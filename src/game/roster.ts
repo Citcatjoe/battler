@@ -218,9 +218,9 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       problems.push(`${at} 1 à 3 forces et 1 à 3 faiblesses attendues`)
     const eventIds = new Set<string>()
     for (const e of d.events) {
-      if (eventIds.has(e.id)) problems.push(`${at} événement en double (${e.id})`)
+      if (eventIds.has(e.id)) problems.push(`${at} compétence en double (${e.id})`)
       eventIds.add(e.id)
-      if (e.effects.length === 0) problems.push(`${at} l'événement ${e.id} n'a aucun effet`)
+      if (e.effects.length === 0) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
       if (e.chance !== undefined && !inRange(e.chance, 0, 1)) problems.push(`${at} ${e.id}.chance hors de [0, 1]`)
       if (e.limit !== undefined && (!Number.isInteger(e.limit) || e.limit < 1))
         problems.push(`${at} ${e.id}.limit doit être un entier ≥ 1`)

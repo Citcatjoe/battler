@@ -23,6 +23,13 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.20.1] — 2026-10-17
+
+### Modifié
+- Compendium, verticale Bonus et malus : les cartes n'indiquent plus la provenance du statut (personnage, événement, cible, charges). Un statut se lit comme une règle neutre du jeu.
+- Interface : « Événement » devient **« Compétence »** (fiche du compendium, onglet et statistiques de l'écran de fin, journal de combat). Le code garde son nom interne (`CharacterEvent`).
+- Docs : décision de cadre sur les statuts et les compétences (`STATUTS.md`, `PERSONNAGES.md`) : statuts neutres, compétences liées au personnage, palette par race, 1 passif de race et 2 compétences au plus. `RESOLUTION.md` explique qui fixe le moment d'une résolution (compétence, statut, moteur) et liste les crochets manquants (`onExpire`, effet différé, action sur le dé).
+
 ## [0.20.0] — 2026-10-17
 
 Couche de **résolution des affrontements**. Les combats actuels ne changent pas : les 2 160 combats de référence et l'empreinte de non-régression sont identiques.

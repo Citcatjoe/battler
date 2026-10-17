@@ -99,7 +99,7 @@ export function Fighter({
                 style={at(45)}
                 className="event-aura absolute left-1/2 aspect-square w-[130%] rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.55)_0%,rgba(167,139,250,0.15)_45%,transparent_70%)]"
               />
-              {/* Nom de l'événement : même texte flottant qu'ESQUIVE ou CRITIQUE, en violet */}
+              {/* Nom de la compétence : même texte flottant qu'ESQUIVE ou CRITIQUE, en violet */}
               {fx.title && (
                 <div
                   style={at(6)}

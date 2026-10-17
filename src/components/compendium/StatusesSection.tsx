@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { statusCatalog, type StatusEntry } from '../../game/catalog'
 import { POLARITY_STYLE, STATUS_DURATION_RULE, type Polarity } from '../../game/statuses'
 import { StatusIcon } from '../Icon'
-import { MiniPortrait } from '../RecordBits'
 import { Tabs } from '../Tabs'
 
 const LABEL: Record<Polarity, string> = { positive: 'Bonus', negative: 'Malus' }
@@ -46,9 +45,12 @@ export function StatusesSection() {
   )
 }
 
-/** Carte à proportions fixes : médaillon, nom, effet, règles et provenance. */
+/**
+ * Carte à proportions fixes : médaillon, nom, effet et règles. Un statut est présenté comme
+ * une règle neutre : on ne dit pas qui le pose (la provenance ne sert qu'au filtre « en jeu »).
+ */
 function StatusCard({ entry }: { entry: StatusEntry }) {
-  const { def, rules, sources } = entry
+  const { def, rules } = entry
   const positive = def.polarity === 'positive'
   return (
     <article className={`codex-card aspect-[4/5] ${positive ? 'codex-positive' : 'codex-negative'}`}>
@@ -83,23 +85,6 @@ function StatusCard({ entry }: { entry: StatusEntry }) {
         ))}
       </ul>
 
-      <footer className="border-t border-amber-200/10 bg-black/25 px-4 py-2.5">
-        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-500">Provenance</p>
-        <ul className="flex flex-col gap-1">
-          {sources.map((s) => (
-            <li key={`${s.character.id}-${s.event.id}`} className="flex items-center gap-2 text-xs text-stone-300">
-              <MiniPortrait character={s.character} size="h-6 w-6" />
-              <span className="min-w-0 truncate">
-                <b className="text-stone-100">{s.character.name}</b> · {s.event.name}
-              </span>
-              <span className="ml-auto shrink-0 font-mono text-[11px] text-stone-500">
-                {s.target === 'opponent' ? '→ adv.' : 'soi'} · {s.stacks}
-                {s.turns ? `×${s.turns}t` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </footer>
     </article>
   )
 }

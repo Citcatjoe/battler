@@ -15,6 +15,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
    - **Mort-vivant** : affliger, c'est-à-dire ronger l'adversaire avec le poison, une aura négative qui ignore l'armure.
 2. **Une variante = la même race, une autre façon de jouer.** Elle garde l'image (teintée en CSS) et l'**événement de sa race**, et décale 2 ou 3 stats dans une direction claire (plus offensive, plus régulière…). Les écarts restent petits.
 3. **L'événement prolonge l'identité de la race.** Il se déclenche sur un 1 au dé, le pire jet possible : la malchance devient un petit moment de gloire, propre à chaque race.
+   - **Compétences et palette (cadre décidé en 0.20.1).** Les compétences appartiennent aux personnages ; les statuts qu'elles posent sont des règles neutres (voir [STATUTS.md](STATUTS.md#statut-et-compétence--deux-notions-séparées)). Chaque race a une palette de 2 ou 3 statuts. Cible par personnage : **1 passif de race** (identité commune à l'original et à ses variantes) et **2 compétences au plus**, dont une peut être propre à la variante (style de jeu).
 4. **Budget d'équilibre** : chaque personnage doit gagner entre 45 et 55 % de ses combats contre le reste du roster (test automatique). Aucun duel ne devrait dépasser 60/40.
 5. **Fiche en jeu courte** : une accroche, 2 ou 3 phrases de background (240 caractères au plus), 1 à 3 forces et 1 à 3 faiblesses. `validateRoster` vérifie ces limites.
 6. **Univers** : des noms et des lieux inventés (Kar-Dush, Lithmeren, Durnhold, Ostremort), sans référence à des œuvres existantes.

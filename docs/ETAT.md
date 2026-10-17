@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-17, version 0.20.0._
+_Dernière mise à jour : 2026-10-17, version 0.20.1._
 
 ## En bref
 
@@ -48,7 +48,7 @@ Tout ce qui suit est dans le dépôt et tourne avec `npm run check` :
 
 | Chantier | Où en est-on | Document |
 | --- | --- | --- |
-| **Bonus et malus** sur un nombre de tours, sous conditions | Le moteur est prêt : durées, cumul, plafond, conditions (`when`), catalogue. Reste à décider quels statuts, pour qui, avec quelles conditions et quelles durées types. | [STATUTS.md](STATUTS.md#chantier--larrivée-des-bonus-et-malus) |
+| **Bonus et malus** sur un nombre de tours, sous conditions | Le moteur est prêt : durées, cumul, plafond, conditions (`when`), catalogue. Cadre décidé (0.20.1) : statuts neutres, compétences liées au personnage, palette par race, 1 passif + 2 compétences au plus. Reste à attribuer les palettes, compétence par compétence, avec conditions, durées types et mesure d'équilibre. | [STATUTS.md](STATUTS.md#chantier--larrivée-des-bonus-et-malus) |
 | **Résolution des affrontements** | Couche en place et testée : trois phases par tour, fenêtres, ordre fixe, contrôle, réactions, garde, immunités, opposition. Sept décisions de design à valider. | [RESOLUTION.md](RESOLUTION.md#9-décisions-de-design-à-valider) |
 | **Compendium** | En place avec deux verticales : Personnages (fiches) et Bonus et malus. Reste à définir l'intégration définitive du bouton d'accès sur l'accueil (bouton rond provisoire), et les futures verticales (événements, arènes, règles…). | [FEATURES.md](FEATURES.md#9-compendium) |
 | **Personnages originaux** | Le mort-vivant est original. L'orc, l'elfe et le nain restent des placeholders, à régénérer avec la style bible. | [STYLE_BIBLE.md](STYLE_BIBLE.md) |

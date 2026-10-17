@@ -103,7 +103,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                 </section>
               </div>
               <section>
-                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">Événement</h2>
+                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">Compétence</h2>
                 <EventInfo character={character} />
               </section>
             </div>
@@ -145,7 +145,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                 <Kpi
                   label={
                     <>
-                      <Icon name="event" /> Événements
+                      <Icon name="event" /> Compétences
                     </>
                   }
                   value={record.events}

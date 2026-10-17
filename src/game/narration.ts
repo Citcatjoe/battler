@@ -122,7 +122,7 @@ export function attackLog(
 
 export function eventLog(event: TriggeredEvent, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   const effects = event.effects.map((e) => effectText(e, fighters)).join(', ')
-  return { kind: 'event', side: event.side, text: `✨ Événement · ${event.name} ! ${effects}.` }
+  return { kind: 'event', side: event.side, text: `✨ Compétence · ${event.name} ! ${effects}.` }
 }
 
 export function statusTickLog(

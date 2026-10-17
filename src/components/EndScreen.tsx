@@ -27,7 +27,7 @@ export type EndTab = 'summary' | 'defense' | 'events' | 'dice'
 const TABS: TabDef<EndTab>[] = [
   { id: 'summary', label: 'Bilan', icon: 'swords' },
   { id: 'defense', label: 'Critiques et défense', icon: 'shield' },
-  { id: 'events', label: 'Événements', icon: 'event' },
+  { id: 'events', label: 'Compétences', icon: 'event' },
   { id: 'dice', label: 'Dés', icon: 'dice' },
 ]
 
@@ -87,10 +87,10 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: 'Événements et statuts',
+    title: 'Compétences et statuts',
     tab: 'events',
     rows: [
-      { label: 'Événements déclenchés', value: (s) => s.events, score: (s) => s.events },
+      { label: 'Compétences déclenchées', value: (s) => s.events, score: (s) => s.events },
       { label: 'PV regagnés', value: (s) => s.healed, score: (s) => s.healed },
       { label: 'Critiques assurés utilisés', value: (s) => s.forcedCrits },
       { label: 'Absorbé par les boucliers', value: (s) => s.shieldAbsorbed, score: (s) => s.shieldAbsorbed },

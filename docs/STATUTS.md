@@ -6,6 +6,27 @@ Ce document décrit le système des **statuts**, c'est-à-dire les bonus et les 
 - **Ce document** en garde la philosophie et les décisions. On le met à jour à chaque statut ajouté ou modifié.
 - **La technique** (crochets du moteur, marche à suivre) est dans [ARCHITECTURE.md](ARCHITECTURE.md#ajouter-un-statut-aura-positive-ou-négative).
 
+## Statut et compétence : deux notions séparées
+
+Décision prise en 0.20.1.
+
+- Un **statut** est une **règle neutre** du jeu, partagée par tous : un Poison est un Poison, quel que soit celui qui le pose. Le compendium les présente ainsi, sans dire qui les pose.
+- Une **compétence** appartient à un **personnage** (dans le code : `CharacterEvent`, dans `roster.ts`). Elle décide **quand** et **à quelles conditions** elle pose un ou plusieurs statuts (ou soigne, inflige, purge).
+- Chaque **race** a une petite **palette de compétences**, qui s'appuient sur 2 ou 3 statuts liés à son thème. Ses variantes y puisent chacune à leur manière.
+- **Plafonds** par personnage, pour la lisibilité et l'équilibre : 1 passif de race, 2 compétences au plus ; 3 statuts au plus par palette de race.
+- Le **moment** où un statut est résolu est fixé par le statut lui-même, jamais par la compétence : voir [RESOLUTION.md](RESOLUTION.md#qui-fixe-le-moment-dune-résolution).
+
+### Palettes de race (proposition, à affiner à l'attribution)
+
+| Race | Statuts de la palette | Thème |
+| --- | --- | --- |
+| Orcs | Brèche, Étourdi, un bonus de rage (à créer) | casser, assommer, s'emporter |
+| Elfes | Critique assuré, Vulnérable | viser, exposer |
+| Nains | Armure temporaire, Épines | tenir, punir l'attaquant |
+| Morts-vivants | Poison, Affaibli | ronger, épuiser |
+
+Un statut peut ponctuellement être emprunté par une autre race, mais il garde une race « maison ». Régénération, Brûlure et Garde sacrée attendent une future race.
+
 ---
 
 ## Vocabulaire
@@ -19,7 +40,7 @@ Ce document décrit le système des **statuts**, c'est-à-dire les bonus et les 
 | **Cumul** (`stacking`) | Ce qui se passe quand on pose un statut déjà présent. `add` : les charges s'additionnent et la durée garde la plus longue. `refresh` : la nouvelle application remplace l'ancienne. |
 | **Plafond** (`maxStacks`) | Nombre maximal de charges. Un cumul au-delà est ramené au plafond. |
 | **Compteur** (`counter`) | Le seul nombre affiché sur l'icône de l'état. Par défaut (`auto`), ce sont les tours restants si le statut a une durée, sinon ses charges. On peut imposer `stacks` ou `turns`. |
-| **Événement** | Capacité d'un personnage qui pose les statuts : *quand* (déclencheur) → *si* (conditions) → *quoi* (effets). |
+| **Compétence** (ou événement, `CharacterEvent` dans le code) | Capacité d'un personnage qui pose les statuts : *quand* (déclencheur) → *si* (conditions) → *quoi* (effets). |
 | **Déclencheur** | Moment du combat : début du combat, début de tour, 1 au dé, critique, esquive, coup encaissé… (10 au total, voir [FEATURES.md](FEATURES.md#3-événements-et-statuts)). |
 | **Condition** (`when`) | Exigence supplémentaire, vérifiée au moment du déclencheur. Toutes les conditions d'un événement doivent être vraies. |
 | **Cible** | Un effet vise le porteur (`self`, par défaut) ou son adversaire (`opponent`). |
@@ -99,14 +120,15 @@ Régénération et Poison s'opposent. Les cinq derniers statuts illustrent chacu
 - `chance` et `limit` (nombre de fois par combat), ciblage du porteur ou de l'adversaire.
 - Purge (`cleanse`) des bonus ou des malus.
 - Couche de résolution (0.20.0) : fin de tour, contrôle, réactions, dégâts entrants, garde, immunités, opposition, ordre de résolution fixe. Voir [RESOLUTION.md](RESOLUTION.md), avec ses décisions à valider (§ 9).
-- Catalogue généré depuis le code (`statusCatalog`), affiché dans le compendium, avec « en jeu » ou « à venir » et la liste de qui pose chaque statut.
+- Catalogue généré depuis le code (`statusCatalog`), affiché dans le compendium, avec « en jeu » ou « à venir ». La provenance (`statusSources`) sert au filtre « en jeu » mais n'est plus affichée sur les cartes (0.20.1).
 
 **À définir (décisions de game design)**
 
-- [ ] **Quels statuts pour qui** : les quatre statuts à venir (Régénération, Affaibli, Brèche, et un usage « sur soi » du poison ?) et leurs porteurs. Faut-il un deuxième événement par race, ou un événement propre à chaque variante ?
+- [x] **Cadre** (0.20.1) : statuts neutres, compétences liées au personnage, palette par race, 1 passif de race + 2 compétences au plus (voir plus haut).
+- [ ] **Quels statuts pour qui** : attribuer les palettes ci-dessus, compétence par compétence, avec une mesure d'équilibre à chaque fois.
 - [ ] **Conditions** : quelles conditions par personnage. Par exemple, un orc qui enrage sous 30 % de ses PV, ou un elfe qui achève une cible empoisonnée.
 - [ ] **Durées types** : fixer une grille, par exemple 2 tours pour un effet court, 3 pour un effet standard, et « jusqu'à épuisement » pour les boucliers et les charges.
 - [ ] **Interactions** : la purge doit-elle exister sur un personnage ? Faut-il des immunités (un mort-vivant immunisé au poison) ?
-- [ ] **Nouveaux crochets éventuels** : vol de vie, renvoi de dégâts, étourdissement (tour passé), provocation… Chacun demande une étape du moteur et ses tests.
+- [ ] **Nouveaux crochets éventuels** : `onExpire` (effet à l'expiration, effet différé), action sur le dé (relance), vol de vie, provocation… Chacun demande une étape du moteur et ses tests (voir RESOLUTION.md).
 - [ ] **Lisibilité** : la zone d'état tient environ 4 médaillons de chaque côté au-dessus d'un combattant. Au-delà, faut-il les regrouper ou réduire leur taille ?
 - [ ] **Compteur** : valider, statut par statut, que le nombre affiché est le bon. Par défaut, c'est la durée si elle existe : le poison d'Ervald affiche ses tours restants, pas ses 2 PV par tour.

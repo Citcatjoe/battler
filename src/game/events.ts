@@ -1,7 +1,7 @@
 import { lowerFirst, STATUSES, type Polarity, type StatusId } from './statuses'
 
 /*
- * Événements : capacités propres à un personnage, déclenchées à un moment précis du combat.
+ * Événements (« compétences » dans l'interface) : capacités propres à un personnage, déclenchées à un moment précis du combat.
  * - Le déclencheur (`Trigger`) dit QUAND, toujours du point de vue du porteur de l'événement.
  * - Les effets (`Effect`) disent QUOI : soin, dégâts, statut à poser, statuts à retirer.
  * - `chance` et `limit` règlent la fréquence.

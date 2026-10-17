@@ -231,7 +231,7 @@ Le compendium est le recueil du jeu : tout ce qu'on peut y consulter, rangé en 
 | Verticale | Contenu |
 | --- | --- |
 | **Personnages** | La liste par famille (race, puis original et variantes) et la fiche du personnage choisi, avec ses onglets Fiche et Statistiques (voir § 7). Le personnage est peint **en arrière-plan**, en grand, à la place de l'ancien modèle : assombri, fondu au sol et sur les côtés, avec un halo chaud, et passant sous les encadrés translucides de la fiche. La mise en page ne change pas |
-| **Bonus et malus** | La liste de tous les effets qu'on peut rencontrer en combat. **Seuls les statuts réellement posés par un personnage** y figurent ; les statuts « à venir » ne sont que dans `STATUTS.md`. Deux sous-onglets, Bonus et Malus, avec leur nombre d'entrées. Grille de cartes encadrées, 4 par ligne, à proportions fixes (4:5) : médaillon de l'icône, nom, polarité, résumé, règles déduites du code (crochets, cumul, plafond) et provenance (personnage, événement, cible, charges, durée). La règle de durée commune est rappelée une fois en tête |
+| **Bonus et malus** | La liste de tous les effets qu'on peut rencontrer en combat. **Seuls les statuts réellement posés par un personnage** y figurent ; les statuts « à venir » ne sont que dans `STATUTS.md`. Deux sous-onglets, Bonus et Malus, avec leur nombre d'entrées. Grille de cartes encadrées, 4 par ligne, à proportions fixes (4:5) : médaillon de l'icône, nom, polarité, résumé, règles déduites du code (crochets, cumul, plafond). Un statut y est présenté comme une règle neutre : la carte ne dit pas qui le pose. La règle de durée commune est rappelée une fois en tête |
 
 - **Accès** : un bouton rond provisoire en haut à gauche de l'accueil, le bouton rond près du nom d'un combattant (qui ouvre directement sa fiche), ou un personnage dans l'écran Statistiques.
 - **Retour** : le bouton retour ramène à l'écran d'où l'on vient (sélection ou statistiques). La sélection en cours est conservée.
@@ -242,4 +242,5 @@ Le compendium est le recueil du jeu : tout ce qu'on peut y consulter, rangé en 
 | 0.18.0 | Création du compendium : verticales Personnages (fiches déplacées depuis l'ancien écran) et Bonus et malus |
 | 0.19.1 | Bonus et malus : uniquement les statuts en jeu, sous-onglets Bonus / Malus, grille de cartes encadrées 4 par ligne |
 | 0.19.2 | Fiche personnage : le personnage passe en grand en arrière-plan |
+| 0.20.1 | Bonus et malus : la provenance (qui pose le statut) n'est plus affichée sur les cartes |
 
