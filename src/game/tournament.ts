@@ -1,5 +1,6 @@
 import type { Character } from './character'
-import type { CombatResult } from './combat'
+import { finalState, type CombatResult } from './combat'
+import { defaultRng, shuffle, type Rng } from './rng'
 import { createCharacter } from './roster'
 
 /*
@@ -93,35 +94,34 @@ export const champion = (t: Tournament): number | null =>
 export function matchFighters(t: Tournament, ref: MatchRef): [Character, Character] {
   const [a, b] = players(t, ref)
   if (a === null || b === null) throw new Error('Match pas encore prêt')
-  const make = (i: number) => createCharacter(t.entrants[i].characterId).renamed(t.entrants[i].label)
+  const make = (i: number) => createCharacter(t.entrants[i].characterId).withName(t.entrants[i].label)
   return [make(a), make(b)]
 }
 
-/** Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi). */
+/**
+ * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi).
+ * Refuse un match déjà joué ou pas encore prêt : l'appelant ne doit alors rien enregistrer.
+ */
 export function withResult(t: Tournament, ref: MatchRef, result: CombatResult): Tournament {
-  const [a, b] = players(t, ref)
-  if (a === null || b === null || t.results[matchKey(ref)]) return t
-  const stats = result.attacks
+  if (status(t, ref) !== 'ready') throw new Error(`Match ${matchKey(ref)} non jouable (${status(t, ref)})`)
+  const [a, b] = players(t, ref) as [number, number]
+  const expected = [t.entrants[a].characterId, t.entrants[b].characterId]
+  if (result.fighters[0].id !== expected[0] || result.fighters[1].id !== expected[1])
+    throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
-  // PV restants du vainqueur, soins compris
-  const last = stats[stats.length - 1]
-  const lastHp = (side: 0 | 1) => (last ? last.after.hp[side] : result.fighters[side].maxHp)
   return {
     ...t,
     results: {
       ...t.results,
-      [matchKey(ref)]: { winner, turns: stats.length, mode: result.mode, hpLeft: lastHp(result.winner) },
+      [matchKey(ref)]: {
+        winner,
+        turns: result.turns,
+        mode: result.mode,
+        // PV restants du vainqueur, soins compris
+        hpLeft: finalState(result).hp[result.winner],
+      },
     },
   }
-}
-
-const shuffle = <T>(items: T[]) => {
-  const a = [...items]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
 }
 
 /**
@@ -129,10 +129,13 @@ const shuffle = <T>(items: T[]) => {
  * en tenant compte des cases déjà choisies à la main et en évitant si possible
  * qu'un personnage affronte son double au premier tour.
  */
-export function fillSlots(slots: (string | null)[], ids: string[]): string[] {
+export function fillSlots(slots: readonly (string | null)[], ids: readonly string[], rng: Rng = defaultRng): string[] {
   const count = new Map(ids.map((id) => [id, 0]))
   slots.forEach((id) => id && count.set(id, (count.get(id) ?? 0) + 1))
-  const empty = shuffle(slots.map((id, i) => (id ? -1 : i)).filter((i) => i >= 0))
+  const empty = shuffle(
+    rng,
+    slots.map((id, i) => (id ? -1 : i)).filter((i) => i >= 0),
+  )
   const out = [...slots]
   for (const i of empty) {
     const partner = out[i % 2 === 0 ? i + 1 : i - 1]
@@ -140,7 +143,7 @@ export function fillSlots(slots: (string | null)[], ids: string[]): string[] {
     const least = ids.filter((id) => count.get(id) === min)
     const candidates = least.filter((id) => id !== partner)
     const pool = candidates.length ? candidates : least
-    const id = pool[Math.floor(Math.random() * pool.length)]
+    const id = pool[Math.floor(rng() * pool.length)]
     out[i] = id
     count.set(id, min + 1)
   }

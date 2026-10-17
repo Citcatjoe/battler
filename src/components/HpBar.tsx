@@ -1,17 +1,13 @@
 import { SIDE_STYLE, type Side } from '../game/combat'
-import type { Buff } from '../game/events'
-import { BuffChips } from './BuffChips'
 
 interface Props {
   side: Side
   name: string
   hp: number
   maxHp: number
-  /** Bonus actifs, affichés sous la barre */
-  buffs?: Buff[]
 }
 
-export function HpBar({ side, name, hp, maxHp, buffs = [] }: Props) {
+export function HpBar({ side, name, hp, maxHp }: Props) {
   const pct = (hp / maxHp) * 100
   const style = SIDE_STYLE[side]
   const low = pct <= 25
@@ -38,7 +34,6 @@ export function HpBar({ side, name, hp, maxHp, buffs = [] }: Props) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <BuffChips buffs={buffs} align={side === 1 ? 'right' : 'left'} />
     </div>
   )
 }

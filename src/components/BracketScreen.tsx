@@ -2,6 +2,7 @@ import { createCharacter } from '../game/roster'
 import { champion, currentRound, readyMatches, ROUND_NAMES, type MatchRef, type Tournament } from '../game/tournament'
 import { Bracket } from './Bracket'
 import { Fighter } from './Fighter'
+import { Icon } from './Icon'
 
 interface Props {
   tournament: Tournament
@@ -38,7 +39,7 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onNewTournament,
               className="rounded-md border border-amber-500/70 px-4 py-2 text-sm font-bold text-amber-200 hover:bg-amber-500/10"
               title="Simule tous les matchs prêts de ce tour"
             >
-              ⚡ Simuler le tour ({ready.length})
+              <Icon name="lightning" /> Simuler le tour ({ready.length})
             </button>
           )}
           {winner && (
@@ -62,12 +63,14 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onNewTournament,
               <div className="h-[230px]">
                 <Fighter character={createCharacter(winner.characterId)} side={0} state="victory" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">🏆 Champion</p>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">
+                <Icon name="trophy" /> Champion
+              </p>
               <p className="font-display text-3xl font-extrabold text-amber-200">{winner.label}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center pt-16 text-center">
-              <span className="text-8xl drop-shadow-[0_6px_12px_rgba(245,158,11,0.35)]">🏆</span>
+              <Icon name="trophy" className="h-28 w-28 drop-shadow-[0_6px_12px_rgba(245,158,11,0.35)]" />
               <p className="mt-4 font-display text-2xl font-extrabold text-stone-300">Finale</p>
             </div>
           )

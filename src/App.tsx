@@ -14,11 +14,13 @@ import {
   type Tournament,
 } from './game/tournament'
 import { sfx } from './game/sound'
+import { ARENAS, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
 import { MatchupScreen } from './components/MatchupScreen'
 import { FightScreen } from './components/FightScreen'
 import { EndScreen } from './components/EndScreen'
-import { CharacterScreen } from './components/CharacterScreen'
+import { CompendiumScreen } from './components/compendium/CompendiumScreen'
+import type { CompendiumSectionId } from './components/compendium/sections'
 import { RecordsScreen } from './components/RecordsScreen'
 import { TournamentSetupScreen } from './components/TournamentSetupScreen'
 import { BracketScreen } from './components/BracketScreen'
@@ -28,9 +30,10 @@ import { Stage } from './components/Stage'
 type Screen =
   | { name: 'start' }
   | { name: 'matchup' }
-  | { name: 'fight'; script: CombatResult }
+  | { name: 'fight'; script: CombatResult; arena: Arena }
   | { name: 'end'; result: CombatResult }
-  | { name: 'character'; id: string }
+  /** `from` : écran où revient le bouton retour */
+  | { name: 'compendium'; section: CompendiumSectionId; characterId: string; from: 'start' | 'records' }
   | { name: 'records' }
   | { name: 'tournamentSetup' }
   | { name: 'bracket' }
@@ -42,6 +45,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'start' })
   const [mode, setMode] = useState<GameMode>('duel')
   const [fighters, setFighters] = useState<Pair<Character>>(() => [createCharacter('gorak'), createCharacter('elaria')])
+  // Arène choisie sur l'écran d'affrontement, gardée pour les combats suivants de la session
+  const [arenaChoice, setArenaChoice] = useState<ArenaChoice>(ARENAS[0].id)
 
   // Tournoi : en mémoire uniquement, perdu au rechargement de la page.
   const [slots, setSlots] = useState<(string | null)[]>(() => Array(SLOTS).fill(null))
@@ -58,8 +63,9 @@ export default function App() {
   const applyResults = (t: Tournament, done: [MatchRef, CombatResult][]) => {
     let next = t
     for (const [ref, result] of done) {
-      recordMatch(result, { tournament: true })
+      // L'arbre valide d'abord le match (prêt, bons combattants) : rien n'est enregistré sinon.
       next = withResult(next, ref, result)
+      recordMatch(result, { tournament: true })
     }
     const champ = champion(next)
     if (champ !== null && champion(t) === null) recordTournamentWin(next.entrants[champ].characterId)
@@ -106,7 +112,11 @@ export default function App() {
           }}
           onOpenCharacter={(id, current) => {
             setFighters(current)
-            go({ name: 'character', id })
+            go({ name: 'compendium', section: 'characters', characterId: id, from: 'start' })
+          }}
+          onOpenCompendium={(current) => {
+            setFighters(current)
+            go({ name: 'compendium', section: 'characters', characterId: current[0].id, from: 'start' })
           }}
           onOpenRecords={(current) => {
             setFighters(current)
@@ -123,7 +133,9 @@ export default function App() {
           title={activeMatch ? matchTitle(activeMatch) : undefined}
           backLabel={activeMatch ? '← ARBRE' : undefined}
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
-          onPlay={() => go({ name: 'fight', script: simulateCombat(fighters) })}
+          arena={arenaChoice}
+          onArenaChange={setArenaChoice}
+          onPlay={() => go({ name: 'fight', script: simulateCombat(fighters), arena: resolveArena(arenaChoice) })}
           onSimulate={() => {
             sfx.click()
             finish(simulateCombat(fighters))
@@ -131,7 +143,7 @@ export default function App() {
           onBack={activeMatch ? backToBracket : () => go({ name: 'start' })}
         />
       )}
-      {screen.name === 'fight' && <FightScreen script={screen.script} onEnd={finish} />}
+      {screen.name === 'fight' && <FightScreen script={screen.script} arena={screen.arena} onEnd={finish} />}
       {screen.name === 'end' && (
         <EndScreen
           result={screen.result}
@@ -152,15 +164,21 @@ export default function App() {
           }
         />
       )}
-      {screen.name === 'character' && (
-        <CharacterScreen
-          characterId={screen.id}
-          onSelect={(id) => go({ name: 'character', id })}
-          onBack={() => go({ name: 'start' })}
+      {screen.name === 'compendium' && (
+        <CompendiumScreen
+          section={screen.section}
+          characterId={screen.characterId}
+          // Navigation interne : sans son de clic en double (les onglets jouent déjà le leur)
+          onNavigate={(to) => setScreen({ ...screen, ...to })}
+          onBack={() => go({ name: screen.from })}
+          backLabel={screen.from === 'records' ? '← Retour aux statistiques' : '← Retour à la sélection'}
         />
       )}
       {screen.name === 'records' && (
-        <RecordsScreen onOpenCharacter={(id) => go({ name: 'character', id })} onBack={() => go({ name: 'start' })} />
+        <RecordsScreen
+          onOpenCharacter={(id) => go({ name: 'compendium', section: 'characters', characterId: id, from: 'records' })}
+          onBack={() => go({ name: 'start' })}
+        />
       )}
       {screen.name === 'tournamentSetup' && (
         <TournamentSetupScreen

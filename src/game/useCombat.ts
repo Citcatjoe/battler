@@ -1,20 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   INITIATIVE_DIE,
-  multiplier,
   other,
   type AppliedEffect,
   type Attack,
-  type AttackOutcome,
-  type TriggeredEvent,
   type CombatResult,
-  type LogEntry,
-  type LogKind,
   type Pair,
   type Side,
 } from './combat'
-import type { Buff } from './events'
+import {
+  attackLog,
+  eventLog,
+  skipLog,
+  statusExpireLog,
+  statusReactionLog,
+  statusTickLog,
+  type LogEntry,
+} from './narration'
+import { STATUSES } from './statuses'
 import { sfx } from './sound'
+import type { Status } from './statuses'
 
 export interface DiceState {
   values: number[]
@@ -24,15 +29,24 @@ export interface DiceState {
   owner: Side | null
   label: string
   crit: boolean
-  /** Critique déclenché par un bonus « critique assuré » */
-  critFromBuff: boolean
+  /** Critique imposé par un statut */
+  critForced: boolean
+  critMultiplier: number
 }
 
 /** Un coup en cours : sert de clé pour relancer les animations CSS. */
-export interface Strike extends AttackOutcome {
+export interface Strike extends Attack {
   key: number
-  attacker: Side
   landed: boolean
+}
+
+/** Effets en train de s'afficher : un événement (avec son titre) ou un statut qui agit. */
+export interface EffectFx {
+  key: number
+  /** Combattant à l'origine : reçoit l'aura et le titre */
+  source: Side | null
+  title: string
+  effects: AppliedEffect[]
 }
 
 const ABORTED = Symbol('aborted')
@@ -44,47 +58,22 @@ const IDLE_DICE: DiceState = {
   owner: null,
   label: '',
   crit: false,
-  critFromBuff: false,
+  critForced: false,
+  critMultiplier: 1,
 }
-
-/** Événement en train de s'afficher au-dessus d'un combattant. */
-export interface EventFx {
-  key: number
-  event: TriggeredEvent
-}
-
-const armorDetail = (attack: Attack) => {
-  const base = attack.absorbed - attack.bonusAbsorbed
-  const parts = [
-    base > 0 && `armure −${base}`,
-    attack.bonusAbsorbed > 0 && `🛡️ armure temporaire −${attack.bonusAbsorbed}`,
-  ]
-  return parts
-    .filter(Boolean)
-    .map((p) => `, ${p}`)
-    .join('')
-}
-
-const effectText = (e: AppliedEffect) =>
-  e.type === 'heal'
-    ? e.amount > 0
-      ? `regagne ${e.amount} PV`
-      : 'est déjà au maximum de ses PV'
-    : e.kind === 'guaranteedCrit'
-      ? 'son prochain coup qui touche sera critique'
-      : `gagne ${e.amount} d'armure temporaire`
 
 /**
  * Met en scène un combat déjà résolu par `simulateCombat` : mêmes jets, même issue,
- * seul le rythme (vitesse, pause) dépend de l'affichage.
+ * seul le rythme (vitesse, pause) dépend de l'affichage. Chaque type d'étape de la
+ * chronologie a sa mise en scène ci-dessous ; aucune règle n'est recalculée ici.
  */
 export function useCombat(script: CombatResult, onEnd: (result: CombatResult) => void) {
   const { fighters } = script
   const [hp, setHp] = useState<Pair<number>>([fighters[0].maxHp, fighters[1].maxHp])
+  const [statuses, setStatuses] = useState<Pair<Status[]>>([[], []])
   const [dice, setDice] = useState<DiceState>(IDLE_DICE)
   const [strike, setStrike] = useState<Strike | null>(null)
-  const [buffs, setBuffs] = useState<Pair<Buff[]>>([[], []])
-  const [eventFx, setEventFx] = useState<EventFx | null>(null)
+  const [fx, setFx] = useState<EffectFx | null>(null)
   const [log, setLog] = useState<LogEntry[]>([])
   const [turn, setTurn] = useState(0)
   const [winner, setWinner] = useState<Side | null>(null)
@@ -102,6 +91,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
   useEffect(() => {
     let aborted = false
     let logId = 0
+    let fxId = 0
     const [a, b] = fighters
 
     // Attente qui respecte la vitesse et la pause.
@@ -119,13 +109,54 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         requestAnimationFrame(tick)
       })
 
-    const push = (kind: LogKind, text: string, side?: Side) => setLog((l) => [...l, { id: logId++, kind, text, side }])
+    const push = (entry: Omit<LogEntry, 'id'>) => setLog((l) => [...l, { ...entry, id: logId++ }])
+
+    /** Affiche des effets ; `apply` met à jour PV, statuts et journal au moment de l'apparition. */
+    const showEffects = async (source: Side | null, title: string, effects: AppliedEffect[], apply: () => void) => {
+      await wait(250)
+      sfx.event()
+      setFx({ key: fxId++, source, title, effects })
+      apply()
+      await wait(1300)
+      setFx(null)
+    }
+
+    async function playAttack(t: number, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
+      const { attacker, faces } = attack
+      const label = `${fighters[attacker].name} attaque`
+      const shown = { ...IDLE_DICE, faces, owner: attacker, label, critMultiplier: attack.critMultiplier }
+
+      setDice({ ...shown, values: [0], rolling: true })
+      sfx.diceRoll(800 / speedRef.current)
+      await wait(800)
+      sfx.diceLand(attack.roll, faces)
+      setDice({ ...shown, values: [attack.roll] })
+      await wait(350)
+      if (attack.crit) {
+        sfx.crit()
+        setDice((d) => ({ ...d, crit: true, critForced: attack.critForced }))
+        await wait(450)
+      }
+
+      // Élan vers l'adversaire, l'impact (ou l'esquive) tombe au milieu de l'animation.
+      setStrike({ ...attack, key: t, landed: false })
+      sfx.whoosh()
+      await wait(300)
+      if (attack.dodged) sfx.dodge()
+      else sfx.impact(attack.damage, attack.crit)
+      setHp(after)
+      setStatuses(afterStatuses)
+      setStrike({ ...attack, key: t, landed: true })
+      push(attackLog(t, attack, fighters, after[other(attacker)]))
+      await wait(550)
+      setStrike(null)
+    }
 
     async function run() {
       const startedAt = performance.now()
 
       await wait(500)
-      push('info', `${a.name} (${a.maxHp} PV) affronte ${b.name} (${b.maxHp} PV) !`)
+      push({ kind: 'info', text: `${a.name} (${a.maxHp} PV) affronte ${b.name} (${b.maxHp} PV) !` })
 
       // Initiative : chacun lance un dé, le plus haut commence (relance sur égalité).
       const initDice = { ...IDLE_DICE, faces: INITIATIVE_DIE, label: 'Initiative' }
@@ -135,87 +166,72 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         await wait(900)
         sfx.diceLand(Math.max(ia, ib), INITIATIVE_DIE)
         setDice({ ...initDice, values: [ia, ib] })
-        push('initiative', `Initiative — ${a.name} : ${ia}, ${b.name} : ${ib}`)
+        push({ kind: 'initiative', text: `Initiative — ${a.name} : ${ia}, ${b.name} : ${ib}` })
         await wait(1000)
-        if (ia === ib) push('info', 'Égalité ! On relance.')
+        if (ia === ib) push({ kind: 'info', text: 'Égalité ! On relance.' })
       }
-
-      const first = script.attacks[0].attacker
-      push('info', `${fighters[first].name} frappe en premier.`, first)
+      const [lastA, lastB] = script.initiative[script.initiative.length - 1]
+      const first: Side = lastA > lastB ? 0 : 1
+      push({ kind: 'info', text: `${fighters[first].name} frappe en premier.`, side: first })
       await wait(700)
 
-      const life: Pair<number> = [a.maxHp, b.maxHp]
-      for (const attack of script.attacks) {
-        const { turn: t, attacker } = attack
-        const defender = other(attacker)
-        const att = fighters[attacker]
-        const def = fighters[defender]
-        const faces = att.stats.damageDie
-        const label = `${att.name} attaque`
-        setTurn(t)
-
-        setDice({ ...IDLE_DICE, faces, values: [0], rolling: true, owner: attacker, label })
-        sfx.diceRoll(800 / speedRef.current)
-        await wait(800)
-        sfx.diceLand(attack.roll, faces)
-        setDice({ ...IDLE_DICE, faces, values: [attack.roll], owner: attacker, label })
-        await wait(350)
-        if (attack.crit) {
-          sfx.crit()
-          setDice((d) => ({ ...d, crit: true, critFromBuff: attack.critFromBuff }))
-          await wait(450)
+      for (const beat of script.beats) {
+        setTurn(beat.turn)
+        switch (beat.type) {
+          case 'attack':
+            await playAttack(beat.turn, beat.attack, beat.state.hp, beat.state.statuses)
+            await wait(450)
+            break
+          case 'event':
+            await showEffects(beat.event.side, beat.event.name, beat.event.effects, () => {
+              setHp(beat.state.hp)
+              setStatuses(beat.state.statuses)
+              push(eventLog(beat.event, fighters))
+            })
+            break
+          case 'statusTick':
+            await showEffects(null, '', beat.effects, () => {
+              setHp(beat.state.hp)
+              setStatuses(beat.state.statuses)
+              push(statusTickLog(beat.side, beat.status, beat.effects, fighters))
+            })
+            break
+          case 'statusReaction':
+            // Le statut agit comme un événement : son nom flotte au-dessus de son porteur.
+            await showEffects(beat.side, STATUSES[beat.status].name, beat.effects, () => {
+              setHp(beat.state.hp)
+              setStatuses(beat.state.statuses)
+              push(statusReactionLog(beat.side, beat.status, beat.effects, fighters))
+            })
+            break
+          case 'skip':
+            setTurn(beat.turn)
+            await showEffects(beat.side, STATUSES[beat.status].name, [], () => {
+              setStatuses(beat.state.statuses)
+              push(skipLog(beat.turn, beat.side, beat.status, fighters))
+            })
+            break
+          case 'statusExpire':
+            setStatuses(beat.state.statuses)
+            push(statusExpireLog(beat.side, beat.statuses, fighters))
+            await wait(400)
+            break
+          default:
+            // Tout nouveau type d'étape doit avoir sa mise en scène ici.
+            beat satisfies never
         }
-
-        // Élan vers l'adversaire, l'impact (ou l'esquive) tombe au milieu de l'animation.
-        setStrike({ ...attack, key: t, attacker, landed: false })
-        sfx.whoosh()
-        await wait(300)
-        if (attack.dodged) sfx.dodge()
-        else sfx.impact(attack.damage, attack.crit)
-        life[defender] = attack.defenderHp
-        setHp(attack.afterHit.hp)
-        setBuffs(attack.afterHit.buffs)
-        setStrike({ ...attack, key: t, attacker, landed: true })
-
-        if (attack.dodged) {
-          push('dodge', `Tour ${t} · ${att.name} frappe (${attack.roll}) mais ${def.name} esquive !`, defender)
-        } else if (attack.crit) {
-          push(
-            'crit',
-            `Tour ${t} · ${attack.critFromBuff ? '🎯 CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${attack.roll} ${multiplier(att.stats.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${life[defender]} PV).`,
-            attacker,
-          )
-        } else {
-          const flavor = attack.roll === faces ? ' Coup maximal !' : attack.roll === 1 ? ' Une égratignure.' : ''
-          push(
-            'attack',
-            `Tour ${t} · ${att.name} inflige ${attack.damage} dégât${attack.damage > 1 ? 's' : ''} à ${def.name}${armorDetail(attack)} (${life[defender]} PV).${flavor}`,
-            attacker,
-          )
-        }
-        await wait(550)
-        setStrike(null)
-
-        // Événements déclenchés par ce coup (ex. un 1 au dé).
-        for (const [k, event] of attack.events.entries()) {
-          await wait(250)
-          sfx.event()
-          setEventFx({ key: t * 10 + k, event })
-          setHp(attack.after.hp)
-          setBuffs(attack.after.buffs)
-          push(
-            'event',
-            `✨ Événement · ${event.name} ! ${fighters[event.side].name} ${event.effects.map(effectText).join(', ')}.`,
-            event.side,
-          )
-          await wait(1300)
-          setEventFx(null)
-        }
-        await wait(450)
       }
 
       const w = script.winner
-      push('ko', `${fighters[other(w)].name} s'effondre ! ${fighters[w].name} remporte le combat.`, w)
+      const lost = other(w)
+      push({
+        kind: 'ko',
+        side: w,
+        text:
+          script.endedBy === 'ko'
+            ? `${fighters[lost].name} s'effondre ! ${fighters[w].name} remporte le combat.`
+            : `Limite de tours atteinte : ${fighters[w].name} l'emporte aux points de vie.`,
+      })
       setWinner(w)
       setDice((d) => ({ ...d, label: 'K.O.' }))
       sfx.ko()
@@ -233,5 +249,5 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     }
   }, [script, fighters])
 
-  return { hp, buffs, dice, strike, eventFx, log, turn, winner, speed, setSpeed, paused, setPaused }
+  return { hp, statuses, dice, strike, fx, log, turn, winner, speed, setSpeed, paused, setPaused }
 }

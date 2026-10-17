@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Character } from '../game/character'
-import { ROSTER } from '../game/roster'
+import type { Character } from '../game/character'
+import { CHARACTERS } from '../game/roster'
 import { STAGE_WIDTH } from './Stage'
 import {
   allMatches,
@@ -13,6 +13,7 @@ import {
   type Tournament,
 } from '../game/tournament'
 import { Portrait } from './Portrait'
+import { Icon } from './Icon'
 
 /* Géométrie de l'arbre, en pixels de la scène 1600×900. */
 const TOP = 150
@@ -51,7 +52,7 @@ export const CENTER_ZONE = {
   bottom: BOTTOM,
 }
 
-const roster = ROSTER.map((def) => new Character(def))
+const roster = CHARACTERS
 const characterById = (id: string) => roster.find((c) => c.id === id)!
 
 interface Props {
@@ -209,20 +210,29 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                   className="rounded bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-stone-950 hover:bg-amber-400"
                   title="Ouvrir l'écran d'affrontement"
                 >
-                  ⚔ Affronter
+                  <Icon name="swords" /> Affronter
                 </button>
                 <button
                   onClick={() => onSimulate?.(ref)}
                   className="rounded border border-amber-500/70 bg-stone-900 px-2 py-0.5 text-[11px] font-bold text-amber-200 hover:bg-amber-500/10"
                   title="Simuler ce match directement"
                 >
-                  ⚡ Simuler
+                  <Icon name="lightning" /> Simuler
                 </button>
               </div>
             )}
             {result && (
               <span className="absolute -bottom-5 left-0 right-0 text-center text-[10px] text-stone-500">
-                {result.mode === 'simulated' ? '⚡ simulé' : '⚔ joué'} · {result.turns} tours
+                {result.mode === 'simulated' ? (
+                  <>
+                    <Icon name="lightning" /> simulé
+                  </>
+                ) : (
+                  <>
+                    <Icon name="swords" /> joué
+                  </>
+                )}{' '}
+                · {result.turns} tours
               </span>
             )}
           </div>

@@ -1,13 +1,9 @@
-import {
-  computeStats,
-  other,
-  percent,
-  SIDE_STYLE,
-  type CombatResult,
-  type FighterStats,
-  type Side,
-} from '../game/combat'
+import { useState } from 'react'
+import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
+import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
+import { Icon } from './Icon'
+import { Tabs, type TabDef } from './Tabs'
 
 interface Props {
   result: CombatResult
@@ -15,6 +11,8 @@ interface Props {
   onMenu: () => void
   /** En tournoi : remplace Revanche / Menu par un retour à l'arbre */
   tournament?: { label: string; onContinue: () => void }
+  /** Onglet affiché à l'ouverture */
+  initialTab?: EndTab
 }
 
 interface Row {
@@ -24,14 +22,26 @@ interface Row {
   score?: (s: FighterStats) => number
 }
 
+export type EndTab = 'summary' | 'defense' | 'events' | 'dice'
+
+const TABS: TabDef<EndTab>[] = [
+  { id: 'summary', label: 'Bilan', icon: 'swords' },
+  { id: 'defense', label: 'Critiques et défense', icon: 'shield' },
+  { id: 'events', label: 'Événements', icon: 'event' },
+  { id: 'dice', label: 'Dés', icon: 'dice' },
+]
+
 interface Section {
   title: string
+  /** Onglet où la section s'affiche */
+  tab: EndTab
   rows: Row[]
 }
 
 const SECTIONS: Section[] = [
   {
     title: 'Bilan',
+    tab: 'summary',
     rows: [
       { label: 'PV restants', value: (s) => s.hpLeft, score: (s) => s.hpLeft },
       { label: 'Dégâts infligés', value: (s) => s.totalDamage, score: (s) => s.totalDamage },
@@ -39,6 +49,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: 'Attaque',
+    tab: 'summary',
     rows: [
       { label: 'Attaques portées', value: (s) => s.attacks },
       {
@@ -57,6 +68,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: 'Critiques',
+    tab: 'defense',
     rows: [
       { label: 'Coups critiques', value: (s) => s.crits, score: (s) => s.crits },
       { label: 'Dégâts des critiques', value: (s) => s.critDamage, score: (s) => s.critDamage },
@@ -64,6 +76,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: 'Défense',
+    tab: 'defense',
     rows: [
       {
         label: 'Esquives réussies',
@@ -74,16 +87,20 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: 'Événements',
+    title: 'Événements et statuts',
+    tab: 'events',
     rows: [
       { label: 'Événements déclenchés', value: (s) => s.events, score: (s) => s.events },
       { label: 'PV regagnés', value: (s) => s.healed, score: (s) => s.healed },
-      { label: 'Critiques assurés utilisés', value: (s) => s.guaranteedCrits },
-      { label: "Absorbé par l'armure temporaire", value: (s) => s.bonusAbsorbed, score: (s) => s.bonusAbsorbed },
+      { label: 'Critiques assurés utilisés', value: (s) => s.forcedCrits },
+      { label: 'Absorbé par les boucliers', value: (s) => s.shieldAbsorbed, score: (s) => s.shieldAbsorbed },
+      { label: 'Dégâts subis hors coups', value: (s) => s.effectDamageTaken },
+      { label: 'Malus reçus', value: (s) => s.debuffsTaken },
     ],
   },
   {
     title: 'Dés',
+    tab: 'dice',
     rows: [
       { label: 'Jets maximaux', value: (s) => s.maxRolls },
       { label: 'Jets à 1', value: (s) => s.minRolls },
@@ -91,14 +108,22 @@ const SECTIONS: Section[] = [
   },
 ]
 
-export function EndScreen({ result, onReplay, onMenu, tournament }: Props) {
+export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = 'summary' }: Props) {
   const stats = computeStats(result)
-  const { fighters, winner, attacks } = result
+  const { fighters, winner } = result
+  const attacks = attacksOf(result)
   const loser = other(winner)
-  const finisher = attacks[attacks.length - 1]
-  const biggest = attacks.reduce((best, a) => (a.damage > best.damage ? a : best), attacks[0])
+  // Dernier coup porté par le vainqueur (le K.O. peut venir d'un effet, ex. poison)
+  const finisher = [...attacks].reverse().find((a) => a.attacker === winner && !a.dodged)
+  const biggest = attacks.reduce<(typeof attacks)[number] | undefined>(
+    (best, a) => (!best || a.dealt > best.dealt ? a : best),
+    undefined,
+  )
   const totalCrits = stats[0].crits + stats[1].crits
   const totalDodges = stats[0].dodges + stats[1].dodges
+
+  const [tab, setTab] = useState<EndTab>(initialTab)
+  const sections = SECTIONS.filter((section) => section.tab === tab)
 
   const isBetter = (row: Row, side: Side) => {
     if (!row.score) return false
@@ -117,7 +142,7 @@ export function EndScreen({ result, onReplay, onMenu, tournament }: Props) {
           <div className="mb-10">
             {result.mode === 'simulated' && (
               <p className="mb-2 inline-block rounded-md border border-amber-500/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-200">
-                ⚡ Combat simulé
+                <Icon name="lightning" /> Combat simulé
               </p>
             )}
             <p className="text-sm uppercase tracking-[0.3em] text-stone-400">Vainqueur</p>
@@ -128,21 +153,30 @@ export function EndScreen({ result, onReplay, onMenu, tournament }: Props) {
               {fighters[winner].race} · {fighters[winner].archetype}
             </p>
             <p className="mt-2 text-stone-400">
-              met {fighters[loser].name} K.O. en {attacks.length} tours
+              {result.endedBy === 'ko'
+                ? `met ${fighters[loser].name} K.O.`
+                : `l'emporte aux PV sur ${fighters[loser].name}`}{' '}
+              en {result.turns} tours
               {result.mode === 'played' && <> ({Math.round(result.durationMs / 1000)} s)</>}
-              <br />
-              avec un coup final de <b className="text-stone-100">{finisher.damage}</b>
-              {finisher.crit && <b className="text-amber-300"> critique</b>}.
+              {finisher && (
+                <>
+                  <br />
+                  avec un dernier coup de <b className="text-stone-100">{finisher.dealt}</b>
+                  {finisher.crit && <b className="text-amber-300"> critique</b>}.
+                </>
+              )}
             </p>
           </div>
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3 text-center">
-          <Highlight label="Tours joués" value={attacks.length} />
+          <Highlight label="Tours joués" value={result.turns} />
           <Highlight
             label="Plus gros coup"
-            value={biggest.damage}
-            sub={`${fighters[biggest.attacker].name}, tour ${biggest.turn}${biggest.crit ? ' (critique)' : ''}`}
+            value={biggest?.dealt ?? '—'}
+            sub={
+              biggest && `${fighters[biggest.attacker].name}, tour ${biggest.turn}${biggest.crit ? ' (critique)' : ''}`
+            }
           />
           <Highlight label="Critiques" value={totalCrits} accent="text-amber-300" />
           <Highlight label="Esquives" value={totalDodges} accent="text-cyan-200" />
@@ -155,7 +189,7 @@ export function EndScreen({ result, onReplay, onMenu, tournament }: Props) {
               onClick={tournament.onContinue}
               className="rounded-xl bg-amber-500 py-3 font-display text-xl font-extrabold tracking-wider text-stone-950 shadow-[0_4px_0_#92400e] hover:bg-amber-400 active:translate-y-1 active:shadow-none"
             >
-              🏆 CONTINUER LE TOURNOI
+              <Icon name="trophy" /> CONTINUER LE TOURNOI
             </button>
           </div>
         ) : (
@@ -176,55 +210,63 @@ export function EndScreen({ result, onReplay, onMenu, tournament }: Props) {
         )}
       </div>
 
-      {/* Colonne droite : tableau comparatif */}
-      <table className="flex-1 self-center overflow-hidden rounded-xl border border-stone-800 text-sm">
-        <thead className="bg-stone-900">
-          <tr>
-            <th className="px-4 py-3 text-left font-normal text-stone-500">Statistique</th>
-            {([0, 1] as Side[]).map((s) => (
-              <th key={s} className={`px-4 py-3 text-right font-display text-lg ${SIDE_STYLE[s].accent}`}>
-                {fighters[s].name}
-                <span className="block font-sans text-xs font-normal text-stone-500">{fighters[s].race}</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        {SECTIONS.map((section) => (
-          <tbody key={section.title}>
-            <tr className="border-t border-stone-800 bg-stone-900/70">
-              <th
-                colSpan={3}
-                className="px-4 py-1 text-left text-xs font-bold uppercase tracking-widest text-stone-500"
-              >
-                {section.title}
-              </th>
-            </tr>
-            {section.rows.map((row) => (
-              <tr key={row.label} className="border-t border-stone-800/60">
-                <td className="px-4 py-1 text-stone-300">{row.label}</td>
-                {([0, 1] as Side[]).map((s) => (
-                  <td
-                    key={s}
-                    className={`px-4 py-2 text-right font-mono tabular-nums ${isBetter(row, s) ? 'font-bold text-amber-300' : 'text-stone-200'}`}
-                  >
-                    {row.value(stats[s])}
-                  </td>
+      {/* Colonne droite : statistiques comparées, réparties en onglets */}
+      <div className="flex min-w-0 flex-1 flex-col gap-4 self-center">
+        <Tabs tabs={TABS} value={tab} onChange={setTab} className="self-start" />
+        {/* Hauteur fixe : changer d'onglet ne fait pas sauter la mise en page */}
+        <div className="h-[520px]">
+          <table key={tab} className="fade-in w-full overflow-hidden rounded-xl border border-stone-800 text-sm">
+            <thead className="bg-stone-900">
+              <tr>
+                <th className="px-4 py-3 text-left font-normal text-stone-500">Statistique</th>
+                {SIDES.map((s) => (
+                  <th key={s} className={`px-4 py-3 text-right font-display text-lg ${SIDE_STYLE[s].accent}`}>
+                    {fighters[s].name}
+                    <span className="block font-sans text-xs font-normal text-stone-500">{fighters[s].race}</span>
+                  </th>
                 ))}
               </tr>
+            </thead>
+            {sections.map((section) => (
+              <tbody key={section.title}>
+                <tr className="border-t border-stone-800 bg-stone-900/70">
+                  <th
+                    colSpan={3}
+                    className="px-4 py-1 text-left text-xs font-bold uppercase tracking-widest text-stone-500"
+                  >
+                    {section.title}
+                  </th>
+                </tr>
+                {section.rows.map((row) => (
+                  <tr key={row.label} className="border-t border-stone-800/60">
+                    <td className="px-4 py-2 text-stone-300">{row.label}</td>
+                    {SIDES.map((s) => (
+                      <td
+                        key={s}
+                        className={`px-4 py-2 text-right font-mono tabular-nums ${isBetter(row, s) ? 'font-bold text-amber-300' : 'text-stone-200'}`}
+                      >
+                        {row.value(stats[s])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
             ))}
-          </tbody>
-        ))}
-        <tbody>
-          <tr className="border-t border-stone-800/60">
-            <td className="px-4 py-1 text-stone-300">Jets d'initiative</td>
-            {([0, 1] as Side[]).map((s) => (
-              <td key={s} className="px-4 py-1 text-right font-mono tabular-nums text-stone-200">
-                {result.initiative.map((r) => r[s]).join(' → ')}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+            {tab === 'dice' && (
+              <tbody>
+                <tr className="border-t border-stone-800/60">
+                  <td className="px-4 py-2 text-stone-300">Jets d'initiative</td>
+                  {SIDES.map((s) => (
+                    <td key={s} className="px-4 py-1 text-right font-mono tabular-nums text-stone-200">
+                      {result.initiative.map((r) => r[s]).join(' → ')}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            )}
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

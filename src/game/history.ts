@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import { computeStats, other, type CombatResult, type Pair, type Side } from './combat'
+import { other, SIDES, type CombatResult, type Pair, type Side } from './combat'
+import { computeStats } from './stats'
 
 /*
  * Historique des combats, conservé dans le localStorage du navigateur.
@@ -92,12 +93,21 @@ function load(): History {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return empty()
     // Complète les champs ajoutés depuis l'enregistrement des données.
-    const data = { ...empty(), ...JSON.parse(raw) } as History
-    for (const id of Object.keys(data.characters)) data.characters[id] = { ...emptyRecord(), ...data.characters[id] }
-    return data
+    return normalize(JSON.parse(raw))
   } catch {
     return empty()
   }
+}
+
+/** Complète un historique enregistré par une version antérieure (champs ajoutés depuis). */
+export function normalize(raw: unknown): History {
+  if (!raw || typeof raw !== 'object') return empty()
+  const data = { ...empty(), ...(raw as Partial<History>) }
+  const characters: Record<string, CharacterRecord> = {}
+  for (const [id, rec] of Object.entries(data.characters ?? {})) {
+    characters[id] = { ...emptyRecord(), ...rec, opponents: { ...rec?.opponents } }
+  }
+  return { ...data, characters, matches: Array.isArray(data.matches) ? data.matches : [] }
 }
 
 function save(history: History) {
@@ -135,14 +145,14 @@ function subscribe(listener: () => void) {
 
 export const getHistory = () => current
 
-export const useHistory = () => useSyncExternalStore(subscribe, getHistory)
+export const useHistory = () => useSyncExternalStore(subscribe, getHistory, getHistory)
 
 export function recordMatch(result: CombatResult, options: { tournament?: boolean } = {}) {
   const stats = computeStats(result)
   const ids: Pair<string> = [result.fighters[0].id, result.fighters[1].id]
   const characters = structuredClone(current.characters)
 
-  for (const side of [0, 1] as Side[]) {
+  for (const side of SIDES) {
     const s = stats[side]
     const opp = other(side)
     const rec = (characters[ids[side]] ??= emptyRecord())
@@ -150,7 +160,7 @@ export function recordMatch(result: CombatResult, options: { tournament?: boolea
     rec.fights++
     rec.wins += won
     rec[result.mode]++
-    rec.turns += result.attacks.length
+    rec.turns += result.turns
     rec.attacks += s.attacks
     rec.hits += s.hits
     rec.crits += s.crits
@@ -176,7 +186,7 @@ export function recordMatch(result: CombatResult, options: { tournament?: boolea
     fighters: ids,
     names: [result.fighters[0].name, result.fighters[1].name],
     winner: result.winner,
-    turns: result.attacks.length,
+    turns: result.turns,
     hpLeft: [stats[0].hpLeft, stats[1].hpLeft],
     damage: [stats[0].totalDamage, stats[1].totalDamage],
   }

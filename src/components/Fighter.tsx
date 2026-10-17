@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import type { Character } from '../game/character'
-import type { AppliedEffect, Side, TriggeredEvent } from '../game/combat'
+import type { AppliedEffect, Side } from '../game/combat'
+import { effectBadge, TONE_CLASS } from '../game/narration'
+import { POLARITY_STYLE, STATUSES, type Polarity, type Status } from '../game/statuses'
 
 /** Ce que le combattant subit pendant le coup en cours. */
 export interface Received {
@@ -19,17 +21,15 @@ interface Props {
   lunging?: boolean
   received?: Received
   state?: 'idle' | 'ko' | 'victory'
-  /** Événement en cours d'affichage sur ce combattant */
-  eventFx?: { key: number; event: TriggeredEvent }
+  /** Effets en cours d'affichage : titre et aura si ce combattant en est la source, badges s'il est visé */
+  fx?: { key: number; source: Side | null; title: string; effects: AppliedEffect[] }
+  /** Statuts actifs : une aura discrète au sol signale bonus (vert) et malus (rouge) */
+  statuses?: readonly Status[]
   className?: string
 }
 
-const effectBadge = (e: AppliedEffect) =>
-  e.type === 'heal'
-    ? { text: `+${e.amount} PV`, className: 'text-emerald-300 [-webkit-text-stroke:1.5px_#064e3b]' }
-    : e.kind === 'guaranteedCrit'
-      ? { text: '🎯 Critique assuré', className: 'text-amber-300 [-webkit-text-stroke:1px_#78350f]' }
-      : { text: `🛡️ +${e.amount} armure`, className: 'text-cyan-200 [-webkit-text-stroke:1px_#164e63]' }
+const polarities = (statuses: readonly Status[]) =>
+  (['positive', 'negative'] as Polarity[]).filter((p) => statuses.some((s) => STATUSES[s.id].polarity === p))
 
 export function Fighter({
   character,
@@ -37,7 +37,8 @@ export function Fighter({
   lunging = false,
   received,
   state = 'idle',
-  eventFx,
+  fx,
+  statuses = [],
   className = '',
 }: Props) {
   const style = { '--dir': side === 0 ? 1 : -1 } as CSSProperties
@@ -51,10 +52,26 @@ export function Fighter({
   const scale = character.look.scale
   const at = (pct: number) => ({ top: `${(1 - scale) * 100 + scale * pct}%` })
 
+  const isSource = fx !== undefined && fx.source === side
+  const badges = fx?.effects.filter((e) => e.target === side).map(effectBadge) ?? []
+  const auras = polarities(statuses)
+
   return (
     <div className={`relative aspect-[636/1062] h-full ${lunging ? 'z-20' : 'z-10'} ${className}`} style={style}>
       {/* ombre au sol */}
       <div className="absolute bottom-[1%] left-1/2 h-[5%] w-[80%] -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
+      {/* auras des statuts actifs : bonus et malus côte à côte */}
+      {auras.map((p, i) => (
+        <div
+          key={p}
+          className="status-aura pointer-events-none absolute bottom-0 h-[16%] rounded-[50%] blur-lg"
+          style={{
+            left: auras.length > 1 ? `${5 + i * 45}%` : '10%',
+            width: auras.length > 1 ? '50%' : '80%',
+            background: `radial-gradient(ellipse at 50% 70%, ${POLARITY_STYLE[p].glow} 0%, transparent 70%)`,
+          }}
+        />
+      ))}
 
       <div className={`h-full ${lunging ? 'lunge' : ''}`}>
         <div className={`h-full ${reaction}`}>
@@ -74,30 +91,34 @@ export function Fighter({
         </div>
       </div>
 
-      {eventFx && (
-        <div key={`ev${eventFx.key}`} className="pointer-events-none absolute inset-0 z-30">
-          <div
-            style={at(45)}
-            className="event-aura absolute left-1/2 aspect-square w-[130%] rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.55)_0%,rgba(167,139,250,0.15)_45%,transparent_70%)]"
-          />
-          <div
-            style={at(4)}
-            className="event-title absolute left-1/2 whitespace-nowrap rounded-full border border-violet-300/60 bg-violet-950/80 px-3 py-1 font-display text-lg font-extrabold text-violet-100"
-          >
-            ✨ {eventFx.event.name}
-          </div>
-          {eventFx.event.effects.map((e, i) => {
-            const badge = effectBadge(e)
-            return (
+      {fx && (isSource || badges.length > 0) && (
+        <div key={`fx-${fx.key}`} className="pointer-events-none absolute inset-0 z-30">
+          {isSource && (
+            <>
               <div
-                key={i}
-                style={at(20 + i * 10)}
-                className={`damage-float absolute left-1/2 whitespace-nowrap font-display text-4xl font-extrabold ${badge.className}`}
-              >
-                {badge.text}
-              </div>
-            )
-          })}
+                style={at(45)}
+                className="event-aura absolute left-1/2 aspect-square w-[130%] rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.55)_0%,rgba(167,139,250,0.15)_45%,transparent_70%)]"
+              />
+              {/* Nom de l'événement : même texte flottant qu'ESQUIVE ou CRITIQUE, en violet */}
+              {fx.title && (
+                <div
+                  style={at(6)}
+                  className="dodge-text absolute left-1/2 whitespace-nowrap font-display text-3xl font-extrabold uppercase text-violet-300 [-webkit-text-stroke:1.5px_#2e1065]"
+                >
+                  {fx.title} !
+                </div>
+              )}
+            </>
+          )}
+          {badges.map((badge, i) => (
+            <div
+              key={i}
+              style={at(20 + i * 10)}
+              className={`damage-float absolute left-1/2 whitespace-nowrap font-display text-4xl font-extrabold ${TONE_CLASS[badge.tone]}`}
+            >
+              {badge.text}
+            </div>
+          ))}
         </div>
       )}
 

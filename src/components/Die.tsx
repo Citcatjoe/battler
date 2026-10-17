@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { rollDie } from '../game/combat'
+import { defaultRng, rollDie } from '../game/rng'
 
 interface Props {
   value: number
@@ -11,14 +11,14 @@ interface Props {
 
 /** Dé stylisé : affiche des valeurs aléatoires tant qu'il roule. */
 export function Die({ value, faces, rolling, color = '#e7e5e4', size = 96 }: Props) {
-  const [face, setFace] = useState(value || rollDie(faces))
+  const [face, setFace] = useState(value || rollDie(defaultRng, faces))
 
   useEffect(() => {
     if (!rolling) {
       if (value) setFace(value)
       return
     }
-    const id = setInterval(() => setFace(rollDie(faces)), 70)
+    const id = setInterval(() => setFace(rollDie(defaultRng, faces)), 70)
     return () => clearInterval(id)
   }, [rolling, value, faces])
 

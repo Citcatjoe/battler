@@ -8,9 +8,9 @@ Le projet sert aussi de terrain d'essai : on ajoute des mécaniques une par une 
 
 ## Principes de conception
 
-1. **Un seul moteur de règles.** Le combat est calculé en entier par une fonction pure (`simulateCombat`). L'écran de combat ne fait que rejouer ce résultat avec des animations. Jouer et simuler donnent donc exactement les mêmes probabilités.
+1. **Un seul moteur de règles.** Le combat est calculé en entier par une fonction pure (`simulateCombat`). L'écran de combat ne fait que rejouer ce résultat avec des animations. Jouer et simuler donnent donc exactement les mêmes probabilités. Le hasard est injecté : avec une même graine, un combat se rejoue à l'identique, ce qui le rend testable.
 2. **Les personnages sont des données.** Un personnage est une définition dans le roster : stats, apparence, événements. On en ajoute sans toucher au moteur.
-3. **Des mécaniques extensibles.** Les événements reposent sur des déclencheurs et des effets génériques, pour pouvoir ajouter d'autres moments de déclenchement plus tard.
+3. **Des mécaniques extensibles.** Les événements reposent sur des déclencheurs et des effets génériques, les auras sur un registre de statuts. Chaque mécanique est définie à un seul endroit, règles et présentation comprises, et arrive avec ses tests.
 4. **L'équilibre se mesure.** Chaque changement de stats se vérifie par simulation (environ 20 000 combats par paire). La cible : chaque personnage gagne entre 45 et 55 % de ses combats.
 5. **Tout se voit.** Une règle qui joue sur le combat doit apparaître à l'écran : dé, badge, journal, bonus sous la barre de vie, statistiques de fin.
 6. **Local et sans friction.** Pas de serveur ni de compte. L'historique est enregistré dans le navigateur, le tournoi en cours vit en mémoire.

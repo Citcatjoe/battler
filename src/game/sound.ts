@@ -123,7 +123,9 @@ export const sfx = {
     tone({ freq: 190, to: 90, dur: 0.12, gain: 0.45 })
     noise({ dur: 0.07, freq: 900, gain: 0.25 })
     if (value === faces) {
-      ;[880, 1320, 1760].forEach((f, i) => tone({ at: 0.06 + i * 0.07, freq: f, dur: 0.25, type: 'triangle', gain: 0.12 }))
+      ;[880, 1320, 1760].forEach((f, i) =>
+        tone({ at: 0.06 + i * 0.07, freq: f, dur: 0.25, type: 'triangle', gain: 0.12 }),
+      )
     } else if (value === 1) {
       tone({ at: 0.05, freq: 240, to: 150, dur: 0.35, type: 'sawtooth', gain: 0.06 })
     }

@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react'
 import type { Character } from '../game/character'
 import type { MatchRecord } from '../game/history'
 import { ROSTER } from '../game/roster'
 import { Portrait } from './Portrait'
+import { Icon } from './Icon'
 
 export const fmtPct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`)
 export const fmtNum = (v: number | null, digits = 1) =>
@@ -30,7 +32,7 @@ export function WinBar({ rate }: { rate: number | null }) {
   )
 }
 
-export function Kpi({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+export function Kpi({ label, value, accent }: { label: ReactNode; value: string | number; accent?: string }) {
   return (
     <div className="rounded-lg border border-stone-800 bg-stone-900/60 px-3 py-2">
       <p className="text-[11px] uppercase tracking-wider text-stone-500">{label}</p>
@@ -57,8 +59,14 @@ export function MatchRow({ match, focus }: { match: MatchRecord; focus?: string 
         <span className={match.winner === 1 ? 'font-bold text-stone-100' : 'text-stone-400'}>{b}</span>
       </span>
       <span className="text-stone-500">{match.turns} t.</span>
-      {match.tournament && <span title="Match de tournoi">🏆</span>}
-      <span title={match.mode === 'simulated' ? 'Simulé' : 'Joué'}>{match.mode === 'simulated' ? '⚡' : '⚔'}</span>
+      {match.tournament && (
+        <span title="Match de tournoi">
+          <Icon name="trophy" />
+        </span>
+      )}
+      <span title={match.mode === 'simulated' ? 'Simulé' : 'Joué'}>
+        <Icon name={match.mode === 'simulated' ? 'lightning' : 'swords'} />
+      </span>
       <span className="w-20 text-right tabular-nums text-stone-500">{dateFmt.format(match.at)}</span>
     </li>
   )

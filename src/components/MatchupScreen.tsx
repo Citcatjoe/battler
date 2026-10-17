@@ -1,9 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { ARENAS, getArena, RANDOM_ARENA, type ArenaChoice } from '../game/arenas'
 import type { Character } from '../game/character'
-import { multiplier, percent, SIDE_STYLE, type Pair, type Side } from '../game/combat'
+import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
 import { EventInfo } from './EventInfo'
+import { StatSheet } from './StatSheet'
+import { Icon } from './Icon'
 
 interface Props {
   fighters: Pair<Character>
@@ -13,6 +16,9 @@ interface Props {
   /** Bandeau au-dessus du duel, ex. « Quarts de finale · Match 2 » */
   title?: string
   backLabel?: string
+  /** Cadre du combat : une arène précise ou « au hasard » */
+  arena: ArenaChoice
+  onArenaChange: (arena: ArenaChoice) => void
 }
 
 /** Écran d'affrontement : présente le duel et laisse choisir entre le jouer ou le simuler. */
@@ -23,6 +29,8 @@ export function MatchupScreen({
   onBack,
   title = 'Affrontement',
   backLabel = '← CHANGER',
+  arena,
+  onArenaChange,
 }: Props) {
   // Fracas quand le « VS » s'abat ; le délai est annulé si l'écran est démonté entre-temps.
   useEffect(() => {
@@ -32,10 +40,28 @@ export function MatchupScreen({
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_110%,#57534e_0%,#1c1917_45%,#0c0a09_80%)]">
+      {/* Aperçu de l'arène choisie, très assombri */}
+      {arena !== RANDOM_ARENA && (
+        <>
+          <img
+            key={arena}
+            src={getArena(arena).image}
+            alt=""
+            draggable={false}
+            className="fade-in pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+            style={{ objectPosition: getArena(arena).focus, filter: 'brightness(0.4) saturate(0.75) blur(2px)' }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(87,83,78,0.25)_0%,rgba(12,10,9,0.55)_55%,rgba(12,10,9,0.9)_100%)]" />
+        </>
+      )}
       <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-sky-500/10 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-rose-500/10 to-transparent" />
 
-      <p className="relative pt-8 text-center text-sm font-bold uppercase tracking-[0.5em] text-stone-500">{title}</p>
+      {/* Respiration entre le titre et le choix de l'arène */}
+      <header className="relative flex flex-col items-center gap-6 pt-8">
+        <p className="text-sm font-bold uppercase tracking-[0.5em] text-stone-500">{title}</p>
+        <ArenaSlider value={arena} onChange={onArenaChange} />
+      </header>
 
       <div className="relative grid flex-1 grid-cols-[1fr_auto_1fr] items-end px-10">
         {([0, 1] as Side[]).map((side) => (
@@ -47,40 +73,79 @@ export function MatchupScreen({
       </div>
 
       <div className="relative flex items-center justify-center gap-6 pb-10 pt-4">
-        <button
-          onClick={onBack}
-          className="w-56 rounded-xl border border-stone-700 py-4 font-display text-lg font-bold tracking-wider text-stone-300 hover:bg-stone-800"
-        >
-          {backLabel}
+        <button onClick={onBack} className="btn btn-md w-56">
+          <span>{backLabel}</span>
         </button>
-        <button
-          onClick={onPlay}
-          className="w-80 rounded-xl bg-amber-500 py-5 font-display text-3xl font-extrabold tracking-widest text-stone-950 shadow-[0_5px_0_#92400e] transition hover:bg-amber-400 active:translate-y-1 active:shadow-[0_1px_0_#92400e]"
-        >
-          ⚔ JOUER
+        <button onClick={onPlay} className="btn btn-primary btn-lg w-80">
+          <Icon name="swords" className="btn-icon" />
+          <span>Jouer</span>
         </button>
         <button
           onClick={onSimulate}
           title="Résout le combat instantanément, avec les mêmes règles, et affiche les scores"
-          className="w-56 rounded-xl border-2 border-amber-500/70 py-4 font-display text-lg font-extrabold tracking-wider text-amber-200 hover:bg-amber-500/10"
+          className="btn btn-md w-56"
         >
-          ⚡ SIMULER
+          <Icon name="lightning" className="btn-icon" />
+          <span>Simuler</span>
         </button>
       </div>
     </div>
   )
 }
 
+/** Arènes proposées, dans l'ordre du sélecteur : chacune, puis « au hasard ». */
+const ARENA_CHOICES: readonly ArenaChoice[] = [...ARENAS.map((a) => a.id), RANDOM_ARENA]
+
+/** Sélecteur d'arène ‹ nom › : change le décor en fond de l'écran. Flèches du clavier acceptées. */
+function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena: ArenaChoice) => void }) {
+  const index = Math.max(0, ARENA_CHOICES.indexOf(value))
+  const step = (delta: number) => {
+    sfx.click()
+    onChange(ARENA_CHOICES[(index + delta + ARENA_CHOICES.length) % ARENA_CHOICES.length])
+  }
+  // Les flèches gauche/droite parcourent les arènes.
+  const stepRef = useRef(step)
+  stepRef.current = step
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') stepRef.current(-1)
+      if (e.key === 'ArrowRight') stepRef.current(1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const random = value === RANDOM_ARENA
+  return (
+    <div className="flex items-center gap-3" role="group" aria-label="Arène">
+      <button onClick={() => step(-1)} aria-label="Arène précédente" className="btn btn-round h-10 w-10 text-lg">
+        <span>‹</span>
+      </button>
+      <div className="flex w-80 flex-col items-center">
+        <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-stone-500">Arène</span>
+        <span
+          key={value}
+          className="fade-in flex items-center gap-2 font-display text-2xl font-extrabold text-amber-100 drop-shadow-[0_2px_0_#000]"
+        >
+          {random && <Icon name="dice" />}
+          {random ? 'Au hasard' : getArena(value).name}
+        </span>
+        {/* Points de position */}
+        <span className="mt-1 flex gap-1.5">
+          {ARENA_CHOICES.map((c, i) => (
+            <span key={c} className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-amber-300' : 'bg-stone-600'}`} />
+          ))}
+        </span>
+      </div>
+      <button onClick={() => step(1)} aria-label="Arène suivante" className="btn btn-round h-10 w-10 text-lg">
+        <span>›</span>
+      </button>
+    </div>
+  )
+}
+
 function FighterCard({ character, side }: { character: Character; side: Side }) {
   const style = SIDE_STYLE[side]
-  const s = character.stats
-  const chips = [
-    ['PV', s.maxHp],
-    ['Dégâts', `1d${s.damageDie}`],
-    ['Armure', s.armor],
-    ['Esquive', percent(s.dodgeChance)],
-    ['Critique', `${percent(s.critChance)} ${multiplier(s.critMultiplier)}`],
-  ]
   return (
     <div
       className={`row-start-1 flex items-end gap-6 ${side === 0 ? 'slide-in-left col-start-1' : 'slide-in-right col-start-3 flex-row-reverse'}`}
@@ -95,14 +160,10 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
             {character.race} · {character.archetype}
           </p>
         </div>
-        <dl className={`flex max-w-72 flex-wrap gap-1.5 ${side === 1 ? 'justify-end' : ''}`}>
-          {chips.map(([k, v]) => (
-            <div key={k} className="rounded-md border border-stone-700 bg-stone-900/70 px-2 py-1 text-xs">
-              <dt className="inline text-stone-500">{k} </dt>
-              <dd className="inline font-mono font-bold text-stone-100">{v}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* Mêmes barres que sur l'écran de sélection, à la couleur du camp */}
+        <div className="w-72 rounded-lg border border-stone-800 bg-stone-900/60 px-3 py-2.5 text-left">
+          <StatSheet character={character} barClass={style.bar} />
+        </div>
         <div className="max-w-72 text-left">
           <EventInfo character={character} compact />
         </div>

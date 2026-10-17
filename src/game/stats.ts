@@ -1,0 +1,84 @@
+import { attacksOf, finalState, type CombatResult, type Pair, type Side } from './combat'
+import { STATUSES, type StatusId } from './statuses'
+
+const isNegative = (id: StatusId) => STATUSES[id].polarity === 'negative'
+
+/** Bilan d'un combattant sur un combat, calculé uniquement à partir de la chronologie. */
+export interface FighterStats {
+  attacks: number
+  hits: number
+  hitRate: number
+  dodges: number
+  dodgeAttempts: number
+  /** Dégâts retenus par son armure et ses boucliers */
+  absorbed: number
+  crits: number
+  critDamage: number
+  totalDamage: number
+  averagePerHit: number
+  best: number
+  worst: number
+  maxRolls: number
+  minRolls: number
+  hpLeft: number
+  /** Événements déclenchés par ce combattant */
+  events: number
+  /** PV regagnés, toutes sources confondues */
+  healed: number
+  /** Dégâts subis hors des coups (effets, statuts) */
+  effectDamageTaken: number
+  /** Critiques imposés par un statut */
+  forcedCrits: number
+  /** Part retenue par ses boucliers */
+  shieldAbsorbed: number
+  /** Statuts négatifs reçus */
+  debuffsTaken: number
+}
+
+export function computeStats(result: CombatResult): Pair<FighterStats> {
+  const attacks = attacksOf(result)
+  const final = finalState(result)
+
+  // Effets appliqués, quelle que soit leur origine (événement ou statut).
+  const applied = result.beats.flatMap((b) =>
+    b.type === 'event' ? b.event.effects : b.type === 'statusTick' || b.type === 'statusReaction' ? b.effects : [],
+  )
+
+  const forSide = (side: Side): FighterStats => {
+    const mine = attacks.filter((a) => a.attacker === side)
+    const theirs = attacks.filter((a) => a.attacker !== side)
+    const hits = mine.filter((a) => !a.dodged)
+    const crits = hits.filter((a) => a.crit)
+    // PV réellement retirés : le coup fatal ne compte que ce qu'il fallait pour atteindre 0.
+    const dealt = hits.map((a) => a.dealt)
+    const total = dealt.reduce((s, d) => s + d, 0)
+    const onMe = applied.filter((e) => e.target === side)
+    const sum = (type: 'heal' | 'damage') => onMe.reduce((s, e) => s + (e.type === type ? e.amount : 0), 0)
+    return {
+      attacks: mine.length,
+      hits: hits.length,
+      hitRate: mine.length ? hits.length / mine.length : 0,
+      dodges: theirs.filter((a) => a.dodged).length,
+      dodgeAttempts: theirs.length,
+      absorbed: theirs.reduce((s, a) => s + a.armorAbsorbed + a.shieldAbsorbed, 0),
+      crits: crits.length,
+      critDamage: crits.reduce((s, a) => s + a.dealt, 0),
+      totalDamage: total,
+      averagePerHit: hits.length ? total / hits.length : 0,
+      best: dealt.length ? Math.max(...dealt) : 0,
+      worst: dealt.length ? Math.min(...dealt) : 0,
+      maxRolls: mine.filter((a) => a.roll === a.faces).length,
+      minRolls: mine.filter((a) => a.roll === 1).length,
+      hpLeft: final.hp[side],
+      events: result.beats.filter((b) => b.type === 'event' && b.event.side === side).length,
+      healed: sum('heal'),
+      effectDamageTaken: sum('damage'),
+      forcedCrits: mine.filter((a) => a.critForced).length,
+      shieldAbsorbed: theirs.reduce((s, a) => s + a.shieldAbsorbed, 0),
+      // Seuls les malus réellement posés (ni bloqués ni annulés par leur opposé)
+      debuffsTaken: onMe.filter((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && isNegative(e.status))
+        .length,
+    }
+  }
+  return [forSide(0), forSide(1)]
+}

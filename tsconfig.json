@@ -9,6 +9,7 @@
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "erasableSyntaxOnly": true,
     "types": ["vite/client"]
   },
   "include": ["src", "vite.config.ts"]

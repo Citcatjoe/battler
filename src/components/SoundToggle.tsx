@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { isMuted, setMuted, sfx } from '../game/sound'
+import { Icon } from './Icon'
 
 export function SoundToggle() {
   const [muted, setState] = useState(isMuted)
@@ -13,9 +14,9 @@ export function SoundToggle() {
       onClick={toggle}
       title={muted ? 'Activer le son' : 'Couper le son'}
       aria-label={muted ? 'Activer le son' : 'Couper le son'}
-      className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-stone-700 bg-stone-900/80 text-lg backdrop-blur hover:bg-stone-800"
+      className="btn btn-round absolute right-4 top-4 z-50"
     >
-      {muted ? '🔇' : '🔊'}
+      <Icon name={muted ? 'sound-off' : 'sound-on'} className="btn-icon" />
     </button>
   )
 }

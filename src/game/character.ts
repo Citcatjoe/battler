@@ -1,4 +1,5 @@
 import type { CharacterEvent } from './events'
+import type { StatusId } from './statuses'
 
 export interface CharacterStats {
   maxHp: number
@@ -14,6 +15,15 @@ export interface CharacterStats {
   critMultiplier: number
 }
 
+export const STAT_KEYS = [
+  'maxHp',
+  'damageDie',
+  'armor',
+  'dodgeChance',
+  'critChance',
+  'critMultiplier',
+] as const satisfies readonly (keyof CharacterStats)[]
+
 export interface CharacterLook {
   image: string
   /** Sens dans lequel regarde l'image source */
@@ -26,6 +36,16 @@ export interface CharacterLook {
   portrait: { x: number; y: number; zoom: number }
 }
 
+/** Fiche courte affichée en jeu. La philosophie et les choix de design sont dans docs/PERSONNAGES.md. */
+export interface CharacterLore {
+  /** Une phrase d'accroche */
+  tagline: string
+  /** Deux ou trois phrases, pas plus */
+  background: string
+  strengths: readonly string[]
+  weaknesses: readonly string[]
+}
+
 export interface CharacterDef {
   id: string
   name: string
@@ -36,69 +56,61 @@ export interface CharacterDef {
   baseId?: string
   stats: CharacterStats
   look: CharacterLook
+  lore: CharacterLore
   /** Capacités déclenchées en combat ; une variante hérite de celles de son original */
-  events: CharacterEvent[]
+  events: readonly CharacterEvent[]
+  /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
+  immunities?: readonly StatusId[]
 }
 
-const chance = (p: number) => Math.random() < p
-
-/** Un personnage jouable : ses caractéristiques de base et ses jets. Immuable. */
+/**
+ * Un personnage jouable : identité, caractéristiques de base et événements.
+ * Pure donnée, immuable : les jets et les règles vivent dans le moteur (`combat.ts`).
+ */
 export class Character {
   readonly id: string
   readonly name: string
   readonly race: string
   readonly archetype: string
   readonly baseId?: string
-  readonly stats: CharacterStats
-  readonly look: CharacterLook
-  readonly events: CharacterEvent[]
+  readonly stats: Readonly<CharacterStats>
+  readonly look: Readonly<CharacterLook>
+  readonly lore: CharacterLore
+  readonly events: readonly CharacterEvent[]
+  readonly immunities: readonly StatusId[]
+  readonly #def: CharacterDef
 
   constructor(def: CharacterDef) {
+    this.#def = def
     this.id = def.id
     this.name = def.name
     this.race = def.race
     this.archetype = def.archetype
     this.baseId = def.baseId
-    this.stats = { ...def.stats }
-    this.look = { ...def.look }
+    this.stats = Object.freeze({ ...def.stats })
+    this.look = Object.freeze({ ...def.look })
+    this.lore = def.lore
     this.events = def.events
+    this.immunities = def.immunities ?? []
   }
 
   get maxHp() {
     return this.stats.maxHp
   }
 
-  rollDamage() {
-    return 1 + Math.floor(Math.random() * this.stats.damageDie)
-  }
-
-  rollCrit() {
-    return chance(this.stats.critChance)
-  }
-
-  rollDodge() {
-    return chance(this.stats.dodgeChance)
-  }
-
   /** Même personnage (mêmes id et stats) sous un autre nom, ex. « Gorak II » en tournoi. */
-  renamed(name: string) {
-    const copy = Object.create(Character.prototype) as Character
-    return Object.assign(copy, this, { name })
-  }
-
-  /** Dégâts réellement subis après l'armure. */
-  absorb(damage: number) {
-    return Math.max(1, damage - this.stats.armor)
+  withName(name: string) {
+    return new Character({ ...this.#def, name })
   }
 }
 
 /**
  * Décline un personnage : nouvelle identité, nouveau coloris et petits ajustements de stats.
- * Les deltas de `stats` s'ajoutent à ceux de la base.
+ * Les deltas de `stats` s'ajoutent à ceux de la base ; les événements sont hérités.
  */
 export function variant(
   base: CharacterDef,
-  changes: Pick<CharacterDef, 'id' | 'name' | 'archetype'> & {
+  changes: Pick<CharacterDef, 'id' | 'name' | 'archetype' | 'lore'> & {
     tint: string
     stats: Partial<CharacterStats>
   },
@@ -112,6 +124,7 @@ export function variant(
     id: changes.id,
     name: changes.name,
     archetype: changes.archetype,
+    lore: changes.lore,
     baseId: base.id,
     stats,
     look: { ...base.look, tint: changes.tint },
