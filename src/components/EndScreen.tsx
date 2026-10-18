@@ -4,6 +4,8 @@ import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
 import { Icon } from './Icon'
 import { Tabs, type TabDef } from './Tabs'
+import { CopyTraceButton } from './CopyTraceButton'
+import { BetsResult, type BetsOutcome } from './Betting'
 
 interface Props {
   result: CombatResult
@@ -13,6 +15,8 @@ interface Props {
   tournament?: { label: string; onContinue: () => void }
   /** Onglet affiché à l'ouverture */
   initialTab?: EndTab
+  /** Règlement des paris du match et classement des parieurs (docs/PARIS.md) : moitié droite de l'écran */
+  bets?: BetsOutcome
 }
 
 interface Row {
@@ -108,185 +112,209 @@ const SECTIONS: Section[] = [
   },
 ]
 
-export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = 'summary' }: Props) {
+export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = 'summary', bets }: Props) {
   const stats = computeStats(result)
   const { fighters, winner } = result
   const attacks = attacksOf(result)
   const loser = other(winner)
   // Dernier coup porté par le vainqueur (le K.O. peut venir d'un effet, ex. poison)
-  const finisher = [...attacks].reverse().find((a) => a.attacker === winner && !a.dodged)
+  const finisher = [...attacks].reverse().find((a) => a.attacker === winner && !a.dodged && !a.forfeited)
   const biggest = attacks.reduce<(typeof attacks)[number] | undefined>(
     (best, a) => (!best || a.dealt > best.dealt ? a : best),
     undefined,
   )
-  const totalCrits = stats[0].crits + stats[1].crits
-  const totalDodges = stats[0].dodges + stats[1].dodges
+  const [details, setDetails] = useState(false)
+  const w = stats[winner]
+  const l = stats[loser]
+  const totalDamage = w.totalDamage + l.totalDamage || 1
 
+  return (
+    <div className="fade-in relative grid h-full grid-cols-2">
+      {/* Moitié gauche : le combat */}
+      <section className="relative flex flex-col overflow-hidden px-14 pb-10 pt-10">
+        <div
+          className={`pointer-events-none absolute -left-40 top-10 h-[700px] w-[700px] rounded-full opacity-30 blur-3xl ${winner === 0 ? 'bg-sky-600' : 'bg-rose-600'}`}
+        />
+        <div className="relative flex items-center gap-4">
+          <h2 className="font-display text-4xl font-extrabold tracking-[0.25em] text-amber-200">COMBAT</h2>
+          <div className="codex-divider flex-1" />
+          {result.mode === 'simulated' && (
+            <p className="rounded-md border border-amber-500/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-200">
+              <Icon name="lightning" /> Simulé
+            </p>
+          )}
+        </div>
+
+        <div className="relative flex flex-1 items-end gap-2">
+          <div className="h-[430px] w-[300px] shrink-0">
+            <Fighter character={fighters[winner]} side={0} state="victory" />
+          </div>
+          <div className="mb-8 min-w-0">
+            <p className="text-sm font-bold uppercase tracking-[0.4em] text-amber-300">Vainqueur</p>
+            <h1 className={`font-display text-7xl font-extrabold leading-none ${SIDE_STYLE[winner].accent}`}>{fighters[winner].name}</h1>
+            <p className="mt-1 text-base text-stone-500">
+              {fighters[winner].race} · {fighters[winner].archetype}
+            </p>
+            <p className="mt-4 text-xl text-stone-300">
+              met <b className={SIDE_STYLE[loser].accent}>{fighters[loser].name}</b> K.O. en <b className="text-stone-100">{result.turns} tours</b>
+            </p>
+            {finisher && (
+              <p className="text-lg text-stone-400">
+                d'un dernier coup de <b className="text-stone-100">{finisher.dealt}</b>
+                {finisher.crit && <b className="text-amber-300"> critique</b>}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Faits marquants : grandes tuiles lisibles de loin */}
+        <div className="relative grid grid-cols-4 gap-3">
+          <Highlight label="PV restants" value={`${w.hpLeft}`} sub={`sur ${fighters[winner].maxHp}`} accent="text-emerald-300" />
+          <Highlight label="Plus gros coup" value={biggest?.dealt ?? '—'} sub={biggest ? `${fighters[biggest.attacker].name}${biggest.crit ? ', critique' : ''}` : undefined} />
+          <Highlight label="Critiques" value={stats[0].crits + stats[1].crits} accent="text-amber-300" />
+          <Highlight label="Esquives" value={stats[0].dodges + stats[1].dodges} accent="text-cyan-200" />
+        </div>
+        {/* Part des dégâts de chacun */}
+        <div className="relative mt-4">
+          <div className="mb-1 flex justify-between text-xs uppercase tracking-wider text-stone-500">
+            <span>
+              Dégâts · <b className={SIDE_STYLE[0].accent}>{stats[0].totalDamage}</b>
+            </span>
+            <span>
+              <b className={SIDE_STYLE[1].accent}>{stats[1].totalDamage}</b>
+            </span>
+          </div>
+          <div className="flex h-3 overflow-hidden rounded-full border border-black bg-stone-900">
+            <div className="bg-sky-500" style={{ width: `${(stats[0].totalDamage / totalDamage) * 100}%` }} />
+            <div className="flex-1 bg-rose-500" />
+          </div>
+        </div>
+
+        <div className="relative mt-6 flex items-center gap-4">
+          {tournament ? (
+            <button onClick={tournament.onContinue} className="btn btn-primary btn-lg flex-1" title={tournament.label}>
+              <Icon name="trophy" className="btn-icon" />
+              <span>Continuer</span>
+            </button>
+          ) : (
+            <>
+              <button onClick={onReplay} className="btn btn-primary btn-lg flex-1">
+                <span>Revanche</span>
+              </button>
+              <button onClick={onMenu} className="btn btn-md w-40">
+                <span>Menu</span>
+              </button>
+            </>
+          )}
+          {bets && (
+            <button onClick={() => setDetails(true)} className="btn btn-md w-56">
+              <Icon name="stats" className="btn-icon" />
+              <span>Détails</span>
+            </button>
+          )}
+        </div>
+        {tournament && <p className="relative mt-2 text-center text-sm text-stone-400">{tournament.label}</p>}
+      </section>
+
+      {/* Moitié droite : les paris et le classement, ou les statistiques si personne ne parie */}
+      <section className="relative flex flex-col border-l border-amber-900/30 bg-gradient-to-b from-stone-950/40 to-black/60 px-12 py-10">
+        {bets ? (
+          <BetsResult outcome={bets} fighterNames={[fighters[0].name, fighters[1].name]} />
+        ) : (
+          <StatsTable result={result} stats={stats} initialTab={initialTab} />
+        )}
+      </section>
+
+      {details && (
+        <div className="desk-in absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-black/90 px-24">
+          <div className="w-full max-w-5xl">
+            <StatsTable result={result} stats={stats} initialTab={initialTab} />
+          </div>
+          <button onClick={() => setDetails(false)} className="btn btn-primary btn-md w-64">
+            <span>Fermer</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Statistiques comparées des deux combattants, réparties en onglets. */
+function StatsTable({ result, stats, initialTab }: { result: CombatResult; stats: FighterStats[]; initialTab: EndTab }) {
+  const { fighters } = result
   const [tab, setTab] = useState<EndTab>(initialTab)
   const sections = SECTIONS.filter((section) => section.tab === tab)
-
   const isBetter = (row: Row, side: Side) => {
     if (!row.score) return false
     const [a, b] = [row.score(stats[0]), row.score(stats[1])]
     return a !== b && (side === 0 ? a > b : b > a)
   }
-
   return (
-    <div className="fade-in flex h-full items-center gap-12 px-16 py-8">
-      {/* Colonne gauche : vainqueur et faits marquants */}
-      <div className="flex w-[600px] shrink-0 flex-col gap-6">
-        <div className="flex items-end gap-6">
-          <div className="h-[400px]">
-            <Fighter character={fighters[winner]} side={0} state="victory" />
-          </div>
-          <div className="mb-10">
-            {result.mode === 'simulated' && (
-              <p className="mb-2 inline-block rounded-md border border-amber-500/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-200">
-                <Icon name="lightning" /> Combat simulé
-              </p>
-            )}
-            <p className="text-sm uppercase tracking-[0.3em] text-stone-400">Vainqueur</p>
-            <h1 className={`font-display text-6xl font-extrabold ${SIDE_STYLE[winner].accent}`}>
-              {fighters[winner].name}
-            </h1>
-            <p className="text-sm text-stone-500">
-              {fighters[winner].race} · {fighters[winner].archetype}
-            </p>
-            <p className="mt-2 text-stone-400">
-              {result.endedBy === 'ko'
-                ? `met ${fighters[loser].name} K.O.`
-                : `l'emporte aux PV sur ${fighters[loser].name}`}{' '}
-              en {result.turns} tours
-              {result.mode === 'played' && <> ({Math.round(result.durationMs / 1000)} s)</>}
-              {finisher && (
-                <>
-                  <br />
-                  avec un dernier coup de <b className="text-stone-100">{finisher.dealt}</b>
-                  {finisher.crit && <b className="text-amber-300"> critique</b>}.
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid w-full grid-cols-2 gap-3 text-center">
-          <Highlight label="Tours joués" value={result.turns} />
-          <Highlight
-            label="Plus gros coup"
-            value={biggest?.dealt ?? '—'}
-            sub={
-              biggest && `${fighters[biggest.attacker].name}, tour ${biggest.turn}${biggest.crit ? ' (critique)' : ''}`
-            }
-          />
-          <Highlight label="Critiques" value={totalCrits} accent="text-amber-300" />
-          <Highlight label="Esquives" value={totalDodges} accent="text-cyan-200" />
-        </div>
-
-        {tournament ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-center text-sm text-stone-400">{tournament.label}</p>
-            <button
-              onClick={tournament.onContinue}
-              className="rounded-xl bg-amber-500 py-3 font-display text-xl font-extrabold tracking-wider text-stone-950 shadow-[0_4px_0_#92400e] hover:bg-amber-400 active:translate-y-1 active:shadow-none"
-            >
-              <Icon name="trophy" /> CONTINUER LE TOURNOI
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-4">
-            <button
-              onClick={onReplay}
-              className="flex-1 rounded-xl bg-amber-500 py-3 font-display text-xl font-extrabold tracking-wider text-stone-950 shadow-[0_4px_0_#92400e] hover:bg-amber-400 active:translate-y-1 active:shadow-none"
-            >
-              REVANCHE
-            </button>
-            <button
-              onClick={onMenu}
-              className="flex-1 rounded-xl border border-stone-700 py-3 font-display text-xl font-bold tracking-wider hover:bg-stone-800"
-            >
-              MENU
-            </button>
-          </div>
-        )}
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-4">
+        <Tabs tabs={TABS} value={tab} onChange={setTab} />
+        <CopyTraceButton result={result} />
       </div>
-
-      {/* Colonne droite : statistiques comparées, réparties en onglets */}
-      <div className="flex min-w-0 flex-1 flex-col gap-4 self-center">
-        <Tabs tabs={TABS} value={tab} onChange={setTab} className="self-start" />
-        {/* Hauteur fixe : changer d'onglet ne fait pas sauter la mise en page */}
-        <div className="h-[520px]">
-          <table key={tab} className="fade-in w-full overflow-hidden rounded-xl border border-stone-800 text-sm">
-            <thead className="bg-stone-900">
-              <tr>
-                <th className="px-4 py-3 text-left font-normal text-stone-500">Statistique</th>
-                {SIDES.map((s) => (
-                  <th key={s} className={`px-4 py-3 text-right font-display text-lg ${SIDE_STYLE[s].accent}`}>
-                    {fighters[s].name}
-                    <span className="block font-sans text-xs font-normal text-stone-500">{fighters[s].race}</span>
-                  </th>
-                ))}
+      {/* Hauteur fixe : changer d'onglet ne fait pas sauter la mise en page */}
+      <div className="h-[520px]">
+        <table key={tab} className="fade-in w-full overflow-hidden rounded-xl border border-stone-800 text-sm">
+          <thead className="bg-stone-900">
+            <tr>
+              <th className="px-4 py-3 text-left font-normal text-stone-500">Statistique</th>
+              {SIDES.map((s) => (
+                <th key={s} className={`px-4 py-3 text-right font-display text-lg ${SIDE_STYLE[s].accent}`}>
+                  {fighters[s].name}
+                  <span className="block font-sans text-xs font-normal text-stone-500">{fighters[s].race}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {sections.map((section) => (
+            <tbody key={section.title}>
+              <tr className="border-t border-stone-800 bg-stone-900/70">
+                <th colSpan={3} className="px-4 py-1 text-left text-xs font-bold uppercase tracking-widest text-stone-500">
+                  {section.title}
+                </th>
               </tr>
-            </thead>
-            {sections.map((section) => (
-              <tbody key={section.title}>
-                <tr className="border-t border-stone-800 bg-stone-900/70">
-                  <th
-                    colSpan={3}
-                    className="px-4 py-1 text-left text-xs font-bold uppercase tracking-widest text-stone-500"
-                  >
-                    {section.title}
-                  </th>
-                </tr>
-                {section.rows.map((row) => (
-                  <tr key={row.label} className="border-t border-stone-800/60">
-                    <td className="px-4 py-2 text-stone-300">{row.label}</td>
-                    {SIDES.map((s) => (
-                      <td
-                        key={s}
-                        className={`px-4 py-2 text-right font-mono tabular-nums ${isBetter(row, s) ? 'font-bold text-amber-300' : 'text-stone-200'}`}
-                      >
-                        {row.value(stats[s])}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            ))}
-            {tab === 'dice' && (
-              <tbody>
-                <tr className="border-t border-stone-800/60">
-                  <td className="px-4 py-2 text-stone-300">Jets d'initiative</td>
+              {section.rows.map((row) => (
+                <tr key={row.label} className="border-t border-stone-800/60">
+                  <td className="px-4 py-2 text-stone-300">{row.label}</td>
                   {SIDES.map((s) => (
-                    <td key={s} className="px-4 py-1 text-right font-mono tabular-nums text-stone-200">
-                      {result.initiative.map((r) => r[s]).join(' → ')}
+                    <td
+                      key={s}
+                      className={`px-4 py-2 text-right font-mono tabular-nums ${isBetter(row, s) ? 'font-bold text-amber-300' : 'text-stone-200'}`}
+                    >
+                      {row.value(stats[s])}
                     </td>
                   ))}
                 </tr>
-              </tbody>
-            )}
-          </table>
-        </div>
+              ))}
+            </tbody>
+          ))}
+          {tab === 'dice' && (
+            <tbody>
+              <tr className="border-t border-stone-800/60">
+                <td className="px-4 py-2 text-stone-300">Jets d'initiative</td>
+                {SIDES.map((s) => (
+                  <td key={s} className="px-4 py-1 text-right font-mono tabular-nums text-stone-200">
+                    {result.initiative.map((r) => r[s]).join(' → ')}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          )}
+        </table>
       </div>
     </div>
   )
 }
 
-function Highlight({
-  label,
-  value,
-  sub,
-  accent = '',
-}: {
-  label: string
-  value: string | number
-  sub?: string
-  accent?: string
-}) {
+function Highlight({ label, value, sub, accent = '' }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
-    <div className="rounded-xl border border-stone-800 bg-stone-900/60 px-3 py-4">
-      <p className="text-xs uppercase tracking-wider text-stone-500">{label}</p>
-      <p className={`font-display text-3xl font-extrabold ${accent}`}>{value}</p>
-      {sub && <p className="text-xs text-stone-400">{sub}</p>}
+    <div className="codex-card items-center px-3 py-3 text-center">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">{label}</p>
+      <p className={`font-display text-4xl font-extrabold leading-tight ${accent}`}>{value}</p>
+      <p className="h-4 truncate text-xs text-stone-400">{sub}</p>
     </div>
   )
 }

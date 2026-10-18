@@ -41,15 +41,17 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
 
   // Effets appliqués, quelle que soit leur origine (événement ou statut).
   const applied = result.beats.flatMap((b) =>
-    b.type === 'event' ? b.event.effects : b.type === 'statusTick' || b.type === 'statusReaction' ? b.effects : [],
+    b.type === 'event' ? b.event.effects : b.type === 'statusTick' || b.type === 'statusReaction' || b.type === 'coin' ? b.effects : [],
   )
 
   const forSide = (side: Side): FighterStats => {
-    const mine = attacks.filter((a) => a.attacker === side)
-    const theirs = attacks.filter((a) => a.attacker !== side)
+    // Un coup sacrifié par une compétence (Vol de vie) n'est ni porté ni esquivé ; seul son dé compte.
+    const rolls = attacks.filter((a) => a.attacker === side)
+    const mine = rolls.filter((a) => !a.forfeited)
+    const theirs = attacks.filter((a) => a.attacker !== side && !a.forfeited)
     const hits = mine.filter((a) => !a.dodged)
     const crits = hits.filter((a) => a.crit)
-    // PV réellement retirés : le coup fatal ne compte que ce qu'il fallait pour atteindre 0.
+    // Dégâts comptés en entier, excès du coup fatal compris (overkill, 0.34.0).
     const dealt = hits.map((a) => a.dealt)
     const total = dealt.reduce((s, d) => s + d, 0)
     const onMe = applied.filter((e) => e.target === side)
@@ -67,8 +69,8 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
       averagePerHit: hits.length ? total / hits.length : 0,
       best: dealt.length ? Math.max(...dealt) : 0,
       worst: dealt.length ? Math.min(...dealt) : 0,
-      maxRolls: mine.filter((a) => a.roll === a.faces).length,
-      minRolls: mine.filter((a) => a.roll === 1).length,
+      maxRolls: rolls.filter((a) => a.roll === a.faces).length,
+      minRolls: rolls.filter((a) => a.roll === 1).length,
       hpLeft: final.hp[side],
       events: result.beats.filter((b) => b.type === 'event' && b.event.side === side).length,
       healed: sum('heal'),

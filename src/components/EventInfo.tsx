@@ -14,7 +14,11 @@ export function EventInfo({ character, compact = false }: { character: Character
           <b>
             <Icon name="event" /> {e.name}
           </b>
-          <span className="text-violet-300/80"> · {TRIGGERS[e.trigger].label} : </span>
+          <span className="text-violet-300/80">
+            {' '}
+            · {TRIGGERS[e.trigger].label}
+            {e.form && ` (${character.forms?.find((f) => f.id === e.form)?.name.toLowerCase()})`} :{' '}
+          </span>
           {describeEvent(e)}
         </li>
       ))}

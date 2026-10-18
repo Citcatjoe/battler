@@ -9,6 +9,9 @@ export type Rng = () => number
 
 export const defaultRng: Rng = () => Math.random()
 
+/** Nouvelle graine au hasard, pour un combat qu'on veut pouvoir rejouer (`seededRng`). */
+export const randomSeed = () => Math.floor(defaultRng() * 4294967296) >>> 0
+
 /** Générateur déterministe (mulberry32) : même graine, même suite de tirages. */
 export function seededRng(seed: number): Rng {
   let a = seed | 0

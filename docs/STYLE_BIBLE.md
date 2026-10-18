@@ -2,7 +2,23 @@
 
 Ce document fixe la direction artistique de Battler et donne des prompts prêts à copier. Le but : des images **cohérentes entre elles**, **originales** et **directement intégrables** au jeu.
 
-> Les personnages actuels (`orc.png`, `elf.png`, `dwarf.png`) sont des placeholders qui proviennent de jeux ou d'œuvres existants. Ils doivent être remplacés par des créations originales avant toute diffusion publique. Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
+> Les personnages `orc.png` et `dwarf.png` sont des placeholders qui proviennent de jeux ou d'œuvres existants. Ils doivent être remplacés par des créations originales avant toute diffusion publique. Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
+
+## Par où commencer
+
+L'utilisateur génère les images dans ChatGPT à partir des prompts de ce document, puis les dépose à la racine du projet. L'agent les traite, les range et met ce document à jour. Un autre agent tient la mécanique (`roster.ts`, `statuses.ts`, combat) : pour un réglage de code qui le concerne (échelle d'un personnage, branchement d'une icône sur un nouveau statut), on lui écrit une consigne, que l'utilisateur transmet.
+
+| Demande | Où regarder | Outil |
+| --- | --- | --- |
+| Un personnage | Palette (section 1), gabarits de taille (section 2), bloc STYLE (section 3), gabarit et exemples (section 4) | `scripts/cutout-character.py` (fond gris `#808080`) |
+| Une arène | Section 5 (bloc fixe et catalogue de lieux) | Compression en JPG |
+| Un fond de menu | Section 6 | Compression en JPG |
+| Des icônes | Inventaire, règles et gabarit de planche (section 7) | `scripts/slice-icons.py` |
+| Une image déposée | Section 8 (vérifier la transparence), section 9 (check-list) | `gio trash` sur la source |
+
+Les scripts demandent numpy, pillow et scipy dans un environnement virtuel (à créer dans le scratchpad de la session). À la fin d'un travail : compléter l'inventaire ou l'historique concerné, et ajouter une ligne « Non publié » au `CHANGELOG.md` (la version est montée par l'agent du gameplay).
+
+**En suspens au 2026-10-19 :** icônes Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3) ; échelles des personnages anciens à rapprocher des gabarits (section 2) ; `orc.png` et `dwarf.png` à remplacer par des créations originales.
 
 ---
 
@@ -10,7 +26,7 @@ Ce document fixe la direction artistique de Battler et donne des prompts prêts 
 
 **En une phrase :** de la high fantasy héroïque, stylisée et peinte à la main, comme les illustrations de personnages des grands MMORPG. Les couleurs sont franches et propres à chaque faction, les proportions sont volontairement exagérées pour qu'on distingue les races au premier coup d'œil, et les visages restent fins, nets et charismatiques.
 
-La référence de ton est l'elfe placeholder actuelle (`elf.png`) : armure ornementée lie-de-vin, filigranes argentés, gemmes émeraude, cape en lambeaux, plumes, yeux lumineux, silhouette élancée et très lisible. On vise ce niveau de finition et cette lisibilité, avec des designs originaux. Il ne faut jamais nommer le jeu ou le personnage d'origine dans un prompt.
+La référence de ton est l'elfe (`elf.png`, chasseresse de la nuit générée en 0.30.1, qui remplace l'ancienne placeholder lie-de-vin) : cuir et tissus bleu nuit, filigranes et croissants de lune argentés, cape et plumes en lambeaux, yeux lumineux, silhouette élancée et très lisible. On vise ce niveau de finition et cette lisibilité, avec des designs originaux. Il ne faut jamais nommer le jeu ou le personnage d'origine dans un prompt.
 
 **Le curseur :** on est entre deux écueils.
 - Trop loin d'un côté : jeu mobile casual ou gacha (Candy Crush, Clash of Clans…). Visages ronds et simplets, gros yeux, sourires, couleurs bonbon, rendu plastique brillant, personnage « mignon » ou grossier.
@@ -36,9 +52,15 @@ Le jeu est sombre (fond pierre `#0c0a09`, accents ambre `#fbbf24` et `#fde68a`).
 | Neutres communs | Fer gris-bleu `#6b7280`, cuir brun `#7c4a2d`, fourrure crème `#e7dcc8` |
 | Accent du jeu (or, runes, yeux) | Ambre `#f59e0b`, or pâle `#fde68a` |
 | Orc | Peau vert olive `#7f8f3a` ; tissus bleu nuit et brun |
-| Elfe | Peau pâle et légèrement froide ; armure lie-de-vin `#7f1d3a` ; touches émeraude `#10b981` |
+| Elfe | Depuis la 0.30.1, le modèle d'Elaria est la chasseresse de la nuit (ligne suivante). Sylwen en est la déclinaison verte (`hue-rotate(-110deg)`). L'ancienne placeholder était lie-de-vin `#7f1d3a`, avec des touches émeraude. |
 | Nain | Barbe roux cuivré `#b45309` ; acier sombre et laiton gravé `#b08d3c` |
 | Mort-vivant | Cape et tabard pourpre usé `#5b2a86`, cuir brun et acier rouillé, peau livide, yeux turquoise `#2dd4bf` |
+| Humain (prêtre) | Robes et tabard ivoire `#f5efe0`, or bruni ; accent bleu roi `#1d4ed8` ; lumière sacrée dorée |
+| Homme-lézard | Écailles vert jade sombre `#0f766e`, ventre sable `#d6c08a` ; cuir noir-brun ; yeux ambre `#f59e0b` |
+| Chasseresse de la nuit | Cuir et tissus bleu nuit `#1e1b4b`, argent ; peau gris cendré ; lueur lunaire blanc-argent `#e0e7ff` |
+| Humain (paladin zélote) | Tabard et étendard rouge sang `#b91c1c`, acier sombre ; écru `#e7dcc8` pour les sceaux et parchemins ; yeux et runes de feu sacré orangé `#f97316` |
+| Ogre sauvage | Peau brun-rose terreux `#b07a5a` ; cuir brut, fer rouillé et cordes ; aucun accent lumineux (il est trop bête pour la magie) |
+| Druide (deux formes) | Vert mousse `#4d7c0f` et brun châtaigne `#7c4a2d` (cheveux, fourrure de l'ours) ; écorce et os ; lueur vert sève `#a3e635` (yeux, tatouages, amulette), identique dans les deux formes |
 
 **Teinte dominante :** les variantes de coloris sont aujourd'hui obtenues en CSS (`hue-rotate`) sur la même image. Chaque personnage doit donc avoir **une couleur dominante claire** (la peau de l'orc, l'armure de l'elfe, la barbe et le laiton du nain), plutôt qu'un mélange de nombreuses couleurs saturées.
 
@@ -61,6 +83,23 @@ Look jeu mobile casual ou gacha, personnage mignon ou mascotte, chibi, grosse t�
 | Pose | Garde de combat, stable, les deux pieds au sol, l'arme en main | Les animations (charge, impact, KO) déplacent l'image entière |
 | Tête | Bien visible, non masquée par l'arme, dans le tiers supérieur | Les portraits sont des recadrages zoomés de la même image (`look.portrait`) |
 | Lumière | De face ou symétrique | L'image est retournée en miroir |
+
+### Gabarits : taille et silhouette
+
+Le détourage recadre chaque personnage au plus près, et le jeu l'affiche à la hauteur de la scène multipliée par `look.scale`. Deux leviers donnent donc à chacun son empreinte à l'écran :
+- **la hauteur**, fixée par `look.scale` dans `roster.ts`. Le prompt n'y peut rien, puisque le personnage remplit toujours son image ;
+- **la largeur de la silhouette**, fixée par le prompt (ligne `BUILD`). Un nain doit être presque aussi large que haut, une elfe deux fois plus haute que large. Sans consigne, GPT Image rend toutes les silhouettes à peu près aussi larges les unes que les autres (rapport proche de 0,6 pour l'orc, l'elfe et le nain actuels).
+
+| Gabarit | Personnages | `look.scale` | Largeur / hauteur du corps (arme exclue) | Ligne `BUILD` à coller |
+| --- | --- | --- | --- | --- |
+| Titanesque | Ogre sauvage, druide en ours | ~1,06 (à valider à l'écran) | ~0,90 | `BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass, gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.` |
+| Colossal | Orc, paladin zélote | 1,00 | ~0,75 | `BUILD: colossal and bulky, the biggest silhouette of the roster: huge shoulders, thick limbs, wide planted stance; the body is about three quarters as wide as it is tall.` |
+| Grand et élancé | Elfes (Elaria, chasseresse de la nuit) | 0,96 | ~0,45 | `BUILD: very tall and willowy, a narrow vertical silhouette: slim limbs, narrow shoulders, no bulk; the body is less than half as wide as it is tall.` |
+| Moyen | Humain, mort-vivant, druide (forme humanoïde) | 0,90 | ~0,55 | `BUILD: average human height and athletic build, balanced proportions; the body is a bit more than half as wide as it is tall.` |
+| Ramassé | Homme-lézard (accroupi) | 0,82 | ~0,75 (queue comprise) | `BUILD: lean but low to the ground, crouched, the long tail stretching the silhouette sideways; the whole figure is about three quarters as wide as it is tall.` |
+| Petit et râblé | Nain | 0,72 | ~0,85 | `BUILD: short and extremely stocky, almost as wide as tall, massive barrel chest and arms, short thick legs; the body is nearly as wide as it is tall.` |
+
+Les échelles sont des cibles, à ajuster une fois l'image intégrée. **État au 2026-10-19** : l'ogre est à 1,06 ; les personnages plus anciens gardent leurs valeurs d'avant les gabarits (elfe 1,04, mort-vivant 1,02, humain 1,00, homme-lézard 0,98, nain 0,78), et la forme d'ours du druide n'a pas encore d'échelle propre. Rapprocher ces valeurs des cibles est à proposer à l'agent qui tient `roster.ts`. Les éléments signature (halo du prêtre, arc, cornes) dépassent de la silhouette et peuvent grandir le personnage. Il faut alors baisser un peu son `scale` pour que le corps garde la taille de son gabarit.
 
 ### Arènes (`src/assets/arena-<lieu>.jpg`)
 
@@ -103,14 +142,27 @@ text, logo, watermark, signature, cast shadow, cropped limbs, extra fingers, dup
 
 SUBJECT: <race> <archetype>, <description physique>, wearing <équipement>, holding <arme>.
 Signature element: <élément de silhouette>.
-Dominant color: <couleur dominante>; accents in amber gold.
+Dominant color: <couleur dominante>; <accent lumineux>.
+BUILD: <ligne du gabarit choisi, section 2>
+POSE: <attitude propre à l'archétype>, like <image mentale>: <appuis, position de l'arme et des mains>;
+head fully visible.
 
-FRAMING: full body from head to feet, standing combat stance, three-quarter view facing RIGHT,
+FRAMING: full body from head to feet, three-quarter view facing RIGHT,
 both feet on the ground, weapon not covering the face, head in the upper third,
 small even margin around the figure, feet near the bottom edge.
 
-OUTPUT: portrait 1024x1536, transparent background, clean cutout edges, no ground, no shadow, no scenery.
+OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery.
 ```
+
+Méthode qui marche depuis la 0.30 :
+- **Le bloc STYLE (section 3) en tête**, puis ce gabarit.
+- **Une posture par archétype** (le prêtre solennel, le voleur accroupi, le paladin qui charge, l'ogre qui louche sur un papillon) : jamais la même garde générique pour tous.
+- **Le gabarit de taille** (section 2) donne la ligne `BUILD` et le `scale` à mettre dans `roster.ts`.
+- **Fond gris `#808080`**, puis `python scripts/cutout-character.py <source.png> src/assets/<race>.png apercu.png`. Le gris est voulu : ChatGPT ne rend pas de vraie transparence pour les personnages (section 8).
+- **Une exception au bloc STYLE** se dit en tête du prompt (`STYLE EXCEPTION: …`, voir l'ogre), sinon le bloc l'emporte.
+- **Un personnage à plusieurs formes** : un prompt par forme, dans la même conversation, la seconde avec l'image de la première jointe et la liste des éléments à garder identiques (voir le druide).
+- **Lumière symétrique** : le jeu retourne l'image d'un des deux combattants.
 
 ### Prompts prêts à l'emploi
 
@@ -146,6 +198,179 @@ steel helmet with a tall brass engraved crest, heavy dark steel plate armor with
 glowing faintly amber, oversized rounded pauldrons, thick leather gloves, heavy armored boots,
 a large single-bladed battle axe held in both hands at guard.
 Signature element: raised battle axe and braided beard. Dominant color: copper beard and brass trims.
+```
+
+**Humain, Prêtre** (généré en 0.30.0 : `src/assets/human.png`, une prêtresse solaire à la masse sacrée ; la famille Ysolde / Bérengère est donc au féminin)
+```text
+SUBJECT: human battle priest, tall athletic man with heroic proportions (broad shoulders, strong hands),
+normal-sized head, refined angular face with a short well-groomed dark beard, high cheekbones,
+calm stern gaze with eyes glowing faintly gold, close-cropped dark hair,
+long ivory-white robes and tabard embroidered with gold sun motifs, worn over burnished gold plate armor,
+oversized round gold pauldrons engraved with radiant suns, a royal-blue sash and blue gems on the chest,
+a heavy holy tome chained to the belt, prayer beads around the wrist,
+a large flanged gold mace in one hand.
+Signature element: a large gold sun-disc halo mounted on the back, behind the shoulders, rising above
+and around the head (the head stays fully visible in front of it). Dominant color: ivory-white and gold.
+BUILD: average human height and athletic build, balanced proportions;
+the body is a bit more than half as wide as it is tall.
+POSE: upright, solemn and commanding, like a holy warrior invoking his god before the fight:
+chest open, chin slightly raised, feet planted wide and firm, the mace held high and diagonally
+above the shoulder (not in front of the face), the other arm stretched forward with the palm open
+and a sphere of golden holy light glowing in it, robes and tabard swaying.
+```
+
+**Homme-lézard, Voleur** (généré en 0.30.0 : `src/assets/lizardman.png`, une assassine lézarde aux dagues dorées ; famille Naraxes / Ssythra au féminin)
+```text
+SUBJECT: lizardfolk rogue, lean and wiry reptilian humanoid, long arms, digitigrade legs,
+a long thick tail curving behind, sleek reptilian head with a narrow snout, small sharp amber eyes
+with slit pupils, a crest of short spines and a frill along the back of the head, cunning predatory gaze,
+dark jade-green scales with a sand-colored belly, fitted black-brown leather armor with many straps,
+pouches and small throwing knives, a ragged dark hood and short tattered scarf around the neck,
+one asymmetric leather and bronze pauldron, wrapped forearms, two curved daggers in reverse grip.
+Signature element: long curved tail and twin reverse-grip daggers. Dominant color: dark jade-green scales.
+BUILD: lean but low to the ground, crouched, the long tail stretching the silhouette sideways;
+the whole figure is about three quarters as wide as it is tall.
+POSE: low, coiled and sneaky, like an ambusher about to pounce: deep crouch with knees bent,
+torso leaning forward, one clawed foot ahead of the other, both feet on the ground,
+one dagger held forward and low, the other raised behind near the shoulder ready to stab,
+tail stretched out behind for balance, head low but lifted and fully visible, eyes locked on the target.
+```
+
+**Elfe, Chasseresse de la nuit** (générée en 0.30.1 : `src/assets/elf.png`, modèle d'Elaria et de Sylwen)
+
+Une archère sombre et mélancolique, à la cape déchirée et aux yeux qui luisent sous la capuche. On reprend l'archétype, mais aucun de ses signes connus : ni peau bleutée, ni yeux rouges, ni cuir vert sombre, ni armure à pointes noires. On la distingue d'Elaria (lie-de-vin, blonde, arc tenu bas) par sa palette bleu nuit et argent, son arc en croissant de lune et sa posture : elle bande son arc.
+
+```text
+SUBJECT: elf night huntress, very tall and slender woman, narrow waist, long legs, very long pointed ears,
+ash-grey skin with a faint cool sheen, long silver-white hair in a thick braid over one shoulder,
+refined angular face, high cheekbones, eyes glowing pale silver-white, melancholic and deadly calm gaze,
+deep midnight-blue hood and a long cape torn into ragged strips like shadows at the hem,
+a short mantle of dark grey owl feathers over the shoulders,
+fitted midnight-blue leather armor with silver plates engraved with crescent moons and stars,
+pointed silver pauldrons, small pale moonstone gems on the chest and bracers,
+quiver of black-fletched arrows with silver tips on the hip,
+a tall elegant silver longbow shaped like a crescent moon, its arrow tip glowing with cold moonlight.
+Signature element: crescent-moon longbow and owl-feather mantle. Dominant color: midnight blue and silver.
+BUILD: very tall and willowy, a narrow vertical silhouette: slim limbs, narrow shoulders, no bulk;
+the body is less than half as wide as it is tall.
+POSE: poised and lethal, like a sniper taking aim: standing tall in a long sideways archer stance,
+front foot forward and back foot planted, both feet on the ground, the crescent bow held vertically
+in the extended front arm, string fully drawn back to the cheek with an arrow nocked and aimed to the right,
+the bow and string beside the face (never in front of it), cape and braid drifting behind.
+```
+
+**Humain, Paladin zélote** (généré en 0.31.0 : `src/assets/paladin.png`)
+
+Un croisé fanatique, colossal, aussi massif qu'un orc : c'est l'exception humaine au gabarit moyen. Pour ne pas doubler le prêtre (ivoire, or, bleu, solennel), il est rouge sang et acier sombre, brûle d'un feu sacré orangé et se jette en avant. Son emblème est une épée flamboyante, inventée, et non un symbole religieux réel.
+
+```text
+SUBJECT: human zealot paladin, a giant of a man as massive as an orc, enormous shoulders and arms,
+huge gauntleted hands, normal-sized head, refined but hard angular face, shaved scarred head,
+short dark beard, eyes burning with orange holy fire, fanatic fervent expression,
+heavy dark steel plate armor dented and battle-worn, gigantic layered pauldrons,
+a long blood-red tabard emblazoned with a white flaming-sword emblem, ragged at the hem,
+wax purity seals with ivory parchment strips and heavy chains hanging from the armor,
+glowing orange runes engraved on the breastplate, a closed great helm hanging from the belt,
+an oversized two-handed greatsword with runes smoldering with orange holy fire.
+Signature element: a tall tattered blood-red war banner mounted on his back, rising above the head,
+with the flaming-sword emblem. Dominant color: blood red and dark steel.
+BUILD: colossal and bulky, the biggest silhouette of the roster: huge shoulders, thick limbs, wide planted stance;
+the body is about three quarters as wide as it is tall.
+POSE: fanatic and unstoppable, like a crusader charging into heresy: heavy stride forward,
+both feet on the ground, the greatsword raised high in both hands above the shoulder ready to cleave
+(not in front of the face), chest forward, mouth open shouting a battle prayer, tabard and banner whipping back.
+```
+
+**Ogre sauvage** (généré en 0.35.0 : `src/assets/ogre.png`)
+
+Une montagne de chair, plus grosse que l'orc, et bête comme ses pieds. La bêtise passe par la posture et le visage (bouche ouverte, regard qui louche sur un papillon posé sur sa masse, main qui gratte le crâne), jamais par un style cartoon. Le bloc STYLE interdit les visages niais : le prompt lève cette interdiction pour l'expression seulement, et garde la peinture premium. Sa peau brun-rose le distingue de l'orc vert.
+
+```text
+STYLE EXCEPTION: this character is deliberately dim-witted. A dull, gaping, vacant expression is allowed
+and wanted, but keep the same premium hand-painted style, realistic anatomy and detailed rendering:
+NOT cartoon, NOT chibi, NOT a mascot.
+SUBJECT: savage ogre, a towering mountain of muscle and fat, even bigger than an orc, huge pot belly,
+massive sloped shoulders, enormous hands, a small head sunk between the shoulders, heavy brow,
+tiny dull eyes, a slack open jaw with a strong underbite and two crooked lower tusks, tongue slightly out,
+dusky reddish-tan skin covered in warts, scars and stitched wounds, a few tufts of coarse hair,
+a dented iron cooking pot worn as a helmet, crooked on the head,
+scavenged mismatched gear: one rusty iron pauldron tied with rope, a patchwork loincloth of hides,
+thick ropes and chains wrapped around the belly, a belt of bones and trinkets,
+bare feet wrapped in rags, a gigantic crude mace: a tree-trunk club capped with a rough block
+of stone studded with rusty iron spikes.
+Signature element: the gigantic stone-and-spike mace and the cooking-pot helmet. Dominant color: dusky reddish-tan skin.
+BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass,
+gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.
+POSE: clumsy and dumb, like a brute who forgot there is a fight: slouched, belly pushed forward,
+knees slightly bent inward, both bare feet planted on the ground, the huge mace resting on one shoulder,
+the other hand scratching the side of his head under the pot, mouth hanging open,
+eyes crossed staring at a small butterfly perched on the mace head; head fully visible.
+FRAMING: full body from head to feet, three-quarter view facing RIGHT, both feet on the ground,
+mace not covering the face, head in the upper third, small even margin, feet near the bottom edge.
+OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery.
+```
+
+**Druide, deux formes** (généré en 0.35.0 : `src/assets/druid.png` et `src/assets/druid-bear.png`)
+
+Un même combattant, qui alterne une forme humanoïde et une forme d'ours féral. Ce sont deux images, deux fichiers (`druid.png` et `druid-bear.png`) et deux gabarits : la forme humanoïde est moyenne (0,90), l'ours titanesque (~1,06). Quatre rappels font reconnaître la même personne :
+1. **les bois** : une couronne de petits bois de cerf tressés de lierre sur la tête du druide, les mêmes bois qui sortent du crâne de l'ours, avec le même lierre ;
+2. **l'amulette** : un grand disque de bois gravé d'une spirale, une pierre vert sève au centre, porté au cou par les deux formes ;
+3. **les tatouages** : des spirales vert sève lumineuses sur le visage et les bras, qui réapparaissent dans la fourrure de l'ours (museau, épaules, pattes avant) ;
+4. **le manteau** : un manteau vert mousse déchiré au col de fourrure châtaigne ; l'ours en garde des lambeaux noués aux épaules, et les bracelets de perles rouge ocre restent aux poignets.
+
+La fourrure de l'ours est du même châtaigne que les cheveux du druide, et les yeux ont la même lueur.
+
+Méthode : deux prompts, **dans la même conversation ChatGPT**. On génère d'abord la forme humanoïde, jusqu'à en être content. Puis on joint cette image au second prompt, qui demande « le même personnage transformé ». Une seule image avec les deux formes côte à côte les forcerait à la même hauteur et diviserait la résolution par deux. Et si l'ours est raté, on ne régénère que lui.
+
+Prompt 1, forme humanoïde :
+```text
+SUBJECT: human druid of the wild, a lean and wiry man with a feral edge, long arms, strong hands
+with dirty fingernails, normal-sized head, refined angular weathered face, high cheekbones,
+short chestnut-brown beard, long wild chestnut-brown hair with small braids, bone and wooden beads,
+eyes glowing sap-green, intense wary gaze,
+a crown of small deer antlers wrapped in ivy and tiny leaves,
+glowing sap-green spiral tattoos on the cheeks, forearms and the back of the hands,
+a large carved wooden disc amulet with a spiral and a glowing sap-green stone in its center, on a leather cord,
+a long tattered moss-green mantle with a thick chestnut bear-fur collar, ragged at the hem,
+layered leather and bark armor, red-ochre beaded bracelets on both wrists, bare feet wrapped in leather,
+a gnarled wooden staff topped by twisted roots holding a glowing sap-green stone.
+Signature element: antler crown and wooden spiral amulet. Dominant color: moss green and chestnut brown.
+BUILD: average human height and athletic build, balanced proportions;
+the body is a bit more than half as wide as it is tall.
+POSE: wild and on edge, like a man about to become a beast: slightly hunched forward, knees bent,
+both feet planted, the staff planted firmly on the ground in the back hand,
+the front hand raised and curled like a claw, fingers starting to turn into bear claws,
+sap-green light swirling around the clawed hand, mantle stirring; head fully visible.
+FRAMING: full body from head to feet, three-quarter view facing RIGHT, both feet on the ground,
+staff not covering the face, head in the upper third, small even margin, feet near the bottom edge.
+OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery.
+```
+
+Prompt 2, forme d'ours (joindre l'image validée du prompt 1) :
+```text
+Using the attached image as the character reference: this is the SAME druid, transformed into
+his feral bear form. It must be instantly recognizable as the same person.
+Keep IDENTICAL: the deer antlers wrapped in ivy (now growing from the bear's skull),
+the carved wooden spiral amulet with its glowing sap-green stone (cord stretched around the bear's neck),
+the glowing sap-green spiral tattoos (now glowing through the fur on the muzzle, shoulders and forelegs),
+the red-ochre beaded bracelets (now around the thick forelegs), the sap-green glowing eyes,
+torn strips of the same moss-green mantle and its chestnut fur collar knotted around the shoulders,
+and the same chestnut-brown color for the whole fur.
+SUBJECT: a huge feral werebear, standing upright on its hind legs, massive humped shoulders,
+thick powerful forelegs ending in long dark claws, broad head with an open roaring maw,
+shaggy chestnut-brown fur with small braids and bone beads tangled in it, a few moss and leaves in the fur.
+Same art style, same lighting, same palette as the reference.
+BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass,
+gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.
+POSE: rearing and furious, like a wild beast defending its forest: standing on both hind legs,
+both feet on the ground, body leaning forward, forelegs spread wide with claws out,
+head thrust forward and roaring, fur bristling; head and antlers fully visible.
+FRAMING: full body from head to feet, three-quarter view facing RIGHT, both feet on the ground,
+claws not covering the face, head in the upper third, small even margin, feet near the bottom edge.
+OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery.
 ```
 
 **Variantes** : aujourd'hui, la teinte est faite en CSS. Pour générer une vraie variante plus tard, on reprend l'image du personnage de base et on demande : _« Same character, same pose, same framing and style, only change: … »_.
@@ -442,132 +667,184 @@ OUTPUT: landscape 1536x1024, no characters, no text.
 
 ## 7. Icônes d'interface
 
-Les icônes remplacent les emojis utilisés dans les boutons, les fiches, les statistiques et les statuts. Elles sont générées en **une seule planche** (grille de 4×4), puis découpées.
-
-On ne remplace pas la typographie : flèches `←` `▲` `▼`, pastilles `①` `②`, symboles de lecture `▶` `❚❚`.
+Chaque compétence, chaque statut et chaque bouton a son icône peinte : aucun emoji nulle part (règle de l'utilisateur depuis la 0.34.0, contrôlée par les tests). Les icônes sont générées par **planches** (une grille par lot), puis découpées par script. On ne remplace pas la typographie : flèches `←` `▲` `▼`, pastilles `①` `②`, symboles de lecture `▶` `❚❚`.
 
 ### Inventaire
 
-| # | Identifiant | Emoji remplacé | Où il apparaît | Motif demandé |
-| --- | --- | --- | --- | --- |
-| 1 | `swords` | ⚔ | Affrontement, Jouer, Affronter, combat « joué » | Deux épées croisées |
-| 2 | `trophy` | 🏆 | Tournoi, Champion, colonnes Tournois | Coupe dorée à deux anses |
-| 3 | `lightning` | ⚡ | Simuler, combat « simulé » | Éclair, lueur bleu électrique |
-| 4 | `stats` | 📊 | Bouton Statistiques | Trois barres montantes en bronze |
-| 5 | `scroll` | 📜 | Bouton Fiche | Parchemin roulé, sceau rouge |
-| 6 | `dice` | 🎲 | Au hasard, Compléter | Dé à vingt faces ivoire |
-| 7 | `event` | ✨ | Événements (fiches, journal, stats) | Étoile magique violette |
-| 8 | `crit` | 🎯 | Statut Critique assuré | Cible avec une flèche au centre |
-| 9 | `shield` | 🛡️ | Statut Armure temporaire | Écu cerclé d'or |
-| 10 | `poison` | ☠️ | Statut Poison | Crâne, lueur verte toxique |
-| 11 | `regen` | 💚 | Statut Régénération | Cœur vert lumineux |
-| 12 | `weakened` | 🥀 | Statut Affaibli | Rose rouge sombre fanée |
-| 13 | `breach` | 💔 | Statut Brèche | Cœur rouge fendu |
-| 14 | `sound-on` | 🔊 | Son activé | Cor de guerre et ondes sonores |
-| 15 | `sound-off` | 🔇 | Son coupé | Même cor, barré en rouge |
-| 16 | `turns` | ⏳ | Tours restants d'un statut | Sablier en bronze |
+L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vérifier qu'il n'est pas déjà pris (le sablier est `turns`, le cœur vert `regen`, l'écu l'Armure temporaire, les épées croisées `swords`…). Les identifiants sont les noms réels des fichiers `src/assets/icons/<identifiant>.png`.
 
-L'ordre du tableau est celui de la grille (de gauche à droite, puis de haut en bas). Il ne faut pas le changer, car la découpe s'appuie dessus.
+| # | Identifiant | Où il apparaît | Motif |
+| --- | --- | --- | --- |
+| 1 | `swords` | Affrontement, Jouer, combat « joué » | Deux épées croisées |
+| 2 | `trophy` | Tournoi, Champion | Coupe dorée à deux anses |
+| 3 | `lightning` | Simuler, combat « simulé » | Éclair, lueur bleu électrique |
+| 4 | `stats` | Bouton Statistiques | Trois barres montantes en bronze |
+| 5 | `scroll` | Bouton Fiche | Parchemin roulé, sceau rouge |
+| 6 | `dice` | Au hasard, Compléter | Dé à vingt faces ivoire |
+| 7 | `event` | Événements | Étoile magique violette |
+| 8 | `crit` | Critique assuré | Cible avec une flèche au centre |
+| 9 | `shield` | Armure temporaire | Écu cerclé d'or |
+| 10 | `poison` | Poison | Crâne, lueur verte toxique |
+| 11 | `regen` | Régénération | Cœur vert lumineux |
+| 12 | `weakened` | Affaibli | Rose rouge sombre fanée |
+| 13 | `breach` | Brèche | Cœur rouge fendu |
+| 14 | `sound-on` | Son activé | Cor de guerre et ondes sonores |
+| 15 | `sound-off` | Son coupé | Même cor, barré en rouge |
+| 16 | `turns` | Tours restants d'un statut | Sablier en bronze |
+| 17 | `thorns` | Épines (nain) | Ronce épineuse enroulée |
+| 18 | `lifesteal` | Vol de vie (mort-vivant) | Cœur pourpre traversé d'un filet de sang |
+| 19 | `wind-fury` | Furie des vents (orc) | Tourbillon de vent avec deux lames |
+| 20 | `evasion` | Esquive améliorée (elfe) | Plume prise dans une rafale |
+| 21 | `precision-aura` | Aura de précision (elfe) | Tête d'aigle dorée, halo or pâle |
+| 22 | `poison-aura` | Aura de poison (mort-vivant) | Encensoir de bronze, vapeurs vertes |
+| 23 | `power-aura` | Aura de puissance (orc) | Gantelet serré, halo rouge orangé |
+| 24 | `intimidation-aura` | Aura d'intimidation (nain) | Masque de guerre cornu, yeux rouges |
+| 25 | `holy-aura` | Aura de sainteté (prêtresse) | Disque solaire doré, gemme bleue, halo ivoire |
+| 26 | `purification` | Purification (prêtresse) | Sceau violet brisé par un rayon de lumière |
+| 27 | `fear` | Peur (posée par la prêtresse) | Masque spectral hurlant, fumée violette |
+| 28 | `decoction-aura` | Aura de décoction (Naraxes) | Dague trempée dans une fiole jaune-vert |
+| 29 | `coin-flip` | Pile ou face (Naraxes) | Pièce d'or tournant sur la tranche |
+| 30 | `lucky-strike` | Coup de chance (Naraxes) | Petit dé pyramidal jade étincelant |
+| 31 | `coin-face` | Dé-pièce, côté face (`Coin.tsx`) | Pièce vue de face, profil de lézard |
+| 32 | `coin-pile` | Dé-pièce, côté pile, 15 dégâts (`Coin.tsx`) | Pièce vue de face, deux dagues croisées |
+| 33 | `retribution` | Rétribution (paladin) | Épée flamboyante plantée pointe en bas |
+| 34 | `riposte` | Riposte (paladin) | Lame qui en pare une autre, étincelles |
+| 35 | `immunity-aura` | Aura d'immunité (paladin) | Sceau de cire rouge, rubans ivoire, feu sacré |
+| 36 | `waiting` | Patience (ogre) | Montre à gousset cabossée, chaîne rouillée |
+| 37 | `life-bloom` | Graine de vie (druide) | Graine qui germe, lueur vert sève |
+| 38 | `bark-skin` | Peau épaisse (druide) | Plaque d'écorce moussue |
+| 39 | `fireflies` | Lucioles (druide) | Trois grosses lucioles en spirale |
+| 40 | `charge` | Charge (druide en ours) | Tête d'ours qui fonce, traînées de vitesse |
+| 41 | `claw` | Coup de griffe (druide en ours) | Patte griffue, trois entailles |
+| 42 | `rot-aura` | Aura de pourriture (druide en ours) ; sert aussi, en attendant, au malus Pourriture | Bois de cerf pourri sous les champignons, halo brun-violet |
 
-### Prompt de la planche
+**Icônes manquantes, à demander :** Pourriture (le malus subi par la cible, distinct de l'aura), Brûlure, Vulnérable, Étourdi et Garde (statuts « à venir »). En attendant, la zone d'état affiche l'initiale du statut.
+
+### Règles de design des icônes
+
+- **Un objet, une silhouette épaisse**, lisible à 20 px, sans cadre ni fond.
+- **Aura = halo.** Un statut permanent (aura) est posé devant une lueur ronde et diffuse de sa couleur d'accent ; les autres n'ont que la lumière de l'objet. ChatGPT a tendance à mettre un halo partout (v2) : la distinction tient donc surtout au motif.
+- **Malus = couleurs froides et maladives** (Peur : violet-noir, Pourriture : brun-violet), sans or triomphant.
+- **Palette du personnage.** Les icônes d'un personnage reprennent les couleurs de sa ligne dans la palette (section 1) : ivoire, or et bleu pour la prêtresse, jade et jaune-vert pour Naraxes, rouge sang et feu orangé pour le paladin, vert sève et châtaigne pour le druide.
+- **Pas deux verts toxiques.** Le vert toxique appartient à `poison` et `poison-aura` : les autres poisons et pourritures prennent une autre teinte (jaune-vert, brun-violet).
+- **Rappeler le personnage** quand c'est possible : le sceau de l'Aura d'immunité pend à l'armure du paladin, le bois pourri vient de la couronne du druide.
+- **Pas de symbole religieux réel** (croix comprise) : on invente les emblèmes (épée flamboyante, disque solaire).
+
+### Gabarit de planche (à copier)
+
+Une planche ne contient **que** les nouvelles icônes. On joint une ou deux planches précédentes (ou quelques icônes de `src/assets/icons/`) comme référence de style. Taille de grille : celle que le script déduira, soit le carré qui contient tous les noms (1 à 4 icônes : 2×2 ; 5 à 9 : 3×3 ; 10 à 16 : 4×4). Les cases en trop restent vides, en fin de grille.
 
 ```text
-Create a single square image, 1024x1024, containing a sprite sheet of 16 game UI icons
-arranged in a strict 4x4 grid (4 columns, 4 rows). Each icon is centered in its own
-invisible 256x256 cell, occupies about 70% of the cell, and never touches or overlaps
-the cell borders. Leave clear empty space between icons.
+Create a single square image, 1024x1024, containing a sprite sheet of <N> game UI icons
+arranged in a strict <G>x<G> grid (<G> columns, <G> rows). Each icon is centered in its own
+invisible cell (1/<G> of the width and height), occupies about 70% of the cell,
+and never touches or overlaps the cell borders. Leave clear empty space between icons,
+glows included. The last <K> cells stay completely EMPTY.
 
-BACKGROUND: fully transparent. If transparency is not possible, use a perfectly flat,
-uniform pure black background (#000000) with no gradient, no texture, no vignette.
-NO grid lines, NO frames, NO labels, NO numbers, NO text anywhere.
+BACKGROUND: fully transparent, real alpha channel. Do NOT paint a checkerboard pattern.
+If transparency is not possible, use a perfectly flat, uniform pure black background (#000000)
+with no gradient, no texture, no vignette.
+NO grid lines, NO frames, NO labels, NO numbers, NO letters, NO text anywhere.
 
-STYLE: original high-fantasy game UI icons, hand-painted stylized fantasy, in the style of
+STYLE: exactly the same style, materials, lighting and scale as the attached icon sheets.
+Original high-fantasy game UI icons, hand-painted stylized fantasy, in the style of
 premium MMORPG interface icons. Single object per icon, bold and simple silhouette that
-stays readable at 20x20 pixels, thick shapes, no thin details, no background behind the
-object, no circular or square frame. Dominant materials: aged gold and warm bronze with
-crisp painted highlights, dark brown outline-like shading for contrast. Each icon may use
-one accent color as listed. Consistent lighting from the top-left on all icons, same
-level of detail, same scale, all icons look like one coherent set.
+stays readable at 20x20 pixels, thick shapes, no thin details, no circular or square frame.
+Crisp painted highlights, dark brown outline-like shading for contrast.
+<MATÉRIAUX : par défaut « Dominant materials: aged gold and warm bronze », ou la palette du personnage>
+Consistent lighting from the top-left, same level of detail, same scale as the attached sheets.
 AVOID: emoji look, flat vector clip-art, cute or cartoon style, glossy plastic,
-3D render, photorealism, drop shadows outside the object, text.
+3D render, photorealism, drop shadows outside the object, text, real-world religious symbols.
+
+AURAS: icons marked [AURA] are permanent auras: the object sits in front of a soft,
+diffuse, round glow of its accent color (a glow, NOT a ring frame, NOT a solid disc).
+Other icons have no background glow, only the light of the object itself.
 
 ICONS, in reading order (left to right, top to bottom):
 Row 1:
- 1. two crossed swords, steel blades with gold hilts
- 2. a golden trophy cup with two handles
- 3. a jagged lightning bolt, gold with pale electric-blue glow
- 4. three vertical bars of rising height like a bar chart, carved bronze bars
-Row 2:
- 5. a rolled parchment scroll with a red wax seal
- 6. a single ivory twenty-sided die with gold edges
- 7. a four-pointed magic star burst, violet glow with gold core
- 8. an archery target with an arrow in the bullseye, red and gold rings
-Row 3:
- 9. a heater shield with gold rim and steel face
-10. a skull, bone-white, with toxic green glow and drip
-11. a green heart with a soft emerald healing glow
-12. a wilted dark red rose with drooping petals
-Row 4:
-13. a red heart cracked in two halves
-14. a bronze war horn emitting curved sound waves
-15. the same bronze war horn, with a bold red diagonal slash across it
-16. a bronze hourglass with golden sand
+ 1. <objet, matières, couleur d'accent> (<sens en deux mots>)
+ 2. ...
+Row <G>:
+ <N+1>. (empty cell, nothing drawn)
 ```
+
+Découpe, noms dans l'ordre de la grille :
+
+```sh
+python scripts/slice-icons.py <planche.png> src/assets/icons nom1,nom2,... controle.png
+```
+
+### Planches passées : motifs demandés
+
+Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui leur est propre, pour pouvoir refaire une icône.
+
+**v1 (16 icônes, 4×4, or et bronze) :** 1. two crossed swords, steel blades with gold hilts · 2. a golden trophy cup with two handles · 3. a jagged lightning bolt, gold with pale electric-blue glow · 4. three vertical bars of rising height, carved bronze · 5. a rolled parchment scroll with a red wax seal · 6. a single ivory twenty-sided die with gold edges · 7. a four-pointed magic star burst, violet glow with gold core · 8. an archery target with an arrow in the bullseye · 9. a heater shield with gold rim and steel face · 10. a skull, bone-white, with toxic green glow and drip · 11. a green heart with a soft emerald healing glow · 12. a wilted dark red rose · 13. a red heart cracked in two halves · 14. a bronze war horn emitting curved sound waves · 15. the same horn with a bold red diagonal slash · 16. a bronze hourglass with golden sand.
+
+**v2 (8 icônes, 3×3, or et bronze) :** 1. [AURA] a proud golden eagle head in profile, pale gold glow · 2. a single white feather caught in a swirling gust of wind, soft cyan streaks · 3. a dark crimson heart pierced by a thin flowing stream of blood, faint purple glow · 4. [AURA] a small bronze censer on short chains, ring of toxic green fumes · 5. a swirling whirlwind with two curved blades inside, pale silver-blue · 6. [AURA] a clenched armored bronze gauntlet fist, fiery red-orange glow · 7. [AURA] a horned bronze war mask, snarling fanged mouth, glowing red eyes, blood-red glow · 8. a coiled thorny bramble vine with bronze-tipped thorns.
+
+**v3 (8 icônes, 3×3) :** rangée de la prêtresse en ivoire, or et bleu roi ; rangée de Naraxes en jade, bronze et poison jaune-vert. 1. [AURA] a radiant gold sun-disc emblem with a royal-blue gem, ivory holy glow · 2. a violet magic sigil shattering, struck by a beam of white-gold light · 3. a pale ghostly screaming wraith face, violet-black smoke (a curse, no gold) · 4. [AURA] a curved bronze dagger dipped into a vial of acid yellow-green poison · 5. a gold coin spinning on its edge, motion arcs · 6. a small jade four-sided pyramid die, golden sparkles · 7-8. [COIN] the two sides of the same gold coin, seen perfectly head-on, no glow : a lizardfolk profile (face), two crossed curved daggers (pile). Les faces de la pièce sont affichées en grand par `Coin.tsx` (exportées en 256 px, sans texte, côté pile gagnant).
+
+**v4 (3 icônes, 2×2, acier sombre, émail rouge sang, feu sacré orangé) :** 1. a heavy dark steel greatsword plunging point-down, wreathed in orange holy fire, burst and cracks at the impact · 2. a dark steel blade parrying another blade, burst of orange sparks, curved slash trail · 3. [AURA] a blood-red wax purity seal stamped with a flaming-sword emblem, two ivory parchment ribbons, orange holy fire glow.
+
+**v5 (7 icônes, 3×3) :** ogre en laiton rouillé ; druide humanoïde végétal (vert mousse, écorce, vert sève `#a3e635`), druide ours animal (châtaigne, griffes sombres). 1. a battered brass pocket watch, cracked glass, two thick hands, rusty chain · 2. a large seed cracking open with two sprouts, sap-green light · 3. a thick plate of gnarled bark shaped like hide armor, moss, sap-green veins · 4. three large glowing fireflies spiraling upward, sap-green and yellow trails · 5. the head of a furious chestnut bear charging right, speed streaks, dust · 6. a chestnut bear paw with dark claws, three glowing slash marks · 7. [AURA] a broken deer antler rotting under sickly fungi, spores, murky brown and dull violet glow, NOT toxic green.
 
 ### Résultat attendu et intégration
 
 | Élément | Convention |
 | --- | --- |
-| Source | Planche déposée à la racine, puis mise à la corbeille après découpe (voir `CLAUDE.md`) |
-| Fichiers | `src/assets/icons/<identifiant>.png` : PNG transparent, carré de 128×128, icône recadrée au plus près puis centrée avec une marge de 8 % |
-| Affichage | Composant `<Icon name="…" />` (`src/components/Icon.tsx`), à 1,3 fois la taille du texte et aligné sur la ligne de base ; `className` pour une autre taille. Les statuts passent par `STATUS_ICON`. |
-| Contrôle | Une planche de contrôle (les 16 icônes sur fond pierre `#0c0a09`, à 20 px et à 64 px) est vérifiée avant l'intégration |
+| Source | Planche déposée à la racine, puis mise à la corbeille après découpe (`gio trash`) |
+| Fichiers | `src/assets/icons/<identifiant>.png` : PNG transparent, carré de 128×128, icône recadrée au plus près puis centrée avec une marge de 8 %, optimisé (`optipng -o5`) |
+| Code | Ajouter le nom à `IconName` dans `src/components/Icon.tsx`, et relier chaque statut dans `STATUS_ICON` (identifiant du statut → nom de l'icône). Le test de `screens.test.tsx` exige une icône peinte pour tout statut en jeu. |
+| Affichage | `<Icon name="…" />`, à 1,3 fois la taille du texte, alignée sur la ligne de base ; `className` pour une autre taille |
+| Contrôle | Planche de contrôle (icônes sur fond pierre `#0c0a09`, à 64 et 20 px) regardée avant l'intégration |
 
-**Découpe.** Elle se fait avec `scripts/slice-icons.py` (dépendances : numpy, pillow, scipy, à installer dans un environnement virtuel) :
-
-```sh
-python scripts/slice-icons.py <planche.png> src/assets/icons \
-  swords,trophy,lightning,stats,scroll,dice,event,crit,shield,poison,regen,weakened,breach,sound-on,sound-off,turns \
-  controle.png
-```
-
-- Les noms sont donnés dans l'ordre de la grille. Une grille de 2×2 prend 4 noms.
-- Le script ne coupe pas aveuglément en cases régulières : il détecte chaque icône et regroupe les morceaux détachés (ondes du cor, gouttes du poison) par case. Il signale un morceau qui déborde sur une case voisine.
-- **Damier peint.** En v1, ChatGPT a dessiné le damier de « transparence » dans l'image au lieu d'un vrai canal alpha. Le script le retire : les lueurs deviennent semi-transparentes, et les parties claires cernées d'un contour (acier, ivoire, os) restent opaques. Si la planche a un vrai canal alpha, cette étape est sautée.
-- Ensuite, on vérifie `controle.png` (fond pierre, 64 px et 20 px), on optimise les PNG (`optipng -o5`) et on met la planche source à la corbeille.
-
-**Limite connue : le journal de combat.** Les icônes de statut et d'événement y sont insérées dans des chaînes de texte (`narration.ts`, `statusLabel`, `events.ts`). Pour y afficher des images, il faut d'abord remplacer le texte brut par un texte avec des marqueurs d'icône. Les emojis restent en place dans le journal tant que ce n'est pas fait. C'est aussi pour ça que `STATUSES[id].icon` (emoji) est conservé à côté de `STATUS_ICON`.
+**Le script `scripts/slice-icons.py`** (numpy, pillow, scipy, dans un environnement virtuel) :
+- déduit la grille du nombre de noms (carré), ignore les cases vides ;
+- détecte chaque icône et regroupe ses morceaux détachés (ondes, gouttes) par case ; il signale un morceau qui déborde (souvent une simple frange de halo : regarder le contrôle) ;
+- gère un **vrai canal alpha** (rien à faire) ou un **damier peint** (retiré ; les lueurs deviennent semi-transparentes, les zones claires cernées d'un contour restent opaques) ;
+- ne gère **pas encore un fond noir uni** : à ajouter le jour où une planche arrive ainsi.
 
 ### Ajouter ou refaire des icônes
 
-- **Une icône ratée :** dans la même conversation ChatGPT, demander _« Keep the exact same sheet, only redraw icon 12 »_. Ou générer l'icône seule, en joignant la planche comme référence : _« Same style, materials, lighting and scale as the attached sheet. Single icon, centered, 1024x1024, transparent background: … »_.
-- **De nouvelles icônes :** ajouter des lignes à l'inventaire (identifiants à la suite), puis générer une planche ne contenant **que** les nouvelles icônes, en reprenant le bloc `STYLE` à l'identique et en joignant l'ancienne planche comme référence de style. Pour 1 à 4 icônes, on demande une grille de 2×2 en 1024×1024.
-- **Refaire tout le jeu d'icônes :** modifier le bloc `STYLE` ci-dessus, régénérer la planche complète, et noter la nouvelle version dans l'historique.
+- **Une icône ratée :** dans la même conversation ChatGPT, _« Keep the exact same sheet, only redraw icon 3 »_. Ou générer l'icône seule, planche jointe : _« Same style, materials, lighting and scale as the attached sheet. Single icon, centered, 1024x1024, transparent background: … »_, puis la découper avec un seul nom.
+- **De nouvelles icônes :** compléter l'inventaire, remplir le gabarit, ajouter une ligne à l'historique.
+- **Refaire tout le jeu :** modifier le gabarit, régénérer tout, noter la version.
 
 ### Historique des planches
 
-| Version | Date | Icônes | État |
+| Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
-| v1 | 2026-10-17 | 1 à 16 | Intégrée dans tous les écrans (hors journal de combat). Damier peint retiré par le script. Avis : très réussies pour les statuts, peut-être un peu trop chargées pour les boutons de menu. Piste pour une v2 des icônes de menu (`swords`, `trophy`, `stats`, `scroll`, `dice`, `sound-*`) : moins de lueur, moins de détails, silhouette plus simple. |
+| v5 | 2026-10-18 | 36 à 42 | Ogre et druide (0.35.0). Vrai canal alpha. Personnages : `ogre.png`, `druid.png`, `druid-bear.png`. |
+| v4 | 2026-10-18 | 33 à 35 | Paladin (0.31.0). Damier peint, découpe sans retouche. Personnage : `paladin.png`. |
+| v3 | 2026-10-18 | 25 à 32 | Prêtresse et Naraxes (0.30.0). Damier peint. **Défaut** : l'éclair blanc doré de `purification` est terne (confondu avec les cases claires du damier) ; à refaire avec une vraie transparence. |
+| v2 | 2026-10-18 | 17 à 24 | Deux compétences par personnage de base. Vrai canal alpha. Halo sur toutes les icônes, pas seulement les auras. |
+| v1 | 2026-10-17 | 1 à 16 | Damier peint, retiré par le script. Avis : très réussies pour les statuts, un peu chargées pour les boutons de menu (piste : `swords`, `trophy`, `stats`, `scroll`, `dice`, `sound-*` avec moins de lueur et une silhouette plus simple). |
+
 
 ---
 
 ## 8. Méthode de travail dans ChatGPT
 
-1. **Une conversation par série.** On garde le même fil pour tous les personnages d'une série, afin que le modèle garde le style.
-2. **Image de référence.** On génère d'abord un personnage jusqu'à en être satisfait, puis on l'utilise comme référence pour les suivants : _« Use the previous image as the style reference: same rendering, lighting, level of detail and framing. »_
-3. **Retouches ciblées.** Pour corriger un détail, on le dit précisément et on demande de garder le reste : _« Keep everything identical, only fix the left hand. »_
-4. **Fond transparent.** Le demander explicitement. Si le fond n'est pas transparent, on demande un fond uni gris moyen `#808080`, puis on détoure.
+1. **Une conversation par série.** On garde le même fil pour une série (les deux formes d'un personnage, les planches d'icônes), afin que le modèle garde le style.
+2. **Image de référence.** On joint une image validée : _« Use the attached image as the style reference: same rendering, lighting, level of detail and framing. »_ Pour les icônes, joindre une ou deux planches précédentes.
+3. **Retouches ciblées.** _« Keep everything identical, only fix the left hand. »_
+4. **Transparence : ce qu'on sait (vérifié le 2026-10-18).**
+   - L'API d'OpenAI fait une vraie transparence (`background: "transparent"`, sortie `png`). L'application ChatGPT n'a pas d'option : le résultat est aléatoire, et le modèle peint souvent un damier dans les pixels. L'aperçu ne permet pas de distinguer un damier d'une vraie transparence.
+   - Constaté sur nos sources : 2 planches d'icônes sur 6 avaient un vrai canal alpha (v2, v5), les 4 autres un damier peint. Les personnages ont tous été demandés sur gris, et sont tous arrivés en RGB.
+   - **Toujours vérifier le fichier** avant de le traiter : `python -c "from PIL import Image; print(Image.open('x.png').mode)"` (RGBA = canal alpha ; il faut encore qu'une partie des pixels soit transparente).
+   - Si un damier arrive, relancer dans la même conversation : _« Convert this into a real RGBA PNG with a true transparent alpha channel, no checkerboard. »_
+   - Le détourage sur gris abîme les fourrures et cheveux fins. Piste non retenue pour l'instant (choix de l'utilisateur) : un script `scripts/generate-image.ts` qui appelle l'API avec une vraie transparence (clé API, images payantes).
 
 ## 9. Check-list avant d'intégrer une image
 
-- [ ] Le personnage est en pied, entier, tourné vers la droite, sur fond transparent.
-- [ ] Il n'y a ni texte, ni filigrane, ni ombre portée, ni halo de détourage.
-- [ ] La silhouette se reconnaît en petit (tuile de 64 px).
+- [ ] Le fichier a été vérifié (mode RGB ou RGBA, damier ou vraie transparence) et traité en conséquence.
+- [ ] Le personnage est en pied, entier, tourné vers la droite, sans halo de détourage (aperçu sur fond sombre et sur fond clair).
+- [ ] Il n'y a ni texte, ni filigrane, ni ombre portée.
+- [ ] La silhouette se reconnaît en petit (tuile de 64 px) et sa largeur correspond à son gabarit.
 - [ ] La lumière ne choque pas quand l'image est retournée.
-- [ ] Le style reste cohérent avec les autres personnages : même rendu, même niveau de détail.
-- [ ] Le design est original, sans ressemblance évidente avec un personnage existant.
-- [ ] Image recadrée au plus près, puis enregistrée dans `src/assets/`.
-- [ ] Dans `roster.ts`, `look` est ajusté : `facing: 'right'`, `scale` (hauteur relative entre races), et le cadrage du portrait `{x, y, zoom}`.
-- [ ] Pour une arène : recadrée en 1920×1080, vérifiée en combat, et sol bien dégagé derrière les combattants.
-- [ ] Pour des icônes : 16 fichiers (ou le nombre prévu) dans `src/assets/icons/`, lisibles à 20 px sur fond sombre, inventaire et historique de la section 7 mis à jour.
+- [ ] Le style reste cohérent avec les autres personnages ; le design est original.
+- [ ] Image recadrée, PNG optimisé, rangée dans `src/assets/` sous un nom kebab-case anglais ; source à la corbeille (`gio trash`).
+- [ ] Dans `roster.ts` (tenu par l'agent du gameplay), `look` est ajusté : `facing`, `scale` du gabarit, cadrage du portrait `{x, y, zoom}`.
+- [ ] Pour une arène : 1920×1080, sol dégagé au centre bas, vérifiée en combat.
+- [ ] Pour des icônes : planche de contrôle regardée, PNG dans `src/assets/icons/`, `IconName` et `STATUS_ICON` à jour, inventaire et historique de la section 7 complétés.
+- [ ] Aucun navigateur ne marche sur cette machine : dire à l'utilisateur quand un rendu n'a pas été vu en jeu.

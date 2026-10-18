@@ -48,3 +48,33 @@ export function statusCatalog(characters: readonly Character[] = CHARACTERS): St
   const rank = (e: StatusEntry) => (e.def.polarity === 'positive' ? 0 : 2) + (e.inGame ? 0 : 1)
   return entries.sort((a, b) => rank(a) - rank(b))
 }
+
+/** Une compétence et les personnages qui la possèdent (l'original et les variantes qui en héritent). */
+export interface SkillEntry {
+  event: CharacterEvent
+  owners: Character[]
+}
+
+/** Les compétences d'une race, dans l'ordre du roster. */
+export interface SkillFamily {
+  race: string
+  skills: SkillEntry[]
+}
+
+/**
+ * Toutes les compétences, regroupées par race. Une compétence partagée par l'original et ses
+ * variantes n'apparaît qu'une fois, avec tous ses possesseurs.
+ */
+export function skillCatalog(characters: readonly Character[] = CHARACTERS): SkillFamily[] {
+  const families: SkillFamily[] = []
+  for (const character of characters) {
+    let family = families.find((f) => f.race === character.race)
+    if (!family) families.push((family = { race: character.race, skills: [] }))
+    for (const event of character.events) {
+      const entry = family.skills.find((s) => s.event.id === event.id)
+      if (entry) entry.owners.push(character)
+      else family.skills.push({ event, owners: [character] })
+    }
+  }
+  return families
+}

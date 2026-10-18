@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { statusCatalog } from './catalog'
+import { skillCatalog, statusCatalog } from './catalog'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
-import { describeEvent, TRIGGERS, type Effect } from './events'
+import { describeEffect, describeEvent, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
-import { attackLog, effectBadge, effectText, eventLog } from './narration'
+import { attackLog, coinLog, effectBadge, effectText, eventLog, statusDurationLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, rollDie, seededRng, shuffle } from './rng'
-import { CHARACTER_IDS, createCharacter, ROSTER, validateRoster } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
+import { EMOJI, testCharacter } from './test-utils'
+import { traceCombat, traceText } from './trace'
 import { STATUS_IDS, statusCounter } from './statuses'
 import {
   champion,
@@ -38,6 +40,22 @@ describe('arènes', () => {
   })
 })
 
+describe('catalogue des compétences', () => {
+  it('liste chaque compétence une fois, par race, avec tous ses possesseurs', () => {
+    const families = skillCatalog()
+    expect(families.map((f) => f.race)).toEqual([...new Set(CHARACTERS.map((c) => c.race))])
+    const skills = families.flatMap((f) => f.skills)
+    expect(new Set(skills.map((s) => s.event.id)).size).toBe(skills.length)
+    // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
+    for (const c of CHARACTERS)
+      for (const e of c.events) expect(skills.find((s) => s.event.id === e.id)!.owners).toContain(c)
+    // Une variante peut avoir sa propre version d'une compétence (Murzug, 0.36.5) : deux entrées distinctes
+    expect(skills.find((s) => s.event.id === 'blood-rage')!.owners.map((c) => c.id)).toEqual(['gorak'])
+    expect(skills.find((s) => s.event.id === 'blood-rage-murzug')!.owners.map((c) => c.id)).toEqual(['murzug'])
+    expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak', 'murzug'])
+  })
+})
+
 describe('catalogue des statuts', () => {
   it('liste chaque statut une fois, avec ses règles et qui le pose', () => {
     const catalog = statusCatalog()
@@ -53,7 +71,9 @@ describe('catalogue des statuts', () => {
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
   })
   it('nombre affiché sur un état : tours restants s’il a une durée, sinon ses charges', () => {
-    expect(statusCounter({ id: 'poison', stacks: 2, turns: 3 })).toEqual({ value: 3, unit: 'turns' })
+    expect(statusCounter({ id: 'windFury', stacks: 1, turns: 2 })).toEqual({ value: 2, unit: 'turns' })
+    // Le poison n'affiche qu'une valeur, ses charges (0.36.4)
+    expect(statusCounter({ id: 'poison', stacks: 3 })).toEqual({ value: 3, unit: 'stacks' })
     expect(statusCounter({ id: 'bonusArmor', stacks: 4 })).toEqual({ value: 4, unit: 'stacks' })
     expect(statusCounter({ id: 'guaranteedCrit', stacks: 1 })).toEqual({ value: 1, unit: 'stacks' })
   })
@@ -105,9 +125,17 @@ describe('roster', () => {
     const broken = { ...ROSTER[0], id: 'x', stats: { ...ROSTER[0].stats, dodgeChance: 1.5 }, baseId: 'nope' }
     expect(validateRoster([broken, broken]).length).toBeGreaterThanOrEqual(3)
   })
-  it('une variante hérite des événements de son original', () => {
+  it("une variante hérite des événements de son original, sauf une version propre de l'un d'eux (même déclencheur)", () => {
     for (const def of ROSTER.filter((d) => d.baseId)) {
-      expect(def.events).toEqual(ROSTER.find((d) => d.id === def.baseId)!.events)
+      const base = ROSTER.find((d) => d.id === def.baseId)!.events
+      expect(def.events).toHaveLength(base.length)
+      const own = def.events.filter((e, i) => e !== base[i] && JSON.stringify(e) !== JSON.stringify(base[i]))
+      expect(own.length).toBeLessThanOrEqual(1)
+      for (const e of own) {
+        const i = def.events.indexOf(e)
+        expect(e.trigger).toBe(base[i].trigger)
+        expect(e.id).not.toBe(base[i].id) // un id propre : le catalogue les distingue
+      }
     }
   })
   it('createCharacter refuse un id inconnu ; withName garde id et stats', () => {
@@ -131,12 +159,14 @@ describe('stats', () => {
           for (const side of [0, 1] as const) {
             const opp = side === 0 ? 1 : 0
             expect(s[side].hpLeft).toBe(final.hp[side])
-            // Exact : le coup fatal ne compte que les PV qu'il restait.
-            expect(s[opp].totalDamage + s[side].effectDamageTaken - s[side].healed).toBe(
-              r.fighters[side].maxHp - final.hp[side],
-            )
+            // Exact pour qui reste debout ; pour le vaincu, l'excès du coup fatal (overkill) est compté en plus
+            const counted = s[opp].totalDamage + s[side].effectDamageTaken - s[side].healed
+            const lost = r.fighters[side].maxHp - final.hp[side]
+            if (final.hp[side] > 0) expect(counted).toBe(lost)
+            else expect(counted).toBeGreaterThanOrEqual(lost)
             expect(s[side].hits + s[opp].dodges).toBe(s[side].attacks)
-            expect(s[side].attacks + s[opp].attacks).toBe(attacksOf(r).length)
+            // Les coups sacrifiés (Vol de vie) ne comptent pas comme coups portés
+            expect(s[side].attacks + s[opp].attacks).toBe(attacksOf(r).filter((x) => !x.forfeited).length)
           }
         }
   })
@@ -205,13 +235,20 @@ describe('tournoi', () => {
       expect(out[5]).toBe('gorak')
       expect(out[9]).toBe('brokk')
       expect(out.every(Boolean)).toBe(true)
-      const counts = CHARACTER_IDS.map((id) => out.filter((s) => s === id).length)
-      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
+      // Équilibre : une case remplie automatiquement reçoit toujours un des personnages les moins
+      // présents (le roster peut compter plus de personnages que de cases)
+      const count = (id: string) => out.filter((s) => s === id).length
+      const min = Math.min(...CHARACTER_IDS.map(count))
+      out.forEach((id, i) => {
+        if (manual[i] === null) expect(count(id)).toBeLessThanOrEqual(min + 1)
+      })
     }
   })
 
   it('numérote les doublons', () => {
-    const t = createTournament(slots(), (id) => createCharacter(id).name)
+    const filled = slots()
+    filled[1] = filled[0] // au moins un doublon, même si le roster dépasse 16 personnages
+    const t = createTournament(filled, (id) => createCharacter(id).name)
     const labels = t.entrants.map((e) => e.label)
     expect(new Set(labels).size).toBe(SLOTS)
     expect(labels.some((l) => / (I|II|III)$/.test(l))).toBe(true)
@@ -277,5 +314,127 @@ describe('historique', () => {
     }
     expect(h.matches.filter((m) => m.tournament)).toHaveLength(25)
     clearHistory()
+  })
+})
+
+describe('trace de résolution', () => {
+  const poisoner = () =>
+    testCharacter('ervald', { damageDie: 4 }, [
+      {
+        id: 'venin',
+        name: 'Venin',
+        trigger: 'combatStart',
+        effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, turns: 3, target: 'opponent' }],
+      },
+    ])
+  const armored = () => testCharacter('brokk', { armor: 5, damageDie: 2 })
+
+  it('une graine rejoue le combat à l’identique et figure dans le résultat', () => {
+    const a = simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 1234 })
+    const b = simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 1234 })
+    expect(a.seed).toBe(1234)
+    expect(b.beats).toEqual(a.beats)
+    expect(simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { rng: seededRng(1234) }).beats).toEqual(a.beats)
+  })
+
+  it('une ligne par étape de la chronologie, dans l’ordre, avec les PV avant et après', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const result = simulateCombat([poisoner(), armored()], { seed })
+      const trace = traceCombat(result)
+      const steps = trace.turns.flatMap((t) => t.lines.filter((l) => l.startsWith('[')))
+      expect(steps).toHaveLength(result.beats.length)
+      expect(trace.footer).toContain(`${result.fighters[result.winner].name} gagne`)
+      expect(traceText(result)).toContain('graine')
+    }
+  })
+
+  it('le poison est tracé comme des dégâts directs qui ignorent l’armure', () => {
+    const result = simulateCombat([poisoner(), armored()], { seed: 7 })
+    const tick = result.beats.findIndex((b) => b.type === 'statusTick' && b.status === 'poison')
+    expect(tick).toBeGreaterThan(-1)
+    const before = result.beats[tick - 1].state.hp[1]
+    const text = traceText(result)
+    expect(text).toContain('Poison agit sur brokk')
+    expect(text).toContain('[début] durée décomptée sur brokk : Poison 3 → 2 tours')
+    expect(text).toContain(`2 dégâts directs à brokk, sans armure, esquive ni bouclier (brokk ${before} → ${before - 2} PV)`)
+  })
+})
+
+describe('aucun emoji dans les textes du jeu', () => {
+  it('journal, trace, fiches et descriptions des compétences', () => {
+    let seed = 1
+    for (const a of CHARACTER_IDS)
+      for (const b of CHARACTER_IDS) {
+        const r = simulateCombat([createCharacter(a), createCharacter(b)], { seed: seed++ })
+        expect(traceText(r).match(EMOJI)?.[0], `trace ${a}-${b}`).toBeUndefined()
+        const lines = r.beats.flatMap((beat) => {
+          switch (beat.type) {
+            case 'attack':
+              return [attackLog(beat.turn, beat.attack, r.fighters, beat.state.hp[beat.attack.attacker === 0 ? 1 : 0]).text]
+            case 'event':
+              return [eventLog(beat.event, r.fighters).text, ...beat.event.effects.map((e) => effectBadge(e).text)]
+            case 'statusTick':
+              return [statusTickLog(beat.side, beat.status, beat.effects, r.fighters).text]
+            case 'statusReaction':
+              return [statusReactionLog(beat.side, beat.status, beat.effects, r.fighters).text]
+            case 'coin':
+              return [coinLog(beat.turn, beat.side, beat.heads, beat.effects, r.fighters).text]
+            case 'statusDuration':
+              return [statusDurationLog(beat.side, beat.changes, r.fighters).text]
+            default:
+              return []
+          }
+        })
+        for (const line of lines) expect(line.match(EMOJI)?.[0], line).toBeUndefined()
+      }
+    for (const c of CHARACTERS) {
+      const texts = [c.name, c.race, c.archetype, c.lore.tagline, c.lore.background, ...c.lore.strengths, ...c.lore.weaknesses]
+      for (const e of c.events) texts.push(e.name, ...e.effects.map((x) => describeEffect(x)))
+      for (const t of texts) expect(t.match(EMOJI)?.[0], `${c.id} : ${t}`).toBeUndefined()
+    }
+  })
+})
+
+describe('Sons (docs/SONS.md, 0.36.2)', () => {
+  it('chaque fichier de src/assets/sounds porte un nom de son connu (un fichier par son)', async () => {
+    const { SAMPLE_URLS, SOUND_NAMES } = await import('./sound')
+    const names: readonly string[] = SOUND_NAMES
+    expect(Object.keys(SAMPLE_URLS).filter((n) => !names.includes(n))).toEqual([])
+  })
+
+  it('seuls les dés ont plusieurs fichiers, tirés au hasard (exception de la règle 2, 0.36.4)', async () => {
+    const { SAMPLE_URLS, VARIED_SOUNDS } = await import('./sound')
+    expect(Object.entries(SAMPLE_URLS).filter(([n, urls]) => urls.length > 1 && !VARIED_SOUNDS.includes(n as never)).map(([n]) => n)).toEqual([])
+    expect(SAMPLE_URLS['dice-roll']).toHaveLength(2)
+    expect(SAMPLE_URLS['dice-land']).toHaveLength(3)
+  })
+
+  it('chaque compétence joue le son de sa nature, le même pour tous les personnages (§ 4.3)', async () => {
+    const { cueOf } = await import('./cues')
+    // Coups (null) : Rétribution, Charge et Coup de griffe sonnent avec leurs coups
+    const expected: Record<string, string | null> = {}
+    const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura'])
+    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin'])
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3'])
+    family('heal', ['blood-rage', 'blood-rage-murzug', 'life-bloom'])
+    family(null, ['retribution', 'charge', 'claw'])
+    const seen: Record<string, Set<string | null>> = {}
+    for (const a of CHARACTER_IDS)
+      for (const b of CHARACTER_IDS)
+        for (let seed = 1; seed <= 4; seed++)
+          for (const beat of simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) }).beats) {
+            if (beat.type !== 'event') continue
+            const blocked = beat.event.effects.some((e) => e.type === 'applyStatus' && e.result.kind !== 'applied')
+            if (!blocked) (seen[beat.event.eventId] ??= new Set()).add(cueOf(beat.event.side, beat.event.effects))
+          }
+    expect(Object.keys(expected).filter((id) => !seen[id])).toEqual([])
+    for (const [id, cues] of Object.entries(seen)) {
+      // Purification : Aura perdue si le bonus retiré est une aura, sinon Dissipation (rien si rien à retirer)
+      if (id === 'purification') expect([...cues].every((c) => c === 'auraLoss' || c === 'dispel' || c === null)).toBe(true)
+      // Un effet sans résultat (soin à PV pleins) est muet (règle 8) : seul compte le son quand il agit
+      else if (expected[id] === null) expect({ id, cues: [...cues] }).toEqual({ id, cues: [null] })
+      else expect({ id, cues: [...cues].filter((c) => c !== null) }).toEqual({ id, cues: [expected[id]] })
+    }
   })
 })

@@ -1,12 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ARENAS, getArena, RANDOM_ARENA, type ArenaChoice } from '../game/arenas'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
-import { EventInfo } from './EventInfo'
+import { SkillDice } from './SkillDice'
 import { StatSheet } from './StatSheet'
 import { Icon } from './Icon'
+import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
+import { BetSummary, BettingDesk } from './Betting'
 
 interface Props {
   fighters: Pair<Character>
@@ -19,6 +21,17 @@ interface Props {
   /** Cadre du combat : une arène précise ou « au hasard » */
   arena: ArenaChoice
   onArenaChange: (arena: ArenaChoice) => void
+  /** Paris entre deux observateurs (docs/PARIS.md) ; absent : pas de guichet */
+  betting?: {
+    wallets: Wallets
+    /** Cotes du match ; null tant qu'elles sont en calcul */
+    odds: MatchOdds | null
+    /** Renvoie la raison d'un refus, ou null si le pari est posé */
+    onBet: (bettor: Bettor, pick: Pick, choice: number) => string | null
+    onCancel: (bettor: Bettor) => void
+    /** Duel simple : remettre les bourses à zéro */
+    onReset?: () => void
+  }
 }
 
 /** Écran d'affrontement : présente le duel et laisse choisir entre le jouer ou le simuler. */
@@ -31,10 +44,13 @@ export function MatchupScreen({
   backLabel = '← CHANGER',
   arena,
   onArenaChange,
+  betting,
 }: Props) {
+  const [desk, setDesk] = useState(false)
+  const names: Pair<string> = [fighters[0].name, fighters[1].name]
   // Fracas quand le « VS » s'abat ; le délai est annulé si l'écran est démonté entre-temps.
   useEffect(() => {
-    const id = setTimeout(() => sfx.impact(10, true), 550)
+    const id = setTimeout(() => sfx.clash(), 550)
     return () => clearTimeout(id)
   }, [])
 
@@ -70,6 +86,11 @@ export function MatchupScreen({
         <span className="vs-slam col-start-2 row-start-1 mb-[300px] font-display text-[140px] font-extrabold leading-none text-amber-300 drop-shadow-[0_6px_0_#78350f]">
           VS
         </span>
+        {betting && (
+          <div className="col-start-2 row-start-1 mb-[150px] self-end justify-self-center">
+            <BetSummary wallets={betting.wallets} odds={betting.odds} fighterNames={names} />
+          </div>
+        )}
       </div>
 
       <div className="relative flex items-center justify-center gap-6 pb-10 pt-4">
@@ -80,6 +101,23 @@ export function MatchupScreen({
           <Icon name="swords" className="btn-icon" />
           <span>Jouer</span>
         </button>
+        {betting && (
+          <button
+            onClick={() => {
+              sfx.click()
+              setDesk(true)
+            }}
+            title="Ouvre le guichet du match : chaque joueur peut parier avant le combat"
+            className="btn btn-md w-56"
+          >
+            <Icon name="coin-pile" className="btn-icon" />
+            <span>
+              Parier
+              {betting.odds &&
+                ` ${humansOf(betting.wallets).filter((b) => betting.wallets.bets[betting.odds!.key]?.[b]).length}/${humansOf(betting.wallets).length}`}
+            </span>
+          </button>
+        )}
         <button
           onClick={onSimulate}
           title="Résout le combat instantanément, avec les mêmes règles, et affiche les scores"
@@ -89,6 +127,21 @@ export function MatchupScreen({
           <span>Simuler</span>
         </button>
       </div>
+
+      {betting && desk && (
+        <BettingDesk
+          wallets={betting.wallets}
+          odds={betting.odds}
+          fighters={fighters}
+          onBet={betting.onBet}
+          onCancel={betting.onCancel}
+          onReset={betting.onReset}
+          onClose={() => {
+            sfx.click()
+            setDesk(false)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -159,14 +212,13 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
           <p className="text-lg text-stone-400">
             {character.race} · {character.archetype}
           </p>
+
         </div>
         {/* Mêmes barres que sur l'écran de sélection, à la couleur du camp */}
         <div className="w-72 rounded-lg border border-stone-800 bg-stone-900/60 px-3 py-2.5 text-left">
           <StatSheet character={character} barClass={style.bar} />
         </div>
-        <div className="max-w-72 text-left">
-          <EventInfo character={character} compact />
-        </div>
+        <SkillDice character={character} align={side === 1 ? 'right' : 'left'} />
       </div>
     </div>
   )

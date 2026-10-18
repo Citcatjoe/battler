@@ -12,10 +12,13 @@ interface Props {
   onChange: (slots: (string | null)[]) => void
   onValidate: (slots: string[]) => void
   onBack: () => void
+  /** Paris entre deux joueurs (docs/PARIS.md) : activés, et les noms des deux parieurs */
+  betting: { enabled: boolean; names: [string, string] }
+  onBettingChange: (betting: { enabled: boolean; names: [string, string] }) => void
 }
 
 /** Configuration de l'arbre : on choisit un personnage dans la palette puis on clique les cases. */
-export function TournamentSetupScreen({ slots, onChange, onValidate, onBack }: Props) {
+export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, betting, onBettingChange }: Props) {
   const roster = CHARACTERS
   const ids = CHARACTER_IDS
   const [brushId, setBrushId] = useState(ids[0])
@@ -45,6 +48,33 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack }: P
             Placez les 16 participants à la main, ou complétez automatiquement les cases restantes. Les doublons sont
             permis.
           </p>
+          <div className="mt-2 flex items-center gap-2 text-sm">
+            <label className="flex cursor-pointer items-center gap-2 text-stone-300">
+              <input
+                type="checkbox"
+                checked={betting.enabled}
+                onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
+                className="h-4 w-4 accent-amber-500"
+              />
+              <Icon name="coin-pile" /> Paris entre
+            </label>
+            {([0, 1] as const).map((i) => [
+              i === 1 && <span key="et" className="text-stone-400">et</span>,
+              <input
+                key={i}
+                value={betting.names[i]}
+                disabled={!betting.enabled}
+                maxLength={16}
+                aria-label={`Parieur ${i + 1}`}
+                onChange={(e) => {
+                  const names: [string, string] = [...betting.names]
+                  names[i] = e.target.value
+                  onBettingChange({ ...betting, names })
+                }}
+                className={`w-32 rounded-md border bg-stone-950/80 px-2 py-1 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
+              />,
+            ])}
+          </div>
         </div>
         <div className="flex items-center gap-3 pt-6">
           <span className={`font-mono text-lg font-bold ${complete ? 'text-emerald-400' : 'text-stone-300'}`}>
@@ -86,8 +116,9 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack }: P
         center={
           <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-amber-500/30 bg-stone-900/70 px-3 py-4">
             <p className="text-center text-sm font-bold text-amber-200">① Choisissez un personnage</p>
-            {/* Une colonne par famille : l'original en haut, ses variantes dessous */}
-            <div className="flex gap-1.5">
+            {/* Une colonne par famille : l'original en haut, ses variantes dessous ; les familles passent
+                à la ligne quand la zone centrale de l'arbre est trop étroite (6 familles) */}
+            <div className="flex flex-wrap justify-center gap-1.5">
               {FAMILIES.map((family) => (
                 <div key={family[0].id} className="flex flex-col gap-1.5">
                   {family.map((c) => {

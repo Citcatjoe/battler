@@ -14,7 +14,7 @@ export function SoundToggle() {
       onClick={toggle}
       title={muted ? 'Activer le son' : 'Couper le son'}
       aria-label={muted ? 'Activer le son' : 'Couper le son'}
-      className="btn btn-round absolute right-4 top-4 z-50"
+      className="btn btn-round absolute right-4 top-4 z-[60]"
     >
       <Icon name={muted ? 'sound-off' : 'sound-on'} className="btn-icon" />
     </button>

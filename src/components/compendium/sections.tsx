@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { IconName } from '../Icon'
 import { CharactersSection } from './CharactersSection'
+import { SkillsSection } from './SkillsSection'
 import { StatusesSection } from './StatusesSection'
 
 /*
@@ -9,7 +10,7 @@ import { StatusesSection } from './StatusesSection'
  * de navigation (`CompendiumNav`), pour pouvoir pointer vers un personnage depuis n'importe où.
  */
 
-export type CompendiumSectionId = 'characters' | 'statuses'
+export type CompendiumSectionId = 'characters' | 'skills' | 'statuses'
 
 export interface CompendiumNav {
   characterId: string
@@ -29,6 +30,12 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
     label: 'Personnages',
     icon: 'scroll',
     render: (nav) => <CharactersSection characterId={nav.characterId} onSelect={nav.onSelectCharacter} />,
+  },
+  {
+    id: 'skills',
+    label: 'Compétences',
+    icon: 'event',
+    render: (nav) => <SkillsSection onSelectCharacter={nav.onSelectCharacter} />,
   },
   {
     id: 'statuses',

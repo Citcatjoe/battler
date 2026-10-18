@@ -3,17 +3,23 @@ import { champion, currentRound, readyMatches, ROUND_NAMES, type MatchRef, type 
 import { Bracket } from './Bracket'
 import { Fighter } from './Fighter'
 import { Icon } from './Icon'
+import type { Wallets } from '../game/betting'
+import { Standings } from './Betting'
 
 interface Props {
   tournament: Tournament
   onPlay: (ref: MatchRef) => void
   onSimulate: (refs: MatchRef[]) => void
+  /** Tournoi terminé : revoir l'écran du champion */
+  onChampion: () => void
   onNewTournament: () => void
   onMenu: () => void
+  /** Bourses des deux parieurs (docs/PARIS.md) ; absent : tournoi sans paris */
+  wallets?: Wallets | null
 }
 
 /** Suivi du tournoi : l'arbre, les matchs à venir et, à la fin, le champion. */
-export function BracketScreen({ tournament, onPlay, onSimulate, onNewTournament, onMenu }: Props) {
+export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNewTournament, onMenu, wallets }: Props) {
   const round = currentRound(tournament)
   const winnerIdx = champion(tournament)
   const winner = winnerIdx === null ? null : tournament.entrants[winnerIdx]
@@ -31,6 +37,11 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onNewTournament,
           <p className="text-sm text-stone-400">
             {round === null ? 'Tournoi terminé' : ROUND_NAMES[round]} · {doneCount} / 15 matchs joués
           </p>
+          {wallets && (
+            <div className="mt-2" title="Classement des parieurs. Les joueurs parient en ouvrant un match (Affronter) ; Borin et Zlatka parient sur tous les matchs.">
+              <Standings wallets={wallets} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 pt-6">
           {ready.length > 0 && (
@@ -40,6 +51,12 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onNewTournament,
               title="Simule tous les matchs prêts de ce tour"
             >
               <Icon name="lightning" /> Simuler le tour ({ready.length})
+            </button>
+          )}
+          {winner && (
+            <button onClick={onChampion} className="btn btn-md">
+              <Icon name="trophy" className="btn-icon" />
+              <span>Le champion</span>
             </button>
           )}
           {winner && (

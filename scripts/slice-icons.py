@@ -78,8 +78,13 @@ else:
     dark = ndimage.binary_closing(grey < 130, iterations=2)
     outlined = ndimage.binary_fill_holes(dark) & ~background
     alpha[outlined] = 1.0
+    # 3 bis. Zones pâles enfermées dans l'icône (visage du spectre, cœur d'un éclair) : sans contour
+    # sombre, le « color to alpha » les rendait presque transparentes. Ce qui est entièrement entouré
+    # de matière opaque, et n'a pas été reconnu comme damier, fait partie du dessin.
+    enclosed = ndimage.binary_fill_holes(alpha > 0.5) & (alpha <= 0.5) & ~background
     alpha[background] = 0.0
     alpha[bg_like & ~outlined] = 0.0  # restes du damier (transitions floues) au milieu des lueurs
+    alpha[enclosed] = 1.0  # après les restes du damier : un visage pâle ressemble à une case grise
     alpha[alpha < 0.03] = 0
 
 a = alpha[..., None]
@@ -97,6 +102,9 @@ for i, sl in enumerate(ndimage.find_objects(labels), start=1):
         continue
     cy, cx = ndimage.center_of_mass(labels == i)
     r, c = int(cy // cell_h), int(cx // cell_w)
+    # Grille incomplète (8 icônes sur 3×3) : les morceaux des cases vides sont ignorés.
+    if r * GRID + c >= len(NAMES):
+        continue
     cells[r * GRID + c][sl] |= m
     # Un morceau à cheval sur deux cases signale une icône qui déborde.
     y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop

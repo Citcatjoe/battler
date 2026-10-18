@@ -79,7 +79,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
         {tab === 'sheet' ? (
           <div key={`sheet-${character.id}`} className="fade-in grid min-h-0 grid-cols-2 gap-8">
             {/* Identité de jeu : qui il est, comment il se bat */}
-            <div className="flex flex-col gap-5">
+            <div className="flex min-h-0 flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
                 <p className="leading-snug text-stone-300">{character.lore.background}</p>
@@ -102,9 +102,12 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                   </ul>
                 </section>
               </div>
-              <section>
-                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">Compétence</h2>
-                <EventInfo character={character} />
+              {/* Six compétences pour un personnage à formes : la liste défile dans son cadre */}
+              <section className="flex min-h-0 flex-1 flex-col">
+                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">Compétences</h2>
+                <div className="scroll-panel min-h-0 flex-1 overflow-y-auto pr-1">
+                  <EventInfo character={character} />
+                </div>
               </section>
             </div>
 

@@ -1,5 +1,6 @@
 import type { Character } from './character'
-import { finalState, type CombatResult } from './combat'
+import { finalState, type CombatResult, type Pair } from './combat'
+import { computeStats, type FighterStats } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
 import { createCharacter } from './roster'
 
@@ -29,6 +30,12 @@ export interface MatchResult {
   mode: CombatResult['mode']
   /** PV restants du vainqueur */
   hpLeft: number
+  /** Index des deux participants (gauche, droite), pour retrouver le bilan de chacun */
+  players?: Pair<number>
+  /** Bilan de chaque côté (`computeStats`), pour l'écran du champion */
+  stats?: Pair<FighterStats>
+  /** Compétences déclenchées par chaque côté, par nom */
+  skills?: Pair<Record<string, number>>
 }
 
 export interface Tournament {
@@ -119,9 +126,85 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult): 
         mode: result.mode,
         // PV restants du vainqueur, soins compris
         hpLeft: finalState(result).hp[result.winner],
+        players: [a, b],
+        stats: computeStats(result),
+        skills: [skillCounts(result, 0), skillCounts(result, 1)],
       },
     },
   }
+}
+
+const skillCounts = (result: CombatResult, side: 0 | 1) => {
+  const counts: Record<string, number> = {}
+  for (const b of result.beats) if (b.type === 'event' && b.event.side === side) counts[b.event.name] = (counts[b.event.name] ?? 0) + 1
+  return counts
+}
+
+/** Un match du parcours du champion : l'adversaire battu et comment. */
+export interface RunMatch {
+  round: number
+  opponent: Entrant
+  turns: number
+  hpLeft: number
+  mode: CombatResult['mode']
+  stats?: FighterStats
+}
+
+/** Le parcours du champion, ses quatre victoires, et le bilan cumulé de son tournoi. */
+export interface ChampionRun {
+  entrant: Entrant
+  matches: RunMatch[]
+  totals: {
+    turns: number
+    damage: number
+    hits: number
+    attacks: number
+    crits: number
+    critDamage: number
+    best: number
+    dodges: number
+    healed: number
+    events: number
+    absorbed: number
+    damageTaken: number
+  }
+  /** Compétences déclenchées sur tout le tournoi, de la plus fréquente à la plus rare */
+  skills: [string, number][]
+}
+
+/** Bilan du champion (null tant que la finale n'est pas jouée). Les bilans manquants comptent pour 0. */
+export function championRun(t: Tournament): ChampionRun | null {
+  const champ = champion(t)
+  if (champ === null) return null
+  const matches: RunMatch[] = []
+  const totals = { turns: 0, damage: 0, hits: 0, attacks: 0, crits: 0, critDamage: 0, best: 0, dodges: 0, healed: 0, events: 0, absorbed: 0, damageTaken: 0 }
+  const skills = new Map<string, number>()
+  for (const ref of allMatches()) {
+    const r = t.results[matchKey(ref)]
+    const [a, b] = players(t, ref)
+    if (!r || (a !== champ && b !== champ)) continue
+    const side = a === champ ? 0 : 1
+    const opponent = t.entrants[(side === 0 ? b : a)!]
+    const mine = r.stats?.[side]
+    const theirs = r.stats?.[side === 0 ? 1 : 0]
+    matches.push({ round: ref.round, opponent, turns: r.turns, hpLeft: r.hpLeft, mode: r.mode, stats: mine })
+    totals.turns += r.turns
+    if (mine) {
+      totals.damage += mine.totalDamage
+      totals.hits += mine.hits
+      totals.attacks += mine.attacks
+      totals.crits += mine.crits
+      totals.critDamage += mine.critDamage
+      totals.best = Math.max(totals.best, mine.best)
+      totals.dodges += mine.dodges
+      totals.healed += mine.healed
+      totals.events += mine.events
+      totals.absorbed += mine.absorbed
+      totals.damageTaken += (theirs?.totalDamage ?? 0) + mine.effectDamageTaken
+    }
+    for (const [name, n] of Object.entries(r.skills?.[side] ?? {})) skills.set(name, (skills.get(name) ?? 0) + n)
+  }
+  return { entrant: t.entrants[champ], matches, totals, skills: [...skills].sort((x, y) => y[1] - x[1]) }
 }
 
 /**

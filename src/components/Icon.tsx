@@ -20,11 +20,37 @@ export type IconName =
   | 'sound-on'
   | 'sound-off'
   | 'turns'
+  | 'holy-aura'
+  | 'purification'
+  | 'fear'
+  | 'decoction-aura'
+  | 'coin-flip'
+  | 'lucky-strike'
+  | 'coin-face'
+  | 'coin-pile'
+  | 'retribution'
+  | 'riposte'
+  | 'immunity-aura'
+  | 'thorns'
+  | 'lifesteal'
+  | 'wind-fury'
+  | 'evasion'
+  | 'precision-aura'
+  | 'poison-aura'
+  | 'power-aura'
+  | 'intimidation-aura'
+  | 'waiting'
+  | 'life-bloom'
+  | 'bark-skin'
+  | 'fireflies'
+  | 'charge'
+  | 'claw'
+  | 'rot-aura'
 
 /**
- * Icône peinte de chaque statut ; `STATUSES[id].icon` (emoji) reste utilisé dans le texte du journal.
- * Facultative pour un statut « à venir » (repli sur l'emoji), obligatoire avant qu'un personnage
- * le pose : un test le vérifie.
+ * Icône peinte de chaque statut. Facultative pour un statut « à venir » (repli sur une marque neutre,
+ * l'initiale de son nom), obligatoire avant qu'un personnage le pose : un test le vérifie.
+ * Jamais d'emoji : une icône manquante se demande à l'utilisateur (docs/STYLE_BIBLE.md § 7).
  */
 export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   guaranteedCrit: 'crit',
@@ -33,15 +59,56 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   regeneration: 'regen',
   weakened: 'weakened',
   exposed: 'breach',
+  thorns: 'thorns',
+  lifesteal: 'lifesteal',
+  windFury: 'wind-fury',
+  evasion: 'evasion',
+  precisionAura: 'precision-aura',
+  poisonAura: 'poison-aura',
+  powerAura: 'power-aura',
+  intimidationAura: 'intimidation-aura',
+  fear: 'fear',
+  holyAura: 'holy-aura',
+  decoctionAura: 'decoction-aura',
+  coinFlip: 'coin-flip',
+  luckyStrike: 'lucky-strike',
+  retribution: 'retribution',
+  riposte: 'riposte',
+  immunityAura: 'immunity-aura',
+  waiting: 'waiting',
+  barkSkin: 'bark-skin',
+  firefly: 'fireflies',
+  rotAura: 'rot-aura',
+  // Provisoire : la Pourriture subie reprend l'icône de l'aura, en attendant la sienne (demandée)
+  rot: 'rot-aura',
 }
 
-/** Icône d'un statut : l'icône peinte, sinon son emoji à la même taille. */
+/**
+ * Icône peinte d'une compétence (par id d'événement), quand elle a la sienne ; sinon, le compendium
+ * et les infobulles montrent l'icône générique des compétences.
+ */
+export const SKILL_ICON: Partial<Record<string, IconName>> = {
+  'life-bloom': 'life-bloom',
+  'bark-skin': 'bark-skin',
+  firefly: 'fireflies',
+  charge: 'charge',
+  claw: 'claw',
+  'rot-aura': 'rot-aura',
+  'waiting-1': 'waiting',
+  'waiting-2': 'waiting',
+  'waiting-3': 'waiting',
+}
+
+/** Icône d'un statut : l'icône peinte, sinon une marque neutre (l'initiale du statut) à la même taille. */
 export function StatusIcon({ id, className }: { id: StatusId; className: string }) {
   const name = STATUS_ICON[id]
   if (name) return <Icon name={name} className={className} />
   return (
-    <span aria-hidden className={`flex items-center justify-center text-[1.6em] leading-none ${className}`}>
-      {STATUSES[id].icon}
+    <span
+      aria-hidden
+      className={`flex items-center justify-center rounded-full border border-stone-500/60 bg-stone-800 font-display font-extrabold leading-none text-stone-300 ${className}`}
+    >
+      {STATUSES[id].name[0]}
     </span>
   )
 }

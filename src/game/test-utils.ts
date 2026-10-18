@@ -23,3 +23,9 @@ export function testCharacter(
   }
   return new Character(def)
 }
+
+/**
+ * Un emoji, tel qu'il s'afficherait en couleur : caractère de présentation emoji, ou suivi du
+ * sélecteur de variante U+FE0F. Aucun texte du jeu ne doit en contenir (icônes peintes seulement).
+ */
+export const EMOJI = /\p{Emoji_Presentation}|\uFE0F/u

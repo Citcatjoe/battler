@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Character } from './game/character'
 import { simulateCombat, type CombatResult, type Pair } from './game/combat'
 import { createCharacter } from './game/roster'
+import { randomSeed } from './game/rng'
+import { reportCombat } from './game/debugConsole'
 import { recordMatch, recordTournamentWin } from './game/history'
 import {
   champion,
+  championRun,
   createTournament,
   matchFighters,
   ROUND_NAMES,
@@ -14,6 +17,21 @@ import {
   type Tournament,
 } from './game/tournament'
 import { sfx } from './game/sound'
+import {
+  cancelBet,
+  cancelMatch,
+  createWallets,
+  DEFAULT_BETTOR_NAMES,
+  placeBet,
+  placeBotBets,
+  priceMatch,
+  relief,
+  settleMatch,
+  worthOf,
+  type MatchOdds,
+  type Wallets,
+} from './game/betting'
+import type { BetsOutcome } from './components/Betting'
 import { ARENAS, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
 import { MatchupScreen } from './components/MatchupScreen'
@@ -26,20 +44,31 @@ import { TournamentSetupScreen } from './components/TournamentSetupScreen'
 import { BracketScreen } from './components/BracketScreen'
 import { SoundToggle } from './components/SoundToggle'
 import { Stage } from './components/Stage'
+import { ChampionScreen } from './components/ChampionScreen'
 
 type Screen =
   | { name: 'start' }
   | { name: 'matchup' }
   | { name: 'fight'; script: CombatResult; arena: Arena }
-  | { name: 'end'; result: CombatResult }
+  /** `bets` : règlement des paris du match, s'il y en avait */
+  | { name: 'end'; result: CombatResult; bets?: BetsOutcome }
   /** `from` : écran où revient le bouton retour */
   | { name: 'compendium'; section: CompendiumSectionId; characterId: string; from: 'start' | 'records' }
   | { name: 'records' }
   | { name: 'tournamentSetup' }
   | { name: 'bracket' }
+  /** Sacre du champion, à la fin d'un tournoi */
+  | { name: 'champion' }
 
 const matchTitle = (ref: MatchRef) =>
   ref.round === ROUND_NAMES.length - 1 ? 'Finale' : `${ROUND_NAMES[ref.round]} · Match ${ref.index + 1}`
+
+/** Résout un combat avec une graine (pour pouvoir le rejouer) et écrit sa trace dans la console. */
+function runCombat(fighters: Pair<Character>): CombatResult {
+  const result = simulateCombat(fighters, { seed: randomSeed() })
+  reportCombat(result)
+  return result
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'start' })
@@ -54,6 +83,54 @@ export default function App() {
   /** Match de tournoi en cours via l'écran d'affrontement ; null en affrontement simple */
   const [activeMatch, setActiveMatch] = useState<MatchRef | null>(null)
 
+  // Paris entre deux observateurs (docs/PARIS.md) : une bourse par tournoi, une autre pour les duels
+  // de la session. En mémoire seulement, comme le tournoi.
+  const [bettingSetup, setBettingSetup] = useState<{ enabled: boolean; names: Pair<string> }>({
+    enabled: true,
+    names: [...DEFAULT_BETTOR_NAMES],
+  })
+  const [wallets, setWallets] = useState<Wallets | null>(null)
+  const [duelWallets, setDuelWallets] = useState<Wallets>(() => createWallets())
+  /** Numéro du duel en cours : chaque duel a ses cotes et son coup de théâtre */
+  const [duelNumber, setDuelNumber] = useState(1)
+  /** Dernier tour du tournoi pour lequel la prime de relance a été examinée */
+  const [reliefRound, setReliefRound] = useState(0)
+  const [odds, setOdds] = useState<MatchOdds | null>(null)
+  const betKey = activeMatch ? `t-${activeMatch.round}-${activeMatch.index}` : `d-${duelNumber}`
+  const purse = activeMatch ? wallets : duelWallets
+  // Dernière bourse connue : deux paris posés dans la même image ne s'écrasent pas
+  const purseRef = useRef(purse)
+  purseRef.current = purse
+  const setPurse = (w: Wallets) => {
+    purseRef.current = w
+    if (activeMatch) setWallets(w)
+    else setDuelWallets(w)
+  }
+  const oddsId = `${betKey}:${fighters[0].id}-${fighters[1].id}`
+
+  // Cotes du match, calculées une fois l'écran d'affrontement affiché (quelques centaines de combats simulés)
+  useEffect(() => {
+    if (screen.name !== 'matchup' || !purse) return
+    if (odds && `${odds.key}:${fighters[0].id}-${fighters[1].id}` === oddsId) return
+    setOdds(null)
+    const id = setTimeout(() => setOdds(priceMatch(fighters, betKey)), 60)
+    return () => clearTimeout(id)
+  }, [screen.name, oddsId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Les parieurs de l'ordinateur misent dès que les cotes du match sont prêtes
+  useEffect(() => {
+    if (screen.name !== 'matchup' || !odds || !purseRef.current) return
+    const next = placeBotBets(purseRef.current, odds)
+    if (next !== purseRef.current) setPurse(next)
+  }, [screen.name, odds]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Prime de relance d'un tournoi au premier match d'un nouveau tour ; renvoie les bourses à jour. */
+  const reliefFor = (w: Wallets, round: number) => {
+    if (round <= reliefRound) return w
+    setReliefRound(round)
+    return relief(w, ROUND_NAMES[round])
+  }
+
   const go = (next: Screen) => {
     sfx.click()
     setScreen(next)
@@ -65,23 +142,52 @@ export default function App() {
     for (const [ref, result] of done) {
       // L'arbre valide d'abord le match (prêt, bons combattants) : rien n'est enregistré sinon.
       next = withResult(next, ref, result)
-      recordMatch(result, { tournament: true })
+      if (!result.forcedRolls) recordMatch(result, { tournament: true })
     }
     const champ = champion(next)
-    if (champ !== null && champion(t) === null) recordTournamentWin(next.entrants[champ].characterId)
+    const crowned = champ !== null && champion(t) === null
+    if (crowned) recordTournamentWin(next.entrants[champ].characterId)
     setTournament(next)
-    return next
+    return { next, crowned }
   }
 
-  // Tout combat terminé, joué ou simulé, est enregistré dans l'historique local.
+  // Tout combat terminé, joué ou simulé, est enregistré dans l'historique local, sauf s'il a été
+  // triché (dés imposés) : il fausserait les statistiques. Sa trace finale, différente de celle
+  // écrite au départ, est enregistrée à part (fichier « _triche » dans logs/combats/).
   const finish = (result: CombatResult) => {
+    if (result.forcedRolls) reportCombat(result)
     if (activeMatch && tournament) applyResults(tournament, [[activeMatch, result]])
-    else recordMatch(result)
-    setScreen({ name: 'end', result })
+    else if (!result.forcedRolls) recordMatch(result)
+    // Règlement des paris du match : mise × cote au gagnant ; combat triché, mises rendues
+    let bets: Extract<Screen, { name: 'end' }>['bets']
+    if (purse && odds && odds.key === betKey && purse.bets[betKey]) {
+      const { wallets: next, entries } = settleMatch(purse, odds, result)
+      setPurse(next)
+      const ids = next.bettors.map((_, i) => i)
+      bets = {
+        entries,
+        bettors: next.bettors,
+        before: ids.map((b) => worthOf(purse, b)),
+        after: ids.map((b) => worthOf(next, b)),
+        line: odds.line,
+        ...(odds.twist && { twist: odds.twist }),
+      }
+      if (entries.some((e) => e.kind === 'settle' && e.won)) sfx.coinWin()
+    }
+    if (!activeMatch) setDuelNumber((n) => n + 1)
+    setScreen({ name: 'end', result, bets })
+  }
+
+  /** Nouveau duel : prime de relance d'un parieur ruiné. */
+  const toDuel = () => {
+    setActiveMatch(null)
+    setDuelWallets((w) => relief(w, 'Nouveau duel'))
+    go({ name: 'matchup' })
   }
 
   const openMatch = (ref: MatchRef) => {
     if (!tournament) return
+    if (wallets) setWallets(reliefFor(wallets, ref.round))
     setActiveMatch(ref)
     setFighters(matchFighters(tournament, ref))
     go({ name: 'matchup' })
@@ -106,9 +212,8 @@ export default function App() {
           mode={mode}
           onModeChange={setMode}
           onStart={(f) => {
-            setActiveMatch(null)
             setFighters(f)
-            go({ name: 'matchup' })
+            toDuel()
           }}
           onOpenCharacter={(id, current) => {
             setFighters(current)
@@ -135,19 +240,42 @@ export default function App() {
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
-          onPlay={() => go({ name: 'fight', script: simulateCombat(fighters), arena: resolveArena(arenaChoice) })}
+          onPlay={() => go({ name: 'fight', script: runCombat(fighters), arena: resolveArena(arenaChoice) })}
           onSimulate={() => {
             sfx.click()
-            finish(simulateCombat(fighters))
+            finish(runCombat(fighters))
           }}
-          onBack={activeMatch ? backToBracket : () => go({ name: 'start' })}
+          onBack={() => {
+            // Revenir avant le combat annule les paris du match : les mises sont rendues
+            if (purse) setPurse(cancelMatch(purse, betKey))
+            if (activeMatch) backToBracket()
+            else go({ name: 'start' })
+          }}
+          betting={
+            purse
+              ? {
+                  wallets: purse,
+                  odds,
+                  onBet: (bettor, pick, choice) => {
+                    if (!odds || !purseRef.current) return 'Cotes en calcul'
+                    const r = placeBet(purseRef.current, odds, bettor, pick, choice)
+                    if (!r.ok) return r.reason
+                    setPurse(r.wallets)
+                    return null
+                  },
+                  onCancel: (bettor) => purseRef.current && setPurse(cancelBet(purseRef.current, betKey, bettor)),
+                  onReset: activeMatch ? undefined : () => setDuelWallets(createWallets(bettingSetup.names)),
+                }
+              : undefined
+          }
         />
       )}
       {screen.name === 'fight' && <FightScreen script={screen.script} arena={screen.arena} onEnd={finish} />}
       {screen.name === 'end' && (
         <EndScreen
           result={screen.result}
-          onReplay={() => go({ name: 'matchup' })}
+          bets={screen.bets}
+          onReplay={toDuel}
           onMenu={() => go({ name: 'start' })}
           tournament={
             activeMatch && tournament
@@ -158,7 +286,14 @@ export default function App() {
                       : `${screen.result.fighters[screen.result.winner].name} se qualifie pour les ${ROUND_NAMES[
                           activeMatch.round + 1
                         ].toLowerCase()}.`,
-                  onContinue: backToBracket,
+                  // Après la finale, le sacre du champion ; sinon, retour à l'arbre
+                  onContinue:
+                    activeMatch.round === ROUND_NAMES.length - 1
+                      ? () => {
+                          setActiveMatch(null)
+                          go({ name: 'champion' })
+                        }
+                      : backToBracket,
                 }
               : undefined
           }
@@ -184,10 +319,16 @@ export default function App() {
         <TournamentSetupScreen
           slots={slots}
           onChange={setSlots}
+          betting={bettingSetup}
+          onBettingChange={setBettingSetup}
           onBack={() => go({ name: 'start' })}
           onValidate={(filled) => {
             setTournament(createTournament(filled, (id) => createCharacter(id).name))
             setActiveMatch(null)
+            const names = bettingSetup.names.map((n, i) => n.trim() || DEFAULT_BETTOR_NAMES[i]) as Pair<string>
+            setWallets(bettingSetup.enabled ? createWallets(names) : null)
+            setDuelWallets((w) => ({ ...w, bettors: w.bettors.map((b, i) => (i < names.length ? { ...b, name: names[i] } : b)) }))
+            setReliefRound(0)
             go({ name: 'bracket' })
           }}
         />
@@ -195,14 +336,36 @@ export default function App() {
       {screen.name === 'bracket' && tournament && (
         <BracketScreen
           tournament={tournament}
+          wallets={wallets}
           onPlay={openMatch}
           onSimulate={(refs) => {
             sfx.click()
-            applyResults(
-              tournament,
-              refs.map((ref) => [ref, simulateCombat(matchFighters(tournament, ref))]),
-            )
+            // Matchs simulés depuis l'arbre : seuls les parieurs de l'ordinateur misent (pas de guichet de tour)
+            let w = wallets && refs.length ? reliefFor(wallets, Math.max(...refs.map((r) => r.round))) : wallets
+            const done = refs.map((ref): [MatchRef, CombatResult] => {
+              const pair = matchFighters(tournament, ref)
+              const result = runCombat(pair)
+              if (w) {
+                const matchOdds = priceMatch(pair, `t-${ref.round}-${ref.index}`)
+                w = settleMatch(placeBotBets(w, matchOdds), matchOdds, result).wallets
+              }
+              return [ref, result]
+            })
+            if (w) setWallets(w)
+            const { crowned } = applyResults(tournament, done)
+            // Finale simulée : on passe directement au sacre du champion
+            if (crowned) go({ name: 'champion' })
           }}
+          onChampion={() => go({ name: 'champion' })}
+          onNewTournament={() => go({ name: 'tournamentSetup' })}
+          onMenu={() => go({ name: 'start' })}
+        />
+      )}
+      {screen.name === 'champion' && tournament && championRun(tournament) && (
+        <ChampionScreen
+          run={championRun(tournament)!}
+          wallets={wallets}
+          onBracket={() => go({ name: 'bracket' })}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
           onMenu={() => go({ name: 'start' })}
         />

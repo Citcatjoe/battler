@@ -8,7 +8,7 @@ import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
 import { Portrait } from './Portrait'
 import { StatSheet } from './StatSheet'
-import { EventInfo } from './EventInfo'
+import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
 
 interface Props {
@@ -54,7 +54,7 @@ export function StartScreen(props: Props) {
   }
 
   return (
-    <div className="fade-in relative isolate flex h-full flex-col items-center gap-5 px-12 py-8">
+    <div className="fade-in relative isolate flex h-full flex-col items-center gap-5 px-8 py-8">
       {mode === 'tournament' ? (
         <>
           {/* Porte de l'arène vue du parvis : la porte (30 % de la largeur) éclaire le champion à contre-jour */}
@@ -180,8 +180,8 @@ function TournamentIntro({ tournamentProgress, onNewTournament, onResumeTourname
           </p>
         </div>
         <div className="flex flex-col items-center gap-3">
-          <button onClick={onNewTournament} className="btn btn-primary btn-lg w-[460px]">
-            <span>{tournamentProgress ? 'Nouveau tournoi' : 'Commencer un tournoi'}</span>
+          <button onClick={onNewTournament} className="btn btn-primary btn-lg w-[460px] text-[22px] tracking-[0.1em]">
+            <span>{tournamentProgress ? 'Nouveau tournoi' : 'Créer un tournoi'}</span>
           </button>
           {tournamentProgress && (
             <>
@@ -213,7 +213,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
   return (
     // Le personnage est toujours côté « VS », les infos vers l'extérieur.
     <section className={`flex h-full min-h-0 items-center gap-6 ${right ? 'flex-row-reverse' : ''}`}>
-      <div className={`flex w-72 shrink-0 flex-col gap-3 ${right ? 'items-end text-right' : ''}`}>
+      <div className={`flex w-[340px] shrink-0 flex-col gap-3 ${right ? 'items-end text-right' : ''}`}>
         <div>
           <div className={`flex items-center gap-2.5 ${right ? 'flex-row-reverse' : ''}`}>
             <h2
@@ -238,14 +238,15 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
         <div className="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2.5 text-left">
           <StatSheet character={character} barClass={style.bar} />
         </div>
-        <div className="w-full text-left">
-          <EventInfo character={character} compact />
+        {/* Compétences : trois dés (1, 2, 3), le détail au survol */}
+        <div className={`flex w-full ${right ? 'justify-end' : ''}`}>
+          <SkillDice character={character} align={right ? 'right' : 'left'} />
         </div>
 
-        {/* Une colonne par famille : l'original en haut, ses variantes dessous */}
-        <div className={`flex gap-1.5 ${right ? 'flex-row-reverse' : ''}`}>
+        {/* Une colonne par famille : l'original en haut, ses variantes dessous (9 familles sur 340 px) */}
+        <div className={`flex gap-1 ${right ? 'flex-row-reverse' : ''}`}>
           {FAMILIES.map((family) => (
-            <div key={family[0].id} className="flex flex-col gap-1.5">
+            <div key={family[0].id} className="flex flex-col gap-1">
               {family.map((c) => {
                 const selected = c.id === character.id
                 return (
@@ -254,7 +255,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
                     onClick={() => onPick(c.id)}
                     title={`${c.name} — ${c.race}, ${c.archetype}`}
                     aria-pressed={selected}
-                    className={`group relative h-16 w-16 overflow-hidden rounded-md border bg-stone-900 transition ${
+                    className={`group relative h-[34px] w-[34px] overflow-hidden rounded-md border bg-stone-900 transition ${
                       selected ? `border-transparent ring-2 ${style.ring}` : 'border-stone-800 hover:border-stone-500'
                     }`}
                   >
@@ -263,7 +264,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
                       side={side}
                       className={`h-full w-full transition ${selected ? '' : 'opacity-50 group-hover:opacity-100'}`}
                     />
-                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-0.5 pt-3 text-center text-[10px] font-bold leading-tight">
+                    <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-0.5 pt-3 text-center text-[9px] font-bold leading-tight">
                       {c.name}
                     </span>
                   </button>
@@ -278,7 +279,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
         </button>
       </div>
 
-      <div className="flex h-[580px] flex-1 items-end justify-center">
+      <div className="flex h-[530px] flex-1 items-end justify-center">
         <Fighter key={character.id} character={character} side={side} className="fade-in" />
       </div>
     </section>

@@ -2,6 +2,16 @@
 
 Prototype de combat aux dés en React, Vite, Tailwind et TypeScript. L'utilisateur parle français : interface, commentaires et docs en français, identifiants de code en anglais.
 
+## Le projet en bref
+
+**Un auto-battler roguelike à regarder et à parier.** Deux terrains de jeu en parallèle : **le jeu des combattants** (personnages, compétences sur les faces du dé, statuts, tournoi, équilibre mesuré) et **le jeu des parieurs** (deux joueurs et deux parieurs de l'ordinateur parient des Deniers sur chaque match, sans jamais toucher au combat). Le projet sert aussi d'**expérience de développement** : mécaniques de jeu (auto-battler, roguelike, gacha, paris), maths et statistiques, ergonomie. Fiche produit complète : `docs/INTENTION.md` § Fiche produit. **La lire en premier.**
+
+Repères de l'utilisateur, à respecter partout :
+- **un jeu vidéo, pas une page web** : grandes formes, tuiles, menus superposés, lisible sur une télévision ;
+- **un personnage est un personnage précis**, pas une race ;
+- **mesurer avant de proposer** (simulation, valeur nette, avant → après), et proposer avec la compensation ;
+- **les cotes des paris restent cachées** jusqu'au règlement.
+
 ## Avant de travailler
 
 Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. Lire, selon la tâche :
@@ -11,7 +21,11 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 - `docs/INTENTION.md` : principes à respecter et pistes ;
 - `docs/RESOLUTION.md` : le livre de règles de la résolution (phases, ordre, application, opposition). Toute modification du déroulé d'un combat commence par ce document ;
 - `docs/STATUTS.md` : bonus et malus (vocabulaire, conditions, catalogue, chantier). À mettre à jour dès qu'on touche un statut, une condition ou un déclencheur ;
+- `docs/SONS.md` : les règles du son. Une compétence ne choisit pas son son, il se déduit de la nature de ses effets ; tout son nouveau ou modifié commence par ce document ;
 - `docs/PERSONNAGES.md` : philosophie et décisions de design de chaque personnage. À mettre à jour (mesures comprises) dès qu'on touche un personnage, ses stats ou son événement.
+- `docs/PARIS.md` : le jeu des parieurs (règles, maths, interface, étapes). Toute modification des paris commence par ce document.
+- `docs/TODO.md` : la liste des chantiers, dont la réflexion auto-battler (§ 11 à 17).
+- `docs/SORTS.md` : idées de sorts, laboratoire et audit des compétences, avec leurs résultats ; `docs/FAMILLES.md` : proposition de familles d'effets ; `docs/ETUDE_AUTOBATTLER.md` : l'étude de fond (limites, jeux de référence, pistes reliques et métas).
 
 ## À chaque évolution livrée
 
@@ -25,11 +39,16 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 
 - Un seul moteur : `simulateCombat` applique toutes les règles et produit une chronologie (`beats`) ; l'écran ne fait que la rejouer. Ne jamais tirer de dés ni recalculer une règle dans l'interface.
 - Aucun `Math.random` dans les règles : tout passe par un `Rng` injecté (`rng.ts`).
+- **Jamais d'emoji** dans un texte affiché (textes flottants, journal, descriptions, infobulles, écrans) : chaque compétence et chaque état a son icône peinte. S'il en manque une, la demander à l'utilisateur. Des tests le vérifient (`EMOJI`).
 - Statuts, déclencheurs et effets se définissent dans leur registre (`statuses.ts`, `events.ts`) ; aucun nom de statut en dur dans les composants. Marche à suivre : `docs/ARCHITECTURE.md`, section « Étendre le jeu ».
 - Toute nouvelle mécanique arrive avec ses tests dans `combat.test.ts`.
 - Scène fixe de 1600×900 (`Stage.tsx`) : pas de breakpoints `sm:` ni d'unités `vh` dans les écrans.
-- Après un changement de stats ou de règles, vérifier l'équilibre par simulation (cible de 45 à 55 % de victoires par personnage).
+- Après toute grosse mise à jour du gameplay (compétence, statut, règle, stats), équilibrer par simulation selon `docs/EQUILIBRAGE.md` : `npm run balance`, comprendre la cause, puis choisir le levier. **Les PV sont le dernier levier** : d'abord les valeurs et les règles des compétences et des statuts, puis les stats secondaires. Tolérance : entre 42 et 58 %, aucun duel au-delà de 65/35 ; des personnages typés valent mieux que des clones à 50 %. Ne pas changer sans demander une valeur fixée par l'utilisateur : la signaler, avec une proposition chiffrée. Quand on parle de compétences, de statuts ou d'équilibre, appuyer chaque argument sur les statistiques constatées (taux et marge, valeur nette, apport, avant → après, taille d'échantillon) : voir « Argumenter avec des chiffres » dans `docs/EQUILIBRAGE.md`.
+- Après un tournoi ou une série de combats de test de l'utilisateur : `npm run logs` (avec `LOGS_SINCE`) rejoue ses combats depuis `logs/combats/`, les audite et les résume ; puis relire les traces marquantes.
 - Le format de l'historique (`battler:history:v1`) doit rester rétrocompatible.
-- Vérifier avec `npm run check` (typecheck + tests) et `npx vite build`. Aucun navigateur automatisé ne fonctionne sur cette machine : le dire quand un rendu n'a pas été vu.
+- Pour vérifier ou déboguer une résolution : la trace d'un combat (`traceText`, `trace.ts`) se lit sans navigateur, et une graine (`simulateCombat(f, { seed })`) rejoue un combat signalé par l'utilisateur à l'identique. Chaque combat joué sur le serveur de dev écrit sa trace dans `logs/combats/` (un fichier par combat) : c'est là qu'on lit les combats de l'utilisateur. En console, `copy(battler.dump())` copie aussi les derniers. Un combat où l'utilisateur a imposé des dés (mode triche, bouton Cheat) a une trace `_triche` qui liste ces dés : `npm run logs` le rejoue tel quel. Toute nouvelle mécanique ajoute son contrôle à `audit.test.ts`.
+- **Essayer une idée de compétence sans la livrer** : `npx vitest run --config vitest.balance.config.ts scripts/lab.report.ts --silent=false` (idées dans `scripts/lab/ideas.ts`, `LAB_ONLY`, `LAB_SERIES`). **Auditer les compétences** (grille de drapeaux rouges) : même commande avec `scripts/skills.report.ts`. Méthode et lecture : `docs/SORTS.md`. Les rapports vont dans `logs/lab/` et `logs/skills/`.
+- **Un autre agent peut travailler en même temps** sur le dépôt (il l'a fait pour les sons). Avant de toucher un fichier partagé (`App.tsx`, écrans, `package.json`, `CHANGELOG.md`), regarder ce qui a bougé récemment (`ls -lt`), relire la version en cours, et ne pas écraser son travail. Le serveur de dev de l'utilisateur recharge à chaud : modifier `App.tsx` pendant qu'il joue un tournoi peut le lui faire perdre ; le signaler.
+- Vérifier avec `npm run check` (typecheck + tests) et `npx vite build`. Pour voir un rendu : Firefox sans interface, piloté par `puppeteer-core` (`browser: 'firefox'`, `/usr/bin/firefox`), capture la scène en 1600×900 depuis le serveur de dev (Chromium et Playwright ne fonctionnent pas). `puppeteer-core` n'est pas une dépendance du projet : l'installer dans le dossier temporaire de la session (ou réutiliser une installation existante dans `~/.npm/_npx`), et lancer son propre serveur de dev sur un autre port (`npx vite --port 5181 --strictPort`) pour ne pas gêner celui de l'utilisateur. Il ne gère pas `(hover: hover)` : forcer une infobulle à la main pour la voir. Le son n'est jamais vérifiable : le dire, comme tout rendu non vu.
 - Si l'empreinte de non-régression (`balance.test.ts`) casse sans changement de règle voulu, c'est un effet de bord à corriger. Ne la mettre à jour (`npx vitest run -u`) que pour un changement voulu, noté dans le CHANGELOG.
 - Images déposées à la racine du projet par l'utilisateur : ce sont des sources brutes. Les compresser (JPG qualité ~82 pour les fonds, PNG optimisé pour les personnages détourés), les renommer en kebab-case anglais selon leur rôle (`arena-<lieu>.jpg`, `menu-<thème>.jpg`, `<race>.png`), les ranger dans `src/assets/`, puis mettre la source à la corbeille (`gio trash`). Aucune image ne doit rester à la racine.

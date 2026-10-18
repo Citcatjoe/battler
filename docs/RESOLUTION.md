@@ -32,16 +32,24 @@ OUVERTURE
 
 TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre le défenseur
   Phase 1 · DÉBUT DE TOUR (actif)
+    0. Changement de forme (personnage à formes, sauf à son premier tour) : étape shift
     1. Effets de début de tour des statuts de l'actif (onTurnStart) : bonus, puis malus
-    2. Durées « début » de l'actif : −1 tour, expiration à 0
+    2. Durées « début » de l'actif : −1 tour (étape statusDuration), expiration à 0 (statusExpire)
     3. Fenêtre « turnStart » (actif)
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
     (une charge consommée) → aller en phase 3.
-    Sinon, ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
-      bloodied (seuil) → naturalOne → naturalMax (actif)
+    Pièce : si l'actif porte un statut `coinToss` (Pile ou face), la pièce remplace toute l'action
+    (étape coin) : pile, dégâts directs ; face, rien. Aucun coup n'est porté, donc aucune fenêtre du coup.
+    Coups multiples : si l'actif porte un statut `extraStrikes` (Furie des vents, Coup de chance), il est
+    consommé (étape flurry) et l'action compte plusieurs coups, chacun avec son dé (`extraDie` : le d3
+    de Coup de chance).
+    Sinon, un seul coup. Pour CHAQUE COUP, entièrement résolu avant le suivant :
+      ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
+      bloodied (seuil) → naturalOne → naturalTwo → naturalMax (actif)
       coup esquivé : missed (actif) → dodge (défenseur)
       coup touché : hit → crit (actif) → hurt (défenseur)
+      coup sacrifié (`forfeitsHit`) : ni l'un ni l'autre, seules les fenêtres du dé s'ouvrent
   Phase 3 · FIN DE TOUR (actif)
     1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus
     2. Durées « fin » de l'actif : −1 tour, expiration à 0
@@ -52,6 +60,17 @@ FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà 
 ```
 
 **Principe du « tour du porteur »** : les effets de tour et les durées d'un statut se règlent pendant le tour **de celui qui le porte**, pas pendant celui de celui qui l'a posé. Un poison posé par Ervald agit au début des tours de sa victime.
+
+**Pas de décompte le tour de la pose** (0.25.0) : un statut posé ou renouvelé pendant un tour n'est pas décompté à la fin de ce même tour. Un statut d'« 1 tour » décompté en fin de tour (`expiresAt: 'turnEnd'`), posé pendant l'action du porteur, dure donc jusqu'à la fin de son **prochain** tour : c'est « pour le tour d'après » (Furie des vents). Un statut décompté au début (défaut) et posé pendant l'action dure jusqu'au début du prochain tour du porteur, donc pendant tout le tour de l'adversaire (Esquive améliorée, Épines).
+
+### Mise en scène d'une résolution
+
+À l'écran, chaque résolution doit être **lisible comme un moment** : le joueur voit la cause et sa conséquence ensemble, dans l'ordre du moteur.
+
+- **Une valeur qui change se voit changer** : le nombre de l'état rebondit au moment de la résolution, avec sa variation (−1, +2).
+- **Cause et conséquence ensemble** : l'effet d'un statut (le « −2 » d'une brûlure) et le décompte de sa durée (3 → 2) qui suit dans la même phase sont montrés au même instant. Un statut qui s'estompe (le poison) perd sa charge dans l'étape même de son effet : le « −3 » et le compteur qui passe à 2 tombent ensemble (`anticipate`, `useCombat.ts`). L'étape du moteur reste distincte ; seul l'affichage les réunit.
+- **Rien ne disparaît sans avoir montré son 0** : un état épuisé ou expiré affiche d'abord son 0, puis quitte la zone d'état (`StatusTray`).
+- Ces règles valent pour toute résolution à venir : un nouveau type d'étape doit dire, dans `useCombat`, avec quoi il est montré.
 
 ### Qui fixe le moment d'une résolution
 
@@ -93,14 +112,18 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | # | Étape | Règle | Peut être modifiée par |
 | --- | --- | --- | --- |
 | 1 | **Dé** | Jet du dé de dégâts de l'attaquant (stats effectives) | `modifyStats` (dé) |
-| 2 | **Esquive** | Le défenseur tire contre sa chance d'esquive. Une esquive annule tout le coup (remplacement). | `modifyStats` (esquive) |
+| 1 bis | **Coup sacrifié** | Si une compétence de l'attaquant déclenchée par ce jet porte `forfeitsHit` (toutes les compétences du 1, du 2 et du 3 depuis la 0.27.0), le coup n'inflige rien : ni esquive, ni critique, ni dégâts, et aucune fenêtre `hit`, `hurt`, `missed` ou `dodge` (remplacement). Les fenêtres du dé s'ouvrent normalement. | `forfeitsHit` (compétence) |
+| 1 bis | **Coup transformé** | Si une compétence du jet a `reshapesHit` (sous la bonne forme), le coup n'est pas sacrifié : sa valeur devient le maximum du dé (`max`) ou un nouveau jet secret plus un bonus (`reroll`). `noCrit` : pas de tirage de critique, et un critique assuré n'est pas consommé | `reshapesHit` (Charge, Coup de griffe) |
+| 2 | **Esquive** | Imposée par un statut du défenseur (`forcesDodge`, sans tirage, une charge consommée), sinon le défenseur tire contre sa chance d'esquive. Une esquive annule tout le coup (remplacement). | `forcesDodge` (Esquive améliorée), `modifyStats` (esquive) |
 | 3 | **Critique** | Forcé par un statut (`forcesCrit`, sans tirage), sinon tirage contre sa chance de critique. Le jet est multiplié, puis arrondi. | `forcesCrit`, `modifyStats` |
 | 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli) |
 | 5 | **Dégâts entrants** | Statuts du défenseur, dans l'ordre de pose | `modifyIncoming` (Vulnérable) |
 | 6 | **Plancher** | Le coup vaut au moins 1 | — |
 | 7 | **Armure** | Armure effective retirée, au moins 1 dégât | `modifyStats` (armure, ex. Brèche) |
 | 8 | **Boucliers** | Chaque bouclier absorbe ce qu'il peut sans descendre sous 1, et s'use d'autant (prévention) | `shield` |
-| 9 | **Application** | PV retirés, plafonnés aux PV restants (le coup fatal ne compte que ce qu'il fallait) | — |
+| 9 | **Application** | PV retirés, sans descendre sous 0. Les dégâts du coup sont comptés en entier, excès du coup fatal compris (overkill, depuis la 0.34.0) | — |
+| 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application | `spentOnHurt` |
+| 10 | **Vol de vie** | Si l'attaquant porte un statut `drainsHit`, le coup porté consomme une charge. S'il a touché, l'attaquant regagne les PV réellement retirés (plafonnés à ses PV max). Esquivé, la charge est perdue sans soin, au moment du coup. Un coup sacrifié (jet de compétence) n'est pas un coup porté : la charge reste. Étape `statusReaction`, avant les fenêtres du coup. | `drainsHit` (Vol de vie) |
 
 Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
 
@@ -115,9 +138,13 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs, pose d'un statut, purge | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
 | **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable | `modifyStats`, `modifyOutgoing`, `modifyIncoming` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
+| **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusExpire` de la phase). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 | `decays` |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines quand le porteur encaisse | `CharacterEvent` ; `reactions` d'un statut |
-| **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 2, 3 et 8 ; `wards`, `immunities` |
+| **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, coup sacrifié, bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1 bis, 2, 3 et 8 ; `forfeitsHit`, `forcesDodge`, `wards`, `immunities` |
+| **Sur le coup** | Juste après l'application d'un coup qui touche | Vol de vie | `drainsHit` (étape 10) |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
+| **Action multiple** | Au début de l'action du porteur | Furie des vents (deux coups) | `extraStrikes` |
+| **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant), d'intimidation (entrant), de précision (stats), de poison (périodique, sur l'adversaire) | crochets existants, statut sans `turns` |
 
 ---
 
@@ -157,10 +184,30 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Situation | Résolution |
 | --- | --- |
 | Une victime empoisonnée (3) reçoit une Régénération (2) | Opposition : Poison 3 − 2 → Poison 1, la Régénération est neutralisée. |
+| Poison 3, puis Souffle de la tombe (3) avant son tour | Cumul : Poison 6, qui fera 6, 5, 4, 3, 2 et 1 PV (21 PV). |
 | Même victime, Régénération (4) | Le poison est effacé, Régénération 1 posée. |
 | Un porteur de Garde sacrée (1) reçoit Poison puis Brèche | Le Poison est bloqué et la garde est épuisée ; la Brèche est posée. |
 | Un mort-vivant immunisé au poison est visé par Souffle de la tombe | Bloqué par immunité (« insensible »). |
-| Épines (2) : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : 2 dégâts directs à l'attaquant (ignorent armure et bouclier). L'attaquant ne déclenche pas son propre `hurt`. |
+| Épines (6) : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : 6 dégâts directs à l'attaquant (ignorent armure et bouclier). Les Épines restent jusqu'au début du prochain tour du porteur. L'attaquant ne déclenche pas son propre `hurt`. (Le crochet `spentOnReaction`, une seule réaction puis disparition, reste disponible pour d'autres statuts.) |
+| Furie des vents contre Épines | **Chaque** coup qui touche le nain déclenche les Épines : 6 + 6 = 12 dégâts renvoyés à l'orc. Interaction voulue (0.29.0) : une rafale contre des épines se paie. |
+| Furie des vents contre Esquive améliorée | Le premier coup est esquivé à coup sûr et consomme la charge ; le second est résolu normalement (tirage d'esquive). |
+| Furie des vents : un 2 pendant les deux coups | Une nouvelle Furie est posée ; l'ancienne a été consommée au début de l'action, la nouvelle vaut pour l'action suivante. Deux 2 sur la même action ne donnent qu'une Furie (1 charge au plus). |
+| Vol de vie : deux 2 de suite, ou un 1 ou un 3 | Le jet suivant est encore un coup sacrifié : aucun coup n'est porté, rien n'est volé, la charge reste (non cumulable, 1 charge au plus). Elle attend le prochain vrai coup. |
+| Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
+| Vol de vie contre Épines | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (étape 10), puis la fenêtre `hurt` du nain renvoie les Épines. |
+| Coup sacrifié contre Esquive améliorée ou Épines | Le coup n'a pas lieu : il ne consomme ni l'esquive imposée ni les Épines. |
+| Aura de poison (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 dégâts directs à l'adversaire, montrés avant son coup. Le K.O. éventuel tombe avant l'action. |
+| Aura de puissance (2 charges) sur un critique de 5 ×2 | Critique d'abord (10), puis sortant : 10 + 4 = 14, puis l'armure. Chaque coup d'une Furie des vents reçoit le bonus. |
+| Aura de puissance (1) contre Aura d'intimidation | Sortant puis entrant : un 6 devient 6 + 2 − 2 = 6. Un 1 contre l'intimidation seule : 1 − 2 = −1, plancher à 1. |
+| Riposte et Vol de vie, Épines | Le coup touche le paladin : l'attaquant vole d'abord sa vie (étape 10), puis la Riposte renvoie la moitié des PV retirés, puis la fenêtre `hurt` (Épines). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
+| Rétribution : jauges | Chaque coup qui touche le paladin range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, épines, pièce) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la somme, au moins 1. |
+| Aura d'immunité | Posée sur un 3 : les malus du paladin sont d'abord purgés, puis toute pose de malus est bloquée (« protégé par Aura d'immunité »), sans usure. Une Purification adverse peut retirer l'aura. |
+| Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière : la Furie expire à la fin de ce tour sans servir ; Pile ou face, sans durée, attend l'action suivante. |
+| Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de puissance à 6 charges disparaît d'un coup. Une Furie ou un Vol de vie en attente peuvent aussi être purifiés. |
+| Coup de chance : le d3 | Un d3 tombe toujours sur 1, 2 ou 3 : il ne frappe jamais et déclenche toujours une compétence de la voleuse (un nouveau Coup de chance, Pile ou face ou l'aura). |
+| Pile ou face et Aura de décoction | La pièce ne frappe pas : pas de fenêtre `hit`, donc pas de poison de la décoction. C'est pourquoi Pile ou face vaut moins qu'un coup normal une fois l'aura en place. |
+| Aura de sainteté et poison | Le poison agit au début du tour du porteur, la sainteté à sa fin : la prêtresse empoisonnée perd puis regagne dans le même tour. |
+| Aura de précision et Œil de faucon | Le critique assuré utilise le multiplicateur effectif : ×3 pour Elaria, ×3,4 pour Sylwen. |
 | Épines achèvent un attaquant à 2 PV | K.O. pendant la fenêtre du coup : le porteur des Épines gagne. |
 | Vulnérable (2) contre une armure de 1, coup de 3 | 3 + 2 = 5, puis l'armure : 4 dégâts. |
 | Affaibli (3) et Vulnérable (2) sur le même coup de 2 | Sortant : 2 − 3 = −1 ; entrant : −1 + 2 = 1 ; plancher : 1 ; puis armure. |
@@ -178,11 +225,10 @@ Pour que chaque règle soit prête et testée, le registre contient un statut «
 | Périodique, fin de tour | 🔥 Brûlure | Perte de PV à la fin des tours du porteur ; durée décomptée en fin de tour |
 | Continu, dégâts entrants | 🩸 Vulnérable | +N dégâts reçus avant l'armure (3 charges au plus) |
 | Contrôle | 💫 Étourdi | Action perdue (1 charge au plus, une charge par tour perdu) |
-| Réaction | 🌵 Épines | Sur `hurt` : N dégâts directs à l'attaquant |
 | Garde | ✨ Garde sacrée | Bloque le prochain malus (une charge par blocage) |
 | Opposition | 💚 Régénération ↔ ☠️ Poison | Charges annulées une à une |
 
-Avant d'attribuer l'un d'eux à un personnage, il faut lui faire peindre une icône (la zone d'état retombe sinon sur l'emoji ; un test l'exige pour tout statut en jeu), puis mesurer l'équilibre.
+Avant d'attribuer l'un d'eux à un personnage, il faut demander son icône peinte à l'utilisateur (la zone d'état affiche sinon une marque neutre, son initiale ; un test l'exige pour tout statut en jeu, et aucun emoji n'est permis), puis mesurer l'équilibre.
 
 ---
 
@@ -201,6 +247,9 @@ Les règles ci-dessus sont des choix par défaut, cohérents et testés. Certain
 ---
 
 ## 10. Étendre la résolution
+
+Pour vérifier qu'un combat suit bien ces règles, la **trace de résolution** de chaque combat (console du navigateur, bouton « Copier la trace ») en donne chaque étape dans l'ordre du moteur, avec la phase, la chaîne de calcul, les PV avant → après et les durées. Voir ARCHITECTURE.md, « Vérifier une résolution ».
+
 
 | Ajouter… | Où | Règle de résolution à respecter |
 | --- | --- | --- |

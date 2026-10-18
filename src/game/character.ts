@@ -46,6 +46,17 @@ export interface CharacterLore {
   weaknesses: readonly string[]
 }
 
+/**
+ * Une forme d'un personnage qui change de forme (druide) : son nom et son apparence. Les compétences
+ * de la forme portent son `id` (`CharacterEvent.form`).
+ */
+export interface CharacterForm {
+  id: string
+  name: string
+  /** Remplace l'apparence de base (image, cadrage…) tant qu'il a cette forme */
+  look?: Partial<CharacterLook>
+}
+
 export interface CharacterDef {
   id: string
   name: string
@@ -61,6 +72,11 @@ export interface CharacterDef {
   events: readonly CharacterEvent[]
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
+  /**
+   * Deux formes (druide) : il commence le combat sous la première, puis en change au début de
+   * chacun de ses tours, sauf le premier.
+   */
+  forms?: readonly [CharacterForm, CharacterForm]
 }
 
 /**
@@ -78,6 +94,7 @@ export class Character {
   readonly lore: CharacterLore
   readonly events: readonly CharacterEvent[]
   readonly immunities: readonly StatusId[]
+  readonly forms?: readonly [CharacterForm, CharacterForm]
   readonly #def: CharacterDef
 
   constructor(def: CharacterDef) {
@@ -92,6 +109,13 @@ export class Character {
     this.lore = def.lore
     this.events = def.events
     this.immunities = def.immunities ?? []
+    this.forms = def.forms
+  }
+
+  /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */
+  lookFor(form = 0): Readonly<CharacterLook> {
+    const f = this.forms?.[form]
+    return f?.look ? { ...this.look, ...f.look, tint: this.look.tint } : this.look
   }
 
   get maxHp() {
@@ -101,6 +125,15 @@ export class Character {
   /** Même personnage (mêmes id et stats) sous un autre nom, ex. « Gorak II » en tournoi. */
   withName(name: string) {
     return new Character({ ...this.#def, name })
+  }
+
+  /** Même personnage avec des stats ou des compétences modifiées : sert aux essais d'équilibrage (analysis.ts). */
+  adjusted(changes: { stats?: Partial<CharacterStats>; events?: readonly CharacterEvent[] }) {
+    return new Character({
+      ...this.#def,
+      stats: { ...this.#def.stats, ...changes.stats },
+      events: changes.events ?? this.#def.events,
+    })
   }
 }
 

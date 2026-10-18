@@ -1,16 +1,94 @@
 /**
- * Effets sonores synthétisés avec la Web Audio API (aucun fichier audio).
+ * Effets sonores, joués avec la Web Audio API. Les règles (ce que chaque son veut dire, quand il
+ * joue, le son d'une nouvelle compétence) sont dans `docs/SONS.md` : ce module en est la mise en
+ * œuvre. Un son = un fichier (`src/assets/sounds/<nom>.mp3`) ; tant que son fichier n'est pas
+ * chargé, ou s'il manque, une version synthétisée joue à sa place.
  * Le contexte audio est créé au premier appel, qui doit suivre un geste
  * de l'utilisateur (clic sur « Combattre ! ») pour être autorisé par le navigateur.
  */
 
 const MUTE_KEY = 'battler:muted'
-const VOLUME = 0.6
+// Volume général (0.36.4 : de 0.6 à 1, « on n'entend rien »), derrière un compresseur qui évite la saturation
+const VOLUME = 1
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let noiseBuf: AudioBuffer | null = null
 let muted = readMuted()
+/** Vitesse du combat (×1, ×2, ×4) : au-delà de ×1, les sons du combat sont écourtés d'autant. */
+let speed = 1
+
+/** Les sons du jeu, un fichier chacun (`docs/SONS.md` § 3). `crit-rumble` est la couche du Coup critique. */
+export const SOUND_NAMES = [
+  'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
+  'hit', 'crit-rumble', 'dodge',
+  'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'heal',
+  'shift', 'ko', 'victory', 'click', 'clash',
+] as const
+export type SoundName = (typeof SOUND_NAMES)[number]
+
+/**
+ * Exception déclarée à « un son = un fichier » (`docs/SONS.md`, règle 2) : les dés ont plusieurs
+ * fichiers (`dice-roll-1.mp3`, `dice-roll-2.mp3`…), tirés au hasard à chaque jet, comme un vrai dé
+ * qui ne sonne jamais deux fois pareil. Décision de l'utilisateur (0.36.4).
+ */
+export const VARIED_SOUNDS: readonly SoundName[] = ['dice-roll', 'dice-land']
+
+/*
+ * Fichiers traités hors du jeu (silence de tête coupé, durée ramenée à la fenêtre du son à ×1,
+ * intensité égalisée) par `scripts/process-sounds.py` ; provenance dans `SOURCES.md`.
+ */
+export const SAMPLE_URLS: Record<string, string[]> = {}
+for (const [path, url] of Object.entries(
+  import.meta.glob<string>('../assets/sounds/*.mp3', { eager: true, query: '?url', import: 'default' }),
+)) {
+  const file = path.split('/').pop()!.replace(/\.mp3$/, '')
+  // `dice-roll-2` est la 2e variante de `dice-roll` (sons à variantes seulement)
+  const varied = VARIED_SOUNDS.find((n) => new RegExp(`^${n}-\\d+$`).test(file))
+  ;(SAMPLE_URLS[varied ?? file] ??= []).push(url)
+}
+const samples: Partial<Record<string, AudioBuffer[]>> = {}
+
+/** Niveaux d'intensité (`docs/SONS.md` § 3 et § 5) : 1 fort, 2 appuyé, 3 moyen, 4 discret. */
+const LEVEL = { 1: 1, 2: 0.85, 3: 0.7, 4: 0.45 } as const
+/** Volume de chaque son ; les dés gardent leur place de la 0.36.0 (validée par l'utilisateur) sous le niveau 3. */
+const MIX: Record<SoundName, number> = {
+  'dice-roll': 0.47,
+  'dice-land': 0.64,
+  'coin-toss': LEVEL[4],
+  'coin-land': LEVEL[2],
+  'coin-win': LEVEL[2],
+  hit: LEVEL[2],
+  'crit-rumble': LEVEL[1],
+  dodge: LEVEL[3],
+  'aura-gain': LEVEL[2],
+  'aura-loss': LEVEL[3],
+  buff: LEVEL[3],
+  debuff: LEVEL[3],
+  dispel: LEVEL[3],
+  stun: LEVEL[3],
+  rot: LEVEL[4],
+  heal: LEVEL[3],
+  shift: LEVEL[2],
+  ko: LEVEL[1],
+  victory: LEVEL[2],
+  click: LEVEL[4],
+  clash: LEVEL[1],
+}
+/** Sons hors du rythme du combat : jamais écourtés par la vitesse. */
+const UNTIMED = new Set<SoundName>(['click', 'clash', 'ko', 'victory'])
+
+function loadSamples(c: AudioContext) {
+  for (const [name, urls] of Object.entries(SAMPLE_URLS))
+    for (const url of urls)
+      fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((data) => c.decodeAudioData(data))
+        .then((buf) => (samples[name] ??= []).push(buf))
+        .catch(() => {
+          /* fichier illisible : le son synthétisé reste */
+        })
+}
 
 function readMuted() {
   try {
@@ -25,13 +103,37 @@ function audio() {
     ctx = new AudioContext()
     master = ctx.createGain()
     master.gain.value = muted ? 0 : VOLUME
-    master.connect(ctx.destination)
+    // Compresseur : les sons qui se chevauchent (coup critique, fin de combat) ne saturent pas
+    const comp = ctx.createDynamicsCompressor()
+    comp.threshold.value = -14
+    comp.knee.value = 8
+    comp.ratio.value = 4
+    comp.attack.value = 0.003
+    comp.release.value = 0.15
+    const makeup = ctx.createGain()
+    makeup.gain.value = 1.4
+    master.connect(comp).connect(makeup).connect(ctx.destination)
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
     const data = noiseBuf.getChannelData(0)
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+    loadSamples(ctx)
   }
-  if (ctx.state === 'suspended') void ctx.resume()
+  if (ctx.state !== 'running') void ctx.resume()
   return { ctx, out: master!, now: ctx.currentTime }
+}
+
+/*
+ * Déverrouillage : le navigateur suspend le contexte audio (créé hors d'un geste, onglet mis en
+ * arrière-plan, veille…) et ne le laisse repartir que pendant un geste de l'utilisateur. Chaque
+ * clic ou touche, n'importe où, le réveille ; sans cela, les sons joués par le combat (hors geste)
+ * restaient muets jusqu'au prochain bouton.
+ */
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    if (ctx && ctx.state !== 'running') void ctx.resume()
+  }
+  window.addEventListener('pointerdown', unlock, true)
+  window.addEventListener('keydown', unlock, true)
 }
 
 export function isMuted() {
@@ -46,6 +148,40 @@ export function setMuted(value: boolean) {
     /* stockage indisponible : on garde juste l'état en mémoire */
   }
   if (ctx && master) master.gain.setTargetAtTime(value ? 0 : VOLUME, ctx.currentTime, 0.02)
+}
+
+export function setSoundSpeed(value: number) {
+  speed = value
+}
+
+/**
+ * Joue le fichier du son `name` (une variante tirée au hasard pour les dés), s'il est chargé
+ * (sinon `false` : l'appelant joue le son synthétisé). `ms` coupe le son plus tôt, avec un fondu : le dé qui roule s'arrête quand il se
+ * pose. Au-delà de ×1, un son du combat est écourté au prorata de la vitesse.
+ */
+function play(name: SoundName, opts: { at?: number; ms?: number } = {}) {
+  const bufs = samples[name]
+  if (!bufs?.length) return false
+  const buf = bufs[Math.floor(Math.random() * bufs.length)]
+  const { ctx: c, out, now } = audio()
+  const t = now + (opts.at ?? 0)
+  let dur = buf.duration
+  if (opts.ms !== undefined) dur = Math.min(dur, opts.ms / 1000)
+  if (speed > 1 && !UNTIMED.has(name)) dur = Math.min(dur, Math.max(0.08, buf.duration / speed))
+  const src = c.createBufferSource()
+  src.buffer = buf
+  const g = c.createGain()
+  const level = MIX[name]
+  g.gain.setValueAtTime(level, t)
+  if (dur < buf.duration) {
+    const fade = Math.min(0.06, dur * 0.3)
+    g.gain.setValueAtTime(level, t + dur - fade)
+    g.gain.linearRampToValueAtTime(0.0001, t + dur)
+  }
+  src.connect(g).connect(out)
+  src.start(t)
+  src.stop(t + dur + 0.02)
+  return true
 }
 
 /** Enveloppe percussive : attaque très courte puis décroissance exponentielle. */
@@ -105,93 +241,161 @@ function noise({ at = 0, dur, filter = 'lowpass', freq, to, q = 1, gain = 0.3 }:
   src.stop(t + dur + 0.05)
 }
 
+/*
+ * Un appel = une signification (`docs/SONS.md` § 3). Chaque son essaie son fichier, sinon joue sa
+ * version synthétisée. Le Coup critique est le seul son composé : Coup et Grondement ensemble.
+ */
 export const sfx = {
+  /** Clic d'un bouton. */
   click() {
+    if (play('click')) return
     tone({ freq: 660, to: 990, dur: 0.08, type: 'triangle', gain: 0.15 })
   },
 
-  /** Cliquetis du dé qui roule pendant `ms` millisecondes. */
+  /** Dé lancé : il roule pendant `ms` millisecondes. Un seul, même quand plusieurs dés roulent. */
   diceRoll(ms: number) {
+    if (play('dice-roll', { ms })) return
     for (let t = 0; t < ms / 1000; t += 0.055 + Math.random() * 0.04) {
       noise({ at: t, dur: 0.03, filter: 'highpass', freq: 2200 + Math.random() * 2000, gain: 0.22 })
       tone({ at: t, freq: 900 + Math.random() * 700, dur: 0.025, type: 'triangle', gain: 0.05 })
     }
   },
 
-  /** Le dé s'arrête : petit choc sourd, avec un jingle sur le max et un « bof » sur 1. */
-  diceLand(value: number, faces: number) {
+  /** Dé posé : le résultat est là. Aucune face n'a de son propre. */
+  diceLand() {
+    if (play('dice-land')) return
     tone({ freq: 190, to: 90, dur: 0.12, gain: 0.45 })
     noise({ dur: 0.07, freq: 900, gain: 0.25 })
-    if (value === faces) {
-      ;[880, 1320, 1760].forEach((f, i) =>
-        tone({ at: 0.06 + i * 0.07, freq: f, dur: 0.25, type: 'triangle', gain: 0.12 }),
-      )
-    } else if (value === 1) {
-      tone({ at: 0.05, freq: 240, to: 150, dur: 0.35, type: 'sawtooth', gain: 0.06 })
-    }
   },
 
-  /** Souffle de l'élan vers l'adversaire. */
-  whoosh() {
-    noise({ dur: 0.32, filter: 'bandpass', freq: 350, to: 2200, q: 1.8, gain: 0.4 })
+  /** Pièce lancée : elle tournoie pendant `ms` millisecondes, en retrait. */
+  coinToss(ms: number) {
+    if (play('coin-toss', { ms })) return
+    for (let t = 0.05; t < ms / 1000; t += 0.09) tone({ at: t, freq: 1800 + (t * 900) % 600, dur: 0.04, type: 'sine', gain: 0.03 })
   },
 
-  /** Impact, plus lourd selon les dégâts ; ajoute un fracas métallique sur 8+ ou critique. */
-  impact(damage: number, crit = false) {
-    const k = Math.min(damage, 12) / 10
-    tone({ freq: 160, to: 38, dur: 0.22 + 0.15 * k, gain: 0.5 + 0.45 * k })
-    noise({ dur: 0.1 + 0.08 * k, freq: 1400 + 3000 * k, gain: 0.45 + 0.35 * k })
-    if (crit) {
-      tone({ freq: 70, to: 30, dur: 0.6, type: 'sawtooth', gain: 0.18 })
-      noise({ at: 0.03, dur: 0.5, freq: 3000, to: 300, gain: 0.35 })
-    }
-    if (damage >= 8 || crit) {
-      tone({ freq: 523, dur: 0.45, type: 'square', gain: 0.07 })
-      tone({ freq: 787, dur: 0.5, type: 'triangle', gain: 0.09 })
-      noise({ at: 0.02, dur: 0.3, filter: 'highpass', freq: 4500, gain: 0.12 })
-    }
+  /** Pièce retombe : tintement net, le même sur pile et sur face. */
+  coinLand() {
+    if (play('coin-land')) return
+    ;[2637, 3951].forEach((f, i) => tone({ at: i * 0.015, freq: f, dur: 0.45, type: 'triangle', gain: 0.16 }))
   },
 
-  /** Annonce d'un coup critique : montée brillante. */
+  /** Pile réussie : « ding » clair et net, juste après le résultat, pour qu'on voie que c'est gagné. */
+  coinWin() {
+    if (play('coin-win')) return
+    ;[1318.5, 2637, 3640].forEach((f, i) => tone({ freq: f, dur: 0.8 - i * 0.2, type: 'sine', gain: 0.18 / (i + 1) }))
+  },
+
+  /** Coup : des dégâts portés par un coup, quelle qu'en soit la source. */
+  hit() {
+    if (play('hit')) return
+    tone({ freq: 160, to: 38, dur: 0.3, gain: 0.7 })
+    noise({ dur: 0.14, freq: 2600, gain: 0.6 })
+  },
+
+  /** Coup critique, son composé : le Coup et le Grondement ensemble. */
   crit() {
-    tone({ freq: 300, to: 1200, dur: 0.3, type: 'sawtooth', gain: 0.08 })
-    ;[1047, 1319, 1568].forEach((f, i) => tone({ at: 0.12 + i * 0.05, freq: f, dur: 0.3, type: 'triangle', gain: 0.1 }))
+    sfx.hit()
+    if (play('crit-rumble')) return
+    tone({ freq: 110, to: 26, dur: 0.9, gain: 0.85 })
+    noise({ dur: 0.18, freq: 6000, to: 800, gain: 0.5 })
+    noise({ at: 0.05, dur: 0.7, filter: 'bandpass', freq: 900, to: 120, q: 0.8, gain: 0.35 })
   },
 
-  /** Esquive : coup dans le vide, sifflement aigu et petit saut. */
+  /** Esquive : le coup fend l'air dans le vide. */
   dodge() {
+    if (play('dodge')) return
     noise({ dur: 0.18, filter: 'bandpass', freq: 3500, to: 1200, q: 3, gain: 0.3 })
-    tone({ freq: 500, to: 1100, dur: 0.12, type: 'triangle', gain: 0.1 })
-    tone({ at: 0.1, freq: 900, to: 600, dur: 0.1, type: 'triangle', gain: 0.07 })
   },
 
-  /** Déclenchement d'un événement : carillon magique ascendant. */
-  event() {
-    ;[659, 880, 1175, 1568].forEach((f, i) => {
-      tone({ at: i * 0.06, freq: f, dur: 0.5, type: 'sine', gain: 0.12 })
-      tone({ at: i * 0.06, freq: f * 2, dur: 0.3, type: 'triangle', gain: 0.03 })
-    })
-    noise({ dur: 0.6, filter: 'highpass', freq: 6000, gain: 0.05 })
+  /** Aura gagnée : souffle qui enfle et accord lumineux. */
+  auraGain() {
+    if (play('aura-gain')) return
+    noise({ dur: 1.1, filter: 'bandpass', freq: 300, to: 1800, q: 0.9, gain: 0.22 })
+    ;[523, 659, 784, 1047, 1319].forEach((f, i) => tone({ at: 0.15 + i * 0.07, freq: f, dur: 0.9, type: 'sine', gain: 0.1 }))
+  },
+
+  /** Aura perdue : le même souffle, qui retombe et s'éteint. */
+  auraLoss() {
+    if (play('aura-loss')) return
+    noise({ dur: 0.9, filter: 'bandpass', freq: 1800, to: 300, q: 0.9, gain: 0.2 })
+    ;[1319, 1047, 784, 659, 523].forEach((f, i) => tone({ at: i * 0.07, freq: f, dur: 0.6, type: 'sine', gain: 0.08 }))
+  },
+
+  /** Bonus gagné : petit éclat ascendant. */
+  buff() {
+    if (play('buff')) return
+    ;[659, 880, 1175].forEach((f, i) => tone({ at: i * 0.06, freq: f, dur: 0.4, type: 'sine', gain: 0.11 }))
+  },
+
+  /** Malus reçu : accord sombre qui descend. */
+  debuff() {
+    if (play('debuff')) return
+    ;[311, 330].forEach((f) => tone({ freq: f, to: f * 0.6, dur: 0.6, type: 'sawtooth', gain: 0.06 }))
+    noise({ dur: 0.45, filter: 'bandpass', freq: 600, to: 200, q: 2, gain: 0.16 })
+  },
+
+  /** Dissipation : un bonus ou un malus retiré, souffle bref qui balaie. */
+  dispel() {
+    if (play('dispel')) return
+    noise({ dur: 0.45, filter: 'bandpass', freq: 3000, to: 600, q: 1.5, gain: 0.25 })
+  },
+
+  /** Tour perdu : grondement sourd. */
+  stun() {
+    if (play('stun')) return
+    tone({ freq: 70, to: 45, dur: 0.8, type: 'sawtooth', gain: 0.12 })
+    noise({ dur: 0.7, filter: 'bandpass', freq: 250, q: 3, gain: 0.25 })
+  },
+
+  /** Ronge : un statut inflige ses dégâts (poison, pourriture…). Liquide et discret, sans choc. */
+  rot() {
+    if (play('rot')) return
+    for (let i = 0; i < 5; i++) tone({ at: i * 0.06, freq: 260 + (i % 3) * 60, to: 170, dur: 0.06, type: 'sine', gain: 0.05 })
+    noise({ dur: 0.4, filter: 'highpass', freq: 5000, gain: 0.04 })
+  },
+
+  /** Soin : des PV regagnés, arpège doux et clair. */
+  heal() {
+    if (play('heal')) return
+    ;[784, 988, 1175, 1568].forEach((f, i) => tone({ at: i * 0.05, freq: f, dur: 0.45, type: 'sine', gain: 0.09 }))
+    noise({ dur: 0.4, filter: 'highpass', freq: 7000, gain: 0.04 })
+  },
+
+  /** Transformation (druide) : bruissement de feuilles, le même dans les deux sens. */
+  shift() {
+    if (play('shift')) return
+    noise({ dur: 0.9, filter: 'bandpass', freq: 900, to: 3200, q: 0.7, gain: 0.3 })
+    for (let i = 0; i < 6; i++) noise({ at: 0.05 + i * 0.08, dur: 0.06, filter: 'highpass', freq: 3500 + i * 300, gain: 0.08 })
   },
 
   /** Le perdant s'effondre. */
   ko() {
+    if (play('ko')) return
     tone({ freq: 95, to: 28, dur: 1.3, gain: 0.9 })
     noise({ dur: 0.9, freq: 500, to: 80, gain: 0.5 })
-    tone({ at: 0.1, freq: 420, to: 70, dur: 1.1, type: 'sawtooth', gain: 0.08 })
   },
 
-  /** Petite fanfare de victoire. */
+  /** Victoire : fanfare. La version synthétisée évite les ondes carrées, trop « 8 bits ». */
   victory() {
+    if (play('victory')) return
     const notes: [number, number, number][] = [
       [523, 0, 0.18],
       [659, 0.16, 0.18],
       [784, 0.32, 0.18],
-      [1047, 0.5, 0.7],
+      [1047, 0.5, 0.9],
     ]
     for (const [f, at, dur] of notes) {
-      tone({ at, freq: f, dur, type: 'square', gain: 0.07 })
-      tone({ at, freq: f / 2, dur, type: 'triangle', gain: 0.12 })
+      tone({ at, freq: f, dur, type: 'sawtooth', gain: 0.035 })
+      tone({ at, freq: f, dur, type: 'triangle', gain: 0.1 })
+      tone({ at, freq: f / 2, dur, type: 'sine', gain: 0.1 })
     }
+  },
+
+  /** Choc du face-à-face, à l'écran de présentation du duel. */
+  clash() {
+    if (play('clash')) return
+    tone({ freq: 110, to: 30, dur: 0.9, gain: 0.85 })
+    noise({ dur: 0.5, freq: 3000, to: 300, gain: 0.4 })
   },
 }

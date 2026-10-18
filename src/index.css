@@ -19,6 +19,10 @@ body {
 .arena.is-paused * {
   animation-play-state: paused !important;
 }
+/* Le journal reste utilisable en pause : son ouverture est animée, elle ne doit pas être figée. */
+.arena.is-paused :is(.log-window, .log-window *, .cheat-panel, .cheat-panel *) {
+  animation-play-state: running !important;
+}
 
 /* ---------- Élan d'attaque ---------- */
 .lunge {
@@ -58,13 +62,33 @@ body {
   100% { transform: translate(0, 0) rotate(0); opacity: 1; }
 }
 
+/* Textes flottants du combat (dégâts, ESQUIVE, CRITIQUE, compétences, effets). Ils sont placés à
+   l'extérieur des combattants (Fighter.tsx). Le contour est peint sous le remplissage (paint-order) :
+   il n'entame plus les lettres fines, et une ombre portée les détache du décor.
+   Test de police : ?police=alegreya (par défaut), cinzel, oswald ou lilita dans l'URL (main.tsx). */
+:root { --font-float: "Alegreya Sans SC", var(--font-sans); --float-weight: 900; --float-spacing: 0.02em; }
+:root[data-float-font='cinzel'] { --font-float: var(--font-display); --float-weight: 800; --float-spacing: 0.04em; }
+:root[data-float-font='oswald'] { --font-float: "Oswald", var(--font-sans); --float-weight: 700; --float-spacing: 0.03em; }
+:root[data-float-font='lilita'] { --font-float: "Lilita One", var(--font-sans); --float-weight: 400; --float-spacing: 0.03em; }
+.float-text {
+  font-family: var(--font-float);
+  font-weight: var(--float-weight);
+  letter-spacing: var(--float-spacing);
+  line-height: 1;
+  overflow-wrap: break-word;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 0, 0, 0.85);
+  transform-origin: var(--float-origin, center);
+}
+
 .dodge-text {
-  animation: dodge-text calc(1000ms / var(--speed)) ease-out both;
+  animation: dodge-text calc(1500ms / var(--speed)) ease-out both;
 }
 @keyframes dodge-text {
-  0% { transform: translate(-50%, 0) scale(0.6) skewX(-12deg); opacity: 0; }
-  20% { transform: translate(-50%, -10px) scale(1.1) skewX(-12deg); opacity: 1; }
-  100% { transform: translate(-50%, -70px) scale(1) skewX(-12deg); opacity: 0; }
+  0% { transform: translate(var(--float-x, -50%), 0) scale(0.6) skewX(-12deg); opacity: 0; }
+  15% { transform: translate(var(--float-x, -50%), -10px) scale(1.1) skewX(-12deg); opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translate(var(--float-x, -50%), -60px) scale(1) skewX(-12deg); opacity: 0; }
 }
 
 .crit-badge {
@@ -87,13 +111,14 @@ body {
 
 /* ---------- Dégâts flottants ---------- */
 .damage-float {
-  animation: damage-float calc(1100ms / var(--speed)) ease-out both;
+  animation: damage-float calc(1700ms / var(--speed)) ease-out both;
 }
 @keyframes damage-float {
-  0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
-  15% { transform: translate(-50%, -20px) scale(1.35); opacity: 1; }
-  30% { transform: translate(-50%, -30px) scale(1); }
-  100% { transform: translate(-50%, -110px) scale(1); opacity: 0; }
+  0% { transform: translate(var(--float-x, -50%), 0) scale(0.4); opacity: 0; }
+  12% { transform: translate(var(--float-x, -50%), -20px) scale(1.35); opacity: 1; }
+  25% { transform: translate(var(--float-x, -50%), -30px) scale(1); }
+  75% { opacity: 1; }
+  100% { transform: translate(var(--float-x, -50%), -100px) scale(1); opacity: 0; }
 }
 
 /* ---------- K.O. ---------- */
@@ -368,6 +393,7 @@ body {
   }
   .codex-positive { --codex-glow: rgba(52, 211, 153, 0.16); }
   .codex-negative { --codex-glow: rgba(239, 68, 68, 0.18); }
+  .codex-skill { --codex-glow: rgba(167, 139, 250, 0.16); }
   /* Filet doré avec un losange au centre */
   .codex-divider {
     position: relative;
@@ -404,11 +430,44 @@ body {
   from { transform: scale(0.3); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+/* Rebond du nombre de la zone d'état quand il change : zoom, léger rebond, éclat */
 .status-count {
-  animation: status-count 300ms ease-out both;
+  animation: status-count calc(650ms / var(--speed, 1)) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  z-index: 1;
 }
 @keyframes status-count {
-  0% { transform: scale(1.6); }
+  0% { transform: scale(1); filter: brightness(1); }
+  22% { transform: scale(2.1); filter: brightness(2.2) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+  45% { transform: scale(0.85); filter: brightness(1.4); }
+  65% { transform: scale(1.18); }
+  82% { transform: scale(0.96); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+/* Variation (−1, +2) qui s'élève au-dessus du médaillon puis s'efface */
+.status-delta {
+  animation: status-delta calc(1000ms / var(--speed, 1)) ease-out both;
+}
+@keyframes status-delta {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6); }
+  18% { opacity: 1; transform: translateY(-4px) scale(1.25); }
+  60% { opacity: 1; transform: translateY(-14px) scale(1); }
+  100% { opacity: 0; transform: translateY(-24px) scale(0.95); }
+}
+/* Sursaut du médaillon, quand une valeur change */
+.status-bump {
+  animation: status-bump calc(420ms / var(--speed, 1)) cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+/* Sortie d'un état épuisé : on laisse d'abord voir son 0 rebondir, puis il s'efface */
+.status-leave {
+  animation: status-leave calc(300ms / var(--speed, 1)) ease-in calc(700ms / var(--speed, 1)) both;
+}
+@keyframes status-leave {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.3); opacity: 0; }
+}
+@keyframes status-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); }
   100% { transform: scale(1); }
 }
 
@@ -420,4 +479,549 @@ body {
 @keyframes backdrop-figure {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
+}
+
+/* ---------- Rappels visuels des statuts (look du registre) ---------- */
+/* Halo d'une aura permanente : il respire autour du combattant. */
+.status-halo {
+  transform: translateX(-50%);
+  animation: status-halo 2.6s ease-in-out infinite alternate;
+}
+@keyframes status-halo {
+  from { opacity: 0.5; transform: translateX(-50%) scale(0.94); }
+  to { opacity: 1; transform: translateX(-50%) scale(1.06); }
+}
+
+/* ---------- Furie des vents : deux dés, deux coups en rafale ---------- */
+/* Élan raccourci : les deux coups s'enchaînent presque sans pause. */
+.lunge.lunge-fast {
+  animation-duration: calc(420ms / var(--speed));
+}
+/* Le second dé jaillit en tournoyant, dans une bourrasque bleutée. */
+.die-burst {
+  /* backwards : une fois jailli, le dé reprend ses styles (mise en avant pendant la rafale) */
+  animation: die-burst calc(700ms / var(--speed)) cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+@keyframes die-burst {
+  0% { transform: translateX(-60%) scale(0) rotate(-200deg); opacity: 0; filter: drop-shadow(0 0 0 rgba(125, 211, 252, 0)); }
+  55% { transform: translateX(6%) scale(1.35) rotate(18deg); opacity: 1; filter: drop-shadow(0 0 22px rgba(125, 211, 252, 1)); }
+  100% { transform: translateX(0) scale(1) rotate(0); opacity: 1; filter: drop-shadow(0 0 10px rgba(125, 211, 252, 0.7)); }
+}
+/* Pendant la rafale, le dé du coup en cours ressort, l'autre s'efface un peu. */
+.die-slot {
+  transition: transform calc(150ms / var(--speed)) ease-out, opacity calc(150ms / var(--speed)) ease-out;
+}
+.die-slot.is-active {
+  transform: scale(1.15);
+}
+.die-slot.is-idle {
+  opacity: 0.4;
+}
+
+/* ---------- Pile ou face : la pièce qui remplace le dé ---------- */
+.coin-stage {
+  perspective: 600px;
+}
+.coin {
+  transform-style: preserve-3d;
+}
+.coin-side {
+  backface-visibility: hidden;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.55));
+}
+/* En l'air : elle monte, tournoie très vite et redescend. */
+.coin-flipping {
+  animation: coin-flip calc(1200ms / var(--speed)) cubic-bezier(0.3, 0, 0.4, 1) infinite;
+}
+@keyframes coin-flip {
+  0% { transform: translateY(0) rotateY(0) rotateX(12deg); }
+  50% { transform: translateY(-70px) rotateY(900deg) rotateX(12deg) scale(1.1); }
+  100% { transform: translateY(0) rotateY(1800deg) rotateX(12deg); }
+}
+/* Retombée : elle finit sa rotation sur le côté tiré (--coin-end), avec un petit rebond. */
+.coin-landed {
+  animation: coin-land calc(500ms / var(--speed)) cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes coin-land {
+  0% { transform: translateY(-30px) rotateY(calc(var(--coin-end) - 360deg)) scale(1.15); }
+  100% { transform: translateY(0) rotateY(var(--coin-end)) scale(1); }
+}
+
+/* ---------- Peur : la victime tremble de gauche à droite ---------- */
+/* `translate` (et non `transform`) : le retournement de l'image (scaleX) reste intact. */
+.status-tremble {
+  animation: status-tremble 0.32s ease-in-out infinite;
+}
+@keyframes status-tremble {
+  0%, 100% { translate: 0 0; }
+  25% { translate: -3% 0; }
+  75% { translate: 3% 0; }
+}
+
+/* ---------- Barre de commandes du combat (HUD) ----------
+   Plaque de pierre sombre au liseré de bronze, dans l'esprit des .btn, mais basse et translucide pour
+   rester discrète : boutons-textes en Cinzel, vitesse en trois gemmes, compteurs en pastilles. */
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+  padding: 0 10px;
+  background: linear-gradient(180deg, rgba(38, 31, 26, 0.82), rgba(18, 14, 11, 0.86));
+  border: 1px solid #000;
+  /* Coins coupés : une plaque, pas une pilule de lecteur vidéo */
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.4), inset 0 6px 10px -6px rgba(255, 230, 180, 0.15);
+  backdrop-filter: blur(3px);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
+}
+.hud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  height: 32px;
+  padding: 0 0.9em;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d6c3a1;
+  text-shadow: 0 1px 0 #000;
+  border-radius: 4px;
+  transition: color 150ms, background 150ms;
+  user-select: none;
+}
+.hud-btn:hover { color: #fde68a; background: rgba(217, 160, 80, 0.1); }
+.hud-btn[aria-pressed='true'] {
+  color: #fde68a;
+  background: linear-gradient(180deg, rgba(217, 160, 80, 0.22), rgba(217, 160, 80, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.45);
+}
+.hud-btn:focus-visible, .hud-speed:focus-visible, .cheat-key:focus-visible { outline: 2px solid #fbbf24; outline-offset: 1px; }
+.hud-btn svg, .hud-btn img { width: 18px; height: 18px; }
+.hud-glyph { font-family: var(--font-sans); font-size: 12px; letter-spacing: -0.05em; }
+.hud-sep {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: linear-gradient(180deg, transparent, rgba(217, 160, 80, 0.45), transparent);
+}
+.hud-speeds { display: flex; gap: 3px; }
+.hud-speed {
+  width: 34px;
+  height: 26px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: #a8a29e;
+  background: rgba(0, 0, 0, 0.35);
+  /* Gemme taillée */
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 6px 100%, 0 50%);
+  transition: color 150ms, background 150ms;
+}
+.hud-speed:hover { color: #fde68a; }
+.hud-speed[aria-pressed='true'] {
+  color: #2b1704;
+  background: linear-gradient(180deg, #fde68a 0%, #f2bf4f 45%, #c4851f 100%);
+}
+.hud-count {
+  min-width: 18px;
+  padding: 0 4px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0;
+  color: #1c1917;
+  background: #f59e0b;
+  border-radius: 9999px;
+}
+.hud-cheat { color: #d8b4fe; }
+.hud-cheat:hover { color: #f0abfc; background: rgba(192, 38, 211, 0.12); }
+.hud-cheat[aria-pressed='true'] {
+  color: #f5d0fe;
+  background: linear-gradient(180deg, rgba(192, 38, 211, 0.3), rgba(192, 38, 211, 0.1));
+  box-shadow: inset 0 0 0 1px rgba(232, 121, 249, 0.55);
+}
+.hud-count-cheat { background: #e879f9; }
+
+/* ---------- Mode triche : pavé du prochain dé ----------
+   Même verre fumé que le journal (console), liseré violet pour signaler un outil hors jeu. */
+.cheat-panel {
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 121, 249, 0.35);
+  background: rgba(12, 10, 9, 0.72);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55), inset 0 0 24px rgba(192, 38, 211, 0.08);
+  backdrop-filter: blur(4px);
+  animation: log-pop 180ms ease-out both;
+}
+.cheat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 6px 16px;
+  border-bottom: 1px solid rgba(232, 121, 249, 0.2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #e9d5ff;
+}
+.cheat-close { padding: 0 6px; border-radius: 4px; color: #78716c; }
+.cheat-close:hover { color: #e7e5e4; background: rgba(68, 64, 60, 0.6); }
+.cheat-key {
+  height: 40px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #e7e5e4;
+  background: linear-gradient(180deg, #292524, #1c1917);
+  border: 1px solid #000;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(120, 113, 108, 0.35), 0 3px 0 #0c0a09;
+  transition: transform 60ms, background 120ms, color 120ms;
+}
+.cheat-key:hover:not(:disabled) { color: #f5d0fe; box-shadow: inset 0 0 0 1px rgba(232, 121, 249, 0.6), 0 3px 0 #0c0a09; }
+.cheat-key:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 0 0 1px rgba(232, 121, 249, 0.6), 0 1px 0 #0c0a09; }
+.cheat-key[aria-pressed='true'] {
+  color: #2e1065;
+  background: linear-gradient(180deg, #f5d0fe, #d946ef);
+  box-shadow: 0 0 14px rgba(217, 70, 239, 0.55), 0 3px 0 #4a044e;
+}
+.cheat-key:disabled { color: #44403c; background: #141110; box-shadow: none; cursor: not-allowed; }
+.cheat-key-wide { width: 96px; height: 34px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+/* Marque du dé imposé, sous le dé dans la zone des dés */
+.cheat-tag {
+  padding: 2px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f5d0fe;
+  background: rgba(134, 25, 143, 0.55);
+  border: 1px solid rgba(232, 121, 249, 0.6);
+  border-radius: 4px;
+}
+
+/* ---------- Défilement interne ----------
+   Un tableau ou une liste trop haute défile dans son propre cadre (la scène fait 1600×900) :
+   barre fine, couleur bronze, discrète. */
+.scroll-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 160, 80, 0.45) transparent;
+}
+
+/* ---------- Aura de personnage (posée sur un 3) ----------
+   La seule lumière qui peut habiter un combattant : halo qui respire derrière lui, cercle lumineux
+   au sol, particules qui montent et contour de la silhouette qui pulse. Couleur : --aura (registre). */
+.char-aura { z-index: -1; }
+.char-aura-halo {
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 60%, var(--aura) 0%, transparent 66%);
+  animation: char-aura-breathe 2.4s ease-in-out infinite alternate;
+}
+@keyframes char-aura-breathe {
+  from { opacity: 0.55; transform: translateX(-50%) scale(0.95); }
+  to { opacity: 1; transform: translateX(-50%) scale(1.05); }
+}
+.char-aura-ring {
+  transform: translateX(-50%);
+  border: 2px solid var(--aura);
+  background: radial-gradient(ellipse at 50% 50%, transparent 40%, var(--aura) 100%);
+  box-shadow: 0 0 18px var(--aura), inset 0 0 12px var(--aura);
+  animation: char-aura-ring 2.4s ease-in-out infinite alternate;
+}
+@keyframes char-aura-ring {
+  from { opacity: 0.6; transform: translateX(-50%) scale(0.92); }
+  to { opacity: 1; transform: translateX(-50%) scale(1.04); }
+}
+.char-aura-mote {
+  background: var(--aura);
+  box-shadow: 0 0 8px 2px var(--aura);
+  opacity: 0;
+  animation: char-aura-mote 3s ease-out infinite;
+}
+@keyframes char-aura-mote {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-260px) scale(1.1); }
+}
+
+/* Médaillon d'aura dans la zone d'état : double contour (anneau intérieur doré, anneau extérieur
+   à la couleur de l'aura qui tourne lentement), pour la distinguer des bonus ordinaires. */
+.aura-token { box-shadow: 0 0 0 2px #0c0a09, 0 0 0 4px rgba(253, 224, 71, 0.85), 0 0 18px var(--aura); }
+.aura-token::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent 0 55%, var(--aura) 75%, rgba(255, 255, 255, 0.9) 80%, transparent 92%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: aura-token-spin calc(3s / var(--speed, 1)) linear infinite;
+}
+@keyframes aura-token-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Dés de compétence (sélection, en-tête du combat) ----------
+   Un dé d'ivoire sombre au liseré violet (la couleur des compétences), points dorés. */
+.skill-die {
+  background: linear-gradient(160deg, #3a3048 0%, #211a2b 55%, #15111b 100%);
+  border: 1px solid #000;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.55), inset 0 4px 6px -3px rgba(255, 255, 255, 0.2), 0 3px 0 #0a080d, 0 6px 12px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms, box-shadow 120ms;
+}
+.group:hover > .skill-die {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px rgba(196, 181, 253, 0.95), inset 0 4px 6px -3px rgba(255, 255, 255, 0.25), 0 5px 0 #0a080d, 0 0 16px rgba(167, 139, 250, 0.55);
+}
+.skill-pip {
+  margin: 1px;
+  background: radial-gradient(circle at 35% 35%, #fef3c7, #f59e0b 70%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Écran du champion ---------- */
+.champion-screen { background: radial-gradient(ellipse at 30% 60%, #2a2118 0%, #0c0a09 70%); }
+.champion-rays {
+  background: conic-gradient(from 160deg at 50% 0%, transparent 0deg, rgba(253, 230, 138, 0.14) 8deg, transparent 16deg, rgba(253, 230, 138, 0.1) 26deg, transparent 34deg, rgba(253, 230, 138, 0.12) 44deg, transparent 52deg);
+  filter: blur(6px);
+  transform-origin: 50% 0;
+  animation: champion-rays 9s ease-in-out infinite alternate;
+}
+@keyframes champion-rays { from { transform: rotate(-4deg); opacity: 0.7; } to { transform: rotate(4deg); opacity: 1; } }
+.champion-pedestal {
+  background: radial-gradient(ellipse at 50% 50%, rgba(251, 191, 36, 0.55) 0%, rgba(251, 191, 36, 0.12) 50%, transparent 72%);
+  box-shadow: 0 0 60px rgba(245, 158, 11, 0.35);
+}
+.champion-name {
+  background: linear-gradient(180deg, #fff7d6 0%, #fde68a 35%, #f2bf4f 60%, #b7791f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 #3b2306) drop-shadow(0 0 24px rgba(245, 158, 11, 0.35));
+}
+.champion-tile {
+  border: 1px solid #000;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(42, 34, 29, 0.85) 0%, rgba(17, 13, 11, 0.85) 100%);
+  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.3);
+}
+
+/* ---------- Ressenti des coups ----------
+   Critique (et coup lourd de compétence) : la scène blanchit un instant, le chiffre tremble. */
+.crit-flash {
+  background: radial-gradient(ellipse at 50% 55%, rgba(255, 247, 214, 0.55) 0%, rgba(251, 191, 36, 0.25) 40%, transparent 75%);
+  animation: crit-flash calc(380ms / var(--speed)) ease-out both;
+}
+@keyframes crit-flash {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.crit-shake { animation: crit-shake calc(700ms / var(--speed)) linear both; }
+@keyframes crit-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  10% { transform: translate(-7px, 3px) rotate(-4deg); }
+  20% { transform: translate(6px, -4px) rotate(3deg); }
+  30% { transform: translate(-5px, -2px) rotate(-2deg); }
+  40% { transform: translate(5px, 3px) rotate(2deg); }
+  55% { transform: translate(-3px, 1px) rotate(-1deg); }
+  70% { transform: translate(2px, -1px) rotate(1deg); }
+  85% { transform: translate(-1px, 0) rotate(0); }
+}
+
+/* ---------- Métamorphose (druide) ----------
+   L'ancienne silhouette s'efface en se tassant et en se brouillant ; la nouvelle jaillit d'un
+   éclair de sève, un peu grandie, puis se pose. Des feuilles s'envolent en couronne. */
+.form-out { animation: form-out calc(700ms / var(--speed)) ease-in both; }
+@keyframes form-out {
+  0% { opacity: 1; filter: blur(0) brightness(1); }
+  100% { opacity: 0; filter: blur(8px) brightness(2.2) saturate(0.4); }
+}
+.form-in { animation: form-in calc(900ms / var(--speed)) cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes form-in {
+  0% { opacity: 0; filter: blur(10px) brightness(2.6) saturate(1.6) hue-rotate(40deg); }
+  35% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.morph-flash {
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(190, 242, 100, 0.75) 0%, rgba(132, 204, 22, 0.35) 30%, transparent 65%);
+  animation: morph-flash calc(900ms / var(--speed)) ease-out both;
+}
+@keyframes morph-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); }
+}
+.morph-leaf {
+  width: 14px;
+  height: 8px;
+  border-radius: 100% 0;
+  background: linear-gradient(135deg, #bef264, #4d7c0f);
+  box-shadow: 0 0 6px rgba(163, 230, 53, 0.8);
+  animation: morph-leaf calc(1100ms / var(--speed)) ease-out both;
+}
+@keyframes morph-leaf {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(0) rotate(0); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) rotate(540deg); }
+}
+
+/* ---------- Luciole ----------
+   Des points de lumière vert-jaune tournent autour du porteur, sur une orbite aplatie. */
+.firefly-orbit {
+  width: 0;
+  height: 0;
+  animation: firefly-orbit linear infinite;
+}
+@keyframes firefly-orbit {
+  from { transform: scaleY(0.45) rotate(0deg); }
+  to { transform: scaleY(0.45) rotate(360deg); }
+}
+.firefly {
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, #ffffff 0%, #fef08a 30%, #a3e635 60%, rgba(163, 230, 53, 0) 72%);
+  box-shadow: 0 0 18px 6px rgba(190, 242, 100, 0.85), 0 0 4px 2px #ecfccb;
+  animation: firefly-blink 1.3s ease-in-out infinite alternate;
+}
+@keyframes firefly-blink { from { opacity: 0.45; } to { opacity: 1; } }
+
+/* ---------- Paris : guichet de jeu et résultats (docs/PARIS.md) ---------- */
+@layer components {
+  .desk-in {
+    animation: desk-in 220ms ease-out both;
+  }
+  .desk-title {
+    text-shadow: 0 4px 0 #78350f, 0 0 40px rgba(245, 158, 11, 0.35);
+    animation: desk-title 380ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  .bet-board {
+    animation: board-up 320ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+  }
+  /* Tuile d'issue : plaque de pierre, dorée quand elle est choisie */
+  .bet-tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 84px;
+    padding: 0 14px;
+    border: 1px solid #000;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #2f2721 0%, #1d1814 60%, #15110e 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(217, 160, 80, 0.35),
+      inset 0 0 0 3px #0f0b09,
+      0 4px 0 #070504,
+      0 8px 16px rgba(0, 0, 0, 0.5);
+    transition: transform 90ms ease-out, filter 120ms, box-shadow 120ms;
+  }
+  .bet-tile:hover {
+    filter: brightness(1.18);
+    transform: translateY(-2px);
+  }
+  .bet-tile:active {
+    transform: translateY(2px);
+  }
+  .bet-tile.is-active {
+    background: linear-gradient(180deg, #5b4214 0%, #3a2a0d 60%, #2a1e09 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(253, 230, 138, 0.9),
+      inset 0 0 0 4px #1a1206,
+      0 4px 0 #3b2205,
+      0 0 26px rgba(245, 158, 11, 0.45);
+  }
+  /* Pièce de mise : médaillon de métal, frappée quand elle est posée */
+  .bet-coin {
+    display: flex;
+    width: 84px;
+    height: 84px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: #3a2306;
+    text-shadow: 0 1px 0 rgba(255, 240, 200, 0.6);
+    background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #f3c552 35%, #c48a23 70%, #8a5a12 100%);
+    box-shadow:
+      inset 0 0 0 3px rgba(120, 70, 10, 0.55),
+      inset 0 0 0 6px rgba(255, 236, 170, 0.45),
+      0 5px 0 #4a2c07,
+      0 10px 18px rgba(0, 0, 0, 0.55);
+    transition: transform 110ms ease-out, filter 120ms, box-shadow 120ms;
+  }
+  .bet-coin:hover:not(:disabled) {
+    transform: translateY(-3px) rotate(-4deg);
+    filter: brightness(1.1);
+  }
+  .bet-coin:disabled {
+    filter: grayscale(1) brightness(0.45);
+    cursor: not-allowed;
+  }
+  .bet-coin.is-active {
+    transform: translateY(-6px) scale(1.08);
+    box-shadow:
+      inset 0 0 0 3px rgba(120, 70, 10, 0.55),
+      inset 0 0 0 6px rgba(255, 236, 170, 0.6),
+      0 0 0 3px #fde68a,
+      0 0 30px rgba(245, 158, 11, 0.7),
+      0 8px 0 #4a2c07;
+    animation: coin-strike 260ms ease-out;
+  }
+  .bet-coin.is-poker {
+    color: #fff1e6;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    background: radial-gradient(circle at 35% 30%, #ffd1c2 0%, #e2553a 40%, #9d2414 75%, #5c1208 100%);
+  }
+  .bet-stamp {
+    color: #fde68a;
+    padding: 2px 12px;
+    border: 3px double rgba(253, 230, 138, 0.8);
+    border-radius: 6px;
+    transform: rotate(-4deg);
+    animation: stamp 300ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
+  /* Ruban doré du coup de théâtre */
+  .twist-ribbon {
+    position: relative;
+    background: linear-gradient(90deg, transparent 0%, rgba(180, 83, 9, 0.85) 12%, rgba(217, 119, 6, 0.95) 50%, rgba(180, 83, 9, 0.85) 88%, transparent 100%);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+    animation: ribbon-in 420ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  }
+  .bet-result {
+    animation: board-up 320ms ease-out both;
+  }
+  .bet-verdict {
+    animation: stamp 300ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  }
+}
+@keyframes desk-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes desk-title {
+  from { opacity: 0; transform: scale(1.4); letter-spacing: 0.6em; }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes board-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes coin-strike {
+  0% { transform: translateY(-20px) scale(1.25) rotate(-20deg); }
+  70% { transform: translateY(-4px) scale(1.04); }
+  100% { transform: translateY(-6px) scale(1.08); }
+}
+@keyframes stamp {
+  from { opacity: 0; transform: scale(2.2) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1) rotate(-4deg); }
+}
+@keyframes ribbon-in {
+  from { opacity: 0; transform: scaleX(0.3); }
+  to { opacity: 1; transform: scaleX(1); }
 }

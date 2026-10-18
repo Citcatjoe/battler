@@ -9,9 +9,11 @@ import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter } from '../game/roster'
 import { STATUS_IDS } from '../game/statuses'
-import { testCharacter } from '../game/test-utils'
-import { createTournament, fillSlots, matchFighters, SLOTS, withResult } from '../game/tournament'
+import { EMOJI, testCharacter } from '../game/test-utils'
+import { allMatches, championRun, createTournament, fillSlots, matchFighters, matchKey, SLOTS, withResult } from '../game/tournament'
 import { BracketScreen } from './BracketScreen'
+import { ChampionScreen } from './ChampionScreen'
+import { CheatPad } from './CheatPad'
 import { CharacterSheet } from './compendium/CharacterSheet'
 import { CompendiumScreen } from './compendium/CompendiumScreen'
 import { COMPENDIUM_SECTIONS } from './compendium/sections'
@@ -27,6 +29,8 @@ import { MatchupScreen } from './MatchupScreen'
 import { RecordsScreen } from './RecordsScreen'
 import { StartScreen } from './StartScreen'
 import { TournamentSetupScreen } from './TournamentSetupScreen'
+import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from './Betting'
+import { createWallets, placeBet, placeBotBets, priceMatch, settleMatch, worthOf, type MatchOdds } from '../game/betting'
 
 const noop = () => {}
 const fighters = [createCharacter('gorak'), createCharacter('brokk')] as [
@@ -51,7 +55,12 @@ const poisoned: CombatResult = simulateCombat(
   { rng: seededRng(1) },
 )
 
-const render = (node: React.ReactNode) => expect(renderToString(node).length).toBeGreaterThan(100)
+/** Rend un écran et vérifie qu'il n'affiche aucun emoji (icônes peintes seulement). */
+const render = (node: React.ReactNode) => {
+  const html = renderToString(node)
+  expect(html.length).toBeGreaterThan(100)
+  expect(html.match(EMOJI)?.[0], 'emoji affiché').toBeUndefined()
+}
 
 describe('écrans', () => {
   it('accueil, affrontement, combat, fin', () => {
@@ -95,6 +104,44 @@ describe('écrans', () => {
         />,
       )
     for (const arena of ARENAS) render(<FightScreen script={result} arena={arena} onEnd={noop} />)
+    // Paris : écran d'affrontement, guichet (avec et sans coup de théâtre), écran de fin avec classement
+    const odds = priceMatch(fighters, 'test', 40)
+    const names: [string, string] = [fighters[0].name, fighters[1].name]
+    const bet = placeBet(placeBotBets(createWallets(), odds), odds, 0, { market: 'winner', side: 0 }, 100)
+    if (!bet.ok) throw new Error(bet.reason)
+    const wallets = bet.wallets
+    const betting = { wallets, odds, onBet: () => null, onCancel: noop }
+    render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />)
+    render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={{ ...betting, odds: null }} />)
+    const twists: MatchOdds[] = [
+      odds,
+      { ...odds, twist: { kind: 'boost', pick: { market: 'duration', over: true } } },
+      { ...odds, twist: { kind: 'doubleStakes' } },
+      { ...odds, twist: { kind: 'jackpot' } },
+    ]
+    for (const o of twists) {
+      render(<BettingDesk wallets={wallets} odds={o} fighters={fighters} onBet={() => null} onCancel={noop} onClose={noop} onReset={noop} />)
+      render(<BetSummary wallets={wallets} odds={o} fighterNames={names} />)
+    }
+    render(<BettingDesk wallets={wallets} odds={null} fighters={fighters} onBet={() => null} onCancel={noop} onClose={noop} />)
+    render(<Standings wallets={wallets} />)
+    const outcome = (r: CombatResult): BetsOutcome => {
+      const { wallets: next, entries } = settleMatch(wallets, odds, r)
+      const ids = next.bettors.map((_, i) => i)
+      return { entries, bettors: next.bettors, before: ids.map((b) => worthOf(wallets, b)), after: ids.map((b) => worthOf(next, b)), line: odds.line, twist: { kind: 'jackpot' } }
+    }
+    render(<BetsResult outcome={outcome(result)} fighterNames={names} />)
+    render(<EndScreen result={result} onReplay={noop} onMenu={noop} bets={outcome(result)} />)
+    render(<EndScreen result={result} onReplay={noop} onMenu={noop} bets={outcome({ ...result, forcedRolls: { 0: 1 } })} tournament={{ label: 'x', onContinue: noop }} />)
+    // Mode triche : dé, pièce, plus de dé, combat sans graine
+
+    for (const cheat of [
+      { available: true, rank: 3, next: { side: 0 as const, faces: 8, coin: false }, forced: 6, count: 2 },
+      { available: true, rank: 3, next: { side: 1 as const, faces: 2, coin: true }, count: 0 },
+      { available: true, rank: 40, count: 1 },
+      { available: false, rank: 0, count: 0 },
+    ])
+      render(<CheatPad cheat={cheat} fighters={result.fighters} onForce={noop} onClose={noop} bottom={76} />)
     for (const tab of ['summary', 'defense', 'events', 'dice'] as const)
       render(<EndScreen result={result} onReplay={noop} onMenu={noop} initialTab={tab} />)
     render(<EndScreen result={poisoned} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop }} />)
@@ -118,28 +165,46 @@ describe('écrans', () => {
     const html = renderToString(<StatusesSection />)
     for (const e of statusCatalog()) {
       if (e.def.polarity !== 'positive') continue
-      if (e.inGame) expect(html).toContain(e.def.name)
-      else expect(html).not.toContain(e.def.name)
+      const name = e.def.name.replace(/'/g, '&#x27;')
+      if (e.inGame) expect(html).toContain(name)
+      else expect(html).not.toContain(name)
     }
   })
 
   it('tournoi', () => {
     const slots = fillSlots(Array(SLOTS).fill(null), CHARACTER_IDS, seededRng(3))
-    render(<TournamentSetupScreen slots={slots} onChange={noop} onValidate={noop} onBack={noop} />)
-    render(<TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} />)
+    const betting = { enabled: true, names: ['karma', 'MiaMiaM'] as [string, string] }
+    render(<TournamentSetupScreen slots={slots} onChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} />)
+    render(<TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} />)
     let t = createTournament(slots, (id) => createCharacter(id).name)
     t = withResult(
       t,
       { round: 0, index: 0 },
       simulateCombat(matchFighters(t, { round: 0, index: 0 }), { rng: seededRng(4) }),
     )
-    render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onNewTournament={noop} onMenu={noop} />)
+    render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
+    render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} wallets={createWallets()} />)
+    // Tournoi complet : l'arbre terminé, puis l'écran du champion et son bilan cumulé
+    let seed = 10
+    for (const ref of allMatches()) if (!t.results[matchKey(ref)]) t = withResult(t, ref, simulateCombat(matchFighters(t, ref), { seed: seed++ }))
+    render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
+    const run = championRun(t)!
+    expect(run.matches).toHaveLength(4)
+    expect(run.totals.damage).toBeGreaterThan(0)
+    expect(run.totals.turns).toBe(run.matches.reduce((s, m) => s + m.turns, 0))
+    render(<ChampionScreen run={run} onBracket={noop} onNewTournament={noop} onMenu={noop} />)
+    render(<ChampionScreen run={run} onBracket={noop} onNewTournament={noop} onMenu={noop} wallets={createWallets()} />)
   })
 
   it('tous les statuts et effets s’affichent', () => {
     const statuses = STATUS_IDS.map((id, i) => ({ id, stacks: i + 1, ...(i % 2 ? { turns: 2 } : {}) }))
     render(<HpBar side={0} name="x" hp={10} maxHp={20} />)
     render(<StatusTray statuses={statuses} />)
+    // Chaque état a son infobulle : nom, effet actuel, tours restants
+    const tray = renderToString(<StatusTray statuses={[{ id: 'poison', stacks: 2, turns: 3 }]} />)
+    expect(tray).toContain('role="tooltip"')
+    expect(tray).toContain('Poison')
+    expect(tray).toContain('3 tours restants')
     const effects = [
       { type: 'heal' as const, target: 0 as const, amount: 3 },
       { type: 'damage' as const, target: 0 as const, amount: 2 },
@@ -164,7 +229,7 @@ describe('écrans', () => {
         character={fighters[0]}
         side={0}
         statuses={statuses}
-        fx={{ key: 1, source: 0, title: '✨ Test', effects }}
+        fx={{ key: 1, source: 0, title: 'Test', effects }}
       />,
     )
   })

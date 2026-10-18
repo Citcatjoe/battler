@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Arena } from '../game/arenas'
 import { multiplier, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
+import { CheatPad } from './CheatPad'
 import { CombatLog } from './CombatLog'
+import { CopyTraceButton } from './CopyTraceButton'
+import { Coin } from './Coin'
 import { Die } from './Die'
 import { Fighter, type Received } from './Fighter'
 import { HpBar } from './HpBar'
@@ -20,6 +23,7 @@ interface Props {
 const SPEEDS = [1, 2, 4]
 
 // Journal masqué au premier combat ; s'il est ouvert, il le reste pour les combats suivants de la session.
+let cheatOpenInSession = false
 let logOpenInSession = false
 
 const SHAKE: Keyframe[] = [
@@ -33,25 +37,26 @@ const SHAKE: Keyframe[] = [
 
 export function FightScreen({ script, arena, onEnd }: Props) {
   const { fighters } = script
-  const { hp, statuses, dice, strike, fx, log, turn, winner, speed, setSpeed, paused, setPaused } = useCombat(
-    script,
-    onEnd,
-  )
+  const { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
+    useCombat(script, onEnd)
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
   const diceColor = dice.owner === null ? '#e7e5e4' : SIDE_STYLE[dice.owner].hex
-  const shake = strike?.landed && !strike.dodged && (strike.crit || strike.damage >= 8)
+  const shake =
+    (strike?.landed && !strike.dodged && (strike.crit || strike.damage >= 8)) || (blow?.landed && (blow.heavy || blow.damage >= 8))
+  const heavyHit = (strike?.landed && !strike.dodged && strike.crit) || (blow?.landed && blow.heavy)
+  const hitKey = strike?.key ?? blow?.key
 
   // Secousse de l'arène sur les gros coups (sans remonter les combattants).
   const arenaRef = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!shake) return
-    const crit = strike?.crit
+    const crit = heavyHit
     arenaRef.current?.animate(crit ? SHAKE.map((k) => ({ transform: `${k.transform} scale(1.02)` })) : SHAKE, {
       duration: (crit ? 500 : 350) / speed,
       easing: 'linear',
     })
-  }, [shake, strike?.key, strike?.crit, speed])
+  }, [shake, hitKey, heavyHit, speed])
 
   const [logOpen, setLogOpenState] = useState(logOpenInSession)
   const setLogOpen = (open: boolean) => {
@@ -65,12 +70,22 @@ export function FightScreen({ script, arena, onEnd }: Props) {
   }, [logOpen, log.length])
   const unread = logOpen ? 0 : log.length - seen
 
-  // Raccourci clavier : J ouvre ou ferme le journal.
-  const toggleRef = useRef(() => {})
-  toggleRef.current = () => setLogOpen(!logOpen)
+  // Mode triche (outil d'observation) : ouvert ou fermé, retenu pour la session comme le journal
+  const [cheatOpen, setCheatOpenState] = useState(cheatOpenInSession)
+  const setCheatOpen = (open: boolean) => {
+    cheatOpenInSession = open
+    setCheatOpenState(open)
+  }
+
+  // Raccourcis clavier : J ouvre ou ferme le journal, C le mode triche.
+  const toggleRef = useRef((_: string) => {})
+  toggleRef.current = (key) => {
+    if (key === 'j') setLogOpen(!logOpen)
+    if (key === 'c') setCheatOpen(!cheatOpen)
+  }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'j' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) toggleRef.current()
+      if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) toggleRef.current(e.key.toLowerCase())
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -79,7 +94,10 @@ export function FightScreen({ script, arena, onEnd }: Props) {
   const receivedBy = (side: Side): Received | undefined =>
     strike && strike.attacker !== side
       ? { key: strike.key, damage: strike.damage, crit: strike.crit, dodged: strike.dodged, landed: strike.landed }
-      : undefined
+      : blow && blow.to === side
+        ? { key: blow.key, damage: blow.damage, crit: blow.heavy, dodged: false, landed: blow.landed }
+        : undefined
+  const lungingSide = strike ? strike.attacker : blow?.lunge ? blow.from : null
 
   return (
     <div
@@ -87,19 +105,19 @@ export function FightScreen({ script, arena, onEnd }: Props) {
       style={{ '--speed': speed } as CSSProperties}
     >
       {/* Barres de vie */}
-      <header className="flex items-start gap-6 border-b border-stone-800 bg-stone-950/80 py-4 pl-8 pr-20">
-        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} />
+      <header className="relative z-[55] flex items-start gap-6 border-b border-stone-800 bg-stone-950/80 py-4 pl-8 pr-20">
+        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} character={fighters[0]} form={forms[0]} />
         <div className="flex shrink-0 flex-col items-center pt-1">
           <span className="text-xs uppercase tracking-widest text-stone-500">Tour</span>
           <span className="font-display text-3xl font-extrabold tabular-nums">{turn || '–'}</span>
         </div>
-        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} />
+        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} character={fighters[1]} form={forms[1]} />
       </header>
 
       {/* Arène */}
       <main
         ref={arenaRef}
-        className="relative flex flex-1 items-end justify-between overflow-hidden bg-stone-950 px-[10%] pt-6"
+        className="relative flex flex-1 items-end justify-between overflow-hidden bg-stone-950 px-[13%] pt-6"
       >
         {/* Décor : assombri, désaturé et légèrement flou pour laisser les combattants au premier plan */}
         <img
@@ -111,6 +129,8 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,transparent_35%,rgba(12,10,9,0.85)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-stone-950/85 to-transparent" />
+        {/* Éclair d'un critique ou d'un coup lourd : la scène blanchit un instant */}
+        {heavyHit && <div key={`flash-${hitKey}`} className="crit-flash pointer-events-none absolute inset-0 z-[35]" />}
         {/* Halo au sol qui détache les silhouettes */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,237,213,0.12)_0%,transparent_65%)]" />
 
@@ -121,14 +141,18 @@ export function FightScreen({ script, arena, onEnd }: Props) {
               character={fighters[side]}
               side={side}
               state={fighterState(side)}
-              lunging={strike?.attacker === side}
+              lunging={lungingSide === side}
+              fastLunge={strike ? strike.fast : blow !== null}
               received={receivedBy(side)}
               fx={fx ?? undefined}
               statuses={statuses[side]}
+              form={forms[side]}
             />
-            {/* Zone d'état : au-dessus de la tête (qui dépend de la taille du personnage), sous les textes flottants */}
+            {/* Zone d'état : au-dessus de la tête (qui dépend de la taille du personnage). Elle passe devant le
+                cadre du combattant, qui la recouvrait chez le nain (plus petit) ; au survol, elle passe devant tout
+                (combattants, journal, commandes) pour que l'infobulle soit lisible. */}
             <div
-              className="pointer-events-auto absolute left-1/2 z-[5] -translate-x-1/2"
+              className="pointer-events-auto absolute left-1/2 z-[15] -translate-x-1/2 hover:z-[60]"
               style={{ bottom: `calc(${fighters[side].look.scale * 100}% + 18px)` }}
             >
               <StatusTray statuses={statuses[side]} />
@@ -145,18 +169,32 @@ export function FightScreen({ script, arena, onEnd }: Props) {
             {dice.label}
           </span>
           <div className="flex gap-6">
+            {/* Pile ou face : la pièce remplace le dé */}
+            {dice.coin && <Coin heads={dice.coin.heads} />}
             {dice.values.map((v, i) => (
-              <Die
+              <div
                 key={`${dice.values.length}-${i}`}
-                value={v}
-                faces={dice.faces}
-                rolling={dice.rolling}
-                color={dice.owner === null ? SIDE_STYLE[i as Side].hex : diceColor}
-                size={dice.values.length > 1 ? 80 : 104}
-              />
+                // Rafale : le second dé jaillit ; ensuite, le dé du coup en cours ressort
+                className={`die-slot ${dice.volley && i > 0 ? 'die-burst' : ''} ${
+                  dice.active === undefined ? '' : dice.active === i ? 'is-active' : 'is-idle'
+                }`}
+              >
+                <Die
+                  value={v}
+                  faces={dice.dieFaces?.[i] ?? dice.faces}
+                  rolling={dice.rolling}
+                  color={dice.dieColors?.[i] ?? (dice.owner === null ? SIDE_STYLE[i as Side].hex : diceColor)}
+                  size={dice.values.length > 1 ? 88 : 104}
+                />
+              </div>
             ))}
           </div>
-          <div className="h-10">
+          <div className="flex h-10 items-center gap-2">
+            {dice.forced && !dice.rolling && (
+              <span className="cheat-tag" title="Dé imposé en mode triche">
+                Imposé
+              </span>
+            )}
             {dice.crit && dice.owner !== null && (
               <span className="crit-badge inline-block rounded-md bg-amber-400 px-3 py-1 font-display text-xl font-extrabold text-stone-950 shadow-[0_3px_0_#92400e]">
                 {dice.critForced ? (
@@ -187,13 +225,16 @@ export function FightScreen({ script, arena, onEnd }: Props) {
               <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-400">
                 <Icon name="scroll" /> Journal
               </span>
-              <button
-                onClick={() => setLogOpen(false)}
-                className="rounded px-1.5 text-stone-500 hover:bg-stone-800/60 hover:text-stone-200"
-                title="Masquer le journal (J)"
-              >
-                ✕
-              </button>
+              <span className="flex items-center gap-1">
+                <CopyTraceButton result={resolved} />
+                <button
+                  onClick={() => setLogOpen(false)}
+                  className="rounded px-1.5 text-stone-500 hover:bg-stone-800/60 hover:text-stone-200"
+                  title="Masquer le journal (J)"
+                >
+                  ✕
+                </button>
+              </span>
             </header>
             <div className="min-h-0 flex-1 [mask-image:linear-gradient(to_bottom,transparent_0,black_18px)]">
               <CombatLog entries={log} />
@@ -202,41 +243,50 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         )}
       </main>
 
-      {/* Commandes : petite barre flottante, hors de l'arène pour ne pas trembler avec elle */}
-      <div className="absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-stone-500/30 bg-stone-950/60 p-1.5 shadow-lg backdrop-blur-[3px]">
-        <button
-          onClick={() => setPaused(!paused)}
-          className="w-28 rounded-full px-3 py-1.5 text-sm font-bold hover:bg-stone-800/70"
-        >
-          {paused ? '▶ Reprendre' : '❚❚ Pause'}
+      {cheatOpen && (
+        <CheatPad
+          cheat={cheat}
+          fighters={fighters}
+          onForce={forceNextRoll}
+          onClose={() => setCheatOpen(false)}
+          bottom={logOpen ? 316 : 76}
+        />
+      )}
+
+      {/* Commandes : barre de jeu discrète (plaque de pierre au liseré de bronze), hors de l'arène pour ne pas trembler avec elle */}
+      <nav aria-label="Commandes du combat" className="hud absolute bottom-5 left-1/2 z-40 -translate-x-1/2">
+        <button onClick={() => setPaused(!paused)} className="hud-btn w-[118px]" aria-pressed={paused} title={paused ? "Reprendre le combat" : "Mettre en pause"}>
+          <span className="hud-glyph">{paused ? '▶' : '❚❚'}</span>
+          {paused ? 'Reprendre' : 'Pause'}
         </button>
-        <div className="flex overflow-hidden rounded-full border border-stone-600/50">
+        <span className="hud-sep" />
+        <div className="hud-speeds" role="group" aria-label="Vitesse">
           {SPEEDS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              className={`px-3 py-1.5 text-sm font-bold ${s === speed ? 'bg-amber-500 text-stone-950' : 'hover:bg-stone-800/70'}`}
-            >
+            <button key={s} onClick={() => setSpeed(s)} aria-pressed={s === speed} className="hud-speed" title={`Vitesse ×${s}`}>
               ×{s}
             </button>
           ))}
         </div>
+        <span className="hud-sep" />
         <button
           onClick={() => setLogOpen(!logOpen)}
           aria-pressed={logOpen}
           title={logOpen ? 'Masquer le journal (J)' : 'Afficher le journal (J)'}
-          className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold ${
-            logOpen ? 'bg-stone-200/15 text-stone-100' : 'text-stone-300 hover:bg-stone-800/70'
-          }`}
+          className="hud-btn"
         >
           <Icon name="scroll" /> Journal
-          {unread > 0 && (
-            <span className="rounded-full bg-amber-500 px-1.5 font-mono text-[11px] leading-5 text-stone-950">
-              {unread > 99 ? '99+' : unread}
-            </span>
-          )}
+          {unread > 0 && <span className="hud-count">{unread > 99 ? '99+' : unread}</span>}
         </button>
-      </div>
+        <button
+          onClick={() => setCheatOpen(!cheatOpen)}
+          aria-pressed={cheatOpen}
+          title={cheatOpen ? 'Fermer le mode triche (C)' : 'Mode triche : imposer le prochain dé (C)'}
+          className="hud-btn hud-cheat"
+        >
+          <Icon name="dice" /> Cheat
+          {cheat.count > 0 && <span className="hud-count hud-count-cheat">{cheat.count}</span>}
+        </button>
+      </nav>
     </div>
   )
 }
