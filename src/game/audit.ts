@@ -109,7 +109,11 @@ export function createAudit() {
               flag('durée décomptée hors de son étape', r, i, `${st.id} ${was.turns}→${st.turns} (${b.type})`)
           }
       if (b.type === 'statusDuration' || b.type === 'statusExpire' || b.type === 'statusTick') {
-        if (b.side !== active(b.turn)) flag('phase de statut sur le mauvais camp', r, i, `${b.type} côté ${b.side}`)
+        // Exception (0.45.0) : un statut `onOpponentTurnStart` agit au début du tour de l'adversaire de son porteur
+        const opponentTick = b.type === 'statusTick' && STATUSES[b.status].onOpponentTurnStart !== undefined
+        if (opponentTick ? b.side === active(b.turn) || b.phase !== 'turnStart' : b.side !== active(b.turn))
+          flag('phase de statut sur le mauvais camp', r, i, `${b.type} côté ${b.side}`)
+        if (opponentTick) see('aura au tour adverse')
       }
       if (b.type === 'attack') {
         const a = b.attack
@@ -176,7 +180,9 @@ export function createAudit() {
           const drained = next?.type === 'statusReaction' && next.status === 'lifesteal'
           if (drain && s.hp[def] > 0 && !drained) flag('vol de vie non appliqué', r, i, '')
           if (!drain && drained) flag('vol de vie sans charge', r, i, '')
-          if (drain && s.hp[def] > 0 && find(r.beats[i + 1]?.state.statuses[att] ?? [], 'lifesteal')) flag('vol de vie non consommé', r, i, '')
+          // Une charge par coup qui touche (deux charges par Vol de vie depuis la 0.45.0)
+          const left = find(r.beats[i + 1]?.state.statuses[att] ?? [], 'lifesteal')?.stacks ?? 0
+          if (drain && s.hp[def] > 0 && left !== drain.stacks - 1) flag('vol de vie non consommé', r, i, `${drain.stacks} → ${left}`)
           if (drained && next.effects[0].type === 'heal' && next.effects[0].amount !== Math.min(a.dealt, r.fighters[att].maxHp - s.hp[att]))
             flag('vol de vie : montant faux', r, i, `${next.effects[0].amount} vs dealt ${a.dealt}`)
           // Épines : réaction attendue dans les étapes qui suivent (avant le prochain coup)
@@ -192,7 +198,8 @@ export function createAudit() {
         } else if (a.damage !== 0 || a.dealt !== 0) flag('coup nul avec dégâts', r, i, '')
         // Vol de vie (0.29.0) : esquivé, la charge est perdue ; jet de compétence, elle reste (ou est renouvelée)
         if (find(prev.statuses[att], 'lifesteal')) {
-          if (a.dodged && find(s.statuses[att], 'lifesteal')) flag('vol de vie gardé après une esquive', r, i, '')
+          const was = find(prev.statuses[att], 'lifesteal')!.stacks
+          if (a.dodged && (find(s.statuses[att], 'lifesteal')?.stacks ?? 0) !== was - 1) flag('vol de vie gardé après une esquive', r, i, '')
           if (a.forfeited && !find(s.statuses[att], 'lifesteal')) flag('vol de vie perdu sur un jet de compétence', r, i, '')
         }
         // Compétences du dé : déclenchées exactement quand il faut

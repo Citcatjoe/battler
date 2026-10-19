@@ -774,7 +774,7 @@ describe('compétences du 2 au dé (0.25.0)', () => {
     i > 0 ? r.beats[i - 1].state : { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [[], []] }
   const has = (list: readonly { id: string }[], id: string) => list.some((s) => s.id === id)
 
-  it('Vol de vie : le 2 ne fait aucun dégât, le prochain coup qui touche rend les PV retirés', () => {
+  it('Vol de vie (0.45.0) : le 2 ne fait aucun dégât et pose 2 charges ; chaque coup qui touche en use une et rend les PV retirés', () => {
     let drains = 0
     for (const r of duelsOf('ervald')) {
       r.beats.forEach((beat, i) => {
@@ -784,25 +784,27 @@ describe('compétences du 2 au dé (0.25.0)', () => {
         if (!owner.events.some((e) => e.id === 'life-steal')) return
         if (a.roll === 2) {
           expect(a).toMatchObject({ forfeited: true, damage: 0, dealt: 0, dodged: false, crit: false })
-          // La compétence suit et pose (ou renouvelle) une seule charge
+          // La compétence suit et ajoute 2 charges, plafonnées à 2
           if (beat.state.hp[1 - a.attacker] > 0) {
             const next = r.beats[i + 1]
             expect(next.type === 'event' && next.event.eventId === 'life-steal').toBe(true)
-            expect(next.state.statuses[a.attacker].find((s) => s.id === 'lifesteal')?.stacks).toBe(1)
+            expect(next.state.statuses[a.attacker].find((s) => s.id === 'lifesteal')?.stacks).toBe(2)
           }
           return
         }
-        const held = has(before(r, i).statuses[a.attacker], 'lifesteal')
-        // Esquivé : charge perdue sans soin ; jet de compétence (1, 3) : aucun coup porté, la charge reste
-        if (held && a.dodged) expect(has(beat.state.statuses[a.attacker], 'lifesteal')).toBe(false)
-        if (held && a.forfeited) expect(has(beat.state.statuses[a.attacker], 'lifesteal')).toBe(true)
+        const charges = (st: readonly { id: string; stacks: number }[]) => st.find((s) => s.id === 'lifesteal')?.stacks ?? 0
+        const was = charges(before(r, i).statuses[a.attacker])
+        const held = was > 0
+        // Esquivé : une charge perdue sans soin ; jet de compétence (1, 3) : aucun coup porté, les charges restent
+        if (held && a.dodged) expect(charges(beat.state.statuses[a.attacker])).toBe(was - 1)
+        if (held && a.forfeited) expect(charges(beat.state.statuses[a.attacker])).toBe(was)
         const next = r.beats[i + 1]
         const reacted = next?.type === 'statusReaction' && next.status === 'lifesteal'
         expect(reacted).toBe(held && !a.dodged && !a.forfeited && beat.state.hp[1 - a.attacker] > 0)
         if (reacted && next.effects[0].type === 'heal') {
           drains++
           expect(next.effects[0].amount).toBe(Math.min(a.dealt, owner.maxHp - beat.state.hp[a.attacker]))
-          expect(has(next.state.statuses[a.attacker], 'lifesteal')).toBe(false)
+          expect(charges(next.state.statuses[a.attacker])).toBe(was - 1)
         }
       })
     }
@@ -939,28 +941,34 @@ describe('auras du 3 au dé (0.26.0)', () => {
     effects: [{ type: 'applyStatus', status, stacks: 1 }],
   })
 
-  it('Aura de poison : au début du tour du porteur, avant son coup, 1 dégât direct par charge à l’adversaire', () => {
-    // a gagne une charge au début du combat, puis une à chacun de ses coups (dé à 1 face)
+  it('Aura de poison (0.45.0) : au début du tour de l’adversaire, après ses poisons, 1 dégât direct par charge', () => {
+    // a gagne une charge au début du combat, puis une à chacun de ses coups (dé à 1 face) ; il empoisonne aussi b
     const r = run([
-      testCharacter('a', { maxHp: 60 }, [at('combatStart', 'poisonAura', 'start'), at('naturalOne', 'poisonAura')]),
+      testCharacter('a', { maxHp: 60 }, [
+        at('combatStart', 'poisonAura', 'start'),
+        { id: 'one', name: 'one', trigger: 'naturalOne', effects: [{ type: 'applyStatus', status: 'poisonAura', stacks: 1 }, { type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }] },
+      ]),
       testCharacter('b', { maxHp: 60 }),
     ])
     const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'poisonAura')
     expect(ticks.length).toBeGreaterThan(3)
-    ticks.forEach((tick, k) => {
+    let afterPoison = 0
+    ticks.forEach((tick) => {
       expect(tick).toMatchObject({ side: 0, phase: 'turnStart' })
-      const before = r.beats[r.beats.indexOf(tick) - 1].state
-      const stacks = before.statuses[0].find((s) => s.id === 'poisonAura')!.stacks
-      // Une charge de départ, plus une par coup déjà porté : elle ne fait que grandir
-      expect(stacks).toBe(k + 1)
+      const i = r.beats.indexOf(tick)
+      const stacks = r.beats[i - 1].state.statuses[0].find((s) => s.id === 'poisonAura')!.stacks
       expect(tick.effects).toEqual([{ type: 'damage', target: 1, amount: stacks }])
-      // Le coup du porteur vient après, dans le même tour
-      const strike = r.beats.slice(r.beats.indexOf(tick)).find((b) => b.type === 'attack')
+      // C'est le tour de b : son coup vient après, dans le même tour
+      const strike = r.beats.slice(i).find((b) => b.type === 'attack')
       if (strike && strike.type === 'attack' && tick.state.hp[1] > 0) {
         expect(strike.turn).toBe(tick.turn)
-        expect(strike.attack.attacker).toBe(0)
+        expect(strike.attack.attacker).toBe(1)
       }
+      // Même étape que le poison de b : son tick, s'il en a un, vient juste avant
+      const prev = r.beats[i - 1]
+      if (prev.type === 'statusTick' && prev.status === 'poison' && prev.turn === tick.turn) afterPoison++
     })
+    expect(afterPoison).toBeGreaterThan(0)
     // Permanente : jamais expirée
     expect(ofType(r, 'statusExpire').some((b) => b.statuses.includes('poisonAura'))).toBe(false)
   })
@@ -1170,6 +1178,19 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     const paladin = createCharacter('aldric')
     expect(effectiveStats(paladin, [{ id: 'immunityAura', stacks: 1 }]).armor).toBe(paladin.stats.armor + 1)
     expect(paladin.events.map((e) => e.id)).toContain('immunity-aura')
+  })
+
+  it('Épines (0.45.0) : permanentes, une charge par 2 au dé, chaque coup encaissé renvoie 1 dégât par charge', () => {
+    let reactions = 0
+    for (const r of rosterCombats(4))
+      r.beats.forEach((beat, i) => {
+        if (beat.type !== 'statusReaction' || beat.status !== 'thorns') return
+        const before = r.beats[i - 1].state.statuses[beat.side].find((s) => s.id === 'thorns')!
+        expect(before.turns).toBeUndefined()
+        expect(beat.effects).toEqual([expect.objectContaining({ type: 'damage', amount: before.stacks })])
+        reactions++
+      })
+    expect(reactions).toBeGreaterThan(50)
   })
 
   it('Aura de sainteté (0.42.0) : plafonnée, ses charges ne dépassent jamais le plafond', () => {

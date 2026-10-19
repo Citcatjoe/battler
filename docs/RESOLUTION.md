@@ -35,6 +35,8 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     0. Changement de forme (personnage à formes, sauf à son premier tour) : étape shift
     1. Effets de début de tour des statuts de l'actif (onTurnStart) : bonus, puis malus
     2. Durées « début » de l'actif : −1 tour (étape statusDuration), expiration à 0 (statusExpire)
+    2 bis. Statuts de l'ADVERSAIRE qui agissent au début de ce tour (`onOpponentTurnStart`, 0.45.0 :
+       Aura de poison), dans l'ordre de pose : au même moment que le Poison que l'actif subit.
     3. Fenêtre « turnStart » (actif)
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action

@@ -31,6 +31,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.45.0] — 2026-10-19
+
+Deuxième passe sur les compétences : quatre notes de l'utilisateur (Aura de poison, Vol de vie, aura de la barde, Épines) et deux compétences signalées par l'audit 0.42.0 (Fausse note, immunité de Gauvain, sans objet depuis son retrait en 0.44.0). Laboratoire (série 5, 30 essais à 300 combats par duel), puis équilibrage du roster entier à 400 combats par duel. Méthode et chiffres : `docs/SORTS.md` § 11.
+
+### Modifié
+- **Épines** (nains, demande de l'utilisateur) : **permanentes et cumulables**. Chaque 2 au dé ajoute une charge ; chaque coup encaissé renvoie 1 dégât direct par charge. Avant : 6 dégâts renvoyés pendant un seul tour. Valeur nette : Brokk +9,9 → +10,9, Grimbald +5,0 → +4,3. Elles se voient bien plus souvent : 6,9 réactions par combat chez Brokk, au lieu de 3,9.
+- **Vol de vie** (morts-vivants) : **deux charges** au lieu d'une ; chaque coup qui touche en use une, une esquive aussi. Le compteur dit enfin quelque chose (2, puis 1). Valeur nette +4,0 → **+10,6** (Ervald) et +3,3 → **+8,9** (Caldrec). (Chiffres de cette ligne et des suivantes : mesurés sur 20 personnages, avant la fusion ; mesures finales plus bas.)
+- **Aura mélodieuse** (barde, double 3) : **2 charges** au lieu d'une. Elle coûtait des victoires (−1,0 et −1,3), parce que le double remplace deux coups : **+2,0 et +2,5**.
+- **Fausse note** (barde, double 2) : **2 charges** (le prochain coup adverse qui touche perd 10). −0,3 et −1,0 → **+0,8 et +0,5**.
+- **Textes clarifiés** (note de l'utilisateur) : l'**Aura mélodieuse** et la **Fausse note** n'emploient plus « dégâts finaux » (« ajouté après l'armure : rien ne le réduit ») ; l'**Aura de poison** dit qu'elle n'est pas un Poison (rien ne l'arrête) et quand elle agit. Coquille « finals » corrigée.
+- **Empreinte de non-régression mise à jour** (changement de règles voulu).
+
+- **Aura de poison** (note et choix de l'utilisateur) : elle agit désormais **au début du tour de l'adversaire, dans la même étape que le Poison qu'il subit** (juste après lui), au lieu du début du tour du porteur. Toujours des dégâts directs : un vrai Poison serait bloqué par l'Aura d'immunité (Ervald tombait à 31 % contre Gauvain). Nouveau crochet de statut `onOpponentTurnStart`. Valeur nette +11,0 → **+13,8** (Ervald) et +4,1 → **+6,2** (Caldrec) : l'aura frappe dès le tour où elle est posée. Le texte dit qu'elle n'est pas un Poison.
+
+### Mesures finales
+- Roster de 10 personnages (un par famille, 0.44.0), 400 combats par duel : de **44,4 %** (Ysolde) à **54,6 %** (Ervald), aucun duel hors limites. Avant la passe : de 45,8 à 51,4 %. Ervald 47,5 → 54,6 %, Fanchon 50,5 → 54,3 % ; les autres perdent 1 à 1,5 point. Valeurs nettes : Vol de vie +4,3 → +9,6, Aura de poison +4,4 → +5,9, Aura mélodieuse −0,9 → +2,3, Fausse note −1,0 → +0,4, Épines +2,6 → +2,4.
+- Fusion avec la 0.44.0 (un personnage par famille) : l'Aura d'immunité propre à Gauvain, mesurée dans cette passe (+2 d'armure), disparaît avec lui.
 ## [0.44.0] — 2026-10-19
 
 Lisibilité du combat (demande de l'utilisateur) : qui joue, et quel dé de compétence vient de sortir. Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.

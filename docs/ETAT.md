@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-19, version 0.44.0._
+_Dernière mise à jour : 2026-10-19, version 0.45.0._
 
 ## En bref
 
@@ -11,6 +11,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Domaine | État |
 | --- | --- |
 | Refonte de l'interface (design system V1.4, `docs/design-system.md`) | ✅ 0.39.0, 13 étapes vues à l'écran (captures Firefox sans interface). Natures des compétences classées (0.39.1). À faire : barre de commandes du combat, boutons Compléter et Valider l'arbre du tournoi, titres de page et textes de moins de 13 px non migrés |
+| Deuxième passe sur les compétences (0.45.0, `docs/SORTS.md` § 11) | ✅ Épines permanentes, Vol de vie à deux charges, Aura de poison au début du tour adverse (avec le Poison), barde (aura et Fausse note à 2 charges) ; textes clarifiés. Roster de 10 : de 44,4 (Ysolde) à 54,6 % (Ervald). Reste signalée : Fausse note « presque inutile » (+0,4). Rendu non vu à l'écran (textes, compteurs) |
 | Audit des compétences (0.42.0, `docs/SORTS.md` § 10) | ✅ Pile ou face et Aura d'immunité ne coûtent plus de victoires, Purification n'est plus gâchée, Fleur de vie compte. Restent signalées : Aura de sainteté et Rétribution « écrasantes » (signatures), Pile ou face et l'immunité de Gauvain « presque inutiles » (de −0,6 à +0,6). Deux contres tolérés de plus : Ysolde contre les voleuses (35 %). Rendu vu : pièce ; la décoction qui suit pile n'est pas capturée |
 | Lisibilité du tour : passage de main (pause de 400 ms, camp actif, anneau au sol) et dé de compétence qui pulse | ✅ 0.44.0, vu à l'écran (Morgrut contre Elaria : annonce, anneau, pulsation du 1). Pas vu : la pulsation d'un double de la barde et d'un coup transformé (couverts par les tests pour le second) |
 | Duel joué ou simulé | ✅ stable |

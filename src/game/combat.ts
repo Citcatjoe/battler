@@ -645,6 +645,19 @@ export function simulateCombat(
       const down = fallen() ?? checkBloodied()
       if (down !== undefined) return down
     }
+    // Statuts de l'adversaire qui agissent au début de ce tour (`onOpponentTurnStart`) : au même moment
+    // que les statuts de l'actif (Aura de poison et Poison), dans l'ordre de pose.
+    if (phase === 'turnStart') {
+      const owner = other(side)
+      for (const status of [...states[owner].statuses]) {
+        const tick = STATUSES[status.id].onOpponentTurnStart?.(status)
+        if (!tick || !states[owner].statuses.some((s) => s.id === status.id)) continue
+        const effects = applyEffects(owner, tick)
+        beats.push({ type: 'statusTick', turn, phase, side: owner, status: status.id, effects, state: snapshot() })
+        const down = fallen() ?? checkBloodied()
+        if (down !== undefined) return down
+      }
+    }
     // Un statut posé pendant ce tour n'est pas décompté à sa fin : « 1 tour » dure jusqu'au prochain.
     const fresh = phase === 'turnEnd' ? states[side].statuses.filter((s) => states[side].fresh.has(s.id)) : []
     const { kept: aged, expired } = tickDurations(
