@@ -372,35 +372,70 @@ body {
     border-radius: var(--r-round);
   }
 
+  /* Onglets majeurs (choix du mode de jeu), pièce prestige du design system :
+     rail octogonal (coupe 10 px) au cadre bronze sur un jour sombre ; onglet actif = plaque
+     d'or chanfreinée (6 px) avec tranche de 3 px, et une encoche sous lui qui désigne l'écran.
+     Les couches sont des pseudo-éléments découpés : le rail lui-même ne l'est pas, pour que
+     son ombre (drop-shadow) et l'encoche dépassent. */
   .tabs {
+    --cut: var(--cut-m);
+    position: relative;
+    isolation: isolate;
     display: inline-flex;
     gap: 4px;
-    padding: 4px;
-    border: 1px solid #000;
-    border-radius: 10px;
-    background: linear-gradient(180deg, #0f0c0a, #1a1512);
-    box-shadow:
-      inset 0 0 0 1px rgba(217, 160, 80, 0.35),
-      inset 0 3px 8px rgba(0, 0, 0, 0.8),
-      0 6px 16px rgba(0, 0, 0, 0.55);
+    padding: 6px;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+  }
+  .tabs::before,
+  .tabs::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    --c: var(--cut);
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  }
+  .tabs::before {
+    inset: 0;
+    background: var(--frame);
+  }
+  .tabs::after {
+    --c: calc(var(--cut) - 1.2px);
+    inset: var(--frame-gap);
+    background: var(--bg-1);
+    box-shadow: inset 0 0 0 1px var(--bg-0), var(--hl);
   }
   .tab {
     --icon: 26px;
+    --plate: transparent;
+    --c: var(--cut-s);
+    position: relative;
+    z-index: 0; /* contexte propre : la plaque (::before) passe au-dessus du rail */
     display: inline-flex;
     align-items: center;
     gap: 0.6em;
     height: 44px;
     padding: 0 1.3em;
-    border-radius: 7px;
     font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 700;
     line-height: 1;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: #a8a29e;
-    transition: color 150ms, background 150ms, filter 150ms;
+    letter-spacing: 0.16em;
+    color: var(--text-2);
+    transition: color 150ms;
     user-select: none;
+  }
+  /* plaque de l'onglet (chanfrein de 6 px) */
+  .tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--plate);
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+    transition: background-color 150ms;
   }
   .tab > span {
     transform: translateY(0.05em);
@@ -410,26 +445,38 @@ body {
     transition: filter 150ms;
   }
   .tab:hover {
-    color: #e7e5e4;
+    --plate: rgba(237, 196, 106, 0.08);
+    color: var(--text-1);
   }
   .tab:hover .btn-icon {
     filter: none;
   }
-  .tab[aria-pressed='true'] {
-    color: #2b1704;
-    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.7);
-    background: linear-gradient(180deg, #fde68a 0%, #f2bf4f 35%, #c98a22 100%);
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 244, 200, 0.85),
-      inset 0 -3px 0 rgba(92, 46, 6, 0.4),
-      0 0 18px rgba(245, 158, 11, 0.3);
+  .tab[aria-selected='true'] {
+    --plate: var(--gold-400);
+    color: var(--on-gold);
+    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.55);
   }
-  .tab[aria-pressed='true'] .btn-icon {
+  .tab[aria-selected='true']::before {
+    box-shadow: inset 0 1px 0 rgba(255, 246, 220, 0.55), inset 0 calc(-1 * var(--tranche-tab)) 0 var(--gold-700);
+  }
+  .tab[aria-selected='true'] .btn-icon {
     filter: drop-shadow(0 1px 1px rgba(60, 30, 0, 0.6));
   }
+  /* encoche : petite pointe d'or sous l'onglet actif, posée sur le bord bas du rail */
+  .tab[aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 6px);
+    width: 14px;
+    height: 8px;
+    transform: translateX(-50%);
+    background: var(--gold-400);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
   .tab:focus-visible {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
+    outline: 2px solid var(--gold-200);
+    outline-offset: -4px;
   }
 
   /* Onglets mineurs (sous-vues, design system) : soulignés, jamais en or plein.

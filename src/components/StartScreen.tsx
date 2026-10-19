@@ -11,6 +11,7 @@ import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
 import { PrestigeButton } from './PrestigeButton'
+import { Tabs } from './Tabs'
 
 interface Props {
   initial: Pair<Character>
@@ -105,23 +106,7 @@ export function StartScreen(props: Props) {
         <h1 className="font-display text-6xl font-extrabold tracking-widest text-amber-200 drop-shadow-[0_4px_0_#78350f]">
           BATTLER
         </h1>
-        <div className="tabs mt-3">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => {
-                if (m.id === mode) return
-                sfx.click()
-                onModeChange(m.id)
-              }}
-              aria-pressed={m.id === mode}
-              className="tab"
-            >
-              <Icon name={m.icon} className="btn-icon" />
-              <span>{m.label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs variant="major" className="mt-3" tabs={MODES} value={mode} onChange={onModeChange} />
       </header>
 
       {mode === 'tournament' ? (
