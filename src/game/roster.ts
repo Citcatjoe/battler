@@ -55,6 +55,7 @@ const gorak: CharacterDef = {
     {
       id: 'blood-rage',
       name: 'Rage du sang',
+      nature: 'martial',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'heal', amount: 3 }],
@@ -62,6 +63,7 @@ const gorak: CharacterDef = {
     {
       id: 'wind-fury',
       name: 'Furie des vents',
+      nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1, turns: 1 }],
@@ -69,6 +71,7 @@ const gorak: CharacterDef = {
     {
       id: 'power-aura',
       name: 'Aura de puissance',
+      nature: 'martial',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
@@ -119,6 +122,7 @@ const elaria: CharacterDef = {
     {
       id: 'hawk-eye',
       name: 'Œil de faucon',
+      nature: 'finesse',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
@@ -126,6 +130,7 @@ const elaria: CharacterDef = {
     {
       id: 'evasion',
       name: 'Esquive améliorée',
+      nature: 'finesse',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
@@ -135,6 +140,7 @@ const elaria: CharacterDef = {
     {
       id: 'precision-aura',
       name: 'Aura de précision',
+      nature: 'finesse',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
@@ -175,6 +181,7 @@ const brokk: CharacterDef = {
     {
       id: 'stoneskin',
       name: 'Peau de pierre',
+      nature: 'martial',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 6 }],
@@ -182,6 +189,7 @@ const brokk: CharacterDef = {
     {
       id: 'thorns',
       name: 'Épines',
+      nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'thorns', stacks: 6, turns: 1 }],
@@ -189,6 +197,7 @@ const brokk: CharacterDef = {
     {
       id: 'intimidation-aura',
       name: "Aura d'intimidation",
+      nature: 'martial',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
@@ -229,6 +238,7 @@ const ervald: CharacterDef = {
     {
       id: 'grave-breath',
       name: 'Souffle de la tombe',
+      nature: 'arcane',
       trigger: 'naturalOne',
       forfeitsHit: true,
       // Poison 3 : 3, 2 puis 1 PV, les 6 PV de l'ancien poison 2 pendant 3 tours (0.36.4)
@@ -237,6 +247,7 @@ const ervald: CharacterDef = {
     {
       id: 'life-steal',
       name: 'Vol de vie',
+      nature: 'arcane',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
@@ -244,6 +255,7 @@ const ervald: CharacterDef = {
     {
       id: 'poison-aura',
       name: 'Aura de poison',
+      nature: 'arcane',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'poisonAura', stacks: 1 }],
@@ -286,6 +298,7 @@ const ysolde: CharacterDef = {
     {
       id: 'fear',
       name: 'Peur',
+      nature: 'arcane',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
@@ -293,6 +306,7 @@ const ysolde: CharacterDef = {
     {
       id: 'purification',
       name: 'Purification',
+      nature: 'arcane',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent' }],
@@ -300,6 +314,7 @@ const ysolde: CharacterDef = {
     {
       id: 'holy-aura',
       name: 'Aura de sainteté',
+      nature: 'arcane',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }],
@@ -342,6 +357,7 @@ const naraxes: CharacterDef = {
     {
       id: 'lucky-strike',
       name: 'Coup de chance',
+      nature: 'finesse',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
@@ -349,6 +365,7 @@ const naraxes: CharacterDef = {
     {
       id: 'coin-flip',
       name: 'Pile ou face',
+      nature: 'finesse',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
@@ -356,6 +373,7 @@ const naraxes: CharacterDef = {
     {
       id: 'decoction-aura',
       name: 'Aura de décoction',
+      nature: 'finesse',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }],
@@ -397,6 +415,7 @@ const aldric: CharacterDef = {
     {
       id: 'retribution',
       name: 'Rétribution',
+      nature: 'arcane',
       trigger: 'naturalOne',
       forfeitsHit: true,
       effects: [{ type: 'release', status: 'retribution', min: 1, target: 'opponent' }],
@@ -404,6 +423,7 @@ const aldric: CharacterDef = {
     {
       id: 'riposte',
       name: 'Riposte',
+      nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'riposte', stacks: 1 }],
@@ -411,6 +431,7 @@ const aldric: CharacterDef = {
     {
       id: 'immunity-aura',
       name: "Aura d'immunité",
+      nature: 'arcane',
       trigger: 'naturalThree',
       forfeitsHit: true,
       effects: [
@@ -440,6 +461,7 @@ const gauvain = variant(aldric, {
 const waitOn = (trigger: 'naturalOne' | 'naturalTwo' | 'naturalThree', face: number): CharacterEvent => ({
   id: `waiting-${face}`,
   name: 'Attente',
+  nature: 'neutral',
   trigger,
   forfeitsHit: true,
   effects: [{ type: 'applyStatus', status: 'waiting', stacks: 1, turns: 1 }],
@@ -500,12 +522,12 @@ const thaldrin: CharacterDef = {
     weaknesses: ['Forme imposée à chaque tour', 'Esquive faible', 'Coups moyens'],
   },
   events: [
-    { id: 'life-bloom', name: 'Fleur de vie', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'heal', amount: 3 }] },
-    { id: 'bark-skin', name: 'Écorce épaisse', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 5 }] },
-    { id: 'firefly', name: 'Luciole', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 3, target: 'opponent' }] },
-    { id: 'charge', name: 'Charge', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },
-    { id: 'claw', name: 'Coup de griffe', trigger: 'naturalTwo', form: 'bear', reshapesHit: { value: 'reroll', bonus: 3 }, effects: [] },
-    { id: 'rot-aura', name: 'Aura de pourriture', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },
+    { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'heal', amount: 3 }] },
+    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 5 }] },
+    { id: 'firefly', name: 'Luciole', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 3, target: 'opponent' }] },
+    { id: 'charge', name: 'Charge', nature: 'martial', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },
+    { id: 'claw', name: 'Coup de griffe', nature: 'martial', trigger: 'naturalTwo', form: 'bear', reshapesHit: { value: 'reroll', bonus: 3 }, effects: [] },
+    { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },
   ],
 }
 

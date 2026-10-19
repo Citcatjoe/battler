@@ -54,6 +54,13 @@ describe('catalogue des compétences', () => {
     expect(skills.find((s) => s.event.id === 'blood-rage-murzug')!.owners.map((c) => c.id)).toEqual(['murzug'])
     expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak', 'murzug'])
   })
+
+  it('chaque compétence déclare sa nature (couleur de sa carte), la variante hérite de la sienne', () => {
+    const skills = skillCatalog().flatMap((f) => f.skills)
+    expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
+    expect(skills.find((s) => s.event.id === 'blood-rage-murzug')!.event.nature).toBe('martial')
+    expect(skills.find((s) => s.event.id === 'waiting-1')!.event.nature).toBe('neutral')
+  })
 })
 
 describe('catalogue des statuts', () => {

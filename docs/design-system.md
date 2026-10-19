@@ -123,7 +123,7 @@ Contraintes techniques :
 | Boutons icône | Ronds 48 px, serti. Pas de chanfrein (inutile à cette taille). `aria-label` obligatoire. |
 | Bouton tertiaire | Transparent, contour `--line-2`, Alegreya 15/500. |
 | Panneau de combattant | Fonctionnel : fond `--scrim` + flou 6 px, rayon 2, contour 1 px `rgba(232,200,140,.16)`, **liseré de camp 2 px en tête** (`inset 0 2px 0 var(--side-x)`). Pas d'équerres. |
-| Cartes de compétence | Lame. La couleur dépend de la **nature** de la compétence : martiale = `--gold-500`, adresse = `--armor`, arcane = `--arcane`. Fenêtre du sceau octogonale. Glyphe natif en repli tant que A-01 n'existe pas. |
+| Cartes de compétence | Lame. La couleur dépend de la **nature** de la compétence : martiale = `--gold-500`, adresse = `--armor`, arcane = `--arcane`, neutre = `--text-3` (ajout de l'utilisateur, 0.39.1 : l'Attente de l'ogre). Fenêtre du sceau octogonale. Glyphe natif en repli tant que A-01 n'existe pas. |
 | Jauges, stats, tableaux, tooltips, pastilles | Inchangés (V1.0). Barre 4–6 px, rayon 2, piste = `--side-x-track`, valeur IBM Plex Mono alignée à droite. |
 | Portrait | Composant réutilisable : carré, visage centré ~40 % de hauteur, recadré depuis l'illustration en pied. États : repos, survol, choisi A / B (2 px couleur du camp), pris en face (opacité 45 %), focus, indisponible. **Nombre et colonnes non figés.** |
 

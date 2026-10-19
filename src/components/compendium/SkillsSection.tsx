@@ -10,6 +10,7 @@ export const NATURE_LABEL: Record<SkillNature, string> = {
   martial: 'Martiale',
   finesse: 'Adresse',
   arcane: 'Arcane',
+  neutral: 'Neutre',
 }
 
 /** « Orc » → « Orcs », « Mort-vivant » → « Morts-vivants ». */

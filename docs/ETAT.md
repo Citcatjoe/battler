@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-19, version 0.39.0._
+_Dernière mise à jour : 2026-10-19, version 0.39.1._
 
 ## En bref
 
@@ -10,7 +10,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 
 | Domaine | État |
 | --- | --- |
-| Refonte de l'interface (design system V1.4, `docs/design-system.md`) | ✅ 0.39.0, 13 étapes vues à l'écran (captures Firefox sans interface). À faire : classer la nature des 33 compétences (toutes en arcane par défaut) ; barre de commandes du combat, boutons Compléter et Valider l'arbre du tournoi, titres de page et textes de moins de 13 px non migrés |
+| Refonte de l'interface (design system V1.4, `docs/design-system.md`) | ✅ 0.39.0, 13 étapes vues à l'écran (captures Firefox sans interface). Natures des compétences classées (0.39.1). À faire : barre de commandes du combat, boutons Compléter et Valider l'arbre du tournoi, titres de page et textes de moins de 13 px non migrés |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |
 | Compétences sur un 1 au dé (les 6 races) | ✅ stable |

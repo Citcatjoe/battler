@@ -80,9 +80,10 @@ export type Condition =
 
 /**
  * Nature d'une compétence, pour sa présentation seulement (couleur de sa carte, design system) :
- * martiale (force, arme), adresse (agilité, ruse) ou arcane (magie). Sans effet sur le combat.
+ * martiale (force du corps ou de l'arme), adresse (agilité, précision, ruse, chance), arcane (magie,
+ * foi, nature, mort) ou neutre (ni l'un ni l'autre : l'Attente de l'ogre). Sans effet sur le combat.
  */
-export type SkillNature = 'martial' | 'finesse' | 'arcane'
+export type SkillNature = 'martial' | 'finesse' | 'arcane' | 'neutral'
 
 /** Nature retenue quand une compétence n'en déclare pas : l'arcane, le violet des cartes d'avant. */
 export const DEFAULT_SKILL_NATURE: SkillNature = 'arcane'

@@ -750,7 +750,8 @@ body {
 
 /* ---------- Carte de compétence : la lame (design system) ----------
    Deux coins opposés coupés (--cut-blade), contour et trait de tête de 2 px à la couleur de la
-   nature (data-nature : martial = --gold-500, finesse = --armor, arcane = --arcane). La carte est
+   nature (data-nature : martial = --gold-500, finesse = --armor, arcane = --arcane,
+   neutral = --text-3). La carte est
    découpée : son ombre est sur l'enveloppe (.skill-blade-wrap). Fenêtre du sceau octogonale. */
 @layer components {
   .skill-blade-wrap { filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.55)); }
@@ -767,6 +768,7 @@ body {
   }
   .skill-blade[data-nature='martial'] { --nature: var(--gold-500); }
   .skill-blade[data-nature='finesse'] { --nature: var(--armor); }
+  .skill-blade[data-nature='neutral'] { --nature: var(--text-3); }
   .skill-blade::before {
     --c: calc(var(--cut-blade) - 0.6px);
     content: '';
