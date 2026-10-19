@@ -57,13 +57,13 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                 clearHistory();
                 setConfirmReset(false);
               }}
-              className="rounded-md bg-red-600 px-3 py-1.5 font-bold hover:bg-red-500"
+              className="min-h-9 rounded-(--r-xs) bg-bad px-3 font-body text-[15px] font-bold text-ink-1 transition-[filter] hover:brightness-110"
             >
               Effacer
             </button>
             <button
               onClick={() => setConfirmReset(false)}
-              className="rounded-md border border-stone-700 px-3 py-1.5 hover:bg-stone-800"
+              className="btn-tertiary"
             >
               Annuler
             </button>
@@ -72,7 +72,7 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
           <button
             onClick={() => setConfirmReset(true)}
             disabled={history.totalMatches === 0}
-            className="rounded-md border border-stone-700 px-3 py-1.5 text-sm text-stone-400 hover:bg-stone-800 disabled:opacity-40"
+            className="btn-tertiary"
           >
             Réinitialiser
           </button>

@@ -31,6 +31,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.6] — 2026-10-19
+
+### Ajouté
+- **Onglets mineurs** (design system, étape 6) : le composant `Tabs` prend une option `variant` (`minor` par défaut, `major`). Les sous-vues (compendium, fiche, statuts, statistiques, écran de fin) passent en onglets soulignés : actif souligné de 2 px `--gold-400`, texte `--gold-300`, jamais en or plein ; Cinzel 15/700 en capitales. Seul le choix du mode de jeu de l'accueil garde la plaque d'or (onglet majeur, étape 10). `data-state` posé sur chaque onglet.
+- **Bouton tertiaire** `.btn-tertiary` : transparent, contour `--line-2`, Alegreya Sans 15/500 (Réinitialiser, Annuler, Vider). Bouton Effacer de l'historique en rouge `--bad`.
+
+### Modifié
+- Cinzel est chargée aussi en graisse 700 : les textes Cinzel en gras (`font-bold`) sont un peu moins épais qu'avant (ils prenaient la 800).
+
 ## [0.38.5] — 2026-10-19
 
 ### Modifié

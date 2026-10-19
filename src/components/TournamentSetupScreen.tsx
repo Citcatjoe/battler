@@ -94,7 +94,7 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
           <button
             onClick={() => onChange(Array(SLOTS).fill(null))}
             disabled={filled === 0}
-            className="rounded-md border border-stone-700 px-3 py-2 text-sm text-stone-400 hover:bg-stone-800 disabled:opacity-40"
+            className="btn-tertiary"
           >
             Vider
           </button>

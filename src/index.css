@@ -446,6 +446,90 @@ body {
     outline: 2px solid #fbbf24;
     outline-offset: 2px;
   }
+
+  /* Onglets mineurs (sous-vues, design system) : soulignés, jamais en or plein.
+     Actif : soulignement 2 px --gold-400 et texte --gold-300 (aria-selected="true"). */
+  .tabs-minor {
+    display: inline-flex;
+    gap: 4px;
+    box-shadow: inset 0 -1px 0 var(--line-1);
+  }
+  .tab-minor {
+    --icon: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    min-height: 44px;
+    padding: 0 0.9em;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-2);
+    transition: color 150ms, box-shadow 150ms;
+    user-select: none;
+  }
+  .tab-minor > span {
+    transform: translateY(0.05em);
+  }
+  .tab-minor .btn-icon {
+    filter: grayscale(0.7) brightness(0.75);
+    transition: filter 150ms;
+  }
+  .tab-minor:hover {
+    color: var(--text-1);
+  }
+  .tab-minor:hover .btn-icon,
+  .tab-minor[aria-selected='true'] .btn-icon {
+    filter: none;
+  }
+  .tab-minor[aria-selected='true'] {
+    color: var(--gold-300);
+    box-shadow: inset 0 -2px 0 var(--gold-400);
+  }
+  .tab-minor:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  .tab-minor[aria-selected='true']:focus-visible {
+    box-shadow: inset 0 -2px 0 var(--gold-400), var(--focus);
+  }
+
+  /* Bouton tertiaire (design system) : transparent, contour --line-2, Alegreya Sans 15/500. */
+  .btn-tertiary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    min-height: 36px;
+    padding: 0 0.9em;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-2);
+    background: transparent;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-xs);
+    transition: color 150ms, border-color 150ms, background-color 150ms;
+  }
+  .btn-tertiary:hover:not(:disabled) {
+    color: var(--text-1);
+    border-color: var(--line-active);
+  }
+  .btn-tertiary:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn-tertiary:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  .btn-tertiary:disabled {
+    color: var(--text-off);
+    border-color: var(--line-1);
+    cursor: not-allowed;
+  }
 }
 
 /* ---------- Compendium : cartes encadrées ---------- */
