@@ -57,6 +57,19 @@
   --engrave-gold: rgba(237, 196, 106, .40);
 
   /* typographie : --font-display, --font-body et --font-data sont dans @theme */
+
+  /* familles d'effets (FAMILLES.md § 3) : la couleur du médaillon d'un état dit ce qu'il fait.
+     Le cramoisi reste au camp de droite : les Représailles prennent un rouge brique. */
+  --fam-power: #F2873A;       /* Puissance : orange */
+  --fam-guard: #9FB1C4;       /* Garde : acier */
+  --fam-precision: #F5A54A;   /* Précision : l'ambre du critique */
+  --fam-evasion: #5ACFE3;     /* Esquive : cyan pâle */
+  --fam-tempo: #6FA8F0;       /* Tempo : bleu du vent */
+  --fam-fortune: #B48CF2;     /* Fortune : violet */
+  --fam-affliction: #7CC94E;  /* Affliction : vert toxique */
+  --fam-heal: #F08A7A;        /* Soin : corail */
+  --fam-retaliation: #C4553F; /* Représailles : rouge brique */
+  --fam-seals: #EADFB8;       /* Sceaux : ivoire */
 }
 
 /* Les mêmes tokens en classes Tailwind (bg-surface-1, text-ink-2, text-gold-300, bg-side-a/20,
@@ -569,6 +582,49 @@ body {
     border-color: var(--line-1);
     cursor: not-allowed;
   }
+}
+
+/* ---------- Médaillon d'un état (0.51.0, FAMILLES.md § 3) ----------
+   La couleur dit la famille (--fam, posée par .fam-<famille>) : fond teinté et anneau.
+   La forme dit la polarité : anneau plein pour un bonus, cranté pour un malus. Les auras gardent
+   en plus leur double cadre doré tournant (.aura-token). Aucune lueur : le design system les réserve. */
+@layer components {
+  .fam-power { --fam: var(--fam-power); }
+  .fam-guard { --fam: var(--fam-guard); }
+  .fam-precision { --fam: var(--fam-precision); }
+  .fam-evasion { --fam: var(--fam-evasion); }
+  .fam-tempo { --fam: var(--fam-tempo); }
+  .fam-fortune { --fam: var(--fam-fortune); }
+  .fam-affliction { --fam: var(--fam-affliction); }
+  .fam-heal { --fam: var(--fam-heal); }
+  .fam-retaliation { --fam: var(--fam-retaliation); }
+  .fam-seals { --fam: var(--fam-seals); }
+  .status-medal {
+    position: relative;
+    border-radius: var(--r-round);
+    background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--fam) 42%, var(--bg-0)) 0%, color-mix(in srgb, var(--fam) 14%, var(--bg-0)) 62%, var(--bg-0) 100%);
+  }
+  /* Anneau : plein (bonus) ou cranté (malus), dessiné par un calque sous l'icône */
+  .status-medal::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--fam);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  }
+  .status-medal.is-negative::after {
+    inset: -3px;
+    background: repeating-conic-gradient(var(--fam) 0deg 18deg, transparent 18deg 30deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 5px));
+  }
+  /* Le contenu passe au-dessus de l'anneau ; une image non positionnée le devient (compendium) */
+  .status-medal > * { z-index: 1; }
+  .status-medal > img { position: relative; }
 }
 
 /* ---------- Pièce prestige : bouton principal (design system, recette prestige) ----------

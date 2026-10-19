@@ -84,6 +84,13 @@ describe('catalogue des statuts', () => {
     const firstNegative = catalog.findIndex((e) => e.def.polarity === 'negative')
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
   })
+  it('chaque état a une famille (couleur de son médaillon, 0.51.0), et chaque famille a son libellé', async () => {
+    const { FAMILY_LABEL, STATUS_FAMILY } = await import('./statuses')
+    expect(STATUS_IDS.filter((id) => !STATUS_FAMILY[id])).toEqual([])
+    expect(Object.values(STATUS_FAMILY).filter((f) => !FAMILY_LABEL[f])).toEqual([])
+    // Les dix familles de FAMILLES.md servent toutes
+    expect(new Set(Object.values(STATUS_FAMILY)).size).toBe(10)
+  })
   it('nombre affiché sur un état : tours restants s’il a une durée, sinon ses charges', () => {
     expect(statusCounter({ id: 'regeneration', stacks: 1, turns: 2 })).toEqual({ value: 2, unit: 'turns' })
     // La Furie des vents compte ses charges en réserve (0.46.0)

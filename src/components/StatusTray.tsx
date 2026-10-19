@@ -1,18 +1,10 @@
 import { useState, type CSSProperties } from 'react'
-import { isAura, POLARITY_STYLE, STATUSES, statusCounter, type Polarity, type Status, type StatusId } from '../game/statuses'
+import { isAura, POLARITY_STYLE, STATUS_FAMILY, STATUSES, statusCounter, type Polarity, type Status, type StatusId } from '../game/statuses'
 import { Icon, StatusIcon } from './Icon'
 
-const RING: Record<Polarity, string> = {
-  positive: 'border-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.55)]',
-  negative: 'border-red-500 shadow-[0_0_14px_rgba(239,68,68,0.6)]',
-}
 const DELTA: Record<Polarity, string> = {
   positive: 'text-emerald-200 [-webkit-text-stroke:1px_#064e3b]',
   negative: 'text-red-200 [-webkit-text-stroke:1px_#450a0a]',
-}
-const COUNT: Record<Polarity, string> = {
-  positive: 'border-emerald-400 text-emerald-100',
-  negative: 'border-red-500 text-red-100',
 }
 
 /** Un état affiché : présent, ou « sortant » (il montre son 0 puis quitte la zone). */
@@ -110,7 +102,8 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
       onAnimationEnd={(e) => {
         if (e.animationName === 'status-leave') onLeft()
       }}
-      className={`group relative h-16 w-16 rounded-full hover:z-10 border-2 bg-stone-950/75 ${RING[def.polarity]} ${aura ? 'aura-token mx-1' : ''} ${leaving ? 'status-leave' : 'status-pop'}`}
+      // Médaillon (0.51.0) : couleur de la famille, anneau plein (bonus) ou cranté (malus) ; voir .status-medal
+      className={`status-medal fam-${STATUS_FAMILY[status.id]} ${def.polarity === 'negative' ? 'is-negative' : ''} group h-16 w-16 hover:z-10 ${aura ? 'aura-token mx-1' : ''} ${leaving ? 'status-leave' : 'status-pop'}`}
       style={aura ? ({ '--aura': def.look!.aura } as CSSProperties) : undefined}
     >
       {/* Sursaut du médaillon : relancé par la clé à chaque changement */}
@@ -121,7 +114,7 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
         <span
           // La clé relance le rebond au moment exact où le nombre change
           key={`count-${change.key}`}
-          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta !== null ? 'status-count' : ''}`}
+          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border border-(--fam) bg-surface-0 px-1.5 font-display text-base font-extrabold leading-none text-ink-1 ${change.delta !== null ? 'status-count' : ''}`}
         >
           {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
           {counter.value}

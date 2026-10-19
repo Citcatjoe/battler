@@ -84,13 +84,14 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [ ] **Palette sémantique** : une couleur par famille ; l'ambre réservé au critique (aujourd'hui aussi ton « positive » dans `narration.ts`) ; la polarité montrée par la forme du cadre plutôt que par le vert et le rouge (FAMILLES.md § 3). Maquette d'abord.
 - [ ] **Décomposition du coup** sous le chiffre de dégâts, maillon par maillon, à la Balatro (étude QW3).
 - [ ] **Charges « armées »** : montrer ce qui attend le prochain coup ou la prochaine action (étude QW4).
-- [ ] **Cadre d'icône par famille**, et repère de fenêtre (prochaine action, prochain coup porté, prochain coup reçu, durée, aura).
+- [x] **Cadre d'icône par famille** (0.51.0, médaillons des états : couleur et anneau plein ou cranté).
+- [ ] **Repère de fenêtre** (prochaine action, prochain coup porté, prochain coup reçu, durée, aura).
 - [ ] **Fiche sensorielle dans les registres** (`present`) : son et mise en scène déclarés, plus devinés par `cueFor`. À caler sur SONS.md quand la refonte des sons sera validée (§ 10).
 
 ## 12. Vocabulaire : les familles
 
 - [ ] **Valider FAMILLES.md** : les sept questions du § 9 (rangement par effet, Fortune, retouches, Luciole, Armure temporaire et Écorce, polarité, sorts).
-- [ ] **Familles en métadonnée** (`family` dans `StatusDef` et `CharacterEvent`), affichées dans le compendium, contrôlées par `validateRoster`. Empreinte inchangée.
+- [ ] **Familles en métadonnée** : faite pour les états (`STATUS_FAMILY`, 0.51.0) ; reste celle des compétences (`CharacterEvent`), affichées dans le compendium, contrôlées par `validateRoster`. Empreinte inchangée.
 
 ## 13. Moteur aplati, à résultats identiques
 

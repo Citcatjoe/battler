@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { statusCatalog, type StatusEntry } from '../../game/catalog'
-import { POLARITY_STYLE, STATUS_DURATION_RULE, type Polarity } from '../../game/statuses'
+import { FAMILY_LABEL, POLARITY_STYLE, STATUS_DURATION_RULE, STATUS_FAMILY, type Polarity } from '../../game/statuses'
 import { StatusIcon } from '../Icon'
 import { Tabs } from '../Tabs'
 
@@ -55,13 +55,7 @@ function StatusCard({ entry }: { entry: StatusEntry }) {
   return (
     <article className={`codex-card aspect-[4/5] ${positive ? 'codex-positive' : 'codex-negative'}`}>
       <header className="flex flex-col items-center gap-2 pt-5 text-center">
-        <div
-          className={`h-20 w-20 rounded-full border-2 bg-stone-950/80 p-1 ${
-            positive
-              ? 'border-emerald-400 shadow-[0_0_22px_rgba(52,211,153,0.45)]'
-              : 'border-red-500 shadow-[0_0_22px_rgba(239,68,68,0.5)]'
-          }`}
-        >
+        <div className={`status-medal fam-${STATUS_FAMILY[entry.id]} ${positive ? '' : 'is-negative'} h-20 w-20 p-1`}>
           <StatusIcon id={entry.id} className="h-full w-full" />
         </div>
         <h4 className="font-display text-xl font-extrabold leading-tight text-amber-100">{def.name}</h4>
@@ -70,6 +64,7 @@ function StatusCard({ entry }: { entry: StatusEntry }) {
         >
           {POLARITY_STYLE[def.polarity].label}
         </span>
+        <span className={`fam-${STATUS_FAMILY[entry.id]} font-body text-[13px] font-bold uppercase tracking-[0.2em] text-(--fam)`}>{FAMILY_LABEL[STATUS_FAMILY[entry.id]]}</span>
       </header>
 
       <p className="px-5 pt-3 text-center text-sm leading-snug text-stone-200">{def.summary}</p>
