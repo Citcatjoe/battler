@@ -217,7 +217,7 @@ const brokk: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
-      effects: [{ type: 'applyStatus', status: 'thorns', stacks: 6, turns: 1 }],
+      effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
     },
     {
       id: 'intimidation-aura',
@@ -275,7 +275,7 @@ const ervald: CharacterDef = {
       nature: 'arcane',
       trigger: 'naturalTwo',
       forfeitsHit: true,
-      effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
+      effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 2 }],
     },
     {
       id: 'poison-aura',
@@ -485,7 +485,7 @@ const aldric: CharacterDef = {
   ],
 }
 
-const gauvain = variant(aldric, {
+const gauvainDef = variant(aldric, {
   id: 'gauvain',
   name: 'Gauvain',
   archetype: 'Croisé',
@@ -499,6 +499,15 @@ const gauvain = variant(aldric, {
   tint: 'sepia(0.35) hue-rotate(-25deg) saturate(1.4) brightness(0.9)',
   stats: { maxHp: -6, dodgeChance: +0.05, critChance: +0.05 },
 })
+/** Gauvain a sa propre Aura d'immunité (0.43.0) : 2 charges, son armure gagne 2 (Aldric : 1). Plus léger, il en profite sans dépasser le budget. */
+const gauvain: CharacterDef = {
+  ...gauvainDef,
+  events: gauvainDef.events.map((e) =>
+    e.id === 'immunity-aura'
+      ? { ...e, id: 'immunity-aura-gauvain', effects: e.effects.map((x) => (x.type === 'applyStatus' && x.status === 'immunityAura' ? { ...x, stacks: 2 } : x)) }
+      : e,
+  ),
+}
 
 /** Attente : un 1, un 2 ou un 3 laisse l'ogre planté là, sans frapper (il n'a aucune compétence). */
 const waitOn = (trigger: 'naturalOne' | 'naturalTwo' | 'naturalThree', face: number): CharacterEvent => ({
@@ -644,14 +653,16 @@ const fanchon: CharacterDef = {
       name: 'Fausse note',
       nature: 'arcane',
       trigger: 'doubleTwo',
-      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }],
+      // 0.43.0 : 2 charges (le prochain coup adverse qui touche perd 10), pour la même raison
+      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }],
     },
     {
       id: 'melodious-aura',
       name: 'Aura mélodieuse',
       nature: 'arcane',
       trigger: 'doubleThree',
-      effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }],
+      // 0.43.0 : 2 charges (le double 3 remplace deux coups : à 1 charge, l'aura coûtait des victoires)
+      effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }],
     },
     // Un seul gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois
     { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'doubleFour', volley: 3, merged: true, effects: [] },

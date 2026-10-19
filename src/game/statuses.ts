@@ -149,6 +149,12 @@ export interface StatusDef {
   onTurnStart?: (s: Status) => Effect[]
   /** Effets appliqués au porteur à la fin de chacun de ses tours (phase 3) */
   onTurnEnd?: (s: Status) => Effect[]
+  /**
+   * Effets du porteur au début de chaque tour de son ADVERSAIRE (phase 1 de l'adversaire, juste après
+   * ses propres statuts) : une aura qui frappe au même moment que le Poison qu'il subit (0.43.0).
+   * `opponent` y désigne toujours l'adversaire du porteur.
+   */
+  onOpponentTurnStart?: (s: Status) => Effect[]
   /** Moment où la durée (`turns`) est décomptée : début (défaut) ou fin des tours du porteur */
   expiresAt?: 'turnStart' | 'turnEnd'
   /** Modifie les dégâts reçus par le porteur, avant l'armure (le coup garde au moins 1) */
@@ -306,12 +312,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Épines',
     look: { glow: 'rgba(132,204,22,0.85)' },
     polarity: 'positive',
-    summary: "Chaque coup encaissé renvoie des dégâts directs à l'attaquant, tant que le statut dure.",
-    describe: (s) => `Chaque coup encaissé renvoie ${plural(s.stacks, 'dégât')} à l'attaquant${forTurns(s)}`,
+    summary: "Chaque coup encaissé renvoie 1 dégât direct par charge à l'attaquant. Permanentes, elles se cumulent.",
+    describe: (s) => `Chaque coup encaissé renvoie ${plural(s.stacks, 'dégât')} à l'attaquant, pour le reste du combat`,
     badge: (s) => String(s.stacks),
-    // La valeur d'épines compte plus que la durée (toujours courte) : c'est elle qui s'affiche.
+    // 0.43.0 (demande de l'utilisateur) : permanentes, une charge par 2 au dé, 1 dégât renvoyé par charge.
+    // Avant : 6 dégâts renvoyés pendant un seul tour, que le spectateur voyait peu.
     counter: 'stacks',
-    stacking: 'refresh',
+    stacking: 'add',
     // Pas de `spentOnReaction` : contre une Furie des vents, les deux coups sont punis (voulu, 0.29.0).
     reactions: { hurt: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }] },
   },
@@ -328,11 +335,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Vol de vie',
     look: { glow: 'rgba(225,29,72,0.85)' },
     polarity: 'positive',
-    summary: 'Le prochain coup du porteur lui rend autant de PV qu’il en retire ; esquivé, il ne rend rien.',
-    describe: () => "Son prochain coup lui rend les PV qu'il retire (perdu si le coup est esquivé)",
-    badge: () => '×1',
-    stacking: 'refresh',
-    maxStacks: 1,
+    summary: 'Chaque charge : le prochain coup du porteur qui touche lui rend autant de PV qu’il en retire. Un coup esquivé consomme la charge sans rien rendre.',
+    describe: (s) =>
+      s.stacks > 1
+        ? `Ses ${s.stacks} prochains coups lui rendent les PV qu'ils retirent (un coup esquivé use une charge)`
+        : "Son prochain coup lui rend les PV qu'il retire (perdu si le coup est esquivé)",
+    badge: (s) => `×${s.stacks}`,
+    // 0.43.0 : deux charges par Vol de vie (deux coups drainés), au lieu d'une ; le compteur dit
+    // combien de coups drainent encore. Avant : +3 à +4 points, et un « 1 » qui n'apprenait rien.
+    stacking: 'add',
+    maxStacks: 2,
     drainsHit: true,
   },
   windFury: {
@@ -426,11 +438,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de poison',
     look: { aura: 'rgba(74,222,128,0.55)' },
     polarity: 'positive',
-    summary: "Au début de chaque tour du porteur, son adversaire perd des PV, avant l'action. Permanente.",
-    describe: (s) => `Au début de chacun de ses tours, l'adversaire perd ${plural(s.stacks, 'PV')} (dégâts directs), pour le reste du combat`,
+    // 0.43.0 : le texte dit que ce n'est pas un Poison (note de l'utilisateur). Un vrai poison serait
+    // bloqué par l'Aura d'immunité et contré par la Régénération : Ervald tombait à 31 % contre Gauvain.
+    summary:
+      "Au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge. Ce n'est pas un Poison : ni l'immunité ni la régénération ne l'arrêtent. Permanente.",
+    describe: (s) => `Au début de chaque tour adverse, avec ses poisons, l'adversaire perd ${plural(s.stacks, 'PV')} ; rien ne l'arrête`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
-    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }],
+    // 0.43.0 (choix de l'utilisateur) : elle agit au début du tour de l'ADVERSAIRE, dans la même étape
+    // que le Poison qu'il subit, au lieu du début du tour du porteur. Toujours des dégâts directs.
+    onOpponentTurnStart: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }],
   },
   powerAura: {
     name: 'Aura de puissance',
@@ -466,15 +483,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'immunité",
     look: { aura: 'rgba(253,224,71,0.55)' },
     polarity: 'positive',
-    summary: 'Plus aucun malus ne peut être posé sur le porteur, et son armure gagne 1, jusqu’à la fin du combat. Permanente, non cumulable.',
-    describe: () => "Aucun malus ne l'atteint plus, et son armure gagne 1, pour le reste du combat",
+    summary: 'Plus aucun malus ne peut être posé sur le porteur, et son armure gagne 1 par charge, jusqu’à la fin du combat. Permanente, non cumulable.',
+    describe: (s) => `Aucun malus ne l'atteint plus, et son armure gagne ${s.stacks}, pour le reste du combat`,
     badge: () => '∞',
     stacking: 'refresh',
-    maxStacks: 1,
+    // Gauvain la pose avec 2 charges (0.43.0) : son armure gagne 2
+    maxStacks: 2,
     immune: 'negative',
     // 0.42.0 : +1 d'armure tant que l'aura est là. Seule, l'immunité coûtait des victoires (−2,7 à
     // −3,9 points) : peu d'adversaires posent des malus, et le 3 sacrifie son coup.
-    modifyStats: (stats) => ({ ...stats, armor: stats.armor + 1 }),
+    modifyStats: (stats, s) => ({ ...stats, armor: stats.armor + s.stacks }),
   },
   holyAura: {
     name: 'Aura de sainteté',
@@ -573,8 +591,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   falseNote: {
     name: 'Fausse note',
     polarity: 'negative',
-    summary: `Le prochain coup du porteur qui touche inflige ${FALSE_NOTE} dégâts finaux de moins par charge (après l'armure, au moins 1), puis la Fausse note disparaît. Se cumule.`,
-    describe: (s) => `Son prochain coup qui touche inflige ${FALSE_NOTE * s.stacks} dégâts finaux de moins, puis la fausse note s'oublie`,
+    summary: `Le prochain coup du porteur qui touche fait ${FALSE_NOTE} dégâts de moins par charge, retirés en dernier, après l'armure (au moins 1 dégât). Puis la Fausse note s'oublie. Se cumule.`,
+    describe: (s) => `Son prochain coup qui touche fait ${FALSE_NOTE * s.stacks} dégâts de moins (au moins 1), puis la note s'oublie`,
     badge: (s) => `−${FALSE_NOTE * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
@@ -585,8 +603,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura mélodieuse',
     look: { aura: 'rgba(196,181,253,0.55)' },
     polarity: 'positive',
-    summary: "Chaque coup du porteur qui touche inflige 1 dégât final de plus par charge, après l'armure et les boucliers. Permanente.",
-    describe: (s) => `Ses coups infligent ${s.stacks} dégât${s.stacks > 1 ? 's' : ''} final${s.stacks > 1 ? 's' : ''} de plus, après l'armure, pour le reste du combat`,
+    // 0.43.0 : textes sans le jargon « dégâts finaux » (note de l'utilisateur : description peu claire)
+    summary:
+      "Chaque coup du porteur qui touche fait 1 dégât de plus par charge. Le bonus s'ajoute en dernier, après l'armure et les boucliers : rien ne le réduit. Permanente, se cumule.",
+    describe: (s) => `Chacun de ses coups qui touche fait +${s.stacks}, ajouté après l'armure : rien ne le réduit (se cumule)`,
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
     modifyFinal: (damage, s) => damage + s.stacks,

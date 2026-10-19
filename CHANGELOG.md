@@ -34,6 +34,24 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.43.0] — 2026-10-19
+
+Deuxième passe sur les compétences : quatre notes de l'utilisateur (Aura de poison, Vol de vie, aura de la barde, Épines) et deux compétences signalées par l'audit 0.42.0 (Fausse note, immunité de Gauvain). Laboratoire (série 5, 30 essais à 300 combats par duel), puis équilibrage du roster entier à 400 combats par duel. Méthode et chiffres : `docs/SORTS.md` § 11.
+
+### Modifié
+- **Épines** (nains, demande de l'utilisateur) : **permanentes et cumulables**. Chaque 2 au dé ajoute une charge ; chaque coup encaissé renvoie 1 dégât direct par charge. Avant : 6 dégâts renvoyés pendant un seul tour. Valeur nette : Brokk +9,9 → +10,9, Grimbald +5,0 → +4,3. Elles se voient bien plus souvent : 6,9 réactions par combat chez Brokk, au lieu de 3,9.
+- **Vol de vie** (morts-vivants) : **deux charges** au lieu d'une ; chaque coup qui touche en use une, une esquive aussi. Le compteur dit enfin quelque chose (2, puis 1). Valeur nette +4,0 → **+10,6** (Ervald) et +3,3 → **+8,9** (Caldrec). Ervald de 46,4 à 51,2 %, Caldrec de 48,9 à 53,3 %.
+- **Aura mélodieuse** (barde, double 3) : **2 charges** au lieu d'une. Elle coûtait des victoires (−1,0 et −1,3), parce que le double remplace deux coups : **+2,0 et +2,5**.
+- **Fausse note** (barde, double 2) : **2 charges** (le prochain coup adverse qui touche perd 10). −0,3 et −1,0 → **+0,8 et +0,5**.
+- **Aura d'immunité de Gauvain** : il la pose avec **2 charges** (son armure gagne 2 ; Aldric, 1). −1,0 → **+3,1**. L'aura gagne 1 d'armure par charge (`modifyStats`), plafond de 2 charges.
+- **Textes clarifiés** (note de l'utilisateur) : l'**Aura mélodieuse** et la **Fausse note** n'emploient plus « dégâts finaux » (« ajouté après l'armure : rien ne le réduit ») ; l'**Aura de poison** dit qu'elle n'est pas un Poison (rien ne l'arrête) et quand elle agit. Coquille « finals » corrigée.
+- **Empreinte de non-régression mise à jour** (changement de règles voulu).
+
+- **Aura de poison** (note et choix de l'utilisateur) : elle agit désormais **au début du tour de l'adversaire, dans la même étape que le Poison qu'il subit** (juste après lui), au lieu du début du tour du porteur. Toujours des dégâts directs : un vrai Poison serait bloqué par l'Aura d'immunité (Ervald tombait à 31 % contre Gauvain). Nouveau crochet de statut `onOpponentTurnStart`. Valeur nette +11,0 → **+13,8** (Ervald) et +4,1 → **+6,2** (Caldrec) : l'aura frappe dès le tour où elle est posée. Le texte dit qu'elle n'est pas un Poison.
+
+### Mesures finales
+- Roster de 20 personnages, 400 combats par duel : de **44,9 %** (Gorak) à **55,1 %** (Caldrec), aucun duel hors limites. Ervald 46,4 → 54,0 %, Caldrec 48,9 → 55,1 %, Gauvain 48,8 → 51,9 %, Fanchon et Mélisande 54,2 et 54,3 %.
+
 ## [0.42.0] — 2026-10-19
 
 Audit des compétences : les six compétences signalées par la grille des drapeaux rouges (règles 0.39.1). Laboratoire (série 4, plus de 50 essais à 300 combats par duel), choix de l'utilisateur, puis équilibrage du roster entier à 400 combats par duel. Méthode et chiffres : `docs/SORTS.md` § 10. Les versions 0.40.0 et 0.41.0 sont celles du chantier des postures et de la barde, menés en parallèle ; les mesures ont été refaites avec la barde.

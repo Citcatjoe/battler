@@ -427,7 +427,7 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution, Charge et Coup de griffe sonnent avec leurs coups
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura', 'melodious-aura', 'overture'])
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'immunity-aura-gauvain', 'rot-aura', 'melodious-aura', 'overture'])
     family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin', 'life-bloom', 'whistle'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note'])
     // Fleur de vie pose une Régénération depuis la 0.42.0 : un bonus sur soi, donc le son du bonus

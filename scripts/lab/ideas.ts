@@ -17,7 +17,7 @@ export interface LabIdea {
    * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`) ;
    * 4 = les six compétences signalées par l'audit 0.39.1, touches seules et kits compensés (SORTS.md § 10)
    */
-  series: 1 | 2 | 3 | 4
+  series: 1 | 2 | 3 | 4 | 5
   /** Personnage modifié (id du roster) */
   character: string
   name: string
@@ -65,8 +65,12 @@ const replace =
     c.adjusted({ events: c.events.map((e) => (e.id === id ? next(e) : e)) })
 
 /** Une idée déclinée pour plusieurs personnages (l'original et sa variante). */
-function forEach(characters: readonly string[], idea: Omit<LabIdea, 'character' | 'id' | 'series'> & { id: string }): LabIdea[] {
-  return characters.map((character) => ({ ...idea, series: 4, character, id: `${character}-${idea.id}` }))
+function forEach(
+  characters: readonly string[],
+  idea: Omit<LabIdea, 'character' | 'id' | 'series'> & { id: string },
+  series: LabIdea['series'] = 4,
+): LabIdea[] {
+  return characters.map((character) => ({ ...idea, series, character, id: `${character}-${idea.id}` }))
 }
 
 const COIN = STATUSES.coinFlip
@@ -408,6 +412,187 @@ const SERIES_4: LabIdea[] = [
     apply: replace('life-bloom', (e) => ({ ...e, effects: [{ type: 'heal', amount: 5 }] })),
     watch: ['life-bloom'],
   }),
+]
+
+/* --- Série 5 : notes de l'utilisateur (poison, vol de vie, aura de la barde, épines) et deux
+   compétences signalées par l'audit 0.42.0 (Fausse note, immunité de Gauvain). SORTS.md § 11. --- */
+const UNDEAD = ['ervald', 'caldrec']
+const DWARVES = ['brokk', 'grimbald']
+const BARDS = ['fanchon', 'melisande']
+const swap = (id: string, effects: CharacterEvent['effects'], extra: Partial<CharacterEvent> = {}) =>
+  replace(id, (e) => ({ ...e, ...extra, effects }))
+const SERIES_5: LabIdea[] = [
+  // Aura de poison : aujourd'hui des dégâts directs au début du tour du PORTEUR, sans rapport avec le Poison
+  ...forEach(UNDEAD, {
+    id: 'aura-empoisonne',
+    name: 'Aura qui empoisonne',
+    schema: 'Clarification',
+    family: 'Affliction',
+    pitch: 'Au début de chacun de ses tours, l’aura pose 1 charge de Poison par charge d’aura sur l’adversaire : il la subit à son tour, comme tout poison.',
+    statuses: { labPoisonAura: { ...STATUSES.poisonAura, onTurnStart: (st) => [{ type: 'applyStatus', status: 'poison', stacks: st.stacks, target: 'opponent' }] } },
+    apply: swap('poison-aura', [{ type: 'applyStatus', status: 'labPoisonAura' as never, stacks: 1 }]),
+    watch: ['poison-aura'],
+  }, 5),
+  ...forEach(UNDEAD, {
+    id: 'aura-empoisonne-2',
+    name: 'Aura qui empoisonne (2 par charge)',
+    schema: 'Clarification',
+    family: 'Affliction',
+    pitch: 'Comme ci-dessus, 2 charges de Poison par charge d’aura.',
+    statuses: { labPoisonAura2: { ...STATUSES.poisonAura, onTurnStart: (st) => [{ type: 'applyStatus', status: 'poison', stacks: 2 * st.stacks, target: 'opponent' }] } },
+    apply: swap('poison-aura', [{ type: 'applyStatus', status: 'labPoisonAura2' as never, stacks: 1 }]),
+    watch: ['poison-aura'],
+  }, 5),
+  ...[1, 2].flatMap((cap) =>
+    forEach(UNDEAD, {
+      id: `aura-empoisonne-plafond-${cap}`,
+      name: `Aura qui empoisonne, ${cap} charge${cap > 1 ? 's' : ''} d’aura au plus`,
+      schema: 'Clarification',
+      family: 'Affliction',
+      pitch: `L’aura pose 1 charge de Poison par charge d’aura au début de chacun de ses tours, et ne dépasse pas ${cap} charge${cap > 1 ? 's' : ''}.`,
+      statuses: { [`labPoisonAuraCap${cap}`]: { ...STATUSES.poisonAura, maxStacks: cap, onTurnStart: (st) => [{ type: 'applyStatus', status: 'poison', stacks: st.stacks, target: 'opponent' }] } },
+      apply: swap('poison-aura', [{ type: 'applyStatus', status: `labPoisonAuraCap${cap}` as never, stacks: 1 }]),
+      watch: ['poison-aura'],
+    }, 5),
+  ),
+  // Calage de l'Aura de poison (retour de l'utilisateur) : même règle (dégâts directs), autre moment
+  ...forEach(UNDEAD, {
+    id: 'aura-au-tour-adverse',
+    name: 'Aura au début du tour adverse',
+    schema: 'Calage',
+    family: 'Affliction',
+    pitch: 'L’aura frappe au début du tour de l’adversaire, au même moment que le Poison qu’il subit. Toujours des dégâts directs.',
+    statuses: { labPoisonAuraOpp: { ...STATUSES.poisonAura, onTurnStart: undefined, onOpponentTurnStart: (st) => [{ type: 'damage', amount: st.stacks, target: 'opponent' }] } },
+    apply: swap('poison-aura', [{ type: 'applyStatus', status: 'labPoisonAuraOpp' as never, stacks: 1 }]),
+    watch: ['poison-aura', 'labPoisonAuraOpp'],
+  }, 5),
+  ...forEach(UNDEAD, {
+    id: 'aura-fin-de-tour',
+    name: 'Aura à la fin de son tour',
+    schema: 'Calage',
+    family: 'Affliction',
+    pitch: 'L’aura frappe à la fin de chacun de ses tours, après son action. Toujours des dégâts directs.',
+    statuses: { labPoisonAuraEnd: { ...STATUSES.poisonAura, onTurnStart: undefined, onTurnEnd: (st) => [{ type: 'damage', amount: st.stacks, target: 'opponent' }] } },
+    apply: swap('poison-aura', [{ type: 'applyStatus', status: 'labPoisonAuraEnd' as never, stacks: 1 }]),
+    watch: ['poison-aura', 'labPoisonAuraEnd'],
+  }, 5),
+  // Vol de vie : +3 à +4 points
+  ...forEach(UNDEAD, {
+    id: 'vol-double',
+    name: 'Vol de vie sur deux coups',
+    schema: 'Petite touche',
+    family: 'Drain',
+    pitch: 'Deux charges : ses deux prochains coups qui touchent lui rendent les PV qu’ils retirent.',
+    statuses: { labDrain2: { ...STATUSES.lifesteal, maxStacks: 2, stacking: 'add' } },
+    apply: swap('life-steal', [{ type: 'applyStatus', status: 'labDrain2' as never, stacks: 2 }]),
+    watch: ['life-steal'],
+  }, 5),
+  ...forEach(UNDEAD, {
+    id: 'vol-et-soin',
+    name: 'Vol de vie et soin',
+    schema: 'Petite touche',
+    family: 'Drain',
+    pitch: 'Il boit tout de suite 3 PV à l’adversaire (3 dégâts directs, 3 PV rendus), puis son prochain coup draine.',
+    apply: swap('life-steal', [{ type: 'damage', amount: 3, target: 'opponent' }, { type: 'heal', amount: 3 }, { type: 'applyStatus', status: 'lifesteal', stacks: 1 }]),
+    watch: ['life-steal'],
+  }, 5),
+  // Épines : 6 renvoyés pendant 1 tour ; piste de l'utilisateur : permanentes
+  ...[1, 2].flatMap((n) =>
+    forEach(DWARVES, {
+      id: `epines-permanentes-${n}`,
+      name: `Épines permanentes (${n} par charge)`,
+      schema: 'Retouche (demande de l’utilisateur)',
+      family: 'Représailles',
+      pitch: `Chaque 2 ajoute une charge d’épines, sans durée : chaque coup encaissé renvoie ${n} dégât${n > 1 ? 's' : ''} par charge, jusqu’à la fin du combat.`,
+      statuses: { [`labThorns${n}`]: { ...STATUSES.thorns, stacking: 'add', reactions: { hurt: (st) => [{ type: 'damage', amount: n * st.stacks, target: 'opponent' }] } } },
+      apply: swap('thorns', [{ type: 'applyStatus', status: `labThorns${n}` as never, stacks: 1 }]),
+      watch: ['thorns', `labThorns${n}`],
+    }, 5),
+  ),
+  ...forEach(DWARVES, {
+    id: 'epines-2-tours',
+    name: 'Épines 4 pendant 2 tours',
+    schema: 'Petite touche',
+    family: 'Représailles',
+    pitch: 'Renvoie 4 dégâts par coup encaissé, pendant 2 tours au lieu d’un.',
+    apply: swap('thorns', [{ type: 'applyStatus', status: 'thorns', stacks: 4, turns: 2 }]),
+    watch: ['thorns'],
+  }, 5),
+  // Aura mélodieuse (double 3) : coûte des victoires, parce qu'elle remplace les deux coups du double
+  ...forEach(BARDS, {
+    id: 'melodie-et-coups',
+    name: 'Aura mélodieuse sans sacrifier les coups',
+    schema: 'Petite touche',
+    family: 'Puissance',
+    pitch: 'Le double 3 pose l’aura ET frappe ses deux coups de 3.',
+    apply: swap('melodious-aura', [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }], { volley: 2 }),
+    watch: ['melodious-aura'],
+  }, 5),
+  ...forEach(BARDS, {
+    id: 'melodie-2',
+    name: 'Aura mélodieuse à 2 charges',
+    schema: 'Petite touche',
+    family: 'Puissance',
+    pitch: 'Le double 3 pose 2 charges d’aura au lieu d’une.',
+    apply: swap('melodious-aura', [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }]),
+    watch: ['melodious-aura'],
+  }, 5),
+  // Fausse note (double 2) : coûte des victoires pour la même raison
+  ...forEach(BARDS, {
+    id: 'fausse-note-et-coups',
+    name: 'Fausse note sans sacrifier les coups',
+    schema: 'Petite touche',
+    family: 'Sceaux',
+    pitch: 'Le double 2 pose la Fausse note ET frappe ses deux coups de 2.',
+    apply: swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }], { volley: 2 }),
+    watch: ['false-note'],
+  }, 5),
+  ...forEach(BARDS, {
+    id: 'fausse-note-2',
+    name: 'Fausse note à 2 charges',
+    schema: 'Petite touche',
+    family: 'Sceaux',
+    pitch: 'Deux charges : le prochain coup adverse qui touche perd 10 dégâts.',
+    apply: swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }]),
+    watch: ['false-note'],
+  }, 5),
+  ...forEach(BARDS, {
+    id: 'kit-melodie-2-fausse-note-2',
+    name: 'Kit : aura à 2 charges, Fausse note à 2 charges',
+    schema: 'Kit',
+    family: 'Puissance + Sceaux',
+    pitch: 'Double 3 : 2 charges d’aura. Double 2 : 2 charges de Fausse note.',
+    apply: all(
+      swap('melodious-aura', [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }]),
+      swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }]),
+    ),
+    watch: ['melodious-aura', 'false-note'],
+  }, 5),
+  ...forEach(BARDS, {
+    id: 'kit-melodie-2-fausse-note-coups',
+    name: 'Kit : aura à 2 charges, Fausse note qui frappe',
+    schema: 'Kit',
+    family: 'Puissance + Sceaux',
+    pitch: 'Double 3 : 2 charges d’aura. Double 2 : la Fausse note et ses deux coups de 2.',
+    apply: all(
+      swap('melodious-aura', [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }]),
+      swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }], { volley: 2 }),
+    ),
+    watch: ['melodious-aura', 'false-note'],
+  }, 5),
+  // Aura d'immunité de Gauvain (−1,0) : sa propre version, comme la Rage du sang de Murzug
+  ...[2, 3].map((armor) => ({
+    series: 5 as const,
+    id: `gauvain-immunite-armure-${armor}`,
+    character: 'gauvain',
+    name: `Immunité et armure +${armor} (Gauvain)`,
+    schema: 'Petite touche',
+    family: 'Sceaux + Garde',
+    pitch: `Tant que l’aura est là : aucun malus, et son armure gagne ${armor} (Aldric garde +1).`,
+    statuses: { [`labGauvainImmunity${armor}`]: { ...STATUSES.immunityAura, modifyStats: (st: Parameters<NonNullable<StatusDef['modifyStats']>>[0]) => ({ ...st, armor: st.armor + armor }) } },
+    apply: swap('immunity-aura', [{ type: 'cleanse', polarity: 'negative' }, { type: 'applyStatus', status: `labGauvainImmunity${armor}` as never, stacks: 1 }]),
+    watch: ['immunity-aura'],
+  })),
 ]
 
 export const IDEAS: readonly LabIdea[] = [
@@ -859,5 +1044,6 @@ export const IDEAS: readonly LabIdea[] = [
   /* --- Série 4 : les six compétences signalées par l'audit 0.39.1 (SORTS.md § 10). Chaque idée est
      déclinée pour les deux personnages qui partagent la compétence. --- */
   ...SERIES_4,
+  ...SERIES_5,
 ]
 

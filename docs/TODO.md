@@ -118,6 +118,8 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [x] **Quatre touches livrées** (0.36.5) : Esquive améliorée sans durée, Coup de chance au d6, Rage du sang à 5 pour Murzug, Écorce épaisse à 5 (à 6, Thaldrin dépassait le budget contre Bérengère).
 - [x] **Aura de sainteté** : plafond de 3 charges, compensé par la Purification de repli (0.42.0). Le plafond à 2 faisait plus de spectacle mais coûtait trop (SORTS.md § 10).
 - [x] **Audit de résolution** : la pièce est lue dans le registre (0.42.0).
+- [x] **Deuxième passe** (0.43.0, SORTS.md § 11) : Aura de poison (texte), Vol de vie, aura de la barde, Épines, Fausse note, immunité de Gauvain.
+- [ ] **Fausse note** (+0,8 et +0,5) et **immunité d'Aldric** (+0,9) encore « presque inutiles » ; **Ouverture** de la barde « écrasante » (+26) ; les doubles de la barde sont « rares à l'écran » (un double sur cinq jets, par construction).
 - [ ] **Raccourcis `npm run lab` et `npm run skills`**, une fois la refonte des sons terminée (`package.json`).
 - [ ] **Premier ajout au moteur pour les sorts** : un effet à l'expiration d'un statut (compte à rebours, écho, réserve relâchée). Ensuite : agir sur le dé adverse (Sabotage, Prophétie).
 

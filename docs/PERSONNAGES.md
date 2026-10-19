@@ -115,6 +115,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Compétence du 2 : Épines** (🌵 6 pendant 1 tour, depuis la 0.29.0). Le jet du 2 ne frappe pas, il pose les Épines. Jusqu'au début du prochain tour du nain, **chaque** coup qui le touche lui retire ses PV normalement, puis renvoie 6 dégâts directs à l'attaquant. Ces dégâts ignorent armure, esquive et boucliers. **Contre une Furie des vents, les deux coups sont punis, soit 12 dégâts** : c'est le genre d'interaction surprenante que l'utilisateur veut favoriser. Jusqu'en 0.28.0, les épines valaient 4 et ne punissaient que le premier coup : leur valeur nette était presque nulle (+1 à +5 points de victoire). Elle est maintenant d'environ +9,5 points pour Brokk et +3,6 pour Grimbald. Environ 6,4 dégâts renvoyés par combat pour Brokk.
 
+**0.43.0, Épines permanentes** (demande de l'utilisateur) : chaque 2 au dé ajoute une charge d'épines, sans durée ; chaque coup encaissé renvoie 1 dégât direct par charge, jusqu'à la fin du combat. Valeur nette : Brokk +9,9 → **+10,9**, Grimbald +5,0 → **+4,3**. Le spectateur les voit agir à presque chaque coup : 6,9 réactions par combat chez Brokk, au lieu de 3,9. À 2 dégâts par charge, Brokk montait à 64 % : trop fort.
+
 **Compétence du 3 : Aura d'intimidation** (😠 permanente, portée par le nain). Les coups de son adversaire infligent 2 de moins, avant l'armure : un 10 devient 8. Elle se combine aux autres calculs : une Aura de puissance de l'orc (+2) l'annule, et un coup ne descend jamais sous 1. Elle est cumulable depuis la 0.28.0 : −2 par charge, −4 après deux 3. C'est la compétence qui fait du nain un tank (valeur nette d'environ +20 points pour Brokk), à la place de l'armure passive perdue. Brokk l'obtient dans trois combats sur quatre, Grimbald dans près de deux sur trois.
 
 **Armure passive retirée (0.24.1)** : Brokk avait 2 d'armure et Grimbald 1, retirées de chaque coup avant l'Armure temporaire. Cumulées, les deux protections étaient un trop gros avantage, et deux notions nommées « armure » prêtaient à confusion. Les deux nains n'ont plus d'armure passive. En compensation, mesurée par simulation : sans rien changer d'autre, Brokk tombait à 18 % et Grimbald à 35 %. Leurs PV passent donc à 72 et 59 (74 et 63 depuis la 0.25.0, voir plus bas).
@@ -154,9 +156,13 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Compétence du 2 : Vol de vie** (🦇, une charge, sans durée depuis la 0.29.0). Le jet du 2 ne frappe pas : le mort-vivant gagne 1 charge de Vol de vie. Son **prochain coup porté** la consomme. S'il touche, il rend les PV qu'il retire (frapper à 10, c'est infliger 10 et regagner 10). S'il est **esquivé**, la charge est perdue sans rien rendre. Un nouveau jet de 1 à 3 n'est pas un coup porté : **la charge reste** (règle de l'utilisateur : « pas de coup donné, donc charge conservée »). Un nouveau 2 la renouvelle, mais elle reste unique. Jusqu'en 0.28.0, elle expirait à la fin du tour suivant, même sans avoir servi. Valeur nette d'environ +5 points. Environ 4,6 PV volés par combat pour Ervald, 3,9 pour Caldrec.
 
+**0.43.0, deux charges** : le Vol de vie pose deux charges ; ses deux prochains coups qui touchent lui rendent les PV retirés, et une esquive use une charge. Le médaillon compte enfin quelque chose (2, puis 1). Valeur nette +4,0 → **+10,6** (Ervald), +3,3 → **+8,9** (Caldrec). Ervald, le plus faible du roster, passe de 46,4 à **51,2 %** ; Caldrec de 48,9 à **53,3 %**. Prix : un peu moins de retournements dans leurs combats (retours d'Ervald de 65 à 62 %). Un vol immédiat de 3 PV en plus était trop fort (+15 points).
+
 **Réglage 0.25.0** : le coup sacrifié coûte cher. Sans compensation, les morts-vivants tombaient à 43,5 %. Ervald passe de 56 à 60 PV, et Caldrec de 54 à 58.
 
 **Compétence du 3 : Aura de poison** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
+
+**0.43.0, ce n'est pas un poison, mais elle agit avec lui** (note de l'utilisateur : « se résout quand ? comme le poison normal ? »). Avant, elle frappait au début du tour du **porteur** ; elle frappe désormais **au début du tour de l'adversaire, juste après ses poisons**, dans la même étape (choix de l'utilisateur). Elle reste des dégâts directs, sans décroître : une version qui pose de vrais Poisons a été mesurée, et l'Aura d'immunité du paladin les bloque (Ervald à **31 % contre Gauvain**) ; à deux charges, les poisons s'empilaient (Ervald battait Brokk à 67 %). Valeur nette +11,0 → **+13,8** (Ervald), +4,1 → **+6,2** (Caldrec) : elle frappe dès le tour où elle est posée. Avec le Vol de vie à deux charges, Ervald passe de 46,4 à **54,0 %**, Caldrec de 48,9 à **55,1 %**.
 
 **Réglage 0.26.0** : Caldrec tombait à 45,8 %. Il ne perd plus de PV par rapport à Ervald (60).
 
@@ -277,6 +283,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 **Compétence du 3 : Aura d'immunité** (permanente, non cumulable). Elle retire tous ses malus, puis plus aucun malus ne peut lui être posé jusqu'à la fin du combat (Peur, Poison…), sans que l'aura s'use. Une Purification de prêtresse peut la lui retirer, comme tout bonus. Valeur nette : **−1,7 point**. Peu d'adversaires posent des malus, et le 3 sacrifie son coup.
 
 **0.42.0, immunité et armure** (choix de l'utilisateur) : tant que l'aura est là, son armure gagne 1, en plus de l'immunité. C'est une règle d'aura, permanente et lisible, la même pour Gauvain. Un bouclier de 2 posé à chaque 3 avait été proposé, puis jugé peu clair. Valeur nette de −2,7 à **+1,1** (Aldric) et de −3,9 à **−0,6** (Gauvain). Compensation : son **esquive passe de 5 à 2 %** (Gauvain de 10 à 7 %). Sans elle, Aldric battait Thaldrin à 66-68 %, même avec 10 % de critique : l'armure vise les petits coups de l'ours, et l'immunité bloque déjà sa Pourriture et sa Luciole. Après : Aldric 53,8 % (53,3 avant), Gauvain 49,9 % (49,5), Aldric contre Thaldrin 62,5 %. La **Rétribution** (+36 et +31 points) n'est pas touchée (décision de l'utilisateur) : deux jauges au lieu de trois faisaient d'ailleurs passer Aldric sous 35 % contre Brokk.
+
+**0.43.0, Gauvain à +2** : l'aura gagne 1 d'armure par charge ; Gauvain la pose avec 2 charges (sa propre version, `immunity-aura-gauvain`), Aldric avec une. Valeur nette de Gauvain −1,0 → **+3,1**, Gauvain de 48,8 à 52,2 %. Aldric reste à +0,9, « presque inutile » de justesse.
 
 **Réglage 0.32.0** : la riposte réparée le portait à 57,3 %, avec Sylwen battue à 67/33 et Gauvain contre Naraxes à 66/34. Le critique passe de 15 à 12 % : Aldric revient à 55,0 % et Gauvain à 50,8 %. Les duels sont ramenés sous 65/35, sauf Ssythra contre Aldric, à 33/67 (contre connu).
 
@@ -422,6 +430,8 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 - **Mesures** : 51,2 % (0.41.0 ; 54,8 % avec +4 PV). Duels de 38 à 61 %, sauf contre Brokk (35 %, à la limite, contre connu).
 
 ---
+
+**0.43.0, aura et Fausse note à 2 charges** (note de l'utilisateur : description de l'aura peu claire). Le double 3 pose 2 charges d'Aura mélodieuse, le double 2 deux charges de Fausse note (le prochain coup adverse qui touche perd 10). À une charge, ces deux doubles coûtaient des victoires (−1,0 à −1,3) : ils remplacent deux coups. Après : Aura mélodieuse **+2,0 et +2,5**, Fausse note **+0,8 et +0,5** (encore « presque inutile »). Fanchon et Mélisande à **54,5 %**. Les textes n'emploient plus « dégâts finaux » : « ajouté après l'armure : rien ne le réduit ». Une Fausse note qui frappe aussi ses deux coups montait à +3,9, mais, avec l'aura, les bardes passaient à 57-58 %.
 
 ## Matrice des duels
 

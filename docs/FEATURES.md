@@ -17,8 +17,8 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
   4. Les **modificateurs de dégâts** s'appliquent : sortants, de l'attaquant (ex. Affaibli), puis entrants, du défenseur (ex. Vulnérable). Le coup garde au moins 1.
   5. L'**armure** du défenseur retire des points, mais le coup fait toujours au moins 1.
   6. Les **boucliers** du défenseur (ex. armure temporaire) absorbent ensuite des points, sans faire descendre le coup sous 1, et s'usent d'autant.
-  6 bis. Les **dégâts finaux** de l'attaquant (Aura mélodieuse, Fausse note, 0.41.0) s'ajoutent ou se retirent en dernier, sans que l'armure ni l'intimidation les rognent ; le coup garde au moins 1.
-  7. **Vol de vie** : si l'attaquant porte Vol de vie, le coup porté consomme la charge. S'il a touché, il regagne les dégâts du coup ; esquivé, il ne regagne rien.
+  6 bis. Les **dégâts finaux** de l'attaquant (Aura mélodieuse, Fausse note, 0.41.0) s'ajoutent ou se retirent en dernier, sans que l'armure ni l'intimidation ne les touchent ; au moins 1 dégât. À l'écran, on dit « ajouté après l'armure : rien ne le réduit » (0.43.0).
+  7. **Vol de vie** : si l'attaquant porte Vol de vie, le coup porté consomme une charge (deux par Vol de vie depuis la 0.43.0). S'il a touché, il regagne les dégâts du coup ; esquivé, la charge est perdue sans soin ; un jet de compétence (1 à 3) ne la consomme pas.
 - **Deux dés (la barde, 0.41.0)** : un personnage `twinDice` lance deux dés à chaque action. Hors double, deux coups séparés, un par dé (esquive et critique chacun) ; sur un double qui a sa compétence, celle-ci remplace les deux coups (voir la section 2 et `RESOLUTION.md` § 2). En mode triche, la paire compte pour deux dés.
 - **Dégâts comptés en entier (overkill, depuis la 0.34.0)** : un coup fatal ou des dégâts directs comptent tout leur montant dans les statistiques, la trace et l'historique, même au-delà des PV restants. Les PV, eux, s'arrêtent à 0.
 - **Événements** du coup : voir la section 3.
@@ -73,8 +73,8 @@ Six races, chacune avec un archétype de base et une variante de coloris aux sta
 **La barde (0.41.0)** lance deux d5 à chaque tour, et ses compétences se déclenchent sur les doubles, à la place des deux coups :
 - **Ouverture** (au début du combat) : 1 charge d'Aura mélodieuse ;
 - **Siffloter** (double 1) : Sifflotement, 3 charges, +2 PV à chaque fin de tour ;
-- **Fausse note** (double 2) : le prochain coup adverse qui touche perd 5 dégâts finaux ;
-- **Aura mélodieuse** (double 3) : +1 dégât final par charge sur chacun de ses coups ;
+- **Fausse note** (double 2) : 2 charges (0.43.0) : le prochain coup adverse qui touche fait 10 dégâts de moins (au moins 1) ;
+- **Aura mélodieuse** (double 3) : 2 charges (0.43.0) ; chaque charge, +1 dégât sur chacun de ses coups qui touche, ajouté après l'armure ;
 - **Crescendo** (double 4) : un seul coup de 12 ;
 - **Soliste** (double 5) : un seul coup de 15.
 
@@ -118,9 +118,9 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Elfe | 1 | Œil de faucon | 🎯 Critique assuré : le prochain coup qui touche est critique |
 | Elfe | 2 | Esquive améliorée | 💨 sans durée (0.36.5) : le prochain coup reçu est esquivé à coup sûr, même si l'adversaire sacrifie d'abord ses coups |
 | Nain | 1 | Peau de pierre | 🛡️ +6 armure temporaire, cumulable, qui s'use en encaissant |
-| Nain | 2 | Épines | 🌵 6 pendant 1 tour : chaque coup encaissé renvoie 6 dégâts directs à l'attaquant (deux fois contre une Furie des vents) |
+| Nain | 2 | Épines | 🌵 permanentes et cumulables (0.43.0) : une charge par 2 au dé ; chaque coup encaissé renvoie 1 dégât direct par charge à l'attaquant |
 | Mort-vivant | 1 | Souffle de la tombe | ☠️ empoisonne l'adversaire : Poison 3, soit −3, −2 puis −1 PV au début de ses tours suivants (0.36.4) |
-| Mort-vivant | 2 | Vol de vie | 🦇 une charge : son prochain coup porté lui rend les PV retirés ; perdue si le coup est esquivé, gardée sur un jet de 1 à 3 |
+| Mort-vivant | 2 | Vol de vie | 🦇 deux charges (0.43.0) : ses deux prochains coups qui touchent lui rendent les PV retirés ; un coup esquivé use une charge, un jet de 1 à 3 la garde |
 | Orc | 3 | Aura de puissance | 💪 permanente, cumulable : +2 dégâts par charge sur chaque coup, avant l'armure |
 | Elfe | 3 | Aura de précision | 🦅 permanente, cumulable : +1 au multiplicateur de critique par charge (×2 → ×3, ×2,4 → ×3,4) |
 | Nain | 3 | Aura d'intimidation | 😠 permanente, cumulable : les coups de l'adversaire font 2 de moins par charge, avant l'armure |
@@ -132,8 +132,8 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Homme-lézard | 3 | Aura de décoction | 🧪 permanente, cumulable : chaque coup qui touche pose 2 charges de poison par charge d'aura (0.36.4) |
 | Paladin | 1 | Rétribution | ⚖️ relâche la somme de ses 3 jauges (les PV des 3 derniers coups reçus) en dégâts directs, au moins 1 |
 | Paladin | 2 | Riposte | ⚔️ 1 tour : le prochain coup encaissé renvoie la moitié de ses dégâts |
-| Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé, et son armure gagne 1 (0.42.0) (permanente, non cumulable) |
-| Mort-vivant | 3 | Aura de poison | ☣️ permanente, cumulable : au début de chacun de ses tours, avant son coup, l'adversaire perd 1 PV par charge (dégâts directs) |
+| Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé, et son armure gagne 1 (0.42.0), 2 pour Gauvain (0.43.0) (permanente, non cumulable) |
+| Mort-vivant | 3 | Aura de poison | ☣️ permanente, cumulable : au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge (dégâts directs ; ce n'est pas un Poison, rien ne l'arrête ; 0.43.0) |
 
 **Déclencheurs disponibles**, du point de vue du porteur :
 
@@ -163,11 +163,11 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | ☠️ Poison | malus | une seule valeur : autant de dégâts au début du tour du porteur, puis une charge de moins (3, 2, 1) | oui (mort-vivant, sur l'adversaire) |
 | 🥀 Affaibli | malus | ses coups infligent moins avant l'armure | pas encore |
 | 💔 Brèche | malus | armure réduite (3 charges au plus) | pas encore |
-| 🌵 Épines | bonus | chaque coup encaissé renvoie N dégâts directs, tant qu'elles durent | oui (nain) |
-| 🦇 Vol de vie | bonus | le prochain coup porté rend les PV qu'il retire ; esquivé, rien | oui (mort-vivant) |
+| 🌵 Épines | bonus | permanentes : chaque coup encaissé renvoie 1 dégât direct par charge | oui (nain) |
+| 🦇 Vol de vie | bonus | une charge par coup : le coup qui touche rend les PV qu'il retire ; esquivé, rien (2 charges) | oui (mort-vivant) |
 | 🌪️ Furie des vents | bonus | deux coups à la prochaine action, chacun résolu à part | oui (orc) |
 | 💨 Esquive améliorée | bonus | le prochain coup reçu est esquivé, sans tirage | oui (elfe) |
-| ☣️ Aura de poison | bonus | permanente : l'adversaire perd 1 PV par charge au début de chaque tour du porteur | oui (mort-vivant) |
+| ☣️ Aura de poison | bonus | permanente : l'adversaire perd 1 PV par charge au début de chacun de ses tours, avec ses poisons ; ce n'est pas un Poison, rien ne l'arrête | oui (mort-vivant) |
 | 💪 Aura de puissance | bonus | permanente : +2 dégâts par charge | oui (orc) |
 | 😠 Aura d'intimidation | bonus | permanente : l'adversaire frappe 2 de moins par charge | oui (nain) |
 | 🦅 Aura de précision | bonus | permanente : multiplicateur de critique +1 par charge | oui (elfe) |
@@ -178,7 +178,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | 🍀 Coup de chance | bonus | prochaine action : un d6 en plus, coup à part | oui (homme-lézard) |
 | ⚖️ Rétribution | bonus | 3 jauges des derniers coups reçus, relâchées sur un 1 | oui (paladin) |
 | ⚔️ Riposte | bonus | prochain coup encaissé : la moitié des dégâts renvoyée | oui (paladin) |
-| Aura d'immunité | bonus | permanente : aucun malus ne peut être posé, armure +1 | oui (paladin) |
+| Aura d'immunité | bonus | permanente : aucun malus ne peut être posé, armure +1 par charge (Gauvain : 2 charges) | oui (paladin) |
 
 **Durées** : un statut posé pendant un tour n'est pas décompté à la fin de ce tour. « 1 tour » posé pendant l'action vaut donc pour le tour d'après : la prochaine action du porteur (Furie des vents, décomptée en fin de tour) ou le tour de l'adversaire (Épines, décomptées au début du tour du porteur). L'Esquive améliorée n'a plus de durée depuis la 0.36.5 : elle attend le prochain coup reçu. Les auras n'ont pas de durée : leur médaillon affiche leurs charges.
 
@@ -218,6 +218,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
+| 0.43.0 | Notes de l'utilisateur et audit : Épines permanentes (1 par charge), Vol de vie à deux charges, barde à 2 charges sur ses doubles 2 et 3, immunité de Gauvain à +2 d'armure ; Aura de poison au début du tour adverse, avec le Poison ; textes clarifiés (Aura de poison, Aura mélodieuse, Fausse note) |
 | 0.42.0 | Audit des six compétences signalées : Pile ou face (pile à 20 qui touche, face vide), Aura de sainteté plafonnée à 3, Purification avec 5 dégâts de repli (`cleanse.orElse`), Aura d'immunité avec +1 d'armure (esquive d'Aldric de 5 à 2 %), Fleur de vie en Régénération 2 × 3 tours ; Rétribution inchangée |
 | 0.36.5 | Petites touches issues de l'audit des compétences : Esquive améliorée sans durée, Coup de chance au d6, Rage du sang propre à Murzug (+5 PV), Écorce épaisse à 5 ; une variante peut avoir sa propre version d'une compétence |
 | 0.9.0 | Système déclencheur → effets (soin, bonus), trois premiers événements, affichage des bonus |

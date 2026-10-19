@@ -368,3 +368,57 @@ Le gâchis de la sainteté vient du plafond : une charge posée au plafond ne ch
 ### Après fusion avec la barde (0.41.0 du chantier parallèle)
 
 Mesures refaites sur le roster de 20 personnages (400 combats par duel pour l'équilibre, 300 pour l'audit) : de 46,4 à 53,1 %, aucun duel hors limites ; Pile ou face +0,1 / +0,6, Aura d'immunité +1,0 / −1,0, Purification +14,2 / +13,6 (gâchis 0 %), Fleur de vie +2,3 / +3,3, Aura de sainteté +41,1 / +38,1. Les compétences de la barde ont leurs propres drapeaux (rares à l'écran, Ouverture écrasante) : à traiter dans son chantier.
+
+## 11. Deuxième passe : notes de l'utilisateur et audit 0.42.0 (0.43.0)
+
+**Demande** : quatre notes de l'utilisateur (« aura de poison de Caldrec et jumeau, se résout quand ? comme le poison normal ? » ; « vérifier le fonctionnement de vol de vie, compteur, mécanique, utilité » ; « aura du barde : description pas claire » ; « épines du nain, revoir fonctionnement, résolution, pertinence de la rendre permanente »), et deux compétences au choix, prises dans l'audit 0.42.0 : **Fausse note** (coûte des victoires) et **l'immunité de Gauvain** (presque inutile, −1,0).
+
+**Méthode** : laboratoire, série 5 (`LAB_SERIES=5`, 300 combats par duel, 30 essais), puis intégration et équilibre du roster entier (20 personnages, 400 combats par duel), puis audit relancé.
+
+### Ce que l'examen a montré
+
+- **Aura de poison** : elle fait perdre des PV au début du tour du **porteur**, avant son action, en dégâts directs, sans décroître. Le Poison, lui, agit au début du tour de la **victime**, décroît de 1 par tour, et c'est un malus (immunité, régénération). Deux règles différentes sous le même mot.
+- **Vol de vie** : une charge, sans durée, consommée par le prochain coup porté (rendue en soin s'il touche, perdue s'il est esquivé, gardée sur un jet de 1 à 3). Le médaillon affichait toujours « 1 », ce qui n'apprenait rien. Valeur +3 à +4.
+- **Épines** : 6 dégâts renvoyés à chaque coup qui touche (fenêtre `hurt`, même si un bouclier absorbe tout), pendant le seul tour adverse. Peu visibles.
+- **Aura mélodieuse et Fausse note** : un double remplace les deux coups ; à une charge, l'échange coûte des victoires. Les textes parlaient de « dégâts finaux » (jargon du moteur) et avaient une coquille.
+
+### Laboratoire
+
+| Piste | Personnages | Δ | Lecture |
+| --- | --- | --- | --- |
+| Aura au début du tour adverse, avec le Poison (dégâts directs) | Ervald / Caldrec | +2,8 / +2,1 | **retenue** (choix de l'utilisateur, second retour) |
+| Aura à la fin de son tour | Ervald / Caldrec | +2,8 / +2,1 | mêmes chiffres, mais décalée du Poison |
+| Aura qui pose de vrais Poisons (1 par charge) | Ervald / Caldrec | +8,7 / +4,9 | les poisons s'empilent ; Ervald bat Brokk à 67 % |
+| Même chose, aura plafonnée à 1 charge | Ervald / Caldrec | +1,3 / +0,9 | **Ervald tombe à 31 % contre Gauvain** : l'immunité bloque le poison |
+| Vol de vie sur deux coups | Ervald / Caldrec | +6,5 / +5,4 | **retenu** |
+| Vol de vie et 3 PV volés tout de suite | Ervald / Caldrec | +15,0 / +10,5 | hors budget |
+| Épines permanentes, 1 par charge | Brokk / Grimbald | +0,7 / −0,6 | **retenu** : neutre, et bien plus visible |
+| Épines permanentes, 2 par charge | Brokk / Grimbald | +12,4 / +7,3 | hors budget |
+| Épines 4 pendant 2 tours | Brokk / Grimbald | +2,3 / +1,8 | correct, moins lisible |
+| Aura mélodieuse à 2 charges | Fanchon / Mélisande | +2,8 / +4,1 | **retenu** |
+| Aura mélodieuse sans sacrifier les coups | Fanchon / Mélisande | +5,8 / +6,3 | trop fort avec le reste |
+| Fausse note à 2 charges | Fanchon / Mélisande | +1,1 / +1,4 | **retenu** |
+| Fausse note qui frappe aussi | Fanchon / Mélisande | +3,9 / +3,9 | avec l'aura à 2, bardes à 57-58 % |
+| Immunité de Gauvain, armure +2 / +3 | Gauvain | +4,3 / +9,1 | **+2 retenu** |
+
+### Avant → après (règles 0.42.0 → 0.43.0, roster de 20 personnages)
+
+| Compétence | Valeur nette | Drapeau |
+| --- | --- | --- |
+| Épines (Brokk / Grimbald) | +9,9 / +5,0 → +10,9 / +4,3 | aucun ; 6,9 réactions par combat chez Brokk |
+| Vol de vie (Ervald / Caldrec) | +4,0 / +3,3 → **+10,6 / +8,9** | aucun (gâchis 11-15 % : charges perdues sur esquive) |
+| Aura mélodieuse (Fanchon / Mélisande) | −1,0 / −1,3 → **+2,0 / +2,5** | coûte des victoires → rare à l'écran |
+| Fausse note (Fanchon / Mélisande) | −0,3 / −1,0 → +0,8 / +0,5 | coûte des victoires → presque inutile |
+| Aura d'immunité (Gauvain) | −1,0 → **+3,1** | presque inutile → aucun |
+| Aura de poison (Ervald / Caldrec) | +11,0 / +4,1 → **+13,8 / +6,2** | aucun (agit avec le Poison, texte clarifié) |
+
+**Taux de victoire** (400 combats par duel) : de 46,4 à 53,1 % avant, de 44,9 % (Gorak) à 55,1 % (Caldrec) après. Ervald 46,4 → 54,0, Caldrec 48,9 → 55,1, Gauvain 48,8 → 51,9. Ceux qui n'ont pas changé perdent un peu : Gorak 46,9 → 44,9, Morgrut 48,6 → 46,5. Brokk contre Ysolde remonte de 27,0 à 30,5 %.
+
+**Spectacle** (200 combats par duel) : stable partout, sauf chez les morts-vivants, qui mènent plus nettement (retours d'Ervald de 65 à 62 %, fins serrées de 42 à 39 %).
+
+### Limites
+
+- **La Fausse note reste mince** : 10 dégâts retirés à un seul coup, sur un double qui en sacrifie deux.
+- **Les doubles de la barde sont rares par construction** (un sur cinq jets) : « rare à l'écran » restera.
+- **Les textes et les compteurs n'ont pas été vus à l'écran.**
+
