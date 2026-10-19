@@ -66,7 +66,7 @@ function StatusCard({ entry }: { entry: StatusEntry }) {
         </div>
         <h4 className="font-display text-xl font-extrabold leading-tight text-amber-100">{def.name}</h4>
         <span
-          className={`rounded border px-2 py-px text-[10px] font-bold uppercase tracking-[0.2em] ${POLARITY_STYLE[def.polarity].chip}`}
+          className={`rounded-(--r-xs) border px-2 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-[0.2em] ${POLARITY_STYLE[def.polarity].chip}`}
         >
           {POLARITY_STYLE[def.polarity].label}
         </span>

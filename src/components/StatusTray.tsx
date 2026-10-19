@@ -150,18 +150,18 @@ function StatusTooltip({ status }: { status: Status }) {
   return (
     <div
       role="tooltip"
-      className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-3 w-60 -translate-x-1/2 rounded-lg border border-amber-200/25 bg-stone-950/95 px-3 py-2.5 text-left opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
+      className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-3 w-60 -translate-x-1/2 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-3 py-2.5 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display text-base font-extrabold leading-tight text-amber-100">{def.name}</span>
+        <span className="font-display text-base font-extrabold leading-tight text-ink-1">{def.name}</span>
         <span
-          className={`shrink-0 rounded border px-1.5 py-px text-[10px] font-bold uppercase tracking-wider ${isAura(status.id) ? 'border-yellow-300/70 bg-yellow-400/15 text-yellow-200' : POLARITY_STYLE[def.polarity].chip}`}
+          className={`shrink-0 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${isAura(status.id) ? 'border-line-2 bg-ink-1/10 text-ink-1' : POLARITY_STYLE[def.polarity].chip}`}
         >
           {isAura(status.id) ? 'Aura' : POLARITY_STYLE[def.polarity].label}
         </span>
       </div>
-      <p className="mt-1 text-xs leading-snug text-stone-200">{def.describe(status)}</p>
-      <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-stone-400">
+      <p className="mt-1 font-body text-[15px] leading-snug text-ink-1">{def.describe(status)}</p>
+      <p className="mt-1.5 flex items-center gap-1.5 font-body text-[13px] font-medium text-ink-3">
         {turns && (
           <>
             <Icon name="turns" className="h-3 w-3" /> {turns} ·{' '}

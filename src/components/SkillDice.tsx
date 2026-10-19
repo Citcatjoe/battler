@@ -109,22 +109,22 @@ function SkillTooltip({
   return (
     <div
       role="tooltip"
-      className={`pointer-events-none invisible absolute z-[70] w-80 rounded-lg border border-amber-200/25 bg-stone-950/95 px-4 py-3 text-left opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.6)] transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
+      className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
         placement === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
       } ${ALIGN[align]}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-amber-100">
+        <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-ink-1">
           {SKILL_ICON[event.id] && <Icon name={SKILL_ICON[event.id]!} className="h-8 w-8" />}
           {event.name}
         </span>
-        <span className="shrink-0 rounded border border-violet-400/60 bg-violet-500/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wider text-violet-200">
+        <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
           Dé {face}
         </span>
       </div>
-      {terms.length > 0 && <p className="mt-0.5 text-[11px] font-bold text-violet-300/90">{terms.join(' · ')}</p>}
+      {terms.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{terms.join(' · ')}</p>}
       <div className="codex-divider my-2.5" />
-      {event.effects.length === 0 && <p className="text-sm text-stone-200">Un coup porté, plus puissant qu'un coup ordinaire.</p>}
+      {event.effects.length === 0 && <p className="font-body text-[15px] text-ink-1">Un coup porté, plus puissant qu'un coup ordinaire.</p>}
       <ul className="space-y-2.5">
         {event.effects.map((effect, i) => (
           <li key={i}>

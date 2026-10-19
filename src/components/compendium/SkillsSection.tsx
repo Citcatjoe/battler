@@ -153,7 +153,7 @@ export function EffectLine({ effect }: { effect: Effect }) {
       <div className="flex items-start gap-3" title={def.summary}>
         <StatusIcon id={effect.status} className="h-9 w-9 shrink-0" />
         <p className="text-sm leading-snug text-stone-200">
-          <span className={`mr-1.5 rounded border px-1.5 py-px text-[10px] font-bold uppercase tracking-wider ${POLARITY_STYLE[def.polarity].chip}`}>
+          <span className={`mr-1.5 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${POLARITY_STYLE[def.polarity].chip}`}>
             Pose
           </span>
           <b className="text-stone-50">{def.name}</b> <span className="text-stone-400">{TARGET(effect.target)}</span>

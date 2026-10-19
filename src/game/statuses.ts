@@ -546,12 +546,12 @@ export const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.
 
 export const POLARITY_STYLE: Record<Polarity, { chip: string; glow: string; label: string }> = {
   positive: {
-    chip: 'border-emerald-400/70 bg-emerald-500/15 text-emerald-100',
+    chip: 'border-good/70 bg-good/15 text-good',
     glow: 'rgba(52,211,153,0.35)',
     label: 'Bonus',
   },
   negative: {
-    chip: 'border-red-400/70 bg-red-500/15 text-red-100',
+    chip: 'border-bad/70 bg-bad/15 text-bad',
     glow: 'rgba(248,113,113,0.4)',
     label: 'Malus',
   },

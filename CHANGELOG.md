@@ -31,6 +31,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.4] — 2026-10-19
+
+### Modifié
+- **Infobulles et pastilles** (design system, étape 4) : infobulles des dés de compétence et de la zone d'état sur `--bg-1`, filet `--line-2`, rayon 4 px, ombre `--shadow-2` ; titre en `--text-1` (l'or est réservé à l'action) ; texte en Alegreya Sans 15, mentions en 13. Pastilles Bonus, Malus, Aura et « Dé n » en 13 px (au lieu de 10), rayon 2 px, aux couleurs `--good`, `--bad`, `--arcane` ; la pastille Aura devient neutre. Les lignes d'effet des infobulles gardent leur style, elles suivront les cartes de compétence (étape 12).
+
 ## [0.38.3] — 2026-10-19
 
 ### Modifié
