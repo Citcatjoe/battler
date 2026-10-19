@@ -10,6 +10,7 @@ import { Icon } from './Icon'
 import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
 import { BetSummary, BettingDesk } from './Betting'
 import { PrestigeButton } from './PrestigeButton'
+import { VsSeal } from './VsSeal'
 
 interface Props {
   fighters: Pair<Character>
@@ -84,14 +85,16 @@ export function MatchupScreen({
         {([0, 1] as Side[]).map((side) => (
           <FighterCard key={side} character={fighters[side]} side={side} />
         ))}
-        <span className="vs-slam col-start-2 row-start-1 mb-[300px] font-display text-[140px] font-extrabold leading-none text-amber-300 drop-shadow-[0_6px_0_#78350f]">
-          VS
-        </span>
-        {betting && (
-          <div className="col-start-2 row-start-1 mb-[150px] self-end justify-self-center">
-            <BetSummary wallets={betting.wallets} odds={betting.odds} fighterNames={names} />
-          </div>
-        )}
+        {/* Le sceau et le rappel des paris s'empilent dans la colonne centrale, sans se chevaucher.
+            L'animation d'entrée est sur l'enveloppe du sceau : il garde sa forme. */}
+        <div
+          className={`col-start-2 row-start-1 flex flex-col items-center gap-6 self-end justify-self-center ${betting ? 'mb-[150px]' : 'mb-[300px]'}`}
+        >
+          <span className="vs-slam flex justify-center">
+            <VsSeal />
+          </span>
+          {betting && <BetSummary wallets={betting.wallets} odds={betting.odds} fighterNames={names} />}
+        </div>
       </div>
 
       <div className="relative flex items-center justify-center gap-6 pb-10 pt-4">

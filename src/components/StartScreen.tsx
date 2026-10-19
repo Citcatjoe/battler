@@ -12,6 +12,7 @@ import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
 import { PrestigeButton } from './PrestigeButton'
 import { Tabs } from './Tabs'
+import { VsSeal } from './VsSeal'
 
 interface Props {
   initial: Pair<Character>
@@ -123,11 +124,8 @@ export function StartScreen(props: Props) {
               onRandom={() => pickRandom(0)}
               onOpenSheet={() => onOpenCharacter(fighters[0].id, fighters)}
             />
-            {/* Médaillon sombre : le « VS » reste lisible devant la lumière du portail */}
-            <span className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-amber-500/60 bg-stone-950/80 font-display text-5xl font-extrabold leading-none text-amber-200 shadow-[0_0_40px_rgba(0,0,0,0.8)] drop-shadow-[0_3px_0_#78350f]">
-              {/* Cinzel réserve la place des jambages : sans correction, les capitales sont 0,05 em trop haut */}
-              <span className="translate-y-[0.05em]">VS</span>
-            </span>
+            {/* Sceau sombre : le « VS » reste lisible devant la lumière du portail */}
+            <VsSeal />
             <SidePanel
               side={1}
               character={fighters[1]}

@@ -683,6 +683,71 @@ body {
   .prestige-btn:disabled .btn-icon { filter: grayscale(1) brightness(0.6); }
 }
 
+/* ---------- Sceau VS (design system, pièce prestige) ----------
+   Octogone de 96 px (coupe --cut-seal) : cadre --gold-500 (::before), jour --bg-0 (::after),
+   plaque --bg-1 (.vs-seal-plate) et gravure d'or à 40 % (.vs-seal-plate::before). Sans lignes de
+   liaison. L'enveloppe n'est pas découpée : elle porte l'ombre portée. */
+@layer components {
+  .vs-seal {
+    --c: var(--cut-seal);
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.7));
+  }
+  .vs-seal::before,
+  .vs-seal::after,
+  .vs-seal-plate,
+  .vs-seal-plate::before {
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  }
+  .vs-seal::before,
+  .vs-seal::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+  }
+  .vs-seal::before { inset: 0; background: var(--gold-500); }
+  .vs-seal::after { --c: calc(var(--cut-seal) - 1.2px); inset: var(--frame-gap); background: var(--bg-0); }
+  .vs-seal-plate {
+    --c: calc(var(--cut-seal) - 2.4px);
+    position: absolute;
+    inset: 4px;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-1);
+    box-shadow: var(--hl);
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--gold-300);
+    text-shadow: 0 2px 0 #000;
+  }
+  /* gravure : octogone d'un pixel, à 10 px du bord */
+  .vs-seal-plate::before {
+    --c: calc(var(--cut-seal) - 6px);
+    --d: calc(var(--c) + 0.4px);
+    content: '';
+    position: absolute;
+    inset: 6px;
+    z-index: -1;
+    background: var(--engrave-gold);
+    clip-path: polygon(evenodd,
+      var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c), var(--c) 0,
+      var(--d) 1px, 1px var(--d), 1px calc(100% - var(--d)), var(--d) calc(100% - 1px),
+      calc(100% - var(--d)) calc(100% - 1px), calc(100% - 1px) calc(100% - var(--d)),
+      calc(100% - 1px) var(--d), calc(100% - var(--d)) 1px, var(--d) 1px);
+  }
+}
+
 /* ---------- Panneau de combattant et tuile de portrait (design system) ----------
    .fighter-panel : voile --scrim flouté, rayon 2, filet clair, liseré de 2 px en tête à la
    couleur du camp (--side, posé par .side-a / .side-b). Pas d'équerres.

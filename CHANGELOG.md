@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.11] — 2026-10-19
+
+### Modifié
+- **Sceau VS** (design system, étape 11) : composant `VsSeal`, octogone de 96 px (coupe de 28 px), cadre `--gold-500`, jour sombre, plaque `--bg-1`, gravure d'or à 40 %, sans lignes de liaison. Il remplace le médaillon rond de l'accueil et le « VS » en texte de 140 px de l'affrontement. L'animation d'entrée (`.vs-slam`) reste sur l'enveloppe ; elle finit inclinée de 4°, comme avant.
+
+### Corrigé
+- Affrontement : le rappel des paris (et son bandeau de coup de théâtre) ne recouvre plus le VS ; les deux s'empilent dans la colonne centrale.
+
 ## [0.38.10] — 2026-10-19
 
 ### Modifié
