@@ -197,7 +197,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Compétence du 2 : Purification**. Effet immédiat : elle retire à l'adversaire **son dernier bonus posé, avec toutes ses charges**, aura comprise (6 charges d'Aura de puissance partent d'un coup). L'utilisateur a demandé « un buff » sans dire lequel : c'est le dernier posé dans l'ordre de la liste, sans tirage au sort. Valeur nette d'environ +10 points.
 
+**0.41.0, Purification de repli** (audit des compétences) : quand l'adversaire n'a aucun bonus à retirer, la lumière lui inflige **5 dégâts directs** au lieu de tomber à vide (54 % des déclenchements avant). Gâchis de 54 % à 0 %, valeur nette de +8,3 à **+12,8 points** (Bérengère de même). Contre Brokk, qui a presque toujours un bonus, rien ne change : un éclat à chaque Purification le faisait tomber à 23,7 % contre Ysolde.
+
 **Compétence du 3 : Aura de sainteté** (🕊️ permanente, cumulable). Elle regagne 2 PV par charge à la fin de chacun de ses tours. C'est la compétence qui la porte : **+42 à +44 points de victoire**, la plus forte du roster.
+
+**0.41.0, plafond de 3 charges** (6 PV par tour au plus). Valeur nette presque inchangée (+41,2 points, Bérengère +38,1), mais avec la Purification de repli, ses combats deviennent plus disputés : retours de 39,5 à 45,6 %, fins serrées de 16 à 22 %, de 36 à 33 tours. Le plafond à 2 faisait encore mieux à l'écran (fins serrées à 26 %), mais coûtait trop : prêtresses à 43 %, ou Brokk sous 25 % avec un éclat plus fort. Ysolde de 47,1 à **48,6 %**, Bérengère de 46,0 à **48,2 %**.
 
 **Réglage 0.30.0** (méthode : [EQUILIBRAGE.md](EQUILIBRAGE.md)) :
 - avec un d6 (l'utilisateur hésitait entre d6 et d7), Ysolde gagnait **63 %** de ses combats, qui duraient **52 tours** : la moitié de ses jets étaient des compétences, et son aura de sainteté se cumulait très vite ;
@@ -232,6 +236,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 **Compétence du 1 : Coup de chance** (🍀). À sa prochaine action, elle lance un **d6 vert** en plus de son dé : deux coups, résolus à part. Sur 4 à 6, le d6 frappe ; sur 1 à 3, il déclenche une compétence (Coup de chance, Pile ou face ou l'aura). **0.36.5** : c'était un d3, qui tombait toujours sur 1, 2 ou 3 et ne frappait donc jamais (règle de la 0.27.0) : valeur nette de +0,7 (Ssythra) à +2,7 points (Naraxes). Avec le d6 : +3,6 points pour chacune ; Ssythra de 48,1 à 50,3 %, Naraxes à 49,4 %.
 
 **Compétence du 2 : Pile ou face** (🪙). À sa prochaine action, une **pièce** remplace son dé. Pile, l'adversaire perd 15 PV, en dégâts directs ; face, rien. La pièce rapporte 7,1 dégâts en moyenne, contre 3,5 pour un coup normal. Sa valeur nette est pourtant **négative** (−5 points), parce qu'elle ne frappe pas : elle ne déclenche pas l'Aura de décoction, et elle prive la voleuse d'un jet de dé.
+
+**0.41.0, pile à 20 qui touche** (FAMILLES.md § 6.2 A, choix de l'utilisateur) : pile passe de 15 à 20 dégâts directs et compte comme un coup qui touche (l'Aura de décoction empoisonne). Face reste vide : la dualité nette et sa mise en scène sonore (tintement, son du critique) sont l'intérêt de la compétence. Une face qui frappe normalement avait été proposée (+5 points), puis refusée pour cette raison. Valeur nette de −5,0 à **+0,0** (Naraxes) et de −4,0 à **+0,6** (Ssythra). Naraxes de 49,4 à **52,9 %**, Ssythra de 50,3 à **53,6 %**. Prix accepté par l'utilisateur : Ysolde tombe à 35 % contre l'une et l'autre, deux contres connus de plus (EQUILIBRAGE.md).
 
 **Compétence du 3 : Aura de décoction** (🧪 permanente, cumulable). Chaque coup qui touche pose sur la cible 2 charges de poison par charge d'aura (0.36.4 ; avant : 1 charge pendant 4 tours) ; le poison se résout comme le poison ordinaire, et s'estompe d'une charge par tour. Valeur nette d'environ +9 à +13 points en 0.30.0. **Mesure 0.36.4** (1 000 combats par duel) : avec 1 charge, Naraxes 38,2 % et Ssythra 39,4 % ; avec **2**, 48,3 % et 47,7 % ; avec 3, 54,6 % et 53,4 %. Ssythra bat Bérengère à 63,7 %, contre connu.
 
@@ -269,6 +275,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 **Compétence du 2 : Riposte** (⚔️, sans durée depuis la 0.32.0). Le prochain coup qui le touche lui renvoie la moitié des PV retirés (arrondie), en dégâts directs, puis la charge est consommée. Jusqu'à la 0.31.0, elle durait un tour et s'éteignait à vide si l'adversaire sacrifiait son coup (jet de 1 à 3) : c'était un bug. Valeur nette : +3,8 points (4,0 PV renvoyés par combat), contre +1,4 point avant.
 
 **Compétence du 3 : Aura d'immunité** (permanente, non cumulable). Elle retire tous ses malus, puis plus aucun malus ne peut lui être posé jusqu'à la fin du combat (Peur, Poison…), sans que l'aura s'use. Une Purification de prêtresse peut la lui retirer, comme tout bonus. Valeur nette : **−1,7 point**. Peu d'adversaires posent des malus, et le 3 sacrifie son coup.
+
+**0.41.0, immunité et armure** (choix de l'utilisateur) : tant que l'aura est là, son armure gagne 1, en plus de l'immunité. C'est une règle d'aura, permanente et lisible, la même pour Gauvain. Un bouclier de 2 posé à chaque 3 avait été proposé, puis jugé peu clair. Valeur nette de −2,7 à **+1,1** (Aldric) et de −3,9 à **−0,6** (Gauvain). Compensation : son **esquive passe de 5 à 2 %** (Gauvain de 10 à 7 %). Sans elle, Aldric battait Thaldrin à 66-68 %, même avec 10 % de critique : l'armure vise les petits coups de l'ours, et l'immunité bloque déjà sa Pourriture et sa Luciole. Après : Aldric 53,8 % (53,3 avant), Gauvain 49,9 % (49,5), Aldric contre Thaldrin 62,5 %. La **Rétribution** (+36 et +31 points) n'est pas touchée (décision de l'utilisateur) : deux jauges au lieu de trois faisaient d'ailleurs passer Aldric sous 35 % contre Brokk.
 
 **Réglage 0.32.0** : la riposte réparée le portait à 57,3 %, avec Sylwen battue à 67/33 et Gauvain contre Naraxes à 66/34. Le critique passe de 15 à 12 % : Aldric revient à 55,0 % et Gauvain à 50,8 %. Les duels sont ramenés sous 65/35, sauf Ssythra contre Aldric, à 33/67 (contre connu).
 
@@ -328,7 +336,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Philosophie** (décision de l'utilisateur) : au début de chacun de ses tours, sauf le premier, il **change de forme**. Ses trois compétences dépendent de sa forme.
 - **Forme humaine** (soutien) :
-  - **Fleur de vie** (1) : +3 PV ;
+  - **Fleur de vie** (1) : Régénération 2 pendant 3 tours (0.41.0 ; +3 PV d'un coup avant). Le soin continue sous la forme d'ours. Valeur nette de +0,3 à **+2,2** (Thaldrin) et de +1,1 à **+3,4** (Brannoc) ;
   - **Écorce épaisse** (2) : un bouclier de 5 (4 avant la 0.36.5), qui se cumule. À 4, sa valeur nette était de +0,4 point (Thaldrin) et +1,9 (Brannoc) ; à 5, +2,3 et +2,4. À 6, Thaldrin battait Bérengère à 65/35, au-delà du budget ;
   - **Luciole** (3) : un malus de **3 charges** sur l'adversaire (0.35.1, une seule auparavant), qui ne peut plus esquiver et subit **+2 dégâts** à chaque coup encaissé (0.35.2) ; une charge part à chaque coup encaissé, et les charges se cumulent.
 - **Forme d'ours** (attaque) :

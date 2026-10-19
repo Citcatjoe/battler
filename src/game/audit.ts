@@ -86,6 +86,19 @@ export function createAudit() {
         }
       }
       if (i > 0 && prev.hp.some((h) => h === 0)) flag('étape après K.O.', r, i, b.type)
+      // Purge avec repli (0.41.0, Purification) : le repli ne joue que s'il n'y avait rien à retirer
+      if (b.type === 'event') {
+        const def = r.fighters[b.event.side].events.find((e) => e.id === b.event.eventId)
+        def?.effects.forEach((effect, k) => {
+          const applied = b.event.effects[k]
+          if (effect.type !== 'cleanse' || !effect.orElse || !applied) return
+          const target = effect.target === 'opponent' ? 1 - b.event.side : b.event.side
+          const had = prev.statuses[target].some((x) => STATUSES[x.id].polarity === effect.polarity)
+          if (applied.type === 'cleanse' && applied.removed.length === 0) flag('purge à vide malgré son repli', r, i, b.event.name)
+          if (applied.type !== 'cleanse' && had) flag('repli joué alors qu’il y avait à retirer', r, i, b.event.name)
+          if (applied.type !== 'cleanse') see('repli de purge')
+        })
+      }
       // Un statut de durée ne perd un tour que pendant une étape statusDuration
       if (b.type !== 'statusDuration')
         for (const side of [0, 1] as const)
@@ -190,16 +203,23 @@ export function createAudit() {
             if (should !== did && !(should && someoneDied)) flag(`compétence ${e.name} mal déclenchée`, r, i, `roll ${a.roll}`)
           }
       }
-        // Pile ou face (0.30.0) : pile = dégâts directs de la pièce, face = rien ; le statut est consommé
+        // Pile ou face (0.30.0) : pile = dégâts directs de la pièce, face = rien ; le statut est consommé.
+        // La pièce et ses dégâts sont lus dans le registre (0.41.0).
       if (b.type === 'coin') {
-        const st = find(prev.statuses[b.side], 'coinFlip')
-        if (!st) flag('pièce sans Pile ou face', r, i, '')
-        if (find(s.statuses[b.side], 'coinFlip')) flag('Pile ou face non consommé', r, i, '')
+        const toss = STATUSES[b.status].coinToss
+        if (!toss || !find(prev.statuses[b.side], b.status)) flag('pièce sans Pile ou face', r, i, b.status)
+        if (find(s.statuses[b.side], b.status)) flag('Pile ou face non consommé', r, i, '')
         const dmg = b.effects.reduce((t, e) => t + (e.type === 'damage' && e.target !== b.side ? e.amount : 0), 0)
-        if (b.heads ? dmg !== 15 : dmg !== 0) flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
+        if (b.heads ? dmg !== toss?.damage : dmg !== 0) flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
         if (b.side !== active(b.turn)) flag('pièce hors de son tour', r, i, '')
         if (r.beats.some((x) => x.turn === b.turn && x.type === 'attack' && x.attack.attacker === b.side))
           flag('coup porté le tour de la pièce', r, i, '')
+        // Pile qui touche : la réaction « quand il touche » d'une Aura de décoction suit la pièce
+        if (b.heads && toss?.headsTouches && find(s.statuses[b.side], 'decoctionAura') && s.hp[1 - b.side] > 0) {
+          const next = r.beats[i + 1]
+          if (!(next?.type === 'statusReaction' && next.status === 'decoctionAura')) flag('pile qui touche sans décoction', r, i, '')
+          else see('pile qui touche')
+        }
       }
       if (b.type === 'flurry') {
         const strikes = r.beats.slice(i + 1).filter((x) => x.turn === b.turn && x.type === 'attack')

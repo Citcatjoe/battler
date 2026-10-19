@@ -101,10 +101,10 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 | Son | Compétences |
 | --- | --- |
 | Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura de poison, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura de pourriture |
-| Bonus gagné | Furie des vents, Œil de faucon, Esquive améliorée, Peau de pierre, Épines, Vol de vie, Coup de chance, Pile ou face, Riposte, Écorce épaisse |
+| Bonus gagné | Furie des vents, Œil de faucon, Esquive améliorée, Peau de pierre, Épines, Vol de vie, Coup de chance, Pile ou face, Riposte, Écorce épaisse, Fleur de vie (elle pose une Régénération depuis la 0.41.0) |
 | Malus reçu | Souffle de la tombe, Peur, Luciole, Attente (ogre) |
-| Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura) |
-| Soin | Rage du sang, Fleur de vie |
+| Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura ; sans bonus à retirer, ses dégâts directs sonnent comme un coup reçu) |
+| Soin | Rage du sang |
 | Coup | Rétribution, Charge, Coup de griffe |
 
 ## 5. Mixage

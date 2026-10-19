@@ -72,7 +72,11 @@ describe('catalogue des statuts', () => {
     expect(poison.inGame).toBe(true)
     expect(poison.sources.map((s) => s.character.id).sort()).toEqual(['caldrec', 'ervald'])
     expect(poison.sources.every((s) => s.target === 'opponent')).toBe(true)
-    expect(catalog.find((e) => e.id === 'regeneration')!.inGame).toBe(false)
+    // Régénération : en jeu depuis la 0.41.0 (Fleur de vie) ; la Brûlure attend encore son premier porteur
+    const regeneration = catalog.find((e) => e.id === 'regeneration')!
+    expect(regeneration.inGame).toBe(true)
+    expect(regeneration.sources.map((s) => s.character.id).sort()).toEqual(['brannoc', 'thaldrin'])
+    expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(false)
     // Bonus d'abord, puis malus
     const firstNegative = catalog.findIndex((e) => e.def.polarity === 'negative')
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
@@ -422,9 +426,10 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura'])
-    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin'])
+    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin', 'life-bloom'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3'])
-    family('heal', ['blood-rage', 'blood-rage-murzug', 'life-bloom'])
+    // Fleur de vie pose une Régénération depuis la 0.41.0 : un bonus sur soi, donc le son du bonus
+    family('heal', ['blood-rage', 'blood-rage-murzug'])
     family(null, ['retribution', 'charge', 'claw'])
     const seen: Record<string, Set<string | null>> = {}
     for (const a of CHARACTER_IDS)

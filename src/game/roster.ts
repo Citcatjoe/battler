@@ -278,6 +278,9 @@ const caldrec = variant(ervald, {
   stats: { damageDie: +2, armor: -1, maxHp: -2, critChance: +0.04 },
 })
 
+/** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.41.0). */
+const PURIFICATION_LIGHT = 5
+
 const ysolde: CharacterDef = {
   id: 'ysolde',
   name: 'Ysolde',
@@ -309,7 +312,9 @@ const ysolde: CharacterDef = {
       nature: 'arcane',
       trigger: 'naturalTwo',
       forfeitsHit: true,
-      effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent' }],
+      // 0.41.0 : quand l'adversaire n'a aucun bonus à retirer, la lumière le blesse (dégâts directs) au lieu
+      // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
+      effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent' } }],
     },
     {
       id: 'holy-aura',
@@ -396,20 +401,24 @@ const ssythra = variant(naraxes, {
   stats: { maxHp: -2, dodgeChance: -0.04, critChance: +0.06, critMultiplier: +0.3 },
 })
 
+/*
+ * 0.41.0 : esquive de 5 à 2 %, en compensation de l'Aura d'immunité qui donne +1 d'armure (Aldric
+ * battait sinon Thaldrin à 66-68 %). Gauvain suit (7 %).
+ */
 const aldric: CharacterDef = {
   id: 'aldric',
   name: 'Aldric',
   race: 'Humain',
   archetype: 'Paladin',
   // Critiques lourds (12 % ×2,5 depuis la 0.32.0, quand la riposte a cessé de s'éteindre à vide) : face à l'intimidation du nain, ses coups moyens ne passaient pas (Brokk le battait à 75 %).
-  stats: { maxHp: 60, damageDie: 8, armor: 0, dodgeChance: 0.05, critChance: 0.12, critMultiplier: 2.5 },
+  stats: { maxHp: 60, damageDie: 8, armor: 0, dodgeChance: 0.02, critChance: 0.12, critMultiplier: 2.5 },
   look: { image: paladinImg, facing: 'right', scale: 1, portrait: { x: 64, y: 24, zoom: 3.4 } },
   lore: {
     tagline: 'Chaque coup reçu est une dette.',
     background:
       "Champion de l'ordre du Sceau ardent, Aldric porte la bannière dans les pires mêlées. Il encaisse sans broncher, tient le compte des coups reçus et rend la justice d'un seul revers.",
-    strengths: ['Rétribution : rend les coups reçus', 'Critiques lourds (12 %, ×2,5)', 'Immunité aux malus (aura)'],
-    weaknesses: ['Aucune esquive à parler (5 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure'],
+    strengths: ['Rétribution : rend les coups reçus', 'Critiques lourds (12 %, ×2,5)', 'Immunité aux malus et +1 d’armure (aura)'],
+    weaknesses: ['Aucune esquive à parler (2 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure sans son aura'],
   },
   events: [
     {
@@ -450,7 +459,7 @@ const gauvain = variant(aldric, {
     tagline: 'La foi tranche plus vite que la loi.',
     background:
       "Frère d'armes d'Aldric, Gauvain a quitté la bannière pour la croisade. Plus léger dans son armure, il esquive davantage et frappe plus souvent juste, mais encaisse moins.",
-    strengths: ['Critiques fréquents (17 %, ×2,5)', 'Esquive correcte (10 %)', 'Rétribution et riposte'],
+    strengths: ['Critiques fréquents (17 %, ×2,5)', 'Esquive correcte (7 %)', 'Rétribution et riposte'],
     weaknesses: ['Moins de PV qu’Aldric (54)', 'Rétribution plus maigre : il encaisse moins', 'Aucune armure'],
   },
   tint: 'sepia(0.35) hue-rotate(-25deg) saturate(1.4) brightness(0.9)',
@@ -522,7 +531,7 @@ const thaldrin: CharacterDef = {
     weaknesses: ['Forme imposée à chaque tour', 'Esquive faible', 'Coups moyens'],
   },
   events: [
-    { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'heal', amount: 3 }] },
+    { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] },
     { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 5 }] },
     { id: 'firefly', name: 'Luciole', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 3, target: 'opponent' }] },
     { id: 'charge', name: 'Charge', nature: 'martial', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },

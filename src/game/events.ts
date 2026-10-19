@@ -54,7 +54,11 @@ export type Effect =
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count`
    * derniers posés (ex. Purification : le dernier bonus de l'adversaire, aura comprise)
    */
-  | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number }
+  /**
+   * Retire des statuts d'une polarité (`count` : seulement les derniers posés). `orElse` : effet joué à
+   * la place quand il n'y a rien à retirer (Purification, 0.41.0 : la lumière blesse au lieu de tomber à vide).
+   */
+  | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number; orElse?: Exclude<Effect, { type: 'cleanse' }> }
   /**
    * Relâche un statut à jauges (Rétribution) : la somme de ses jauges en dégâts directs à l'adversaire,
    * au moins `min`, puis le statut est vidé. Le porteur ne remplit ses jauges que s'il a cet effet.
@@ -148,9 +152,10 @@ export function describeEffect(effect: Effect): string {
       return `relâche ${STATUSES[effect.status].name} : la somme de ses jauges en dégâts directs (au moins ${effect.min})`
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
-      if (effect.count === undefined) return `retire les ${kind}${on ? ` ${on}` : ''}`
+      const orElse = effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''
+      if (effect.count === undefined) return `retire les ${kind}${on ? ` ${on}` : ''}${orElse}`
       const what = effect.count === 1 ? `le dernier ${kind} posé` : `les ${effect.count} derniers ${kind} posés`
-      return `retire ${what}${on ? ` ${on}` : ''}, avec toutes ses charges`
+      return `retire ${what}${on ? ` ${on}` : ''}, avec toutes ses charges${orElse}`
     }
   }
 }

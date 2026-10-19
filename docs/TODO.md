@@ -100,8 +100,9 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 
 ## 14. Compétences faibles et déséquilibres connus
 
-- [ ] **Retouches à mesurer** (FAMILLES.md § 6) : Coup de chance (+1 à +3 points), Pile ou face (environ −5), Fleur de vie (+0,2 à +0,7 ; la Régénération 2 × 3 donne +2,4 au laboratoire), Aura d'immunité (environ −2).
-- [ ] **Aura de sainteté** (+42 à +44 points) et les duels Brokk contre les prêtresses (28-29 %) : à surveiller, surtout quand les reliques arriveront.
+- [x] **Retouches à mesurer** (FAMILLES.md § 6) : Coup de chance (0.36.5), Pile ou face, Fleur de vie et Aura d'immunité (0.41.0, SORTS.md § 10).
+- [ ] **Pile ou face** (+0,0 et +0,6) et **l'immunité de Gauvain** (−0,6) encore « presque inutiles » ; l'immunité attend des malus dans le roster (reliques, édits). Ysolde contre les voleuses (35 %) tolérés depuis la 0.41.0.
+- [ ] **Aura de sainteté** (+38 à +42 points, plafonnée à 3 charges depuis la 0.41.0) et les duels Brokk contre les prêtresses (27-28 %) : à surveiller, surtout quand les reliques arriveront.
 - [ ] **Combats longs** (jusqu'à 39 tours) : une montée de tension qui borne la durée, comme la tempête de The Bazaar (étude R1).
 
 ## 15. Sorts et laboratoire
@@ -115,8 +116,8 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [ ] **Ajouter les mesures de spectacle au rapport `npm run balance`** (`analysis.ts`).
 - [x] **Audit des compétences** (grille de drapeaux rouges) : `scripts/skills.report.ts` (SORTS.md § 8), et une série 3 de petites touches mesurées (SORTS.md § 9).
 - [x] **Quatre touches livrées** (0.36.5) : Esquive améliorée sans durée, Coup de chance au d6, Rage du sang à 5 pour Murzug, Écorce épaisse à 5 (à 6, Thaldrin dépassait le budget contre Bérengère).
-- [ ] **Aura de sainteté** : essayer un plafond de charges avec compensation (le plafond à 2 améliore nettement le spectacle, mais coûte 9 points à Ysolde).
-- [ ] **Audit de résolution** : lire la valeur du Pile ou face dans le registre au lieu de `coinFlip` et 15 écrits en dur.
+- [x] **Aura de sainteté** : plafond de 3 charges, compensé par la Purification de repli (0.41.0). Le plafond à 2 faisait plus de spectacle mais coûtait trop (SORTS.md § 10).
+- [x] **Audit de résolution** : la pièce est lue dans le registre (0.41.0).
 - [ ] **Raccourcis `npm run lab` et `npm run skills`**, une fois la refonte des sons terminée (`package.json`).
 - [ ] **Premier ajout au moteur pour les sorts** : un effet à l'expiration d'un statut (compte à rebours, écho, réserve relâchée). Ensuite : agir sur le dé adverse (Sabotage, Prophétie).
 
