@@ -782,9 +782,11 @@ export function simulateCombat(
   return end(states[0].hp >= states[1].hp ? 0 : 1, 'turnLimit')
 }
 
+/** Couleurs des camps (tokens --side-a / --side-b du design system). hex reprend la valeur du
+ *  token pour les attributs SVG, qui ne lisent pas les variables CSS partout. */
 export const SIDE_STYLE = {
-  0: { accent: 'text-sky-300', bar: 'bg-sky-400', ring: 'ring-sky-400/60', hex: '#38bdf8' },
-  1: { accent: 'text-rose-300', bar: 'bg-rose-500', ring: 'ring-rose-500/60', hex: '#f43f5e' },
+  0: { accent: 'text-side-a-hi', bar: 'bg-side-a', ring: 'ring-side-a/60', hex: '#43B4EE' },
+  1: { accent: 'text-side-b-hi', bar: 'bg-side-b', ring: 'ring-side-b/60', hex: '#EE4A72' },
 } as const
 
 export const percent = (p: number) => `${Math.round(p * 100)} %`

@@ -133,7 +133,7 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
       {/* Moitié gauche : le combat */}
       <section className="relative flex flex-col overflow-hidden px-14 pb-10 pt-10">
         <div
-          className={`pointer-events-none absolute -left-40 top-10 h-[700px] w-[700px] rounded-full opacity-30 blur-3xl ${winner === 0 ? 'bg-sky-600' : 'bg-rose-600'}`}
+          className={`pointer-events-none absolute -left-40 top-10 h-[700px] w-[700px] rounded-full opacity-30 blur-3xl ${winner === 0 ? 'bg-side-a' : 'bg-side-b'}`}
         />
         <div className="relative flex items-center gap-4">
           <h2 className="font-display text-4xl font-extrabold tracking-[0.25em] text-amber-200">COMBAT</h2>
@@ -185,8 +185,8 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
             </span>
           </div>
           <div className="flex h-3 overflow-hidden rounded-full border border-black bg-stone-900">
-            <div className="bg-sky-500" style={{ width: `${(stats[0].totalDamage / totalDamage) * 100}%` }} />
-            <div className="flex-1 bg-rose-500" />
+            <div className="bg-side-a" style={{ width: `${(stats[0].totalDamage / totalDamage) * 100}%` }} />
+            <div className="flex-1 bg-side-b" />
           </div>
         </div>
 

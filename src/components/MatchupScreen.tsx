@@ -70,8 +70,8 @@ export function MatchupScreen({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(87,83,78,0.25)_0%,rgba(12,10,9,0.55)_55%,rgba(12,10,9,0.9)_100%)]" />
         </>
       )}
-      <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-sky-500/10 to-transparent" />
-      <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-rose-500/10 to-transparent" />
+      <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-side-a/10 to-transparent" />
+      <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-side-b/10 to-transparent" />
 
       {/* Respiration entre le titre et le choix de l'arène */}
       <header className="relative flex flex-col items-center gap-6 pt-8">
