@@ -31,6 +31,31 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.50.0] — 2026-10-20
+
+Quatrième passe sur les compétences : les doutes de l'utilisateur après ses combats (immunité du paladin et poisons, Pile ou face « qui ne tombe jamais sur pile »), deux demandes (Furie des vents instantanée, Coup de chance cumulable) et trois compétences faibles, en favorisant le spectacle (Écorce épaisse, Riposte, Luciole). Laboratoire (série 7, 400 combats par duel), roster de 10. Méthode et chiffres : `docs/SORTS.md` § 13.
+
+### Examiné, sans bug
+- **Immunité du paladin contre les poisons** : dans le combat signalé (Ervald contre Aldric), l'immunité bloquait bien le Poison ; c'est l'**Aura de poison**, qui n'est pas un Poison, qui continuait d'agir. Désormais, l'immunité l'arrête aussi (ci-dessous).
+- **Pile ou face** : sur toutes les traces de l'utilisateur, 52 piles pour 54 faces (aujourd'hui 1 sur 6, un hasard qui arrive une fois sur neuf environ) ; la pièce s'affiche du bon côté. Mais le libellé « PILE ! » est presque caché par la pièce : signalé à la session qui modifie `FightScreen.tsx`.
+
+### Modifié
+- **Furie des vents instantanée** (demande de l'utilisateur) : le 2 tombe, et l'orc frappe deux fois **tout de suite**, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus par action). Nouveau crochet `instantStrikes`. Compensation : **dé de Gorak de d10 à d8** (sans elle, Gorak montait à 64 %). Valeur nette +7,1 → **+27,7** : la Furie devient le cœur de l'orc (« écrasante »). Gorak 50,4 → 50,9 %.
+- **Coup de chance cumulable** (demande de l'utilisateur) : chaque 1 ajoute une charge ; la prochaine action lance un d6 vert de plus par charge, chacun joué comme un coup à part, chacun pouvant être critique. Les charges multiples restent rares (il faut un 1 sur le d6 du coup en plus) : +3,3 → +4,0.
+- **L'Aura d'immunité arrête l'Aura de poison** (nouveau crochet `stoppedByImmunity`) : ce que l'utilisateur attendait en jeu. Le journal le dit. Aura de poison +5,4 → +4,7 ; Ervald 54,4 → 51,8 %.
+- **Écorce épaisse à 7** (au lieu de 5) : +0,8 → **+2,4**, elle n'est plus « presque inutile ».
+- **Riposte à deux charges** : ses deux prochains coups encaissés renvoient chacun la moitié des dégâts. +2,7 → **+7,1** ; Aldric 49,0 → 54,1 %, plus de retournements dans ses combats (retours de 61 à 62,5 %).
+- **Luciole à 4 charges** (au lieu de 3), texte raccourci : +2,5 → **+4,2** ; on la voit agir plus longtemps.
+- Audit : contrôles de la Furie instantanée et de l'aura arrêtée par l'immunité. **Empreinte de non-régression mise à jour** (changement de règles voulu).
+
+### Retours de l'utilisateur sur cette passe
+- **Aura de poison renommée « Aura glaciale »** : le nom laissait croire à un Poison, dont elle n'a pas la règle. C'est le froid du chevalier liche ; halo bleu glacé. Règle inchangée. L'icône peinte reste celle de l'ancienne aura, en attendant la sienne.
+- **Écorce épaisse et Peau de pierre : une seule règle**. Le statut « Écorce épaisse » disparaît : les deux compétences posent la même **Armure temporaire** (7 pour le druide, 6 pour le nain). Équilibre inchangé (c'était déjà la même règle sous deux noms).
+- **Feux follets** au lieu de la Luciole (jugée ennuyeuse) : une **Brûlure de 3 pendant 3 tours** sur l'adversaire, à la fin de chacun de ses tours ; mêmes valeurs que la Luciole à 4 charges (+4,2). La Luciole reste au registre, inutilisée. L'icône de la Brûlure est celle des lucioles, en attendant la sienne. Écartées : Racines (perd sa prochaine action, −1,0, trop proche de la Peur) et Ronces (−7).
+
+### Mesures
+- Roster de 10, 400 combats par duel : de **43,1 %** (Ysolde) à **54,1 %** (Aldric), aucun duel hors limites (avant : 44,0 à 54,6 %). Ysolde, la plus basse, perd encore 0,9 point : à traiter.
+- Spectacle : stable, sauf chez Gorak, dont les combats se décident plus vite (retours de 64 à 59 %, fins serrées de 41 à 38 %).
 ## [0.49.0] — 2026-10-20
 
 Lecture du combat (demande de l'utilisateur) : ce qui se passe ensemble tombe ensemble, et une frappe spéciale empile ses badges. Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.

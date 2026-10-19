@@ -44,7 +44,6 @@ export type StatusId =
   | 'riposte'
   | 'retribution'
   | 'waiting'
-  | 'barkSkin'
   | 'firefly'
   | 'rotAura'
   | 'rot'
@@ -134,6 +133,12 @@ export interface StatusDef {
    * Sans ce champ : une seule charge, consommée en entier.
    */
   strikeCharges?: 'all' | 'one'
+  /**
+   * Coups supplémentaires instantanés (0.50.0, Furie des vents) : une charge gagnée pendant l'action
+   * frappe dans cette même action, juste après le coup en cours, au lieu d'attendre l'action suivante.
+   * Une charge gagnée pendant ces coups-là enchaîne encore (au plus INSTANT_CHAIN fois par action).
+   */
+  instantStrikes?: boolean
   /** Faces du dé des coups supplémentaires (défaut : le dé du porteur), ex. le d6 de Coup de chance */
   extraDie?: number
   /**
@@ -167,6 +172,11 @@ export interface StatusDef {
   modifyIncoming?: (damage: number, s: Status) => number
   /** Immunité : aucun statut de cette polarité ne peut être posé sur le porteur (sans consommer de charge) */
   immune?: Polarity
+  /**
+   * Statut qui agit sur l'adversaire de son porteur (`onOpponentTurnStart`) et que l'immunité de la
+   * victime arrête aussi (0.50.0, Aura de poison contre l'Aura d'immunité) : aucun effet, une étape vide.
+   */
+  stoppedByImmunity?: boolean
   /** Riposte : le prochain coup qui touche le porteur renvoie cette part des PV retirés (dégâts directs) ; consommé */
   reflectsHit?: number
   /**
@@ -357,19 +367,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'Chaque charge : une action où le porteur frappe deux fois, chaque coup résolu à part. Les charges se cumulent et restent en réserve : une par action.',
-    describe: (s) =>
-      s.stacks > 1
-        ? `Frappe deux fois à chacune de ses ${s.stacks} prochaines actions, chaque coup résolu à part`
-        : 'Frappe deux fois à sa prochaine action, chaque coup résolu à part',
+    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Un 2 pendant ces coups relance la Furie.',
+    describe: () => 'Frappe deux fois tout de suite, chaque coup résolu à part',
     badge: () => '×2',
-    // 0.46.0 (demande de l'utilisateur) : cumulable, sans durée ; chaque action dépense une charge
+    // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
+    // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas.
     counter: 'stacks',
     stacking: 'add',
-    // Une Furie posée avec une durée (aucune aujourd'hui) se décompte en fin de tour
     expiresAt: 'turnEnd',
-    extraStrikes: 1,
-    strikeCharges: 'one',
+    extraStrikes: 2,
+    instantStrikes: true,
   },
   evasion: {
     name: 'Esquive améliorée',
@@ -413,12 +420,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Coup de chance',
     look: { glow: 'rgba(52,211,153,0.85)', dieColor: '#34d399' },
     polarity: 'positive',
-    summary: 'À sa prochaine action, le porteur lance un d6 en plus de son dé : deux coups, résolus à part.',
-    describe: () => 'À sa prochaine action, lance un d6 en plus de son dé : deux coups, résolus à part',
-    badge: () => '+d6',
-    stacking: 'refresh',
-    maxStacks: 1,
+    summary: 'À sa prochaine action, le porteur lance un d6 de plus par charge en plus de son dé : autant de coups, résolus à part, chacun pouvant être critique. Se cumule.',
+    describe: (s) =>
+      s.stacks > 1
+        ? `À sa prochaine action, lance ${s.stacks} d6 en plus de son dé : ${s.stacks + 1} coups, résolus à part`
+        : 'À sa prochaine action, lance un d6 en plus de son dé : deux coups, résolus à part',
+    badge: (s) => `+${s.stacks}d6`,
+    // 0.50.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
+    counter: 'stacks',
+    stacking: 'add',
     extraStrikes: 1,
+    strikeCharges: 'all',
     // d6 depuis la 0.36.5 : un d3 tombait toujours sur 1, 2 ou 3 et ne frappait jamais (valeur nette +0,7 à +2,7)
     extraDie: 6,
   },
@@ -428,11 +440,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Riposte',
     look: { glow: 'rgba(253,230,138,0.9)' },
     polarity: 'positive',
-    summary: "Le prochain coup qui touche le porteur lui renvoie la moitié des dégâts. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
-    describe: (s) => `Le prochain coup encaissé renvoie la moitié de ses dégâts à l'attaquant${forTurns(s)}`,
+    summary: "Chaque charge : le prochain coup qui touche le porteur lui renvoie la moitié des dégâts. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
+    describe: (s) =>
+      s.stacks > 1
+        ? `Ses ${s.stacks} prochains coups encaissés renvoient chacun la moitié de leurs dégâts à l'attaquant`
+        : "Le prochain coup encaissé renvoie la moitié de ses dégâts à l'attaquant",
     badge: () => '50 %',
-    stacking: 'refresh',
-    maxStacks: 1,
+    // 0.50.0 : deux charges par Riposte (deux coups renvoyés), comme le Vol de vie
+    counter: 'stacks',
+    stacking: 'add',
+    maxStacks: 2,
     reflectsHit: 0.5,
   },
   retribution: {
@@ -447,18 +464,20 @@ export const STATUSES: Record<StatusId, StatusDef> = {
 
   /* Auras : bonus permanents (sans durée) posés sur un 3 au dé, pour le reste du combat. */
   poisonAura: {
-    name: 'Aura de poison',
-    look: { aura: 'rgba(74,222,128,0.55)' },
+    name: 'Aura glaciale',
+    look: { aura: 'rgba(147,197,253,0.6)' },
     polarity: 'positive',
     // 0.45.0 : le texte dit que ce n'est pas un Poison (note de l'utilisateur). Un vrai poison serait
     // bloqué par l'Aura d'immunité et contré par la Régénération : Ervald tombait à 31 % contre Gauvain.
     summary:
-      "Au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge. Ce n'est pas un Poison : ni l'immunité ni la régénération ne l'arrêtent. Permanente.",
-    describe: (s) => `Au début de chaque tour adverse, avec ses poisons, l'adversaire perd ${plural(s.stacks, 'PV')} ; rien ne l'arrête`,
+      "Au début de chaque tour de l'adversaire, juste après ses poisons, le froid de la tombe lui fait perdre 1 PV par charge. L'Aura d'immunité l'arrête ; la régénération, non. Permanente.",
+    describe: (s) => `Au début de chaque tour adverse, le froid lui fait perdre ${plural(s.stacks, 'PV')}, sauf s'il est immunisé`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
     // 0.45.0 (choix de l'utilisateur) : elle agit au début du tour de l'ADVERSAIRE, dans la même étape
     // que le Poison qu'il subit, au lieu du début du tour du porteur. Toujours des dégâts directs.
+    // 0.50.0 : l'Aura d'immunité l'arrête aussi (l'utilisateur pensait l'immunité inefficace)
+    stoppedByImmunity: true,
     onOpponentTurnStart: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }],
   },
   powerAura: {
@@ -544,21 +563,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
 
   /* Druide (0.35.0). */
-  barkSkin: {
-    name: 'Écorce épaisse',
-    polarity: 'positive',
-    summary: "Une écorce qui absorbe des dégâts après l'armure, puis s'effrite. Se cumule.",
-    describe: (s) => `Absorbe encore ${plural(s.stacks, 'point')} de dégâts, puis s'effrite`,
-    badge: (s) => String(s.stacks),
-    stacking: 'add',
-    shield: true,
-  },
   firefly: {
     name: 'Luciole',
     look: { motion: 'fireflies' },
     polarity: 'negative',
     summary: "Des lucioles trahissent le porteur : il ne peut plus esquiver, et chaque coup reçu lui inflige 2 dégâts de plus, avant l'armure. Chaque coup qui le touche en chasse une (une charge).",
-    describe: (s) => `Ne peut plus esquiver et subit +2 dégâts par coup ; ${s.stacks > 1 ? `ses ${s.stacks} prochains coups encaissés` : 'le prochain coup encaissé'} en chassent les lucioles`,
+    // 0.50.0 : texte raccourci (l'audit le trouvait trop long)
+    describe: (s) => `Ne peut plus esquiver, chaque coup reçu fait +2 ; ${s.stacks > 1 ? `${s.stacks} coups encaissés` : 'un coup encaissé'} les chassent`,
     badge: (s) => String(s.stacks),
     counter: 'stacks',
     stacking: 'add',

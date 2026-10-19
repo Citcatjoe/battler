@@ -460,3 +460,65 @@ Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spe
 - **Le « ding » n'est pas vérifiable à l'oreille** par l'agent.
 - **Écorce épaisse** passe sous le seuil de « presque inutile » (+1,1, dans la marge).
 
+## 13. Quatrième passe : doutes de jeu, Furie instantanée, Coup de chance cumulable (0.50.0)
+
+**Demande** : « son immunité ne l'a pas protégé des poisons » ; « Pile ou face ne tombe jamais sur pile (bug ?) » ; Coup de chance cumulable, un dé de plus par charge ; Furie des vents instantanée ; et trois compétences cassées à réparer en favorisant le spectacle, avec le tour des taux de victoire avant et après.
+
+### Les doutes, vérifiés sur les traces de l'utilisateur (`logs/combats/`)
+
+- **Immunité** (Ervald contre Aldric, 0 h 29) : l'Aura d'immunité bloquait le Poison ; l'Aura de poison, des dégâts directs, continuait. Pas un bug, mais une règle qui trompe : désormais, l'immunité arrête aussi l'aura.
+- **Pile ou face** : 52 piles pour 54 faces sur toutes les traces ; 1 sur 6 le dernier jour (environ une chance sur neuf). L'affichage de la pièce est juste (capture), mais le libellé « PILE ! » est presque caché par la pièce.
+
+### Laboratoire (série 7, 400 combats par duel)
+
+| Piste | Personnage | Δ | Lecture |
+| --- | --- | --- | --- |
+| Furie instantanée (un coup) | Gorak | +1,5 | essai faux : la Furie, ce sont deux coups |
+| Furie instantanée (deux coups), intégrée | Gorak | Gorak à 64 % | hors budget ; d6 : 60 % ; d4 : 58 % ; critique 8 % : 55 % |
+| Même chose, **dé de d10 à d8** | Gorak | 50,9 % | **retenu** |
+| Coup de chance cumulable | Naraxes | +0,2 | **retenu** (demande) ; charges multiples rares |
+| Aura de poison arrêtée par l'immunité | Ervald | −0,8 | **retenue** |
+| Écorce 7 / 9 | Thaldrin | +2,1 / +3,6 | **7 retenue** |
+| Écorce épineuse / de sève | Thaldrin | +1,0 / +0,8 | plus visibles, mais faibles |
+| Riposte 75 % / 100 % | Aldric | +2,9 / +6,1 | à 100 %, Thaldrin 65 % |
+| Riposte à deux charges | Aldric | +4,5 | **retenue** : retours 61 → 63 % |
+| Luciole 4 charges / +3 dégâts | Thaldrin | +1,0 / +2,4 | **4 charges retenue** ; +3 met Ysolde contre Thaldrin à la limite |
+
+### Avant → après (0.47.0 → 0.50.0, roster de 10)
+
+| Personnage | Victoires | Retours | Fins serrées |
+| --- | --- | --- | --- |
+| Gorak | 50,4 → 50,9 % | 63,9 → 59,3 % | 41,4 → 37,9 % |
+| Elaria | 49,6 → 48,3 % | 52,9 → 52,6 % | 33,7 → 33,4 % |
+| Brokk | 49,7 → 48,4 % | 61,2 → 60,6 % | 40,3 → 39,4 % |
+| Ervald | 54,4 → 51,8 % | 62,2 → 60,8 % | 41,8 → 41,1 % |
+| Ysolde | 44,0 → **43,1 %** | 46,3 → 45,4 % | 24,2 → 22,4 % |
+| Naraxes | 50,2 → 49,9 % | 55,2 → 55,4 % | 34,3 → 34,6 % |
+| Aldric | 49,0 → **54,1 %** | 61,0 → 62,5 % | 41,2 → 41,6 % |
+| Morgrut | 48,9 → 48,0 % | 59,4 → 59,1 % | 41,5 → 41,1 % |
+| Thaldrin | 49,1 → 51,5 % | 65,2 → 63,7 % | 43,6 → 43,1 % |
+| Fanchon | 54,6 → 53,9 % | 62,3 → 62,4 % | 41,8 → 42,3 % |
+
+| Compétence | Valeur nette | Drapeau |
+| --- | --- | --- |
+| Furie des vents | +7,1 → **+27,7** | aucun → écrasante (le cœur de l'orc) |
+| Coup de chance | +3,3 → +4,0 | aucun |
+| Aura de poison | +5,4 → +4,7 | aucun |
+| Écorce épaisse | +0,8 → **+2,4** | presque inutile → aucun |
+| Riposte | +2,7 → **+7,1** | aucun |
+| Luciole | +2,5 → **+4,2** | aucun |
+| Pile ou face | −0,8 → +0,4 | presque inutile |
+
+### Limites
+
+- **Ysolde (43,1 %)** est à un point du plancher : la prochaine passe doit la remonter.
+- **Gorak change d'identité** : un dé de d8 et une Furie qui frappe tout de suite ; ses combats se décident plus vite.
+- **Le libellé de la pièce** reste à corriger dans `FightScreen.tsx`.
+
+### Retours de l'utilisateur sur la passe (0.50.0)
+
+- **Aura de poison → Aura glaciale** : le nom trompait (ce n'est pas un Poison). Le froid du chevalier liche ; même règle.
+- **Écorce épaisse = Armure temporaire** : « c'est de l'armure, non ? » Oui : les deux statuts avaient exactement la même règle. Le statut Écorce disparaît, les deux compétences (Peau de pierre 6, Écorce épaisse 7) posent l'Armure temporaire. Simplification sans effet sur l'équilibre.
+- **Feux follets au lieu de la Luciole** (« ennuyante ») : trois pistes mesurées (400 combats par duel) : Feux follets, Brûlure 3 pendant 3 tours, **0,0** ; Racines, l'adversaire perd sa prochaine action, −1,0 ; Ronces, ses 3 prochains coups lui coûtent 2 PV, −7,1. Feux follets retenus : même force, des dégâts visibles à chaque fin de tour adverse, la lignée des lucioles.
+- Mesures finales : de 43,0 % (Ysolde) à 54,0 % (Aldric) ; Feux follets +4,2, Écorce +2,4, Aura glaciale +4,6.
+

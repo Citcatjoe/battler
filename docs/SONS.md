@@ -101,7 +101,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 
 | Son | Compétences |
 | --- | --- |
-| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura de poison, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura de pourriture |
+| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura de pourriture |
 | Bonus gagné | Furie des vents, Œil de faucon, Esquive améliorée, Peau de pierre, Épines, Vol de vie, Coup de chance, Pile ou face, Riposte, Écorce épaisse, Fleur de vie (elle pose une Régénération depuis la 0.42.0) |
 | Malus reçu | Souffle de la tombe, Peur, Luciole, Attente (ogre) |
 | Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura ; sans bonus à retirer, ses dégâts directs sonnent comme un coup reçu) |
@@ -197,7 +197,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Malus reçu | Souffle de la tombe, Peur, Luciole, Attente ; l'Aura de décoction qui empoisonne et l'Aura de pourriture qui pourrit, quand un coup touche |
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi |
-| Ronge | Poison, Pourriture et Brûlure qui agissent sur leur porteur ; l'Aura de poison qui frappe l'adversaire |
+| Ronge | Poison, Pourriture et Brûlure qui agissent sur leur porteur ; l'Aura glaciale qui frappe l'adversaire |
 | Soin | Rage du sang, Fleur de vie ; le vol de vie (Vol de vie) ; l'Aura de sainteté et la Régénération qui soignent |
 | Transformation | le druide qui change de forme, dans les deux sens |
 | KO | la fin du combat, par K.O. ou à la limite de tours |
@@ -214,7 +214,7 @@ Les deux personnages d'une même race partagent leurs compétences.
 | Orc (Gorak, Murzug) | Rage du sang : Soin | Furie des vents : Bonus gagné | Aura de puissance : Aura gagnée |
 | Elfe (Elaria, Sylwen) | Œil de faucon : Bonus gagné | Esquive améliorée : Bonus gagné | Aura de précision : Aura gagnée |
 | Nain (Brokk, Grimbald) | Peau de pierre : Bonus gagné | Épines : Bonus gagné | Aura d'intimidation : Aura gagnée |
-| Mort-vivant (Ervald, Caldrec) | Souffle de la tombe : Malus reçu | Vol de vie : Bonus gagné | Aura de poison : Aura gagnée |
+| Mort-vivant (Ervald, Caldrec) | Souffle de la tombe : Malus reçu | Vol de vie : Bonus gagné | Aura glaciale : Aura gagnée |
 | Humain (Ysolde, Bérengère) | Peur : Malus reçu | Purification : Aura perdue ou Dissipation | Aura de sainteté : Aura gagnée |
 | Homme-lézard (Naraxes, Ssythra) | Coup de chance : Bonus gagné | Pile ou face : Bonus gagné | Aura de décoction : Aura gagnée |
 | Paladin (Aldric, Gauvain) | Rétribution : Coup par jauge, Coup critique sur la dernière | Riposte : Bonus gagné | Aura d'immunité : Aura gagnée |
@@ -232,7 +232,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | --- | --- | --- |
 | Poison, Pourriture | début du tour du porteur | Ronge |
 | Brûlure | fin du tour du porteur | Ronge |
-| Aura de poison | début du tour du porteur, dégâts à l'adversaire | Ronge |
+| Aura glaciale | début du tour du porteur, dégâts à l'adversaire | Ronge |
 | Régénération | début du tour du porteur | Soin |
 | Aura de sainteté | fin du tour du porteur | Soin |
 | Épines | le porteur est touché | Coup (sur l'attaquant) |

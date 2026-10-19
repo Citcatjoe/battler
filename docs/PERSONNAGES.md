@@ -94,6 +94,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.46.0, Furie des vents cumulable** (demande de l'utilisateur) : chaque 2 ajoute une charge, sans durée ; chaque action en dépense une (deux coups), les autres restent en réserve. Valeur nette +6,9 → +7,1 : il faut un 2 pendant la rafale pour en avoir deux. Gorak de 49,8 à 50,4 %.
 
+**0.50.0, Furie des vents instantanée** (demande de l'utilisateur) : le 2 tombe, et Gorak frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus). Sans compensation, Gorak montait à 64 % (deux coups de d4 au lieu de son dé : encore 58 %) : son **dé passe de d10 à d8**, et Gorak revient à 50,9 %. La Furie vaut désormais +27,7 points : elle est le cœur de l'orc. Ses combats se décident plus vite (retours de 64 à 59 %).
+
 ## Elfes : éviter et punir
 
 **Image** : `elf.png`, une chasseresse de la nuit qui bande son arc en croissant de lune, en bleu nuit et argent (0.30.1). Elle remplace l'ancienne elfe lie-de-vin, une placeholder tirée d'une œuvre existante. Le design prévu pour une « Chasseresse de la nuit » distincte (STYLE_BIBLE) sert maintenant de modèle à Elaria et à Sylwen.
@@ -185,7 +187,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Réglage 0.25.0** : le coup sacrifié coûte cher. Sans compensation, les morts-vivants tombaient à 43,5 %. Ervald passe de 56 à 60 PV, et Caldrec de 54 à 58.
 
-**Compétence du 3 : Aura de poison** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
+**Compétence du 3 : Aura glaciale** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
 
 **0.45.0, ce n'est pas un poison, mais elle agit avec lui** (note de l'utilisateur : « se résout quand ? comme le poison normal ? »). Avant, elle frappait au début du tour du **porteur** ; elle frappe désormais **au début du tour de l'adversaire, juste après ses poisons**, dans la même étape (choix de l'utilisateur). Elle reste des dégâts directs, sans décroître : une version qui pose de vrais Poisons a été mesurée, et l'Aura d'immunité du paladin les bloque (Ervald à **31 % contre Gauvain**) ; à deux charges, les poisons s'empilaient (Ervald battait Brokk à 67 %). Valeur nette +11,0 → **+13,8** (Ervald), +4,1 → **+6,2** (Caldrec) : elle frappe dès le tour où elle est posée. Avec le Vol de vie à deux charges, Ervald passe de 47,5 à **54,6 %** (roster de 10 personnages, 0.45.0).
 
@@ -217,6 +219,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
   - Ses combats rapides laissent moins de temps au poison d'agir : son identité passe davantage par les coups que par l'affliction.
 
 ---
+
+**0.50.0, l'immunité arrête l'aura** : l'Aura d'immunité du paladin arrête désormais l'Aura de poison (le journal le dit). L'utilisateur, en jeu, pensait l'immunité inefficace. Aura de poison +5,4 → +4,7 ; Ervald 54,4 → 51,8 %.
 
 ## Humains : contrôler
 
@@ -297,6 +301,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
+**0.50.0, Coup de chance cumulable** (demande de l'utilisateur) : chaque 1 ajoute une charge ; la prochaine action lance un d6 vert de plus par charge, chacun pouvant être critique. Les charges multiples sont rares (il faut un 1 sur le d6 du coup en plus) : +3,3 → +4,0. **Pile ou face** : sur ses traces, 52 piles pour 54 faces ; le libellé « PILE ! » est presque caché par la pièce, d'où l'impression qu'elle ne tombe jamais sur pile.
+
 ## Paladin : rendre les coups
 
 **Image** : `paladin.png`, un chevalier en armure à l'épée flamboyante, avec une bannière rouge (0.31.0). C'est un humain, mais il forme sa propre famille ; sa variante est Gauvain (0.32.0). Son nom, Aldric, est un choix par défaut.
@@ -333,6 +339,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 - **Mesures** : 50,8 % de victoires (0.32.0, 400 combats par duel), environ 20 tours par combat. Brokk le bat à 64 % : contre connu, comme pour Aldric (63 %).
 
 ---
+
+**0.50.0, Riposte à deux charges** : ses deux prochains coups encaissés renvoient chacun la moitié des dégâts. +2,7 → **+7,1** ; Aldric 49,0 → 54,1 %, ses combats se retournent un peu plus (retours de 61 à 62,5 %). À 100 % de renvoi, Thaldrin passait à 65 % contre lui.
 
 ## Ogre : taper, attendre, taper plus fort
 
@@ -409,6 +417,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Stats** : PV 52 (−4), esquive 12 % (+4), critique 12 % (+4).
 - **Teinte** : feuillage roux (`hue-rotate(-28deg) saturate(1.25)`).
 - **Mesures** : 49,4 % (0.35.0). Il bat les prêtresses à 66 % : contre connu (EQUILIBRAGE.md).
+
+**0.50.0, Écorce à 7, Feux follets** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**) et pose désormais la même **Armure temporaire** que la Peau de pierre du nain (une seule règle, deux compétences). La Luciole, jugée ennuyeuse par l'utilisateur, laisse place aux **Feux follets** : une Brûlure de 3 pendant 3 tours sur l'adversaire, même valeur (+4,2), mais des dégâts qui se voient à chaque fin de tour. Écartées : Racines (−1,0, trop proche de la Peur d'Ysolde) et Ronces (−7). Thaldrin 49,1 → 51,4 %.
 
 ## Barde : deux dés, et la musique sur les doubles
 

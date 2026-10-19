@@ -77,7 +77,9 @@ describe('catalogue des statuts', () => {
     const regeneration = catalog.find((e) => e.id === 'regeneration')!
     expect(regeneration.inGame).toBe(true)
     expect(regeneration.sources.map((s) => s.character.id).sort()).toEqual(['thaldrin'])
-    expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(false)
+    // La Brûlure est en jeu depuis la 0.50.0 (Feux follets) ; la Luciole, remplacée, ne l'est plus
+    expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
+    expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
     // Bonus d'abord, puis malus
     const firstNegative = catalog.findIndex((e) => e.def.polarity === 'negative')
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
