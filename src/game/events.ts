@@ -78,6 +78,15 @@ export type Condition =
   /** À partir du tour n (inclus) */
   | { type: 'fromTurn'; turn: number }
 
+/**
+ * Nature d'une compétence, pour sa présentation seulement (couleur de sa carte, design system) :
+ * martiale (force, arme), adresse (agilité, ruse) ou arcane (magie). Sans effet sur le combat.
+ */
+export type SkillNature = 'martial' | 'finesse' | 'arcane'
+
+/** Nature retenue quand une compétence n'en déclare pas : l'arcane, le violet des cartes d'avant. */
+export const DEFAULT_SKILL_NATURE: SkillNature = 'arcane'
+
 export interface CharacterEvent {
   id: string
   name: string
@@ -104,6 +113,8 @@ export interface CharacterEvent {
   reshapesHit?: { value: 'max' | 'reroll'; bonus?: number; noCrit?: boolean }
   /** Forme requise (personnage à formes, ex. druide) : la compétence n'existe que sous cette forme */
   form?: string
+  /** Nature de la compétence, pour sa carte (défaut : DEFAULT_SKILL_NATURE). Présentation seulement. */
+  nature?: SkillNature
 }
 
 /** Déclencheurs liés à la valeur du dé, connus dès le jet. */

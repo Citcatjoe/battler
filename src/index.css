@@ -748,6 +748,59 @@ body {
   }
 }
 
+/* ---------- Carte de compétence : la lame (design system) ----------
+   Deux coins opposés coupés (--cut-blade), contour et trait de tête de 2 px à la couleur de la
+   nature (data-nature : martial = --gold-500, finesse = --armor, arcane = --arcane). La carte est
+   découpée : son ombre est sur l'enveloppe (.skill-blade-wrap). Fenêtre du sceau octogonale. */
+@layer components {
+  .skill-blade-wrap { filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.55)); }
+  .skill-blade {
+    --nature: var(--arcane);
+    --c: var(--cut-blade);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(var(--nature) 0 2px, color-mix(in srgb, var(--nature) 45%, transparent) 2px);
+    clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+  }
+  .skill-blade[data-nature='martial'] { --nature: var(--gold-500); }
+  .skill-blade[data-nature='finesse'] { --nature: var(--armor); }
+  .skill-blade::before {
+    --c: calc(var(--cut-blade) - 0.6px);
+    content: '';
+    position: absolute;
+    inset: 2px 1px 1px;
+    z-index: -1;
+    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 60%);
+    box-shadow: var(--hl);
+    clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
+  }
+
+  .skill-seal {
+    --c: 30%;
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--nature, var(--line-bronze));
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  }
+  .skill-seal::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    background: var(--bg-0);
+    clip-path: inherit;
+  }
+}
+
 /* ---------- Panneau de combattant et tuile de portrait (design system) ----------
    .fighter-panel : voile --scrim flouté, rayon 2, filet clair, liseré de 2 px en tête à la
    couleur du camp (--side, posé par .side-a / .side-b). Pas d'équerres.

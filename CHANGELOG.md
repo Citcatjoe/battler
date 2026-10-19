@@ -31,6 +31,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.12] — 2026-10-19
+
+### Ajouté
+- **Cartes de compétence en lame** (design system, étape 12) : deux coins opposés coupés de 12 px, contour et trait de tête de 2 px à la couleur de la **nature** de la compétence (martiale `--gold-500`, adresse `--armor`, arcane `--arcane`), ombre sur l'enveloppe. Fenêtre octogonale du sceau (`SkillSeal`, 56 px sur la carte, 32 px dans l'infobulle des dés), prête pour les sceaux peints (asset A-01, `SKILL_SEAL`) avec repli sur l'icône peinte actuelle, à la même taille.
+- Champ optionnel `nature` des compétences (`SkillNature`, `events.ts`), présentation seulement, sans effet sur le combat. **Aucune compétence n'est encore classée** : toutes prennent l'arcane par défaut, le violet des cartes d'avant.
+
+### Modifié
+- Lignes d'effet (cartes et infobulles) aux tokens : Alegreya Sans 15, mentions en 13, soin `--good`, dégâts directs `--bad`, relâche `--crit`, purge `--dodge`. Le filet orné d'un losange laisse place à un filet simple dans les cartes de compétence.
+
 ## [0.38.11] — 2026-10-19
 
 ### Modifié

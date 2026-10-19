@@ -40,6 +40,7 @@ src/
     test-utils.ts        personnages de test aux jets prévisibles
   components/            écrans (*Screen.tsx), briques d'interface (Tabs, StatusTray…), screens.test.tsx
     Betting.tsx          guichet du match (plateaux, tuiles, pièces), rappel sous le VS, classement, résultat des paris de l'écran de fin (aucune règle : tout vient de betting.ts)
+    SkillSeal.tsx        fenêtre octogonale du sceau d'une compétence (asset A-01 à venir, repli sur l'icône peinte)
     VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement
     PrestigeButton.tsx   bouton principal d'un écran (pièce prestige du design system, un seul par écran)
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
@@ -101,7 +102,7 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 2. Dans `roster.ts`, créer un `CharacterDef` : stats, `look` (`image`, `facing`, `scale`, cadrage du portrait `{x, y, zoom}`), `lore` (fiche courte) et `events`. Puis ajouter sa section dans `docs/PERSONNAGES.md` (voir la check-list en fin de document).
 3. Pour une variante : `variant(base, { id, name, archetype, lore, tint, stats: { …écarts } })`. Elle hérite des événements (et des formes).
    - **Personnage à formes** (druide) : `forms: [{ id, name }, { id, name, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence.
-   - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (Charge, Coup de griffe), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`).
+   - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (Charge, Coup de griffe), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
 4. L'ajouter à `ROSTER`. La sélection (rangée par famille via `FAMILIES`), les fiches, les statistiques et le tournoi le prennent en compte automatiquement.
 5. `npm run check` : `validateRoster` vérifie les données, le test d'équilibre vérifie la tolérance (entre 42 et 58 %, aucun duel au-delà de 65/35) ; `npm run balance` donne le rapport détaillé (docs/EQUILIBRAGE.md), et l'empreinte de non-régression doit être mise à jour (`npx vitest run -u`), puisque le roster a changé.
 

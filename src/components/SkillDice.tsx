@@ -1,7 +1,7 @@
 import type { Character } from '../game/character'
 import { describeCondition, type CharacterEvent, type Trigger } from '../game/events'
 import { EffectLine } from './compendium/SkillsSection'
-import { Icon, SKILL_ICON } from './Icon'
+import { SkillSeal } from './SkillSeal'
 
 /** Les trois faces qui déclenchent une compétence de race, dans l'ordre. */
 const FACES: { face: 1 | 2 | 3; trigger: Trigger }[] = [
@@ -115,7 +115,7 @@ function SkillTooltip({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-ink-1">
-          {SKILL_ICON[event.id] && <Icon name={SKILL_ICON[event.id]!} className="h-8 w-8" />}
+          <SkillSeal id={event.id} size={32} />
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
