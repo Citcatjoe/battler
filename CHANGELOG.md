@@ -31,6 +31,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.46.1] — 2026-10-20
+
+### Modifié
+- **Zone d'état plus grande** au-dessus des combattants (demande de l'utilisateur) : médaillons de 64 px au lieu de 48 (+33 %), compteur, sablier et variation (−1, +2) agrandis d'autant, écarts élargis. Le nombre d'états affichés en même temps le permet.
+
 ## [0.46.0] — 2026-10-20
 
 Troisième passe sur les compétences : deux demandes de l'utilisateur (le « ding » des doubles de la barde, la Furie des vents cumulable) et trois compétences signalées par l'audit 0.45.1 (Siffloter, Fausse note, Ouverture). Laboratoire (série 6, 400 combats par duel), roster de 10 personnages. Méthode et chiffres : `docs/SORTS.md` § 12.

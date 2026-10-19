@@ -62,14 +62,14 @@ export function StatusTray({ statuses }: { statuses: readonly Status[] }) {
   const malus = of('negative')
   if (items.length === 0) return null
   return (
-    <div className="flex items-center gap-2.5" aria-label="États actifs">
-      <div className="flex gap-1.5">
+    <div className="flex items-center gap-3" aria-label="États actifs">
+      <div className="flex gap-2">
         {bonus.map((i) => (
           <StatusToken key={i.key} status={i.status} leaving={i.leaving} onLeft={() => remove(i.key)} />
         ))}
       </div>
-      {bonus.length > 0 && malus.length > 0 && <span className="h-8 w-px bg-stone-400/40" />}
-      <div className="flex gap-1.5">
+      {bonus.length > 0 && malus.length > 0 && <span className="h-11 w-px bg-stone-400/40" />}
+      <div className="flex gap-2">
         {malus.map((i) => (
           <StatusToken key={i.key} status={i.status} leaving={i.leaving} onLeft={() => remove(i.key)} />
         ))}
@@ -110,7 +110,7 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
       onAnimationEnd={(e) => {
         if (e.animationName === 'status-leave') onLeft()
       }}
-      className={`group relative h-12 w-12 rounded-full hover:z-10 border-2 bg-stone-950/75 ${RING[def.polarity]} ${aura ? 'aura-token mx-1' : ''} ${leaving ? 'status-leave' : 'status-pop'}`}
+      className={`group relative h-16 w-16 rounded-full hover:z-10 border-2 bg-stone-950/75 ${RING[def.polarity]} ${aura ? 'aura-token mx-1' : ''} ${leaving ? 'status-leave' : 'status-pop'}`}
       style={aura ? ({ '--aura': def.look!.aura } as CSSProperties) : undefined}
     >
       {/* Sursaut du médaillon : relancé par la clé à chaque changement */}
@@ -121,9 +121,9 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
         <span
           // La clé relance le rebond au moment exact où le nombre change
           key={`count-${change.key}`}
-          className={`absolute -bottom-1.5 -right-1.5 flex h-6 min-w-6 items-center justify-center rounded-full border bg-stone-950 px-1 font-display text-sm font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta !== null ? 'status-count' : ''}`}
+          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta !== null ? 'status-count' : ''}`}
         >
-          {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3 w-3" />}
+          {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
           {counter.value}
         </span>
       )}
@@ -131,7 +131,7 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
         <span
           key={`delta-${change.key}`}
           aria-hidden
-          className={`status-delta pointer-events-none absolute -right-3 -top-3 font-display text-base font-extrabold ${DELTA[def.polarity]}`}
+          className={`status-delta pointer-events-none absolute -right-4 -top-4 font-display text-lg font-extrabold ${DELTA[def.polarity]}`}
         >
           {change.delta > 0 ? `+${change.delta}` : `−${-change.delta}`}
         </span>
