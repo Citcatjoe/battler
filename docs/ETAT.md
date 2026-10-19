@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-19, version 0.38.6._
+_Dernière mise à jour : 2026-10-19, version 0.38.7._
 
 ## En bref
 
@@ -10,7 +10,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 
 | Domaine | État |
 | --- | --- |
-| Refonte de l'interface (design system V1.4, `docs/design-system.md`) | 🚧 0.38.6, étape 6 sur 13 : tokens et polices posés ; camps, jauges, fiches de stats, infobulles, pastilles, statistiques, onglets mineurs et bouton tertiaire migrés |
+| Refonte de l'interface (design system V1.4, `docs/design-system.md`) | 🚧 0.38.7, étape 7 sur 13 : tokens et polices posés ; camps, jauges, fiches de stats, infobulles, pastilles, statistiques, onglets mineurs, boutons tertiaire, secondaires et icône migrés |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |
 | Compétences sur un 1 au dé (les 6 races) | ✅ stable |

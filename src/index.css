@@ -288,9 +288,12 @@ body {
    L'icône d'un bouton prend la classe .btn-icon pour suivre --icon.
    Dans @layer components : les utilitaires Tailwind (absolute, w-96…) gardent la priorité. */
 @layer components {
+  /* Bouton secondaire : serti, variante A du design system (fond --bg-2, texte --gold-300,
+     filet bronze, jour du fond, filet gravé, tranche sombre de 2 px). Rectangle de rayon 2. */
   .btn {
     --icon: 22px;
-    --rim: rgba(217, 160, 80, 0.55);
+    --plate: var(--bg-2);
+    --rim: var(--frame);
     --depth: #070504;
     position: relative;
     display: inline-flex;
@@ -299,42 +302,51 @@ body {
     gap: 0.55em;
     padding: 0 1.4em;
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.16em;
     white-space: nowrap;
-    color: #fde68a;
-    text-shadow: 0 2px 0 #000;
-    background: linear-gradient(180deg, #3b312a 0%, #261f1a 50%, #1a1512 100%);
-    border: 1px solid #000;
-    border-radius: 7px;
+    color: var(--gold-300);
+    text-shadow: 0 1px 0 #000;
+    background: var(--plate);
+    border: 0;
+    border-radius: var(--r-xs);
     box-shadow:
       inset 0 0 0 1px var(--rim),
-      inset 0 0 0 3px #120e0b,
-      inset 0 0 0 4px rgba(217, 160, 80, 0.18),
-      inset 0 6px 10px -6px rgba(255, 230, 180, 0.18),
-      0 4px 0 var(--depth),
-      0 7px 16px rgba(0, 0, 0, 0.65);
-    transition: transform 80ms ease-out, box-shadow 80ms ease-out, filter 150ms;
+      inset 0 0 0 4px var(--plate),
+      inset 0 0 0 5px var(--engrave),
+      var(--hl),
+      0 2px 0 var(--depth),
+      var(--shadow-2);
+    transition: transform 80ms ease-out, box-shadow 120ms ease-out, color 150ms, background-color 150ms;
     user-select: none;
   }
   .btn:hover {
-    filter: brightness(1.2);
+    --rim: var(--gold-500);
+    --plate: var(--bg-3);
+    color: var(--gold-200);
   }
   .btn:active {
-    transform: translateY(3px);
+    transform: translateY(1px);
     box-shadow:
       inset 0 0 0 1px var(--rim),
-      inset 0 0 0 3px #120e0b,
-      inset 0 0 0 4px rgba(217, 160, 80, 0.18),
-      inset 0 6px 10px -6px rgba(255, 230, 180, 0.18),
+      inset 0 0 0 4px var(--plate),
+      inset 0 0 0 5px var(--engrave),
+      var(--hl),
       0 1px 0 var(--depth),
-      0 2px 6px rgba(0, 0, 0, 0.65);
+      var(--shadow-2);
+  }
+  .btn:disabled {
+    --rim: var(--line-bronze);
+    --plate: var(--bg-1);
+    color: var(--text-off);
+    cursor: not-allowed;
+    transform: none;
   }
   .btn:focus-visible {
-    outline: 2px solid #fbbf24;
-    outline-offset: 3px;
+    outline: 2px solid var(--gold-200);
+    outline-offset: 2px;
   }
   .btn-icon {
     width: var(--icon);
@@ -352,6 +364,9 @@ body {
   .btn-lg { --icon: 40px; height: 76px; font-size: 28px; letter-spacing: 0.16em; }
 
   .btn-primary {
+    font-weight: 800;
+    border: 1px solid;
+    border-radius: 7px;
     --rim: rgba(255, 244, 200, 0.85);
     --depth: #5a320c;
     color: #2b1704;
@@ -375,16 +390,23 @@ body {
       0 3px 8px rgba(0, 0, 0, 0.6),
       0 0 20px rgba(245, 158, 11, 0.22);
   }
+  /* Survol du bouton principal : il garde son texte sombre et son liseré clair (refonte à l'étape 9). */
+  .btn-primary:hover {
+    --rim: rgba(255, 244, 200, 0.85);
+    color: #2b1704;
+    filter: brightness(1.12);
+  }
   .btn-primary .btn-icon {
     filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.6)) drop-shadow(0 2px 2px rgba(60, 30, 0, 0.5));
   }
 
+  /* Bouton icône : rond de 48 px, serti, sans chanfrein. aria-label obligatoire. */
   .btn-round {
-    --icon: 30px;
-    width: 52px;
-    height: 52px;
+    --icon: 28px;
+    width: 48px;
+    height: 48px;
     padding: 0;
-    border-radius: 9999px;
+    border-radius: var(--r-round);
   }
 
   .tabs {
