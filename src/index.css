@@ -554,6 +554,73 @@ body {
   }
 }
 
+/* ---------- Panneau de combattant et tuile de portrait (design system) ----------
+   .fighter-panel : voile --scrim flouté, rayon 2, filet clair, liseré de 2 px en tête à la
+   couleur du camp (--side, posé par .side-a / .side-b). Pas d'équerres.
+   .portrait-tile : états portés par data-state (idle, selected, taken, disabled) et
+   data-selection (a, b, gold). La forme ne change jamais, seuls le contour et l'opacité. */
+@layer components {
+  .side-a { --side: var(--side-a); }
+  .side-b { --side: var(--side-b); }
+  .fighter-panel {
+    background: var(--scrim);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(232, 200, 140, 0.16);
+    border-radius: var(--r-xs);
+    box-shadow: inset 0 2px 0 var(--side, var(--line-2)), var(--hl);
+  }
+
+  .portrait-tile {
+    --sel: var(--gold-400);
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-xs);
+    background: var(--bg-1);
+    box-shadow: 0 0 0 1px var(--line-2);
+    transition: box-shadow 150ms, opacity 150ms, filter 150ms;
+  }
+  .portrait-tile[data-selection='a'] { --sel: var(--side-a); }
+  .portrait-tile[data-selection='b'] { --sel: var(--side-b); }
+  .portrait-tile:hover:not(:disabled) {
+    box-shadow: 0 0 0 1px var(--gold-500);
+    filter: brightness(1.12);
+  }
+  .portrait-tile[data-state='selected'] {
+    box-shadow: 0 0 0 2px var(--sel);
+  }
+  .portrait-tile[data-state='taken'] {
+    opacity: 0.45;
+  }
+  .portrait-tile[data-state='taken']:hover {
+    opacity: 0.8;
+  }
+  .portrait-tile:disabled {
+    opacity: 0.3;
+    filter: grayscale(1);
+    cursor: not-allowed;
+  }
+  .portrait-tile:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+  /* Nom posé en bas de la tuile */
+  .portrait-tile-name {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    overflow: hidden;
+    padding: 12px 2px 0;
+    font-family: var(--font-body);
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-1);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  }
+}
+
 /* ---------- Compendium : cartes encadrées ---------- */
 @layer components {
   .codex-card {

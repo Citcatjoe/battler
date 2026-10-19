@@ -4,7 +4,7 @@ import { CHARACTER_IDS, CHARACTERS, FAMILIES } from '../game/roster'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
-import { Portrait } from './Portrait'
+import { Portrait, PortraitTile } from './Portrait'
 import { Icon } from './Icon'
 
 interface Props {
@@ -122,30 +122,24 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
               {FAMILIES.map((family) => (
                 <div key={family[0].id} className="flex flex-col gap-1.5">
                   {family.map((c) => {
-                    const active = c.id === brushId
                     return (
-                      <button
+                      <PortraitTile
                         key={c.id}
+                        character={c}
+                        side={0}
+                        state={c.id === brushId ? 'selected' : 'idle'}
                         onClick={() => {
                           sfx.click()
                           setBrushId(c.id)
                         }}
                         title={`${c.name} — ${c.race}, ${c.archetype}`}
-                        aria-pressed={active}
-                        className={`relative h-[54px] w-[54px] overflow-hidden rounded-lg border bg-stone-900 transition ${
-                          active
-                            ? 'border-amber-400 ring-2 ring-amber-400'
-                            : 'border-stone-700 opacity-60 hover:opacity-100'
-                        }`}
+                        className="h-[54px] w-[54px]"
                       >
-                        <Portrait character={c} side={0} className="h-full w-full" />
-                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent pt-2 text-[10px] font-bold">
-                          {c.name}
-                        </span>
-                        <span className="absolute right-0.5 top-0.5 rounded bg-black/70 px-1 font-mono text-[10px]">
+                        <span className="portrait-tile-name text-[10px]">{c.name}</span>
+                        <span className="absolute right-0.5 top-0.5 rounded-(--r-xs) bg-black/70 px-1 font-data text-[10px]">
                           ×{count(c.id)}
                         </span>
-                      </button>
+                      </PortraitTile>
                     )
                   })}
                 </div>

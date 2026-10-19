@@ -31,6 +31,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.8] — 2026-10-19
+
+### Ajouté
+- **Tuile de portrait** `PortraitTile` (design system, étape 8) : composant réutilisable, sans taille ni grille imposées, avec ses états en `data-state` : repos, survol, choisi (2 px à la couleur du camp, ou or hors camp), pris en face (45 %), focus et indisponible. Utilisée par les grilles de l'accueil et par la palette de la préparation du tournoi.
+- Accueil : **le personnage choisi par l'autre camp** est estompé dans la grille (il reste sélectionnable, pour les duels miroirs). Les autres tuiles ne sont plus estompées au repos.
+
+### Modifié
+- **Panneau de combattant** `.fighter-panel` : voile `--scrim` flouté de 6 px, rayon 2, filet clair, liseré de 2 px en tête à la couleur du camp, sans équerres (fiches de l'accueil et de l'écran d'affrontement).
+
 ## [0.38.7] — 2026-10-19
 
 ### Modifié

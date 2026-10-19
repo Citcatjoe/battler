@@ -6,7 +6,7 @@ import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { CHARACTERS, FAMILIES } from '../game/roster'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
-import { Portrait } from './Portrait'
+import { PortraitTile } from './Portrait'
 import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
@@ -131,6 +131,7 @@ export function StartScreen(props: Props) {
             <SidePanel
               side={0}
               character={fighters[0]}
+              opponentId={fighters[1].id}
               roster={roster}
               onPick={(id) => pick(0, id)}
               onRandom={() => pickRandom(0)}
@@ -144,6 +145,7 @@ export function StartScreen(props: Props) {
             <SidePanel
               side={1}
               character={fighters[1]}
+              opponentId={fighters[0].id}
               roster={roster}
               onPick={(id) => pick(1, id)}
               onRandom={() => pickRandom(1)}
@@ -205,9 +207,11 @@ interface SidePanelProps {
   onPick: (id: string) => void
   onRandom: () => void
   onOpenSheet: () => void
+  /** Personnage choisi par l'autre camp : sa tuile est estompée (il reste sélectionnable) */
+  opponentId: string
 }
 
-function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: SidePanelProps) {
+function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opponentId }: SidePanelProps) {
   const style = SIDE_STYLE[side]
   const right = side === 1
   return (
@@ -235,7 +239,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
           </p>
         </div>
 
-        <div className="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2.5 text-left">
+        <div className={`fighter-panel ${right ? 'side-b' : 'side-a'} w-full px-3 pb-2.5 pt-3 text-left`}>
           <StatSheet character={character} barClass={style.bar} trackClass={style.track} />
         </div>
         {/* Compétences : trois dés (1, 2, 3), le détail au survol */}
@@ -247,29 +251,20 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
         <div className={`flex gap-1 ${right ? 'flex-row-reverse' : ''}`}>
           {FAMILIES.map((family) => (
             <div key={family[0].id} className="flex flex-col gap-1">
-              {family.map((c) => {
-                const selected = c.id === character.id
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => onPick(c.id)}
-                    title={`${c.name} — ${c.race}, ${c.archetype}`}
-                    aria-pressed={selected}
-                    className={`group relative h-[34px] w-[34px] overflow-hidden rounded-md border bg-stone-900 transition ${
-                      selected ? `border-transparent ring-2 ${style.ring}` : 'border-stone-800 hover:border-stone-500'
-                    }`}
-                  >
-                    <Portrait
-                      character={c}
-                      side={side}
-                      className={`h-full w-full transition ${selected ? '' : 'opacity-50 group-hover:opacity-100'}`}
-                    />
-                    <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-0.5 pt-3 text-center text-[9px] font-bold leading-tight">
-                      {c.name}
-                    </span>
-                  </button>
-                )
-              })}
+              {family.map((c) => (
+                <PortraitTile
+                  key={c.id}
+                  character={c}
+                  side={side}
+                  state={c.id === character.id ? 'selected' : c.id === opponentId ? 'taken' : 'idle'}
+                  selection={right ? 'b' : 'a'}
+                  onClick={() => onPick(c.id)}
+                  title={`${c.name} — ${c.race}, ${c.archetype}${c.id === opponentId ? ' (choisi en face)' : ''}`}
+                  className="h-[34px] w-[34px]"
+                >
+                  <span className="portrait-tile-name text-[9px]">{c.name}</span>
+                </PortraitTile>
+              ))}
             </div>
           ))}
         </div>
