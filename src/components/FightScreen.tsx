@@ -138,16 +138,21 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         {/* Halo au sol qui détache les silhouettes */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,237,213,0.12)_0%,transparent_65%)]" />
 
+        {/* Ligne au sol du combattant dont c'est le tour : toute la moitié de l'arène de son camp, dans sa
+            couleur (un anneau sous les pieds se confondait avec l'anneau de l'aura) */}
+        {([0, 1] as Side[]).map((side) => (
+          <div
+            key={`turn-${side}`}
+            aria-hidden
+            data-active={active === side}
+            className={`turn-line pointer-events-none absolute bottom-[86px] h-[3px] w-1/2 ${side === 0 ? 'left-0' : 'right-0 rotate-180'}`}
+            style={{ '--camp': SIDE_STYLE[side].hex } as CSSProperties}
+          />
+        ))}
+
         {/* Pieds posés sur la terre battue de l'arène, un peu en retrait du bord de l'écran */}
         {([0, 1] as Side[]).map((side) => (
           <div key={side} className={`relative mb-[88px] h-[470px] ${side === 1 ? 'order-last' : ''}`}>
-            {/* Anneau au sol du combattant dont c'est le tour, dans la couleur de son camp */}
-            <div
-              aria-hidden
-              data-active={active === side}
-              className="turn-ring pointer-events-none absolute bottom-[-1%] left-1/2 h-[7%] w-[78%] -translate-x-1/2 rounded-[50%]"
-              style={{ '--camp': SIDE_STYLE[side].hex } as CSSProperties}
-            />
             <Fighter
               character={fighters[side]}
               side={side}

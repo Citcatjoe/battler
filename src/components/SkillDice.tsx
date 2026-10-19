@@ -34,14 +34,16 @@ interface Props {
   tooltip?: 'above' | 'below'
   /** Côté vers lequel l'infobulle s'aligne, pour ne pas sortir de la scène */
   align?: 'left' | 'center' | 'right'
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'header' | 'md'
   /**
    * Personnage à formes (druide) : en combat, la forme en cours (ses trois dés à elle) ; absent,
    * une rangée de dés par forme, avec son nom (sélection)
    */
   form?: number
-  /** En combat : le dé de la face qui vient de sortir pulse (une fois par `key`) */
+  /** En combat : le dé de la face qui vient de sortir s'allume un instant (une fois par `key`) */
   pulse?: SkillPulse
+  /** En combat : les dés sont éteints au repos, et ne s'allument qu'au déclenchement */
+  dim?: boolean
 }
 
 /**
@@ -49,7 +51,7 @@ interface Props {
  * infobulle donne la compétence qu'il déclenche (version allégée de la carte du compendium, au
  * style de l'infobulle de la zone d'état). Sur l'écran de sélection et en tête du combat.
  */
-export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form, pulse }: Props) {
+export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form, pulse, dim = false }: Props) {
   const forms = character.forms
   if (forms && form === undefined)
     return (
@@ -64,14 +66,17 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
     )
   const formId = forms?.[form ?? 0].id
   return (
-    <ul className="flex gap-2" aria-label={`Compétences de ${character.name}`}>
+    <ul className={`flex gap-2 ${dim ? 'skill-dice-dim' : ''}`} aria-label={`Compétences de ${character.name}`}>
       {(character.twinDice ? DOUBLES : FACES).map(({ face, trigger }) => {
         const event = character.events.find((e) => e.trigger === trigger && (!e.form || e.form === formId))
         return (
           <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event?.nature ?? 'neutral'}>
-            {/* Le dé qui sort : une pulsation lumineuse dans la couleur de la nature de la compétence */}
+            {/* Le dé qui sort : il s'allume un instant, comme un tintement, dans la couleur de la nature de la
+                compétence ; la clé relance l'éclat quand la même face sort deux fois de suite */}
             {event && pulse?.face === face && <span key={pulse.key} aria-hidden className="skill-die-pulse" />}
-            <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
+            <div key={event && pulse?.face === face ? pulse.key : 'idle'} className={event && pulse?.face === face ? 'skill-die-flash' : ''}>
+              <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
+            </div>
             {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
           </li>
         )
@@ -80,8 +85,10 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
   )
 }
 
-function DieFace({ face, size, empty, double }: { face: Face; size: 'sm' | 'md'; empty: boolean; double?: boolean }) {
-  const box = size === 'sm' ? 'h-8 w-8 p-[5px]' : 'h-11 w-11 p-[7px]'
+const BOX = { sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
+
+function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
+  const box = BOX[size]
   const die = (
     <div
       aria-label={double ? undefined : `Dé ${face}`}

@@ -1387,48 +1387,56 @@ body {
   background: radial-gradient(circle at 35% 35%, #fef3c7, #f59e0b 70%);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
-/* Le dé qui sort (en-tête du combat) : deux pulsations lumineuses dans la couleur de la nature de la
-   compétence (data-nature, comme les cartes en lame), au moment où le dé du combat tombe. */
+/* Dés de compétence en combat (en-tête) : éteints au repos, ils ne s'allument qu'un instant quand leur
+   face sort, comme le tintement d'une clochette : un éclat bref et ample dans la couleur de la nature de
+   la compétence (data-nature, comme les cartes en lame), puis retour à l'état éteint. */
 .skill-die-slot { --nature: var(--arcane); }
 .skill-die-slot[data-nature='martial'] { --nature: var(--gold-400); }
 .skill-die-slot[data-nature='finesse'] { --nature: var(--armor); }
 .skill-die-slot[data-nature='neutral'] { --nature: var(--text-3); }
+.skill-dice-dim .skill-die { filter: grayscale(0.85) brightness(0.5); transition: filter 150ms, transform 120ms, box-shadow 120ms; }
+.skill-dice-dim .group:hover .skill-die { filter: none; }
+.skill-die-flash .skill-die { animation: skill-die-flash calc(520ms / var(--speed)) ease-out; }
+@keyframes skill-die-flash {
+  0% { filter: none; transform: scale(1); }
+  12% { filter: brightness(1.6) saturate(1.4); transform: scale(1.45); box-shadow: 0 0 0 2px var(--nature), 0 0 24px 6px var(--nature); }
+  35% { filter: brightness(1.25); transform: scale(1.18); box-shadow: 0 0 0 1px var(--nature), 0 0 14px 2px var(--nature); }
+  100% { filter: grayscale(0.85) brightness(0.5); transform: scale(1); }
+}
+/* L'onde du tintement : un anneau qui s'élargit et s'efface vite */
 .skill-die-pulse {
   position: absolute;
-  inset: -3px;
+  inset: -2px;
   z-index: 10;
   pointer-events: none;
   border-radius: 10px;
   border: 2px solid var(--nature);
-  animation: skill-die-pulse calc(1100ms / var(--speed)) ease-out both;
+  animation: skill-die-pulse calc(480ms / var(--speed)) ease-out both;
 }
 @keyframes skill-die-pulse {
-  0% { opacity: 0; transform: scale(0.9); box-shadow: 0 0 0 0 var(--nature); }
-  15% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px 6px var(--nature), inset 0 0 14px var(--nature); }
-  45% { opacity: 0.55; transform: scale(1); box-shadow: 0 0 8px 1px var(--nature); }
-  65% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 18px 4px var(--nature), inset 0 0 10px var(--nature); }
-  100% { opacity: 0; transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 16px 4px var(--nature); }
+  100% { opacity: 0; transform: scale(2.1); box-shadow: 0 0 4px 0 var(--nature); }
 }
 
 /* ---------- Passage de main (combat) ----------
-   Le camp dont c'est le tour s'allume (nom et barre de vie), l'autre se tamise ; un anneau au sol
-   de la couleur du camp marque le combattant actif. --camp : couleur du camp, posée par le composant. */
-.hp-camp { transition: filter calc(300ms / var(--speed)); }
-.hp-camp[data-turn='waiting'] { filter: saturate(0.55) brightness(0.72); }
+   Le camp dont c'est le tour s'allume nettement (nom et barre de vie) ; l'autre reste tel quel. Une ligne
+   lumineuse au sol, de la couleur du camp, court sous toute sa moitié de l'arène. --camp : couleur du camp. */
 .hp-camp-name, .hp-camp-track { transition: text-shadow calc(300ms / var(--speed)), box-shadow calc(300ms / var(--speed)); }
-.hp-camp[data-turn='active'] .hp-camp-name { text-shadow: 0 0 14px color-mix(in srgb, var(--camp) 70%, transparent); }
-.hp-camp[data-turn='active'] .hp-camp-track { box-shadow: 0 0 12px color-mix(in srgb, var(--camp) 55%, transparent); }
-.turn-ring {
-  border: 2px solid color-mix(in srgb, var(--camp) 85%, transparent);
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--camp) 22%, transparent) 0%, transparent 70%);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--camp) 60%, transparent), inset 0 0 12px color-mix(in srgb, var(--camp) 40%, transparent);
-  opacity: 0;
-  transform: translateX(-50%) scale(0.85);
-  transition: opacity calc(300ms / var(--speed)), transform calc(300ms / var(--speed));
+.hp-camp[data-turn='active'] .hp-camp-name { text-shadow: 0 0 10px var(--camp), 0 0 24px color-mix(in srgb, var(--camp) 70%, transparent); }
+.hp-camp[data-turn='active'] .hp-camp-track {
+  box-shadow: 0 0 0 1px var(--camp), 0 0 14px 2px var(--camp), 0 0 32px color-mix(in srgb, var(--camp) 55%, transparent);
 }
-.turn-ring[data-active='true'] { opacity: 1; transform: translateX(-50%) scale(1); }
+.turn-line {
+  /* Pleine au pied du combattant, elle s'efface vers le centre de l'arène (la ligne du camp de droite est retournée) */
+  background: linear-gradient(90deg, transparent 0%, var(--camp) 12%, var(--camp) 70%, transparent 100%);
+  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--camp) 60%, transparent), 0 0 32px 6px color-mix(in srgb, var(--camp) 25%, transparent);
+  border-radius: 999px;
+  opacity: 0;
+  transition: opacity calc(300ms / var(--speed));
+}
+.turn-line[data-active='true'] { opacity: 0.9; }
 @media (prefers-reduced-motion: reduce) {
-  .skill-die-pulse { animation-duration: 1ms; }
+  .skill-die-pulse, .skill-die-flash .skill-die { animation-duration: 1ms; }
 }
 
 /* ---------- Écran du champion ---------- */

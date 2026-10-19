@@ -31,6 +31,13 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.45.1] — 2026-10-20
+
+### Modifié
+- **Ligne au sol à la place de l'anneau** (retour de l'utilisateur : l'anneau sous le combattant actif se confondait avec celui de l'aura) : une ligne lumineuse de la couleur du camp court sous toute sa moitié de l'arène, pleine au pied du combattant, effacée vers le centre.
+- **Barre de vie** : l'éclat du camp actif est renforcé (liseré, lueur large, nom lumineux) ; l'autre camp n'est plus tamisé.
+- **Dés de compétence de l'en-tête** : un peu plus grands (36 px au lieu de 32), **éteints au repos** (grisés et assombris), ils ne s'allument qu'au déclenchement. L'éclat est plus ample et plus bref, comme un tintement de clochette (sans son) : le dé grossit de 45 % en lumière vive, une onde s'élargit et s'efface, puis il s'éteint (520 ms à ×1, au lieu de deux pulsations de 1,1 s). Au survol, un dé s'allume pour qu'on lise son infobulle.
+
 ## [0.45.0] — 2026-10-19
 
 Deuxième passe sur les compétences : quatre notes de l'utilisateur (Aura de poison, Vol de vie, aura de la barde, Épines) et deux compétences signalées par l'audit 0.42.0 (Fausse note, immunité de Gauvain, sans objet depuis son retrait en 0.44.0). Laboratoire (série 5, 30 essais à 300 combats par duel), puis équilibrage du roster entier à 400 combats par duel. Méthode et chiffres : `docs/SORTS.md` § 11.

@@ -33,7 +33,15 @@ export function HpBar({ side, name, hp, maxHp, character, form, turn, pulse }: P
         <span className={`flex items-center gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
           <span className={`hp-camp-name font-display text-2xl font-extrabold tracking-wide ${style.accent}`}>{name}</span>
           {character && (
-            <SkillDice character={character} form={form ?? 0} size="sm" tooltip="below" align={side === 1 ? 'right' : 'left'} pulse={pulse} />
+            <SkillDice
+              character={character}
+              form={form ?? 0}
+              size={turn === undefined ? 'sm' : 'header'}
+              tooltip="below"
+              align={side === 1 ? 'right' : 'left'}
+              pulse={pulse}
+              dim={turn !== undefined}
+            />
           )}
         </span>
         <span className="font-data text-[15px] font-medium tabular-nums text-ink-2">
