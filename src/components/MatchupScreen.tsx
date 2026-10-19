@@ -216,7 +216,7 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
         </div>
         {/* Mêmes barres que sur l'écran de sélection, à la couleur du camp */}
         <div className="w-72 rounded-lg border border-stone-800 bg-stone-900/60 px-3 py-2.5 text-left">
-          <StatSheet character={character} barClass={style.bar} />
+          <StatSheet character={character} barClass={style.bar} trackClass={style.track} />
         </div>
         <SkillDice character={character} align={side === 1 ? 'right' : 'left'} />
       </div>

@@ -236,7 +236,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet }: S
         </div>
 
         <div className="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2.5 text-left">
-          <StatSheet character={character} barClass={style.bar} />
+          <StatSheet character={character} barClass={style.bar} trackClass={style.track} />
         </div>
         {/* Compétences : trois dés (1, 2, 3), le détail au survol */}
         <div className={`flex w-full ${right ? 'justify-end' : ''}`}>

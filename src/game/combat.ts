@@ -785,8 +785,8 @@ export function simulateCombat(
 /** Couleurs des camps (tokens --side-a / --side-b du design system). hex reprend la valeur du
  *  token pour les attributs SVG, qui ne lisent pas les variables CSS partout. */
 export const SIDE_STYLE = {
-  0: { accent: 'text-side-a-hi', bar: 'bg-side-a', ring: 'ring-side-a/60', hex: '#43B4EE' },
-  1: { accent: 'text-side-b-hi', bar: 'bg-side-b', ring: 'ring-side-b/60', hex: '#EE4A72' },
+  0: { accent: 'text-side-a-hi', bar: 'bg-side-a', track: 'bg-side-a-track', ring: 'ring-side-a/60', hex: '#43B4EE' },
+  1: { accent: 'text-side-b-hi', bar: 'bg-side-b', track: 'bg-side-b-track', ring: 'ring-side-b/60', hex: '#EE4A72' },
 } as const
 
 export const percent = (p: number) => `${Math.round(p * 100)} %`

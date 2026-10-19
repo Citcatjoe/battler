@@ -115,7 +115,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
             <div className="flex flex-col gap-5">
               <section className="rounded-xl border border-stone-800 bg-stone-900/50 p-5">
                 <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">Caractéristiques</h2>
-                <StatSheet character={character} barClass="bg-amber-400" />
+                <StatSheet character={character} barClass="bg-ink-2" />
               </section>
               {related && <VariantComparison character={character} related={related} />}
             </div>

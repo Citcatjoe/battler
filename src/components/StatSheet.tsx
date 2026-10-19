@@ -22,22 +22,30 @@ const MAX = Object.fromEntries(
   STAT_LINES.map((l) => [l.key, Math.max(...ROSTER.map((c) => c.stats[l.key]))]),
 ) as Record<keyof CharacterStats, number>
 
-/** Fiche de stats d'un personnage. */
-export function StatSheet({ character, barClass }: { character: Character; barClass: string }) {
+/** Fiche de stats d'un personnage : jauges fines à la couleur du camp sur sa piste (design system). */
+export function StatSheet({
+  character,
+  barClass,
+  trackClass = 'bg-surface-3',
+}: {
+  character: Character
+  barClass: string
+  trackClass?: string
+}) {
   return (
-    <dl className="flex flex-col gap-1.5 text-xs">
+    <dl className="flex flex-col gap-1">
       {STAT_LINES.map((l) => {
         const v = character.stats[l.key]
         return (
           <div key={l.key} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2">
-            <dt className="text-stone-400">{l.label}</dt>
-            <div className="h-1.5 overflow-hidden rounded-full bg-stone-800">
+            <dt className="font-body text-[15px] font-medium text-ink-2">{l.label}</dt>
+            <div className={`h-1.5 overflow-hidden rounded-(--r-xs) ${trackClass}`}>
               <div
-                className={`h-full rounded-full ${barClass}`}
+                className={`h-full rounded-(--r-xs) ${barClass}`}
                 style={{ width: `${MAX[l.key] ? (v / MAX[l.key]) * 100 : 0}%` }}
               />
             </div>
-            <dd className="text-right font-mono text-stone-100">{l.format(v)}</dd>
+            <dd className="text-right font-data text-[14px] font-medium tabular-nums text-ink-1">{l.format(v)}</dd>
           </div>
         )
       })}

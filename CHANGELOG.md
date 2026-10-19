@@ -31,6 +31,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.3] — 2026-10-19
+
+### Modifié
+- **Jauges et fiches de stats** (design system, étape 3) : barres au rayon de 2 px sur une piste à la couleur du camp (`--side-x-track`, nouveau champ `track` de `SIDE_STYLE`), libellés en Alegreya Sans 15/500, valeurs en IBM Plex Mono 14/500 alignées à droite. Barre de PV : mêmes tokens, rouge `--bad` sous 25 %. Compendium : les jauges passent de l'or à un beige neutre (`--text-2`), l'or étant réservé à l'action. La fiche de l'accueil gagne environ 30 px de haut.
+
 ## [0.38.2] — 2026-10-19
 
 ### Modifié
