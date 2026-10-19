@@ -801,6 +801,9 @@ body {
   }
 }
 
+/* Texte posé sur une illustration (design system, section 5) : jamais sur une zone claire. */
+.on-illus { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9); }
+
 /* ---------- Panneau de combattant et tuile de portrait (design system) ----------
    .fighter-panel : voile --scrim flouté, rayon 2, filet clair, liseré de 2 px en tête à la
    couleur du camp (--side, posé par .side-a / .side-b). Pas d'équerres.

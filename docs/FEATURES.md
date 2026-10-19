@@ -266,6 +266,7 @@ Accueil (duel | tournoi)
 | 0.32.1 | Textes flottants à l'extérieur des combattants, plus longs à l'écran, nouvelle police et test de police (`?police=`) |
 | 0.19.0 | Affrontement : stats en barres, arène un peu plus bas sous le titre ; combat : zone d'état et événements en texte flottant |
 | 0.12.0 | Nouveau fond d'arène original (ruines forestières au crépuscule) |
+| 0.39.0 | Fin de la refonte au design system : bouton principal, onglets de mode et sceau VS en pièces prestige, cartes de compétence en lame (couleur selon la nature), textes sur illustration ombrés |
 | 0.38.8 | Refonte au design system (étapes 1 à 8, `docs/design-system.md`) : tokens, camps azur et cramoisi, jauges, statistiques à paliers, onglets mineurs soulignés, boutons sertis, panneaux voilés à liseré de camp ; vignette du personnage choisi en face estompée |
 
 ## 5. Arènes

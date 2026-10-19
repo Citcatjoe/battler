@@ -31,6 +31,13 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.39.0] — 2026-10-19
+
+**Refonte de l'interface au design system V1.4** (`docs/design-system.md`), menée en 13 étapes de la 0.38.1 à la 0.39.0 sur la branche `design-system-v1` : tokens, camps azur et cramoisi, jauges, infobulles, statistiques à paliers, onglets mineurs soulignés, boutons sertis, panneaux voilés, tuiles de portrait, pièces prestige (bouton principal, onglets majeurs, sceau VS) et cartes de compétence en lame.
+
+### Modifié
+- **Textes posés sur une illustration** (étape 13) : noms, races et archétypes de l'accueil et de l'affrontement portent l'ombre du design system (`.on-illus`) ; noms de héros en Cinzel 600. Le reste de la section 5 (ancrage au sol, mise à l'échelle par la hauteur, ombre de contact en ellipse, combattant et portrait tournés vers le centre) était déjà en place : pas de drapeau de comparaison.
+
 ## [0.38.12] — 2026-10-19
 
 ### Ajouté

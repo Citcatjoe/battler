@@ -205,7 +205,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opp
         <div>
           <div className={`flex items-center gap-2.5 ${right ? 'flex-row-reverse' : ''}`}>
             <h2
-              className={`font-display text-[40px] font-extrabold leading-none tracking-wide drop-shadow-[0_3px_0_rgba(0,0,0,0.6)] ${style.accent}`}
+              className={`on-illus font-display text-[40px] font-semibold leading-none tracking-wide ${style.accent}`}
             >
               {character.name}
             </h2>
@@ -218,7 +218,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opp
               <Icon name="scroll" className="btn-icon" />
             </button>
           </div>
-          <p className="mt-1 text-sm text-stone-400">
+          <p className="on-illus mt-1 font-body text-[17px] text-ink-2">
             {character.race} · {character.archetype}
           </p>
         </div>
