@@ -9,6 +9,7 @@ import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter } from '../game/roster'
 import { STATUS_IDS } from '../game/statuses'
+import { skillFaceAt, skillFaceOf, turnLabel } from '../game/useCombat'
 import { EMOJI, testCharacter } from '../game/test-utils'
 import { allMatches, championRun, createTournament, fillSlots, matchFighters, matchKey, SLOTS, withResult } from '../game/tournament'
 import { BracketScreen } from './BracketScreen'
@@ -157,6 +158,49 @@ describe('écrans', () => {
     render(<Fighter character={posed} side={0} received={{ key: 1, damage: 0, crit: false, dodged: true, landed: false }} />)
     const html = renderToString(<Fighter character={posed} side={1} lunging />)
     expect(html).toContain('a.png')
+  })
+
+  it('passage de main et dé de compétence qui sort (en-tête)', () => {
+    const on = renderToString(
+      <HpBar side={0} name="A" hp={10} maxHp={20} character={fighters[0]} turn="active" pulse={{ side: 0, face: 2, key: 1 }} />,
+    )
+    expect(on).toContain('data-turn="active"')
+    // Un seul dé pulse : celui de la face 2 (deuxième dé de la rangée)
+    expect(on.split('skill-die-pulse').length - 1).toBe(1)
+    const after = on.slice(on.indexOf('skill-die-pulse'))
+    expect(after.match(/aria-label="Dé (\d)"/)?.[1]).toBe('2')
+    const off = renderToString(<HpBar side={1} name="B" hp={10} maxHp={20} character={fighters[1]} turn="waiting" />)
+    expect(off).toContain('data-turn="waiting"')
+    expect(off).not.toContain('skill-die-pulse')
+    expect(turnLabel('Elaria')).toBe("Au tour d'Elaria")
+    expect(turnLabel('Ysolde')).toBe("Au tour d'Ysolde")
+    expect(turnLabel('Gorak')).toBe('Au tour de Gorak')
+  })
+
+  it('le dé qui pulse est celui du jet qui déclenche la compétence', () => {
+    let pulses = 0
+    for (const x of CHARACTER_IDS)
+      for (const y of CHARACTER_IDS)
+        for (const seed of [1, 2, 3]) {
+          const pair = [createCharacter(x), createCharacter(y)] as [ReturnType<typeof createCharacter>, ReturnType<typeof createCharacter>]
+          const { beats } = simulateCombat(pair, { rng: seededRng(seed) })
+          beats.forEach((beat, i) => {
+            if (beat.type === 'attack') {
+              const face = skillFaceAt(beats, pair, i)
+              // Un coup ordinaire (ni compétence, ni coup transformé) ne fait rien pulser ; sinon, c'est la face du dé
+              if (face !== undefined && !beat.attack.reshaped) expect(beat.attack.roll).toBe(face)
+            }
+            // Toute compétence sur un 1, 2 ou 3 a son coup, dont le dé pulse sur cette face
+            if (beat.type === 'event' && ['naturalOne', 'naturalTwo', 'naturalThree'].includes(beat.event.trigger)) {
+              let j = i - 1
+              while (j >= 0 && !(beats[j].turn === beat.turn && beats[j].type === 'attack')) j--
+              expect(j, `${beat.event.name} sans coup`).toBeGreaterThanOrEqual(0)
+              expect(skillFaceAt(beats, pair, j)).toBe(skillFaceOf(beat.event.trigger))
+              pulses++
+            }
+          })
+        }
+    expect(pulses).toBeGreaterThan(50)
   })
 
   it('compendium, fiches et statistiques', () => {

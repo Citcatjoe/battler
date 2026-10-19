@@ -89,12 +89,10 @@ export interface CharacterDef {
   race: string
   /** Archétype de combat, ex. « Brute » */
   archetype: string
-  /** Pour une variante de coloris : id du personnage d'origine */
-  baseId?: string
   stats: CharacterStats
   look: CharacterLook
   lore: CharacterLore
-  /** Capacités déclenchées en combat ; une variante hérite de celles de son original */
+  /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
@@ -119,7 +117,6 @@ export class Character {
   readonly name: string
   readonly race: string
   readonly archetype: string
-  readonly baseId?: string
   readonly stats: Readonly<CharacterStats>
   readonly look: Readonly<CharacterLook>
   readonly lore: CharacterLore
@@ -135,7 +132,6 @@ export class Character {
     this.name = def.name
     this.race = def.race
     this.archetype = def.archetype
-    this.baseId = def.baseId
     this.stats = Object.freeze({ ...def.stats })
     this.look = Object.freeze({ ...def.look })
     this.lore = def.lore
@@ -170,32 +166,5 @@ export class Character {
       stats: { ...this.#def.stats, ...changes.stats },
       events: changes.events ?? this.#def.events,
     })
-  }
-}
-
-/**
- * Décline un personnage : nouvelle identité, nouveau coloris et petits ajustements de stats.
- * Les deltas de `stats` s'ajoutent à ceux de la base ; les événements sont hérités.
- */
-export function variant(
-  base: CharacterDef,
-  changes: Pick<CharacterDef, 'id' | 'name' | 'archetype' | 'lore'> & {
-    tint: string
-    stats: Partial<CharacterStats>
-  },
-): CharacterDef {
-  const stats = { ...base.stats }
-  for (const [key, delta] of Object.entries(changes.stats) as [keyof CharacterStats, number][]) {
-    stats[key] = Math.round((stats[key] + delta) * 100) / 100
-  }
-  return {
-    ...base,
-    id: changes.id,
-    name: changes.name,
-    archetype: changes.archetype,
-    lore: changes.lore,
-    baseId: base.id,
-    stats,
-    look: { ...base.look, tint: changes.tint },
   }
 }

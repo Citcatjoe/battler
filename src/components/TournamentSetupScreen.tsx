@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { CHARACTER_IDS, CHARACTERS, FAMILIES } from '../game/roster'
+import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
@@ -116,12 +116,9 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
         center={
           <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-amber-500/30 bg-stone-900/70 px-3 py-4">
             <p className="text-center text-sm font-bold text-amber-200">① Choisissez un personnage</p>
-            {/* Une colonne par famille : l'original en haut, ses variantes dessous ; les familles passent
-                à la ligne quand la zone centrale de l'arbre est trop étroite (6 familles) */}
+            {/* Un portrait par personnage (un par famille, 0.43.0), à la ligne si la zone centrale est étroite */}
             <div className="flex flex-wrap justify-center gap-1.5">
-              {FAMILIES.map((family) => (
-                <div key={family[0].id} className="flex flex-col gap-1.5">
-                  {family.map((c) => {
+              {CHARACTERS.map((c) => {
                     return (
                       <PortraitTile
                         key={c.id}
@@ -142,8 +139,6 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
                       </PortraitTile>
                     )
                   })}
-                </div>
-              ))}
             </div>
 
             <div className="mt-1 flex w-full items-center gap-3 rounded-lg bg-stone-950/60 p-2">

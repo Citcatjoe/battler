@@ -1,19 +1,14 @@
-import { FAMILIES } from '../../game/roster'
+import { CHARACTERS } from '../../game/roster'
 import { Portrait } from '../Portrait'
 import { CharacterSheet } from './CharacterSheet'
 
-/** Verticale « Personnages » : la liste par famille, et la fiche du personnage choisi. */
+/** Verticale « Personnages » : la liste des personnages (un par famille, 0.43.0), et la fiche du personnage choisi. */
 export function CharactersSection({ characterId, onSelect }: { characterId: string; onSelect: (id: string) => void }) {
   return (
     <div className="grid h-full min-h-0 grid-cols-[180px_1fr] gap-8">
       <nav aria-label="Personnages" className="flex flex-col gap-4 overflow-y-auto pr-1">
-        {FAMILIES.map((family) => (
-          <section key={family[0].id}>
-            <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-stone-500">
-              {family[0].race}
-            </h3>
-            <ul className="flex flex-col gap-1">
-              {family.map((c) => {
+        <ul className="flex flex-col gap-1">
+              {CHARACTERS.map((c) => {
                 const selected = c.id === characterId
                 return (
                   <li key={c.id}>
@@ -31,15 +26,13 @@ export function CharactersSection({ characterId, onSelect }: { characterId: stri
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate font-display text-base font-bold leading-tight">{c.name}</span>
-                        <span className="block truncate text-[11px] text-stone-500">{c.archetype}</span>
+                        <span className="block truncate text-[13px] text-stone-500">{c.race} · {c.archetype}</span>
                       </span>
                     </button>
                   </li>
                 )
               })}
-            </ul>
-          </section>
-        ))}
+        </ul>
       </nav>
       <CharacterSheet characterId={characterId} onSelect={onSelect} />
     </div>

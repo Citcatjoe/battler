@@ -3,10 +3,10 @@ import menuImg from '../assets/menu-portal.jpg'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
-import { CHARACTERS, FAMILIES } from '../game/roster'
+import { CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
-import { PortraitTile } from './Portrait'
+import { Portrait } from './Portrait'
 import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
@@ -42,6 +42,8 @@ export function StartScreen(props: Props) {
   const roster = CHARACTERS
   const [picked, setPicked] = useState<Pair<string>>([initial[0].id, initial[1].id])
   const fighters = picked.map((id) => roster.find((c) => c.id === id)!) as Pair<Character>
+  /** Camp qui choisit sur le rail (curseur de jeu de combat) : il passe à l'autre après chaque choix */
+  const [active, setActive] = useState<Side>(0)
 
   const pick = (side: Side, id: string) => {
     if (picked[side] === id) return
@@ -49,6 +51,12 @@ export function StartScreen(props: Props) {
     const next: Pair<string> = [...picked]
     next[side] = id
     setPicked(next)
+  }
+
+  /** Choix sur le rail : pour le camp actif, puis le curseur passe en face */
+  const pickOnRail = (id: string) => {
+    pick(active, id)
+    if (picked[active] !== id) setActive(active === 0 ? 1 : 0)
   }
 
   const pickRandom = (side: Side) => {
@@ -118,9 +126,8 @@ export function StartScreen(props: Props) {
             <SidePanel
               side={0}
               character={fighters[0]}
-              opponentId={fighters[1].id}
-              roster={roster}
-              onPick={(id) => pick(0, id)}
+              active={active === 0}
+              onActivate={() => setActive(0)}
               onRandom={() => pickRandom(0)}
               onOpenSheet={() => onOpenCharacter(fighters[0].id, fighters)}
             />
@@ -129,13 +136,14 @@ export function StartScreen(props: Props) {
             <SidePanel
               side={1}
               character={fighters[1]}
-              opponentId={fighters[0].id}
-              roster={roster}
-              onPick={(id) => pick(1, id)}
+              active={active === 1}
+              onActivate={() => setActive(1)}
               onRandom={() => pickRandom(1)}
               onOpenSheet={() => onOpenCharacter(fighters[1].id, fighters)}
             />
           </div>
+
+          <RosterRail roster={roster} picked={picked} active={active} onActivate={setActive} onPick={pickOnRail} />
 
           {/* Lancer le duel : centré sous le « VS », seul en bas de l'écran */}
           <PrestigeButton onClick={() => onStart(fighters)} className="w-96 shrink-0">
@@ -184,18 +192,86 @@ function TournamentIntro({ tournamentProgress, onNewTournament, onResumeTourname
   )
 }
 
+const SIDE_LABEL = { 0: 'Combattant de gauche', 1: 'Combattant de droite' } as const
+
+/**
+ * Rail des combattants (0.43.0) : un portrait par personnage, au centre de l'écran, comme le tableau
+ * de sélection d'un jeu de combat. Le camp actif choisit (curseur azur ou cramoisi), puis la main passe
+ * en face. Le liseré d'une carte dit quel camp l'a choisie ; les deux camps peuvent choisir le même.
+ */
+function RosterRail({
+  roster,
+  picked,
+  active,
+  onActivate,
+  onPick,
+}: {
+  roster: readonly Character[]
+  picked: Pair<string>
+  active: Side
+  onActivate: (side: Side) => void
+  onPick: (id: string) => void
+}) {
+  return (
+    <div className="roster-rail relative z-20 flex shrink-0 flex-col items-center gap-2.5">
+      {/* Le camp qui choisit : onglets aux couleurs des camps */}
+      <div role="tablist" aria-label="Camp qui choisit" className="flex items-center gap-6">
+        {([0, 1] as const).map((side) => (
+          <button
+            key={side}
+            role="tab"
+            aria-selected={active === side}
+            data-side={side === 0 ? 'a' : 'b'}
+            onClick={() => onActivate(side)}
+            className="rail-camp"
+          >
+            {/* Flèche en CSS (jamais de caractère pictographique) : vers le camp qui choisit */}
+            {side === 0 && <span aria-hidden className="rail-camp-arrow" data-dir="left" />}
+            {SIDE_LABEL[side]}
+            {side === 1 && <span aria-hidden className="rail-camp-arrow" data-dir="right" />}
+          </button>
+        ))}
+      </div>
+      <ul className="flex gap-2" aria-label="Combattants">
+        {roster.map((c) => {
+          const a = picked[0] === c.id
+          const b = picked[1] === c.id
+          return (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => onPick(c.id)}
+                data-a={a || undefined}
+                data-b={b || undefined}
+                data-cursor={active === 0 ? 'a' : 'b'}
+                aria-label={`${c.name}, ${c.race} · ${c.archetype}${a ? ', choisi à gauche' : ''}${b ? ', choisi à droite' : ''}`}
+                title={`${c.name} — ${c.race}, ${c.archetype}`}
+                className="roster-card"
+              >
+                <Portrait character={c} side={0} className="roster-card-face" />
+                <span className="roster-card-name">{c.name}</span>
+                {a && <span className="roster-card-tag" data-side="a">A</span>}
+                {b && <span className="roster-card-tag" data-side="b">B</span>}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 interface SidePanelProps {
   side: Side
   character: Character
-  roster: readonly Character[]
-  onPick: (id: string) => void
+  /** Ce camp choisit sur le rail */
+  active: boolean
+  onActivate: () => void
   onRandom: () => void
   onOpenSheet: () => void
-  /** Personnage choisi par l'autre camp : sa tuile est estompée (il reste sélectionnable) */
-  opponentId: string
 }
 
-function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opponentId }: SidePanelProps) {
+function SidePanel({ side, character, active, onActivate, onRandom, onOpenSheet }: SidePanelProps) {
   const style = SIDE_STYLE[side]
   const right = side === 1
   return (
@@ -231,36 +307,22 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opp
           <SkillDice character={character} align={right ? 'right' : 'left'} />
         </div>
 
-        {/* Une colonne par famille : l'original en haut, ses variantes dessous (9 familles sur 340 px) */}
-        <div className={`flex gap-1 ${right ? 'flex-row-reverse' : ''}`}>
-          {FAMILIES.map((family) => (
-            <div key={family[0].id} className="flex flex-col gap-1">
-              {family.map((c) => (
-                <PortraitTile
-                  key={c.id}
-                  character={c}
-                  side={side}
-                  state={c.id === character.id ? 'selected' : c.id === opponentId ? 'taken' : 'idle'}
-                  selection={right ? 'b' : 'a'}
-                  onClick={() => onPick(c.id)}
-                  title={`${c.name} — ${c.race}, ${c.archetype}${c.id === opponentId ? ' (choisi en face)' : ''}`}
-                  className="h-[34px] w-[34px]"
-                >
-                  <span className="portrait-tile-name text-[9px]">{c.name}</span>
-                </PortraitTile>
-              ))}
-            </div>
-          ))}
-        </div>
-        <button onClick={onRandom} className="btn btn-md w-full" disabled={roster.length < 2}>
+        <button onClick={onRandom} className="btn btn-md w-full">
           <Icon name="dice" className="btn-icon" />
           <span>Au hasard</span>
         </button>
       </div>
 
-      <div className="flex h-[530px] flex-1 items-end justify-center">
+      {/* Cliquer le personnage donne la main à son camp sur le rail */}
+      <button
+        type="button"
+        onClick={onActivate}
+        aria-label={`Choisir le combattant ${right ? 'de droite' : 'de gauche'}`}
+        aria-pressed={active}
+        className="flex h-full flex-1 cursor-pointer items-end justify-center"
+      >
         <Fighter key={character.id} character={character} side={side} className="fade-in" />
-      </div>
+      </button>
     </section>
   )
 }

@@ -6,6 +6,29 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
+## Un personnage par famille (0.43.0)
+
+**Décision de l'utilisateur** (2026-10-19) : avec vingt personnages, un jumeau de coloris pour chacun n'apportait plus assez. Il compliquait le processus créatif (deux noms, deux fiches, deux équilibrages pour une seule image). Chaque famille garde son **personnage principal** : son nom, son image, ses postures et sa fiche. Elle garde aussi, des deux, **les statistiques les plus pertinentes**. Les jumeaux disparaissent du jeu ; leurs sections ci-dessous restent pour l'historique.
+
+**Méthode** : chaque candidat (le principal avec ses statistiques, A, ou avec celles de son jumeau, B) a affronté les neuf autres principaux, sur 400 combats par duel. On garde celui qui est le plus proche de 50 %, avec les duels les plus resserrés, sans sacrifier ce qui type le personnage. L'ensemble a ensuite été vérifié sur le roster entier.
+
+| Famille | A (principal) | B (jumeau) | Retenu |
+| --- | --- | --- | --- |
+| Gorak | 46,8 %, de 41 à 51 % | Murzug : 50,4 %, de 46 à 57 % | **B** : 57 PV, 18 % de critique, Rage du sang à 5 PV |
+| Elaria | 49,6 %, de 40 à 62 % | Sylwen : 49,4 %, de 42 à 57 % | **B** : 50 PV, 26 % d'esquive, 17 % de critique ×2,4 |
+| Brokk | 51,1 %, Ysolde à 26 % | Grimbald : 51,2 %, de 42 à 61 % | **B** : d10, 57 PV, 10 % de critique |
+| Ervald | 46,7 %, de 39 à 54 % | Caldrec : 48,8 %, de 46 à 53 % | **B** : d10, sans armure, 56 PV, 16 % de critique |
+| Ysolde | 50,7 % | Bérengère : 49,7 % ; 44,6 % sur le roster entier | **A** |
+| Naraxes | 53,6 %, de 42 à 63 % | Ssythra : 52,9 %, Ysolde à 68 % | **A** |
+| Aldric | 52,7 %, de 39 à 61 % | Gauvain : 50,1 %, de 37 à 58 % | **B** : 54 PV, 7 % d'esquive, 17 % de critique |
+| Morgrut | 47,7 %, de 38 à 57 % | Gnashka : 49,0 % | **A** : le d14 sans critique est sa signature |
+| Thaldrin | 53,0 %, de 39 à 62 % | Brannoc : 52,3 %, de 37 à 64 % | **A** |
+| Fanchon | 50,2 % | Mélisande : 50,9 % | **A** |
+
+**Roster entier** (0.43.0, 400 combats par duel) : de 45,8 % (Ysolde) à 51,4 % (Brokk). Sept contres connus disparaissent. Restent Brokk contre Fanchon (65/35, à la limite) et Naraxes contre Ysolde (62/38).
+
+---
+
 ## Principes du roster
 
 1. **Une race = un archétype de combat lisible.** On doit pouvoir dire en une phrase *comment il gagne* et *comment il perd*.
@@ -15,7 +38,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
    - **Humain** (0.30.0) : contrôler, avec un petit dé et des compétences sur 3 jets sur 7 (peur, purification, soin).
    - **Homme-lézard** (0.30.0) : tenter sa chance, avec l'esquive, le poison et des coups de dés à double tranchant.
    - **Mort-vivant** : affliger et drainer, c'est-à-dire ronger l'adversaire avec le poison, qui ignore l'armure, et lui voler sa vie.
-2. **Une variante = la même race, une autre façon de jouer.** Elle garde l'image (teintée en CSS) et les **compétences de sa race**, et décale 2 ou 3 stats dans une direction claire (plus offensive, plus régulière…). Les écarts restent petits.
+2. ~~**Une variante = la même race, une autre façon de jouer.**~~ (retiré en 0.43.0 : un personnage par famille, voir plus haut) Elle garde l'image (teintée en CSS) et les **compétences de sa race**, et décale 2 ou 3 stats dans une direction claire (plus offensive, plus régulière…). Les écarts restent petits.
 3. **Les compétences prolongent l'identité de la race.** Elles se déclenchent sur les deux pires jets : la malchance devient un petit moment de gloire, propre à chaque race. Sur un **1**, la compétence d'origine (soin, critique, bouclier, poison). Sur un **2** (0.25.0, compétences données par l'utilisateur), une compétence qui prépare le tour suivant : Furie des vents, Esquive améliorée, Épines, Vol de vie. Sur un **3** (0.26.0, données par l'utilisateur), une **aura permanente** pour le reste du combat : puissance, précision, intimidation, poison. Trois compétences par race dépassent le plafond de 2 fixé en 0.20.1 : c'est un choix de l'utilisateur, et le plafond est à reformuler (voir STATUTS.md).
 
    **Les jets de 1, 2 et 3 n'infligent plus de dégâts (0.27.0, demande de l'utilisateur).** Ils servent seulement à déclencher la compétence du chiffre (`forfeitsHit` sur les douze compétences) : aucun dégât, ni esquive ni critique. Un personnage ne frappe donc jamais pour 1, 2 ou 3. Ce sont 3 jets sur 8 pour un d8, et 3 sur 10 pour un d10 : les petits dés y perdent davantage.
@@ -27,7 +50,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 4. **Budget d'équilibre** : chaque personnage gagne entre 42 et 58 %, aucun duel au-delà de 65/35 (test automatique), avec une zone de confort de 45 à 55 %. On veut des personnages typés, pas des clones. Les PV sont le dernier levier d'équilibrage : voir [EQUILIBRAGE.md](EQUILIBRAGE.md).
 5. **Fiche en jeu courte** : une accroche, 2 ou 3 phrases de background (240 caractères au plus), 1 à 3 forces et 1 à 3 faiblesses. `validateRoster` vérifie ces limites.
 6. **Univers** : des noms et des lieux inventés (Kar-Dush, Lithmeren, Durnhold, Ostremort), sans référence à des œuvres existantes.
-7. **Sélection** : les personnages sont rangés par famille, une colonne par race, avec l'original en haut et ses variantes en dessous (`FAMILIES` dans `roster.ts`).
+7. **Sélection** (0.43.0) : un rail de dix cartes au centre de l'accueil, comme le tableau d'un jeu de combat. Le camp actif choisit, puis la main passe en face (`RosterRail`, `StartScreen.tsx`). Avant, il y avait une colonne par famille et deux tuiles par colonne, de chaque côté.
 8. **Nature des compétences** (0.39.1, classement de l'utilisateur) : chaque compétence déclare sa `nature`, qui colore seulement sa carte (aucun effet sur le combat). **Martiale** : la force du corps ou de l'arme (orcs, nains, Riposte, la forme d'ours du druide). **Adresse** : l'agilité, la précision, la ruse, la chance (elfes, hommes-lézards ; l'Aura de décoction, poison enduit sur la lame, en fait partie). **Arcane** : la magie, la foi, la nature, la mort (morts-vivants, Ysolde, Rétribution et Aura d'immunité d'Aldric, forme humaine du druide, Aura de pourriture). **Neutre** : ni l'un ni l'autre (l'Attente de l'ogre). Une variante hérite de la nature de la compétence de son original.
 
 ---
@@ -47,7 +70,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 > « Le roc des fosses de Kar-Dush. »
 
 - **Fantasy** : le champion des fosses, lent et inébranlable. C'est la référence de l'orc, et l'unité de taille du jeu (`scale: 1`).
-- **Stats** : PV 61, d10, armure 0, esquive 5 %, critique 10 % ×2.
+- **Stats** (0.43.0, celles de Murzug) : PV 57, d10, armure 0, esquive 5 %, critique 18 % ×2 ; Rage du sang à 5 PV. Jusqu'à la 0.42.0 : PV 61, critique 10 %, Rage du sang à 3 PV.
 - **Comment il gagne** : ses PV absorbent les pics de dégâts, et son d10 frappe régulièrement fort.
 - **Comment il perd** : il prend tous les coups, et n'a aucune réponse face à l'usure du nain.
 - **Mesures** : 50,0 % de victoires (0.26.0), environ 19 tours par combat. Duels les plus durs : les elfes (44 % contre Elaria, 45 % contre Sylwen).
@@ -55,7 +78,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
   - Il a beaucoup de PV parce qu'il n'a aucune défense active : les PV sont sa défense. Depuis la 0.24.1, Brokk en a davantage, pour compenser son armure perdue.
   - Il ne critique que rarement (10 %) : son danger vient de la régularité du d10, pas des pics.
 
-### Murzug · Berserker (variante de Gorak)
+### Murzug · Berserker (variante de Gorak) · retiré en 0.43.0
 
 > « Il compte les cicatrices, pas les coups reçus. »
 
@@ -86,7 +109,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 > « Un souffle, une flèche. »
 
 - **Fantasy** : l'éclaireuse insaisissable, jamais là où l'on frappe.
-- **Stats** : PV 48 (le minimum du roster), d8, armure 0, esquive 33 % (le maximum), critique 22 % (le maximum) ×2.
+- **Stats** (0.43.0, celles de Sylwen) : PV 50, d8, armure 0, esquive 26 %, critique 17 % ×2,4. Jusqu'à la 0.42.0 : PV 48, esquive 33 %, critique 22 % ×2.
 - **Comment elle gagne** : un tiers des coups adverses passent dans le vide, et ses critiques fréquents rattrapent son petit dé.
 - **Comment elle perd** : quand l'esquive ne passe pas, ses PV fondent. Contre Ervald (armure 1, poison), son pire duel (44 %), ses petits coups sont rognés et ses PV bas fondent sous le poison.
 - **Mesures** : 51,7 % de victoires (0.26.0). Elle bat les orcs (56 % et 54 %). Duel le plus dur : Brokk (45 %).
@@ -94,7 +117,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
   - Elle a les PV les plus bas parce qu'elle a la meilleure défense active. Le hasard de l'esquive crée de la variance : ses combats sont les plus imprévisibles.
   - Son point faible face à l'armure est voulu. Depuis que les nains n'ont plus d'armure passive (0.24.1), il ne joue plus que contre Ervald et les boucliers.
 
-### Sylwen · Sentinelle sylvestre (variante d'Elaria)
+### Sylwen · Sentinelle sylvestre (variante d'Elaria) · retiré en 0.43.0
 
 > « La forêt ne pardonne pas deux fois. »
 
@@ -124,7 +147,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 > « Ce qui passe la porte passe par moi. »
 
 - **Fantasy** : le gardien qui ne recule jamais.
-- **Stats** : PV 68 (le maximum du roster), d8, armure 0, esquive 6 %, critique 8 % ×2,5. Il est petit à l'écran (`scale: 0.78`).
+- **Stats** (0.43.0, celles de Grimbald) : PV 57, d10, armure 0, esquive 6 %, critique 10 % ×2,5. Jusqu'à la 0.42.0 : PV 68, d8, critique 8 %. Il est petit à l'écran.
 - **Comment il gagne** : il encaisse plus que quiconque, et Peau de pierre allonge encore le combat. Ses combats restent les plus longs.
 - **Comment il perd** : son d8 et ses critiques rares le rendent lent à finir l'adversaire. Le poison et le vol de vie d'Ervald (45 %), qui profitent des combats longs, pèsent sur lui.
 - **Mesures** : 51,1 % de victoires (0.26.0), les combats les plus longs (environ 25 tours).
@@ -132,7 +155,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
   - Son armure passive de 2 a été retirée en 0.24.1 : cumulée à Peau de pierre, elle protégeait trop. Son endurance passe désormais par les PV, compensés par l'offensive la plus faible du roster.
   - **À surveiller** : le duel contre Ervald (45 %), où le poison, qui ignore tout, gagne avec la durée du combat.
 
-### Grimbald · Briseur de fer (variante de Brokk)
+### Grimbald · Briseur de fer (variante de Brokk) · retiré en 0.43.0
 
 > « Pourquoi parer quand on peut briser ? »
 
@@ -165,7 +188,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 > « La mort l'a rendu, pas pardonné. »
 
 - **Fantasy** : le capitaine tombé en défendant Ostremort, revenu sous son étendard pourpre. Il ne fatigue jamais.
-- **Stats** : PV 58, d8, armure 1, esquive 8 %, critique 12 % ×2. Il est grand à l'écran (`scale: 1.02`).
+- **Stats** (0.43.0, celles de Caldrec) : PV 56, d10, armure 0, esquive 8 %, critique 16 % ×2. Jusqu'à la 0.42.0 : PV 58, d8, armure 1, critique 12 %. Il est grand à l'écran.
 - **Comment il gagne** : il encaisse, et chaque jet raté ronge l'adversaire au fil des tours. Contre les elfes, peu nombreux en PV et sans armure, le poison pèse lourd (54 % contre Elaria). Le vol de vie le fait durer encore.
 - **Comment il perd** : ses propres coups sont faibles (4,4 dégâts par coup, comme Brokk). Et chaque 2 est un coup perdu, rattrapé seulement si le coup suivant touche. Les adversaires au d10 qui raccourcissent le combat (Grimbald, Caldrec) le gênent le plus.
 - **Mesures** : 48,8 % de victoires (0.26.0), environ 22 tours par combat. Il bat Sylwen (56 %), mais perd contre les orcs (45 % et 41 %), dont la puissance l'emporte sur son usure.
@@ -173,7 +196,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
   - Il réutilise le statut Poison du registre, sans aucune règle nouvelle dans le moteur. Ajouter la race a seulement demandé des données.
   - Il a une armure légère (1). C'est la seule armure passive du roster depuis que les nains l'ont perdue (0.24.1).
 
-### Caldrec · Faucheur d'âmes (variante d'Ervald)
+### Caldrec · Faucheur d'âmes (variante d'Ervald) · retiré en 0.43.0
 
 > « Il ne garde rien, pas même son bouclier. »
 
@@ -217,7 +240,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 - **Mesures** : 51,0 % de victoires (0.30.0), environ 39 tours par combat, les plus longs du roster.
 - **À surveiller** : elle écrase Brokk (72 %, voir « Questions ouvertes » dans EQUILIBRAGE.md). Sans son aura de sainteté, elle ne gagne que **0,7 %** de ses combats contre lui : l'intimidation ramène ses petits coups à 1 dégât, et seul le soin la fait gagner.
 
-### Bérengère · Inquisitrice (variante d'Ysolde)
+### Bérengère · Inquisitrice (variante d'Ysolde) · retiré en 0.43.0
 
 > « La lumière brûle aussi. »
 
@@ -256,7 +279,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 - **Comment elle perd** : peu de PV, et ses compétences du 1 et du 2 rapportent peu.
 - **Mesures** : 50,3 % de victoires (0.30.0), environ 20 tours par combat.
 
-### Ssythra · Assassine (variante de Naraxes)
+### Ssythra · Assassine (variante de Naraxes) · retiré en 0.43.0
 
 > « Une seule morsure suffit. »
 
@@ -286,12 +309,12 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 > « Chaque coup reçu est une dette. »
 
-- **Stats** : PV 60, d8, armure 0, esquive 5 %, critique 12 % ×2,5 (15 % jusqu'à la 0.31.0).
+- **Stats** (0.43.0, celles de Gauvain) : PV 54, d8, armure 0, esquive 7 %, critique 17 % ×2,5. Jusqu'à la 0.42.0 : PV 60, esquive 2 %, critique 12 %.
 - **Comment il gagne** : il encaisse, remplit ses jauges et relâche une rétribution énorme au bon moment, ou un critique lourd.
 - **Comment il perd** : contre un adversaire qui frappe peu fort (Brokk), ses jauges restent maigres.
 - **Mesures** : 54,8 % de victoires (0.31.0), environ 21 tours par combat. Il bat Ssythra à 66 % : un contre connu (EQUILIBRAGE.md).
 
-### Gauvain · Croisé
+### Gauvain · Croisé · retiré en 0.43.0
 
 > « La foi tranche plus vite que la loi. »
 
@@ -319,7 +342,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 - **Comment il perd** : contre Brokk (36 %), dont l'intimidation rogne ses gros coups, et contre l'esquive des elfes (44 à 49 %).
 - **Mesures** : 51,7 % de victoires (0.35.0, 400 combats par duel), environ 19 tours par combat. Il bat les prêtresses à 61-62 %.
 
-### Gnashka · Ogre des cavernes
+### Gnashka · Ogre des cavernes · retiré en 0.43.0
 
 > « Plus gris, plus dur, toujours aussi perdu. »
 
@@ -370,7 +393,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Stats** : PV 56, d10, armure 0, esquive 8 %, critique 8 % ×2 (10 % jusqu'à la 0.35.1).
 - **Mesures** : 48,0 % de victoires (0.35.0). Il bat les prêtresses à 60-62 % (la Pourriture use leurs soins), mais perd contre Aldric (38 %) et les ogres (44 %).
 
-### Brannoc · Druide d'automne
+### Brannoc · Druide d'automne · retiré en 0.43.0
 
 > « Les feuilles tombent, les griffes aussi. »
 
@@ -413,7 +436,7 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 - **Stats** : PV 46, 2 × d5, armure 0, esquive 12 %, critique 5 % ×2.
 - **Mesures** : 52,3 % (0.41.0). Duels de 45 à 62 %, sauf contre Brokk (29 %, contre connu).
 
-### Mélisande · Ménestrelle
+### Mélisande · Ménestrelle · retiré en 0.43.0
 
 > « Elle chante juste, et frappe plus juste encore. »
 

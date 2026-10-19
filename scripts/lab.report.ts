@@ -102,7 +102,11 @@ it('laboratoire des sorts', () => {
   const perPair = Number(process.env.LAB_N ?? 200)
   const only = process.env.LAB_ONLY?.split(',').map((s) => s.trim()).filter(Boolean)
   const series = process.env.LAB_SERIES ? Number(process.env.LAB_SERIES) : undefined
-  const ideas = IDEAS.filter((i) => (!only?.length || only.includes(i.id)) && (series === undefined || i.series === series))
+  const wanted = IDEAS.filter((i) => (!only?.length || only.includes(i.id)) && (series === undefined || i.series === series))
+  // Les idées des jumeaux retirés en 0.43.0 (Murzug, Sylwen…) restent dans ideas.ts pour l'historique, sans être rejouées
+  const ideas = wanted.filter((i) => CHARACTERS.some((c) => c.id === i.character))
+  const skipped = wanted.filter((i) => !ideas.includes(i))
+  if (skipped.length) console.log(`Idées ignorées (personnage retiré) : ${skipped.map((i) => i.id).join(', ')}`)
   const rows = ideas.map((i) => compare(i, perPair))
 
   const verdict = (r: (typeof rows)[number]) => {

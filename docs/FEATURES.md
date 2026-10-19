@@ -23,6 +23,7 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 - **Dégâts comptés en entier (overkill, depuis la 0.34.0)** : un coup fatal ou des dégâts directs comptent tout leur montant dans les statistiques, la trace et l'historique, même au-delà des PV restants. Les PV, eux, s'arrêtent à 0.
 - **Événements** du coup : voir la section 3.
 - **Fin** : le premier à 0 PV perd, que ce soit à cause d'un coup, d'un effet ou d'un statut. Plus rien ne se déclenche après un K.O. Une limite de sécurité arrête le combat à 1 000 tours ; il est alors gagné aux PV.
+- **Lisibilité du tour (0.44.0, présentation pure)** : au passage de main, une pause de 400 ms (`HANDOVER_MS`, divisée par la vitesse) vide le plateau de dés, qui annonce « Au tour de … » ; le camp actif s'allume dans l'en-tête, l'autre se tamise, et un anneau au sol de la couleur du camp marque le combattant actif. Quand le dé tombe sur une face de compétence (1, 2, 3, coup transformé, double de la barde), le dé de cette face pulse dans l'en-tête, dans la couleur de la nature de la compétence.
 - **Jouer ou simuler** : les deux options appellent le même moteur. « Jouer » anime le résultat calculé à l'avance, « Simuler » l'affiche directement à l'écran de fin.
 - **Reproductible** : avec une même graine de hasard, un combat se rejoue à l'identique (utilisé par les tests).
 
@@ -40,35 +41,26 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 | 0.25.0 | Coup sacrifié, esquive imposée, vol de vie dans la chaîne d'attaque ; action à plusieurs coups (Furie des vents) |
 | 0.27.0 | Les jets de 1, 2 et 3 n'infligent plus de dégâts : ils déclenchent seulement la compétence du chiffre |
 | 0.41.0 | Personnage à deux dés (paire, doubles, gros coup d'un double) et dégâts finaux (`modifyFinal`), pour la barde |
+| 0.44.0 | Passage de main (pause, camp actif, anneau au sol) et dé de compétence qui pulse dans l'en-tête |
 
 ## 2. Personnages et roster
 
 **Règles actuelles**
 
-Six races, chacune avec un archétype de base et une variante de coloris aux stats légèrement différentes (douze personnages depuis la 0.30.0).
+**Un personnage par famille** depuis la 0.43.0 (décision de l'utilisateur) : les jumeaux de coloris sont retirés. Chaque famille garde son personnage principal (nom, image, postures, fiche) et les statistiques les plus pertinentes des deux, mesurées (voir [PERSONNAGES.md](PERSONNAGES.md#un-personnage-par-famille-0430)).
 
 | Personnage | Race · archétype | PV | Dé | Armure | Esquive | Critique | Multiplicateur |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Gorak | Orc · Brute | 61 | d10 | 0 | 5 % | 10 % | ×2 |
-| Murzug | Orc · Berserker | 57 | d10 | 0 | 5 % | 18 % | ×2 |
-| Elaria | Elfe · Rôdeuse | 48 | d8 | 0 | 33 % | 22 % | ×2 |
-| Sylwen | Elfe · Sentinelle sylvestre | 50 | d8 | 0 | 26 % | 17 % | ×2,4 |
-| Brokk | Nain · Gardien | 68 | d8 | 0 | 6 % | 8 % | ×2,5 |
-| Grimbald | Nain · Briseur de fer | 57 | d10 | 0 | 6 % | 10 % | ×2,5 |
-| Ervald | Mort-vivant · Chevalier liche | 58 | d8 | 1 | 8 % | 12 % | ×2 |
-| Caldrec | Mort-vivant · Faucheur d'âmes | 56 | d10 | 0 | 8 % | 16 % | ×2 |
+| Gorak | Orc · Brute | 57 | d10 | 0 | 5 % | 18 % | ×2 |
+| Elaria | Elfe · Rôdeuse | 50 | d8 | 0 | 26 % | 17 % | ×2,4 |
+| Brokk | Nain · Gardien | 57 | d10 | 0 | 6 % | 10 % | ×2,5 |
+| Ervald | Mort-vivant · Chevalier liche | 56 | d10 | 0 | 8 % | 16 % | ×2 |
 | Ysolde | Humain · Prêtresse solaire | 52 | d7 | 0 | 8 % | 10 % | ×2 |
-| Bérengère | Humain · Inquisitrice | 50 | d7 | 0 | 8 % | 16 % | ×2 |
 | Naraxes | Homme-lézard · Voleuse | 50 | d10 | 0 | 20 % | 14 % | ×2 |
-| Ssythra | Homme-lézard · Assassine | 48 | d10 | 0 | 16 % | 20 % | ×2,3 |
-| Aldric | Humain · Paladin | 60 | d8 | 0 | 5 % | 12 % | ×2,5 |
-| Gauvain | Humain · Croisé | 54 | d8 | 0 | 10 % | 17 % | ×2,5 |
+| Aldric | Humain · Paladin | 54 | d8 | 0 | 7 % | 17 % | ×2,5 |
 | Morgrut | Ogre · Cogneur | 63 | d14 | 0 | 0 % | 0 % | ×2 |
-| Gnashka | Ogre · Ogre des cavernes | 70 | d12 | 0 | 0 % | 10 % | ×2 |
-| Thaldrin | Sylvain · Druide | 56 | d10 | 0 | 8 % | 10 % | ×2 |
-| Brannoc | Sylvain · Druide d'automne | 52 | d10 | 0 | 12 % | 14 % | ×2 |
+| Thaldrin | Sylvain · Druide | 56 | d10 | 0 | 8 % | 8 % | ×2 |
 | Fanchon | Humain · Saltimbanque | 46 | 2 × d5 | 0 | 12 % | 5 % | ×2 |
-| Mélisande | Humain · Ménestrelle | 48 | 2 × d5 | 0 | 8 % | 5 % | ×2 |
 
 **La barde (0.41.0)** lance deux d5 à chaque tour, et ses compétences se déclenchent sur les doubles, à la place des deux coups :
 - **Ouverture** (au début du combat) : 1 charge d'Aura mélodieuse ;
@@ -78,7 +70,6 @@ Six races, chacune avec un archétype de base et une variante de coloris aux sta
 - **Crescendo** (double 4) : un seul coup de 12 ;
 - **Soliste** (double 5) : un seul coup de 15.
 
-Une variante est définie à partir de son original (`variant()`), avec des écarts de stats et un filtre de couleur sur la même image.
 
 Chaque personnage a une fiche courte affichée sur son écran : accroche, background, forces et faiblesses. Sa philosophie et les décisions de design qui le concernent sont dans [PERSONNAGES.md](PERSONNAGES.md).
 
@@ -101,6 +92,7 @@ Chaque personnage a une fiche courte affichée sur son écran : accroche, backgr
 | 0.30.0 | Deux nouvelles races : Humains (Ysolde, Bérengère) et Hommes-lézards (Naraxes, Ssythra) |
 | 0.28.0 | Rééquilibrage par les compétences (méthode `EQUILIBRAGE.md`) : Rage du sang 3 PV, Peau de pierre +6, intimidation et précision cumulables, Grimbald 10 % de critique ; PV ramenés près de l'identité (Brokk 68 au lieu de 83) |
 | 0.41.0 | La barde, dixième famille (Fanchon, Mélisande) : deux dés, compétences sur les doubles, concept d'un ami de l'utilisateur ; postures et icônes de la session images |
+| 0.43.0 | Un personnage par famille : les dix jumeaux retirés ; Gorak, Elaria, Brokk, Ervald et Aldric prennent les statistiques de leur ancien jumeau (Murzug, Sylwen, Grimbald, Caldrec, Gauvain), les cinq autres gardent les leurs |
 | 0.27.0 | Jets de 1 à 3 sans dégâts ; PV réglés : Gorak 61, Murzug 57, Elaria 50, Sylwen 52, Brokk 83, Grimbald 65, Ervald 62, Caldrec 57 |
 
 ## 3. Événements et statuts
@@ -109,7 +101,7 @@ Chaque personnage a une fiche courte affichée sur son écran : accroche, backgr
 
 Un **événement** est une capacité propre à un personnage : *quand* (déclencheur) → *quoi* (effets). Il peut avoir une probabilité (`chance`) et un nombre maximal de déclenchements par combat (`limit`).
 
-**Compétences en jeu** : trois par race, héritées par les variantes, sur un 1, un 2 et un 3 au dé de dégâts du porteur. Le 3 donne une **aura permanente**. Depuis la 0.27.0, ces jets n'infligent **aucun dégât** : ils déclenchent seulement la compétence. Elles se déclenchent même si le coup est esquivé, à condition que le défenseur soit encore debout.
+**Compétences en jeu** : trois par personnage, sur un 1, un 2 et un 3 au dé de dégâts du porteur. Le 3 donne une **aura permanente**. Depuis la 0.27.0, ces jets n'infligent **aucun dégât** : ils déclenchent seulement la compétence. Elles se déclenchent même si le coup est esquivé, à condition que le défenseur soit encore debout.
 
 | Race | Dé | Compétence | Effet |
 | --- | --- | --- | --- |
@@ -254,11 +246,11 @@ Accueil (duel | tournoi)
  └─ Tournoi : Configuration → Arbre → (Affrontement | ⚡ Simuler) → Fin → Arbre
 ```
 
-- **Accueil** : bascule duel/tournoi. Pour chaque combattant : son nom en grand, avec un petit bouton rond pour ouvrir sa fiche, sa race et son archétype, ses stats, son événement, les vignettes de 64 px rangées par famille (une colonne par race, l'original en haut, ses variantes dessous ; celle du personnage choisi en face est estompée, et reste sélectionnable) et un bouton « Au hasard » (icône de dé). Grand modèle de chaque combattant, bouton « Combattre » centré en bas, version du jeu. En haut à gauche : Statistiques et **Compendium**, ce dernier par un bouton rond provisoire (son intégration définitive reste à définir). Le bouton rond près du nom ouvre la fiche du personnage dans le compendium.
+- **Accueil** : bascule duel/tournoi. Pour chaque combattant : son nom en grand, avec un petit bouton rond pour ouvrir sa fiche, sa race et son archétype, ses stats, ses compétences en dés et un bouton « Au hasard » (icône de dé), avec son grand modèle. **Rail des combattants** (0.43.0) : au centre, sous les modèles, une carte par personnage (portrait et nom), comme le tableau de sélection d'un jeu de combat. Deux onglets aux couleurs des camps disent qui choisit (« Combattant de gauche », « de droite ») : un clic sur une carte la donne à ce camp, puis la main passe en face. Cliquer un modèle donne aussi la main à son camp. Une carte choisie porte le liseré de son camp et une pastille A ou B ; les deux camps peuvent prendre le même personnage. Bouton « Combattre » centré en bas, version du jeu. En haut à gauche : Statistiques et **Compendium** (bouton rond provisoire). Le bouton rond près du nom ouvre la fiche du personnage dans le compendium.
 - **Affrontement** : en haut, sous « Affrontement » et un peu en retrait, le sélecteur d'arène ‹ nom › (flèches de l'écran ou du clavier), qui change le décor en fond. Puis les deux modèles, leurs stats en **barres** (les mêmes que sur l'écran de sélection, à la couleur du camp), leur événement, et les boutons JOUER, SIMULER et CHANGER.
 - **Combat** : dés animés, charge et impact, textes flottants ESQUIVE, CRITIQUE et nom de l'événement (à l'extérieur des combattants, sur le décor, en Alegreya Sans SC ; test de police avec `?police=cinzel|oswald|lilita`), zone d'état au-dessus de chaque combattant, fond d'arène assombri. L'arène occupe tout l'écran sous les barres de vie. Une barre de commandes flottante (pause, vitesse ×1/×2/×4, journal) est placée en bas au centre. Le **journal**, masqué au départ, s'ouvre dans une fenêtre translucide entre les combattants (bouton ou touche J), avec un compteur des lignes non lues. S'il est ouvert, il le reste pour les combats suivants de la session. Les dégâts directs y sont signalés comme tels (« l'armure ne compte pas »).
 - **Taille des combattants** (0.40.0, `STYLE_BIBLE.md` § 2) : une échelle resserrée, ni uniforme ni réaliste. Le nain (0,86 d'un humain) reste le plus petit, l'ogre (1,13) le plus grand, avec des étapes entre les deux : lézard 0,97, humains et druide 1,00, elfes 1,03, paladin 1,04, mort-vivant 1,05, orc 1,08, ours 1,10. Toutes les images sont affichées à leur largeur naturelle : la carrure vient du dessin, l'ogre retrouve la sienne.
-- **Postures** (0.40.0, [POSTURES.md](POSTURES.md)) : un combattant peut changer d'image au fil du combat, sur cinq moments communs à tous : l'attaque (pendant l'élan), l'esquive, le coup encaissé, le K.O. et la victoire. La compétence garde l'image de garde et son animation. Une posture absente retombe sur la garde : un personnage sans postures s'affiche comme avant. Les images sont préchargées et changent instantanément, sous les animations existantes (élan, saut). Avec une posture de K.O., la chute est dans l'image, et l'animation ne garde que le grisé. Les menus et panneaux passent au-dessus des combattants. **Personnages à postures** : l'orc (Gorak, Murzug), avec sa nouvelle image originale, et la voleuse (Naraxes, Ssythra).
+- **Postures** (0.40.0, [POSTURES.md](POSTURES.md)) : un combattant peut changer d'image au fil du combat, sur cinq moments communs à tous : l'attaque (pendant l'élan), l'esquive, le coup encaissé, le K.O. et la victoire. La compétence garde l'image de garde et son animation. Une posture absente retombe sur la garde : un personnage sans postures s'affiche comme avant. Les images sont préchargées et changent instantanément, sous les animations existantes (élan, saut). Avec une posture de K.O., la chute est dans l'image, et l'animation ne garde que le grisé. Les menus et panneaux passent au-dessus des combattants. **Personnages à postures** : l'orc (Gorak), avec sa nouvelle image originale, la voleuse (Naraxes) et la barde (Fanchon).
 - **Trace de résolution** (vérification et débogage) : chaque combat est tiré avec une **graine** et sa trace complète est écrite dans la **console du navigateur**, repliée, un groupe par tour. Elle donne, étape par étape et dans l'ordre du moteur : phase (ouverture, début, action, fin), jet de dé, esquive, critique, modificateurs de dégâts avec leur porteur (« 😠 Aura d'intimidation de Brokk −2 », plancher à 1 signalé), dégâts avant armure, armure, boucliers, plancher d'1 dégât, PV avant → après, compétences et effets (posé, annulé, bloqué), effets des statuts, décomptes de durée et expirations, puis l'état des deux combattants. Le bouton « Copier la trace » du journal et de l'écran de fin la copie en texte brut. **Sur le disque** (0.27.0, serveur de dev) : chaque combat écrit sa trace dans `logs/combats/` du projet, un fichier par combat (`<date>_<gauche>-vs-<droite>_graine-<n>.txt`), relisible sans navigateur. En console : `battler.trace()` (dernier combat), `battler.trace(n)`, `copy(battler.dump())` (copie les traces des 40 derniers combats, un tournoi entier), `battler.replay(graine, 'gorak', 'brokk')` (rejoue un combat à l'identique).
 - **Mode triche** (outil d'observation, bouton « Cheat » ou touche C pendant un combat) : un pavé numérique impose la valeur du **prochain dé lancé à l'écran**. Les touches vont de 1 à 10, celles qui dépassent le dé sont grisées ; pour la pièce, ce sont Pile et Face, et « Hasard » annule. Au clavier, panneau ouvert : 1 à 9, 0 pour 10, P et F, Retour arrière. Le combat est résolu à nouveau par le moteur (`forcedRolls`), avec la même graine : tout ce qui précède le dé imposé reste identique, et la lecture continue sur la nouvelle chronologie. Le dé imposé porte la mention « Imposé ». Le combat est exclu des statistiques (il compte quand même dans l'arbre d'un tournoi). Sa trace finale est écrite dans `logs/combats/` avec le suffixe `_triche`, et `npm run logs` la rejoue.
 - **Fin** : à gauche, le vainqueur, les faits marquants et les boutons ; à droite, les statistiques comparées en quatre onglets (Bilan, Critiques et défense, Événements, Dés). Un badge indique un combat simulé.
@@ -268,6 +260,7 @@ Accueil (duel | tournoi)
 | Version | Changement |
 | --- | --- |
 | 0.1.0 | Écrans d'accueil, de combat et de fin ; animations de charge et d'impact |
+| 0.43.0 | Accueil : un rail central de dix cartes (portrait et nom) remplace les deux grilles de vignettes ; le camp actif choisit, puis la main passe en face |
 | 0.40.0 | Postures des combattants (attaque, esquive, coup encaissé, K.O., victoire ; retour à la garde, préchargement, K.O. sans bascule, menus au-dessus des combattants) ; tous les combattants à leur largeur naturelle, avec une échelle de tailles resserrée (nain 0,86 → ogre 1,13 d'un humain) ; découpe et alignement des planches (`slice-poses.py`) ; l'orc, premier personnage à postures, avec une nouvelle image originale |
 | 0.5.0 | Tout le jeu sur une scène fixe en 16:9 (1600×900), tuiles de sélection plus petites |
 | 0.6.0 | Écran d'affrontement avec Jouer et Simuler |
@@ -378,7 +371,7 @@ Le compendium est le recueil du jeu : tout ce qu'on peut y consulter, rangé en 
 
 | Verticale | Contenu |
 | --- | --- |
-| **Personnages** | La liste par famille (race, puis original et variantes) et la fiche du personnage choisi, avec ses onglets Fiche et Statistiques (voir § 7). Le personnage est peint **en arrière-plan**, en grand, à la place de l'ancien modèle : assombri, fondu au sol et sur les côtés, avec un halo chaud, et passant sous les encadrés translucides de la fiche. La mise en page ne change pas |
+| **Personnages** | La liste des personnages (un par famille depuis la 0.43.0) et la fiche du personnage choisi, avec ses onglets Fiche et Statistiques (voir § 7). Le personnage est peint **en arrière-plan**, en grand, à la place de l'ancien modèle : assombri, fondu au sol et sur les côtés, avec un halo chaud, et passant sous les encadrés translucides de la fiche. La mise en page ne change pas |
 | **Compétences** | Les capacités des personnages, **regroupées par race** (un bloc par race, cartes 3 par ligne). Chaque carte donne le nom, le déclencheur, les conditions, la chance et la limite, puis chaque effet : **Immédiat** (soin, dégâts directs, purge) ou **Pose** d'un statut, avec son icône, sa cible et sa règle. En pied de carte, ses possesseurs (l'original et les variantes qui en héritent) : un clic ouvre leur fiche. C'est la carte de compétence qui relie un personnage aux statuts, présentés comme des règles neutres. La fiche du personnage garde aussi sa compétence en résumé |
 | **Bonus et malus** | La liste de tous les effets qu'on peut rencontrer en combat. **Seuls les statuts réellement posés par un personnage** y figurent ; les statuts « à venir » ne sont que dans `STATUTS.md`. Deux sous-onglets, Bonus et Malus, avec leur nombre d'entrées. Grille de cartes encadrées, 4 par ligne, à proportions fixes (4:5) : médaillon de l'icône, nom, polarité, résumé, règles déduites du code (crochets, cumul, plafond). Un statut y est présenté comme une règle neutre : la carte ne dit pas qui le pose. La règle de durée commune est rappelée une fois en tête |
 

@@ -24,7 +24,7 @@ import bardDodgeImg from '../assets/bard-dodge.png'
 import bardHurtImg from '../assets/bard-hurt.png'
 import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
-import { Character, variant, type CharacterDef } from './character'
+import { Character, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
 import { isDoubleTrigger, ROLL_TRIGGERS } from './events'
 import { STATUSES } from './statuses'
@@ -37,7 +37,8 @@ import { STATUSES } from './statuses'
  * - Mort-vivant : affliction, endurant et peu esquiveur, il empoisonne l'adversaire.
  * - Humain (prêtresse) : contrôle, un petit dé mais des compétences sur la moitié de ses jets.
  * - Homme-lézard (voleuse) : chance et poison, esquive et critiques, coups de dés à double tranchant.
- * Chaque variante de coloris décale légèrement ces stats et hérite des trois compétences de sa race,
+ * Un seul personnage par famille depuis la 0.43.0 (les jumeaux de coloris sont retirés, chacun garde
+ * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md). Trois compétences,
  * sur un 1, un 2 et un 3 au dé (le 3 donne une aura permanente, voir plus bas). Depuis la 0.27.0,
  * ces jets n'infligent aucun dégât : ils servent seulement à déclencher la compétence (`forfeitsHit`).
  * - Orc : Rage du sang (1 : regagne 3 PV) ; Furie des vents (2 : frappe deux fois au tour suivant).
@@ -58,7 +59,9 @@ const gorak: CharacterDef = {
   name: 'Gorak',
   race: 'Orc',
   archetype: 'Brute',
-  stats: { maxHp: 61, damageDie: 10, armor: 0, dodgeChance: 0.05, critChance: 0.1, critMultiplier: 2 },
+  // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique,
+  // Rage du sang à 5 PV. Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
+  stats: { maxHp: 57, damageDie: 10, armor: 0, dodgeChance: 0.05, critChance: 0.18, critMultiplier: 2 },
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -73,8 +76,8 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Beaucoup de PV (61)', 'Gros dé (d10)', 'Un jet raté le soigne'],
-    weaknesses: ["N'esquive presque jamais", 'Critiques rares', 'Aucune armure'],
+    strengths: ['Gros dé (d10)', 'Critiques fréquents pour un orc (18 %)', 'Un jet raté le soigne (5 PV)'],
+    weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   events: [
     {
@@ -83,7 +86,8 @@ const gorak: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalOne',
       forfeitsHit: true,
-      effects: [{ type: 'heal', amount: 3 }],
+      // 5 PV (ceux de Murzug, 0.36.5) : avec moins de PV et des coups plus forts, 3 PV ne valaient rien
+      effects: [{ type: 'heal', amount: 5 }],
     },
     {
       id: 'wind-fury',
@@ -104,44 +108,21 @@ const gorak: CharacterDef = {
   ],
 }
 
-/*
- * Murzug a sa propre Rage du sang (0.36.5) : 5 PV au lieu de 3. Avec moins de PV et des coups plus
- * forts que Gorak, 3 PV ne lui valaient rien (+0,6 point de valeur nette, contre +2,0 pour Gorak).
- */
-const murzugDef = variant(gorak, {
-  id: 'murzug',
-  name: 'Murzug',
-  archetype: 'Berserker',
-  lore: {
-    tagline: 'Il compte les cicatrices, pas les coups reçus.',
-    background:
-      "Banni de son clan pour avoir défié le chef en plein festin, Murzug s'est couvert de peintures de guerre et ne vit plus que pour la prochaine mêlée. Moins solide que Gorak, bien plus imprévisible.",
-    strengths: ['Gros dé (d10)', 'Critiques fréquents pour un orc (18 %)', 'Un jet raté le soigne'],
-    weaknesses: ['Moins de PV que Gorak', "N'esquive presque jamais", 'Aucune armure'],
-  },
-  tint: 'hue-rotate(-75deg) saturate(1.25) brightness(0.95)',
-  stats: { maxHp: -4, critChance: +0.08 },
-})
-const murzug: CharacterDef = {
-  ...murzugDef,
-  events: murzugDef.events.map((e) =>
-    e.id === 'blood-rage' ? { ...e, id: 'blood-rage-murzug', effects: [{ type: 'heal', amount: 5 }] } : e,
-  ),
-}
-
 const elaria: CharacterDef = {
   id: 'elaria',
   name: 'Elaria',
   race: 'Elfe',
   archetype: 'Rôdeuse',
-  stats: { maxHp: 48, damageDie: 8, armor: 0, dodgeChance: 0.33, critChance: 0.22, critMultiplier: 2 },
+  // Statistiques de Sylwen, son ancienne jumelle (0.43.0) : même valeur (49,4 % contre 49,6 %), duels plus
+  // resserrés (de 42 à 57 % au lieu de 40 à 62 %).
+  stats: { maxHp: 50, damageDie: 8, armor: 0, dodgeChance: 0.26, critChance: 0.17, critMultiplier: 2.4 },
   look: { image: elfImg, facing: 'right', scale: 0.96, portrait: { x: 42, y: 8, zoom: 3.4 } },
   lore: {
     tagline: 'Un souffle, une flèche.',
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
-    strengths: ['Meilleure esquive (33 %)', 'Critiques fréquents (22 %)', 'Un jet raté prépare un critique'],
-    weaknesses: ['Le moins de PV du roster', 'Petit dé (d8)', "Peine face à l'armure"],
+    strengths: ['Meilleure esquive (26 %)', 'Critiques dévastateurs (×2,4)', 'Un jet raté prépare un critique'],
+    weaknesses: ['PV modestes (50)', 'Petit dé (d8)', "Peine face à l'armure"],
   },
   events: [
     {
@@ -173,34 +154,21 @@ const elaria: CharacterDef = {
   ],
 }
 
-const sylwen = variant(elaria, {
-  id: 'sylwen',
-  name: 'Sylwen',
-  archetype: 'Sentinelle sylvestre',
-  lore: {
-    tagline: 'La forêt ne pardonne pas deux fois.',
-    background:
-      "Gardienne des bois sacrés de Lithmeren, Sylwen attend l'ouverture parfaite plutôt que de harceler. Elle critique moins souvent qu'Elaria, mais chacun de ses critiques fait très mal.",
-    strengths: ['Critiques dévastateurs (×2,4)', 'Esquive encore élevée (26 %)', 'Un jet raté prépare un critique'],
-    weaknesses: ['Petit dé (d8)', 'PV modestes', "Moins insaisissable qu'Elaria"],
-  },
-  tint: 'hue-rotate(-110deg)',
-  stats: { maxHp: +2, dodgeChance: -0.07, critChance: -0.05, critMultiplier: +0.4 },
-})
-
 const brokk: CharacterDef = {
   id: 'brokk',
   name: 'Brokk',
   race: 'Nain',
   archetype: 'Gardien',
-  stats: { maxHp: 68, damageDie: 8, armor: 0, dodgeChance: 0.06, critChance: 0.08, critMultiplier: 2.5 },
+  // Statistiques de Grimbald, son ancien jumeau (0.43.0) : d10 et 57 PV. Avec les siennes (d8, 68 PV), Ysolde
+  // ne le battait qu'à 26 % (contre connu) ; ainsi, tous ses duels tiennent entre 45 et 60 %.
+  stats: { maxHp: 57, damageDie: 10, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2.5 },
   look: { image: dwarfImg, facing: 'left', scale: 0.8, portrait: { x: 38, y: 40, zoom: 2.8 } },
   lore: {
     tagline: 'Ce qui passe la porte passe par moi.',
     background:
       "Gardien héréditaire de la grande porte de Durnhold, Brokk n'a jamais reculé d'un pas. Il encaisse plus que quiconque, et chaque faux pas le rend plus dur encore.",
-    strengths: ['Le plus de PV du roster (68)', 'Peau de pierre cumulable', 'Critiques lourds (×2,5)'],
-    weaknesses: ['Petit dé (d8)', 'Critiques rares (8 %)', 'Esquive faible'],
+    strengths: ['Gros dé (d10)', 'Peau de pierre cumulable', 'Critiques lourds (×2,5)'],
+    weaknesses: ['Critiques peu fréquents (10 %)', 'Esquive faible', 'Lent à prendre l’avantage'],
   },
   events: [
     {
@@ -230,34 +198,21 @@ const brokk: CharacterDef = {
   ],
 }
 
-const grimbald = variant(brokk, {
-  id: 'grimbald',
-  name: 'Grimbald',
-  archetype: 'Briseur de fer',
-  lore: {
-    tagline: 'Pourquoi parer quand on peut briser ?',
-    background:
-      "Ancien forgeron de Durnhold, Grimbald a troqué l'enclume pour une hache de siège. Il a troqué l'endurance pour la force de frappe, au grand dam des anciens du clan.",
-    strengths: ['Gros dé (d10)', 'Critiques lourds (×2,5)', 'Peau de pierre cumulable'],
-    weaknesses: ['Moins de PV que Brokk (57)', 'Critiques peu fréquents (10 %)', 'Esquive faible'],
-  },
-  tint: 'saturate(0.15) brightness(1.15)',
-  stats: { damageDie: +2, maxHp: -11, critChance: +0.02 },
-})
-
 const ervald: CharacterDef = {
   id: 'ervald',
   name: 'Ervald',
   race: 'Mort-vivant',
   archetype: 'Chevalier liche',
-  stats: { maxHp: 58, damageDie: 8, armor: 1, dodgeChance: 0.08, critChance: 0.12, critMultiplier: 2 },
+  // Statistiques de Caldrec, son ancien jumeau (0.43.0) : d10, sans armure, 56 PV, 16 % de critique.
+  // 48,8 % contre les neuf autres (46,7 % avec les siennes).
+  stats: { maxHp: 56, damageDie: 10, armor: 0, dodgeChance: 0.08, critChance: 0.16, critMultiplier: 2 },
   look: { image: undeadImg, facing: 'right', scale: 0.98, portrait: { x: 60, y: 8, zoom: 3.2 } },
   lore: {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Empoisonne sur un jet raté', 'Armure légère (−1 par coup)', 'Endurant (58 PV)'],
-    weaknesses: ["N'esquive presque jamais", 'Petit dé (d8)', 'Dégâts lents à venir'],
+    strengths: ['Empoisonne sur un jet raté', 'Gros dé (d10)', 'Critiques fréquents (16 %)'],
+    weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   events: [
     {
@@ -287,21 +242,6 @@ const ervald: CharacterDef = {
     },
   ],
 }
-
-const caldrec = variant(ervald, {
-  id: 'caldrec',
-  name: 'Caldrec',
-  archetype: 'Faucheur d’âmes',
-  lore: {
-    tagline: 'Il ne garde rien, pas même son bouclier.',
-    background:
-      "Lieutenant d'Ervald, Caldrec a abandonné l'armure pour la vitesse d'une lame spectrale. Il frappe plus fort et plus souvent en critique, mais le moindre coup l'entame.",
-    strengths: ['Gros dé (d10)', 'Critiques plus fréquents (16 %)', 'Empoisonne sur un jet raté'],
-    weaknesses: ['Aucune armure', 'Moins de PV qu’Ervald', "N'esquive presque jamais"],
-  },
-  tint: 'hue-rotate(-110deg) saturate(1.1) brightness(0.95)',
-  stats: { damageDie: +2, armor: -1, maxHp: -2, critChance: +0.04 },
-})
 
 /** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0). */
 const PURIFICATION_LIGHT = 5
@@ -352,21 +292,6 @@ const ysolde: CharacterDef = {
   ],
 }
 
-const berengere = variant(ysolde, {
-  id: 'berengere',
-  name: 'Bérengère',
-  archetype: 'Inquisitrice',
-  lore: {
-    tagline: 'La lumière brûle aussi.',
-    background:
-      "Inquisitrice de l'ordre solaire, Bérengère a troqué la patience du sanctuaire pour la traque des hérétiques. Elle frappe plus souvent fort qu'Ysolde, mais tient moins longtemps.",
-    strengths: ['Critiques fréquents (16 %)', 'Peur et purification', 'Se soigne chaque tour (sainteté)'],
-    weaknesses: ['Moins de PV qu’Ysolde (50)', 'Petit dé (d7)', 'Esquive faible'],
-  },
-  tint: 'saturate(0.55) brightness(0.92) contrast(1.1)',
-  stats: { maxHp: -2, critChance: +0.06 },
-})
-
 const naraxes: CharacterDef = {
   id: 'naraxes',
   name: 'Naraxes',
@@ -389,7 +314,7 @@ const naraxes: CharacterDef = {
     tagline: 'Pile, je gagne. Face, tu perds quand même.',
     background:
       "Coupe-bourse des marais de Sszeth, Naraxes vit de paris et de lames enduites. Elle joue tout sur un coup de chance, et ce qu'elle ne tue pas, son poison s'en charge.",
-    strengths: ['Bonne esquive (20 %)', 'Pile ou face : 15 dégâts', 'Lames empoisonnées (décoction)'],
+    strengths: ['Bonne esquive (20 %)', 'Pile ou face : 20 dégâts', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
   events: [
@@ -420,24 +345,9 @@ const naraxes: CharacterDef = {
   ],
 }
 
-const ssythra = variant(naraxes, {
-  id: 'ssythra',
-  name: 'Ssythra',
-  archetype: 'Assassine',
-  lore: {
-    tagline: 'Une seule morsure suffit.',
-    background:
-      "Sœur de couvée de Naraxes, Ssythra ne vole pas : elle exécute. Moins insaisissable, elle vise les points faibles et ses critiques ne pardonnent pas.",
-    strengths: ['Critiques fréquents (20 %)', 'Critiques lourds (×2,3)', 'Pile ou face : 15 dégâts'],
-    weaknesses: ['Moins de PV que Naraxes', 'Moins d’esquive (16 %)', 'Aucune armure'],
-  },
-  tint: 'hue-rotate(-80deg) saturate(1.15) brightness(0.95)',
-  stats: { maxHp: -2, dodgeChance: -0.04, critChance: +0.06, critMultiplier: +0.3 },
-})
-
 /*
  * 0.42.0 : esquive de 5 à 2 %, en compensation de l'Aura d'immunité qui donne +1 d'armure (Aldric
- * battait sinon Thaldrin à 66-68 %). Gauvain suit (7 %).
+ * battait sinon Thaldrin à 66-68 %). Depuis la 0.43.0, il a les statistiques de Gauvain (7 %).
  */
 const aldric: CharacterDef = {
   id: 'aldric',
@@ -445,14 +355,16 @@ const aldric: CharacterDef = {
   race: 'Humain',
   archetype: 'Paladin',
   // Critiques lourds (12 % ×2,5 depuis la 0.32.0, quand la riposte a cessé de s'éteindre à vide) : face à l'intimidation du nain, ses coups moyens ne passaient pas (Brokk le battait à 75 %).
-  stats: { maxHp: 60, damageDie: 8, armor: 0, dodgeChance: 0.02, critChance: 0.12, critMultiplier: 2.5 },
+  // Statistiques de Gauvain, son ancien jumeau (0.43.0) : 54 PV, 7 % d'esquive, 17 % de critique.
+  // 50,1 % contre les neuf autres (52,7 % avec les siennes).
+  stats: { maxHp: 54, damageDie: 8, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
   look: { image: paladinImg, facing: 'right', scale: 0.97, portrait: { x: 64, y: 24, zoom: 3.4 } },
   lore: {
     tagline: 'Chaque coup reçu est une dette.',
     background:
       "Champion de l'ordre du Sceau ardent, Aldric porte la bannière dans les pires mêlées. Il encaisse sans broncher, tient le compte des coups reçus et rend la justice d'un seul revers.",
-    strengths: ['Rétribution : rend les coups reçus', 'Critiques lourds (12 %, ×2,5)', 'Immunité aux malus et +1 d’armure (aura)'],
-    weaknesses: ['Aucune esquive à parler (2 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure sans son aura'],
+    strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Immunité aux malus et +1 d’armure (aura)'],
+    weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure sans son aura'],
   },
   events: [
     {
@@ -485,21 +397,6 @@ const aldric: CharacterDef = {
   ],
 }
 
-const gauvain = variant(aldric, {
-  id: 'gauvain',
-  name: 'Gauvain',
-  archetype: 'Croisé',
-  lore: {
-    tagline: 'La foi tranche plus vite que la loi.',
-    background:
-      "Frère d'armes d'Aldric, Gauvain a quitté la bannière pour la croisade. Plus léger dans son armure, il esquive davantage et frappe plus souvent juste, mais encaisse moins.",
-    strengths: ['Critiques fréquents (17 %, ×2,5)', 'Esquive correcte (7 %)', 'Rétribution et riposte'],
-    weaknesses: ['Moins de PV qu’Aldric (54)', 'Rétribution plus maigre : il encaisse moins', 'Aucune armure'],
-  },
-  tint: 'sepia(0.35) hue-rotate(-25deg) saturate(1.4) brightness(0.9)',
-  stats: { maxHp: -6, dodgeChance: +0.05, critChance: +0.05 },
-})
-
 /** Attente : un 1, un 2 ou un 3 laisse l'ogre planté là, sans frapper (il n'a aucune compétence). */
 const waitOn = (trigger: 'naturalOne' | 'naturalTwo' | 'naturalThree', face: number): CharacterEvent => ({
   id: `waiting-${face}`,
@@ -528,22 +425,6 @@ const morgrut: CharacterDef = {
   },
   events: [waitOn('naturalOne', 1), waitOn('naturalTwo', 2), waitOn('naturalThree', 3)],
 }
-
-const gnashka = variant(morgrut, {
-  id: 'gnashka',
-  name: 'Gnashka',
-  archetype: 'Ogre des cavernes',
-  lore: {
-    tagline: 'Plus gris, plus dur, toujours aussi perdu.',
-    background:
-      "Cousine de Morgrut, Gnashka a grandi sous la montagne. Sa peau grise encaisse mieux et elle vise les têtes, mais sa massue de pierre frappe moins fort.",
-    strengths: ['Encore plus de PV (70)', 'Critiques (10 %)', 'Gros dé (d12)'],
-    weaknesses: ['Aucune compétence', 'Sur 1, 2 ou 3, elle attend sans frapper', "N'esquive jamais"],
-  },
-  tint: 'hue-rotate(185deg) saturate(0.45) brightness(0.92)',
-  // Un d12 au lieu du d14, compensé par 7 PV et 10 % de critique (52,8 % aux essais)
-  stats: { maxHp: +7, damageDie: -2, critChance: +0.1 },
-})
 
 const thaldrin: CharacterDef = {
   id: 'thaldrin',
@@ -574,21 +455,6 @@ const thaldrin: CharacterDef = {
     { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },
   ],
 }
-
-const brannoc = variant(thaldrin, {
-  id: 'brannoc',
-  name: 'Brannoc',
-  archetype: "Druide d'automne",
-  lore: {
-    tagline: 'Les feuilles tombent, les griffes aussi.',
-    background:
-      "Brannoc veille sur les forêts à la fin de l'été. Plus vif que Thaldrin, il esquive mieux et frappe plus souvent juste, mais sa sève s'épuise plus vite.",
-    strengths: ['Deux formes, six compétences', 'Meilleure esquive (12 %)', 'Critiques plus fréquents'],
-    weaknesses: ['Moins de PV que Thaldrin', 'Forme imposée à chaque tour', 'Coups moyens'],
-  },
-  tint: 'hue-rotate(-28deg) saturate(1.25) brightness(0.95)',
-  stats: { maxHp: -4, dodgeChance: +0.04, critChance: +0.04 },
-})
 
 /*
  * Barde (0.41.0, concept d'un ami de l'utilisateur) : un petit d5, mais deux dés à chaque action. Hors
@@ -659,43 +525,18 @@ const fanchon: CharacterDef = {
   ],
 }
 
-const melisande = variant(fanchon, {
-  id: 'melisande',
-  name: 'Mélisande',
-  archetype: 'Ménestrelle',
-  lore: {
-    tagline: 'Elle chante juste, et frappe plus juste encore.',
-    background:
-      "Ancienne ménestrelle de cour, Mélisande a troqué les salons pour les arènes. Plus solide que Fanchon, elle esquive moins : elle préfère tenir la note jusqu'au bout.",
-    strengths: ['Deux coups par tour', 'Plus de PV que Fanchon (50)', 'Compétences sur les doubles'],
-    weaknesses: ['Petit dé (d5)', 'Esquive plus faible', 'Un double sur cinq seulement'],
-  },
-  tint: 'hue-rotate(150deg) saturate(1.2) brightness(0.95)',
-  stats: { maxHp: +2, dodgeChance: -0.04 },
-})
-
-/** Personnages disponibles, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
+/** Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
 export const ROSTER: readonly CharacterDef[] = [
   gorak,
-  murzug,
   elaria,
-  sylwen,
   brokk,
-  grimbald,
   ervald,
-  caldrec,
   ysolde,
-  berengere,
   naraxes,
-  ssythra,
   aldric,
-  gauvain,
   morgrut,
-  gnashka,
   thaldrin,
-  brannoc,
   fanchon,
-  melisande,
 ]
 
 /** Les personnages instanciés une fois pour toutes (ils sont immuables). */
@@ -703,11 +544,6 @@ export const CHARACTERS: readonly Character[] = ROSTER.map((def) => new Characte
 
 export const CHARACTER_IDS: readonly string[] = CHARACTERS.map((c) => c.id)
 
-/** Familles : chaque original suivi de ses variantes, dans l'ordre du roster (une colonne par famille). */
-export const FAMILIES: readonly (readonly Character[])[] = CHARACTERS.filter((c) => !c.baseId).map((base) => [
-  base,
-  ...CHARACTERS.filter((c) => c.baseId === base.id),
-])
 
 export function createCharacter(id: string): Character {
   const character = CHARACTERS.find((c) => c.id === id)
@@ -734,7 +570,6 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     if (!inRange(s.dodgeChance, 0, 1)) problems.push(`${at} dodgeChance hors de [0, 1]`)
     if (!inRange(s.critChance, 0, 1)) problems.push(`${at} critChance hors de [0, 1]`)
     if (!inRange(s.critMultiplier, 1)) problems.push(`${at} critMultiplier doit être ≥ 1`)
-    if (d.baseId && !defs.some((o) => o.id === d.baseId)) problems.push(`${at} baseId inconnu (${d.baseId})`)
     const { lore } = d
     if (!lore.tagline || !lore.background) problems.push(`${at} fiche incomplète (accroche ou background)`)
     if (lore.background.length > 240) problems.push(`${at} background trop long pour la fiche (240 caractères max.)`)

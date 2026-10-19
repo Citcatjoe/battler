@@ -1,10 +1,10 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-19, version 0.42.0._
+_Dernière mise à jour : 2026-10-19, version 0.44.0._
 
 ## En bref
 
-Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Vingt personnages (10 familles × 2 variantes : orc, elfe, nain, mort-vivant, humain, homme-lézard, paladin, ogre, druide, barde), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente), sauf la barde, qui lance deux dés et joue ses compétences sur les doubles ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
+Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Dix personnages, un par famille depuis la 0.43.0 (Gorak l'orc, Elaria l'elfe, Brokk le nain, Ervald le mort-vivant, Ysolde la prêtresse, Naraxes la voleuse, Aldric le paladin, Morgrut l'ogre, Thaldrin le druide, Fanchon la barde), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente), sauf la barde, qui lance deux dés et joue ses compétences sur les doubles ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
 
 ## Ce qui fonctionne
 
@@ -12,11 +12,12 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | --- | --- |
 | Refonte de l'interface (design system V1.4, `docs/design-system.md`) | ✅ 0.39.0, 13 étapes vues à l'écran (captures Firefox sans interface). Natures des compétences classées (0.39.1). À faire : barre de commandes du combat, boutons Compléter et Valider l'arbre du tournoi, titres de page et textes de moins de 13 px non migrés |
 | Audit des compétences (0.42.0, `docs/SORTS.md` § 10) | ✅ Pile ou face et Aura d'immunité ne coûtent plus de victoires, Purification n'est plus gâchée, Fleur de vie compte. Restent signalées : Aura de sainteté et Rétribution « écrasantes » (signatures), Pile ou face et l'immunité de Gauvain « presque inutiles » (de −0,6 à +0,6). Deux contres tolérés de plus : Ysolde contre les voleuses (35 %). Rendu vu : pièce ; la décoction qui suit pile n'est pas capturée |
+| Lisibilité du tour : passage de main (pause de 400 ms, camp actif, anneau au sol) et dé de compétence qui pulse | ✅ 0.44.0, vu à l'écran (Morgrut contre Elaria : annonce, anneau, pulsation du 1). Pas vu : la pulsation d'un double de la barde et d'un coup transformé (couverts par les tests pour le second) |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |
 | Compétences sur un 1 au dé (les 6 races) | ✅ stable |
 | Aldric, le paladin (Rétribution à jauges, Riposte, Aura d'immunité) | ✅ 0.31.0, rendu à valider (jauges dans la zone d'état, sélection à 7 familles) |
-| Gauvain, variante d'Aldric | ✅ 0.32.0, teinte non vue à l'écran |
+| Un personnage par famille (dix personnages, sans jumeaux), rail de sélection central sur l'accueil | ✅ 0.43.0, vu à l'écran (accueil, passage de la main en face, préparation du tournoi, compendium). Le format de l'historique ne change pas : les statistiques des jumeaux restent stockées, mais ne s'affichent plus |
 | Lisibilité des textes flottants (placement, police, durée) | ✅ 0.32.1, police validée par l'utilisateur |
 | Mode triche (prochain dé imposé) et barre de commandes au style jeu | ✅ 0.33.0 ; barre vue à l'écran (0.34.0) |
 | Sons enregistrés (33 sons, 67 fichiers CC0), repli synthétisé, écourtés selon la vitesse | ⚠️ 0.36.0 jugée cacophonique ; refonte selon `docs/SONS.md` en 0.36.2 (20 sons, un fichier chacun) ; 19 fichiers choisis à l'oreille par l'utilisateur (0.36.3), Ronge encore synthétisé. Volumes à régler à l'oreille |
@@ -39,7 +40,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |
 | Version affichée en jeu | ✅ depuis 0.11.0 |
 | Taille des combattants (échelle resserrée, nain 0,86 → ogre 1,13, largeur naturelle pour tous) | ✅ 0.40.0, vue à l'écran (accueil, affrontement, combat) |
-| Postures des combattants (attaque, esquive, coup encaissé, K.O., victoire ; retour à la garde) | ✅ 0.40.0, l'orc (nouvelle image originale) et la voleuse, avec leurs variantes ; attaque, coup encaissé et victoire vus à l'écran, esquive et K.O. non vus (`POSTURES.md`) |
+| Postures des combattants (attaque, esquive, coup encaissé, K.O., victoire ; retour à la garde) | ✅ 0.40.0, l'orc (nouvelle image originale) et la voleuse ; attaque, coup encaissé et victoire vus à l'écran, esquive et K.O. non vus (`POSTURES.md`) |
 | La barde (Fanchon, Mélisande) : deux dés, compétences sur les doubles, dégâts finaux | ✅ 0.41.0. Vus à l'écran (captures Firefox) : sélection à 10 familles, dés des doubles, affrontement face au nain (tailles), paire de dés en combat, aura, posture d'attaque. Mélisande et sa teinte vues sur l'affrontement (postures redécoupées, ancrage sur la silhouette, `bodyInset`). Non vus : un double en combat (annonce « DOUBLE », gros coup), les sons. Brokk contre la barde : contre connu |
 | Paris (deux joueurs et deux parieurs de l'ordinateur, guichet de jeu, cotes cachées, mises fixes, rattrapage, coups de théâtre, écran de fin en deux moitiés, classement) | ✅ 0.38.0, vu à l'écran (captures Firefox : guichet, fin de combat, arbre). Pas encore de guichet de tour : les joueurs ne parient pas sur les matchs simulés depuis l'arbre (Borin et Zlatka, si). Sons non vérifiés |
 | Laboratoire des sorts et audit des compétences (`scripts/lab.report.ts`, `scripts/skills.report.ts`) | ✅ 0.36.5, voir `SORTS.md` |
@@ -63,7 +64,7 @@ Tout ce qui suit est dans le dépôt et tourne avec `npm run check` :
 - **Tournoi non sauvegardé.** C'est voulu : un rechargement de la page le perd, et les bourses des paris avec lui.
 - **Paris : pas de guichet de tour.** Les joueurs ne parient pas sur les matchs simulés depuis l'arbre (« Simuler », « Simuler le tour ») ; il faut ouvrir le match. Borin et Zlatka, eux, parient sur tous les matchs (PARIS.md, étape P3).
 - **Personnage en placeholder.** `dwarf.png` provient d'une œuvre existante et est à remplacer par une création originale (voir `docs/STYLE_BIBLE.md`). L'orc a été remplacé en 0.40.0.
-- **Postures** : seuls l'orc, la voleuse et la barde (et leurs variantes) en ont (`POSTURES.md`).
+- **Postures** : seuls l'orc, la voleuse et la barde en ont (`POSTURES.md`).
 - **Pas de version mobile.** La scène 16:9 se réduit, mais rien n'est pensé pour le tactile.
 - **Historique git récent.** Premier commit et tag à partir de la 0.11.0 ; les versions précédentes ont été reconstituées dans le CHANGELOG.
 

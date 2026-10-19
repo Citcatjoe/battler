@@ -878,6 +878,104 @@ body {
     color: var(--text-1);
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
   }
+
+  /* Rail des combattants de l'accueil (0.43.0) : un panneau fonctionnel, une carte par personnage.
+     Le camp qui choisit est un onglet mineur à sa couleur ; une carte choisie porte le liseré de son
+     camp (2 px), les deux s'il est choisi des deux côtés. La forme ne change jamais. */
+  .roster-rail {
+    padding: 10px 16px 14px;
+    background: var(--scrim);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(232, 200, 140, 0.16);
+    border-radius: var(--r-xs);
+    box-shadow: var(--hl), var(--shadow-2);
+  }
+  .rail-camp {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 2px 5px;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    transition: color 150ms, border-color 150ms;
+  }
+  .rail-camp:hover { color: var(--text-2); }
+  .rail-camp[aria-selected='true'][data-side='a'] { color: var(--side-a-hi); border-color: var(--side-a); }
+  .rail-camp[aria-selected='true'][data-side='b'] { color: var(--side-b-hi); border-color: var(--side-b); }
+  .rail-camp:focus-visible { outline: none; box-shadow: var(--focus); }
+  .rail-camp-arrow {
+    width: 0;
+    height: 0;
+    border-block: 5px solid transparent;
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .rail-camp-arrow[data-dir='left'] { border-right: 7px solid currentColor; }
+  .rail-camp-arrow[data-dir='right'] { border-left: 7px solid currentColor; }
+  .rail-camp[aria-selected='true'] .rail-camp-arrow { opacity: 1; }
+
+  .roster-card {
+    --cursor: var(--side-a);
+    position: relative;
+    display: flex;
+    width: 80px;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--r-xs);
+    background: var(--bg-1);
+    box-shadow: 0 0 0 1px var(--line-2), var(--hl);
+    transition: box-shadow 150ms, transform 150ms, filter 150ms;
+  }
+  .roster-card[data-cursor='b'] { --cursor: var(--side-b); }
+  .roster-card:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+    box-shadow: 0 0 0 1px var(--cursor), var(--hl);
+  }
+  .roster-card:active { transform: translateY(1px); }
+  .roster-card[data-a] { box-shadow: 0 0 0 2px var(--side-a); }
+  .roster-card[data-b] { box-shadow: 0 0 0 2px var(--side-b); }
+  .roster-card[data-a][data-b] { box-shadow: 0 0 0 2px var(--side-a), 0 0 0 4px var(--side-b); }
+  .roster-card:focus-visible { outline: none; box-shadow: var(--focus); }
+  .roster-card-face {
+    height: 84px;
+    width: 100%;
+  }
+  .roster-card-name {
+    overflow: hidden;
+    padding: 3px 4px 4px;
+    border-top: 1px solid var(--line-1);
+    background: var(--bg-2);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-1);
+  }
+  .roster-card[data-a] .roster-card-name,
+  .roster-card[data-b] .roster-card-name { color: var(--gold-200); }
+  .roster-card-tag {
+    position: absolute;
+    top: 3px;
+    min-width: 18px;
+    padding: 1px 4px;
+    border-radius: var(--r-xs);
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--bg-0);
+  }
+  .roster-card-tag[data-side='a'] { left: 3px; background: var(--side-a); }
+  .roster-card-tag[data-side='b'] { right: 3px; background: var(--side-b); }
 }
 
 /* ---------- Compendium : cartes encadrées ---------- */
@@ -1288,6 +1386,49 @@ body {
   margin: 1px;
   background: radial-gradient(circle at 35% 35%, #fef3c7, #f59e0b 70%);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+/* Le dé qui sort (en-tête du combat) : deux pulsations lumineuses dans la couleur de la nature de la
+   compétence (data-nature, comme les cartes en lame), au moment où le dé du combat tombe. */
+.skill-die-slot { --nature: var(--arcane); }
+.skill-die-slot[data-nature='martial'] { --nature: var(--gold-400); }
+.skill-die-slot[data-nature='finesse'] { --nature: var(--armor); }
+.skill-die-slot[data-nature='neutral'] { --nature: var(--text-3); }
+.skill-die-pulse {
+  position: absolute;
+  inset: -3px;
+  z-index: 10;
+  pointer-events: none;
+  border-radius: 10px;
+  border: 2px solid var(--nature);
+  animation: skill-die-pulse calc(1100ms / var(--speed)) ease-out both;
+}
+@keyframes skill-die-pulse {
+  0% { opacity: 0; transform: scale(0.9); box-shadow: 0 0 0 0 var(--nature); }
+  15% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 22px 6px var(--nature), inset 0 0 14px var(--nature); }
+  45% { opacity: 0.55; transform: scale(1); box-shadow: 0 0 8px 1px var(--nature); }
+  65% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 18px 4px var(--nature), inset 0 0 10px var(--nature); }
+  100% { opacity: 0; transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ---------- Passage de main (combat) ----------
+   Le camp dont c'est le tour s'allume (nom et barre de vie), l'autre se tamise ; un anneau au sol
+   de la couleur du camp marque le combattant actif. --camp : couleur du camp, posée par le composant. */
+.hp-camp { transition: filter calc(300ms / var(--speed)); }
+.hp-camp[data-turn='waiting'] { filter: saturate(0.55) brightness(0.72); }
+.hp-camp-name, .hp-camp-track { transition: text-shadow calc(300ms / var(--speed)), box-shadow calc(300ms / var(--speed)); }
+.hp-camp[data-turn='active'] .hp-camp-name { text-shadow: 0 0 14px color-mix(in srgb, var(--camp) 70%, transparent); }
+.hp-camp[data-turn='active'] .hp-camp-track { box-shadow: 0 0 12px color-mix(in srgb, var(--camp) 55%, transparent); }
+.turn-ring {
+  border: 2px solid color-mix(in srgb, var(--camp) 85%, transparent);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--camp) 22%, transparent) 0%, transparent 70%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--camp) 60%, transparent), inset 0 0 12px color-mix(in srgb, var(--camp) 40%, transparent);
+  opacity: 0;
+  transform: translateX(-50%) scale(0.85);
+  transition: opacity calc(300ms / var(--speed)), transform calc(300ms / var(--speed));
+}
+.turn-ring[data-active='true'] { opacity: 1; transform: translateX(-50%) scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .skill-die-pulse { animation-duration: 1ms; }
 }
 
 /* ---------- Écran du champion ---------- */

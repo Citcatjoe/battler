@@ -28,9 +28,11 @@ import {
   type LogEntry,
 } from './narration'
 import { STATUSES, type StatusId } from './statuses'
+import { doubleFace, type Trigger } from './events'
 import { cueOf } from './cues'
 import { setSoundSpeed, sfx } from './sound'
 import type { Status } from './statuses'
+import type { Character } from './character'
 
 export interface DiceState {
   values: number[]
@@ -91,6 +93,52 @@ export interface EffectFx {
 }
 
 /** Mode triche : le prochain dé à venir (pas encore lancé à l'écran) et la valeur qui lui est imposée. */
+/**
+ * Dé de compétence qui sort : au moment où le dé tombe sur une face qui déclenche une compétence
+ * (1, 2, 3, ou un double de la barde), le dé de cette face pulse dans l'en-tête de son camp (SkillDice).
+ * `key` relance l'animation quand la même face sort deux fois de suite.
+ */
+export interface SkillPulse {
+  side: Side
+  face: number
+  key: number
+}
+
+/** Face des dés de compétence (en-tête) qui correspond à un déclencheur du dé. */
+const NATURAL_FACE: Partial<Record<Trigger, number>> = { naturalOne: 1, naturalTwo: 2, naturalThree: 3 }
+export const skillFaceOf = (trigger: Trigger) => NATURAL_FACE[trigger] ?? doubleFace(trigger)
+
+/**
+ * Face de compétence du coup de l'étape `i` (une étape `attack`) : la compétence que son dé déclenche
+ * (sur un 1, 2 ou 3), cherchée dans la suite du même tour, ou le coup transformé (Charge, Coup de griffe).
+ * Lue dans la chronologie, jamais recalculée. Undefined si le jet ne déclenche rien.
+ */
+export function skillFaceAt(beats: Beat[], fighters: Pair<Character>, i: number): number | undefined {
+  const beat = beats[i]
+  if (beat?.type !== 'attack') return undefined
+  const attack = beat.attack
+  const own = fighters[attack.attacker].events
+  if (attack.reshaped) {
+    const trigger = own.find((e) => e.id === attack.reshaped!.event)?.trigger
+    return trigger && skillFaceOf(trigger)
+  }
+  for (let j = i + 1; j < beats.length && beats[j].turn === beat.turn; j++) {
+    const next = beats[j]
+    if (next.type === 'attack') break
+    if (next.type === 'event' && next.event.side === attack.attacker) {
+      const face = skillFaceOf(next.event.trigger)
+      if (face !== undefined) return face
+    }
+  }
+  return undefined
+}
+
+/** Annonce du passage de main, avec l'élision devant une voyelle (« Au tour d'Elaria »). */
+export const turnLabel = (name: string) => (/^[aeiouyàâäéèêëîïôöûü]/i.test(name) ? `Au tour d'${name}` : `Au tour de ${name}`)
+
+/** Passage de main : pause entre la fin du tour d'un combattant et le début du tour de l'autre (ms, à ×1). */
+export const HANDOVER_MS = 400
+
 export interface CheatState {
   /** Faux sans graine : le combat ne peut pas être résolu à nouveau */
   available: boolean
@@ -135,6 +183,9 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
   /** Forme de chaque combattant (druide) : index dans `Character.forms` */
   const [forms, setForms] = useState<Pair<number>>([0, 0])
   const [winner, setWinner] = useState<Side | null>(null)
+  /** Le combattant dont c'est le tour (null avant l'initiative et après le K.O.) */
+  const [active, setActive] = useState<Side | null>(null)
+  const [pulse, setPulse] = useState<SkillPulse | null>(null)
   const [speed, setSpeed] = useState(1)
   const [paused, setPaused] = useState(false)
 
@@ -168,6 +219,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     let logId = 0
     let fxId = 0
     let strikeId = 0
+    let pulseId = 0
     const [a, b] = fighters
 
     // PV affichés, retenus pour faire tomber une relâche de jauges coup par coup
@@ -209,6 +261,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     }
     setResolved(script)
     setForms([0, 0])
+    setActive(null)
+    setPulse(null)
     publishCheat()
 
     // Attente qui respecte la vitesse et la pause.
@@ -336,12 +390,13 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     }
 
     /** Deux dés (barde) : la paire roule ensemble et retombe ; un double qui a sa compétence est annoncé. */
-    async function rollPair(side: Side, rolls: [number, number], faces: number, skill: string | undefined, forced: boolean) {
+    async function rollPair(side: Side, rolls: [number, number], faces: number, skill: string | undefined, forced: boolean, double?: number) {
       const shown = { ...IDLE_DICE, faces, owner: side, label: `${fighters[side].name} · deux dés`, volley: true }
       setDice({ ...shown, values: [0, 0], rolling: true })
       sfx.diceRoll(900 / speedRef.current)
       await wait(900)
       sfx.diceLand()
+      if (skill) pulseSkill(side, double)
       setDice({ ...shown, values: rolls, forced, label: skill ? `DOUBLE ${rolls[0]} !` : shown.label })
       await wait(skill ? 550 : 400)
     }
@@ -379,7 +434,12 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       setFx(null)
     }
 
-    async function playAttack(t: number, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
+    /** Le dé de compétence de cette face pulse dans l'en-tête, au moment où le dé tombe. */
+    const pulseSkill = (side: Side, face: number | undefined) => {
+      if (face !== undefined) setPulse({ side, face, key: pulseId++ })
+    }
+
+    async function playAttack(t: number, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>, skillFace?: number) {
       const { attacker, faces } = attack
       const label = `${fighters[attacker].name} attaque`
       const shown = { ...IDLE_DICE, faces, owner: attacker, label, critMultiplier: attack.critMultiplier }
@@ -388,6 +448,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       sfx.diceRoll(800 / speedRef.current)
       await wait(800)
       sfx.diceLand()
+      pulseSkill(attacker, skillFace)
       setDice({ ...shown, values: [attack.roll], forced: attack.forced })
       await wait(350)
       if (attack.crit) {
@@ -496,9 +557,21 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       // `pointed` : chaque coup désigne son dé (rafale, deux coups de la barde) ; faux pour les coups d'un double
       let volley: { strikes: number[]; next: number; pointed: boolean } | null = null
 
+      // Le tour t appartient à celui qui a commencé s'il est impair, à l'autre s'il est pair (les tours alternent)
+      const ownerOf = (t: number): Side => (t % 2 === 1 ? first : other(first))
+      setActive(first)
+
       // `current.beats` est relu à chaque étape : un dé imposé en remplace la suite
       for (let i = 0; i < current.beats.length; i++) {
         const beat = current.beats[i]
+        // Passage de main : le plateau de dés se vide et annonce le suivant, son camp s'allume, un temps de pause
+        if (i > 0 && beat.turn !== current.beats[i - 1].turn) {
+          const next = ownerOf(beat.turn)
+          setTurn(beat.turn)
+          setActive(next)
+          setDice({ ...IDLE_DICE, owner: next, label: turnLabel(fighters[next].name) })
+          await wait(HANDOVER_MS)
+        }
         setTurn(beat.turn)
         anticipate(i)
         const rolled = diceOf(beat).length
@@ -513,7 +586,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               await wait(last ? 450 : 60)
               break
             }
-            await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses))
+            await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses), skillFaceAt(current.beats, fighters, i))
             await wait(450)
             break
           case 'event':
@@ -637,7 +710,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.preset)
               .map(([j]) => j)
             volley = strikes.length > 0 ? { strikes, next: 0, pointed: beat.double === undefined } : null
-            await rollPair(beat.side, beat.rolls, beat.faces, name, !!beat.forced)
+            await rollPair(beat.side, beat.rolls, beat.faces, name, !!beat.forced, beat.double)
             push(pairLog(beat.turn, beat.side, beat.rolls, name, fighters))
             break
           }
@@ -680,6 +753,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
             : `Limite de tours atteinte : ${fighters[w].name} l'emporte aux points de vie.`,
       })
       setWinner(w)
+      setActive(null)
       setDice((d) => ({ ...d, label: 'K.O.' }))
       sfx.ko()
       await wait(1000)
@@ -699,5 +773,5 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
   /** Mode triche : impose `value` au prochain dé (null : le laisse au hasard) */
   const forceNextRoll = (value: number | null) => forceRef.current(value)
 
-  return { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved }
+  return { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, active, pulse, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved }
 }

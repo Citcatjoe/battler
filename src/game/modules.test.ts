@@ -51,16 +51,15 @@ describe('catalogue des compétences', () => {
     // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
     for (const c of CHARACTERS)
       for (const e of c.events) expect(skills.find((s) => s.event.id === e.id)!.owners).toContain(c)
-    // Une variante peut avoir sa propre version d'une compétence (Murzug, 0.36.5) : deux entrées distinctes
-    expect(skills.find((s) => s.event.id === 'blood-rage')!.owners.map((c) => c.id)).toEqual(['gorak'])
-    expect(skills.find((s) => s.event.id === 'blood-rage-murzug')!.owners.map((c) => c.id)).toEqual(['murzug'])
-    expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak', 'murzug'])
+    // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
+    for (const s of skills) expect(s.owners).toHaveLength(1)
+    expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak'])
   })
 
-  it('chaque compétence déclare sa nature (couleur de sa carte), la variante hérite de la sienne', () => {
+  it('chaque compétence déclare sa nature (couleur de sa carte)', () => {
     const skills = skillCatalog().flatMap((f) => f.skills)
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
-    expect(skills.find((s) => s.event.id === 'blood-rage-murzug')!.event.nature).toBe('martial')
+    expect(skills.find((s) => s.event.id === 'blood-rage')!.event.nature).toBe('martial')
     expect(skills.find((s) => s.event.id === 'waiting-1')!.event.nature).toBe('neutral')
   })
 })
@@ -72,12 +71,12 @@ describe('catalogue des statuts', () => {
     for (const e of catalog) expect(e.rules.length).toBeGreaterThan(0)
     const poison = catalog.find((e) => e.id === 'poison')!
     expect(poison.inGame).toBe(true)
-    expect(poison.sources.map((s) => s.character.id).sort()).toEqual(['caldrec', 'ervald'])
+    expect(poison.sources.map((s) => s.character.id).sort()).toEqual(['ervald'])
     expect(poison.sources.every((s) => s.target === 'opponent')).toBe(true)
     // Régénération : en jeu depuis la 0.42.0 (Fleur de vie) ; la Brûlure attend encore son premier porteur
     const regeneration = catalog.find((e) => e.id === 'regeneration')!
     expect(regeneration.inGame).toBe(true)
-    expect(regeneration.sources.map((s) => s.character.id).sort()).toEqual(['brannoc', 'thaldrin'])
+    expect(regeneration.sources.map((s) => s.character.id).sort()).toEqual(['thaldrin'])
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(false)
     // Bonus d'abord, puis malus
     const firstNegative = catalog.findIndex((e) => e.def.polarity === 'negative')
@@ -135,21 +134,14 @@ describe('roster', () => {
     expect(validateRoster()).toEqual([])
   })
   it('détecte les erreurs de données', () => {
-    const broken = { ...ROSTER[0], id: 'x', stats: { ...ROSTER[0].stats, dodgeChance: 1.5 }, baseId: 'nope' }
+    const broken = { ...ROSTER[0], id: 'x', stats: { ...ROSTER[0].stats, dodgeChance: 1.5, maxHp: 0 } }
     expect(validateRoster([broken, broken]).length).toBeGreaterThanOrEqual(3)
   })
-  it("une variante hérite des événements de son original, sauf une version propre de l'un d'eux (même déclencheur)", () => {
-    for (const def of ROSTER.filter((d) => d.baseId)) {
-      const base = ROSTER.find((d) => d.id === def.baseId)!.events
-      expect(def.events).toHaveLength(base.length)
-      const own = def.events.filter((e, i) => e !== base[i] && JSON.stringify(e) !== JSON.stringify(base[i]))
-      expect(own.length).toBeLessThanOrEqual(1)
-      for (const e of own) {
-        const i = def.events.indexOf(e)
-        expect(e.trigger).toBe(base[i].trigger)
-        expect(e.id).not.toBe(base[i].id) // un id propre : le catalogue les distingue
-      }
-    }
+  it('un personnage par famille (0.43.0) : dix personnages, dix races ou archétypes distincts, sans jumeau', () => {
+    expect(ROSTER).toHaveLength(10)
+    expect(new Set(ROSTER.map((d) => d.look.image)).size).toBe(ROSTER.length)
+    for (const id of ['murzug', 'sylwen', 'grimbald', 'caldrec', 'berengere', 'ssythra', 'gauvain', 'gnashka', 'brannoc', 'melisande'])
+      expect(() => createCharacter(id)).toThrow()
   })
   it('createCharacter refuse un id inconnu ; withName garde id et stats', () => {
     expect(() => createCharacter('inconnu')).toThrow()
@@ -431,7 +423,7 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin', 'life-bloom', 'whistle'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note'])
     // Fleur de vie pose une Régénération depuis la 0.42.0 : un bonus sur soi, donc le son du bonus
-    family('heal', ['blood-rage', 'blood-rage-murzug'])
+    family('heal', ['blood-rage'])
     // Crescendo et Soliste (barde) : leurs trois coups sonnent, la compétence est muette
     family(null, ['retribution', 'charge', 'claw', 'crescendo', 'soloist'])
     const seen: Record<string, Set<string | null>> = {}
@@ -498,8 +490,8 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
   })
 
-  it('Gorak et Naraxes ont les cinq postures communes, que leurs variantes héritent', () => {
-    for (const id of ['gorak', 'murzug', 'naraxes', 'ssythra'])
+  it('Gorak, Naraxes et Fanchon ont les cinq postures communes', () => {
+    for (const id of ['gorak', 'naraxes', 'fanchon'])
       expect(Object.keys(createCharacter(id).look.poses ?? {}).sort()).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
   })
 

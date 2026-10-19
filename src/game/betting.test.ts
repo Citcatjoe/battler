@@ -116,7 +116,7 @@ describe('paris : cotes', () => {
   })
 
   it('tire des coups de théâtre sur environ un match sur trois, de tous les genres', () => {
-    const fighters = pair('gorak', 'murzug')
+    const fighters = pair('gorak', 'morgrut')
     const kinds = new Map<string, number>()
     let twisted = 0
     const n = 300

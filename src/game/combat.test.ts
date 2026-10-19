@@ -1169,8 +1169,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
   it('Aura d’immunité (0.42.0) : tant qu’elle est là, l’armure du porteur gagne 1', () => {
     const paladin = createCharacter('aldric')
     expect(effectiveStats(paladin, [{ id: 'immunityAura', stacks: 1 }]).armor).toBe(paladin.stats.armor + 1)
-    // Même règle pour Gauvain : plus de version à part
-    expect(createCharacter('gauvain').events.map((e) => e.id)).toContain('immunity-aura')
+    expect(paladin.events.map((e) => e.id)).toContain('immunity-aura')
   })
 
   it('Aura de sainteté (0.42.0) : plafonnée, ses charges ne dépassent jamais le plafond', () => {
@@ -1411,7 +1410,7 @@ describe('ogre et druide (0.35.0)', () => {
   })
 
   it('Luciole du druide : 3 charges posées sur l’adversaire (0.35.1)', () => {
-    for (const id of ['thaldrin', 'brannoc'] as const) {
+    for (const id of ['thaldrin'] as const) {
       const fly = createCharacter(id).events.find((e) => e.id === 'firefly')!
       expect(fly.effects).toEqual([{ type: 'applyStatus', status: 'firefly', stacks: 3, target: 'opponent' }])
     }

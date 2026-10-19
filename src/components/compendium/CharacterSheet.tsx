@@ -10,7 +10,7 @@ import { Tabs } from '../Tabs'
 
 interface Props {
   characterId: string
-  /** Ouvre un autre personnage (ex. sa variante) */
+  /** Ouvre un autre personnage (ex. un adversaire de l'historique) */
   onSelect: (id: string) => void
   /** Onglet affiché à l'ouverture */
   initialTab?: SheetTab
@@ -20,7 +20,7 @@ export type SheetTab = 'sheet' | 'stats'
 
 /**
  * Fiche d'un personnage, dans le compendium : le modèle à gauche ; à droite, deux onglets.
- * - « Fiche » : ce qui définit le personnage (background, forces, événement, stats, variante).
+ * - « Fiche » : ce qui définit le personnage (background, forces, événement, stats).
  * - « Statistiques » : ce qu'il a fait (palmarès, adversaires, derniers combats).
  */
 export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: Props) {
@@ -32,10 +32,6 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
   const record = history.characters[character.id] ?? emptyRecord()
   const r = ratios(record)
 
-  // Une variante se compare à son original ; un original à sa (première) variante.
-  const related = character.baseId
-    ? roster.find((c) => c.id === character.baseId)
-    : roster.find((c) => c.baseId === character.id)
   const matches = history.matches.filter((m) => m.fighters.includes(character.id)).slice(0, 5)
 
   return (
@@ -53,16 +49,6 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
             </p>
             <h2 className="font-display text-5xl font-extrabold text-amber-200">{character.name}</h2>
           </div>
-          {related && (
-            <button
-              onClick={() => onSelect(related.id)}
-              className="mb-1 flex items-center gap-2 text-sm text-stone-400 hover:text-stone-100"
-            >
-              <MiniPortrait character={related} size="h-8 w-8" />
-              {character.baseId ? 'Variante de coloris de' : 'Variante de coloris :'}{' '}
-              <b className="text-stone-200">{related.name}</b>
-            </button>
-          )}
         </div>
 
         {/* Onglets */}
@@ -117,7 +103,6 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                 <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">Caractéristiques</h2>
                 <StatSheet character={character} barClass="bg-ink-2" />
               </section>
-              {related && <VariantComparison character={character} related={related} />}
             </div>
           </div>
         ) : (
@@ -235,43 +220,5 @@ function BackdropFigure({ character }: { character: Character }) {
         }}
       />
     </div>
-  )
-}
-
-/** Écarts de stats avec l'original (ou la variante). */
-function VariantComparison({ character, related }: { character: Character; related: Character }) {
-  return (
-    <section className="rounded-xl border border-stone-800 bg-stone-900/50 p-5">
-      <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">Comparé à {related.name}</h3>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-xs text-stone-500">
-            <th className="pb-1 text-left font-normal">Stat</th>
-            <th className="pb-1 text-right font-normal">{character.name}</th>
-            <th className="pb-1 text-right font-normal">{related.name}</th>
-            <th className="pb-1 text-right font-normal">Écart</th>
-          </tr>
-        </thead>
-        <tbody>
-          {STAT_LINES.map((l) => {
-            const mine = character.stats[l.key]
-            const theirs = related.stats[l.key]
-            const delta = Math.round((mine - theirs) * 100) / 100
-            return (
-              <tr key={l.key} className="border-t border-stone-800/60">
-                <td className="py-1 text-stone-400">{l.label}</td>
-                <td className="py-1 text-right font-mono text-stone-100">{l.format(mine)}</td>
-                <td className="py-1 text-right font-mono text-stone-400">{l.format(theirs)}</td>
-                <td
-                  className={`py-1 text-right font-mono ${delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-red-400' : 'text-stone-600'}`}
-                >
-                  {delta === 0 ? '=' : `${delta > 0 ? '+' : '−'}${l.format(Math.abs(delta)).replace(/^1d|^×/, '')}`}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </section>
   )
 }

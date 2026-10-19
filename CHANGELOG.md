@@ -11,9 +11,6 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 
 ## [Non publié]
 
-### Modifié
-- **Attaque de la barde refaite, plus ample** (demande de l'utilisateur : des postures plus expressives, surtout le coup) : une fente complète, rapière entière, à la place de l'attaque tassée dont la lame était coupée. Toutes ses postures sont redécoupées sur une toile de 992×1005 (avant 703×1005), sans changement de `scale`, `headroom` ni portrait. `scripts/slice-poses.py` centre désormais la toile commune sur les pieds de la garde, pour qu'une attaque ample ne la décale pas.
-
 ### Ajouté
 - **Icônes peintes** à la place des emojis dans les boutons, fiches, statistiques, arbre de tournoi et statuts (`src/assets/icons/`, composant `Icon`). Le journal de combat garde ses emojis pour l'instant.
 - `scripts/slice-icons.py` : découpe d'une planche d'icônes générée par ChatGPT Image, y compris quand le damier de transparence est peint dans l'image.
@@ -33,6 +30,42 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - **Boutons au style jeu vidéo** (`.btn`, `.btn-primary`, `.btn-round`, `.tabs` dans `index.css`) : plaques d'or ou de pierre au liseré de bronze, en relief, qui s'enfoncent au clic, avec du texte en Cinzel capitales et des icônes de taille fixe. Appliqués à l'écran de sélection (Statistiques et Son en médaillons, onglets Affrontement / Tournoi, Fiche, Au hasard, Combattre) et à l'écran d'affrontement (Changer, Jouer, Simuler).
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
+
+## [0.44.0] — 2026-10-19
+
+Lisibilité du combat (demande de l'utilisateur) : qui joue, et quel dé de compétence vient de sortir. Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.
+
+### Ajouté
+- **Passage de main** : entre la fin du tour d'un combattant et le début du tour de l'autre, une pause de 400 ms (raccourcie en ×2 et ×4, comme le reste ; environ +8 s sur un combat moyen de 21 tours en ×1, soit +15 %). Elle montre trois signaux : le plateau de dés se vide et annonce « Au tour de … » (« d'Elaria » devant une voyelle) dans la couleur du camp ; dans l'en-tête, le camp actif s'allume (lueur sur le nom et la barre de vie), l'autre se tamise ; un anneau au sol, azur ou cramoisi, marque le combattant actif. Aucun son ajouté (`SONS.md`).
+- **Le dé de compétence qui sort pulse** : quand le dé du combat tombe sur une face qui déclenche une compétence (1, 2, 3, un coup transformé comme la Charge, ou un double de la barde), le dé de cette face, dans l'en-tête, fait deux pulsations lumineuses au même instant, dans la couleur de la nature de la compétence (or martial, acier d'adresse, violet arcane). La face est lue dans la chronologie (`skillFaceAt`), jamais recalculée. Tests : la face qui pulse est celle du jet, sur les 100 duels du roster et 3 graines.
+
+### Modifié
+- **Attaque de la barde refaite, plus ample** (demande de l'utilisateur : des postures plus expressives, surtout le coup) : une fente complète, rapière entière, à la place de l'attaque tassée dont la lame était coupée. Toutes ses postures sont redécoupées sur une toile de 992×1005 (avant 703×1005), sans changement de `scale`, `headroom` ni portrait. `scripts/slice-poses.py` centre désormais la toile commune sur les pieds de la garde, pour qu'une attaque ample ne la décale pas.
+
+## [0.43.0] — 2026-10-19
+
+### Modifié
+- **Un personnage par famille** (décision de l'utilisateur : un jumeau par personnage n'apportait plus assez, et doublait le travail de création). Les dix jumeaux de coloris sont retirés : Murzug, Sylwen, Grimbald, Caldrec, Bérengère, Ssythra, Gauvain, Gnashka, Brannoc et Mélisande. Chaque famille garde son personnage principal (nom, image, postures, fiche) et les statistiques les plus pertinentes des deux, mesurées contre les neuf autres principaux (400 combats par duel, détail dans `docs/PERSONNAGES.md`) :
+  - **Gorak** prend celles de Murzug : 57 PV, 18 % de critique, Rage du sang à 5 PV (46,8 → 50,4 %) ;
+  - **Elaria** prend celles de Sylwen : 50 PV, 26 % d'esquive, 17 % de critique ×2,4 (même taux, duels plus resserrés) ;
+  - **Brokk** prend celles de Grimbald : d10, 57 PV, 10 % de critique ; Ysolde ne tombe plus à 26 % contre lui ;
+  - **Ervald** prend celles de Caldrec : d10, sans armure, 56 PV, 16 % de critique (46,7 → 48,8 %) ;
+  - **Aldric** prend celles de Gauvain : 54 PV, 7 % d'esquive, 17 % de critique (52,7 → 50,1 %) ;
+  - Ysolde, Naraxes, Morgrut (son d14 sans critique), Thaldrin et Fanchon gardent les leurs.
+  - Roster entier : de 45,8 % (Ysolde) à 51,4 % (Brokk), aucun duel hors limites. Les fiches (forces, faiblesses) suivent les nouvelles statistiques.
+- **Accueil : rail des combattants**, au style du design system, à la place des deux grilles de vignettes. C'est un panneau au centre, sous les modèles, avec une carte par personnage (portrait et nom), comme le tableau de sélection d'un jeu de combat.
+  - Deux onglets aux couleurs des camps disent qui choisit. Un clic donne la carte à ce camp, puis la main passe en face ; cliquer un modèle donne aussi la main à son camp.
+  - Une carte choisie porte le liseré de son camp et une pastille A ou B.
+- Préparation du tournoi, compendium et statistiques : une liste simple, sans familles ni mention de variante. La comparaison avec la variante disparaît de la fiche.
+- **Contres connus** : 2 au lieu de 11. Restent Brokk contre Fanchon (65,3 %) et Naraxes contre Ysolde (62,0 %).
+- **Empreinte de non-régression régénérée** (changement voulu) : 100 duels au lieu de 400, et des statistiques changées pour cinq personnages.
+- Laboratoire des sorts : les idées propres aux jumeaux restent dans `scripts/lab/ideas.ts` pour l'historique, mais ne sont plus rejouées (message « Idées ignorées »).
+
+### Retiré
+- `variant()`, `CharacterDef.baseId` et `FAMILIES` : plus de variantes de coloris dans le modèle.
+
+### Non changé
+- Le format de l'historique (`battler:history:v1`) : les statistiques des jumeaux restent stockées, mais ne s'affichent plus.
 
 ## [0.42.0] — 2026-10-19
 

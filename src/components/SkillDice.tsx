@@ -2,6 +2,7 @@ import type { Character } from '../game/character'
 import { describeCondition, doubleFace, DOUBLE_TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
 import { EffectLine } from './compendium/SkillsSection'
 import { SkillSeal } from './SkillSeal'
+import type { SkillPulse } from '../game/useCombat'
 
 type Face = 1 | 2 | 3 | 4 | 5
 
@@ -39,6 +40,8 @@ interface Props {
    * une rangée de dés par forme, avec son nom (sélection)
    */
   form?: number
+  /** En combat : le dé de la face qui vient de sortir pulse (une fois par `key`) */
+  pulse?: SkillPulse
 }
 
 /**
@@ -46,7 +49,7 @@ interface Props {
  * infobulle donne la compétence qu'il déclenche (version allégée de la carte du compendium, au
  * style de l'infobulle de la zone d'état). Sur l'écran de sélection et en tête du combat.
  */
-export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form }: Props) {
+export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form, pulse }: Props) {
   const forms = character.forms
   if (forms && form === undefined)
     return (
@@ -65,7 +68,9 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
       {(character.twinDice ? DOUBLES : FACES).map(({ face, trigger }) => {
         const event = character.events.find((e) => e.trigger === trigger && (!e.form || e.form === formId))
         return (
-          <li key={face} className="group relative hover:z-[70]">
+          <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event?.nature ?? 'neutral'}>
+            {/* Le dé qui sort : une pulsation lumineuse dans la couleur de la nature de la compétence */}
+            {event && pulse?.face === face && <span key={pulse.key} aria-hidden className="skill-die-pulse" />}
             <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
             {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
           </li>

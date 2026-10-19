@@ -154,7 +154,6 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                               </span>
                               <span className="block text-[13px] text-ink-3">
                                 {c.race}
-                                {c.baseId ? " · variante" : ""}
                               </span>
                             </span>
                           </button>

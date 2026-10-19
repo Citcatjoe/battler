@@ -38,7 +38,7 @@ const SHAKE: Keyframe[] = [
 
 export function FightScreen({ script, arena, onEnd }: Props) {
   const { fighters } = script
-  const { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
+  const { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, active, pulse, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
     useCombat(script, onEnd)
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
@@ -99,6 +99,9 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         ? { key: blow.key, damage: blow.damage, crit: blow.heavy, dodged: false, landed: blow.landed }
         : undefined
   const lungingSide = strike ? strike.attacker : blow?.lunge ? blow.from : null
+  // Passage de main : le camp dont c'est le tour s'allume, l'autre se tamise (rien avant l'initiative ni après le K.O.)
+  const turnOf = (side: Side) => (active === null ? undefined : active === side ? 'active' : 'waiting')
+  const pulseOf = (side: Side) => (pulse?.side === side ? pulse : undefined)
 
   return (
     <div
@@ -107,12 +110,12 @@ export function FightScreen({ script, arena, onEnd }: Props) {
     >
       {/* Barres de vie */}
       <header className="relative z-[55] flex items-start gap-6 border-b border-stone-800 bg-stone-950/80 py-4 pl-8 pr-20">
-        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} character={fighters[0]} form={forms[0]} />
+        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} character={fighters[0]} form={forms[0]} turn={turnOf(0)} pulse={pulseOf(0)} />
         <div className="flex shrink-0 flex-col items-center pt-1">
           <span className="text-xs uppercase tracking-widest text-stone-500">Tour</span>
           <span className="font-display text-3xl font-extrabold tabular-nums">{turn || '–'}</span>
         </div>
-        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} character={fighters[1]} form={forms[1]} />
+        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} character={fighters[1]} form={forms[1]} turn={turnOf(1)} pulse={pulseOf(1)} />
       </header>
 
       {/* Arène */}
@@ -138,6 +141,13 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         {/* Pieds posés sur la terre battue de l'arène, un peu en retrait du bord de l'écran */}
         {([0, 1] as Side[]).map((side) => (
           <div key={side} className={`relative mb-[88px] h-[470px] ${side === 1 ? 'order-last' : ''}`}>
+            {/* Anneau au sol du combattant dont c'est le tour, dans la couleur de son camp */}
+            <div
+              aria-hidden
+              data-active={active === side}
+              className="turn-ring pointer-events-none absolute bottom-[-1%] left-1/2 h-[7%] w-[78%] -translate-x-1/2 rounded-[50%]"
+              style={{ '--camp': SIDE_STYLE[side].hex } as CSSProperties}
+            />
             <Fighter
               character={fighters[side]}
               side={side}
