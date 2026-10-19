@@ -17,6 +17,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [SYSTEMES.md](SYSTEMES.md) | Le grand livre des systèmes : inventaire de toutes les briques (résolution, chronologie, animations, sons, interface), contenu vu comme assemblages, surface de chaque mécanique, sources d'effets de bord, pistes |
 | | [RESOLUTION.md](RESOLUTION.md) | Le livre de règles de la résolution : phases du tour, chaîne de calcul, types d'effets, ordre, application et opposition, interactions, inspirations |
 | | [SONS.md](SONS.md) | Les règles du son : vocabulaire de sons, ce que chacun veut dire, son de chaque moment du combat, son d'une nouvelle compétence, mixage |
+| | [POSTURES.md](POSTURES.md) | Les postures des combattants : cinq postures communes (attaque, esquive, coup encaissé, K.O., victoire) en plus de la garde, choix de la posture, planches de génération et découpe (`scripts/slice-poses.py`) |
 | | [PARIS.md](PARIS.md) | Les paris entre deux observateurs : règles (bourses, marchés, cotes, coups de théâtre, relance), interface, architecture, livraison par étapes |
 | **Réflexion** | [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) | Étude : Battler face aux règles des auto-battlers, limites, jeux de référence, propositions |
 | | [FAMILLES.md](FAMILLES.md) | Proposition : dix familles d'effets, signature de chaque personnage, retouches, accroches pour les reliques |

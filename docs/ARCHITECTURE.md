@@ -19,6 +19,7 @@ src/
   game/                  logique sans interface (sauf useCombat)
     rng.ts               hasard injectable : Rng, seededRng, rollDie, chance, shuffle
     character.ts         CharacterStats, CharacterDef, classe Character (pure donnée), variant()
+    poses.ts             postures d'un combattant (POSES, poseOf, poseImage) : l'image change au fil du combat (docs/POSTURES.md)
     statuses.ts          REGISTRE des statuts (auras bonus/malus) : règles + présentation
     events.ts            déclencheurs (TRIGGERS), effets (Effect), CharacterEvent
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
@@ -98,10 +99,12 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 ## Étendre le jeu
 
 ### Ajouter un personnage
-1. Mettre l'image dans `src/assets/<race>.png` (voir `docs/STYLE_BIBLE.md`). Une image générée sur fond uni se détoure avec `python scripts/cutout-character.py <source.png> src/assets/<race>.png [aperçu.png]` (numpy, pillow, scipy) ; vérifier ensuite l'aperçu, surtout les lames et les reflets gris.
-2. Dans `roster.ts`, créer un `CharacterDef` : stats, `look` (`image`, `facing`, `scale`, cadrage du portrait `{x, y, zoom}`), `lore` (fiche courte) et `events`. Puis ajouter sa section dans `docs/PERSONNAGES.md` (voir la check-list en fin de document).
+1. Mettre l'image dans `src/assets/<race>.png` (voir `docs/STYLE_BIBLE.md`). Une image générée sur fond uni se détoure avec `python scripts/cutout-character.py <source.png> src/assets/<race>.png [aperçu.png]` (numpy, pillow, scipy ; la machine n'en a pas en standard, passer par un environnement `python -m venv`) ; vérifier ensuite l'aperçu, surtout les lames et les reflets gris.
+   - **Postures** (facultatives, [POSTURES.md](POSTURES.md)) : la garde générée d'abord, puis une planche par posture avec la garde en première case, puis `python scripts/slice-poses.py <nom> a.png:2x1:idle,attack … --fond`. Dans `look` : `image: <nom>-idle.png`, `poses: { attack, dodge, hurt, ko, victory }` (une posture absente retombe sur la garde), `scale` calculé sur la part de la toile qu'occupe la garde et `headroom` (part vide au-dessus de la tête), portrait recadré. `figureHeight(look)` (`character.ts`) donne la hauteur du personnage dans son conteneur, pour placer la zone d'état et les effets. Si la toile est bien plus large que la garde (fente de l'attaque), `bodyInset: { left, right }` (vide de part et d'autre de la garde, en part de la largeur) cale l'ancrage `inside` sur la silhouette.
+2. Dans `roster.ts`, créer un `CharacterDef` : stats, `look` (`image`, `facing`, `scale` selon l'échelle resserrée de `STYLE_BIBLE.md` § 2, cadrage du portrait `{x, y, zoom}`), `lore` (fiche courte) et `events`. Puis ajouter sa section dans `docs/PERSONNAGES.md` (voir la check-list en fin de document).
 3. Pour une variante : `variant(base, { id, name, archetype, lore, tint, stats: { …écarts } })`. Elle hérite des événements (et des formes).
    - **Personnage à formes** (druide) : `forms: [{ id, name }, { id, name, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence.
+   - **Personnage à deux dés** (barde) : `twinDice: true`. L'action devient une paire (étape `pair`, `twinAction` dans `combat.ts`). Ses compétences sont sur les doubles (`doubleOne` à `doubleFive`, `DOUBLE_TRIGGERS`), sans `chance` ni `forfeitsHit` (`validateRoster`) ; `volley: n` pour attaquer (n coups de la face), avec `merged` pour un seul coup qui vaut leur somme. Les coups de la paire portent `preset` (aucun dé lancé) ; le mode triche compte les dés par étape avec `diceOf` et `rankAt`.
    - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (Charge, Coup de griffe), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
 4. L'ajouter à `ROSTER`. La sélection (rangée par famille via `FAMILIES`), les fiches, les statistiques et le tournoi le prennent en compte automatiquement.
 5. `npm run check` : `validateRoster` vérifie les données, le test d'équilibre vérifie la tolérance (entre 42 et 58 %, aucun duel au-delà de 65/35) ; `npm run balance` donne le rapport détaillé (docs/EQUILIBRAGE.md), et l'empreinte de non-régression doit être mise à jour (`npx vitest run -u`), puisque le roster a changé.
@@ -136,6 +139,8 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | --- | --- |
 | `modifyStats` | modifie les stats effectives du porteur (armure, esquive, critique…) |
 | `modifyOutgoing` | modifie les dégâts du porteur avant l'armure |
+| `modifyFinal` | modifie les dégâts finaux du porteur, après l'armure et les boucliers, au moins 1 (Aura mélodieuse, Fausse note) |
+| `spentOnHit` | le statut disparaît quand un coup du porteur touche (Fausse note) |
 | `forcesCrit` | le prochain coup qui touche est critique, et consomme une charge |
 | `forcesDodge` | le prochain coup reçu est esquivé sans tirage, et consomme une charge |
 | `drainsHit` | le prochain coup qui touche rend les PV retirés (étape `statusReaction` sur `hit`), et consomme une charge |

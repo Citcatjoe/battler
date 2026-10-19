@@ -48,6 +48,9 @@ export type StatusId =
   | 'firefly'
   | 'rotAura'
   | 'rot'
+  | 'whistling'
+  | 'falseNote'
+  | 'melodiousAura'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -108,6 +111,11 @@ export interface StatusDef {
   modifyStats?: (stats: CombatStats, s: Status) => CombatStats
   /** Modifie les dégâts du porteur avant l'armure (le coup garde au moins 1) */
   modifyOutgoing?: (damage: number, s: Status) => number
+  /**
+   * Modifie les dégâts FINAUX des coups du porteur : après l'armure et les boucliers, au moins 1 (Aura
+   * mélodieuse, Fausse note). Contrairement à `modifyOutgoing`, ni l'armure ni l'intimidation ne le rognent.
+   */
+  modifyFinal?: (damage: number, s: Status) => number
   /** Le prochain coup qui touche est critique ; consomme une charge */
   forcesCrit?: boolean
   /** Le prochain coup reçu est esquivé à coup sûr ; consomme une charge par esquive */
@@ -162,6 +170,11 @@ export interface StatusDef {
   reactions?: Partial<Record<Trigger, (s: Status) => Effect[]>>
   /** Le statut disparaît après avoir réagi une fois (ex. Épines : seul le prochain coup encaissé est puni) */
   spentOnReaction?: boolean
+  /**
+   * Le statut disparaît, toutes charges comprises, dès qu'un coup DU porteur touche (ex. Fausse note :
+   * seul son prochain coup est affaibli). Un coup esquivé ou sacrifié ne le consomme pas.
+   */
+  spentOnHit?: boolean
   /** Le porteur perd une charge chaque fois qu'un coup le touche (ex. Luciole : un coup inesquivable par charge) */
   spentOnHurt?: boolean
   /** Opposition : poser ce statut sur un porteur du statut opposé annule les charges une à une */
@@ -173,6 +186,10 @@ export interface StatusDef {
 // « PV » est une abréviation : invariable
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 && word !== 'PV' ? 's' : ''}`
 const forTurns = (s: Status) => (s.turns === undefined ? '' : `, encore ${plural(s.turns, 'tour')}`)
+
+/** PV rendus par Sifflotement à chaque fin de tour, et dégâts retirés par charge de Fausse note (barde). */
+export const WHISTLE_HEAL = 2
+export const FALSE_NOTE = 5
 
 /** Charges de poison posées par coup qui touche, par charge d'Aura de décoction. */
 export const DECOCTION_POISON = 2
@@ -526,6 +543,40 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
   },
+
+  /* Barde (0.41.0) : deux dés, des compétences sur les doubles. */
+  whistling: {
+    name: 'Sifflotement',
+    polarity: 'positive',
+    summary: "Le porteur regagne 2 PV à la fin de chacun de ses tours, puis perd une charge : une charge par tour. Se cumule (les tours s'ajoutent).",
+    describe: (s) => `Regagne 2 PV à la fin de chacun de ses tours, encore ${plural(s.stacks, 'tour')} (${2 * s.stacks} PV en tout)`,
+    badge: (s) => `+${2 * s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    onTurnEnd: () => [{ type: 'heal', amount: WHISTLE_HEAL }],
+  },
+  falseNote: {
+    name: 'Fausse note',
+    polarity: 'negative',
+    summary: `Le prochain coup du porteur qui touche inflige ${FALSE_NOTE} dégâts finaux de moins par charge (après l'armure, au moins 1), puis la Fausse note disparaît. Se cumule.`,
+    describe: (s) => `Son prochain coup qui touche inflige ${FALSE_NOTE * s.stacks} dégâts finaux de moins, puis la fausse note s'oublie`,
+    badge: (s) => `−${FALSE_NOTE * s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyFinal: (damage, s) => damage - FALSE_NOTE * s.stacks,
+    spentOnHit: true,
+  },
+  melodiousAura: {
+    name: 'Aura mélodieuse',
+    look: { aura: 'rgba(196,181,253,0.55)' },
+    polarity: 'positive',
+    summary: "Chaque coup du porteur qui touche inflige 1 dégât final de plus par charge, après l'armure et les boucliers. Permanente.",
+    describe: (s) => `Ses coups infligent ${s.stacks} dégât${s.stacks > 1 ? 's' : ''} final${s.stacks > 1 ? 's' : ''} de plus, après l'armure, pour le reste du combat`,
+    badge: (s) => `+${s.stacks}`,
+    stacking: 'add',
+    modifyFinal: (damage, s) => damage + s.stacks,
+  },
 }
 
 export const STATUS_IDS = Object.keys(STATUSES) as StatusId[]
@@ -587,6 +638,8 @@ export function statusRules(id: StatusId): string[] {
     rules.push("Absorbe autant de points que de charges, après l'armure, sans faire descendre un coup sous 1 dégât.")
   if (def.onTurnStart) rules.push('Agit au début de chaque tour du porteur, avant son attaque.')
   if (def.modifyOutgoing) rules.push("Modifie les dégâts du porteur avant l'armure ; un coup garde au moins 1 dégât.")
+  if (def.modifyFinal)
+    rules.push("Modifie les dégâts finaux des coups du porteur, après l'armure et les boucliers ; un coup garde au moins 1 dégât.")
   if (def.modifyStats)
     rules.push('Modifie les caractéristiques du porteur, bornées par le moteur (armure ≥ 0, chances entre 0 et 100 %).')
   if (def.onTurnEnd) rules.push('Agit à la fin de chaque tour du porteur, après son action.')
@@ -597,6 +650,7 @@ export function statusRules(id: StatusId): string[] {
     rules.push(
       `Réagit ${lowerFirst(TRIGGERS[trigger].label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''}, sans déclencher d'autre réaction en chaîne.`,
     )
+  if (def.spentOnHit) rules.push('Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ou sacrifié ne le consomme pas.')
   if (def.immune)
     rules.push(`Aucun ${def.immune === 'negative' ? 'malus' : 'bonus'} ne peut être posé sur le porteur ; l'immunité ne s'use pas.`)
   if (def.reflectsHit)

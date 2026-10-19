@@ -203,6 +203,13 @@ body {
 @keyframes ko {
   to { transform: translateY(8%) rotate(calc(var(--dir) * -12deg)); filter: grayscale(1) brightness(0.5); opacity: 0.7; }
 }
+/* K.O. avec une posture à terre (docs/POSTURES.md) : l'image montre déjà la chute, on garde le grisé */
+.ko-posed {
+  animation: ko-posed 900ms ease-in forwards;
+}
+@keyframes ko-posed {
+  to { filter: grayscale(1) brightness(0.5); opacity: 0.75; }
+}
 
 .victory {
   animation: victory 1.2s ease-in-out infinite alternate;

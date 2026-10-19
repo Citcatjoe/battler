@@ -370,6 +370,49 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Teinte** : feuillage roux (`hue-rotate(-28deg) saturate(1.25)`).
 - **Mesures** : 49,4 % (0.35.0). Il bat les prêtresses à 66 % : contre connu (EQUILIBRAGE.md).
 
+## Barde : deux dés, et la musique sur les doubles
+
+**Images** : `bard-idle.png` et cinq postures (0.41.0, session images). Saltimbanque de foire, en tenue bigarrée à losanges et chapeau à plume, avec un luth et une rapière. Taille 1,00, celle d'un humain.
+
+**Concept** (d'un ami de l'utilisateur) : un petit d5, mais **deux dés à chaque tour**. Ses compétences se déclenchent sur les **doubles**, pas sur un 1, un 2 ou un 3 :
+- **hors double**, deux coups séparés, chacun avec son esquive et son critique (décision de l'utilisateur) ;
+- **sur un double** qui a sa compétence, celle-ci remplace les deux coups. Un double sort une fois sur cinq, chaque double une fois sur 25.
+  - **Siffloter** (double 1) : Sifflotement, 3 charges, +2 PV à chaque fin de tour ; les charges s'ajoutent.
+  - **Fausse note** (double 2) : un malus sur l'adversaire, −5 dégâts finaux sur son prochain coup qui touche, par charge. L'utilisateur avait demandé « −3, mesuré » : à −3, sa valeur nette était de −1,2 point ; à −5, de −0,2.
+  - **Aura mélodieuse** (double 3) : +1 dégât final par charge sur chacun de ses coups, permanente.
+  - **Crescendo** (double 4) et **Soliste** (double 5) : un seul gros coup de 12 et de 15. Le concept prévoyait trois coups de 4 et de 5 ; c'est l'utilisateur qui a eu l'idée du coup unique.
+- **Ouverture** (au début du combat) : elle entre en scène avec 1 charge d'Aura mélodieuse.
+
+**Pourquoi « dégâts finaux » et l'Ouverture** : appliqué à la lettre, le concept gagnait 45 % de ses combats, mais perdait 87/13 contre Brokk, 78/22 contre Grimbald et 71/29 contre Ervald. Tout ce qui retire une valeur fixe à chaque coup rogne ses petits coups (3 en moyenne) : l'intimidation (−2 par coup), les épines (6 renvoyés par coup) et l'armure de 1 d'Ervald. Le texte du concept parle de « dégâts finaux » pour l'aura et la fausse note : ils s'appliquent donc après l'armure. Comme un double 3 n'arrive que 0,4 fois par combat, l'Ouverture pose l'aura dès le début. La compensation est de 46 PV et 5 % de critique. Toutes les pistes mesurées sont dans EQUILIBRAGE.md.
+
+**Mesures** (0.41.0, 400 combats par duel), valeur nette en points :
+
+| Compétence | Fanchon | Mélisande |
+| --- | --- | --- |
+| Ouverture | +25,4 | +25,2 |
+| Soliste | +2,6 | +2,4 |
+| Crescendo | +1,8 | +2,4 |
+| Siffloter | +1,3 | +0,9 |
+| Fausse note | −0,2 | −1,1 |
+| Aura mélodieuse (double 3) | −1,1 | −1,1 |
+
+Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour les autres. Ses compétences, en revanche, sont rares : environ 0,3 déclenchement par compétence et par combat. Une deuxième charge d'aura (double 3) coûte les deux coups du tour pour +1 par coup : elle se rentabilise mal en 17 tours.
+
+### Fanchon · Saltimbanque
+
+> « Deux dés, une chanson, aucune fausse note. Sauf chez vous. »
+
+- **Stats** : PV 46, 2 × d5, armure 0, esquive 12 %, critique 5 % ×2.
+- **Mesures** : 52,3 % (0.41.0). Duels de 45 à 62 %, sauf contre Brokk (29 %, contre connu).
+
+### Mélisande · Ménestrelle
+
+> « Elle chante juste, et frappe plus juste encore. »
+
+- **Stats** : PV 48 (+2), esquive 8 % (−4).
+- **Teinte** : `hue-rotate(150deg) saturate(1.2) brightness(0.95)` (turquoise et vert), vue à l'écran.
+- **Mesures** : 51,2 % (0.41.0 ; 54,8 % avec +4 PV). Duels de 38 à 61 %, sauf contre Brokk (35 %, à la limite, contre connu).
+
 ---
 
 ## Matrice des duels
@@ -403,3 +446,4 @@ Taux de victoire de la ligne contre la colonne.
 - [ ] La fiche courte est écrite dans `roster.ts` (`lore`), et sa section ajoutée ici : fantasy, stats, comment il gagne et perd, mesures, décisions.
 - [ ] La matrice des duels est remesurée (`npm run balance`), avec un global entre 42 et 58 %, aucun duel au-delà de 65/35, selon la méthode d'[EQUILIBRAGE.md](EQUILIBRAGE.md).
 - [ ] L'image respecte `docs/STYLE_BIBLE.md`. Sur fond uni, elle se détoure avec `scripts/cutout-character.py`.
+- [ ] Facultatif : ses cinq postures communes (attaque, esquive, coup encaissé, K.O., victoire), générées en planches avec la garde en première case et découpées par `scripts/slice-poses.py` ([POSTURES.md](POSTURES.md)).

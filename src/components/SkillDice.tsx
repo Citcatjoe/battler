@@ -1,20 +1,30 @@
 import type { Character } from '../game/character'
-import { describeCondition, type CharacterEvent, type Trigger } from '../game/events'
+import { describeCondition, doubleFace, DOUBLE_TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
 import { EffectLine } from './compendium/SkillsSection'
 import { SkillSeal } from './SkillSeal'
 
+type Face = 1 | 2 | 3 | 4 | 5
+
 /** Les trois faces qui déclenchent une compétence de race, dans l'ordre. */
-const FACES: { face: 1 | 2 | 3; trigger: Trigger }[] = [
+const FACES: { face: Face; trigger: Trigger }[] = [
   { face: 1, trigger: 'naturalOne' },
   { face: 2, trigger: 'naturalTwo' },
   { face: 3, trigger: 'naturalThree' },
 ]
 
-/** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre). */
-const PIPS: Record<1 | 2 | 3, [number, number][]> = {
+/** Personnage à deux dés (barde) : une compétence par double, du double 1 au double 5. */
+const DOUBLES: { face: Face; trigger: Trigger }[] = ([1, 2, 3, 4, 5] as const).map((face) => ({
+  face,
+  trigger: DOUBLE_TRIGGERS[face],
+}))
+
+/** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). */
+const PIPS: Record<Face, [number, number][]> = {
   1: [[1, 1]],
   2: [[0, 0], [2, 2]],
   3: [[0, 0], [1, 1], [2, 2]],
+  4: [[0, 0], [2, 0], [0, 2], [2, 2]],
+  5: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]],
 }
 
 interface Props {
@@ -52,11 +62,11 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
   const formId = forms?.[form ?? 0].id
   return (
     <ul className="flex gap-2" aria-label={`Compétences de ${character.name}`}>
-      {FACES.map(({ face, trigger }) => {
+      {(character.twinDice ? DOUBLES : FACES).map(({ face, trigger }) => {
         const event = character.events.find((e) => e.trigger === trigger && (!e.form || e.form === formId))
         return (
           <li key={face} className="group relative hover:z-[70]">
-            <DieFace face={face} size={size} empty={!event} />
+            <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
             {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
           </li>
         )
@@ -65,16 +75,26 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
   )
 }
 
-function DieFace({ face, size, empty }: { face: 1 | 2 | 3; size: 'sm' | 'md'; empty: boolean }) {
+function DieFace({ face, size, empty, double }: { face: Face; size: 'sm' | 'md'; empty: boolean; double?: boolean }) {
   const box = size === 'sm' ? 'h-8 w-8 p-[5px]' : 'h-11 w-11 p-[7px]'
-  return (
+  const die = (
     <div
-      aria-label={`Dé ${face}`}
+      aria-label={double ? undefined : `Dé ${face}`}
       className={`skill-die grid grid-cols-3 grid-rows-3 rounded-lg ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
     >
       {PIPS[face].map(([x, y]) => (
         <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />
       ))}
+    </div>
+  )
+  if (!double) return die
+  // Un double : le même dé deux fois, le second décalé derrière le premier
+  return (
+    <div aria-label={`Double ${face}`} className="relative">
+      <div className="absolute left-1.5 top-1.5 opacity-60" aria-hidden>
+        {die}
+      </div>
+      <div className="relative">{die}</div>
     </div>
   )
 }
@@ -97,7 +117,9 @@ function SkillTooltip({
   align: 'left' | 'center' | 'right'
 }) {
   const reshape = event.reshapesHit
+  const double = doubleFace(event.trigger)
   const terms = [
+    ...(double !== undefined ? ['À la place des deux coups du tour'] : []),
     ...(event.forfeitsHit ? ["Le jet n'inflige aucun dégât"] : []),
     ...(reshape?.value === 'max' ? ['Frappe pour la valeur maximale de son dé'] : []),
     ...(reshape?.value === 'reroll' ? [`Relance son dé et ajoute ${reshape.bonus ?? 0}`] : []),
@@ -119,12 +141,20 @@ function SkillTooltip({
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          Dé {face}
+          {double !== undefined ? 'Double' : 'Dé'} {face}
         </span>
       </div>
       {terms.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{terms.join(' · ')}</p>}
       <div className="codex-divider my-2.5" />
-      {event.effects.length === 0 && <p className="font-body text-[15px] text-ink-1">Un coup porté, plus puissant qu'un coup ordinaire.</p>}
+      {event.effects.length === 0 && (
+        <p className="font-body text-[15px] text-ink-1">
+          {event.volley && double !== undefined
+            ? event.merged
+              ? `Un seul coup de ${event.volley * double} (${event.volley} × ${double}).`
+              : `${event.volley} coups de ${double}.`
+            : "Un coup porté, plus puissant qu'un coup ordinaire."}
+        </p>
+      )}
       <ul className="space-y-2.5">
         {event.effects.map((effect, i) => (
           <li key={i}>

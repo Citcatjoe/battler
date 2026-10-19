@@ -6,8 +6,8 @@
  * combats joués par l'utilisateur, rejoués depuis leur graine). Méthode : docs/EQUILIBRAGE.md.
  * Toute nouvelle mécanique ajoute ici son contrôle.
  */
-import { effectiveStats, rollsDie, type Beat, type CombatResult, type Snapshot } from './combat'
-import { rollMatches } from './events'
+import { diceOf, effectiveStats, type Beat, type CombatResult, type Snapshot } from './combat'
+import { DOUBLE_TRIGGERS, rollMatches } from './events'
 import { STATUSES, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
@@ -34,15 +34,15 @@ export function createAudit() {
     // Mode triche : seuls les dés de `forcedRolls` sont marqués imposés, avec leur valeur (ramenée au dé)
     let rank = 0
     r.beats.forEach((b, i) => {
-      if (!rollsDie(b)) return
-      const asked = r.forcedRolls?.[rank++]
-      const marked = b.type === 'attack' ? b.attack.forced : b.type === 'coin' ? b.forced : undefined
-      if (!!marked !== (asked !== undefined)) flag('dé imposé incohérent', r, i, `rang ${rank - 1} : marqué ${!!marked}, demandé ${asked}`)
-      if (asked === undefined) return
-      see('dé imposé')
-      const faces = b.type === 'attack' ? b.attack.faces : 2
-      const value = b.type === 'attack' ? b.attack.roll : b.type === 'coin' ? (b.heads ? 1 : 2) : 0
-      if (value !== Math.min(faces, Math.max(1, asked))) flag('dé imposé ignoré', r, i, `rang ${rank - 1} : ${value} au lieu de ${asked}`)
+      diceOf(b).forEach((die, k) => {
+        const asked = r.forcedRolls?.[rank++]
+        const marked = b.type === 'attack' ? b.attack.forced : b.type === 'coin' ? b.forced : b.type === 'pair' ? b.forced?.[k] : undefined
+        if (!!marked !== (asked !== undefined)) flag('dé imposé incohérent', r, i, `rang ${rank - 1} : marqué ${!!marked}, demandé ${asked}`)
+        if (asked === undefined) return
+        see('dé imposé')
+        const value = b.type === 'attack' ? b.attack.roll : b.type === 'coin' ? (b.heads ? 1 : 2) : b.type === 'pair' ? b.rolls[k] : 0
+        if (value !== Math.min(die.faces, Math.max(1, asked))) flag('dé imposé ignoré', r, i, `rang ${rank - 1} : ${value} au lieu de ${asked}`)
+      })
     })
     const init: Snapshot = { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [[], []] }
     const last = r.initiative[r.initiative.length - 1]
@@ -53,6 +53,7 @@ export function createAudit() {
     // Forme en cours de chaque camp (druide) : une compétence de forme n'existe que sous sa forme
     const form = [0, 0]
     const inForm = (side: number, e: { form?: string }) => !e.form || e.form === r.fighters[side].forms?.[form[side]].id
+    const stateBefore = (i: number) => (i ? r.beats[i - 1].state : init)
     r.beats.forEach((b: Beat, i) => {
       if (b.type === 'shift') {
         see('changement de forme')
@@ -113,7 +114,8 @@ export function createAudit() {
         const sacrifice = r.fighters[att].events.some((e) => e.forfeitsHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
         // Coup transformé (Charge, Coup de griffe) : la bonne compétence, la bonne valeur, sans critique si demandé
         const reshaper = r.fighters[att].events.find((e) => e.reshapesHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
-        if (!!reshaper !== !!a.reshaped && !a.forfeited) flag('coup transformé incohérent', r, i, `roll ${a.roll}`)
+        // Le gros coup d'un double (`merged`, barde) est vérifié avec sa paire
+        if (!!reshaper !== !!a.reshaped && !a.forfeited && !a.preset) flag('coup transformé incohérent', r, i, `roll ${a.roll}`)
         if (reshaper && a.reshaped) {
           see(`coup transformé ${reshaper.name}`)
           const rs = reshaper.reshapesHit!
@@ -146,6 +148,11 @@ export function createAudit() {
           // Boucliers (armure temporaire, écorce), dans l'ordre de pose : chacun absorbe sans descendre sous 1
           let expected = afterArmor
           for (const st of prev.statuses[def]) if (STATUSES[st.id].shield) expected -= Math.min(st.stacks, expected - 1)
+          // Dégâts finaux (Aura mélodieuse, Fausse note, 0.41.0) : après les boucliers, au moins 1
+          for (const st of prev.statuses[att]) {
+            const modify = STATUSES[st.id].modifyFinal
+            if (modify) expected = Math.max(1, Math.round(modify(expected, st)))
+          }
           if (a.damage !== expected) flag('dégâts finaux faux', r, i, `${a.damage} vs ${expected}`)
           if (a.dealt !== a.damage) flag('dégâts comptés faux', r, i, '')
           const forcing = find(prev.statuses[att], 'guaranteedCrit')
@@ -216,10 +223,64 @@ export function createAudit() {
         const was = find(prev.statuses[b.side], b.status)!
         const now = find(b.state.statuses[b.side], b.status)
         const e = b.effects[0]
-        if (!e || e.type !== 'damage' || e.amount !== was.stacks) flag("s'estompe : montant", r, i, JSON.stringify(b.effects))
+        const def = STATUSES[b.status]
+        const asked = (b.phase === 'turnStart' ? def.onTurnStart : def.onTurnEnd)?.(was)[0]
+        // Un soin s'arrête aux PV max : il peut rendre moins que demandé, jamais plus
+        const ok =
+          e && asked && e.type === asked.type && (e.type === 'damage' && asked.type === 'damage' ? e.amount === asked.amount : e.type === 'heal' && asked.type === 'heal' && e.amount <= asked.amount)
+        if (!ok || (b.status === 'poison' && (e.type !== 'damage' || e.amount !== was.stacks))) flag("s'estompe : montant", r, i, JSON.stringify(b.effects))
         if ((now?.stacks ?? 0) !== was.stacks - 1) flag("s'estompe : charge perdue", r, i, `${was.stacks} → ${now?.stacks ?? 0}`)
         if (was.turns !== undefined) flag("s'estompe : durée en tours", r, i, '')
         see('estompe')
+      }
+      // Deux dés (barde, 0.41.0) : une paire, puis deux coups de ses valeurs, ou la compétence du double et ses coups
+      if (b.type === 'pair') {
+        see('paire de dés')
+        const c = r.fighters[b.side]
+        if (!c.twinDice) flag('paire sans deux dés', r, i, '')
+        if (b.side !== active(b.turn)) flag('paire hors de son tour', r, i, '')
+        const isDouble = b.rolls[0] === b.rolls[1]
+        const skill = isDouble ? c.events.find((e) => e.trigger === DOUBLE_TRIGGERS[b.rolls[0]] && inForm(b.side, e)) : undefined
+        if ((b.double !== undefined) !== !!skill) flag('double incohérent', r, i, `${b.rolls} double ${b.double}`)
+        const rest = r.beats.slice(i + 1).filter((x) => x.turn === b.turn)
+        const strikes = rest.filter((x) => x.type === 'attack')
+        const ended = r.turns === b.turn
+        if (strikes.some((x) => x.type === 'attack' && !x.attack.preset)) flag('coup lancé après une paire', r, i, '')
+        if (skill) {
+          see(`double ${skill.name}`)
+          const next = r.beats[i + 1]
+          if (next?.type !== 'event' || next.event.eventId !== skill.id) flag('double : compétence absente', r, i, next?.type ?? '')
+          // `merged` (Crescendo, Soliste) : un seul coup qui vaut la somme
+          const count = skill.merged ? 1 : (skill.volley ?? 0)
+          const value = skill.merged ? (skill.volley ?? 0) * b.rolls[0] : b.rolls[0]
+          if (!ended && strikes.length !== (skill.volley ? count : 0)) flag('double : nombre de coups', r, i, `${strikes.length}`)
+          if (strikes.some((x) => x.type === 'attack' && (x.attack.reshaped?.value ?? x.attack.roll) !== value)) flag('double : valeur des coups', r, i, '')
+          if (strikes.some((x) => x.type === 'attack' && x.attack.roll !== b.rolls[0])) flag('double : dé affiché', r, i, '')
+        } else {
+          if (!ended && strikes.length !== 2) flag('paire : nombre de coups', r, i, `${strikes.length}`)
+          strikes.forEach((x, k) => {
+            if (x.type === 'attack' && x.attack.roll !== b.rolls[k]) flag('paire : valeur des coups', r, i, `${x.attack.roll} au lieu de ${b.rolls[k]}`)
+          })
+          if (rest.some((x) => x.type === 'event' && DOUBLE_TRIGGERS[b.rolls[0]] === x.event.trigger)) flag('compétence de double sans double', r, i, '')
+        }
+      }
+      if (b.type === 'attack' && b.attack.preset) {
+        const pair = r.beats.slice(0, i).reverse().find((x) => x.type === 'pair' || x.type === 'flurry' || x.turn !== b.turn)
+        if (pair?.type !== 'pair' || pair.turn !== b.turn) flag('coup de paire sans paire', r, i, '')
+      }
+      // Fausse note (0.41.0) : le coup du porteur qui touche la subit, puis elle disparaît ; esquivé ou sacrifié, elle reste
+      if (b.type === 'attack') {
+        const att = b.attack.attacker
+        const note = find(stateBefore(i).statuses[att], 'falseNote')
+        if (note) {
+          see('fausse note')
+          const touched = !b.attack.dodged && !b.attack.forfeited
+          const left = find(b.state.statuses[att], 'falseNote')
+          if (touched && left) flag('Fausse note non consommée', r, i, '')
+          if (!touched && left?.stacks !== note.stacks) flag('Fausse note perdue sans toucher', r, i, '')
+          const before = b.attack.damage - b.attack.modifiers.reduce((t, m) => t + (m.final ? m.delta : 0), 0)
+          if (touched && !b.attack.modifiers.some((m) => m.status === 'falseNote') && before > 1) flag('Fausse note sans effet', r, i, '')
+        }
       }
       // Aura de poison : toujours avant l'action du porteur
       if (b.type === 'statusTick' && b.status === 'poisonAura') {

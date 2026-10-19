@@ -147,6 +147,18 @@ describe('écrans', () => {
     render(<EndScreen result={poisoned} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop }} />)
   })
 
+  it('combattant avec postures : chaque moment se rend', () => {
+    const base = createCharacter('gorak')
+    const posed = base.adjusted({})
+    Object.assign(posed, { look: { ...base.look, poses: { attack: 'a.png', dodge: 'd.png', hurt: 'h.png', ko: 'k.png', victory: 'v.png' } } })
+    for (const state of ['idle', 'ko', 'victory'] as const) render(<Fighter character={posed} side={0} state={state} />)
+    render(<Fighter character={posed} side={1} lunging />)
+    render(<Fighter character={posed} side={0} received={{ key: 1, damage: 5, crit: false, dodged: false, landed: true }} />)
+    render(<Fighter character={posed} side={0} received={{ key: 1, damage: 0, crit: false, dodged: true, landed: false }} />)
+    const html = renderToString(<Fighter character={posed} side={1} lunging />)
+    expect(html).toContain('a.png')
+  })
+
   it('compendium, fiches et statistiques', () => {
     for (const section of COMPENDIUM_SECTIONS)
       render(<CompendiumScreen section={section.id} characterId="gorak" onNavigate={noop} onBack={noop} />)

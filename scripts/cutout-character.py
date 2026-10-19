@@ -13,8 +13,11 @@ Dépendances : numpy, pillow, scipy.
    bande de quelques pixels, puis « décontamination » (on retire la teinte du fond des
    pixels semi-transparents pour éviter un liseré gris).
 4. L'image est recadrée au plus près, avec une petite marge, et enregistrée en PNG optimisé.
+   Avec CUTOUT_KEEP_CANVAS=1, elle garde au contraire sa toile entière : c'est ce qu'utilise
+   `slice-poses.py`, qui recadre ensuite toutes les postures d'un personnage avec le même rectangle.
 L'aperçu facultatif montre le résultat sur un fond sombre et sur un fond clair.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -69,6 +72,8 @@ rgba = np.dstack([np.clip(clean, 0, 255), alpha * 255]).astype(np.uint8)
 ys, xs = np.nonzero(alpha > 0.05)
 top, bottom = max(ys.min() - MARGIN, 0), min(ys.max() + MARGIN, h - 1)
 left, right = max(xs.min() - MARGIN, 0), min(xs.max() + MARGIN, w - 1)
+if os.environ.get('CUTOUT_KEEP_CANVAS') == '1':
+    top, left, bottom, right = 0, 0, h - 1, w - 1
 img = Image.fromarray(rgba, 'RGBA').crop((left, top, right + 1, bottom + 1))
 img.save(out, optimize=True)
 print(f'{out} : {img.width}x{img.height}, fond estimé {bg.round().astype(int).tolist()}, recadrage x{left} y{top}')

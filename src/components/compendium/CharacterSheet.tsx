@@ -206,7 +206,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
 /**
  * Grande figure en fond : pieds en bas de l'écran, centrée sur la colonne du modèle, assombrie
  * et fondue sur les bords pour que la fiche reste lisible devant elle. Elle garde les tailles
- * relatives des races (`look.scale`).
+ * relatives des personnages (`look.scale`, échelle resserrée de la STYLE_BIBLE § 2).
  */
 function BackdropFigure({ character }: { character: Character }) {
   const { look } = character

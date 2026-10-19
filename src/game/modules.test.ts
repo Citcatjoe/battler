@@ -8,6 +8,8 @@ import { attackLog, coinLog, effectBadge, effectText, eventLog, statusDurationLo
 import { chance, rollDie, seededRng, shuffle } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
+import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
+import { Character, figureHeight } from './character'
 import { EMOJI, testCharacter } from './test-utils'
 import { traceCombat, traceText } from './trace'
 import { STATUS_IDS, statusCounter } from './statuses'
@@ -421,11 +423,12 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution, Charge et Coup de griffe sonnent avec leurs coups
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura'])
-    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3'])
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura', 'melodious-aura', 'overture'])
+    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin', 'whistle'])
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note'])
     family('heal', ['blood-rage', 'blood-rage-murzug', 'life-bloom'])
-    family(null, ['retribution', 'charge', 'claw'])
+    // Crescendo et Soliste (barde) : leurs trois coups sonnent, la compétence est muette
+    family(null, ['retribution', 'charge', 'claw', 'crescendo', 'soloist'])
     const seen: Record<string, Set<string | null>> = {}
     for (const a of CHARACTER_IDS)
       for (const b of CHARACTER_IDS)
@@ -445,3 +448,62 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     }
   })
 })
+
+describe('postures (docs/POSTURES.md)', () => {
+  it('choisit la posture du moment par ordre de priorité', () => {
+    expect(poseOf({})).toBe('idle')
+    expect(poseOf({ received: { landed: false, dodged: false } })).toBe('idle') // élan adverse pas encore arrivé
+    expect(poseOf({ received: { landed: true, dodged: false } })).toBe('hurt')
+    expect(poseOf({ received: { landed: false, dodged: true } })).toBe('dodge')
+    expect(poseOf({ lunging: true, received: { landed: true, dodged: false } })).toBe('attack')
+    expect(poseOf({ state: 'ko', lunging: true })).toBe('ko')
+    expect(poseOf({ state: 'victory' })).toBe('victory')
+    expect(POSE_IDS).toEqual(['idle', 'attack', 'dodge', 'hurt', 'ko', 'victory'])
+  })
+
+  it("retombe sur l'image de garde quand une posture manque", () => {
+    const look = { image: 'garde.png', poses: { attack: 'attaque.png' } }
+    expect(poseImage(look, 'attack')).toBe('attaque.png')
+    expect(poseImage(look, 'dodge')).toBe('garde.png')
+    expect(poseImage({ image: 'garde.png' }, 'ko')).toBe('garde.png')
+    expect(poseImages(look)).toEqual(['garde.png', 'attaque.png'])
+  })
+
+  it("une forme qui change d'image ne reprend pas les postures de la forme de base", () => {
+    const base = ROSTER.find((d) => d.forms)!
+    const c = new Character({
+      ...base,
+      look: { ...base.look, poses: { attack: 'druide-attaque.png' } },
+      forms: [base.forms![0], { ...base.forms![1], look: { ...base.forms![1].look, poses: { ko: 'ours-ko.png' } } }],
+    })
+    expect(poseImage(c.lookFor(0), 'attack')).toBe('druide-attaque.png')
+    expect(poseImage(c.lookFor(1), 'attack')).toBe(c.lookFor(1).image) // pas l'attaque du druide
+    expect(poseImage(c.lookFor(1), 'ko')).toBe('ours-ko.png')
+  })
+
+  it("échelle resserrée (STYLE_BIBLE § 2) : le nain le plus petit, l'ogre le plus grand, des écarts modérés", () => {
+    const h = (id: string, form = 0) => figureHeight(createCharacter(id).lookFor(form))
+    expect(h('brokk')).toBeLessThan(h('ysolde'))
+    expect(h('ysolde')).toBeLessThan(h('gorak'))
+    expect(h('gorak')).toBeLessThan(h('morgrut'))
+    expect(h('thaldrin', 1)).toBeGreaterThan(h('thaldrin', 0)) // l'ours dépasse le druide
+    for (const c of CHARACTERS) expect(h(c.id)).toBeLessThanOrEqual(h('morgrut'))
+    // Ni des clones de même taille, ni des tailles « réalistes » (ogre deux fois le nain, jugé trop fort)
+    expect(h('morgrut') / h('brokk')).toBeGreaterThan(1.2)
+    expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
+  })
+
+  it('Gorak et Naraxes ont les cinq postures communes, que leurs variantes héritent', () => {
+    for (const id of ['gorak', 'murzug', 'naraxes', 'ssythra'])
+      expect(Object.keys(createCharacter(id).look.poses ?? {}).sort()).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
+  })
+
+  it('chaque posture a un nom, un moment et un prompt, sans emoji', () => {
+    for (const id of POSE_IDS) {
+      const p = POSES[id]
+      expect(p.name && p.when && p.prompt).toBeTruthy()
+      for (const t of [p.name, p.when, p.prompt]) expect(t).not.toMatch(EMOJI)
+    }
+  })
+})
+

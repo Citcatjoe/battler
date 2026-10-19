@@ -11,6 +11,9 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 
 ## [Non publié]
 
+### Modifié
+- **Attaque de la barde refaite, plus ample** (demande de l'utilisateur : des postures plus expressives, surtout le coup) : une fente complète, rapière entière, à la place de l'attaque tassée dont la lame était coupée. Toutes ses postures sont redécoupées sur une toile de 992×1005 (avant 703×1005), sans changement de `scale`, `headroom` ni portrait. `scripts/slice-poses.py` centre désormais la toile commune sur les pieds de la garde, pour qu'une attaque ample ne la décale pas.
+
 ### Ajouté
 - **Icônes peintes** à la place des emojis dans les boutons, fiches, statistiques, arbre de tournoi et statuts (`src/assets/icons/`, composant `Icon`). Le journal de combat garde ses emojis pour l'instant.
 - `scripts/slice-icons.py` : découpe d'une planche d'icônes générée par ChatGPT Image, y compris quand le damier de transparence est peint dans l'image.
@@ -30,6 +33,56 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - **Boutons au style jeu vidéo** (`.btn`, `.btn-primary`, `.btn-round`, `.tabs` dans `index.css`) : plaques d'or ou de pierre au liseré de bronze, en relief, qui s'enfoncent au clic, avec du texte en Cinzel capitales et des icônes de taille fixe. Appliqués à l'écran de sélection (Statistiques et Son en médaillons, onglets Affrontement / Tournoi, Fiche, Au hasard, Combattre) et à l'écran d'affrontement (Changer, Jouer, Simuler).
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
+
+## [0.41.0] — 2026-10-19
+
+### Ajouté
+- **La barde, dixième famille : Fanchon (Saltimbanque) et Mélisande (Ménestrelle)**, d'après le concept d'un ami de l'utilisateur. Le twist : un petit d5, mais **deux dés à chaque tour**, et des compétences sur les **doubles** au lieu des faces 1, 2 et 3.
+  - Hors double : deux coups séparés, un par dé, chacun avec son esquive et son critique.
+  - Sur un double qui a sa compétence, celle-ci remplace les deux coups :
+    - double 1, **Siffloter** : Sifflotement, 3 charges, +2 PV à chaque fin de tour, puis −1 charge ; cumulable ;
+    - double 2, **Fausse note** : le prochain coup adverse qui touche perd 5 dégâts finaux par charge, puis la note s'oublie ;
+    - double 3, **Aura mélodieuse** : +1 dégât final par charge sur chacun de ses coups, permanente ;
+    - double 4, **Crescendo** : un coup de 12 (3 × 4) ;
+    - double 5, **Soliste** : un coup de 15 (3 × 5).
+  - **Ouverture** : elle entre en scène avec 1 charge d'Aura mélodieuse.
+  - Choix de l'utilisateur, après mesure : un coup unique pour Crescendo et Soliste, et l'Ouverture. Voir `docs/EQUILIBRAGE.md` et `docs/PERSONNAGES.md`.
+- **Images de la barde** : garde et cinq postures (`src/assets/bard-*.png`, toile 703×1005, `scale` 0,97 pour la taille 1,00), et cinq icônes de compétences qui servent aussi à ses trois statuts (`whistle`, `false-note`, `melodious-aura`, `crescendo`, `soloist`, planche v6). Elles ont été générées et découpées par la session images, avec leurs prompts dans la `STYLE_BIBLE` § 4 et § 7. Défaut connu : la rapière de l'attaque est coupée.
+- **Moteur : personnage à deux dés** (`CharacterDef.twinDice`, `docs/RESOLUTION.md` § 2) :
+  - nouvelle étape de chronologie `pair`, qui lance deux dés et compte deux rangs en mode triche (`diceOf`, `rankAt`) ;
+  - déclencheurs `doubleOne` à `doubleFive` ;
+  - champs de compétence `volley` (coups de la face du double) et `merged` (un seul coup qui vaut leur somme, joué comme un coup transformé) ;
+  - coups au dé déjà tiré (`Attack.preset`).
+  - À l'écran, les deux dés roulent ensemble, « DOUBLE 4 ! » est annoncé, puis les coups partent en rafale. Les dés de compétences de la barde montrent ses cinq doubles.
+- **Statuts** :
+  - crochet `modifyFinal` : dégâts finaux, après l'armure et les boucliers, au moins 1 ;
+  - crochet `spentOnHit` : disparaît quand un coup du porteur touche ;
+  - trois statuts : Sifflotement, Fausse note, Aura mélodieuse.
+- `look.bodyInset` : vide de la toile de part et d'autre de la garde. L'ancrage `inside` (écran d'affrontement, champion) se cale sur la silhouette, plus sur le bord de la toile. Une toile à postures large, comme la fente de la barde (992 px de large, la garde n'en occupe que la moitié), ne pousse plus le personnage sous son nom.
+- Audit (`audit.ts`) : contrôles de la paire, des doubles, des gros coups, de la Fausse note, des dés imposés par paire, et des statuts qui s'estompent en soignant.
+
+### Modifié
+- Équilibre : Brokk contre Fanchon (71/29) et contre Mélisande (65/35) rejoignent les **contres connus** (`balance.test.ts`, question ouverte dans `EQUILIBRAGE.md`).
+- Empreinte de non-régression : 76 lignes ajoutées, une par nouveau duel. Aucun combat existant ne change.
+
+### Corrigé
+- Test « compétences du dé » : un attaquant tué par une Riposte avant sa compétence ne la déclenche pas. C'était un cas réel que le test ignorait, révélé par les nouvelles graines.
+
+## [0.40.0] — 2026-10-19
+
+### Ajouté
+- **Postures des combattants** (demande de l'utilisateur : tester si changer d'image au fil des animations renforce l'immersion ; `docs/POSTURES.md`). En plus de sa garde, un personnage peut avoir **cinq postures communes à tous** : attaque (pendant l'élan), esquive, coup encaissé, K.O. et victoire. Ce sont des décisions de l'utilisateur : pas plus, pour garder la production d'images légère, et jamais une posture propre à une capacité. Le registre `POSES` et le choix de la posture du moment (`poseOf`) sont dans `src/game/poses.ts`, avec `CharacterLook.poses`. `Fighter` change l'image instantanément, sous les animations existantes, et précharge les postures. Une posture absente retombe sur la garde. Avec une posture de K.O., l'animation ne garde que le grisé (`.ko-posed`). Présentation pure : le moteur de règles et l'empreinte de non-régression sont inchangés.
+- **L'orc, premier personnage à postures**. Gorak (et Murzug, sa variante) a une **nouvelle image originale**, générée avec son prompt de la `STYLE_BIBLE`, qui remplace le placeholder `orc.png` issu d'une œuvre existante (mis à la corbeille). Ses cinq postures sont générées en planches et alignées sur la garde (toile 778×993) ; le coup encaissé est ajouté ensuite avec `--reference`. Son `scale` passe à 1,19 pour garder sa taille, et son portrait est recadré.
+- **La voleuse (Naraxes, Ssythra), deuxième personnage à postures** : une nouvelle garde et cinq postures, en trois planches (deux de trois cases, une de deux), soit 3 générations. `scale` 1,10, `headroom` 0,14, portrait recadré ; l'ancienne `lizardman.png` est à la corbeille.
+- `scripts/slice-poses.py` : découpe des planches de postures (1536×1024, deux ou trois cases, la garde en première case comme règle), mise à l'échelle de la garde, calage sur ses pieds, recadrage commun de toutes les postures, planche de contrôle `logs/poses-<nom>.png`, retrait des fragments isolés, et `--reference=<garde.png>` pour ajouter une posture à un personnage déjà découpé, sur sa toile. `cutout-character.py` accepte `CUTOUT_KEEP_CANVAS=1` (détourer sans recadrer).
+- **Prompts** : gabarit de planche de postures et lignes de chaque posture dans la `STYLE_BIBLE` (§ 4) et `POSTURES.md` (§ 3), avec les versions de l'orc ; check-lists d'intégration à jour.
+
+### Modifié
+- **Taille des combattants : une échelle resserrée, et la largeur naturelle pour tous** (demande de l'utilisateur : un nain ne doit pas avoir la taille de l'ogre, mais une taille « réaliste » dessert le rendu). Hauteur par rapport à un humain : nain 0,86, homme-lézard 0,97, humains et druide 1,00, elfes 1,03, paladin 1,04, mort-vivant 1,05, orc 1,08, ours 1,10, ogre 1,13 (`scale` recalculé, formule dans la `STYLE_BIBLE` § 2). Toutes les images sont affichées à leur largeur naturelle, centrées sur les pieds. Avant, une boîte au rapport fixe rétrécissait les images larges : l'ogre s'affichait plus petit que l'orc et le mort-vivant (500 px contre 563 et 564 sur l'affrontement), et l'orc à postures, seul à sa vraie largeur, paraissait bien plus massif que lui. Sur l'affrontement et l'écran de fin, une image large déborde vers le centre (`anchor="inside"`), plutôt que hors de l'écran. `headroom` (part vide au-dessus de la tête d'une toile à postures) et `figureHeight` placent la zone d'état et les effets sur la tête. Un test vérifie l'ordre et les écarts.
+- **Les menus, les panneaux et le sceau « VS » passent au-dessus des combattants** (accueil, affrontement, fin de combat) : une arme levée passe derrière, jamais devant.
+
+### Non vérifié
+- L'esquive et le K.O. n'ont pas été vus dans un combat joué (couverts par les tests). Vus par capture : l'attaque des deux personnages pendant l'élan, le coup encaissé de la voleuse, l'accueil, l'affrontement, la victoire de l'orc sur l'écran de fin.
 
 ## [0.39.1] — 2026-10-19
 

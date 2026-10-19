@@ -46,6 +46,11 @@ export type IconName =
   | 'charge'
   | 'claw'
   | 'rot-aura'
+  | 'whistle'
+  | 'false-note'
+  | 'melodious-aura'
+  | 'crescendo'
+  | 'soloist'
 
 /**
  * Icône peinte de chaque statut. Facultative pour un statut « à venir » (repli sur une marque neutre,
@@ -81,6 +86,10 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   rotAura: 'rot-aura',
   // Provisoire : la Pourriture subie reprend l'icône de l'aura, en attendant la sienne (demandée)
   rot: 'rot-aura',
+  // Barde (0.41.0) : une icône pour la compétence et son statut, comme les auras
+  whistling: 'whistle',
+  falseNote: 'false-note',
+  melodiousAura: 'melodious-aura',
 }
 
 /**
@@ -97,6 +106,12 @@ export const SKILL_ICON: Partial<Record<string, IconName>> = {
   'waiting-1': 'waiting',
   'waiting-2': 'waiting',
   'waiting-3': 'waiting',
+  whistle: 'whistle',
+  'false-note': 'false-note',
+  'melodious-aura': 'melodious-aura',
+  overture: 'melodious-aura',
+  crescendo: 'crescendo',
+  soloist: 'soloist',
 }
 
 /** Icône d'un statut : l'icône peinte, sinon une marque neutre (l'initiale du statut) à la même taille. */

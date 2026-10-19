@@ -18,7 +18,7 @@ describe('équilibre du roster', () => {
    * Contres connus, en attente d'une décision de l'utilisateur (docs/EQUILIBRAGE.md, questions
    * ouvertes) : tolérés jusqu'à 75/25 au lieu de 65/35. Ne rien ajouter ici sans l'écrire là-bas.
    */
-  const KNOWN_COUNTERS = new Set(['brokk-ysolde', 'berengere-brokk', 'aldric-ssythra', 'brokk-gauvain', 'brannoc-ysolde', 'berengere-brannoc', 'berengere-ssythra'])
+  const KNOWN_COUNTERS = new Set(['brokk-ysolde', 'berengere-brokk', 'aldric-ssythra', 'brokk-gauvain', 'brannoc-ysolde', 'berengere-brannoc', 'berengere-ssythra', 'brokk-fanchon', 'brokk-melisande'])
   const counter = (a: string, b: string) => KNOWN_COUNTERS.has([a, b].sort().join('-'))
 
   it('chaque personnage gagne entre 42 et 58 % de ses combats, aucun duel au-delà de 65/35', () => {

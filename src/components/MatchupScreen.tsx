@@ -208,9 +208,9 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
       className={`row-start-1 flex items-end gap-6 ${side === 0 ? 'slide-in-left col-start-1' : 'slide-in-right col-start-3 flex-row-reverse'}`}
     >
       <div className="h-[560px] shrink-0">
-        <Fighter character={character} side={side} />
+        <Fighter character={character} side={side} anchor="inside" />
       </div>
-      <div className={`mb-16 flex flex-col gap-3 ${side === 1 ? 'items-end text-right' : ''}`}>
+      <div className={`relative z-20 mb-16 flex flex-col gap-3 ${side === 1 ? 'items-end text-right' : ''}`}>
         <div>
           <h2 className={`on-illus font-display text-5xl font-semibold ${style.accent}`}>{character.name}</h2>
           <p className="on-illus font-body text-lg text-ink-2">

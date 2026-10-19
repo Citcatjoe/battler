@@ -58,7 +58,9 @@ describe('simulateCombat : propriétés générales', () => {
             expect(a.dodged && a.forfeited).toBe(false)
           } else {
             expect(a.damage).toBeGreaterThanOrEqual(1)
-            expect(a.damage).toBe(a.raw - a.armorAbsorbed - a.shieldAbsorbed)
+            // Dégâts finaux (Aura mélodieuse, Fausse note, 0.41.0) : après l'armure et les boucliers
+            const final = a.modifiers.reduce((t, m) => t + (m.final ? m.delta : 0), 0)
+            expect(a.damage).toBe(a.raw - a.armorAbsorbed - a.shieldAbsorbed + final)
             expect(a.dealt).toBeLessThanOrEqual(a.damage)
             expect(a.dealt).toBeGreaterThanOrEqual(0)
             // Jet (× critique), puis modificateurs sortants (attaquant) et entrants (défenseur), plancher à 1
@@ -85,7 +87,8 @@ describe('simulateCombat : propriétés générales', () => {
   it('déclenche les compétences du dé (1 et 2) du roster exactement quand il le faut', () => {
     for (const r of rosterCombats(20)) {
       r.beats.forEach((beat, i) => {
-        if (beat.type !== 'attack') return
+        // Les coups de la barde (dé de la paire) n'ont pas de compétence du dé : voir « deux dés »
+        if (beat.type !== 'attack' || beat.attack.preset) return
         // Les étapes qui suivent le coup, jusqu'au prochain coup (vol de vie, compétences, réactions)
         const after: typeof r.beats = []
         for (const next of r.beats.slice(i + 1)) {
@@ -93,9 +96,14 @@ describe('simulateCombat : propriétés générales', () => {
           after.push(next)
         }
         const alive = beat.state.hp[1 - beat.attack.attacker] > 0
+        // Un attaquant tué par une réaction au coup (Riposte) avant sa compétence ne la déclenche pas
+        const firstEvent = after.findIndex((b) => b.type === 'event')
+        const killedFirst = after
+          .slice(0, firstEvent < 0 ? after.length : firstEvent)
+          .some((b) => b.type === 'statusReaction' && b.state.hp[beat.attack.attacker] === 0)
         for (const [trigger, roll] of [['naturalOne', 1], ['naturalTwo', 2]] as const) {
           const fired = after.some((b) => b.type === 'event' && b.event.trigger === trigger)
-          expect(fired).toBe(beat.attack.roll === roll && alive)
+          expect(fired).toBe(beat.attack.roll === roll && alive && !killedFirst)
         }
         // Un jet qui déclenche une compétence du dé (1, 2 ou 3) n'inflige aucun dégât (0.27.0),
         // sauf s'il la transforme en coup (druide en ours : Charge, Coup de griffe, 0.35.0)
@@ -815,7 +823,8 @@ describe('compétences du 2 au dé (0.25.0)', () => {
       })
       // Hors Furie, une action = un coup
       const perTurn = new Map<number, number>()
-      for (const a of attacksOf(r)) perTurn.set(a.turn, (perTurn.get(a.turn) ?? 0) + 1)
+      // (les deux coups d'une paire de dés, chez la barde, sont une autre règle)
+      for (const a of attacksOf(r).filter((x) => !x.preset)) perTurn.set(a.turn, (perTurn.get(a.turn) ?? 0) + 1)
       const flurryTurns = new Set(ofType(r, 'flurry').map((b) => b.turn))
       for (const [t, n] of perTurn) expect(n).toBe(flurryTurns.has(t) ? n : 1)
       // La Furie gagnée sur un 2 vaut pour l'action suivante du porteur, pas pour la même

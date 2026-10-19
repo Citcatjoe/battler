@@ -1,10 +1,10 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-19, version 0.39.1._
+_Dernière mise à jour : 2026-10-19, version 0.41.0._
 
 ## En bref
 
-Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Dix-huit personnages (9 familles × 2 variantes : orc, elfe, nain, mort-vivant, humain, homme-lézard, paladin, ogre, druide), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente) ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
+Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Vingt personnages (10 familles × 2 variantes : orc, elfe, nain, mort-vivant, humain, homme-lézard, paladin, ogre, druide, barde), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente), sauf la barde, qui lance deux dés et joue ses compétences sur les doubles ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
 
 ## Ce qui fonctionne
 
@@ -37,6 +37,9 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Compendium (Personnages, Compétences, Bonus et malus) | ✅ 0.18.0 (Compétences en 0.21.0), bouton d'accès provisoire |
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |
 | Version affichée en jeu | ✅ depuis 0.11.0 |
+| Taille des combattants (échelle resserrée, nain 0,86 → ogre 1,13, largeur naturelle pour tous) | ✅ 0.40.0, vue à l'écran (accueil, affrontement, combat) |
+| Postures des combattants (attaque, esquive, coup encaissé, K.O., victoire ; retour à la garde) | ✅ 0.40.0, l'orc (nouvelle image originale) et la voleuse, avec leurs variantes ; attaque, coup encaissé et victoire vus à l'écran, esquive et K.O. non vus (`POSTURES.md`) |
+| La barde (Fanchon, Mélisande) : deux dés, compétences sur les doubles, dégâts finaux | ✅ 0.41.0. Vus à l'écran (captures Firefox) : sélection à 10 familles, dés des doubles, affrontement face au nain (tailles), paire de dés en combat, aura, posture d'attaque. Mélisande et sa teinte vues sur l'affrontement (postures redécoupées, ancrage sur la silhouette, `bodyInset`). Non vus : un double en combat (annonce « DOUBLE », gros coup), les sons. Brokk contre la barde : contre connu |
 | Paris (deux joueurs et deux parieurs de l'ordinateur, guichet de jeu, cotes cachées, mises fixes, rattrapage, coups de théâtre, écran de fin en deux moitiés, classement) | ✅ 0.38.0, vu à l'écran (captures Firefox : guichet, fin de combat, arbre). Pas encore de guichet de tour : les joueurs ne parient pas sur les matchs simulés depuis l'arbre (Borin et Zlatka, si). Sons non vérifiés |
 | Laboratoire des sorts et audit des compétences (`scripts/lab.report.ts`, `scripts/skills.report.ts`) | ✅ 0.36.5, voir `SORTS.md` |
 
@@ -58,7 +61,8 @@ Tout ce qui suit est dans le dépôt et tourne avec `npm run check` :
 - **Animations non testées automatiquement.** Les tests couvrent les règles et le rendu des écrans, pas le déroulé animé du combat dans le navigateur.
 - **Tournoi non sauvegardé.** C'est voulu : un rechargement de la page le perd, et les bourses des paris avec lui.
 - **Paris : pas de guichet de tour.** Les joueurs ne parient pas sur les matchs simulés depuis l'arbre (« Simuler », « Simuler le tour ») ; il faut ouvrir le match. Borin et Zlatka, eux, parient sur tous les matchs (PARIS.md, étape P3).
-- **Personnages en placeholder.** `orc.png` et `dwarf.png` proviennent d'œuvres existantes et sont à remplacer par des créations originales (voir `docs/STYLE_BIBLE.md`).
+- **Personnage en placeholder.** `dwarf.png` provient d'une œuvre existante et est à remplacer par une création originale (voir `docs/STYLE_BIBLE.md`). L'orc a été remplacé en 0.40.0.
+- **Postures** : seuls l'orc, la voleuse et la barde (et leurs variantes) en ont (`POSTURES.md`).
 - **Pas de version mobile.** La scène 16:9 se réduit, mais rien n'est pensé pour le tactile.
 - **Historique git récent.** Premier commit et tag à partir de la 0.11.0 ; les versions précédentes ont été reconstituées dans le CHANGELOG.
 

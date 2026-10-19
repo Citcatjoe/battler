@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  diceOf,
   dieAt,
   INITIATIVE_DIE,
   other,
-  rollsDie,
+  rankAt,
   simulateCombat,
   type AppliedEffect,
   type Attack,
@@ -17,6 +18,7 @@ import {
   coinLog,
   eventLog,
   flurryLog,
+  pairLog,
   shiftLog,
   skipLog,
   statusDurationLog,
@@ -191,7 +193,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         forced: forced[committed],
         count: Object.keys(forced).length,
       })
-    const rankOf = (i: number) => current.beats.slice(0, i).filter(rollsDie).length
+    const rankOf = (i: number) => rankAt(current.beats, i)
     const commit = (upTo: number) => {
       if (upTo <= committed) return
       committed = upTo
@@ -311,7 +313,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     const strikeSound = (attack: Attack) => (attack.dodged ? sfx.dodge() : attack.crit ? sfx.crit() : sfx.hit())
 
     /** Un coup de la rafale : pas de nouveau jet, élan court, impact presque immédiat. */
-    async function playVolleyStrike(t: number, index: number, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
+    async function playVolleyStrike(t: number, index: number | undefined, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
       setDice((d) => ({ ...d, active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier }))
       if (attack.forfeited) {
         showHp(after)
@@ -331,6 +333,17 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       push(attackLog(t, attack, fighters, after[other(attack.attacker)]))
       await wait(260)
       setStrike(null)
+    }
+
+    /** Deux dés (barde) : la paire roule ensemble et retombe ; un double qui a sa compétence est annoncé. */
+    async function rollPair(side: Side, rolls: [number, number], faces: number, skill: string | undefined, forced: boolean) {
+      const shown = { ...IDLE_DICE, faces, owner: side, label: `${fighters[side].name} · deux dés`, volley: true }
+      setDice({ ...shown, values: [0, 0], rolling: true })
+      sfx.diceRoll(900 / speedRef.current)
+      await wait(900)
+      sfx.diceLand()
+      setDice({ ...shown, values: rolls, forced, label: skill ? `DOUBLE ${rolls[0]} !` : shown.label })
+      await wait(skill ? 550 : 400)
     }
 
     /** Pile ou face : la pièce remplace le dé, tournoie, retombe ; pile, les dégâts tombent sur l'adversaire. */
@@ -480,19 +493,21 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
 
       // Rafale en cours (Furie des vents) : les index de ses coups, dans l'ordre, et le prochain à jouer.
       // Des index plutôt que les étapes : la chronologie peut être remplacée en cours de route (mode triche).
-      let volley: { strikes: number[]; next: number } | null = null
+      // `pointed` : chaque coup désigne son dé (rafale, deux coups de la barde) ; faux pour les coups d'un double
+      let volley: { strikes: number[]; next: number; pointed: boolean } | null = null
 
       // `current.beats` est relu à chaque étape : un dé imposé en remplace la suite
       for (let i = 0; i < current.beats.length; i++) {
         const beat = current.beats[i]
         setTurn(beat.turn)
         anticipate(i)
-        if (rollsDie(beat)) commit(rankOf(i) + 1)
+        const rolled = diceOf(beat).length
+        if (rolled > 0) commit(rankOf(i) + rolled)
         switch (beat.type) {
           case 'attack':
             if (volley && volley.strikes.includes(i)) {
               const index = volley.next++
-              await playVolleyStrike(beat.turn, index, beat.attack, beat.state.hp, display(beat.state.statuses))
+              await playVolleyStrike(beat.turn, volley.pointed ? index : undefined, beat.attack, beat.state.hp, display(beat.state.statuses))
               const last = volley.next === volley.strikes.length
               if (last) volley = null
               await wait(last ? 450 : 60)
@@ -590,7 +605,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.attacker === beat.side)
               .slice(0, beat.strikes)
             if (strikes.length > 0) {
-              volley = { strikes: strikes.map(([j]) => j), next: 0 }
+              volley = { strikes: strikes.map(([j]) => j), next: 0, pointed: true }
               commit(rankOf(i) + strikes.length)
               await rollVolley(
                 strikes.flatMap(([, b]) => (b.type === 'attack' ? [b.attack] : [])),
@@ -612,6 +627,18 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               },
               { cue: sfx.shift },
             )
+            break
+          }
+          case 'pair': {
+            // Les deux dés roulent ensemble ; les coups qui suivent (deux, ou ceux d'un double) partent en rafale
+            const skill = beat.double !== undefined ? current.beats[i + 1] : undefined
+            const name = skill?.type === 'event' ? skill.event.name : undefined
+            const strikes = [...current.beats.entries()]
+              .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.preset)
+              .map(([j]) => j)
+            volley = strikes.length > 0 ? { strikes, next: 0, pointed: beat.double === undefined } : null
+            await rollPair(beat.side, beat.rolls, beat.faces, name, !!beat.forced)
+            push(pairLog(beat.turn, beat.side, beat.rolls, name, fighters))
             break
           }
           case 'coin':

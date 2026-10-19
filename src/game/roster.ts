@@ -1,16 +1,32 @@
-import orcImg from '../assets/orc.png'
+import orcIdleImg from '../assets/orc-idle.png'
+import orcAttackImg from '../assets/orc-attack.png'
+import orcDodgeImg from '../assets/orc-dodge.png'
+import orcKoImg from '../assets/orc-ko.png'
+import orcVictoryImg from '../assets/orc-victory.png'
+import orcHurtImg from '../assets/orc-hurt.png'
 import elfImg from '../assets/elf.png'
 import dwarfImg from '../assets/dwarf.png'
 import undeadImg from '../assets/undead.png'
 import humanImg from '../assets/human.png'
-import lizardImg from '../assets/lizardman.png'
+import lizardIdleImg from '../assets/lizardman-idle.png'
+import lizardAttackImg from '../assets/lizardman-attack.png'
+import lizardDodgeImg from '../assets/lizardman-dodge.png'
+import lizardHurtImg from '../assets/lizardman-hurt.png'
+import lizardKoImg from '../assets/lizardman-ko.png'
+import lizardVictoryImg from '../assets/lizardman-victory.png'
 import paladinImg from '../assets/paladin.png'
 import ogreImg from '../assets/ogre.png'
 import druidImg from '../assets/druid.png'
 import druidBearImg from '../assets/druid-bear.png'
+import bardIdleImg from '../assets/bard-idle.png'
+import bardAttackImg from '../assets/bard-attack.png'
+import bardDodgeImg from '../assets/bard-dodge.png'
+import bardHurtImg from '../assets/bard-hurt.png'
+import bardKoImg from '../assets/bard-ko.png'
+import bardVictoryImg from '../assets/bard-victory.png'
 import { Character, variant, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
-import { ROLL_TRIGGERS } from './events'
+import { isDoubleTrigger, ROLL_TRIGGERS } from './events'
 import { STATUSES } from './statuses'
 
 /*
@@ -43,7 +59,16 @@ const gorak: CharacterDef = {
   race: 'Orc',
   archetype: 'Brute',
   stats: { maxHp: 61, damageDie: 10, armor: 0, dodgeChance: 0.05, critChance: 0.1, critMultiplier: 2 },
-  look: { image: orcImg, facing: 'right', scale: 1, portrait: { x: 55, y: 5, zoom: 3 } },
+  // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
+  // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
+  look: {
+    image: orcIdleImg,
+    poses: { attack: orcAttackImg, dodge: orcDodgeImg, hurt: orcHurtImg, ko: orcKoImg, victory: orcVictoryImg },
+    facing: 'right',
+    scale: 1.18,
+    headroom: 0.13,
+    portrait: { x: 49, y: 8, zoom: 3 },
+  },
   lore: {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
@@ -110,7 +135,7 @@ const elaria: CharacterDef = {
   race: 'Elfe',
   archetype: 'Rôdeuse',
   stats: { maxHp: 48, damageDie: 8, armor: 0, dodgeChance: 0.33, critChance: 0.22, critMultiplier: 2 },
-  look: { image: elfImg, facing: 'right', scale: 1.04, portrait: { x: 42, y: 8, zoom: 3.4 } },
+  look: { image: elfImg, facing: 'right', scale: 0.96, portrait: { x: 42, y: 8, zoom: 3.4 } },
   lore: {
     tagline: 'Un souffle, une flèche.',
     background:
@@ -169,7 +194,7 @@ const brokk: CharacterDef = {
   race: 'Nain',
   archetype: 'Gardien',
   stats: { maxHp: 68, damageDie: 8, armor: 0, dodgeChance: 0.06, critChance: 0.08, critMultiplier: 2.5 },
-  look: { image: dwarfImg, facing: 'left', scale: 0.78, portrait: { x: 38, y: 40, zoom: 2.8 } },
+  look: { image: dwarfImg, facing: 'left', scale: 0.8, portrait: { x: 38, y: 40, zoom: 2.8 } },
   lore: {
     tagline: 'Ce qui passe la porte passe par moi.',
     background:
@@ -226,7 +251,7 @@ const ervald: CharacterDef = {
   race: 'Mort-vivant',
   archetype: 'Chevalier liche',
   stats: { maxHp: 58, damageDie: 8, armor: 1, dodgeChance: 0.08, critChance: 0.12, critMultiplier: 2 },
-  look: { image: undeadImg, facing: 'right', scale: 1.02, portrait: { x: 60, y: 8, zoom: 3.2 } },
+  look: { image: undeadImg, facing: 'right', scale: 0.98, portrait: { x: 60, y: 8, zoom: 3.2 } },
   lore: {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
@@ -286,7 +311,7 @@ const ysolde: CharacterDef = {
   // Petit dé (d7) : 3 jets sur 7 (1 à 3) déclenchent une compétence au lieu de frapper. Un d6 (un jet
   // sur deux) la rendait trop dépendante de l'Aura de sainteté : 63 % de victoires, combats de 52 tours.
   stats: { maxHp: 52, damageDie: 7, armor: 0, dodgeChance: 0.08, critChance: 0.1, critMultiplier: 2 },
-  look: { image: humanImg, facing: 'right', scale: 1, portrait: { x: 52, y: 14, zoom: 3.4 } },
+  look: { image: humanImg, facing: 'right', scale: 0.93, portrait: { x: 52, y: 14, zoom: 3.4 } },
   lore: {
     tagline: 'Le soleil ne frappe pas. Il juge.',
     background:
@@ -345,7 +370,16 @@ const naraxes: CharacterDef = {
   // Gros dé (d10) : moins de jets de compétence (3 sur 10) et de plus gros coups. Avec un d8, Pile ou face
   // et Coup de chance, qui ne frappent pas, la laissaient à 33 % de victoires.
   stats: { maxHp: 50, damageDie: 10, armor: 0, dodgeChance: 0.2, critChance: 0.14, critMultiplier: 2 },
-  look: { image: lizardImg, facing: 'right', scale: 0.98, portrait: { x: 86, y: 8, zoom: 3.2 } },
+  // Postures (0.40.0, docs/POSTURES.md) : la garde occupe 81 % de la toile commune, avec 14 % de vide
+  // au-dessus de la tête (dague levée de l'attaque) : scale 1,10 pour sa taille 0,97.
+  look: {
+    image: lizardIdleImg,
+    poses: { attack: lizardAttackImg, dodge: lizardDodgeImg, hurt: lizardHurtImg, ko: lizardKoImg, victory: lizardVictoryImg },
+    facing: 'right',
+    scale: 1.1,
+    headroom: 0.14,
+    portrait: { x: 62, y: 16, zoom: 3.2 },
+  },
   lore: {
     tagline: 'Pile, je gagne. Face, tu perds quand même.',
     background:
@@ -403,7 +437,7 @@ const aldric: CharacterDef = {
   archetype: 'Paladin',
   // Critiques lourds (12 % ×2,5 depuis la 0.32.0, quand la riposte a cessé de s'éteindre à vide) : face à l'intimidation du nain, ses coups moyens ne passaient pas (Brokk le battait à 75 %).
   stats: { maxHp: 60, damageDie: 8, armor: 0, dodgeChance: 0.05, critChance: 0.12, critMultiplier: 2.5 },
-  look: { image: paladinImg, facing: 'right', scale: 1, portrait: { x: 64, y: 24, zoom: 3.4 } },
+  look: { image: paladinImg, facing: 'right', scale: 0.97, portrait: { x: 64, y: 24, zoom: 3.4 } },
   lore: {
     tagline: 'Chaque coup reçu est une dette.',
     background:
@@ -475,7 +509,7 @@ const morgrut: CharacterDef = {
   // Aucune compétence : un d14 et de la masse. Un jet de 1 à 3 (3 sur 14) le laisse attendre.
   // Aucun critique (il ne vise pas) : avec 8 % de critique et 66 PV, il gagnait 63 % de ses combats.
   stats: { maxHp: 63, damageDie: 14, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
-  look: { image: ogreImg, facing: 'right', scale: 1.06, portrait: { x: 63, y: 14, zoom: 3.2 } },
+  look: { image: ogreImg, facing: 'right', scale: 1.05, portrait: { x: 63, y: 14, zoom: 3.2 } },
   lore: {
     tagline: 'Taper. Attendre. Taper plus fort.',
     background:
@@ -508,11 +542,12 @@ const thaldrin: CharacterDef = {
   race: 'Sylvain',
   archetype: 'Druide',
   stats: { maxHp: 56, damageDie: 10, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
-  look: { image: druidImg, facing: 'right', scale: 1, portrait: { x: 47, y: 13, zoom: 3.2 } },
+  look: { image: druidImg, facing: 'right', scale: 0.93, portrait: { x: 47, y: 13, zoom: 3.2 } },
   // Il change de forme au début de chacun de ses tours, sauf le premier
   forms: [
     { id: 'human', name: 'Forme humaine' },
-    { id: 'bear', name: "Forme d'ours", look: { image: druidBearImg, portrait: { x: 70, y: 17, zoom: 3.2 } } },
+    // L'ours (taille 1,10) dépasse le druide de forme humaine (1,00) : la métamorphose le fait grandir
+    { id: 'bear', name: "Forme d'ours", look: { image: druidBearImg, scale: 1.02, portrait: { x: 70, y: 17, zoom: 3.2 } } },
   ],
   lore: {
     tagline: 'La forêt a deux visages.',
@@ -546,6 +581,90 @@ const brannoc = variant(thaldrin, {
   stats: { maxHp: -4, dodgeChance: +0.04, critChance: +0.04 },
 })
 
+/*
+ * Barde (0.41.0, concept d'un ami de l'utilisateur) : un petit d5, mais deux dés à chaque action. Hors
+ * double, deux coups séparés (esquive et critique chacun) ; sur un double, la compétence de sa face
+ * remplace les deux coups (RESOLUTION.md § 2).
+ * Équilibrage (0.41.0, choix de l'utilisateur après mesure) : appliqué à la lettre, le concept gagnait 45 %
+ * mais perdait 87/13 contre Brokk, 78/22 contre Grimbald, 71/29 contre Ervald : l'intimidation, les épines
+ * et l'armure rognent chacun de ses petits coups. D'où l'Ouverture (Aura mélodieuse dès le début, en dégâts
+ * finaux, après l'armure), Crescendo et Soliste en un seul gros coup, et 46 PV, 5 % de critique.
+ */
+const fanchon: CharacterDef = {
+  id: 'fanchon',
+  name: 'Fanchon',
+  race: 'Humain',
+  archetype: 'Saltimbanque',
+  twinDice: true,
+  stats: { maxHp: 46, damageDie: 5, armor: 0, dodgeChance: 0.12, critChance: 0.05, critMultiplier: 2 },
+  // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
+  look: {
+    image: bardIdleImg,
+    poses: { attack: bardAttackImg, dodge: bardDodgeImg, hurt: bardHurtImg, ko: bardKoImg, victory: bardVictoryImg },
+    facing: 'right',
+    scale: 0.97,
+    headroom: 0.03,
+    // Toile large (fente de l'attaque) : la garde n'en occupe que la moitié centrale (pixels 242 à 750 sur 992)
+    bodyInset: { left: 0.244, right: 0.244 },
+    portrait: { x: 60, y: 5, zoom: 3.2 },
+  },
+  lore: {
+    tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
+    background:
+      "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Elle lance deux dés à chaque tour et frappe deux fois ; quand les dés s'accordent, c'est la musique qui frappe.",
+    strengths: ['Deux coups par tour', 'Aura dès son entrée en scène', 'Crescendo (12) et Soliste (15)'],
+    weaknesses: ['Petit dé (d5)', 'Un double sur cinq seulement', 'Peu de PV (46)'],
+  },
+  events: [
+    {
+      id: 'overture',
+      name: 'Ouverture',
+      nature: 'arcane',
+      trigger: 'combatStart',
+      effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }],
+    },
+    {
+      id: 'whistle',
+      name: 'Siffloter',
+      nature: 'arcane',
+      trigger: 'doubleOne',
+      effects: [{ type: 'applyStatus', status: 'whistling', stacks: 3 }],
+    },
+    {
+      id: 'false-note',
+      name: 'Fausse note',
+      nature: 'arcane',
+      trigger: 'doubleTwo',
+      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }],
+    },
+    {
+      id: 'melodious-aura',
+      name: 'Aura mélodieuse',
+      nature: 'arcane',
+      trigger: 'doubleThree',
+      effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }],
+    },
+    // Un seul gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois
+    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'doubleFour', volley: 3, merged: true, effects: [] },
+    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'doubleFive', volley: 3, merged: true, effects: [] },
+  ],
+}
+
+const melisande = variant(fanchon, {
+  id: 'melisande',
+  name: 'Mélisande',
+  archetype: 'Ménestrelle',
+  lore: {
+    tagline: 'Elle chante juste, et frappe plus juste encore.',
+    background:
+      "Ancienne ménestrelle de cour, Mélisande a troqué les salons pour les arènes. Plus solide que Fanchon, elle esquive moins : elle préfère tenir la note jusqu'au bout.",
+    strengths: ['Deux coups par tour', 'Plus de PV que Fanchon (50)', 'Compétences sur les doubles'],
+    weaknesses: ['Petit dé (d5)', 'Esquive plus faible', 'Un double sur cinq seulement'],
+  },
+  tint: 'hue-rotate(150deg) saturate(1.2) brightness(0.95)',
+  stats: { maxHp: +2, dodgeChance: -0.04 },
+})
+
 /** Personnages disponibles, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
 export const ROSTER: readonly CharacterDef[] = [
   gorak,
@@ -566,6 +685,8 @@ export const ROSTER: readonly CharacterDef[] = [
   gnashka,
   thaldrin,
   brannoc,
+  fanchon,
+  melisande,
 ]
 
 /** Les personnages instanciés une fois pour toutes (ils sont immuables). */
@@ -619,9 +740,15 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     for (const e of d.events) {
       if (eventIds.has(e.id)) problems.push(`${at} compétence en double (${e.id})`)
       eventIds.add(e.id)
-      if (e.effects.length === 0 && !e.reshapesHit) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
+      if (e.effects.length === 0 && !e.reshapesHit && !e.volley) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
       if (e.reshapesHit && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined || e.forfeitsHit))
         problems.push(`${at} ${e.id}.reshapesHit : réservé aux déclencheurs du dé, sans chance ni forfeitsHit`)
+      if (isDoubleTrigger(e.trigger) && (!d.twinDice || e.chance !== undefined || e.forfeitsHit))
+        problems.push(`${at} ${e.id} : un double est réservé aux personnages à deux dés (twinDice), sans chance ni forfeitsHit`)
+      if (e.volley !== undefined && (!isDoubleTrigger(e.trigger) || !Number.isInteger(e.volley) || e.volley < 1))
+        problems.push(`${at} ${e.id}.volley : un entier ≥ 1, réservé aux doubles`)
+      if (d.twinDice && ROLL_TRIGGERS.includes(e.trigger))
+        problems.push(`${at} ${e.id} : un personnage à deux dés n'a de compétences que sur les doubles`)
       if (e.form && !d.forms?.some((f) => f.id === e.form)) problems.push(`${at} ${e.id}.form : forme inconnue (${e.form})`)
       if (e.chance !== undefined && !inRange(e.chance, 0, 1)) problems.push(`${at} ${e.id}.chance hors de [0, 1]`)
       if (e.forfeitsHit && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined))

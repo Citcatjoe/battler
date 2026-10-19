@@ -1,5 +1,5 @@
 import type { Character } from './character'
-import { rollMatches, ROLL_TRIGGERS, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
+import { DOUBLE_TRIGGERS, rollMatches, ROLL_TRIGGERS, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
   consumeStatus,
@@ -87,9 +87,12 @@ export interface Attack {
   forfeited: boolean
   /** Dé imposé par l'observateur (mode triche, `forcedRolls`) ; absent d'un combat normal */
   forced?: true
+  /** Dé déjà tiré par la paire (personnage à deux dés, étape pair) : ce coup ne lance aucun dé */
+  preset?: true
   /**
-   * Coup transformé par une compétence (`reshapesHit` : Charge, Coup de griffe) : `value` remplace
-   * le jet pour les dégâts ; le jet affiché (`roll`) reste celui qui a déclenché la compétence
+   * Coup transformé par une compétence (`reshapesHit` : Charge, Coup de griffe ; ou le gros coup d'un
+   * double `merged` : Crescendo, Soliste) : `value` remplace le jet pour les dégâts ; le jet affiché
+   * (`roll`) reste celui qui a déclenché la compétence
    */
   reshaped?: { event: string; value: number; noCrit: boolean }
   crit: boolean
@@ -124,6 +127,8 @@ export interface AttackModifier {
   /** Porté par l'attaquant (sortant) ou par le défenseur (entrant) */
   by: 'attacker' | 'defender'
   delta: number
+  /** Modificateur des dégâts finaux (`modifyFinal`), appliqué après l'armure et les boucliers */
+  final?: true
 }
 
 export interface TriggeredEvent {
@@ -159,6 +164,12 @@ export type Beat = { turn: number; state: Snapshot } & (
   | { type: 'shift'; side: Side; form: number }
   /** Un statut donne plusieurs coups à l'action (ex. Furie des vents) ; il est consommé */
   | { type: 'flurry'; side: Side; status: StatusId; strikes: number; faces: number[] }
+  /**
+   * Deux dés (personnage `twinDice`) : la paire lancée pour l'action. `double` : la face du double qui
+   * déclenche une compétence (elle suit, étape event), absent si l'action est faite des deux coups.
+   * `forced` : pour chaque dé, imposé ou non (mode triche).
+   */
+  | { type: 'pair'; side: Side; rolls: [number, number]; faces: number; double?: number; forced?: [boolean, boolean] }
   /** Pile ou face : une pièce remplace le dé ; pile, des dégâts directs, face, rien. Le statut est consommé */
   | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
 )
@@ -185,18 +196,37 @@ export interface CombatResult {
 
 /* ---------- Lecture d'un résultat ---------- */
 
-/** Une étape qui lance un dé : un coup ou une pièce (mode triche, `forcedRolls`). */
-export const rollsDie = (beat: Beat) => beat.type === 'attack' || beat.type === 'coin'
+/** Un dé lancé (mode triche) : son lanceur, ses faces (2 pour une pièce). */
+export interface RolledDie {
+  side: Side
+  faces: number
+  coin: boolean
+}
 
 /**
- * Le dé de rang `rank` (mode triche) : l'étape qui le lance, son lanceur et son nombre de faces
- * (2 pour une pièce). `undefined` si le combat se termine avant.
+ * Les dés que lance une étape, dans l'ordre (mode triche, `forcedRolls`) : un pour un coup (sauf un
+ * coup dont la paire a déjà tiré le dé), un pour une pièce, deux pour une paire.
  */
-export function dieAt(result: CombatResult, rank: number) {
-  const beat = result.beats.filter(rollsDie)[rank]
-  if (beat?.type === 'attack') return { side: beat.attack.attacker, faces: beat.attack.faces, coin: false }
-  if (beat?.type === 'coin') return { side: beat.side, faces: 2, coin: true }
-  return undefined
+export function diceOf(beat: Beat): RolledDie[] {
+  if (beat.type === 'attack') return beat.attack.preset ? [] : [{ side: beat.attack.attacker, faces: beat.attack.faces, coin: false }]
+  if (beat.type === 'coin') return [{ side: beat.side, faces: 2, coin: true }]
+  if (beat.type === 'pair') return [0, 1].map(() => ({ side: beat.side, faces: beat.faces, coin: false }))
+  return []
+}
+
+/** Une étape qui lance au moins un dé. */
+export const rollsDie = (beat: Beat) => diceOf(beat).length > 0
+
+/** Nombre de dés lancés par les étapes qui précèdent l'étape `index` : le rang de son premier dé. */
+export const rankAt = (beats: readonly Beat[], index: number) =>
+  beats.slice(0, index).reduce((n, b) => n + diceOf(b).length, 0)
+
+/**
+ * Le dé de rang `rank` (mode triche) : son lanceur et son nombre de faces (2 pour une pièce).
+ * `undefined` si le combat se termine avant.
+ */
+export function dieAt(result: CombatResult, rank: number): RolledDie | undefined {
+  return result.beats.flatMap(diceOf)[rank]
 }
 
 export const attacksOf = (result: CombatResult) =>
@@ -233,7 +263,8 @@ export function effectiveStats(character: Character, statuses: readonly Status[]
  * Résout un coup sans modifier l'état : le dé est lancé, le défenseur tente d'esquiver,
  * puis l'attaquant peut critiquer (forcément s'il porte un statut `forcesCrit`).
  * Les modificateurs de dégâts de l'attaquant s'appliquent, puis l'armure (le coup garde
- * au moins 1), enfin les boucliers du défenseur absorbent ce qu'ils peuvent, sans descendre sous 1.
+ * au moins 1), puis les boucliers du défenseur absorbent ce qu'ils peuvent, sans descendre sous 1,
+ * enfin les modificateurs de dégâts finaux de l'attaquant (`modifyFinal`), toujours au moins 1.
  * L'ordre des tirages (dé, esquive, critique) est fixe : il garantit la reproductibilité.
  */
 /**
@@ -258,15 +289,18 @@ export function resolveAttack(
   forcedRoll?: number,
   /** Une compétence transforme-t-elle ce coup (`reshapesHit`) ? Interrogé juste après le dé, si le coup n'est pas sacrifié */
   reshape: (roll: number, faces: number) => Attack['reshaped'] = () => undefined,
+  /** Valeur déjà tirée par la paire (personnage à deux dés) : aucun dé n'est lancé pour ce coup */
+  preset?: number,
 ): Omit<Attack, 'attacker' | 'dealt'> {
   const att = effectiveStats(attacker, attackerStatuses)
   const def = effectiveStats(defender, defenderStatuses)
   const faces = die ?? att.damageDie
-  const roll = forceRoll(rollDie(rng, faces), faces, forcedRoll)
+  const roll = preset ?? forceRoll(rollDie(rng, faces), faces, forcedRoll)
   const base = {
     roll,
     faces,
     ...(forcedRoll !== undefined && { forced: true as const }),
+    ...(preset !== undefined && { preset: true as const }),
     critMultiplier: att.critMultiplier,
     shields: {},
     armor: def.armor,
@@ -322,19 +356,31 @@ export function resolveAttack(
   const floored =
     raw - def.armor < 1 ||
     (damage === 1 && defenderStatuses.some((s) => STATUSES[s.id].shield && s.stacks > (shields[s.id] ?? 0)))
+  // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers, au moins 1
+  const shielded = damage
+  let finalFloor = false
+  for (const s of attackerStatuses) {
+    const modify = STATUSES[s.id].modifyFinal
+    if (!modify) continue
+    const wanted = Math.round(modify(damage, s))
+    const next = Math.max(1, wanted)
+    if (wanted < 1) finalFloor = true
+    if (next !== damage) modifiers.push({ status: s.id, by: 'attacker', delta: next - damage, final: true })
+    damage = next
+  }
   return {
     ...base,
     ...(reshaped && { reshaped }),
     shields,
     modifiers,
-    floored,
+    floored: damage === 1 && (floored || finalFloor),
     dodged: false,
     crit,
     critForced,
     raw,
     damage,
     armorAbsorbed: raw - afterArmor,
-    shieldAbsorbed: afterArmor - damage,
+    shieldAbsorbed: afterArmor - shielded,
   }
 }
 
@@ -631,8 +677,11 @@ export function simulateCombat(
     )
   }
 
-  /** Un coup complet de `attacker`, fenêtres comprises. Renvoie le perdant s'il y a K.O. */
-  function strikeOnce(attacker: Side, die?: number): Side | undefined {
+  /**
+   * Un coup complet de `attacker`, fenêtres comprises. Renvoie le perdant s'il y a K.O.
+   * `preset` : valeur déjà tirée par la paire (personnage à deux dés), sans nouveau dé.
+   */
+  function strikeOnce(attacker: Side, die?: number, preset?: number, merged?: Attack['reshaped']): Side | undefined {
     const defender = other(attacker)
     const att = states[attacker]
     const def = states[defender]
@@ -644,8 +693,9 @@ export function simulateCombat(
       def.statuses,
       (roll, faces) => forfeits(attacker, roll, faces),
       die,
-      nextForced(),
-      (roll, faces) => reshapes(attacker, roll, faces),
+      preset === undefined ? nextForced() : undefined,
+      (roll, faces) => merged ?? reshapes(attacker, roll, faces),
+      preset,
     )
     if (outcome.critForced) {
       const forcing = att.statuses.find((s) => STATUSES[s.id].forcesCrit)!
@@ -658,6 +708,8 @@ export function simulateCombat(
     for (const [id, taken] of Object.entries(outcome.shields) as [StatusId, number][]) {
       def.statuses = consumeStatus(def.statuses, id, taken)
     }
+    // Fausse note : le coup du porteur qui touche l'a subie, elle disparaît avec toutes ses charges (`spentOnHit`)
+    if (!outcome.dodged && !outcome.forfeited) att.statuses = att.statuses.filter((x) => !STATUSES[x.id].spentOnHit)
     // Vol de vie sur un coup esquivé : la charge est perdue sans soin, au moment même du coup.
     const drain = outcome.forfeited ? undefined : att.statuses.find((s) => STATUSES[s.id].drainsHit)
     if (drain && outcome.dodged) att.statuses = consumeStatus(att.statuses, drain.id, 1)
@@ -684,6 +736,7 @@ export function simulateCombat(
     const touched = !outcome.dodged && !outcome.forfeited
     // Luciole : chaque coup qui touche le porteur lui retire une charge (`spentOnHurt`)
     if (touched) for (const s of def.statuses.filter((x) => STATUSES[x.id].spentOnHurt)) def.statuses = consumeStatus(def.statuses, s.id, 1)
+
     if (drain && touched) {
       att.statuses = consumeStatus(att.statuses, drain.id, 1)
       const effects = applyEffects(attacker, [{ type: 'heal', amount: dealt }])
@@ -712,6 +765,51 @@ export function simulateCombat(
       hitTriggers.push([defender, 'hurt'])
     }
     return fireAll(hitTriggers)
+  }
+
+  /**
+   * Action d'un personnage à deux dés (la barde) : la paire est lancée (deux rangs de dé), puis un double
+   * qui a sa compétence la déclenche à la place des coups (et ses `volley` coups de la face du double) ;
+   * sinon deux coups, un par dé, avec la valeur tirée. Renvoie le perdant s'il y a K.O.
+   */
+  function twinAction(attacker: Side): Side | undefined {
+    const att = states[attacker]
+    const faces = effectiveStats(fighters[attacker], att.statuses).damageDie
+    const draws = [0, 1].map(() => {
+      const forced = nextForced()
+      return { roll: forceRoll(rollDie(rng, faces), faces, forced), forced: forced !== undefined }
+    })
+    const rolls: [number, number] = [draws[0].roll, draws[1].roll]
+    const trigger = rolls[0] === rolls[1] ? DOUBLE_TRIGGERS[rolls[0]] : undefined
+    // Même règle que le déclenchement (forme, limite, conditions), sans tirage : `validateRoster` refuse `chance` ici
+    const skill = trigger && fighters[attacker].events.find((e) => e.trigger === trigger && canFire(attacker, e))
+    beats.push({
+      type: 'pair',
+      turn,
+      side: attacker,
+      rolls,
+      faces,
+      ...(skill && { double: rolls[0] }),
+      ...(draws.some((d) => d.forced) && { forced: [draws[0].forced, draws[1].forced] as [boolean, boolean] }),
+      state: snapshot(),
+    })
+    if (!skill) {
+      for (const roll of rolls) {
+        const down = strikeOnce(attacker, undefined, roll)
+        if (down !== undefined) return down
+      }
+      return undefined
+    }
+    const down = fire(attacker, trigger!)
+    if (down !== undefined) return down
+    // `merged` : un seul coup qui vaut la somme (Soliste : 3 × 5 = 15), comme un coup transformé : le dé
+    // affiché reste celui du double, la valeur du coup est la somme
+    if (skill.merged && skill.volley) return strikeOnce(attacker, undefined, rolls[0], { event: skill.id, value: skill.volley * rolls[0], noCrit: false })
+    for (let k = 0; k < (skill.volley ?? 0); k++) {
+      const down = strikeOnce(attacker, undefined, rolls[0])
+      if (down !== undefined) return down
+    }
+    return undefined
   }
 
   let down = fireAll([
@@ -753,6 +851,9 @@ export function simulateCombat(
       const effects = heads ? applyEffects(attacker, [{ type: 'damage', amount: STATUSES[coin.id].coinToss!.damage, target: 'opponent' }]) : []
       beats.push({ type: 'coin', turn, side: attacker, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }), state: snapshot() })
       down = fallen() ?? checkBloodied()
+      if (down !== undefined) return end(other(down), 'ko')
+    } else if (fighters[attacker].twinDice) {
+      down = twinAction(attacker)
       if (down !== undefined) return end(other(down), 'ko')
     } else {
       // Coups supplémentaires (Furie des vents, Coup de chance) : le statut est consommé avant le

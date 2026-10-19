@@ -148,9 +148,9 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
 
         <div className="relative flex flex-1 items-end gap-2">
           <div className="h-[430px] w-[300px] shrink-0">
-            <Fighter character={fighters[winner]} side={0} state="victory" />
+            <Fighter character={fighters[winner]} side={0} state="victory" anchor="inside" />
           </div>
-          <div className="mb-8 min-w-0">
+          <div className="relative z-20 mb-8 min-w-0">
             <p className="text-sm font-bold uppercase tracking-[0.4em] text-amber-300">Vainqueur</p>
             <h1 className={`font-display text-7xl font-extrabold leading-none ${SIDE_STYLE[winner].accent}`}>{fighters[winner].name}</h1>
             <p className="mt-1 text-base text-stone-500">

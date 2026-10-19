@@ -103,7 +103,7 @@ export function StartScreen(props: Props) {
       >
         <Icon name="scroll" className="btn-icon" />
       </button>
-      <header className="text-center">
+      <header className="relative z-20 text-center">
         <h1 className="font-display text-6xl font-extrabold tracking-widest text-amber-200 drop-shadow-[0_4px_0_#78350f]">
           BATTLER
         </h1>
@@ -125,7 +125,7 @@ export function StartScreen(props: Props) {
               onOpenSheet={() => onOpenCharacter(fighters[0].id, fighters)}
             />
             {/* Sceau sombre : le « VS » reste lisible devant la lumière du portail */}
-            <VsSeal />
+            <VsSeal className="relative z-20" />
             <SidePanel
               side={1}
               character={fighters[1]}
@@ -201,7 +201,7 @@ function SidePanel({ side, character, roster, onPick, onRandom, onOpenSheet, opp
   return (
     // Le personnage est toujours côté « VS », les infos vers l'extérieur.
     <section className={`flex h-full min-h-0 items-center gap-6 ${right ? 'flex-row-reverse' : ''}`}>
-      <div className={`flex w-[340px] shrink-0 flex-col gap-3 ${right ? 'items-end text-right' : ''}`}>
+      <div className={`relative z-20 flex w-[340px] shrink-0 flex-col gap-3 ${right ? 'items-end text-right' : ''}`}>
         <div>
           <div className={`flex items-center gap-2.5 ${right ? 'flex-row-reverse' : ''}`}>
             <h2

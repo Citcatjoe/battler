@@ -18,6 +18,11 @@ export type Trigger =
   | 'naturalTwo'
   | 'naturalThree'
   | 'naturalMax'
+  | 'doubleOne'
+  | 'doubleTwo'
+  | 'doubleThree'
+  | 'doubleFour'
+  | 'doubleFive'
   | 'hit'
   | 'crit'
   | 'missed'
@@ -34,6 +39,11 @@ export const TRIGGERS: Record<Trigger, { label: string }> = {
   naturalTwo: { label: 'Sur un 2 au dé de dégâts' },
   naturalThree: { label: 'Sur un 3 au dé de dégâts' },
   naturalMax: { label: 'Sur un jet maximal au dé de dégâts' },
+  doubleOne: { label: 'Sur un double 1 (deux dés)' },
+  doubleTwo: { label: 'Sur un double 2 (deux dés)' },
+  doubleThree: { label: 'Sur un double 3 (deux dés)' },
+  doubleFour: { label: 'Sur un double 4 (deux dés)' },
+  doubleFive: { label: 'Sur un double 5 (deux dés)' },
   hit: { label: 'Quand il touche' },
   crit: { label: 'Quand il porte un critique' },
   missed: { label: 'Quand son coup est esquivé' },
@@ -112,6 +122,14 @@ export interface CharacterEvent {
    * normal ensuite (esquive, modificateurs, armure, boucliers). Mêmes réserves que `forfeitsHit`.
    */
   reshapesHit?: { value: 'max' | 'reroll'; bonus?: number; noCrit?: boolean }
+  /**
+   * Compétence d'un double (personnage à deux dés, `twinDice`) qui attaque : l'action devient `volley`
+   * coups dont le dé vaut la face du double (Crescendo : trois coups de 4). Réservé aux déclencheurs
+   * doubleOne à doubleFive.
+   */
+  volley?: number
+  /** Les `volley` coups n'en font qu'un, qui vaut leur somme (Soliste : un coup de 3 × 5 = 15) */
+  merged?: boolean
   /** Forme requise (personnage à formes, ex. druide) : la compétence n'existe que sous cette forme */
   form?: string
   /** Nature de la compétence, pour sa carte (défaut : DEFAULT_SKILL_NATURE). Présentation seulement. */
@@ -120,6 +138,26 @@ export interface CharacterEvent {
 
 /** Déclencheurs liés à la valeur du dé, connus dès le jet. */
 export const ROLL_TRIGGERS: readonly Trigger[] = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax']
+
+/**
+ * Déclencheurs d'un double, pour un personnage à deux dés (`twinDice`), par face : connus dès le jet de
+ * la paire. Un double qui a sa compétence remplace toute l'action (docs/RESOLUTION.md § 2).
+ */
+export const DOUBLE_TRIGGERS: Readonly<Record<number, Trigger>> = {
+  1: 'doubleOne',
+  2: 'doubleTwo',
+  3: 'doubleThree',
+  4: 'doubleFour',
+  5: 'doubleFive',
+}
+
+export const isDoubleTrigger = (t: Trigger) => Object.values(DOUBLE_TRIGGERS).includes(t)
+
+/** La face d'un déclencheur de double (doubleFour : 4), ou undefined. */
+export const doubleFace = (t: Trigger) => {
+  const face = Object.entries(DOUBLE_TRIGGERS).find(([, x]) => x === t)?.[0]
+  return face === undefined ? undefined : Number(face)
+}
 
 /** Le déclencheur du dé correspond-il à ce jet ? */
 export function rollMatches(trigger: Trigger, roll: number, faces: number) {
@@ -185,5 +223,7 @@ export function describeEvent(e: CharacterEvent) {
   const reshape = r
     ? `${r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`}${r.noCrit ? ', jamais critique' : ''}`
     : ''
-  return `${forfeit}${[reshape, ...e.effects.map(describeEffect)].filter(Boolean).join(', ')}${odds}${when}${cap}`
+  const face = doubleFace(e.trigger)
+  const volley = e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : ''
+  return `${forfeit}${[volley, reshape, ...e.effects.map(describeEffect)].filter(Boolean).join(', ')}${odds}${when}${cap}`
 }

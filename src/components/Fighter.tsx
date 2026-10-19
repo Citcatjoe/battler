@@ -1,8 +1,9 @@
-import { useState, type CSSProperties } from 'react'
-import type { Character } from '../game/character'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { figureHeight, type Character } from '../game/character'
 import type { AppliedEffect, Side } from '../game/combat'
 import { atCap, effectBadge, TONE_CLASS } from '../game/narration'
 import { isAura, STATUSES, type Status } from '../game/statuses'
+import { poseImage, poseImages, poseOf } from '../game/poses'
 
 /** Ce que le combattant subit pendant le coup en cours. */
 export interface Received {
@@ -30,6 +31,12 @@ interface Props {
   /** Forme en cours (druide) : index dans `character.forms` ; un changement joue la métamorphose */
   form?: number
   className?: string
+  /**
+   * Ancrage d'une image plus large que sa colonne : `center` (défaut) la centre sur les pieds ;
+   * `inside` garde son bord extérieur dans la colonne (près du bord de l'écran) et la fait déborder vers le
+   * centre, derrière les panneaux.
+   */
+  anchor?: 'center' | 'inside'
 }
 
 /**
@@ -99,6 +106,7 @@ export function Fighter({
   statuses = [],
   form = 0,
   className = '',
+  anchor = 'center',
 }: Props) {
   const morph = useFormChange(form)
   const look = character.lookFor(form)
@@ -107,12 +115,23 @@ export function Fighter({
   if (looks.aura) Object.assign(style, { '--aura': looks.aura.color })
   const wantsFacing = side === 0 ? 'right' : 'left'
   const flipOf = (f: number) => character.lookFor(f).facing !== wantsFacing
+  /**
+   * Ancrage `inside` : la toile est poussée vers le bord de l'écran du vide qui entoure la garde de ce
+   * côté (`look.bodyInset`), pour que ce soit la silhouette, et non la toile, qui touche le bord.
+   */
+  const insetShift = (look: { bodyInset?: { left: number; right: number } }, flipped: boolean) => {
+    if (anchor !== 'inside' || !look.bodyInset) return ''
+    const { left, right } = look.bodyInset
+    // Vide du côté du bord de l'écran, une fois l'image retournée ou non
+    const outer = side === 0 ? (flipped ? right : left) : flipped ? left : right
+    return `translateX(${side === 0 ? -outer * 100 : outer * 100}%)`
+  }
 
   // L'esquive démarre avec l'élan, le recul n'arrive qu'à l'impact.
   const reaction = received?.dodged ? 'dodge' : received?.landed ? 'hit' : ''
 
   // Les effets se placent par rapport à la silhouette, plus petite pour un nain.
-  const scale = look.scale
+  const scale = figureHeight(look)
   const at = (pct: number) => ({ top: `${(1 - scale) * 100 + scale * pct}%` })
 
   // Textes flottants : à l'extérieur de la silhouette (à gauche du combattant de gauche, à droite de
@@ -134,6 +153,16 @@ export function Fighter({
     .filter((name) => name !== shownFx?.title)
     .join(' · ')
   const badges = mine.filter((e) => !echoes.includes(e)).map(effectBadge)
+
+  // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, K.O., victoire
+  const pose = poseOf({ state, lunging, received })
+  // Une vraie posture de K.O. (à terre) garde le grisé de l'animation, sans la bascule
+  const koClass = look.poses?.ko ? 'ko-posed' : 'ko'
+  // Précharge les postures : changer d'image ne doit pas clignoter au premier élan
+  const allImages = (character.forms ?? [null]).flatMap((_, f) => poseImages(character.lookFor(f))).join('|')
+  useEffect(() => {
+    for (const src of allImages.split('|')) if (src) new Image().src = src
+  }, [allImages])
   const column = {
     [side === 0 ? 'right' : 'left']: '78%',
     '--float-x': '0',
@@ -168,7 +197,7 @@ export function Fighter({
           </div>
         )}
         <div className={`relative h-full ${reaction}`}>
-          <div className={`relative h-full ${state === 'ko' ? 'ko' : state === 'victory' ? 'victory' : ''}`}>
+          <div className={`relative h-full ${state === 'ko' ? koClass : state === 'victory' ? 'victory' : ''}`}>
             {/* Une silhouette par forme (une seule sans formes) : fondu de l'ancienne vers la nouvelle */}
             {(character.forms ?? [null]).map((_, f) => {
               const shown = f === form
@@ -178,15 +207,21 @@ export function Fighter({
               return (
                 <img
                   key={`${f}-${shown ? morph.key : 'out'}`}
-                  src={fLook.image}
+                  src={shown ? poseImage(fLook, pose) : fLook.image}
                   alt={shown ? character.name : ''}
                   draggable={false}
-                  className={`absolute bottom-0 left-0 w-full select-none object-contain object-bottom transition-[opacity,filter] duration-300 ${
+                  // Largeur naturelle, centrée sur les pieds : une image large (ogre, homme-lézard, toile à postures)
+                  // n'est plus rétrécie par la colonne, si bien que chacun garde sa vraie carrure
+                  className={`absolute bottom-0 select-none object-contain object-bottom transition-[opacity,filter] duration-300 ${
+                    anchor === 'inside'
+                        ? `w-auto max-w-none ${side === 0 ? 'left-0' : 'right-0'}`
+                        : 'left-1/2 w-auto max-w-none -translate-x-1/2'
+                  } ${
                     looks.tremble && shown ? 'status-tremble' : ''
                   } ${morph.key > 0 ? (shown ? 'form-in' : 'form-out') : ''}`}
                   style={{
                     height: `${fLook.scale * 100}%`,
-                    transform: flipOf(f) ? 'scaleX(-1)' : undefined,
+                    transform: [insetShift(fLook, flipOf(f)), flipOf(f) ? 'scaleX(-1)' : ''].filter(Boolean).join(' ') || undefined,
                     filter,
                     // Translucide tant qu'il porte une esquive imposée (Esquive améliorée)
                     opacity: shown ? looks.opacity : undefined,

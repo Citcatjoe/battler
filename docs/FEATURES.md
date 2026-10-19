@@ -17,7 +17,9 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
   4. Les **modificateurs de dégâts** s'appliquent : sortants, de l'attaquant (ex. Affaibli), puis entrants, du défenseur (ex. Vulnérable). Le coup garde au moins 1.
   5. L'**armure** du défenseur retire des points, mais le coup fait toujours au moins 1.
   6. Les **boucliers** du défenseur (ex. armure temporaire) absorbent ensuite des points, sans faire descendre le coup sous 1, et s'usent d'autant.
+  6 bis. Les **dégâts finaux** de l'attaquant (Aura mélodieuse, Fausse note, 0.41.0) s'ajoutent ou se retirent en dernier, sans que l'armure ni l'intimidation les rognent ; le coup garde au moins 1.
   7. **Vol de vie** : si l'attaquant porte Vol de vie, le coup porté consomme la charge. S'il a touché, il regagne les dégâts du coup ; esquivé, il ne regagne rien.
+- **Deux dés (la barde, 0.41.0)** : un personnage `twinDice` lance deux dés à chaque action. Hors double, deux coups séparés, un par dé (esquive et critique chacun) ; sur un double qui a sa compétence, celle-ci remplace les deux coups (voir la section 2 et `RESOLUTION.md` § 2). En mode triche, la paire compte pour deux dés.
 - **Dégâts comptés en entier (overkill, depuis la 0.34.0)** : un coup fatal ou des dégâts directs comptent tout leur montant dans les statistiques, la trace et l'historique, même au-delà des PV restants. Les PV, eux, s'arrêtent à 0.
 - **Événements** du coup : voir la section 3.
 - **Fin** : le premier à 0 PV perd, que ce soit à cause d'un coup, d'un effet ou d'un statut. Plus rien ne se déclenche après un K.O. Une limite de sécurité arrête le combat à 1 000 tours ; il est alors gagné aux PV.
@@ -37,6 +39,7 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 | 0.20.0 | Tour en trois phases (début, action, fin), dégâts entrants dans la chaîne de calcul, règles de résolution formalisées dans `RESOLUTION.md`. Mêmes résultats qu'avant, jet pour jet |
 | 0.25.0 | Coup sacrifié, esquive imposée, vol de vie dans la chaîne d'attaque ; action à plusieurs coups (Furie des vents) |
 | 0.27.0 | Les jets de 1, 2 et 3 n'infligent plus de dégâts : ils déclenchent seulement la compétence du chiffre |
+| 0.41.0 | Personnage à deux dés (paire, doubles, gros coup d'un double) et dégâts finaux (`modifyFinal`), pour la barde |
 
 ## 2. Personnages et roster
 
@@ -64,6 +67,16 @@ Six races, chacune avec un archétype de base et une variante de coloris aux sta
 | Gnashka | Ogre · Ogre des cavernes | 70 | d12 | 0 | 0 % | 10 % | ×2 |
 | Thaldrin | Sylvain · Druide | 56 | d10 | 0 | 8 % | 10 % | ×2 |
 | Brannoc | Sylvain · Druide d'automne | 52 | d10 | 0 | 12 % | 14 % | ×2 |
+| Fanchon | Humain · Saltimbanque | 46 | 2 × d5 | 0 | 12 % | 5 % | ×2 |
+| Mélisande | Humain · Ménestrelle | 48 | 2 × d5 | 0 | 8 % | 5 % | ×2 |
+
+**La barde (0.41.0)** lance deux d5 à chaque tour, et ses compétences se déclenchent sur les doubles, à la place des deux coups :
+- **Ouverture** (au début du combat) : 1 charge d'Aura mélodieuse ;
+- **Siffloter** (double 1) : Sifflotement, 3 charges, +2 PV à chaque fin de tour ;
+- **Fausse note** (double 2) : le prochain coup adverse qui touche perd 5 dégâts finaux ;
+- **Aura mélodieuse** (double 3) : +1 dégât final par charge sur chacun de ses coups ;
+- **Crescendo** (double 4) : un seul coup de 12 ;
+- **Soliste** (double 5) : un seul coup de 15.
 
 Une variante est définie à partir de son original (`variant()`), avec des écarts de stats et un filtre de couleur sur la même image.
 
@@ -87,6 +100,7 @@ Chaque personnage a une fiche courte affichée sur son écran : accroche, backgr
 | 0.35.0 | Deux familles : l'ogre (Morgrut, Gnashka), sans compétence ; le druide (Thaldrin, Brannoc), à deux formes |
 | 0.30.0 | Deux nouvelles races : Humains (Ysolde, Bérengère) et Hommes-lézards (Naraxes, Ssythra) |
 | 0.28.0 | Rééquilibrage par les compétences (méthode `EQUILIBRAGE.md`) : Rage du sang 3 PV, Peau de pierre +6, intimidation et précision cumulables, Grimbald 10 % de critique ; PV ramenés près de l'identité (Brokk 68 au lieu de 83) |
+| 0.41.0 | La barde, dixième famille (Fanchon, Mélisande) : deux dés, compétences sur les doubles, concept d'un ami de l'utilisateur ; postures et icônes de la session images |
 | 0.27.0 | Jets de 1 à 3 sans dégâts ; PV réglés : Gorak 61, Murzug 57, Elaria 50, Sylwen 52, Brokk 83, Grimbald 65, Ervald 62, Caldrec 57 |
 
 ## 3. Événements et statuts
@@ -242,6 +256,8 @@ Accueil (duel | tournoi)
 - **Accueil** : bascule duel/tournoi. Pour chaque combattant : son nom en grand, avec un petit bouton rond pour ouvrir sa fiche, sa race et son archétype, ses stats, son événement, les vignettes de 64 px rangées par famille (une colonne par race, l'original en haut, ses variantes dessous ; celle du personnage choisi en face est estompée, et reste sélectionnable) et un bouton « Au hasard » (icône de dé). Grand modèle de chaque combattant, bouton « Combattre » centré en bas, version du jeu. En haut à gauche : Statistiques et **Compendium**, ce dernier par un bouton rond provisoire (son intégration définitive reste à définir). Le bouton rond près du nom ouvre la fiche du personnage dans le compendium.
 - **Affrontement** : en haut, sous « Affrontement » et un peu en retrait, le sélecteur d'arène ‹ nom › (flèches de l'écran ou du clavier), qui change le décor en fond. Puis les deux modèles, leurs stats en **barres** (les mêmes que sur l'écran de sélection, à la couleur du camp), leur événement, et les boutons JOUER, SIMULER et CHANGER.
 - **Combat** : dés animés, charge et impact, textes flottants ESQUIVE, CRITIQUE et nom de l'événement (à l'extérieur des combattants, sur le décor, en Alegreya Sans SC ; test de police avec `?police=cinzel|oswald|lilita`), zone d'état au-dessus de chaque combattant, fond d'arène assombri. L'arène occupe tout l'écran sous les barres de vie. Une barre de commandes flottante (pause, vitesse ×1/×2/×4, journal) est placée en bas au centre. Le **journal**, masqué au départ, s'ouvre dans une fenêtre translucide entre les combattants (bouton ou touche J), avec un compteur des lignes non lues. S'il est ouvert, il le reste pour les combats suivants de la session. Les dégâts directs y sont signalés comme tels (« l'armure ne compte pas »).
+- **Taille des combattants** (0.40.0, `STYLE_BIBLE.md` § 2) : une échelle resserrée, ni uniforme ni réaliste. Le nain (0,86 d'un humain) reste le plus petit, l'ogre (1,13) le plus grand, avec des étapes entre les deux : lézard 0,97, humains et druide 1,00, elfes 1,03, paladin 1,04, mort-vivant 1,05, orc 1,08, ours 1,10. Toutes les images sont affichées à leur largeur naturelle : la carrure vient du dessin, l'ogre retrouve la sienne.
+- **Postures** (0.40.0, [POSTURES.md](POSTURES.md)) : un combattant peut changer d'image au fil du combat, sur cinq moments communs à tous : l'attaque (pendant l'élan), l'esquive, le coup encaissé, le K.O. et la victoire. La compétence garde l'image de garde et son animation. Une posture absente retombe sur la garde : un personnage sans postures s'affiche comme avant. Les images sont préchargées et changent instantanément, sous les animations existantes (élan, saut). Avec une posture de K.O., la chute est dans l'image, et l'animation ne garde que le grisé. Les menus et panneaux passent au-dessus des combattants. **Personnages à postures** : l'orc (Gorak, Murzug), avec sa nouvelle image originale, et la voleuse (Naraxes, Ssythra).
 - **Trace de résolution** (vérification et débogage) : chaque combat est tiré avec une **graine** et sa trace complète est écrite dans la **console du navigateur**, repliée, un groupe par tour. Elle donne, étape par étape et dans l'ordre du moteur : phase (ouverture, début, action, fin), jet de dé, esquive, critique, modificateurs de dégâts avec leur porteur (« 😠 Aura d'intimidation de Brokk −2 », plancher à 1 signalé), dégâts avant armure, armure, boucliers, plancher d'1 dégât, PV avant → après, compétences et effets (posé, annulé, bloqué), effets des statuts, décomptes de durée et expirations, puis l'état des deux combattants. Le bouton « Copier la trace » du journal et de l'écran de fin la copie en texte brut. **Sur le disque** (0.27.0, serveur de dev) : chaque combat écrit sa trace dans `logs/combats/` du projet, un fichier par combat (`<date>_<gauche>-vs-<droite>_graine-<n>.txt`), relisible sans navigateur. En console : `battler.trace()` (dernier combat), `battler.trace(n)`, `copy(battler.dump())` (copie les traces des 40 derniers combats, un tournoi entier), `battler.replay(graine, 'gorak', 'brokk')` (rejoue un combat à l'identique).
 - **Mode triche** (outil d'observation, bouton « Cheat » ou touche C pendant un combat) : un pavé numérique impose la valeur du **prochain dé lancé à l'écran**. Les touches vont de 1 à 10, celles qui dépassent le dé sont grisées ; pour la pièce, ce sont Pile et Face, et « Hasard » annule. Au clavier, panneau ouvert : 1 à 9, 0 pour 10, P et F, Retour arrière. Le combat est résolu à nouveau par le moteur (`forcedRolls`), avec la même graine : tout ce qui précède le dé imposé reste identique, et la lecture continue sur la nouvelle chronologie. Le dé imposé porte la mention « Imposé ». Le combat est exclu des statistiques (il compte quand même dans l'arbre d'un tournoi). Sa trace finale est écrite dans `logs/combats/` avec le suffixe `_triche`, et `npm run logs` la rejoue.
 - **Fin** : à gauche, le vainqueur, les faits marquants et les boutons ; à droite, les statistiques comparées en quatre onglets (Bilan, Critiques et défense, Événements, Dés). Un badge indique un combat simulé.
@@ -251,6 +267,7 @@ Accueil (duel | tournoi)
 | Version | Changement |
 | --- | --- |
 | 0.1.0 | Écrans d'accueil, de combat et de fin ; animations de charge et d'impact |
+| 0.40.0 | Postures des combattants (attaque, esquive, coup encaissé, K.O., victoire ; retour à la garde, préchargement, K.O. sans bascule, menus au-dessus des combattants) ; tous les combattants à leur largeur naturelle, avec une échelle de tailles resserrée (nain 0,86 → ogre 1,13 d'un humain) ; découpe et alignement des planches (`slice-poses.py`) ; l'orc, premier personnage à postures, avec une nouvelle image originale |
 | 0.5.0 | Tout le jeu sur une scène fixe en 16:9 (1600×900), tuiles de sélection plus petites |
 | 0.6.0 | Écran d'affrontement avec Jouer et Simuler |
 | 0.7.0 | Bouton 📜 Fiche sur la sélection, écran de statistiques globales |

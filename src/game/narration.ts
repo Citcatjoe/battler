@@ -102,12 +102,16 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
   }
 }
 
+const modifierText = (m: Attack['modifiers'][number]) => `${lowerFirst(statusLabel(m.status))} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
+
 const armorDetail = (attack: Attack) => {
   const parts = [
     // Auras et statuts qui ont changé la force du coup (puissance +2, intimidation −2…)
-    ...attack.modifiers.map((m) => `${lowerFirst(statusLabel(m.status))} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`),
+    ...attack.modifiers.filter((m) => !m.final).map(modifierText),
     attack.armorAbsorbed > 0 && `armure −${attack.armorAbsorbed}`,
     ...Object.entries(attack.shields).map(([id, n]) => `${lowerFirst(statusLabel(id as StatusId))} −${n}`),
+    // Dégâts finaux (Aura mélodieuse, Fausse note), après l'armure et les boucliers
+    ...attack.modifiers.filter((m) => m.final).map(modifierText),
   ]
   return parts
     .filter(Boolean)
@@ -218,6 +222,19 @@ export function flurryLog(turn: number, side: Side, status: StatusId, strikes: n
     kind: 'status',
     side,
     text: `Tour ${turn} · ${statusLabel(status)} · ${fighters[side].name} frappe ${strikes} fois !`,
+  }
+}
+
+/** Deux dés (barde) : la paire lancée, et ce qu'elle donne */
+export function pairLog(turn: number, side: Side, rolls: [number, number], skill: string | undefined, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  const name = fighters[side].name
+  const [x, y] = rolls
+  return {
+    kind: skill ? 'event' : 'attack',
+    side,
+    text: skill
+      ? `Tour ${turn} · ${name} fait un double ${x} : ${skill} !`
+      : `Tour ${turn} · ${name} lance ses deux dés : ${x} et ${y}${x === y ? ', un double' : ''}, deux coups.`,
   }
 }
 

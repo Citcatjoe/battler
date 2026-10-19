@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
-import { TRIGGERS, type Trigger } from './events'
+import { DOUBLE_TRIGGERS, TRIGGERS, type Trigger } from './events'
 import { atCap, of } from './narration'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
 
@@ -97,19 +97,22 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       const att = fighters[a.attacker]
       const defSide = other(a.attacker)
       const def = fighters[defSide]
-      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
+      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
+      const modifier = (m: (typeof a.modifiers)[number]) =>
+        `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
+      const early = a.modifiers.filter((m) => !m.final)
       if (a.forfeited) return [`${head} · coup sacrifié par une compétence, aucun dégât (ni esquive ni critique)`]
       if (a.dodged)
         return [`${head} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
       const steps = [
         a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
         // Auras et statuts qui changent la force du coup, avec leur porteur
-        ...a.modifiers.map(
-          (m) => `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`,
-        ),
-        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(a.roll * a.critMultiplier) : a.roll) + a.modifiers.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
+        ...early.map(modifier),
+        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(a.roll * a.critMultiplier) : a.roll) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
         ...Object.entries(a.shields).map(([id, n]) => `${label(id as StatusId)} −${n}`),
+        // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
+        ...a.modifiers.filter((m) => m.final).map((m) => `${modifier(m)} (dégâts finaux)`),
         `dégâts ${a.damage}${a.floored ? ' (plancher : un coup qui touche inflige au moins 1)' : ''}`,
         a.dealt > before.hp[defSide] ? `retirés ${before.hp[defSide]}, dont ${a.dealt - before.hp[defSide]} d'excès (overkill, compté)` : `retirés ${a.dealt}`,
       ]
@@ -147,6 +150,14 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [
         `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque coup résolu à part (statut consommé)`,
       ]
+    case 'pair': {
+      const c = fighters[beat.side]
+      const forced = beat.forced ? beat.rolls.map((r, k) => `${r}${beat.forced![k] ? ' [imposé]' : ''}`) : beat.rolls
+      const skill = beat.double !== undefined ? c.events.find((e) => e.trigger === DOUBLE_TRIGGERS[beat.double!])?.name : undefined
+      return [
+        `${c.name} lance ses deux dés (d${beat.faces}) : ${forced.join(' et ')} → ${skill ? `double ${beat.double} : « ${skill} », à la place des deux coups` : beat.rolls[0] === beat.rolls[1] ? `double ${beat.rolls[0]} sans compétence : deux coups` : 'deux coups, un par dé'}`,
+      ]
+    }
     case 'coin':
       return [
         `${label(beat.status)} : ${fighters[beat.side].name} lance une pièce au lieu de son dé → ${beat.heads ? 'PILE' : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,

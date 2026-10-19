@@ -141,3 +141,15 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 
 - [ ] **Construire son dé** : choisir quelle compétence va sur quelle face, faces et reliques de dé (étude § 5.4).
 - [ ] **Équipes en file**, à la Super Auto Pets, avec le duel toujours au cœur du moteur.
+
+## 18. Postures des combattants (demande du 2026-10-19)
+
+But : tester si changer l'image du combattant au fil des animations renforce l'immersion. Conception et procédure : [POSTURES.md](POSTURES.md). Cinq postures communes à tous (attaque, esquive, coup encaissé, K.O., victoire) : décisions de l'utilisateur, pour une production légère et sans posture de capacité.
+- [x] Moteur d'affichage (0.40.0) : registre `POSES`, posture du moment, retour à la garde, préchargement, K.O. sans bascule, largeur naturelle des images à postures, menus au-dessus des combattants ; tests.
+- [x] Outils et prompts (0.40.0) : `scripts/slice-poses.py`, `CUTOUT_KEEP_CANVAS`, gabarit de planche (STYLE_BIBLE § 4, POSTURES.md § 3).
+- [x] Essai sur l'orc (0.40.0) : nouvelle image originale (placeholder remplacé) et quatre postures intégrées.
+- [ ] Juger l'immersion à l'écran (utilisateur) ; voir l'esquive et le K.O. en combat joué.
+- [x] Orc : coup encaissé ajouté (`--reference`). Voleuse : cinq postures en trois planches (0.40.0).
+- [x] **Une même règle d'affichage pour tous** (0.40.0) : largeur naturelle et échelle resserrée (nain 0,86 → ogre 1,13), après l'essai « réaliste » rejeté. Un personnage à postures garde sa taille.
+- [ ] Puis généraliser au roster (3 générations par famille avec les planches de trois cases), à commencer par le nain, dernier placeholder. Seulement des postures communes à tous, jamais une posture de capacité.
+

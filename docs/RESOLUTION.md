@@ -44,6 +44,13 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     Coups multiples : si l'actif porte un statut `extraStrikes` (Furie des vents, Coup de chance), il est
     consommé (étape flurry) et l'action compte plusieurs coups, chacun avec son dé (`extraDie` : le d3
     de Coup de chance).
+    Deux dés (`twinDice`, la barde, 0.41.0) : l'actif lance ses deux dés ensemble (étape pair, deux
+    rangs de dé en mode triche). Un double qui a sa compétence (fenêtres doubleOne à doubleFive)
+    remplace toute l'action : la compétence se déclenche (étape event), et si elle porte `volley`,
+    suivent `volley` coups dont le dé vaut la face du double, ou, avec `merged`, un seul coup qui vaut
+    leur somme (Crescendo : un coup de 3 × 4 = 12 ; Soliste : 15). Sinon,
+    deux coups, un par dé, avec la valeur déjà tirée. Ces coups ne relancent rien : esquive,
+    critique, modificateurs et fenêtres du coup comme un coup normal.
     Sinon, un seul coup. Pour CHAQUE COUP, entièrement résolu avant le suivant :
       ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
       bloodied (seuil) → naturalOne → naturalTwo → naturalMax (actif)
@@ -121,8 +128,9 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | 6 | **Plancher** | Le coup vaut au moins 1 | — |
 | 7 | **Armure** | Armure effective retirée, au moins 1 dégât | `modifyStats` (armure, ex. Brèche) |
 | 8 | **Boucliers** | Chaque bouclier absorbe ce qu'il peut sans descendre sous 1, et s'use d'autant (prévention) | `shield` |
+| 8 bis | **Dégâts finaux** | Statuts de l'attaquant, dans l'ordre de pose, après tout le reste ; au moins 1 (0.41.0). Ni l'armure ni l'intimidation ne les rognent | `modifyFinal` (Aura mélodieuse, Fausse note) |
 | 9 | **Application** | PV retirés, sans descendre sous 0. Les dégâts du coup sont comptés en entier, excès du coup fatal compris (overkill, depuis la 0.34.0) | — |
-| 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application | `spentOnHurt` |
+| 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application ; un statut `spentOnHit` de l'attaquant qui touche disparaît (Fausse note) | `spentOnHurt`, `spentOnHit` |
 | 10 | **Vol de vie** | Si l'attaquant porte un statut `drainsHit`, le coup porté consomme une charge. S'il a touché, l'attaquant regagne les PV réellement retirés (plafonnés à ses PV max). Esquivé, la charge est perdue sans soin, au moment du coup. Un coup sacrifié (jet de compétence) n'est pas un coup porté : la charge reste. Étape `statusReaction`, avant les fenêtres du coup. | `drainsHit` (Vol de vie) |
 
 Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
@@ -136,7 +144,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | Famille | Quand | Exemples | Mise en œuvre |
 | --- | --- | --- | --- |
 | **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs, pose d'un statut, purge | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
-| **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable | `modifyStats`, `modifyOutgoing`, `modifyIncoming` |
+| **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusExpire` de la phase). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 | `decays` |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines quand le porteur encaisse | `CharacterEvent` ; `reactions` d'un statut |
@@ -144,6 +152,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | **Sur le coup** | Juste après l'application d'un coup qui touche | Vol de vie | `drainsHit` (étape 10) |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
 | **Action multiple** | Au début de l'action du porteur | Furie des vents (deux coups) | `extraStrikes` |
+| **Deux dés** | À l'action, pour un personnage qui lance deux dés | la barde : deux coups, ou une compétence sur un double | `twinDice`, déclencheurs `doubleOne`… `doubleFive`, `volley` |
 | **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant), d'intimidation (entrant), de précision (stats), de poison (périodique, sur l'adversaire) | crochets existants, statut sans `turns` |
 
 ---
@@ -213,6 +222,11 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Affaibli (3) et Vulnérable (2) sur le même coup de 2 | Sortant : 2 − 3 = −1 ; entrant : −1 + 2 = 1 ; plancher : 1 ; puis armure. |
 | Étourdi (1) | Début de tour normal (le poison agit), action perdue, fin de tour normale (la brûlure agit). |
 | Régénération et Brûlure | La Régénération agit au début du tour, la Brûlure à la fin. |
+| Barde : deux dés différents (2 et 5) | Deux coups, l'un de 2, l'autre de 5, chacun avec son esquive et son critique. Un 2 seul ne déclenche rien : seules les paires comptent. |
+| Barde : double 4, Aura mélodieuse (2 charges) | Crescendo : un seul coup de 12 (critique : 24), puis l'armure et les boucliers, puis +2 en dégâts finaux. |
+| Aura mélodieuse contre Aura d'intimidation (1) et armure 1 | Dégâts finaux (`modifyFinal`) : appliqués après tout le reste. Un 3 devient 3 − 2 = 1, l'armure laisse 1 (plancher), puis +1 : 2. C'est la réponse de la barde aux réductions fixes par coup. |
+| Fausse note (2 charges) contre une Furie des vents | Le premier coup qui touche perd 6 dégâts finaux, après l'armure (plancher à 1), et consomme toute la Fausse note ; le second est normal. Un coup esquivé ou sacrifié ne la consomme pas. |
+| Sifflotement (3 charges), relancé avant la fin | Cumul : les charges s'ajoutent (3 + 3 = 6), chaque fin de tour rend 2 PV et retire une charge. |
 
 ---
 

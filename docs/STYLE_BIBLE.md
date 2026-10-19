@@ -2,7 +2,7 @@
 
 Ce document fixe la direction artistique de Battler et donne des prompts prêts à copier. Le but : des images **cohérentes entre elles**, **originales** et **directement intégrables** au jeu.
 
-> Les personnages `orc.png` et `dwarf.png` sont des placeholders qui proviennent de jeux ou d'œuvres existants. Ils doivent être remplacés par des créations originales avant toute diffusion publique. Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
+> Le personnage `dwarf.png` est un placeholder qui provient d'un jeu ou d'une œuvre existante. Il doit être remplacé par une création originale avant toute diffusion publique. L'orc a été remplacé le 2026-10-19 par une création originale (`orc-idle.png` et ses postures). Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
 
 ## Par où commencer
 
@@ -18,7 +18,7 @@ L'utilisateur génère les images dans ChatGPT à partir des prompts de ce docum
 
 Les scripts demandent numpy, pillow et scipy dans un environnement virtuel (à créer dans le scratchpad de la session). À la fin d'un travail : compléter l'inventaire ou l'historique concerné, et ajouter une ligne « Non publié » au `CHANGELOG.md` (la version est montée par l'agent du gameplay).
 
-**En suspens au 2026-10-19 :** icônes Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3) ; échelles des personnages anciens à rapprocher des gabarits (section 2) ; `orc.png` et `dwarf.png` à remplacer par des créations originales.
+**En suspens au 2026-10-19 :** icônes Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3)  ; `dwarf.png` à remplacer par une création originale (l'orc l'a été le 2026-10-19, avec ses postures).
 
 ---
 
@@ -60,6 +60,7 @@ Le jeu est sombre (fond pierre `#0c0a09`, accents ambre `#fbbf24` et `#fde68a`).
 | Chasseresse de la nuit | Cuir et tissus bleu nuit `#1e1b4b`, argent ; peau gris cendré ; lueur lunaire blanc-argent `#e0e7ff` |
 | Humain (paladin zélote) | Tabard et étendard rouge sang `#b91c1c`, acier sombre ; écru `#e7dcc8` pour les sceaux et parchemins ; yeux et runes de feu sacré orangé `#f97316` |
 | Ogre sauvage | Peau brun-rose terreux `#b07a5a` ; cuir brut, fer rouillé et cordes ; aucun accent lumineux (il est trop bête pour la magie) |
+| Barde saltimbanque (Fanchon, Mélisande) | Bleu paon profond (pourpoint et collants à losanges bleu et crème), crème et cuivre ; notes de musique magenta lumineuses ; seule humaine joyeuse du roster |
 | Druide (deux formes) | Vert mousse `#4d7c0f` et brun châtaigne `#7c4a2d` (cheveux, fourrure de l'ours) ; écorce et os ; lueur vert sève `#a3e635` (yeux, tatouages, amulette), identique dans les deux formes |
 
 **Teinte dominante :** les variantes de coloris sont aujourd'hui obtenues en CSS (`hue-rotate`) sur la même image. Chaque personnage doit donc avoir **une couleur dominante claire** (la peau de l'orc, l'armure de l'elfe, la barbe et le laiton du nain), plutôt qu'un mélange de nombreuses couleurs saturées.
@@ -86,20 +87,30 @@ Look jeu mobile casual ou gacha, personnage mignon ou mascotte, chibi, grosse t�
 
 ### Gabarits : taille et silhouette
 
-Le détourage recadre chaque personnage au plus près, et le jeu l'affiche à la hauteur de la scène multipliée par `look.scale`. Deux leviers donnent donc à chacun son empreinte à l'écran :
-- **la hauteur**, fixée par `look.scale` dans `roster.ts`. Le prompt n'y peut rien, puisque le personnage remplit toujours son image ;
-- **la largeur de la silhouette**, fixée par le prompt (ligne `BUILD`). Un nain doit être presque aussi large que haut, une elfe deux fois plus haute que large. Sans consigne, GPT Image rend toutes les silhouettes à peu près aussi larges les unes que les autres (rapport proche de 0,6 pour l'orc, l'elfe et le nain actuels).
+**Règle de taille (0.40.0, décision de l'utilisateur) : une échelle resserrée, ni uniforme ni réaliste.** Chaque personnage a une taille relative à un humain (1,00), dans une fourchette étroite : du nain (0,86) à l'ogre (1,13). Il est donc impossible qu'un nain fasse la taille de l'ogre, mais on n'a pas non plus un ogre gigantesque face à un nain minuscule. Une première version « réaliste », avec un ogre deux fois plus grand que le nain, a été essayée puis rejetée : l'ogre devenait beaucoup trop gros et le nain beaucoup trop petit. Toutes les images sont affichées **à leur largeur naturelle**, si bien que la carrure vient du dessin. Un test vérifie l'ordre et les écarts (`modules.test.ts`).
 
-| Gabarit | Personnages | `look.scale` | Largeur / hauteur du corps (arme exclue) | Ligne `BUILD` à coller |
-| --- | --- | --- | --- | --- |
-| Titanesque | Ogre sauvage, druide en ours | ~1,06 (à valider à l'écran) | ~0,90 | `BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass, gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.` |
-| Colossal | Orc, paladin zélote | 1,00 | ~0,75 | `BUILD: colossal and bulky, the biggest silhouette of the roster: huge shoulders, thick limbs, wide planted stance; the body is about three quarters as wide as it is tall.` |
-| Grand et élancé | Elfes (Elaria, chasseresse de la nuit) | 0,96 | ~0,45 | `BUILD: very tall and willowy, a narrow vertical silhouette: slim limbs, narrow shoulders, no bulk; the body is less than half as wide as it is tall.` |
-| Moyen | Humain, mort-vivant, druide (forme humanoïde) | 0,90 | ~0,55 | `BUILD: average human height and athletic build, balanced proportions; the body is a bit more than half as wide as it is tall.` |
-| Ramassé | Homme-lézard (accroupi) | 0,82 | ~0,75 (queue comprise) | `BUILD: lean but low to the ground, crouched, the long tail stretching the silhouette sideways; the whole figure is about three quarters as wide as it is tall.` |
-| Petit et râblé | Nain | 0,72 | ~0,85 | `BUILD: short and extremely stocky, almost as wide as tall, massive barrel chest and arms, short thick legs; the body is nearly as wide as it is tall.` |
+Deux leviers donnent à chacun son empreinte :
+- **la hauteur**, fixée par `look.scale` dans `roster.ts`. Le prompt n'y peut rien, puisque le générateur remplit toujours son image ;
+- **la largeur de la silhouette**, fixée par le prompt (ligne `BUILD`). Sans consigne, GPT Image rend toutes les silhouettes à peu près aussi larges (rapport proche de 0,6).
 
-Les échelles sont des cibles, à ajuster une fois l'image intégrée. **État au 2026-10-19** : l'ogre est à 1,06 ; les personnages plus anciens gardent leurs valeurs d'avant les gabarits (elfe 1,04, mort-vivant 1,02, humain 1,00, homme-lézard 0,98, nain 0,78), et la forme d'ours du druide n'a pas encore d'échelle propre. Rapprocher ces valeurs des cibles est à proposer à l'agent qui tient `roster.ts`. Les éléments signature (halo du prêtre, arc, cornes) dépassent de la silhouette et peuvent grandir le personnage. Il faut alors baisser un peu son `scale` pour que le corps garde la taille de son gabarit.
+| Gabarit | Personnages (taille) | Largeur / hauteur du corps (arme exclue) | Ligne `BUILD` à coller |
+| --- | --- | --- | --- |
+| Titanesque | Ogre (1,13), druide en ours (1,10) | ~0,90 | `BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass, gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.` |
+| Colossal | Orc (1,08) | ~0,75 | `BUILD: colossal and bulky, the biggest silhouette of the roster: huge shoulders, thick limbs, wide planted stance; the body is about three quarters as wide as it is tall.` |
+| Grand | Mort-vivant (1,05), paladin (1,04) | ~0,55 | `BUILD: tall and imposing, broad-shouldered, upright; the body is a bit more than half as wide as it is tall.` |
+| Grand et élancé | Elfes (1,03) | ~0,45 | `BUILD: very tall and willowy, a narrow vertical silhouette: slim limbs, narrow shoulders, no bulk; the body is less than half as wide as it is tall.` |
+| Moyen | Humain, barde, druide de forme humaine (1,00) | ~0,55 | `BUILD: average human height and athletic build, balanced proportions; the body is a bit more than half as wide as it is tall.` |
+| Ramassé | Homme-lézard, accroupi (0,97) | ~0,75 (queue comprise) | `BUILD: lean but low to the ground, crouched, the long tail stretching the silhouette sideways; the whole figure is about three quarters as wide as it is tall.` |
+| Petit et râblé | Nain (0,86) | ~0,85 | `BUILD: short and extremely stocky, almost as wide as tall, massive barrel chest and arms, short thick legs; the body is nearly as wide as it is tall.` |
+
+**Régler la taille d'un nouveau personnage :**
+1. Choisir sa taille dans la fourchette, en le plaçant entre deux personnages existants (« un peu plus grand que l'orc » : 1,10). Ne pas sortir de 0,86 à 1,13 sans l'accord de l'utilisateur.
+2. Mesurer la part de son image occupée par le personnage, en hauteur : environ 0,99 pour une image détourée au plus près, moins pour une toile à postures (0,84 pour l'orc).
+3. Calculer **`scale = taille × 0,92 / part`**. 0,92 est la hauteur d'un humain dans le conteneur d'un combattant : 516 px sur les 560 de l'écran d'affrontement. Exemple pour l'orc : 1,08 × 0,92 / 0,845 = 1,18.
+4. Pour une toile à postures, renseigner aussi **`headroom`**, la part vide au-dessus de la tête (0,13 pour l'orc) : la zone d'état et les effets s'y calent.
+5. Vérifier par capture à côté du plus petit et du plus grand (nain, ogre).
+
+Les éléments signature (halo du prêtre, arc, cornes) dépassent de la silhouette et comptent dans la hauteur de l'image : le corps de ces personnages paraît un peu plus petit. Avec des écarts aussi faibles, c'est acceptable. On corrige au cas par cas en relevant légèrement leur `scale`.
 
 ### Arènes (`src/assets/arena-<lieu>.jpg`)
 
@@ -163,6 +174,43 @@ Méthode qui marche depuis la 0.30 :
 - **Une exception au bloc STYLE** se dit en tête du prompt (`STYLE EXCEPTION: …`, voir l'ogre), sinon le bloc l'emporte.
 - **Un personnage à plusieurs formes** : un prompt par forme, dans la même conversation, la seconde avec l'image de la première jointe et la liste des éléments à garder identiques (voir le druide).
 - **Lumière symétrique** : le jeu retourne l'image d'un des deux combattants.
+
+### Planche de postures (0.40.0)
+
+Un personnage peut avoir, en plus de sa garde, **cinq postures** que le jeu affiche au fil du combat : attaque, esquive, coup encaissé, K.O., victoire. Pas plus, pour garder la production légère, et **seulement des postures communes à tous les personnages**, jamais une posture liée à une capacité (décisions de l'utilisateur). Les planches de trois cases (POSTURES.md § 3.2 bis) en réunissent deux par image. Règles, moteur et intégration : [POSTURES.md](POSTURES.md). Ce qu'il faut retenir pour générer :
+- **la garde d'abord**, avec le prompt du personnage : elle devient la référence ;
+- **jamais une posture seule** dans une image : le générateur ne garde pas l'échelle d'une image à l'autre ;
+- **une planche 1536×1024 en deux cases de 768×1024**, la **garde à gauche** (elle sert de règle), la posture à droite, sur le même gris `#808080` ;
+- **joindre la garde** comme référence, dans la conversation du personnage. **Jamais un placeholder** issu d'une œuvre existante : les postures en recopieraient le design ;
+- **même taille, même ligne de sol (3 % au-dessus du bas), même vue de trois-quarts vers la droite, même lumière** dans les deux cases ;
+- puis `scripts/slice-poses.py`, qui aligne toutes les postures sur la garde et les recadre ensemble.
+
+```text
+[STYLE BLOCK]
+
+REFERENCE: the attached image is this character. Keep EXACTLY the same character in both panels:
+same face, body, proportions, armor, colors, weapon and every detail. Only the pose changes.
+
+LAYOUT: two identical portrait panels side by side, 768x1024 each, with a thin clear gap between them.
+LEFT PANEL: GUARD — <la pose de garde actuelle, reprise du prompt d'origine>.
+RIGHT PANEL: <NOM DE LA POSTURE> — <ligne de la posture, POSTURES.md § 3.2>.
+
+CONSISTENCY: the character is the SAME SIZE in both panels (same scale, same camera distance and height),
+both figures stand on the SAME ground line, about 3% above the bottom edge of the panels,
+same three-quarter view facing RIGHT, same soft frontal symmetric lighting.
+FRAMING: full body in each panel, nothing cropped, no part of one pose crossing into the other panel,
+room above the head for a raised weapon.
+
+OUTPUT: landscape 1536x1024, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery, no text, no panel borders.
+```
+
+Lignes de posture (à adapter à l'archétype, par exemple : l'ogre esquive en pataud ; versions de l'orc dans POSTURES.md § 3.2) :
+- `ATTACK — mid-attack, lunging forward toward the right, weapon swinging at full extension, front foot planted`
+- `DODGE — evading sideways, body twisting and leaning away to the left, light on the feet`
+- `HURT — recoiling from a heavy blow, torso twisted back, one arm raised to shield the face, grimacing, both feet still on the ground`
+- `KO — defeated, collapsed on one knee or lying on the ground, weapon dropped beside` (un K.O. à genoux se lit mieux qu'un personnage allongé)
+- `VICTORY — triumphant victory pose, weapon raised high, chest out, both feet planted`
 
 ### Prompts prêts à l'emploi
 
@@ -372,6 +420,52 @@ claws not covering the face, head in the upper third, small even margin, feet ne
 OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
 no ground, no shadow, no scenery.
 ```
+
+**Barde saltimbanque** (généré le 2026-10-19 : `src/assets/bard-idle.png` et ses cinq postures ; Fanchon, variante Mélisande ; branchée en 0.41.0)
+
+Une ménestrelle de foire, joyeuse, qui joue du luth en dansant. Un premier essai « duelliste narquoise » a été rejeté par l'utilisateur : il voulait une humeur plus gaie et plus de musique. Le bloc STYLE pousse vers une carrure héroïque et un air menaçant ; l'exception lève les deux, pour une femme humaine de taille moyenne (environ 7,5 têtes), à côté du nain et de l'ogre. La garde joue du luth, rapière au fourreau ; la rapière sort à l'attaque. Les notes restent collées au corps ou au luth : `slice-poses.py` efface tout fragment isolé.
+
+```text
+[STYLE BLOCK]
+
+STYLE EXCEPTION: this character is joyful and full of life, NOT menacing. A bright, warm, open expression
+is wanted: a radiant confident grin, eyes sparkling, mid-song. Keep the same premium hand-painted style,
+refined angular adult face and detailed rendering: NOT cartoon, NOT cute, NOT a mascot.
+Proportions are those of a real athletic adult woman of average height, about 7.5 heads tall:
+NO exaggerated bulk, NO oversized pauldrons, NO oversized weapon. Light performer's clothing, not armor.
+
+SUBJECT: human bard, a joyful traveling minstrel and street acrobat, a lithe athletic woman,
+normal-sized head, refined angular face, high cheekbones, freckles, sparkling eyes glowing faintly magenta,
+singing with a radiant confident grin, jet-black hair in a long high ponytail tied with ribbons,
+a wide-brimmed deep peacock-blue hat cocked to one side with a long sweeping magenta and cream plume
+and a small copper music-note brooch,
+a fitted harlequin doublet and leggings patterned with large diamonds in deep peacock blue and cream,
+puffed slashed sleeves showing cream silk, a light laced leather bodice with copper studs,
+a short cream half-cape fluttering, knee-high soft leather boots with copper buckles,
+a belt hung with tiny copper bells, a small tambourine, a wooden flute and rolled sheets of music,
+a slender rapier with an elegant swept copper hilt, sheathed at the hip.
+She PLAYS an ornate long-necked lute of dark lacquered wood with copper inlays and a carved rosette,
+held across her body on a wide embroidered strap.
+Music made visible: glowing magenta musical notes and flowing ribbons of sound spiral out of the lute
+and swirl around her, staying close to her body.
+Signature element: the lute played across her body and the plumed wide-brimmed hat.
+Dominant color: deep peacock blue; secondary cream and copper; glowing magenta notes as accent.
+BUILD: average human height and athletic build, balanced proportions;
+the body is a bit more than half as wide as it is tall.
+POSE: playing mid-performance, like a minstrel leading a festival crowd: light on her feet, a lively
+dance step with one knee slightly bent, both feet on the ground, body turned three-quarter to the right,
+strumming the lute with flair, the lute neck pointing up and forward (never in front of the face),
+head tilted up as she sings, plume, ponytail, ribbons and cape swaying with the rhythm;
+head fully visible.
+FRAMING / OUTPUT : ceux du gabarit.
+```
+
+Lignes de posture utilisées (planches A et B de trois cases, C de deux ; chaque planche rappelle l'exception : « joyful, realistic athletic proportions of an average-height adult woman ») :
+- Attaque, refaite seule en planche de deux cases de 768 (demande de l'utilisateur : des postures plus amples, surtout le coup) : `ATTACK — a long, explosive fencing lunge toward the right, full extension: the front leg bent deep and far forward, the back leg stretched straight behind, the torso leaning low into the thrust, the rapier arm fully extended straight forward at chest height, the free arm flung back behind her for balance…`, avec « The pose uses the whole width of its panel, but the ENTIRE rapier, tip included, stays inside the right panel ». La première attaque, tassée dans une case de 512, avait la lame coupée. La fente a quand même débordé sur la case de la garde (cheveux, notes) : les deux figures ont été séparées par leurs contours, puis recomposées dans des cases plus larges avant `slice-poses.py` (voir POSTURES.md § 4).
+- `DODGE — an acrobatic evasion away to the left: torso arched back, one knee lifted, the lute hugged close to her chest, the free hand holding her hat on her head, laughing`
+- `KO — collapsed onto one knee, leaning on the lute planted upright beside her, head bowed, hat askew but still on her head, one lute string snapped, no glowing notes`
+- `VICTORY — strumming a final triumphant chord on the lute, a burst of glowing magenta notes rising close above the instrument, chin raised, beaming radiant grin, rapier sheathed`
+- `HURT — staggering back from a heavy blow, torso twisted, the free arm raised to shield the face, the lute clutched protectively against her side, hat knocked askew, wincing`
 
 **Variantes** : aujourd'hui, la teinte est faite en CSS. Pour générer une vraie variante plus tard, on reprend l'image du personnage de base et on demande : _« Same character, same pose, same framing and style, only change: … »_.
 - Murzug (Berserker) : peau rouge brique, peintures de guerre, plus de cicatrices.
@@ -717,6 +811,11 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 40 | `charge` | Charge (druide en ours) | Tête d'ours qui fonce, traînées de vitesse |
 | 41 | `claw` | Coup de griffe (druide en ours) | Patte griffue, trois entailles |
 | 42 | `rot-aura` | Aura de pourriture (druide en ours) ; sert aussi, en attendant, au malus Pourriture | Bois de cerf pourri sous les champignons, halo brun-violet |
+| 43 | `whistle` | Siffloter et le statut Sifflotement (barde, double 1) | Flûtiau de cuivre, notes en lumière corail |
+| 44 | `false-note` | Fausse note, compétence et malus (barde, double 2) | Diapason de bronze fendu, onde brisée violet terne |
+| 45 | `melodious-aura` | Aura mélodieuse (barde, double 3) et Ouverture (l'aura posée au début du combat) | Caisse de luth à rosace de cuivre, notes et halo magenta |
+| 46 | `crescendo` | Crescendo (barde, double 4 : un coup de 12 depuis la 0.41.0, plus trois coups) | Trois notes-lames en escalier, traînée magenta ; le motif évoque encore trois coups, à refaire si besoin |
+| 47 | `soloist` | Soliste (barde, double 5 : un coup de 15) | Une grosse note forgée en lame, éclat magenta |
 
 **Icônes manquantes, à demander :** Pourriture (le malus subi par la cible, distinct de l'aura), Brûlure, Vulnérable, Étourdi et Garde (statuts « à venir »). En attendant, la zone d'état affiche l'initiale du statut.
 
@@ -788,6 +887,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v5 (7 icônes, 3×3) :** ogre en laiton rouillé ; druide humanoïde végétal (vert mousse, écorce, vert sève `#a3e635`), druide ours animal (châtaigne, griffes sombres). 1. a battered brass pocket watch, cracked glass, two thick hands, rusty chain · 2. a large seed cracking open with two sprouts, sap-green light · 3. a thick plate of gnarled bark shaped like hide armor, moss, sap-green veins · 4. three large glowing fireflies spiraling upward, sap-green and yellow trails · 5. the head of a furious chestnut bear charging right, speed streaks, dust · 6. a chestnut bear paw with dark claws, three glowing slash marks · 7. [AURA] a broken deer antler rotting under sickly fungi, spores, murky brown and dull violet glow, NOT toxic green.
 
+**v6 (5 icônes, 3×3, cuivre, bois laqué, bleu paon, notes magenta épaisses ; « no sheet-music staff lines ») :** 1. a small polished copper penny whistle, two chunky notes, warm coral-pink healing light · 2. a cracked dull bronze tuning fork, jagged broken sound wave, sickly violet and grey, no gold · 3. [AURA] an ornate dark-wood lute body, copper rosette, magenta notes, round magenta glow · 4. three thick notes rising in a staircase, stems edged like blades · 5. one large note forged as a copper and steel blade, magenta burst.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -814,6 +915,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v6 | 2026-10-19 | 43 à 47 | Barde (Fanchon). Vrai canal alpha ; les franges de halo débordent (avertissements du script sans conséquence). Personnage : `bard-idle.png` et ses postures. |
 | v5 | 2026-10-18 | 36 à 42 | Ogre et druide (0.35.0). Vrai canal alpha. Personnages : `ogre.png`, `druid.png`, `druid-bear.png`. |
 | v4 | 2026-10-18 | 33 à 35 | Paladin (0.31.0). Damier peint, découpe sans retouche. Personnage : `paladin.png`. |
 | v3 | 2026-10-18 | 25 à 32 | Prêtresse et Naraxes (0.30.0). Damier peint. **Défaut** : l'éclair blanc doré de `purification` est terne (confondu avec les cases claires du damier) ; à refaire avec une vraie transparence. |
@@ -844,7 +946,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 - [ ] La lumière ne choque pas quand l'image est retournée.
 - [ ] Le style reste cohérent avec les autres personnages ; le design est original.
 - [ ] Image recadrée, PNG optimisé, rangée dans `src/assets/` sous un nom kebab-case anglais ; source à la corbeille (`gio trash`).
-- [ ] Dans `roster.ts` (tenu par l'agent du gameplay), `look` est ajusté : `facing`, `scale` du gabarit, cadrage du portrait `{x, y, zoom}`.
+- [ ] Dans `roster.ts` (tenu par l'agent du gameplay), `look` est ajusté : `facing`, `scale` calculé selon l'échelle resserrée (section 2), `headroom` pour une toile à postures, cadrage du portrait `{x, y, zoom}`.
+- [ ] Pour des postures : planches avec la garde en première case, `slice-poses.py`, planche de contrôle `logs/poses-<nom>.png` regardée (mêmes pieds, même taille), check-list de [POSTURES.md](POSTURES.md) § 3.4.
 - [ ] Pour une arène : 1920×1080, sol dégagé au centre bas, vérifiée en combat.
 - [ ] Pour des icônes : planche de contrôle regardée, PNG dans `src/assets/icons/`, `IconName` et `STATUS_ICON` à jour, inventaire et historique de la section 7 complétés.
 - [ ] Aucun navigateur ne marche sur cette machine : dire à l'utilisateur quand un rendu n'a pas été vu en jeu.

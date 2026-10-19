@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Arena } from '../game/arenas'
 import { multiplier, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
+import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
 import { CombatLog } from './CombatLog'
 import { CopyTraceButton } from './CopyTraceButton'
@@ -153,7 +154,7 @@ export function FightScreen({ script, arena, onEnd }: Props) {
                 (combattants, journal, commandes) pour que l'infobulle soit lisible. */}
             <div
               className="pointer-events-auto absolute left-1/2 z-[15] -translate-x-1/2 hover:z-[60]"
-              style={{ bottom: `calc(${fighters[side].look.scale * 100}% + 18px)` }}
+              style={{ bottom: `calc(${figureHeight(fighters[side].lookFor(forms[side])) * 100}% + 18px)` }}
             >
               <StatusTray statuses={statuses[side]} />
             </div>

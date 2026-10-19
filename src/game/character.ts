@@ -1,3 +1,4 @@
+import type { PoseId } from './poses'
 import type { CharacterEvent } from './events'
 import type { StatusId } from './statuses'
 
@@ -30,11 +31,36 @@ export interface CharacterLook {
   facing: 'left' | 'right'
   /** Filtre CSS pour décliner une même image */
   tint?: string
-  /** Hauteur relative à l'écran (1 = taille d'un orc) */
+  /**
+   * Hauteur de l'image, en part du conteneur d'un combattant. Réglée pour suivre l'échelle resserrée des
+   * personnages (STYLE_BIBLE § 2 : nain 0,86, humain 1, orc 1,08, ogre 1,13 par rapport à un humain) :
+   * scale = taille × 0,92 / part de l'image occupée par le personnage. Toutes les images sont affichées
+   * à leur largeur naturelle.
+   */
   scale: number
+  /**
+   * Part vide de l'image au-dessus de la tête (0 par défaut) : la toile d'un personnage à postures est
+   * plus haute que sa garde (arme levée de l'attaque). La zone d'état et les effets se calent sur la tête.
+   */
+  headroom?: number
+  /**
+   * Vide de la toile à gauche et à droite de la garde, en part de sa largeur (image source, avant tout
+   * retournement). Une toile à postures large (fente de l'attaque) a beaucoup de vide autour de la garde :
+   * l'ancrage `inside` (écran d'affrontement, champion) se cale alors sur la silhouette, pas sur la toile.
+   */
+  bodyInset?: { left: number; right: number }
   /** Cadrage du portrait : position du visage en % de l'image, et zoom */
   portrait: { x: number; y: number; zoom: number }
+  /**
+   * Postures (docs/POSTURES.md) : une image par moment du combat, sur la MÊME toile que `image`
+   * (mêmes dimensions, même ligne de sol, même échelle), pour qu'en changer ne fasse pas sauter le
+   * personnage. Une posture absente retombe sur `image`, la garde.
+   */
+  poses?: Partial<Record<Exclude<PoseId, 'idle'>, string>>
 }
+
+/** Hauteur du personnage (des pieds au sommet de la tête), en part du conteneur d'un combattant. */
+export const figureHeight = (look: Pick<CharacterLook, 'scale' | 'headroom'>) => look.scale * (1 - (look.headroom ?? 0))
 
 /** Fiche courte affichée en jeu. La philosophie et les choix de design sont dans docs/PERSONNAGES.md. */
 export interface CharacterLore {
@@ -77,6 +103,11 @@ export interface CharacterDef {
    * chacun de ses tours, sauf le premier.
    */
   forms?: readonly [CharacterForm, CharacterForm]
+  /**
+   * Deux dés par action (la barde) : deux coups, un par dé ; un double déclenche la compétence de sa
+   * face (`doubleOne` à `doubleFive`) à la place des deux coups. Voir docs/RESOLUTION.md § 2.
+   */
+  twinDice?: true
 }
 
 /**
@@ -95,6 +126,7 @@ export class Character {
   readonly events: readonly CharacterEvent[]
   readonly immunities: readonly StatusId[]
   readonly forms?: readonly [CharacterForm, CharacterForm]
+  readonly twinDice: boolean
   readonly #def: CharacterDef
 
   constructor(def: CharacterDef) {
@@ -110,12 +142,16 @@ export class Character {
     this.events = def.events
     this.immunities = def.immunities ?? []
     this.forms = def.forms
+    this.twinDice = !!def.twinDice
   }
 
   /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */
   lookFor(form = 0): Readonly<CharacterLook> {
     const f = this.forms?.[form]
-    return f?.look ? { ...this.look, ...f.look, tint: this.look.tint } : this.look
+    if (!f?.look) return this.look
+    // Une forme qui change d'image ne reprend pas les postures de la forme de base
+    const poses = f.look.image ? f.look.poses : (f.look.poses ?? this.look.poses)
+    return { ...this.look, ...f.look, tint: this.look.tint, poses }
   }
 
   get maxHp() {
