@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.48.0._
+_Dernière mise à jour : 2026-10-20, version 0.49.0._
 
 ## En bref
 
@@ -14,6 +14,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Troisième passe sur les compétences (0.46.0, `docs/SORTS.md` § 12) | ✅ Furie des vents cumulable en réserve ; barde : « ding » sur tout double, Siffloter et Fausse note qui frappent (esquive de Fanchon 6 %). Ouverture « écrasante » gardée (identité). Son non vérifiable à l'oreille ; rendu non vu |
 | Deuxième passe sur les compétences (0.45.0, `docs/SORTS.md` § 11) | ✅ Épines permanentes, Vol de vie à deux charges, Aura de poison au début du tour adverse (avec le Poison), barde (aura et Fausse note à 2 charges) ; textes clarifiés. Roster de 10 : de 44,4 (Ysolde) à 54,6 % (Ervald). Reste signalée : Fausse note « presque inutile » (+0,4). Rendu non vu à l'écran (textes, compteurs) |
 | Audit des compétences (0.42.0, `docs/SORTS.md` § 10) | ✅ Pile ou face et Aura d'immunité ne coûtent plus de victoires, Purification n'est plus gâchée, Fleur de vie compte. Restent signalées : Aura de sainteté et Rétribution « écrasantes » (signatures), Pile ou face et l'immunité de Gauvain « presque inutiles » (de −0,6 à +0,6). Deux contres tolérés de plus : Ysolde contre les voleuses (35 %). Rendu vu : pièce ; la décoction qui suit pile n'est pas capturée |
+| Compétence groupée avec son jet, badges de coups spéciaux empilés et colorés par famille | ✅ 0.49.0, vu à l'écran (Esquive améliorée groupée avec le 2 ; Critique assuré + Critique + Riposte, et + Épines ; Coup de chance ; libellé « Face… » lisible). Pas vu : Furie des vents, Vol de vie, Rétribution, gros coups de la barde. Halo du camp actif vu (Elaria) |
 | Lisibilité du tour : passage de main (pause de 400 ms, camp actif, ligne au sol) et dé de compétence qui s'allume | ✅ 0.44.0, retouché en 0.45.1 (ligne au lieu de l'anneau, dés éteints au repos, éclat bref), vu à l'écran (Ervald, Fanchon contre Elaria : ligne, barre active, éclat du 3). Pas vu : la pulsation d'un double de la barde et d'un coup transformé (couverts par les tests pour le second) |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |

@@ -31,6 +31,18 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.49.0] — 2026-10-20
+
+Lecture du combat (demande de l'utilisateur) : ce qui se passe ensemble tombe ensemble, et une frappe spéciale empile ses badges. Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.
+
+### Ajouté
+- **Badges de coups spéciaux, empilés sous le dé** : le badge ambre du critique devient un système. Chaque effet qui arme ou produit un coup spécial pose son badge au moment où il a lieu, dans l'ordre : Critique assuré (or pâle, puis le badge « Critique ×2 » ambre), Furie des vents (bleu ciel, Tempo), Coup de chance et Pile ou face (violet, Fortune), Charge et Coup de griffe (violet), Riposte, Épines et Rétribution (cramoisi, Représailles), Vol de vie (corail, Soin), Crescendo et Soliste (magenta, la couleur de la barde). La famille est **déduite de la mécanique** (`src/game/specials.ts`) : une compétence future qui force un critique, ajoute des coups, renvoie des dégâts ou draine reçoit son badge sans rien déclarer ; `TONE_OVERRIDE` donne sa couleur propre à un personnage. Test : chaque mécanique de coup spécial a sa famille, et seulement elles.
+
+### Modifié
+- **Une compétence tombe avec le dé qui la déclenche** : sur un 1, 2 ou 3 (ou un double de la barde), le dé qui s'arrête, le dé de l'en-tête qui s'allume, le nom de la compétence en texte flottant, le statut gagné et son son arrivent au même instant. Avant, environ 1,35 s séparait le dé de l'effet (pauses de 350, 300, 450 puis 250 ms). Le nom d'un coup transformé (Charge, Coup de griffe) jaillit aussi avec le dé, avant l'élan. Test : sur les 100 duels du roster, chaque coup sacrifié par une compétence du dé est directement suivi d'elle.
+- **Halo du camp actif à la place de la ligne au sol** (retour de l'utilisateur : la ligne était trop visible, trop proche des pieds, et ses extrémités dégradées peu nettes) : une lueur diffuse de la couleur du camp monte du bas de l'écran, sous sa moitié de l'arène, et s'efface bien avant le centre. Elle accompagne la barre de vie allumée, qui reste le signal principal.
+- **Libellé de la zone des dés** (« Pile ! », « Face… », « Au tour de … ») plus grand et devant la pièce : il était caché derrière elle, et l'utilisateur croyait que la pièce ne tombait jamais sur pile (signalé par l'agent des compétences).
+
 ## [0.48.0] — 2026-10-20
 
 ### Ajouté

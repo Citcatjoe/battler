@@ -3,6 +3,7 @@ import {
   diceOf,
   dieAt,
   INITIATIVE_DIE,
+  multiplier,
   other,
   rankAt,
   simulateCombat,
@@ -30,6 +31,7 @@ import {
 import { STATUSES, type StatusId } from './statuses'
 import { doubleFace, type Trigger } from './events'
 import { cueOf } from './cues'
+import { eventSpecialTone, statusSpecialTone, type SpecialBadge, type SpecialTone } from './specials'
 import { setSoundSpeed, sfx } from './sound'
 import type { Status } from './statuses'
 import type { Character } from './character'
@@ -56,6 +58,8 @@ export interface DiceState {
   coin?: { heads?: boolean }
   /** Un dé affiché a été imposé par l'observateur (mode triche) : marqué une fois retombé */
   forced?: boolean
+  /** Badges du coup spécial, empilés dans l'ordre où ils tombent (critique, Riposte…), voir specials.ts */
+  specials?: SpecialBadge[]
 }
 
 /** Un coup en cours : sert de clé pour relancer les animations CSS. */
@@ -220,6 +224,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     let fxId = 0
     let strikeId = 0
     let pulseId = 0
+    let specialId = 0
     const [a, b] = fighters
 
     // PV affichés, retenus pour faire tomber une relâche de jauges coup par coup
@@ -288,6 +293,25 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       if (cue) sfx[cue]()
     }
 
+    /** Empile un badge de coup spécial sous le dé (une seule fois par libellé pour un même jet). */
+    const addSpecial = (label: string, tone: SpecialTone) =>
+      setDice((d) =>
+        d.specials?.some((x) => x.label === label) ? d : { ...d, specials: [...(d.specials ?? []), { key: specialId++, label, tone }] },
+      )
+    /** Le critique d'un coup : le badge du critique assuré (s'il vient d'un statut), puis celui du critique. */
+    const critSpecials = (attack: Attack) => {
+      if (!attack.crit) return
+      if (attack.critForced) addSpecial('Critique assuré', 'precision')
+      addSpecial(`Critique ${multiplier(attack.critMultiplier)}`, 'crit')
+    }
+    /** Badge d'un coup transformé ou d'un gros coup de double (Charge, Crescendo…). */
+    const reshapedSpecial = (attack: Attack) => {
+      const move = attack.reshaped && fighters[attack.attacker].events.find((e) => e.id === attack.reshaped!.event)
+      const tone = move && eventSpecialTone(move)
+      if (move && tone) addSpecial(move.name, tone)
+      return move
+    }
+
     /**
      * Coups de compétence : chaque montant (ou chaque jauge d'une relâche) part comme un coup, en
      * rafale ; les PV tombent coup par coup. Le dernier d'une série est lourd (secousse, chiffre doré).
@@ -320,13 +344,23 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       title: string,
       effects: AppliedEffect[],
       apply: () => void,
-      opts: { blows?: 'lunge' | 'reaction'; cue?: () => void; impact?: (damage: number, heavy: boolean) => void } = {},
+      opts: {
+        blows?: 'lunge' | 'reaction'
+        cue?: () => void
+        impact?: (damage: number, heavy: boolean) => void
+        /** Attente avant l'apparition : 0 quand l'effet tombe avec le dé qui le déclenche (voir `grouped`) */
+        lead?: number
+        /** Badge de coup spécial posé à l'apparition */
+        special?: { label: string; tone: SpecialTone }
+      } = {},
     ) => {
       const hits =
         source !== null && opts.blows ? effects.filter((e) => e.type === 'damage' && e.target !== source && e.amount > 0) : []
-      await wait(250)
+      const lead = opts.lead ?? 250
+      if (lead > 0) await wait(lead)
       ;(opts.cue ?? (() => cueFor(source, effects)))()
       setFx({ key: fxId++, source, title, effects: effects.filter((e) => !hits.includes(e)) })
+      if (opts.special) addSpecial(opts.special.label, opts.special.tone)
       if (hits.length > 0 && source !== null) {
         await wait(200)
         await playBlows(source, hits, opts.blows === 'lunge', opts.impact ?? ((_, heavy) => (heavy ? sfx.crit() : sfx.hit())))
@@ -343,7 +377,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
      * Rafale : tous les dés roulent ensemble, le second jaillit en tournoyant (Furie des vents), ou
      * apparaît dans sa couleur s'il est d'une autre sorte (le d6 de Coup de chance).
      */
-    async function rollVolley(attacks: Attack[], color?: string) {
+    async function rollVolley(attacks: Attack[], color?: string, status?: StatusId) {
       const { attacker, faces } = attacks[0]
       const shown = {
         ...IDLE_DICE,
@@ -354,12 +388,15 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         dieFaces: attacks.map((a) => a.faces),
         dieColors: attacks.map((_, k) => (k > 0 ? color : undefined)),
       }
-      setDice({ ...shown, values: attacks.map(() => 0), rolling: true })
+      // La rafale est un coup spécial dès son départ : le badge du statut qui l'arme (Furie des vents…)
+      const tone = status && statusSpecialTone(status)
+      const specials = status && tone ? [{ key: specialId++, label: STATUSES[status].name, tone }] : undefined
+      setDice({ ...shown, values: attacks.map(() => 0), rolling: true, specials })
       // Un seul dé lancé et un seul dé posé pour toute la rafale : un instant, un son
       sfx.diceRoll(900 / speedRef.current)
       await wait(900)
       sfx.diceLand()
-      setDice({ ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced) })
+      setDice({ ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced), specials })
       await wait(400)
     }
 
@@ -369,6 +406,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     /** Un coup de la rafale : pas de nouveau jet, élan court, impact presque immédiat. */
     async function playVolleyStrike(t: number, index: number | undefined, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
       setDice((d) => ({ ...d, active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier }))
+      reshapedSpecial(attack)
+      critSpecials(attack)
       if (attack.forfeited) {
         showHp(after)
         setStatuses(afterStatuses)
@@ -390,7 +429,15 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     }
 
     /** Deux dés (barde) : la paire roule ensemble et retombe ; un double qui a sa compétence est annoncé. */
-    async function rollPair(side: Side, rolls: [number, number], faces: number, skill: string | undefined, forced: boolean, double?: number) {
+    async function rollPair(
+      side: Side,
+      rolls: [number, number],
+      faces: number,
+      skill: string | undefined,
+      forced: boolean,
+      double?: number,
+      special?: { label: string; tone: SpecialTone },
+    ) {
       const shown = { ...IDLE_DICE, faces, owner: side, label: `${fighters[side].name} · deux dés`, volley: true }
       setDice({ ...shown, values: [0, 0], rolling: true })
       sfx.diceRoll(900 / speedRef.current)
@@ -399,14 +446,22 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       // Un double, quel qu'il soit : le « ding » de la chance, en même temps que les dés (0.46.0, SONS.md § 4.1)
       if (rolls[0] === rolls[1]) sfx.coinWin()
       if (skill) pulseSkill(side, double)
-      setDice({ ...shown, values: rolls, forced, label: skill ? `DOUBLE ${rolls[0]} !` : shown.label })
-      await wait(skill ? 550 : 400)
+      setDice({
+        ...shown,
+        values: rolls,
+        forced,
+        label: skill ? `DOUBLE ${rolls[0]} !` : shown.label,
+        specials: special && [{ key: specialId++, ...special }],
+      })
+      // Un double qui a sa compétence : elle tombe avec la paire (étape suivante, sans attente)
+      if (!skill) await wait(400)
     }
 
     /** Pile ou face : la pièce remplace le dé, tournoie, retombe ; pile, les dégâts tombent sur l'adversaire. */
     async function playCoin(
       t: number,
       side: Side,
+      status: StatusId,
       heads: boolean,
       effects: AppliedEffect[],
       after: Pair<number>,
@@ -419,7 +474,14 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       sfx.coinToss(1200 / speedRef.current)
       await wait(1200)
       sfx.coinLand()
-      setDice({ ...shown, coin: { heads }, label: heads ? 'PILE !' : 'FACE…', forced })
+      const tone = statusSpecialTone(status)
+      setDice({
+        ...shown,
+        coin: { heads },
+        label: heads ? 'PILE !' : 'FACE…',
+        forced,
+        specials: heads && tone ? [{ key: specialId++, label: STATUSES[status].name, tone }] : undefined,
+      })
       // Pile : un « ding » juste après le résultat, pour que la réussite s'entende (SONS.md § 4.1)
       if (heads) {
         await wait(140)
@@ -441,7 +503,18 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       if (face !== undefined) setPulse({ side, face, key: pulseId++ })
     }
 
-    async function playAttack(t: number, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>, skillFace?: number) {
+    /**
+     * `grouped` : le jet déclenche une compétence qui remplace le coup ; tout tombe ensemble, au moment où le
+     * dé s'arrête (dé de l'en-tête, nom de la compétence, statut, son) : l'étape suivante suit sans attente.
+     */
+    async function playAttack(
+      t: number,
+      attack: Attack,
+      after: Pair<number>,
+      afterStatuses: Pair<Status[]>,
+      skillFace?: number,
+      grouped = false,
+    ) {
       const { attacker, faces } = attack
       const label = `${fighters[attacker].name} attaque`
       const shown = { ...IDLE_DICE, faces, owner: attacker, label, critMultiplier: attack.critMultiplier }
@@ -452,10 +525,10 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       sfx.diceLand()
       pulseSkill(attacker, skillFace)
       setDice({ ...shown, values: [attack.roll], forced: attack.forced })
-      await wait(350)
-      if (attack.crit) {
-        setDice((d) => ({ ...d, crit: true, critForced: attack.critForced }))
-        await wait(450)
+      // Coup transformé (Charge, Coup de griffe) : son nom jaillit avec le dé qui tombe, avant l'élan
+      if (attack.reshaped) {
+        const move = reshapedSpecial(attack)
+        setFx({ key: fxId++, source: attacker, title: move?.name ?? '', effects: [] })
       }
 
       // Coup sacrifié par une compétence : pas d'élan, la compétence qui suit prend le relais.
@@ -463,15 +536,15 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         showHp(after)
         setStatuses(afterStatuses)
         push(attackLog(t, attack, fighters, after[other(attacker)]))
-        await wait(300)
+        if (!grouped) await wait(650)
         return
       }
 
-      // Coup transformé (Charge, Coup de griffe) : le nom de la compétence jaillit avant l'élan ; il sonne comme un coup
-      if (attack.reshaped) {
-        const move = fighters[attacker].events.find((e) => e.id === attack.reshaped!.event)
-        setFx({ key: fxId++, source: attacker, title: move?.name ?? '', effects: [] })
-        await wait(350)
+      await wait(350)
+      if (attack.crit) {
+        setDice((d) => ({ ...d, crit: true, critForced: attack.critForced }))
+        critSpecials(attack)
+        await wait(450)
       }
 
       // Élan vers l'adversaire, muet ; l'impact (ou l'esquive) tombe au milieu de l'animation.
@@ -558,6 +631,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       // Des index plutôt que les étapes : la chronologie peut être remplacée en cours de route (mode triche).
       // `pointed` : chaque coup désigne son dé (rafale, deux coups de la barde) ; faux pour les coups d'un double
       let volley: { strikes: number[]; next: number; pointed: boolean } | null = null
+      // L'étape précédente a été un jet qui déclenche une compétence : celle-ci tombe avec lui, sans attente
+      let snap = false
 
       // Le tour t appartient à celui qui a commencé s'il est impair, à l'autre s'il est pair (les tours alternent)
       const ownerOf = (t: number): Side => (t % 2 === 1 ? first : other(first))
@@ -566,6 +641,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       // `current.beats` est relu à chaque étape : un dé imposé en remplace la suite
       for (let i = 0; i < current.beats.length; i++) {
         const beat = current.beats[i]
+        const snapped = snap
+        snap = false
         // Passage de main : le plateau de dés se vide et annonce le suivant, son camp s'allume, un temps de pause
         if (i > 0 && beat.turn !== current.beats[i - 1].turn) {
           const next = ownerOf(beat.turn)
@@ -588,8 +665,14 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               await wait(last ? 450 : 60)
               break
             }
-            await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses), skillFaceAt(current.beats, fighters, i))
-            await wait(450)
+            {
+              const face = skillFaceAt(current.beats, fighters, i)
+              const next = current.beats[i + 1]
+              const grouped = beat.attack.forfeited === true && face !== undefined && next?.type === 'event'
+              await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses), face, grouped)
+              if (grouped) snap = true
+              else await wait(450)
+            }
             break
           case 'event':
             // Un coup transformé (Charge…) a déjà été joué avec le coup : la compétence n'est que notée
@@ -608,8 +691,16 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
                 show(beat.state.statuses)
                 push(eventLog(beat.event, fighters))
               },
-              // Le coup lourd (le dernier d'une relâche) sonne comme un critique
-              { blows: 'lunge' },
+              // Le coup lourd (le dernier d'une relâche) sonne comme un critique ; une relâche (Rétribution) est un coup spécial
+              {
+                blows: 'lunge',
+                lead: snapped ? 0 : undefined,
+                special: (() => {
+                  const def = fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
+                  const tone = def && eventSpecialTone(def)
+                  return tone && !def.merged && !def.reshapesHit ? { label: beat.event.name, tone } : undefined
+                })(),
+              },
             )
             break
           case 'statusTick': {
@@ -647,11 +738,18 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
                   push(statusReactionLog(beat.side, beat.status, beat.effects, fighters))
                 },
                 // Un renvoi de dégâts n'est qu'un coup, même gros ; le vol de vie, un soin
-                harms
-                  ? { blows: reflects ? 'lunge' : 'reaction', cue: () => {}, impact: () => sfx.hit() }
-                  : def.drainsHit
-                    ? { cue: sfx.heal }
-                    : {},
+                {
+                  ...(harms
+                    ? { blows: reflects ? 'lunge' : 'reaction', cue: () => {}, impact: () => sfx.hit() }
+                    : def.drainsHit
+                      ? { cue: sfx.heal }
+                      : {}),
+                  // Riposte, Épines, Vol de vie : le coup en cours devient spécial
+                  special: (() => {
+                    const tone = statusSpecialTone(beat.status)
+                    return tone ? { label: def.name, tone } : undefined
+                  })(),
+                } as const,
               )
             }
             break
@@ -685,6 +783,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               await rollVolley(
                 strikes.flatMap(([, b]) => (b.type === 'attack' ? [b.attack] : [])),
                 STATUSES[beat.status].look?.dieColor,
+                beat.status,
               )
             }
             break
@@ -712,12 +811,15 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.preset)
               .map(([j]) => j)
             volley = strikes.length > 0 ? { strikes, next: 0, pointed: beat.double === undefined } : null
-            await rollPair(beat.side, beat.rolls, beat.faces, name, !!beat.forced, beat.double)
+            const move = skill?.type === 'event' ? fighters[beat.side].events.find((e) => e.id === skill.event.eventId) : undefined
+            const tone = move && eventSpecialTone(move)
+            await rollPair(beat.side, beat.rolls, beat.faces, name, !!beat.forced, beat.double, move && tone ? { label: move.name, tone } : undefined)
             push(pairLog(beat.turn, beat.side, beat.rolls, name, fighters))
+            if (name) snap = true
             break
           }
           case 'coin':
-            await playCoin(beat.turn, beat.side, beat.heads, beat.effects, beat.state.hp, beat.state.statuses, beat.forced)
+            await playCoin(beat.turn, beat.side, beat.status, beat.heads, beat.effects, beat.state.hp, beat.state.statuses, beat.forced)
             break
           case 'statusDuration': {
             // Le compteur de la zone d'état rebondit sur sa nouvelle valeur (StatusTray),

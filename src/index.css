@@ -1592,22 +1592,24 @@ body {
 }
 
 /* ---------- Passage de main (combat) ----------
-   Le camp dont c'est le tour s'allume nettement (nom et barre de vie) ; l'autre reste tel quel. Une ligne
-   lumineuse au sol, de la couleur du camp, court sous toute sa moitié de l'arène. --camp : couleur du camp. */
+   Le camp dont c'est le tour s'allume nettement (nom et barre de vie) ; l'autre reste tel quel. Un halo
+   diffus de la couleur du camp monte du bas de l'écran, sous sa moitié de l'arène. --camp : couleur du camp. */
 .hp-camp-name, .hp-camp-track { transition: text-shadow calc(300ms / var(--speed)), box-shadow calc(300ms / var(--speed)); }
 .hp-camp[data-turn='active'] .hp-camp-name { text-shadow: 0 0 10px var(--camp), 0 0 24px color-mix(in srgb, var(--camp) 70%, transparent); }
 .hp-camp[data-turn='active'] .hp-camp-track {
   box-shadow: 0 0 0 1px var(--camp), 0 0 14px 2px var(--camp), 0 0 32px color-mix(in srgb, var(--camp) 55%, transparent);
 }
-.turn-line {
-  /* Pleine au pied du combattant, elle s'efface vers le centre de l'arène (la ligne du camp de droite est retournée) */
-  background: linear-gradient(90deg, transparent 0%, var(--camp) 12%, var(--camp) 70%, transparent 100%);
-  box-shadow: 0 0 14px 2px color-mix(in srgb, var(--camp) 60%, transparent), 0 0 32px 6px color-mix(in srgb, var(--camp) 25%, transparent);
-  border-radius: 999px;
+.turn-halo {
+  /* Ellipse centrée sous le combattant (côté extérieur de la moitié), qui s'efface bien avant le centre de l'écran */
+  background: radial-gradient(ellipse 75% 100% at 42% 100%, color-mix(in srgb, var(--camp) 30%, transparent) 0%, color-mix(in srgb, var(--camp) 12%, transparent) 45%, transparent 75%);
+  mix-blend-mode: screen;
   opacity: 0;
-  transition: opacity calc(300ms / var(--speed));
+  transition: opacity calc(450ms / var(--speed));
 }
-.turn-line[data-active='true'] { opacity: 0.9; }
+.turn-halo[data-side='1'] {
+  background: radial-gradient(ellipse 75% 100% at 58% 100%, color-mix(in srgb, var(--camp) 30%, transparent) 0%, color-mix(in srgb, var(--camp) 12%, transparent) 45%, transparent 75%);
+}
+.turn-halo[data-active='true'] { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .skill-die-pulse, .skill-die-flash .skill-die { animation-duration: 1ms; }
 }

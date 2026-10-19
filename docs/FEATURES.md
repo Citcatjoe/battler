@@ -23,7 +23,8 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 - **Dégâts comptés en entier (overkill, depuis la 0.34.0)** : un coup fatal ou des dégâts directs comptent tout leur montant dans les statistiques, la trace et l'historique, même au-delà des PV restants. Les PV, eux, s'arrêtent à 0.
 - **Événements** du coup : voir la section 3.
 - **Fin** : le premier à 0 PV perd, que ce soit à cause d'un coup, d'un effet ou d'un statut. Plus rien ne se déclenche après un K.O. Une limite de sécurité arrête le combat à 1 000 tours ; il est alors gagné aux PV.
-- **Lisibilité du tour (0.44.0, présentation pure)** : au passage de main, une pause de 400 ms (`HANDOVER_MS`, divisée par la vitesse) vide le plateau de dés, qui annonce « Au tour de … » ; le camp actif s'allume nettement dans l'en-tête (nom et barre de vie), et une ligne lumineuse de la couleur du camp court sous sa moitié de l'arène (0.45.1, à la place d'un anneau qui se confondait avec l'aura). Les dés de compétence de l'en-tête sont éteints au repos ; quand le dé tombe sur une face de compétence (1, 2, 3, coup transformé, double de la barde), le dé de cette face s'allume un instant, comme un tintement, dans la couleur de la nature de la compétence.
+- **Lisibilité du tour (0.44.0, présentation pure)** : au passage de main, une pause de 400 ms (`HANDOVER_MS`, divisée par la vitesse) vide le plateau de dés, qui annonce « Au tour de … » ; le camp actif s'allume nettement dans l'en-tête (nom et barre de vie), et un halo diffus de la couleur du camp monte du bas de l'écran sous sa moitié de l'arène (0.49.0 ; avant, un anneau qui se confondait avec l'aura, puis une ligne au sol jugée trop visible). Les dés de compétence de l'en-tête sont éteints au repos ; quand le dé tombe sur une face de compétence (1, 2, 3, coup transformé, double de la barde), le dé de cette face s'allume un instant, comme un tintement, dans la couleur de la nature de la compétence.
+- **Synchronisation et coups spéciaux (0.49.0, présentation pure)** : une compétence déclenchée par le dé tombe avec lui (dé qui s'arrête, dé de l'en-tête, texte flottant, statut et son au même instant). Une frappe spéciale empile ses badges sous le dé, dans l'ordre où ils tombent et dans la couleur de leur famille, déduite de la mécanique (`specials.ts`) : critique assuré et critique, Furie des vents, Coup de chance, Pile ou face, coups transformés, Riposte, Épines, Rétribution, Vol de vie, gros coups de la barde.
 - **Jouer ou simuler** : les deux options appellent le même moteur. « Jouer » anime le résultat calculé à l'avance, « Simuler » l'affiche directement à l'écran de fin.
 - **Reproductible** : avec une même graine de hasard, un combat se rejoue à l'identique (utilisé par les tests).
 
@@ -43,6 +44,7 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 | 0.41.0 | Personnage à deux dés (paire, doubles, gros coup d'un double) et dégâts finaux (`modifyFinal`), pour la barde |
 | 0.44.0 | Passage de main (pause, camp actif, anneau au sol) et dé de compétence qui pulse dans l'en-tête |
 | 0.45.1 | Ligne au sol sur la moitié de l'arène, barre de vie active renforcée sans tamiser l'autre, dés éteints au repos et éclat bref au déclenchement |
+| 0.49.0 | Halo diffus du camp actif en bas de l'écran (au lieu de la ligne) ; compétence du dé groupée avec son jet ; badges de coups spéciaux empilés, colorés par famille (`specials.ts`) ; libellé de la pièce lisible |
 
 ## 2. Personnages et roster
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Arena } from '../game/arenas'
-import { multiplier, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
+import { SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
 import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
@@ -12,6 +12,7 @@ import { Fighter, type Received } from './Fighter'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
 import { Icon } from './Icon'
+import { TONE_STYLE } from '../game/specials'
 
 interface Props {
   /** Combat déjà résolu, que cet écran met en scène */
@@ -138,14 +139,15 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         {/* Halo au sol qui détache les silhouettes */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-[radial-gradient(ellipse_at_50%_100%,rgba(255,237,213,0.12)_0%,transparent_65%)]" />
 
-        {/* Ligne au sol du combattant dont c'est le tour : toute la moitié de l'arène de son camp, dans sa
-            couleur (un anneau sous les pieds se confondait avec l'anneau de l'aura) */}
+        {/* Halo du camp dont c'est le tour : une lueur diffuse qui monte du bas de l'écran, sous sa moitié de l'arène,
+            dans la couleur du camp (avec la barre de vie qui s'allume dans l'en-tête) */}
         {([0, 1] as Side[]).map((side) => (
           <div
             key={`turn-${side}`}
             aria-hidden
             data-active={active === side}
-            className={`turn-line pointer-events-none absolute bottom-[86px] h-[3px] w-1/2 ${side === 0 ? 'left-0' : 'right-0 rotate-180'}`}
+            data-side={side}
+            className={`turn-halo pointer-events-none absolute bottom-0 h-[45%] w-1/2 ${side === 0 ? 'left-0' : 'right-0'}`}
             style={{ '--camp': SIDE_STYLE[side].hex } as CSSProperties}
           />
         ))}
@@ -179,7 +181,7 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         {/* Zone des dés */}
         <div className="absolute left-1/2 top-[12%] z-0 flex -translate-x-1/2 flex-col items-center gap-3">
           <span
-            className="h-5 whitespace-nowrap text-sm font-bold uppercase tracking-widest"
+            className="relative z-10 h-7 whitespace-nowrap text-lg font-bold uppercase tracking-widest drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
             style={{ color: diceColor }}
           >
             {dice.label}
@@ -205,24 +207,29 @@ export function FightScreen({ script, arena, onEnd }: Props) {
               </div>
             ))}
           </div>
-          <div className="flex h-10 items-center gap-2">
+          {/* Coup spécial : les badges s'empilent dans l'ordre où ils tombent (critique, Riposte, Furie des vents…),
+              chacun dans la couleur de sa famille (specials.ts) */}
+          <div className="flex min-h-10 max-w-[820px] flex-wrap items-center justify-center gap-x-6 gap-y-3">
             {dice.forced && !dice.rolling && (
               <span className="cheat-tag" title="Dé imposé en mode triche">
                 Imposé
               </span>
             )}
-            {dice.crit && dice.owner !== null && (
-              <span className="crit-badge inline-block rounded-md bg-amber-400 px-3 py-1 font-display text-xl font-extrabold text-stone-950 shadow-[0_3px_0_#92400e]">
-                {dice.critForced ? (
-                  <>
-                    <Icon name="crit" /> CRITIQUE ASSURÉ
-                  </>
-                ) : (
-                  'CRITIQUE'
-                )}{' '}
-                {multiplier(dice.critMultiplier)}
-              </span>
-            )}
+            {dice.owner !== null &&
+              dice.specials?.map((b) => {
+                const tone = TONE_STYLE[b.tone]
+                return (
+                  <span
+                    key={b.key}
+                    data-tone={b.tone}
+                    className="crit-badge special-badge inline-flex items-center gap-1.5 rounded-md px-3 py-1 font-display text-xl font-extrabold uppercase"
+                    style={{ background: tone.bg, color: tone.fg, boxShadow: `0 3px 0 ${tone.edge}` }}
+                  >
+                    {b.tone === 'precision' && <Icon name="crit" />}
+                    {b.label}
+                  </span>
+                )
+              })}
           </div>
           {winner !== null && (
             <span className="fade-in font-display text-5xl font-extrabold text-amber-300 drop-shadow-[0_3px_0_#78350f]">

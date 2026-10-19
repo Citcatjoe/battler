@@ -10,6 +10,8 @@ import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter } from '../game/roster'
 import { STATUS_IDS } from '../game/statuses'
 import { skillFaceAt, skillFaceOf, turnLabel } from '../game/useCombat'
+import { eventSpecialTone, statusSpecialTone, TONE_STYLE } from '../game/specials'
+import { STATUSES } from '../game/statuses'
 import { EMOJI, testCharacter } from '../game/test-utils'
 import { allMatches, championRun, createTournament, fillSlots, matchFighters, matchKey, SLOTS, withResult } from '../game/tournament'
 import { BracketScreen } from './BracketScreen'
@@ -201,6 +203,37 @@ describe('écrans', () => {
           })
         }
     expect(pulses).toBeGreaterThan(50)
+  })
+
+  it('coups spéciaux : chaque mécanique qui arme ou produit un coup spécial a sa famille (badge)', () => {
+    for (const id of STATUS_IDS) {
+      const def = STATUSES[id]
+      const special = def.forcesCrit || def.extraStrikes || def.coinToss || def.reflectsHit || def.fillsOnHurt || def.reactions?.hurt || def.drainsHit
+      expect(statusSpecialTone(id) !== undefined, `${def.name} : badge de coup spécial`).toBe(!!special)
+    }
+    for (const id of CHARACTER_IDS)
+      for (const e of createCharacter(id).events) {
+        const special = e.reshapesHit || e.merged || e.effects.some((x) => x.type === 'release')
+        expect(eventSpecialTone(e) !== undefined, `${e.name} : badge de coup spécial`).toBe(!!special)
+      }
+    for (const tone of Object.values(TONE_STYLE)) expect(tone.name).not.toMatch(EMOJI)
+  })
+
+  it('une compétence sur le dé tombe avec son jet (regroupement)', () => {
+    let grouped = 0
+    for (const x of CHARACTER_IDS)
+      for (const y of CHARACTER_IDS) {
+        const pair = [createCharacter(x), createCharacter(y)] as [ReturnType<typeof createCharacter>, ReturnType<typeof createCharacter>]
+        const { beats } = simulateCombat(pair, { rng: seededRng(4) })
+        beats.forEach((beat, i) => {
+          // Un coup sacrifié par une compétence du dé est suivi directement de cette compétence : le rejoueur les joue ensemble
+          if (beat.type === 'attack' && beat.attack.forfeited && skillFaceAt(beats, pair, i) !== undefined) {
+            expect(beats[i + 1]?.type).toBe('event')
+            grouped++
+          }
+        })
+      }
+    expect(grouped).toBeGreaterThan(50)
   })
 
   it('compendium, fiches et statistiques', () => {
