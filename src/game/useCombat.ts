@@ -396,6 +396,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       sfx.diceRoll(900 / speedRef.current)
       await wait(900)
       sfx.diceLand()
+      // Un double, quel qu'il soit : le « ding » de la chance, en même temps que les dés (0.46.0, SONS.md § 4.1)
+      if (rolls[0] === rolls[1]) sfx.coinWin()
       if (skill) pulseSkill(side, double)
       setDice({ ...shown, values: rolls, forced, label: skill ? `DOUBLE ${rolls[0]} !` : shown.label })
       await wait(skill ? 550 : 400)

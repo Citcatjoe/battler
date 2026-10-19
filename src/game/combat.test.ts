@@ -811,14 +811,15 @@ describe('compétences du 2 au dé (0.25.0)', () => {
     expect(drains).toBeGreaterThan(0)
   })
 
-  it('Furie des vents : deux coups à la prochaine action, chacun résolu à part', () => {
+  it('Furie des vents (0.46.0) : deux coups par action, une charge dépensée, les autres en réserve', () => {
     let flurries = 0
+    const charges = (st: readonly { id: string; stacks: number }[]) => st.find((s) => s.id === 'windFury')?.stacks ?? 0
     for (const r of duelsOf('gorak')) {
       r.beats.forEach((beat, i) => {
-        if (beat.type !== 'flurry') return
+        if (beat.type !== 'flurry' || beat.status !== 'windFury') return
         flurries++
         expect(beat.strikes).toBe(2)
-        expect(has(beat.state.statuses[beat.side], 'windFury')).toBe(false)
+        expect(charges(beat.state.statuses[beat.side])).toBe(charges(r.beats[i - 1].state.statuses[beat.side]) - 1)
         const strikes = r.beats.slice(i + 1).filter((b) => b.turn === beat.turn && b.type === 'attack')
         // Deux coups, sauf si le combat s'arrête entre les deux (K.O. par le coup, les épines, etc.)
         expect(strikes.length).toBe(r.turns === beat.turn && strikes.length < 2 ? strikes.length : 2)

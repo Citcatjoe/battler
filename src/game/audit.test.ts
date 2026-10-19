@@ -27,7 +27,7 @@ describe('audit de résolution', () => {
     const report = [...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)
     expect(report).toEqual([])
     // L'audit a bien rencontré chaque mécanique
-    for (const k of ['coup sacrifié', 'esquive imposée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick poisonAura', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'aura au tour adverse'])
+    for (const k of ['coup sacrifié', 'esquive imposée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick poisonAura', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'aura au tour adverse', 'furie en réserve'])
       expect(seen[k], k).toBeGreaterThan(0)
   })
 })

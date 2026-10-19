@@ -17,7 +17,7 @@ export interface LabIdea {
    * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`) ;
    * 4 = les six compétences signalées par l'audit 0.39.1, touches seules et kits compensés (SORTS.md § 10)
    */
-  series: 1 | 2 | 3 | 4 | 5
+  series: 1 | 2 | 3 | 4 | 5 | 6
   /** Personnage modifié (id du roster) */
   character: string
   name: string
@@ -595,6 +595,81 @@ const SERIES_5: LabIdea[] = [
   })),
 ]
 
+/* --- Série 6 : Furie des vents cumulable (demande de l'utilisateur) et kit de la barde (Siffloter,
+   Fausse note, Ouverture, signalés par l'audit 0.45.1). SORTS.md § 12. --- */
+const WIND = STATUSES.windFury
+const SERIES_6: LabIdea[] = [
+  {
+    series: 6, id: 'gorak-furie-toutes', character: 'gorak', name: 'Furie cumulable, tout d’un coup', schema: 'Retouche (demande)', family: 'Rafale',
+    pitch: 'Chaque 2 ajoute une charge, sans durée ; la prochaine action dépense toutes les charges : un coup de plus par charge.',
+    statuses: { labWindAll: { ...WIND, stacking: 'add', maxStacks: undefined, expiresAt: undefined, strikeCharges: 'all' } },
+    apply: swap('wind-fury', [{ type: 'applyStatus', status: 'labWindAll' as never, stacks: 1 }]),
+    watch: ['wind-fury'],
+  },
+  {
+    series: 6, id: 'gorak-furie-reserve', character: 'gorak', name: 'Furie cumulable, en réserve', schema: 'Retouche (demande)', family: 'Rafale',
+    pitch: 'Chaque 2 ajoute une charge, sans durée ; chaque action en dépense une (deux coups), les autres restent en réserve.',
+    statuses: { labWindOne: { ...WIND, stacking: 'add', maxStacks: undefined, expiresAt: undefined, strikeCharges: 'one' } },
+    apply: swap('wind-fury', [{ type: 'applyStatus', status: 'labWindOne' as never, stacks: 1 }]),
+    watch: ['wind-fury'],
+  },
+  {
+    series: 6, id: 'fanchon-siffloter-5', character: 'fanchon', name: 'Siffloter à 5 charges', schema: 'Petite touche', family: 'Soin',
+    pitch: 'Le double 1 pose 5 charges de Sifflotement (10 PV sur 5 tours) au lieu de 3.',
+    apply: swap('whistle', [{ type: 'applyStatus', status: 'whistling', stacks: 5 }]),
+    watch: ['whistle'],
+  },
+  {
+    series: 6, id: 'fanchon-siffloter-coups', character: 'fanchon', name: 'Siffloter sans sacrifier les coups', schema: 'Petite touche', family: 'Soin',
+    pitch: 'Le double 1 pose le Sifflotement ET frappe ses deux coups de 1.',
+    apply: swap('whistle', [{ type: 'applyStatus', status: 'whistling', stacks: 3 }], { volley: 2 }),
+    watch: ['whistle'],
+  },
+  {
+    series: 6, id: 'fanchon-fausse-note-coups', character: 'fanchon', name: 'Fausse note qui frappe', schema: 'Petite touche', family: 'Sceaux',
+    pitch: 'Le double 2 pose ses 2 charges de Fausse note ET frappe ses deux coups de 2.',
+    apply: swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }], { volley: 2 }),
+    watch: ['false-note'],
+  },
+  {
+    series: 6, id: 'fanchon-sans-ouverture', character: 'fanchon', name: 'Sans Ouverture', schema: 'Mesure', family: 'Puissance',
+    pitch: 'Aucune aura au début du combat (pour mesurer ce que l’Ouverture porte).',
+    apply: remove('overture'),
+    watch: ['melodious-aura'],
+  },
+  {
+    series: 6, id: 'fanchon-kit-doubles', character: 'fanchon', name: 'Kit : doubles qui frappent, sans Ouverture', schema: 'Kit compensé', family: 'Puissance + Soin + Sceaux',
+    pitch: 'Plus d’Ouverture ; en échange, Siffloter, Fausse note et Aura mélodieuse frappent aussi leurs deux coups.',
+    apply: all(
+      remove('overture'),
+      swap('whistle', [{ type: 'applyStatus', status: 'whistling', stacks: 3 }], { volley: 2 }),
+      swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }], { volley: 2 }),
+      swap('melodious-aura', [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }], { volley: 2 }),
+    ),
+    watch: ['whistle', 'false-note', 'melodious-aura'],
+  },
+  {
+    series: 6, id: 'fanchon-kit-doubles-ouverture', character: 'fanchon', name: 'Kit : Siffloter et Fausse note qui frappent, avec Ouverture', schema: 'Kit', family: 'Soin + Sceaux',
+    pitch: 'Ouverture gardée ; Siffloter et Fausse note frappent aussi leurs deux coups.',
+    apply: all(
+      swap('whistle', [{ type: 'applyStatus', status: 'whistling', stacks: 3 }], { volley: 2 }),
+      swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }], { volley: 2 }),
+    ),
+    watch: ['whistle', 'false-note'],
+  },
+  ...[0.08, 0.06, 0.04].map((dodge) => ({
+    series: 6 as const, id: `fanchon-kit-esquive-${Math.round(dodge * 100)}`, character: 'fanchon',
+    name: `Kit : Siffloter et Fausse note qui frappent, esquive ${Math.round(dodge * 100)} %`, schema: 'Kit compensé', family: 'Soin + Sceaux',
+    pitch: `Siffloter et Fausse note frappent aussi leurs deux coups ; en compensation, l’esquive passe de 12 à ${Math.round(dodge * 100)} %.`,
+    apply: all(
+      swap('whistle', [{ type: 'applyStatus', status: 'whistling', stacks: 3 }], { volley: 2 }),
+      swap('false-note', [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }], { volley: 2 }),
+      stats({ dodgeChance: dodge }),
+    ),
+    watch: ['whistle', 'false-note'],
+  })),
+]
+
 export const IDEAS: readonly LabIdea[] = [
   {
     series: 1,
@@ -1045,5 +1120,6 @@ export const IDEAS: readonly LabIdea[] = [
      déclinée pour les deux personnages qui partagent la compétence. --- */
   ...SERIES_4,
   ...SERIES_5,
+  ...SERIES_6,
 ]
 

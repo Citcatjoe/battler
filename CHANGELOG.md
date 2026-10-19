@@ -31,6 +31,26 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.46.0] — 2026-10-20
+
+Troisième passe sur les compétences : deux demandes de l'utilisateur (le « ding » des doubles de la barde, la Furie des vents cumulable) et trois compétences signalées par l'audit 0.45.1 (Siffloter, Fausse note, Ouverture). Laboratoire (série 6, 400 combats par duel), roster de 10 personnages. Méthode et chiffres : `docs/SORTS.md` § 12.
+
+### Ajouté
+- **Barde : « ding » sur tout double** (demande de l'utilisateur) : dès que les deux dés retombent sur la même valeur, quel que soit le double, le son Pile réussie (`sfx.coinWin`, son existant) joue en même temps que les dés (`docs/SONS.md`, étape `pair`). Non vérifié à l'oreille.
+- Option de moteur `strikeCharges` pour les statuts à coups supplémentaires : `all` (toutes les charges à la prochaine action) ou `one` (une par action, les autres en réserve). Contrôle d'audit des charges dépensées.
+
+### Modifié
+- **Furie des vents cumulable** (demande de l'utilisateur) : chaque 2 au dé ajoute une charge, sans durée ; chaque action en dépense une (deux coups), les autres restent en réserve jusqu'aux actions suivantes. Le médaillon compte les charges. Valeur nette +6,9 → +7,1 : deux charges à la fois restent rares (il faut un 2 pendant la rafale). Les deux lectures (tout d'un coup, ou une par action) ont été mesurées à égalité (+0,3 point).
+- **Siffloter et Fausse note** (barde, doubles 1 et 2) : le double **frappe aussi ses deux coups**, en plus de son effet. Valeur nette +0,7 → **+3,3** (Siffloter) et +0,4 → **+4,3** (Fausse note) : ni l'un ni l'autre n'est plus « presque inutile ». Compensation : **esquive de Fanchon de 12 à 6 %** (sans elle, Fanchon montait à 60,5 %).
+- **Empreinte de non-régression mise à jour** (changement de règles voulu).
+
+### Non changé
+- **Ouverture** (+27 points, « écrasante ») : c'est l'identité de la barde ; sans elle, Fanchon tombe à 28 %, et des doubles qui frappent tous ne la remontent qu'à 38 %.
+
+### Mesures
+- Roster de 10 personnages, 400 combats par duel : de 44,0 % (Ysolde) à 54,6 % (Fanchon), presque inchangé (44,4 à 54,6 % avant). Gorak 49,8 → 50,4 %, Fanchon 54,3 → 54,6 %.
+- Nouveau drapeau : **Écorce épaisse** (Thaldrin) « presque inutile » (+1,1 → sous le seuil, dans la marge).
+
 ## [0.45.1] — 2026-10-20
 
 ### Modifié

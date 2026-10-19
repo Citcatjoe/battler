@@ -119,7 +119,8 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [x] **Aura de sainteté** : plafond de 3 charges, compensé par la Purification de repli (0.42.0). Le plafond à 2 faisait plus de spectacle mais coûtait trop (SORTS.md § 10).
 - [x] **Audit de résolution** : la pièce est lue dans le registre (0.42.0).
 - [x] **Deuxième passe** (0.45.0, SORTS.md § 11) : Aura de poison (texte), Vol de vie, aura de la barde, Épines, Fausse note (l'immunité de Gauvain est sans objet depuis son retrait).
-- [ ] **Fausse note** (+0,4) encore « presque inutile » ; **Ouverture** de la barde « écrasante » ; ses doubles « rares à l'écran » (un sur cinq jets, par construction). **Ysolde** à 44,4 %, la plus basse du roster de 10.
+- [x] **Siffloter, Fausse note** (0.46.0) : les doubles frappent aussi leurs coups.
+- [ ] **Écorce épaisse** (Thaldrin) « presque inutile » à la marge ; **Ouverture** **Ouverture** de la barde « écrasante » ; ses doubles « rares à l'écran » (un sur cinq jets, par construction). **Ysolde** à 44,4 %, la plus basse du roster de 10.
 - [ ] **Raccourcis `npm run lab` et `npm run skills`**, une fois la refonte des sons terminée (`package.json`).
 - [ ] **Premier ajout au moteur pour les sorts** : un effet à l'expiration d'un statut (compte à rebours, écho, réserve relâchée). Ensuite : agir sur le dé adverse (Sabotage, Prophétie).
 
