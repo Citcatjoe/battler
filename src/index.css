@@ -976,6 +976,179 @@ body {
   }
   .roster-card-tag[data-side='a'] { left: 3px; background: var(--side-a); }
   .roster-card-tag[data-side='b'] { right: 3px; background: var(--side-b); }
+
+  /* Grande carte de la palette du tournoi (0.47.0) : même carte, plus grande ; le pinceau choisi en or
+     (sélection hors camp), avec le nombre de cases déjà prises. */
+  .roster-card-lg { width: 148px; }
+  .roster-card-lg .roster-card-face { height: 170px; }
+  .roster-card-lg .roster-card-name { padding: 6px 6px 7px; font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0.04em; }
+  .roster-card[data-brush] { box-shadow: 0 0 0 2px var(--gold-400), var(--shadow-2); }
+  .roster-card[data-brush] .roster-card-name { color: var(--gold-200); }
+  .roster-card-lg:hover { box-shadow: 0 0 0 1px var(--gold-500), var(--hl); }
+  .roster-card-lg[data-brush]:hover { box-shadow: 0 0 0 2px var(--gold-300), var(--shadow-2); }
+  .roster-card-count {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 26px;
+    padding: 1px 6px;
+    border-radius: var(--r-xs);
+    background: rgba(14, 11, 9, 0.85);
+    box-shadow: 0 0 0 1px var(--line-2);
+    font-family: var(--font-data);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--text-2);
+  }
+  .roster-card-count[data-used] { color: var(--gold-200); box-shadow: 0 0 0 1px var(--gold-700); }
+
+  /* Arbre du tournoi (0.47.0) : cases fonctionnelles (rectangle, filet, liseré d'or quand le match est
+     prêt : c'est une action), numéro de case aux extrémités, vainqueur en or, perdant éteint. */
+  .bracket-match {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--r-xs);
+    background: rgba(22, 18, 15, 0.94);
+    box-shadow: 0 0 0 1px var(--line-2), var(--hl), var(--shadow-2);
+  }
+  .bracket-match[data-final] { box-shadow: 0 0 0 1px var(--frame), var(--hl), var(--shadow-2); }
+  .bracket-match[data-state='ready'] { box-shadow: 0 0 0 2px var(--gold-400), var(--hl), var(--shadow-2); }
+  .bracket-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .bracket-row[data-row='0'] { border-bottom: 1px solid var(--line-1); }
+  .bracket-slot {
+    display: flex;
+    height: 100%;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 8px;
+    margin: 0 -8px;
+    padding: 0 8px;
+    text-align: inherit;
+    transition: background-color 150ms;
+  }
+  .bracket-slot:hover { background: var(--bg-2); }
+  .bracket-slot:focus-visible { outline: none; box-shadow: var(--focus); }
+  .bracket-seed {
+    width: 20px;
+    flex-shrink: 0;
+    font-family: var(--font-data);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    color: var(--text-3);
+  }
+  .bracket-face {
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: var(--r-xs);
+    background: var(--bg-2);
+    box-shadow: 0 0 0 1px var(--line-1);
+  }
+  .bracket-face[data-lost] { opacity: 0.3; filter: grayscale(1); }
+  .bracket-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  .bracket-name[data-leaf] { font-size: 16px; }
+  .bracket-name[data-won] { font-weight: 700; color: var(--gold-200); }
+  .bracket-name[data-lost] { color: var(--text-off); text-decoration: line-through; }
+  .bracket-hp {
+    flex-shrink: 0;
+    font-family: var(--font-data);
+    font-size: 13px;
+    color: var(--text-3);
+  }
+  .bracket-empty {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-style: italic;
+    color: var(--text-off);
+  }
+  .bracket-hint {
+    flex: 1;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold-300);
+  }
+  .bracket-clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    height: 24px;
+    width: 24px;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    border-radius: var(--r-xs);
+    background: var(--bg-3);
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-2);
+  }
+  .bracket-row.flex-row-reverse .bracket-clear { right: auto; left: 6px; }
+  .bracket-clear:hover { color: var(--bad); }
+  /* Actions d'un match prêt : petites plaques sous la case (serti), Affronter en or (l'action principale) */
+  .bracket-action {
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    gap: 5px;
+    padding: 0 9px;
+    border-radius: var(--r-xs);
+    background: var(--bg-2);
+    box-shadow: inset 0 0 0 1px var(--line-2), var(--hl);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-2);
+    transition: background-color 150ms, color 150ms, box-shadow 150ms;
+  }
+  .bracket-action[data-primary] { color: var(--gold-300); box-shadow: inset 0 0 0 1px var(--frame), var(--hl); }
+  .bracket-action:hover { background: var(--bg-3); color: var(--text-1); }
+  .bracket-action[data-primary]:hover { color: var(--gold-200); box-shadow: inset 0 0 0 1px var(--gold-400), var(--hl); }
+  .bracket-action:active { transform: translateY(1px); }
+  .bracket-action:focus-visible { outline: none; box-shadow: var(--focus); }
+  .bracket-result {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-3);
+  }
+
+  /* Panneau central de la configuration du tournoi : la palette, intégrée à l'arbre (les lignes y entrent) */
+  .bracket-panel {
+    background: var(--scrim);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(232, 200, 140, 0.16);
+    border-radius: var(--r-xs);
+    box-shadow: var(--hl), var(--shadow-3);
+  }
 }
 
 /* ---------- Compendium : cartes encadrées ---------- */

@@ -31,6 +31,26 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.47.0] — 2026-10-20
+
+### Modifié
+- **Arbre du tournoi refait** (demande de l'utilisateur : mêmes fonctions, extrémités plus lisibles, roster central plus grand et mieux intégré, au style du design system). Rien ne change dans les règles du tournoi.
+  - **Configuration** :
+    - Seul le premier tour se remplit : ses cases, aux deux extrémités, sont grandes (252 px, deux lignes de 42 px), avec le numéro de la case (1 à 16), le portrait et le nom en 16 px.
+    - Au survol d'une case vide, le combattant qui y sera placé s'affiche avec son portrait.
+    - Les tours suivants ne sont plus que des jonctions : les lignes convergent vers le panneau central et s'éclairent quand un match est rempli.
+  - **La palette devient le panneau central de l'arbre**, d'environ 870 px de large au lieu de 264 :
+    - dix grandes cartes (portrait de 148 × 170), avec le nombre de cases prises et le pinceau en or ;
+    - la fiche du pinceau : stats en une ligne et dés de compétences ;
+    - le compte « n / 16 », Compléter, Vider et **Valider l'arbre**, seule pièce prestige de l'écran.
+  - **Suivi** :
+    - Les cases du premier tour sont plus larges (208 px, avec le numéro de la case) que celles des tours suivants.
+    - Un match prêt a son liseré d'or, et ses actions sont de petites plaques sous la case : Affronter en or, Simuler.
+    - Le chemin des vainqueurs est tracé en or, et le perdant éteint (portrait grisé, nom barré).
+    - « Simuler le tour » passe en bouton du design system, « Nouveau tournoi » en pièce prestige.
+  - **Décor** : les deux écrans prennent la porte de l'arène de l'onglet Tournoi, très assombrie, avec des titres en Cinzel.
+  - Captures vérifiées : configuration vide, en cours et complète, suivi en cours et tournoi terminé.
+
 ## [0.46.1] — 2026-10-20
 
 ### Modifié

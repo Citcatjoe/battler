@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.46.1._
+_Dernière mise à jour : 2026-10-20, version 0.47.0._
 
 ## En bref
 
@@ -36,7 +36,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Fiches et design des personnages | ✅ en jeu et dans `docs/PERSONNAGES.md` (0.14.0) |
 | Sons de synthèse et bouton muet | ✅ stable |
 | Fiche personnage et statistiques globales | ✅ stable |
-| Tournoi à 16 (configuration, arbre, suivi) | ✅ stable depuis la correction 0.8.1 |
+| Tournoi à 16 (configuration, arbre, suivi) | ✅ stable depuis la correction 0.8.1 ; arbre refait au design system en 0.47.0, vu à l'écran (configuration vide et complète, suivi, tournoi terminé) |
 | Arènes (2), au choix sur l'écran d'affrontement | ✅ 0.16.0 |
 | Compendium (Personnages, Compétences, Bonus et malus) | ✅ 0.18.0 (Compétences en 0.21.0), bouton d'accès provisoire |
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |

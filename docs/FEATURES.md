@@ -353,9 +353,9 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 **Règles actuelles**
 
 - Arbre à élimination directe de 16 participants : huitièmes, quarts, demies, finale. Les deux moitiés de l'arbre convergent vers la finale au centre.
-- **Configuration** : on choisit un personnage dans la palette, puis on clique les cases. Le × vide une case. 🎲 **Compléter** remplit seulement les cases vides, en équilibrant le roster et en évitant les duels miroirs au premier tour quand c'est possible.
+- **Configuration** (refonte 0.47.0) : la palette des combattants est le grand panneau central de l'arbre. Ce sont dix cartes avec le nombre de cases prises. On choisit le combattant (le pinceau, en or), puis on clique les cases du premier tour, aux deux extrémités : elles sont grandes et numérotées de 1 à 16. Au survol d'une case vide, le pinceau s'y montre. Le × vide une case. Les tours suivants ne sont que des jonctions : les lignes convergent vers le panneau et s'éclairent quand un match est rempli. **Compléter** remplit seulement les cases vides, en équilibrant le roster et en évitant les duels miroirs au premier tour quand c'est possible. **Valider l'arbre** est la pièce prestige de l'écran.
 - Les doublons sont permis ; ils sont nommés avec des chiffres romains (Gorak I, Gorak II…).
-- **Suivi** : chaque match prêt propose ⚔ Affronter (passe par l'écran d'affrontement) ou ⚡ Simuler. « ⚡ Simuler le tour » simule tous les matchs prêts du tour en cours. Le champion s'affiche au centre.
+- **Suivi** : les cases du premier tour, aux extrémités, sont plus larges et numérotées. Chaque match prêt a un liseré d'or et propose Affronter (passe par l'écran d'affrontement) ou Simuler. « Simuler le tour » simule tous les matchs prêts du tour en cours. Le chemin des vainqueurs est tracé en or, le perdant est éteint, et le champion s'affiche au centre. Le décor est la porte de l'arène, très assombrie, comme pour la configuration.
 - Les matchs alimentent l'historique global. Le tournoi n'est pas sauvegardé, il est perdu au rechargement.
 - **Sacre** : après la finale, jouée ou simulée, l'**écran du champion** le montre en grand, avec son parcours (les quatre adversaires battus), le bilan cumulé de son tournoi (dégâts, critiques, plus gros coup, soins, esquives, compétences, précision, dégâts encaissés) et les compétences déclenchées. On y revient depuis l'arbre (« Le champion »).
 
@@ -366,6 +366,7 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 | 0.34.0 | Écran du champion (parcours et bilan cumulé du tournoi) |
 | 0.38.0 | Classement des parieurs dans l'arbre et sur l'écran du champion ; écran de fin en deux moitiés (combat, paris) |
 | 0.13.0 | Un match ne peut plus être enregistré deux fois, ni avec les mauvais combattants ; l'arbre valide le résultat avant l'historique |
+| 0.47.0 | Arbre refait au design system : extrémités grandes et numérotées, palette en grand panneau central (dix cartes, pinceau, actions), jonctions en configuration, chemin des vainqueurs en or, décor de la porte de l'arène |
 
 ## 9. Compendium
 

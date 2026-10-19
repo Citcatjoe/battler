@@ -1,3 +1,4 @@
+import tournamentImg from '../assets/menu-tournament.jpg'
 import { createCharacter } from '../game/roster'
 import { champion, currentRound, readyMatches, ROUND_NAMES, type MatchRef, type Tournament } from '../game/tournament'
 import { Bracket } from './Bracket'
@@ -5,6 +6,7 @@ import { Fighter } from './Fighter'
 import { Icon } from './Icon'
 import type { Wallets } from '../game/betting'
 import { Standings } from './Betting'
+import { PrestigeButton } from './PrestigeButton'
 
 interface Props {
   tournament: Tournament
@@ -27,14 +29,23 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
   const doneCount = Object.keys(tournament.results).length
 
   return (
-    <div className="fade-in relative h-full bg-[radial-gradient(ellipse_at_50%_55%,#292524_0%,#0c0a09_70%)]">
-      <header className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-8 pr-20 pt-6">
+    <div className="fade-in relative isolate h-full">
+      {/* Même décor que la configuration : la porte de l'arène, très assombrie (refonte 0.47.0) */}
+      <img
+        src={tournamentImg}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
+        style={{ filter: 'brightness(0.2) saturate(0.7)' }}
+      />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
+      <header className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
-          <button onClick={onMenu} className="text-sm font-bold text-stone-400 hover:text-stone-100">
+          <button onClick={onMenu} className="btn-tertiary h-8 px-3 text-[13px]">
             ← Menu
           </button>
-          <h1 className="font-display text-4xl font-extrabold text-amber-200">Tournoi</h1>
-          <p className="text-sm text-stone-400">
+          <h1 className="on-illus mt-2 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">Tournoi</h1>
+          <p className="mt-1 font-body text-[15px] text-ink-2">
             {round === null ? 'Tournoi terminé' : ROUND_NAMES[round]} · {doneCount} / 15 matchs joués
           </p>
           {wallets && (
@@ -45,12 +56,9 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
         </div>
         <div className="flex items-center gap-2 pt-6">
           {ready.length > 0 && (
-            <button
-              onClick={() => onSimulate(ready)}
-              className="rounded-md border border-amber-500/70 px-4 py-2 text-sm font-bold text-amber-200 hover:bg-amber-500/10"
-              title="Simule tous les matchs prêts de ce tour"
-            >
-              <Icon name="lightning" /> Simuler le tour ({ready.length})
+            <button onClick={() => onSimulate(ready)} className="btn btn-sm" title="Simule tous les matchs prêts de ce tour">
+              <Icon name="lightning" className="btn-icon" />
+              <span>Simuler le tour ({ready.length})</span>
             </button>
           )}
           {winner && (
@@ -60,12 +68,9 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
             </button>
           )}
           {winner && (
-            <button
-              onClick={onNewTournament}
-              className="rounded-xl bg-amber-500 px-5 py-2.5 font-display font-extrabold tracking-wider text-stone-950 shadow-[0_4px_0_#92400e] hover:bg-amber-400"
-            >
-              NOUVEAU TOURNOI
-            </button>
+            <PrestigeButton size="md" className="w-[280px]" onClick={onNewTournament}>
+              <span>Nouveau tournoi</span>
+            </PrestigeButton>
           )}
         </div>
       </header>
@@ -80,15 +85,15 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
               <div className="h-[230px]">
                 <Fighter character={createCharacter(winner.characterId)} side={0} state="victory" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">
-                <Icon name="trophy" /> Champion
+              <p className="flex items-center gap-1.5 font-display text-[15px] font-bold uppercase tracking-[0.16em] text-gold-300">
+                <Icon name="trophy" className="h-5 w-5" /> Champion
               </p>
-              <p className="font-display text-3xl font-extrabold text-amber-200">{winner.label}</p>
+              <p className="font-display text-[32px] font-semibold text-gold-200">{winner.label}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center pt-16 text-center">
-              <Icon name="trophy" className="h-28 w-28 drop-shadow-[0_6px_12px_rgba(245,158,11,0.35)]" />
-              <p className="mt-4 font-display text-2xl font-extrabold text-stone-300">Finale</p>
+              <Icon name="trophy" className="h-28 w-28" />
+              <p className="mt-4 font-display text-[22px] font-semibold tracking-wide text-ink-2">Finale</p>
             </div>
           )
         }

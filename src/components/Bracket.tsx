@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import type { Character } from '../game/character'
 import { CHARACTERS } from '../game/roster'
 import { STAGE_WIDTH } from './Stage'
 import {
@@ -15,45 +14,76 @@ import {
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
 
-/* Géométrie de l'arbre, en pixels de la scène 1600×900. */
-const TOP = 150
-const BOTTOM = 880
-const BOX_W = 180
-const ROW_H = 32
-const BOX_H = ROW_H * 2
-const GAP = 40
-const MARGIN = 24
+/*
+ * Arbre du tournoi (design system, refonte 0.47.0), en pixels de la scène 1600×900. Deux mises en page :
+ * - `track` (suivi) : les quatre tours, les deux moitiés convergent vers la finale au centre. Les cases
+ *   du premier tour, aux extrémités, sont plus larges et plus hautes que les suivantes.
+ * - `setup` (configuration) : seul le premier tour se remplit. Ses cases sont grandes, les tours
+ *   suivants ne sont plus que des jonctions, et les lignes convergent vers le grand panneau central
+ *   (la palette des combattants), qui prend toute la place libérée.
+ */
+type Layout = 'track' | 'setup'
+
+interface Geometry {
+  top: number
+  bottom: number
+  margin: number
+  /** Largeur d'une case par tour (0 : une simple jonction) ; la finale est au centre */
+  widths: readonly number[]
+  /** Hauteur d'une ligne (un participant) par tour */
+  rowH: readonly number[]
+  /** Écart entre deux colonnes */
+  gap: number
+}
+
+const GEOMETRY: Record<Layout, Geometry> = {
+  track: { top: 150, bottom: 880, margin: 24, widths: [208, 168, 168, 208], rowH: [38, 32, 32, 38], gap: 28 },
+  setup: { top: 176, bottom: 884, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
+}
 
 interface Box {
   x: number
   /** Centre vertical */
   cy: number
+  w: number
+  rowH: number
   side: 'left' | 'right' | 'center'
 }
 
-/** Position d'un match : les deux moitiés de l'arbre convergent vers la finale au centre. */
-export function boxOf({ round, index }: MatchRef): Box {
-  if (round === ROUNDS - 1) return { x: STAGE_WIDTH / 2 - BOX_W / 2, cy: (TOP + BOTTOM) / 2, side: 'center' }
-  const perSide = matchesInRound(round) / 2
-  const left = index < perSide
-  const local = index % perSide
-  const cy = TOP + ((local + 0.5) * (BOTTOM - TOP)) / perSide
-  const offset = round * (BOX_W + GAP)
-  return left
-    ? { x: MARGIN + offset, cy, side: 'left' }
-    : { x: STAGE_WIDTH - MARGIN - BOX_W - offset, cy, side: 'right' }
+/** Abscisse (bord gauche) de la colonne d'un tour, côté gauche. */
+function columnX(g: Geometry, round: number) {
+  let x = g.margin
+  for (let r = 0; r < round; r++) x += g.widths[r] + g.gap
+  return x
 }
 
-/** Zone libre au centre de l'arbre (entre les deux demi-finales). */
-export const CENTER_ZONE = {
-  left: MARGIN + 2 * (BOX_W + GAP) + BOX_W + 24,
-  right: STAGE_WIDTH - MARGIN - 2 * (BOX_W + GAP) - BOX_W - 24,
-  top: TOP,
-  bottom: BOTTOM,
+/** Position d'un match : les deux moitiés de l'arbre convergent vers la finale au centre. */
+function boxOf(layout: Layout, { round, index }: MatchRef): Box {
+  const g = GEOMETRY[layout]
+  const w = g.widths[round]
+  const rowH = g.rowH[round]
+  if (round === ROUNDS - 1) return { x: STAGE_WIDTH / 2 - w / 2, cy: (g.top + g.bottom) / 2, w, rowH, side: 'center' }
+  const perSide = matchesInRound(round) / 2
+  const left = index < perSide
+  const cy = g.top + (((index % perSide) + 0.5) * (g.bottom - g.top)) / perSide
+  const x = columnX(g, round)
+  return left ? { x, cy, w, rowH, side: 'left' } : { x: STAGE_WIDTH - x - w, cy, w, rowH, side: 'right' }
+}
+
+/** Zone libre au centre de l'arbre, entre les deux dernières colonnes (palette, trophée, champion). */
+export function centerZone(layout: Layout) {
+  const g = GEOMETRY[layout]
+  const edge = columnX(g, ROUNDS - 2) + g.widths[ROUNDS - 2] + (layout === 'setup' ? g.gap : 20)
+  return { left: edge, right: STAGE_WIDTH - edge, top: g.top, bottom: g.bottom }
 }
 
 const roster = CHARACTERS
 const characterById = (id: string) => roster.find((c) => c.id === id)!
+
+/* Couleurs des connecteurs (attributs SVG) : filet du design system, or quand le vainqueur est passé. */
+const LINE = 'rgba(232,200,140,0.22)'
+const LINE_FILLED = 'rgba(232,200,140,0.42)'
+const LINE_WON = '#B9862F'
 
 interface Props {
   /** Mode configuration : seules les cases du premier tour existent */
@@ -62,7 +92,7 @@ interface Props {
   onSlotClick?: (slot: number) => void
   onSlotClear?: (slot: number) => void
   /** Personnage qui sera placé au clic, montré au survol d'une case vide */
-  slotHint?: string
+  slotHint?: { id: string; name: string }
   /** Actions sur un match prêt */
   onPlay?: (ref: MatchRef) => void
   onSimulate?: (ref: MatchRef) => void
@@ -71,7 +101,10 @@ interface Props {
 }
 
 export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint, onPlay, onSimulate, center }: Props) {
+  const layout: Layout = slots ? 'setup' : 'track'
   const matches = allMatches()
+  const zone = centerZone(layout)
+  const box = (ref: MatchRef) => boxOf(layout, ref)
 
   // Participant affiché sur une ligne : en configuration, les cases ; en tournoi, les entrants.
   const entrantAt = (ref: MatchRef, row: 0 | 1) => {
@@ -86,153 +119,169 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
     const id = slots[slot]
     return id ? { idx: slot, character: characterById(id), label: characterById(id).name } : null
   }
+  /** Un match de configuration dont les deux cases sont remplies : sa ligne s'éclaire */
+  const filled = (ref: MatchRef): boolean =>
+    !!slots &&
+    (ref.round === 0 ? !!slots[2 * ref.index] && !!slots[2 * ref.index + 1] : [0, 1].every((k) => filled({ round: ref.round - 1, index: 2 * ref.index + k })))
 
   return (
     <div className="pointer-events-none absolute inset-0">
       {/* Connecteurs */}
-      <svg className="pointer-events-none absolute inset-0" width="100%" height="100%">
+      <svg className="pointer-events-none absolute inset-0" width="100%" height="100%" aria-hidden>
         {matches
           .filter((m) => m.round > 0)
           .flatMap((parent) =>
             [0, 1].map((k) => {
               const child = { round: parent.round - 1, index: 2 * parent.index + k }
-              const c = boxOf(child)
-              const p = boxOf(parent)
-              const toRight = c.x < p.x
-              const x1 = toRight ? c.x + BOX_W : c.x
-              const x2 = toRight ? p.x : p.x + BOX_W
-              const y2 = p.cy + (parent.round === ROUNDS - 1 ? 0 : (k === 0 ? -1 : 1) * (ROW_H / 2))
-              const xm = (x1 + x2) / 2
-              const advanced = tournament?.results[matchKey(child)]
+              const c = box(child)
+              const p = box(parent)
+              const toRight = c.side === 'left'
+              const x1 = toRight ? c.x + c.w : c.x
+              const isFinal = parent.round === ROUNDS - 1
+              // Configuration : la finale est le panneau central, les lignes y entrent par son bord
+              const x2 =
+                layout === 'setup' && isFinal ? (toRight ? zone.left : zone.right) : toRight ? p.x : p.x + p.w
+              const y2 = p.cy + (layout === 'track' && !isFinal ? (k === 0 ? -1 : 1) * (p.rowH / 2) : 0)
+              const xm = layout === 'setup' && !isFinal ? x2 : (x1 + x2) / 2
+              const won = tournament?.results[matchKey(child)]
+              const lit = won || filled(child)
               return (
                 <path
                   key={`${matchKey(parent)}-${k}`}
                   d={`M ${x1} ${c.cy} H ${xm} V ${y2} H ${x2}`}
                   fill="none"
-                  stroke={advanced ? '#f59e0b' : '#44403c'}
-                  strokeWidth={advanced ? 2.5 : 1.5}
+                  stroke={won ? LINE_WON : lit ? LINE_FILLED : LINE}
+                  strokeWidth={won ? 2 : 1.5}
                 />
               )
             }),
           )}
+        {/* Configuration : un point à chaque jonction des tours suivants */}
+        {layout === 'setup' &&
+          matches
+            .filter((m) => m.round > 0 && m.round < ROUNDS - 1)
+            .map((m) => {
+              const p = box(m)
+              return <circle key={matchKey(m)} cx={p.x} cy={p.cy} r={3} fill={filled(m) ? LINE_FILLED : LINE} />
+            })}
       </svg>
 
       {center && (
         <div
           className="pointer-events-auto absolute flex flex-col items-center"
-          style={{ left: CENTER_ZONE.left, width: CENTER_ZONE.right - CENTER_ZONE.left, top: CENTER_ZONE.top }}
+          style={{ left: zone.left, width: zone.right - zone.left, top: zone.top, height: zone.bottom - zone.top }}
         >
           {center}
         </div>
       )}
 
       {matches.map((ref) => {
-        const box = boxOf(ref)
+        const b = box(ref)
+        if (b.w === 0) return null // configuration : les tours suivants ne sont que des jonctions
         const isFinal = ref.round === ROUNDS - 1
-        if (isFinal && slots) return null // la palette occupe le centre pendant la configuration
+        const leaf = ref.round === 0
         const st = tournament ? status(tournament, ref) : 'pending'
         const result = tournament?.results[matchKey(ref)]
+        const right = b.side === 'right'
         return (
           <div
             key={matchKey(ref)}
-            className={`pointer-events-auto absolute rounded-lg border bg-stone-900/90 shadow-lg ${
-              st === 'ready'
-                ? 'border-amber-500/80 shadow-amber-500/10'
-                : isFinal
-                  ? 'border-amber-300/50'
-                  : 'border-stone-700'
-            }`}
-            style={{ left: box.x, top: box.cy - BOX_H / 2, width: BOX_W, height: BOX_H }}
+            data-state={st === 'ready' ? 'ready' : result ? 'done' : 'pending'}
+            data-final={isFinal || undefined}
+            className="bracket-match pointer-events-auto absolute"
+            style={{ left: b.x, top: b.cy - b.rowH, width: b.w, height: b.rowH * 2 }}
           >
             {([0, 1] as const).map((row) => {
               const e = entrantAt(ref, row)
-              const won = result && e && result.winner === e.idx
-              const lost = result && e && result.winner !== e.idx
+              const won = !!(result && e && result.winner === e.idx)
+              const lost = !!(result && e && result.winner !== e.idx)
               const slot = 2 * ref.index + row
-              const editable = slots && ref.round === 0
+              const editable = !!slots && leaf
+              const seed = (
+                <span className="bracket-seed" aria-hidden>
+                  {slot + 1}
+                </span>
+              )
+              const portraitSize = leaf ? (layout === 'setup' ? 'h-8 w-8' : 'h-7 w-7') : 'h-6 w-6'
+              const content = e ? (
+                <>
+                  <span className={`bracket-face ${portraitSize}`} data-lost={lost || undefined}>
+                    <Portrait character={e.character} side={right ? 1 : 0} className="h-full w-full" />
+                  </span>
+                  <span className="bracket-name" data-won={won || undefined} data-lost={lost || undefined} data-leaf={leaf || undefined}>
+                    {e.label}
+                  </span>
+                  {won && <span className="bracket-hp">{result!.hpLeft} PV</span>}
+                </>
+              ) : editable ? (
+                <>
+                  <span className="bracket-empty group-hover:hidden">Case vide</span>
+                  {slotHint && (
+                    <span className="bracket-hint hidden group-hover:flex">
+                      <span className={`bracket-face ${portraitSize} opacity-70`}>
+                        <Portrait character={characterById(slotHint.id)} side={right ? 1 : 0} className="h-full w-full" />
+                      </span>
+                      + {slotHint.name}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="bracket-empty">À déterminer</span>
+              )
               return (
                 <div
                   key={row}
-                  onClick={editable ? () => onSlotClick?.(slot) : undefined}
-                  className={`group relative flex items-center gap-2 px-1.5 ${row === 0 ? 'border-b border-stone-800' : ''} ${
-                    editable ? 'cursor-pointer hover:bg-stone-800' : ''
-                  } ${box.side === 'right' ? 'flex-row-reverse text-right' : ''}`}
-                  style={{ height: ROW_H }}
+                  data-row={row}
+                  className={`bracket-row group ${right ? 'flex-row-reverse text-right' : ''}`}
+                  style={{ height: b.rowH }}
                 >
-                  {e ? (
-                    <>
-                      <div className={`h-6 w-6 shrink-0 overflow-hidden rounded ${lost ? 'opacity-30 grayscale' : ''}`}>
-                        <Portrait
-                          character={e.character}
-                          side={box.side === 'right' ? 1 : 0}
-                          className="h-full w-full"
-                        />
-                      </div>
-                      <span
-                        className={`flex-1 truncate text-sm ${
-                          won ? 'font-bold text-amber-200' : lost ? 'text-stone-600 line-through' : 'text-stone-200'
-                        }`}
-                      >
-                        {e.label}
-                      </span>
-                      {won && <span className="font-mono text-[10px] text-stone-400">{result.hpLeft} PV</span>}
-                      {editable && (
-                        <button
-                          onClick={(ev) => {
-                            ev.stopPropagation()
-                            onSlotClear?.(slot)
-                          }}
-                          className="hidden px-1 text-stone-500 hover:text-red-400 group-hover:block"
-                          title="Vider la case"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </>
-                  ) : editable ? (
-                    <>
-                      <span className="flex-1 text-xs italic text-stone-600 group-hover:hidden">Case vide</span>
-                      <span className="hidden flex-1 text-xs font-bold text-amber-300 group-hover:block">
-                        + {slotHint}
-                      </span>
-                    </>
+                  {editable ? (
+                    <button
+                      type="button"
+                      onClick={() => onSlotClick?.(slot)}
+                      aria-label={e ? `Case ${slot + 1} : ${e.label}, remplacer par ${slotHint?.name}` : `Case ${slot + 1} : placer ${slotHint?.name}`}
+                      className={`bracket-slot ${right ? 'flex-row-reverse' : ''}`}
+                    >
+                      {seed}
+                      {content}
+                    </button>
                   ) : (
-                    <span className="flex-1 text-xs italic text-stone-600">À déterminer</span>
+                    <>
+                      {leaf && seed}
+                      {content}
+                    </>
+                  )}
+                  {editable && e && (
+                    <button
+                      type="button"
+                      onClick={() => onSlotClear?.(slot)}
+                      className="bracket-clear hidden group-hover:flex"
+                      aria-label={`Vider la case ${slot + 1}`}
+                      title="Vider la case"
+                    >
+                      ×
+                    </button>
                   )}
                 </div>
               )
             })}
 
             {st === 'ready' && (
-              <div className="absolute -bottom-7 left-0 right-0 flex justify-center gap-1">
-                <button
-                  onClick={() => onPlay?.(ref)}
-                  className="rounded bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-stone-950 hover:bg-amber-400"
-                  title="Ouvrir l'écran d'affrontement"
-                >
-                  <Icon name="swords" /> Affronter
+              <div className="absolute -bottom-9 left-0 right-0 flex justify-center gap-1.5">
+                <button onClick={() => onPlay?.(ref)} className="bracket-action" data-primary title="Ouvrir l'écran d'affrontement">
+                  <Icon name="swords" className="h-4 w-4" />
+                  Affronter
                 </button>
-                <button
-                  onClick={() => onSimulate?.(ref)}
-                  className="rounded border border-amber-500/70 bg-stone-900 px-2 py-0.5 text-[11px] font-bold text-amber-200 hover:bg-amber-500/10"
-                  title="Simuler ce match directement"
-                >
-                  <Icon name="lightning" /> Simuler
+                <button onClick={() => onSimulate?.(ref)} className="bracket-action" title="Simuler ce match directement">
+                  <Icon name="lightning" className="h-4 w-4" />
+                  Simuler
                 </button>
               </div>
             )}
             {result && (
-              <span className="absolute -bottom-5 left-0 right-0 text-center text-[10px] text-stone-500">
-                {result.mode === 'simulated' ? (
-                  <>
-                    <Icon name="lightning" /> simulé
-                  </>
-                ) : (
-                  <>
-                    <Icon name="swords" /> joué
-                  </>
-                )}{' '}
-                · {result.turns} tours
+              <span className="bracket-result">
+                <Icon name={result.mode === 'simulated' ? 'lightning' : 'swords'} className="h-3.5 w-3.5" />
+                {result.mode === 'simulated' ? 'simulé' : 'joué'} · {result.turns} tours
               </span>
             )}
           </div>

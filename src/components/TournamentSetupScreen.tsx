@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import type { Character } from '../game/character'
+import tournamentImg from '../assets/menu-tournament.jpg'
+import { multiplier, percent } from '../game/combat'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
-import { Portrait, PortraitTile } from './Portrait'
+import { Portrait } from './Portrait'
 import { Icon } from './Icon'
+import { PrestigeButton } from './PrestigeButton'
+import { SkillDice } from './SkillDice'
 
 interface Props {
   slots: (string | null)[]
@@ -17,7 +20,11 @@ interface Props {
   onBettingChange: (betting: { enabled: boolean; names: [string, string] }) => void
 }
 
-/** Configuration de l'arbre : on choisit un personnage dans la palette puis on clique les cases. */
+/**
+ * Configuration de l'arbre (refonte 0.47.0) : on choisit un combattant dans la grande palette centrale
+ * (le « pinceau »), puis on clique les cases du premier tour, aux deux extrémités de l'arbre. Les lignes
+ * de l'arbre convergent vers la palette, qui porte aussi le compte et les actions (Compléter, Vider, Valider).
+ */
 export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, betting, onBettingChange }: Props) {
   const roster = CHARACTERS
   const ids = CHARACTER_IDS
@@ -36,127 +43,151 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
   const count = (id: string) => slots.filter((s) => s === id).length
 
   return (
-    <div className="fade-in relative h-full">
-      {/* Au-dessus de l'arbre, qui occupe toute la scène */}
-      <header className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 pr-20 pt-6">
+    <div className="fade-in relative isolate h-full">
+      {/* La porte de l'arène, très assombrie : le décor de l'onglet Tournoi, sous l'arbre */}
+      <img
+        src={tournamentImg}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
+        style={{ filter: 'brightness(0.2) saturate(0.7)' }}
+      />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
+
+      {/* Titre, paris : au-dessus de l'arbre, qui occupe toute la scène */}
+      <header className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
-          <button onClick={onBack} className="text-sm font-bold text-stone-400 hover:text-stone-100">
+          <button onClick={onBack} className="btn-tertiary h-8 px-3 text-[13px]">
             ← Retour
           </button>
-          <h1 className="font-display text-4xl font-extrabold text-amber-200">Configuration du tournoi</h1>
-          <p className="text-sm text-stone-400">
-            Placez les 16 participants à la main, ou complétez automatiquement les cases restantes. Les doublons sont
-            permis.
-          </p>
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <label className="flex cursor-pointer items-center gap-2 text-stone-300">
-              <input
-                type="checkbox"
-                checked={betting.enabled}
-                onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
-                className="h-4 w-4 accent-amber-500"
-              />
-              <Icon name="coin-pile" /> Paris entre
-            </label>
-            {([0, 1] as const).map((i) => [
-              i === 1 && <span key="et" className="text-stone-400">et</span>,
-              <input
-                key={i}
-                value={betting.names[i]}
-                disabled={!betting.enabled}
-                maxLength={16}
-                aria-label={`Parieur ${i + 1}`}
-                onChange={(e) => {
-                  const names: [string, string] = [...betting.names]
-                  names[i] = e.target.value
-                  onBettingChange({ ...betting, names })
-                }}
-                className={`w-32 rounded-md border bg-stone-950/80 px-2 py-1 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
-              />,
-            ])}
-          </div>
+          <h1 className="on-illus mt-2 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">
+            Configuration du tournoi
+          </h1>
         </div>
-        <div className="flex items-center gap-3 pt-6">
-          <span className={`font-mono text-lg font-bold ${complete ? 'text-emerald-400' : 'text-stone-300'}`}>
-            {filled} / {SLOTS}
-          </span>
-          <button
-            onClick={() => {
-              sfx.click()
-              onChange(fillSlots(slots, ids))
-            }}
-            disabled={complete}
-            className="rounded-md border border-amber-500/70 px-4 py-2 text-sm font-bold text-amber-200 hover:bg-amber-500/10 disabled:opacity-40"
-            title="Remplit les cases vides en équilibrant le roster ; les cases placées à la main sont conservées"
-          >
-            <Icon name="dice" /> Compléter
-          </button>
-          <button
-            onClick={() => onChange(Array(SLOTS).fill(null))}
-            disabled={filled === 0}
-            className="btn-tertiary"
-          >
-            Vider
-          </button>
-          <button
-            onClick={() => complete && onValidate(slots as string[])}
-            disabled={!complete}
-            className="ml-2 rounded-xl bg-amber-500 px-6 py-2.5 font-display text-lg font-extrabold tracking-wider text-stone-950 shadow-[0_4px_0_#92400e] hover:bg-amber-400 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400 disabled:shadow-none"
-          >
-            VALIDER L'ARBRE
-          </button>
+        <div className="flex items-center gap-2 pt-12 font-body text-[15px]">
+          <label className="flex cursor-pointer items-center gap-2 text-ink-2">
+            <input
+              type="checkbox"
+              checked={betting.enabled}
+              onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
+              className="h-4 w-4 accent-amber-500"
+            />
+            <Icon name="coin-pile" className="h-5 w-5" /> Paris entre
+          </label>
+          {([0, 1] as const).map((i) => [
+            i === 1 && (
+              <span key="et" className="text-ink-3">
+                et
+              </span>
+            ),
+            <input
+              key={i}
+              value={betting.names[i]}
+              disabled={!betting.enabled}
+              maxLength={16}
+              aria-label={`Parieur ${i + 1}`}
+              onChange={(e) => {
+                const names: [string, string] = [...betting.names]
+                names[i] = e.target.value
+                onBettingChange({ ...betting, names })
+              }}
+              className={`h-9 w-36 rounded-(--r-xs) border bg-surface-1 px-2 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
+            />,
+          ])}
         </div>
       </header>
 
       <Bracket
         slots={slots}
-        slotHint={brush.name}
+        slotHint={{ id: brush.id, name: brush.name }}
         onSlotClick={(slot) => set(slot, brushId)}
         onSlotClear={(slot) => set(slot, null)}
         center={
-          <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-amber-500/30 bg-stone-900/70 px-3 py-4">
-            <p className="text-center text-sm font-bold text-amber-200">① Choisissez un personnage</p>
-            {/* Un portrait par personnage (un par famille, 0.43.0), à la ligne si la zone centrale est étroite */}
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {CHARACTERS.map((c) => {
-                    return (
-                      <PortraitTile
-                        key={c.id}
-                        character={c}
-                        side={0}
-                        state={c.id === brushId ? 'selected' : 'idle'}
-                        onClick={() => {
-                          sfx.click()
-                          setBrushId(c.id)
-                        }}
-                        title={`${c.name} — ${c.race}, ${c.archetype}`}
-                        className="h-[54px] w-[54px]"
-                      >
-                        <span className="portrait-tile-name text-[10px]">{c.name}</span>
-                        <span className="absolute right-0.5 top-0.5 rounded-(--r-xs) bg-black/70 px-1 font-data text-[10px]">
-                          ×{count(c.id)}
-                        </span>
-                      </PortraitTile>
-                    )
-                  })}
+          <div className="bracket-panel flex h-full w-full flex-col px-6 pb-5 pt-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="font-display text-[22px] font-semibold tracking-wide text-ink-1">Les combattants</h2>
+              <p className="font-body text-[15px] text-ink-3">
+                Choisissez-en un, puis cliquez les cases de l'arbre. Les doublons sont permis.
+              </p>
             </div>
 
-            <div className="mt-1 flex w-full items-center gap-3 rounded-lg bg-stone-950/60 p-2">
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-amber-400">
+            {/* La palette : dix grandes cartes, le pinceau en or, le nombre de cases déjà prises */}
+            <ul className="mt-3 grid grid-cols-5 justify-items-center gap-x-3 gap-y-3" aria-label="Combattants">
+              {roster.map((c) => {
+                const n = count(c.id)
+                return (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sfx.click()
+                        setBrushId(c.id)
+                      }}
+                      data-brush={c.id === brushId || undefined}
+                      aria-pressed={c.id === brushId}
+                      aria-label={`${c.name}, ${c.race} · ${c.archetype}, ${n} case${n > 1 ? 's' : ''}`}
+                      title={`${c.name} — ${c.race}, ${c.archetype}`}
+                      className="roster-card roster-card-lg"
+                    >
+                      <Portrait character={c} side={0} className="roster-card-face" />
+                      <span className="roster-card-name">{c.name}</span>
+                      <span className="roster-card-count" data-used={n > 0 || undefined}>
+                        ×{n}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {/* Le pinceau : qui sera placé au clic */}
+            <div className="mt-4 flex items-center gap-4 rounded-(--r-xs) border border-line-1 bg-surface-1/80 p-3">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-(--r-xs) shadow-[0_0_0_2px_var(--gold-400)]">
                 <Portrait character={brush} side={0} className="h-full w-full" />
               </div>
-              <div className="min-w-0">
-                <p className="font-display text-lg font-extrabold leading-tight text-amber-200">{brush.name}</p>
-                <p className="truncate text-xs text-stone-400">
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[26px] font-semibold leading-none text-gold-200">{brush.name}</p>
+                <p className="mt-1 truncate font-body text-[15px] text-ink-2">
                   {brush.race} · {brush.archetype}
                 </p>
+                <p className="mt-1 font-data text-[13px] text-ink-3">
+                  {brush.maxHp} PV · {brush.twinDice ? '2 × ' : ''}d{brush.stats.damageDie} · esquive {percent(brush.stats.dodgeChance)} · critique{' '}
+                  {percent(brush.stats.critChance)} {multiplier(brush.stats.critMultiplier)}
+                </p>
               </div>
+              <SkillDice character={brush} size="sm" tooltip="above" align="right" />
             </div>
 
-            <p className="mt-1 text-center text-sm font-bold text-amber-200">② Cliquez les cases de l'arbre</p>
-            <p className="text-center text-xs text-stone-500">
-              à gauche et à droite pour y placer {brush.name}. Le × au survol vide une case.
-            </p>
+            {/* Compte et actions : Valider est la seule pièce prestige de l'écran */}
+            <div className="mt-auto flex items-center gap-3 pt-4">
+              <span className={`font-data text-[22px] font-semibold tabular-nums ${complete ? 'text-good' : 'text-ink-2'}`}>
+                {filled} / {SLOTS}
+              </span>
+              <button
+                onClick={() => {
+                  sfx.click()
+                  onChange(fillSlots(slots, ids))
+                }}
+                disabled={complete}
+                className="btn btn-sm"
+                title="Remplit les cases vides en équilibrant le roster ; les cases placées à la main sont conservées"
+              >
+                <Icon name="dice" className="btn-icon" />
+                <span>Compléter</span>
+              </button>
+              <button onClick={() => onChange(Array(SLOTS).fill(null))} disabled={filled === 0} className="btn-tertiary h-9 px-3">
+                Vider
+              </button>
+              <PrestigeButton
+                size="md"
+                className="ml-auto w-[280px]"
+                onClick={() => complete && onValidate(slots as string[])}
+                disabled={!complete}
+              >
+                <Icon name="trophy" className="btn-icon" />
+                <span>Valider l'arbre</span>
+              </PrestigeButton>
+            </div>
           </div>
         }
       />
