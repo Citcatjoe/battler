@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Character } from '../../game/character'
 import { emptyRecord, ratios, useHistory } from '../../game/history'
 import { CHARACTERS } from '../../game/roster'
-import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WinBar } from '../RecordBits'
+import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WIN_TEXT, WinBar } from '../RecordBits'
 import { STAT_LINES, StatSheet } from '../StatSheet'
 import { EventInfo } from '../EventInfo'
 import { Icon } from '../Icon'
@@ -129,11 +129,11 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
               <div className="grid grid-cols-3 gap-2">
                 <Kpi label="Combats" value={record.fights} />
                 <Kpi label="Victoires" value={record.wins} />
-                <Kpi label="% victoire" value={fmtPct(r.winRate)} accent="text-amber-300" />
+                <Kpi label="% victoire" value={fmtPct(r.winRate)} accent={r.winRate === null ? undefined : WIN_TEXT(r.winRate)} />
                 <Kpi label="Dégâts / combat" value={fmtNum(r.damagePerFight)} />
                 <Kpi label="Coups réussis" value={fmtPct(r.hitRate)} />
-                <Kpi label="Critiques" value={fmtPct(r.critRate)} accent="text-amber-200" />
-                <Kpi label="Esquives" value={fmtPct(r.dodgeRate)} accent="text-cyan-200" />
+                <Kpi label="Critiques" value={fmtPct(r.critRate)} accent="text-crit" />
+                <Kpi label="Esquives" value={fmtPct(r.dodgeRate)} accent="text-dodge" />
                 <Kpi label="Armure absorbée" value={record.absorbed} />
                 <Kpi label="Meilleur coup" value={record.bestHit || '—'} />
                 <Kpi
@@ -143,7 +143,7 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                     </>
                   }
                   value={record.tournamentWins}
-                  accent="text-amber-300"
+                  accent="text-gold-300"
                 />
                 <Kpi
                   label={
@@ -152,9 +152,9 @@ export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: 
                     </>
                   }
                   value={record.events}
-                  accent="text-violet-200"
+                  accent="text-arcane"
                 />
-                <Kpi label="PV regagnés" value={record.healed} accent="text-emerald-300" />
+                <Kpi label="PV regagnés" value={record.healed} accent="text-good" />
               </div>
             </div>
 

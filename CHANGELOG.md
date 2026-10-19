@@ -31,6 +31,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.5] — 2026-10-19
+
+### Modifié
+- **Statistiques** (design system, étape 5) : classement, matrice des confrontations, derniers combats, chiffres clés et adversaires de la fiche aux tokens (surfaces, filets `--line-1`, rayons 2 à 4 px). Texte en Alegreya Sans, chiffres en IBM Plex Mono alignés à droite, mentions en 13 px au minimum. **Taux de victoire en trois paliers** au lieu d'un dégradé : rouille sous 40 %, laiton de 40 à 59 %, vert à partir de 60 %, le chiffre toujours affiché (`winColor`, `WIN_TEXT`). Critiques en ambre `--crit`, esquives en `--dodge`, compétences en `--arcane` ; les tournois remportés gardent l'or (ce qui se gagne).
+
 ## [0.38.4] — 2026-10-19
 
 ### Modifié

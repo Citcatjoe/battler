@@ -96,9 +96,9 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
           {/* Tableau par personnage */}
           {/* Le tableau défile dans son cadre, en-tête figé, s'il ne tient pas dans l'écran */}
           {tab === "table" && (
-            <div className="scroll-panel min-h-0 flex-1 overflow-y-auto rounded-xl border border-stone-800">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-stone-900 text-xs text-stone-500">
+            <div className="scroll-panel min-h-0 flex-1 overflow-y-auto rounded-(--r-sm) border border-line-1">
+              <table className="w-full font-body text-[15px] text-ink-1">
+                <thead className="sticky top-0 z-10 bg-surface-1 text-[13px] text-ink-3">
                   <tr>
                     <th className="px-3 py-2 text-left font-normal">
                       Personnage
@@ -141,7 +141,7 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                     const r = rec(c.id);
                     const x = ratios(r);
                     return (
-                      <tr key={c.id} className="border-t border-stone-800/70">
+                      <tr key={c.id} className="border-t border-line-1">
                         <td className="px-3 py-1">
                           <button
                             onClick={() => onOpenCharacter(c.id)}
@@ -149,47 +149,47 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                           >
                             <MiniPortrait character={c} size="h-9 w-9" />
                             <span>
-                              <span className="block font-display font-bold text-stone-100 group-hover:text-amber-200">
+                              <span className="block font-display font-bold text-ink-1 group-hover:text-gold-300">
                                 {c.name}
                               </span>
-                              <span className="block text-xs text-stone-500">
+                              <span className="block text-[13px] text-ink-3">
                                 {c.race}
                                 {c.baseId ? " · variante" : ""}
                               </span>
                             </span>
                           </button>
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums">
+                        <td className="px-2 text-right font-data tabular-nums">
                           {r.fights}
                         </td>
-                        <td className="whitespace-nowrap px-2 text-right font-mono tabular-nums text-stone-400">
+                        <td className="whitespace-nowrap px-2 text-right font-data tabular-nums text-ink-2">
                           {r.wins} / {r.fights - r.wins}
                         </td>
                         <td className="px-2">
                           <WinBar rate={x.winRate} />
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums">
+                        <td className="px-2 text-right font-data tabular-nums">
                           {fmtNum(x.damagePerFight)}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums">
+                        <td className="px-2 text-right font-data tabular-nums">
                           {fmtPct(x.hitRate)}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums text-amber-200">
+                        <td className="px-2 text-right font-data tabular-nums text-crit">
                           {fmtPct(x.critRate)}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums text-cyan-200">
+                        <td className="px-2 text-right font-data tabular-nums text-dodge">
                           {fmtPct(x.dodgeRate)}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums">
+                        <td className="px-2 text-right font-data tabular-nums">
                           {r.absorbed}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums">
+                        <td className="px-2 text-right font-data tabular-nums">
                           {r.bestHit || "—"}
                         </td>
-                        <td className="px-2 text-right font-mono tabular-nums text-violet-200">
+                        <td className="px-2 text-right font-data tabular-nums text-arcane">
                           {r.events}
                         </td>
-                        <td className="px-3 text-right font-mono tabular-nums text-amber-300">
+                        <td className="px-3 text-right font-data tabular-nums text-gold-300">
                           {r.tournamentWins}
                         </td>
                       </tr>
@@ -206,22 +206,22 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
               key="matrix"
               className="fade-in flex min-h-0 flex-1 flex-col"
             >
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
+              <h2 className="mb-2 font-body text-[13px] font-bold uppercase tracking-widest text-ink-3">
                 Confrontations{" "}
                 <span className="font-normal normal-case tracking-normal">
                   · % de victoire de la ligne contre la colonne
                 </span>
               </h2>
               <div className="scroll-panel min-h-0 flex-1 overflow-auto">
-                <table className="text-sm">
-                  <thead className="sticky top-0 z-10 bg-[#0c0a09]">
+                <table className="font-body text-[15px] text-ink-1">
+                  <thead className="sticky top-0 z-10 bg-surface-0">
                     <tr>
                       <th />
                       {roster.map((c) => (
                         <th key={c.id} className="px-1 pb-1">
                           <div className="flex flex-col items-center gap-0.5">
                             <MiniPortrait character={c} size="h-8 w-8" />
-                            <span className="text-[10px] font-normal text-stone-500">
+                            <span className="text-[13px] font-normal text-ink-3">
                               {c.name}
                             </span>
                           </div>
@@ -232,7 +232,7 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                   <tbody>
                     {roster.map((row) => (
                       <tr key={row.id}>
-                        <th className="pr-3 text-right text-xs font-bold text-stone-300">
+                        <th className="pr-3 text-right font-body text-[14px] font-bold text-ink-2">
                           {row.name}
                         </th>
                         {roster.map((col) => {
@@ -246,7 +246,7 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                                     ? `${row.name} contre ${col.name} : ${vs.wins} victoire(s) sur ${vs.fights}`
                                     : "Pas encore de combat"
                                 }
-                                className="flex h-9 w-24 flex-col items-center justify-center rounded-md border border-stone-800 bg-stone-900/60 leading-tight"
+                                className="flex h-10 w-24 flex-col items-center justify-center rounded-(--r-xs) border border-line-1 bg-surface-1/60 leading-tight"
                                 style={
                                   rate === null
                                     ? undefined
@@ -255,10 +255,10 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
                                       }
                                 }
                               >
-                                <span className="font-mono font-bold">
+                                <span className="font-data text-[14px] font-medium">
                                   {fmtPct(rate)}
                                 </span>
-                                <span className="text-[10px] text-stone-500">
+                                <span className="text-[13px] text-ink-3">
                                   {vs ? `${vs.fights} comb.` : ""}
                                 </span>
                               </div>
@@ -276,15 +276,15 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
 
         {/* Historique */}
         {tab === "table" && (
-          <section className="flex min-h-0 flex-col rounded-xl border border-stone-800 bg-stone-900/40 p-4">
-            <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
+          <section className="flex min-h-0 flex-col rounded-(--r-sm) border border-line-1 bg-surface-1/40 p-4">
+            <h2 className="mb-2 font-body text-[13px] font-bold uppercase tracking-widest text-ink-3">
               Derniers combats{" "}
               <span className="font-normal normal-case tracking-normal">
                 · <Icon name="swords" /> joué, <Icon name="lightning" /> simulé
               </span>
             </h2>
             {history.matches.length === 0 ? (
-              <p className="text-sm italic text-stone-500">
+              <p className="font-body text-[15px] italic text-ink-3">
                 Aucun combat enregistré. Jouez ou simulez un affrontement !
               </p>
             ) : (
