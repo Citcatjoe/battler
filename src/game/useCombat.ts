@@ -377,7 +377,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
      * Rafale : tous les dés roulent ensemble, le second jaillit en tournoyant (Furie des vents), ou
      * apparaît dans sa couleur s'il est d'une autre sorte (le d6 de Coup de chance).
      */
-    async function rollVolley(attacks: Attack[], color?: string, status?: StatusId) {
+    async function rollVolley(attacks: Attack[], color?: string, status?: StatusId, relaunch = 1) {
       const { attacker, faces } = attacks[0]
       const shown = {
         ...IDLE_DICE,
@@ -390,7 +390,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       }
       // La rafale est un coup spécial dès son départ : le badge du statut qui l'arme (Furie des vents…)
       const tone = status && statusSpecialTone(status)
-      const specials = status && tone ? [{ key: specialId++, label: STATUSES[status].name, tone }] : undefined
+      const label = status && (relaunch > 1 ? `${STATUSES[status].name} ×${relaunch}` : STATUSES[status].name)
+      const specials = label && tone ? [{ key: specialId++, label, tone }] : undefined
       setDice({ ...shown, values: attacks.map(() => 0), rolling: true, specials })
       // Un seul dé lancé et un seul dé posé pour toute la rafale : un instant, un son
       sfx.diceRoll(900 / speedRef.current)
@@ -404,15 +405,26 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     const strikeSound = (attack: Attack) => (attack.dodged ? sfx.dodge() : attack.crit ? sfx.crit() : sfx.hit())
 
     /** Un coup de la rafale : pas de nouveau jet, élan court, impact presque immédiat. */
-    async function playVolleyStrike(t: number, index: number | undefined, attack: Attack, after: Pair<number>, afterStatuses: Pair<Status[]>) {
+    /** `skillFace`, `grouped` : un dé de la rafale qui déclenche une compétence (un 2 relance la Furie) ; voir `playAttack`. */
+    async function playVolleyStrike(
+      t: number,
+      index: number | undefined,
+      attack: Attack,
+      after: Pair<number>,
+      afterStatuses: Pair<Status[]>,
+      skillFace?: number,
+      grouped = false,
+    ) {
       setDice((d) => ({ ...d, active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier }))
       reshapedSpecial(attack)
       critSpecials(attack)
       if (attack.forfeited) {
+        // Le dé de la rafale ressort, son dé de l'en-tête s'allume, et sa compétence suit sans attente
+        pulseSkill(attack.attacker, skillFace)
         showHp(after)
         setStatuses(afterStatuses)
         push(attackLog(t, attack, fighters, after[other(attack.attacker)]))
-        await wait(250)
+        await wait(grouped ? 120 : 250)
         return
       }
       const key = strikeId++
@@ -659,10 +671,13 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
           case 'attack':
             if (volley && volley.strikes.includes(i)) {
               const index = volley.next++
-              await playVolleyStrike(beat.turn, volley.pointed ? index : undefined, beat.attack, beat.state.hp, display(beat.state.statuses))
+              const face = skillFaceAt(current.beats, fighters, i)
+              const grouped = beat.attack.forfeited === true && face !== undefined && current.beats[i + 1]?.type === 'event'
+              await playVolleyStrike(beat.turn, volley.pointed ? index : undefined, beat.attack, beat.state.hp, display(beat.state.statuses), face, grouped)
               const last = volley.next === volley.strikes.length
               if (last) volley = null
-              await wait(last ? 450 : 60)
+              if (grouped) snap = true
+              else await wait(last ? 450 : 60)
               break
             }
             {
@@ -769,10 +784,19 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
           case 'flurry': {
             // Le nom du statut flotte au-dessus du porteur, puis tous les dés roulent ensemble
             // et les coups partent en rafale, un par dé (voir `rollVolley`, `playVolleyStrike`).
-            await showEffects(beat.side, STATUSES[beat.status].name, [], () => {
+            // Furie instantanée : la compétence qui la pose vient d'afficher son nom ; la rafale part sans le répéter
+            const chained = current.beats[i - 1]?.type === 'event'
+            if (chained) {
               show(beat.state.statuses)
               push(flurryLog(beat.turn, beat.side, beat.status, beat.strikes, fighters))
-            })
+              await wait(300)
+            } else
+              await showEffects(beat.side, STATUSES[beat.status].name, [], () => {
+                show(beat.state.statuses)
+                push(flurryLog(beat.turn, beat.side, beat.status, beat.strikes, fighters))
+              })
+            // Surenchère : la même action relance la Furie, le badge monte (« Furie des vents ×2 », « ×3 »)
+            const relaunch = current.beats.slice(0, i + 1).filter((b) => b.type === 'flurry' && b.turn === beat.turn && b.side === beat.side).length
             // Tous les dés de la rafale roulent ensemble : ils sont lancés, donc plus imposables
             const strikes = [...current.beats.entries()]
               .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.attacker === beat.side)
@@ -784,6 +808,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
                 strikes.flatMap(([, b]) => (b.type === 'attack' ? [b.attack] : [])),
                 STATUSES[beat.status].look?.dieColor,
                 beat.status,
+                relaunch,
               )
             }
             break

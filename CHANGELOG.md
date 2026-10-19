@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.52.0] — 2026-10-20
+
+### Modifié
+- **Furie des vents relancée, mise en scène** (suite de la Furie instantanée de la 0.50.0, qui se relance sur un 2 pendant ses coups, 3 fois au plus par action) :
+  - le badge monte à chaque relance dans la même action : « Furie des vents », puis « Furie des vents ×2 », puis « ×3 » ;
+  - le 2 de la rafale qui relance la Furie (comme le 1 qui donne la Rage du sang) tombe avec sa compétence : le dé de l'en-tête s'allume et le nom jaillit sans attente ;
+  - la Furie instantanée n'affiche plus son nom deux fois (une fois pour la compétence, une fois pour la rafale).
+
 ## [0.51.0] — 2026-10-20
 
 ### Ajouté
