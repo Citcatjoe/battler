@@ -811,7 +811,7 @@ describe('compétences du 2 au dé (0.25.0)', () => {
     expect(drains).toBeGreaterThan(0)
   })
 
-  it('Furie des vents (0.48.0) : sur un 2, deux coups tout de suite, dans la même action', () => {
+  it('Furie des vents (0.50.0) : sur un 2, deux coups tout de suite, dans la même action', () => {
     let bursts = 0
     for (const r of duelsOf('gorak')) {
       r.beats.forEach((beat, i) => {
@@ -892,7 +892,7 @@ describe('compétences du 2 au dé (0.25.0)', () => {
   })
 
   it('durée : un statut posé pendant un tour ne se décompte pas à la fin de ce tour', () => {
-    // a fait toujours 1 et se pose une Brûlure d'un tour (décomptée en fin de tour) à chaque coup (0.48.0 :
+    // a fait toujours 1 et se pose une Brûlure d'un tour (décomptée en fin de tour) à chaque coup (0.50.0 :
     // la Furie des vents, instantanée, ne sert plus d'exemple)
     const burn: CharacterEvent = {
       id: 'f',
@@ -1206,7 +1206,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
         if (f.status !== 'luckyStrike') continue
         volleys++
         const own = r.fighters[f.side].stats.damageDie
-        // Cumulable (0.48.0) : un d6 par charge, toutes à la fois
+        // Cumulable (0.50.0) : un d6 par charge, toutes à la fois
         const stacks = r.beats[r.beats.indexOf(f) - 1].state.statuses[f.side].find((x) => x.id === 'luckyStrike')!.stacks
         const dice = [own, ...Array(stacks).fill(6)]
         expect(f.faces).toEqual(dice)
@@ -1424,7 +1424,7 @@ describe('ogre et druide (0.35.0)', () => {
     expect(mine.slice(2).every((a) => !a.modifiers?.length)).toBe(true)
   })
 
-  it('Luciole du druide : 4 charges posées sur l’adversaire (0.48.0)', () => {
+  it('Luciole du druide : 4 charges posées sur l’adversaire (0.50.0)', () => {
     for (const id of ['thaldrin'] as const) {
       const fly = createCharacter(id).events.find((e) => e.id === 'firefly')!
       expect(fly.effects).toEqual([{ type: 'applyStatus', status: 'firefly', stacks: 4, target: 'opponent' }])

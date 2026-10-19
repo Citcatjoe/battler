@@ -37,7 +37,7 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     2. Durées « début » de l'actif : −1 tour (étape statusDuration), expiration à 0 (statusExpire)
     2 bis. Statuts de l'ADVERSAIRE qui agissent au début de ce tour (`onOpponentTurnStart`, 0.45.0 :
        Aura de poison), dans l'ordre de pose : au même moment que le Poison que l'actif subit. Un
-       statut `stoppedByImmunity` n'a aucun effet si l'actif est immunisé (Aura d'immunité, 0.48.0).
+       statut `stoppedByImmunity` n'a aucun effet si l'actif est immunisé (Aura d'immunité, 0.50.0).
     3. Fenêtre « turnStart » (actif)
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
@@ -47,8 +47,8 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     (0.42.0, Pile ou face) : `headsTouches`, pile ouvre les fenêtres « hit » (actif) et « hurt »
     (défenseur), comme un coup qui touche, mais sans esquive, armure ni critique.
     Coups multiples : si l'actif porte un statut `extraStrikes` (Furie des vents, Coup de chance), il est
-    (Coup de chance, 0.48.0 : toutes ses charges, un d6 par charge, `strikeCharges: 'all'`).
-    Coups instantanés (`instantStrikes`, Furie des vents, 0.48.0) : une charge gagnée pendant l'action
+    (Coup de chance, 0.50.0 : toutes ses charges, un d6 par charge, `strikeCharges: 'all'`).
+    Coups instantanés (`instantStrikes`, Furie des vents, 0.50.0) : une charge gagnée pendant l'action
     frappe juste après le coup en cours, dans la même action (`extraStrikes` coups) ; une charge gagnée
     pendant ces coups enchaîne encore, INSTANT_CHAIN (3) fois au plus.
     consommé (étape flurry) et l'action compte plusieurs coups, chacun avec son dé (`extraDie` : le d3
@@ -209,7 +209,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Épines (6) : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : 6 dégâts directs à l'attaquant (ignorent armure et bouclier). Les Épines restent jusqu'au début du prochain tour du porteur. L'attaquant ne déclenche pas son propre `hurt`. (Le crochet `spentOnReaction`, une seule réaction puis disparition, reste disponible pour d'autres statuts.) |
 | Furie des vents contre Épines | **Chaque** coup qui touche le nain déclenche les Épines : avec 3 charges d'épines (permanentes depuis la 0.45.0), 3 + 3 = 6 dégâts renvoyés à l'orc. |
 | Furie des vents contre Esquive améliorée | Le premier coup est esquivé à coup sûr et consomme la charge ; le second est résolu normalement (tirage d'esquive). |
-| Furie des vents : un 2 pendant les deux coups | La Furie, instantanée depuis la 0.48.0, relance aussitôt deux coups dans la même action, 3 fois au plus. |
+| Furie des vents : un 2 pendant les deux coups | La Furie, instantanée depuis la 0.50.0, relance aussitôt deux coups dans la même action, 3 fois au plus. |
 | Vol de vie : deux 2 de suite, ou un 1 ou un 3 | Le jet suivant est encore un coup sacrifié : aucun coup n'est porté, rien n'est volé, la charge reste (non cumulable, 1 charge au plus). Elle attend le prochain vrai coup. |
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
 | Vol de vie contre Épines | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (étape 10), puis la fenêtre `hurt` du nain renvoie les Épines. |
@@ -220,7 +220,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Riposte et Vol de vie, Épines | Le coup touche le paladin : l'attaquant vole d'abord sa vie (étape 10), puis la Riposte renvoie la moitié des PV retirés, puis la fenêtre `hurt` (Épines). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
 | Rétribution : jauges | Chaque coup qui touche le paladin range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, épines, pièce) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la somme, au moins 1. |
 | Aura d'immunité | Posée sur un 3 : les malus du paladin sont d'abord purgés, puis toute pose de malus est bloquée (« protégé par Aura d'immunité »), sans usure. Une Purification adverse peut retirer l'aura. |
-| Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière. La Furie, instantanée depuis la 0.48.0, ne peut pas se faire voler son action : elle frappe dans celle où elle est posée. La pièce, elle, attend l'action suivante. |
+| Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière. La Furie, instantanée depuis la 0.50.0, ne peut pas se faire voler son action : elle frappe dans celle où elle est posée. La pièce, elle, attend l'action suivante. |
 | Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de puissance à 6 charges disparaît d'un coup. Une Furie ou un Vol de vie en attente peuvent aussi être purifiés. |
 | Coup de chance : le d3 | Un d3 tombe toujours sur 1, 2 ou 3 : il ne frappe jamais et déclenche toujours une compétence de la voleuse (un nouveau Coup de chance, Pile ou face ou l'aura). |
 | Pile ou face et Aura de décoction | La pièce ne frappe pas : pas de fenêtre `hit`, donc pas de poison de la décoction. C'est pourquoi Pile ou face vaut moins qu'un coup normal une fois l'aura en place. |

@@ -135,7 +135,7 @@ export interface StatusDef {
    */
   strikeCharges?: 'all' | 'one'
   /**
-   * Coups supplémentaires instantanés (0.48.0, Furie des vents) : une charge gagnée pendant l'action
+   * Coups supplémentaires instantanés (0.50.0, Furie des vents) : une charge gagnée pendant l'action
    * frappe dans cette même action, juste après le coup en cours, au lieu d'attendre l'action suivante.
    * Une charge gagnée pendant ces coups-là enchaîne encore (au plus INSTANT_CHAIN fois par action).
    */
@@ -175,7 +175,7 @@ export interface StatusDef {
   immune?: Polarity
   /**
    * Statut qui agit sur l'adversaire de son porteur (`onOpponentTurnStart`) et que l'immunité de la
-   * victime arrête aussi (0.48.0, Aura de poison contre l'Aura d'immunité) : aucun effet, une étape vide.
+   * victime arrête aussi (0.50.0, Aura de poison contre l'Aura d'immunité) : aucun effet, une étape vide.
    */
   stoppedByImmunity?: boolean
   /** Riposte : le prochain coup qui touche le porteur renvoie cette part des PV retirés (dégâts directs) ; consommé */
@@ -371,7 +371,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Un 2 pendant ces coups relance la Furie.',
     describe: () => 'Frappe deux fois tout de suite, chaque coup résolu à part',
     badge: () => '×2',
-    // 0.48.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
+    // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
     // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas.
     counter: 'stacks',
     stacking: 'add',
@@ -427,7 +427,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
         ? `À sa prochaine action, lance ${s.stacks} d6 en plus de son dé : ${s.stacks + 1} coups, résolus à part`
         : 'À sa prochaine action, lance un d6 en plus de son dé : deux coups, résolus à part',
     badge: (s) => `+${s.stacks}d6`,
-    // 0.48.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
+    // 0.50.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
     counter: 'stacks',
     stacking: 'add',
     extraStrikes: 1,
@@ -447,7 +447,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
         ? `Ses ${s.stacks} prochains coups encaissés renvoient chacun la moitié de leurs dégâts à l'attaquant`
         : "Le prochain coup encaissé renvoie la moitié de ses dégâts à l'attaquant",
     badge: () => '50 %',
-    // 0.48.0 : deux charges par Riposte (deux coups renvoyés), comme le Vol de vie
+    // 0.50.0 : deux charges par Riposte (deux coups renvoyés), comme le Vol de vie
     counter: 'stacks',
     stacking: 'add',
     maxStacks: 2,
@@ -477,7 +477,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     // 0.45.0 (choix de l'utilisateur) : elle agit au début du tour de l'ADVERSAIRE, dans la même étape
     // que le Poison qu'il subit, au lieu du début du tour du porteur. Toujours des dégâts directs.
-    // 0.48.0 : l'Aura d'immunité l'arrête aussi (l'utilisateur pensait l'immunité inefficace)
+    // 0.50.0 : l'Aura d'immunité l'arrête aussi (l'utilisateur pensait l'immunité inefficace)
     stoppedByImmunity: true,
     onOpponentTurnStart: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }],
   },
@@ -578,7 +578,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { motion: 'fireflies' },
     polarity: 'negative',
     summary: "Des lucioles trahissent le porteur : il ne peut plus esquiver, et chaque coup reçu lui inflige 2 dégâts de plus, avant l'armure. Chaque coup qui le touche en chasse une (une charge).",
-    // 0.48.0 : texte raccourci (l'audit le trouvait trop long)
+    // 0.50.0 : texte raccourci (l'audit le trouvait trop long)
     describe: (s) => `Ne peut plus esquiver, chaque coup reçu fait +2 ; ${s.stacks > 1 ? `${s.stacks} coups encaissés` : 'un coup encaissé'} les chassent`,
     badge: (s) => String(s.stacks),
     counter: 'stacks',

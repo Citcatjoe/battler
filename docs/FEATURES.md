@@ -107,7 +107,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Race | Dé | Compétence | Effet |
 | --- | --- | --- | --- |
 | Orc | 1 | Rage du sang | +3 PV (sans dépasser le maximum) ; Murzug a la sienne, +5 PV (0.36.5) |
-| Orc | 2 | Furie des vents | 🌪️ instantanée (0.48.0) : le 2 tombe, et l'orc frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus par action) |
+| Orc | 2 | Furie des vents | 🌪️ instantanée (0.50.0) : le 2 tombe, et l'orc frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus par action) |
 | Elfe | 1 | Œil de faucon | 🎯 Critique assuré : le prochain coup qui touche est critique |
 | Elfe | 2 | Esquive améliorée | 💨 sans durée (0.36.5) : le prochain coup reçu est esquivé à coup sûr, même si l'adversaire sacrifie d'abord ses coups |
 | Nain | 1 | Peau de pierre | 🛡️ +6 armure temporaire, cumulable, qui s'use en encaissant |
@@ -120,11 +120,11 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Humain | 1 | Peur | 😱 l'adversaire perd sa prochaine action (il tremble tant qu'il a peur) |
 | Humain | 2 | Purification | retire le dernier bonus posé de l'adversaire, avec toutes ses charges (aura comprise) ; s'il n'en a aucun, 5 dégâts directs (0.42.0) |
 | Humain | 3 | Aura de sainteté | 🕊️ permanente, cumulable jusqu'à 3 charges (0.42.0) : +2 PV par charge à la fin de chacun de ses tours |
-| Homme-lézard | 1 | Coup de chance | 🍀 à sa prochaine action, un d6 vert par charge en plus de son dé, chacun joué comme un coup à part et pouvant être critique ; cumulable (0.48.0) |
+| Homme-lézard | 1 | Coup de chance | 🍀 à sa prochaine action, un d6 vert par charge en plus de son dé, chacun joué comme un coup à part et pouvant être critique ; cumulable (0.50.0) |
 | Homme-lézard | 2 | Pile ou face | 🪙 à sa prochaine action, une pièce remplace son dé : pile, 20 dégâts directs qui comptent comme un coup qui touche (0.42.0) ; face, rien |
 | Homme-lézard | 3 | Aura de décoction | 🧪 permanente, cumulable : chaque coup qui touche pose 2 charges de poison par charge d'aura (0.36.4) |
 | Paladin | 1 | Rétribution | ⚖️ relâche la somme de ses 3 jauges (les PV des 3 derniers coups reçus) en dégâts directs, au moins 1 |
-| Paladin | 2 | Riposte | ⚔️ deux charges (0.48.0) : ses deux prochains coups encaissés renvoient chacun la moitié de leurs dégâts |
+| Paladin | 2 | Riposte | ⚔️ deux charges (0.50.0) : ses deux prochains coups encaissés renvoient chacun la moitié de leurs dégâts |
 | Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé, et son armure gagne 1 (0.42.0) (permanente, non cumulable) |
 | Mort-vivant | 3 | Aura de poison | ☣️ permanente, cumulable : au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge (dégâts directs ; ce n'est pas un Poison, rien ne l'arrête ; 0.45.0) |
 
@@ -182,7 +182,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 **Personnages à formes (druide, 0.35.0)** : il commence sous sa première forme, puis en change **au tout début de chacun de ses tours, sauf le premier** (étape `shift`, avant ses statuts). Ses compétences dépendent de sa forme (`CharacterEvent.form`).
 - **À l'écran** : fondu entre les deux silhouettes, avec éclair de sève, feuilles et son. L'en-tête du combat montre les trois dés de la forme en cours ; la sélection montre les deux rangées.
 - **Coups transformés** (`reshapesHit`) : au lieu de sacrifier le coup, la compétence le change. **Charge** frappe pour la valeur maximale du dé, sans critique possible ; **Coup de griffe** relance le dé en secret et ajoute 3. C'est ensuite un coup normal : esquive, modificateurs, armure, boucliers.
-- **Luciole** : elle pose 4 charges (0.48.0 ; 3 depuis la 0.35.1). Chaque coup reçu par le porteur prend +2 avant l'armure, une fois par coup (0.35.2). L'esquive du porteur tombe à 0 (une esquive imposée passe quand même). Chaque coup qui le touche retire une charge (`spentOnHurt`).
+- **Luciole** : elle pose 4 charges (0.50.0 ; 3 depuis la 0.35.1). Chaque coup reçu par le porteur prend +2 avant l'armure, une fois par coup (0.35.2). L'esquive du porteur tombe à 0 (une esquive imposée passe quand même). Chaque coup qui le touche retire une charge (`spentOnHurt`).
 - **Pourriture** : 1 dégât par charge au début de chacun des tours du porteur, sans durée. Seule une purge l'enlève.
 
 **L'ogre (0.35.0)** n'a aucune compétence : un 1, un 2 ou un 3 lui pose **Attente**. Il ne frappe pas, et l'état retombe au début de son tour suivant (`expiresAt: 'turnStart'`).
@@ -211,7 +211,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
-| 0.48.0 | Furie des vents instantanée (dé de Gorak de d10 à d8) ; Coup de chance cumulable ; l'Aura d'immunité arrête l'Aura de poison ; Écorce épaisse à 7, Riposte à deux charges, Luciole à 4 charges |
+| 0.50.0 | Furie des vents instantanée (dé de Gorak de d10 à d8) ; Coup de chance cumulable ; l'Aura d'immunité arrête l'Aura de poison ; Écorce épaisse à 7, Riposte à deux charges, Luciole à 4 charges |
 | 0.46.0 | Furie des vents cumulable en réserve ; barde : « ding » sur tout double, Siffloter et Fausse note frappent aussi leurs deux coups, esquive de 12 à 6 % |
 | 0.45.0 | Notes de l'utilisateur et audit : Épines permanentes (1 par charge), Vol de vie à deux charges, barde à 2 charges sur ses doubles 2 et 3 ; Aura de poison au début du tour adverse, avec le Poison ; textes clarifiés (Aura de poison, Aura mélodieuse, Fausse note) |
 | 0.42.0 | Audit des six compétences signalées : Pile ou face (pile à 20 qui touche, face vide), Aura de sainteté plafonnée à 3, Purification avec 5 dégâts de repli (`cleanse.orElse`), Aura d'immunité avec +1 d'armure (esquive d'Aldric de 5 à 2 %), Fleur de vie en Régénération 2 × 3 tours ; Rétribution inchangée |

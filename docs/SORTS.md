@@ -460,7 +460,7 @@ Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spe
 - **Le « ding » n'est pas vérifiable à l'oreille** par l'agent.
 - **Écorce épaisse** passe sous le seuil de « presque inutile » (+1,1, dans la marge).
 
-## 13. Quatrième passe : doutes de jeu, Furie instantanée, Coup de chance cumulable (0.48.0)
+## 13. Quatrième passe : doutes de jeu, Furie instantanée, Coup de chance cumulable (0.50.0)
 
 **Demande** : « son immunité ne l'a pas protégé des poisons » ; « Pile ou face ne tombe jamais sur pile (bug ?) » ; Coup de chance cumulable, un dé de plus par charge ; Furie des vents instantanée ; et trois compétences cassées à réparer en favorisant le spectacle, avec le tour des taux de victoire avant et après.
 
@@ -484,7 +484,7 @@ Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spe
 | Riposte à deux charges | Aldric | +4,5 | **retenue** : retours 61 → 63 % |
 | Luciole 4 charges / +3 dégâts | Thaldrin | +1,0 / +2,4 | **4 charges retenue** ; +3 met Ysolde contre Thaldrin à la limite |
 
-### Avant → après (0.47.0 → 0.48.0, roster de 10)
+### Avant → après (0.47.0 → 0.50.0, roster de 10)
 
 | Personnage | Victoires | Retours | Fins serrées |
 | --- | --- | --- | --- |

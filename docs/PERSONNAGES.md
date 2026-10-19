@@ -94,7 +94,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.46.0, Furie des vents cumulable** (demande de l'utilisateur) : chaque 2 ajoute une charge, sans durée ; chaque action en dépense une (deux coups), les autres restent en réserve. Valeur nette +6,9 → +7,1 : il faut un 2 pendant la rafale pour en avoir deux. Gorak de 49,8 à 50,4 %.
 
-**0.48.0, Furie des vents instantanée** (demande de l'utilisateur) : le 2 tombe, et Gorak frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus). Sans compensation, Gorak montait à 64 % (deux coups de d4 au lieu de son dé : encore 58 %) : son **dé passe de d10 à d8**, et Gorak revient à 50,9 %. La Furie vaut désormais +27,7 points : elle est le cœur de l'orc. Ses combats se décident plus vite (retours de 64 à 59 %).
+**0.50.0, Furie des vents instantanée** (demande de l'utilisateur) : le 2 tombe, et Gorak frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus). Sans compensation, Gorak montait à 64 % (deux coups de d4 au lieu de son dé : encore 58 %) : son **dé passe de d10 à d8**, et Gorak revient à 50,9 %. La Furie vaut désormais +27,7 points : elle est le cœur de l'orc. Ses combats se décident plus vite (retours de 64 à 59 %).
 
 ## Elfes : éviter et punir
 
@@ -220,7 +220,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
-**0.48.0, l'immunité arrête l'aura** : l'Aura d'immunité du paladin arrête désormais l'Aura de poison (le journal le dit). L'utilisateur, en jeu, pensait l'immunité inefficace. Aura de poison +5,4 → +4,7 ; Ervald 54,4 → 51,8 %.
+**0.50.0, l'immunité arrête l'aura** : l'Aura d'immunité du paladin arrête désormais l'Aura de poison (le journal le dit). L'utilisateur, en jeu, pensait l'immunité inefficace. Aura de poison +5,4 → +4,7 ; Ervald 54,4 → 51,8 %.
 
 ## Humains : contrôler
 
@@ -301,7 +301,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
-**0.48.0, Coup de chance cumulable** (demande de l'utilisateur) : chaque 1 ajoute une charge ; la prochaine action lance un d6 vert de plus par charge, chacun pouvant être critique. Les charges multiples sont rares (il faut un 1 sur le d6 du coup en plus) : +3,3 → +4,0. **Pile ou face** : sur ses traces, 52 piles pour 54 faces ; le libellé « PILE ! » est presque caché par la pièce, d'où l'impression qu'elle ne tombe jamais sur pile.
+**0.50.0, Coup de chance cumulable** (demande de l'utilisateur) : chaque 1 ajoute une charge ; la prochaine action lance un d6 vert de plus par charge, chacun pouvant être critique. Les charges multiples sont rares (il faut un 1 sur le d6 du coup en plus) : +3,3 → +4,0. **Pile ou face** : sur ses traces, 52 piles pour 54 faces ; le libellé « PILE ! » est presque caché par la pièce, d'où l'impression qu'elle ne tombe jamais sur pile.
 
 ## Paladin : rendre les coups
 
@@ -340,7 +340,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
-**0.48.0, Riposte à deux charges** : ses deux prochains coups encaissés renvoient chacun la moitié des dégâts. +2,7 → **+7,1** ; Aldric 49,0 → 54,1 %, ses combats se retournent un peu plus (retours de 61 à 62,5 %). À 100 % de renvoi, Thaldrin passait à 65 % contre lui.
+**0.50.0, Riposte à deux charges** : ses deux prochains coups encaissés renvoient chacun la moitié des dégâts. +2,7 → **+7,1** ; Aldric 49,0 → 54,1 %, ses combats se retournent un peu plus (retours de 61 à 62,5 %). À 100 % de renvoi, Thaldrin passait à 65 % contre lui.
 
 ## Ogre : taper, attendre, taper plus fort
 
@@ -418,7 +418,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Teinte** : feuillage roux (`hue-rotate(-28deg) saturate(1.25)`).
 - **Mesures** : 49,4 % (0.35.0). Il bat les prêtresses à 66 % : contre connu (EQUILIBRAGE.md).
 
-**0.48.0, Écorce à 7 et Luciole à 4** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**, elle n'est plus « presque inutile ») ; la Luciole pose 4 charges au lieu de 3, et son texte est raccourci (+2,5 → **+4,2**). Une écorce « épineuse » (2 renvoyés par coup) ou « de sève » (2 PV par coup) rapportait moins (+0,8 à +1,0) ; une Luciole à +3 faisait toucher la limite à Ysolde contre Thaldrin. Thaldrin 49,1 → 51,5 %.
+**0.50.0, Écorce à 7 et Luciole à 4** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**, elle n'est plus « presque inutile ») ; la Luciole pose 4 charges au lieu de 3, et son texte est raccourci (+2,5 → **+4,2**). Une écorce « épineuse » (2 renvoyés par coup) ou « de sève » (2 PV par coup) rapportait moins (+0,8 à +1,0) ; une Luciole à +3 faisait toucher la limite à Ysolde contre Thaldrin. Thaldrin 49,1 → 51,5 %.
 
 ## Barde : deux dés, et la musique sur les doubles
 

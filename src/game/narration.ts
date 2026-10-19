@@ -178,7 +178,7 @@ export function statusTickLog(
   effects: AppliedEffect[],
   fighters: Pair<Character>,
 ): Omit<LogEntry, 'id'> {
-  // Arrêté par l'immunité de la victime (0.48.0) : rien ne se passe, on dit pourquoi
+  // Arrêté par l'immunité de la victime (0.50.0) : rien ne se passe, on dit pourquoi
   if (effects.length === 0 && STATUSES[status].stoppedByImmunity)
     return { kind: 'status', side, text: `${statusLabel(status)} ${of(fighters[side].name)} · l'immunité de ${fighters[1 - side].name} l'arrête.` }
   // Un statut qui agit sur l'adversaire dit à qui il appartient : « Aura de poison d'Ervald · … »

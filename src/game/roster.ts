@@ -61,7 +61,7 @@ const gorak: CharacterDef = {
   archetype: 'Brute',
   // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique,
   // Rage du sang à 5 PV. Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
-  // Dé de d10 à d8 (0.48.0) : compensation de la Furie des vents instantanée (sinon 64 %)
+  // Dé de d10 à d8 (0.50.0) : compensation de la Furie des vents instantanée (sinon 64 %)
   stats: { maxHp: 57, damageDie: 8, armor: 0, dodgeChance: 0.05, critChance: 0.18, critMultiplier: 2 },
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.

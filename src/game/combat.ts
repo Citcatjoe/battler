@@ -899,7 +899,7 @@ export function simulateCombat(
         down = strikeOnce(attacker, k === 0 ? undefined : die)
         if (down !== undefined) return end(other(down), 'ko')
       }
-      // Coups instantanés (Furie des vents, 0.48.0) : une charge gagnée pendant l'action frappe tout de suite
+      // Coups instantanés (Furie des vents, 0.50.0) : une charge gagnée pendant l'action frappe tout de suite
       for (let chain = 0; chain < INSTANT_CHAIN; chain++) {
         const burst = att.statuses.find((s) => STATUSES[s.id].instantStrikes)
         if (!burst) break
