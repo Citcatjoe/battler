@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.1] — 2026-10-19
+
+Début de la refonte de l'interface selon le design system V1.4 (branche `design-system-v1`, plan en 13 étapes).
+
+### Ajouté
+- **Design system** : `docs/design-system.md` (source de vérité visuelle) et `docs/prompts-claude-code-BATTLER.md` (phases d'intégration).
+- **Tokens** du design system sur `:root` dans `src/index.css` (surfaces, texte, lignes, or, camps, données de jeu, formes, géométrie prestige), exposés en classes Tailwind (`bg-surface-1`, `text-ink-2`, `text-gold-300`, `bg-side-a`, `font-body`, `font-data`…). Polices Alegreya Sans et IBM Plex Mono chargées. Aucun composant ne les utilise encore : rendu identique (six écrans comparés au pixel près).
+
 ## [0.38.0] — 2026-10-18
 
 ### Ajouté

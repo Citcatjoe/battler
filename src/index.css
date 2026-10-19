@@ -3,6 +3,81 @@
 @theme {
   --font-display: "Cinzel", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* design system : texte courant et données chiffrées (classes font-body, font-data) */
+  --font-body: 'Alegreya Sans', 'Gill Sans', 'Segoe UI', sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+
+/* ---------- Design system V1.4 : tokens (docs/design-system.md, section 1) ----------
+   Source de vérité des couleurs, formes et polices de l'interface. Les composants y passent un
+   par un : tant qu'un composant n'est pas migré, il garde ses couleurs Tailwind.
+   --font-display existe déjà (Cinzel, même famille que le document) : il n'est pas redéfini. */
+:root {
+  /* surfaces */
+  --bg-0: #0E0B09;  --bg-1: #16120F;  --bg-2: #1F1914;  --bg-3: #2A221B;
+  --scrim: rgba(14, 11, 9, .80);          /* voile de panneau sur illustration, + backdrop-filter: blur(6px) */
+
+  /* texte */
+  --text-1: #F3EADB; --text-2: #BFB2A1; --text-3: #8C8174; --text-off: #5C5249;
+
+  /* lignes */
+  --line-1: rgba(232, 200, 140, .10); --line-2: rgba(232, 200, 140, .22);
+  --line-bronze: #6E4D1D; --line-active: #DDA94A;
+
+  /* or : réservé à l'action (ce qui se clique, se sélectionne ou se gagne) */
+  --gold-200: #F6DC9A; --gold-300: #EDC46A; --gold-400: #DDA94A;
+  --gold-500: #B9862F; --gold-700: #6E4D1D; --on-gold: #24170A;
+
+  /* camps : azur = camp A (gauche), cramoisi = camp B (droite) */
+  --side-a: #43B4EE; --side-a-hi: #8AD3F7; --side-a-track: #13283A;
+  --side-b: #EE4A72; --side-b-hi: #F68BA4; --side-b-track: #3A1520;
+
+  /* données de jeu */
+  --crit: #F5A54A;   /* ambre, distinct de l'or d'interface */
+  --dodge: #5ACFE3; --arcane: #A47BF0; --armor: #A9B4BF;
+  --good: #78C46A;  --bad: #E5484D;
+  /* taux de victoire : < 40 %, 40 à 59 %, ≥ 60 % (--good) */
+  --rate-low: #A86B4A; --rate-mid: #C9A65A;
+
+  /* forme */
+  --r-xs: 2px; --r-sm: 4px; --r-md: 8px; --r-round: 999px;
+  --hl: inset 0 1px 0 rgba(255, 240, 210, .06);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, .45);
+  --shadow-3: 0 16px 40px rgba(0, 0, 0, .60);
+  --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--gold-200);
+
+  /* géométrie prestige */
+  --cut-s: 6px; --cut-m: 10px; --cut-l: 14px;
+  --cut-seal: 28px;          /* octogone VS 96 px */
+  --cut-blade: 12px;         /* lame : 2 coins opposés */
+  --frame: #8A6424;          /* cadre bronze */
+  --frame-gap: 2px;          /* jour sombre = --bg-0 */
+  --tranche-btn: 4px; --tranche-tab: 3px;
+  --engrave: rgba(36, 23, 10, .30);
+  --engrave-gold: rgba(237, 196, 106, .40);
+
+  /* typographie : --font-display, --font-body et --font-data sont dans @theme */
+}
+
+/* Les mêmes tokens en classes Tailwind (bg-surface-1, text-ink-2, text-gold-300, bg-side-a/20,
+   font-body, font-data…). « inline » : la classe lit la variable de :root, sans la recopier.
+   Les rayons ne sont pas exposés ici : --radius-md de Tailwind vaut 6 px, le redéfinir
+   changerait les rounded-md existants ; utiliser rounded-(--r-md). */
+@theme inline {
+  --color-surface-0: var(--bg-0); --color-surface-1: var(--bg-1);
+  --color-surface-2: var(--bg-2); --color-surface-3: var(--bg-3);
+  --color-scrim: var(--scrim);
+  --color-ink-1: var(--text-1); --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3); --color-ink-off: var(--text-off);
+  --color-line-1: var(--line-1); --color-line-2: var(--line-2);
+  --color-line-bronze: var(--line-bronze); --color-line-active: var(--line-active);
+  --color-gold-200: var(--gold-200); --color-gold-300: var(--gold-300); --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500); --color-gold-700: var(--gold-700); --color-on-gold: var(--on-gold);
+  --color-side-a: var(--side-a); --color-side-a-hi: var(--side-a-hi); --color-side-a-track: var(--side-a-track);
+  --color-side-b: var(--side-b); --color-side-b-hi: var(--side-b-hi); --color-side-b-track: var(--side-b-track);
+  --color-crit: var(--crit); --color-dodge: var(--dodge); --color-arcane: var(--arcane);
+  --color-armor: var(--armor); --color-good: var(--good); --color-bad: var(--bad);
+  --color-rate-low: var(--rate-low); --color-rate-mid: var(--rate-mid);
 }
 
 body {

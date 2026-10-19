@@ -13,7 +13,7 @@
 ```
 src/
   main.tsx, App.tsx      point d'entrée ; App = machine à écrans + état du tournoi
-  index.css              thème (polices), keyframes d'animation
+  index.css              thème (polices), tokens du design system, keyframes d'animation
   env.d.ts               __APP_VERSION__ (injectée par vite.config.ts depuis package.json)
   assets/                images des personnages et de l'arène
   game/                  logique sans interface (sauf useCombat)
