@@ -173,6 +173,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 | Les dés (0.36.4) | Remettre ceux de la 0.36.0, avec leurs variantes tirées au hasard : exception à la règle 2, comme le critique en est une à la règle 3. |
 | Coup et Grondement (0.36.4) | Remplacés par `hit.wav` et `crit.wav`, déposés par l'utilisateur. |
 | Le volume (0.36.4) | « On n'entend rien » : plus de gain partout. |
+| La musique de fond (0.48.0) | Trois boucles déposées par l'utilisateur, « tapis sonore » des combats : une au hasard, quelle que soit l'arène, en boucle, « pas trop fort, bonne intégration ». Voir § 10. |
 
 ## 9. Index : qui joue quel son
 
@@ -252,4 +253,19 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Tous les écrans | Clic sur les boutons |
 | Présentation du duel | Choc du face-à-face |
 | Combat | tous les sons ci-dessus, puis KO et Victoire |
+
+## 10. Musique de fond des combats (0.48.0)
+
+Ce n'est pas un son au sens du § 2 : la musique ne signifie rien, elle installe l'ambiance. Les règles 1 à 3 et 8 ne s'y appliquent donc pas : elle se tire au hasard et dure tout le combat. Les règles 6 et 7 la gardent à sa place : sous les effets, sans jamais les couvrir.
+
+- **Quand** : pendant chaque combat joué (écran de combat), du premier instant jusqu'à l'écran de fin. Une boucle est tirée au hasard parmi les trois, **quelle que soit l'arène**, à chaque combat. Un combat simulé n'a pas de musique : il n'a pas d'écran de combat.
+- **Comment** :
+  - en boucle, avec un fondu d'entrée de 2,5 s et un fondu de sortie de 1,2 s quand on quitte l'écran ;
+  - au KO, elle s'efface à 25 % de son niveau en 0,3 s, pour que le KO et la fanfare de victoire ressortent ;
+  - elle ne suit pas la vitesse du combat (×2, ×4) ;
+  - elle est coupée avec tout le reste par le bouton du son.
+- **Niveau** : les trois boucles n'ont pas la même sonie à la source (−18,4, −9,7 et −8,7 LUFS intégrés, mesurés avec `ffmpeg -af ebur128`). Le jeu ramène chacune à **−29 LUFS** (`MUSIC_TARGET`), soit environ 15 dB sous les effets, égalisés vers −12 dB RMS. C'est le réglage « pas trop fort ». Il se règle à l'oreille dans `sound.ts`, à un seul endroit.
+- **Mixage** : la musique a son propre bus, à part du compresseur des effets. Sinon, chaque coup ferait « pomper » le compresseur et la musique avec lui.
+- **Fichiers** : `src/assets/music/battle-boss.mp3` (77,6 s, 155 bpm), `battle-orchestral.mp3` (40,3 s), `battle-drums.mp3` (22,3 s, 172 bpm). Ils sont gardés tels que livrés, sans réencodage, pour ne pas abîmer la jonction des boucles. Provenance : `src/assets/music/SOURCES.md`. Une nouvelle boucle se dépose dans ce dossier, avec sa sonie mesurée dans `MUSIC_LOUDNESS`. Un test vérifie qu'aucune piste n'en manque.
+- **Non vérifiable par l'agent** : le niveau réel, la propreté des jonctions de boucle et l'accord avec les effets sont à juger à l'oreille.
 

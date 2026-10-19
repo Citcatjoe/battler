@@ -31,6 +31,16 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.48.0] — 2026-10-20
+
+### Ajouté
+- **Musique de fond des combats** (demande de l'utilisateur : un « tapis sonore », une des trois boucles au hasard, quelle que soit l'arène, en boucle, pas trop fort ; `docs/SONS.md` § 10).
+  - **Fichiers** : les trois MP3 déposés à la racine sont rangés dans `src/assets/music/` sous des noms de rôle (`battle-boss`, `battle-orchestral`, `battle-drums`), sans réencodage, pour garder les jonctions de boucle propres. Provenance notée dans `src/assets/music/SOURCES.md`.
+  - **Lecture** (`music` dans `sound.ts`) : une piste tirée au hasard à chaque combat joué, en boucle. Fondu d'entrée de 2,5 s et fondu de sortie de 1,2 s à l'écran de fin ; au KO, elle s'efface à 25 %, pour que le KO et la fanfare ressortent. La vitesse du combat ne l'écourte pas, et le bouton du son la coupe aussi.
+  - **Niveau** : les sources vont de −18,4 à −8,7 LUFS (mesures ffmpeg ebur128). Chacune est ramenée à −29 LUFS (`MUSIC_TARGET`), environ 15 dB sous les effets.
+  - **Mixage** : un bus à part du compresseur des effets, que la musique ferait pomper à chaque coup.
+  - **Vérifié** : la piste se charge en combat (navigateur sans interface, aucune erreur), et un test contrôle les trois pistes et leur sonie. **Le rendu à l'oreille n'est pas vérifiable par l'agent**, ni le niveau réel ni les jonctions de boucle : à régler dans `MUSIC_TARGET` si besoin.
+
 ## [0.47.0] — 2026-10-20
 
 ### Modifié

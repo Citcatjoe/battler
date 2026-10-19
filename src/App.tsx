@@ -16,7 +16,7 @@ import {
   type MatchRef,
   type Tournament,
 } from './game/tournament'
-import { sfx } from './game/sound'
+import { music, sfx } from './game/sound'
 import {
   cancelBet,
   cancelMatch,
@@ -107,6 +107,14 @@ export default function App() {
     else setDuelWallets(w)
   }
   const oddsId = `${betKey}:${fighters[0].id}-${fighters[1].id}`
+
+  // Tapis sonore (docs/SONS.md § 10) : une boucle au hasard pendant chaque combat joué, en fondu
+  const fightScript = screen.name === 'fight' ? screen.script : null
+  useEffect(() => {
+    if (!fightScript) return
+    music.start()
+    return () => music.stop()
+  }, [fightScript])
 
   // Cotes du match, calculées une fois l'écran d'affrontement affiché (quelques centaines de combats simulés)
   useEffect(() => {

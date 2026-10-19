@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.47.0._
+_Dernière mise à jour : 2026-10-20, version 0.48.0._
 
 ## En bref
 
@@ -23,6 +23,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Lisibilité des textes flottants (placement, police, durée) | ✅ 0.32.1, police validée par l'utilisateur |
 | Mode triche (prochain dé imposé) et barre de commandes au style jeu | ✅ 0.33.0 ; barre vue à l'écran (0.34.0) |
 | Sons enregistrés (33 sons, 67 fichiers CC0), repli synthétisé, écourtés selon la vitesse | ⚠️ 0.36.0 jugée cacophonique ; refonte selon `docs/SONS.md` en 0.36.2 (20 sons, un fichier chacun) ; 19 fichiers choisis à l'oreille par l'utilisateur (0.36.3), Ronge encore synthétisé. Volumes à régler à l'oreille |
+| Musique de fond des combats (trois boucles au hasard, égalisées, bus à part) | ✅ 0.48.0, chargement vérifié en combat ; niveau et jonctions de boucle à juger à l'oreille (`SONS.md` § 10) |
 | Ogre (Attente) et druide (deux formes, six compétences) | ✅ 0.35.0, vus à l'écran (métamorphose, lucioles, sélection à 9 familles) ; sons non vérifiables. Icône de la Pourriture subie à fournir (elle reprend celle de l'aura) |
 | Écran du champion, compétences en dés, auras, overkill, aucun emoji, ressenti des coups | ✅ 0.34.0, vu à l'écran sauf les sons et la rafale de Rétribution (captures Firefox sans interface) |
 | Humains (Ysolde, Bérengère) et Hommes-lézards (Naraxes, Ssythra) | ✅ 0.30.0, rendu à valider à l'écran (pièce, dé vert du Coup de chance, un d6 depuis la 0.36.5, tremblement de la peur, sélection à 6 familles) |

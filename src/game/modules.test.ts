@@ -402,6 +402,14 @@ describe('aucun emoji dans les textes du jeu', () => {
   })
 })
 
+describe('musique de fond (docs/SONS.md § 10, 0.48.0)', () => {
+  it('trois boucles, chacune avec sa sonie mesurée pour être égalisée', async () => {
+    const sound = await import('./sound')
+    expect([...sound.MUSIC_TRACKS].sort()).toEqual(['battle-boss', 'battle-drums', 'battle-orchestral'])
+    for (const t of sound.MUSIC_TRACKS) expect(sound.MUSIC_LOUDNESS[t]).toBeLessThan(0)
+  })
+})
+
 describe('Sons (docs/SONS.md, 0.36.2)', () => {
   it('chaque fichier de src/assets/sounds porte un nom de son connu (un fichier par son)', async () => {
     const { SAMPLE_URLS, SOUND_NAMES } = await import('./sound')

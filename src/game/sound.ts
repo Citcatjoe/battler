@@ -13,6 +13,8 @@ const VOLUME = 1
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
+/** Bus de la musique : à part du compresseur des effets (qu'elle ferait pomper), coupé avec eux */
+let musicBus: GainNode | null = null
 let noiseBuf: AudioBuffer | null = null
 let muted = readMuted()
 /** Vitesse du combat (×1, ×2, ×4) : au-delà de ×1, les sons du combat sont écourtés d'autant. */
@@ -113,6 +115,9 @@ function audio() {
     const makeup = ctx.createGain()
     makeup.gain.value = 1.4
     master.connect(comp).connect(makeup).connect(ctx.destination)
+    musicBus = ctx.createGain()
+    musicBus.gain.value = muted ? 0 : 1
+    musicBus.connect(ctx.destination)
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
     const data = noiseBuf.getChannelData(0)
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
@@ -148,6 +153,89 @@ export function setMuted(value: boolean) {
     /* stockage indisponible : on garde juste l'état en mémoire */
   }
   if (ctx && master) master.gain.setTargetAtTime(value ? 0 : VOLUME, ctx.currentTime, 0.02)
+  if (ctx && musicBus) musicBus.gain.setTargetAtTime(value ? 0 : 1, ctx.currentTime, 0.05)
+}
+
+/* ---------- Musique de fond des combats (docs/SONS.md § 10) ---------- */
+
+/**
+ * Tapis sonore des combats : trois boucles (`src/assets/music/`), une tirée au hasard à chaque combat,
+ * quelle que soit l'arène, jouée en boucle sous les effets. Sa sonie a été mesurée (LUFS intégrés,
+ * `ffmpeg -af ebur128`) : chaque piste est ramenée à la même sonie, `MUSIC_TARGET`, nettement sous
+ * les effets (égalisés vers -12 dB RMS), pour rester un fond.
+ */
+const MUSIC_URLS: Record<string, string> = Object.fromEntries(
+  Object.entries(import.meta.glob<string>('../assets/music/*.mp3', { eager: true, query: '?url', import: 'default' })).map(
+    ([path, url]) => [path.split('/').pop()!.replace(/\.mp3$/, ''), url],
+  ),
+)
+export const MUSIC_TRACKS = Object.keys(MUSIC_URLS)
+export const MUSIC_LOUDNESS: Record<string, number> = { 'battle-boss': -18.4, 'battle-orchestral': -9.7, 'battle-drums': -8.7 }
+/** Sonie visée pour la musique (LUFS) : « pas trop fort », environ 15 dB sous les effets */
+const MUSIC_TARGET = -29
+const MUSIC_FADE_IN = 2.5
+const MUSIC_FADE_OUT = 1.2
+/** Sous le KO et la fanfare de victoire, la musique s'efface à cette part de son niveau */
+const MUSIC_DUCK = 0.25
+
+const musicBuffers: Partial<Record<string, Promise<AudioBuffer>>> = {}
+let current: { source: AudioBufferSourceNode; gain: GainNode; level: number } | null = null
+/** Jeton de la lecture demandée : un arrêt pendant le chargement annule la lecture */
+let musicTicket = 0
+
+const musicGain = (track: string) => 10 ** ((MUSIC_TARGET - (MUSIC_LOUDNESS[track] ?? -14)) / 20)
+
+function loadMusic(c: AudioContext, track: string) {
+  return (musicBuffers[track] ??= fetch(MUSIC_URLS[track])
+    .then((r) => r.arrayBuffer())
+    .then((data) => c.decodeAudioData(data)))
+}
+
+export const music = {
+  /** Lance une boucle tirée au hasard (ou `track`), en fondu ; remplace celle en cours. */
+  start(track = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)]) {
+    if (!track || !MUSIC_URLS[track]) return
+    music.stop()
+    const ticket = ++musicTicket
+    const { ctx: c } = audio()
+    loadMusic(c, track)
+      .then((buf) => {
+        if (ticket !== musicTicket || !musicBus) return
+        const source = c.createBufferSource()
+        source.buffer = buf
+        source.loop = true
+        const gain = c.createGain()
+        const level = musicGain(track)
+        gain.gain.setValueAtTime(0.0001, c.currentTime)
+        gain.gain.linearRampToValueAtTime(level, c.currentTime + MUSIC_FADE_IN)
+        source.connect(gain).connect(musicBus)
+        source.start()
+        current = { source, gain, level }
+      })
+      .catch(() => {
+        /* fichier illisible : le combat se joue sans musique */
+      })
+  },
+  /** Arrête la musique en fondu (fin du combat, retour au menu). */
+  stop() {
+    musicTicket++
+    if (!current || !ctx) return
+    const { source, gain } = current
+    const t = ctx.currentTime
+    gain.gain.cancelScheduledValues(t)
+    gain.gain.setValueAtTime(gain.gain.value, t)
+    gain.gain.linearRampToValueAtTime(0.0001, t + MUSIC_FADE_OUT)
+    source.stop(t + MUSIC_FADE_OUT + 0.05)
+    current = null
+  },
+  /** S'efface sous le KO et la victoire, pour qu'ils ressortent. */
+  duck() {
+    if (!current || !ctx) return
+    const t = ctx.currentTime
+    current.gain.gain.cancelScheduledValues(t)
+    current.gain.gain.setValueAtTime(current.gain.gain.value, t)
+    current.gain.gain.linearRampToValueAtTime(current.level * MUSIC_DUCK, t + 0.3)
+  },
 }
 
 export function setSoundSpeed(value: number) {
@@ -371,6 +459,7 @@ export const sfx = {
 
   /** Le perdant s'effondre. */
   ko() {
+    music.duck()
     if (play('ko')) return
     tone({ freq: 95, to: 28, dur: 1.3, gain: 0.9 })
     noise({ dur: 0.9, freq: 500, to: 80, gain: 0.5 })
