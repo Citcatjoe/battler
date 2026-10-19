@@ -61,7 +61,8 @@ const gorak: CharacterDef = {
   archetype: 'Brute',
   // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique,
   // Rage du sang à 5 PV. Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
-  stats: { maxHp: 57, damageDie: 10, armor: 0, dodgeChance: 0.05, critChance: 0.18, critMultiplier: 2 },
+  // Dé de d10 à d8 (0.48.0) : compensation de la Furie des vents instantanée (sinon 64 %)
+  stats: { maxHp: 57, damageDie: 8, armor: 0, dodgeChance: 0.05, critChance: 0.18, critMultiplier: 2 },
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -76,7 +77,7 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Gros dé (d10)', 'Critiques fréquents pour un orc (18 %)', 'Un jet raté le soigne (5 PV)'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (18 %)', 'Un jet raté le soigne (5 PV)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   events: [
@@ -381,7 +382,7 @@ const aldric: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
-      effects: [{ type: 'applyStatus', status: 'riposte', stacks: 1 }],
+      effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
     },
     {
       id: 'immunity-aura',
@@ -448,8 +449,8 @@ const thaldrin: CharacterDef = {
   },
   events: [
     { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] },
-    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 5 }] },
-    { id: 'firefly', name: 'Luciole', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 3, target: 'opponent' }] },
+    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 7 }] },
+    { id: 'firefly', name: 'Luciole', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 4, target: 'opponent' }] },
     { id: 'charge', name: 'Charge', nature: 'martial', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },
     { id: 'claw', name: 'Coup de griffe', nature: 'martial', trigger: 'naturalTwo', form: 'bear', reshapesHit: { value: 'reroll', bonus: 3 }, effects: [] },
     { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },

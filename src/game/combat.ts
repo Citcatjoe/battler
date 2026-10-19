@@ -53,6 +53,8 @@ export const INITIATIVE_DIE = 10
 
 /** Garde-fou si des stats rendaient le K.O. impossible (ex. 100 % d'esquive). */
 export const MAX_TURNS = 1000
+/** Enchaînements de coups instantanés au plus par action (une Furie gagnée pendant une Furie). */
+export const INSTANT_CHAIN = 3
 
 /** État des deux combattants à un instant du combat. */
 export interface Snapshot {
@@ -652,7 +654,9 @@ export function simulateCombat(
       for (const status of [...states[owner].statuses]) {
         const tick = STATUSES[status.id].onOpponentTurnStart?.(status)
         if (!tick || !states[owner].statuses.some((s) => s.id === status.id)) continue
-        const effects = applyEffects(owner, tick)
+        // Une victime immunisée (Aura d'immunité) arrête aussi ce statut s'il le prévoit : étape sans effet
+        const stopped = STATUSES[status.id].stoppedByImmunity && states[side].statuses.some((s) => STATUSES[s.id].immune === 'negative')
+        const effects = stopped ? [] : applyEffects(owner, tick)
         beats.push({ type: 'statusTick', turn, phase, side: owner, status: status.id, effects, state: snapshot() })
         const down = fallen() ?? checkBloodied()
         if (down !== undefined) return down
@@ -879,7 +883,8 @@ export function simulateCombat(
     } else {
       // Coups supplémentaires (Furie des vents, Coup de chance) : le statut est consommé avant le
       // premier coup, si bien qu'un nouveau déclenchement pendant ces coups vaut pour la prochaine action.
-      const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes)
+      // Les coups instantanés (Furie des vents) partent après le coup de l'action, pas avant (voir plus bas)
+      const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes && !STATUSES[s.id].instantStrikes)
       const own = effectiveStats(fighters[attacker], att.statuses).damageDie
       const faces = [own]
       if (flurry) {
@@ -893,6 +898,19 @@ export function simulateCombat(
       for (const [k, die] of faces.entries()) {
         down = strikeOnce(attacker, k === 0 ? undefined : die)
         if (down !== undefined) return end(other(down), 'ko')
+      }
+      // Coups instantanés (Furie des vents, 0.48.0) : une charge gagnée pendant l'action frappe tout de suite
+      for (let chain = 0; chain < INSTANT_CHAIN; chain++) {
+        const burst = att.statuses.find((s) => STATUSES[s.id].instantStrikes)
+        if (!burst) break
+        const def = STATUSES[burst.id]
+        const extra = Array.from({ length: def.extraStrikes ?? 1 }, () => def.extraDie ?? own)
+        att.statuses = consumeStatus(att.statuses, burst.id, 1)
+        beats.push({ type: 'flurry', turn, side: attacker, status: burst.id, strikes: extra.length, faces: extra, state: snapshot() })
+        for (const die of extra) {
+          down = strikeOnce(attacker, die)
+          if (down !== undefined) return end(other(down), 'ko')
+        }
       }
     }
 

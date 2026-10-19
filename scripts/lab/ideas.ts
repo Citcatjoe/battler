@@ -17,7 +17,7 @@ export interface LabIdea {
    * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`) ;
    * 4 = les six compétences signalées par l'audit 0.39.1, touches seules et kits compensés (SORTS.md § 10)
    */
-  series: 1 | 2 | 3 | 4 | 5 | 6
+  series: 1 | 2 | 3 | 4 | 5 | 6 | 7
   /** Personnage modifié (id du roster) */
   character: string
   name: string
@@ -670,6 +670,82 @@ const SERIES_6: LabIdea[] = [
   })),
 ]
 
+/* --- Série 7 : doutes de l'utilisateur (immunité et Aura de poison, Furie instantanée, Coup de chance
+   cumulable) et trois compétences faibles, en favorisant le spectacle (Écorce, Riposte, Luciole). § 13. --- */
+const LUCKY = STATUSES.luckyStrike
+const BARK = STATUSES.barkSkin
+const FIREFLY = STATUSES.firefly
+const SERIES_7: LabIdea[] = [
+  {
+    series: 7, id: 'gorak-furie-instantanee', character: 'gorak', name: 'Furie des vents instantanée', schema: 'Retouche (demande)', family: 'Rafale',
+    pitch: 'Sur un 2, l’orc frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups enchaîne encore.',
+    statuses: { labWindNow: { ...STATUSES.windFury, strikeCharges: undefined, instantStrikes: true } },
+    apply: swap('wind-fury', [{ type: 'applyStatus', status: 'labWindNow' as never, stacks: 1 }]),
+    watch: ['wind-fury'],
+  },
+  {
+    series: 7, id: 'naraxes-chance-cumulable', character: 'naraxes', name: 'Coup de chance cumulable', schema: 'Retouche (demande)', family: 'Fortune',
+    pitch: 'Chaque 1 ajoute une charge : la prochaine action lance un d6 de plus par charge, chacun pouvant être critique.',
+    statuses: { labLuckyStack: { ...LUCKY, stacking: 'add', maxStacks: undefined, strikeCharges: 'all' } },
+    apply: swap('lucky-strike', [{ type: 'applyStatus', status: 'labLuckyStack' as never, stacks: 1 }]),
+    watch: ['lucky-strike'],
+  },
+  {
+    series: 7, id: 'ervald-aura-arretee', character: 'ervald', name: 'Aura de poison arrêtée par l’immunité', schema: 'Clarification', family: 'Affliction',
+    pitch: 'L’Aura d’immunité du paladin arrête aussi l’Aura de poison.',
+    statuses: { labAuraStopped: { ...STATUSES.poisonAura, stoppedByImmunity: true } },
+    apply: swap('poison-aura', [{ type: 'applyStatus', status: 'labAuraStopped' as never, stacks: 1 }]),
+    watch: ['poison-aura'],
+  },
+  ...[7, 9].map((n) => ({
+    series: 7 as const, id: `thaldrin-ecorce-${n}`, character: 'thaldrin', name: `Écorce épaisse à ${n}`, schema: 'Petite touche', family: 'Garde',
+    pitch: `L’écorce absorbe ${n} points au lieu de 5.`,
+    apply: swap('bark-skin', [{ type: 'applyStatus', status: 'barkSkin', stacks: n }]),
+    watch: ['bark-skin'],
+  })),
+  {
+    series: 7, id: 'thaldrin-ecorce-epineuse', character: 'thaldrin', name: 'Écorce épineuse', schema: 'Spectacle', family: 'Garde + Représailles',
+    pitch: 'Tant que l’écorce tient, chaque coup encaissé renvoie 2 dégâts à l’attaquant : on voit l’écorce mordre.',
+    statuses: { labBarkThorns: { ...BARK, reactions: { hurt: () => [{ type: 'damage', amount: 2, target: 'opponent' }] } } },
+    apply: swap('bark-skin', [{ type: 'applyStatus', status: 'labBarkThorns' as never, stacks: 5 }]),
+    watch: ['bark-skin', 'labBarkThorns'],
+  },
+  {
+    series: 7, id: 'thaldrin-ecorce-seve', character: 'thaldrin', name: 'Écorce de sève', schema: 'Spectacle', family: 'Garde + Soin',
+    pitch: 'Tant que l’écorce tient, chaque coup encaissé lui rend 2 PV : la sève coule.',
+    statuses: { labBarkSap: { ...BARK, reactions: { hurt: () => [{ type: 'heal', amount: 2 }] } } },
+    apply: swap('bark-skin', [{ type: 'applyStatus', status: 'labBarkSap' as never, stacks: 5 }]),
+    watch: ['bark-skin', 'labBarkSap'],
+  },
+  ...[0.75, 1].map((ratio) => ({
+    series: 7 as const, id: `aldric-riposte-${Math.round(ratio * 100)}`, character: 'aldric', name: `Riposte à ${Math.round(ratio * 100)} %`, schema: 'Petite touche', family: 'Représailles',
+    pitch: `Le prochain coup qui le touche renvoie ${Math.round(ratio * 100)} % de ses dégâts au lieu de 50 %.`,
+    statuses: { [`labRiposte${Math.round(ratio * 100)}`]: { ...STATUSES.riposte, reflectsHit: ratio } },
+    apply: swap('riposte', [{ type: 'applyStatus', status: `labRiposte${Math.round(ratio * 100)}` as never, stacks: 1 }]),
+    watch: ['riposte'],
+  })),
+  {
+    series: 7, id: 'aldric-riposte-double', character: 'aldric', name: 'Riposte sur deux coups', schema: 'Spectacle', family: 'Représailles',
+    pitch: 'Deux charges : les deux prochains coups qui le touchent renvoient chacun la moitié de leurs dégâts.',
+    statuses: { labRiposte2: { ...STATUSES.riposte, stacking: 'add', maxStacks: 2 } },
+    apply: swap('riposte', [{ type: 'applyStatus', status: 'labRiposte2' as never, stacks: 2 }]),
+    watch: ['riposte'],
+  },
+  {
+    series: 7, id: 'thaldrin-luciole-4', character: 'thaldrin', name: 'Luciole à 4 charges', schema: 'Petite touche', family: 'Affliction',
+    pitch: '4 lucioles au lieu de 3.',
+    apply: swap('firefly', [{ type: 'applyStatus', status: 'firefly', stacks: 4, target: 'opponent' }]),
+    watch: ['firefly'],
+  },
+  {
+    series: 7, id: 'thaldrin-luciole-3-degats', character: 'thaldrin', name: 'Luciole à +3', schema: 'Petite touche', family: 'Affliction',
+    pitch: 'Chaque coup encaissé sous les lucioles fait +3 au lieu de +2.',
+    statuses: { labFirefly3: { ...FIREFLY, modifyIncoming: (damage) => damage + 3 } },
+    apply: swap('firefly', [{ type: 'applyStatus', status: 'labFirefly3' as never, stacks: 3, target: 'opponent' }]),
+    watch: ['firefly'],
+  },
+]
+
 export const IDEAS: readonly LabIdea[] = [
   {
     series: 1,
@@ -1121,5 +1197,6 @@ export const IDEAS: readonly LabIdea[] = [
   ...SERIES_4,
   ...SERIES_5,
   ...SERIES_6,
+  ...SERIES_7,
 ]
 

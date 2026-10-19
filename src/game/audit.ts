@@ -236,7 +236,10 @@ export function createAudit() {
         }
       }
       if (b.type === 'flurry') {
-        const strikes = r.beats.slice(i + 1).filter((x) => x.turn === b.turn && x.type === 'attack')
+        // Les coups de la rafale : jusqu'à la rafale suivante du même tour (Furie instantanée qui enchaîne, 0.48.0)
+        const rest = r.beats.slice(i + 1)
+        const nextBurst = rest.findIndex((x) => x.type === 'flurry')
+        const strikes = (nextBurst < 0 ? rest : rest.slice(0, nextBurst)).filter((x) => x.turn === b.turn && x.type === 'attack')
         const ended = r.turns === b.turn
         if (strikes.length !== b.strikes && !ended) flag('coups multiples : nombre de coups', r, i, `${strikes.length}`)
         // Chaque coup avec son dé : le premier avec le dé du porteur, les suivants avec le dé du statut (d6 de Coup de chance)
@@ -244,6 +247,12 @@ export function createAudit() {
           if (x.type === 'attack' && x.attack.faces !== b.faces[k]) flag('coups multiples : mauvais dé', r, i, `${x.attack.faces} au lieu de d${b.faces[k]}`)
         })
         if (b.side !== active(b.turn)) flag('Furie hors de son tour', r, i, '')
+        // Furie instantanée (0.48.0) : la rafale suit, dans la même action, le coup qui l'a déclenchée
+        if (STATUSES[b.status].instantStrikes) {
+          const before = r.beats.slice(0, i).reverse().find((x) => x.turn === b.turn && x.type === 'attack')
+          if (!before) flag('Furie instantanée sans coup déclencheur', r, i, '')
+          else see('furie instantanée')
+        }
         // Charges en réserve (0.46.0) : une seule est dépensée par action, les autres restent
         if (STATUSES[b.status].strikeCharges === 'one') {
           const before = find(prev.statuses[b.side], b.status)?.stacks ?? 0
@@ -323,7 +332,12 @@ export function createAudit() {
         if (before) flag('aura de poison après le coup', r, i, '')
         const st = find(prev.statuses[b.side], 'poisonAura')!
         const e = b.effects[0]
-        if (!e || e.type !== 'damage' || e.target === b.side || e.amount !== st.stacks)
+        // Arrêtée par l'immunité de la victime (0.48.0) : aucun effet, et seulement dans ce cas
+        const immune = prev.statuses[1 - b.side].some((x) => STATUSES[x.id].immune === 'negative')
+        if (immune && STATUSES.poisonAura.stoppedByImmunity) {
+          if (b.effects.length) flag('aura de poison malgré l’immunité', r, i, JSON.stringify(b.effects))
+          else see('aura arrêtée par l’immunité')
+        } else if (!e || e.type !== 'damage' || e.target === b.side || e.amount !== st.stacks)
           flag('aura de poison : montant ou cible', r, i, JSON.stringify(b.effects))
       }
     })
@@ -333,6 +347,8 @@ export function createAudit() {
       for (const e of b.event.effects) {
         if (e.type !== 'applyStatus' || e.result.kind !== 'applied') continue
         if (e.status !== 'windFury' && e.status !== 'lifesteal') continue
+        // Furie instantanée (0.48.0) : elle frappe dans l'action même, rien n'attend l'action suivante
+        if (STATUSES[e.status].instantStrikes) continue
         const side = e.target
         const nextTurn = r.beats.find((x) => x.turn === b.turn + 2)
         if (!nextTurn) continue
