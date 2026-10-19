@@ -187,7 +187,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Réglage 0.25.0** : le coup sacrifié coûte cher. Sans compensation, les morts-vivants tombaient à 43,5 %. Ervald passe de 56 à 60 PV, et Caldrec de 54 à 58.
 
-**Compétence du 3 : Aura de poison** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
+**Compétence du 3 : Aura glaciale** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
 
 **0.45.0, ce n'est pas un poison, mais elle agit avec lui** (note de l'utilisateur : « se résout quand ? comme le poison normal ? »). Avant, elle frappait au début du tour du **porteur** ; elle frappe désormais **au début du tour de l'adversaire, juste après ses poisons**, dans la même étape (choix de l'utilisateur). Elle reste des dégâts directs, sans décroître : une version qui pose de vrais Poisons a été mesurée, et l'Aura d'immunité du paladin les bloque (Ervald à **31 % contre Gauvain**) ; à deux charges, les poisons s'empilaient (Ervald battait Brokk à 67 %). Valeur nette +11,0 → **+13,8** (Ervald), +4,1 → **+6,2** (Caldrec) : elle frappe dès le tour où elle est posée. Avec le Vol de vie à deux charges, Ervald passe de 47,5 à **54,6 %** (roster de 10 personnages, 0.45.0).
 
@@ -418,7 +418,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Teinte** : feuillage roux (`hue-rotate(-28deg) saturate(1.25)`).
 - **Mesures** : 49,4 % (0.35.0). Il bat les prêtresses à 66 % : contre connu (EQUILIBRAGE.md).
 
-**0.50.0, Écorce à 7 et Luciole à 4** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**, elle n'est plus « presque inutile ») ; la Luciole pose 4 charges au lieu de 3, et son texte est raccourci (+2,5 → **+4,2**). Une écorce « épineuse » (2 renvoyés par coup) ou « de sève » (2 PV par coup) rapportait moins (+0,8 à +1,0) ; une Luciole à +3 faisait toucher la limite à Ysolde contre Thaldrin. Thaldrin 49,1 → 51,5 %.
+**0.50.0, Écorce à 7, Feux follets** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**) et pose désormais la même **Armure temporaire** que la Peau de pierre du nain (une seule règle, deux compétences). La Luciole, jugée ennuyeuse par l'utilisateur, laisse place aux **Feux follets** : une Brûlure de 3 pendant 3 tours sur l'adversaire, même valeur (+4,2), mais des dégâts qui se voient à chaque fin de tour. Écartées : Racines (−1,0, trop proche de la Peur d'Ysolde) et Ronces (−7). Thaldrin 49,1 → 51,4 %.
 
 ## Barde : deux dés, et la musique sur les doubles
 

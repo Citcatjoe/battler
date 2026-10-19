@@ -1424,11 +1424,19 @@ describe('ogre et druide (0.35.0)', () => {
     expect(mine.slice(2).every((a) => !a.modifiers?.length)).toBe(true)
   })
 
-  it('Luciole du druide : 4 charges posées sur l’adversaire (0.50.0)', () => {
-    for (const id of ['thaldrin'] as const) {
-      const fly = createCharacter(id).events.find((e) => e.id === 'firefly')!
-      expect(fly.effects).toEqual([{ type: 'applyStatus', status: 'firefly', stacks: 4, target: 'opponent' }])
-    }
+  it('Feux follets du druide (0.50.0) : une Brûlure de 3 pendant 3 tours, qui agit à la fin des tours de l’adversaire', () => {
+    const wisps = createCharacter('thaldrin').events.find((e) => e.id === 'firefly')!
+    expect(wisps.name).toBe('Feux follets')
+    expect(wisps.effects).toEqual([{ type: 'applyStatus', status: 'burn', stacks: 3, turns: 3, target: 'opponent' }])
+    let ticks = 0
+    for (const r of rosterCombats(4))
+      for (const b of ofType(r, 'statusTick')) {
+        if (b.status !== 'burn') continue
+        expect(b).toMatchObject({ phase: 'turnEnd' })
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'damage', amount: 3, target: b.side })])
+        ticks++
+      }
+    expect(ticks).toBeGreaterThan(20)
   })
 
   it('Pourriture : posée par chaque coup sous Aura de pourriture, elle ne s’estompe jamais', () => {
@@ -1446,10 +1454,14 @@ describe('ogre et druide (0.35.0)', () => {
     expect(ofType(r, 'statusExpire').some((b) => b.statuses.includes('rot'))).toBe(false)
   })
 
-  it("Écorce épaisse : un bouclier de 4 qui se cumule", () => {
-    const bark = [{ id: 'b', name: 'b', trigger: 'combatStart' as const, effects: [{ type: 'applyStatus' as const, status: 'barkSkin' as const, stacks: 4 }, { type: 'applyStatus' as const, status: 'barkSkin' as const, stacks: 4 }] }]
+  it("Écorce épaisse (0.50.0) : la même Armure temporaire que la Peau de pierre, qui se cumule", () => {
+    // Un seul statut pour les deux compétences : l'Écorce du druide (7) et la Peau de pierre du nain (6)
+    const pose = (id: string, skill: string) => createCharacter(id).events.find((e) => e.id === skill)!.effects[0]
+    expect(pose('thaldrin', 'bark-skin')).toEqual({ type: 'applyStatus', status: 'bonusArmor', stacks: 7 })
+    expect(pose('brokk', 'stoneskin')).toMatchObject({ type: 'applyStatus', status: 'bonusArmor' })
+    const bark = [{ id: 'b', name: 'b', trigger: 'combatStart' as const, effects: [{ type: 'applyStatus' as const, status: 'bonusArmor' as const, stacks: 4 }, { type: 'applyStatus' as const, status: 'bonusArmor' as const, stacks: 4 }] }]
     const r = run([testCharacter('a', {}, bark), testCharacter('b', { damageDie: 1, critChance: 1, critMultiplier: 6 })])
-    expect(statusOn(ofType(r, 'event')[0].state, 0, 'barkSkin')?.stacks).toBe(8)
+    expect(statusOn(ofType(r, 'event')[0].state, 0, 'bonusArmor')?.stacks).toBe(8)
     const hit = attacksOf(r).find((a) => a.attacker === 1)!
     expect(hit).toMatchObject({ raw: 6, damage: 1, shieldAbsorbed: 5 })
   })

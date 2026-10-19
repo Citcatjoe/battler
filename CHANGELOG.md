@@ -48,6 +48,11 @@ Quatrième passe sur les compétences : les doutes de l'utilisateur après ses c
 - **Luciole à 4 charges** (au lieu de 3), texte raccourci : +2,5 → **+4,2** ; on la voit agir plus longtemps.
 - Audit : contrôles de la Furie instantanée et de l'aura arrêtée par l'immunité. **Empreinte de non-régression mise à jour** (changement de règles voulu).
 
+### Retours de l'utilisateur sur cette passe
+- **Aura de poison renommée « Aura glaciale »** : le nom laissait croire à un Poison, dont elle n'a pas la règle. C'est le froid du chevalier liche ; halo bleu glacé. Règle inchangée. L'icône peinte reste celle de l'ancienne aura, en attendant la sienne.
+- **Écorce épaisse et Peau de pierre : une seule règle**. Le statut « Écorce épaisse » disparaît : les deux compétences posent la même **Armure temporaire** (7 pour le druide, 6 pour le nain). Équilibre inchangé (c'était déjà la même règle sous deux noms).
+- **Feux follets** au lieu de la Luciole (jugée ennuyeuse) : une **Brûlure de 3 pendant 3 tours** sur l'adversaire, à la fin de chacun de ses tours ; mêmes valeurs que la Luciole à 4 charges (+4,2). La Luciole reste au registre, inutilisée. L'icône de la Brûlure est celle des lucioles, en attendant la sienne. Écartées : Racines (perd sa prochaine action, −1,0, trop proche de la Peur) et Ronces (−7).
+
 ### Mesures
 - Roster de 10, 400 combats par duel : de **43,1 %** (Ysolde) à **54,1 %** (Aldric), aucun duel hors limites (avant : 44,0 à 54,6 %). Ysolde, la plus basse, perd encore 0,9 point : à traiter.
 - Spectacle : stable, sauf chez Gorak, dont les combats se décident plus vite (retours de 64 à 59 %, fins serrées de 41 à 38 %).

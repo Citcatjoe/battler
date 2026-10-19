@@ -120,7 +120,8 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [x] **Audit de résolution** : la pièce est lue dans le registre (0.42.0).
 - [x] **Deuxième passe** (0.45.0, SORTS.md § 11) : Aura de poison (texte), Vol de vie, aura de la barde, Épines, Fausse note (l'immunité de Gauvain est sans objet depuis son retrait).
 - [ ] **Ysolde** à 43,1 % (0.50.0), la plus basse du roster, à un point du plancher de 42 %.
-- [ ] **Libellé du résultat de Pile ou face** caché par la pièce (`FightScreen.tsx`, signalé à la session de l'interface).
+- [x] **Libellé du résultat de Pile ou face** (corrigé en 0.49.0 par la session de l'interface).
+- [ ] **Icônes à peindre** : Aura glaciale (l'ancienne icône est verte, celle du poison) et Brûlure des Feux follets (icône des lucioles en attendant).
 - [x] **Siffloter, Fausse note** (0.46.0) : les doubles frappent aussi leurs coups.
 - [ ] **Écorce épaisse** (Thaldrin) « presque inutile » à la marge ; **Ouverture** **Ouverture** de la barde « écrasante » ; ses doubles « rares à l'écran » (un sur cinq jets, par construction). **Ysolde** à 44,4 %, la plus basse du roster de 10.
 - [ ] **Raccourcis `npm run lab` et `npm run skills`**, une fois la refonte des sons terminée (`package.json`).

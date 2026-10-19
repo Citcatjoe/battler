@@ -515,3 +515,10 @@ Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spe
 - **Gorak change d'identité** : un dé de d8 et une Furie qui frappe tout de suite ; ses combats se décident plus vite.
 - **Le libellé de la pièce** reste à corriger dans `FightScreen.tsx`.
 
+### Retours de l'utilisateur sur la passe (0.50.0)
+
+- **Aura de poison → Aura glaciale** : le nom trompait (ce n'est pas un Poison). Le froid du chevalier liche ; même règle.
+- **Écorce épaisse = Armure temporaire** : « c'est de l'armure, non ? » Oui : les deux statuts avaient exactement la même règle. Le statut Écorce disparaît, les deux compétences (Peau de pierre 6, Écorce épaisse 7) posent l'Armure temporaire. Simplification sans effet sur l'équilibre.
+- **Feux follets au lieu de la Luciole** (« ennuyante ») : trois pistes mesurées (400 combats par duel) : Feux follets, Brûlure 3 pendant 3 tours, **0,0** ; Racines, l'adversaire perd sa prochaine action, −1,0 ; Ronces, ses 3 prochains coups lui coûtent 2 PV, −7,1. Feux follets retenus : même force, des dégâts visibles à chaque fin de tour adverse, la lignée des lucioles.
+- Mesures finales : de 43,0 % (Ysolde) à 54,0 % (Aldric) ; Feux follets +4,2, Écorce +2,4, Aura glaciale +4,6.
+

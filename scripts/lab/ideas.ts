@@ -744,6 +744,26 @@ const SERIES_7: LabIdea[] = [
     apply: swap('firefly', [{ type: 'applyStatus', status: 'labFirefly3' as never, stacks: 3, target: 'opponent' }]),
     watch: ['firefly'],
   },
+  // Remplacer la Luciole, jugée ennuyeuse par l'utilisateur : des effets qui se voient tout de suite
+  {
+    series: 7, id: 'thaldrin-ronces', character: 'thaldrin', name: 'Ronces', schema: 'Spectacle', family: 'Représailles',
+    pitch: 'Des ronces s’enroulent autour de l’adversaire : ses 3 prochains coups qui touchent lui coûtent chacun 2 PV.',
+    statuses: { labBrambles: { name: 'Ronces', polarity: 'negative', summary: 'Chaque coup qui touche coûte 2 PV au porteur.', describe: (st) => `Ses ${st.stacks} prochains coups lui coûtent 2 PV chacun`, badge: (st) => String(st.stacks), counter: 'stacks', stacking: 'add', reactions: { hit: () => [{ type: 'damage', amount: 2 }] }, spentOnHit: true } as StatusDef },
+    apply: swap('firefly', [{ type: 'applyStatus', status: 'labBrambles' as never, stacks: 3, target: 'opponent' }]),
+    watch: ['firefly', 'labBrambles'],
+  },
+  {
+    series: 7, id: 'thaldrin-racines', character: 'thaldrin', name: 'Racines', schema: 'Spectacle', family: 'Contrôle',
+    pitch: 'Des racines jaillissent du sol : l’adversaire, pris au piège, perd sa prochaine action.',
+    apply: swap('firefly', [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }]),
+    watch: ['firefly'],
+  },
+  {
+    series: 7, id: 'thaldrin-feux-follets', character: 'thaldrin', name: 'Feux follets', schema: 'Spectacle', family: 'Affliction',
+    pitch: 'Des feux follets s’accrochent à l’adversaire : il perd 3 PV à la fin de chacun de ses 3 prochains tours.',
+    apply: swap('firefly', [{ type: 'applyStatus', status: 'burn', stacks: 3, turns: 3, target: 'opponent' }]),
+    watch: ['firefly', 'burn'],
+  },
 ]
 
 export const IDEAS: readonly LabIdea[] = [

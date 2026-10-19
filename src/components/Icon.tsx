@@ -81,8 +81,9 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   riposte: 'riposte',
   immunityAura: 'immunity-aura',
   waiting: 'waiting',
-  barkSkin: 'bark-skin',
   firefly: 'fireflies',
+  // Brûlure des Feux follets (0.50.0) : l'icône des lucioles, en attendant la sienne
+  burn: 'fireflies',
   rotAura: 'rot-aura',
   // Provisoire : la Pourriture subie reprend l'icône de l'aura, en attendant la sienne (demandée)
   rot: 'rot-aura',

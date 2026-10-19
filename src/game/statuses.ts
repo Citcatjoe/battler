@@ -44,7 +44,6 @@ export type StatusId =
   | 'riposte'
   | 'retribution'
   | 'waiting'
-  | 'barkSkin'
   | 'firefly'
   | 'rotAura'
   | 'rot'
@@ -465,14 +464,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
 
   /* Auras : bonus permanents (sans durée) posés sur un 3 au dé, pour le reste du combat. */
   poisonAura: {
-    name: 'Aura de poison',
-    look: { aura: 'rgba(74,222,128,0.55)' },
+    name: 'Aura glaciale',
+    look: { aura: 'rgba(147,197,253,0.6)' },
     polarity: 'positive',
     // 0.45.0 : le texte dit que ce n'est pas un Poison (note de l'utilisateur). Un vrai poison serait
     // bloqué par l'Aura d'immunité et contré par la Régénération : Ervald tombait à 31 % contre Gauvain.
     summary:
-      "Au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge. Ce n'est pas un Poison : la régénération ne l'arrête pas, l'Aura d'immunité si. Permanente.",
-    describe: (s) => `Au début de chaque tour adverse, avec ses poisons, l'adversaire perd ${plural(s.stacks, 'PV')}, sauf s'il est immunisé`,
+      "Au début de chaque tour de l'adversaire, juste après ses poisons, le froid de la tombe lui fait perdre 1 PV par charge. L'Aura d'immunité l'arrête ; la régénération, non. Permanente.",
+    describe: (s) => `Au début de chaque tour adverse, le froid lui fait perdre ${plural(s.stacks, 'PV')}, sauf s'il est immunisé`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
     // 0.45.0 (choix de l'utilisateur) : elle agit au début du tour de l'ADVERSAIRE, dans la même étape
@@ -564,15 +563,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
 
   /* Druide (0.35.0). */
-  barkSkin: {
-    name: 'Écorce épaisse',
-    polarity: 'positive',
-    summary: "Une écorce qui absorbe des dégâts après l'armure, puis s'effrite. Se cumule.",
-    describe: (s) => `Absorbe encore ${plural(s.stacks, 'point')} de dégâts, puis s'effrite`,
-    badge: (s) => String(s.stacks),
-    stacking: 'add',
-    shield: true,
-  },
   firefly: {
     name: 'Luciole',
     look: { motion: 'fireflies' },

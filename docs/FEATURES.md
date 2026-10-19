@@ -126,7 +126,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Paladin | 1 | Rétribution | ⚖️ relâche la somme de ses 3 jauges (les PV des 3 derniers coups reçus) en dégâts directs, au moins 1 |
 | Paladin | 2 | Riposte | ⚔️ deux charges (0.50.0) : ses deux prochains coups encaissés renvoient chacun la moitié de leurs dégâts |
 | Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé, et son armure gagne 1 (0.42.0) (permanente, non cumulable) |
-| Mort-vivant | 3 | Aura de poison | ☣️ permanente, cumulable : au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge (dégâts directs ; ce n'est pas un Poison, rien ne l'arrête ; 0.45.0) |
+| Mort-vivant | 3 | Aura glaciale | ☣️ permanente, cumulable : au début de chaque tour de l'adversaire, juste après ses poisons, il perd 1 PV par charge (dégâts directs ; ce n'est pas un Poison, rien ne l'arrête ; 0.45.0) |
 
 **Déclencheurs disponibles**, du point de vue du porteur :
 
@@ -160,7 +160,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | 🦇 Vol de vie | bonus | une charge par coup : le coup qui touche rend les PV qu'il retire ; esquivé, rien (2 charges) | oui (mort-vivant) |
 | 🌪️ Furie des vents | bonus | une action à deux coups par charge ; charges cumulables en réserve (0.46.0) | oui (orc) |
 | 💨 Esquive améliorée | bonus | le prochain coup reçu est esquivé, sans tirage | oui (elfe) |
-| ☣️ Aura de poison | bonus | permanente : l'adversaire perd 1 PV par charge au début de chacun de ses tours, avec ses poisons ; ce n'est pas un Poison, rien ne l'arrête | oui (mort-vivant) |
+| ☣️ Aura glaciale | bonus | permanente : l'adversaire perd 1 PV par charge au début de chacun de ses tours, avec ses poisons ; ce n'est pas un Poison, rien ne l'arrête | oui (mort-vivant) |
 | 💪 Aura de puissance | bonus | permanente : +2 dégâts par charge | oui (orc) |
 | 😠 Aura d'intimidation | bonus | permanente : l'adversaire frappe 2 de moins par charge | oui (nain) |
 | 🦅 Aura de précision | bonus | permanente : multiplicateur de critique +1 par charge | oui (elfe) |
@@ -182,7 +182,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 **Personnages à formes (druide, 0.35.0)** : il commence sous sa première forme, puis en change **au tout début de chacun de ses tours, sauf le premier** (étape `shift`, avant ses statuts). Ses compétences dépendent de sa forme (`CharacterEvent.form`).
 - **À l'écran** : fondu entre les deux silhouettes, avec éclair de sève, feuilles et son. L'en-tête du combat montre les trois dés de la forme en cours ; la sélection montre les deux rangées.
 - **Coups transformés** (`reshapesHit`) : au lieu de sacrifier le coup, la compétence le change. **Charge** frappe pour la valeur maximale du dé, sans critique possible ; **Coup de griffe** relance le dé en secret et ajoute 3. C'est ensuite un coup normal : esquive, modificateurs, armure, boucliers.
-- **Luciole** : elle pose 4 charges (0.50.0 ; 3 depuis la 0.35.1). Chaque coup reçu par le porteur prend +2 avant l'armure, une fois par coup (0.35.2). L'esquive du porteur tombe à 0 (une esquive imposée passe quand même). Chaque coup qui le touche retire une charge (`spentOnHurt`).
+- **Feux follets** (0.50.0, au lieu de la Luciole) : une Brûlure de 3 pendant 3 tours sur l'adversaire. Chaque coup reçu par le porteur prend +2 avant l'armure, une fois par coup (0.35.2). L'esquive du porteur tombe à 0 (une esquive imposée passe quand même). Chaque coup qui le touche retire une charge (`spentOnHurt`).
 - **Pourriture** : 1 dégât par charge au début de chacun des tours du porteur, sans durée. Seule une purge l'enlève.
 
 **L'ogre (0.35.0)** n'a aucune compétence : un 1, un 2 ou un 3 lui pose **Attente**. Il ne frappe pas, et l'état retombe au début de son tour suivant (`expiresAt: 'turnStart'`).
@@ -211,7 +211,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
-| 0.50.0 | Furie des vents instantanée (dé de Gorak de d10 à d8) ; Coup de chance cumulable ; l'Aura d'immunité arrête l'Aura de poison ; Écorce épaisse à 7, Riposte à deux charges, Luciole à 4 charges |
+| 0.50.0 | Aura de poison renommée Aura glaciale ; Écorce épaisse et Peau de pierre posent la même Armure temporaire ; Feux follets au lieu de la Luciole ; Furie des vents instantanée (dé de Gorak de d10 à d8) ; Coup de chance cumulable ; l'Aura d'immunité arrête l'Aura de poison ; Écorce épaisse à 7, Riposte à deux charges, Luciole à 4 charges |
 | 0.46.0 | Furie des vents cumulable en réserve ; barde : « ding » sur tout double, Siffloter et Fausse note frappent aussi leurs deux coups, esquive de 12 à 6 % |
 | 0.45.0 | Notes de l'utilisateur et audit : Épines permanentes (1 par charge), Vol de vie à deux charges, barde à 2 charges sur ses doubles 2 et 3 ; Aura de poison au début du tour adverse, avec le Poison ; textes clarifiés (Aura de poison, Aura mélodieuse, Fausse note) |
 | 0.42.0 | Audit des six compétences signalées : Pile ou face (pile à 20 qui touche, face vide), Aura de sainteté plafonnée à 3, Purification avec 5 dégâts de repli (`cleanse.orElse`), Aura d'immunité avec +1 d'armure (esquive d'Aldric de 5 à 2 %), Fleur de vie en Régénération 2 × 3 tours ; Rétribution inchangée |

@@ -235,7 +235,7 @@ const ervald: CharacterDef = {
     },
     {
       id: 'poison-aura',
-      name: 'Aura de poison',
+      name: 'Aura glaciale',
       nature: 'arcane',
       trigger: 'naturalThree',
       forfeitsHit: true,
@@ -449,8 +449,9 @@ const thaldrin: CharacterDef = {
   },
   events: [
     { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] },
-    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'barkSkin', stacks: 7 }] },
-    { id: 'firefly', name: 'Luciole', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'firefly', stacks: 4, target: 'opponent' }] },
+    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 7 }] },
+    // 0.50.0 : Feux follets au lieu de la Luciole (jugée ennuyeuse par l'utilisateur) : une Brûlure de 3 pendant 3 tours
+    { id: 'firefly', name: 'Feux follets', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, turns: 3, target: 'opponent' }] },
     { id: 'charge', name: 'Charge', nature: 'martial', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },
     { id: 'claw', name: 'Coup de griffe', nature: 'martial', trigger: 'naturalTwo', form: 'bear', reshapesHit: { value: 'reroll', bonus: 3 }, effects: [] },
     { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },

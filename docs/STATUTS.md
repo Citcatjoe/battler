@@ -32,9 +32,9 @@ Chaque race a trois compétences, une sur un **1** au dé, une sur un **2**, une
 | Druide (homme) | Fleur de vie (Régénération 2 pendant 3 tours) | Écorce épaisse (bouclier de 5, cumulable) | Luciole (malus : plus d'esquive, +2 dégâts reçus) | soigner, protéger |
 | Druide (ours) | Charge (coup au maximum du dé, sans critique) | Coup de griffe (relance + 3) | Aura de pourriture (Pourriture permanente) | charger, pourrir |
 | Paladin | ⚖️ Rétribution (relâche ses 3 jauges de dégâts reçus, au moins 1) | ⚔️ Riposte (renvoie la moitié du prochain coup encaissé) | Aura d'immunité (purge ses malus, puis plus aucun malus et +1 d'armure, non cumulable) | rendre les coups |
-| Morts-vivants | ☠️ Souffle de la tombe (Poison 3 : 3, 2 puis 1 PV) | 🦇 Vol de vie (deux charges, 0.45.0 : chaque coup qui touche en use une et rend les PV retirés ; une esquive en use une) | ☣️ Aura de poison (1 dégât direct par charge à l'adversaire au début de son tour, cumulable) | ronger, drainer |
+| Morts-vivants | ☠️ Souffle de la tombe (Poison 3 : 3, 2 puis 1 PV) | 🦇 Vol de vie (deux charges, 0.45.0 : chaque coup qui touche en use une et rend les PV retirés ; une esquive en use une) | ☣️ Aura glaciale (1 dégât direct par charge à l'adversaire au début de son tour, cumulable) | ronger, drainer |
 
-**Auras (0.26.0)** : des bonus **permanents**, posés sur un 3 et sans durée, qui restent jusqu'à la fin du combat. Elles réutilisent les crochets existants, sans règle nouvelle dans le moteur. **Toutes les auras se cumulent** : chaque nouveau 3 ajoute une charge (+2 dégâts, −2 dégâts reçus, +1 au multiplicateur, ou 1 PV de plus par tour). L'intimidation et la précision étaient plafonnées à une charge en 0.26.0, faute de consigne. Elles sont cumulables depuis la 0.28.0 : c'était le meilleur levier d'équilibrage des nains et des elfes (voir [EQUILIBRAGE.md](EQUILIBRAGE.md)), et la règle devient la même pour toutes les races. L'Aura de poison frappe au **début du tour de son porteur**, avant son coup.
+**Auras (0.26.0)** : des bonus **permanents**, posés sur un 3 et sans durée, qui restent jusqu'à la fin du combat. Elles réutilisent les crochets existants, sans règle nouvelle dans le moteur. **Toutes les auras se cumulent** : chaque nouveau 3 ajoute une charge (+2 dégâts, −2 dégâts reçus, +1 au multiplicateur, ou 1 PV de plus par tour). L'intimidation et la précision étaient plafonnées à une charge en 0.26.0, faute de consigne. Elles sont cumulables depuis la 0.28.0 : c'était le meilleur levier d'équilibrage des nains et des elfes (voir [EQUILIBRAGE.md](EQUILIBRAGE.md)), et la règle devient la même pour toutes les races. L'Aura glaciale frappe au **début du tour de son porteur**, avant son coup.
 
 **Depuis la 0.27.0, aucun jet de 1, 2 ou 3 n'inflige de dégâts** : il déclenche seulement sa compétence (`forfeitsHit` sur les douze). Les compétences du 2 ont été données par l'utilisateur. Toutes, sauf Vol de vie, frappent normalement sur le 2 et préparent le tour suivant. **Vol de vie** sacrifie le coup du 2 (aucun dégât) pour gagner sa charge. Si un nouveau 2 tombe alors qu'une charge est déjà là, le coup est de nouveau sacrifié. La charge reste unique, et sa durée repart pour un tour.
 
@@ -45,7 +45,7 @@ Chaque race a trois compétences, une sur un **1** au dé, une sur un **2**, une
 | Orcs | Furie des vents, Aura de puissance | Brèche, Étourdi |
 | Elfes | Critique assuré, Esquive améliorée, Aura de précision | Vulnérable |
 | Nains | Armure temporaire, Épines, Aura d'intimidation | — |
-| Morts-vivants | Poison, Vol de vie, Aura de poison | Affaibli |
+| Morts-vivants | Poison, Vol de vie, Aura glaciale | Affaibli |
 
 Un statut peut ponctuellement être emprunté par une autre race, mais il garde une race « maison ». Brûlure et Garde sacrée attendent une future race. La Régénération est entrée en jeu en 0.42.0, posée par la Fleur de vie du druide.
 
@@ -99,12 +99,12 @@ Une condition fausse ne consomme pas de hasard : la `chance` d'un événement n'
 | Statut | Polarité | Effet | Cumul | Plafond | En jeu |
 | --- | --- | --- | --- | --- | --- |
 | 🎯 Critique assuré | bonus | le prochain coup qui touche est critique (une charge par coup) | add | — | oui · elfes (Œil de faucon), sur soi |
-| 🛡️ Armure temporaire | bonus | bouclier qui absorbe après l'armure, s'use d'autant | add | — | oui · nains (Peau de pierre), sur soi |
+| 🛡️ Armure temporaire | bonus | bouclier qui absorbe après l'armure, s'use d'autant | add | — | oui · nain (Peau de pierre, 6) et druide (Écorce épaisse, 7) : une seule règle depuis la 0.50.0 |
 | 💚 Régénération | bonus | rend des PV au début de chaque tour du porteur | refresh | — | oui · druide (Fleur de vie, sur un 1, forme humaine), sur soi |
 | ☠️ Poison | malus | au début de chaque tour du porteur, lui fait perdre autant de PV que de charges, en ignorant l'armure, puis perd une charge (`decays`, 0.36.4) : poison 3 = 3 + 2 + 1 PV | add | — | oui · morts-vivants (Souffle de la tombe), sur l'adversaire |
 | 🥀 Affaibli | malus | les coups du porteur infligent moins avant l'armure | refresh | — | à venir |
 | 💔 Brèche | malus | armure du porteur réduite | add | 3 | à venir |
-| 🔥 Brûlure | malus | perte de PV à la **fin** des tours du porteur ; durée décomptée en fin de tour | refresh | — | à venir |
+| 🔥 Brûlure | malus | perte de PV à la **fin** des tours du porteur ; durée décomptée en fin de tour | refresh | — | oui · druide (Feux follets, sur un 3, forme humaine), sur l'adversaire (0.50.0) |
 | 🩸 Vulnérable | malus | +N dégâts reçus avant l'armure | add | 3 | à venir |
 | 💫 Étourdi | malus | perd son action (une charge par tour perdu) | add | 1 | à venir |
 | 🌵 Épines | bonus | **chaque** coup encaissé renvoie 1 dégât direct par charge à l'attaquant ; permanentes depuis la 0.45.0 (demande de l'utilisateur ; avant : 6 pendant 1 tour) | add | — | oui · nains (sur un 2), sur soi |
@@ -122,8 +122,7 @@ Une condition fausse ne consomme pas de hasard : la `chance` d'un événement n'
 | 🪙 Pile ou face | bonus | à la prochaine action, une pièce remplace le dé : pile, 20 dégâts directs qui comptent comme un coup qui touche (`headsTouches`, 0.42.0) ; face, rien (`coinToss`) | refresh | 1 | oui · hommes-lézards (sur un 2), sur soi |
 | ⚖️ Rétribution | bonus | 3 jauges : les PV retirés par les 3 derniers coups reçus (`fillsOnHurt`, `slots`) ; relâchées par l'effet `release` ; affiche leur somme | refresh | — | oui · paladin, sur soi |
 | Attente | malus | l'ogre a fait 1, 2 ou 3 : il n'a pas frappé ; retombe au début de son tour suivant (`expiresAt: 'turnStart'`) | refresh | 1 | oui · ogre (sur 1, 2, 3), sur soi |
-| Écorce épaisse | bonus | bouclier (`shield`) : absorbe des dégâts après l'armure ; le druide en pose 7 (0.50.0 ; 5 avant) | add | — | oui · druide (sur un 2, forme humaine), sur soi |
-| Luciole | malus | esquive à 0 (`modifyStats`), +2 dégâts reçus par coup (`modifyIncoming`) ; une charge part à chaque coup encaissé (`spentOnHurt`) | add | — | oui · druide humain (sur un 3), 3 charges sur l'adversaire ; le druide en pose 4 charges (0.50.0) |
+| Luciole | malus | esquive à 0 (`modifyStats`), +2 dégâts reçus par coup (`modifyIncoming`) ; une charge part à chaque coup encaissé (`spentOnHurt`) | add | — | non (remplacée par les Feux follets en 0.50.0) |
 | Aura de pourriture | bonus, aura | chaque coup qui touche pose ses charges de Pourriture sur la cible (`reactions.hit`) ; permanente | add | — | oui · druide ours (sur un 3), sur soi |
 | Pourriture | malus | 1 dégât direct par charge au début de chaque tour du porteur ; sans durée, seule une purge l'enlève | add | — | oui · posée par l'Aura de pourriture |
 | ⚔️ Riposte | bonus | chaque charge : le prochain coup qui touche le porteur lui renvoie 50 % des PV retirés (`reflectsHit`) ; sans durée. Deux charges par Riposte (0.50.0) | add | 2 | oui · paladin (sur un 2), sur soi |

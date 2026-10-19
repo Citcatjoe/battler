@@ -36,7 +36,7 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     1. Effets de début de tour des statuts de l'actif (onTurnStart) : bonus, puis malus
     2. Durées « début » de l'actif : −1 tour (étape statusDuration), expiration à 0 (statusExpire)
     2 bis. Statuts de l'ADVERSAIRE qui agissent au début de ce tour (`onOpponentTurnStart`, 0.45.0 :
-       Aura de poison), dans l'ordre de pose : au même moment que le Poison que l'actif subit. Un
+       Aura glaciale), dans l'ordre de pose : au même moment que le Poison que l'actif subit. Un
        statut `stoppedByImmunity` n'a aucun effet si l'actif est immunisé (Aura d'immunité, 0.50.0).
     3. Fenêtre « turnStart » (actif)
   Phase 2 · ACTION (actif)
@@ -214,7 +214,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
 | Vol de vie contre Épines | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (étape 10), puis la fenêtre `hurt` du nain renvoie les Épines. |
 | Coup sacrifié contre Esquive améliorée ou Épines | Le coup n'a pas lieu : il ne consomme ni l'esquive imposée ni les Épines. |
-| Aura de poison (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 dégâts directs à l'adversaire, montrés avant son coup. Le K.O. éventuel tombe avant l'action. |
+| Aura glaciale (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 dégâts directs à l'adversaire, montrés avant son coup. Le K.O. éventuel tombe avant l'action. |
 | Aura de puissance (2 charges) sur un critique de 5 ×2 | Critique d'abord (10), puis sortant : 10 + 4 = 14, puis l'armure. Chaque coup d'une Furie des vents reçoit le bonus. |
 | Aura de puissance (1) contre Aura d'intimidation | Sortant puis entrant : un 6 devient 6 + 2 − 2 = 6. Un 1 contre l'intimidation seule : 1 − 2 = −1, plancher à 1. |
 | Riposte et Vol de vie, Épines | Le coup touche le paladin : l'attaquant vole d'abord sa vie (étape 10), puis la Riposte renvoie la moitié des PV retirés, puis la fenêtre `hurt` (Épines). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
