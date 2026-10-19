@@ -9,6 +9,7 @@ import { StatSheet } from './StatSheet'
 import { Icon } from './Icon'
 import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
 import { BetSummary, BettingDesk } from './Betting'
+import { PrestigeButton } from './PrestigeButton'
 
 interface Props {
   fighters: Pair<Character>
@@ -97,10 +98,10 @@ export function MatchupScreen({
         <button onClick={onBack} className="btn btn-md w-56">
           <span>{backLabel}</span>
         </button>
-        <button onClick={onPlay} className="btn btn-primary btn-lg w-80">
+        <PrestigeButton onClick={onPlay} className="w-80">
           <Icon name="swords" className="btn-icon" />
           <span>Jouer</span>
-        </button>
+        </PrestigeButton>
         {betting && (
           <button
             onClick={() => {

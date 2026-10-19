@@ -10,6 +10,7 @@ import { PortraitTile } from './Portrait'
 import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
 import { Icon, type IconName } from './Icon'
+import { PrestigeButton } from './PrestigeButton'
 
 interface Props {
   initial: Pair<Character>
@@ -154,10 +155,10 @@ export function StartScreen(props: Props) {
           </div>
 
           {/* Lancer le duel : centré sous le « VS », seul en bas de l'écran */}
-          <button onClick={() => onStart(fighters)} className="btn btn-primary btn-lg w-96 shrink-0">
+          <PrestigeButton onClick={() => onStart(fighters)} className="w-96 shrink-0">
             <Icon name="swords" className="btn-icon" />
             <span>Combattre</span>
-          </button>
+          </PrestigeButton>
         </>
       )}
       <span className="absolute bottom-2 right-4 font-mono text-xs text-stone-600">v{__APP_VERSION__}</span>
@@ -182,9 +183,9 @@ function TournamentIntro({ tournamentProgress, onNewTournament, onResumeTourname
           </p>
         </div>
         <div className="flex flex-col items-center gap-3">
-          <button onClick={onNewTournament} className="btn btn-primary btn-lg w-[460px] text-[22px] tracking-[0.1em]">
+          <PrestigeButton onClick={onNewTournament} className="w-[460px] text-[22px] tracking-[0.1em]">
             <span>{tournamentProgress ? 'Nouveau tournoi' : 'Créer un tournoi'}</span>
-          </button>
+          </PrestigeButton>
           {tournamentProgress && (
             <>
               <button onClick={onResumeTournament} className="btn btn-md w-[460px]">

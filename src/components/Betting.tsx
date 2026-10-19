@@ -27,6 +27,7 @@ import type { Pair, Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Icon } from './Icon'
 import { Portrait } from './Portrait'
+import { PrestigeButton } from './PrestigeButton'
 
 /*
  * Paris entre observateurs (docs/PARIS.md), présentés comme un menu de jeu : de grandes tuiles,
@@ -119,10 +120,10 @@ export function BettingDesk({ wallets, odds, fighters, onBet, onCancel, onClose,
             </button>
           )}
         </div>
-        <button onClick={onClose} className="btn btn-primary btn-lg w-96">
+        <PrestigeButton onClick={onClose} className="w-96">
           <Icon name="swords" className="btn-icon" />
           <span>Au combat</span>
-        </button>
+        </PrestigeButton>
         <p className="text-right text-sm text-stone-400">
           {bots.map((b) => wallets.bettors[b].name).join(' et ')} ont aussi misé.
           <br />

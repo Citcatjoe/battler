@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.38.9] — 2026-10-19
+
+### Ajouté
+- **Bouton principal en pièce prestige** (design system, étape 9) : composant `PrestigeButton`, qui remplace `.btn-primary` (Combattre, Jouer, Revanche, Continuer, Au combat, Créer un tournoi, Nouveau tournoi, Fermer). Octogone (coupe de 14 px, 10 px en taille moyenne), cadre bronze, jour sombre, plaque `--gold-400`, tranche de 4 px et gravure à 10 px du bord, toutes les couches en `clip-path`. Ombre portée sur l'enveloppe (`drop-shadow`), zone cliquable égale à la forme. Survol : plaque `--gold-300` ; pressé : descend de 1 px, tranche de 2 px ; focus : cadre `--gold-200` ; désactivé : plaque sombre. Plus de lueur dorée autour du bouton.
+
+### Retiré
+- Classe `.btn-primary` (plus aucun usage).
+
 ## [0.38.8] — 2026-10-19
 
 ### Ajouté

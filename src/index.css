@@ -281,7 +281,7 @@ body {
 
 /* ---------- Boutons de jeu ----------
    .btn : plaque de pierre sombre au liseré de bronze (action secondaire)
-   .btn-primary : plaque d'or en relief (action principale de l'écran)
+   Le bouton principal de l'écran est une pièce prestige : composant PrestigeButton (.prestige).
    .btn-sm / .btn-md / .btn-lg : hauteur, texte et taille d'icône (--icon)
    .btn-round : médaillon rond, icône seule (le libellé passe par title et aria-label)
    .tabs / .tab : sélecteur de mode, l'onglet actif porte aria-pressed="true"
@@ -362,43 +362,6 @@ body {
   .btn-sm { --icon: 20px; height: 36px; padding: 0 0.9em; font-size: 11px; }
   .btn-md { --icon: 28px; height: 54px; font-size: 16px; }
   .btn-lg { --icon: 40px; height: 76px; font-size: 28px; letter-spacing: 0.16em; }
-
-  .btn-primary {
-    font-weight: 800;
-    border: 1px solid;
-    border-radius: 7px;
-    --rim: rgba(255, 244, 200, 0.85);
-    --depth: #5a320c;
-    color: #2b1704;
-    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.7);
-    background: linear-gradient(180deg, #fde68a 0%, #f2bf4f 30%, #d99a2b 62%, #a86818 100%);
-    border-color: #3b1f06;
-    box-shadow:
-      inset 0 0 0 1px var(--rim),
-      inset 0 -4px 0 rgba(92, 46, 6, 0.45),
-      inset 0 0 0 4px rgba(120, 60, 10, 0.25),
-      0 5px 0 var(--depth),
-      0 9px 20px rgba(0, 0, 0, 0.6),
-      0 0 28px rgba(245, 158, 11, 0.28);
-  }
-  .btn-primary:active {
-    box-shadow:
-      inset 0 0 0 1px var(--rim),
-      inset 0 -2px 0 rgba(92, 46, 6, 0.45),
-      inset 0 0 0 4px rgba(120, 60, 10, 0.25),
-      0 1px 0 var(--depth),
-      0 3px 8px rgba(0, 0, 0, 0.6),
-      0 0 20px rgba(245, 158, 11, 0.22);
-  }
-  /* Survol du bouton principal : il garde son texte sombre et son liseré clair (refonte à l'étape 9). */
-  .btn-primary:hover {
-    --rim: rgba(255, 244, 200, 0.85);
-    color: #2b1704;
-    filter: brightness(1.12);
-  }
-  .btn-primary .btn-icon {
-    filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.6)) drop-shadow(0 2px 2px rgba(60, 30, 0, 0.5));
-  }
 
   /* Bouton icône : rond de 48 px, serti, sans chanfrein. aria-label obligatoire. */
   .btn-round {
@@ -552,6 +515,125 @@ body {
     border-color: var(--line-1);
     cursor: not-allowed;
   }
+}
+
+/* ---------- Pièce prestige : bouton principal (design system, recette prestige) ----------
+   Couches empilées, toutes en octogone : cadre --frame (le bouton), jour --bg-0 (::before, 2 px),
+   plaque d'or (::after, 4 px) avec filet clair et tranche, gravure (.prestige-engrave, 10 px du
+   bord). Ombre portée par drop-shadow sur l'enveloppe (.prestige) : le clip-path coupe box-shadow.
+   Focus : le cadre passe en --gold-200 (l'anneau serait coupé). Les états changent les couleurs
+   des couches, jamais la forme. */
+@layer components {
+  .prestige {
+    --cut: var(--cut-l);
+    --oct: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+    display: inline-flex;
+    height: 72px;
+    font-size: 26px;
+    letter-spacing: 0.16em;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+  }
+  .prestige-md {
+    --cut: var(--cut-m);
+    height: 54px;
+    font-size: 16px;
+  }
+  .prestige-btn {
+    --frame-c: var(--frame);
+    --plate: var(--gold-400);
+    --tranche: var(--tranche-btn);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    clip-path: var(--oct);
+    background: var(--frame-c);
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--on-gold);
+    transition: transform 80ms ease-out;
+    user-select: none;
+  }
+  .prestige-btn::before,
+  .prestige-btn::after,
+  .prestige-engrave {
+    content: '';
+    position: absolute;
+    z-index: -1;
+  }
+  /* jour : chaque retrait de d px raccourcit le chanfrein d'environ 0,6 × d */
+  .prestige-btn::before {
+    --c: calc(var(--cut) - 1.2px);
+    inset: var(--frame-gap);
+    background: var(--bg-0);
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+  }
+  .prestige-btn::after {
+    --c: calc(var(--cut) - 2.4px);
+    inset: 4px;
+    background: var(--plate);
+    box-shadow: inset 0 1px 0 rgba(255, 246, 220, 0.55), inset 0 calc(-1 * var(--tranche)) 0 var(--gold-700);
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+    transition: background-color 150ms, box-shadow 80ms;
+  }
+  /* gravure : un octogone d'un pixel, à 10 px du bord (anneau en evenodd) */
+  .prestige-engrave {
+    --c: calc(var(--cut) - 6px);
+    --d: calc(var(--c) + 0.4px);
+    inset: 10px 10px calc(10px + var(--tranche));
+    z-index: 0; /* au-dessus de la plaque (::after, peinte après le contenu) */
+    background: var(--engrave);
+    clip-path: polygon(evenodd,
+      var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
+      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c), var(--c) 0,
+      var(--d) 1px, 1px var(--d), 1px calc(100% - var(--d)), var(--d) calc(100% - 1px),
+      calc(100% - var(--d)) calc(100% - 1px), calc(100% - 1px) calc(100% - var(--d)),
+      calc(100% - 1px) var(--d), calc(100% - var(--d)) 1px, var(--d) 1px);
+  }
+  .prestige-md .prestige-engrave { inset: 8px 8px calc(8px + var(--tranche)); --c: calc(var(--cut) - 4.8px); }
+  .prestige-label {
+    --icon: 40px;
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    padding: 0 1.2em calc(var(--tranche) / 2);
+    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.55);
+  }
+  .prestige-md .prestige-label { --icon: 28px; }
+  /* Cinzel réserve la place des jambages : on recentre les capitales sur l'icône. */
+  .prestige-label > span { transform: translateY(0.05em); }
+  .prestige-label .btn-icon {
+    filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.6)) drop-shadow(0 2px 2px rgba(60, 30, 0, 0.5));
+  }
+
+  .prestige-btn:hover { --plate: var(--gold-300); }
+  .prestige-btn:active {
+    --tranche: 2px;
+    transform: translateY(1px);
+  }
+  .prestige-btn:focus-visible {
+    outline: none;
+    --frame-c: var(--gold-200);
+  }
+  .prestige-btn:disabled {
+    --plate: var(--bg-3);
+    --frame-c: var(--line-bronze);
+    color: var(--text-off);
+    text-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .prestige-btn:disabled .btn-icon { filter: grayscale(1) brightness(0.6); }
 }
 
 /* ---------- Panneau de combattant et tuile de portrait (design system) ----------

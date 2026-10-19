@@ -40,6 +40,8 @@ src/
     test-utils.ts        personnages de test aux jets prévisibles
   components/            écrans (*Screen.tsx), briques d'interface (Tabs, StatusTray…), screens.test.tsx
     Betting.tsx          guichet du match (plateaux, tuiles, pièces), rappel sous le VS, classement, résultat des paris de l'écran de fin (aucune règle : tout vient de betting.ts)
+    PrestigeButton.tsx   bouton principal d'un écran (pièce prestige du design system, un seul par écran)
+    Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
     compendium/          CompendiumScreen, registre des verticales (sections.tsx), CharactersSection,
                          CharacterSheet (fiche personnage), SkillsSection, StatusesSection
 ```

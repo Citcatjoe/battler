@@ -6,6 +6,7 @@ import { Icon } from './Icon'
 import { MiniPortrait } from './RecordBits'
 import type { Wallets } from '../game/betting'
 import { Standings } from './Betting'
+import { PrestigeButton } from './PrestigeButton'
 
 interface Props {
   run: ChampionRun
@@ -115,10 +116,10 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
         </div>
 
         <div className="flex gap-3 pt-2">
-          <button onClick={onNewTournament} className="btn btn-primary btn-md w-72">
+          <PrestigeButton onClick={onNewTournament} size="md" className="w-72">
             <Icon name="trophy" className="btn-icon" />
             <span>Nouveau tournoi</span>
-          </button>
+          </PrestigeButton>
           <button onClick={onBracket} className="btn btn-md w-56">
             <span>Voir l'arbre</span>
           </button>

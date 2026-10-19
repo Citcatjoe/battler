@@ -6,6 +6,7 @@ import { Icon } from './Icon'
 import { Tabs, type TabDef } from './Tabs'
 import { CopyTraceButton } from './CopyTraceButton'
 import { BetsResult, type BetsOutcome } from './Betting'
+import { PrestigeButton } from './PrestigeButton'
 
 interface Props {
   result: CombatResult
@@ -192,15 +193,15 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
 
         <div className="relative mt-6 flex items-center gap-4">
           {tournament ? (
-            <button onClick={tournament.onContinue} className="btn btn-primary btn-lg flex-1" title={tournament.label}>
+            <PrestigeButton onClick={tournament.onContinue} title={tournament.label} className="flex-1">
               <Icon name="trophy" className="btn-icon" />
               <span>Continuer</span>
-            </button>
+            </PrestigeButton>
           ) : (
             <>
-              <button onClick={onReplay} className="btn btn-primary btn-lg flex-1">
+              <PrestigeButton onClick={onReplay} className="flex-1">
                 <span>Revanche</span>
-              </button>
+              </PrestigeButton>
               <button onClick={onMenu} className="btn btn-md w-40">
                 <span>Menu</span>
               </button>
@@ -230,9 +231,9 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
           <div className="w-full max-w-5xl">
             <StatsTable result={result} stats={stats} initialTab={initialTab} />
           </div>
-          <button onClick={() => setDetails(false)} className="btn btn-primary btn-md w-64">
+          <PrestigeButton onClick={() => setDetails(false)} size="md" className="w-64">
             <span>Fermer</span>
-          </button>
+          </PrestigeButton>
         </div>
       )}
     </div>
