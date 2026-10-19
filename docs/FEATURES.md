@@ -125,14 +125,14 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Elfe | 3 | Aura de précision | 🦅 permanente, cumulable : +1 au multiplicateur de critique par charge (×2 → ×3, ×2,4 → ×3,4) |
 | Nain | 3 | Aura d'intimidation | 😠 permanente, cumulable : les coups de l'adversaire font 2 de moins par charge, avant l'armure |
 | Humain | 1 | Peur | 😱 l'adversaire perd sa prochaine action (il tremble tant qu'il a peur) |
-| Humain | 2 | Purification | retire le dernier bonus posé de l'adversaire, avec toutes ses charges (aura comprise) |
-| Humain | 3 | Aura de sainteté | 🕊️ permanente, cumulable : +2 PV par charge à la fin de chacun de ses tours |
+| Humain | 2 | Purification | retire le dernier bonus posé de l'adversaire, avec toutes ses charges (aura comprise) ; s'il n'en a aucun, 5 dégâts directs (0.42.0) |
+| Humain | 3 | Aura de sainteté | 🕊️ permanente, cumulable jusqu'à 3 charges (0.42.0) : +2 PV par charge à la fin de chacun de ses tours |
 | Homme-lézard | 1 | Coup de chance | 🍀 à sa prochaine action, un d6 vert en plus de son dé, joué comme un coup à part : il frappe sur 4 à 6, et déclenche une compétence sur 1 à 3 (d6 depuis la 0.36.5 ; un d3 ne frappait jamais) |
-| Homme-lézard | 2 | Pile ou face | 🪙 à sa prochaine action, une pièce remplace son dé : pile, 15 dégâts directs ; face, rien |
+| Homme-lézard | 2 | Pile ou face | 🪙 à sa prochaine action, une pièce remplace son dé : pile, 20 dégâts directs qui comptent comme un coup qui touche (0.42.0) ; face, rien |
 | Homme-lézard | 3 | Aura de décoction | 🧪 permanente, cumulable : chaque coup qui touche pose 2 charges de poison par charge d'aura (0.36.4) |
 | Paladin | 1 | Rétribution | ⚖️ relâche la somme de ses 3 jauges (les PV des 3 derniers coups reçus) en dégâts directs, au moins 1 |
 | Paladin | 2 | Riposte | ⚔️ 1 tour : le prochain coup encaissé renvoie la moitié de ses dégâts |
-| Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé (permanente, non cumulable) |
+| Paladin | 3 | Aura d'immunité | purge ses malus ; plus aucun malus ne peut lui être posé, et son armure gagne 1 (0.42.0) (permanente, non cumulable) |
 | Mort-vivant | 3 | Aura de poison | ☣️ permanente, cumulable : au début de chacun de ses tours, avant son coup, l'adversaire perd 1 PV par charge (dégâts directs) |
 
 **Déclencheurs disponibles**, du point de vue du porteur :
@@ -149,7 +149,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | `hurt` | il encaisse un coup |
 | `bloodied` | la première fois qu'il passe sous la moitié de ses PV |
 
-**Effets disponibles** : soin, dégâts directs (ignorent armure, esquive et boucliers), pose d'un statut, purge des bonus ou des malus (tous, ou seulement les derniers posés : `count`, ex. Purification). Chaque effet vise le porteur ou son adversaire. Une compétence du dé peut aussi **sacrifier son coup** (`forfeitsHit`) : le coup du déclenchement n'inflige rien, sans esquive ni critique.
+**Effets disponibles** : soin, dégâts directs (ignorent armure, esquive et boucliers), pose d'un statut, purge des bonus ou des malus (tous, ou seulement les derniers posés : `count`, ex. Purification ; avec un effet de repli quand il n'y a rien à retirer : `orElse`, 0.42.0). Chaque effet vise le porteur ou son adversaire. Une compétence du dé peut aussi **sacrifier son coup** (`forfeitsHit`) : le coup du déclenchement n'inflige rien, sans esquive ni critique.
 
 **Conditions** (`when`) : un événement peut exiger que les PV du porteur ou de l'adversaire soient sous (ou au-dessus d') une fraction de leur maximum, qu'un statut soit présent (avec un minimum de charges) ou absent, ou qu'un tour minimal soit atteint. Toutes les conditions doivent être vraies, et elles sont vérifiées avant le tirage de `chance`. Le détail est dans [STATUTS.md](STATUTS.md).
 
@@ -159,7 +159,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | --- | --- | --- | --- |
 | 🎯 Critique assuré | bonus | le prochain coup qui touche est critique (une charge par coup) | oui (elfe) |
 | 🛡️ Armure temporaire | bonus | bouclier : absorbe des points après l'armure, s'use d'autant | oui (nain) |
-| 💚 Régénération | bonus | soigne au début de chaque tour du porteur | pas encore |
+| 💚 Régénération | bonus | soigne au début de chaque tour du porteur | oui (druide, Fleur de vie, 0.42.0) |
 | ☠️ Poison | malus | une seule valeur : autant de dégâts au début du tour du porteur, puis une charge de moins (3, 2, 1) | oui (mort-vivant, sur l'adversaire) |
 | 🥀 Affaibli | malus | ses coups infligent moins avant l'armure | pas encore |
 | 💔 Brèche | malus | armure réduite (3 charges au plus) | pas encore |
@@ -172,19 +172,19 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | 😠 Aura d'intimidation | bonus | permanente : l'adversaire frappe 2 de moins par charge | oui (nain) |
 | 🦅 Aura de précision | bonus | permanente : multiplicateur de critique +1 par charge | oui (elfe) |
 | 😱 Peur | malus | perd sa prochaine action ; tremble tant qu'il a peur | oui (humain, sur l'adversaire) |
-| 🕊️ Aura de sainteté | bonus | permanente : +2 PV par charge à la fin de ses tours | oui (humain) |
+| 🕊️ Aura de sainteté | bonus | permanente : +2 PV par charge à la fin de ses tours, 3 charges au plus | oui (humain) |
 | 🧪 Aura de décoction | bonus | permanente : chaque coup qui touche empoisonne (2 charges par charge d'aura) | oui (homme-lézard) |
-| 🪙 Pile ou face | bonus | prochaine action : une pièce au lieu du dé, pile 15 dégâts directs | oui (homme-lézard) |
+| 🪙 Pile ou face | bonus | prochaine action : une pièce au lieu du dé, pile 20 dégâts directs qui touchent, face rien | oui (homme-lézard) |
 | 🍀 Coup de chance | bonus | prochaine action : un d6 en plus, coup à part | oui (homme-lézard) |
 | ⚖️ Rétribution | bonus | 3 jauges des derniers coups reçus, relâchées sur un 1 | oui (paladin) |
 | ⚔️ Riposte | bonus | prochain coup encaissé : la moitié des dégâts renvoyée | oui (paladin) |
-| Aura d'immunité | bonus | permanente : aucun malus ne peut être posé | oui (paladin) |
+| Aura d'immunité | bonus | permanente : aucun malus ne peut être posé, armure +1 | oui (paladin) |
 
 **Durées** : un statut posé pendant un tour n'est pas décompté à la fin de ce tour. « 1 tour » posé pendant l'action vaut donc pour le tour d'après : la prochaine action du porteur (Furie des vents, décomptée en fin de tour) ou le tour de l'adversaire (Épines, décomptées au début du tour du porteur). L'Esquive améliorée n'a plus de durée depuis la 0.36.5 : elle attend le prochain coup reçu. Les auras n'ont pas de durée : leur médaillon affiche leurs charges.
 
 **En combat** : un coup sacrifié n'a pas d'élan, et le journal le note (« Ervald retient son coup (2) : aucun dégât »). Le nom de la compétence flotte ensuite. La Furie des vents s'annonce au-dessus de l'orc. Puis **deux dés** roulent ensemble : le second jaillit en tournoyant dans une bourrasque bleutée, avec un son de rafale. Les deux coups partent coup sur coup, avec un élan court. Le dé du coup en cours ressort pendant que l'autre s'efface.
 
-**Pile ou face** : la pièce remplace le dé au centre de l'arène. Elle tournoie en l'air (son de pièce), puis retombe sur pile (sabres croisés, carillon doré, « PILE ! » et −15 sur l'adversaire) ou sur face (tête de lézard, « FACE… »). **Coup de chance** : le d6 apparaît en vert à côté du dé habituel, et les deux coups partent en rafale comme ceux de la Furie. **Peur** : la victime tremble de gauche à droite tant qu'elle a peur.
+**Pile ou face** : la pièce remplace le dé au centre de l'arène. Elle tournoie en l'air (son de pièce), puis retombe sur pile (sabres croisés, carillon doré, « PILE ! » et −15 sur l'adversaire) ou sur face (tête de lézard, « FACE… »). Depuis la 0.42.0, pile vaut 20 et compte comme un coup qui touche : l'Aura de décoction empoisonne juste après. **Coup de chance** : le d6 apparaît en vert à côté du dé habituel, et les deux coups partent en rafale comme ceux de la Furie. **Peur** : la victime tremble de gauche à droite tant qu'elle a peur.
 
 **Personnages à formes (druide, 0.35.0)** : il commence sous sa première forme, puis en change **au tout début de chacun de ses tours, sauf le premier** (étape `shift`, avant ses statuts). Ses compétences dépendent de sa forme (`CharacterEvent.form`).
 - **À l'écran** : fondu entre les deux silhouettes, avec éclair de sève, feuilles et son. L'en-tête du combat montre les trois dés de la forme en cours ; la sélection montre les deux rangées.
@@ -218,6 +218,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
+| 0.42.0 | Audit des six compétences signalées : Pile ou face (pile à 20 qui touche, face vide), Aura de sainteté plafonnée à 3, Purification avec 5 dégâts de repli (`cleanse.orElse`), Aura d'immunité avec +1 d'armure (esquive d'Aldric de 5 à 2 %), Fleur de vie en Régénération 2 × 3 tours ; Rétribution inchangée |
 | 0.36.5 | Petites touches issues de l'audit des compétences : Esquive améliorée sans durée, Coup de chance au d6, Rage du sang propre à Murzug (+5 PV), Écorce épaisse à 5 ; une variante peut avoir sa propre version d'une compétence |
 | 0.9.0 | Système déclencheur → effets (soin, bonus), trois premiers événements, affichage des bonus |
 | 0.13.0 | Registre des statuts, positifs ou négatifs, avec durée, cumul et crochets de règles. 10 déclencheurs, 4 types d'effets, `chance` et `limit`, ciblage de l'adversaire. Auras au sol et pastilles colorées. Quatre statuts prêts pour de futurs événements |

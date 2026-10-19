@@ -14,9 +14,10 @@ export interface LabIdea {
   id: string
   /**
    * Série d'essais : 1 = idée ajoutée au kit ; 2 = à puissance égale (avec sa compensation) ;
-   * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`)
+   * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`) ;
+   * 4 = les six compétences signalées par l'audit 0.39.1, touches seules et kits compensés (SORTS.md § 10)
    */
-  series: 1 | 2 | 3
+  series: 1 | 2 | 3 | 4
   /** Personnage modifié (id du roster) */
   character: string
   name: string
@@ -62,6 +63,352 @@ const replace =
   (id: string, next: (old: CharacterEvent) => CharacterEvent) =>
   (c: Character) =>
     c.adjusted({ events: c.events.map((e) => (e.id === id ? next(e) : e)) })
+
+/** Une idée déclinée pour plusieurs personnages (l'original et sa variante). */
+function forEach(characters: readonly string[], idea: Omit<LabIdea, 'character' | 'id' | 'series'> & { id: string }): LabIdea[] {
+  return characters.map((character) => ({ ...idea, series: 4, character, id: `${character}-${idea.id}` }))
+}
+
+const COIN = STATUSES.coinFlip
+const HOLY = STATUSES.holyAura
+/** Aura de sainteté plafonnée à `cap` charges, `heal` PV par charge. */
+const holy = (cap: number, heal: number): StatusDef => ({
+  ...HOLY,
+  maxStacks: cap,
+  summary: `Le porteur regagne ${heal} PV par charge à la fin de chacun de ses tours (${cap} charges au plus). Permanente.`,
+  describe: (st) => `Regagne ${heal * st.stacks} PV à la fin de chacun de ses tours`,
+  badge: (st) => `+${heal * st.stacks}`,
+  onTurnEnd: (st) => [{ type: 'heal', amount: heal * st.stacks }],
+})
+const holyAs = (status: string) =>
+  replace('holy-aura', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: status as never, stacks: 1 }] }))
+/** Purification avec un effet qui sert même quand l'adversaire n'a rien à retirer. */
+const purifyPlus = (...extra: CharacterEvent['effects']) =>
+  replace('purification', (e) => ({ ...e, effects: [...e.effects, ...extra] }))
+const PRIESTS = ['ysolde', 'berengere']
+const PALADINS = ['aldric', 'gauvain']
+const THIEVES = ['naraxes', 'ssythra']
+const DRUIDS = ['thaldrin', 'brannoc']
+const retribution2 = replace('retribution', (e) => ({ ...e, effects: [{ type: 'release', status: 'labRetribution2' as never, min: 1, target: 'opponent' }] }))
+const immunityPlus = (...extra: CharacterEvent['effects']) =>
+  replace('immunity-aura', (e) => ({ ...e, effects: [...e.effects, ...extra] }))
+
+const SERIES_4: LabIdea[] = [
+  // Pile ou face : la pièce ne touche pas, et face ne fait rien (FAMILLES.md § 6.2)
+  ...forEach(THIEVES, {
+    id: 'pile-touche',
+    name: 'Pile qui touche',
+    schema: 'Retouche (FAMILLES.md § 6.2 A)',
+    family: 'Fortune',
+    pitch: 'Pile : 15 dégâts directs, et la pièce compte comme un coup qui touche (l’Aura de décoction empoisonne).',
+    statuses: { labCoinTouch: { ...COIN, coinToss: { damage: 15, headsTouches: true } } },
+    apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'labCoinTouch' as never, stacks: 1 }] })),
+    watch: ['coin-flip'],
+  }),
+  ...forEach(THIEVES, {
+    id: 'face-frappe',
+    name: 'Face qui frappe',
+    schema: 'Retouche (FAMILLES.md § 6.2 B)',
+    family: 'Fortune',
+    pitch: 'Face n’est plus vide : elle frappe normalement avec son dé. Pile reste 15 dégâts directs.',
+    statuses: { labCoinTails: { ...COIN, coinToss: { damage: 15, tailsStrikes: true } } },
+    apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'labCoinTails' as never, stacks: 1 }] })),
+    watch: ['coin-flip'],
+  }),
+  ...forEach(THIEVES, {
+    id: 'pile-touche-face-frappe',
+    name: 'Pile qui touche, face qui frappe',
+    schema: 'Retouche (FAMILLES.md § 6.2 A + B)',
+    family: 'Fortune',
+    pitch: 'Pile : 15 dégâts directs qui touchent (décoction) ; face : un coup normal.',
+    statuses: { labCoinBoth: { ...COIN, coinToss: { damage: 15, headsTouches: true, tailsStrikes: true } } },
+    apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'labCoinBoth' as never, stacks: 1 }] })),
+    watch: ['coin-flip'],
+  }),
+
+  // Aura de sainteté (écrasante) et Purification (gâchée) : un seul kit, celui des prêtresses
+  ...forEach(PRIESTS, {
+    id: 'saintete-3',
+    name: 'Sainteté plafonnée à 3',
+    schema: 'Petite touche',
+    family: 'Soin',
+    pitch: 'L’aura ne se cumule plus au-delà de 3 charges (6 PV par tour au plus).',
+    statuses: { labHoly3: holy(3, 2) },
+    apply: holyAs('labHoly3'),
+    watch: ['holy-aura'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'saintete-2x3',
+    name: 'Sainteté à 2 charges de 3 PV',
+    schema: 'Petite touche',
+    family: 'Soin',
+    pitch: 'Deux charges au plus, mais 3 PV par charge (6 PV par tour au plus) : le soin arrive plus vite et s’arrête plus tôt.',
+    statuses: { labHoly2x3: holy(2, 3) },
+    apply: holyAs('labHoly2x3'),
+    watch: ['holy-aura'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'purification-eclat',
+    name: 'Purification et éclat',
+    schema: 'Petite touche',
+    family: 'Sceaux',
+    pitch: 'En plus de retirer le dernier bonus adverse, la lumière inflige 3 dégâts directs : elle ne tombe plus à vide.',
+    apply: purifyPlus({ type: 'damage', amount: 3, target: 'opponent' }),
+    watch: ['purification'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'purification-aveugle',
+    name: 'Purification aveuglante',
+    schema: 'Petite touche',
+    family: 'Sceaux',
+    pitch: 'En plus de retirer le dernier bonus adverse, la lumière l’affaiblit : ses coups font 2 de moins pendant 2 tours.',
+    apply: purifyPlus({ type: 'applyStatus', status: 'weakened', stacks: 2, turns: 2, target: 'opponent' }),
+    watch: ['purification'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'kit-2-eclat',
+    name: 'Kit : sainteté à 2, purification et éclat',
+    schema: 'Kit compensé',
+    family: 'Soin + Sceaux',
+    pitch: 'Sainteté plafonnée à 2 charges (4 PV par tour), Purification qui inflige aussi 3 dégâts directs.',
+    statuses: { labHoly2: holy(2, 2) },
+    apply: all(holyAs('labHoly2'), purifyPlus({ type: 'damage', amount: 3, target: 'opponent' })),
+    watch: ['holy-aura', 'purification'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'kit-3-eclat',
+    name: 'Kit : sainteté à 3, purification et éclat',
+    schema: 'Kit compensé',
+    family: 'Soin + Sceaux',
+    pitch: 'Sainteté plafonnée à 3 charges (6 PV par tour), Purification qui inflige aussi 3 dégâts directs.',
+    statuses: { labHoly3: holy(3, 2) },
+    apply: all(holyAs('labHoly3'), purifyPlus({ type: 'damage', amount: 3, target: 'opponent' })),
+    watch: ['holy-aura', 'purification'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'kit-2x3-eclat',
+    name: 'Kit : sainteté à 2 × 3 PV, purification et éclat',
+    schema: 'Kit compensé',
+    family: 'Soin + Sceaux',
+    pitch: 'Sainteté à 2 charges de 3 PV (6 PV par tour), Purification qui inflige aussi 3 dégâts directs.',
+    statuses: { labHoly2x3: holy(2, 3) },
+    apply: all(holyAs('labHoly2x3'), purifyPlus({ type: 'damage', amount: 3, target: 'opponent' })),
+    watch: ['holy-aura', 'purification'],
+  }),
+  ...forEach(PRIESTS, {
+    id: 'kit-3-aveugle',
+    name: 'Kit : sainteté à 3, purification aveuglante',
+    schema: 'Kit compensé',
+    family: 'Soin + Sceaux',
+    pitch: 'Sainteté plafonnée à 3 charges, Purification qui affaiblit aussi l’adversaire (−2 pendant 2 tours).',
+    statuses: { labHoly3: holy(3, 2) },
+    apply: all(holyAs('labHoly3'), purifyPlus({ type: 'applyStatus', status: 'weakened', stacks: 2, turns: 2, target: 'opponent' })),
+    watch: ['holy-aura', 'purification'],
+  }),
+
+  // Rétribution (écrasante) et Aura d'immunité (coûte des victoires) : un seul kit, celui du paladin
+  ...forEach(PALADINS, {
+    id: 'immunite-riposte',
+    name: 'Immunité qui riposte',
+    schema: 'Retouche (FAMILLES.md § 6.4, variante de B)',
+    family: 'Sceaux + Représailles',
+    pitch: 'En posant l’aura, il se met aussi en garde : une Riposte attend le prochain coup qui le touche.',
+    apply: immunityPlus({ type: 'applyStatus', status: 'riposte', stacks: 1 }),
+    watch: ['immunity-aura', 'riposte'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'immunite-regeneration',
+    name: 'Immunité et régénération',
+    schema: 'Petite touche',
+    family: 'Sceaux + Soin',
+    pitch: 'En posant l’aura, il se régénère : 2 PV par tour pendant 3 tours.',
+    apply: immunityPlus({ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }),
+    watch: ['immunity-aura'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'kit-2-jauges-riposte',
+    name: 'Kit : Rétribution à 2 jauges, immunité qui riposte',
+    schema: 'Kit compensé',
+    family: 'Représailles + Sceaux',
+    pitch: 'La Rétribution ne retient que les deux derniers coups ; l’Aura d’immunité pose aussi une Riposte.',
+    statuses: { labRetribution2: { ...STATUSES.retribution, fillsOnHurt: { slots: 2 } } },
+    apply: all(retribution2, immunityPlus({ type: 'applyStatus', status: 'riposte', stacks: 1 })),
+    watch: ['retribution', 'immunity-aura', 'riposte'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'kit-2-jauges-soin',
+    name: 'Kit : Rétribution à 2 jauges, immunité et soin',
+    schema: 'Kit compensé',
+    family: 'Représailles + Sceaux',
+    pitch: 'La Rétribution ne retient que les deux derniers coups ; l’Aura d’immunité rend aussi 4 PV.',
+    statuses: { labRetribution2: { ...STATUSES.retribution, fillsOnHurt: { slots: 2 } } },
+    apply: all(retribution2, immunityPlus({ type: 'heal', amount: 4 })),
+    watch: ['retribution', 'immunity-aura'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'kit-2-jauges-riposte-soin',
+    name: 'Kit : Rétribution à 2 jauges, immunité qui riposte et soigne',
+    schema: 'Kit compensé',
+    family: 'Représailles + Sceaux',
+    pitch: 'La Rétribution ne retient que les deux derniers coups ; l’Aura d’immunité pose une Riposte et rend 4 PV.',
+    statuses: { labRetribution2: { ...STATUSES.retribution, fillsOnHurt: { slots: 2 } } },
+    apply: all(retribution2, immunityPlus({ type: 'applyStatus', status: 'riposte', stacks: 1 }, { type: 'heal', amount: 4 })),
+    watch: ['retribution', 'immunity-aura', 'riposte'],
+  }),
+
+  // Second tour : réglages des meilleures pistes du premier
+  ...[18, 20].flatMap((damage) =>
+    forEach(THIEVES, {
+      id: `pile-touche-face-frappe-${damage}`,
+      name: `Pile qui touche (${damage}), face qui frappe`,
+      schema: 'Retouche (FAMILLES.md § 6.2 A + B)',
+      family: 'Fortune',
+      pitch: `Pile : ${damage} dégâts directs qui touchent (décoction) ; face : un coup normal.`,
+      statuses: { [`labCoinBoth${damage}`]: { ...COIN, coinToss: { damage, headsTouches: true, tailsStrikes: true } } },
+      apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: `labCoinBoth${damage}` as never, stacks: 1 }] })),
+      watch: ['coin-flip'],
+    }),
+  ),
+  ...[4, 5].flatMap((damage) =>
+    forEach(PRIESTS, {
+      id: `kit-2-eclat-${damage}`,
+      name: `Kit : sainteté à 2, purification et éclat de ${damage}`,
+      schema: 'Kit compensé',
+      family: 'Soin + Sceaux',
+      pitch: `Sainteté plafonnée à 2 charges (4 PV par tour), Purification qui inflige aussi ${damage} dégâts directs.`,
+      statuses: { labHoly2: holy(2, 2) },
+      apply: all(holyAs('labHoly2'), purifyPlus({ type: 'damage', amount: damage, target: 'opponent' })),
+      watch: ['holy-aura', 'purification'],
+    }),
+  ),
+  ...forEach(PALADINS, {
+    id: 'kit-2-jauges-bouclier',
+    name: 'Kit : Rétribution à 2 jauges, immunité et bouclier',
+    schema: 'Kit compensé',
+    family: 'Représailles + Sceaux + Garde',
+    pitch: 'La Rétribution ne retient que les deux derniers coups ; l’Aura d’immunité pose aussi 5 points d’Armure temporaire.',
+    statuses: { labRetribution2: { ...STATUSES.retribution, fillsOnHurt: { slots: 2 } } },
+    apply: all(retribution2, immunityPlus({ type: 'applyStatus', status: 'bonusArmor', stacks: 5 })),
+    watch: ['retribution', 'immunity-aura'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'kit-2-jauges-riposte-soin-2',
+    name: 'Kit : Rétribution à 2 jauges, immunité qui riposte et soigne 2',
+    schema: 'Kit compensé',
+    family: 'Représailles + Sceaux',
+    pitch: 'La Rétribution ne retient que les deux derniers coups ; l’Aura d’immunité pose une Riposte et rend 2 PV.',
+    statuses: { labRetribution2: { ...STATUSES.retribution, fillsOnHurt: { slots: 2 } } },
+    apply: all(retribution2, immunityPlus({ type: 'applyStatus', status: 'riposte', stacks: 1 }, { type: 'heal', amount: 2 })),
+    watch: ['retribution', 'immunity-aura', 'riposte'],
+  }),
+  ...forEach(PALADINS, {
+    id: 'immunite-bouclier',
+    name: 'Immunité et bouclier',
+    schema: 'Petite touche',
+    family: 'Sceaux + Garde',
+    pitch: 'En posant l’aura, il gagne 5 points d’Armure temporaire.',
+    apply: immunityPlus({ type: 'applyStatus', status: 'bonusArmor', stacks: 5 }),
+    watch: ['immunity-aura'],
+  }),
+  ...[2, 3].flatMap((armor) =>
+    forEach(PALADINS, {
+      id: `immunite-bouclier-${armor}`,
+      name: `Immunité et bouclier de ${armor}`,
+      schema: 'Petite touche',
+      family: 'Sceaux + Garde',
+      pitch: `En posant l’aura, il gagne ${armor} points d’Armure temporaire.`,
+      apply: immunityPlus({ type: 'applyStatus', status: 'bonusArmor', stacks: armor }),
+      watch: ['immunity-aura'],
+    }),
+  ),
+  ...forEach(PALADINS, {
+    id: 'immunite-soin-2',
+    name: 'Immunité et soin de 2',
+    schema: 'Petite touche',
+    family: 'Sceaux + Soin',
+    pitch: 'En posant l’aura, il regagne 2 PV.',
+    apply: immunityPlus({ type: 'heal', amount: 2 }),
+    watch: ['immunity-aura'],
+  }),
+  // Pile ou face, second essai (refus de l'utilisateur : garder face = rien, pile = un gros coup)
+  ...[20, 25].flatMap((damage) =>
+    forEach(THIEVES, {
+      id: `pile-${damage}`,
+      name: `Pile à ${damage}`,
+      schema: 'Petite touche',
+      family: 'Fortune',
+      pitch: `Pile : ${damage} dégâts directs ; face, rien.`,
+      statuses: { [`labPile${damage}`]: { ...COIN, coinToss: { damage } } },
+      apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: `labPile${damage}` as never, stacks: 1 }] })),
+      watch: ['coin-flip'],
+    }),
+  ),
+  ...[18, 20, 22].flatMap((damage) =>
+    forEach(THIEVES, {
+      id: `pile-touche-seule-${damage}`,
+      name: `Pile qui touche à ${damage}`,
+      schema: 'Retouche (FAMILLES.md § 6.2 A)',
+      family: 'Fortune',
+      pitch: `Pile : ${damage} dégâts directs, qui comptent comme un coup qui touche (décoction) ; face, rien.`,
+      statuses: { [`labPileTouche${damage}`]: { ...COIN, coinToss: { damage, headsTouches: true } } },
+      apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: `labPileTouche${damage}` as never, stacks: 1 }] })),
+      watch: ['coin-flip'],
+    }),
+  ),
+  // Aura d'immunité, second essai : une règle d'aura lisible (tant qu'elle est là : aucun malus et +armure)
+  ...[1, 2].flatMap((armor) =>
+    forEach(PALADINS, {
+      id: `immunite-armure-${armor}`,
+      name: `Immunité et armure +${armor}`,
+      schema: 'Petite touche',
+      family: 'Sceaux + Garde',
+      pitch: `Tant que l’aura est là : aucun malus ne peut lui être posé, et son armure gagne ${armor}. Sans bouclier temporaire.`,
+      statuses: {
+        [`labImmunityArmor${armor}`]: {
+          ...STATUSES.immunityAura,
+          modifyStats: (stats: Parameters<NonNullable<StatusDef['modifyStats']>>[0]) => ({ ...stats, armor: stats.armor + armor }),
+        },
+      },
+      apply: (c: Character) =>
+        c.adjusted({
+          events: c.events.map((e) =>
+            e.id.startsWith('immunity-aura')
+              ? { ...e, effects: [{ type: 'cleanse', polarity: 'negative' }, { type: 'applyStatus', status: `labImmunityArmor${armor}` as never, stacks: 1 }] }
+              : e,
+          ),
+        }),
+      watch: ['immunity-aura', 'immunity-aura-gauvain'],
+    }),
+  ),
+  // Fleur de vie (presque inutile) : FAMILLES.md § 6.3
+  ...forEach(DRUIDS, {
+    id: 'fleur-ouverte',
+    name: 'Fleur qui s’ouvre',
+    schema: 'Retouche (FAMILLES.md § 6.3 A)',
+    family: 'Soin',
+    pitch: 'Régénération 2 pendant 3 tours au lieu de 3 PV d’un coup : le soin continue sous la forme d’ours.',
+    apply: replace('life-bloom', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] })),
+    watch: ['life-bloom'],
+  }),
+  ...forEach(DRUIDS, {
+    id: 'fleur-ouverte-4',
+    name: 'Fleur qui s’ouvre, 4 tours',
+    schema: 'Retouche (FAMILLES.md § 6.3 A)',
+    family: 'Soin',
+    pitch: 'Régénération 2 pendant 4 tours.',
+    apply: replace('life-bloom', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 4 }] })),
+    watch: ['life-bloom'],
+  }),
+  ...forEach(DRUIDS, {
+    id: 'fleur-5',
+    name: 'Fleur de vie à 5',
+    schema: 'Petite touche (FAMILLES.md § 6.3 B)',
+    family: 'Soin',
+    pitch: '5 PV au lieu de 3.',
+    apply: replace('life-bloom', (e) => ({ ...e, effects: [{ type: 'heal', amount: 5 }] })),
+    watch: ['life-bloom'],
+  }),
+]
 
 export const IDEAS: readonly LabIdea[] = [
   {
@@ -508,4 +855,9 @@ export const IDEAS: readonly LabIdea[] = [
     apply: replace('holy-aura', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: 'labHolyCap2' as never, stacks: 1 }] })),
     watch: ['holy-aura'],
   },
+
+  /* --- Série 4 : les six compétences signalées par l'audit 0.39.1 (SORTS.md § 10). Chaque idée est
+     déclinée pour les deux personnages qui partagent la compétence. --- */
+  ...SERIES_4,
 ]
+

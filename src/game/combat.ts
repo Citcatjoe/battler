@@ -504,6 +504,8 @@ export function simulateCombat(
         const matching = state.statuses.filter((s) => STATUSES[s.id].polarity === effect.polarity).map((s) => s.id)
         // `count` : seulement les derniers posés (ordre de la liste), toutes charges comprises
         const removed = effect.count === undefined ? matching : matching.slice(-effect.count)
+        // Rien à retirer : l'effet de repli joue à la place (il garde la même cible de référence, le porteur)
+        if (removed.length === 0 && effect.orElse) return applyEffect(owner, effect.orElse)
         state.statuses =
           effect.count === undefined ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
         return { type: 'cleanse', target, removed }
@@ -848,10 +850,16 @@ export function simulateCombat(
       att.statuses = att.statuses.filter((s) => s.id !== coin.id)
       const forced = nextForced()
       const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
-      const effects = heads ? applyEffects(attacker, [{ type: 'damage', amount: STATUSES[coin.id].coinToss!.damage, target: 'opponent' }]) : []
+      const toss = STATUSES[coin.id].coinToss!
+      const effects = heads ? applyEffects(attacker, [{ type: 'damage', amount: toss.damage, target: 'opponent' }]) : []
       beats.push({ type: 'coin', turn, side: attacker, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }), state: snapshot() })
       down = fallen() ?? checkBloodied()
       if (down !== undefined) return end(other(down), 'ko')
+      // Pile qui « touche » (0.42.0) : les fenêtres du coup s'ouvrent (l'Aura de décoction empoisonne)
+      if (heads && toss.headsTouches) {
+        down = fireAll([[attacker, 'hit'], [defender, 'hurt']])
+        if (down !== undefined) return end(other(down), 'ko')
+      }
     } else if (fighters[attacker].twinDice) {
       down = twinAction(attacker)
       if (down !== undefined) return end(other(down), 'ko')

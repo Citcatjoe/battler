@@ -299,6 +299,72 @@ Chaque touche **remplace** la compétence actuelle (et ne s'ajoute pas au kit). 
 
 ### Limites
 
-- **L'audit de résolution connaît le Pile ou face par son nom** (`coinFlip`, avec 15 dégâts écrits dans `audit.ts`). La version d'essai à 20 dégâts, qui porte un autre nom, y est donc signalée comme une anomalie, alors que le combat est juste. Si la touche est retenue, il faudra que l'audit lise la valeur dans le registre.
+- ~~L'audit de résolution connaît le Pile ou face par son nom~~ : il lit la pièce dans le registre depuis la 0.42.0.
 - **La perte des charges n'est mesurée que pour les statuts à durée.** Un Vol de vie perdu sur une esquive n'est pas compté.
 - **Les seuils de la grille se discutent** : ce sont des signaux, pas des verdicts.
+
+## 10. Série 4 : les six compétences signalées, d'un coup (0.42.0)
+
+L'audit relancé sur les règles 0.39.1 (300 combats par duel) signalait six compétences : Pile ou face (coûte des victoires), Aura d'immunité (coûte des victoires), Purification (gâchée), Aura de sainteté et Rétribution (écrasantes), Fleur de vie (presque inutile). Les quatre touches de la 0.36.5 avaient fait leur travail (Esquive améliorée sans gâchis, Coup de chance à +3,9, Rage du sang de Murzug à +3,9).
+
+### Méthode
+
+1. **Laboratoire, série 4** (`LAB_SERIES=4`, 300 combats par duel) : plus de 50 essais, chaque idée déclinée pour les deux personnages qui partagent la compétence. Touches seules, puis kits compensés, puis réglages.
+2 bis. **Premier retour de l'utilisateur** : la face qui frappe est refusée (elle efface la dualité nette du pile ou face et sa mise en scène sonore), le bouclier de l'immunité jugé peu clair, la Rétribution à laisser. Second tour sur ces deux compétences.
+2. **Intégration, puis équilibre du roster entier** : le laboratoire ne change qu'un personnage à la fois ; une fois tout intégré, les adversaires ont bougé aussi. Les prêtresses, à +0,5 et +1,6 au laboratoire, retombaient à 46 % une fois les voleuses, Gauvain et les druides renforcés. Mesure finale : `npm run balance` à 400 combats par duel, avant et après sur les mêmes graines.
+3. **Audit relancé** sur les règles retenues.
+
+### Ce que le laboratoire a montré
+
+| Piste | Personnages | Δ | Lecture |
+| --- | --- | --- | --- |
+| Pile qui touche (décoction) | Naraxes / Ssythra | +0,8 / +0,9 | ne suffit pas seule |
+| Face qui frappe | Naraxes / Ssythra | +4,7 / +4,2 | la vraie réparation |
+| Les deux, pile à 15 | Naraxes / Ssythra | +5,5 / +5,1 | refusée : face ne doit rien faire |
+| Pile à 20 (face vide) | Naraxes / Ssythra | +4,3 / +3,9 | valeur nette d'environ −0,3 |
+| Pile qui touche à 18 / 20 / 22 (face vide) | Naraxes | +3,3 / +4,8 / +6,1 | **20 retenue** (choix de l'utilisateur) |
+| Les deux, pile à 18 ou 20 | Naraxes / Ssythra | +7,0 à +9,6 | hors budget |
+| Sainteté plafonnée à 3 | Ysolde / Bérengère | −1,8 / −1,5 | presque gratuit |
+| Sainteté à 2 charges de 3 PV | Ysolde / Bérengère | +11,6 / +11,8 | trop fort, et moins de spectacle |
+| Purification et éclat de 3 | Ysolde / Bérengère | +4,6 / +5,4 | retours de 40 à 45 % |
+| Kit : sainteté à 2, éclat de 4 | Ysolde / Bérengère | +0,5 / +1,6 | **le plus spectaculaire** : retours 40 → 51 %, fins serrées 16 → 27 % |
+| Immunité qui riposte | Aldric / Gauvain | +6,5 / +6,2 | Aldric hors budget |
+| Immunité et Armure temporaire 2 / 3 | Aldric | +2,6 / +4,2 | à 3, Thaldrin le bat à 69 % ; jugée peu claire |
+| Immunité et armure +1 / +2 (règle d'aura) | Aldric | +1,4 / +5,5 (par rapport au bouclier de 2) | **+1 choisie par l'utilisateur** |
+| Kits Rétribution à 2 jauges | Aldric | −0,6 à +8,8 | Brokk le bat à 69 % : la Rétribution reste |
+| Fleur qui s'ouvre (Régénération 2 × 3) | Thaldrin / Brannoc | +1,9 / +2,2 | **retenue** |
+| Fleur de vie à 5 | Thaldrin / Brannoc | +1,4 / +1,5 | plus plate |
+
+### Ce que l'intégration a changé
+
+- **Brokk contre les prêtresses** borne tout : un éclat à chaque Purification ignore son armure et le fait tomber à 23,7 % contre Ysolde (contre connu toléré jusqu'à 25 %). D'où la **Purification de repli** (nouvelle option `cleanse.orElse`) : l'éclat ne frappe que s'il n'y a rien à retirer. Contre Brokk, qui a toujours un bonus, rien ne change.
+- Avec la lumière de repli seule, les prêtresses tombaient à 43 % : le plafond de sainteté passe de 2 à **3 charges** (il ne coûte qu'environ 2 points), et la lumière à **5**.
+- **Pile ou face** : la face qui frappe faisait tomber Brokk de 40,8 à 33 % contre Ssythra ; refusée. Avec la pile à 20 qui touche, Ysolde tombe à 35,0 % pile contre Naraxes et contre Ssythra dans le test, qui exige plus de 35 % : l'utilisateur garde 20, et ces deux duels rejoignent les contres connus.
+- **Aura d'immunité à +1 d'armure** : Aldric bat alors Thaldrin à 66-68 % (l'armure vise les petits coups de l'ours). Ni 10 % de critique, ni ×2,25 ne suffisent ; **l'esquive d'Aldric de 5 à 2 %** ramène le duel à 62,5 % et les autres duels d'Aldric au centre.
+
+### Avant → après (règles 0.39.1 → 0.42.0)
+
+| Compétence | Valeur nette | Gâchis | Drapeau |
+| --- | --- | --- | --- |
+| Pile ou face (Naraxes / Ssythra) | −5,0 / −4,0 → **+0,0 / +0,6** | 0 % | coûte des victoires → presque inutile |
+| Aura d'immunité (Aldric / Gauvain) | −2,7 / −3,9 → **+1,1 / −0,6** | 0 % | coûte des victoires → aucun (Aldric), presque inutile (Gauvain) |
+| Purification (Ysolde / Bérengère) | +8,3 / +7,8 → **+12,8 / +12,8** | 54-55 % → **0 %** | gâchée → aucun |
+| Fleur de vie (Thaldrin / Brannoc) | +0,3 / +1,1 → **+2,2 / +3,4** | 16 % → 2 % | presque inutile → aucun |
+| Aura de sainteté (Ysolde / Bérengère) | +41,9 / +38,5 → +41,2 / +38,1 | 0 → 22-24 % | écrasante (signature) |
+| Rétribution (Aldric / Gauvain) | +35,1 / +30,0 → +35,6 / +30,5 | 16-18 % | écrasante (signature, non touchée) |
+
+Le gâchis de la sainteté vient du plafond : une charge posée au plafond ne change rien.
+
+**Taux de victoire** (400 combats par duel) : de 46,0 à 53,3 % avant, de 45,5 à 53,8 % après. Ysolde 47,1 → 48,6, Bérengère 46,0 → 48,2, Naraxes 49,4 → 52,9, Ssythra 50,3 → 53,6, Aldric 53,3 → 53,8, Gauvain 49,5 → 49,9, Thaldrin 51,1 → 51,5, Brannoc 51,8 → 52,6. Ervald (47,0 → 45,5) et Gorak (48,1 → 46,9) perdent un peu : leurs adversaires sont plus forts.
+
+**Spectacle** (200 combats par duel, combats où le personnage figure) : chez les prêtresses, retours de 39,5 à 45,6 %, fins serrées de 16-18 à 22 %, de 36 à 33 tours. Partout ailleurs, retours et fins serrées gagnent de 0,5 à 2,5 points.
+
+### Limites
+
+- **Deux « écrasantes » restent** : l'Aura de sainteté et la Rétribution portent leurs personnages. Les ramener sous +20 points demanderait de refaire ces personnages, pas une retouche.
+- **L'Aura d'immunité reste mince** : sa valeur dépend des malus du roster, rares. Elle prendra de la valeur avec des reliques ou des édits à malus (FAMILLES.md § 6.4 A).
+- **Pile ou face** reste « presque inutile » (+0,0 et +0,6) : la pièce prend toujours la place d'un jet de dé, par choix (face vide).
+
+### Après fusion avec la barde (0.41.0 du chantier parallèle)
+
+Mesures refaites sur le roster de 20 personnages (400 combats par duel pour l'équilibre, 300 pour l'audit) : de 46,4 à 53,1 %, aucun duel hors limites ; Pile ou face +0,1 / +0,6, Aura d'immunité +1,0 / −1,0, Purification +14,2 / +13,6 (gâchis 0 %), Fleur de vie +2,3 / +3,3, Aura de sainteté +41,1 / +38,1. Les compétences de la barde ont leurs propres drapeaux (rares à l'écran, Ouverture écrasante) : à traiter dans son chantier.

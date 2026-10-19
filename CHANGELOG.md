@@ -34,6 +34,25 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.42.0] — 2026-10-19
+
+Audit des compétences : les six compétences signalées par la grille des drapeaux rouges (règles 0.39.1). Laboratoire (série 4, plus de 50 essais à 300 combats par duel), choix de l'utilisateur, puis équilibrage du roster entier à 400 combats par duel. Méthode et chiffres : `docs/SORTS.md` § 10. Les versions 0.40.0 et 0.41.0 sont celles du chantier des postures et de la barde, menés en parallèle ; les mesures ont été refaites avec la barde.
+
+### Modifié
+- **Pile ou face** : pile passe de 15 à **20 dégâts directs** et compte comme un **coup qui touche** (l'Aura de décoction empoisonne). Face reste vide : la dualité et sa mise en scène sonore (tintement, puis son du critique) sont gardées. Valeur nette de −5,0 et −4,0 à **+0,0** (Naraxes) et **+0,6** (Ssythra) : elle ne coûte plus de victoires. Nouveau crochet `coinToss.headsTouches`. Naraxes de 49,4 à 52,9 %, Ssythra de 50,3 à 53,6 %.
+- **Contres connus** (décision de l'utilisateur, pour garder le pile à 20) : **Ysolde contre Naraxes** et **Ysolde contre Ssythra**, à 35,0 % pile dans le test d'équilibre, sont tolérés jusqu'à 25/75 (`balance.test.ts`, EQUILIBRAGE.md).
+- **Aura de sainteté** plafonnée à **3 charges** (6 PV par tour au plus).
+- **Purification** : quand l'adversaire n'a aucun bonus à retirer, la lumière lui inflige **5 dégâts directs** au lieu de tomber à vide. Gâchis de 54-55 % à **0 %**, valeur nette de +8 à **+13 points**. Contre un adversaire à bonus (Brokk), rien ne change. Nouvelle option de moteur : `cleanse.orElse`. Avec le plafond de sainteté, les combats des prêtresses gagnent en spectacle : retours de 39,5 à 45,6 %, fins serrées de 16 à 22 %, de 36 à 33 tours. Ysolde de 47,1 à 48,6 %, Bérengère de 46,0 à 48,2 %.
+- **Aura d'immunité** : tant qu'elle est là, **l'armure du porteur gagne 1** (`modifyStats`). Valeur nette de −2,7 à **+1,1** (Aldric) et de −3,9 à **−0,6** (Gauvain). Compensation : **esquive d'Aldric de 5 à 2 %** (Gauvain de 10 à 7 %) ; sans elle, Aldric battait Thaldrin à 66-68 %.
+- **Fleur de vie** : **Régénération 2 pendant 3 tours** au lieu de 3 PV d'un coup ; le soin continue sous la forme d'ours. Valeur nette de +0,3 et +1,1 à **+2,2** (Thaldrin) et **+3,4** (Brannoc). La Régénération entre en jeu ; Fleur de vie prend le son du bonus gagné (règle des sons, déduite de ses effets).
+- **Audit de résolution** : la pièce est lue dans le registre (statut et dégâts) ; contrôles de la pile qui touche et de la purge avec repli.
+- **Empreinte de non-régression mise à jour** (changement de règles voulu).
+
+### Non changé
+- **Rétribution** (+36 et +31 points, « écrasante ») : décision de l'utilisateur, c'est la signature du paladin.
+
+### Mesures après fusion avec la barde (0.41.0)
+- Roster de 20 personnages, 400 combats par duel : de 46,4 % (Ervald) à 53,1 % (Naraxes, Ssythra), aucun duel hors limites. Valeurs nettes : Pile ou face +0,1 et +0,6, Aura d'immunité +1,0 (Aldric) et −1,0 (Gauvain), Purification +14,2 et +13,6 (gâchis 0 %), Fleur de vie +2,3 et +3,3, Aura de sainteté +41,1 et +38,1.
 ## [0.41.0] — 2026-10-19
 
 ### Ajouté

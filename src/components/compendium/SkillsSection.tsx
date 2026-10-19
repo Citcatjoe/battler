@@ -1,5 +1,5 @@
 import { skillCatalog, type SkillEntry } from '../../game/catalog'
-import { DEFAULT_SKILL_NATURE, describeCondition, TRIGGERS, type Effect, type SkillNature } from '../../game/events'
+import { DEFAULT_SKILL_NATURE, describeCondition, describeEffect, TRIGGERS, type Effect, type SkillNature } from '../../game/events'
 import { lowerFirst, POLARITY_STYLE, STATUSES } from '../../game/statuses'
 import { Icon, StatusIcon } from '../Icon'
 import { MiniPortrait } from '../RecordBits'
@@ -149,9 +149,10 @@ function immediateLook(effect: ImmediateEffect) {
         glyph: <Icon name="purification" className="h-7 w-7" />,
         tone: 'border-dodge text-dodge',
         text:
-          effect.count === undefined
+          (effect.count === undefined
             ? `retire les ${kind}`
-            : `retire le dernier ${kind} posé, toutes charges comprises (aura comprise)`,
+            : `retire le dernier ${kind} posé, toutes charges comprises (aura comprise)`) +
+          (effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''),
       }
     }
   }

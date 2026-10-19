@@ -133,8 +133,10 @@ export interface StatusDef {
   /**
    * Pile ou face : à sa prochaine action, le porteur lance une pièce au lieu de son dé. Pile, l'adversaire
    * perd `damage` PV (dégâts directs) ; face, rien. Le statut est consommé en entier.
+   * `headsTouches` : pile compte comme un coup qui touche (fenêtres `hit` du porteur et `hurt` de
+   * l'adversaire : l'Aura de décoction empoisonne).
    */
-  coinToss?: { damage: number }
+  coinToss?: { damage: number; headsTouches?: boolean }
   /**
    * S'estompe : chaque fois qu'il agit (`onTurnStart` ou `onTurnEnd`), le statut perd une charge, et
    * disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3, 2, puis
@@ -193,6 +195,9 @@ export const FALSE_NOTE = 5
 
 /** Charges de poison posées par coup qui touche, par charge d'Aura de décoction. */
 export const DECOCTION_POISON = 2
+
+/** Plafond de charges de l'Aura de sainteté (0.42.0). */
+const HOLY_CAP = 3
 
 export const STATUSES: Record<StatusId, StatusDef> = {
   guaranteedCrit: {
@@ -370,12 +375,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
-    summary: 'À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, 15 dégâts directs ; face, rien.',
-    describe: () => "À sa prochaine action, lance une pièce au lieu de son dé : pile, l'adversaire perd 15 PV ; face, rien",
-    badge: () => '15',
+    summary: 'À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, 20 dégâts directs qui comptent comme un coup qui touche ; face, rien.',
+    describe: () => 'À sa prochaine action, une pièce au lieu du dé : pile, 20 dégâts qui touchent ; face, rien',
+    badge: () => '20',
     stacking: 'refresh',
     maxStacks: 1,
-    coinToss: { damage: 15 },
+    // 0.42.0 (audit des compétences, SORTS.md § 10) : pile à 20 au lieu de 15, et pile touche (l'Aura
+    // de décoction empoisonne). Face reste vide : la dualité et sa mise en scène sonore sont voulues.
+    // Avant : valeur nette de −4 à −5 points, parce que la pièce prend la place d'un jet de dé.
+    coinToss: { damage: 20, headsTouches: true },
   },
   luckyStrike: {
     name: 'Coup de chance',
@@ -458,21 +466,27 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'immunité",
     look: { aura: 'rgba(253,224,71,0.55)' },
     polarity: 'positive',
-    summary: 'Plus aucun malus ne peut être posé sur le porteur, jusqu’à la fin du combat. Permanente, non cumulable.',
-    describe: () => 'Aucun malus ne peut plus lui être posé, pour le reste du combat',
+    summary: 'Plus aucun malus ne peut être posé sur le porteur, et son armure gagne 1, jusqu’à la fin du combat. Permanente, non cumulable.',
+    describe: () => "Aucun malus ne l'atteint plus, et son armure gagne 1, pour le reste du combat",
     badge: () => '∞',
     stacking: 'refresh',
     maxStacks: 1,
     immune: 'negative',
+    // 0.42.0 : +1 d'armure tant que l'aura est là. Seule, l'immunité coûtait des victoires (−2,7 à
+    // −3,9 points) : peu d'adversaires posent des malus, et le 3 sacrifie son coup.
+    modifyStats: (stats) => ({ ...stats, armor: stats.armor + 1 }),
   },
   holyAura: {
     name: 'Aura de sainteté',
     look: { aura: 'rgba(254,243,199,0.6)' },
     polarity: 'positive',
-    summary: 'Le porteur regagne 2 PV par charge à la fin de chacun de ses tours. Permanente.',
+    summary: `Le porteur regagne 2 PV par charge à la fin de chacun de ses tours (${HOLY_CAP} charges au plus). Permanente.`,
     describe: (s) => `Regagne ${plural(2 * s.stacks, 'PV')} à la fin de chacun de ses tours, pour le reste du combat`,
     badge: (s) => `+${2 * s.stacks}`,
     stacking: 'add',
+    // 0.42.0 : plafond de 2 charges (4 PV par tour). Sans plafond, les soins s'empilaient et les combats
+    // des prêtresses devenaient longs et joués d'avance (+42 points de valeur nette, 16 % de fins serrées).
+    maxStacks: HOLY_CAP,
     onTurnEnd: (s) => [{ type: 'heal', amount: 2 * s.stacks }],
   },
   decoctionAura: {
@@ -630,7 +644,7 @@ export function statusRules(id: StatusId): string[] {
     )
   if (def.coinToss)
     rules.push(
-      `À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, ${def.coinToss.damage} dégâts directs à l'adversaire ; face, rien. Le statut est consommé.`,
+      `À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, ${def.coinToss.damage} dégâts directs à l'adversaire${def.coinToss.headsTouches ? ", qui comptent comme un coup qui touche (les effets « quand il touche » se déclenchent)" : ''} ; face, rien. Le statut est consommé.`,
     )
   if (def.forcesCrit)
     rules.push('Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.')

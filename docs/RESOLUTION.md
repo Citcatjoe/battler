@@ -40,7 +40,9 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
     (une charge consommée) → aller en phase 3.
     Pièce : si l'actif porte un statut `coinToss` (Pile ou face), la pièce remplace toute l'action
-    (étape coin) : pile, dégâts directs ; face, rien. Aucun coup n'est porté, donc aucune fenêtre du coup.
+    (étape coin) : pile, dégâts directs ; face, rien. Aucun coup n'est porté. Option du statut
+    (0.42.0, Pile ou face) : `headsTouches`, pile ouvre les fenêtres « hit » (actif) et « hurt »
+    (défenseur), comme un coup qui touche, mais sans esquive, armure ni critique.
     Coups multiples : si l'actif porte un statut `extraStrikes` (Furie des vents, Coup de chance), il est
     consommé (étape flurry) et l'action compte plusieurs coups, chacun avec son dé (`extraDie` : le d3
     de Coup de chance).
@@ -143,8 +145,8 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 
 | Famille | Quand | Exemples | Mise en œuvre |
 | --- | --- | --- | --- |
-| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs, pose d'un statut, purge | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
-| **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
+| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs, pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
+| **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable, Aura d'immunité (armure +1) | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusExpire` de la phase). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 | `decays` |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines quand le porteur encaisse | `CharacterEvent` ; `reactions` d'un statut |

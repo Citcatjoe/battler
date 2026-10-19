@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { attacksOf, dieAt, finalState, MAX_TURNS, rollsDie, simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
+import { attacksOf, dieAt, effectiveStats, finalState, MAX_TURNS, rollsDie, simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
 import type { CharacterEvent } from './events'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
@@ -1086,7 +1086,8 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     }
   })
 
-  it('Pile ou face : la pièce remplace le dé ; pile, 15 dégâts directs ; face, rien ; le statut est consommé', () => {
+  it('Pile ou face : la pièce remplace le dé ; pile, ses dégâts directs ; face, rien ; le statut est consommé', () => {
+    const damage = STATUSES.coinFlip.coinToss!.damage
     let heads = 0
     let tails = 0
     for (let seed = 1; seed < 40; seed++) {
@@ -1098,14 +1099,13 @@ describe('prêtresse et voleuse (0.30.0)', () => {
         seed,
       )
       for (const c of ofType(r, 'coin')) {
-        const i = r.beats.indexOf(c)
         expect(c.side).toBe(0)
         expect(has(c.state.statuses[0], 'coinFlip')).toBe(false)
-        // Pas de coup ce tour-là : la pièce remplace l'action
+        // Pas de coup ce tour-là : la pièce remplace l'action, sur pile comme sur face
         expect(attacksOf(r).some((x) => x.attacker === 0 && x.turn === c.turn)).toBe(false)
         if (c.heads) {
           heads++
-          expect(c.effects).toEqual([{ type: 'damage', target: 1, amount: 15 }])
+          expect(c.effects).toEqual([{ type: 'damage', target: 1, amount: damage }])
         } else {
           tails++
           expect(c.effects).toEqual([])
@@ -1115,6 +1115,77 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     // Les deux côtés tombent
     expect(heads).toBeGreaterThan(10)
     expect(tails).toBeGreaterThan(10)
+  })
+
+  it('Pile ou face (0.42.0) : pile compte comme un coup qui touche, l’Aura de décoction empoisonne', () => {
+    let poisoned = 0
+    for (let seed = 1; seed < 40; seed++) {
+      const r = run(
+        [
+          testCharacter('a', { maxHp: 200 }, [
+            at('combatStart', [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }], 'combatStart'),
+            at('naturalOne', [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }]),
+          ]),
+          testCharacter('b', { maxHp: 200 }),
+        ],
+        seed,
+      )
+      for (const c of ofType(r, 'coin').filter((x) => x.heads)) {
+        const next = r.beats[r.beats.indexOf(c) + 1]
+        if (!next) continue // dernière étape du combat (limite de tours)
+        // La réaction de l'aura suit la pièce et pose le poison sur l'adversaire
+        expect(next.type === 'statusReaction' && next.status === 'decoctionAura').toBe(true)
+        expect(next.state.statuses[1].find((s) => s.id === 'poison')?.stacks).toBeGreaterThanOrEqual(DECOCTION_POISON)
+        poisoned++
+      }
+    }
+    expect(poisoned).toBeGreaterThan(10)
+  })
+
+  it('Purification (0.42.0) : retire le dernier bonus ; sans bonus à retirer, la lumière inflige ses dégâts directs', () => {
+    const purification = createCharacter('ysolde').events.find((e) => e.id === 'purification')!
+    const cleanse = purification.effects[0]
+    expect(cleanse.type === 'cleanse' && cleanse.orElse?.type === 'damage').toBe(true)
+    const light = cleanse.type === 'cleanse' && cleanse.orElse?.type === 'damage' ? cleanse.orElse.amount : 0
+    let empty = 0
+    let full = 0
+    for (const r of rosterCombats(4))
+      for (const b of ofType(r, 'event')) {
+        if (b.event.eventId !== 'purification') continue
+        const [effect] = b.event.effects
+        if (effect.type === 'cleanse') {
+          // Un bonus retiré : pas de dégâts en plus
+          expect(effect.removed.length).toBeGreaterThan(0)
+          full++
+        } else {
+          expect(effect).toMatchObject({ type: 'damage', amount: light })
+          empty++
+        }
+      }
+    expect(empty).toBeGreaterThan(10)
+    expect(full).toBeGreaterThan(10)
+  })
+
+  it('Aura d’immunité (0.42.0) : tant qu’elle est là, l’armure du porteur gagne 1', () => {
+    const paladin = createCharacter('aldric')
+    expect(effectiveStats(paladin, [{ id: 'immunityAura', stacks: 1 }]).armor).toBe(paladin.stats.armor + 1)
+    // Même règle pour Gauvain : plus de version à part
+    expect(createCharacter('gauvain').events.map((e) => e.id)).toContain('immunity-aura')
+  })
+
+  it('Aura de sainteté (0.42.0) : plafonnée, ses charges ne dépassent jamais le plafond', () => {
+    const cap = STATUSES.holyAura.maxStacks!
+    expect(cap).toBeGreaterThan(1)
+    let capped = 0
+    for (const r of rosterCombats(4))
+      for (const b of r.beats)
+        for (const side of [0, 1] as const) {
+          const holy = b.state.statuses[side].find((s) => s.id === 'holyAura')
+          if (!holy) continue
+          expect(holy.stacks).toBeLessThanOrEqual(cap)
+          if (holy.stacks === cap) capped++
+        }
+    expect(capped).toBeGreaterThan(0)
   })
 
   it("Coup de chance : à l'action suivante, un d6 en plus du dé habituel, joué comme un coup à part", () => {
