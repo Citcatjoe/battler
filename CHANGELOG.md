@@ -31,6 +31,21 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.51.0] — 2026-10-20
+
+### Ajouté
+- **Médaillons des états par famille** (demande de l'utilisateur : des icônes plus en lien avec ce qu'elles font, en CSS d'abord, sans nouvelle icône). Chaque état appartient à l'une des dix familles de `docs/FAMILLES.md` (`STATUS_FAMILY`, `statuses.ts`, présentation seulement). Dans la zone d'état, les lignes d'effet et le compendium :
+  - **la couleur dit la famille** : fond teinté et anneau (Puissance orange, Garde acier, Précision ambre, Esquive cyan, Tempo bleu, Fortune violet, Affliction vert, Soin corail, Représailles rouge brique, Sceaux ivoire ; tokens `--fam-*`) ;
+  - **la forme dit la polarité** : anneau plein pour un bonus, **cranté** pour un malus (au lieu du vert et du rouge, qui se confondaient avec le poison et les dégâts) ;
+  - les auras gardent leur double cadre doré tournant ; plus aucune lueur colorée autour des médaillons (design system).
+- Compendium : chaque carte de statut affiche sa famille.
+
+### Modifié
+- Le compteur du médaillon prend la couleur de la famille. Les pastilles « Bonus » et « Malus » restent en vert et rouge (texte).
+
+### Non vu
+- La couleur de l'Aura glaciale est celle de l'Affliction (vert) : son icône, un encensoir aux vapeurs vertes, reste à repeindre en givre (voir la TODO).
+
 ## [0.50.0] — 2026-10-20
 
 Quatrième passe sur les compétences : les doutes de l'utilisateur après ses combats (immunité du paladin et poisons, Pile ou face « qui ne tombe jamais sur pile »), deux demandes (Furie des vents instantanée, Coup de chance cumulable) et trois compétences faibles, en favorisant le spectacle (Écorce épaisse, Riposte, Luciole). Laboratoire (série 7, 400 combats par duel), roster de 10. Méthode et chiffres : `docs/SORTS.md` § 13.

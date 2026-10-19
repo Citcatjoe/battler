@@ -638,6 +638,62 @@ export const STATUSES: Record<StatusId, StatusDef> = {
 export const STATUS_IDS = Object.keys(STATUSES) as StatusId[]
 
 /** Une aura de personnage (posée sur un 3 au dé), reconnue à sa couleur d'aura (`look.aura`). */
+/**
+ * Familles d'effets (docs/FAMILLES.md) : la question que se pose le spectateur. Présentation seulement
+ * (couleur du médaillon d'un état, 0.51.0) : aucun effet sur le combat.
+ */
+export type StatusFamily = 'power' | 'guard' | 'precision' | 'evasion' | 'tempo' | 'fortune' | 'affliction' | 'heal' | 'retaliation' | 'seals'
+
+export const FAMILY_LABEL: Record<StatusFamily, string> = {
+  power: 'Puissance',
+  guard: 'Garde',
+  precision: 'Précision',
+  evasion: 'Esquive',
+  tempo: 'Tempo',
+  fortune: 'Fortune',
+  affliction: 'Affliction',
+  heal: 'Soin',
+  retaliation: 'Représailles',
+  seals: 'Sceaux',
+}
+
+/** La famille de chaque état (une seule : celle de son effet principal, FAMILLES.md § 2.1). */
+export const STATUS_FAMILY: Record<StatusId, StatusFamily> = {
+  powerAura: 'power',
+  weakened: 'power',
+  melodiousAura: 'power',
+  falseNote: 'power',
+  bonusArmor: 'guard',
+  intimidationAura: 'guard',
+  vulnerable: 'guard',
+  exposed: 'guard',
+  guaranteedCrit: 'precision',
+  precisionAura: 'precision',
+  evasion: 'evasion',
+  firefly: 'evasion',
+  windFury: 'tempo',
+  fear: 'tempo',
+  stunned: 'tempo',
+  waiting: 'tempo',
+  coinFlip: 'fortune',
+  luckyStrike: 'fortune',
+  poison: 'affliction',
+  rot: 'affliction',
+  burn: 'affliction',
+  poisonAura: 'affliction',
+  decoctionAura: 'affliction',
+  rotAura: 'affliction',
+  regeneration: 'heal',
+  holyAura: 'heal',
+  lifesteal: 'heal',
+  whistling: 'heal',
+  thorns: 'retaliation',
+  riposte: 'retaliation',
+  retribution: 'retaliation',
+  immunityAura: 'seals',
+  ward: 'seals',
+}
+
 export const isAura = (id: StatusId) => STATUSES[id].look?.aura !== undefined
 
 /** Le nombre à afficher sur l'icône d'un état (voir `StatusDef.counter`), ou null s'il n'y a rien à compter. */
