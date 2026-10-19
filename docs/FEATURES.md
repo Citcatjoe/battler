@@ -65,8 +65,8 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 
 **La barde (0.41.0)** lance deux d5 à chaque tour, et ses compétences se déclenchent sur les doubles, à la place des deux coups :
 - **Ouverture** (au début du combat) : 1 charge d'Aura mélodieuse ;
-- **Siffloter** (double 1) : Sifflotement, 3 charges, +2 PV à chaque fin de tour ;
-- **Fausse note** (double 2) : 2 charges (0.45.0) : le prochain coup adverse qui touche fait 10 dégâts de moins (au moins 1) ;
+- **Siffloter** (double 1) : Sifflotement, 3 charges, +2 PV à chaque fin de tour ; le double frappe aussi ses deux coups (0.46.0) ;
+- **Fausse note** (double 2) : 2 charges (0.45.0) : le prochain coup adverse qui touche fait 10 dégâts de moins (au moins 1) ; le double frappe aussi ses deux coups (0.46.0) ;
 - **Aura mélodieuse** (double 3) : 2 charges (0.45.0) ; chaque charge, +1 dégât sur chacun de ses coups qui touche, ajouté après l'armure ;
 - **Crescendo** (double 4) : un seul coup de 12 ;
 - **Soliste** (double 5) : un seul coup de 15.
@@ -107,7 +107,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Race | Dé | Compétence | Effet |
 | --- | --- | --- | --- |
 | Orc | 1 | Rage du sang | +3 PV (sans dépasser le maximum) ; Murzug a la sienne, +5 PV (0.36.5) |
-| Orc | 2 | Furie des vents | 🌪️ pendant 1 tour : à sa prochaine action, il frappe deux fois, chaque coup résolu à part (et pouvant relancer une Furie) |
+| Orc | 2 | Furie des vents | 🌪️ une charge par 2 au dé : une action à deux coups ; les charges se cumulent et restent en réserve, une par action (0.46.0) |
 | Elfe | 1 | Œil de faucon | 🎯 Critique assuré : le prochain coup qui touche est critique |
 | Elfe | 2 | Esquive améliorée | 💨 sans durée (0.36.5) : le prochain coup reçu est esquivé à coup sûr, même si l'adversaire sacrifie d'abord ses coups |
 | Nain | 1 | Peau de pierre | 🛡️ +6 armure temporaire, cumulable, qui s'use en encaissant |
@@ -158,7 +158,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | 💔 Brèche | malus | armure réduite (3 charges au plus) | pas encore |
 | 🌵 Épines | bonus | permanentes : chaque coup encaissé renvoie 1 dégât direct par charge | oui (nain) |
 | 🦇 Vol de vie | bonus | une charge par coup : le coup qui touche rend les PV qu'il retire ; esquivé, rien (2 charges) | oui (mort-vivant) |
-| 🌪️ Furie des vents | bonus | deux coups à la prochaine action, chacun résolu à part | oui (orc) |
+| 🌪️ Furie des vents | bonus | une action à deux coups par charge ; charges cumulables en réserve (0.46.0) | oui (orc) |
 | 💨 Esquive améliorée | bonus | le prochain coup reçu est esquivé, sans tirage | oui (elfe) |
 | ☣️ Aura de poison | bonus | permanente : l'adversaire perd 1 PV par charge au début de chacun de ses tours, avec ses poisons ; ce n'est pas un Poison, rien ne l'arrête | oui (mort-vivant) |
 | 💪 Aura de puissance | bonus | permanente : +2 dégâts par charge | oui (orc) |
@@ -211,6 +211,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
+| 0.46.0 | Furie des vents cumulable en réserve ; barde : « ding » sur tout double, Siffloter et Fausse note frappent aussi leurs deux coups, esquive de 12 à 6 % |
 | 0.45.0 | Notes de l'utilisateur et audit : Épines permanentes (1 par charge), Vol de vie à deux charges, barde à 2 charges sur ses doubles 2 et 3 ; Aura de poison au début du tour adverse, avec le Poison ; textes clarifiés (Aura de poison, Aura mélodieuse, Fausse note) |
 | 0.42.0 | Audit des six compétences signalées : Pile ou face (pile à 20 qui touche, face vide), Aura de sainteté plafonnée à 3, Purification avec 5 dégâts de repli (`cleanse.orElse`), Aura d'immunité avec +1 d'armure (esquive d'Aldric de 5 à 2 %), Fleur de vie en Régénération 2 × 3 tours ; Rétribution inchangée |
 | 0.36.5 | Petites touches issues de l'audit des compétences : Esquive améliorée sans durée, Coup de chance au d6, Rage du sang propre à Murzug (+5 PV), Écorce épaisse à 5 ; une variante peut avoir sa propre version d'une compétence |

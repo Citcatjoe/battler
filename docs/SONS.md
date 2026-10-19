@@ -38,7 +38,7 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Dé posé | le dé s'arrête, le résultat est là | petit choc net de dé qui s'immobilise | 3 | 0,2 à 0,3 s |
 | | Pièce lancée | Pile ou face : la pièce tournoie en l'air | pièce qui tournoie, léger et en retrait : le résultat doit se détacher | 4 | 1 à 1,5 s, coupé quand elle retombe |
 | | Pièce retombe | le résultat de la pièce est là, pile comme face | pièce qui claque net sur une table, plus fort que le lancer | 2 | 0,2 à 0,6 s |
-| | Pile réussie | la pièce est tombée sur pile : la voleuse a gagné son pari | « ding » clair et net, juste après la pièce qui retombe | 2 | 0,5 à 0,8 s |
+| | Pile réussie (chance gagnée) | un coup de chance a réussi : la pièce est tombée sur pile, ou la barde a fait un double (0.46.0) | « ding » clair et net : juste après la pièce qui retombe, ou en même temps que les deux dés | 2 | 0,5 à 0,8 s |
 | **Coups** | Coup | des dégâts portés par un coup, quelle qu'en soit la source | frappe d'épée, bruit métallique net | 2 | 0,3 à 0,4 s |
 | | Coup critique (composé) | un coup critique, le coup de Pile, ou le dernier coup d'une relâche (Rétribution) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
 | | *Grondement* | couche du Coup critique, jamais jouée seule | gros choc grave qui résonne | 1 | 0,6 à 0,9 s |
@@ -76,6 +76,7 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | `skip` | Tour perdu |
 | `shift` | Transformation |
 | `coin` | Pièce lancée, Pièce retombe ; sur pile, Pile réussie juste après (0,14 s), puis Coup critique au coup ; sur face, rien de plus. La pièce seule ne disait pas assez si le pari était gagné (retour de l'utilisateur, 0.36.4). |
+| `pair` | Dés lancés, Dé posé ; sur un double, quel qu'il soit, Pile réussie en même temps que les dés (0.46.0, demande de l'utilisateur : le double doit s'entendre tout de suite). Les coups qui suivent sonnent comme des coups. |
 | `statusDuration`, `statusExpire` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
 | Fin du combat | KO, puis Victoire |
 
@@ -168,6 +169,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 | La pièce | Le lancer sonnait plus fort que le résultat : le résultat doit être un tintement caractéristique, au-dessus du lancer. |
 | Les fichiers (0.36.3) | Un par son, choisis par l'utilisateur ; aucun pour Ronge. |
 | La pièce (0.36.4) | On ne savait pas si le pari était gagné : un « ding » clair après le résultat, sur pile (généré par l'agent). |
+| Le double de la barde (0.46.0) | « Quand il fait un double dé, peu importe lequel, ça doit faire ding instantanément, utilise un son existant » : le « ding » de Pile réussie, joué en même temps que les dés qui se posent. |
 | Les dés (0.36.4) | Remettre ceux de la 0.36.0, avec leurs variantes tirées au hasard : exception à la règle 2, comme le critique en est une à la règle 3. |
 | Coup et Grondement (0.36.4) | Remplacés par `hit.wav` et `crit.wav`, déposés par l'utilisateur. |
 | Le volume (0.36.4) | « On n'entend rien » : plus de gain partout. |
@@ -184,7 +186,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Dé posé | la fin de tout jet, quelle que soit la face |
 | Pièce lancée | Pile ou face, quand la pièce part |
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
-| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile |
+| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; la barde, quand ses deux dés font un double (0.46.0) |
 | Coup | un coup d'attaque qui touche (y compris Charge et Coup de griffe) ; Épines et Riposte (renvois) ; chaque jauge de la Rétribution sauf la dernière |
 | Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup de la Rétribution, ou un coup de compétence unique de 10 dégâts et plus |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |

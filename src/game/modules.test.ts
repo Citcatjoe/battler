@@ -83,7 +83,9 @@ describe('catalogue des statuts', () => {
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
   })
   it('nombre affiché sur un état : tours restants s’il a une durée, sinon ses charges', () => {
-    expect(statusCounter({ id: 'windFury', stacks: 1, turns: 2 })).toEqual({ value: 2, unit: 'turns' })
+    expect(statusCounter({ id: 'regeneration', stacks: 1, turns: 2 })).toEqual({ value: 2, unit: 'turns' })
+    // La Furie des vents compte ses charges en réserve (0.46.0)
+    expect(statusCounter({ id: 'windFury', stacks: 2 })).toEqual({ value: 2, unit: 'stacks' })
     // Le poison n'affiche qu'une valeur, ses charges (0.36.4)
     expect(statusCounter({ id: 'poison', stacks: 3 })).toEqual({ value: 3, unit: 'stacks' })
     expect(statusCounter({ id: 'bonusArmor', stacks: 4 })).toEqual({ value: 4, unit: 'stacks' })

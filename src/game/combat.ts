@@ -884,8 +884,10 @@ export function simulateCombat(
       const faces = [own]
       if (flurry) {
         const def = STATUSES[flurry.id]
-        for (let k = 0; k < def.extraStrikes!; k++) faces.push(def.extraDie ?? own)
-        att.statuses = att.statuses.filter((s) => s.id !== flurry.id)
+        const extra = def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1)
+        for (let k = 0; k < extra; k++) faces.push(def.extraDie ?? own)
+        // Charges en réserve (`strikeCharges: 'one'`) : une seule est dépensée, les autres attendent
+        att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
         beats.push({ type: 'flurry', turn, side: attacker, status: flurry.id, strikes: faces.length, faces, state: snapshot() })
       }
       for (const [k, die] of faces.entries()) {

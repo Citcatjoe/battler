@@ -244,6 +244,13 @@ export function createAudit() {
           if (x.type === 'attack' && x.attack.faces !== b.faces[k]) flag('coups multiples : mauvais dé', r, i, `${x.attack.faces} au lieu de d${b.faces[k]}`)
         })
         if (b.side !== active(b.turn)) flag('Furie hors de son tour', r, i, '')
+        // Charges en réserve (0.46.0) : une seule est dépensée par action, les autres restent
+        if (STATUSES[b.status].strikeCharges === 'one') {
+          const before = find(prev.statuses[b.side], b.status)?.stacks ?? 0
+          const after = find(s.statuses[b.side], b.status)?.stacks ?? 0
+          if (after !== before - 1) flag('Furie : charges mal dépensées', r, i, `${before} → ${after}`)
+          if (after > 0) see('furie en réserve')
+        }
       }
       // Statut qui s'estompe (poison, 0.36.4) : agit pour ses charges, puis en perd une, sans durée en tours
       if (b.type === 'statusTick' && STATUSES[b.status].decays) {

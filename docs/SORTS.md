@@ -426,3 +426,37 @@ Mesures refaites sur le roster de 20 personnages (400 combats par duel pour l'é
 
 La passe a été mesurée sur 20 personnages, puis fusionnée après le retrait des jumeaux (0.44.0) ; elle devient la 0.45.0. L'immunité propre à Gauvain disparaît avec lui. Mesures refaites sur le roster de 10 (400 combats par duel pour l'équilibre, 300 pour l'audit) : de 45,8–51,4 % avant à **44,4 % (Ysolde) – 54,6 % (Ervald)** après, aucun duel hors limites ; Fanchon 50,5 → 54,3 %. Valeurs nettes : Vol de vie +4,3 → **+9,6**, Aura de poison +4,4 → **+5,9**, Aura mélodieuse −0,9 → **+2,3**, Fausse note −1,0 → **+0,4** (presque inutile), Épines +2,6 → +2,4, Aura d'immunité d'Aldric +1,2 → +1,4.
 
+## 12. Troisième passe : Furie des vents, son des doubles, kit de la barde (0.46.0)
+
+**Demande** : un « ding » instantané sur tout double de la barde, avec un son existant ; une Furie des vents cumulable, dont les déclenchements restent en réserve ; trois compétences proposées par l'audit 0.45.1. Écartées : la Rétribution (décision de l'utilisateur), la Pile ou face (règle fixée par l'utilisateur), les doubles « rares à l'écran » (par construction). Retenues : **Siffloter** et **Fausse note** (« presque inutiles »), **Ouverture** (« écrasante »).
+
+### Laboratoire (série 6, 400 combats par duel)
+
+| Piste | Personnage | Δ | Lecture |
+| --- | --- | --- | --- |
+| Furie cumulable, tout d'un coup | Gorak | +0,3 ± 0,2 | les charges multiples sont rares |
+| Furie cumulable, une par action (en réserve) | Gorak | +0,3 ± 0,2 | **retenue** : fidèle à « en réserve jusqu'à ses prochains coups » |
+| Siffloter à 5 charges | Fanchon | +1,5 | plus plat |
+| Siffloter qui frappe aussi | Fanchon | +2,8 | retenu, en kit |
+| Fausse note qui frappe aussi | Fanchon | +3,5 | retenue, en kit |
+| Sans Ouverture | Fanchon | −26,2 | l'Ouverture porte la barde |
+| Kit : tous les doubles frappent, sans Ouverture | Fanchon | −16,1 | trop faible |
+| Kit : Siffloter et Fausse note qui frappent | Fanchon | +6,1 | 60,5 % : hors budget |
+| Même kit, esquive 8 / 6 / 4 % | Fanchon | +3,0 / **+0,3** / −1,8 | **6 % retenu** |
+
+### Avant → après (0.45.1 → 0.46.0, roster de 10)
+
+| Compétence | Valeur nette | Drapeau |
+| --- | --- | --- |
+| Siffloter | +0,7 → **+3,3** | presque inutile → rare à l'écran |
+| Fausse note | +0,4 → **+4,3** | presque inutile → rare à l'écran |
+| Ouverture | +25,7 → +27,1 | écrasante (gardée) |
+| Furie des vents | +6,9 → +7,1 | aucun |
+
+Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spectacle de la barde : fins serrées de 41 à 43 % au laboratoire.
+
+### Limites
+
+- **Le « ding » n'est pas vérifiable à l'oreille** par l'agent.
+- **Écorce épaisse** passe sous le seuil de « presque inutile » (+1,1, dans la marge).
+

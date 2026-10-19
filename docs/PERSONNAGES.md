@@ -92,6 +92,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
+**0.46.0, Furie des vents cumulable** (demande de l'utilisateur) : chaque 2 ajoute une charge, sans durée ; chaque action en dépense une (deux coups), les autres restent en réserve. Valeur nette +6,9 → +7,1 : il faut un 2 pendant la rafale pour en avoir deux. Gorak de 49,8 à 50,4 %.
+
 ## Elfes : éviter et punir
 
 **Image** : `elf.png`, une chasseresse de la nuit qui bande son arc en croissant de lune, en bleu nuit et argent (0.30.1). Elle remplace l'ancienne elfe lie-de-vin, une placeholder tirée d'une œuvre existante. Le design prévu pour une « Chasseresse de la nuit » distincte (STYLE_BIBLE) sert maintenant de modèle à Elaria et à Sylwen.
@@ -454,6 +456,8 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 ---
 
 **0.45.0, aura et Fausse note à 2 charges** (note de l'utilisateur : description de l'aura peu claire). Le double 3 pose 2 charges d'Aura mélodieuse, le double 2 deux charges de Fausse note (le prochain coup adverse qui touche perd 10). À une charge, ces deux doubles coûtaient des victoires (−1,0 à −1,3) : ils remplacent deux coups. Après : Aura mélodieuse **+2,0 et +2,5**, Fausse note **+0,8 et +0,5** (encore « presque inutile »). Fanchon et Mélisande à **54,5 %**. Les textes n'emploient plus « dégâts finaux » : « ajouté après l'armure : rien ne le réduit ». Une Fausse note qui frappe aussi ses deux coups montait à +3,9, mais, avec l'aura, les bardes passaient à 57-58 %.
+
+**0.46.0, Siffloter et Fausse note frappent aussi** (audit) : le double 1 et le double 2 gardent leurs deux coups en plus de leur effet. Siffloter +0,7 → **+3,3**, Fausse note +0,4 → **+4,3**. Compensation : esquive de 12 à **6 %** (sans elle, 60,5 %) ; Fanchon 54,3 → 54,6 %. L'**Ouverture** (+27, « écrasante ») est gardée : c'est son identité (sans elle, 28 % ; avec tous les doubles qui frappent, 38 %). Sur tout double, un « ding » (Pile réussie) joue en même temps que les dés.
 
 ## Matrice des duels
 

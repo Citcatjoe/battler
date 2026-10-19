@@ -95,7 +95,7 @@ const gorak: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
-      effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1, turns: 1 }],
+      effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1 }],
     },
     {
       id: 'power-aura',
@@ -471,7 +471,8 @@ const fanchon: CharacterDef = {
   race: 'Humain',
   archetype: 'Saltimbanque',
   twinDice: true,
-  stats: { maxHp: 46, damageDie: 5, armor: 0, dodgeChance: 0.12, critChance: 0.05, critMultiplier: 2 },
+  // Esquive de 12 à 6 % (0.46.0) : compensation de Siffloter et de la Fausse note, qui frappent désormais
+  stats: { maxHp: 46, damageDie: 5, armor: 0, dodgeChance: 0.06, critChance: 0.05, critMultiplier: 2 },
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
@@ -503,6 +504,8 @@ const fanchon: CharacterDef = {
       name: 'Siffloter',
       nature: 'arcane',
       trigger: 'doubleOne',
+      // 0.46.0 : le double frappe aussi ses deux coups (il ne les sacrifie plus : « presque inutile » avant)
+      volley: 2,
       effects: [{ type: 'applyStatus', status: 'whistling', stacks: 3 }],
     },
     {
@@ -510,6 +513,8 @@ const fanchon: CharacterDef = {
       name: 'Fausse note',
       nature: 'arcane',
       trigger: 'doubleTwo',
+      // 0.46.0 : le double frappe aussi ses deux coups
+      volley: 2,
       // 0.45.0 : 2 charges (le prochain coup adverse qui touche perd 10), pour la même raison
       effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }],
     },

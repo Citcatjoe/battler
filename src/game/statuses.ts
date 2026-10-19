@@ -128,6 +128,12 @@ export interface StatusDef {
   drainsHit?: boolean
   /** Coups supplémentaires à sa prochaine action, chacun résolu indépendamment ; le statut est consommé en entier */
   extraStrikes?: number
+  /**
+   * Charges de coups supplémentaires (0.46.0) : `all`, la prochaine action dépense toutes les charges
+   * (`extraStrikes` coups par charge) ; `one`, chaque action en dépense une seule, les autres restent en réserve.
+   * Sans ce champ : une seule charge, consommée en entier.
+   */
+  strikeCharges?: 'all' | 'one'
   /** Faces du dé des coups supplémentaires (défaut : le dé du porteur), ex. le d6 de Coup de chance */
   extraDie?: number
   /**
@@ -351,13 +357,19 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'À sa prochaine action, le porteur frappe deux fois ; chaque coup est résolu à part.',
-    describe: (s) => `Frappe deux fois à sa prochaine action, chaque coup résolu à part${forTurns(s)}`,
+    summary: 'Chaque charge : une action où le porteur frappe deux fois, chaque coup résolu à part. Les charges se cumulent et restent en réserve : une par action.',
+    describe: (s) =>
+      s.stacks > 1
+        ? `Frappe deux fois à chacune de ses ${s.stacks} prochaines actions, chaque coup résolu à part`
+        : 'Frappe deux fois à sa prochaine action, chaque coup résolu à part',
     badge: () => '×2',
-    stacking: 'refresh',
-    maxStacks: 1,
+    // 0.46.0 (demande de l'utilisateur) : cumulable, sans durée ; chaque action dépense une charge
+    counter: 'stacks',
+    stacking: 'add',
+    // Une Furie posée avec une durée (aucune aujourd'hui) se décompte en fin de tour
     expiresAt: 'turnEnd',
     extraStrikes: 1,
+    strikeCharges: 'one',
   },
   evasion: {
     name: 'Esquive améliorée',

@@ -23,7 +23,7 @@ Chaque race a trois compétences, une sur un **1** au dé, une sur un **2**, une
 
 | Race | Sur un 1 | Sur un 2 | Sur un 3 (aura permanente) | Thème |
 | --- | --- | --- | --- | --- |
-| Orcs | Rage du sang (+3 PV, immédiat) | 🌪️ Furie des vents (deux coups à l'action suivante) | 💪 Aura de puissance (+2 dégâts par charge, cumulable) | s'emporter, déferler |
+| Orcs | Rage du sang (+3 PV, immédiat) | 🌪️ Furie des vents (deux coups par action, charges cumulables en réserve, 0.46.0) | 💪 Aura de puissance (+2 dégâts par charge, cumulable) | s'emporter, déferler |
 | Elfes | 🎯 Œil de faucon (Critique assuré) | 💨 Esquive améliorée (esquive à coup sûr le prochain coup reçu, sans durée) | 🦅 Aura de précision (+1 au multiplicateur de critique par charge, cumulable) | viser, se dérober |
 | Nains | 🛡️ Peau de pierre (Armure temporaire +6) | 🌵 Épines (permanentes, cumulables : 1 dégât renvoyé par charge à chaque coup encaissé, 0.45.0) | 😠 Aura d'intimidation (l'adversaire frappe 2 de moins par charge, cumulable) | tenir, punir l'attaquant |
 | Humains | 😱 Peur (l'adversaire perd sa prochaine action) | Purification (retire le dernier bonus adverse, toutes charges ; sinon 5 dégâts directs) | 🕊️ Aura de sainteté (+2 PV par charge en fin de tour, 3 charges au plus) | contrôler, tenir |
@@ -78,7 +78,7 @@ Un statut peut ponctuellement être emprunté par une autre race, mais il garde 
 
 Le tour du porteur a trois phases : **début de tour** (effets périodiques de début, durées « début »), **action** (attaque, ou action perdue s'il est Étourdi) et **fin de tour** (effets périodiques de fin, durées « fin »). Les fenêtres, l'ordre de résolution, l'application (immunité → garde → opposition → cumul) et des exemples d'interactions sont dans **[RESOLUTION.md](RESOLUTION.md)**, le livre de règles de la résolution.
 
-Exemple : une Furie des vents de durée 1 tient jusqu'à l'action suivante du porteur, puis expire. Le poison n'a pas de durée depuis la 0.36.4 : il s'estompe (3, 2, 1, puis il disparaît).
+Exemple : une Furie des vents de durée 1 tiendrait jusqu'à l'action suivante du porteur, puis expirerait (depuis la 0.46.0, Gorak la pose sans durée, en réserve). Le poison n'a pas de durée depuis la 0.36.4 : il s'estompe (3, 2, 1, puis il disparaît).
 
 ### Conditions disponibles
 
@@ -110,7 +110,7 @@ Une condition fausse ne consomme pas de hasard : la `chance` d'un événement n'
 | 🌵 Épines | bonus | **chaque** coup encaissé renvoie 1 dégât direct par charge à l'attaquant ; permanentes depuis la 0.45.0 (demande de l'utilisateur ; avant : 6 pendant 1 tour) | add | — | oui · nains (sur un 2), sur soi |
 | ✨ Garde sacrée | bonus | bloque les prochains malus (une charge par blocage) | add | — | à venir |
 | 🦇 Vol de vie | bonus | chaque charge : le prochain coup porté rend les PV qu'il retire (`drainsHit`) ; esquivé, la charge est perdue ; un jet de compétence la laisse. Deux charges par Vol de vie (0.45.0) | add | 2 | oui · morts-vivants (sur un 2), sur soi |
-| 🌪️ Furie des vents | bonus | deux coups à la prochaine action, chacun résolu à part (`extraStrikes`) ; décomptée en fin de tour | refresh | 1 | oui · orcs (Furie des vents, 1 tour), sur soi |
+| 🌪️ Furie des vents | bonus | chaque charge : une action à deux coups, chacun résolu à part (`extraStrikes`) ; les charges se cumulent, sans durée, et chaque action en dépense une (`strikeCharges: 'one'`, 0.46.0, demande de l'utilisateur) | add | — | oui · orcs (sur un 2), sur soi |
 | 💨 Esquive améliorée | bonus | le prochain coup reçu est esquivé, sans tirage (`forcesDodge`) | refresh | 1 | oui · elfes (Esquive améliorée, 1 tour), sur soi |
 | ☣️ Aura de poison | bonus | au début de chaque tour de l'**adversaire**, juste après ses poisons, il perd 1 PV par charge (dégâts directs, `onOpponentTurnStart`, 0.45.0 ; avant : au début du tour du porteur) ; permanente. **Ce n'est pas un Poison** : ni l'immunité ni la régénération ne l'arrêtent (un vrai poison faisait tomber Ervald à 31 % contre Gauvain) | add | — | oui · morts-vivants (sur un 3), sur soi |
 | 💪 Aura de puissance | bonus | +2 dégâts par charge sur chaque coup, avant l'armure (`modifyOutgoing`) ; permanente | add | — | oui · orcs (sur un 3), sur soi |
@@ -128,8 +128,8 @@ Une condition fausse ne consomme pas de hasard : la `chance` d'un événement n'
 | Pourriture | malus | 1 dégât direct par charge au début de chaque tour du porteur ; sans durée, seule une purge l'enlève | add | — | oui · posée par l'Aura de pourriture |
 | ⚔️ Riposte | bonus | le prochain coup qui touche le porteur lui renvoie 50 % des PV retirés (`reflectsHit`) ; sans durée, gardée sur un jet adverse de 1 à 3 (0.32.0) | refresh | 1 | oui · paladin (sur un 2), sur soi |
 | Aura d'immunité | bonus | aucun malus ne peut être posé sur le porteur, sans s'user (`immune`), et son armure gagne 1 (`modifyStats`, 0.42.0) ; permanente | refresh | 1 | oui · paladin (sur un 3), sur soi |
-| Sifflotement | bonus | +2 PV à chaque fin de tour du porteur, puis une charge de moins (`decays`, `onTurnEnd`) : une charge par tour | add | — | oui · barde (Siffloter, double 1, 3 charges), sur soi |
-| Fausse note | malus | le prochain coup du porteur qui touche fait 5 dégâts de moins par charge, retirés après l'armure (`modifyFinal`, au moins 1), puis disparaît (`spentOnHit`) ; esquivé ou sacrifié, elle reste. La barde en pose 2 charges (0.45.0) | add | — | oui · barde (Fausse note, double 2), sur l'adversaire |
+| Sifflotement | bonus | +2 PV à chaque fin de tour du porteur, puis une charge de moins (`decays`, `onTurnEnd`) : une charge par tour | add | — | oui · barde (Siffloter, double 1, 3 charges ; le double frappe aussi ses deux coups depuis la 0.46.0), sur soi |
+| Fausse note | malus | le prochain coup du porteur qui touche fait 5 dégâts de moins par charge, retirés après l'armure (`modifyFinal`, au moins 1), puis disparaît (`spentOnHit`) ; esquivé ou sacrifié, elle reste. La barde en pose 2 charges (0.45.0) | add | — | oui · barde (Fausse note, double 2 ; il frappe aussi ses deux coups depuis la 0.46.0), sur l'adversaire |
 | Aura mélodieuse | bonus, aura | +1 dégât par charge sur chaque coup qui touche, ajouté après l'armure et les boucliers (`modifyFinal`) : rien ne le réduit ; permanente | add | — | oui · barde (Ouverture au début du combat : 1 charge ; double 3 : 2 charges depuis la 0.45.0), sur soi |
 | 🍀 Coup de chance | bonus | à la prochaine action, un d6 en plus, coup à part (`extraStrikes` + `extraDie`) | refresh | 1 | oui · hommes-lézards (sur un 1), sur soi |
 
