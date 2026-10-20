@@ -102,7 +102,7 @@ function SkillCard({ entry, onSelectCharacter }: { entry: SkillEntry; onSelectCh
         <ul className="flex-1 space-y-2 overflow-hidden px-5">
           {event.effects.map((effect, i) => (
             <li key={i}>
-              <EffectLine effect={effect} />
+              <EffectLine effect={effect} skillName={event.name} />
             </li>
           ))}
         </ul>
@@ -160,11 +160,27 @@ function immediateLook(effect: ImmediateEffect) {
 
 const TARGET = (target: Effect['target']) => (target === 'opponent' ? "sur l'adversaire" : 'sur soi')
 
-/** Un effet : médaillon (icône du statut, ou symbole de l'effet immédiat) et sa règle en clair. */
-export function EffectLine({ effect }: { effect: Effect }) {
+/**
+ * Un effet : médaillon (icône du statut, ou symbole de l'effet immédiat) et sa règle en clair.
+ * Une ligne d'effet d'une compétence. `skillName` : le nom de la compétence qui pose l'effet. Quand elle pose un
+ * statut du même nom (Furie des vents pose Furie des vents), son icône et son nom sont déjà en tête de la carte :
+ * la ligne ne garde que ce que fait le statut, sans les répéter.
+ */
+export function EffectLine({ effect, skillName }: { effect: Effect; skillName?: string }) {
   if (effect.type === 'applyStatus') {
     const def = STATUSES[effect.status]
     const status = { id: effect.status, stacks: effect.stacks, turns: effect.turns }
+    if (skillName !== undefined && def.name === skillName)
+      return (
+        <p className="font-body text-[15px] leading-snug text-ink-1" title={def.summary}>
+          <span className={`mr-1.5 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${POLARITY_STYLE[def.polarity].chip}`}>
+            {def.polarity === 'negative' ? 'Malus' : 'Bonus'}
+          </span>
+          <span className="text-ink-2">{TARGET(effect.target)}</span>
+          <br />
+          <span className="text-ink-1">{def.describe(status)}</span>
+        </p>
+      )
     return (
       <div className="flex items-start gap-3" title={def.summary}>
         <StatusIcon id={effect.status} className="h-9 w-9 shrink-0" />

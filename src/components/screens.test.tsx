@@ -27,7 +27,7 @@ import { Fighter } from './Fighter'
 import { FightScreen } from './FightScreen'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
-import { STATUS_ICON } from './Icon'
+import { skillIcon, STATUS_ICON } from './Icon'
 import { MatchupScreen } from './MatchupScreen'
 import { RecordsScreen } from './RecordsScreen'
 import { StartScreen } from './StartScreen'
@@ -234,6 +234,14 @@ describe('écrans', () => {
         })
       }
     expect(grouped).toBeGreaterThan(50)
+  })
+
+  it("chaque compétence montre sa vraie icône (pas l'étoile générique) dans son sceau", () => {
+    // En attente d'une icône peinte, demandée à l'utilisateur (docs/STYLE_BIBLE.md § 7)
+    const pending = ['blood-rage']
+    for (const id of CHARACTER_IDS)
+      for (const e of createCharacter(id).events)
+        expect(skillIcon(e) === 'event', `${e.name} (${e.id}) : icône du sceau`).toBe(pending.includes(e.id))
   })
 
   it('compendium, fiches et statistiques', () => {

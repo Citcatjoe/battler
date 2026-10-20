@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Icon, SKILL_ICON } from './Icon'
+import { ROSTER } from '../game/roster'
+import { Icon, skillIcon } from './Icon'
 
 /**
  * Sceaux peints des compétences (asset A-01 du design system, pas encore générés), par id de
@@ -12,7 +13,9 @@ const SKILL_SEAL: Partial<Record<string, string>> = {}
 export function SkillSeal({ id, size = 56 }: { id: string; size?: 32 | 40 | 56 }) {
   const [failed, setFailed] = useState(false)
   const seal = SKILL_SEAL[id]
-  const icon = SKILL_ICON[id] ?? 'event'
+  // L'icône de la compétence elle-même (et non l'étoile générique), cherchée par son id dans le roster
+  const event = ROSTER.flatMap((c) => c.events).find((e) => e.id === id)
+  const icon = event ? skillIcon(event) : 'event'
   return (
     <span className="skill-seal" style={{ width: size, height: size }}>
       {seal && !failed ? (

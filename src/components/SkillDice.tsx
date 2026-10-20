@@ -73,8 +73,8 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
           <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event?.nature ?? 'neutral'}>
             {/* Le dé qui sort : il s'allume un instant, comme un tintement, dans la couleur de la nature de la
                 compétence ; la clé relance l'éclat quand la même face sort deux fois de suite */}
-            {event && pulse?.face === face && <span key={pulse.key} aria-hidden className="skill-die-pulse" />}
-            <div key={event && pulse?.face === face ? pulse.key : 'idle'} className={event && pulse?.face === face ? 'skill-die-flash' : ''}>
+            {event && pulse?.face === face && <span key={`wave-${pulse.key}`} aria-hidden className="skill-die-pulse" />}
+            <div key={event && pulse?.face === face ? `flash-${pulse.key}` : 'idle'} className={event && pulse?.face === face ? 'skill-die-flash' : ''}>
               <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
             </div>
             {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
@@ -170,7 +170,7 @@ function SkillTooltip({
       <ul className="space-y-2.5">
         {event.effects.map((effect, i) => (
           <li key={i}>
-            <EffectLine effect={effect} />
+            <EffectLine effect={effect} skillName={event.name} />
           </li>
         ))}
       </ul>

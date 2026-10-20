@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.53.0._
+_Dernière mise à jour : 2026-10-20, version 0.53.1._
 
 ## En bref
 

@@ -45,6 +45,7 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
 | 0.44.0 | Passage de main (pause, camp actif, anneau au sol) et dé de compétence qui pulse dans l'en-tête |
 | 0.45.1 | Ligne au sol sur la moitié de l'arène, barre de vie active renforcée sans tamiser l'autre, dés éteints au repos et éclat bref au déclenchement |
 | 0.52.0 | Furie relancée : badge qui monte (×2, ×3), dé de la rafale groupé avec sa compétence, nom de la Furie affiché une seule fois |
+| 0.53.1 | Infobulles des dés et cartes du compendium : la vraie icône de la compétence dans le sceau (au lieu de l'étoile), sans répéter le statut du même nom |
 | 0.49.0 | Halo diffus du camp actif en bas de l'écran (au lieu de la ligne) ; compétence du dé groupée avec son jet ; badges de coups spéciaux empilés, colorés par famille (`specials.ts`) ; libellé de la pièce lisible |
 
 ## 2. Personnages et roster

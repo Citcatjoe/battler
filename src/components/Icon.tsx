@@ -1,4 +1,5 @@
 import { STATUSES, type StatusId } from '../game/statuses'
+import type { CharacterEvent } from '../game/events'
 
 /** Icônes peintes (`src/assets/icons/`, voir la section 7 de `docs/STYLE_BIBLE.md`). */
 const URLS = import.meta.glob<string>('../assets/icons/*.png', { eager: true, import: 'default' })
@@ -113,6 +114,22 @@ export const SKILL_ICON: Partial<Record<string, IconName>> = {
   overture: 'melodious-aura',
   crescendo: 'crescendo',
   soloist: 'soloist',
+}
+
+/**
+ * Icône d'une compétence, pour sa fenêtre (sceau) dans les infobulles et le compendium : son icône propre
+ * (`SKILL_ICON`, ou une icône peinte qui porte son id, comme `wind-fury`), sinon celle du statut qu'elle pose
+ * ou relâche (Œil de faucon : le critique assuré), sinon l'icône générique des compétences.
+ */
+export function skillIcon(event: Pick<CharacterEvent, 'id' | 'effects'>): IconName {
+  const own = SKILL_ICON[event.id] ?? (URLS[`../assets/icons/${event.id}.png`] ? (event.id as IconName) : undefined)
+  if (own) return own
+  for (const e of event.effects) {
+    const status = e.type === 'applyStatus' || e.type === 'release' ? e.status : undefined
+    const icon = status && STATUS_ICON[status]
+    if (icon) return icon
+  }
+  return 'event'
 }
 
 /** Icône d'un statut : l'icône peinte, sinon une marque neutre (l'initiale du statut) à la même taille. */

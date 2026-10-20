@@ -31,6 +31,13 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.53.1] — 2026-10-20
+
+### Corrigé
+- **Infobulles des dés de compétence (écran principal) et cartes du compendium** (signalé par l'utilisateur : « un premier étage avec une étoile violette, présentée sur tous les sorts, et dessous la vraie icône ») : le sceau en tête montre maintenant **l'icône de la compétence** (la sienne, ou celle du statut qu'elle pose : Œil de faucon, le critique assuré ; Peau de pierre, l'écu), au lieu de l'étoile générique (`skillIcon`, `Icon.tsx`). Seule la Rage du sang de Gorak, un soin immédiat sans icône peinte, garde l'étoile en attendant la sienne (demandée). Test : chaque compétence du roster a son icône.
+- **L'information n'est plus répétée** : quand une compétence pose un statut du même nom (Furie des vents pose Furie des vents), la ligne d'effet ne redit ni l'icône ni le nom, et ne garde que ce que fait le statut (« Bonus, sur soi : frappe deux fois tout de suite… »).
+- **Console** : avertissement React de clés en double pendant les combats joués (l'onde et le dé allumé d'une même face de compétence avaient la même clé, `SkillDice`).
+
 ## [0.53.0] — 2026-10-20
 
 ### Ajouté
