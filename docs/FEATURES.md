@@ -319,11 +319,12 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 - **Silences** : l'élan, le jet maximal, les faces de compétence (1, 2 et 3), les durées qui baissent et les statuts qui expirent ne sonnent pas.
 - **Vitesse** : à ×2 et ×4, les sons du combat sont écourtés au prorata, avec un fondu. Le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
 - **Ajouter ou remplacer un fichier** : traiter la source avec `scripts/process-sounds.py`, copier le fichier retenu sous le nom du son (`SOUND_NAMES`), régler son volume dans `MIX`.
-- **Musique de fond** (0.48.0, [SONS.md](SONS.md) § 10) : pendant chaque combat joué, une boucle tirée au hasard parmi trois (`src/assets/music/`), quelle que soit l'arène, en boucle sous les effets. Elle entre en fondu, s'efface au KO pour laisser ressortir le KO et la victoire, puis s'arrête en fondu à l'écran de fin. Chaque piste est égalisée à −29 LUFS, environ 15 dB sous les effets. Elle a son propre bus, hors du compresseur des effets, et le bouton du son la coupe aussi.
+- **Musique de fond** (0.48.0, [SONS.md](SONS.md) § 10) : pendant chaque combat joué, une boucle tirée au hasard parmi trois (`src/assets/music/`), quelle que soit l'arène, en boucle sous les effets. Elle entre en fondu, s'efface au KO pour laisser ressortir le KO et la victoire, puis s'arrête en fondu à l'écran de fin. Chaque piste est égalisée à −29 LUFS, environ 15 dB sous les effets. Elle a son propre bus, hors du compresseur des effets, et le bouton du son la coupe aussi. Un second bouton, sous celui du son, coupe la musique seule (0.53.0), et ce choix est gardé d'une partie à l'autre.
 
 | Version | Changement |
 | --- | --- |
 | 0.2.0 | Ajout des effets sonores et du bouton muet |
+| 0.53.0 | Second bouton, sous celui du son : couper la musique seule (choix gardé) |
 | 0.48.0 | Musique de fond des combats : trois boucles déposées par l'utilisateur, une au hasard par combat, égalisées et discrètes |
 | 0.9.0 | Son d'événement |
 | 0.35.4 | Plus de son de déception sur un 1 au dé |

@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.53.0] — 2026-10-20
+
+### Ajouté
+- **Couper la musique seule** (demande de l'utilisateur) : un second bouton rond, sous celui du son et plus petit, coupe ou remet la musique de fond sans toucher aux effets.
+  - **Mémoire** : le choix est gardé d'une partie à l'autre (`battler:music-muted`). Couper le son coupe toujours tout, et la musique reprend son état quand le son revient.
+  - **Placement** : à côté du bouton du son, il recouvrait le nom du combattant de droite en combat et « Simuler le tour » dans l'arbre ; dessous, il ne gêne aucun écran (vérifié à la capture).
+  - **Icône provisoire** : une note dessinée en vecteur, jamais un emoji, barrée quand la musique est coupée. Les icônes peintes `music-on` et `music-off` sont à produire.
+
 ## [0.52.1] — 2026-10-20
 
 ### Retiré

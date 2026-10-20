@@ -263,7 +263,8 @@ Ce n'est pas un son au sens du § 2 : la musique ne signifie rien, elle installe
   - en boucle, avec un fondu d'entrée de 2,5 s et un fondu de sortie de 1,2 s quand on quitte l'écran ;
   - au KO, elle s'efface à 25 % de son niveau en 0,3 s, pour que le KO et la fanfare de victoire ressortent ;
   - elle ne suit pas la vitesse du combat (×2, ×4) ;
-  - elle est coupée avec tout le reste par le bouton du son.
+  - elle est coupée avec tout le reste par le bouton du son ;
+  - un **second bouton**, sous celui du son et plus petit (0.53.0), coupe la musique seule. Ce choix est gardé d'une partie à l'autre (`battler:music-muted`) et retrouvé quand le son revient. Son icône est une note dessinée en vecteur, provisoire, en attendant les icônes peintes `music-on` et `music-off`.
 - **Niveau** : les trois boucles n'ont pas la même sonie à la source (−18,4, −9,7 et −8,7 LUFS intégrés, mesurés avec `ffmpeg -af ebur128`). Le jeu ramène chacune à **−29 LUFS** (`MUSIC_TARGET`), soit environ 15 dB sous les effets, égalisés vers −12 dB RMS. C'est le réglage « pas trop fort ». Il se règle à l'oreille dans `sound.ts`, à un seul endroit.
 - **Mixage** : la musique a son propre bus, à part du compresseur des effets. Sinon, chaque coup ferait « pomper » le compresseur et la musique avec lui.
 - **Fichiers** : `src/assets/music/battle-boss.mp3` (77,6 s, 155 bpm), `battle-orchestral.mp3` (40,3 s), `battle-drums.mp3` (22,3 s, 172 bpm). Ils sont gardés tels que livrés, sans réencodage, pour ne pas abîmer la jonction des boucles. Provenance : `src/assets/music/SOURCES.md`. Une nouvelle boucle se dépose dans ce dossier, avec sa sonie mesurée dans `MUSIC_LOUDNESS`. Un test vérifie qu'aucune piste n'en manque.

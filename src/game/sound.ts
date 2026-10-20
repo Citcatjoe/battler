@@ -8,6 +8,8 @@
  */
 
 const MUTE_KEY = 'battler:muted'
+/** Musique coupée à part (0.53.0) : les effets restent */
+const MUSIC_MUTE_KEY = 'battler:music-muted'
 // Volume général (0.36.4 : de 0.6 à 1, « on n'entend rien »), derrière un compresseur qui évite la saturation
 const VOLUME = 1
 
@@ -17,6 +19,9 @@ let master: GainNode | null = null
 let musicBus: GainNode | null = null
 let noiseBuf: AudioBuffer | null = null
 let muted = readMuted()
+let musicMuted = readMuted(MUSIC_MUTE_KEY)
+/** Niveau du bus de musique : coupé par le bouton du son, ou par celui de la musique seule */
+const musicOn = () => (muted || musicMuted ? 0 : 1)
 /** Vitesse du combat (×1, ×2, ×4) : au-delà de ×1, les sons du combat sont écourtés d'autant. */
 let speed = 1
 
@@ -92,9 +97,9 @@ function loadSamples(c: AudioContext) {
         })
 }
 
-function readMuted() {
+function readMuted(key = MUTE_KEY) {
   try {
-    return localStorage.getItem(MUTE_KEY) === '1'
+    return localStorage.getItem(key) === '1'
   } catch {
     return false
   }
@@ -116,7 +121,7 @@ function audio() {
     makeup.gain.value = 1.4
     master.connect(comp).connect(makeup).connect(ctx.destination)
     musicBus = ctx.createGain()
-    musicBus.gain.value = muted ? 0 : 1
+    musicBus.gain.value = musicOn()
     musicBus.connect(ctx.destination)
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
     const data = noiseBuf.getChannelData(0)
@@ -153,7 +158,22 @@ export function setMuted(value: boolean) {
     /* stockage indisponible : on garde juste l'état en mémoire */
   }
   if (ctx && master) master.gain.setTargetAtTime(value ? 0 : VOLUME, ctx.currentTime, 0.02)
-  if (ctx && musicBus) musicBus.gain.setTargetAtTime(value ? 0 : 1, ctx.currentTime, 0.05)
+  if (ctx && musicBus) musicBus.gain.setTargetAtTime(musicOn(), ctx.currentTime, 0.05)
+}
+
+export function isMusicMuted() {
+  return musicMuted
+}
+
+/** Coupe ou rétablit la musique seule (deuxième bouton, 0.53.0), en fondu court ; les effets ne changent pas. */
+export function setMusicMuted(value: boolean) {
+  musicMuted = value
+  try {
+    localStorage.setItem(MUSIC_MUTE_KEY, value ? '1' : '0')
+  } catch {
+    /* stockage indisponible : on garde juste l'état en mémoire */
+  }
+  if (ctx && musicBus) musicBus.gain.setTargetAtTime(musicOn(), ctx.currentTime, 0.15)
 }
 
 /* ---------- Musique de fond des combats (docs/SONS.md § 10) ---------- */

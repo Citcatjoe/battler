@@ -415,6 +415,15 @@ describe('musique de fond (docs/SONS.md § 10, 0.48.0)', () => {
     expect([...sound.MUSIC_TRACKS].sort()).toEqual(['battle-boss', 'battle-drums', 'battle-orchestral'])
     for (const t of sound.MUSIC_TRACKS) expect(sound.MUSIC_LOUDNESS[t]).toBeLessThan(0)
   })
+  it('la musique se coupe à part (0.53.0), sans toucher au bouton du son', async () => {
+    const sound = await import('./sound')
+    const before = sound.isMuted()
+    sound.setMusicMuted(true)
+    expect(sound.isMusicMuted()).toBe(true)
+    expect(sound.isMuted()).toBe(before)
+    sound.setMusicMuted(false)
+    expect(sound.isMusicMuted()).toBe(false)
+  })
 })
 
 describe('Sons (docs/SONS.md, 0.36.2)', () => {
