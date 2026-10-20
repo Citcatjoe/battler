@@ -19,7 +19,7 @@ Chaque section donne les règles actuelles, puis l'historique de la fonctionnali
   6. Les **boucliers** du défenseur (ex. armure temporaire) absorbent ensuite des points, sans faire descendre le coup sous 1, et s'usent d'autant.
   6 bis. Les **dégâts finaux** de l'attaquant (Aura mélodieuse, Fausse note, 0.41.0) s'ajoutent ou se retirent en dernier, sans que l'armure ni l'intimidation ne les touchent ; au moins 1 dégât. À l'écran, on dit « ajouté après l'armure : rien ne le réduit » (0.45.0).
   7. **Vol de vie** : si l'attaquant porte Vol de vie, le coup porté consomme une charge (deux par Vol de vie depuis la 0.45.0). S'il a touché, il regagne les dégâts du coup ; esquivé, la charge est perdue sans soin ; un jet de compétence (1 à 3) ne la consomme pas.
-- **Deux dés (la barde, 0.41.0)** : un personnage `twinDice` lance deux dés à chaque action. Hors double, deux coups séparés, un par dé (esquive et critique chacun) ; sur un double qui a sa compétence, celle-ci remplace les deux coups (voir la section 2 et `RESOLUTION.md` § 2). En mode triche, la paire compte pour deux dés.
+- **Deux dés (la barde, 0.41.0)** : un personnage `twinDice` lance deux dés à chaque action. Hors double, deux coups séparés, un par dé (esquive et critique chacun) ; sur un double qui a sa compétence, celle-ci remplace les deux coups (voir la section 2 et `RESOLUTION.md` § 2). En combat test, la paire compte pour deux dés, choisis un par un.
 - **Dégâts comptés en entier (overkill, depuis la 0.34.0)** : un coup fatal ou des dégâts directs comptent tout leur montant dans les statistiques, la trace et l'historique, même au-delà des PV restants. Les PV, eux, s'arrêtent à 0.
 - **Événements** du coup : voir la section 3.
 - **Fin** : le premier à 0 PV perd, que ce soit à cause d'un coup, d'un effet ou d'un statut. Plus rien ne se déclenche après un K.O. Une limite de sécurité arrête le combat à 1 000 tours ; il est alors gagné aux PV.
@@ -251,21 +251,23 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 **Parcours actuel**
 
 ```
-Accueil (duel | tournoi)
+Accueil (menu)
+ ├─ Combat test : combat direct, chaque dé choisi par le joueur (décor de la forêt d'entraînement, hors statistiques)
  ├─ Duel : sélection → Affrontement → Jouer → Combat → Fin
  │                                   └─ Simuler ───────→ Fin
- ├─ 📖 Compendium : Personnages (fiches) | Bonus et malus
- ├─ 📊 Statistiques globales ─→ (fiche d'un personnage dans le compendium)
- └─ Tournoi : Configuration → Arbre → (Affrontement | ⚡ Simuler) → Fin → Arbre
+ ├─ Tournoi : présentation → Configuration → Arbre → (Affrontement | Simuler) → Fin → Arbre → Champion
+ ├─ Compendium : Personnages (fiches) | Compétences | Bonus et malus
+ └─ Statistiques globales ─→ (fiche d'un personnage dans le compendium)
 ```
 
-- **Accueil** : bascule duel/tournoi. Pour chaque combattant : son nom en grand, avec un petit bouton rond pour ouvrir sa fiche, sa race et son archétype, ses stats, ses compétences en dés et un bouton « Au hasard » (icône de dé), avec son grand modèle. **Rail des combattants** (0.43.0) : au centre, sous les modèles, une carte par personnage (portrait et nom), comme le tableau de sélection d'un jeu de combat. Deux onglets aux couleurs des camps disent qui choisit (« Combattant de gauche », « de droite ») : un clic sur une carte la donne à ce camp, puis la main passe en face. Cliquer un modèle donne aussi la main à son camp. Une carte choisie porte le liseré de son camp et une pastille A ou B ; les deux camps peuvent prendre le même personnage. Bouton « Combattre » centré en bas, version du jeu. En haut à gauche : Statistiques et **Compendium** (bouton rond provisoire). Le bouton rond près du nom ouvre la fiche du personnage dans le compendium.
+- **Accueil** (0.59.0, triptyque en 0.61.0) : premier écran du jeu. Sous le titre « BATTLER », un **triptyque** de trois arches brisées en fer forgé, une par mode : **Combat test** à gauche (actif depuis la 0.60.0), **Duel** au centre (le plus grand) et **Tournoi** à droite (sa ligne d'explication affiche la progression d'un tournoi en cours). Chaque arche porte une illustration et un socle gravé à son titre ; les volets pivotent vers le centre, comme ceux d'un retable. Aucune arche n'est mise en avant : au repos, les trois sont égales ; au survol (ou au focus clavier), l'arche s'élève et grossit légèrement, son illustration s'éclaire et avance dans le cadre, et son socle passe à l'or. Un clic ouvre le mode ; au clavier, Tab puis les flèches, et Entrée. Statistiques et Compendium en boutons ronds en haut à gauche, version du jeu en bas à droite. Fond : un haut plateau au crépuscule, des croix de bois à gauche (`menu-home.jpg`). Illustrations des arches : le portail du duel (`arch-duel.jpg`), le trophée du tournoi (`arch-tournament.jpg`) ; Combat test reprend la Cour-des-Enclumes.
+- **Sélection du duel** : bouton « ← Menu » en haut à gauche, à côté de Statistiques et Compendium. Pour chaque combattant : son nom en grand, avec un petit bouton rond pour ouvrir sa fiche, sa race et son archétype, ses stats, ses compétences en dés et un bouton « Au hasard » (icône de dé), avec son grand modèle. **Rail des combattants** (0.43.0) : au centre, sous les modèles, une carte par personnage (portrait et nom), comme le tableau de sélection d'un jeu de combat. Deux onglets aux couleurs des camps disent qui choisit (« Combattant de gauche », « de droite ») : un clic sur une carte la donne à ce camp, puis la main passe en face. Cliquer un modèle donne aussi la main à son camp. Une carte choisie porte le liseré de son camp et une pastille A ou B ; les deux camps peuvent prendre le même personnage. Bouton « Combattre » centré en bas, version du jeu. En haut à gauche : Statistiques et **Compendium** (bouton rond provisoire). Le bouton rond près du nom ouvre la fiche du personnage dans le compendium.
 - **Affrontement** : en haut, sous « Affrontement » et un peu en retrait, le sélecteur d'arène ‹ nom › (flèches de l'écran ou du clavier), qui change le décor en fond. Puis les deux modèles, leurs stats en **barres** (les mêmes que sur l'écran de sélection, à la couleur du camp), leur événement, et les boutons JOUER, SIMULER et CHANGER.
 - **Combat** : dés animés, charge et impact, textes flottants ESQUIVE, CRITIQUE et nom de l'événement (à l'extérieur des combattants, sur le décor, en Alegreya Sans SC ; test de police avec `?police=cinzel|oswald|lilita`), zone d'état au-dessus de chaque combattant, fond d'arène assombri. L'arène occupe tout l'écran sous les barres de vie. Une barre de commandes flottante (pause, vitesse ×1/×2/×4, journal) est placée en bas au centre. Le **journal**, masqué au départ, s'ouvre dans une fenêtre translucide entre les combattants (bouton ou touche J), avec un compteur des lignes non lues. S'il est ouvert, il le reste pour les combats suivants de la session. Les dégâts directs y sont signalés comme tels (« l'armure ne compte pas »).
 - **Taille des combattants** (0.40.0, `STYLE_BIBLE.md` § 2) : une échelle resserrée, ni uniforme ni réaliste. Le nain (0,86 d'un humain) reste le plus petit, l'ogre (1,13) le plus grand, avec des étapes entre les deux : lézard 0,97, humains et druide 1,00, elfes 1,03, paladin 1,04, mort-vivant 1,05, orc 1,08, ours 1,10. Toutes les images sont affichées à leur largeur naturelle : la carrure vient du dessin, l'ogre retrouve la sienne.
 - **Postures** (0.40.0, [POSTURES.md](POSTURES.md)) : un combattant peut changer d'image au fil du combat, sur cinq moments communs à tous : l'attaque (pendant l'élan), l'esquive, le coup encaissé, le K.O. et la victoire. La compétence garde l'image de garde et son animation. Une posture absente retombe sur la garde : un personnage sans postures s'affiche comme avant. Les images sont préchargées et changent instantanément, sous les animations existantes (élan, saut). Avec une posture de K.O., la chute est dans l'image, et l'animation ne garde que le grisé. Les menus et panneaux passent au-dessus des combattants. **Personnages à postures** : l'orc (Gorak), avec sa nouvelle image originale, la voleuse (Naraxes), la barde (Fanchon), le mort-vivant (Ervald, 0.54.0, postures plus amples) le paladin (Aldric, 0.56.0, nouveau modèle) la prêtresse (Ysolde, 0.57.0) et l'elfe (Elaria, 0.58.0).
 - **Trace de résolution** (vérification et débogage) : chaque combat est tiré avec une **graine** et sa trace complète est écrite dans la **console du navigateur**, repliée, un groupe par tour. Elle donne, étape par étape et dans l'ordre du moteur : phase (ouverture, début, action, fin), jet de dé, esquive, critique, modificateurs de dégâts avec leur porteur (« 😠 Aura d'intimidation de Brokk −2 », plancher à 1 signalé), dégâts avant armure, armure, boucliers, plancher d'1 dégât, PV avant → après, compétences et effets (posé, annulé, bloqué), effets des statuts, décomptes de durée et expirations, puis l'état des deux combattants. Le bouton « Copier la trace » du journal et de l'écran de fin la copie en texte brut. **Sur le disque** (0.27.0, serveur de dev) : chaque combat écrit sa trace dans `logs/combats/` du projet, un fichier par combat (`<date>_<gauche>-vs-<droite>_graine-<n>.txt`), relisible sans navigateur. En console : `battler.trace()` (dernier combat), `battler.trace(n)`, `copy(battler.dump())` (copie les traces des 40 derniers combats, un tournoi entier), `battler.replay(graine, 'gorak', 'brokk')` (rejoue un combat à l'identique).
-- **Mode triche** (outil d'observation, bouton « Cheat » ou touche C pendant un combat) : un pavé numérique impose la valeur du **prochain dé lancé à l'écran**. Les touches vont de 1 à 10, celles qui dépassent le dé sont grisées ; pour la pièce, ce sont Pile et Face, et « Hasard » annule. Au clavier, panneau ouvert : 1 à 9, 0 pour 10, P et F, Retour arrière. Le combat est résolu à nouveau par le moteur (`forcedRolls`), avec la même graine : tout ce qui précède le dé imposé reste identique, et la lecture continue sur la nouvelle chronologie. Le dé imposé porte la mention « Imposé ». Le combat est exclu des statistiques (il compte quand même dans l'arbre d'un tournoi). Sa trace finale est écrite dans `logs/combats/` avec le suffixe `_triche`, et `npm run logs` la rejoue.
+- **Combat test** (0.60.0, outil de mise au point des compétences ; il remplace le mode triche des combats normaux) : entrée « Combat test » de l'accueil. Pas de sélection ni d'affrontement : le combat commence aussitôt (initiative tirée sans animation, notée au journal), dans son décor réservé, la forêt d'entraînement du Pré-aux-Guetteurs, sans ambiance. **Chaque dé attend le joueur** : sous chaque combattant, un pavé propose les faces de son dé (Pile et Face pour la pièce) et « Hasard ». Seul le pavé de celui qui a la main s'allume, à la couleur de son camp, une fois le coup précédent mis en scène ; l'autre montre son dé, éteint. Le reste (compétences, statuts, fin de tour, passage de main) se résout seul jusqu'au dé suivant ; les deux dés de la barde et les dés d'une rafale se choisissent un par un. Clavier : 1 à 9, 0 pour 10, P et F, H ou Retour arrière pour le hasard. Chaque choix fait résoudre le combat à nouveau par le moteur (`forcedRolls`), avec la même graine : ce qui précède reste identique ; « Hasard » garde le dé tiré. Esquive, critique et chances des compétences restent au hasard. Le dé choisi porte la mention « Imposé ». En haut de l'arène : un sélecteur par camp (Gauche, Droite) qui relance le combat avec un autre personnage, et les boutons Recommencer (nouvelle initiative) et Menu. Rien n'est compté dans les statistiques ; la trace finale est écrite dans `logs/combats/` (suffixe `_triche` dès qu'un dé est choisi), et `npm run logs` la rejoue.
 - **Fin** : à gauche, le vainqueur, les faits marquants et les boutons ; à droite, les statistiques comparées en quatre onglets (Bilan, Critiques et défense, Événements, Dés). Un badge indique un combat simulé.
 
 **Historique**
@@ -273,6 +275,12 @@ Accueil (duel | tournoi)
 | Version | Changement |
 | --- | --- |
 | 0.1.0 | Écrans d'accueil, de combat et de fin ; animations de charge et d'impact |
+| 0.63.0 | Combat test dans la forêt d'entraînement ; sélection : nouveau fond en gouache (`menu-duel.jpg`) |
+| 0.62.0 | Accueil : fond et illustrations des arches en gouache graphique ; combat test dans le marais des Pilotis ; nouveau fond du tournoi |
+| 0.61.1 | Accueil : aucune arche mise en avant, l'or seulement au survol ; survol plus doux (élévation, zoom de l'illustration) ; bouton principal et médaillons retirés, un clic ouvre le mode |
+| 0.61.0 | Accueil en triptyque : trois arches de fer forgé (illustration, médaillon, socle titré), volets tournés vers le centre ; choix au clic ou aux flèches, ouverture par le bouton principal |
+| 0.60.0 | Combat test : chaque dé choisi sur un pavé sous chaque combattant, sélecteurs de personnages, fond noir ; le bouton Cheat quitte les combats normaux |
+| 0.59.0 | Écran d'accueil avec menu (Combat test à venir, Duel, Tournoi) ; la sélection perd ses onglets de mode au profit d'un retour au menu |
 | 0.58.0 | Postures d'Elaria |
 | 0.57.0 | Postures d'Ysolde (taille réglée sur le corps) |
 | 0.56.0 | Nouveau modèle d'Aldric (épée basse, taille réglée sur le corps) et ses postures |
@@ -301,12 +309,22 @@ Accueil (duel | tournoi)
 
 **Règles actuelles**
 
-Une arène est le cadre visuel d'un combat. Elle est purement décorative et ne change aucune règle. On la choisit sur l'écran d'affrontement, avec le sélecteur ‹ › placé sous le titre (le décor du fond change avec lui). « Au hasard » la tire au lancement du combat. Le choix est gardé pour la session. La simulation directe n'affiche pas d'arène.
+Une arène est le cadre visuel d'un combat. Elle est purement décorative et ne change aucune règle. On la choisit sur l'écran d'affrontement, avec le sélecteur ‹ › placé sous le titre (le décor du fond change avec lui). Par défaut, le choix est « Au hasard » : l'arène est tirée au lancement de chaque combat. Le choix est gardé pour la session. La simulation directe n'affiche pas d'arène.
+
+Chaque arène porte le nom d'un **lieu-dit** et, dessous, du lieu qui l'entoure, comme sur une carte. Les décors sont peints en gouache graphique (voir `docs/STYLE_BIBLE.md`, section 5).
 
 | Arène | Image | Ambiance |
 | --- | --- | --- |
-| Ruines forestières | `arena-ruins.jpg` | clairière de ruines au crépuscule, torches et bannière |
-| Cour de Durnhold | `arena-dwarf-fortress.jpg` | cour dallée d'une forteresse naine, statues, braseros, montagnes enneigées |
+| Les Pierres-Couchées, bois de Vaumorin | `arena-glade.jpg` | clairière de ruines, chouette, renard, vallée et château au loin |
+| La Cour-des-Enclumes, Durnhold | `arena-dwarf-city.jpg` | cour d'une cité naine, forge, statues, porte sur la vallée enneigée |
+| Les Mille-Feux, lac Sorelle | `arena-lantern-lake.jpg` | ponton de fête sur un lac, la nuit, lanternes |
+| Les Chapeaux-Fols, val Brunelle | `arena-mushroom-vale.jpg` | vallée de champignons lumineux dans la pénombre |
+| Les Cloches-Noyées, anse de Morvoux | `arena-tide-temple.jpg` | temple marin à marée basse, soir d'orage |
+| La Paume-du-Vieux, pic Solange | `arena-sky-hand.jpg` | paume d'une statue géante au-dessus des nuages, à l'aube |
+| Les Pilotis, marais de Gâtebois | `arena-swamp.jpg` | marais sur pilotis, nuit de pleine lune |
+| Le Pas-des-Comètes, col d'Aubrelle | `arena-terrace.jpg` | terrasse en altitude, pluie d'étoiles filantes, vallée et arène au loin |
+
+**Arène d'entraînement** : Le Pré-aux-Guetteurs, forêt de Brandeval (`arena-training.jpg`, `TRAINING_ARENA`) : une clairière d'entraînement à l'aube, des yeux dans les fourrés. C'est toujours le décor du combat test, et il n'apparaît nulle part ailleurs : ni au choix, ni au hasard.
 
 Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la zone dégagée, et son traitement (assombri, désaturé, légèrement flou).
 
@@ -315,6 +333,8 @@ Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la 
 | 0.10.0 | Première image d'arène en fond de combat (placeholder) |
 | 0.12.0 | Arène originale : ruines forestières |
 | 0.16.0 | Registre des arènes, choix sur l'écran d'affrontement, Cour de Durnhold |
+| 0.62.0 | Six arènes en gouache graphique, nommées par lieux-dits ; « Au hasard » par défaut ; le marais réservé au combat test ; anciennes arènes retirées |
+| 0.63.0 | Le Pas-des-Comètes ; le marais rejoint les arènes ; le combat test passe dans la forêt d'entraînement (Le Pré-aux-Guetteurs) |
 
 ## 6. Son
 
@@ -368,6 +388,7 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 
 **Règles actuelles**
 
+- On y entre par l'entrée **Tournoi** de l'accueil (0.59.0) : présentation, puis « Créer un tournoi » ou « Reprendre le tournoi ». « ← Menu » ramène à l'accueil.
 - Arbre à élimination directe de 16 participants : huitièmes, quarts, demies, finale. Les deux moitiés de l'arbre convergent vers la finale au centre.
 - **Configuration** (refonte 0.47.0) : la palette des combattants est le grand panneau central de l'arbre. Ce sont dix cartes avec le nombre de cases prises. On choisit le combattant (le pinceau, en or), puis on clique les cases du premier tour, aux deux extrémités : elles sont grandes et numérotées de 1 à 16. Au survol d'une case vide, le pinceau s'y montre. Le × vide une case. Les tours suivants ne sont que des jonctions : les lignes convergent vers le panneau et s'éclairent quand un match est rempli. **Compléter** remplit seulement les cases vides, en équilibrant le roster et en évitant les duels miroirs au premier tour quand c'est possible. **Valider l'arbre** est la pièce prestige de l'écran.
 - Les doublons sont permis ; ils sont nommés avec des chiffres romains (Gorak I, Gorak II…).
@@ -383,6 +404,7 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 | 0.38.0 | Classement des parieurs dans l'arbre et sur l'écran du champion ; écran de fin en deux moitiés (combat, paris) |
 | 0.13.0 | Un match ne peut plus être enregistré deux fois, ni avec les mauvais combattants ; l'arbre valide le résultat avant l'historique |
 | 0.47.0 | Arbre refait au design system : extrémités grandes et numérotées, palette en grand panneau central (dix cartes, pinceau, actions), jonctions en configuration, chemin des vainqueurs en or, décor de la porte de l'arène |
+| 0.59.0 | Accès par l'entrée Tournoi du nouvel écran d'accueil |
 
 ## 9. Compendium
 

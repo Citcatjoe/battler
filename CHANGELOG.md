@@ -31,6 +31,102 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.63.0] — 2026-10-20
+
+### Modifié
+- **Fusion de deux branches divergentes** : le travail du 2026-10-20 fait sur une autre machine (accueil en triptyque, combat test, arènes en gouache), parti de la 0.44.0 et poussé sous les numéros 0.45.0 à 0.49.0, est réuni avec la branche locale (0.45.0 à 0.58.1, jamais poussée). Ses entrées sont renumérotées 0.59.0 à 0.63.0 ci-dessous. Le combat test garde la mise en scène locale (halo du camp actif, compétences groupées avec leur dé, badges de coups spéciaux) ; l'anneau au sol, remplacé localement par le halo, ne revient pas.
+
+### Ajouté
+- Arène **Le Pas-des-Comètes, col d'Aubrelle** (`arena-terrace.jpg`) : une terrasse en altitude sous une pluie d'étoiles filantes.
+- Décor d'entraînement **Le Pré-aux-Guetteurs, forêt de Brandeval** (`arena-training.jpg`) : toujours celui du combat test, et jamais ailleurs.
+
+### Modifié
+- Le marais des Pilotis devient une arène ordinaire, au choix ou au hasard.
+- Écran de sélection : nouveau fond en gouache (`menu-duel.jpg`).
+
+### Retiré
+- Le portail de l'ancien style (`menu-portal.jpg`).
+
+## [0.62.0] — 2026-10-20
+
+> Faite sur une autre machine sous le numéro 0.48.0, à partir de la 0.44.0 ; renumérotée à la fusion du 2026-10-20 avec la branche locale (0.45.0 à 0.58.1).
+
+### Ajouté
+- **Six arènes en gouache graphique**, tirées au hasard ou choisies sur l'écran d'affrontement : Les Pierres-Couchées (bois de Vaumorin), La Cour-des-Enclumes (Durnhold), Les Mille-Feux (lac Sorelle), Les Chapeaux-Fols (val Brunelle), Les Cloches-Noyées (anse de Morvoux), La Paume-du-Vieux (pic Solange). Chaque arène porte un lieu-dit et sa région, affichée sous le nom dans le sélecteur.
+- **Arène d'entraînement** : Les Pilotis, marais de Gâtebois (`TRAINING_ARENA`). C'est toujours le décor du combat test, et il n'apparaît sur aucun autre écran (test dédié dans `modules.test.ts`).
+- Accueil : fond dédié (`menu-home.jpg`, haut plateau au crépuscule, croix de bois) et illustrations des arches Duel (`arch-duel.jpg`) et Tournoi (`arch-tournament.jpg`).
+
+### Modifié
+- Le choix d'arène est « Au hasard » par défaut.
+- Fond du tournoi refait en gouache (`menu-tournament.jpg`) : porte à gauche, rempart sombre à droite, coffre d'or et restes d'un combattant au premier plan.
+- Toutes les images de décor sont agrandies ×4 par IA (Real-ESRGAN), puis livrées en 2400×1600 (arches : 1800×1200).
+- `docs/STYLE_BIBLE.md` (2026-10-20) : nouveau style pour tous les décors, arènes et fonds d'écran : la **gouache graphique** (aplats mats, formes géométriques, palette courte, sans lueurs ni particules), qui remplace la peinture numérique surchargée. Personnages et icônes gardent leur direction. Nouvelles règles de composition : côtés vivants (objets, traces de vie, petit animal caché), lointain habité, centre calme, et **rien au premier plan** sous les pieds des combattants. Un prompt de référence complet remplace le bloc fixe et sa fiche : les prompts donnés sont toujours entiers.
+- `docs/STYLE_BIBLE.md` : un tableau « En bref » réunit les règles des décors (format paysage annoncé en tête du prompt, style, clair-obscur, dépôt, agrandissement, nommage, lieux-dits). Historique des arènes et prompt validé du tournoi à jour.
+
+### Retiré
+- Les deux arènes de l'ancien style (`arena-ruins.jpg`, `arena-dwarf-fortress.jpg`).
+
+## [0.61.1] — 2026-10-20
+
+> Faite sur une autre machine sous le numéro 0.47.1, à partir de la 0.44.0 ; renumérotée à la fusion du 2026-10-20 avec la branche locale (0.45.0 à 0.58.1).
+
+### Modifié
+- Accueil : **aucune arche n'est mise en avant**. Au repos, les trois sont égales (fer et bronze, illustration dans la pénombre) ; l'or ne vient qu'au survol ou au focus clavier.
+- Survol plus doux : l'arche s'élève et grossit légèrement (ombre plus profonde), son illustration s'éclaire et avance dans le cadre, le socle passe à l'or en fondu (environ une demi-seconde, courbe amortie). Les volets se redressent un peu vers le spectateur.
+- Un clic sur une arche ouvre directement le mode.
+
+### Retiré
+- Accueil : le bouton principal sous le triptyque (« Choisir les combattants »…) et l'état « arche choisie » ; les médaillons d'icône des arches. Au clavier, Tab puis les flèches passent d'une arche à l'autre, Entrée l'ouvre.
+
+## [0.61.0] — 2026-10-20
+
+> Faite sur une autre machine sous le numéro 0.47.0, à partir de la 0.44.0 ; renumérotée à la fusion du 2026-10-20 avec la branche locale (0.45.0 à 0.58.1).
+
+Accueil en triptyque (demande de l'utilisateur). Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.
+
+### Modifié
+- **Écran d'accueil** : la colonne de trois boutons devient un **triptyque** de trois arches brisées en fer forgé, une par mode (Combat test, Duel au centre, Tournoi). Chaque arche a un filet de bronze, un bandeau de fer riveté, une clef de voûte, une illustration, un médaillon du mode, et un socle chanfreiné qui porte son titre ; une ligne d'explication est écrite dessous. Le panneau central est le plus grand ; les deux volets, plus bas, pivotent vers lui comme ceux d'un retable.
+- Choix d'un mode : un clic choisit une arche, qui passe à l'or, s'avance et s'éclaire. Un second clic, ou le bouton principal sous le triptyque (« Lancer le combat test », « Choisir les combattants », « Entrer dans le tournoi »), l'ouvre. Au clavier : flèches gauche et droite, puis Entrée.
+- Illustrations provisoires, reprises des décors existants (forteresse naine, portail, porte du tournoi) ; fond de l'accueil provisoire : les ruines, floutées et assombries.
+
+## [0.60.0] — 2026-10-20
+
+> Faite sur une autre machine sous le numéro 0.46.0, à partir de la 0.44.0 ; renumérotée à la fusion du 2026-10-20 avec la branche locale (0.45.0 à 0.58.1).
+
+Combat test (demande de l'utilisateur) : le choix des dés quitte les combats normaux pour un mode dédié. Le moteur et l'empreinte de non-régression sont inchangés.
+
+### Ajouté
+- **Combat test** (`TestFightScreen.tsx`), entrée « Combat test » de l'accueil, désormais active. Pas de sélection ni d'écran d'affrontement : le combat commence aussitôt (initiative tirée sans animation, notée au journal), sur fond noir en attendant son décor, sans ambiance. **Chaque dé attend le joueur** : sous chaque combattant, un pavé (l'ancien pavé du mode triche) propose les faces de son dé, ou Pile et Face pour la pièce, et « Hasard ». Seul le pavé du combattant qui a la main s'allume, à la couleur de son camp, une fois le coup précédent mis en scène ; le reste du tour (compétences, statuts, fin de tour, passage de main) se résout seul jusqu'au dé suivant. Les deux dés de la barde et les dés d'une rafale se choisissent un par un. Clavier : 1 à 9, 0 pour 10, P et F, H ou Retour arrière pour le hasard.
+- En haut de l'arène : un sélecteur par camp (Gauche, Droite) pour changer de personnage sans recharger, et les boutons Recommencer (nouvelle initiative) et Menu.
+- Les combats test ne comptent pas dans les statistiques ; leur trace finale part dans `logs/combats/` (suffixe `_triche` dès qu'un dé est choisi), et `npm run logs` la rejoue.
+- Test : un combat dont chaque dé est choisi un par un, du premier au K.O. (deux dés et pièce compris), sans changer ce qui précède.
+
+### Modifié
+- `useCombat` : option `test`, qui arrête la lecture avant chaque dé (`CheatState.waiting`) jusqu'au choix du joueur, et saute l'animation de l'initiative.
+- `FightScreen` : fond d'arène facultatif (fond noir), pavés et commandes du combat test.
+- `CheatPad` : un pavé par combattant, posé sous lui, au lieu d'une fenêtre unique.
+
+### Retiré
+- Bouton **Cheat** et touche C des combats normaux (duel et tournoi) : imposer un dé n'est plus possible que dans le combat test.
+
+## [0.59.0] — 2026-10-20
+
+> Faite sur une autre machine sous le numéro 0.45.0, à partir de la 0.44.0 ; renumérotée à la fusion du 2026-10-20 avec la branche locale (0.45.0 à 0.58.1).
+
+Écran d'accueil (demande de l'utilisateur). Présentation pure : le moteur et l'empreinte de non-régression sont inchangés.
+
+### Ajouté
+- **Écran d'accueil** (`HomeScreen.tsx`), premier écran du jeu : titre « BATTLER » et menu de trois entrées, dans cet ordre :
+  - **Combat test** : mode à venir, entrée grisée « Bientôt disponible » ;
+  - **Duel** : l'ancienne sélection de personnages, action principale (pièce prestige) ;
+  - **Tournoi** : la présentation du tournoi ; sa progression s'affiche sous l'entrée s'il est en cours.
+- Statistiques et Compendium sont aussi accessibles depuis l'accueil. Fond provisoire (`menu-portal.jpg`, plus assombri), en attendant le fond dédié en cours de génération.
+
+### Modifié
+- Sélection du duel et présentation du tournoi : les onglets majeurs Affrontement / Tournoi disparaissent, remplacés par un bouton tertiaire « ← Menu » qui ramène à l'accueil.
+- « Menu » de l'arbre de tournoi et de l'écran du champion ramène à l'accueil ; celui de l'écran de fin d'un duel ramène toujours à la sélection. Le compendium et les statistiques reviennent à l'écran d'où on les a ouverts (accueil ou sélection).
+- Bouton `.btn` désactivé : son icône s'éteint aussi, comme sur la pièce prestige.
+
 ## [0.58.1] — 2026-10-20
 
 ### Modifié

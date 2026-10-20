@@ -178,7 +178,7 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
       <button onClick={() => step(-1)} aria-label="Arène précédente" className="btn btn-round h-10 w-10 text-lg">
         <span>‹</span>
       </button>
-      <div className="flex w-80 flex-col items-center">
+      <div className="flex w-96 flex-col items-center">
         <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-stone-500">Arène</span>
         <span
           key={value}
@@ -186,6 +186,9 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
         >
           {random && <Icon name="dice" />}
           {random ? 'Au hasard' : getArena(value).name}
+        </span>
+        <span key={`${value}-region`} className="fade-in text-xs italic text-stone-400">
+          {random ? 'Un lieu tiré au sort' : getArena(value).region}
         </span>
         {/* Points de position */}
         <span className="mt-1 flex gap-1.5">

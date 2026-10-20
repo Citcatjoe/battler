@@ -32,10 +32,12 @@ import {
   type Wallets,
 } from './game/betting'
 import type { BetsOutcome } from './components/Betting'
-import { ARENAS, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
+import { RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
+import { HomeScreen } from './components/HomeScreen'
 import { MatchupScreen } from './components/MatchupScreen'
 import { FightScreen } from './components/FightScreen'
+import { TestFightScreen } from './components/TestFightScreen'
 import { EndScreen } from './components/EndScreen'
 import { CompendiumScreen } from './components/compendium/CompendiumScreen'
 import type { CompendiumSectionId } from './components/compendium/sections'
@@ -46,14 +48,21 @@ import { SoundToggle } from './components/SoundToggle'
 import { Stage } from './components/Stage'
 import { ChampionScreen } from './components/ChampionScreen'
 
+/** Écrans d'où l'on ouvre le compendium ou les statistiques, et où l'on y revient */
+type Origin = 'home' | 'start'
+
 type Screen =
+  /** Accueil : menu des modes de jeu */
+  | { name: 'home' }
+  /** Combat test : chaque dé choisi par le joueur, hors statistiques */
+  | { name: 'test' }
   | { name: 'start' }
   | { name: 'matchup' }
   | { name: 'fight'; script: CombatResult; arena: Arena }
   /** `bets` : règlement des paris du match, s'il y en avait */
   | { name: 'end'; result: CombatResult; bets?: BetsOutcome }
   /** `from` : écran où revient le bouton retour */
-  | { name: 'compendium'; section: CompendiumSectionId; characterId: string; from: 'start' | 'records' }
+  | { name: 'compendium'; section: CompendiumSectionId; characterId: string; from: Origin | 'records' }
   | { name: 'records' }
   | { name: 'tournamentSetup' }
   | { name: 'bracket' }
@@ -71,11 +80,13 @@ function runCombat(fighters: Pair<Character>): CombatResult {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>({ name: 'start' })
+  const [screen, setScreen] = useState<Screen>({ name: 'home' })
   const [mode, setMode] = useState<GameMode>('duel')
   const [fighters, setFighters] = useState<Pair<Character>>(() => [createCharacter('gorak'), createCharacter('elaria')])
+  // Écran d'où les statistiques ont été ouvertes : il survit à un passage par une fiche du compendium
+  const [recordsFrom, setRecordsFrom] = useState<Origin>('start')
   // Arène choisie sur l'écran d'affrontement, gardée pour les combats suivants de la session
-  const [arenaChoice, setArenaChoice] = useState<ArenaChoice>(ARENAS[0].id)
+  const [arenaChoice, setArenaChoice] = useState<ArenaChoice>(RANDOM_ARENA)
 
   // Tournoi : en mémoire uniquement, perdu au rechargement de la page.
   const [slots, setSlots] = useState<(string | null)[]>(() => Array(SLOTS).fill(null))
@@ -206,6 +217,14 @@ export default function App() {
     return `${Object.keys(tournament.results).length} / 15 matchs joués`
   })()
 
+  const openRecords = (from: Origin) => {
+    setRecordsFrom(from)
+    go({ name: 'records' })
+  }
+
+  const backLabel = (from: Origin | 'records') =>
+    ({ home: '← Retour au menu', start: '← Retour à la sélection', records: '← Retour aux statistiques' })[from]
+
   const backToBracket = () => {
     setActiveMatch(null)
     go({ name: 'bracket' })
@@ -214,11 +233,25 @@ export default function App() {
   return (
     <Stage>
       <SoundToggle />
+      {screen.name === 'home' && (
+        <HomeScreen
+          tournamentProgress={progress}
+          onChoose={(choice) => {
+            if (choice === 'test') return go({ name: 'test' })
+            setMode(choice)
+            go({ name: 'start' })
+          }}
+          onOpenRecords={() => openRecords('home')}
+          onOpenCompendium={() =>
+            go({ name: 'compendium', section: 'characters', characterId: fighters[0].id, from: 'home' })
+          }
+        />
+      )}
       {screen.name === 'start' && (
         <StartScreen
           initial={fighters}
           mode={mode}
-          onModeChange={setMode}
+          onHome={() => go({ name: 'home' })}
           onStart={(f) => {
             setFighters(f)
             toDuel()
@@ -233,7 +266,7 @@ export default function App() {
           }}
           onOpenRecords={(current) => {
             setFighters(current)
-            go({ name: 'records' })
+            openRecords('start')
           }}
           tournamentProgress={progress}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
@@ -279,6 +312,9 @@ export default function App() {
         />
       )}
       {screen.name === 'fight' && <FightScreen script={screen.script} arena={screen.arena} onEnd={finish} />}
+      {screen.name === 'test' && (
+        <TestFightScreen initial={[fighters[0].id, fighters[1].id]} onMenu={() => go({ name: 'home' })} />
+      )}
       {screen.name === 'end' && (
         <EndScreen
           result={screen.result}
@@ -314,13 +350,14 @@ export default function App() {
           // Navigation interne : sans son de clic en double (les onglets jouent déjà le leur)
           onNavigate={(to) => setScreen({ ...screen, ...to })}
           onBack={() => go({ name: screen.from })}
-          backLabel={screen.from === 'records' ? '← Retour aux statistiques' : '← Retour à la sélection'}
+          backLabel={backLabel(screen.from)}
         />
       )}
       {screen.name === 'records' && (
         <RecordsScreen
           onOpenCharacter={(id) => go({ name: 'compendium', section: 'characters', characterId: id, from: 'records' })}
-          onBack={() => go({ name: 'start' })}
+          onBack={() => go({ name: recordsFrom })}
+          backLabel={backLabel(recordsFrom)}
         />
       )}
       {screen.name === 'tournamentSetup' && (
@@ -366,7 +403,7 @@ export default function App() {
           }}
           onChampion={() => go({ name: 'champion' })}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
-          onMenu={() => go({ name: 'start' })}
+          onMenu={() => go({ name: 'home' })}
         />
       )}
       {screen.name === 'champion' && tournament && championRun(tournament) && (
@@ -375,7 +412,7 @@ export default function App() {
           wallets={wallets}
           onBracket={() => go({ name: 'bracket' })}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
-          onMenu={() => go({ name: 'start' })}
+          onMenu={() => go({ name: 'home' })}
         />
       )}
     </Stage>

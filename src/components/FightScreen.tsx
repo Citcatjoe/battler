@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Arena } from '../game/arenas'
 import { SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
@@ -17,15 +17,19 @@ import { TONE_STYLE } from '../game/specials'
 interface Props {
   /** Combat déjà résolu, que cet écran met en scène */
   script: CombatResult
-  /** Cadre visuel du combat */
-  arena: Arena
+  /** Cadre visuel du combat ; null : fond noir (combat test, en attendant son décor) */
+  arena: Arena | null
   onEnd: (result: CombatResult) => void
+  /**
+   * Combat test : chaque dé attend le choix du joueur sur le pavé posé sous chaque combattant
+   * (`CheatPad`), sans initiative animée. `toolbar` : commandes du mode, en haut de l'arène.
+   */
+  test?: { toolbar: ReactNode }
 }
 
 const SPEEDS = [1, 2, 4]
 
 // Journal masqué au premier combat ; s'il est ouvert, il le reste pour les combats suivants de la session.
-let cheatOpenInSession = false
 let logOpenInSession = false
 
 const SHAKE: Keyframe[] = [
@@ -37,10 +41,10 @@ const SHAKE: Keyframe[] = [
   { transform: 'translate(0, 0)' },
 ]
 
-export function FightScreen({ script, arena, onEnd }: Props) {
+export function FightScreen({ script, arena, onEnd, test }: Props) {
   const { fighters } = script
   const { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, active, pulse, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
-    useCombat(script, onEnd)
+    useCombat(script, onEnd, { test: test !== undefined })
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
   const diceColor = dice.owner === null ? '#e7e5e4' : SIDE_STYLE[dice.owner].hex
@@ -72,18 +76,10 @@ export function FightScreen({ script, arena, onEnd }: Props) {
   }, [logOpen, log.length])
   const unread = logOpen ? 0 : log.length - seen
 
-  // Mode triche (outil d'observation) : ouvert ou fermé, retenu pour la session comme le journal
-  const [cheatOpen, setCheatOpenState] = useState(cheatOpenInSession)
-  const setCheatOpen = (open: boolean) => {
-    cheatOpenInSession = open
-    setCheatOpenState(open)
-  }
-
-  // Raccourcis clavier : J ouvre ou ferme le journal, C le mode triche.
+  // Raccourci clavier : J ouvre ou ferme le journal.
   const toggleRef = useRef((_: string) => {})
   toggleRef.current = (key) => {
     if (key === 'j') setLogOpen(!logOpen)
-    if (key === 'c') setCheatOpen(!cheatOpen)
   }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -122,18 +118,22 @@ export function FightScreen({ script, arena, onEnd }: Props) {
       {/* Arène */}
       <main
         ref={arenaRef}
-        className="relative flex flex-1 items-end justify-between overflow-hidden bg-stone-950 px-[13%] pt-6"
+        className={`relative flex flex-1 items-end justify-between overflow-hidden px-[13%] pt-6 ${arena ? 'bg-stone-950' : 'bg-black'}`}
       >
         {/* Décor : assombri, désaturé et légèrement flou pour laisser les combattants au premier plan */}
-        <img
-          src={arena.image}
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] select-none object-cover"
-          style={{ filter: arena.filter, objectPosition: arena.focus }}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,transparent_35%,rgba(12,10,9,0.85)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-stone-950/85 to-transparent" />
+        {arena && (
+          <>
+            <img
+              src={arena.image}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] select-none object-cover"
+              style={{ filter: arena.filter, objectPosition: arena.focus }}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,transparent_35%,rgba(12,10,9,0.85)_100%)]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-stone-950/85 to-transparent" />
+          </>
+        )}
         {/* Éclair d'un critique ou d'un coup lourd : la scène blanchit un instant */}
         {heavyHit && <div key={`flash-${hitKey}`} className="crit-flash pointer-events-none absolute inset-0 z-[35]" />}
         {/* Halo au sol qui détache les silhouettes */}
@@ -152,9 +152,13 @@ export function FightScreen({ script, arena, onEnd }: Props) {
           />
         ))}
 
-        {/* Pieds posés sur la terre battue de l'arène, un peu en retrait du bord de l'écran */}
+        {/* Pieds posés sur la terre battue de l'arène, un peu en retrait du bord de l'écran ;
+            combat test : plus haut, pour laisser la place au pavé du dé */}
         {([0, 1] as Side[]).map((side) => (
-          <div key={side} className={`relative mb-[88px] h-[470px] ${side === 1 ? 'order-last' : ''}`}>
+          <div
+            key={side}
+            className={`relative h-[470px] ${test ? 'mb-[196px]' : 'mb-[88px]'} ${side === 1 ? 'order-last' : ''}`}
+          >
             <Fighter
               character={fighters[side]}
               side={side}
@@ -175,6 +179,11 @@ export function FightScreen({ script, arena, onEnd }: Props) {
             >
               <StatusTray statuses={statuses[side]} />
             </div>
+            {test && (
+              <div className="absolute left-1/2 top-full z-30 mt-3 -translate-x-1/2">
+                <CheatPad side={side} fighter={fighters[side]} cheat={cheat} onForce={forceNextRoll} />
+              </div>
+            )}
           </div>
         ))}
 
@@ -238,6 +247,8 @@ export function FightScreen({ script, arena, onEnd }: Props) {
           )}
         </div>
 
+        {test?.toolbar}
+
         {/* Journal : fenêtre translucide entre les combattants, au premier plan, masquée par défaut */}
         {logOpen && (
           <section
@@ -266,15 +277,6 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         )}
       </main>
 
-      {cheatOpen && (
-        <CheatPad
-          cheat={cheat}
-          fighters={fighters}
-          onForce={forceNextRoll}
-          onClose={() => setCheatOpen(false)}
-          bottom={logOpen ? 316 : 76}
-        />
-      )}
 
       {/* Commandes : barre de jeu discrète (plaque de pierre au liseré de bronze), hors de l'arène pour ne pas trembler avec elle */}
       <nav aria-label="Commandes du combat" className="hud absolute bottom-5 left-1/2 z-40 -translate-x-1/2">
@@ -299,15 +301,6 @@ export function FightScreen({ script, arena, onEnd }: Props) {
         >
           <Icon name="scroll" /> Journal
           {unread > 0 && <span className="hud-count">{unread > 99 ? '99+' : unread}</span>}
-        </button>
-        <button
-          onClick={() => setCheatOpen(!cheatOpen)}
-          aria-pressed={cheatOpen}
-          title={cheatOpen ? 'Fermer le mode triche (C)' : 'Mode triche : imposer le prochain dé (C)'}
-          className="hud-btn hud-cheat"
-        >
-          <Icon name="dice" /> Cheat
-          {cheat.count > 0 && <span className="hud-count hud-count-cheat">{cheat.count}</span>}
         </button>
       </nav>
     </div>

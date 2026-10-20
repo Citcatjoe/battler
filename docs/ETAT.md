@@ -1,10 +1,10 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.58.1._
+_Dernière mise à jour : 2026-10-20, version 0.63.0 (fusion avec le travail fait sur une autre machine)._
 
 ## En bref
 
-Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Dix personnages, un par famille depuis la 0.43.0 (Gorak l'orc, Elaria l'elfe, Brokk le nain, Ervald le mort-vivant, Ysolde la prêtresse, Naraxes la voleuse, Aldric le paladin, Morgrut l'ogre, Thaldrin le druide, Fanchon la barde), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente), sauf la barde, qui lance deux dés et joue ses compétences sur les doubles ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
+Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](INTENTION.md#fiche-produit)). Prototype jouable de bout en bout : écran d'accueil (Combat test, Duel, Tournoi), sélection, affrontement, combat animé ou simulé, écran de fin (combat et paris), fiches de personnages, statistiques globales et tournoi à 16 participants. Dix personnages, un par famille depuis la 0.43.0 (Gorak l'orc, Elaria l'elfe, Brokk le nain, Ervald le mort-vivant, Ysolde la prêtresse, Naraxes la voleuse, Aldric le paladin, Morgrut l'ogre, Thaldrin le druide, Fanchon la barde), chacun avec trois compétences sur un 1, un 2 et un 3 au dé (le 3 donnant une aura permanente), sauf la barde, qui lance deux dés et joue ses compétences sur les doubles ; une variante peut avoir sa propre version d'une compétence (Murzug). Le jeu des parieurs (0.38.0) oppose deux joueurs et deux parieurs de l'ordinateur sur chaque match.
 
 ## Ce qui fonctionne
 
@@ -19,13 +19,15 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Retours de lecture 0.55.0 : Furie à plat, Pile ou face d'un bloc, textes flottants devant, cerclage du compteur, tremblement corrigé, voleuse au sol | ✅ 0.55.0, vu à l'écran : Furie (badge au 2, frappes à plat), textes devant, cerclage du compteur, voleuse au sol. Pas vu : Pile ou face (Firefox sans interface s'est fermé), le tremblement corrigé en mouvement (couvert par un test). Textes flottants devant : un essai, à juger |
 | Compétence groupée avec son jet, badges de coups spéciaux empilés et colorés par famille | ✅ 0.49.0, vu à l'écran (Esquive améliorée groupée avec le 2 ; Critique assuré + Critique + Riposte, et + Épines ; Coup de chance ; libellé « Face… » lisible). Furie des vents et sa relance (« ×2 ») vues en 0.52.0. Pas vu : Vol de vie, Rétribution, gros coups de la barde. Halo du camp actif vu (Elaria) |
 | Lisibilité du tour : passage de main (pause de 400 ms, camp actif, ligne au sol) et dé de compétence qui s'allume | ✅ 0.44.0, retouché en 0.45.1 (ligne au lieu de l'anneau, dés éteints au repos, éclat bref), vu à l'écran (Ervald, Fanchon contre Elaria : ligne, barre active, éclat du 3). Pas vu : la pulsation d'un double de la barde et d'un coup transformé (couverts par les tests pour le second) |
+| Écran d'accueil en triptyque : trois arches (Combat test, Duel, Tournoi) | ✅ 0.59.0, triptyque en 0.61.0, survol revu en 0.61.1 ; vu à l'écran (repos, survol du centre et d'un volet, clic). Fond et illustrations des arches en gouache (0.62.0), vus à l'écran ; navigation au clavier vérifiée dans Firefox |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |
 | Compétences sur un 1 au dé (les 6 races) | ✅ stable |
 | Aldric, le paladin (Rétribution à jauges, Riposte, Aura d'immunité) | ✅ 0.31.0, rendu à valider (jauges dans la zone d'état, sélection à 7 familles) |
 | Un personnage par famille (dix personnages, sans jumeaux), rail de sélection central sur l'accueil | ✅ 0.43.0, vu à l'écran (accueil, passage de la main en face, préparation du tournoi, compendium). Le format de l'historique ne change pas : les statistiques des jumeaux restent stockées, mais ne s'affichent plus |
 | Lisibilité des textes flottants (placement, police, durée) | ✅ 0.32.1, police validée par l'utilisateur |
-| Mode triche (prochain dé imposé) et barre de commandes au style jeu | ✅ 0.33.0 ; barre vue à l'écran (0.34.0) |
+| Barre de commandes du combat au style jeu | ✅ 0.33.0 ; vue à l'écran (0.34.0) |
+| Combat test : chaque dé choisi sur le pavé du combattant, sélecteurs de personnages, fond noir (remplace le mode triche des combats normaux) | ✅ 0.60.0, vu à l'écran (Gorak contre Elaria : pavé allumé du bon camp, dé « Imposé », compétence sur le 1, attente du dé suivant). Pas vu : pièce, deux dés de la barde, rafale (couverts par les tests du moteur). Décor réservé : la forêt d'entraînement du Pré-aux-Guetteurs (0.63.0, vu à l'écran) |
 | Sons enregistrés (33 sons, 67 fichiers CC0), repli synthétisé, écourtés selon la vitesse | ⚠️ 0.36.0 jugée cacophonique ; refonte selon `docs/SONS.md` en 0.36.2 (20 sons, un fichier chacun) ; 19 fichiers choisis à l'oreille par l'utilisateur (0.36.3), Ronge encore synthétisé. Volumes à régler à l'oreille |
 | Musique de fond des combats (trois boucles au hasard, égalisées, bus à part) | ✅ 0.48.0, chargement vérifié en combat ; bouton propre à la musique en 0.53.0 (icône peinte à produire) ; niveau et jonctions de boucle à juger à l'oreille (`SONS.md` § 10) |
 | Ogre (Attente) et druide (deux formes, six compétences) | ✅ 0.35.0, vus à l'écran (métamorphose, lucioles, sélection à 9 familles) ; sons non vérifiables. Icône de la Pourriture subie à fournir (elle reprend celle de l'aura) |
@@ -42,7 +44,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Sons de synthèse et bouton muet | ✅ stable |
 | Fiche personnage et statistiques globales | ✅ stable |
 | Tournoi à 16 (configuration, arbre, suivi) | ✅ stable depuis la correction 0.8.1 ; arbre refait au design system en 0.47.0, vu à l'écran (configuration vide et complète, suivi, tournoi terminé) |
-| Arènes (2), au choix sur l'écran d'affrontement | ✅ 0.16.0 |
+| Arènes (8 au choix ou au hasard, plus la forêt réservée au combat test), décors en gouache graphique | ✅ 0.62.0, 0.63.0. Vus à l'écran : accueil, sélection, tournoi, combat test. Pas vus en combat : les huit arènes du duel (cadrage `focus` et assombrissement `filter` à confirmer en jeu) |
 | Compendium (Personnages, Compétences, Bonus et malus) | ✅ 0.18.0 (Compétences en 0.21.0), bouton d'accès provisoire |
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |
 | Version affichée en jeu | ✅ depuis 0.11.0 |
@@ -83,7 +85,7 @@ La liste des demandes à traiter, point par point, est dans [TODO.md](TODO.md).
 | --- | --- | --- |
 | **Bonus et malus** sur un nombre de tours, sous conditions | Le moteur est prêt : durées, cumul, plafond, conditions (`when`), catalogue. Cadre décidé (0.20.1) : statuts neutres, compétences liées au personnage, palette par race, 1 passif + 2 compétences au plus. Deux compétences par race en jeu depuis la 0.25.0 (sur le 1 et sur le 2). Reste à prolonger les palettes (pistes dans STATUTS.md), avec conditions, durées types et mesure d'équilibre, et à peindre les icônes des quatre nouveaux statuts. | [STATUTS.md](STATUTS.md#chantier--larrivée-des-bonus-et-malus) |
 | **Résolution des affrontements** | Couche en place et testée : trois phases par tour, fenêtres, ordre fixe, contrôle, réactions, garde, immunités, opposition. Sept décisions de design à valider. | [RESOLUTION.md](RESOLUTION.md#9-décisions-de-design-à-valider) |
-| **Compendium** | En place avec trois verticales : Personnages (fiches), Compétences et Bonus et malus. Reste à définir l'intégration définitive du bouton d'accès sur l'accueil (bouton rond provisoire), et les futures verticales (arènes, règles…). | [FEATURES.md](FEATURES.md#9-compendium) |
+| **Compendium** | En place avec trois verticales : Personnages (fiches), Compétences et Bonus et malus. Reste à définir l'intégration définitive du bouton d'accès (bouton rond provisoire, sur l'accueil et la sélection), et les futures verticales (arènes, règles…). | [FEATURES.md](FEATURES.md#9-compendium) |
 | **Sons** | Règles validées et appliquées (0.36.2) : 20 sons, un fichier chacun, un son par instant, le son déduit de la nature de l'effet. Fichiers choisis par l'utilisateur (0.36.3). Reste : un fichier pour Ronge, et le réglage des volumes à l'oreille. | [SONS.md](SONS.md) |
 | **Paris** | Refonte jouable (0.38.0) : guichet de jeu, cotes cachées, mises fixes et rattrapage, deux parieurs de l'ordinateur, écran de fin en deux moitiés, classement dans l'arbre et sur l'écran du champion. Reste P3 (guichet de tour), les sons propres et les icônes peintes (bourse, jeton, coup de théâtre, guichet). | [PARIS.md](PARIS.md) |
 | **Personnages originaux** | Le mort-vivant, l'elfe (chasseresse de la nuit, 0.30.1), la prêtresse et la voleuse sont originaux. L'orc et le nain restent des placeholders, à régénérer avec la style bible. | [STYLE_BIBLE.md](STYLE_BIBLE.md) |

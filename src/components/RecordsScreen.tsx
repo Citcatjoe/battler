@@ -16,10 +16,15 @@ import { Tabs } from "./Tabs";
 interface Props {
   onOpenCharacter: (id: string) => void;
   onBack: () => void;
+  backLabel?: string;
 }
 
 /** Statistiques globales de tous les personnages, tirées de l'historique local. */
-export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
+export function RecordsScreen({
+  onOpenCharacter,
+  onBack,
+  backLabel = "← Retour à la sélection",
+}: Props) {
   const roster = CHARACTERS;
   const history = useHistory();
   const [confirmReset, setConfirmReset] = useState(false);
@@ -34,7 +39,7 @@ export function RecordsScreen({ onOpenCharacter, onBack }: Props) {
             onClick={onBack}
             className="text-sm font-bold text-stone-400 hover:text-stone-100"
           >
-            ← Retour à la sélection
+            {backLabel}
           </button>
           <h1 className="font-display text-5xl font-extrabold text-amber-200">
             Statistiques
