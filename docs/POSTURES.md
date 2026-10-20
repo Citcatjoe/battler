@@ -216,6 +216,8 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 - la masse levée et le halo dépassent de la tête : taille réglée sur le corps, comme Aldric (tête-pieds 74 % de la toile de 1058×1070) : `scale` = 1,00 × 0,945 / 0,755 ≈ 1,25, `headroom` 0,245, portrait `{ x: 52, y: 28, zoom: 5 }` ;
 - vu par capture : l'accueil, l'affrontement face à Aldric (un peu plus petite que lui), l'attaque, le coup encaissé et le K.O. Non vus : l'esquive et la victoire.
 
+**Elaria (2026-10-20, 0.58.0)**, à partir de sa garde actuelle, quatre planches du premier coup : l'arc dépasse de la tête, donc la taille est réglée sur le corps (de la capuche aux pieds, 77 % de la toile de 1014×1116). `scale` = 1,03 × 0,945 / 0,78 ≈ 1,25, `headroom` 0,22, portrait `{ x: 42, y: 25, zoom: 4.8 }`. Vu par capture : l'accueil, l'affrontement face à Ysolde, l'attaque, l'esquive et le coup encaissé. Non vus : le K.O. et la victoire.
+
 **Vu à l'écran** (captures Firefox) :
 - l'attaque des deux personnages pendant l'élan ;
 - le coup encaissé de la voleuse ;

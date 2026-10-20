@@ -4,7 +4,12 @@ import orcDodgeImg from '../assets/orc-dodge.png'
 import orcKoImg from '../assets/orc-ko.png'
 import orcVictoryImg from '../assets/orc-victory.png'
 import orcHurtImg from '../assets/orc-hurt.png'
-import elfImg from '../assets/elf.png'
+import elfIdleImg from '../assets/elf-idle.png'
+import elfAttackImg from '../assets/elf-attack.png'
+import elfDodgeImg from '../assets/elf-dodge.png'
+import elfHurtImg from '../assets/elf-hurt.png'
+import elfKoImg from '../assets/elf-ko.png'
+import elfVictoryImg from '../assets/elf-victory.png'
 import dwarfImg from '../assets/dwarf.png'
 import undeadIdleImg from '../assets/undead-idle.png'
 import undeadAttackImg from '../assets/undead-attack.png'
@@ -132,7 +137,16 @@ const elaria: CharacterDef = {
   // Statistiques de Sylwen, son ancienne jumelle (0.43.0) : même valeur (49,4 % contre 49,6 %), duels plus
   // resserrés (de 42 à 57 % au lieu de 40 à 62 %).
   stats: { maxHp: 50, damageDie: 8, armor: 0, dodgeChance: 0.26, critChance: 0.17, critMultiplier: 2.4 },
-  look: { image: elfImg, facing: 'right', scale: 0.96, portrait: { x: 42, y: 8, zoom: 3.4 } },
+  // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
+  // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
+  look: {
+    image: elfIdleImg,
+    poses: { attack: elfAttackImg, dodge: elfDodgeImg, hurt: elfHurtImg, ko: elfKoImg, victory: elfVictoryImg },
+    facing: 'right',
+    scale: 1.25,
+    headroom: 0.22,
+    portrait: { x: 42, y: 25, zoom: 4.8 },
+  },
   lore: {
     tagline: 'Un souffle, une flèche.',
     background:

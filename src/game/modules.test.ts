@@ -516,8 +516,8 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
   })
 
-  it('Gorak, Naraxes, Fanchon, Ervald, Aldric et Ysolde ont les cinq postures communes', () => {
-    for (const id of ['gorak', 'naraxes', 'fanchon', 'ervald', 'aldric', 'ysolde'])
+  it('Gorak, Naraxes, Fanchon, Ervald, Aldric, Ysolde et Elaria ont les cinq postures communes', () => {
+    for (const id of ['gorak', 'naraxes', 'fanchon', 'ervald', 'aldric', 'ysolde', 'elaria'])
       expect(Object.keys(createCharacter(id).look.poses ?? {}).sort()).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
   })
 

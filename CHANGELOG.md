@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.58.0] — 2026-10-20
+
+### Ajouté
+- **Postures d'Elaria** (atelier des postures) : garde, attaque (une flèche lâchée en pleine fente), esquive, coup encaissé, K.O. et victoire, à partir de sa garde actuelle. La nouvelle garde remplace `elf.png`, qui est à la corbeille.
+  - **Taille réglée sur le corps**, comme Aldric et Ysolde, puisque l'arc dépasse de la tête : de la capuche aux pieds, elle occupe 77 % de la toile. `scale` 0,96 → 1,25, `headroom` 0,22 : un peu plus grande qu'Ysolde (1,03 d'un humain).
+  - Portrait recadré (`zoom` 4,8).
+  - Vu par capture : accueil, affrontement face à Ysolde, attaque, esquive et coup encaissé en combat. Non vus : le K.O. et la victoire.
+
 ## [0.57.0] — 2026-10-20
 
 ### Ajouté
