@@ -19,7 +19,12 @@ import lizardDodgeImg from '../assets/lizardman-dodge.png'
 import lizardHurtImg from '../assets/lizardman-hurt.png'
 import lizardKoImg from '../assets/lizardman-ko.png'
 import lizardVictoryImg from '../assets/lizardman-victory.png'
-import paladinImg from '../assets/paladin.png'
+import paladinIdleImg from '../assets/paladin-idle.png'
+import paladinAttackImg from '../assets/paladin-attack.png'
+import paladinDodgeImg from '../assets/paladin-dodge.png'
+import paladinHurtImg from '../assets/paladin-hurt.png'
+import paladinKoImg from '../assets/paladin-ko.png'
+import paladinVictoryImg from '../assets/paladin-victory.png'
 import ogreImg from '../assets/ogre.png'
 import druidImg from '../assets/druid.png'
 import druidBearImg from '../assets/druid-bear.png'
@@ -376,7 +381,17 @@ const aldric: CharacterDef = {
   // Statistiques de Gauvain, son ancien jumeau (0.43.0) : 54 PV, 7 % d'esquive, 17 % de critique.
   // 50,1 % contre les neuf autres (52,7 % avec les siennes).
   stats: { maxHp: 54, damageDie: 8, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
-  look: { image: paladinImg, facing: 'right', scale: 0.97, portrait: { x: 64, y: 24, zoom: 3.4 } },
+  // Nouveau modèle et postures (atelier des postures, 2026-10-20) : épée basse, plus rien au-dessus de la
+  // tête que la hampe de la bannière. La taille se règle sur le corps (tête-pieds, 77 % de la toile) et non
+  // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
+  look: {
+    image: paladinIdleImg,
+    poses: { attack: paladinAttackImg, dodge: paladinDodgeImg, hurt: paladinHurtImg, ko: paladinKoImg, victory: paladinVictoryImg },
+    facing: 'right',
+    scale: 1.24,
+    headroom: 0.21,
+    portrait: { x: 55, y: 22, zoom: 5.2 },
+  },
   lore: {
     tagline: 'Chaque coup reçu est une dette.',
     background:

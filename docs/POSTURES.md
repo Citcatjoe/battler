@@ -207,6 +207,11 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 - toile 1002×1118, la garde en occupe 83 % : `scale` 0,98 → 1,16 pour garder la même hauteur à l'écran, `headroom` 0,15 (l'épée levée de la victoire), portrait `{ x: 56, y: 19, zoom: 5 }` ;
 - vu par capture : l'accueil, l'affrontement face à Aldric (même taille), l'attaque, le coup encaissé, l'esquive et la victoire en combat. Non vu : le K.O.
 
+**Aldric (2026-10-20, 0.56.0)**, nouveau modèle (planche 0 de l'atelier) puis quatre planches :
+- la règle de hauteur n'a été tenue qu'à moitié : l'épée est basse, mais la hampe de la bannière dépasse encore la tête d'environ 10 % ;
+- **la taille se règle donc sur le corps** (tête-pieds, 77 % de la toile de 1054×1099) et non sur la silhouette entière : `scale` = 1,04 × 0,945 / 0,79 ≈ 1,24 (0,945 : rapport moyen hauteur affichée / taille, mesuré sur Gorak, Fanchon et Ervald), `headroom` 0,21, portrait `{ x: 55, y: 22, zoom: 5.2 }`. C'est la méthode à suivre pour tout personnage dont un élément dépasse de la tête ;
+- vu par capture : l'accueil, l'affrontement face à Ervald, l'attaque, le coup encaissé et le K.O. Non vus : l'esquive et la victoire.
+
 **Vu à l'écran** (captures Firefox) :
 - l'attaque des deux personnages pendant l'élan ;
 - le coup encaissé de la voleuse ;

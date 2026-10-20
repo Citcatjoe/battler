@@ -31,6 +31,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.56.0] — 2026-10-20
+
+### Ajouté
+- **Nouveau modèle d'Aldric et ses cinq postures** (atelier des postures). Il y avait deux défauts : l'épée levée et la bannière haute rapetissaient son corps à l'écran (signalé par l'utilisateur), et sa garde montrait une arme au-dessus de la tête. La nouvelle garde tient l'épée basse, prête à charger, et la bannière est raccourcie. Mêmes couleurs et même identité : rouge sang, acier sombre, feu sacré.
+  - **Taille réglée sur le corps** (tête-pieds, 77 % de la toile), et non plus sur la hampe de la bannière, qui dépasse encore un peu : `scale` 0,97 → 1,24, `headroom` 0,21 (le vide et la bannière au-dessus de la tête). Son corps paraît donc plus grand qu'avant, à la taille prévue (1,04 d'un humain), à côté d'Ervald (1,05).
+  - Portrait recadré (`zoom` 5,2). `paladin.png` est à la corbeille.
+  - Vu par capture : l'accueil, l'affrontement face à Ervald, puis en combat l'attaque, le coup encaissé et le K.O. L'esquive et la victoire n'ont pas été vues.
+- Test : Ervald et Aldric ont les cinq postures communes.
+
 ## [0.55.0] — 2026-10-20
 
 Retours de l'utilisateur sur la lecture des combats.
