@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { skillCatalog, statusCatalog } from './catalog'
-import { ARENAS, getArena, RANDOM_ARENA, resolveArena } from './arenas'
+import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
 import { describeEffect, describeEvent, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
@@ -31,7 +31,13 @@ const duel = (a: string, b: string, seed: number) =>
 describe('arènes', () => {
   it('ont des ids uniques, une image et un nom', () => {
     expect(new Set(ARENAS.map((a) => a.id)).size).toBe(ARENAS.length)
-    for (const a of ARENAS) expect(a.name && a.image && a.focus && a.filter).toBeTruthy()
+    for (const a of [...ARENAS, TRAINING_ARENA]) expect(a.name && a.region && a.image && a.focus && a.filter).toBeTruthy()
+  })
+  it("l'arène d'entraînement n'est jamais proposée ni tirée au hasard", () => {
+    expect(ARENAS.some((a) => a.id === TRAINING_ARENA.id || a.image === TRAINING_ARENA.image)).toBe(false)
+    const rng = seededRng(7)
+    for (let i = 0; i < 300; i++) expect(resolveArena(RANDOM_ARENA, rng).id).not.toBe(TRAINING_ARENA.id)
+    expect(getArena(TRAINING_ARENA.id)).not.toBe(TRAINING_ARENA)
   })
   it('« au hasard » tire chaque arène, un id inconnu retombe sur la première', () => {
     const rng = seededRng(3)

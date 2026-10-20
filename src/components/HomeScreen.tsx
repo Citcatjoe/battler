@@ -1,10 +1,9 @@
 import type { KeyboardEvent } from 'react'
-// Fond provisoire : à remplacer par le fond dédié de l'accueil (`menu-home.jpg`) dès qu'il est prêt
-import homeImg from '../assets/arena-ruins.jpg'
-// Illustrations provisoires des arches, reprises des décors existants : chaque mode aura la sienne
-import testArt from '../assets/arena-dwarf-fortress.jpg'
-import duelArt from '../assets/menu-portal.jpg'
-import tournamentArt from '../assets/menu-tournament.jpg'
+import homeImg from '../assets/menu-home.jpg'
+// Illustrations des arches. Le combat test reprend une arène (son marais est réservé au combat lui-même)
+import testArt from '../assets/arena-dwarf-city.jpg'
+import duelArt from '../assets/arch-duel.jpg'
+import tournamentArt from '../assets/arch-tournament.jpg'
 import { Icon } from './Icon'
 
 export type HomeChoice = 'test' | 'duel' | 'tournament'
@@ -98,10 +97,10 @@ export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tourname
         src={homeImg}
         alt=""
         draggable={false}
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full scale-105 select-none object-cover blur-[3px]"
-        style={{ filter: 'brightness(0.32) saturate(0.8)' }}
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover object-[50%_55%]"
+        style={{ filter: 'brightness(0.7) saturate(0.9)' }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_15%,rgba(12,10,9,0.9)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_15%,rgba(12,10,9,0.75)_100%)]" />
 
       <button
         onClick={onOpenRecords}

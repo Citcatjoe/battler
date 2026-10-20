@@ -1,15 +1,24 @@
-import ruinsImg from '../assets/arena-ruins.jpg'
-import fortressImg from '../assets/arena-dwarf-fortress.jpg'
+import gladeImg from '../assets/arena-glade.jpg'
+import dwarfCityImg from '../assets/arena-dwarf-city.jpg'
+import lanternLakeImg from '../assets/arena-lantern-lake.jpg'
+import mushroomValeImg from '../assets/arena-mushroom-vale.jpg'
+import tideTempleImg from '../assets/arena-tide-temple.jpg'
+import skyHandImg from '../assets/arena-sky-hand.jpg'
+import swampImg from '../assets/arena-swamp.jpg'
 import { defaultRng, pick, type Rng } from './rng'
 
 /*
  * Arènes : le cadre visuel d'un combat. Purement décoratives, elles n'influencent pas les règles.
  * Ajouter une arène = une image dans src/assets/ (voir docs/STYLE_BIBLE.md) et une entrée ici.
+ * Chaque arène porte le nom d'un lieu-dit (`name`) et du lieu qui l'entoure (`region`), comme sur une carte.
  */
 
 export interface Arena {
   id: string
+  /** Lieu-dit, affiché en grand */
   name: string
+  /** Lieu plus large (bois, val, lac…), affiché sous le lieu-dit */
+  region: string
   image: string
   /** Cadrage CSS (`object-position`) : le sol doit tomber sous les pieds des combattants */
   focus: string
@@ -17,23 +26,69 @@ export interface Arena {
   filter: string
 }
 
+/** Arènes des duels et du tournoi : au choix sur l'écran d'affrontement, ou tirées au hasard. */
 export const ARENAS: readonly Arena[] = [
   {
-    id: 'ruins',
-    name: 'Ruines forestières',
-    image: ruinsImg,
+    id: 'glade',
+    name: 'Les Pierres-Couchées',
+    region: 'Bois de Vaumorin',
+    image: gladeImg,
     focus: '50% 70%',
-    filter: 'brightness(0.5) saturate(0.85) blur(1.5px)',
+    // Plein jour, sol clair : le plus assombri
+    filter: 'brightness(0.6) saturate(0.9) blur(1px)',
   },
   {
-    id: 'dwarf-fortress',
-    name: 'Cour de Durnhold',
-    image: fortressImg,
-    focus: '50% 75%',
-    // Décor très lumineux (ciel, braseros) : un peu plus assombri
-    filter: 'brightness(0.45) saturate(0.85) blur(1.5px)',
+    id: 'dwarf-city',
+    name: 'La Cour-des-Enclumes',
+    region: 'Durnhold',
+    image: dwarfCityImg,
+    focus: '50% 72%',
+    filter: 'brightness(0.65) saturate(0.9) blur(1px)',
+  },
+  {
+    id: 'lantern-lake',
+    name: 'Les Mille-Feux',
+    region: 'Lac Sorelle',
+    image: lanternLakeImg,
+    focus: '50% 70%',
+    filter: 'brightness(0.75) saturate(0.9) blur(1px)',
+  },
+  {
+    id: 'mushroom-vale',
+    name: 'Les Chapeaux-Fols',
+    region: 'Val Brunelle',
+    image: mushroomValeImg,
+    focus: '50% 70%',
+    // Champignons très saturés : on calme la couleur plus que la lumière
+    filter: 'brightness(0.65) saturate(0.75) blur(1px)',
+  },
+  {
+    id: 'tide-temple',
+    name: 'Les Cloches-Noyées',
+    region: 'Anse de Morvoux',
+    image: tideTempleImg,
+    focus: '50% 70%',
+    filter: 'brightness(0.7) saturate(0.9) blur(1px)',
+  },
+  {
+    id: 'sky-hand',
+    name: 'La Paume-du-Vieux',
+    region: 'Pic Solange',
+    image: skyHandImg,
+    focus: '50% 70%',
+    filter: 'brightness(0.6) saturate(0.9) blur(1px)',
   },
 ]
+
+/** Arène de l'entraînement : toujours celle du combat test, et jamais ailleurs (ni au choix, ni au hasard). */
+export const TRAINING_ARENA: Arena = {
+  id: 'swamp',
+  name: 'Les Pilotis',
+  region: 'Marais de Gâtebois',
+  image: swampImg,
+  focus: '50% 70%',
+  filter: 'brightness(0.8) saturate(0.9) blur(1px)',
+}
 
 /** Choix « au hasard » : l'arène est tirée au moment de lancer le combat. */
 export const RANDOM_ARENA = 'random'

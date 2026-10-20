@@ -118,12 +118,12 @@ Les éléments signature (halo du prêtre, arc, cornes) dépassent de la silhoue
 
 | Contrainte | Valeur | Pourquoi |
 | --- | --- | --- |
-| Format | **1536×1024**, à recadrer en **1920×1080 (16:9)**, JPG | Fond de la scène de 1600×900 |
+| Format | Généré en **1536×1024** (paysage 3:2), agrandi ×4 puis livré en **2400×1600** JPG, sans recadrage | Fond de la scène de 1600×900 ; le jeu cadre l'image avec `focus` (voir section 5, « En bref ») |
 | Composition | Un sol dégagé et plat sur le **tiers inférieur central** ; l'horizon vers 40 à 45 % de la hauteur | Les combattants se tiennent à gauche et à droite du centre, en bas ; l'image est cadrée à `50% 70%` |
 | Premier plan | **Rien** dans le tiers inférieur, coins compris ; le sol part du bord bas de l'image | Les pieds des combattants touchent le sol : aucun ne doit sembler posé sur un objet ni caché derrière (voir section 5.2) |
 | Centre | Peu de contraste et pas d'élément fort au milieu | L'interface (dés, journal) et les impacts s'y affichent |
 | Personnages | **Aucun** personnage, ni créature, ni texte | Les combattants sont ajoutés par le jeu |
-| Lumière | Assez claire et lisible | Le jeu assombrit le fond (`brightness 0.45`, désaturation, flou) |
+| Lumière | **Clair-obscur** : côtés sombres, une zone lumineuse au loin, sol en demi-teinte | Le jeu assombrit encore un peu le fond (`filter` de chaque arène, `brightness` 0,6 à 0,8) ; un décor clair partout noie les combattants |
 
 ---
 
@@ -485,6 +485,20 @@ Une arène peut être **n'importe quel lieu** du monde : une forêt, des égouts
 
 **Un prompt donné à l'utilisateur est toujours complet**, prêt à coller d'un bloc. On ne lui donne jamais un bloc commun à reconstituer avec une fiche (demande expresse de l'utilisateur, 2026-10-20). Pour écrire une nouvelle arène, on part du prompt de référence (section 5.3) et on réécrit ses parties sur le lieu.
 
+**En bref** (tout décor : arène, fond d'écran, illustration d'arche) :
+
+| Point | Règle |
+| --- | --- |
+| Format | **Paysage 1536×1024 (3:2), toujours**, même pour une arche de l'accueil (le jeu la recadre). L'écrire en **première phrase** du prompt (_« A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. »_), puis en dernière ligne (_« OUTPUT: landscape 1536x1024, wider than tall. »_) : ChatGPT ignore souvent une consigne de format donnée seulement à la fin |
+| Style | Gouache graphique (section 5.1), pour tous les décors. Ni pour les personnages, ni pour les icônes |
+| Lumière | Clair-obscur : côtés dans l'ombre, une seule zone très lumineuse au loin, sol de combat en demi-teinte (section 5.2) |
+| Composition | Côtés vivants, centre calme, **rien dans le tiers inférieur** (section 5.2) |
+| Prompt | Complet, prêt à coller ; aucune image de référence |
+| Dépôt | L'utilisateur dépose les PNG à la racine, nommés selon leur rôle : `arena <lieu>.png` pour une arène tirée au hasard, le nom de l'écran sinon (`home.png`, `duel.png`, `tournoi.png`…). `arena swamp` est l'exception : réservé au combat test |
+| Traitement | Agrandissement ×4 par IA (Real-ESRGAN, modèle `realesrgan-x4plus`, binaire macOS `realesrgan-ncnn-vulkan` téléchargé dans le scratchpad), réduction Lanczos à **2400×1600** (arches : 1800×1200), JPG qualité 82 progressif : de 0,5 à 1,2 Mo par image. Le 3:2 est gardé : le cadrage se règle dans le code (`focus` des arènes, `object-position` ou `preserveAspectRatio` des écrans) |
+| Rangement | `src/assets/arena-<lieu>.jpg`, `menu-<écran>.jpg`, `arch-<mode>.jpg` ; source à la corbeille (`gio trash`) |
+| Nom d'arène | Un **lieu-dit** (`name`) et le lieu qui l'entoure (`region`), comme sur une carte : « Les Pierres-Couchées, bois de Vaumorin ». Des noms qu'on croirait trouver sur une carte d'état-major, pas des titres épiques (« Marais du Chagrin ») |
+
 ### 5.1 Style des décors : la gouache graphique
 
 Choisi le 2026-10-20, pour **tous les décors** : arènes et fonds d'écran (accueil, tournoi…). Il ne s'applique **ni aux personnages, ni aux icônes**, qui gardent la direction de la section 1.
@@ -497,7 +511,7 @@ Choisi le 2026-10-20, pour **tous les décors** : arènes et fonds d'écran (acc
 | Formes | Simplifiées et géométriques, dans l'esprit d'un livre illustré du milieu du XXᵉ siècle ou d'un film d'animation stylisé : sapins en hauts triangles, buissons ronds, nuages en rubans, collines en courbes nettes, pierres en blocs simples |
 | Détail | Économe : chaque objet en quelques coups de pinceau, les feuillages en masses |
 | Profondeur | Trois plans, chacun dans sa propre valeur : structures sombres sur les côtés, plan moyen, lointain pâle et très simplifié |
-| Lumière | Une seule idée de lumière ; les ombres sont des aplats plus sombres |
+| Lumière | **Clair-obscur marqué** : beaucoup d'écart entre les ombres et la lumière. Une seule idée de lumière ; les ombres sont des aplats plus sombres ; la lumière est peinte en aplats clairs, jamais en halo |
 | Palette | Cinq ou six couleurs, nommées dans le prompt |
 | Interdit | Bloom, lueurs, rayons, reflets brillants, particules, braises, poussière en suspension, brume en effet, contre-jour sur les bords, dégradés, rendu HDR ou 3D, textures hyper détaillées, photoréalisme |
 
@@ -513,14 +527,15 @@ Un décor sobre n'est pas un décor vide : une clairière avec une seule arche e
 - **Le centre reste calme** et peu contrasté : l'interface et les impacts s'y affichent.
 - **Rien au premier plan.** Les combattants ont les pieds au sol, en bas de l'image. Le tiers inférieur ne porte donc aucun objet, ni souche, ni rocher, ni herbe haute, coins compris : aucun pied ne doit sembler posé dessus ou caché derrière. Les éléments des côtés se tiennent **derrière** le sol de combat, au fond de la clairière.
 - **La bonne distance du sol**, comme dans les arènes actuelles : la caméra est à hauteur d'homme, à quelques mètres des combattants. Le sol court sans interruption du bord bas de l'image jusqu'au pied des éléments des côtés. En bas de l'image, on le voit à l'échelle d'un personnage en pied, ni en gros plan, ni au loin.
+- **Ombre devant, lumière au loin** (retour de l'utilisateur sur la première série, 2026-10-20). Les images réussies ont beaucoup d'écart entre ombre et lumière : l'accueil (terrasse au crépuscule) et le tournoi. Le modèle à suivre est la terrasse : les côtés sont sombres, avec une seule zone lumineuse au loin, au centre, qui attire l'œil. Le sol de combat est en demi-teinte, plus sombre vers le bas, pour que les combattants ressortent. Les décors clairs partout (carrière en plein midi, désert de sel qui ressemblait à une banquise) écrasent la profondeur, et les personnages s'y confondent avec le fond. Le lac aux lanternes et la cour naine sont à la limite. Le spectacle se joue au premier plan.
 - **Si l'image devient trop chargée**, on retire un ou deux éléments des côtés. On ne touche pas au style.
 
 ### 5.3 Prompt de référence
 
-Clairière en ruines, dans le style et la composition retenus. Pour une autre arène, on garde tels quels le premier paragraphe (style), FIGHTING GROUND AND CAMERA (en changeant seulement la matière du sol), DEPTH, COMPOSITION, AVOID et OUTPUT. On réécrit SCENE, LEFT SIDE, RIGHT SIDE, DISTANCE et LIGHT AND COLOR. Puis on donne à l'utilisateur le prompt **entier**.
+Clairière en ruines, dans le style et la composition retenus. Pour une autre arène, on garde tels quels le premier paragraphe (style), FIGHTING GROUND AND CAMERA (en changeant seulement la matière du sol), DEPTH, COMPOSITION, AVOID et OUTPUT. On réécrit SCENE, LEFT SIDE, RIGHT SIDE, DISTANCE, LIGHT AND SHADOW et COLOR. Puis on donne à l'utilisateur le prompt **entier**.
 
 ```text
-A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: pines as tall triangles, rounded bushes, ribbon-like clouds, hills in clean curves, stones as simple blocks. Flat colors with subtle dry-brush texture, crisp edges, a playful yet epic mood. Original location, not based on any existing film, book or game.
+A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: pines as tall triangles, rounded bushes, ribbon-like clouds, hills in clean curves, stones as simple blocks. Flat colors with subtle dry-brush texture, crisp edges, a playful yet epic mood. Original location, not based on any existing film, book or game.
 
 SCENE: a forest clearing used as a dueling ground, among the ruins of an old stone sanctuary. The place feels lived-in and full of small stories that reward a second look.
 
@@ -534,13 +549,15 @@ DISTANCE (center): a river valley with an old stone bridge, a small hamlet with 
 
 DEPTH: three clearly separated planes, each in its own flat value: darker structures on the sides, mid-value trees and ruins, pale and very simplified distance.
 
-LIGHT AND COLOR: late afternoon, warm light from the left, shadows as flat darker shapes. Limited palette: deep green, olive, warm ochre, grey-blue stone, brick red, pale sky blue.
+LIGHT AND SHADOW: strong chiaroscuro, a rather dark image with a bright heart. The left and right sides are in deep shadow, dark silhouettes with only a few small warm lights. One luminous area of interest far away in the center, the brightest part of the image: the sunlit valley and castle. The fighting ground is in soft half-light, darker toward the bottom edge, with a pool of warm light reaching its middle. Light is painted as flat bright shapes, never as a glow.
+
+COLOR: late afternoon. Limited palette: deep green, olive, warm ochre, grey-blue stone, brick red, pale sky blue.
 
 COMPOSITION: straight-on, human eye level, horizon at about 40% of the height. The center is calm and low-contrast; the interest lives on the sides and in the distance.
 
 AVOID: foreground objects, anything in the bottom third of the image, bloom, glow, light rays, lens flare, sparkles, particles, floating embers, dust motes, haze effects, rim light, gradients, glossy reflections, HDR look, hyper-detailed textures, photorealism, 3D render look, people, monsters, text, logo, watermark.
 
-OUTPUT: landscape 1536x1024.
+OUTPUT: landscape 1536x1024, wider than tall.
 ```
 
 ### 5.4 Varier les arènes
@@ -556,7 +573,7 @@ Chaque arène joue sur six axes. **Une nouvelle arène doit changer au moins tro
 | Source de lumière | Soleil, lune, torches, braseros, forges, cristaux, magie, puits de lumière |
 | Palette dominante | Vert et or, gris acier et orange, bleu nuit et ambre, turquoise et vert, ocre et rouge, violet et argent… |
 
-**Garde-fous pour les lieux sombres** (égouts, cimetière, caverne, nuit) : le jeu assombrit le fond de moitié. Il faut donc demander une image **plus claire qu'on ne l'imagine**, avec une source de lumière franche au centre ou au fond qui éclaire le sol. L'ambiance peut être inquiétante, mais pas horrifique : ni cadavres, ni sang, ni créatures.
+**Garde-fous pour les lieux sombres** (égouts, cimetière, caverne, nuit) : l'image peut être sombre, mais jamais sans lumière. Il faut une zone lumineuse franche au centre ou au fond, et une flaque de lumière sur le sol de combat. Le jeu assombrit encore le fond (`brightness 0.45`) : pour un décor déjà sombre, c'est l'intégration qui allège le filtre (`filter` dans `ARENAS`), pas le prompt qui éclaircit l'image. L'ambiance peut être inquiétante, mais pas horrifique : ni cadavres, ni sang, ni créatures.
 
 **Garder le sol jouable** : quel que soit le lieu, le centre bas doit rester plat et dégagé. Il faut le dire explicitement pour les lieux qui s'y prêtent mal : l'eau des égouts reste sur les côtés, les tombes s'alignent sur les bords, les étals du marché s'écartent.
 
@@ -700,8 +717,17 @@ LIGHTING AND PALETTE: warm candlelight and blue arcane glow; deep purple, warm w
 
 | Fichier | Lieu | Palette | Remarques |
 | --- | --- | --- | --- |
-| `arena-ruins.jpg` | Clairière en ruines, fin d'après-midi | Vert, or, pierre chaude | Ancien style, à refaire en gouache graphique (prompt de la section 5.3) |
-| `arena-dwarf-fortress.jpg` | Cour de forteresse naine, neige | Gris acier, laiton, orange | Ancien style, à refaire. Sol de dalles très lisible |
+Première série en gouache graphique, intégrée le 2026-10-20. Elle remplace les deux arènes de l'ancien style (`arena-ruins.jpg`, `arena-dwarf-fortress.jpg`, retirées).
+
+| Fichier | Nom en jeu | Lieu | Palette | Remarques |
+| --- | --- | --- | --- | --- |
+| `arena-glade.jpg` | Les Pierres-Couchées, bois de Vaumorin | Clairière en ruines, fin d'après-midi | Vert, ocre, pierre | Prompt de référence (5.3), première version encore claire : le plus assombri en jeu |
+| `arena-dwarf-city.jpg` | La Cour-des-Enclumes, Durnhold | Cour d'une cité naine, porte sur la vallée enneigée | Gris acier, laiton, orange | Limite en luminosité, bon contraste ombre et lumière |
+| `arena-lantern-lake.jpg` | Les Mille-Feux, lac Sorelle | Ponton de fête sur un lac, nuit | Indigo, vermillon, or | Limite en luminosité |
+| `arena-mushroom-vale.jpg` | Les Chapeaux-Fols, val Brunelle | Vallée de champignons lumineux, pénombre | Violet, magenta, turquoise, or | Couleurs très saturées : désaturé en jeu |
+| `arena-tide-temple.jpg` | Les Cloches-Noyées, anse de Morvoux | Temple marin à marée basse, soir d'orage | Bleu-vert, corail, or | Bon clair-obscur |
+| `arena-sky-hand.jpg` | La Paume-du-Vieux, pic Solange | Paume d'une statue géante au-dessus des nuages, aube | Ardoise, or rose, pêche | Contre-jour |
+| `arena-swamp.jpg` | Les Pilotis, marais de Gâtebois | Marais sur pilotis, nuit de pleine lune | Vert-noir, sarcelle, ivoire | **Réservé au combat test** (`TRAINING_ARENA`) : jamais au choix, jamais au hasard, sur aucun autre écran |
 
 Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regarder ce tableau pour changer au moins trois axes et la palette.
 
@@ -709,7 +735,7 @@ Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regar
 
 ## 6. Gabarit : fond d'écran de menu
 
-> **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1) et ses règles de composition (côtés vivants, centre calme ; section 5.2). Les prompts validés ci-dessous sont de l'ancien style : on en garde les zones de l'écran, pas le rendu. Le portail (`menu-portal.jpg`) reste tel quel, à la demande de l'utilisateur. Le tournoi est à refaire dans le nouveau style, avec son sujet principal à gauche.
+> **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1), le clair-obscur et le format paysage (section 5, « En bref »). Seul le portail de la sélection (`menu-portal.jpg`) est encore de l'ancien style ; il reste tel quel, à la demande de l'utilisateur. Le prompt du portail ci-dessous est donc de l'ancien style : on en garde les zones de l'écran, pas le rendu.
 
 L'écran de sélection (`StartScreen.tsx`) affiche un fond illustré, assombri en CSS (`brightness(0.6)`), avec un vignettage et un dégradé en bas. Ses contraintes diffèrent de celles d'une arène :
 
@@ -755,7 +781,31 @@ Le fond étant lumineux au centre, tout élément posé dessus a besoin de son p
 
 ### Fond de l'écran d'accueil
 
-`HomeScreen.tsx` (triptyque depuis la 0.47.0) utilise provisoirement `arena-ruins.jpg`, flouté et très assombri (`brightness(0.32)`). Son fond dédié, `menu-home.jpg`, est en cours de génération ; il suffira de changer l'import en tête du composant. Le fond passe derrière le triptyque : il ne sert que d'ambiance.
+`HomeScreen.tsx` (triptyque depuis la 0.47.0) affiche `menu-home.jpg` (2026-10-20) : un haut plateau au crépuscule, des croix de bois à gauche (des compagnons enterrés là), des chaînes de montagnes au loin. Il est légèrement assombri (`brightness(0.7)`), sans flou, avec un vignettage. Le fond passe derrière le triptyque : seuls les bords et le ciel restent vraiment visibles.
+
+Prompt validé (2026-10-20), qui a donné `menu-home.jpg` :
+
+```text
+A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Very pared-down and graphic: large flat areas of color, few shapes, mountains as clean angular peaks in flat layered silhouettes, grass as a few simple strokes, clouds as flat ribbons. Flat colors with subtle dry-brush texture, crisp edges, a quiet, melancholic and epic mood. Original location, not based on any existing film, book or game.
+
+SCENE: a bare high-altitude plateau at dusk, swept by the wind, very empty and silent. Far away, several chains of mountains, layered one behind the other, each paler than the last.
+
+THE GRAVES: on the left of the image, a few simple wooden crosses planted in the ground, as if someone had buried their companions here: five or six crosses of different heights, slightly leaning, one with a sword planted beside it, one with a helmet hung on it, one with a scarf tied around it and flapping in the wind. They stand as dark graphic silhouettes against the bright sky. A small pile of stones at the foot of one cross. A single crow sits on the tallest cross.
+
+RIGHT SIDE: almost empty: the plateau going on, a lone weathered rock, a few tufts of grass bent by the wind.
+
+CENTER (game logo and menu entries will be placed over it): calm and empty, only the plateau, the distant mountains and the sky. No strong shape, low contrast.
+
+LIGHT AND SHADOW: strong chiaroscuro, a rather dark image with a bright heart. The plateau and the crosses are in deep shadow, dark silhouettes; the brightest part of the image is the last light of the sun just behind the farthest mountain chain, in the center, painted as a flat pale gold band on the horizon. The sky goes from that warm band to a deep blue-violet at the top. Light is painted as flat bright shapes, never as a glow.
+
+COLOR: dusk. Limited palette: deep blue-violet, slate blue, dark olive, warm pale gold, ash grey, a single touch of muted red for the scarf.
+
+COMPOSITION: wide, straight-on, human eye level, horizon at about 55% of the height. Lots of empty space; the crosses on the left balance the empty right. The top and the center stay calm.
+
+AVOID: busy composition, bloom, glow, light rays, lens flare, sparkles, particles, haze effects, rim light, gradients, glossy reflections, HDR look, hyper-detailed textures, photorealism, 3D render look, people, monsters, skeletons, bodies, gore, text, letters, logo, watermark.
+
+OUTPUT: landscape 1536x1024, wider than tall.
+```
 
 | Zone de l'écran | Ce qu'il y a dessus | Ce que le fond doit offrir |
 | --- | --- | --- |
@@ -767,10 +817,10 @@ Le fond étant lumineux au centre, tout élément posé dessus a besoin de son p
 
 ### Illustrations des arches de l'accueil
 
-Chaque arche du triptyque (`HomeScreen.tsx`, constante `ITEMS`) affiche une illustration, recadrée par le SVG (`preserveAspectRatio`, en mode `slice`) dans une ogive. Pour l'instant, ce sont des décors existants : `arena-dwarf-fortress.jpg` (Combat test), `menu-portal.jpg` (Duel), `menu-tournament.jpg` (Tournoi). À générer, une image par mode :
+Chaque arche du triptyque (`HomeScreen.tsx`, constante `ITEMS`) affiche une illustration, recadrée par le SVG (`preserveAspectRatio`, en mode `slice`) dans une ogive. Depuis le 2026-10-20 : `arch-duel.jpg` (portail ouvert sur une arène au couchant, bannières rouge et bleue, corbeau), `arch-tournament.jpg` (porte du colisée, trophée d'or sur un socle à gauche, restes d'un combattant ; cadrée à gauche, `xMinYMid`). Combat test reprend `arena-dwarf-city.jpg` : le marais est réservé au combat lui-même.
 
-- **format portrait**, 2:3 environ (l'arche centrale fait 340 × 470 px, les volets 288 × 404) ; le haut est coupé en ogive, les coins sont perdus ;
-- **sujet centré**, dans le tiers du milieu ; le quart du bas reste sombre et calme : un dégradé s'y pose, et le socle du titre vient juste dessous ;
+- **format paysage 1536×1024**, comme tous les décors : ChatGPT rend mal le portrait et le jeu recadre de toute façon (l'arche centrale fait 340 × 470 px, les volets 288 × 404) ; le haut est coupé en ogive, les côtés sont perdus ;
+- **sujet au centre** de la largeur (ou à gauche, avec un cadrage `xMinYMid`), dans le tiers du milieu de la hauteur ; le quart du bas reste sombre et calme : un dégradé s'y pose, et le socle du titre vient juste dessous ;
 - une **marge** autour du sujet : au survol, l'illustration est agrandie de 7 % dans son cadre ;
 - pas de texte ni de personnage reconnaissable du roster (l'écran n'a pas à changer quand le roster bouge) ;
 - les trois forment une série : même heure, même palette chaude, chacune avec son motif (Combat test : salle d'entraînement, mannequins, râtelier de dés ; Duel : deux armes croisées sous un portail ; Tournoi : la porte du colisée, bannières et trophée).
@@ -788,36 +838,31 @@ L'onglet « Tournoi » de `StartScreen.tsx` a son propre fond, `menu-tournament.
 | Moitié droite | Titre « Tournoi à élimination directe », texte et boutons | Mur de pierre sombre et uni, peu contrasté |
 | Bas (1/5) | Pieds du personnage | Pavés sombres et unis |
 
-Prompt validé, qui a donné `src/assets/menu-tournament.jpg` (porte fortifiée au crépuscule, porte à 30 % de la largeur) :
+Prompt validé, qui a donné `src/assets/menu-tournament.jpg` (gouache, 2026-10-20) : porte à 30 % de la largeur, rempart sombre à droite, coffre débordant d'or et restes d'un combattant dans le coin bas gauche.
 
 ```text
-STYLE: original high-fantasy environment painting, hand-painted digital illustration,
-painterly brushwork, atmospheric depth, rich warm colors, epic and festive yet solemn mood.
-Original location, not based on any existing game.
-AVOID: casual mobile game look, pastel or candy colors, characters, creatures, crowd, text,
-letters, logo, watermark, bright or busy details on the right half of the image.
+A wide landscape image, 3:2 aspect ratio (1536x1024). A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: the gate as a clean rounded arch, walls as large simple blocks, banners as flat ribbons, pennants as triangles. Flat colors with subtle dry-brush texture, crisp edges, a festive yet solemn and slightly ominous epic mood. Original location, not based on any existing film, book or game.
 
-SUBJECT: the monumental main gate of a grand tournament colosseum, seen from the paved plaza
-outside, at dusk. A huge rounded stone archway with a raised iron portcullis and heavy open
-wooden doors; through it, a glimpse of the sunlit arena sand and distant stands, golden light
-and dust pouring out onto the plaza. Above the gate, a carved stone crest of two crossed swords
-and a laurel wreath (no letters), long tournament banners in alternating crimson and deep blue
-hanging from the ramparts, lit braziers on both sides of the archway, a few pennants on poles.
+SCENE: the monumental main gate of a grand tournament colosseum at dusk, seen from the paved plaza outside, from a slightly low angle so the walls feel colossal.
 
-COMPOSITION: straight-on view at human eye level, slightly low angle to make the gate feel
-monumental. The gate is placed in the LEFT HALF of the image, its center at about 35% of the
-width, because a single standing hero will be placed in front of it and must be backlit by
-its glow. The RIGHT HALF is a dark, plain, low-contrast stretch of colossal stone wall with
-deep shadow, because a title, a paragraph of text and buttons will be placed over it.
-The top fifth is dark dusk sky and shadowed ramparts, because the game title sits there.
-The bottom fifth is dark, plain paving stones in shadow, where the hero's feet will be.
-No strong object at the far left edge, natural vignette in the corners.
+LEFT PART, THE GATE: the gate is the focal point, its center at about 30% of the width. A huge rounded stone archway with a raised portcullis and heavy open wooden doors. Through it, the bright sunlit arena: sand, curved tiers of stands, a small striped tent and a few flags. Above the gate, a carved stone crest of two crossed swords inside a laurel wreath (no letters), long crimson and deep blue banners on each side of the arch, two stone pillars with braziers framing the entrance. Behind, the top of the colosseum curving away.
 
-LIGHTING: dusk, overall dark image with deep blue-violet sky and stone-grey shadows,
-the brightest area is the warm golden-amber light coming through the open gate,
-warm brazier glow on the gate pillars, the right half stays dim and cool.
+FOREGROUND, BOTTOM-LEFT CORNER ONLY, at the very left edge of the image: a heavy open treasure chest overflowing with gold coins, jewels, a small crown and a golden goblet, coins spilling onto the paving. At its foot, the remains of a fighter who fell here earlier: a few bones and a skull half hidden under a torn cloak, a cracked helmet, a broken sword and a dented round shield. Everything painted simply, dark in shadow, with the gold catching a little warm light. This group stays at the far left edge and does not reach the space in front of the gate, where a hero will stand.
 
-OUTPUT: landscape 1536x1024, no characters, no text.
+RIGHT HALF (dark and calm, text and buttons will cover it): a long, colossal stone rampart going away in perspective toward the right, made of large simple blocks in deep shadow, with a few tall dark banners hanging along it and battlements with pennants against the sky. Plain, dim and uniform, low contrast.
+
+TOP RIGHT: a deep dusk sky, dark blue-violet with a few flat ribbon clouds and a thin warm band near the horizon, where the game title will sit.
+
+GROUND: flat, plain paving stones in perspective, running from the very bottom edge of the image to the gate, across the whole width. Nothing on them except the chest group in the bottom-left corner. A flat shape of warm light spills from the gate onto the paving in front of it; the rest of the plaza is dark.
+
+LIGHT AND SHADOW: strong chiaroscuro, a dark image with a bright heart. The brightest part of the image is the sunlit arena seen through the gate. The braziers are small flat warm lights. The right half and the foreground stay in deep shadow. Light is painted as flat bright shapes, never as a glow.
+
+COLOR: dusk. Limited palette: deep blue-violet, dark stone grey, warm gold, burnt orange, crimson, deep blue.
+
+AVOID: bright or busy details on the right half, objects in front of the gate, bloom, glow, light rays as haze, lens flare, sparkles, particles, embers, haze effects, rim light, gradients, glossy reflections, wet shiny paving, HDR look, hyper-detailed textures, photorealism, 3D render look, gore, blood, people, crowd, monsters, text, letters, logo, watermark.
+
+OUTPUT: landscape 1536x1024, wider than tall.
+```
 
 ---
 

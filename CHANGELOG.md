@@ -19,7 +19,6 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - Onglet Tournoi de l'accueil : fond dédié (`src/assets/menu-tournament.jpg`, porte fortifiée de l'arène vue du parvis), qui remplace la rangée de tout le roster. La présentation et les boutons (« Commencer un tournoi », « Reprendre le tournoi ») sont sur la moitié droite, au style `.btn`.
 
 ### Modifié
-- `docs/STYLE_BIBLE.md` (2026-10-20) : nouveau style pour tous les décors, arènes et fonds d'écran : la **gouache graphique** (aplats mats, formes géométriques, palette courte, sans lueurs ni particules), qui remplace la peinture numérique surchargée. Personnages et icônes gardent leur direction. Nouvelles règles de composition : côtés vivants (objets, traces de vie, petit animal caché), lointain habité, centre calme, et **rien au premier plan** sous les pieds des combattants. Un prompt de référence complet remplace le bloc fixe et sa fiche : les prompts donnés sont toujours entiers.
 - **Fiche produit** (2026-10-19, vision donnée par l'utilisateur) : Battler est un auto-battler roguelike à regarder et à parier, avec deux terrains de jeu en parallèle (les combattants, les parieurs) et un double but (un jeu ludique, une expérience de développement). Écrite en tête de `docs/INTENTION.md`, résumée dans `CLAUDE.md` avec les repères de l'utilisateur, les nouveaux documents (PARIS, SORTS, FAMILLES, ETUDE_AUTOBATTLER, TODO), les outils de mesure et la conduite à tenir quand un autre agent travaille en même temps. Principes 8 à 10 ajoutés à `INTENTION.md` (personnage précis, paris sans effet sur le combat, jeu vidéo et non page web).
 - `docs/STYLE_BIBLE.md` réorganisée pour être reprise d'une session à l'autre (2026-10-19) :
   - une section « Par où commencer » (qui fait quoi, où regarder, points en suspens) ;
@@ -31,6 +30,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - **Boutons au style jeu vidéo** (`.btn`, `.btn-primary`, `.btn-round`, `.tabs` dans `index.css`) : plaques d'or ou de pierre au liseré de bronze, en relief, qui s'enfoncent au clic, avec du texte en Cinzel capitales et des icônes de taille fixe. Appliqués à l'écran de sélection (Statistiques et Son en médaillons, onglets Affrontement / Tournoi, Fiche, Au hasard, Combattre) et à l'écran d'affrontement (Changer, Jouer, Simuler).
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
+
+## [0.48.0] — 2026-10-20
+
+### Ajouté
+- **Six arènes en gouache graphique**, tirées au hasard ou choisies sur l'écran d'affrontement : Les Pierres-Couchées (bois de Vaumorin), La Cour-des-Enclumes (Durnhold), Les Mille-Feux (lac Sorelle), Les Chapeaux-Fols (val Brunelle), Les Cloches-Noyées (anse de Morvoux), La Paume-du-Vieux (pic Solange). Chaque arène porte un lieu-dit et sa région, affichée sous le nom dans le sélecteur.
+- **Arène d'entraînement** : Les Pilotis, marais de Gâtebois (`TRAINING_ARENA`). C'est toujours le décor du combat test, et il n'apparaît sur aucun autre écran (test dédié dans `modules.test.ts`).
+- Accueil : fond dédié (`menu-home.jpg`, haut plateau au crépuscule, croix de bois) et illustrations des arches Duel (`arch-duel.jpg`) et Tournoi (`arch-tournament.jpg`).
+
+### Modifié
+- Le choix d'arène est « Au hasard » par défaut.
+- Fond du tournoi refait en gouache (`menu-tournament.jpg`) : porte à gauche, rempart sombre à droite, coffre d'or et restes d'un combattant au premier plan.
+- Toutes les images de décor sont agrandies ×4 par IA (Real-ESRGAN), puis livrées en 2400×1600 (arches : 1800×1200).
+- `docs/STYLE_BIBLE.md` (2026-10-20) : nouveau style pour tous les décors, arènes et fonds d'écran : la **gouache graphique** (aplats mats, formes géométriques, palette courte, sans lueurs ni particules), qui remplace la peinture numérique surchargée. Personnages et icônes gardent leur direction. Nouvelles règles de composition : côtés vivants (objets, traces de vie, petit animal caché), lointain habité, centre calme, et **rien au premier plan** sous les pieds des combattants. Un prompt de référence complet remplace le bloc fixe et sa fiche : les prompts donnés sont toujours entiers.
+- `docs/STYLE_BIBLE.md` : un tableau « En bref » réunit les règles des décors (format paysage annoncé en tête du prompt, style, clair-obscur, dépôt, agrandissement, nommage, lieux-dits). Historique des arènes et prompt validé du tournoi à jour.
+
+### Retiré
+- Les deux arènes de l'ancien style (`arena-ruins.jpg`, `arena-dwarf-fortress.jpg`).
 
 ## [0.47.1] — 2026-10-20
 

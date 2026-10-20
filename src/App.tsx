@@ -32,7 +32,7 @@ import {
   type Wallets,
 } from './game/betting'
 import type { BetsOutcome } from './components/Betting'
-import { ARENAS, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
+import { RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
 import { HomeScreen } from './components/HomeScreen'
 import { MatchupScreen } from './components/MatchupScreen'
@@ -86,7 +86,7 @@ export default function App() {
   // Écran d'où les statistiques ont été ouvertes : il survit à un passage par une fiche du compendium
   const [recordsFrom, setRecordsFrom] = useState<Origin>('start')
   // Arène choisie sur l'écran d'affrontement, gardée pour les combats suivants de la session
-  const [arenaChoice, setArenaChoice] = useState<ArenaChoice>(ARENAS[0].id)
+  const [arenaChoice, setArenaChoice] = useState<ArenaChoice>(RANDOM_ARENA)
 
   // Tournoi : en mémoire uniquement, perdu au rechargement de la page.
   const [slots, setSlots] = useState<(string | null)[]>(() => Array(SLOTS).fill(null))

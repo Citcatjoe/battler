@@ -3,12 +3,13 @@ import type { Character } from '../game/character'
 import { simulateCombat, type CombatResult, type Pair, type Side } from '../game/combat'
 import { reportCombat } from '../game/debugConsole'
 import { randomSeed } from '../game/rng'
+import { TRAINING_ARENA } from '../game/arenas'
 import { CHARACTERS, createCharacter } from '../game/roster'
 import { FightScreen } from './FightScreen'
 
 /*
  * Combat test : un mode de mise au point des compétences, sans sélection ni écran d'affrontement,
- * sans décor (fond noir en attendant le sien). Le combat s'arrête avant chaque dé et le joueur
+ * toujours dans le même décor (`TRAINING_ARENA`, réservé à ce mode). Le combat s'arrête avant chaque dé et le joueur
  * choisit la face sur le pavé du combattant qui a la main (ou laisse le hasard) : on vérifie ainsi
  * l'enchaînement des compétences, leur résolution et leur rythme, coup par coup. Rien n'est compté
  * dans les statistiques ; la trace finale part dans `logs/combats/` (suffixe `_triche`).
@@ -44,7 +45,7 @@ export function TestFightScreen({ initial, onMenu }: Props) {
     <FightScreen
       key={`${ids.join('-')}-${seed}`}
       script={script}
-      arena={null}
+      arena={TRAINING_ARENA}
       onEnd={onEnd}
       test={{
         // En haut de l'arène : un sélecteur par camp, et les commandes du mode au centre

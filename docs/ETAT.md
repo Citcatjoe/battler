@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.47.1._
+_Dernière mise à jour : 2026-10-20, version 0.48.0._
 
 ## En bref
 
@@ -13,7 +13,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Refonte de l'interface (design system V1.4, `docs/design-system.md`) | ✅ 0.39.0, 13 étapes vues à l'écran (captures Firefox sans interface). Natures des compétences classées (0.39.1). À faire : barre de commandes du combat, boutons Compléter et Valider l'arbre du tournoi, titres de page et textes de moins de 13 px non migrés |
 | Audit des compétences (0.42.0, `docs/SORTS.md` § 10) | ✅ Pile ou face et Aura d'immunité ne coûtent plus de victoires, Purification n'est plus gâchée, Fleur de vie compte. Restent signalées : Aura de sainteté et Rétribution « écrasantes » (signatures), Pile ou face et l'immunité de Gauvain « presque inutiles » (de −0,6 à +0,6). Deux contres tolérés de plus : Ysolde contre les voleuses (35 %). Rendu vu : pièce ; la décoction qui suit pile n'est pas capturée |
 | Lisibilité du tour : passage de main (pause de 400 ms, camp actif, anneau au sol) et dé de compétence qui pulse | ✅ 0.44.0, vu à l'écran (Morgrut contre Elaria : annonce, anneau, pulsation du 1). Pas vu : la pulsation d'un double de la barde et d'un coup transformé (couverts par les tests pour le second) |
-| Écran d'accueil en triptyque : trois arches (Combat test, Duel, Tournoi) | ✅ 0.45.0, triptyque en 0.47.0, survol revu en 0.47.1 ; vu à l'écran (repos, survol du centre et d'un volet, clic). Illustrations des arches et fond provisoires, repris des décors existants ; navigation au clavier vérifiée dans Firefox |
+| Écran d'accueil en triptyque : trois arches (Combat test, Duel, Tournoi) | ✅ 0.45.0, triptyque en 0.47.0, survol revu en 0.47.1 ; vu à l'écran (repos, survol du centre et d'un volet, clic). Fond et illustrations des arches en gouache (0.48.0), vus à l'écran ; navigation au clavier vérifiée dans Firefox |
 | Duel joué ou simulé | ✅ stable |
 | Esquive, critique, armure | ✅ stable |
 | Compétences sur un 1 au dé (les 6 races) | ✅ stable |
@@ -21,7 +21,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Un personnage par famille (dix personnages, sans jumeaux), rail de sélection central sur l'accueil | ✅ 0.43.0, vu à l'écran (accueil, passage de la main en face, préparation du tournoi, compendium). Le format de l'historique ne change pas : les statistiques des jumeaux restent stockées, mais ne s'affichent plus |
 | Lisibilité des textes flottants (placement, police, durée) | ✅ 0.32.1, police validée par l'utilisateur |
 | Barre de commandes du combat au style jeu | ✅ 0.33.0 ; vue à l'écran (0.34.0) |
-| Combat test : chaque dé choisi sur le pavé du combattant, sélecteurs de personnages, fond noir (remplace le mode triche des combats normaux) | ✅ 0.46.0, vu à l'écran (Gorak contre Elaria : pavé allumé du bon camp, dé « Imposé », compétence sur le 1, attente du dé suivant). Pas vu : pièce, deux dés de la barde, rafale (couverts par les tests du moteur). Fond noir en attendant le décor dédié |
+| Combat test : chaque dé choisi sur le pavé du combattant, sélecteurs de personnages, fond noir (remplace le mode triche des combats normaux) | ✅ 0.46.0, vu à l'écran (Gorak contre Elaria : pavé allumé du bon camp, dé « Imposé », compétence sur le 1, attente du dé suivant). Pas vu : pièce, deux dés de la barde, rafale (couverts par les tests du moteur). Décor réservé : le marais des Pilotis (0.48.0, vu à l'écran) |
 | Sons enregistrés (33 sons, 67 fichiers CC0), repli synthétisé, écourtés selon la vitesse | ⚠️ 0.36.0 jugée cacophonique ; refonte selon `docs/SONS.md` en 0.36.2 (20 sons, un fichier chacun) ; 19 fichiers choisis à l'oreille par l'utilisateur (0.36.3), Ronge encore synthétisé. Volumes à régler à l'oreille |
 | Ogre (Attente) et druide (deux formes, six compétences) | ✅ 0.35.0, vus à l'écran (métamorphose, lucioles, sélection à 9 familles) ; sons non vérifiables. Icône de la Pourriture subie à fournir (elle reprend celle de l'aura) |
 | Écran du champion, compétences en dés, auras, overkill, aucun emoji, ressenti des coups | ✅ 0.34.0, vu à l'écran sauf les sons et la rafale de Rétribution (captures Firefox sans interface) |
@@ -37,7 +37,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Sons de synthèse et bouton muet | ✅ stable |
 | Fiche personnage et statistiques globales | ✅ stable |
 | Tournoi à 16 (configuration, arbre, suivi) | ✅ stable depuis la correction 0.8.1 |
-| Arènes (2), au choix sur l'écran d'affrontement | ✅ 0.16.0 |
+| Arènes (6 au choix ou au hasard, plus le marais du combat test), décors en gouache graphique | ✅ 0.48.0. Vus à l'écran : accueil, tournoi, combat test. Pas vus en combat : les six arènes du duel (cadrage `focus` et assombrissement `filter` à confirmer en jeu) |
 | Compendium (Personnages, Compétences, Bonus et malus) | ✅ 0.18.0 (Compétences en 0.21.0), bouton d'accès provisoire |
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |
 | Version affichée en jeu | ✅ depuis 0.11.0 |
