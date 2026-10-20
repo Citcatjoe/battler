@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useCallback, useState, type CSSProperties } from 'react'
 import { hurtsEachTurn, isAura, POLARITY_STYLE, STATUSES, statusCounter, type Polarity, type Status, type StatusId } from '../game/statuses'
 import { Icon, StatusIcon } from './Icon'
 
@@ -122,22 +122,14 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
         <span
           // La clé relance le rebond au moment exact où le nombre change
           key={`count-${change.key}`}
-          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta !== null ? 'status-count' : ''}`}
+          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta === null ? '' : change.delta > 0 ? 'status-count' : 'status-count-down'}`}
         >
           {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
           {counter.value}
-          {/* Le compteur décroît (charge usée, tour décompté) : un cerclage se vide de la part perdue
-              (de 3 à 2, un tiers), pendant le rebond, puis s'efface */}
+          {/* Le compteur décroît (charge usée, tour décompté) : pas le rebond de la hausse, mais une lueur et un
+              cerclage dont le trait s'efface à rebours, de la part perdue (de 3 à 2, un tiers), puis disparaît */}
           {change.delta !== null && change.delta < 0 && counter.value - change.delta > 0 && (
-            <svg aria-hidden viewBox="0 0 36 36" className="count-drain pointer-events-none absolute -inset-1.5 -rotate-90">
-              <circle
-                cx="18"
-                cy="18"
-                r="16"
-                pathLength="100"
-                style={{ '--kept': `${(100 * counter.value) / (counter.value - change.delta)}` } as CSSProperties}
-              />
-            </svg>
+            <CountDrain kept={(100 * counter.value) / (counter.value - change.delta)} />
           )}
         </span>
       )}
@@ -152,6 +144,35 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
       )}
       {!leaving && <StatusTooltip status={status} />}
     </div>
+  )
+}
+
+/**
+ * Cerclage d'un compteur qui décroît : un trait plein qui s'efface à rebours jusqu'à la part gardée (`kept`, en %),
+ * doublé d'un trait flou pour la lueur, puis qui disparaît. Animé par la Web Animations API : Firefox n'applique
+ * pas une variable CSS dans les images clés du trait. La durée suit la vitesse du combat (--speed).
+ */
+function CountDrain({ kept }: { kept: number }) {
+  const animate = useCallback(
+    (svg: SVGSVGElement | null) => {
+      if (!svg?.animate) return
+      const speed = Number(getComputedStyle(svg).getPropertyValue('--speed')) || 1
+      const end = kept - 100
+      const frames: Keyframe[] = [
+        { strokeDashoffset: 0, opacity: 0 },
+        { strokeDashoffset: 0, opacity: 1, offset: 0.12 },
+        { strokeDashoffset: end, opacity: 1, offset: 0.7 },
+        { strokeDashoffset: end, opacity: 0 },
+      ]
+      for (const circle of svg.querySelectorAll('circle')) circle.animate(frames, { duration: 1000 / speed, easing: 'ease-in-out', fill: 'both' })
+    },
+    [kept],
+  )
+  return (
+    <svg ref={animate} aria-hidden viewBox="0 0 36 36" className="count-drain pointer-events-none absolute -inset-1.5 -rotate-90 overflow-visible">
+      <circle className="count-drain-glow" cx="18" cy="18" r="16" pathLength="100" />
+      <circle cx="18" cy="18" r="16" pathLength="100" />
+    </svg>
   )
 }
 

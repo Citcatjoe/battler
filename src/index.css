@@ -1213,22 +1213,31 @@ body {
   animation: status-count calc(650ms / var(--speed, 1)) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
   z-index: 1;
 }
-/* Cerclage du compteur qui décroît : plein au départ, il se vide jusqu'à la part gardée (--kept, en %),
-   puis s'efface. Couleur du compteur (vert ou rouge). */
+/* Compteur qui décroît : visuellement l'inverse de la hausse (le rebond ci-dessus). Pas de bond : le nombre
+   s'allume d'une lueur, se tasse légèrement, et un cerclage lumineux plein autour de lui s'efface à rebours,
+   trait par trait, jusqu'à la part gardée (--kept, en %), puis disparaît. Couleur du compteur (vert ou rouge). */
+.status-count-down {
+  animation: status-count-down calc(1000ms / var(--speed, 1)) ease-out both;
+  z-index: 1;
+}
+@keyframes status-count-down {
+  0% { transform: scale(1); filter: brightness(1); }
+  15% { transform: scale(1.12); filter: brightness(1.9) drop-shadow(0 0 8px currentColor); }
+  70% { transform: scale(0.94); filter: brightness(1.3) drop-shadow(0 0 4px currentColor); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
 .count-drain circle {
   fill: none;
   stroke: currentColor;
-  stroke-width: 3;
+  stroke-width: 3.5;
   stroke-linecap: round;
   stroke-dasharray: 100;
-  animation: count-drain calc(900ms / var(--speed, 1)) ease-out both;
-  filter: drop-shadow(0 0 3px currentColor);
+  opacity: 0;
 }
-@keyframes count-drain {
-  0% { stroke-dashoffset: 0; opacity: 1; }
-  60% { stroke-dashoffset: calc(100 - var(--kept)); opacity: 1; }
-  100% { stroke-dashoffset: calc(100 - var(--kept)); opacity: 0; }
-}
+/* La lueur : le même trait, plus épais et flou (un filtre sur le trait dessinait un carré dans Firefox) */
+.count-drain .count-drain-glow { stroke-width: 7; filter: blur(2.5px); }
+/* Le trait recule à rebours (dashoffset négatif), animé par CountDrain (StatusTray.tsx) */
+
 @keyframes status-count {
   0% { transform: scale(1); filter: brightness(1); }
   22% { transform: scale(2.1); filter: brightness(2.2) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }

@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.58.1] — 2026-10-20
+
+### Modifié
+- **Compteur d'état : une hausse et une baisse se distinguent** (retour de l'utilisateur : la même animation servait aux deux). La hausse garde son grand rebond lumineux. La baisse n'a plus de bond : le nombre s'allume d'une lueur et se tasse, et un cerclage lumineux plein autour de lui **s'efface à rebours, trait par trait**, jusqu'à la part gardée (de 3 à 2, un tiers du contour disparaît), puis s'éteint.
+
+### Corrigé
+- Le cerclage de la 0.55.0 ne se vidait pas dans Firefox (variable CSS dans les images clés ignorée) et sa lueur dessinait un carré grisâtre : le trait est animé par le composant (Web Animations API), la lueur est un second trait flou.
+
 ## [0.58.0] — 2026-10-20
 
 ### Ajouté
