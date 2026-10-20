@@ -239,7 +239,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 ```
 Accueil (menu)
- ├─ Combat test : combat direct, chaque dé choisi par le joueur (décor du marais, hors statistiques)
+ ├─ Combat test : combat direct, chaque dé choisi par le joueur (décor de la forêt d'entraînement, hors statistiques)
  ├─ Duel : sélection → Affrontement → Jouer → Combat → Fin
  │                                   └─ Simuler ───────→ Fin
  ├─ Tournoi : présentation → Configuration → Arbre → (Affrontement | Simuler) → Fin → Arbre → Champion
@@ -254,7 +254,7 @@ Accueil (menu)
 - **Taille des combattants** (0.40.0, `STYLE_BIBLE.md` § 2) : une échelle resserrée, ni uniforme ni réaliste. Le nain (0,86 d'un humain) reste le plus petit, l'ogre (1,13) le plus grand, avec des étapes entre les deux : lézard 0,97, humains et druide 1,00, elfes 1,03, paladin 1,04, mort-vivant 1,05, orc 1,08, ours 1,10. Toutes les images sont affichées à leur largeur naturelle : la carrure vient du dessin, l'ogre retrouve la sienne.
 - **Postures** (0.40.0, [POSTURES.md](POSTURES.md)) : un combattant peut changer d'image au fil du combat, sur cinq moments communs à tous : l'attaque (pendant l'élan), l'esquive, le coup encaissé, le K.O. et la victoire. La compétence garde l'image de garde et son animation. Une posture absente retombe sur la garde : un personnage sans postures s'affiche comme avant. Les images sont préchargées et changent instantanément, sous les animations existantes (élan, saut). Avec une posture de K.O., la chute est dans l'image, et l'animation ne garde que le grisé. Les menus et panneaux passent au-dessus des combattants. **Personnages à postures** : l'orc (Gorak), avec sa nouvelle image originale, la voleuse (Naraxes) et la barde (Fanchon).
 - **Trace de résolution** (vérification et débogage) : chaque combat est tiré avec une **graine** et sa trace complète est écrite dans la **console du navigateur**, repliée, un groupe par tour. Elle donne, étape par étape et dans l'ordre du moteur : phase (ouverture, début, action, fin), jet de dé, esquive, critique, modificateurs de dégâts avec leur porteur (« 😠 Aura d'intimidation de Brokk −2 », plancher à 1 signalé), dégâts avant armure, armure, boucliers, plancher d'1 dégât, PV avant → après, compétences et effets (posé, annulé, bloqué), effets des statuts, décomptes de durée et expirations, puis l'état des deux combattants. Le bouton « Copier la trace » du journal et de l'écran de fin la copie en texte brut. **Sur le disque** (0.27.0, serveur de dev) : chaque combat écrit sa trace dans `logs/combats/` du projet, un fichier par combat (`<date>_<gauche>-vs-<droite>_graine-<n>.txt`), relisible sans navigateur. En console : `battler.trace()` (dernier combat), `battler.trace(n)`, `copy(battler.dump())` (copie les traces des 40 derniers combats, un tournoi entier), `battler.replay(graine, 'gorak', 'brokk')` (rejoue un combat à l'identique).
-- **Combat test** (0.46.0, outil de mise au point des compétences ; il remplace le mode triche des combats normaux) : entrée « Combat test » de l'accueil. Pas de sélection ni d'affrontement : le combat commence aussitôt (initiative tirée sans animation, notée au journal), dans son décor réservé, le marais des Pilotis, sans ambiance. **Chaque dé attend le joueur** : sous chaque combattant, un pavé propose les faces de son dé (Pile et Face pour la pièce) et « Hasard ». Seul le pavé de celui qui a la main s'allume, à la couleur de son camp, une fois le coup précédent mis en scène ; l'autre montre son dé, éteint. Le reste (compétences, statuts, fin de tour, passage de main) se résout seul jusqu'au dé suivant ; les deux dés de la barde et les dés d'une rafale se choisissent un par un. Clavier : 1 à 9, 0 pour 10, P et F, H ou Retour arrière pour le hasard. Chaque choix fait résoudre le combat à nouveau par le moteur (`forcedRolls`), avec la même graine : ce qui précède reste identique ; « Hasard » garde le dé tiré. Esquive, critique et chances des compétences restent au hasard. Le dé choisi porte la mention « Imposé ». En haut de l'arène : un sélecteur par camp (Gauche, Droite) qui relance le combat avec un autre personnage, et les boutons Recommencer (nouvelle initiative) et Menu. Rien n'est compté dans les statistiques ; la trace finale est écrite dans `logs/combats/` (suffixe `_triche` dès qu'un dé est choisi), et `npm run logs` la rejoue.
+- **Combat test** (0.46.0, outil de mise au point des compétences ; il remplace le mode triche des combats normaux) : entrée « Combat test » de l'accueil. Pas de sélection ni d'affrontement : le combat commence aussitôt (initiative tirée sans animation, notée au journal), dans son décor réservé, la forêt d'entraînement du Pré-aux-Guetteurs, sans ambiance. **Chaque dé attend le joueur** : sous chaque combattant, un pavé propose les faces de son dé (Pile et Face pour la pièce) et « Hasard ». Seul le pavé de celui qui a la main s'allume, à la couleur de son camp, une fois le coup précédent mis en scène ; l'autre montre son dé, éteint. Le reste (compétences, statuts, fin de tour, passage de main) se résout seul jusqu'au dé suivant ; les deux dés de la barde et les dés d'une rafale se choisissent un par un. Clavier : 1 à 9, 0 pour 10, P et F, H ou Retour arrière pour le hasard. Chaque choix fait résoudre le combat à nouveau par le moteur (`forcedRolls`), avec la même graine : ce qui précède reste identique ; « Hasard » garde le dé tiré. Esquive, critique et chances des compétences restent au hasard. Le dé choisi porte la mention « Imposé ». En haut de l'arène : un sélecteur par camp (Gauche, Droite) qui relance le combat avec un autre personnage, et les boutons Recommencer (nouvelle initiative) et Menu. Rien n'est compté dans les statistiques ; la trace finale est écrite dans `logs/combats/` (suffixe `_triche` dès qu'un dé est choisi), et `npm run logs` la rejoue.
 - **Fin** : à gauche, le vainqueur, les faits marquants et les boutons ; à droite, les statistiques comparées en quatre onglets (Bilan, Critiques et défense, Événements, Dés). Un badge indique un combat simulé.
 
 **Historique**
@@ -264,6 +264,7 @@ Accueil (menu)
 | 0.1.0 | Écrans d'accueil, de combat et de fin ; animations de charge et d'impact |
 | 0.47.1 | Accueil : aucune arche mise en avant, l'or seulement au survol ; survol plus doux (élévation, zoom de l'illustration) ; bouton principal et médaillons retirés, un clic ouvre le mode |
 | 0.47.0 | Accueil en triptyque : trois arches de fer forgé (illustration, médaillon, socle titré), volets tournés vers le centre ; choix au clic ou aux flèches, ouverture par le bouton principal |
+| 0.49.0 | Combat test dans la forêt d'entraînement ; sélection : nouveau fond en gouache (`menu-duel.jpg`) |
 | 0.48.0 | Accueil : fond et illustrations des arches en gouache graphique ; combat test dans le marais des Pilotis ; nouveau fond du tournoi |
 | 0.46.0 | Combat test : chaque dé choisi sur un pavé sous chaque combattant, sélecteurs de personnages, fond noir ; le bouton Cheat quitte les combats normaux |
 | 0.45.0 | Écran d'accueil avec menu (Combat test à venir, Duel, Tournoi) ; la sélection perd ses onglets de mode au profit d'un retour au menu |
@@ -303,8 +304,10 @@ Chaque arène porte le nom d'un **lieu-dit** et, dessous, du lieu qui l'entoure,
 | Les Chapeaux-Fols, val Brunelle | `arena-mushroom-vale.jpg` | vallée de champignons lumineux dans la pénombre |
 | Les Cloches-Noyées, anse de Morvoux | `arena-tide-temple.jpg` | temple marin à marée basse, soir d'orage |
 | La Paume-du-Vieux, pic Solange | `arena-sky-hand.jpg` | paume d'une statue géante au-dessus des nuages, à l'aube |
+| Les Pilotis, marais de Gâtebois | `arena-swamp.jpg` | marais sur pilotis, nuit de pleine lune |
+| Le Pas-des-Comètes, col d'Aubrelle | `arena-terrace.jpg` | terrasse en altitude, pluie d'étoiles filantes, vallée et arène au loin |
 
-**Arène d'entraînement** : Les Pilotis, marais de Gâtebois (`arena-swamp.jpg`, `TRAINING_ARENA`). C'est toujours le décor du combat test, et il n'apparaît nulle part ailleurs : ni au choix, ni au hasard.
+**Arène d'entraînement** : Le Pré-aux-Guetteurs, forêt de Brandeval (`arena-training.jpg`, `TRAINING_ARENA`) : une clairière d'entraînement à l'aube, des yeux dans les fourrés. C'est toujours le décor du combat test, et il n'apparaît nulle part ailleurs : ni au choix, ni au hasard.
 
 Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la zone dégagée, et son traitement (assombri, désaturé, légèrement flou).
 
@@ -314,6 +317,7 @@ Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la 
 | 0.12.0 | Arène originale : ruines forestières |
 | 0.16.0 | Registre des arènes, choix sur l'écran d'affrontement, Cour de Durnhold |
 | 0.48.0 | Six arènes en gouache graphique, nommées par lieux-dits ; « Au hasard » par défaut ; le marais réservé au combat test ; anciennes arènes retirées |
+| 0.49.0 | Le Pas-des-Comètes ; le marais rejoint les arènes ; le combat test passe dans la forêt d'entraînement (Le Pré-aux-Guetteurs) |
 
 ## 6. Son
 

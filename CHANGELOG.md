@@ -31,6 +31,19 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.49.0] — 2026-10-20
+
+### Ajouté
+- Arène **Le Pas-des-Comètes, col d'Aubrelle** (`arena-terrace.jpg`) : une terrasse en altitude sous une pluie d'étoiles filantes.
+- Décor d'entraînement **Le Pré-aux-Guetteurs, forêt de Brandeval** (`arena-training.jpg`) : toujours celui du combat test, et jamais ailleurs.
+
+### Modifié
+- Le marais des Pilotis devient une arène ordinaire, au choix ou au hasard.
+- Écran de sélection : nouveau fond en gouache (`menu-duel.jpg`).
+
+### Retiré
+- Le portail de l'ancien style (`menu-portal.jpg`).
+
 ## [0.48.0] — 2026-10-20
 
 ### Ajouté

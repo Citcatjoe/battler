@@ -5,6 +5,8 @@ import mushroomValeImg from '../assets/arena-mushroom-vale.jpg'
 import tideTempleImg from '../assets/arena-tide-temple.jpg'
 import skyHandImg from '../assets/arena-sky-hand.jpg'
 import swampImg from '../assets/arena-swamp.jpg'
+import terraceImg from '../assets/arena-terrace.jpg'
+import trainingImg from '../assets/arena-training.jpg'
 import { defaultRng, pick, type Rng } from './rng'
 
 /*
@@ -78,14 +80,30 @@ export const ARENAS: readonly Arena[] = [
     focus: '50% 70%',
     filter: 'brightness(0.6) saturate(0.9) blur(1px)',
   },
+  {
+    id: 'swamp',
+    name: 'Les Pilotis',
+    region: 'Marais de Gâtebois',
+    image: swampImg,
+    focus: '50% 70%',
+    filter: 'brightness(0.8) saturate(0.9) blur(1px)',
+  },
+  {
+    id: 'terrace',
+    name: 'Le Pas-des-Comètes',
+    region: "Col d'Aubrelle",
+    image: terraceImg,
+    focus: '50% 72%',
+    filter: 'brightness(0.7) saturate(0.85) blur(1px)',
+  },
 ]
 
 /** Arène de l'entraînement : toujours celle du combat test, et jamais ailleurs (ni au choix, ni au hasard). */
 export const TRAINING_ARENA: Arena = {
-  id: 'swamp',
-  name: 'Les Pilotis',
-  region: 'Marais de Gâtebois',
-  image: swampImg,
+  id: 'training',
+  name: 'Le Pré-aux-Guetteurs',
+  region: 'Forêt de Brandeval',
+  image: trainingImg,
   focus: '50% 70%',
   filter: 'brightness(0.8) saturate(0.9) blur(1px)',
 }

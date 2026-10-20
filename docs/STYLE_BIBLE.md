@@ -494,7 +494,7 @@ Une arène peut être **n'importe quel lieu** du monde : une forêt, des égouts
 | Lumière | Clair-obscur : côtés dans l'ombre, une seule zone très lumineuse au loin, sol de combat en demi-teinte (section 5.2) |
 | Composition | Côtés vivants, centre calme, **rien dans le tiers inférieur** (section 5.2) |
 | Prompt | Complet, prêt à coller ; aucune image de référence |
-| Dépôt | L'utilisateur dépose les PNG à la racine, nommés selon leur rôle : `arena <lieu>.png` pour une arène tirée au hasard, le nom de l'écran sinon (`home.png`, `duel.png`, `tournoi.png`…). `arena swamp` est l'exception : réservé au combat test |
+| Dépôt | L'utilisateur dépose les PNG à la racine, nommés selon leur rôle : `arena <lieu>.png` pour une arène tirée au hasard, le nom de l'écran sinon (`home.png`, `duel.png`, `tournoi.png`…). `training.png` est le décor réservé au combat test (jamais une arène ailleurs) |
 | Traitement | Agrandissement ×4 par IA (Real-ESRGAN, modèle `realesrgan-x4plus`, binaire macOS `realesrgan-ncnn-vulkan` téléchargé dans le scratchpad), réduction Lanczos à **2400×1600** (arches : 1800×1200), JPG qualité 82 progressif : de 0,5 à 1,2 Mo par image. Le 3:2 est gardé : le cadrage se règle dans le code (`focus` des arènes, `object-position` ou `preserveAspectRatio` des écrans) |
 | Rangement | `src/assets/arena-<lieu>.jpg`, `menu-<écran>.jpg`, `arch-<mode>.jpg` ; source à la corbeille (`gio trash`) |
 | Nom d'arène | Un **lieu-dit** (`name`) et le lieu qui l'entoure (`region`), comme sur une carte : « Les Pierres-Couchées, bois de Vaumorin ». Des noms qu'on croirait trouver sur une carte d'état-major, pas des titres épiques (« Marais du Chagrin ») |
@@ -727,7 +727,9 @@ Première série en gouache graphique, intégrée le 2026-10-20. Elle remplace l
 | `arena-mushroom-vale.jpg` | Les Chapeaux-Fols, val Brunelle | Vallée de champignons lumineux, pénombre | Violet, magenta, turquoise, or | Couleurs très saturées : désaturé en jeu |
 | `arena-tide-temple.jpg` | Les Cloches-Noyées, anse de Morvoux | Temple marin à marée basse, soir d'orage | Bleu-vert, corail, or | Bon clair-obscur |
 | `arena-sky-hand.jpg` | La Paume-du-Vieux, pic Solange | Paume d'une statue géante au-dessus des nuages, aube | Ardoise, or rose, pêche | Contre-jour |
-| `arena-swamp.jpg` | Les Pilotis, marais de Gâtebois | Marais sur pilotis, nuit de pleine lune | Vert-noir, sarcelle, ivoire | **Réservé au combat test** (`TRAINING_ARENA`) : jamais au choix, jamais au hasard, sur aucun autre écran |
+| `arena-swamp.jpg` | Les Pilotis, marais de Gâtebois | Marais sur pilotis, nuit de pleine lune | Vert-noir, sarcelle, ivoire | Décor du combat test en 0.48.0, arène ordinaire depuis la 0.49.0 |
+| `arena-terrace.jpg` | Le Pas-des-Comètes, col d'Aubrelle | Terrasse en altitude, pluie d'étoiles filantes, vallée et arène au loin | Violet, rouge braise, ambre | 0.49.0. Tirée du prompt de la terrasse prévu pour l'accueil |
+| `arena-training.jpg` | Le Pré-aux-Guetteurs, forêt de Brandeval | Clairière d'entraînement à l'aube, brume, yeux dans les fourrés | Bleu-vert, pêche, gris | **Réservée au combat test** (`TRAINING_ARENA`, 0.49.0) : jamais au choix, jamais au hasard, sur aucun autre écran |
 
 Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regarder ce tableau pour changer au moins trois axes et la palette.
 
@@ -735,7 +737,7 @@ Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regar
 
 ## 6. Gabarit : fond d'écran de menu
 
-> **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1), le clair-obscur et le format paysage (section 5, « En bref »). Seul le portail de la sélection (`menu-portal.jpg`) est encore de l'ancien style ; il reste tel quel, à la demande de l'utilisateur. Le prompt du portail ci-dessous est donc de l'ancien style : on en garde les zones de l'écran, pas le rendu.
+> **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1), le clair-obscur et le format paysage (section 5, « En bref »). Depuis la 0.49.0, tous les fonds sont en gouache : la sélection affiche `menu-duel.jpg` (même image que l'arche du duel), qui remplace le portail de l'ancien style (`menu-portal.jpg`, retiré). Le prompt du portail ci-dessous est de l'ancien style : on en garde les zones de l'écran, pas le rendu.
 
 L'écran de sélection (`StartScreen.tsx`) affiche un fond illustré, assombri en CSS (`brightness(0.6)`), avec un vignettage et un dégradé en bas. Ses contraintes diffèrent de celles d'une arène :
 

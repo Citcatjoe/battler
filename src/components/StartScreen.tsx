@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import menuImg from '../assets/menu-portal.jpg'
+import menuImg from '../assets/menu-duel.jpg'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'

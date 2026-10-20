@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-20, version 0.48.0._
+_Dernière mise à jour : 2026-10-20, version 0.49.0._
 
 ## En bref
 
@@ -21,7 +21,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Un personnage par famille (dix personnages, sans jumeaux), rail de sélection central sur l'accueil | ✅ 0.43.0, vu à l'écran (accueil, passage de la main en face, préparation du tournoi, compendium). Le format de l'historique ne change pas : les statistiques des jumeaux restent stockées, mais ne s'affichent plus |
 | Lisibilité des textes flottants (placement, police, durée) | ✅ 0.32.1, police validée par l'utilisateur |
 | Barre de commandes du combat au style jeu | ✅ 0.33.0 ; vue à l'écran (0.34.0) |
-| Combat test : chaque dé choisi sur le pavé du combattant, sélecteurs de personnages, fond noir (remplace le mode triche des combats normaux) | ✅ 0.46.0, vu à l'écran (Gorak contre Elaria : pavé allumé du bon camp, dé « Imposé », compétence sur le 1, attente du dé suivant). Pas vu : pièce, deux dés de la barde, rafale (couverts par les tests du moteur). Décor réservé : le marais des Pilotis (0.48.0, vu à l'écran) |
+| Combat test : chaque dé choisi sur le pavé du combattant, sélecteurs de personnages, fond noir (remplace le mode triche des combats normaux) | ✅ 0.46.0, vu à l'écran (Gorak contre Elaria : pavé allumé du bon camp, dé « Imposé », compétence sur le 1, attente du dé suivant). Pas vu : pièce, deux dés de la barde, rafale (couverts par les tests du moteur). Décor réservé : la forêt d'entraînement du Pré-aux-Guetteurs (0.49.0, vu à l'écran) |
 | Sons enregistrés (33 sons, 67 fichiers CC0), repli synthétisé, écourtés selon la vitesse | ⚠️ 0.36.0 jugée cacophonique ; refonte selon `docs/SONS.md` en 0.36.2 (20 sons, un fichier chacun) ; 19 fichiers choisis à l'oreille par l'utilisateur (0.36.3), Ronge encore synthétisé. Volumes à régler à l'oreille |
 | Ogre (Attente) et druide (deux formes, six compétences) | ✅ 0.35.0, vus à l'écran (métamorphose, lucioles, sélection à 9 familles) ; sons non vérifiables. Icône de la Pourriture subie à fournir (elle reprend celle de l'aura) |
 | Écran du champion, compétences en dés, auras, overkill, aucun emoji, ressenti des coups | ✅ 0.34.0, vu à l'écran sauf les sons et la rafale de Rétribution (captures Firefox sans interface) |
@@ -37,7 +37,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 | Sons de synthèse et bouton muet | ✅ stable |
 | Fiche personnage et statistiques globales | ✅ stable |
 | Tournoi à 16 (configuration, arbre, suivi) | ✅ stable depuis la correction 0.8.1 |
-| Arènes (6 au choix ou au hasard, plus le marais du combat test), décors en gouache graphique | ✅ 0.48.0. Vus à l'écran : accueil, tournoi, combat test. Pas vus en combat : les six arènes du duel (cadrage `focus` et assombrissement `filter` à confirmer en jeu) |
+| Arènes (8 au choix ou au hasard, plus la forêt réservée au combat test), décors en gouache graphique | ✅ 0.48.0, 0.49.0. Vus à l'écran : accueil, sélection, tournoi, combat test. Pas vus en combat : les huit arènes du duel (cadrage `focus` et assombrissement `filter` à confirmer en jeu) |
 | Compendium (Personnages, Compétences, Bonus et malus) | ✅ 0.18.0 (Compétences en 0.21.0), bouton d'accès provisoire |
 | Conditions d'événement, plafond de charges | ✅ 0.18.0, prêts, pas encore utilisés par un personnage |
 | Version affichée en jeu | ✅ depuis 0.11.0 |
