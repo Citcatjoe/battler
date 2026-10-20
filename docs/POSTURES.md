@@ -141,6 +141,23 @@ no ground, no shadow, no scenery, no text, no panel borders.
 
 Découpe : `python scripts/slice-poses.py <nom> a.png:3x1:idle,attack,dodge b.png:3x1:idle,ko,victory c.png:2x1:idle,hurt --fond`.
 
+### 3.2 ter Quatre planches amples et l'atelier des postures (0.54.0, recommandé)
+
+Demande de l'utilisateur (2026-10-20) : **plus d'amplitude**. Les personnages sont pensés un peu de côté. Un coup se porte dans l'élan, le corps en extension ; un coup reçu repousse tout le corps vers l'arrière. L'attaque de la barde, de face, semblait frapper le spectateur : c'est à éviter.
+
+- **Quatre planches** de 1536×1024 : A garde + attaque, B coup encaissé + garde, C esquive + garde (deux cases de 768×1024 chacune), D garde + K.O. + victoire (trois cases de 512). Quatre générations au lieu de trois : c'est le prix des cases larges.
+- **La garde du côté opposé au mouvement** : à gauche pour l'attaque (qui part vers la droite), à droite pour le coup encaissé et l'esquive (qui partent vers la gauche). Rien ne déborde ainsi sur la garde.
+- **Bloc `CAMERA AND MOTION` et `AMPLITUDE`** dans chaque prompt : la caméra ne bouge pas, mais le personnage se tourne presque de profil dans la case d'action. L'action reste parallèle à l'image, sans raccourci de perspective et sans arme pointée vers le spectateur. Le mouvement passe par tout le corps, et les tissus suivent derrière.
+- **Règle de hauteur** pour une garde neuve : le sommet de la tête est le point le plus haut du personnage. Une arme levée au-dessus de la tête compte dans la hauteur de la garde, qui règle la taille à l'écran, et rapetisse le corps (Aldric, Morgrut).
+- **L'atelier des postures** : une page de prompts complets, à copier d'un clic, une fiche par personnage avec sa garde. On ouvre une conversation ChatGPT par personnage et on y joint la garde une seule fois. Les gardes sur fond gris sont dans `logs/atelier/`, les planches sources rangées dans `logs/atelier/sources/<personnage>/`.
+
+Découpe :
+```
+python scripts/slice-poses.py undead a.png:2x1:idle,attack b.png:2x1:hurt,idle c.png:2x1:dodge,idle d.png:3x1:idle,ko,victory --fond --contours
+```
+
+`--contours` sépare les figures par leurs silhouettes. La planche est détourée d'un bloc, puis coupée entre deux figures par la ligne la moins dense (le vide, ou leur contact le plus mince). Chaque lambeau isolé rejoint la figure la plus proche. Sur Ervald, l'attaque débordait de 195 px sur la case de la garde, le coup encaissé de 177 px, l'esquive de 154 px : tout est resté à sa figure.
+
 ### 3.3 Découper et intégrer
 
 ```
@@ -184,6 +201,11 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 - toile 992×1005, **centrée sur les pieds de la garde** (`slice-poses.py` élargit désormais la toile des deux côtés : une attaque ample ne décale plus la garde), la garde en occupe 95 % : `scale` 0,97 (taille 1,00), `headroom` 0,03, portrait `{ x: 60, y: 5, zoom: 3.2 }` (inchangés) ;
 - vu par capture : l'élan des deux côtés (la lame file vers l'adversaire, sans passer sur les dés), l'accueil, l'affrontement. **Effet de bord** : sur l'affrontement, l'ancrage `inside` colle le bord de la toile au bord de l'écran ; la toile plus large pousse la barde d'environ 70 px vers le centre, sous son nom et le bord de son panneau ;
 - intégration dans `roster.ts` par l'agent du gameplay.
+
+**Ervald (2026-10-20, 0.54.0)**, premier personnage fait avec l'atelier (§ 3.2 ter) :
+- une nouvelle garde, tirée de sa planche, qui remplace `undead.png` ; quatre planches, générées du premier coup ;
+- toile 1002×1118, la garde en occupe 83 % : `scale` 0,98 → 1,16 pour garder la même hauteur à l'écran, `headroom` 0,15 (l'épée levée de la victoire), portrait `{ x: 56, y: 19, zoom: 5 }` ;
+- vu par capture : l'accueil, l'affrontement face à Aldric (même taille), l'attaque, le coup encaissé, l'esquive et la victoire en combat. Non vu : le K.O.
 
 **Vu à l'écran** (captures Firefox) :
 - l'attaque des deux personnages pendant l'élan ;

@@ -6,7 +6,12 @@ import orcVictoryImg from '../assets/orc-victory.png'
 import orcHurtImg from '../assets/orc-hurt.png'
 import elfImg from '../assets/elf.png'
 import dwarfImg from '../assets/dwarf.png'
-import undeadImg from '../assets/undead.png'
+import undeadIdleImg from '../assets/undead-idle.png'
+import undeadAttackImg from '../assets/undead-attack.png'
+import undeadDodgeImg from '../assets/undead-dodge.png'
+import undeadHurtImg from '../assets/undead-hurt.png'
+import undeadKoImg from '../assets/undead-ko.png'
+import undeadVictoryImg from '../assets/undead-victory.png'
 import humanImg from '../assets/human.png'
 import lizardIdleImg from '../assets/lizardman-idle.png'
 import lizardAttackImg from '../assets/lizardman-attack.png'
@@ -207,7 +212,16 @@ const ervald: CharacterDef = {
   // Statistiques de Caldrec, son ancien jumeau (0.43.0) : d10, sans armure, 56 PV, 16 % de critique.
   // 48,8 % contre les neuf autres (46,7 % avec les siennes).
   stats: { maxHp: 56, damageDie: 10, armor: 0, dodgeChance: 0.08, critChance: 0.16, critMultiplier: 2 },
-  look: { image: undeadImg, facing: 'right', scale: 0.98, portrait: { x: 60, y: 8, zoom: 3.2 } },
+  // Postures (atelier des postures, 2026-10-20) : la garde occupe 83,4 % de la toile ; la même hauteur
+  // à l'écran qu'avant (0,98 × 0,99 de l'ancienne image) donne scale 0,97 / 0,834 = 1,16
+  look: {
+    image: undeadIdleImg,
+    poses: { attack: undeadAttackImg, dodge: undeadDodgeImg, hurt: undeadHurtImg, ko: undeadKoImg, victory: undeadVictoryImg },
+    facing: 'right',
+    scale: 1.16,
+    headroom: 0.15, // part vide au-dessus de la tête (l'épée levée de la victoire)
+    portrait: { x: 56, y: 19, zoom: 5 },
+  },
   lore: {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:

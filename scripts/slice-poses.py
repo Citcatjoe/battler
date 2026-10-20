@@ -20,6 +20,9 @@ Exemple (deux planches de 1536×1024, deux cases chacune, la garde en première 
 - Sortie : `src/assets/<nom>-<posture>.png` pour chaque posture, et la garde recadrée de la même façon
   en `src/assets/<nom>-idle.png` (à utiliser comme `look.image` à la place de l'image actuelle si l'on
   adopte les postures). Planche de contrôle : `logs/poses-<nom>.png`.
+- `--contours` (avec `--fond`, planches d'une rangée) : sépare les figures par leurs silhouettes au lieu
+  de la grille. Une cape ou une arme qui déborde sur la case voisine reste à sa figure. Les cases
+  servent encore à l'ordre des postures et au calage ; il faut que les figures ne se touchent pas.
 - `--sortie=<dossier>` : écrit ailleurs que dans `src/assets/` (pour un essai).
 - `--reference=<garde.png>` : ajoute des postures à un personnage déjà découpé. La garde de chaque planche
   est calée sur cette garde existante (même hauteur, mêmes pieds), et les nouvelles postures sont écrites
@@ -77,7 +80,107 @@ def cut_out(cell: Image.Image) -> Image.Image:
         return Image.open(out).convert('RGBA')
 
 
-def read_sheet(spec: str, background: bool) -> dict[str, Image.Image]:
+def seam(alpha: np.ndarray, center: int, band: int) -> np.ndarray:
+    """Ligne de coupe verticale la moins dense (programmation dynamique) dans une bande autour de
+    `center` : elle passe par le vide entre deux figures, ou par leur contact le plus mince. Rend, pour
+    chaque ligne, la colonne de la coupe."""
+    lo, hi = max(center - band, 1), min(center + band, alpha.shape[1] - 2)
+    cost = alpha[:, lo:hi].astype(np.float64)
+    # Léger penchant pour le milieu de la bande, à coût égal (une coupe dans le vide reste au centre)
+    cost += np.abs(np.arange(lo, hi) - center)[None, :] * 1e-3
+    acc = cost.copy()
+    for y in range(1, acc.shape[0]):
+        prev = acc[y - 1]
+        best = np.minimum(prev, np.minimum(np.r_[np.inf, prev[:-1]], np.r_[prev[1:], np.inf]))
+        acc[y] += best
+    path = np.empty(acc.shape[0], dtype=int)
+    path[-1] = int(np.argmin(acc[-1]))
+    for y in range(acc.shape[0] - 2, -1, -1):
+        x = path[y + 1]
+        cand = [c for c in (x - 1, x, x + 1) if 0 <= c < acc.shape[1]]
+        path[y] = min(cand, key=lambda c: acc[y, c])
+    return path + lo
+
+
+def split_by_contours(path, sheet: Image.Image, poses: list[str], cols: int, rows: int, w: int, h: int):
+    """Sépare les figures d'une planche par leurs silhouettes, et non par la grille : une cape ou une
+    arme qui déborde sur la case voisine reste à sa figure. La planche est détourée d'un bloc, puis
+    coupée entre chaque paire de figures par la ligne la moins dense (le vide, ou le contact le plus
+    mince si elles se touchent). Chaque lambeau isolé (cape, mèche) rejoint ensuite la figure la plus
+    proche. Chaque figure est rendue dans le repère de SA case, avec une marge d'une case de chaque
+    côté, pour que le calage sur les pieds reste celui de la grille."""
+    from scipy import ndimage
+
+    if rows != 1:
+        sys.exit(f'{path} : --contours ne gère que les planches d\'une seule rangée')
+    full = keep_figure_all(cut_out(sheet))
+    rgba = np.asarray(full)
+    alpha = rgba[..., 3]
+    solid = alpha > SOLID
+    # Une coupe par frontière de cases, cherchée sur la moitié de case de part et d'autre
+    cuts = [seam(alpha, k * w, w // 2) for k in range(1, cols)]
+    xs = np.arange(alpha.shape[1])[None, :]
+    region = np.zeros(alpha.shape, dtype=int)
+    for c in cuts:
+        region += xs >= c[:, None]
+    # Le noyau de chaque figure : la plus grande tache de sa région ; les autres taches vont au noyau le plus proche
+    cores = []
+    for k in range(cols):
+        lab, n = ndimage.label(solid & (region == k))
+        if n == 0:
+            cores.append(None)
+            continue
+        sizes = ndimage.sum(np.ones_like(lab), lab, index=np.arange(1, n + 1))
+        cores.append(lab == 1 + int(np.argmax(sizes)))
+    live = [k for k in range(cols) if cores[k] is not None]
+    dist = {k: ndimage.distance_transform_edt(~cores[k]) for k in live}
+    owner = np.full(alpha.shape, -1)
+    lab, n = ndimage.label(solid & ~np.any([cores[k] for k in live], axis=0))
+    for k in live:
+        owner[cores[k]] = k
+    for i in range(1, n + 1):
+        mask = lab == i
+        owner[mask] = min(live, key=lambda k: dist[k][mask].min())
+    figures = {}
+    for i, pose in enumerate(poses):
+        if pose == '-':
+            continue
+        if cores[i] is None:
+            print(f'{path} : case {pose} vide, ignorée')
+            continue
+        # La frange semi-transparente suit sa figure, sans franchir la coupe
+        keep = ndimage.binary_dilation(owner == i, iterations=3) & (region == i) | (owner == i)
+        own = rgba.copy()
+        own[..., 3] = np.where(keep, own[..., 3], 0)
+        fig = Image.fromarray(own, 'RGBA')
+        cell = Image.new('RGBA', (w * 3, h))
+        cell.alpha_composite(fig, (w - i * w, 0))
+        figures[pose] = cell
+        b = bbox(fig)
+        spill = max(i * w - b[0], b[2] - (i + 1) * w, 0)
+        print(f'{path} : {pose} séparée par sa silhouette' + (f' (déborde de {spill} px sur la case voisine)' if spill > 0 else ''))
+    if 'idle' not in figures:
+        sys.exit(f'{path} : la case de garde est vide')
+    return figures
+
+
+def keep_figure_all(img: Image.Image) -> Image.Image:
+    """Retire les poussières de détourage (moins de 0,05 % de la planche), sans toucher aux figures."""
+    from scipy import ndimage
+
+    alpha = np.asarray(img.getchannel('A'))
+    labels, n = ndimage.label(alpha > SOLID)
+    if n <= 1:
+        return img
+    sizes = ndimage.sum(np.ones_like(labels), labels, index=np.arange(1, n + 1))
+    keep = np.isin(labels, 1 + np.nonzero(sizes >= alpha.size * 0.0005)[0])
+    keep = ndimage.binary_dilation(keep, iterations=3)
+    out = np.asarray(img).copy()
+    out[..., 3] = np.where(keep, out[..., 3], 0)
+    return Image.fromarray(out, 'RGBA')
+
+
+def read_sheet(spec: str, background: bool, contours: bool = False) -> dict[str, Image.Image]:
     """Les figures détourées d'une planche, par posture."""
     path, grid, order = spec.rsplit(':', 2)
     cols, rows = (int(x) for x in grid.lower().split('x'))
@@ -91,6 +194,8 @@ def read_sheet(spec: str, background: bool) -> dict[str, Image.Image]:
     if not background and 'A' not in sheet.getbands():
         sys.exit(f'{path} : planche sans transparence, ajouter --fond pour la détourer')
     w, h = sheet.width // cols, sheet.height // rows
+    if contours:
+        return split_by_contours(path, sheet, poses, cols, rows, w, h)
     figures = {}
     for i, pose in enumerate(poses):
         if pose == '-':
@@ -150,7 +255,7 @@ def main():
     name, specs = args[0], args[1:]
     target = next((Path(a.split('=', 1)[1]) for a in flags if a.startswith('--sortie=')), ROOT / 'src/assets')
     target.mkdir(parents=True, exist_ok=True)
-    sheets = [read_sheet(spec, '--fond' in flags) for spec in specs]
+    sheets = [read_sheet(spec, '--fond' in flags, '--contours' in flags) for spec in specs]
     reference = next((Path(a.split('=', 1)[1]) for a in flags if a.startswith('--reference=')), None)
     if reference:
         add_to_reference(name, sheets, Image.open(reference).convert('RGBA'), target)

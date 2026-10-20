@@ -31,6 +31,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.54.0] — 2026-10-20
+
+### Ajouté
+- **Postures d'Ervald** : garde, attaque, esquive, coup encaissé, K.O. et victoire, générés par l'utilisateur avec l'atelier des postures. C'est le quatrième personnage à postures, après Gorak, Naraxes et Fanchon. La nouvelle garde remplace `undead.png` (à la corbeille).
+  - **Plus d'amplitude** (demande de l'utilisateur) : le personnage se tourne presque de profil dans la case d'action, et l'action reste parallèle à l'image, sans rien qui vise le spectateur. L'attaque est une fente en extension vers l'adversaire ; le coup encaissé repousse tout le corps vers l'arrière.
+  - **Taille inchangée à l'écran** : `scale` 0,98 → 1,16 (la garde occupe 83 % de sa nouvelle toile), `headroom` 0,15, portrait recadré (`zoom` 5). Vu par capture : accueil, affrontement face à Aldric, attaque, coup encaissé, esquive et victoire en combat. Le K.O. n'a pas été vu.
+- **Atelier des postures** (page de prompts hors du jeu, sources dans `logs/atelier/`) : des prompts complets à copier d'un clic, une conversation ChatGPT par personnage, la garde jointe une seule fois. Il fait quatre planches par personnage : A attaque, B coup encaissé, C esquive (deux cases de 768 px chacune, la garde du côté opposé au mouvement), D K.O. et victoire (trois cases). Aldric et Morgrut reçoivent un nouveau modèle sans arme au-dessus de la tête, et Brokk une garde originale.
+- `scripts/slice-poses.py --contours` : sépare les figures d'une planche par leurs silhouettes, et non plus par la grille. Une ligne de coupe passe par le vide entre deux figures, ou par leur contact le plus mince ; chaque lambeau isolé rejoint la figure la plus proche. Une cape ou une arme qui déborde sur la case voisine reste ainsi à sa figure : c'était le défaut de la fente de la barde. Les cases servent toujours à l'ordre des postures et au calage sur les pieds.
+
 ## [0.53.1] — 2026-10-20
 
 ### Corrigé
