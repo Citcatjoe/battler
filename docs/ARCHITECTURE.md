@@ -20,7 +20,7 @@ src/
     rng.ts               hasard injectable : Rng, seededRng, rollDie, chance, shuffle
     character.ts         CharacterStats, CharacterDef, classe Character (pure donnée), variant()
     poses.ts             postures d'un combattant (POSES, poseOf, poseImage) : l'image change au fil du combat (docs/POSTURES.md)
-    statuses.ts          REGISTRE des statuts (auras bonus/malus) : règles + présentation ; STATUS_FAMILY (famille de chaque état, couleur du médaillon)
+    statuses.ts          REGISTRE des statuts (auras bonus/malus) : règles + présentation
     events.ts            déclencheurs (TRIGGERS), effets (Effect), CharacterEvent
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
     arenas.ts            ARENAS : cadres visuels des combats (image, cadrage, traitement)

@@ -81,7 +81,7 @@ C'est une réserve de contres lisibles pour plus tard : un malus déjà défini,
 
 ## 3. Présentation : une famille, un langage visuel
 
-**Appliqué en 0.51.0** (demande de l'utilisateur, en CSS, sans nouvelle icône) aux médaillons des états : couleur de la famille et forme de l'anneau. Le repère de fenêtre reste à faire. Les teintes retenues sont dans `src/index.css` (`--fam-*`) ; seule différence avec les pistes ci-dessous, les Représailles prennent un **rouge brique**, le cramoisi étant réservé au camp de droite (design system). La règle :
+**Essayé en 0.51.0, refusé par l'utilisateur** pour les médaillons des états : dix couleurs, « c'est carnaval, ça complique énormément la compréhension ». La distinction simple bonus vert / malus rouge est meilleure. Retenu : le **bord en pointillés pour les dégâts périodiques** (0.52.1). Les couleurs ci-dessous ne sont donc plus une piste pour les médaillons ; elles peuvent encore servir ailleurs (sons par famille, reliques), à rediscuter. L'idée d'origine :
 
 - **La couleur dit la famille.** Une teinte par famille, utilisée pour le cadre d'icône, le texte flottant et la lueur.
 - **La forme du cadre dit la polarité.** Par exemple un cadre plein et arrondi pour un bonus, un cadre ébréché ou à pointes pour un malus. Aujourd'hui, la polarité utilise vert et rouge (`POLARITY_STYLE`), ce qui entre en conflit avec le vert du poison et le rouge des dégâts.

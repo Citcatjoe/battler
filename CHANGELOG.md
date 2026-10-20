@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.52.1] — 2026-10-20
+
+### Retiré
+- **Médaillons des états par famille** (0.51.0), à la demande de l'utilisateur : dix couleurs, « c'est carnaval, ça complique énormément la compréhension ». Retour à la **distinction simple** : anneau vert pour un bonus, rouge pour un malus. `STATUS_FAMILY`, les tokens `--fam-*` et la famille affichée dans le compendium sont retirés.
+
+### Ajouté
+- **Bord en pointillés pour les dégâts périodiques** (l'idée retenue de la 0.51.0) : un état qui fait perdre des PV à son porteur à chaque tour (Poison, Brûlure, Pourriture) a un anneau en pointillés, dans la zone d'état et le compendium. Lu dans les règles du statut (`hurtsEachTurn`, `statuses.ts`), sans liste écrite à la main.
+
 ## [0.52.0] — 2026-10-20
 
 ### Modifié
