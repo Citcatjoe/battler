@@ -1,6 +1,6 @@
 import { skillCatalog, type SkillEntry } from '../../game/catalog'
 import { DEFAULT_SKILL_NATURE, describeCondition, describeEffect, TRIGGERS, type Effect, type SkillNature } from '../../game/events'
-import { lowerFirst, POLARITY_STYLE, STATUS_FAMILY, STATUSES } from '../../game/statuses'
+import { lowerFirst, POLARITY_STYLE, STATUSES } from '../../game/statuses'
 import { Icon, StatusIcon } from '../Icon'
 import { MiniPortrait } from '../RecordBits'
 import { SkillSeal } from '../SkillSeal'
@@ -167,9 +167,7 @@ export function EffectLine({ effect }: { effect: Effect }) {
     const status = { id: effect.status, stacks: effect.stacks, turns: effect.turns }
     return (
       <div className="flex items-start gap-3" title={def.summary}>
-        <span className={`status-medal fam-${STATUS_FAMILY[effect.status]} ${def.polarity === 'negative' ? 'is-negative' : ''} h-9 w-9 shrink-0 p-0.5`}>
-          <StatusIcon id={effect.status} className="h-full w-full" />
-        </span>
+        <StatusIcon id={effect.status} className="h-9 w-9 shrink-0" />
         <p className="font-body text-[15px] leading-snug text-ink-1">
           <span className={`mr-1.5 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${POLARITY_STYLE[def.polarity].chip}`}>
             Pose
