@@ -9,9 +9,8 @@ import { Fighter } from './Fighter'
 import { Portrait } from './Portrait'
 import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
-import { Icon, type IconName } from './Icon'
+import { Icon } from './Icon'
 import { PrestigeButton } from './PrestigeButton'
-import { Tabs } from './Tabs'
 import { VsSeal } from './VsSeal'
 
 interface Props {
@@ -22,8 +21,10 @@ interface Props {
   onOpenRecords: (current: Pair<Character>) => void
   /** Compendium (personnages, bonus et malus…) ; la sélection en cours est conservée */
   onOpenCompendium: (current: Pair<Character>) => void
+  /** Choisi sur l'écran d'accueil : sélection du duel ou présentation du tournoi */
   mode: GameMode
-  onModeChange: (mode: GameMode) => void
+  /** Retour à l'écran d'accueil */
+  onHome: () => void
   /** Tournoi en cours : progression affichée en mode tournoi */
   tournamentProgress: string | null
   onNewTournament: () => void
@@ -32,13 +33,8 @@ interface Props {
 
 export type GameMode = 'duel' | 'tournament'
 
-const MODES: { id: GameMode; icon: IconName; label: string }[] = [
-  { id: 'duel', icon: 'swords', label: 'Affrontement' },
-  { id: 'tournament', icon: 'trophy', label: 'Tournoi' },
-]
-
 export function StartScreen(props: Props) {
-  const { initial, onStart, onOpenCharacter, onOpenRecords, onOpenCompendium, mode, onModeChange } = props
+  const { initial, onStart, onOpenCharacter, onOpenRecords, onOpenCompendium, mode, onHome } = props
   const roster = CHARACTERS
   const [picked, setPicked] = useState<Pair<string>>([initial[0].id, initial[1].id])
   const fighters = picked.map((id) => roster.find((c) => c.id === id)!) as Pair<Character>
@@ -111,11 +107,13 @@ export function StartScreen(props: Props) {
       >
         <Icon name="scroll" className="btn-icon" />
       </button>
+      <button onClick={onHome} className="btn-tertiary absolute left-36 top-[22px] z-20">
+        ← Menu
+      </button>
       <header className="relative z-20 text-center">
         <h1 className="font-display text-6xl font-extrabold tracking-widest text-amber-200 drop-shadow-[0_4px_0_#78350f]">
           BATTLER
         </h1>
-        <Tabs variant="major" className="mt-3" tabs={MODES} value={mode} onChange={onModeChange} />
       </header>
 
       {mode === 'tournament' ? (

@@ -150,6 +150,8 @@ export interface CheatState {
   forced?: number
   /** Nombre de dés imposés depuis le début du combat */
   count: number
+  /** Combat test : la lecture est arrêtée sur ce dé, en attendant le choix du joueur */
+  waiting: boolean
 }
 
 const ABORTED = Symbol('aborted')
@@ -169,8 +171,12 @@ const IDLE_DICE: DiceState = {
  * Met en scène un combat déjà résolu par `simulateCombat` : mêmes jets, même issue,
  * seul le rythme (vitesse, pause) dépend de l'affichage. Chaque type d'étape de la
  * chronologie a sa mise en scène ci-dessous ; aucune règle n'est recalculée ici.
+ *
+ * `test` (combat test) : pas d'initiative animée, et la lecture s'arrête avant chaque dé jusqu'à
+ * ce que le joueur le choisisse (`forceNextRoll`, null pour le hasard). C'est le mécanisme du mode
+ * triche : chaque choix fait résoudre le combat à nouveau par le moteur, avec la même graine.
  */
-export function useCombat(script: CombatResult, onEnd: (result: CombatResult) => void) {
+export function useCombat(script: CombatResult, onEnd: (result: CombatResult) => void, { test = false } = {}) {
   const { fighters } = script
   const [hp, setHp] = useState<Pair<number>>([fighters[0].maxHp, fighters[1].maxHp])
   const [statuses, setStatuses] = useState<Pair<Status[]>>([[], []])
@@ -208,6 +214,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     rank: 0,
     next: dieAt(script, 0),
     count: 0,
+    waiting: false,
   }))
   /** Le combat tel qu'il se résout maintenant (différent de `script` dès qu'un dé est imposé) */
   const [resolved, setResolved] = useState(script)
@@ -237,6 +244,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     let current = script
     const forced: Record<number, number> = {}
     let committed = 0
+    /** Combat test : le dé de rang `committed` attend le choix du joueur */
+    let waiting = false
     const publishCheat = () =>
       setCheat({
         available: script.seed !== undefined,
@@ -244,6 +253,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         next: dieAt(current, committed),
         forced: forced[committed],
         count: Object.keys(forced).length,
+        waiting,
       })
     const rankOf = (i: number) => rankAt(current.beats, i)
     const commit = (upTo: number) => {
@@ -257,6 +267,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       else forced[committed] = value
       current = simulateCombat(fighters, { seed: script.seed, forcedRolls: forced })
       setResolved(current)
+      // Combat test : le choix est fait, la lecture reprend
+      waiting = false
       publishCheat()
     }
     setResolved(script)
@@ -279,6 +291,23 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         }
         requestAnimationFrame(tick)
       })
+
+    /**
+     * Combat test : chaque dé, du prochain jusqu'au rang `upTo` exclu, attend le choix du joueur avant
+     * d'être lancé. Un choix peut raccourcir le combat (K.O.) : on s'arrête quand il n'y a plus de dé.
+     */
+    const choose = async (upTo: number) => {
+      if (!test) return
+      while (committed < upTo && dieAt(current, committed) !== undefined) {
+        waiting = true
+        publishCheat()
+        while (waiting) await idle()
+        commit(committed + 1)
+      }
+    }
+    // Attente du joueur : hors vitesse et pause
+    const idle = () =>
+      new Promise<void>((resolve, reject) => setTimeout(() => (aborted ? reject(ABORTED) : resolve()), 50))
 
     const push = (entry: Omit<LogEntry, 'id'>) => setLog((l) => [...l, { ...entry, id: logId++ }])
 
@@ -490,25 +519,29 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     async function run() {
       const startedAt = performance.now()
 
-      await wait(500)
+      if (!test) await wait(500)
       push({ kind: 'info', text: `${a.name} (${a.maxHp} PV) affronte ${b.name} (${b.maxHp} PV) !` })
 
-      // Initiative : chacun lance un dé, le plus haut commence (relance sur égalité).
+      // Initiative : chacun lance un dé, le plus haut commence (relance sur égalité). Combat test :
+      // seulement notée au journal, on entre directement dans le combat.
       const initDice = { ...IDLE_DICE, faces: INITIATIVE_DIE, label: 'Initiative' }
       for (const [ia, ib] of script.initiative) {
-        setDice({ ...initDice, values: [0, 0], rolling: true })
-        sfx.diceRoll(900 / speedRef.current)
-        await wait(900)
-        sfx.diceLand()
-        setDice({ ...initDice, values: [ia, ib] })
+        if (!test) {
+          setDice({ ...initDice, values: [0, 0], rolling: true })
+          sfx.diceRoll(900 / speedRef.current)
+          await wait(900)
+          sfx.diceLand()
+          setDice({ ...initDice, values: [ia, ib] })
+        }
         push({ kind: 'initiative', text: `Initiative — ${a.name} : ${ia}, ${b.name} : ${ib}` })
-        await wait(1000)
+        if (!test) await wait(1000)
         if (ia === ib) push({ kind: 'info', text: 'Égalité ! On relance.' })
       }
       const [lastA, lastB] = script.initiative[script.initiative.length - 1]
       const first: Side = lastA > lastB ? 0 : 1
       push({ kind: 'info', text: `${fighters[first].name} frappe en premier.`, side: first })
-      await wait(700)
+      if (test) setDice({ ...IDLE_DICE, owner: first, label: turnLabel(fighters[first].name) })
+      else await wait(700)
 
       /*
        * Synchronisation : quand un statut agit (poison au début du tour…), le décompte de sa
@@ -563,15 +596,17 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
 
       // `current.beats` est relu à chaque étape : un dé imposé en remplace la suite
       for (let i = 0; i < current.beats.length; i++) {
-        const beat = current.beats[i]
         // Passage de main : le plateau de dés se vide et annonce le suivant, son camp s'allume, un temps de pause
-        if (i > 0 && beat.turn !== current.beats[i - 1].turn) {
-          const next = ownerOf(beat.turn)
-          setTurn(beat.turn)
+        if (i > 0 && current.beats[i].turn !== current.beats[i - 1].turn) {
+          const next = ownerOf(current.beats[i].turn)
+          setTurn(current.beats[i].turn)
           setActive(next)
           setDice({ ...IDLE_DICE, owner: next, label: turnLabel(fighters[next].name) })
           await wait(HANDOVER_MS)
         }
+        // Combat test : les dés de cette étape attendent le choix du joueur (l'étape peut en sortir changée)
+        await choose(rankOf(i) + diceOf(current.beats[i]).length)
+        const beat = current.beats[i]
         setTurn(beat.turn)
         anticipate(i)
         const rolled = diceOf(beat).length
@@ -673,7 +708,9 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               show(beat.state.statuses)
               push(flurryLog(beat.turn, beat.side, beat.status, beat.strikes, fighters))
             })
-            // Tous les dés de la rafale roulent ensemble : ils sont lancés, donc plus imposables
+            // Tous les dés de la rafale roulent ensemble : ils sont lancés, donc plus imposables.
+            // Combat test : le joueur les choisit d'abord, un par un.
+            await choose(rankOf(i) + beat.strikes)
             const strikes = [...current.beats.entries()]
               .filter(([j, b]) => j > i && b.type === 'attack' && b.turn === beat.turn && b.attack.attacker === beat.side)
               .slice(0, beat.strikes)
@@ -768,7 +805,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
     return () => {
       aborted = true
     }
-  }, [script, fighters])
+  }, [script, fighters, test])
 
   /** Mode triche : impose `value` au prochain dé (null : le laisse au hasard) */
   const forceNextRoll = (value: number | null) => forceRef.current(value)

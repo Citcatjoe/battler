@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { attacksOf, dieAt, effectiveStats, finalState, MAX_TURNS, rollsDie, simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
+import { attacksOf, diceOf, dieAt, effectiveStats, finalState, MAX_TURNS, rollsDie, simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
 import type { CharacterEvent } from './events'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
@@ -1317,6 +1317,31 @@ describe('mode triche : dés imposés (0.33.0)', () => {
     expect(text).toContain('[imposé]')
     expect(parseForcedRolls(text)).toEqual({ 1: 2, 6: 8 })
     expect(traceText(simulateCombat(pair(), { seed: 8, forcedRolls: parseForcedRolls(text) }))).toBe(text)
+  })
+
+  it('combat test : chaque dé choisi un par un, du premier au K.O., sans changer ce qui précède', () => {
+    // Le déroulé de `useCombat` en combat test : on choisit le dé du rang suivant, le moteur résout à
+    // nouveau, et ainsi de suite. Le hasard (0) laisse le dé tiré ; deux dés (barde) et pièce compris.
+    for (const ids of [['gorak', 'naraxes'], ['fanchon', 'elaria']] as const) {
+      const fighters: Pair<ReturnType<typeof createCharacter>> = [createCharacter(ids[0]), createCharacter(ids[1])]
+      const forced: Record<number, number> = {}
+      let current = simulateCombat(fighters, { seed: 11 })
+      let rank = 0
+      for (; rank < 400; rank++) {
+        const die = dieAt(current, rank)
+        if (!die) break
+        // Les étapes avant celle qui lance ce dé
+        let n = 0
+        const before = current.beats.slice(0, current.beats.findIndex((b) => (n += diceOf(b).length) > rank))
+        if (rank % 3 !== 2) forced[rank] = die.coin ? 1 + (rank % 2) : 1 + (rank % die.faces)
+        const next = simulateCombat(fighters, { seed: 11, forcedRolls: forced })
+        expect(next.beats.slice(0, before.length)).toEqual(before)
+        expect(dieAt(next, rank)).toEqual(die)
+        current = next
+      }
+      expect(rank).toBeLessThan(400)
+      expect(finalState(current).hp[current.winner === 0 ? 1 : 0]).toBe(0)
+    }
   })
 })
 

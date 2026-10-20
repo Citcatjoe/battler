@@ -23,12 +23,14 @@ import { statusCatalog } from '../game/catalog'
 import { EndScreen } from './EndScreen'
 import { Fighter } from './Fighter'
 import { FightScreen } from './FightScreen'
+import { TestFightScreen } from './TestFightScreen'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
 import { STATUS_ICON } from './Icon'
 import { MatchupScreen } from './MatchupScreen'
 import { RecordsScreen } from './RecordsScreen'
 import { StartScreen } from './StartScreen'
+import { HomeScreen } from './HomeScreen'
 import { TournamentSetupScreen } from './TournamentSetupScreen'
 import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from './Betting'
 import { createWallets, placeBet, placeBotBets, priceMatch, settleMatch, worthOf, type MatchOdds } from '../game/betting'
@@ -64,12 +66,14 @@ const render = (node: React.ReactNode) => {
 }
 
 describe('écrans', () => {
-  it('accueil, affrontement, combat, fin', () => {
+  it('accueil, sélection, affrontement, combat, fin', () => {
+    for (const progress of [null, '3 / 15'])
+      render(<HomeScreen onChoose={noop} onOpenRecords={noop} onOpenCompendium={noop} tournamentProgress={progress} />)
     render(
       <StartScreen
         initial={fighters}
         mode="duel"
-        onModeChange={noop}
+        onHome={noop}
         onStart={noop}
         onOpenCharacter={noop}
         onOpenRecords={noop}
@@ -83,7 +87,7 @@ describe('écrans', () => {
       <StartScreen
         initial={fighters}
         mode="tournament"
-        onModeChange={noop}
+        onHome={noop}
         onStart={noop}
         onOpenCharacter={noop}
         onOpenRecords={noop}
@@ -134,15 +138,17 @@ describe('écrans', () => {
     render(<BetsResult outcome={outcome(result)} fighterNames={names} />)
     render(<EndScreen result={result} onReplay={noop} onMenu={noop} bets={outcome(result)} />)
     render(<EndScreen result={result} onReplay={noop} onMenu={noop} bets={outcome({ ...result, forcedRolls: { 0: 1 } })} tournament={{ label: 'x', onContinue: noop }} />)
-    // Mode triche : dé, pièce, plus de dé, combat sans graine
-
+    // Combat test : l'écran, et le pavé de chaque camp (dé attendu, pièce attendue, en attente, plus de dé)
+    render(<TestFightScreen initial={['gorak', 'elaria']} onMenu={noop} />)
+    render(<FightScreen script={result} arena={null} onEnd={noop} test={{ toolbar: null }} />)
     for (const cheat of [
-      { available: true, rank: 3, next: { side: 0 as const, faces: 8, coin: false }, forced: 6, count: 2 },
-      { available: true, rank: 3, next: { side: 1 as const, faces: 2, coin: true }, count: 0 },
-      { available: true, rank: 40, count: 1 },
-      { available: false, rank: 0, count: 0 },
+      { available: true, rank: 3, next: { side: 0 as const, faces: 8, coin: false }, count: 2, waiting: true },
+      { available: true, rank: 3, next: { side: 1 as const, faces: 2, coin: true }, count: 0, waiting: true },
+      { available: true, rank: 3, next: { side: 1 as const, faces: 10, coin: false }, count: 0, waiting: false },
+      { available: true, rank: 40, count: 1, waiting: false },
     ])
-      render(<CheatPad cheat={cheat} fighters={result.fighters} onForce={noop} onClose={noop} bottom={76} />)
+      for (const side of [0, 1] as const)
+        render(<CheatPad side={side} fighter={result.fighters[side]} cheat={cheat} onForce={noop} />)
     for (const tab of ['summary', 'defense', 'events', 'dice'] as const)
       render(<EndScreen result={result} onReplay={noop} onMenu={noop} initialTab={tab} />)
     render(<EndScreen result={poisoned} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop }} />)
