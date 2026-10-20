@@ -12,7 +12,12 @@ import undeadDodgeImg from '../assets/undead-dodge.png'
 import undeadHurtImg from '../assets/undead-hurt.png'
 import undeadKoImg from '../assets/undead-ko.png'
 import undeadVictoryImg from '../assets/undead-victory.png'
-import humanImg from '../assets/human.png'
+import humanIdleImg from '../assets/human-idle.png'
+import humanAttackImg from '../assets/human-attack.png'
+import humanDodgeImg from '../assets/human-dodge.png'
+import humanHurtImg from '../assets/human-hurt.png'
+import humanKoImg from '../assets/human-ko.png'
+import humanVictoryImg from '../assets/human-victory.png'
 import lizardIdleImg from '../assets/lizardman-idle.png'
 import lizardAttackImg from '../assets/lizardman-attack.png'
 import lizardDodgeImg from '../assets/lizardman-dodge.png'
@@ -274,7 +279,16 @@ const ysolde: CharacterDef = {
   // Petit dé (d7) : 3 jets sur 7 (1 à 3) déclenchent une compétence au lieu de frapper. Un d6 (un jet
   // sur deux) la rendait trop dépendante de l'Aura de sainteté : 63 % de victoires, combats de 52 tours.
   stats: { maxHp: 52, damageDie: 7, armor: 0, dodgeChance: 0.08, critChance: 0.1, critMultiplier: 2 },
-  look: { image: humanImg, facing: 'right', scale: 0.93, portrait: { x: 52, y: 14, zoom: 3.4 } },
+  // Postures (atelier des postures, 2026-10-20). La masse levée et le halo dépassent de la tête : la taille
+  // se règle sur le corps (tête-pieds, 74 % de la toile), le reste compte dans `headroom` (comme Aldric)
+  look: {
+    image: humanIdleImg,
+    poses: { attack: humanAttackImg, dodge: humanDodgeImg, hurt: humanHurtImg, ko: humanKoImg, victory: humanVictoryImg },
+    facing: 'right',
+    scale: 1.25,
+    headroom: 0.245,
+    portrait: { x: 52, y: 28, zoom: 5 },
+  },
   lore: {
     tagline: 'Le soleil ne frappe pas. Il juge.',
     background:

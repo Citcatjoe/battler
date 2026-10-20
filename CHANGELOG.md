@@ -31,6 +31,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.57.0] — 2026-10-20
+
+### Ajouté
+- **Postures d'Ysolde** (atelier des postures) : garde, attaque, esquive, coup encaissé, K.O. et victoire, générés par l'utilisateur à partir de sa garde actuelle. La nouvelle garde remplace `human.png`, qui est à la corbeille.
+  - **Taille réglée sur le corps**, comme Aldric : la masse levée et le halo dépassent de la tête. Le corps (tête-pieds) occupe 74 % de la toile : `scale` 0,93 → 1,25, `headroom` 0,245. Son corps paraît donc plus grand qu'avant, à sa taille prévue (1,00 d'un humain, un peu moins qu'Aldric).
+  - Portrait recadré (`zoom` 5).
+  - Vu par capture : accueil, affrontement face à Aldric, attaque, coup encaissé et K.O. Non vus : l'esquive et la victoire.
+
 ## [0.56.0] — 2026-10-20
 
 ### Ajouté

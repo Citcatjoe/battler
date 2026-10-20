@@ -212,6 +212,10 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 - **la taille se règle donc sur le corps** (tête-pieds, 77 % de la toile de 1054×1099) et non sur la silhouette entière : `scale` = 1,04 × 0,945 / 0,79 ≈ 1,24 (0,945 : rapport moyen hauteur affichée / taille, mesuré sur Gorak, Fanchon et Ervald), `headroom` 0,21, portrait `{ x: 55, y: 22, zoom: 5.2 }`. C'est la méthode à suivre pour tout personnage dont un élément dépasse de la tête ;
 - vu par capture : l'accueil, l'affrontement face à Ervald, l'attaque, le coup encaissé et le K.O. Non vus : l'esquive et la victoire.
 
+**Ysolde (2026-10-20, 0.57.0)**, à partir de sa garde actuelle, quatre planches générées du premier coup :
+- la masse levée et le halo dépassent de la tête : taille réglée sur le corps, comme Aldric (tête-pieds 74 % de la toile de 1058×1070) : `scale` = 1,00 × 0,945 / 0,755 ≈ 1,25, `headroom` 0,245, portrait `{ x: 52, y: 28, zoom: 5 }` ;
+- vu par capture : l'accueil, l'affrontement face à Aldric (un peu plus petite que lui), l'attaque, le coup encaissé et le K.O. Non vus : l'esquive et la victoire.
+
 **Vu à l'écran** (captures Firefox) :
 - l'attaque des deux personnages pendant l'élan ;
 - le coup encaissé de la voleuse ;
