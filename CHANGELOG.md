@@ -31,6 +31,28 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.55.0] — 2026-10-20
+
+Retours de l'utilisateur sur la lecture des combats.
+
+### Ajouté
+- **Cerclage du compteur qui décroît** : quand un état perd une charge ou un tour, un cerclage autour de son nombre se vide de la part perdue (de 3 à 2, un tiers), pendant le rebond, puis s'efface.
+- `look.footroom` (vide de la toile sous les pieds) : l'image est redescendue d'autant, partout où elle s'affiche (combat, accueil, affrontement, fin, fiche du compendium).
+
+### Modifié
+- **Furie des vents instantanée** : son badge tombe avec le 2 qui la déclenche, avec son nom ; puis, après une demi-seconde, les dés des deux coups apparaissent **à plat**, sans nouveau lancer, et les frappes partent. Règle générale : une compétence qui agit tout de suite pose son badge au résultat du dé. Une relance dans la même action affiche « ×2 » dès le dé.
+- **Pile ou face** : la pièce tournoie, puis le résultat, son « ding » (pile), son badge et son texte tombent d'un bloc ; un temps pour le lire (0,65 s), puis la frappe (`SONS.md` mis à jour).
+- **Textes flottants devant le combattant**, du côté de l'adversaire, au lieu de derrière lui (essai demandé par l'utilisateur : l'œil reste près du centre, où tombent les dés).
+- **Badge du Vol de vie** en violet profond (la cape du mort-vivant) au lieu du rouge-rose, qui se confondait avec les dégâts.
+- **Naraxes redescendue** (`footroom` 0,04) : sa toile avait 6 % de vide sous les pieds (sa queue au K.O. descend plus bas), elle paraissait flotter ; elle touche le sol comme l'orc et la barde.
+
+### Corrigé
+- **Tremblement de la Peur** : il animait la propriété `translate` de l'image, qui la centre sur ses pieds ; le combattant sautait d'une demi-largeur de côté, surtout visible sur les toiles larges des personnages à postures. Le tremblement passe sur un conteneur. Test.
+- **Liseré coloré des sceaux** dans les infobulles des dés (accueil, en-tête du combat) : la couleur de l'éclat des dés (`--nature`) était lue par le sceau ; l'éclat a sa propre variable (`--pulse`).
+
+### Documentation
+- `STYLE_BIBLE.md` : icônes à refaire ou à créer, **Fleur de vie** (le cœur vert générique de la Régénération) et **Rage du sang** (aucune icône).
+
 ## [0.54.0] — 2026-10-20
 
 ### Ajouté

@@ -1213,6 +1213,22 @@ body {
   animation: status-count calc(650ms / var(--speed, 1)) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
   z-index: 1;
 }
+/* Cerclage du compteur qui décroît : plein au départ, il se vide jusqu'à la part gardée (--kept, en %),
+   puis s'efface. Couleur du compteur (vert ou rouge). */
+.count-drain circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  animation: count-drain calc(900ms / var(--speed, 1)) ease-out both;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+@keyframes count-drain {
+  0% { stroke-dashoffset: 0; opacity: 1; }
+  60% { stroke-dashoffset: calc(100 - var(--kept)); opacity: 1; }
+  100% { stroke-dashoffset: calc(100 - var(--kept)); opacity: 0; }
+}
 @keyframes status-count {
   0% { transform: scale(1); filter: brightness(1); }
   22% { transform: scale(2.1); filter: brightness(2.2) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
@@ -1562,18 +1578,19 @@ body {
 }
 /* Dés de compétence en combat (en-tête) : éteints au repos, ils ne s'allument qu'un instant quand leur
    face sort, comme le tintement d'une clochette : un éclat bref et ample dans la couleur de la nature de
-   la compétence (data-nature, comme les cartes en lame), puis retour à l'état éteint. */
-.skill-die-slot { --nature: var(--arcane); }
-.skill-die-slot[data-nature='martial'] { --nature: var(--gold-400); }
-.skill-die-slot[data-nature='finesse'] { --nature: var(--armor); }
-.skill-die-slot[data-nature='neutral'] { --nature: var(--text-3); }
+   la compétence (data-nature, comme les cartes en lame), puis retour à l'état éteint. Variable --pulse et
+   non --nature : le sceau de l'infobulle lit --nature, et prenait un liseré coloré hors de propos. */
+.skill-die-slot { --pulse: var(--arcane); }
+.skill-die-slot[data-nature='martial'] { --pulse: var(--gold-400); }
+.skill-die-slot[data-nature='finesse'] { --pulse: var(--armor); }
+.skill-die-slot[data-nature='neutral'] { --pulse: var(--text-3); }
 .skill-dice-dim .skill-die { filter: grayscale(0.85) brightness(0.5); transition: filter 150ms, transform 120ms, box-shadow 120ms; }
 .skill-dice-dim .group:hover .skill-die { filter: none; }
 .skill-die-flash .skill-die { animation: skill-die-flash calc(520ms / var(--speed)) ease-out; }
 @keyframes skill-die-flash {
   0% { filter: none; transform: scale(1); }
-  12% { filter: brightness(1.6) saturate(1.4); transform: scale(1.45); box-shadow: 0 0 0 2px var(--nature), 0 0 24px 6px var(--nature); }
-  35% { filter: brightness(1.25); transform: scale(1.18); box-shadow: 0 0 0 1px var(--nature), 0 0 14px 2px var(--nature); }
+  12% { filter: brightness(1.6) saturate(1.4); transform: scale(1.45); box-shadow: 0 0 0 2px var(--pulse), 0 0 24px 6px var(--pulse); }
+  35% { filter: brightness(1.25); transform: scale(1.18); box-shadow: 0 0 0 1px var(--pulse), 0 0 14px 2px var(--pulse); }
   100% { filter: grayscale(0.85) brightness(0.5); transform: scale(1); }
 }
 /* L'onde du tintement : un anneau qui s'élargit et s'efface vite */
@@ -1583,12 +1600,12 @@ body {
   z-index: 10;
   pointer-events: none;
   border-radius: 10px;
-  border: 2px solid var(--nature);
+  border: 2px solid var(--pulse);
   animation: skill-die-pulse calc(480ms / var(--speed)) ease-out both;
 }
 @keyframes skill-die-pulse {
-  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 16px 4px var(--nature); }
-  100% { opacity: 0; transform: scale(2.1); box-shadow: 0 0 4px 0 var(--nature); }
+  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 16px 4px var(--pulse); }
+  100% { opacity: 0; transform: scale(2.1); box-shadow: 0 0 4px 0 var(--pulse); }
 }
 
 /* ---------- Passage de main (combat) ----------

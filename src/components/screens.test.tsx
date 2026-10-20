@@ -244,6 +244,18 @@ describe('écrans', () => {
         expect(skillIcon(e) === 'event', `${e.name} (${e.id}) : icône du sceau`).toBe(pending.includes(e.id))
   })
 
+  it("la Peur fait trembler le conteneur, pas l'image (centrée par sa propriété translate)", () => {
+    const html = renderToString(<Fighter character={createCharacter('naraxes')} side={0} statuses={[{ id: 'fear', stacks: 1 }]} />)
+    expect(html).toContain('status-tremble')
+    expect(html.match(/<img[^>]*status-tremble/), 'tremblement sur l’image').toBeNull()
+  })
+
+  it('une toile avec du vide sous les pieds est redescendue (voleuse)', () => {
+    const naraxes = createCharacter('naraxes')
+    expect(naraxes.look.footroom).toBeGreaterThan(0)
+    expect(renderToString(<Fighter character={naraxes} side={0} />)).toMatch(/bottom:-\d/)
+  })
+
   it('compendium, fiches et statistiques', () => {
     for (const section of COMPENDIUM_SECTIONS)
       render(<CompendiumScreen section={section.id} characterId="gorak" onNavigate={noop} onBack={noop} />)

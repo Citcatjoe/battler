@@ -352,6 +352,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         lead?: number
         /** Badge de coup spécial posé à l'apparition */
         special?: { label: string; tone: SpecialTone }
+        /** Temps de lecture après l'effet (1 300 ms) ; plus court quand des frappes instantanées suivent */
+        hold?: number
       } = {},
     ) => {
       const hits =
@@ -368,7 +370,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         await wait(500)
       } else {
         apply()
-        await wait(1300)
+        await wait(opts.hold ?? 1300)
       }
       setFx(null)
     }
@@ -377,7 +379,11 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
      * Rafale : tous les dés roulent ensemble, le second jaillit en tournoyant (Furie des vents), ou
      * apparaît dans sa couleur s'il est d'une autre sorte (le d6 de Coup de chance).
      */
-    async function rollVolley(attacks: Attack[], color?: string, status?: StatusId, relaunch = 1) {
+    /**
+     * `flat` : rafale instantanée (Furie des vents), déclenchée par le dé qui vient de tomber. Pas de nouveau lancer :
+     * les dés des coups apparaissent d'un coup, à plat, et le badge posé au résultat du dé reste en place.
+     */
+    async function rollVolley(attacks: Attack[], color?: string, status?: StatusId, relaunch = 1, flat = false) {
       const { attacker, faces } = attacks[0]
       const shown = {
         ...IDLE_DICE,
@@ -390,6 +396,11 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       }
       // La rafale est un coup spécial dès son départ : le badge du statut qui l'arme (Furie des vents…)
       const tone = status && statusSpecialTone(status)
+      if (flat) {
+        setDice((d) => ({ ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced), specials: d.specials }))
+        await wait(250)
+        return
+      }
       const label = status && (relaunch > 1 ? `${STATUSES[status].name} ×${relaunch}` : STATUSES[status].name)
       const specials = label && tone ? [{ key: specialId++, label, tone }] : undefined
       setDice({ ...shown, values: attacks.map(() => 0), rolling: true, specials })
@@ -414,6 +425,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       afterStatuses: Pair<Status[]>,
       skillFace?: number,
       grouped = false,
+      instant?: { label: string; tone: SpecialTone },
     ) {
       setDice((d) => ({ ...d, active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier }))
       reshapedSpecial(attack)
@@ -421,6 +433,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       if (attack.forfeited) {
         // Le dé de la rafale ressort, son dé de l'en-tête s'allume, et sa compétence suit sans attente
         pulseSkill(attack.attacker, skillFace)
+        if (instant) addSpecial(instant.label, instant.tone)
         showHp(after)
         setStatuses(afterStatuses)
         push(attackLog(t, attack, fighters, after[other(attack.attacker)]))
@@ -494,13 +507,11 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
         forced,
         specials: heads && tone ? [{ key: specialId++, label: STATUSES[status].name, tone }] : undefined,
       })
-      // Pile : un « ding » juste après le résultat, pour que la réussite s'entende (SONS.md § 4.1)
-      if (heads) {
-        await wait(140)
-        sfx.coinWin()
-        await wait(210)
-      } else await wait(350)
+      // Le résultat tombe d'un bloc : la pièce, son libellé, le « ding » de la réussite (SONS.md § 4.1), le badge
+      // et le texte flottant. Puis un temps pour le lire, et seulement alors la frappe.
+      if (heads) sfx.coinWin()
       setFx({ key: fxId++, source: side, title: heads ? 'Pile !' : 'Face…', effects: [] })
+      await wait(650)
       // Pile : la voleuse fond sur sa cible, un seul coup lourd
       if (heads)
         await playBlows(side, effects, true, () => sfx.crit())
@@ -526,6 +537,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       afterStatuses: Pair<Status[]>,
       skillFace?: number,
       grouped = false,
+      instant?: { label: string; tone: SpecialTone },
     ) {
       const { attacker, faces } = attack
       const label = `${fighters[attacker].name} attaque`
@@ -536,7 +548,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       await wait(800)
       sfx.diceLand()
       pulseSkill(attacker, skillFace)
-      setDice({ ...shown, values: [attack.roll], forced: attack.forced })
+      // Une compétence qui agit tout de suite (Furie des vents instantanée) pose son badge au résultat du dé
+      setDice({ ...shown, values: [attack.roll], forced: attack.forced, specials: instant && [{ key: specialId++, ...instant }] })
       // Coup transformé (Charge, Coup de griffe) : son nom jaillit avec le dé qui tombe, avant l'élan
       if (attack.reshaped) {
         const move = reshapedSpecial(attack)
@@ -646,6 +659,26 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
       // L'étape précédente a été un jet qui déclenche une compétence : celle-ci tombe avec lui, sans attente
       let snap = false
 
+      /**
+       * Badge d'une compétence qui agit tout de suite, posé au résultat du dé qui la déclenche : l'étape `i` est le
+       * coup sacrifié, la suivante la compétence ; elle pose un statut à frappes instantanées (Furie des vents).
+       * Une relance dans la même action monte le compte (« Furie des vents ×2 »).
+       */
+      const instantBadgeAt = (i: number): { label: string; tone: SpecialTone } | undefined => {
+        const next = current.beats[i + 1]
+        if (next?.type !== 'event') return undefined
+        for (const e of next.event.effects) {
+          if (e.type !== 'applyStatus' || !STATUSES[e.status].instantStrikes) continue
+          const tone = statusSpecialTone(e.status)
+          if (!tone) continue
+          const turn = current.beats[i].turn
+          const before = current.beats.slice(0, i).filter((b) => b.type === 'flurry' && b.turn === turn && b.side === next.event.side).length
+          const name = STATUSES[e.status].name
+          return { label: before > 0 ? `${name} ×${before + 1}` : name, tone }
+        }
+        return undefined
+      }
+
       // Le tour t appartient à celui qui a commencé s'il est impair, à l'autre s'il est pair (les tours alternent)
       const ownerOf = (t: number): Side => (t % 2 === 1 ? first : other(first))
       setActive(first)
@@ -673,7 +706,16 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               const index = volley.next++
               const face = skillFaceAt(current.beats, fighters, i)
               const grouped = beat.attack.forfeited === true && face !== undefined && current.beats[i + 1]?.type === 'event'
-              await playVolleyStrike(beat.turn, volley.pointed ? index : undefined, beat.attack, beat.state.hp, display(beat.state.statuses), face, grouped)
+              await playVolleyStrike(
+                beat.turn,
+                volley.pointed ? index : undefined,
+                beat.attack,
+                beat.state.hp,
+                display(beat.state.statuses),
+                face,
+                grouped,
+                grouped ? instantBadgeAt(i) : undefined,
+              )
               const last = volley.next === volley.strikes.length
               if (last) volley = null
               if (grouped) snap = true
@@ -684,7 +726,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               const face = skillFaceAt(current.beats, fighters, i)
               const next = current.beats[i + 1]
               const grouped = beat.attack.forfeited === true && face !== undefined && next?.type === 'event'
-              await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses), face, grouped)
+              await playAttack(beat.turn, beat.attack, beat.state.hp, display(beat.state.statuses), face, grouped, grouped ? instantBadgeAt(i) : undefined)
               if (grouped) snap = true
               else await wait(450)
             }
@@ -710,6 +752,8 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
               {
                 blows: 'lunge',
                 lead: snapped ? 0 : undefined,
+                // Furie instantanée : ses frappes suivent vite (le badge et le nom sont déjà tombés avec le dé)
+                hold: current.beats[i + 1]?.type === 'flurry' ? 500 : undefined,
                 special: (() => {
                   const def = fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
                   const tone = def && eventSpecialTone(def)
@@ -789,7 +833,6 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
             if (chained) {
               show(beat.state.statuses)
               push(flurryLog(beat.turn, beat.side, beat.status, beat.strikes, fighters))
-              await wait(300)
             } else
               await showEffects(beat.side, STATUSES[beat.status].name, [], () => {
                 show(beat.state.statuses)
@@ -809,6 +852,7 @@ export function useCombat(script: CombatResult, onEnd: (result: CombatResult) =>
                 STATUSES[beat.status].look?.dieColor,
                 beat.status,
                 relaunch,
+                chained,
               )
             }
             break

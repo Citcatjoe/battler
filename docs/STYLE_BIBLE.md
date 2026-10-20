@@ -18,7 +18,7 @@ L'utilisateur génère les images dans ChatGPT à partir des prompts de ce docum
 
 Les scripts demandent numpy, pillow et scipy dans un environnement virtuel (à créer dans le scratchpad de la session). À la fin d'un travail : compléter l'inventaire ou l'historique concerné, et ajouter une ligne « Non publié » au `CHANGELOG.md` (la version est montée par l'agent du gameplay).
 
-**En suspens au 2026-10-19 :** icônes Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3)  ; `dwarf.png` à remplacer par une création originale (l'orc l'a été le 2026-10-19, avec ses postures).
+**En suspens au 2026-10-20 :** icônes **à refaire ou à créer** : **Fleur de vie** (le druide pose une Régénération, qui s'affiche avec le cœur vert générique `regen` : il lui faut sa propre icône, demande de l'utilisateur), **Rage du sang** (Gorak, soin immédiat, sans icône : son sceau montre l'étoile générique ; piste : deux défenses d'orc croisées, ruisselantes de sang, lueur rouge orangé) ; Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3)  ; `dwarf.png` à remplacer par une création originale (l'orc l'a été le 2026-10-19, avec ses postures).
 
 ---
 
@@ -817,7 +817,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 46 | `crescendo` | Crescendo (barde, double 4 : un coup de 12 depuis la 0.41.0, plus trois coups) | Trois notes-lames en escalier, traînée magenta ; le motif évoque encore trois coups, à refaire si besoin |
 | 47 | `soloist` | Soliste (barde, double 5 : un coup de 15) | Une grosse note forgée en lame, éclat magenta |
 
-**Icônes manquantes, à demander :** Pourriture (le malus subi par la cible, distinct de l'aura), Brûlure, Vulnérable, Étourdi et Garde (statuts « à venir »). En attendant, la zone d'état affiche l'initiale du statut.
+**À refaire (2026-10-20) :** Fleur de vie (le cœur vert de la Régénération ne dit pas la compétence du druide) et Rage du sang (aucune icône, étoile générique). **Icônes manquantes, à demander :** Pourriture (le malus subi par la cible, distinct de l'aura), Brûlure, Vulnérable, Étourdi et Garde (statuts « à venir »). En attendant, la zone d'état affiche l'initiale du statut.
 
 ### Règles de design des icônes
 

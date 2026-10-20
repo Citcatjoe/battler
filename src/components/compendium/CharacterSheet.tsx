@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Character } from '../../game/character'
+import { footDrop, type Character } from '../../game/character'
 import { emptyRecord, ratios, useHistory } from '../../game/history'
 import { CHARACTERS } from '../../game/roster'
 import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WIN_TEXT, WinBar } from '../RecordBits'
@@ -210,6 +210,7 @@ function BackdropFigure({ character }: { character: Character }) {
         className="absolute bottom-0 left-1/2 w-auto max-w-none -translate-x-1/2 select-none object-contain object-bottom"
         style={{
           height: `${look.scale * 100}%`,
+          bottom: look.footroom ? `${-footDrop(look) * 100}%` : undefined,
           transform: flip ? 'scaleX(-1)' : undefined,
           filter: `${look.tint ?? ''} brightness(0.62) saturate(0.85) contrast(1.05)`,
           // Fondu : le bas se perd dans le sol, les côtés dans le décor

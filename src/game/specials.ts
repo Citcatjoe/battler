@@ -26,7 +26,8 @@ export const TONE_STYLE: Record<SpecialTone, { name: string; bg: string; fg: str
   tempo: { name: 'Tempo', bg: '#7dd3fc', fg: '#0c1a2a', edge: '#075985' },
   fortune: { name: 'Fortune', bg: '#c084fc', fg: '#1e0b2e', edge: '#6b21a8' },
   retaliation: { name: 'Représailles', bg: '#e11d48', fg: '#fff1f2', edge: '#881337' },
-  heal: { name: 'Soin', bg: '#fb7185', fg: '#2a0a10', edge: '#9f1239' },
+  // Vol de vie : violet profond, la cape du mort-vivant (le rouge-rose se confondait avec les dégâts, retour de l'utilisateur)
+  heal: { name: 'Drain', bg: '#7c3aed', fg: '#f5f3ff', edge: '#3b0764' },
   power: { name: 'Puissance', bg: '#fb923c', fg: '#1c0f05', edge: '#9a3412' },
   bard: { name: 'Barde', bg: '#ec4899', fg: '#fdf2f8', edge: '#831843' },
 }

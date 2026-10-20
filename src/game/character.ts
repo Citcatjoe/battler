@@ -49,6 +49,12 @@ export interface CharacterLook {
    * l'ancrage `inside` (écran d'affrontement, champion) se cale alors sur la silhouette, pas sur la toile.
    */
   bodyInset?: { left: number; right: number }
+  /**
+   * Part vide de l'image sous les pieds de la garde (0 par défaut) : une posture qui descend plus bas que les
+   * pieds (la queue de la voleuse) laisse du vide sous la garde, qui paraît alors flotter. L'image est
+   * redescendue d'autant, partout où elle s'affiche.
+   */
+  footroom?: number
   /** Cadrage du portrait : position du visage en % de l'image, et zoom */
   portrait: { x: number; y: number; zoom: number }
   /**
@@ -60,7 +66,11 @@ export interface CharacterLook {
 }
 
 /** Hauteur du personnage (des pieds au sommet de la tête), en part du conteneur d'un combattant. */
-export const figureHeight = (look: Pick<CharacterLook, 'scale' | 'headroom'>) => look.scale * (1 - (look.headroom ?? 0))
+export const figureHeight = (look: Pick<CharacterLook, 'scale' | 'headroom' | 'footroom'>) =>
+  look.scale * (1 - (look.headroom ?? 0) - (look.footroom ?? 0))
+
+/** Décalage vers le bas d'une image dont la toile a du vide sous les pieds (`footroom`), en part du conteneur. */
+export const footDrop = (look: Pick<CharacterLook, 'scale' | 'footroom'>) => look.scale * (look.footroom ?? 0)
 
 /** Fiche courte affichée en jeu. La philosophie et les choix de design sont dans docs/PERSONNAGES.md. */
 export interface CharacterLore {

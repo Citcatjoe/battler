@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { figureHeight, type Character } from '../game/character'
+import { figureHeight, footDrop, type Character } from '../game/character'
 import type { AppliedEffect, Side } from '../game/combat'
 import { atCap, effectBadge, TONE_CLASS } from '../game/narration'
 import { isAura, STATUSES, type Status } from '../game/statuses'
@@ -163,10 +163,12 @@ export function Fighter({
   useEffect(() => {
     for (const src of allImages.split('|')) if (src) new Image().src = src
   }, [allImages])
+  // Textes flottants devant le combattant, du côté de l'adversaire (essai demandé par l'utilisateur : l'œil
+  // reste près du centre, où tombent les dés, au lieu d'aller chercher le texte derrière le personnage)
   const column = {
-    [side === 0 ? 'right' : 'left']: '78%',
+    [side === 0 ? 'left' : 'right']: '78%',
     '--float-x': '0',
-    '--float-origin': side === 0 ? 'right' : 'left',
+    '--float-origin': side === 0 ? 'left' : 'right',
   } as CSSProperties
   // Contour lumineux de l'aura (couleur --aura, posée sur le combattant) en plus de l'ombre portée
   const filter = [
@@ -197,6 +199,9 @@ export function Fighter({
           </div>
         )}
         <div className={`relative h-full ${reaction}`}>
+          {/* La Peur fait trembler ce conteneur, pas l'image : l'image est centrée sur ses pieds par sa propriété
+              `translate`, qu'une animation sur elle écrasait (le combattant sautait d'une demi-largeur) */}
+          <div className={`relative h-full ${looks.tremble ? 'status-tremble' : ''}`}>
           <div className={`relative h-full ${state === 'ko' ? koClass : state === 'victory' ? 'victory' : ''}`}>
             {/* Une silhouette par forme (une seule sans formes) : fondu de l'ancienne vers la nouvelle */}
             {(character.forms ?? [null]).map((_, f) => {
@@ -216,11 +221,11 @@ export function Fighter({
                     anchor === 'inside'
                         ? `w-auto max-w-none ${side === 0 ? 'left-0' : 'right-0'}`
                         : 'left-1/2 w-auto max-w-none -translate-x-1/2'
-                  } ${
-                    looks.tremble && shown ? 'status-tremble' : ''
                   } ${morph.key > 0 ? (shown ? 'form-in' : 'form-out') : ''}`}
                   style={{
                     height: `${fLook.scale * 100}%`,
+                    // Toile avec du vide sous les pieds (voleuse) : redescendue pour toucher le sol
+                    bottom: fLook.footroom ? `${-footDrop(fLook) * 100}%` : undefined,
                     transform: [insetShift(fLook, flipOf(f)), flipOf(f) ? 'scaleX(-1)' : ''].filter(Boolean).join(' ') || undefined,
                     filter,
                     // Translucide tant qu'il porte une esquive imposée (Esquive améliorée)
@@ -229,6 +234,7 @@ export function Fighter({
                 />
               )
             })}
+          </div>
           </div>
         </div>
         {/* Lucioles (Luciole) : elles tournent autour du porteur et le trahissent */}
@@ -277,7 +283,7 @@ export function Fighter({
         </div>
       )}
 
-      <div className={`pointer-events-none absolute inset-y-0 z-30 w-[250px] ${side === 0 ? 'text-right' : 'text-left'}`} style={column}>
+      <div className={`pointer-events-none absolute inset-y-0 z-30 w-[250px] ${side === 0 ? 'text-left' : 'text-right'}`} style={column}>
         {shownFx && (isSource || badges.length > 0) && (
           <div key={`fx-${shownFx.key}`} className="absolute inset-0">
             {isSource && shownFx.title && (

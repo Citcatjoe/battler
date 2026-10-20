@@ -126,6 +126,19 @@ function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boo
         >
           {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
           {counter.value}
+          {/* Le compteur décroît (charge usée, tour décompté) : un cerclage se vide de la part perdue
+              (de 3 à 2, un tiers), pendant le rebond, puis s'efface */}
+          {change.delta !== null && change.delta < 0 && counter.value - change.delta > 0 && (
+            <svg aria-hidden viewBox="0 0 36 36" className="count-drain pointer-events-none absolute -inset-1.5 -rotate-90">
+              <circle
+                cx="18"
+                cy="18"
+                r="16"
+                pathLength="100"
+                style={{ '--kept': `${(100 * counter.value) / (counter.value - change.delta)}` } as CSSProperties}
+              />
+            </svg>
+          )}
         </span>
       )}
       {change.delta !== null && (

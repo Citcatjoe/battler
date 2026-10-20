@@ -323,6 +323,9 @@ const naraxes: CharacterDef = {
     facing: 'right',
     scale: 1.1,
     headroom: 0.14,
+    // 6 % de vide sous ses pieds (sa queue au K.O. descend plus bas) : elle paraissait flotter. Redescendue
+    // de 4 %, comme l'orc et la barde (2 à 3 %) ; demande de l'utilisateur
+    footroom: 0.04,
     portrait: { x: 62, y: 16, zoom: 3.2 },
   },
   lore: {
