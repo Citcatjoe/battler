@@ -2,7 +2,7 @@ import type { KeyboardEvent } from 'react'
 import gateImg from '../assets/menu-duel.jpg'
 import { createCharacter } from '../game/roster'
 import { HEDGE_PLANES, HOME_HEDGE, type HedgeSlot } from './homeHedge'
-import { Icon, type IconName } from './Icon'
+import { Glyph, IconButton, ModePair, ModePairItem, type GlyphName } from './kit'
 import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
 
 export type HomeChoice = 'test' | 'duel' | 'tournament'
@@ -15,10 +15,10 @@ interface Props {
   tournamentProgress: string | null
 }
 
-/** Les deux modes principaux, côte à côte dans la même pièce prestige, dans l'ordre affiché */
-const MODES: { id: HomeChoice; label: string; icon: IconName }[] = [
-  { id: 'duel', label: 'Duel', icon: 'swords' },
-  { id: 'tournament', label: 'Tournoi', icon: 'trophy' },
+/** Les deux modes principaux, côte à côte dans la paire de modes du UI kit, dans l'ordre affiché */
+const MODES: { id: HomeChoice; label: string; icon: GlyphName }[] = [
+  { id: 'duel', label: 'Duel', icon: 'combattre' },
+  { id: 'tournament', label: 'Tournoi', icon: 'tournoi' },
 ]
 
 /**
@@ -59,28 +59,22 @@ export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tourname
       {/* Voile sombre localisé sous le logo et les boutons : la lumière de la porte reste au-dessus */}
       <div className="home-veil pointer-events-none absolute bottom-0 left-1/2 h-[560px] w-[1000px] -translate-x-1/2" />
 
-      <button onClick={onOpenRecords} title="Statistiques" aria-label="Statistiques" className="btn btn-round absolute left-4 top-4">
-        <Icon name="stats" className="btn-icon" />
-      </button>
+      <IconButton onClick={onOpenRecords} icon="statistiques" label="Statistiques" className="absolute left-4 top-4" />
       {/* Accès provisoire au compendium : son intégration définitive reste à définir */}
-      <button onClick={onOpenCompendium} title="Compendium" aria-label="Compendium" className="btn btn-round absolute left-20 top-4">
-        <Icon name="scroll" className="btn-icon" />
-      </button>
+      <IconButton onClick={onOpenCompendium} icon="compendium" label="Compendium" className="absolute left-20 top-4" />
 
       <nav aria-label="Modes de jeu" onKeyDown={onKey} className="absolute inset-x-0 bottom-[60px] z-10 flex flex-col items-center">
         <h1 className="home-logo font-display text-[96px] font-bold leading-none tracking-[0.08em]">BATTLER</h1>
 
-        {/* Une seule pièce prestige : un cadre octogonal, deux plaques d'or identiques, deux choix de même rang */}
-        <div className="mode-rail mt-8">
-          {MODES.map((m) => (
-            <button key={m.id} type="button" data-mode onClick={() => onChoose(m.id)} className="mode-plate">
-              <span className="mode-engrave" aria-hidden />
-              <span className="mode-label">
-                <Icon name={m.icon} className="btn-icon" />
-                <span>{m.label}</span>
-              </span>
-            </button>
-          ))}
+        {/* Paire de modes du UI kit : deux choix de même rang dans un même cadre */}
+        <div className="mt-8">
+          <ModePair label="Modes de jeu">
+            {MODES.map((m) => (
+              <ModePairItem key={m.id} icon={m.icon} data-mode onClick={() => onChoose(m.id)}>
+                {m.label}
+              </ModePairItem>
+            ))}
+          </ModePair>
         </div>
         <div className="mode-hints mt-3">
           <span className="home-hint">Deux combattants, un vainqueur</span>
@@ -93,7 +87,7 @@ export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tourname
         title="Choisir chaque dé pour tester les compétences"
         className="home-link absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
       >
-        <Icon name="dice" className="h-5 w-5" />
+        <Glyph name="hasard" size={16} />
         <span>
           Combat test <span className="text-ink-3">· choisir chaque dé</span>
         </span>
