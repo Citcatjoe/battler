@@ -5,11 +5,10 @@ import { of } from '../game/narration'
 import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
 import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
-import { Icon } from './Icon'
+import { BackLink, Button, Glyph } from './kit'
 import { Tabs, type TabDef } from './Tabs'
 import { CopyTraceButton } from './CopyTraceButton'
 import { BetsResult, type BetsOutcome } from './Betting'
-import { PrestigeButton } from './PrestigeButton'
 import { RelicCard, RelicRow } from './RelicSeal'
 
 /** Récompense d'un match de tournoi : l'offre, le choix du vainqueur, et de quoi le changer. */
@@ -48,10 +47,10 @@ interface Row {
 export type EndTab = 'summary' | 'defense' | 'events' | 'dice'
 
 const TABS: TabDef<EndTab>[] = [
-  { id: 'summary', label: 'Bilan', icon: 'swords' },
-  { id: 'defense', label: 'Critiques et défense', icon: 'shield' },
-  { id: 'events', label: 'Compétences', icon: 'event' },
-  { id: 'dice', label: 'Dés', icon: 'dice' },
+  { id: 'summary', label: 'Bilan' },
+  { id: 'defense', label: 'Critiques et défense' },
+  { id: 'events', label: 'Compétences' },
+  { id: 'dice', label: 'Dés' },
 ]
 
 interface Section {
@@ -161,8 +160,8 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
           <h2 className="font-display text-4xl font-extrabold tracking-[0.25em] text-amber-200">COMBAT</h2>
           <div className="codex-divider flex-1" />
           {result.mode === 'simulated' && (
-            <p className="rounded-md border border-amber-500/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-200">
-              <Icon name="lightning" /> Simulé
+            <p className="flex items-center gap-1.5 rounded-md border border-amber-500/60 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-200">
+              <Glyph name="simuler" size={14} /> Simulé
             </p>
           )}
         </div>
@@ -215,25 +214,28 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
         <div className="relative mt-6 flex items-center gap-4">
           {tournament ? (
             // Une récompense à choisir : le bouton principal ouvre l'écran des reliques, qui mène à l'arbre
-            <PrestigeButton onClick={reward ? () => setRewardOpen(true) : tournament.onContinue} title={tournament.label} className="flex-1">
-              <Icon name="trophy" className="btn-icon" />
-              <span>{reward ? 'Récompense' : 'Continuer'}</span>
-            </PrestigeButton>
+            <Button
+              variant="primary"
+              size="xl"
+              icon="tournoi"
+              onClick={reward ? () => setRewardOpen(true) : tournament.onContinue}
+              title={tournament.label}
+              className="flex-1"
+            >
+              {reward ? 'Récompense' : 'Continuer'}
+            </Button>
           ) : (
             <>
-              <PrestigeButton onClick={onReplay} className="flex-1">
-                <span>Revanche</span>
-              </PrestigeButton>
-              <button onClick={onMenu} className="btn btn-md w-40">
-                <span>Menu</span>
-              </button>
+              <Button variant="primary" size="xl" icon="combattre" onClick={onReplay} className="flex-1">
+                Revanche
+              </Button>
+              <BackLink onClick={onMenu}>Menu</BackLink>
             </>
           )}
           {bets && (
-            <button onClick={() => setDetails(true)} className="btn btn-md w-56">
-              <Icon name="stats" className="btn-icon" />
-              <span>Détails</span>
-            </button>
+            <Button variant="secondary" size="md" icon="statistiques" onClick={() => setDetails(true)}>
+              Détails
+            </Button>
           )}
         </div>
         {tournament && <p className="relative mt-2 text-center text-sm text-stone-400">{tournament.label}</p>}
@@ -253,9 +255,9 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
           <div className="w-full max-w-5xl">
             <StatsTable result={result} stats={stats} initialTab={initialTab} />
           </div>
-          <PrestigeButton onClick={() => setDetails(false)} size="md" className="w-64">
-            <span>Fermer</span>
-          </PrestigeButton>
+          <Button variant="secondary" size="md" icon="fermer" onClick={() => setDetails(false)}>
+            Fermer
+          </Button>
         </div>
       )}
 
@@ -321,13 +323,10 @@ function RewardMenu({
         </div>
       )}
       <div className="flex items-center gap-4">
-        <button onClick={onBack} className="btn btn-md w-56">
-          <span>← Combat</span>
-        </button>
-        <PrestigeButton onClick={() => onContinue(picked)} className="w-96">
-          <Icon name="trophy" className="btn-icon" />
-          <span>{own ? 'Continuer' : 'Imposer ce choix'}</span>
-        </PrestigeButton>
+        <BackLink onClick={onBack}>Combat</BackLink>
+        <Button variant="primary" size="xl" icon="tournoi" onClick={() => onContinue(picked)} className="w-96">
+          {own ? 'Continuer' : 'Imposer ce choix'}
+        </Button>
       </div>
     </div>
   )
