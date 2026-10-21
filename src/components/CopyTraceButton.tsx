@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import type { CombatResult } from '../game/combat'
 import { traceText } from '../game/trace'
+import { IconButton } from './kit'
 
 /**
  * Copie la trace de résolution complète du combat (texte brut, voir trace.ts) : outil de
  * vérification et de débogage, à coller dans un rapport. La même trace est dans la console.
+ * Bouton icône du UI kit (glyphe « copier ») ; le résultat de la copie s'écrit à sa gauche.
  */
-export function CopyTraceButton({ result, className = '' }: { result: CombatResult; className?: string }) {
+export function CopyTraceButton({ result }: { result: CombatResult }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const copy = async () => {
     try {
@@ -18,12 +20,18 @@ export function CopyTraceButton({ result, className = '' }: { result: CombatResu
     setTimeout(() => setState('idle'), 1800)
   }
   return (
-    <button
-      onClick={copy}
-      title="Copier la trace de résolution complète (aussi dans la console du navigateur : battler.trace())"
-      className={`rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:bg-stone-800/60 hover:text-stone-200 ${className}`}
-    >
-      {state === 'copied' ? '✓ Trace copiée' : state === 'failed' ? 'Copie impossible' : '⧉ Copier la trace'}
-    </button>
+    <span className="flex items-center gap-2">
+      {state !== 'idle' && (
+        <span role="status" className="font-body text-[13px] text-ink-3">
+          {state === 'copied' ? 'Trace copiée' : 'Copie impossible'}
+        </span>
+      )}
+      <IconButton
+        onClick={copy}
+        icon="copier"
+        size="sm"
+        label="Copier la trace de résolution complète (aussi dans la console du navigateur : battler.trace())"
+      />
+    </span>
   )
 }

@@ -1,0 +1,18 @@
+/* Mise en page de la page de développement ?kit (KitReference.tsx) : celle de docs/ui-kit/reference.html,
+   bloc <style> recopié sous .kit-ref, plus les valeurs par défaut du navigateur que le preflight de Tailwind
+   remplace (interligne, graisse du titre). Les contrôles, eux, ne prennent que le UI kit. */
+.kit-ref{min-height:100vh;background:#0E0B09;color:#F3EADB;font-family:var(--font-body);line-height:normal}
+.kit-ref main{width:1440px;box-sizing:border-box;padding:56px 64px 72px;display:flex;flex-direction:column;gap:44px}
+.kit-ref h1{margin:0;font-family:var(--font-display);font-size:40px;font-weight:700;color:var(--gold-300)}
+.kit-ref h2{margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--line-1);font-family:var(--font-display);font-size:20px;font-weight:600;letter-spacing:.04em}
+.kit-ref .row{display:flex;align-items:center;flex-wrap:wrap;gap:20px}
+.kit-ref .cell{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.kit-ref .cap{font-family:var(--font-data);font-size:11px;color:var(--text-3)}
+.kit-ref .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.kit-ref .g{margin:0;display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--bg-1);border-radius:2px;box-shadow:inset 0 0 0 1px var(--line-1)}
+.kit-ref .gw{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--gold-300);background:var(--bg-2);border-radius:2px}
+.kit-ref figcaption{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--text-2)} .kit-ref figcaption b{font-family:var(--font-data);font-weight:500;color:var(--text-1)}
+.kit-ref .note{margin:0;font-size:14px;color:var(--text-3);max-width:1100px;line-height:1.5}
+.kit-ref .rule{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kit-ref .box{padding:16px 18px;background:var(--bg-1);border-radius:2px;box-shadow:inset 0 0 0 1px var(--line-1);font-size:14px;line-height:1.5;color:var(--text-2)}
+.kit-ref .box b{color:var(--text-1)}

@@ -1,0 +1,213 @@
+/* =========================================================================
+   BATTLER — UI kit (boutons, icônes de commande, contrôles)
+   Source de vérité pour les contrôles. Dépend des tokens de docs/design-system.md.
+   Ne pas réinterpréter : copier ces valeurs telles quelles.
+   ========================================================================= */
+
+:root {
+  /* rappel des tokens utilisés (déjà définis dans tokens.css, repris ici pour autonomie) */
+  --bg-0: #0E0B09; --bg-1: #16120F; --bg-2: #1F1914; --bg-3: #2A221B;
+  --text-1: #F3EADB; --text-2: #BFB2A1; --text-3: #8C8174; --text-off: #5C5249;
+  --line-1: rgba(232,200,140,.10); --line-2: rgba(232,200,140,.22);
+  --gold-200: #F6DC9A; --gold-300: #EDC46A; --gold-400: #DDA94A; --gold-500: #B9862F;
+  --gold-700: #6E4D1D; --on-gold: #24170A; --frame: #8A6424;
+  --font-display: Cinzel, 'Trajan Pro', Georgia, serif;
+  --font-body: 'Alegreya Sans', 'Gill Sans', 'Segoe UI', sans-serif;
+  --font-data: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--gold-200);
+
+  /* octogones */
+  --oct-14: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  --oct-13: polygon(13px 0, calc(100% - 13px) 0, 100% 13px, 100% calc(100% - 13px), calc(100% - 13px) 100%, 13px 100%, 0 calc(100% - 13px), 0 13px);
+  --oct-12: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  --oct-9:  polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  --oct-8:  polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+
+/* ---------- base commune à tous les boutons ---------- */
+.bt-btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  box-sizing: border-box;
+  margin: 0; border: 0; padding: 0 24px;
+  font-family: var(--font-display); font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  line-height: 1; white-space: nowrap; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .12s, color .12s, box-shadow .12s, transform .08s;
+}
+.bt-btn:focus-visible { outline: none; box-shadow: var(--focus); }
+.bt-btn:disabled, .bt-btn[aria-disabled="true"] { cursor: not-allowed; }
+.bt-btn > svg, .bt-btn__label > svg { flex: none; }
+
+/* tailles : seules hauteurs autorisées */
+.bt-btn--xl { height: 72px; min-width: 320px; padding: 0 40px; font-size: 23px; letter-spacing: .18em; gap: 12px; }
+.bt-btn--md { height: 52px; min-width: 200px; font-size: 15px; }
+.bt-btn--sm { height: 40px; padding: 0 16px; font-size: 13px; gap: 8px; }
+
+/* ---------- PRIMAIRE (prestige) : cadre + jour + plaque + gravure ----------
+   <button class="bt-btn bt-btn--primary bt-btn--xl">
+     <span class="bt-plate" aria-hidden="true"></span>
+     <span class="bt-btn__label"><svg …/>Combattre</span>
+   </button>
+   Un seul par écran (ou une paire de modes, voir .bt-modepair). */
+.bt-btn--primary {
+  --plate: var(--gold-400); --plate-shade: var(--gold-500); --frame-c: var(--frame);
+  background: transparent; color: var(--on-gold);
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));
+  isolation: isolate;
+}
+.bt-btn--primary::before { /* cadre bronze */
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background: var(--frame-c); clip-path: var(--oct-14);
+}
+.bt-btn--primary::after { /* jour sombre */
+  content: ""; position: absolute; inset: 2px; z-index: 1;
+  background: var(--bg-0); clip-path: var(--oct-13);
+}
+.bt-btn--primary .bt-plate { /* plaque or + tranche */
+  position: absolute; inset: 4px; z-index: 2;
+  background: var(--plate); clip-path: var(--oct-12);
+  box-shadow: inset 0 1px 0 rgba(255,246,220,.55), inset 0 -4px 0 var(--plate-shade);
+}
+.bt-btn--primary .bt-plate::before { /* gravure : filet 1 px qui suit les coupes */
+  content: ""; position: absolute; inset: 6px 6px 10px; background: rgba(36,23,10,.32); clip-path: var(--oct-9);
+}
+.bt-btn--primary .bt-plate::after {
+  content: ""; position: absolute; inset: 7px 7px 11px; background: var(--plate); clip-path: var(--oct-8);
+}
+.bt-btn--primary .bt-btn__label { position: relative; z-index: 3; display: inline-flex; align-items: center; gap: inherit; margin-top: -3px; }
+.bt-btn--primary:hover { --plate: var(--gold-300); --plate-shade: var(--gold-400); }
+.bt-btn--primary:active { --plate: var(--gold-500); --plate-shade: #8A6424; transform: translateY(1px); }
+.bt-btn--primary:focus-visible { box-shadow: none; --frame-c: var(--gold-200); }
+.bt-btn--primary:disabled { --plate: #3A3027; --plate-shade: #2A221B; --frame-c: var(--gold-700); color: var(--text-off); filter: none; }
+
+/* ---------- PAIRE DE MODES (écran titre : Duel | Tournoi) ----------
+   <div class="bt-modepair" role="group" aria-label="Choisir un mode">
+     <button class="bt-modepair__item"><svg …/>Duel</button>
+     <button class="bt-modepair__item"><svg …/>Tournoi</button>
+   </div> */
+.bt-modepair {
+  position: relative; display: inline-flex; gap: 4px; padding: 4px; height: 72px; box-sizing: border-box;
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,.55)); isolation: isolate;
+}
+.bt-modepair::before { content: ""; position: absolute; inset: 0; z-index: 0; background: var(--frame); clip-path: var(--oct-14); }
+.bt-modepair::after  { content: ""; position: absolute; inset: 2px; z-index: 0; background: var(--bg-0); clip-path: var(--oct-13); }
+.bt-modepair__item {
+  --plate: var(--gold-400); --plate-shade: var(--gold-500);
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  width: 294px; height: 64px; padding: 0 0 3px; border: 0; margin: 0; cursor: pointer;
+  background: var(--plate); color: var(--on-gold);
+  box-shadow: inset 0 1px 0 rgba(255,246,220,.55), inset 0 -4px 0 var(--plate-shade);
+  font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+}
+.bt-modepair__item:first-child { clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px), 0 12px); }
+.bt-modepair__item:last-child  { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+.bt-modepair__item:hover  { --plate: var(--gold-300); --plate-shade: var(--gold-400); }
+.bt-modepair__item:active { --plate: var(--gold-500); --plate-shade: #8A6424; }
+.bt-modepair__item:focus-visible { outline: 2px solid var(--gold-200); outline-offset: -6px; }
+
+/* ---------- SECONDAIRE (serti) : Au hasard, Changer, Parier, Simuler ---------- */
+.bt-btn--secondary {
+  border-radius: 2px; background: var(--bg-2); color: var(--gold-300);
+  box-shadow: inset 0 1px 0 rgba(255,240,210,.07), inset 0 0 0 1px var(--frame), inset 0 0 0 4px var(--bg-2), inset 0 0 0 5px rgba(110,77,29,.55), 0 2px 0 #0A0806;
+}
+.bt-btn--secondary:hover  { background: var(--bg-3); color: var(--gold-200);
+  box-shadow: inset 0 1px 0 rgba(255,240,210,.08), inset 0 0 0 1px var(--gold-500), inset 0 0 0 4px var(--bg-3), inset 0 0 0 5px rgba(185,134,47,.5), 0 2px 0 #0A0806; }
+.bt-btn--secondary:active { background: var(--bg-1); transform: translateY(1px);
+  box-shadow: inset 0 0 0 1px var(--gold-500), inset 0 0 0 4px var(--bg-1), inset 0 0 0 5px rgba(185,134,47,.5); }
+.bt-btn--secondary:focus-visible { box-shadow: inset 0 0 0 1px var(--frame), inset 0 0 0 4px var(--bg-2), inset 0 0 0 5px rgba(110,77,29,.55), var(--focus); }
+.bt-btn--secondary:disabled { background: var(--bg-1); color: var(--text-off); box-shadow: inset 0 0 0 1px var(--line-1); }
+
+/* ---------- TERTIAIRE : Réinitialiser, Fermer ---------- */
+.bt-btn--tertiary {
+  border-radius: 2px; background: transparent; color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  font-family: var(--font-body); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 15px;
+}
+.bt-btn--tertiary:hover  { background: var(--bg-2); box-shadow: inset 0 0 0 1px rgba(232,200,140,.32); }
+.bt-btn--tertiary:active { background: var(--bg-1); color: var(--text-2); }
+.bt-btn--tertiary:disabled { color: var(--text-off); box-shadow: inset 0 0 0 1px var(--line-1); }
+
+/* ---------- LIEN DE RETOUR (un seul style pour « ← Menu », « ← Retour à la sélection ») ---------- */
+.bt-back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--text-2); text-decoration: none;
+  background: none; border: 0; padding: 0; cursor: pointer;
+}
+.bt-back:hover { color: var(--gold-300); }
+.bt-back:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 2px; }
+
+/* ---------- BOUTON ICÔNE ROND (statistiques, compendium, son, musique, chroniques) ---------- */
+.bt-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 48px; height: 48px; padding: 0; margin: 0; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--bg-2); color: var(--gold-300);
+  box-shadow: inset 0 0 0 1px var(--frame), inset 0 0 0 3px var(--bg-2), inset 0 0 0 4px rgba(110,77,29,.6);
+  transition: background-color .12s, color .12s, box-shadow .12s;
+}
+.bt-iconbtn--sm { width: 44px; height: 44px; }
+.bt-iconbtn:hover { background: var(--bg-3); color: var(--gold-200);
+  box-shadow: inset 0 0 0 1px var(--gold-500), inset 0 0 0 3px var(--bg-3), inset 0 0 0 4px rgba(185,134,47,.55); }
+.bt-iconbtn:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--frame), inset 0 0 0 3px var(--bg-2), inset 0 0 0 4px rgba(110,77,29,.6), var(--focus); }
+/* état « coupé » (son, musique) : on change l'icône (glyphe barré), pas la couleur en rouge */
+.bt-iconbtn[aria-pressed="false"] { color: var(--text-3); }
+
+/* ---------- OUTIL (barre de combat : journal, magnétoscope) ---------- */
+.bt-tool {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 40px; padding: 0; border: 0; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--text-2);
+}
+.bt-tool:hover { background: var(--bg-3); color: var(--text-1); }
+.bt-tool[aria-pressed="true"] { background: var(--bg-3); color: var(--gold-200); box-shadow: inset 0 0 0 1px rgba(221,169,74,.55), inset 0 -2px 0 var(--gold-400); }
+.bt-tool:focus-visible { outline: none; box-shadow: var(--focus); }
+.bt-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: var(--gold-300); box-shadow: 0 0 0 2px var(--bg-1); }
+
+/* ---------- SÉLECTEUR SEGMENTÉ (vitesse ×1 ×2 ×4, filtres courts) ---------- */
+.bt-segmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: 2px; background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-1); }
+.bt-segmented > button {
+  min-width: 40px; height: 34px; padding: 0 8px; border: 0; border-radius: 2px; cursor: pointer;
+  background: transparent; color: var(--text-2); font-family: var(--font-data); font-size: 13px; font-weight: 500;
+}
+.bt-segmented > button:hover { color: var(--text-1); background: var(--bg-2); }
+.bt-segmented > button[aria-checked="true"], .bt-segmented > button[aria-selected="true"] { background: var(--bg-3); color: var(--gold-300); box-shadow: inset 0 -2px 0 var(--gold-400); }
+.bt-segmented > button:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* ---------- ONGLETS MINEURS (sections : Compendium, Statistiques) ---------- */
+.bt-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line-1); }
+.bt-tabs > [role="tab"] {
+  display: inline-flex; align-items: baseline; gap: 6px; height: 44px; padding: 0 2px; margin-bottom: -1px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent; cursor: pointer;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-2);
+}
+.bt-tabs > [role="tab"]:hover { color: var(--text-1); }
+.bt-tabs > [role="tab"][aria-selected="true"] { color: var(--gold-300); border-bottom-color: var(--gold-400); }
+.bt-tabs .bt-count { font-family: var(--font-data); font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--text-3); }
+
+/* ---------- BARRE DE LECTURE (combat) ---------- */
+.bt-playbar {
+  display: inline-flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px; box-sizing: border-box;
+  border-radius: 2px; background: rgba(22,18,15,.9); backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(232,200,140,.18), 0 10px 26px rgba(0,0,0,.55);
+}
+.bt-playbar__sep { width: 1px; height: 28px; background: rgba(232,200,140,.16); }
+.bt-playbar .bt-btn--sm { width: 148px; }
+/* en pause, le bouton devient « Reprendre » : plaque or simple (pas le cadre prestige) */
+.bt-btn--resume {
+  border-radius: 2px; background: var(--gold-400); color: var(--on-gold);
+  box-shadow: inset 0 1px 0 rgba(255,246,220,.5), inset 0 -3px 0 var(--gold-500);
+}
+.bt-btn--resume:hover { background: var(--gold-300); }
+.bt-btn--resume:focus-visible { box-shadow: inset 0 1px 0 rgba(255,246,220,.5), inset 0 -3px 0 var(--gold-500), var(--focus); }
+
+/* ---------- ICÔNES DE COMMANDE ----------
+   Toujours <svg class="bt-glyph"> monochrome, trait, currentColor.
+   Jamais d'image peinte dans un bouton de commande (les images peintes sont réservées
+   aux compétences, statuts, reliques, objets). */
+.bt-glyph { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.bt-glyph--16 { width: 16px; height: 16px; }
+.bt-glyph--18 { width: 18px; height: 18px; }
+.bt-glyph--22 { width: 22px; height: 22px; }
+.bt-glyph--24 { width: 24px; height: 24px; }
+.bt-glyph--14 { width: 14px; height: 14px; stroke-width: 2; }
