@@ -229,7 +229,7 @@ Une relique de seuil se réarmait quand les PV remontaient au-dessus : sans char
 - **Illustration** : une canine de loup enfermée dans une petite cage de fil de fer, la dent fêlée aux quatre dixièmes de sa hauteur. Sur un cordon.
 
 #### Collier de ronces
-- **Règle** : quand ses PV passent sous 50 %, une fois : 2 Épines acérées (chaque coup encaissé fait saigner l'attaquant), pour le reste du combat.
+- **Règle** : quand ses PV passent sous 50 %, une fois : 2 Épines acérées (chaque coup encaissé fait saigner l'attaquant), pour le reste du combat. Les Épines ne répondent pas au coup qui fait passer le seuil : elles répondent dès le coup suivant, même le coup suivant d'une rafale (RESOLUTION règle 9, 2026-10-21).
 - **Pourquoi** : acculé, il devient dangereux à frapper. Gros gain contre ceux qui frappent souvent (Fanchon et ses deux dés, la Furie de Gorak) ; pour Brokk, qui porte déjà les Épines, les charges s'ajoutent. Une seule fois : sans charge, un soigneur empilerait les épines à chaque passage.
 - **Illustration** : un collier de ronce séchée tressée, refermé sur un médaillon de bois fendu par le milieu.
 

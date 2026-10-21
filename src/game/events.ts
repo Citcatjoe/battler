@@ -279,9 +279,10 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     const text = lowerFirst(def.describe({ id: effect.status, stacks: effect.stacks, turns }))
     // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
     // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21). Posé par un coup
-    // qui touche, un statut qui réagit aux coups reçus réagit déjà à celui-ci (la plaie de Pourfendre coule aussitôt).
+    // qui touche, un statut qui réagit aux coups reçus ne réagit pas à celui-ci : il agit dès le coup suivant (règle 9,
+    // la plaie de Pourfendre coule au prochain coup qui touche l'adversaire).
     if (effect.target !== 'opponent') return `${touch}${text}`
-    return `${touch}sur l'adversaire${e.needsTouch && def.reactions?.hurt ? ', dès ce coup' : ''} : ${text}`
+    return `${touch}sur l'adversaire${e.needsTouch && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`
   })
   const parts = [
     e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : '',

@@ -248,13 +248,14 @@ export function describeRelic(r: Relic): RelicDescription {
   ]
     .filter(Boolean)
     .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
-  // Posée au passage d'un seuil, une réaction aux coups encaissés réagit déjà au coup qui l'a fait franchir
-  const reactsAtOnce = t?.type === 'hpBelow' && (r.effects ?? []).some((e) => e.type === 'applyStatus' && STATUSES[e.status].reactions?.hurt)
+  // Posée au passage d'un seuil, une réaction aux coups encaissés ne réagit pas au coup qui l'a fait franchir : elle
+  // répond dès le coup suivant (règle 9)
+  const reactsNext = t?.type === 'hpBelow' && (r.effects ?? []).some((e) => e.type === 'applyStatus' && STATUSES[e.status].reactions?.hurt)
   const tags = [
     ...(face ? ['que le coup touche ou non', 'pas sur les coups bruts (Furie des vents)'] : []),
     ...(r.onFace !== undefined ? ['pas sur les coups bruts (Furie des vents)'] : []),
     ...(t?.type === 'turn' ? ['après ses statuts de début de tour, avant son action'] : []),
-    ...(reactsAtOnce ? ['dès le coup qui fait passer le seuil'] : []),
+    ...(reactsNext ? ['répond dès le coup suivant, pas à celui qui fait passer le seuil'] : []),
     ...(r.when ?? []).map((c) => `si ${describeCondition(c)}`),
     ...(r.charges !== undefined ? [r.charges === 1 ? 'une fois par combat' : `${r.charges} fois par combat`] : []),
     ...(r.cooldown && t?.type !== 'turn' ? [`recharge : ${r.cooldown} de ses tours`] : []),

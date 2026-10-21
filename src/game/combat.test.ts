@@ -715,20 +715,50 @@ describe('résolution : phases, contrôle, réactions, application', () => {
     expect(finalState(dodging).statuses[0]).toContainEqual({ id: 'bleed', stacks: 3 })
   })
 
-  it('Saignement (2026-10-21, plus de plaie différée) : la plaie ouverte ou grossie par un coup coule sur ce coup, de toutes ses charges', () => {
+  it('Saignement (2026-10-21, règle 9) : la plaie ouverte par un coup ne coule pas sur ce coup, elle coule dès le coup suivant, de ses charges du début du coup', () => {
     // b pose Saignement 2 à chaque coup qui touche (fenêtre `hit`) ; la fenêtre `hurt` de a vient après
     const cut: CharacterEvent = { id: 'cut', name: 'cut', trigger: 'hit', effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }] }
     const r = run([testCharacter('a', { maxHp: 200, dodgeChance: 0 }), testCharacter('b', { maxHp: 200, damageDie: 1, critChance: 0 }, [cut])])
     const hits = r.beats.flatMap((b, i) => (b.type === 'attack' && b.attack.attacker === 1 && !b.attack.dodged ? [i] : []))
-    const flowOf = (hit: number) => r.beats.find((b) => b.cause === hit && b.type === 'statusReaction' && b.status === 'bleed')!
-    // Le premier coup ouvre la plaie (2) et la fait couler aussitôt : 2 PV, puis 1 charge
-    const first = flowOf(hits[0])
-    expect(first.type === 'statusReaction' && first.effects).toEqual([{ type: 'damage', target: 0, amount: 2 }])
-    expect(first.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 1 })
-    // Le deuxième coup la grossit (1 + 2 = 3) et la fait couler de toutes ses charges : 3 PV, puis 2
+    const flowOf = (hit: number) => r.beats.find((b) => b.cause === hit && b.type === 'statusReaction' && b.status === 'bleed')
+    const bleedAfter = (hit: number) => r.beats.filter((b) => b.cause === hit).at(-1)!.state.statuses[0].find((s) => s.id === 'bleed')?.stacks
+    // Le premier coup ouvre la plaie (2) : elle ne coule pas sur ce coup
+    expect(flowOf(hits[0])).toBeUndefined()
+    expect(bleedAfter(hits[0])).toBe(2)
+    // Le deuxième la grossit (2 + 2 = 4) et la fait couler de ses charges du début du coup : 2 PV, puis 3 charges
     const second = flowOf(hits[1])
-    expect(second.type === 'statusReaction' && second.effects).toEqual([{ type: 'damage', target: 0, amount: 3 }])
-    expect(second.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 2 })
+    expect(second?.type === 'statusReaction' && second.effects).toEqual([{ type: 'damage', target: 0, amount: 2 }])
+    expect(second!.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 3 })
+    // Le troisième : 3 au début, 5 après la pose, 3 PV, puis 4
+    const third = flowOf(hits[2])
+    expect(third?.type === 'statusReaction' && third.effects).toEqual([{ type: 'damage', target: 0, amount: 3 }])
+    expect(third!.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 4 })
+  })
+
+  it('règle 9 (2026-10-21) : un statut posé pendant un coup réagit dès le coup suivant de la même volée (Coup de chance)', () => {
+    // a prend un Coup de chance à chaque tour (un d6 de plus) ; chaque coup de a qui touche donne des Épines à b dans la
+    // fenêtre `hit`, avant la fenêtre `hurt` de b où elles répondent : sans la règle, elles répondraient à ce coup même
+    const luck: CharacterEvent = { id: 'luck', name: 'luck', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }] }
+    const spikes: CharacterEvent = { id: 'spikes', name: 'spikes', trigger: 'hit', effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1, target: 'opponent' }] }
+    let volleys = 0
+    for (let seed = 1; seed < 40; seed++) {
+      const r = run([testCharacter('a', { maxHp: 400, critChance: 0 }, [luck, spikes]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })], seed)
+      for (const flurry of ofType(r, 'flurry')) {
+        if (flurry.side !== 0) continue
+        const strikes = r.beats.filter((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack' && b.cause === flurry.id)
+        const [first, second] = strikes
+        if (!first || !second || first.attack.dodged || second.attack.dodged || second.state.hp.includes(0)) continue
+        const thornsAt = (beat: number) => stacksOf(r.beats[beat - 1].state.statuses[1], 'thorns')
+        const reaction = (hit: number) => r.beats.find((b) => b.cause === hit && b.type === 'statusReaction' && b.status === 'thorns')
+        if (thornsAt(first.id) > 0) continue
+        // Posées pendant le premier coup, les Épines ne répondent pas à ce coup, mais au deuxième, de leur charge du début
+        expect(reaction(first.id)).toBeUndefined()
+        const back = reaction(second.id)
+        expect(back?.type === 'statusReaction' && back.effects[0]).toMatchObject({ type: 'applyStatus', status: 'bleed', stacks: thornsAt(second.id) })
+        volleys++
+      }
+    }
+    expect(volleys).toBeGreaterThan(3)
   })
 
   it('application : Garde sacrée bloque un malus et perd une charge, pas un bonus', () => {
@@ -1293,20 +1323,24 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     expect(paladin.events.map((e) => e.id)).toContain('immunity-aura')
   })
 
-  it('Saignement dans le roster (2026-10-21) : la plaie coule de toutes les charges qu’elle a quand sa fenêtre s’ouvre, puis en perd une', () => {
+  it('Saignement dans le roster (règle 9) : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une', () => {
     let flows = 0
     for (const r of rosterCombats(4))
       r.beats.forEach((beat, i) => {
         if (beat.type !== 'statusReaction' || beat.status !== 'bleed') return
         const was = r.beats[i - 1].state.statuses[beat.side].find((s) => s.id === 'bleed')!
-        expect(beat.effects).toEqual([{ type: 'damage', target: beat.side, amount: was.stacks }])
+        // Le coup (ou la pièce) dont la plaie coule : son état de référence est celui d'avant son étape
+        const opener = r.beats.slice(0, i).reverse().find((b) => b.type === 'attack' || b.type === 'coin')!
+        const atStart = opener.id ? stacksOf(r.beats[opener.id - 1].state.statuses[beat.side], 'bleed') : 0
+        expect(atStart).toBeGreaterThan(0)
+        expect(beat.effects).toEqual([{ type: 'damage', target: beat.side, amount: Math.min(was.stacks, atStart) }])
         expect(beat.state.statuses[beat.side].find((s) => s.id === 'bleed')?.stacks ?? 0).toBe(was.stacks - 1)
         flows++
       })
     expect(flows).toBeGreaterThan(50)
   })
 
-  it('Pourfendre (Gorak, 0.70.0) : le 1 frappe ; s’il touche, Saignement 2, qui coule aussitôt sur ce coup (2026-10-21)', () => {
+  it('Pourfendre (Gorak, 0.70.0) : le 1 frappe ; s’il touche, Saignement 2, qui ne coule pas sur ce coup mais dès le coup suivant (règle 9)', () => {
     let cuts = 0
     let dodged = 0
     for (const r of rosterCombats(4))
@@ -1325,13 +1359,12 @@ describe('prêtresse et voleuse (0.30.0)', () => {
         }
         if (beat.state.hp[target] === 0 || next.some((b) => b.state.hp.includes(0))) return
         expect(cleave?.type === 'event' && cleave.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', status: 'bleed', stacks: 2, target })])
-        // La plaie qu'il ouvre ou grossit coule sur ce coup, de toutes ses charges (sauf si l'immunité l'a bloquée)
-        const posed = cleave?.type === 'event' ? cleave.event.effects[0] : undefined
-        const gained = posed?.type === 'applyStatus' && posed.result.kind === 'applied' ? posed.result.stacks : 0
-        const before = beat.state.statuses[target].find((s) => s.id === 'bleed')?.stacks ?? 0
+        // La plaie ne coule sur ce coup que si elle était déjà là au début du coup, et de ses charges de ce moment (l'étape
+        // du coup ne touche pas au Saignement : son état vaut celui du début du coup)
+        const before = stacksOf(beat.state.statuses[target], 'bleed')
         const flow = next.find((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.cause === i)
-        if (before + gained === 0) expect(flow).toBeUndefined()
-        else expect(flow?.type === 'statusReaction' && flow.effects[0]).toMatchObject({ amount: before + gained })
+        if (before === 0) expect(flow).toBeUndefined()
+        else expect(flow?.type === 'statusReaction' && flow.effects[0]).toMatchObject({ amount: before })
         cuts++
       })
     expect(cuts).toBeGreaterThan(20)
@@ -2022,21 +2055,53 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
     expect(seen).toBeGreaterThan(5)
   })
 
-  it('Collier de ronces : les Épines posées par le seuil réagissent au coup qui l’a fait franchir (règle générale)', () => {
-    let reacted = 0
+  it('Collier de ronces (règle 9) : les Épines posées par le seuil ne répondent pas au coup qui l’a fait franchir, mais dès le coup suivant', () => {
+    let waited = 0
+    let answered = 0
     for (let seed = 0; seed < 200; seed++) {
       const r = simulateCombat([createCharacter('gorak').withRelics([getRelic('bramble-collar')]), createCharacter('naraxes')], { seed })
       for (const relic of ofType(r, 'relic')) {
         if (relic.relic !== 'bramble-collar' || relic.cause === undefined || relic.state.hp.includes(0)) continue
         const hit = r.beats[relic.cause]
         if (hit.type !== 'attack' && hit.type !== 'coin') continue
-        const thorns = reactionTo(r, hit.id, 'thorns')
-        if (r.beats.slice(relic.id).some((b) => b.cause === hit.id && b.state.hp.includes(0)) && !thorns) continue
-        expect(thorns?.id).toBeGreaterThan(relic.id)
-        reacted++
+        if (stacksOf(r.beats[hit.id - 1].state.statuses[0], 'thorns') > 0) continue
+        expect(reactionTo(r, hit.id, 'thorns')).toBeUndefined()
+        waited++
+        // Le coup suivant qui touche Gorak (et ouvre ses fenêtres) : les Épines y répondent
+        const next = r.beats.find(
+          (b): b is Extract<Beat, { type: 'attack' }> =>
+            b.id > hit.id && b.type === 'attack' && b.attack.attacker === 1 && !b.attack.dodged && !b.attack.forfeited && !b.attack.plain,
+        )
+        if (!next || next.state.hp.includes(0) || stacksOf(r.beats[next.id - 1].state.statuses[0], 'thorns') === 0) continue
+        expect(reactionTo(r, next.id, 'thorns')).toBeDefined()
+        answered++
       }
     }
-    expect(reacted).toBeGreaterThan(5)
+    expect(waited).toBeGreaterThan(5)
+    expect(answered).toBeGreaterThan(3)
+  })
+
+  it('pile (règle 9) : un statut posé pendant la pièce ne réagit pas à la pièce ; posé pendant le coup qui la lance, il y réagit', () => {
+    // Chaque fois que a touche (coup ou pile), il donne une Épine à b dans la fenêtre `hit` et prend une pièce
+    const spikes = ev('hit', [
+      { type: 'applyStatus', status: 'thorns', stacks: 1, target: 'opponent' },
+      { type: 'applyStatus', status: 'coinFlip', stacks: 1 },
+    ])
+    let coins = 0
+    for (let seed = 1; seed < 40; seed++) {
+      const r = run([testCharacter('a', { maxHp: 400 }, [spikes]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })], seed)
+      for (const coin of ofType(r, 'coin')) {
+        if (!coin.heads || coin.side !== 0 || r.beats.some((b) => b.cause === coin.id && b.state.hp.includes(0))) continue
+        // Les Épines du début de la pièce (celles du coup qui l'a lancée) répondent, sans celle que la pièce vient d'ajouter
+        const atStart = stacksOf(r.beats[coin.id - 1].state.statuses[1], 'thorns')
+        expect(atStart).toBeGreaterThan(0)
+        const back = reactionTo(r, coin.id, 'thorns')
+        expect(back?.effects[0]).toMatchObject({ type: 'applyStatus', status: 'bleed', stacks: atStart })
+        expect(stacksOf(back!.state.statuses[1], 'thorns')).toBe(atStart + 1)
+        coins++
+      }
+    }
+    expect(coins).toBeGreaterThan(5)
   })
 
   it('Purification ne retire pas la Rétribution : un mécanisme ne se purge pas', () => {

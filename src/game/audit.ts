@@ -62,8 +62,8 @@ export function createAudit() {
     /**
      * Un coup qui touche (attaque, ou pile qui touche) : une seule règle depuis le 2026-10-21. Ce qui réagit à un coup
      * qui touche réagit dans ses fenêtres, avec ce coup pour cause : Vol de vie (une charge, les PV retirés rendus),
-     * Riposte (une charge, la part renvoyée), jauges (le coup rangé), Épines, Saignement (toutes ses charges, même
-     * celles posées par ce coup, puis une de moins).
+     * Riposte (une charge, la part renvoyée), jauges (le coup rangé), Épines, Saignement. Seul un statut déjà là au début
+     * du coup y réagit, avec au plus ses charges de ce moment (règle 9) : une plaie ouverte par ce coup attend le suivant.
      */
     const touchControls = (i: number, striker: Side, dealt: number) => {
       const target = (1 - striker) as Side
@@ -107,20 +107,22 @@ export function createAudit() {
       }
       // Épines
       if (find(s.statuses[target], 'thorns') && !reaction('thorns') && !died) flag('épines non déclenchées', r, i, '')
-      // Saignement : la plaie coule de toutes les charges qu'elle a quand sa fenêtre s'ouvre, puis en perd une
+      // Saignement : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une
       const flow = reaction('bleed')
+      const atStart = find(stateBefore(i).statuses[target], 'bleed')?.stacks ?? 0
       if (flow) {
         const was = find(before(flow).statuses[target], 'bleed')?.stacks ?? 0
         const amount = flow.effects.reduce((t, e) => t + (e.type === 'damage' && e.target === target ? e.amount : 0), 0)
-        if (amount !== was) flag('saignement : montant faux', r, i, `${amount} vs ${was}`)
+        if (amount !== Math.min(was, atStart)) flag('saignement : montant faux', r, i, `${amount} vs ${Math.min(was, atStart)}`)
         const left = find(flow.state.statuses[target], 'bleed')?.stacks ?? 0
         if (flow.state.hp[target] > 0 && left !== was - 1) flag('saignement non estompé', r, i, `${was} → ${left}`)
         else see('saignement')
-        // Plaie ouverte par ce coup (Pourfendre) : elle coule aussitôt (2026-10-21, plus de plaie différée)
-        if (!find(s.statuses[target], 'bleed')) see('saignement sur le coup qui l’ouvre')
+        if (was > atStart) see('plaie grossie pendant le coup, qui coule de ses charges du début')
       } else {
         const end = caused.length ? caused[caused.length - 1].state : s
-        if (find(end.statuses[target], 'bleed') && !died) flag('saignement non déclenché', r, i, '')
+        const left = find(end.statuses[target], 'bleed')
+        if (left && atStart && !died) flag('saignement non déclenché', r, i, '')
+        else if (left && !atStart) see('plaie ouverte pendant le coup, qui attend le suivant')
       }
     }
     r.beats.forEach((b: Beat, i) => {
@@ -194,6 +196,17 @@ export function createAudit() {
           if (target === b.event.side && effect.polarity === 'negative' && applied.removed.length) see('purge de ses malus')
           if (prev.statuses[target].some((x) => isMechanic(x.id) && STATUSES[x.id].polarity === effect.polarity)) see('purge face à un mécanisme')
         })
+      }
+      // Règle 9 (2026-10-21) : pendant un coup (attaque ou pièce, jusqu'au coup, à la rafale ou à la paire suivante),
+      // seul un statut déjà là au début du coup réagit. Les jauges ne réagissent pas : elles se remplissent.
+      if (b.type === 'statusReaction' && !STATUSES[b.status].fillsOnHurt) {
+        let k = i - 1
+        while (k >= 0 && r.beats[k].turn === b.turn && r.beats[k].phase === b.phase && !['attack', 'coin', 'flurry', 'pair'].includes(r.beats[k].type)) k--
+        const opener = k >= 0 && r.beats[k].turn === b.turn && r.beats[k].phase === b.phase ? r.beats[k] : undefined
+        if (opener && (opener.type === 'attack' || opener.type === 'coin')) {
+          if (!find(stateBefore(k).statuses[b.side], b.status)) flag('un statut posé pendant un coup réagit à ce coup', r, i, b.status)
+          else see('réaction d’un statut déjà là au début du coup')
+        }
       }
       // Un statut de durée ne perd un tour que pendant une étape statusAge
       if (b.type !== 'statusAge')

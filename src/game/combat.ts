@@ -35,7 +35,8 @@ import {
  *               → armure → boucliers
  *               → fenêtres du coup : bloodied, naturalOne, naturalTwo, naturalMax (pas pour un coup brut), puis
  *                 esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt (défenseur).
- *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction.
+ *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction. Seuls les statuts
+ *                 présents au début du coup réagissent dans ses fenêtres (`strikeBase`, règle 9).
  *     Phase 3 · Fin de tour : effets `onTurnEnd` (bonus, puis malus) → durées « fin » → fenêtre « turnEnd »
  *   Dans une fenêtre, pour chaque camp concerné : réactions de ses statuts (ordre de pose), puis
  *   événements de son personnage (ordre de définition). Les effets ainsi produits ne déclenchent
@@ -545,10 +546,25 @@ export function simulateCombat(
   }
   /**
    * Le coup en cours, pendant ses fenêtres (null hors d'un coup) : a-t-il touché, et combien de PV a-t-il retirés.
-   * Les réactions d'un coup qui touche en ont besoin (Vol de vie, Riposte, jauges). Depuis 2026-10-21, aucun cliché des
-   * statuts : un statut posé ou grossi pendant un coup réagit à ce coup si sa fenêtre vient après (RESOLUTION règle 9).
+   * Les réactions d'un coup qui touche en ont besoin (Vol de vie, Riposte, jauges).
    */
   let strike: { touched: boolean; dealt: number } | null = null
+  /**
+   * État de référence du coup en cours (null hors d'un coup) : les statuts des deux camps au début du coup, avant son
+   * dé. Règle du jeu (2026-10-21, RESOLUTION règle 9) : un statut posé ou renforcé pendant un coup ne réagit pas à ce
+   * coup, il agit dès le coup suivant (le coup suivant d'une même volée compris). Vaut pour toutes les fenêtres du
+   * coup : seuils, faces du dé, esquivé ou touché, et celles de la pièce qui tombe sur pile.
+   */
+  let strikeBase: Pair<Status[]> | null = null
+  /** Résout `run` avec `base` pour état de référence du coup. */
+  const withinStrike = <T,>(base: Pair<Status[]>, run: () => T): T => {
+    strikeBase = base
+    try {
+      return run()
+    } finally {
+      strikeBase = null
+    }
+  }
   /** Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce). */
   const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number) => {
     strike = { touched, dealt }
@@ -710,8 +726,12 @@ export function simulateCombat(
         fillGauge(side, id, strike!.dealt, cause)
         continue
       }
-      // Le statut tel qu'il est maintenant : retiré entre-temps, il ne réagit plus ; grossi, il réagit de toutes ses charges
-      const status = states[side].statuses.find((s) => s.id === id)
+      // Le statut tel qu'il est maintenant : retiré entre-temps, il ne réagit plus. Pendant un coup, seul un statut déjà
+      // là au début du coup réagit, et avec au plus ses charges de ce moment (les charges ajoutées attendent le coup suivant)
+      const now = states[side].statuses.find((s) => s.id === id)
+      const was = strikeBase?.[side].find((s) => s.id === id)
+      if (strikeBase && !was) continue
+      const status = now && was && was.stacks < now.stacks ? { ...now, stacks: was.stacks } : now
       const react = status && reactionTo(status, trigger)
       if (!react) continue
       const effects = applyEffects(side, react)
@@ -915,6 +935,8 @@ export function simulateCombat(
     const defender = other(attacker)
     const att = states[attacker]
     const def = states[defender]
+    // État de référence du coup : les statuts de ce moment, avant le dé (règle 9)
+    const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     const outcome = resolveAttack(
       rng,
       fighters[attacker],
@@ -947,19 +969,22 @@ export function simulateCombat(
     if (def.hp === 0) return defender
 
     // Fenêtres du coup : seuils, faces du dé (pas pour un coup brut), puis esquivé ou touché. Vol de vie, Riposte et
-    // jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »).
-    const down = checkThresholds(hit)
-    if (down !== undefined) return down
-    const hitTriggers: [Side, Trigger][] = plain
-      ? []
-      : ROLL_TRIGGERS.filter((t) => rollMatches(t, outcome.roll, outcome.faces)).map((t) => [attacker, t])
-    if (outcome.dodged) hitTriggers.push([attacker, 'missed'], [defender, 'dodge'])
-    else if (touched) {
-      hitTriggers.push([attacker, 'hit'])
-      if (outcome.crit) hitTriggers.push([attacker, 'crit'])
-      hitTriggers.push([defender, 'hurt'])
-    }
-    const fell = fireStrike(hitTriggers, touched, dealt, hit)
+    // jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »). Seuls les
+    // statuts déjà là au début du coup y réagissent (`strikeBase`).
+    const fell = withinStrike(base, () => {
+      const down = checkThresholds(hit)
+      if (down !== undefined) return down
+      const hitTriggers: [Side, Trigger][] = plain
+        ? []
+        : ROLL_TRIGGERS.filter((t) => rollMatches(t, outcome.roll, outcome.faces)).map((t) => [attacker, t])
+      if (outcome.dodged) hitTriggers.push([attacker, 'missed'], [defender, 'dodge'])
+      else if (touched) {
+        hitTriggers.push([attacker, 'hit'])
+        if (outcome.crit) hitTriggers.push([attacker, 'crit'])
+        hitTriggers.push([defender, 'hurt'])
+      }
+      return fireStrike(hitTriggers, touched, dealt, hit)
+    })
     if (fell !== undefined) return fell
     // Pile ou face (2026-10-21) : la pièce part aussitôt, juste après le coup pendant lequel elle a été posée
     return tossCoin(attacker, hit) ?? tossCoin(defender, hit)
@@ -975,6 +1000,8 @@ export function simulateCombat(
   function tossCoin(side: Side, after: number): Side | undefined {
     const coin = states[side].statuses.find((s) => STATUSES[s.id].coinToss)
     if (!coin) return undefined
+    // État de référence de la pièce (un coup à part entière, règle 9) : les statuts au moment où elle part
+    const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     states[side].statuses = states[side].statuses.filter((s) => s.id !== coin.id)
     const forced = nextForced()
     const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
@@ -984,9 +1011,11 @@ export function simulateCombat(
       { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
       posedBy[side][coin.id] ?? after,
     )
-    const down = fallen() ?? checkThresholds(id)
-    if (down !== undefined || !heads || !toss.headsTouches) return down
-    return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, toss.damage, id)
+    return withinStrike(base, () => {
+      const down = fallen() ?? checkThresholds(id)
+      if (down !== undefined || !heads || !toss.headsTouches) return down
+      return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, toss.damage, id)
+    })
   }
 
   /**

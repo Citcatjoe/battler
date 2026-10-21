@@ -133,7 +133,7 @@ export const RULES: Record<RuleId, Rule> = {
   'needs-touch': {
     group: 'skills',
     title: "S'il touche",
-    text: "La compétence d'un jet ne se déclenche que si le coup qu'elle accompagne touche : un coup doit toucher pour poser un malus physique. Le jet n'est pas sacrifié, c'est un vrai coup (esquive, critique, modificateurs). Ce qu'elle pose réagit déjà à ce coup : la plaie de Pourfendre coule aussitôt.",
+    text: "La compétence d'un jet ne se déclenche que si le coup qu'elle accompagne touche : un coup doit toucher pour poser un malus physique. Le jet n'est pas sacrifié, c'est un vrai coup (esquive, critique, modificateurs). Ce qu'elle pose ne réagit pas à ce coup : la plaie de Pourfendre coule dès le coup suivant qui touche l'adversaire.",
   },
   reshape: {
     group: 'skills',

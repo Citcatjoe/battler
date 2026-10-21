@@ -295,16 +295,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   /*
    * Saignement (0.68.0) : le pendant du Poison, qui compte les coups au lieu des tours. Chaque coup qui
    * touche le porteur rouvre la plaie ; plusieurs coups dans une action (Furie des vents, deux dés) la
-   * vident d'un coup, une esquive ou une action perdue la laissent ouverte. Comme toute réaction, une plaie
-   * ouverte ou grossie pendant un coup réagit à ce coup quand sa fenêtre `hurt` vient après la pose (audit du
-   * 2026-10-21 : la plaie différée de la 0.68.1, `strikeBase`, est retirée) : Pourfendre la fait couler aussitôt.
+   * vident d'un coup, une esquive ou une action perdue la laissent ouverte. Comme tout statut (règle 9 de
+   * RESOLUTION, 2026-10-21), une plaie ouverte pendant un coup ne coule pas sur ce coup, et une plaie grossie y coule
+   * de ses charges du début du coup : la plaie de Pourfendre coule dès le coup suivant qui touche le porteur.
    */
   bleed: {
     name: 'Saignement',
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'negative',
     summary:
-      "Chaque coup qui touche le porteur lui fait perdre autant de PV que de charges, en ignorant l'armure, puis perd une charge. Une seule valeur : les PV perdus au prochain coup qui le touche, qui baissent de 1 à chaque coup (2, 1). Une plaie ouverte pendant un coup qui touche le porteur coule dès ce coup. Se cumule.",
+      "Chaque coup qui touche le porteur lui fait perdre autant de PV que de charges, en ignorant l'armure, puis perd une charge. Une seule valeur : les PV perdus au prochain coup qui le touche, qui baissent de 1 à chaque coup (2, 1). Une plaie ouverte pendant un coup ne coule pas sur ce coup : elle coule dès le coup suivant qui touche le porteur. Se cumule.",
     describe: (s) =>
       s.stacks > 1
         ? `Les coups qui le touchent lui font perdre ${plural(s.stacks, 'PV')} de plus, puis 1 de moins à chaque coup (${(s.stacks * (s.stacks + 1)) / 2} PV en tout)`
@@ -878,7 +878,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     const hurts = react({ id, stacks: 1 }).some((e) => e.type === 'damage')
     say(
       effect,
-      `Réagit ${lowerFirst(TRIGGERS[trigger].label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''}, dès le coup pendant lequel il est posé si ce moment est encore à venir ; sans réaction en chaîne.`,
+      `Réagit ${lowerFirst(TRIGGERS[trigger].label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''} ; sans réaction en chaîne. Posé pendant un coup, il ne réagit pas à ce coup : il agit dès le coup suivant (renforcé pendant un coup, il y réagit avec ses charges du début du coup).`,
       hurts ? 'direct-damage' : undefined,
     )
   }

@@ -32,6 +32,17 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.84.1] — 2026-10-21
+
+### Modifié
+- **Un statut posé pendant un coup agit dès le coup suivant** (décision de l'utilisateur, qui annule la « plaie immédiate » de la 0.84.0). C'est une règle de jeu, `docs/RESOLUTION.md` règle 9. Chaque coup a un état de référence, pris à son début : un statut absent à ce moment ne réagit pas à ce coup, et un statut renforcé pendant le coup y réagit avec ses charges du début.
+  - Le Saignement de Pourfendre ne coule pas sur le coup qui l'ouvre, mais dès le coup suivant qui touche le porteur.
+  - Les Épines du Collier de ronces ne répondent pas au coup qui fait passer sous 50 %, mais au suivant.
+  - Le coup suivant peut être dans la même action (rafale de Furie des vents, deux dés de la barde, d6 de Coup de chance), et la pièce de Pile ou face compte comme un coup à part.
+  - Le reste de la 0.84.0 ne change pas : Vol de vie, Riposte et jauges de Rétribution réagissent dans les fenêtres du coup, pile comprise. Les jauges se remplissent à chaque coup qui touche : ce n'est pas une réaction.
+- Textes : Saignement, Pourfendre, Collier de ronces, règle « S'il touche » ; contrôle d'audit « un statut posé pendant un coup réagit à ce coup ». L'empreinte de non-régression change.
+- Équilibre (`npm run balance`) : Gorak 52,2 → 51,0 %, Ysolde 43,7 → 43,9 %, les autres à ±0,1 point, soit les valeurs d'avant la 0.84.0.
+
 ## [0.84.0] — 2026-10-21
 
 Audit de fidélité entre les règles affichées, les données et le moteur, après le moteur v2 (trois rapports : règles du compendium, compétences, statuts et reliques). Les règles qui n'existaient que pour l'ancien affichage sont corrigées (décisions de l'utilisateur). L'empreinte de non-régression change.

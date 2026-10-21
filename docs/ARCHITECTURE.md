@@ -192,7 +192,7 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | `expiresAt` | moment où la durée se décompte : `turnStart` (défaut) ou `turnEnd` |
 | `modifyIncoming` | modifie les dégâts reçus par le porteur avant l'armure |
 | `skipsAction` | le porteur perd son action (une charge par tour perdu) |
-| `reactions` | effets déclenchés par un `Trigger`, du point de vue du porteur (sans chaîne) ; chaque fenêtre fait réagir les statuts présents à son ouverture, y compris ceux posés par une fenêtre précédente du même coup (2026-10-21, `strikeBase` retiré) |
+| `reactions` | effets déclenchés par un `Trigger`, du point de vue du porteur (sans chaîne) ; pendant un coup, seuls les statuts présents au début du coup réagissent, avec au plus leurs charges de ce moment (`strikeBase`, RESOLUTION règle 9, 2026-10-21) ; hors d'un coup, ceux présents à l'ouverture de la fenêtre |
 | `mechanic` | `skill` ou `form` : mécanisme d'une compétence ou d'une forme (`isMechanic`) ; jamais purgé, jamais bloqué (immunité, garde, opposition), hors des comptes de bonus et malus |
 | `spentOnReaction` | le statut disparaît après avoir réagi une fois (prêt, posé par personne) |
 | `decays` | le statut perd une charge chaque fois qu'il agit : au début ou à la fin du tour (Poison), ou après une réaction (Saignement, 0.68.0), dans la même étape que son effet |
