@@ -14,7 +14,7 @@ import {
   type Tournament,
 } from '../game/tournament'
 import { Portrait } from './Portrait'
-import { Icon } from './Icon'
+import { Glyph } from './kit'
 import { RelicRow } from './RelicSeal'
 
 /*
@@ -292,18 +292,18 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
             {st === 'ready' && (
               <div className="absolute -bottom-9 left-0 right-0 flex justify-center gap-1.5">
                 <button onClick={() => onPlay?.(ref)} className="bracket-action" data-primary title="Ouvrir l'écran d'affrontement">
-                  <Icon name="swords" className="h-4 w-4" />
+                  <Glyph name="combattre" size={16} />
                   Affronter
                 </button>
                 <button onClick={() => onSimulate?.(ref)} className="bracket-action" title="Simuler ce match directement">
-                  <Icon name="lightning" className="h-4 w-4" />
+                  <Glyph name="simuler" size={16} />
                   Simuler
                 </button>
               </div>
             )}
             {result && (
               <span className="bracket-result">
-                <Icon name={result.mode === 'simulated' ? 'lightning' : 'swords'} className="h-3.5 w-3.5" />
+                <Glyph name={result.mode === 'simulated' ? 'simuler' : 'combattre'} size={14} />
                 {result.mode === 'simulated' ? 'simulé' : 'joué'} · {result.turns} tours
               </span>
             )}

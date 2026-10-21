@@ -6,7 +6,7 @@ import { Fighter } from './Fighter'
 import { Icon } from './Icon'
 import type { Wallets } from '../game/betting'
 import { Standings } from './Betting'
-import { PrestigeButton } from './PrestigeButton'
+import { BackLink, Button, Glyph } from './kit'
 
 interface Props {
   tournament: Tournament
@@ -41,10 +41,8 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
       <header className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
-          <button onClick={onMenu} className="btn-tertiary h-8 px-3 text-[13px]">
-            ← Menu
-          </button>
-          <h1 className="on-illus mt-2 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">Tournoi</h1>
+          <BackLink onClick={onMenu}>Menu</BackLink>
+          <h1 className="on-illus mt-1 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">Tournoi</h1>
           <p className="mt-1 font-body text-[15px] text-ink-2">
             {round === null ? 'Tournoi terminé' : ROUND_NAMES[round]} · {doneCount} / 15 matchs joués
           </p>
@@ -54,23 +52,21 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 pt-6">
+        <div className="flex items-center gap-4 pt-6">
           {ready.length > 0 && (
-            <button onClick={() => onSimulate(ready)} className="btn btn-sm" title="Simule tous les matchs prêts de ce tour">
-              <Icon name="lightning" className="btn-icon" />
-              <span>Simuler le tour ({ready.length})</span>
-            </button>
+            <Button variant="secondary" size="md" icon="simuler" onClick={() => onSimulate(ready)} title="Simule tous les matchs prêts de ce tour">
+              Simuler le tour ({ready.length})
+            </Button>
           )}
           {winner && (
-            <button onClick={onChampion} className="btn btn-md">
-              <Icon name="trophy" className="btn-icon" />
-              <span>Le champion</span>
-            </button>
+            <Button variant="secondary" size="md" icon="tournoi" onClick={onChampion}>
+              Le champion
+            </Button>
           )}
           {winner && (
-            <PrestigeButton size="md" className="w-[280px]" onClick={onNewTournament}>
-              <span>Nouveau tournoi</span>
-            </PrestigeButton>
+            <Button variant="primary" size="xl" icon="tournoi" onClick={onNewTournament}>
+              Nouveau tournoi
+            </Button>
           )}
         </div>
       </header>
@@ -86,7 +82,7 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
                 <Fighter character={createCharacter(winner.characterId)} side={0} state="victory" />
               </div>
               <p className="flex items-center gap-1.5 font-display text-[15px] font-bold uppercase tracking-[0.16em] text-gold-300">
-                <Icon name="trophy" className="h-5 w-5" /> Champion
+                <Glyph name="tournoi" size={18} /> Champion
               </p>
               <p className="font-display text-[32px] font-semibold text-gold-200">{winner.label}</p>
             </div>
