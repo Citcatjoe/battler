@@ -7,10 +7,9 @@ import { Fighter } from './Fighter'
 import { RelicRow } from './RelicSeal'
 import { SkillDice } from './SkillDice'
 import { StatSheet } from './StatSheet'
-import { Icon } from './Icon'
+import { Button, Glyph, type GlyphName } from './kit'
 import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
 import { BetSummary, BettingDesk } from './Betting'
-import { PrestigeButton } from './PrestigeButton'
 import { VsSeal } from './VsSeal'
 
 interface Props {
@@ -20,7 +19,8 @@ interface Props {
   onBack: () => void
   /** Bandeau au-dessus du duel, ex. « Quarts de finale · Match 2 » */
   title?: string
-  backLabel?: string
+  /** Bouton de retour (secondaire) : « Changer » en duel, « Arbre » en tournoi */
+  back?: { label: string; icon: GlyphName }
   /** Cadre du combat : une arène précise ou « au hasard » */
   arena: ArenaChoice
   onArenaChange: (arena: ArenaChoice) => void
@@ -44,7 +44,7 @@ export function MatchupScreen({
   onSimulate,
   onBack,
   title = 'Affrontement',
-  backLabel = '← CHANGER',
+  back = { label: 'Changer', icon: 'changer' },
   arena,
   onArenaChange,
   betting,
@@ -99,38 +99,39 @@ export function MatchupScreen({
       </div>
 
       <div className="relative flex items-center justify-center gap-6 pb-10 pt-4">
-        <button onClick={onBack} className="btn btn-md w-56">
-          <span>{backLabel}</span>
-        </button>
-        <PrestigeButton onClick={onPlay} className="w-80">
-          <Icon name="swords" className="btn-icon" />
-          <span>Jouer</span>
-        </PrestigeButton>
+        <Button variant="secondary" size="md" icon={back.icon} onClick={onBack} className="w-56">
+          {back.label}
+        </Button>
+        <Button variant="primary" size="xl" icon="combattre" onClick={onPlay} className="w-80">
+          Jouer
+        </Button>
         {betting && (
-          <button
+          <Button
+            variant="secondary"
+            size="md"
+            icon="parier"
             onClick={() => {
               sfx.click()
               setDesk(true)
             }}
             title="Ouvre le guichet du match : chaque joueur peut parier avant le combat"
-            className="btn btn-md w-56"
+            className="w-56"
           >
-            <Icon name="ticket" className="btn-icon" />
-            <span>
-              Parier
-              {betting.odds &&
-                ` ${humansOf(betting.wallets).filter((b) => betting.wallets.bets[betting.odds!.key]?.[b]).length}/${humansOf(betting.wallets).length}`}
-            </span>
-          </button>
+            Parier
+            {betting.odds &&
+              ` ${humansOf(betting.wallets).filter((b) => betting.wallets.bets[betting.odds!.key]?.[b]).length}/${humansOf(betting.wallets).length}`}
+          </Button>
         )}
-        <button
+        <Button
+          variant="secondary"
+          size="md"
+          icon="simuler"
           onClick={onSimulate}
           title="Résout le combat instantanément, avec les mêmes règles, et affiche les scores"
-          className="btn btn-md w-56"
+          className="w-56"
         >
-          <Icon name="lightning" className="btn-icon" />
-          <span>Simuler</span>
-        </button>
+          Simuler
+        </Button>
       </div>
 
       {betting && desk && (
@@ -176,8 +177,8 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
   const random = value === RANDOM_ARENA
   return (
     <div className="flex items-center gap-3" role="group" aria-label="Arène">
-      <button onClick={() => step(-1)} aria-label="Arène précédente" className="btn btn-round h-10 w-10 text-lg">
-        <span>‹</span>
+      <button type="button" onClick={() => step(-1)} aria-label="Arène précédente" title="Arène précédente" className="bt-iconbtn bt-iconbtn--sm text-lg">
+        ‹
       </button>
       <div className="flex w-96 flex-col items-center">
         <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-stone-500">Arène</span>
@@ -185,7 +186,7 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
           key={value}
           className="fade-in flex items-center gap-2 font-display text-2xl font-extrabold text-amber-100 drop-shadow-[0_2px_0_#000]"
         >
-          {random && <Icon name="dice" />}
+          {random && <Glyph name="hasard" size={18} />}
           {random ? 'Au hasard' : getArena(value).name}
         </span>
         <span key={`${value}-region`} className="fade-in text-xs italic text-stone-400">
@@ -198,8 +199,8 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
           ))}
         </span>
       </div>
-      <button onClick={() => step(1)} aria-label="Arène suivante" className="btn btn-round h-10 w-10 text-lg">
-        <span>›</span>
+      <button type="button" onClick={() => step(1)} aria-label="Arène suivante" title="Arène suivante" className="bt-iconbtn bt-iconbtn--sm text-lg">
+        ›
       </button>
     </div>
   )

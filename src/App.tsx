@@ -229,8 +229,9 @@ export default function App() {
     go({ name: 'records' })
   }
 
+  /** Libellé du lien de retour (BackLink : la flèche est son glyphe) */
   const backLabel = (from: Origin | 'records') =>
-    ({ home: '← Retour au menu', start: '← Retour à la sélection', records: '← Retour aux statistiques' })[from]
+    ({ home: 'Retour au menu', start: 'Retour à la sélection', records: 'Retour aux statistiques' })[from]
 
   const backToBracket = () => {
     setActiveMatch(null)
@@ -284,7 +285,7 @@ export default function App() {
         <MatchupScreen
           fighters={fighters}
           title={activeMatch ? matchTitle(activeMatch) : undefined}
-          backLabel={activeMatch ? '← ARBRE' : undefined}
+          back={activeMatch ? { label: 'Arbre', icon: 'retour' } : undefined}
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
