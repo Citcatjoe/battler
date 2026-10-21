@@ -1,10 +1,9 @@
 import type { KeyboardEvent } from 'react'
-import homeImg from '../assets/menu-home.jpg'
-// Illustrations des arches. Le combat test reprend une arène (son marais est réservé au combat lui-même)
-import testArt from '../assets/arena-dwarf-city.jpg'
-import duelArt from '../assets/arch-duel.jpg'
-import tournamentArt from '../assets/arch-tournament.jpg'
-import { Icon } from './Icon'
+import gateImg from '../assets/menu-duel.jpg'
+import { createCharacter } from '../game/roster'
+import { HEDGE_PLANES, HOME_HEDGE, type HedgeSlot } from './homeHedge'
+import { Icon, type IconName } from './Icon'
+import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
 
 export type HomeChoice = 'test' | 'duel' | 'tournament'
 
@@ -12,204 +11,132 @@ interface Props {
   onChoose: (choice: HomeChoice) => void
   onOpenRecords: () => void
   onOpenCompendium: () => void
-  /** Tournoi en cours : progression affichée sous l'arche « Tournoi » */
+  /** Tournoi en cours : progression affichée sous la plaque « Tournoi » */
   tournamentProgress: string | null
 }
 
-interface Item {
-  id: HomeChoice
-  label: string
-  hint: string
-  art: string
-  /** Cadrage de l'illustration dans l'arche (`preserveAspectRatio` du SVG) */
-  focus: string
-  /** Mode pas encore jouable : l'arche se choisit, mais ne s'ouvre pas */
-  soon?: boolean
-}
-
-/** Le triptyque, dans l'ordre affiché. Le Duel est au centre, mais aucune arche n'est mise en avant. */
-const ITEMS: Item[] = [
-  {
-    id: 'test',
-    label: 'Combat test',
-    hint: 'Choisir chaque dé pour tester les compétences',
-    art: testArt,
-    focus: 'xMidYMid slice',
-  },
-  {
-    id: 'duel',
-    label: 'Duel',
-    hint: 'Deux combattants, un seul reste debout',
-    art: duelArt,
-    focus: 'xMidYMid slice',
-  },
-  {
-    id: 'tournament',
-    label: 'Tournoi',
-    hint: '16 participants, élimination directe',
-    art: tournamentArt,
-    focus: 'xMinYMid slice',
-  },
+/** Les deux modes principaux, côte à côte dans la même pièce prestige, dans l'ordre affiché */
+const MODES: { id: HomeChoice; label: string; icon: IconName }[] = [
+  { id: 'duel', label: 'Duel', icon: 'swords' },
+  { id: 'tournament', label: 'Tournoi', icon: 'trophy' },
 ]
 
-/** Dimensions des arches : le panneau central domine, les volets sont plus bas et plus étroits. */
-const SIZE = { center: { w: 340, h: 470 }, wing: { w: 288, h: 404 } }
-
 /**
- * Contour d'une arche brisée (ogive) de largeur `w` et de hauteur `h`, rentré de `d` px : les deux
- * arcs gardent leurs centres, si bien que chaque couche du cadre est parallèle à la précédente.
+ * L'accueil : le seuil de l'arène. Une haie de combattants (homeHedge.ts) accompagne le joueur vers la
+ * porte et sa lumière ; le logo et le choix du mode sont posés au premier plan, dans l'allée centrale.
+ * Duel et Tournoi sont deux choix de même rang, deux plaques d'or dans un même cadre ; Combat test est un lien.
  */
-function archPath(w: number, h: number, d: number) {
-  const r = w * 0.8
-  const rise = Math.sqrt(r * r - (r - w / 2) ** 2)
-  const spring = rise + 4
-  const ri = r - d
-  const apex = spring - Math.sqrt(ri * ri - (r - w / 2) ** 2)
-  return `M${d},${h - d} V${spring} A${ri},${ri} 0 0 1 ${w / 2},${apex} A${ri},${ri} 0 0 1 ${w - d},${spring} V${h - d} Z`
-}
-
-/** Rivets du bandeau de fer, sur les deux montants (à mi-épaisseur du bandeau). */
-function rivets(w: number, h: number) {
-  const r = w * 0.8
-  const spring = Math.sqrt(r * r - (r - w / 2) ** 2) + 4
-  const ys: number[] = []
-  for (let y = spring; y < h - 20; y += 56) ys.push(y)
-  return ys.flatMap((y) => [
-    [7.5, y],
-    [w - 7.5, y],
-  ])
-}
-
 export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tournamentProgress }: Props) {
-  /** Au clavier, comme un menu de jeu : les flèches passent d'une arche à l'autre, Entrée l'ouvre */
+  /** Au clavier, comme un menu de jeu : les flèches passent d'un mode à l'autre, Entrée l'ouvre */
   const onKey = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-    const arches = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('.arch')]
-    const i = arches.indexOf(document.activeElement as HTMLButtonElement)
+    const modes = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-mode]')]
+    const i = modes.indexOf(document.activeElement as HTMLButtonElement)
     const next = i + (e.key === 'ArrowRight' ? 1 : -1)
-    arches[Math.max(0, Math.min(arches.length - 1, next))]?.focus()
+    modes[Math.max(0, Math.min(modes.length - 1, next))]?.focus()
     e.preventDefault()
   }
 
   return (
-    <div className="fade-in relative isolate flex h-full flex-col items-center justify-center gap-10 pb-6">
+    <div className="fade-in relative isolate h-full overflow-hidden">
+      {/* La porte de l'arène, centrée sur l'allée ; le sol reste dans l'ombre */}
       <img
-        src={homeImg}
+        src={gateImg}
         alt=""
         draggable={false}
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover object-[50%_55%]"
-        style={{ filter: 'brightness(0.7) saturate(0.9)' }}
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover object-[50%_40%]"
+        style={{ filter: 'brightness(0.78) saturate(0.95)' }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_15%,rgba(12,10,9,0.75)_100%)]" />
+      <div className="home-vignette pointer-events-none absolute inset-0 -z-10" />
 
-      <button
-        onClick={onOpenRecords}
-        title="Statistiques"
-        aria-label="Statistiques"
-        className="btn btn-round absolute left-4 top-4"
-      >
+      {/* La haie : chaque plan plus petit et plus sombre que le précédent */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        {HOME_HEDGE.map((slot) => (
+          <HedgeFigure key={`${slot.side}-${slot.id}`} slot={slot} />
+        ))}
+      </div>
+
+      {/* Voile sombre localisé sous le logo et les boutons : la lumière de la porte reste au-dessus */}
+      <div className="home-veil pointer-events-none absolute bottom-0 left-1/2 h-[560px] w-[1000px] -translate-x-1/2" />
+
+      <button onClick={onOpenRecords} title="Statistiques" aria-label="Statistiques" className="btn btn-round absolute left-4 top-4">
         <Icon name="stats" className="btn-icon" />
       </button>
       {/* Accès provisoire au compendium : son intégration définitive reste à définir */}
-      <button
-        onClick={onOpenCompendium}
-        title="Compendium"
-        aria-label="Compendium"
-        className="btn btn-round absolute left-20 top-4"
-      >
+      <button onClick={onOpenCompendium} title="Compendium" aria-label="Compendium" className="btn btn-round absolute left-20 top-4">
         <Icon name="scroll" className="btn-icon" />
       </button>
 
-      <h1 className="font-display text-7xl font-extrabold tracking-[0.12em] text-amber-200 drop-shadow-[0_5px_0_#78350f]">
-        BATTLER
-      </h1>
+      <nav aria-label="Modes de jeu" onKeyDown={onKey} className="absolute inset-x-0 bottom-[60px] z-10 flex flex-col items-center">
+        <h1 className="home-logo font-display text-[96px] font-bold leading-none tracking-[0.08em]">BATTLER</h1>
 
-      {/* Le triptyque : trois arches de fer forgé sur leur socle, les volets tournés vers le centre */}
-      <nav aria-label="Modes de jeu" className="triptych" onKeyDown={onKey}>
-        {ITEMS.map((item, i) => (
-          <Arch
-            key={item.id}
-            item={item}
-            place={i === 0 ? 'left' : i === ITEMS.length - 1 ? 'right' : 'center'}
-            hint={item.id === 'tournament' && tournamentProgress ? `En cours · ${tournamentProgress}` : item.hint}
-            // Un clic ouvre le mode ; un mode à venir ne s'ouvre pas
-            onClick={() => !item.soon && onChoose(item.id)}
-          />
-        ))}
+        {/* Une seule pièce prestige : un cadre octogonal, deux plaques d'or identiques, deux choix de même rang */}
+        <div className="mode-rail mt-8">
+          {MODES.map((m) => (
+            <button key={m.id} type="button" data-mode onClick={() => onChoose(m.id)} className="mode-plate">
+              <span className="mode-engrave" aria-hidden />
+              <span className="mode-label">
+                <Icon name={m.icon} className="btn-icon" />
+                <span>{m.label}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="mode-hints mt-3">
+          <span className="home-hint">Deux combattants, un vainqueur</span>
+          <span className="home-hint">{tournamentProgress ? `En cours · ${tournamentProgress}` : '16 participants, élimination directe'}</span>
+        </div>
       </nav>
 
-      <span className="absolute bottom-2 right-4 font-mono text-xs text-stone-600">v{__APP_VERSION__}</span>
+      <button
+        onClick={() => onChoose('test')}
+        title="Choisir chaque dé pour tester les compétences"
+        className="home-link absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
+      >
+        <Icon name="dice" className="h-5 w-5" />
+        <span>
+          Combat test <span className="text-ink-3">· choisir chaque dé</span>
+        </span>
+      </button>
+
+      <span className="on-illus absolute bottom-2 right-4 z-10 font-mono text-xs text-stone-500">v{__APP_VERSION__}</span>
     </div>
   )
 }
 
-function Arch({
-  item,
-  place,
-  hint,
-  onClick,
-}: {
-  item: Item
-  place: 'left' | 'center' | 'right'
-  hint: string
-  onClick: () => void
-}) {
-  const { w, h } = place === 'center' ? SIZE.center : SIZE.wing
-  const clip = `arch-clip-${item.id}`
-  const shade = `arch-shade-${item.id}`
-  const r = w * 0.8
-  const apex = 4
-  const spring = Math.sqrt(r * r - (r - w / 2) ** 2) + 4
+/**
+ * Un combattant de la haie, en garde, à l'échelle par la hauteur (jamais déformé), ancré bas-centre sur
+ * ses pieds (le vide de la toile au-dessus de la tête et sous les pieds est compté), tourné vers l'allée,
+ * avec son ombre de contact.
+ */
+function HedgeFigure({ slot }: { slot: HedgeSlot }) {
+  const { look } = createCharacter(slot.id)
+  const plane = HEDGE_PLANES[slot.plane]
+  const body = slot.height * STAGE_HEIGHT
+  const canvas = body / (1 - (look.headroom ?? 0) - (look.footroom ?? 0))
+  const flip = look.facing !== (slot.side === 'left' ? 'right' : 'left')
+  // Centre de la silhouette dans la toile (source, avant miroir), pour poser le corps et non la toile
+  const inset = look.bodyInset ?? { left: 0, right: 0 }
+  const shift = (inset.left - inset.right) / 2
+  const x = slot.side === 'left' ? slot.x * STAGE_WIDTH : (1 - slot.x) * STAGE_WIDTH
   return (
-    <button
-      type="button"
-      aria-label={`${item.label} : ${hint}`}
-      data-place={place}
-      data-soon={item.soon || undefined}
-      onClick={onClick}
-      className="arch"
-    >
-      <span className="arch-body">
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="arch-frame" aria-hidden>
-        <defs>
-          <clipPath id={clip}>
-            <path d={archPath(w, h, 15)} />
-          </clipPath>
-          <linearGradient id={shade} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.45" stopColor="#0E0B09" stopOpacity="0" />
-            <stop offset="1" stopColor="#0E0B09" stopOpacity="0.92" />
-          </linearGradient>
-        </defs>
-        {/* Cadre : filet de bronze, bandeau de fer forgé, second filet, puis l'illustration */}
-        <path d={archPath(w, h, 0)} className="arch-rim" />
-        <path d={archPath(w, h, 2)} className="arch-iron" />
-        <path d={archPath(w, h, 13)} className="arch-rim arch-rim-inner" />
-        <path d={archPath(w, h, 15)} className="arch-void" />
-        <g clipPath={`url(#${clip})`}>
-          <image href={item.art} x="0" y="0" width={w} height={h} preserveAspectRatio={item.focus} className="arch-art" />
-          <rect x="0" y="0" width={w} height={h} fill={`url(#${shade})`} />
-        </g>
-        {/* Gravure à 10 px du cadre, comme sur les pièces prestige */}
-        <path d={archPath(w, h, 25)} className="arch-engrave" />
-        {rivets(w, h).map(([x, y]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r={2.6} className="arch-rivet" />
-        ))}
-        {/* Clef de voûte : losange de bronze à cheval sur le bandeau */}
-        <path
-          d={`M${w / 2},${apex - 6} L${w / 2 + 11},${apex + 8} L${w / 2},${apex + 22} L${w / 2 - 11},${apex + 8} Z`}
-          className="arch-key"
-        />
-        {/* Ressauts : là où l'ogive prend appui sur les montants */}
-        <rect x={-3} y={spring - 5} width={19} height={10} className="arch-key" />
-        <rect x={w - 16} y={spring - 5} width={19} height={10} className="arch-key" />
-      </svg>
-      </span>
-
-      {/* Socle : la plaque gravée du titre, plus large que l'arche */}
-      <span className="arch-plinth" style={{ width: w + 28 }}>
-        <span className="arch-plinth-label">{item.label}</span>
-      </span>
-      <span className="arch-hint">{item.soon ? 'Bientôt disponible' : hint}</span>
-    </button>
+    <div className="absolute h-0 w-0" style={{ left: x, top: slot.feet * STAGE_HEIGHT, zIndex: plane.z }}>
+      <span
+        className="hedge-shadow"
+        style={{ width: body * 0.62, height: body * 0.08, opacity: 0.55 + 0.45 * plane.brightness }}
+      />
+      <img
+        src={look.image}
+        alt=""
+        draggable={false}
+        className="absolute left-0 max-w-none select-none"
+        style={{
+          height: canvas,
+          bottom: -(look.footroom ?? 0) * canvas,
+          transform: `translateX(${(-0.5 - (flip ? -shift : shift)) * 100}%) scaleX(${flip ? -1 : 1})`,
+          filter: [look.tint, `brightness(${plane.brightness}) saturate(${plane.saturate})`].filter(Boolean).join(' '),
+        }}
+      />
+    </div>
   )
 }

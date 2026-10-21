@@ -96,9 +96,30 @@ rgba = np.dstack([fg, alpha * 255]).round().astype(np.uint8)
 labels, n = ndimage.label(alpha > 0.08)
 cell_h, cell_w = h / GRID, w / GRID
 cells = {i: np.zeros((h, w), bool) for i in range(GRID * GRID)}
+rows = np.minimum((np.arange(h) // cell_h).astype(int), GRID - 1)
+cols = np.minimum((np.arange(w) // cell_w).astype(int), GRID - 1)
+cell_of = rows[:, None] * GRID + cols[None, :]
 for i, sl in enumerate(ndimage.find_objects(labels), start=1):
     m = labels[sl] == i
     if m.sum() < 30:
+        continue
+    # Deux icônes voisines dont les lueurs se touchent forment un seul morceau (v8 : l'Aura glaciale et
+    # l'Aura de rancune) : si plusieurs cases en portent une part notable, chaque pixel du morceau va à
+    # l'icône dont la partie opaque (le cœur) est la plus proche, plutôt que d'être coupé au bord des cases.
+    owners = cell_of[sl][m]
+    shares = np.bincount(owners, minlength=GRID * GRID) / owners.size
+    if np.sum(shares > 0.15) > 1:
+        print(f'attention : morceau partagé entre les cases {[NAMES[k] for k in np.nonzero(shares > 0.15)[0] if k < len(NAMES)]}, réparti par cœur le plus proche')
+        cores, n_cores = ndimage.label(m & (alpha[sl] > 0.6))
+        core_cell = np.zeros(n_cores + 1, int)
+        for j, csl in enumerate(ndimage.find_objects(cores), start=1):
+            cy, cx = ndimage.center_of_mass(cores == j)
+            core_cell[j] = cell_of[sl][int(cy), int(cx)]
+        _, (iy, ix) = ndimage.distance_transform_edt(cores == 0, return_indices=True)
+        nearest = core_cell[cores[iy, ix]]
+        for k in np.unique(nearest[m]):
+            if k < len(NAMES):
+                cells[k][sl] |= m & (nearest == k)
         continue
     cy, cx = ndimage.center_of_mass(labels == i)
     r, c = int(cy // cell_h), int(cx // cell_w)

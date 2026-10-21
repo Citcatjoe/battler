@@ -37,7 +37,7 @@ export const ARENAS: readonly Arena[] = [
     image: gladeImg,
     focus: '50% 70%',
     // Plein jour, sol clair : le plus assombri
-    filter: 'brightness(0.6) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.6) saturate(0.9)',
   },
   {
     id: 'dwarf-city',
@@ -45,7 +45,7 @@ export const ARENAS: readonly Arena[] = [
     region: 'Durnhold',
     image: dwarfCityImg,
     focus: '50% 72%',
-    filter: 'brightness(0.65) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.65) saturate(0.9)',
   },
   {
     id: 'lantern-lake',
@@ -53,7 +53,7 @@ export const ARENAS: readonly Arena[] = [
     region: 'Lac Sorelle',
     image: lanternLakeImg,
     focus: '50% 70%',
-    filter: 'brightness(0.75) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.75) saturate(0.9)',
   },
   {
     id: 'mushroom-vale',
@@ -62,7 +62,7 @@ export const ARENAS: readonly Arena[] = [
     image: mushroomValeImg,
     focus: '50% 70%',
     // Champignons très saturés : on calme la couleur plus que la lumière
-    filter: 'brightness(0.65) saturate(0.75) blur(1px)',
+    filter: 'brightness(0.65) saturate(0.75)',
   },
   {
     id: 'tide-temple',
@@ -70,7 +70,7 @@ export const ARENAS: readonly Arena[] = [
     region: 'Anse de Morvoux',
     image: tideTempleImg,
     focus: '50% 70%',
-    filter: 'brightness(0.7) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.7) saturate(0.9)',
   },
   {
     id: 'sky-hand',
@@ -78,7 +78,7 @@ export const ARENAS: readonly Arena[] = [
     region: 'Pic Solange',
     image: skyHandImg,
     focus: '50% 70%',
-    filter: 'brightness(0.6) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.6) saturate(0.9)',
   },
   {
     id: 'swamp',
@@ -86,7 +86,7 @@ export const ARENAS: readonly Arena[] = [
     region: 'Marais de Gâtebois',
     image: swampImg,
     focus: '50% 70%',
-    filter: 'brightness(0.8) saturate(0.9) blur(1px)',
+    filter: 'brightness(0.8) saturate(0.9)',
   },
   {
     id: 'terrace',
@@ -94,18 +94,18 @@ export const ARENAS: readonly Arena[] = [
     region: "Col d'Aubrelle",
     image: terraceImg,
     focus: '50% 72%',
-    filter: 'brightness(0.7) saturate(0.85) blur(1px)',
+    filter: 'brightness(0.7) saturate(0.85)',
   },
 ]
 
-/** Arène de l'entraînement : toujours celle du combat test, et jamais ailleurs (ni au choix, ni au hasard). */
+/** Arène de l'entraînement : décor par défaut du combat test, et jamais ailleurs (ni au choix, ni au hasard). */
 export const TRAINING_ARENA: Arena = {
   id: 'training',
   name: 'Le Pré-aux-Guetteurs',
   region: 'Forêt de Brandeval',
   image: trainingImg,
   focus: '50% 70%',
-  filter: 'brightness(0.8) saturate(0.9) blur(1px)',
+  filter: 'brightness(0.8) saturate(0.9)',
 }
 
 /** Choix « au hasard » : l'arène est tirée au moment de lancer le combat. */

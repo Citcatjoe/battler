@@ -2,7 +2,7 @@
 
 Ce document fixe la direction artistique de Battler et donne des prompts prêts à copier. Le but : des images **cohérentes entre elles**, **originales** et **directement intégrables** au jeu.
 
-> Le personnage `dwarf.png` est un placeholder qui provient d'un jeu ou d'une œuvre existante. Il doit être remplacé par une création originale avant toute diffusion publique. L'orc a été remplacé le 2026-10-19 par une création originale (`orc-idle.png` et ses postures). Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
+> Tout le roster est original depuis la 0.65.0 : le dernier placeholder, `dwarf.png`, issu d'une œuvre existante, a été remplacé par un nouveau modèle de Brokk (`dwarf-idle.png` et ses postures), comme l'orc le 2026-10-19. Ne jamais citer un jeu, un studio, un artiste ou un personnage existant dans un prompt.
 
 ## Par où commencer
 
@@ -18,7 +18,7 @@ L'utilisateur génère les images dans ChatGPT à partir des prompts de ce docum
 
 Les scripts demandent numpy, pillow et scipy dans un environnement virtuel (à créer dans le scratchpad de la session). À la fin d'un travail : compléter l'inventaire ou l'historique concerné, et ajouter une ligne « Non publié » au `CHANGELOG.md` (la version est montée par l'agent du gameplay).
 
-**En suspens au 2026-10-20 :** icônes **à refaire ou à créer** : **Fleur de vie** (le druide pose une Régénération, qui s'affiche avec le cœur vert générique `regen` : il lui faut sa propre icône, demande de l'utilisateur), **Rage du sang** (Gorak, soin immédiat, sans icône : son sceau montre l'étoile générique ; piste : deux défenses d'orc croisées, ruisselantes de sang, lueur rouge orangé) ; Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3)  ; `dwarf.png` à remplacer par une création originale (l'orc l'a été le 2026-10-19, avec ses postures).
+**En suspens au 2026-10-20 :** icônes **à refaire ou à créer** : **Saignement** et **Pourfendre** (0.68.0 et 0.70.0, planche v7 prête, section 7), **Épines acérées** à retoucher (même planche) ; **Fleur de vie** (le druide pose une Régénération, qui s'affiche avec le cœur vert générique `regen` : il lui faut sa propre icône, demande de l'utilisateur) ; Pourriture (malus), Brûlure, Vulnérable, Étourdi et Garde (section 7) ; `purification` terne, à refaire (section 7, historique v3).
 
 ---
 
@@ -97,7 +97,7 @@ Deux leviers donnent à chacun son empreinte :
 
 | Gabarit | Personnages (taille) | Largeur / hauteur du corps (arme exclue) | Ligne `BUILD` à coller |
 | --- | --- | --- | --- |
-| Titanesque | Ogre (1,13), druide en ours (1,10) | ~0,90 | `BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass, gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.` |
+| Titanesque | Ogre (1,13) | ~0,90 | `BUILD: titanic, the single largest creature of the roster, towering over an orc: enormous hunched mass, gut and shoulders spilling sideways, tree-trunk limbs; the body is nearly as wide as it is tall.` |
 | Colossal | Orc (1,08) | ~0,75 | `BUILD: colossal and bulky, the biggest silhouette of the roster: huge shoulders, thick limbs, wide planted stance; the body is about three quarters as wide as it is tall.` |
 | Grand | Mort-vivant (1,05), paladin (1,04) | ~0,55 | `BUILD: tall and imposing, broad-shouldered, upright; the body is a bit more than half as wide as it is tall.` |
 | Grand et élancé | Elfes (1,03) | ~0,45 | `BUILD: very tall and willowy, a narrow vertical silhouette: slim limbs, narrow shoulders, no bulk; the body is less than half as wide as it is tall.` |
@@ -242,7 +242,7 @@ quiver of white-feathered arrows on the back, elegant longbow held low in one ha
 Signature element: hood and quiver of white feathered arrows. Dominant color: wine-red armor.
 ```
 
-**Nain, Gardien (Brokk)**
+**Nain, Gardien (Brokk)** (le modèle de la 0.65.0, `dwarf-idle.png`, généré dans l'atelier des postures, s'écarte de ce prompt : nain torse nu, sans casque, cheveux et barbe roux cuivré tressés de laiton, pagne rouge brodé, bottes de cuir et de laiton, grande hache à un tranchant tenue en travers)
 ```text
 SUBJECT: dwarf guardian, short and extremely stocky, almost as wide as tall, massive arms,
 head proportionate to the body, stern weathered face with a strong nose, thick brows and small sharp eyes,
@@ -334,7 +334,7 @@ both feet on the ground, the greatsword raised high in both hands above the shou
 (not in front of the face), chest forward, mouth open shouting a battle prayer, tabard and banner whipping back.
 ```
 
-**Ogre sauvage** (généré en 0.35.0 : `src/assets/ogre.png`)
+**Ogre sauvage** (généré en 0.35.0 : `src/assets/ogre.png` ; depuis la 0.65.0, `ogre-idle.png` et ses postures, même modèle)
 
 Une montagne de chair, plus grosse que l'orc, et bête comme ses pieds. La bêtise passe par la posture et le visage (bouche ouverte, regard qui louche sur un papillon posé sur sa masse, main qui gratte le crâne), jamais par un style cartoon. Le bloc STYLE interdit les visages niais : le prompt lève cette interdiction pour l'expression seulement, et garde la peinture premium. Sa peau brun-rose le distingue de l'orc vert.
 
@@ -425,6 +425,52 @@ claws not covering the face, head in the upper third, small even margin, feet ne
 OUTPUT: portrait 1024x1536, plain flat uniform medium grey background (#808080), no gradient,
 no ground, no shadow, no scenery.
 ```
+
+**L'ours à quatre pattes (0.67.0)**. Le prompt 2 ci-dessus a donné l'ours debout de la 0.35.0. Depuis, l'ours est une bête à quatre pattes (règle de l'utilisateur, `POSTURES.md` § 0) : aussi haut que le druide, bois compris, et une fois et demie plus long que haut. Sa garde s'obtient en joignant l'ancienne garde (`logs/atelier/druid-bear.jpg`), qui donne le modèle (bois, amulette, tatouages, bracelets, lambeaux de manteau), pas la pose. **Pas de bloc STYLE des humanoïdes** (épaules, mains, visage, armure, armes) : il tirait l'ours vers des gestes d'homme. Prompt complet de la garde :
+
+```text
+STYLE: original high-fantasy creature art in the style of premium MMORPG creature illustrations,
+hand-painted stylized fantasy, crisp readable shapes, richly painted fur, sharp highlights on claws, antlers and beads.
+Real animal anatomy: this is a four-legged beast, a giant grizzly bear, with a bear's head, muzzle and body.
+Bold saturated but harmonious colors: chestnut-brown fur dominant, moss green secondary, glowing sap-green accent.
+Soft frontal key light slightly from above with subtle cool rim light on both edges.
+Epic, wild, menacing mood, no gore. Original design, not based on any existing game, film or character.
+AVOID: anthropomorphic bear, werebear standing like a man, upright posture, human arms, hands or fists,
+punching, boxing, sword-swing or club-swing motion, kneeling, sitting like a person, human face,
+armor, weapons, cute, chibi, mascot, cartoon, plush toy, glossy plastic render, anime, photorealism,
+thick black comic outlines, text, logo, watermark, signature, cast shadow, cropped limbs, extra legs.
+
+REFERENCE: the attached image is this creature. Keep IDENTICAL: the deer antlers wrapped in ivy growing from
+the skull, the carved wooden spiral amulet with its glowing sap-green stone on a cord around the neck,
+the glowing sap-green spiral tattoos in the fur (muzzle, shoulders, forelegs), the red-ochre bead bracelets
+around the forelegs, the torn moss-green mantle strips and chestnut fur collar knotted around the shoulders,
+the sap-green glowing eyes, the long dark claws and the same chestnut-brown fur.
+CHANGE ONLY the stance: it no longer stands like a man. It is now a real giant feral bear on all four legs.
+
+ANIMAL BODY LANGUAGE: the bear moves like a real grizzly in a wildlife painting.
+When it stands or moves, it is on all four legs; its forelegs are LEGS, not arms: they run, leap, brace, pin and land,
+they never rise above the line of the shoulders, never swing across the body, never reach out sideways
+like an arm. Its weapons are its jaws, its mass and its weight. Never upright on the hind legs, never a punch,
+never kneeling, nothing held in the paws, no human gesture.
+
+BUILD: titanic, the single largest creature of the roster: a grizzly far bigger than a horse, massive humped
+shoulders, thick forelegs, heavy hindquarters; seen on all fours the body is about one and a half times
+as long as it is tall.
+POSE: a menacing feral guard, like a grizzly about to charge: on all four legs, the forelegs planted wide and
+braced with the claws spread, the humped shoulders raised, the head held low and thrust forward,
+lips curled back on the fangs in a snarl, sap-green eyes locked on the enemy, tattoos glowing,
+mantle strips hanging from the shoulders; head and antlers fully visible, not hidden by a paw.
+HEIGHT RULE: the tips of the antlers are the highest point of the figure.
+
+FRAMING: full body from antlers to paws, three-quarter view facing RIGHT, turned enough to the side that the
+length of the body reads clearly, all four paws on the same ground line, small even margin around the figure,
+paws near the bottom edge.
+
+OUTPUT: landscape 1536x1024, plain flat uniform medium grey background (#808080), no gradient,
+no ground, no shadow, no scenery.
+```
+
+Ses cinq planches de postures (deux cases en paysage empilées, la garde en haut) suivent le même principe : `POSTURES.md` § 0 et § 4.
 
 **Barde saltimbanque** (généré le 2026-10-19 : `src/assets/bard-idle.png` et ses cinq postures ; Fanchon, variante Mélisande ; branchée en 0.41.0)
 
@@ -872,6 +918,8 @@ OUTPUT: landscape 1536x1024, wider than tall.
 
 Chaque compétence, chaque statut et chaque bouton a son icône peinte : aucun emoji nulle part (règle de l'utilisateur depuis la 0.34.0, contrôlée par les tests). Les icônes sont générées par **planches** (une grille par lot), puis découpées par script. On ne remplace pas la typographie : flèches `←` `▲` `▼`, pastilles `①` `②`, symboles de lecture `▶` `❚❚`.
 
+**Reliques** (0.75.0, douze depuis la 0.77.0) : leurs icônes suivent le même gabarit de planche, avec leur propre grammaire (un objet immobile, patiné, avec son attache, la magie contenue dedans, le chiffre de la règle lisible dans l'objet : [RELIQUES.md](RELIQUES.md) § 6) et sans cadre : le sceau hexagonal est natif. Prompt complet de la planche des douze et découpe : [RELIQUES.md](RELIQUES.md) § 10. Fichier : `src/assets/icons/<id de la relique>.png`, à ajouter à l'inventaire ci-dessous une fois intégré.
+
 ### Inventaire
 
 L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vérifier qu'il n'est pas déjà pris (le sablier est `turns`, le cœur vert `regen`, l'écu l'Armure temporaire, les épées croisées `swords`…). Les identifiants sont les noms réels des fichiers `src/assets/icons/<identifiant>.png`.
@@ -899,7 +947,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 19 | `wind-fury` | Furie des vents (orc) | Tourbillon de vent avec deux lames |
 | 20 | `evasion` | Esquive améliorée (elfe) | Plume prise dans une rafale |
 | 21 | `precision-aura` | Aura de précision (elfe) | Tête d'aigle dorée, halo or pâle |
-| 22 | `poison-aura` | Aura de poison (mort-vivant) | Encensoir de bronze, vapeurs vertes |
+| 22 | `frost-aura` | Aura glaciale (Ervald, v8 ; remplace `poison-aura`, l'encensoir vert de l'ancienne Aura de poison) | Le même encensoir de bronze, givré, stalactites, brume bleu glacé, gouttes de poison prises dans la glace |
 | 23 | `power-aura` | Aura de puissance (orc) | Gantelet serré, halo rouge orangé |
 | 24 | `intimidation-aura` | Aura d'intimidation (nain) | Masque de guerre cornu, yeux rouges |
 | 25 | `holy-aura` | Aura de sainteté (prêtresse) | Disque solaire doré, gemme bleue, halo ivoire |
@@ -914,19 +962,150 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 34 | `riposte` | Riposte (paladin) | Lame qui en pare une autre, étincelles |
 | 35 | `immunity-aura` | Aura d'immunité (paladin) | Sceau de cire rouge, rubans ivoire, feu sacré |
 | 36 | `waiting` | Patience (ogre) | Montre à gousset cabossée, chaîne rouillée |
-| 37 | `life-bloom` | Graine de vie (druide) | Graine qui germe, lueur vert sève |
-| 38 | `bark-skin` | Peau épaisse (druide) | Plaque d'écorce moussue |
-| 39 | `fireflies` | Lucioles (druide) | Trois grosses lucioles en spirale |
-| 40 | `charge` | Charge (druide en ours) | Tête d'ours qui fonce, traînées de vitesse |
-| 41 | `claw` | Coup de griffe (druide en ours) | Patte griffue, trois entailles |
+| 37 | `life-bloom` | Graine de vie (druide) ; sans usage depuis la 0.73.0 (Fleur de vie retirée) | Graine qui germe, lueur vert sève |
+| 38 | `bark-skin` | Peau épaisse (druide) ; sans usage depuis la 0.73.0 (Écorce épaisse retirée) | Plaque d'écorce moussue |
+| 39 | `fireflies` | Lucioles (druide) ; statut `firefly`, hors jeu | Trois grosses lucioles en spirale |
+| 40 | `charge` | Charge (druide en ours) ; sans usage depuis la 0.73.0 | Tête d'ours qui fonce, traînées de vitesse |
+| 41 | `claw` | Coup de griffe (druide en ours) ; sans usage depuis la 0.73.0 | Patte griffue, trois entailles |
 | 42 | `rot-aura` | Aura de pourriture (druide en ours) ; sert aussi, en attendant, au malus Pourriture | Bois de cerf pourri sous les champignons, halo brun-violet |
 | 43 | `whistle` | Siffloter et le statut Sifflotement (barde, double 1) | Flûtiau de cuivre, notes en lumière corail |
 | 44 | `false-note` | Fausse note, compétence et malus (barde, double 2) | Diapason de bronze fendu, onde brisée violet terne |
 | 45 | `melodious-aura` | Aura mélodieuse (barde, double 3) et Ouverture (l'aura posée au début du combat) | Caisse de luth à rosace de cuivre, notes et halo magenta |
 | 46 | `crescendo` | Crescendo (barde, double 4 : un coup de 12 depuis la 0.41.0, plus trois coups) | Trois notes-lames en escalier, traînée magenta ; le motif évoque encore trois coups, à refaire si besoin |
 | 47 | `soloist` | Soliste (barde, double 5 : un coup de 15) | Une grosse note forgée en lame, éclat magenta |
+| 48 | `bleed` | Saignement (malus, v8) | Trois gouttes de sang rouge sombre tombant d'une entaille |
+| 49 | `cleave` | Pourfendre (Gorak, v8) | Couperet de fer ébréché en plein élan, sang projeté |
+| 50 | `grudge` | Rancune (druide, relais, v8) ; sans usage depuis la 0.73.0 (relais retiré) | Croc d'ours sur cordelette de cuir, braise ambre dans ses fêlures |
+| 51 | `sap` | Sève (druide, relais, v8) ; sans usage depuis la 0.73.0 (relais retiré) | Goutte de sève émeraude qui perle d'une écorce entaillée |
+| 52 | `grudge-aura` | Aura de rancune (druide en ours, v8) ; depuis la 0.73.0, Aura sauvage (druide en homme) | Empreinte d'ours brûlée dans une rondelle de chêne, braise ambre, halo ambre-brun |
+| 53 | `sap-aura` | Aura de sève (druide en homme, v8) ; sans usage depuis la 0.73.0 | Bois de cerf vivant qui bourgeonne, feuilles vert sève, halo émeraude |
+| 54 | `thunderbolt` | Foudre (druide en homme, v9) | Nuage d'orage noir, éclair fourchu bleu-blanc, étincelles émeraude, rochers brisés |
+| 55 | `casting` | Incantation (forme humaine du druide, v9) | Tête de bâton noueux couronnée de bois de cerf, anneau de runes émeraude |
+| 56 | `bear-might` | Force de l'ours (forme d'ours du druide, v9) | Patte d'ours châtaigne qui fend un rocher, éclats ambre |
+| 57 | `burn` | Brûlure (malus, v9) et Feux follets (la compétence qui la pose) | Flamme fantôme vert pâle sur un lambeau d'étoffe calcinée, braises rouges |
+| 58 | `lead-pommel` | Contrepoids de plomb (relique, v10) | Boule de plomb cerclée de fer, trou de rivet, anneau |
+| 59 | `felt-boots` | Bottes de feutre (relique, v10) | Paire de bottes de cuir usées, lacets défaits |
+| 60 | `mercenary-mail` | Cotte du mercenaire (relique, v10) | Cotte de mailles roulée, sanglée, anneaux neufs plus clairs |
+| 61 | `split-knucklebone` | Osselet fendu (relique, v10) | Osselet fendu, un seul point gravé, cordelette |
+| 62 | `hollow-die` | Dé creux (relique, v10) | Dé cubique d'os, couronne sur la face haute, chaînette |
+| 63 | `four-nail-shoe` | Fer à quatre clous (relique, v10) | Fer à cheval étroit, quatre clous, suspendu par une ficelle |
+| 64 | `opening-bell` | Cloche d'ouverture (relique, v10) | Clochette de bronze, une encoche, lanière de cuir |
+| 65 | `hermit-beads` | Chapelet de l'ermite (relique, v10) | Chapelet de perles de bois, trois grosses perles d'os, fermoir d'os |
+| 66 | `siege-clepsydra` | Clepsydre de siège (relique, v10) | Bol de bronze percé, trois graduations, eau arrêtée, une goutte |
+| 67 | `wolf-fang` | Dent de loup (relique, v10) | Croc fêlé dans une cage de fil de fer, lueur rouge dans la fêlure |
+| 68 | `bramble-collar` | Collier de ronces (relique, v10) | Couronne de ronce tressée, médaillon de bois fendu |
+| 69 | `hunter-trophy` | Trophée du chasseur (relique, v10) | Mâchoire de bête sur un lacet, entailles gravées |
+| 70 | `music-on` | Musique allumée (second bouton du son, v11) | Tambour de bronze, deux baguettes croisées |
+| 71 | `music-off` | Musique coupée (v11) | Même tambour, barré en rouge |
+| 72 | `purse` | Bourse d'un parieur (guichet, classement des paris, v11) | Bourse de cuir nouée, pièces d'or qui dépassent |
+| 73 | `bet-token` | Titre « Combien ? » des mises (guichet, v11) | Jeton de bronze cranté, couronne de laurier |
+| 74 | `twist` | Bandeau du coup de théâtre (v11 ; remplace `coin-flip` dans le bandeau) | Embrasse de rideau de velours rouge, gland doré |
+| 75 | `ticket` | Bouton « Parier » de l'affrontement (v11) | Ticket de pari déchiré, épinglé, traits d'encre illisibles |
 
-**À refaire (2026-10-20) :** Fleur de vie (le cœur vert de la Régénération ne dit pas la compétence du druide) et Rage du sang (aucune icône, étoile générique). **Icônes manquantes, à demander :** Pourriture (le malus subi par la cible, distinct de l'aura), Brûlure, Vulnérable, Étourdi et Garde (statuts « à venir »). En attendant, la zone d'état affiche l'initiale du statut.
+`thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
+
+**À refaire (2026-10-20) :** ~~Fleur de vie~~ (retirée en 0.73.0). L'Aura sauvage garde `grudge-aura` ; `bark-skin`, `charge`, `claw`, `grudge`, `life-bloom`, `sap` et `sap-aura` sont sans usage depuis la 0.73.0.
+
+### Icônes à générer
+
+**La liste d'attente de tout le projet**, tous chantiers confondus (druide, reliques, son, paris, interface). Chaque besoin s'y ajoute dès qu'une compétence, un statut, une relique ou un bouton arrive sans son icône, avec son type, son besoin, son motif et son icône provisoire. Tout se génère **d'un seul coup**, le moment venu (décision de l'utilisateur, 2026-10-20), mais **une planche par type** (règle de cette bible) : chaque type a sa grammaire, et les mélanger sur une planche brouille le style (une relique est un objet immobile sans halo ; une aura a son halo ; un bouton d'interface a moins de lueur). En attendant, l'icône provisoire s'affiche (ou l'initiale, s'il n'en a pas).
+
+**Emblèmes d'état : un type d'icône à part** (planche v12, intégrée le 2026-10-21, 0.79.2). On cultive la différence de concept entre **compétence** et **état**, et elle passe aussi par l'image :
+
+| | Compétence | État |
+| --- | --- | --- |
+| Ce que c'est | l'identité d'un personnage, ce qu'il sait faire | un mot du vocabulaire commun, ce qu'il subit ou porte, le même chez tous |
+| Image | un objet peint, riche, à la palette du personnage | un symbole **gravé sur une pièce**, **monochrome** (argent et fer vieillis) |
+| Cadre | posée dans un sceau octogonal CSS (`.skill-seal`), avec bordure | **aucun** : la pièce est découpée en disque et posée telle quelle ; toutes sont rondes et de même taille, elles s'alignent d'elles-mêmes |
+| Couleur | celle du personnage | aucune dans l'image ; monochrome, elle peut être teintée en CSS si besoin ; la polarité se lit au compteur (vert ou rouge) et à la rangée (bonus à gauche, malus à droite) |
+| Par-dessus | la pastille du dé, ses jauges | le compteur de l'état |
+
+Deux mots du prompt font cette grammaire (ajoutés par l'utilisateur à la première version, qui donnait des icônes trop proches des compétences) : **« monochrome »** et **« carved on a coin »**. Aucun motif ne reprend celui d'une compétence (le gantelet de l'Aura de puissance, la cible d'Œil de faucon, l'écu de Peau de pierre, le crâne du Souffle de la tombe).
+
+| Fichier | État | Symbole gravé |
+| --- | --- | --- |
+| `state-power.png` | Puissance | an upright sword with two stacked upward chevrons |
+| `state-weakened.png` | Affaibli | a snapped sword blade, one downward chevron |
+| `state-shield.png` | Bouclier | a round buckler with a horizontal band |
+| `state-sure-crit.png` | Critique assuré | concentric rings with a four-pointed spark |
+| `state-crit-power.png` | Critique renforcé | an impact burst with an upward chevron |
+| `state-sure-dodge.png` | Esquive assurée | a curved arrow swerving around a post |
+| `state-extra-die.png` | Dé en plus | two six-sided dice |
+| `state-healing.png` | Soin | a heart with an upward chevron |
+| `state-drain.png` | Drain | a heart with an arrow looping out and back in |
+| `state-reflect.png` | Renvoi | an arrow bouncing off a small shield |
+| `state-thorns.png` | Épines | a thorn star |
+| `state-immunity.png` | Immunité | a shield with a keyhole |
+| `state-poison.png` | Poison | a drop with rising bubbles |
+| `state-bleed.png` | Saignement | a drop under a slash mark |
+| `state-burn.png` | Brûlure | a flame |
+| `state-lost-turn.png` | Tour perdu | iron shackles |
+
+**Pas encore à générer**, mais connus (pour ne pas les redécouvrir) :
+- **Statuts sans porteur** : Vulnérable, Étourdi, Garde sacrée, Pourriture (le malus subi). Ils n'entrent dans la liste que lorsqu'un personnage les pose. Les reliques ne les poseront pas : une relique ne pose jamais de malus sur l'adversaire (RELIQUES.md § 3, règle 7).
+- **Sceaux de compétence peints** (asset A-01, [design-system.md](design-system.md) : retenu, prioritaire) : un autre format qu'une icône, une illustration qui remplit la fenêtre octogonale de la carte (`object-fit: cover`), une par compétence ; aucun n'est commandé, la compétence montre son icône en attendant (`SKILL_SEAL`, `SkillSeal.tsx`).
+- **Icônes de commande** (N-01, design-system : à tester, 3 d'abord) : boutons icône et boutons d'action.
+
+**Emprunts** : une compétence qui pose un statut montre l'icône de ce statut (Œil de faucon → `crit`, Peau de pierre → `shield`, Vol de vie → `lifesteal`, Souffle de la tombe → `poison`) ; Ouverture prend l'Aura mélodieuse qu'elle pose ; les trois Attente de l'ogre partagent `waiting` ; l'Aura sauvage garde `grudge-aura` ; Feux follets montre ses lucioles (`fireflies`, 0.79.0). **Depuis la 0.79.0, ces emprunts restent aux compétences** : ce sont les états qui ont un emblème à eux (pièces gravées de la planche v12, intégrée en 0.79.2) : une compétence et l'état qu'elle pose ne montrent plus la même image.
+
+**Prompt d'une planche d'emblèmes d'état** (celui de la v12, complet, à coller tel quel ; pour de nouveaux états, garder tout sauf la liste ICONS, et joindre la planche v12 comme référence de style) :
+
+```text
+Create a single square image, 1024x1024, containing a sprite sheet of 16 game UI icons
+arranged in a strict 4x4 grid (4 columns, 4 rows). Each icon is centered in its own
+invisible cell (1/4 of the width and height), occupies about 85% of the cell,
+and never touches or overlaps the cell borders. Leave clear empty space between icons.
+All coins have exactly the same diameter.
+
+BACKGROUND: fully transparent, real alpha channel. Do NOT paint a checkerboard pattern.
+If transparency is not possible, use a perfectly flat, uniform pure black background (#000000)
+with no gradient, no texture, no vignette, no shadow under the coins.
+NO grid lines, NO labels, NO numbers, NO letters, NO text anywhere.
+
+PURPOSE: these are STATUS EMBLEMS for a fantasy auto-battler. Each one is shown as is, at
+64 pixels and down to 24 pixels, with a small counter placed over its lower right edge.
+They must read as simple SYMBOLS, not as illustrated objects: the game's skill icons are rich,
+colorful painted objects, these emblems must look clearly different from them.
+
+STYLE: MONOCHROME. Each icon is one bold, simple symbol CARVED ON A COIN: a round, flat,
+old silver-and-iron coin seen perfectly head-on, with a thick raised rim, a worn hammered
+surface, and the symbol embossed in its center. Grey metal only, no other color at all
+(the game may tint them). Crisp painted highlight from the top-left, deep engraved shadows
+for contrast. Thick strokes, no thin details, no scenery, no hands, no faces.
+Every symbol must be distinct in silhouette from all the others.
+AVOID: color, gold, emoji look, flat vector clip-art, cute or cartoon style, glossy plastic,
+3D perspective, photorealism, text, real-world religious symbols (no crosses).
+
+ICONS, in reading order (left to right, top to bottom), each carved on its coin:
+Row 1:
+ 1. an upright sword with two stacked bold upward chevrons behind its blade (more damage)
+ 2. a sword blade snapped in two, the tip falling, one bold downward chevron below (less damage)
+ 3. a round buckler shield seen head-on, a thick rim and a horizontal band (damage shield)
+ 4. three concentric rings with a sharp four-pointed spark at their center (sure critical)
+Row 2:
+ 5. a jagged impact burst (spiky star) with one bold upward chevron above it (stronger criticals)
+ 6. a thick curved arrow swerving around a short upright post (sure dodge)
+ 7. two six-sided dice, one slightly behind the other, pips as simple dots (extra die)
+ 8. a heart shape with one bold upward chevron inside it (healing over time)
+Row 3:
+ 9. a heart shape with a curved arrow looping out of it and back into it (life drain)
+10. a small round shield with an arrow bouncing off it and turning back (reflect damage)
+11. a thorn star: five thick sharp thorns pointing outward from a small ring (thorns)
+12. a shield outline with a keyhole at its center (immunity)
+Row 4:
+13. a single teardrop with three tiny bubbles rising inside (poison)
+14. a single heavy drop below a short diagonal slash mark (bleeding)
+15. a single bold flame tongue (burn)
+16. a pair of iron shackles: two cuffs joined by a short chain (loses its turn)
+```
+
+**Découpe** (`scripts/slice-coins.py`, propre à cette grammaire) : sur fond noir uni ou transparent, chaque pièce est trouvée comme un disque (centre au barycentre, rayon tiré de son aire), découpée en rond avec un bord adouci un peu à l'intérieur de la tranche, et remplit tout son carré de 128 px, sans marge. La planche de contrôle montre chaque pièce à 64 et 24 px, avec un compteur posé dessus.
+
+```sh
+python scripts/slice-coins.py <planche.png> src/assets/icons state-power,state-weakened,state-shield,state-sure-crit,state-crit-power,state-sure-dodge,state-extra-die,state-healing,state-drain,state-reflect,state-thorns,state-immunity,state-poison,state-bleed,state-burn,state-lost-turn controle.png
+```
+
+Intégration : les noms dans `IconName`, et l'état dans `STATE_ICON` (`Icon.tsx`). La zone d'état (`StatusTray`) pose l'emblème sans cadre, à 48 px, teinté légèrement en vert ou en rouge selon sa polarité (`.state-tint`, 0.79.3), et son compteur dessus. Les statuts, leurs compétences et le compendium gardent leurs icônes peintes.
 
 ### Règles de design des icônes
 
@@ -998,6 +1177,16 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v6 (5 icônes, 3×3, cuivre, bois laqué, bleu paon, notes magenta épaisses ; « no sheet-music staff lines ») :** 1. a small polished copper penny whistle, two chunky notes, warm coral-pink healing light · 2. a cracked dull bronze tuning fork, jagged broken sound wave, sickly violet and grey, no gold · 3. [AURA] an ornate dark-wood lute body, copper rosette, magenta notes, round magenta glow · 4. three thick notes rising in a staircase, stems edged like blades · 5. one large note forged as a copper and steel blade, magenta burst.
 
+**v7 (3 icônes) :** jamais générée, fusionnée dans la v8 (mêmes motifs pour `bleed`, `cleave` et `thorns`).
+
+**v8, intégrée le 2026-10-20 (8 icônes, 3×3, dernière case vide ; référence de style jointe : les icônes `thorns`, `power-aura`, `poison-aura`, `claw` et `life-bloom`) :** toutes les icônes manquantes des personnages en jeu. Rangée 1, le Saignement et ses sources (sang rouge sombre et froid, jamais vermillon, aucun cœur : `breach` et `lifesteal` le prennent déjà) ; rangée 2, l'Aura glaciale d'Ervald (bleu glacé, pas de vert toxique) puis le relais du druide ; rangée 3, ses deux auras. Le druide garde sa palette (châtaigne, vert sève `#a3e635`, mousse) ; la Rancune et son aura prennent l'ambre orangé de l'aura en jeu. Motifs choisis pour ne doubler aucune icône du druide (graine, écorce, lucioles, tête d'ours, patte griffue, bois pourri). 1. three heavy dark-crimson blood drops falling from a short jagged open slash mark, cold dark red with a faint sickly violet edge, no gold (`bleed`, malus) · 2. a massive notched two-handed iron cleaver caught mid-swing in a wide diagonal arc, olive-green leather-wrapped grip, a crescent slash trail, thick dark-crimson blood flung from its edge, no glow (`cleave`, Pourfendre de Gorak) · 3. the same coiled thorny bramble vine as the attached `thorns` icon, bronze-tipped thorns now wet with dark-crimson blood, a few drops falling (`thorns`, Épines acérées, remplace l'actuelle) · 4. [AURA] the same small bronze censer on short chains as the attached `poison-aura` icon, now crusted with frost and short icicles, exhaling pale icy-blue mist, a few dark poison drops frozen inside the ice, pale icy-blue glow, NO green (`frost-aura`, Aura glaciale, remplace `poison-aura`) · 5. a single large curved bear fang hanging from a knotted brown leather cord, a smoldering amber-orange ember glowing inside cracks of the fang, no background glow (`grudge`, Rancune) · 6. a heavy glowing drop of emerald sap welling out of a deep cut in a piece of chestnut-brown bark, sap-green light, no background glow (`sap`, Sève) · 7. [AURA] a large bear paw print scorched into a round slab of dark oak, the print glowing like molten amber-orange embers, soft amber-brown glow (`grudge-aura`, Aura de rancune) · 8. [AURA] a living deer antler sprouting fresh sap-green leaves and small buds, soft emerald glow (`sap-aura`, Aura de sève ; le pendant vivant du bois pourri de `rot-aura`) · 9. vide. Découpe : `python scripts/slice-icons.py <planche.png> src/assets/icons bleed,cleave,thorns,frost-aura,grudge,sap,grudge-aura,sap-aura controle.png`. Intégration : les huit noms dans `IconName` ; `STATUS_ICON` : `bleed`, `frostAura: 'frost-aura'`, `grudge`, `sap`, `grudgeAura: 'grudge-aura'`, `sapAura: 'sap-aura'` ; les compétences `cleave`, `frost-aura`, `grudge`, `sap`, `grudge-aura` et `sap-aura` trouvent leur icône par leur id (fichier du même nom) ; `poison-aura.png` est sorti du jeu (corbeille).
+
+**v9, druide (4 icônes, 2×2, intégrée le 2026-10-20 ; références jointes : `claw`, `life-bloom`, `grudge-aura`, `fireflies` ; palette du druide, aucune aura) :** 1. a small dark storm cloud with a thick jagged forked lightning bolt striking down out of it, crackling white-blue core, a few emerald sparks at the tip, no gold · 2. the carved head of a gnarled druid staff crowned with two small deer antlers, a ring of glowing emerald runes swirling around it · 3. a massive chestnut bear paw slamming down on a grey boulder that splits under it, amber dust and a short amber shockwave · 4. a pale sickly green ghost flame clinging to a charred, smoking scrap of dark cloth, ember-red edges, no gold.
+
+**v10, reliques (12 icônes, 4×4, intégrée le 2026-10-20) :** prompt complet dans [RELIQUES.md](RELIQUES.md) § 10 (grammaire des reliques : objet immobile, attache, usure, magie contenue, compte dessiné dans l'objet, aucun halo).
+
+**v11, interface (6 icônes, 3×3, intégrée le 2026-10-20 ; références jointes : `sound-on`, `sound-off`, `coin-pile`, `trophy` ; or et bronze, cuir, bois, vieux papier, « moins de lueur, silhouette plus simple ») :** 1. a small bronze hand drum with a leather skin, two crossed wooden drumsticks resting on it · 2. the exact same drum with a bold red diagonal slash · 3. a fat leather coin purse tied with a cord, a few gold coins peeking out · 4. a single round bronze betting token, notched rim, an engraved laurel ring · 5. a heavy red velvet stage curtain rope ending in a big gold tassel · 6. a torn paper betting ticket with a punched hole, pinned by a brass pin, illegible ink strokes.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1024,6 +1213,11 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v12 | 2026-10-21 | 76 à 91 | Emblèmes d'état, nouvelle grammaire : pièces gravées monochromes. Deux versions générées : la première (or, bronze et couleurs, vrai canal alpha) était trop proche des compétences ; la seconde, retenue, ajoute « monochrome » et « carved on a coin ». Fond noir uni, pas de canal alpha : découpe en disque par `scripts/slice-coins.py`, sans retouche (rayons de 136 à 139 px). |
+| v11 | 2026-10-20 | 70 à 75 | Interface : musique, bourse, jeton, coup de théâtre, ticket. Vrai canal alpha ; une poussière de 89 px près du tambour, effacée avant la découpe. La corde de l'embrasse (`twist`) est coupée net au bord de sa case, visible en grand. |
+| v10 | 2026-10-20 | 58 à 69 | Les douze reliques. Vrai canal alpha, découpe sans retouche ; icônes plus grandes que leur case (avertissements du script sans conséquence). |
+| v9 | 2026-10-20 | 54 à 57 | Druide : Foudre, Incantation, Force de l'ours, Brûlure. Vrai canal alpha, découpe sans retouche. |
+| v8 | 2026-10-20 | 17 (refaite), 22 (remplacée), 48 à 53 | Saignement et ses sources (v7 fusionnée), Aura glaciale, relais du druide. Vrai canal alpha. Les lueurs de l'Aura glaciale et de l'Aura de rancune se touchaient : le script répartit désormais un morceau partagé entre deux cases selon le cœur opaque le plus proche. |
 | v6 | 2026-10-19 | 43 à 47 | Barde (Fanchon). Vrai canal alpha ; les franges de halo débordent (avertissements du script sans conséquence). Personnage : `bard-idle.png` et ses postures. |
 | v5 | 2026-10-18 | 36 à 42 | Ogre et druide (0.35.0). Vrai canal alpha. Personnages : `ogre.png`, `druid.png`, `druid-bear.png`. |
 | v4 | 2026-10-18 | 33 à 35 | Paladin (0.31.0). Damier peint, découpe sans retouche. Personnage : `paladin.png`. |

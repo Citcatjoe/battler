@@ -1,5 +1,6 @@
 import type { PoseId } from './poses'
 import type { CharacterEvent } from './events'
+import { withRelicStats, type Relic } from './relics'
 import type { StatusId } from './statuses'
 
 export interface CharacterStats {
@@ -91,6 +92,11 @@ export interface CharacterForm {
   name: string
   /** Remplace l'apparence de base (image, cadrage…) tant qu'il a cette forme */
   look?: Partial<CharacterLook>
+  /**
+   * Statuts de forme (0.73.0) : posés tant qu'il a cette forme, retirés quand il la quitte. Ce sont les
+   * règles de la forme (le d3 de l'homme, le +3 de l'ours) ; ils doivent être `innate` (validateRoster).
+   */
+  statuses?: readonly StatusId[]
 }
 
 export interface CharacterDef {
@@ -116,6 +122,11 @@ export interface CharacterDef {
    * face (`doubleOne` à `doubleFive`) à la place des deux coups. Voir docs/RESOLUTION.md § 2.
    */
   twinDice?: true
+  /**
+   * Reliques portées (tournoi, docs/RELIQUES.md), dans l'ordre d'obtention. Leurs stats s'ajoutent à plat à
+   * `stats` ; leurs autres effets sont appliqués par le moteur.
+   */
+  relics?: readonly Relic[]
 }
 
 /**
@@ -127,13 +138,17 @@ export class Character {
   readonly name: string
   readonly race: string
   readonly archetype: string
+  /** Stats de combat : celles du personnage, plus celles de ses reliques */
   readonly stats: Readonly<CharacterStats>
+  /** Stats du personnage seul, sans ses reliques */
+  readonly baseStats: Readonly<CharacterStats>
   readonly look: Readonly<CharacterLook>
   readonly lore: CharacterLore
   readonly events: readonly CharacterEvent[]
   readonly immunities: readonly StatusId[]
   readonly forms?: readonly [CharacterForm, CharacterForm]
   readonly twinDice: boolean
+  readonly relics: readonly Relic[]
   readonly #def: CharacterDef
 
   constructor(def: CharacterDef) {
@@ -142,7 +157,9 @@ export class Character {
     this.name = def.name
     this.race = def.race
     this.archetype = def.archetype
-    this.stats = Object.freeze({ ...def.stats })
+    this.baseStats = Object.freeze({ ...def.stats })
+    this.relics = def.relics ?? []
+    this.stats = Object.freeze(withRelicStats(def.stats, this.relics))
     this.look = Object.freeze({ ...def.look })
     this.lore = def.lore
     this.events = def.events
@@ -167,6 +184,11 @@ export class Character {
   /** Même personnage (mêmes id et stats) sous un autre nom, ex. « Gorak II » en tournoi. */
   withName(name: string) {
     return new Character({ ...this.#def, name })
+  }
+
+  /** Même personnage, avec ces reliques (elles remplacent les précédentes). */
+  withRelics(relics: readonly Relic[]) {
+    return new Character({ ...this.#def, relics })
   }
 
   /** Même personnage avec des stats ou des compétences modifiées : sert aux essais d'équilibrage (analysis.ts). */

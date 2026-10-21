@@ -11,6 +11,7 @@ _Fonctionnalité ajoutée en 0.40.0. But : **tester si changer l'image du combat
 - **L'écran choisit la posture** d'après ce qu'il rejoue déjà : l'élan, l'esquive, le coup reçu, la fin du combat. Le moteur de règles n'est pas touché : c'est de la présentation pure.
 - **Une posture absente retombe sur la garde.** Un personnage sans postures s'affiche exactement comme avant.
 - **Toutes les postures d'un personnage partagent la même toile** : mêmes dimensions, même ligne de sol, même échelle. Changer d'image ne fait donc pas sauter le personnage. C'est le rôle de `scripts/slice-poses.py`.
+- **Une forme animale bouge comme un animal** (règle de l'utilisateur, 2026-10-20) : l'ours du druide se tient, attaque, encaisse, esquive, tombe et triomphe comme une bête, à quatre pattes. Jamais debout comme un homme, jamais un coup de poing, jamais à genou. Les mêmes cinq moments, joués par un quadrupède : charge au galop gueule ouverte, sursaut en arrière sur ses quatre pattes, bond de côté, couché sur le flanc, rugissement campé sur ses pattes. Il lui faut donc une **nouvelle garde à quatre pattes**, tirée de l'ancienne (bois, amulette, tatouages). Un quadrupède est plus long que haut : ses planches empilent **deux cases en paysage de 1024×768** dans une image en portrait 1024×1536, la garde en haut, soit cinq planches (découpe `1x2:idle,<posture>`). **Ses prompts n'ont pas un mot d'anatomie humaine** : un premier jet reprenait le bloc STYLE des humanoïdes (épaules, mains, visage) et le bloc de mouvement (bras, « fighting-game »), et un coup de griffe d'une patte avant : ChatGPT en tirait une attaque d'homme, même avec la garde à quatre pattes jointe. L'attaque passe donc par la gueule et la masse, jamais par une patte levée, et la garde à quatre pattes se joint à chaque planche. À l'intégration, son `scale` et sa largeur à l'écran seront à régler sur la nouvelle silhouette.
 
 ---
 
@@ -23,8 +24,8 @@ Registre : `src/game/poses.ts` (`POSES`).
 | `idle` | Garde | au repos, et quand il déclenche une compétence. C'est `look.image` | tremblement de la Peur, translucidité de l'esquive imposée |
 | `attack` | Attaque | pendant l'élan d'une attaque (`lunging`) | l'élan (`.lunge`) : recul, bond vers l'adversaire, retour |
 | `dodge` | Esquive | quand il esquive (`received.dodged`), synchronisée avec l'élan adverse | le saut de côté (`.dodge`) |
-| `hurt` | Coup encaissé | quand un coup le touche (`received.landed`, non esquivé), jusqu'au moment suivant | le recul et l'éclair rouge (`.hit`) |
-| `ko` | K.O. | à la fin du combat, s'il a perdu | avec une posture K.O., le grisé seul (`.ko-posed`) ; sans, la bascule et le grisé (`.ko`) |
+| `hurt` | Coup encaissé | quand un coup le touche (`received.landed`, non esquivé), jusqu'au moment suivant | rien pour un coup ordinaire : la posture seule. Un critique repousse en plus le combattant puis le ramène (`.knockback`, 0.68.3, demande de l'utilisateur) |
+| `ko` | K.O. | à la fin du combat, s'il a perdu | le grisé, en fondu sur le filtre de l'image ; sans posture K.O., la bascule en plus (`.ko`) |
 | `victory` | Victoire | à la fin du combat s'il a gagné, sur l'écran de fin et sur l'écran du champion | le léger balancement (`.victory`) |
 
 **Priorité**, quand deux moments se chevauchent (`poseOf`) : K.O. et victoire, puis attaque, puis esquive, puis coup encaissé, puis garde.
@@ -39,9 +40,9 @@ Registre : `src/game/poses.ts` (`POSES`).
 | --- | --- |
 | `src/game/poses.ts` | le registre `POSES` (nom, moment, ligne de prompt), `poseOf` (la posture du moment), `poseImage` (l'image, ou la garde par défaut), `poseImages` (préchargement) |
 | `src/game/character.ts` | `CharacterLook.poses?: { attack?, dodge?, hurt?, ko?, victory? }`. `lookFor(form)` : une forme qui change d'image (l'ours) ne reprend pas les postures de la forme de base |
-| `src/components/Fighter.tsx` | calcule la posture, change l'image affichée, précharge, choisit `.ko` ou `.ko-posed`. Toutes les images sont à leur largeur naturelle, centrées sur les pieds ; `anchor="inside"` fait déborder une image large vers le centre de l'écran plutôt que hors de l'écran (affrontement, fin de combat) |
+| `src/components/Fighter.tsx` | calcule la posture, change l'image affichée, précharge, choisit `.knockback` (critique reçu) et `.ko` (K.O. sans posture). Toutes les images sont à leur largeur naturelle, centrées sur les pieds ; `anchor="inside"` fait déborder une image large vers le centre de l'écran plutôt que hors de l'écran (affrontement, fin de combat). **Deux règles de Firefox** : le filtre (ombre, contour d'aura, grisé du K.O.) est sur une enveloppe exactement à la taille de l'image, jamais sur un conteneur plus petit qu'elle (la colonne du combattant), qui couperait ce qui déborde ; le retournement (`scaleX(-1)`) est sur l'image, sous ce filtre, jamais au-dessus : un filtre dans un repère retourné est coupé au bord de l'écran, du mauvais côté (0.77.x : l'ours à droite, dont la toile déborde de l'écran de 63 px, perdait son museau et ses pattes avant ; vu seulement dans un Firefox à l'écran, pas dans les captures sans interface) |
 | `src/components/StartScreen.tsx`, `MatchupScreen.tsx`, `EndScreen.tsx` | les menus, les panneaux et le sceau « VS » passent au-dessus des combattants (`relative z-20`) : une arme levée passe derrière, jamais devant |
-| `src/index.css` | `.ko-posed` : le K.O. sans bascule |
+| `src/index.css` | `.knockback` : le recul d'un critique ; `.ko` : la bascule d'un K.O. sans posture |
 | `scripts/slice-poses.py` | découpe les planches, aligne les postures sur la garde, les recadre ensemble |
 | `scripts/cutout-character.py` | `CUTOUT_KEEP_CANVAS=1` : détourer sans recadrer (utilisé par `slice-poses.py`) |
 
@@ -166,6 +167,8 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 
 - `--fond` : les planches sont sur le gris `#808080` ; chaque case est détourée par `cutout-character.py`, sans recadrage. Les fragments isolés (pointe d'une arme d'une case voisine qui déborde, résidu de fond) sont retirés : seuls restent le personnage et ce qu'il tient.
 - **Ajouter une posture à un personnage déjà découpé** : `--reference=src/assets/<nom>-idle.png`. La garde de la planche est calée sur la garde existante (même hauteur, mêmes pieds), et la posture est écrite sur sa toile. Les autres postures ne bougent pas. Une planche où le personnage paraît plus grand, comme une planche à deux cases face à une planche à trois, se recale ainsi d'elle-même. Exemple : `python scripts/slice-poses.py orc c.png:2x1:idle,hurt --fond --reference=src/assets/orc-idle.png`.
+- `--sol` : pose chaque posture sur la ligne de sol de la garde (son point le plus bas sur celui de la garde). Le générateur place la figure de chaque case un peu plus haut ou plus bas que la garde de sa planche : sans lui, une posture flotte ou s'enfonce (jusqu'à 121 px pour l'ours couché, § 4). `--sol=ko,hurt` ne pose que ces postures. À éviter pour une posture qui doit descendre sous les pieds (massue de Morgrut, queue de Naraxes) ou décoller ; regarder la planche de contrôle dans tous les cas.
+- `--avant=<px>` : pour un personnage très large, comme l'ours à quatre pattes. La toile s'allonge à l'arrière de deux fois <px> ; le jeu la centrant sur la colonne du combattant, la silhouette s'affiche <px> (de toile) plus près de l'adversaire et ne sort plus de l'écran par l'arrière.
 - Sortie : `src/assets/<nom>-idle.png`, `-attack`, `-dodge`, `-hurt`, `-ko` et `-victory`, tous aux **mêmes dimensions** (778×993 pour l'orc), et une planche de contrôle `logs/poses-<nom>.png` avec la ligne de sol.
 - **Regarder la planche de contrôle** : les pieds de chaque posture debout doivent toucher la ligne, et le personnage doit avoir la même taille dans toutes.
 - Le script dit quelle part de la toile la garde occupe (84 % pour l'orc) : `scale = taille × 0,92 / part` (échelle resserrée, `STYLE_BIBLE.md` § 2), et `headroom` = la part vide au-dessus de la tête.
@@ -218,6 +221,20 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 
 **Elaria (2026-10-20, 0.58.0)**, à partir de sa garde actuelle, quatre planches du premier coup : l'arc dépasse de la tête, donc la taille est réglée sur le corps (de la capuche aux pieds, 77 % de la toile de 1014×1116). `scale` = 1,03 × 0,945 / 0,78 ≈ 1,25, `headroom` 0,22, portrait `{ x: 42, y: 25, zoom: 4.8 }`. Vu par capture : l'accueil, l'affrontement face à Ysolde, l'attaque, l'esquive et le coup encaissé. Non vus : le K.O. et la victoire.
 
+**Brokk et Morgrut (2026-10-20, 0.65.0)**, une garde (planche 0) puis quatre planches chacun, du premier coup ; sources dans `logs/atelier/sources/brokk/` et `morgrut/` :
+- **Brokk, nouveau modèle** (nain torse nu à la grande hache), création originale qui remplace `dwarf.png`, le dernier placeholder. Il regarde vers la droite (`facing` passe de `left` à `right`). La hache dépasse de la tête : taille réglée sur le corps (tête-pieds 71,6 % de la toile de 902×1098), `scale` = 0,86 × 0,945 / 0,716 ≈ 1,14, `headroom` 0,23, `footroom` 0,035 (la hache du K.O. descend 5 % sous les pieds), portrait `{ x: 60, y: 33, zoom: 4.6 }` ;
+- **Morgrut**, même modèle, dont la nouvelle garde remplace `ogre.png`. Rien ne dépasse de sa tête, mais la massue levée de la victoire rend la toile haute (1042×1232) : la garde n'en occupe que 70,3 %, soit `scale` = 1,13 × 0,92 / 0,703 ≈ 1,48, la même hauteur à l'écran qu'avant. `headroom` 0,22, `footroom` 0,06 (la massue du coup encaissé et du K.O. descend 8 % sous les pieds), portrait `{ x: 56, y: 28, zoom: 4.6 }`. Le papillon reste dans le K.O. et la victoire ;
+- **écran de fin** : la massue de la victoire montait jusqu'au titre « COMBAT », qui passe désormais devant le vainqueur (`z-20`) ;
+- vu par capture : la sélection, l'affrontement Brokk contre Morgrut, l'attaque et le coup encaissé des deux en combat, la victoire des deux sur l'écran de fin. Non vus : les K.O. et l'esquive de Brokk. Celle de Morgrut ne sert pas, puisqu'il n'esquive jamais (0 %).
+
+**Thaldrin, deux formes (2026-10-20, 0.67.0)**, chaque forme dans sa conversation ; sources dans `logs/atelier/sources/thaldrin/` (garde, puis A à D) et `thaldrin-ours/` (garde à quatre pattes, puis A à E) :
+- **forme humaine**, à partir de sa garde actuelle : quatre planches du premier coup. Le bâton et les bois montent à hauteur de la tête : taille réglée sur la silhouette entière, comme avant. La garde occupe 83,9 % de la toile de 1004×1022 (bâton levé de la victoire) : `scale` = 0,93 × 0,989 / 0,839 ≈ 1,10, la même hauteur à l'écran qu'avant ; `headroom` 0,155. Toile large (fente de l'attaque) : `bodyInset` `{ left: 0.216, right: 0.217 }`, pour que l'affrontement le colle au bord par sa silhouette et non par sa toile. Portrait `{ x: 62, y: 22, zoom: 4.2 }` ;
+- **forme d'ours, en animal** (§ 0) : une garde à quatre pattes (planche 0, l'ancienne garde debout jointe comme modèle), puis cinq planches de deux cases en paysage empilées. Le premier jet de prompts, qui reprenait les blocs des humanoïdes, donnait une attaque d'homme ; les prompts réécrits ont marché ;
+- **les postures de l'ours flottaient** : dans les planches empilées, la case du bas place l'ours plus haut que la garde de la case du haut, jusqu'à 121 px pour le K.O. couché (16 % de sa hauteur), 79 px pour l'attaque, 60 px pour le coup encaissé. Le druide humain s'écartait aussi de 5 à 30 px. D'où `slice-poses.py --sol`, qui pose chaque posture sur le sol de la garde (`--sol` sur les deux formes) ;
+- **l'ours sortait de l'écran par l'arrière** : une fois et demie plus long que haut, sa toile centrée sur sa colonne débordait du bord gauche. D'où `slice-poses.py --avant=130` : la toile s'allonge à l'arrière (1318×737), ce qui avance l'ours de 130 px de toile vers l'adversaire. La garde occupe 90,1 % de la hauteur : `scale` 0,98, `headroom` 0,088, soit une silhouette de 0,894 contre 0,930 au druide (96 %, bois compris). L'ours grossit, il ne grandit plus ;
+- commandes : `slice-poses.py druid a.png:2x1:idle,attack b.png:2x1:hurt,idle c.png:2x1:dodge,idle d.png:3x1:idle,ko,victory --fond --contours --sol` et `slice-poses.py druid-bear a.png:1x2:idle,attack b.png:1x2:idle,hurt c.png:1x2:idle,dodge d.png:1x2:idle,ko e.png:1x2:idle,victory --fond --sol --avant=130` ;
+- vu par capture : la sélection, l'affrontement face à Gorak, la métamorphose dans les deux sens, l'attaque des deux formes, le coup encaissé du druide, le K.O. et la victoire de l'ours en combat, la victoire du druide sur l'écran de fin. Non vus : les esquives, le coup encaissé de l'ours, le K.O. du druide.
+
 **Vu à l'écran** (captures Firefox) :
 - l'attaque des deux personnages pendant l'élan ;
 - le coup encaissé de la voleuse ;
@@ -225,10 +242,11 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 
 **Pas encore vu** : l'esquive et le K.O. dans un combat joué. Ils sont couverts par les tests.
 
-**À juger par l'utilisateur** : l'apport à l'immersion, avant de généraliser au roster. Il faut trois générations par famille avec les planches de trois cases, plus la garde pour le nain, dernier placeholder.
+**À juger par l'utilisateur** : l'apport à l'immersion. Tout le roster a ses postures depuis la 0.67.0.
 
 ## 5. Limites connues
 
 - **Une même règle d'affichage pour tous** depuis la 0.40.0 : toutes les images sont à leur largeur naturelle, avec une échelle resserrée (`STYLE_BIBLE.md` § 2). Une première version, où seul l'orc était à sa vraie largeur, le faisait paraître bien plus massif que l'ogre (472 px de large contre 330) : c'est corrigé. Un personnage qui reçoit des postures garde sa taille, à condition de régler son `scale` sur sa nouvelle toile.
-- **Sur l'écran de fin**, la victoire de l'orc (couperet levé) passe derrière le début du texte (« Orc · Brute »), qui reste au premier plan mais se lit moins bien.
+- **Sur l'écran de fin**, la victoire de l'orc (couperet levé) passe derrière le début du texte (« Orc · Brute »), qui reste au premier plan mais se lit moins bien. Même chose pour le corps de Morgrut sous « Ogre · Cogneur », dont les pieds touchent aussi le haut de la carte « PV restants ».
+- **Le druide vainqueur apparaît en forme humaine sur l'écran de fin**, même s'il a gagné en ours : l'écran ne reçoit pas la forme, et l'ours à quatre pattes ne tiendrait pas dans son cadre en hauteur. Sa victoire d'ours se voit en combat.
 - **La cohérence du dessin** d'une planche à l'autre dépend du générateur : la garde jointe et le rappel « same character » limitent la dérive, sans la supprimer. Une planche ratée se régénère seule, avec sa garde.

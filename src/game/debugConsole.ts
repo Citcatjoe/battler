@@ -1,5 +1,7 @@
+import type { Character } from './character'
 import type { Pair } from './combat'
 import { simulateCombat, type CombatResult } from './combat'
+import { getRelic } from './relics'
 import { createCharacter } from './roster'
 import { traceCombat, traceText, turnTitle } from './trace'
 
@@ -12,6 +14,7 @@ import { traceCombat, traceText, turnTitle } from './trace'
  *   battler.trace(2)         → celle de l'avant-avant-dernier
  *   battler.traces           → les derniers combats (résultats complets)
  *   battler.replay(graine, 'gorak', 'brokk') → rejoue un combat à l'identique et l'affiche
+ *   battler.replay(graine, 'gorak', 'brokk', ['wolf-fang'], []) → idem, avec les reliques de chaque camp
  *   copy(battler.dump())     → copie les traces de tous les combats gardés (un tournoi entier), du plus ancien au plus récent
  */
 
@@ -25,7 +28,7 @@ declare global {
       traces: readonly CombatResult[]
       trace: (back?: number) => string | undefined
       dump: () => string
-      replay: (seed: number, left: string, right: string) => CombatResult
+      replay: (seed: number, left: string, right: string, leftRelics?: string[], rightRelics?: string[]) => CombatResult
     }
   }
 }
@@ -82,8 +85,11 @@ export function installDebugConsole() {
       return text
     },
     dump: () => [...traces].reverse().map(traceText).join('\n\n'),
-    replay: (seed, left, right) => {
-      const fighters: Pair<ReturnType<typeof createCharacter>> = [createCharacter(left), createCharacter(right)]
+    replay: (seed, left, right, leftRelics = [], rightRelics = []) => {
+      const fighters: Pair<Character> = [
+        createCharacter(left).withRelics(leftRelics.map(getRelic)),
+        createCharacter(right).withRelics(rightRelics.map(getRelic)),
+      ]
       const result = simulateCombat(fighters, { seed })
       reportCombat(result)
       return result

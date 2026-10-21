@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { skillCatalog, statusCatalog } from './catalog'
+import { describe, expect, it, vi } from 'vitest'
+import { skillCatalog, statusCatalog, statusLinks } from './catalog'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
-import { describeEffect, describeEvent, TRIGGERS, type Effect } from './events'
+import { cueOf } from './cues'
+import { describeEffect, describeEvent, describeSkill, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusDurationLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, rollDie, seededRng, shuffle } from './rng'
@@ -12,18 +13,25 @@ import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
 import { Character, figureHeight } from './character'
 import { EMOJI, testCharacter } from './test-utils'
 import { traceCombat, traceText } from './trace'
-import { STATUS_IDS, statusCounter } from './statuses'
+import { STATUS_IDS, statusCounter, type StatusId } from './statuses'
 import {
+  allMatches,
   champion,
+  championRun,
+  chooseRelic,
   createTournament,
   fillSlots,
   matchFighters,
+  matchKey,
   readyMatches,
+  relicsOf,
+  ROUNDS,
   SLOTS,
   status,
   withResult,
   type Tournament,
 } from './tournament'
+import { OFFER_SIZE, RELIC_IDS } from './relics'
 
 const duel = (a: string, b: string, seed: number) =>
   simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) })
@@ -56,7 +64,10 @@ describe('catalogue des compétences', () => {
     expect(new Set(skills.map((s) => s.event.id)).size).toBe(skills.length)
     // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
     for (const c of CHARACTERS)
-      for (const e of c.events) expect(skills.find((s) => s.event.id === e.id)!.owners).toContain(c)
+      for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
+    // Faces identiques d'un même porteur : une seule ligne, qui liste ses déclencheurs (l'Attente de l'ogre)
+    const waiting = skills.filter((s) => s.event.name === 'Attente')
+    expect(waiting.map((s) => s.triggers)).toEqual([['naturalOne', 'naturalTwo', 'naturalThree']])
     // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
     for (const s of skills) expect(s.owners).toHaveLength(1)
     expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak'])
@@ -65,30 +76,71 @@ describe('catalogue des compétences', () => {
   it('chaque compétence déclare sa nature (couleur de sa carte)', () => {
     const skills = skillCatalog().flatMap((f) => f.skills)
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
-    expect(skills.find((s) => s.event.id === 'blood-rage')!.event.nature).toBe('martial')
+    expect(skills.find((s) => s.event.id === 'cleave')!.event.nature).toBe('martial')
     expect(skills.find((s) => s.event.id === 'waiting-1')!.event.nature).toBe('neutral')
+  })
+
+  it('un effet subi par l’adversaire le nomme dans le texte de la compétence (retour du 2026-10-21)', () => {
+    // « Perd 3 PV au début de son prochain tour » (Souffle de la tombe) se lisait comme une perte du lanceur
+    for (const c of CHARACTERS)
+      for (const e of c.events)
+        for (const effect of e.effects.filter((x) => x.target === 'opponent'))
+          expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
+    expect(describeSkill(createCharacter('ervald').events.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3 PV/)
   })
 })
 
 describe('catalogue des statuts', () => {
-  it('liste chaque statut une fois, avec ses règles et qui le pose', () => {
+  it('liste chaque statut une fois, avec ses règles et qui le met en jeu', () => {
     const catalog = statusCatalog()
     expect(catalog.map((e) => e.id).sort()).toEqual([...STATUS_IDS].sort())
-    for (const e of catalog) expect(e.rules.length).toBeGreaterThan(0)
-    const poison = catalog.find((e) => e.id === 'poison')!
-    expect(poison.inGame).toBe(true)
-    expect(poison.sources.map((s) => s.character.id).sort()).toEqual(['ervald'])
-    expect(poison.sources.every((s) => s.target === 'opponent')).toBe(true)
-    // Régénération : en jeu depuis la 0.42.0 (Fleur de vie) ; la Brûlure attend encore son premier porteur
-    const regeneration = catalog.find((e) => e.id === 'regeneration')!
-    expect(regeneration.inGame).toBe(true)
-    expect(regeneration.sources.map((s) => s.character.id).sort()).toEqual(['thaldrin'])
-    // La Brûlure est en jeu depuis la 0.50.0 (Feux follets) ; la Luciole, remplacée, ne l'est plus
+    const who = (id: StatusId) =>
+      catalog
+        .find((e) => e.id === id)!
+        .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : `${s.kind}:${s.character.id}`))
+        .sort()
+    // Poison : posé par Ervald, et aussi par deux auras (effet de tour, réaction)
+    expect(who('poison')).toEqual(['skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
+    // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
+    expect(who('regeneration')).toEqual([])
+    // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
+    expect(who('retribution')).toEqual(['release:aldric'])
+    // Statuts de forme (0.73.0) : posés par la forme du druide, pas par une compétence
+    expect(who('casting')).toEqual(['form:thaldrin'])
+    expect(who('bearMight')).toEqual(['form:thaldrin'])
+    // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
     // Bonus d'abord, puis malus
     const firstNegative = catalog.findIndex((e) => e.def.polarity === 'negative')
     expect(catalog.slice(firstNegative).every((e) => e.def.polarity === 'negative')).toBe(true)
+  })
+  it('liens croisés : un statut affiché par une compétence la cite parmi ceux qui le posent, et inversement', () => {
+    const catalog = statusCatalog()
+    for (const c of CHARACTERS)
+      for (const e of c.events)
+        for (const { status } of describeSkill(e).posed) {
+          const entry = catalog.find((x) => x.id === status)!
+          expect(entry.inGame, `${e.id} → ${status}`).toBe(true)
+          expect(entry.sources.some((s) => (s.kind === 'skill' || s.kind === 'release') && s.event.id === e.id), `${status} ← ${e.id}`).toBe(true)
+        }
+    for (const entry of catalog)
+      for (const s of entry.sources)
+        if (s.kind === 'skill' || s.kind === 'release') expect(describeSkill(s.event).posed.map((p) => p.status), `${s.event.id} → ${entry.id}`).toContain(entry.id)
+  })
+  it('interactions : déclarées d’un côté, montrées des deux', () => {
+    const texts = (id: StatusId) => statusLinks(id).map((l) => l.status)
+    // Opposition (déclarée sur le Poison seulement) ; la Régénération n'a plus de porteur depuis la 0.73.0 : un
+    // personnage de test la met en jeu
+    const healer = testCharacter('healer', {}, [{ id: 'mend', name: 'mend', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] }])
+    const withHealer = (id: StatusId) => statusLinks(id, [...CHARACTERS, healer]).map((l) => l.status)
+    expect(withHealer('poison')).toContain('regeneration')
+    expect(withHealer('regeneration')).toContain('poison')
+    // Un statut de forme ne se purge pas : aucune purge n'est citée (la Purification d'Ysolde vise les bonus)
+    expect(statusLinks('casting').some((l) => l.skill)).toBe(false)
+    expect(statusLinks('wildAura').some((l) => l.skill?.event.id === 'purification')).toBe(true)
+    // Immunité : chaque malus en jeu renvoie à l'aura qui le bloque
+    expect(texts('fear')).toContain('immunityAura')
   })
   it('bord en pointillés : seuls les états qui font perdre des PV à leur porteur à chaque tour (0.52.1)', async () => {
     const { hurtsEachTurn } = await import('./statuses')
@@ -221,6 +273,22 @@ describe('narration', () => {
       expect(effectText(e, [...fighters])).not.toBe('')
       expect(effectBadge(e).text).not.toBe('')
     }
+    // Purge à vide : rien n'est parti, on ne dit pas « Purifié »
+    expect(effectBadge({ type: 'cleanse', target: 0, removed: [] }).text).toBe('Rien à purifier')
+    expect(effectBadge({ type: 'cleanse', target: 0, removed: ['poison'] }).text).toBe('Purifié')
+  })
+  it('le sens d’un texte flottant dit gain ou perte de la chose nommée, pas bon ou mauvais (2026-10-21)', () => {
+    // Un malus posé est gagné : il monte, en couleur de malus (Peur posée sur Naraxes)
+    const fear = effectBadge({ type: 'applyStatus', target: 1, status: 'fear', stacks: 1, result: { kind: 'applied', stacks: 1 } })
+    expect(fear).toMatchObject({ text: 'Peur', tone: 'negative', rises: true })
+    // Un bonus gagné monte aussi
+    expect(effectBadge({ type: 'applyStatus', target: 0, status: 'powerAura', stacks: 1, result: { kind: 'applied', stacks: 1 } }).rises).toBe(true)
+    // Un bonus dissipé est perdu : il tombe ; des malus purifiés aussi
+    expect(effectBadge({ type: 'cleanse', target: 0, removed: ['powerAura'] })).toMatchObject({ tone: 'negative', rises: false })
+    expect(effectBadge({ type: 'cleanse', target: 0, removed: ['poison'] }).rises).toBe(false)
+    // Des PV perdus tombent, des PV regagnés montent
+    expect(effectBadge({ type: 'damage', target: 0, amount: 7 })).toMatchObject({ text: '-7', rises: false })
+    expect(effectBadge({ type: 'heal', target: 0, amount: 3 }).rises).toBe(true)
   })
   it('chaque déclencheur a un libellé, chaque événement une description', () => {
     for (const t of Object.values(TRIGGERS)) expect(t.label).not.toBe('')
@@ -284,13 +352,61 @@ describe('tournoi', () => {
         expect(ready.length).toBeGreaterThan(0)
         for (const ref of ready) {
           const result = simulateCombat(matchFighters(t, ref), { rng })
-          t = withResult(t, ref, result)
+          t = withResult(t, ref, result, rng)
           played++
           expect(status(t, ref)).toBe('done')
+          // Récompense : hors finale, une offre de reliques distinctes qu'il n'avait pas, et son choix dedans
+          const won = t.results[matchKey(ref)]
+          const before = relicsOf(t, won.winner, ref.round)
+          if (ref.round === ROUNDS - 1) expect(won.relic).toBeUndefined()
+          else {
+            expect(won.relic!.offer).toHaveLength(Math.min(OFFER_SIZE, RELIC_IDS.length - before.length))
+            expect(new Set(won.relic!.offer).size).toBe(won.relic!.offer.length)
+            expect(won.relic!.offer.some((id) => before.includes(id))).toBe(false)
+            expect(won.relic!.offer).toContain(won.relic!.chosen)
+          }
         }
       }
       expect(played).toBe(SLOTS - 1)
+      // Le champion a gagné une relique par tour avant la finale, toutes différentes, et il les portait en finale
+      const champ = championRun(t)!
+      expect(champ.relics).toHaveLength(ROUNDS - 1)
+      expect(new Set(champ.relics).size).toBe(ROUNDS - 1)
+      const final = allMatches().find((m) => m.round === ROUNDS - 1)!
+      const finalists = matchFighters(t, final)
+      const champSide = t.results[matchKey(final)].players![0] === champion(t) ? 0 : 1
+      expect(finalists[champSide].relics.map((r) => r.id)).toEqual(champ.relics)
+      // Bilan : encaissés = PV perdus (PV max + soins − PV restants) ; infligés (coups et effets, excès du coup
+      // fatal compris) ≥ ce que chaque adversaire avait à perdre (les effets ont longtemps manqué aux infligés).
+      let lost = 0
+      let owed = 0
+      for (const ref of allMatches()) {
+        const r = t.results[matchKey(ref)]
+        const i = r.players!.indexOf(champion(t)!)
+        if (i < 0) continue
+        const pair = matchFighters(t, ref)
+        lost += pair[i].maxHp + r.stats![i].healed - r.hpLeft
+        owed += pair[1 - i].maxHp + r.stats![1 - i].healed
+      }
+      expect(champ.totals.damageTaken).toBe(lost)
+      expect(champ.totals.damage).toBeGreaterThanOrEqual(owed)
     }
+  })
+
+  it('sans reliques : aucune victoire n’en offre, personne n’en porte', () => {
+    const rng = seededRng(5)
+    let t = createTournament(slots(rng), (id) => createCharacter(id).name, { relics: false })
+    expect(t.relics).toBe(false)
+    while (champion(t) === null)
+      for (const ref of readyMatches(t)) {
+        const fighters = matchFighters(t, ref)
+        expect(fighters.every((f) => f.relics.length === 0)).toBe(true)
+        t = withResult(t, ref, simulateCombat(fighters, { rng }), rng)
+        expect(t.results[matchKey(ref)].relic).toBeUndefined()
+      }
+    expect(championRun(t)!.relics).toEqual([])
+    // Par défaut, le système est actif
+    expect(createTournament(slots(rng), (id) => createCharacter(id).name).relics).toBe(true)
   })
 
   it('refuse un match déjà joué, pas prêt, ou avec les mauvais combattants', () => {
@@ -304,6 +420,28 @@ describe('tournoi', () => {
     const wrong: CombatResult = { ...other, fighters: [createCharacter('gorak'), createCharacter('gorak')] }
     if (t.entrants[2].characterId !== 'gorak' || t.entrants[3].characterId !== 'gorak')
       expect(() => withResult(t, { round: 0, index: 1 }, wrong)).toThrow()
+  })
+
+  it('l’observateur peut changer la relique du vainqueur, tant qu’il n’a pas rejoué', () => {
+    const rng = seededRng(3)
+    let t = createTournament(slots(rng), (id) => createCharacter(id).name)
+    const first = { round: 0, index: 0 }
+    t = withResult(t, first, simulateCombat(matchFighters(t, first), { rng }), rng)
+    const { offer, chosen } = t.results[matchKey(first)].relic!
+    const other = offer.find((id) => id !== chosen)!
+    t = chooseRelic(t, first, other)
+    const winner = t.results[matchKey(first)].winner
+    expect(relicsOf(t, winner)).toEqual([other])
+    expect(() => chooseRelic(t, first, 'pas-une-relique')).toThrow()
+    // Le combat suivant se joue avec la relique choisie ; un combat préparé avant le changement est refusé
+    const second = { round: 0, index: 1 }
+    t = withResult(t, second, simulateCombat(matchFighters(t, second), { rng }), rng)
+    const next = { round: 1, index: 0 }
+    const stale = simulateCombat(matchFighters(chooseRelic(t, first, chosen), next), { rng })
+    expect(() => withResult(t, next, stale, rng)).toThrow()
+    expect(matchFighters(t, next).flatMap((f) => f.relics.map((r) => r.id))).toContain(other)
+    t = withResult(t, next, simulateCombat(matchFighters(t, next), { rng }), rng)
+    expect(() => chooseRelic(t, first, chosen)).toThrow()
   })
 })
 
@@ -430,6 +568,29 @@ describe('musique de fond (docs/SONS.md § 10, 0.48.0)', () => {
     sound.setMusicMuted(false)
     expect(sound.isMusicMuted()).toBe(false)
   })
+  it('son et musique coupés par défaut ; un choix enregistré « rallumé » les rétablit', async () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => stored.get(k) ?? null,
+      setItem: (k: string, v: string) => void stored.set(k, v),
+    })
+    try {
+      // Import dynamique voulu : l'état muet se lit au chargement du module, qu'on recharge ici
+      vi.resetModules()
+      const fresh = await import('./sound')
+      expect(fresh.isMuted()).toBe(true)
+      expect(fresh.isMusicMuted()).toBe(true)
+      fresh.setMuted(false)
+      fresh.setMusicMuted(false)
+      vi.resetModules()
+      const reloaded = await import('./sound')
+      expect(reloaded.isMuted()).toBe(false)
+      expect(reloaded.isMusicMuted()).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+      vi.resetModules()
+    }
+  })
 })
 
 describe('Sons (docs/SONS.md, 0.36.2)', () => {
@@ -448,16 +609,14 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
 
   it('chaque compétence joue le son de sa nature, le même pour tous les personnages (§ 4.3)', async () => {
     const { cueOf } = await import('./cues')
-    // Coups (null) : Rétribution, Charge et Coup de griffe sonnent avec leurs coups
+    // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'poison-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'rot-aura', 'melodious-aura', 'overture'])
-    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'bark-skin', 'life-bloom', 'whistle'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note'])
-    // Fleur de vie pose une Régénération depuis la 0.42.0 : un bonus sur soi, donc le son du bonus
-    family('heal', ['blood-rage'])
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture'])
+    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'whistle'])
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note', 'cleave'])
     // Crescendo et Soliste (barde) : leurs trois coups sonnent, la compétence est muette
-    family(null, ['retribution', 'charge', 'claw', 'crescendo', 'soloist'])
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist'])
     const seen: Record<string, Set<string | null>> = {}
     for (const a of CHARACTER_IDS)
       for (const b of CHARACTER_IDS)
@@ -475,6 +634,12 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
       else if (expected[id] === null) expect({ id, cues: [...cues] }).toEqual({ id, cues: [null] })
       else expect({ id, cues: [...cues].filter((c) => c !== null) }).toEqual({ id, cues: [expected[id]] })
     }
+  })
+
+  it("une aura cumulable reposée à son plafond ne sonne pas : rien ne s'est activé (§ 4.2, règle 8)", () => {
+    const capped = { type: 'applyStatus', target: 0, status: 'holyAura', stacks: 1, result: { kind: 'applied', stacks: 0 } } as const
+    expect(cueOf(0, [capped])).toBeNull()
+    expect(cueOf(0, [{ ...capped, result: { kind: 'applied', stacks: 1 } }])).toBe('auraGain')
   })
 })
 
@@ -515,16 +680,21 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(h('brokk')).toBeLessThan(h('ysolde'))
     expect(h('ysolde')).toBeLessThan(h('gorak'))
     expect(h('gorak')).toBeLessThan(h('morgrut'))
-    expect(h('thaldrin', 1)).toBeGreaterThan(h('thaldrin', 0)) // l'ours dépasse le druide
+    // L'ours, à quatre pattes, ne grandit pas : il reste sous l'ogre et à la hauteur du druide, à 5 % près
+    expect(h('thaldrin', 1)).toBeLessThan(h('morgrut'))
+    expect(Math.abs(h('thaldrin', 1) / h('thaldrin', 0) - 1)).toBeLessThan(0.05)
     for (const c of CHARACTERS) expect(h(c.id)).toBeLessThanOrEqual(h('morgrut'))
     // Ni des clones de même taille, ni des tailles « réalistes » (ogre deux fois le nain, jugé trop fort)
     expect(h('morgrut') / h('brokk')).toBeGreaterThan(1.2)
     expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
   })
 
-  it('Gorak, Naraxes, Fanchon, Ervald, Aldric, Ysolde et Elaria ont les cinq postures communes', () => {
-    for (const id of ['gorak', 'naraxes', 'fanchon', 'ervald', 'aldric', 'ysolde', 'elaria'])
-      expect(Object.keys(createCharacter(id).look.poses ?? {}).sort()).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
+  it('tous les personnages, et les deux formes du druide, ont les cinq postures communes', () => {
+    const looks = CHARACTERS.flatMap((c) => (c.forms ?? [null]).map((_, f) => [`${c.id}:${f}`, c.lookFor(f)] as const))
+    for (const [id, look] of looks) expect(Object.keys(look.poses ?? {}).sort(), id).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
+    // L'ours a ses propres postures, pas celles du druide
+    const thaldrin = createCharacter('thaldrin')
+    expect(thaldrin.lookFor(1).poses?.attack).not.toBe(thaldrin.lookFor(0).poses?.attack)
   })
 
   it('chaque posture a un nom, un moment et un prompt, sans emoji', () => {

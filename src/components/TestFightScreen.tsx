@@ -3,13 +3,14 @@ import type { Character } from '../game/character'
 import { simulateCombat, type CombatResult, type Pair, type Side } from '../game/combat'
 import { reportCombat } from '../game/debugConsole'
 import { randomSeed } from '../game/rng'
-import { TRAINING_ARENA } from '../game/arenas'
+import { ARENAS, TRAINING_ARENA } from '../game/arenas'
 import { CHARACTERS, createCharacter } from '../game/roster'
 import { FightScreen } from './FightScreen'
 
 /*
- * Combat test : un mode de mise au point des compétences, sans sélection ni écran d'affrontement,
- * toujours dans le même décor (`TRAINING_ARENA`, réservé à ce mode). Le combat s'arrête avant chaque dé et le joueur
+ * Combat test : un mode de mise au point des compétences, sans sélection ni écran d'affrontement.
+ * Le décor est par défaut celui de l'entraînement (`TRAINING_ARENA`, réservé à ce mode), et un menu
+ * déroulant le remplace par n'importe quelle arène, sans relancer le combat. Le combat s'arrête avant chaque dé et le joueur
  * choisit la face sur le pavé du combattant qui a la main (ou laisse le hasard) : on vérifie ainsi
  * l'enchaînement des compétences, leur résolution et leur rythme, coup par coup. Rien n'est compté
  * dans les statistiques ; la trace finale part dans `logs/combats/` (suffixe `_triche`).
@@ -29,8 +30,12 @@ interface Session {
 
 const newSession = (ids: Pair<string>): Session => ({ ids, seed: randomSeed() })
 
+/** Décors du combat test : l'entraînement d'abord, puis les arènes des duels et du tournoi. */
+const TEST_ARENAS = [TRAINING_ARENA, ...ARENAS]
+
 export function TestFightScreen({ initial, onMenu }: Props) {
   const [session, setSession] = useState(() => newSession(initial))
+  const [arena, setArena] = useState(TRAINING_ARENA)
   const { ids, seed } = session
   const script = useMemo(() => {
     const fighters: Pair<Character> = [createCharacter(ids[0]), createCharacter(ids[1])]
@@ -45,7 +50,7 @@ export function TestFightScreen({ initial, onMenu }: Props) {
     <FightScreen
       key={`${ids.join('-')}-${seed}`}
       script={script}
-      arena={TRAINING_ARENA}
+      arena={arena}
       onEnd={onEnd}
       test={{
         // En haut de l'arène : un sélecteur par camp, et les commandes du mode au centre
@@ -70,7 +75,20 @@ export function TestFightScreen({ initial, onMenu }: Props) {
             ))}
             <div className="pointer-events-auto flex flex-col items-center gap-1">
               <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-fuchsia-300/80">Combat test</span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                {/* Le décor est purement visuel : le changer garde le combat en cours */}
+                <select
+                  value={arena.id}
+                  onChange={(e) => setArena(TEST_ARENAS.find((a) => a.id === e.target.value) ?? TRAINING_ARENA)}
+                  className="test-select"
+                  title="Arène (décor du combat)"
+                >
+                  {TEST_ARENAS.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
                 <button onClick={() => setSession(newSession(ids))} className="btn btn-sm" title="Recommencer le combat (nouvelle initiative)">
                   <span>Recommencer</span>
                 </button>

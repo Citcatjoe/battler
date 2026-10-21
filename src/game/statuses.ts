@@ -31,7 +31,7 @@ export type StatusId =
   | 'lifesteal'
   | 'windFury'
   | 'evasion'
-  | 'poisonAura'
+  | 'frostAura'
   | 'powerAura'
   | 'intimidationAura'
   | 'precisionAura'
@@ -50,6 +50,10 @@ export type StatusId =
   | 'whistling'
   | 'falseNote'
   | 'melodiousAura'
+  | 'bleed'
+  | 'casting'
+  | 'bearMight'
+  | 'wildAura'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -136,22 +140,25 @@ export interface StatusDef {
   /**
    * Coups supplémentaires instantanés (0.50.0, Furie des vents) : une charge gagnée pendant l'action
    * frappe dans cette même action, juste après le coup en cours, au lieu d'attendre l'action suivante.
-   * Une charge gagnée pendant ces coups-là enchaîne encore (au plus INSTANT_CHAIN fois par action).
+   * Depuis la 0.69.0, ce sont des coups bruts : leur dé ne donne que la valeur du coup (un 1, un 2 ou un
+   * 3 frappe pour sa valeur), sans compétence de jet, donc sans nouvelle Furie en chaîne.
    */
   instantStrikes?: boolean
   /** Faces du dé des coups supplémentaires (défaut : le dé du porteur), ex. le d6 de Coup de chance */
   extraDie?: number
   /**
-   * Pile ou face : à sa prochaine action, le porteur lance une pièce au lieu de son dé. Pile, l'adversaire
-   * perd `damage` PV (dégâts directs) ; face, rien. Le statut est consommé en entier.
+   * Pile ou face : le porteur lance aussitôt une pièce, juste après le coup pendant lequel le statut est posé
+   * (2026-10-21 ; avant, elle remplaçait le dé de sa prochaine action). Pile, l'adversaire perd `damage` PV
+   * (dégâts directs) ; face, rien. Le statut est consommé en entier.
    * `headsTouches` : pile compte comme un coup qui touche (fenêtres `hit` du porteur et `hurt` de
    * l'adversaire : l'Aura de décoction empoisonne).
    */
   coinToss?: { damage: number; headsTouches?: boolean }
   /**
-   * S'estompe : chaque fois qu'il agit (`onTurnStart` ou `onTurnEnd`), le statut perd une charge, et
-   * disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3, 2, puis
-   * 1 PV). Il n'a donc pas de durée en tours.
+   * S'estompe : chaque fois qu'il agit (`onTurnStart`, `onTurnEnd` ou une réaction), le statut perd une
+   * charge, et disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3,
+   * 2, puis 1 PV ; saignement 2 : 2 puis 1 PV, sur les deux prochains coups reçus). Il n'a donc pas de
+   * durée en tours. La réaction agit d'abord, avec ses charges d'avant, puis la charge part.
    */
   decays?: boolean
   /** Bouclier : absorbe jusqu'à `stacks` points après l'armure, sans descendre sous 1 dégât ; s'use d'autant */
@@ -160,23 +167,23 @@ export interface StatusDef {
   onTurnStart?: (s: Status) => Effect[]
   /** Effets appliqués au porteur à la fin de chacun de ses tours (phase 3) */
   onTurnEnd?: (s: Status) => Effect[]
-  /**
-   * Effets du porteur au début de chaque tour de son ADVERSAIRE (phase 1 de l'adversaire, juste après
-   * ses propres statuts) : une aura qui frappe au même moment que le Poison qu'il subit (0.45.0).
-   * `opponent` y désigne toujours l'adversaire du porteur.
-   */
-  onOpponentTurnStart?: (s: Status) => Effect[]
   /** Moment où la durée (`turns`) est décomptée : début (défaut) ou fin des tours du porteur */
   expiresAt?: 'turnStart' | 'turnEnd'
+  /**
+   * Une seule valeur (0.69.0, Brûlure) : posé sans durée, le statut dure autant de tours que de charges
+   * (Brûlure 3 : 3 PV à la fin de ses 3 prochains tours). `validateRoster` refuse une durée en plus.
+   */
+  turnsFromStacks?: boolean
   /** Modifie les dégâts reçus par le porteur, avant l'armure (le coup garde au moins 1) */
   modifyIncoming?: (damage: number, s: Status) => number
   /** Immunité : aucun statut de cette polarité ne peut être posé sur le porteur (sans consommer de charge) */
   immune?: Polarity
   /**
-   * Statut qui agit sur l'adversaire de son porteur (`onOpponentTurnStart`) et que l'immunité de la
-   * victime arrête aussi (0.50.0, Aura de poison contre l'Aura d'immunité) : aucun effet, une étape vide.
+   * Statut de forme (0.73.0, druide) : le moteur le pose quand le porteur prend la forme qui le déclare
+   * (`CharacterForm.statuses`) et le retire quand il la quitte. C'est une règle de la forme, pas un effet :
+   * aucune purge ne l'enlève, aucune immunité ni garde ne le bloque.
    */
-  stoppedByImmunity?: boolean
+  innate?: boolean
   /** Riposte : le prochain coup qui touche le porteur renvoie cette part des PV retirés (dégâts directs) ; consommé */
   reflectsHit?: number
   /**
@@ -217,6 +224,19 @@ export const FALSE_NOTE = 5
 
 /** Charges de poison posées par coup qui touche, par charge d'Aura de décoction. */
 export const DECOCTION_POISON = 2
+
+/**
+ * Dégâts directs de pile (Pile ou face). 2026-10-21 (choix de l'utilisateur, laboratoire série 13) : 10 au lieu
+ * de 20, pour compenser la pièce lancée aussitôt (Naraxes 61,6 % avec 20 ; 54,1 % au laboratoire avec 10).
+ */
+export const COIN_HEADS = 10
+
+/**
+ * Druide : ce que l'ours ajoute à chacun de ses coups (Force de l'ours), et par charge d'Aura sauvage.
+ * +4 en 0.73.0, +3 en 0.76.0 : la compensation des trois éclairs de la Foudre (6 dégâts au lieu de 5).
+ */
+export const BEAR_MIGHT = 3
+export const WILD_AURA_BONUS = 2
 
 /** Plafond de charges de l'Aura de sainteté (0.42.0). */
 const HOLY_CAP = 3
@@ -262,6 +282,29 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
     opposes: 'regeneration',
   },
+  /*
+   * Saignement (0.68.0) : le pendant du Poison, qui compte les coups au lieu des tours. Chaque coup qui
+   * touche le porteur rouvre la plaie ; plusieurs coups dans une action (Furie des vents, deux dés) la
+   * vident d'un coup, une esquive ou une action perdue la laissent ouverte. Depuis la 0.68.1, la plaie
+   * qu'un coup ouvre ou grossit ne coule qu'au coup suivant (`strikeBase`, combat.ts) : l'observateur la
+   * voit, l'attend, et son écoulement s'affiche à l'impact (badge « Saignement +2 », useCombat.ts).
+   */
+  bleed: {
+    name: 'Saignement',
+    look: { glow: 'rgba(220,38,38,0.85)' },
+    polarity: 'negative',
+    summary:
+      "Chaque coup qui touche le porteur lui fait perdre autant de PV que de charges, en ignorant l'armure, puis perd une charge. Une seule valeur : les PV perdus au prochain coup reçu, qui baissent de 1 à chaque coup (2, 1). Le coup qui ouvre la plaie ne la fait pas couler : elle attend le suivant. Se cumule.",
+    describe: (s) =>
+      s.stacks > 1
+        ? `Le prochain coup qui le touche lui fait perdre ${plural(s.stacks, 'PV')} de plus, puis 1 de moins à chaque coup (${(s.stacks * (s.stacks + 1)) / 2} PV en tout)`
+        : 'Le prochain coup qui le touche lui fait perdre 1 PV de plus, puis la plaie se referme',
+    badge: (s) => String(s.stacks),
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    reactions: { hurt: (s) => [{ type: 'damage', amount: s.stacks }] },
+  },
   /* Statuts disponibles pour de futures compétences, pas encore attribués à un personnage. */
   regeneration: {
     name: 'Régénération',
@@ -297,10 +340,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   burn: {
     name: 'Brûlure',
     polarity: 'negative',
-    summary: 'Fait perdre des PV à la fin de chaque tour du porteur.',
+    summary:
+      'Fait perdre autant de PV que sa valeur à la fin de chaque tour du porteur, pendant autant de tours (Brûlure 3 : 3 PV à la fin de ses 3 prochains tours). Une nouvelle Brûlure remplace l’ancienne.',
     describe: (s) => `Perd ${plural(s.stacks, 'PV')} à la fin de chacun de ses tours${forTurns(s)}`,
     badge: (s) => String(s.stacks),
+    // 0.69.0 (demande de l'utilisateur) : une seule valeur, comme le Poison et le Saignement ; la durée
+    // suit les dégâts. Avant : deux valeurs posées à part (Feux follets : 3 PV, 3 tours).
+    counter: 'stacks',
     stacking: 'refresh',
+    turnsFromStacks: true,
     onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks }],
     expiresAt: 'turnEnd',
   },
@@ -325,18 +373,18 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     skipsAction: true,
   },
   thorns: {
-    name: 'Épines',
+    name: 'Épines acérées',
     look: { glow: 'rgba(132,204,22,0.85)' },
     polarity: 'positive',
-    summary: "Chaque coup encaissé renvoie 1 dégât direct par charge à l'attaquant. Permanentes, elles se cumulent.",
-    describe: (s) => `Chaque coup encaissé renvoie ${plural(s.stacks, 'dégât')} à l'attaquant, pour le reste du combat`,
+    summary: "Chaque coup encaissé fait saigner l'attaquant : 1 charge de Saignement par charge d'épines. Permanentes, elles se cumulent.",
+    describe: (s) => `Chaque coup encaissé pose ${plural(s.stacks, 'charge')} de Saignement sur l'attaquant, pour le reste du combat`,
     badge: (s) => String(s.stacks),
-    // 0.45.0 (demande de l'utilisateur) : permanentes, une charge par 2 au dé, 1 dégât renvoyé par charge.
-    // Avant : 6 dégâts renvoyés pendant un seul tour, que le spectateur voyait peu.
+    // 0.68.0 : les épines font saigner au lieu de renvoyer 1 dégât direct par charge (0.45.0). Le saignement
+    // ne coule que quand le nain touche l'attaquant : la punition attend la riposte du porteur.
     counter: 'stacks',
     stacking: 'add',
-    // Pas de `spentOnReaction` : contre une Furie des vents, les deux coups sont punis (voulu, 0.29.0).
-    reactions: { hurt: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }] },
+    // Pas de `spentOnReaction` : contre une Furie des vents, chaque coup ouvre la plaie (voulu, 0.29.0).
+    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: s.stacks, target: 'opponent' }] },
   },
   ward: {
     name: 'Garde sacrée',
@@ -367,11 +415,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Un 2 pendant ces coups relance la Furie.',
-    describe: () => 'Frappe deux fois tout de suite, chaque coup résolu à part',
+    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence.',
+    describe: () => 'Frappe deux fois tout de suite ; un 1, un 2 ou un 3 frappe pour sa valeur',
     badge: () => '×2',
     // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
     // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas.
+    // 0.69.0 (demande de l'utilisateur) : coups bruts. Avant, un tiers des coups de Furie tombaient sur
+    // une compétence (36,5 %), et une Furie sur cinq en relançait une autre (SORTS.md § 15).
     counter: 'stacks',
     stacking: 'add',
     expiresAt: 'turnEnd',
@@ -382,11 +432,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Esquive améliorée',
     look: { glow: 'rgba(165,243,252,0.8)', opacity: 0.45 },
     polarity: 'positive',
-    summary: "Le prochain coup reçu est esquivé à coup sûr. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
-    describe: (s) => `Esquive à coup sûr le prochain coup reçu${forTurns(s)}`,
+    summary:
+      "Le prochain coup reçu est esquivé à coup sûr, une charge par esquive. Se cumule : chaque charge esquive un coup de plus. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
+    describe: (s) => (s.stacks > 1 ? `Esquive à coup sûr les ${s.stacks} prochains coups reçus${forTurns(s)}` : `Esquive à coup sûr le prochain coup reçu${forTurns(s)}`),
     badge: () => '100 %',
-    stacking: 'refresh',
-    maxStacks: 1,
+    // 2026-10-21 (demande de l'utilisateur) : cumulable, une charge par esquive. Avant : plafonnée à 1 (`refresh`).
+    counter: 'stacks',
+    stacking: 'add',
     forcesDodge: true,
   },
 
@@ -396,7 +448,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(148,163,184,0.7)', motion: 'tremble' },
     polarity: 'negative',
     summary: 'Le porteur, terrifié, perd sa prochaine action.',
-    describe: () => 'Terrifié : perd sa prochaine action',
+    describe: () => 'Perd sa prochaine action, terrifié',
     badge: () => '×1',
     stacking: 'add',
     maxStacks: 1,
@@ -406,15 +458,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
-    summary: 'À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, 20 dégâts directs qui comptent comme un coup qui touche ; face, rien.',
-    describe: () => 'À sa prochaine action, une pièce au lieu du dé : pile, 20 dégâts qui touchent ; face, rien',
-    badge: () => '20',
+    summary: `Le porteur lance aussitôt une pièce, juste après le jet qui l’a posé : pile, ${COIN_HEADS} dégâts directs qui comptent comme un coup qui touche ; face, rien.`,
+    describe: () => `Une pièce lancée aussitôt : pile, ${COIN_HEADS} dégâts qui touchent ; face, rien`,
+    badge: () => String(COIN_HEADS),
     stacking: 'refresh',
     maxStacks: 1,
     // 0.42.0 (audit des compétences, SORTS.md § 10) : pile à 20 au lieu de 15, et pile touche (l'Aura
     // de décoction empoisonne). Face reste vide : la dualité et sa mise en scène sonore sont voulues.
     // Avant : valeur nette de −4 à −5 points, parce que la pièce prend la place d'un jet de dé.
-    coinToss: { damage: 20, headsTouches: true },
+    // 2026-10-21 (demande de l'utilisateur) : la pièce part aussitôt, juste après le jet de 2 qui l'a posée,
+    // au lieu de remplacer le dé de l'action suivante.
+    coinToss: { damage: COIN_HEADS, headsTouches: true },
   },
   luckyStrike: {
     name: 'Coup de chance',
@@ -463,22 +517,19 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
 
   /* Auras : bonus permanents (sans durée) posés sur un 3 au dé, pour le reste du combat. */
-  poisonAura: {
+  frostAura: {
     name: 'Aura glaciale',
     look: { aura: 'rgba(147,197,253,0.6)' },
     polarity: 'positive',
-    // 0.45.0 : le texte dit que ce n'est pas un Poison (note de l'utilisateur). Un vrai poison serait
-    // bloqué par l'Aura d'immunité et contré par la Régénération : Ervald tombait à 31 % contre Gauvain.
     summary:
-      "Au début de chaque tour de l'adversaire, juste après ses poisons, le froid de la tombe lui fait perdre 1 PV par charge. L'Aura d'immunité l'arrête ; la régénération, non. Permanente.",
-    describe: (s) => `Au début de chaque tour adverse, le froid lui fait perdre ${plural(s.stacks, 'PV')}, sauf s'il est immunisé`,
-    badge: (s) => String(s.stacks),
+      "Au début de chacun de ses tours, le froid de la tombe pose 1 charge de Poison par charge d'aura sur l'adversaire. Le Poison perd une charge à chaque tour : une charge d'aura le fige à sa valeur. Permanente.",
+    describe: (s) => `Au début de chacun de ses tours, ${plural(s.stacks, 'charge')} de Poison sur l'adversaire`,
+    badge: (s) => `+${s.stacks}`,
     stacking: 'add',
-    // 0.45.0 (choix de l'utilisateur) : elle agit au début du tour de l'ADVERSAIRE, dans la même étape
-    // que le Poison qu'il subit, au lieu du début du tour du porteur. Toujours des dégâts directs.
-    // 0.50.0 : l'Aura d'immunité l'arrête aussi (l'utilisateur pensait l'immunité inefficace)
-    stoppedByImmunity: true,
-    onOpponentTurnStart: (s) => [{ type: 'damage', amount: s.stacks, target: 'opponent' }],
+    // 0.69.0 (choix de l'utilisateur, SORTS.md § 15) : elle pose du vrai Poison au lieu de dégâts directs
+    // au début du tour adverse (0.45.0). Un seul statut, une seule règle : l'immunité le bloque, la
+    // Régénération l'annule, une purge l'enlève, sans crochet propre. Cumulable, sans compensation.
+    onTurnStart: (s) => [{ type: 'applyStatus', status: 'poison', stacks: s.stacks, target: 'opponent' }],
   },
   powerAura: {
     name: 'Aura de puissance',
@@ -598,6 +649,48 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
   },
 
+  /*
+   * Druide (0.73.0, SORTS.md § 18) : un tour sur deux, l'homme lance un sort ; l'autre tour, la bête frappe.
+   * Les deux règles de forme sont des statuts de forme (`innate`), visibles dans la zone d'état.
+   */
+  casting: {
+    name: 'Incantation',
+    look: { glow: 'rgba(163,230,53,0.7)' },
+    polarity: 'positive',
+    summary: 'Sous forme humaine, le druide ne frappe pas : son dé devient un d3, et chaque jet lance un sort.',
+    describe: () => 'Son dé est un d3 : chaque jet lance un sort',
+    badge: () => 'd3',
+    // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
+    counter: 'turns',
+    stacking: 'refresh',
+    maxStacks: 1,
+    innate: true,
+    modifyStats: (stats) => ({ ...stats, damageDie: 3 }),
+  },
+  bearMight: {
+    name: "Force de l'ours",
+    look: { glow: 'rgba(180,83,9,0.7)' },
+    polarity: 'positive',
+    summary: `Sous forme d'ours, le druide ne lance aucun sort : chaque coup fait ${BEAR_MIGHT} de plus, avant l'armure, un 1, un 2 ou un 3 compris.`,
+    describe: () => `Chaque coup fait +${BEAR_MIGHT}`,
+    badge: () => `+${BEAR_MIGHT}`,
+    counter: 'turns',
+    stacking: 'refresh',
+    maxStacks: 1,
+    innate: true,
+    modifyOutgoing: (damage) => damage + BEAR_MIGHT,
+  },
+  wildAura: {
+    name: 'Aura sauvage',
+    look: { aura: 'rgba(180,83,9,0.55)' },
+    polarity: 'positive',
+    summary: `Chaque coup du porteur fait ${WILD_AURA_BONUS} de plus par charge, avant l'armure : posée par l'homme, elle sert l'ours, le seul qui frappe. Permanente.`,
+    describe: (s) => `Ses coups font +${WILD_AURA_BONUS * s.stacks} avant l'armure, pour le reste du combat`,
+    badge: (s) => `+${WILD_AURA_BONUS * s.stacks}`,
+    stacking: 'add',
+    modifyOutgoing: (damage, s) => damage + WILD_AURA_BONUS * s.stacks,
+  },
+
   /* Barde (0.41.0) : deux dés, des compétences sur les doubles. */
   whistling: {
     name: 'Sifflotement',
@@ -676,69 +769,80 @@ export const POLARITY_STYLE: Record<Polarity, { chip: string; glow: string; labe
   },
 }
 
-/** Règle de durée commune à tous les statuts (affichée une fois, pas sur chaque statut). */
-export const STATUS_DURATION_RULE =
-  "Un statut dure jusqu'à épuisement de ses charges, ou pendant le nombre de tours du porteur fixé par l'effet qui le pose. La durée est décomptée au début de chacun de ses tours (à la fin pour certains statuts), mais jamais à la fin du tour où le statut a été posé."
-
 /**
- * Règles d'un statut en phrases, déduites de sa définition (crochets, cumul, plafond) :
- * le compendium et la documentation restent fidèles au code sans texte écrit à la main.
+ * Ce que fait un statut, en phrases déduites de sa définition (crochets) : le compendium reste fidèle au code
+ * sans texte écrit à la main. Rangées comme sa fiche les montre :
+ * - `effect` : ce que le statut fait ;
+ * - `consumption` : comment il s'use ou s'éteint ;
+ * - `stacking` et `maxStacks` : son cumul, qui renvoie aux règles communes (section « Règles », rules.ts),
+ *   écrites une seule fois au lieu d'être répétées sur chaque statut.
+ * L'opposition à un autre statut n'est pas ici : c'est une interaction (catalog.ts, `statusLinks`).
  */
-export function statusRules(id: StatusId): string[] {
+export interface StatusRuleSections {
+  effect: string[]
+  consumption: string[]
+  stacking: 'stacking-add' | 'stacking-refresh'
+  maxStacks?: number
+}
+
+export function statusRuleSections(id: StatusId): StatusRuleSections {
   const def = STATUSES[id]
-  const rules: string[] = []
-  if (def.forcesDodge) rules.push('Le prochain coup reçu est esquivé à coup sûr, sans tirage ; une charge par esquive.')
+  const effect: string[] = []
+  const consumption: string[] = []
+  if (def.forcesDodge) effect.push('Le prochain coup reçu est esquivé à coup sûr, sans tirage ; une charge par esquive.')
   if (def.drainsHit)
-    rules.push(
+    effect.push(
       "Le prochain coup porté rend au porteur les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet de compétence (1, 2, 3) la laisse en place.",
     )
-  if (def.extraStrikes)
-    rules.push(
+  if (def.extraStrikes && def.instantStrikes)
+    effect.push(
+      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : le dé ne donne que la valeur du coup, sans compétence (un 1, un 2 ou un 3 frappe pour sa valeur).`,
+    )
+  else if (def.extraStrikes)
+    effect.push(
       `À sa prochaine action, le porteur frappe ${def.extraStrikes + 1} fois${def.extraDie ? ` (le coup en plus avec un d${def.extraDie})` : ''} : dé, esquive, critique et compétences de chaque coup sont résolus à part. Le statut est consommé au début de l'action.`,
     )
   if (def.coinToss)
-    rules.push(
-      `À sa prochaine action, le porteur lance une pièce au lieu de son dé : pile, ${def.coinToss.damage} dégâts directs à l'adversaire${def.coinToss.headsTouches ? ", qui comptent comme un coup qui touche (les effets « quand il touche » se déclenchent)" : ''} ; face, rien. Le statut est consommé.`,
+    effect.push(
+      `Le porteur lance aussitôt une pièce, juste après le coup pendant lequel le statut est posé : pile, ${def.coinToss.damage} dégâts directs à l'adversaire${def.coinToss.headsTouches ? ", qui comptent comme un coup qui touche (les effets « quand il touche » se déclenchent)" : ''} ; face, rien. Le statut est consommé.`,
     )
-  if (def.forcesCrit)
-    rules.push('Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.')
-  if (def.shield)
-    rules.push("Absorbe autant de points que de charges, après l'armure, sans faire descendre un coup sous 1 dégât.")
-  if (def.onTurnStart) rules.push('Agit au début de chaque tour du porteur, avant son attaque.')
-  if (def.modifyOutgoing) rules.push("Modifie les dégâts du porteur avant l'armure ; un coup garde au moins 1 dégât.")
+  if (def.forcesCrit) effect.push('Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.')
+  if (def.shield) effect.push("Absorbe autant de points que de charges, après l'armure, sans faire descendre un coup sous 1 dégât.")
+  if (def.onTurnStart) effect.push('Agit au début de chaque tour du porteur, avant son attaque.')
+  if (def.modifyOutgoing) effect.push("Modifie les dégâts du porteur avant l'armure ; un coup garde au moins 1 dégât.")
   if (def.modifyFinal)
-    rules.push("Modifie les dégâts finaux des coups du porteur, après l'armure et les boucliers ; un coup garde au moins 1 dégât.")
-  if (def.modifyStats)
-    rules.push('Modifie les caractéristiques du porteur, bornées par le moteur (armure ≥ 0, chances entre 0 et 100 %).')
-  if (def.onTurnEnd) rules.push('Agit à la fin de chaque tour du porteur, après son action.')
-  if (def.decays) rules.push("S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
-  if (def.modifyIncoming) rules.push("Modifie les dégâts reçus par le porteur avant l'armure ; un coup garde au moins 1 dégât.")
-  if (def.skipsAction) rules.push('Le porteur perd son action ; une charge par tour perdu.')
+    effect.push("Modifie les dégâts finaux des coups du porteur, après l'armure et les boucliers ; un coup garde au moins 1 dégât.")
+  if (def.modifyStats) effect.push('Modifie les caractéristiques du porteur, bornées par le moteur (armure ≥ 0, chances entre 0 et 100 %).')
+  if (def.onTurnEnd) effect.push('Agit à la fin de chaque tour du porteur, après son action.')
+  if (def.modifyIncoming) effect.push("Modifie les dégâts reçus par le porteur avant l'armure ; un coup garde au moins 1 dégât.")
+  if (def.skipsAction) effect.push('Le porteur perd son action ; une charge par tour perdu.')
   for (const trigger of Object.keys(def.reactions ?? {}) as Trigger[])
-    rules.push(
+    effect.push(
       `Réagit ${lowerFirst(TRIGGERS[trigger].label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''}, sans déclencher d'autre réaction en chaîne.`,
     )
-  if (def.spentOnHit) rules.push('Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ou sacrifié ne le consomme pas.')
-  if (def.immune)
-    rules.push(`Aucun ${def.immune === 'negative' ? 'malus' : 'bonus'} ne peut être posé sur le porteur ; l'immunité ne s'use pas.`)
+  if (def.immune) effect.push(`Aucun ${def.immune === 'negative' ? 'malus' : 'bonus'} ne peut être posé sur le porteur ; l'immunité ne s'use pas.`)
+  if (def.innate)
+    consumption.push("Statut de forme : présent tant que le porteur a cette forme, retiré quand il en change ; aucune purge ne l'enlève, aucune immunité ne le bloque.")
   if (def.reflectsHit)
-    rules.push(`Le prochain coup qui touche le porteur lui renvoie ${Math.round(def.reflectsHit * 100)} % des PV retirés, en dégâts directs ; une charge.`)
+    effect.push(`Le prochain coup qui touche le porteur lui renvoie ${Math.round(def.reflectsHit * 100)} % des PV retirés, en dégâts directs ; une charge.`)
   if (def.fillsOnHurt)
-    rules.push(`Chaque coup qui touche le porteur range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges (la plus ancienne cède sa place) ; relâchées d'un coup par la compétence du porteur.`)
+    effect.push(
+      `Chaque coup qui touche le porteur range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges (la plus ancienne cède sa place) ; relâchées d'un coup par la compétence du porteur.`,
+    )
   if (def.wards)
-    rules.push(
+    effect.push(
       `Bloque la pose ${def.wards.polarity === 'negative' ? 'des malus' : def.wards.polarity === 'positive' ? 'des bonus' : 'de certains statuts'} sur le porteur ; une charge par blocage.`,
     )
-  if (def.opposes)
-    rules.push(`S'oppose à ${STATUSES[def.opposes].name} : leurs charges s'annulent une à une.`)
-  if (def.expiresAt === 'turnEnd') rules.push('Sa durée se décompte à la fin des tours du porteur.')
-  rules.push(
-    def.stacking === 'add'
-      ? 'Cumulable : une nouvelle application ajoute ses charges, la durée garde la plus longue.'
-      : "Non cumulable : une nouvelle application remplace l'existante (charges et durée).",
-  )
-  if (def.maxStacks !== undefined) rules.push(`Plafonné à ${def.maxStacks} charges.`)
-  return rules
+  if (def.decays) consumption.push("S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
+  if (def.spentOnHit) consumption.push('Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ou sacrifié ne le consomme pas.')
+  if (def.expiresAt === 'turnEnd') consumption.push('Sa durée se décompte à la fin des tours du porteur.')
+  if (def.turnsFromStacks) consumption.push('Une seule valeur : il dure autant de tours que de charges.')
+  return {
+    effect,
+    consumption,
+    stacking: def.stacking === 'add' ? 'stacking-add' : 'stacking-refresh',
+    maxStacks: def.maxStacks,
+  }
 }
 
 /* ---------- Manipulation (immuable) d'une liste de statuts ---------- */
@@ -826,8 +930,9 @@ export function consumeStatus(list: readonly Status[], id: StatusId, amount: num
   })
 }
 
+/** Retire les statuts d'une polarité, sauf les statuts de forme (`innate`), qui ne se purgent pas. */
 export const removeStatuses = (list: readonly Status[], polarity: Polarity) =>
-  list.filter((s) => STATUSES[s.id].polarity !== polarity)
+  list.filter((s) => STATUSES[s.id].polarity !== polarity || STATUSES[s.id].innate)
 
 /** Décompte d'un début de tour : renvoie les statuts restants et ceux qui expirent. */
 export function tickDurations(

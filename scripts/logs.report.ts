@@ -10,7 +10,8 @@ import { it } from 'vitest'
 import { createAudit } from '../src/game/audit'
 import { simulateCombat, type CombatResult } from '../src/game/combat'
 import { CHARACTER_IDS, createCharacter } from '../src/game/roster'
-import { parseForcedRolls, traceText } from '../src/game/trace'
+import { parseForcedRolls, parseRelics, traceText } from '../src/game/trace'
+import { getRelic, RELIC_IDS } from '../src/game/relics'
 import pkg from '../package.json' with { type: 'json' }
 
 const DIR = 'logs/combats'
@@ -42,11 +43,17 @@ it('rapport des combats joués', () => {
       skipped.push(`${file} (personnage inconnu)`)
       continue
     }
-    // Les noms viennent de l'en-tête (« Gorak II » en tournoi), les règles de l'identifiant
+    // Les noms viennent de l'en-tête (« Gorak II » en tournoi), les règles de l'identifiant, les reliques de leur ligne
     const text = readFileSync(`${DIR}/${file}`, 'utf8')
     const names = /^=== Battler · (.+) contre (.+) · graine/.exec(text)
-    const fighter = (id: string, name?: string) => (name ? createCharacter(id).withName(name) : createCharacter(id))
-    const r = simulateCombat([fighter(a, names?.[1]), fighter(b, names?.[2])], { seed: Number(seed), forcedRolls: parseForcedRolls(text) })
+    const relics = parseRelics(text)
+    if (relics.flat().some((id) => !RELIC_IDS.includes(id))) {
+      skipped.push(`${file} (relique inconnue)`)
+      continue
+    }
+    const fighter = (id: string, side: 0 | 1, name?: string) =>
+      (name ? createCharacter(id).withName(name) : createCharacter(id)).withRelics(relics[side].map(getRelic))
+    const r = simulateCombat([fighter(a, 0, names?.[1]), fighter(b, 1, names?.[2])], { seed: Number(seed), forcedRolls: parseForcedRolls(text) })
     // La trace écrite et la trace rejouée doivent être identiques ; sinon, les règles ont changé depuis
     const same = traceText(r) === text
     results.push({ file, r, same })

@@ -6,8 +6,10 @@
  * combats joués par l'utilisateur, rejoués depuis leur graine). Méthode : docs/EQUILIBRAGE.md.
  * Toute nouvelle mécanique ajoute ici son contrôle.
  */
-import { diceOf, effectiveStats, type Beat, type CombatResult, type Snapshot } from './combat'
+import { STAT_KEYS } from './character'
+import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DOUBLE_TRIGGERS, rollMatches } from './events'
+import { withRelicStats } from './relics'
 import { STATUSES, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
@@ -44,7 +46,9 @@ export function createAudit() {
         if (value !== Math.min(die.faces, Math.max(1, asked))) flag('dé imposé ignoré', r, i, `rang ${rank - 1} : ${value} au lieu de ${asked}`)
       })
     })
-    const init: Snapshot = { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [[], []] }
+    // Statuts de forme (0.73.0) : un personnage à formes commence avec ceux de sa première forme
+    const startStatuses = (side: 0 | 1) => (r.fighters[side].forms?.[0].statuses ?? []).map((id) => ({ id, stacks: 1 }))
+    const init: Snapshot = { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [startStatuses(0), startStatuses(1)] }
     const last = r.initiative[r.initiative.length - 1]
     const first = last[0] > last[1] ? 0 : 1
     const active = (t: number) => (t % 2 === 1 ? first : 1 - first)
@@ -68,12 +72,19 @@ export function createAudit() {
       if (b.type === 'flurry') volley = { turn: b.turn, faces: b.faces, next: 0 }
       const prev = i ? r.beats[i - 1].state : init
       const s = b.state
+      // Statuts de forme (0.73.0) : exactement ceux de la forme du moment, ni purgés ni oubliés au changement
+      for (const side of [0, 1] as const) {
+        const forms = r.fighters[side].forms
+        if (!forms) continue
+        const expected = [...(forms[form[side]].statuses ?? [])].sort().join()
+        const actual = s.statuses[side].filter((x) => STATUSES[x.id].innate).map((x) => x.id).sort().join()
+        if (actual !== expected) flag('statuts de forme incohérents', r, i, `${actual} au lieu de ${expected}`)
+        else if (expected) see('statut de forme')
+      }
       // PV : chaque variation s'explique par l'étape
       for (const side of [0, 1] as const) {
         let delta = 0
-        const effects =
-        b.type === 'event' ? b.event.effects : b.type === 'statusTick' || b.type === 'statusReaction' || b.type === 'coin' ? b.effects : []
-        for (const e of effects) if (e.target === side) delta += e.type === 'heal' ? e.amount : e.type === 'damage' ? -e.amount : 0
+        for (const e of beatEffects(b)) if (e.target === side) delta += e.type === 'heal' ? e.amount : e.type === 'damage' ? -e.amount : 0
         if (b.type === 'attack' && b.attack.attacker !== side) delta -= b.attack.dealt
         // Dégâts comptés en entier (overkill) : les PV, eux, s'arrêtent à 0
         if (s.hp[side] !== Math.max(0, prev.hp[side] + delta)) flag('PV inexpliqués', r, i, `${b.type} côté ${side} : ${prev.hp[side]} → ${s.hp[side]}, attendu ${delta}`)
@@ -94,10 +105,28 @@ export function createAudit() {
           const applied = b.event.effects[k]
           if (effect.type !== 'cleanse' || !effect.orElse || !applied) return
           const target = effect.target === 'opponent' ? 1 - b.event.side : b.event.side
-          const had = prev.statuses[target].some((x) => STATUSES[x.id].polarity === effect.polarity)
+          const had = prev.statuses[target].some((x) => STATUSES[x.id].polarity === effect.polarity && !STATUSES[x.id].innate)
           if (applied.type === 'cleanse' && applied.removed.length === 0) flag('purge à vide malgré son repli', r, i, b.event.name)
           if (applied.type !== 'cleanse' && had) flag('repli joué alors qu’il y avait à retirer', r, i, b.event.name)
           if (applied.type !== 'cleanse') see('repli de purge')
+        })
+        // Dégâts en plusieurs coups (0.76.0, Foudre) : autant de coups que `hits`, chacun du montant demandé
+        def?.effects.forEach((effect, k) => {
+          const applied = b.event.effects[k]
+          if (effect.type !== 'damage' || !effect.hits || applied?.type !== 'damage') return
+          if (applied.parts?.length !== effect.hits || applied.parts.some((n) => n !== effect.amount) || applied.amount !== effect.amount * effect.hits)
+            flag('coups multiples faux', r, i, `${b.event.name} ${JSON.stringify(applied)}`)
+          else see('coups multiples')
+        })
+        // Purge (0.69.0, Purification double) : elle retire exactement les `count` derniers statuts de sa polarité
+        def?.effects.forEach((effect, k) => {
+          const applied = b.event.effects[k]
+          if (effect.type !== 'cleanse' || applied?.type !== 'cleanse') return
+          const target = effect.target === 'opponent' ? 1 - b.event.side : b.event.side
+          const matching = prev.statuses[target].filter((x) => STATUSES[x.id].polarity === effect.polarity && !STATUSES[x.id].innate).map((x) => x.id)
+          const expected = effect.count === undefined ? matching : matching.slice(-effect.count)
+          if (applied.removed.join() !== expected.join()) flag('purge : mauvais statuts retirés', r, i, `${applied.removed.join()} vs ${expected.join()}`)
+          if (target === b.event.side && effect.polarity === 'negative' && applied.removed.length) see('purge de ses malus')
         })
       }
       // Un statut de durée ne perd un tour que pendant une étape statusDuration
@@ -109,12 +138,16 @@ export function createAudit() {
               flag('durée décomptée hors de son étape', r, i, `${st.id} ${was.turns}→${st.turns} (${b.type})`)
           }
       if (b.type === 'statusDuration' || b.type === 'statusExpire' || b.type === 'statusTick') {
-        // Exception (0.45.0) : un statut `onOpponentTurnStart` agit au début du tour de l'adversaire de son porteur
-        const opponentTick = b.type === 'statusTick' && STATUSES[b.status].onOpponentTurnStart !== undefined
-        if (opponentTick ? b.side === active(b.turn) || b.phase !== 'turnStart' : b.side !== active(b.turn))
-          flag('phase de statut sur le mauvais camp', r, i, `${b.type} côté ${b.side}`)
-        if (opponentTick) see('aura au tour adverse')
+        if (b.side !== active(b.turn)) flag('phase de statut sur le mauvais camp', r, i, `${b.type} côté ${b.side}`)
       }
+      // Une seule valeur (Brûlure, 0.69.0) : posé sans durée, il dure autant de tours que de charges
+      if (b.type === 'event')
+        for (const e of b.event.effects) {
+          if (e.type !== 'applyStatus' || e.result.kind !== 'applied' || !STATUSES[e.status].turnsFromStacks) continue
+          const st = find(s.statuses[e.target], e.status)
+          if (st && st.turns !== st.stacks) flag('durée différente de la valeur', r, i, `${e.status} ${st.stacks} / ${st.turns} tours`)
+          else see('brûlure à une valeur')
+        }
       if (b.type === 'attack') {
         const a = b.attack
         const att = a.attacker
@@ -128,9 +161,13 @@ export function createAudit() {
         if (a.faces !== expectedDie) flag('dé incohérent', r, i, `${a.faces} vs ${expectedDie}`)
         if (a.critMultiplier !== eff.critMultiplier) flag('multiplicateur incohérent', r, i, `${a.critMultiplier} vs ${eff.critMultiplier}`)
         if (a.armor !== effDef.armor) flag('armure incohérente', r, i, `${a.armor} vs ${effDef.armor}`)
-        const sacrifice = r.fighters[att].events.some((e) => e.forfeitsHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
+        // Coup brut (Furie des vents, 0.69.0) : son jet ne sacrifie ni ne transforme rien
+        const sacrifice = !a.plain && r.fighters[att].events.some((e) => e.forfeitsHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
         // Coup transformé (Charge, Coup de griffe) : la bonne compétence, la bonne valeur, sans critique si demandé
-        const reshaper = r.fighters[att].events.find((e) => e.reshapesHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
+        const reshaper = a.plain ? undefined : r.fighters[att].events.find((e) => e.reshapesHit && inForm(att, e) && rollMatches(e.trigger, a.roll, a.faces))
+        // Un coup brut ne vient que d'une rafale instantanée du même tour
+        if (a.plain && !r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'flurry' && STATUSES[x.status].instantStrikes))
+          flag('coup brut hors d’une Furie', r, i, '')
         // Le gros coup d'un double (`merged`, barde) est vérifié avec sa paire
         if (!!reshaper !== !!a.reshaped && !a.forfeited && !a.preset) flag('coup transformé incohérent', r, i, `roll ${a.roll}`)
         if (reshaper && a.reshaped) {
@@ -153,9 +190,17 @@ export function createAudit() {
         if (a.forfeited !== sacrifice) flag('coup sacrifié incohérent', r, i, `roll ${a.roll}`)
         const evasion = !!find(prev.statuses[def], 'evasion')
         if (!a.forfeited && a.dodgeForced !== evasion) flag('esquive imposée incohérente', r, i, `evasion ${evasion}`)
-        if (a.dodgeForced && find(s.statuses[def], 'evasion')) flag('esquive imposée non consommée', r, i, '')
+        // Esquive améliorée cumulable (2026-10-21) : une esquive imposée use exactement une charge
+        const kept = (find(prev.statuses[def], 'evasion')?.stacks ?? 0) - (find(s.statuses[def], 'evasion')?.stacks ?? 0)
+        if (a.dodgeForced && kept !== 1) flag('esquive imposée : une charge par esquive', r, i, `${kept} charge(s) usée(s)`)
+        else if (a.dodgeForced && find(s.statuses[def], 'evasion')) see('esquive imposée cumulée')
         if (!a.dodged && !a.forfeited) {
-          const value = a.reshaped?.value ?? a.roll
+          // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
+          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face
+          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || x.onFace === a.roll) ? x.rollBonus : 0), 0)
+          if (bonus !== (a.relicBonus ?? []).reduce((t, x) => t + x.amount, 0)) flag('bonus de relique incohérent', r, i, `${bonus}`)
+          else if (bonus) see('bonus de relique')
+          const value = (a.reshaped?.value ?? a.roll) + bonus
           let raw = a.crit ? Math.round(value * a.critMultiplier) : value
           for (const st of prev.statuses[att]) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
           for (const st of prev.statuses[def]) raw = STATUSES[st.id].modifyIncoming?.(raw, st) ?? raw
@@ -195,6 +240,28 @@ export function createAudit() {
             const attackerDead = window.some((x) => x.state.hp[att] === 0)
             if (!reacted && !attackerDead && !window.some((x) => x.state.hp[def] === 0)) flag('épines non déclenchées', r, i, '')
           }
+          // Saignement (0.68.1) : chaque coup qui touche un porteur de plaie la fait couler des charges qu'elle
+          // avait avant ce coup (une plaie posée ou grossie par ce même coup attend le suivant), puis elle en perd une
+          if (s.hp[def] > 0) {
+            const after = r.beats.slice(i + 1)
+            const stop = after.findIndex((x) => x.type === 'attack' || x.turn !== b.turn)
+            const window = stop < 0 ? after : after.slice(0, stop)
+            const at = window.findIndex((x) => x.type === 'statusReaction' && x.status === 'bleed')
+            const flow = window[at]
+            const open = find(s.statuses[def], 'bleed')?.stacks ?? 0
+            if (!flow) {
+              const knockedOut = window.some((x) => x.state.hp[def] === 0 || x.state.hp[att] === 0)
+              if (open > 0 && !knockedOut) flag('saignement non déclenché', r, i, '')
+            } else if (flow.type === 'statusReaction') {
+              const was = find((at === 0 ? s : window[at - 1].state).statuses[def], 'bleed')?.stacks ?? 0
+              const amount = flow.effects.reduce((t, e) => t + (e.type === 'damage' && e.target === def ? e.amount : 0), 0)
+              if (open === 0) flag('saignement : coule sur le coup qui le pose', r, i, `${amount}`)
+              else if (amount !== open) flag('saignement : montant faux', r, i, `${amount} vs ${open}`)
+              const left = find(flow.state.statuses[def], 'bleed')?.stacks ?? 0
+              if (flow.state.hp[def] > 0 && left !== was - 1) flag('saignement non estompé', r, i, `${was} → ${left}`)
+              else see('saignement')
+            }
+          }
         } else if (a.damage !== 0 || a.dealt !== 0) flag('coup nul avec dégâts', r, i, '')
         // Vol de vie (0.29.0) : esquivé, la charge est perdue ; jet de compétence, elle reste (ou est renouvelée)
         if (find(prev.statuses[att], 'lifesteal')) {
@@ -205,38 +272,45 @@ export function createAudit() {
         // Compétences du dé : déclenchées exactement quand il faut
         const after: Beat[] = []
         for (const x of r.beats.slice(i + 1)) {
-          if (x.type !== 'event' && x.type !== 'statusReaction') break
+          // Une relique (seuil franchi par le coup, moment du coup) a sa place dans les fenêtres du coup
+          if (x.type !== 'event' && x.type !== 'statusReaction' && x.type !== 'relic') break
           after.push(x)
         }
         if (s.hp[def] > 0)
           for (const e of r.fighters[att].events) {
             if (!['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax'].includes(e.trigger) || !inForm(att, e)) continue
-            const should = rollMatches(e.trigger, a.roll, a.faces)
+            // Pourfendre (0.70.0) : une compétence `needsTouch` attend que son coup touche
+            const should = !a.plain && rollMatches(e.trigger, a.roll, a.faces) && !(e.needsTouch && a.dodged)
             const did = after.some((x) => x.type === 'event' && x.event.eventId === e.id)
             const someoneDied = after.some((x) => x.state.hp.some((h) => h === 0))
             if (should !== did && !(should && someoneDied)) flag(`compétence ${e.name} mal déclenchée`, r, i, `roll ${a.roll}`)
           }
       }
-        // Pile ou face (0.30.0) : pile = dégâts directs de la pièce, face = rien ; le statut est consommé.
-        // La pièce et ses dégâts sont lus dans le registre (0.42.0).
+      // Pile ou face (0.30.0) : pile = dégâts directs de la pièce, face = rien ; le statut est consommé.
+      // La pièce et ses dégâts sont lus dans le registre (0.42.0). Depuis le 2026-10-21, elle part aussitôt, juste
+      // après le coup pendant lequel elle a été posée, dans le même tour.
+      if (b.type === 'attack' || (i > 0 && b.turn !== r.beats[i - 1].turn))
+        for (const side of [0, 1] as const)
+          if (prev.statuses[side].some((x) => STATUSES[x.id].coinToss)) flag('pièce gardée pour plus tard', r, i, `côté ${side}`)
       if (b.type === 'coin') {
         const toss = STATUSES[b.status].coinToss
         if (!toss || !find(prev.statuses[b.side], b.status)) flag('pièce sans Pile ou face', r, i, b.status)
         if (find(s.statuses[b.side], b.status)) flag('Pile ou face non consommé', r, i, '')
         const dmg = b.effects.reduce((t, e) => t + (e.type === 'damage' && e.target !== b.side ? e.amount : 0), 0)
         if (b.heads ? dmg !== toss?.damage : dmg !== 0) flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
-        if (b.side !== active(b.turn)) flag('pièce hors de son tour', r, i, '')
-        if (r.beats.some((x) => x.turn === b.turn && x.type === 'attack' && x.attack.attacker === b.side))
-          flag('coup porté le tour de la pièce', r, i, '')
+        const strike = r.beats.slice(0, i).reverse().find((x) => x.type === 'attack')
+        if (!strike || strike.turn !== b.turn) flag('pièce sans le coup qui la lance', r, i, '')
+        else see('pièce lancée aussitôt')
         // Pile qui touche : la réaction « quand il touche » d'une Aura de décoction suit la pièce
         if (b.heads && toss?.headsTouches && find(s.statuses[b.side], 'decoctionAura') && s.hp[1 - b.side] > 0) {
-          const next = r.beats[i + 1]
+          // Une relique (seuil franchi par la pièce) peut s'intercaler avant les fenêtres du coup
+          const next = r.beats.slice(i + 1).find((x) => x.type !== 'relic')
           if (!(next?.type === 'statusReaction' && next.status === 'decoctionAura')) flag('pile qui touche sans décoction', r, i, '')
           else see('pile qui touche')
         }
       }
       if (b.type === 'flurry') {
-        // Les coups de la rafale : jusqu'à la rafale suivante du même tour (Furie instantanée qui enchaîne, 0.50.0)
+        // Les coups de la rafale : jusqu'à la rafale suivante du même tour
         const rest = r.beats.slice(i + 1)
         const nextBurst = rest.findIndex((x) => x.type === 'flurry')
         const strikes = (nextBurst < 0 ? rest : rest.slice(0, nextBurst)).filter((x) => x.turn === b.turn && x.type === 'attack')
@@ -247,11 +321,18 @@ export function createAudit() {
           if (x.type === 'attack' && x.attack.faces !== b.faces[k]) flag('coups multiples : mauvais dé', r, i, `${x.attack.faces} au lieu de d${b.faces[k]}`)
         })
         if (b.side !== active(b.turn)) flag('Furie hors de son tour', r, i, '')
-        // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le coup qui l'a déclenchée
+        // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le coup qui l'a déclenchée ; ses
+        // coups sont bruts (0.69.0), et un 1 à 3 y frappe pour sa valeur
         if (STATUSES[b.status].instantStrikes) {
           const before = r.beats.slice(0, i).reverse().find((x) => x.turn === b.turn && x.type === 'attack')
           if (!before) flag('Furie instantanée sans coup déclencheur', r, i, '')
           else see('furie instantanée')
+          for (const x of strikes) {
+            if (x.type !== 'attack') continue
+            if (!x.attack.plain || x.attack.forfeited) flag('Furie : coup qui n’est pas brut', r, i, `roll ${x.attack.roll}`)
+            else if (x.attack.roll <= 3 && !x.attack.dodged) see('coup brut de 1 à 3')
+          }
+          if (r.beats.slice(i + 1).some((x) => x.turn === b.turn && x.type === 'flurry' && STATUSES[x.status].instantStrikes)) flag('Furie en chaîne', r, i, '')
         }
         // Charges en réserve (0.46.0) : une seule est dépensée par action, les autres restent
         if (STATUSES[b.status].strikeCharges === 'one') {
@@ -325,20 +406,16 @@ export function createAudit() {
           if (touched && !b.attack.modifiers.some((m) => m.status === 'falseNote') && before > 1) flag('Fausse note sans effet', r, i, '')
         }
       }
-      // Aura de poison : toujours avant l'action du porteur
-      if (b.type === 'statusTick' && b.status === 'poisonAura') {
-        if (b.phase !== 'turnStart') flag('aura de poison hors début de tour', r, i, '')
-        const before = r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')
-        if (before) flag('aura de poison après le coup', r, i, '')
-        const st = find(prev.statuses[b.side], 'poisonAura')!
+      // Aura glaciale (0.69.0) : au début du tour de son porteur, avant son coup, 1 charge de Poison par
+      // charge d'aura sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler)
+      if (b.type === 'statusTick' && b.status === 'frostAura') {
+        if (b.phase !== 'turnStart') flag('aura glaciale hors début de tour', r, i, '')
+        if (r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')) flag('aura glaciale après le coup', r, i, '')
+        const st = find(prev.statuses[b.side], 'frostAura')!
         const e = b.effects[0]
-        // Arrêtée par l'immunité de la victime (0.50.0) : aucun effet, et seulement dans ce cas
-        const immune = prev.statuses[1 - b.side].some((x) => STATUSES[x.id].immune === 'negative')
-        if (immune && STATUSES.poisonAura.stoppedByImmunity) {
-          if (b.effects.length) flag('aura de poison malgré l’immunité', r, i, JSON.stringify(b.effects))
-          else see('aura arrêtée par l’immunité')
-        } else if (!e || e.type !== 'damage' || e.target === b.side || e.amount !== st.stacks)
-          flag('aura de poison : montant ou cible', r, i, JSON.stringify(b.effects))
+        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== st.stacks)
+          flag('aura glaciale : poison, montant ou cible', r, i, JSON.stringify(b.effects))
+        else if (e.result.kind === 'applied') see('aura glaciale')
       }
     })
     // Durées de « 1 tour » : Furie et Vol de vie doivent survivre jusqu'à l'action suivante du porteur
@@ -361,9 +438,124 @@ export function createAudit() {
         if (!find(prevState.statuses[side], e.status) && !purged) flag(`${e.status} perdu avant l'action suivante`, r, i, '')
       }
     })
+    auditRelics(r)
     // Fin : un seul perdant à 0
     const fin = r.beats[r.beats.length - 1].state
     if (fin.hp[1 - r.winner] !== 0 && r.endedBy === 'ko') flag('fin incohérente', r, r.beats.length - 1, '')
+  }
+
+  /**
+   * Reliques (0.73.0, docs/RELIQUES.md), recomptées depuis la chronologie : stats ajoutées à plat, compte des
+   * déclenchements et charges, recharge, reliques de tour (au début de ses tours prévus, aucun de manqué),
+   * reliques de seuil (après un passage sous le seuil, aucun de manqué), reliques de coup (sur leur moment).
+   */
+  function auditRelics(r: CombatResult) {
+    const last = r.initiative[r.initiative.length - 1]
+    const first: Side = last[0] > last[1] ? 0 : 1
+    const owner = (t: number): Side => (t % 2 === 1 ? first : first === 0 ? 1 : 0)
+    // Tours entamés par un camp au tour global `t` : le premier joue les tours impairs, l'autre les pairs
+    const ownTurns = (side: Side, t: number) => (side === first ? Math.ceil(t / 2) : Math.floor(t / 2))
+    const lastTurn = r.beats[r.beats.length - 1].turn
+    for (const side of [0, 1] as const) {
+      const f = r.fighters[side]
+      if (!f.relics.length) continue
+      see('reliques portées')
+      const stats = withRelicStats(f.baseStats, f.relics)
+      if (STAT_KEYS.some((k) => stats[k] !== f.stats[k])) flag('reliques : stats fausses', r, 0, f.id)
+      if (f.relics.some((x) => x.stats)) see('relique de caractéristique')
+      for (const relic of f.relics) {
+        const fires = r.beats.flatMap((b, i) => (b.type === 'relic' && b.side === side && b.relic === relic.id ? [i] : []))
+        fires.forEach((i, n) => {
+          const b = r.beats[i]
+          if (b.type === 'relic' && b.uses !== n + 1) flag('relique : compte faux', r, i, `${b.uses} au lieu de ${n + 1}`)
+        })
+        if (relic.charges !== undefined && fires.length > relic.charges) flag('relique : charges dépassées', r, fires[relic.charges], relic.id)
+        if (relic.cooldown)
+          for (let n = 1; n < fires.length; n++)
+            if (ownTurns(side, r.beats[fires[n]].turn) - ownTurns(side, r.beats[fires[n - 1]].turn) < relic.cooldown) flag('relique : recharge ignorée', r, fires[n], relic.id)
+        const t = relic.trigger
+        if (!t) {
+          if (fires.length) flag('relique passive déclenchée', r, fires[0], relic.id)
+          continue
+        }
+        if (t.type === 'turn') {
+          for (const i of fires)
+            if (r.beats[i].turn === 0 || owner(r.beats[i].turn) !== side || ownTurns(side, r.beats[i].turn) < t.turn) flag('relique de tour hors de son tour', r, i, relic.id)
+          if (relic.when) continue
+          // Tours prévus : le sien, puis tous les `cooldown` tours, tant qu'il reste des charges ; le dernier tour du
+          // combat est exclu (un K.O. au début du tour peut précéder la fenêtre)
+          const want: number[] = []
+          for (let k = t.turn; (side === first ? 2 * k - 1 : 2 * k) < lastTurn; k += relic.cooldown ?? 1) {
+            if (relic.charges !== undefined && want.length >= relic.charges) break
+            want.push(k)
+          }
+          const got = fires.map((i) => ownTurns(side, r.beats[i].turn))
+          if (want.some((k) => !got.includes(k))) flag('relique de tour manquée', r, 0, `${relic.id} : ${got.join(',')} au lieu de ${want.join(',')}`)
+          else if (got.length) see('relique de tour')
+        }
+        if (t.type === 'hpBelow') {
+          // Le seuil lit les PV du porteur, ou ceux de l'adversaire (Trophée du chasseur)
+          const watched = t.who === 'opponent' ? (side === 0 ? 1 : 0) : side
+          const threshold = r.fighters[watched].maxHp * t.ratio
+          if (t.who === 'opponent' && fires.length) see('relique de seuil adverse')
+          // Dent de loup (2026-10-21) : une relique de seuil ne part qu'une fois, ou selon sa recharge. Sans l'une
+          // ni l'autre, un soin la réarmait et elle repartait à chaque nouvelle chute sous son seuil.
+          if (relic.charges === undefined && !relic.cooldown) flag('relique de seuil sans limite', r, fires[0] ?? 0, relic.id)
+          if (relic.charges === 1 && fires.length === 1) see('relique de seuil unique')
+          let armed = true
+          let pending: number | null = null
+          r.beats.forEach((b, i) => {
+            if (pending !== null && b.turn > r.beats[pending].turn) {
+              flag('relique de seuil manquée', r, pending, relic.id)
+              pending = null
+            }
+            if (b.type === 'relic' && b.side === side && b.relic === relic.id) {
+              const before = r.beats[i - 1]?.state.hp[watched] ?? r.fighters[watched].maxHp
+              if (before >= threshold || before <= 0) flag('relique de seuil au-dessus de son seuil', r, i, `${before} PV`)
+              else see('relique de seuil')
+              pending = null
+            }
+            const hp = b.state.hp[watched]
+            if (hp >= threshold) armed = true
+            else if (armed && hp > 0) {
+              armed = false
+              // Avec une recharge ou des conditions, un passage peut ne rien déclencher : seul le surplus est contrôlé
+              const spent = relic.charges !== undefined && fires.filter((x) => x < i).length >= relic.charges
+              if (!spent && !relic.cooldown && !relic.when) pending = i
+            }
+          })
+        }
+        if (t.type === 'strike') {
+          for (const i of fires) {
+            // Le coup du moment : le dernier coup du tour, ou une pièce tombée sur pile qui touche (Pile ou face)
+            const hit = r.beats
+              .slice(0, i)
+              .reverse()
+              .find((x) => x.type === 'attack' || x.type === 'coin')
+            if (!hit || hit.turn !== r.beats[i].turn || (hit.type !== 'attack' && hit.type !== 'coin')) {
+              flag('relique de coup sans coup', r, i, relic.id)
+              continue
+            }
+            const a =
+              hit.type === 'attack'
+                ? hit.attack
+                : { attacker: hit.side, dodged: false, forfeited: !hit.heads, crit: false, plain: true, roll: 0, faces: 2 }
+            const mine = a.attacker === side
+            const touched = !a.dodged && !a.forfeited
+            const moments: Partial<Record<string, boolean>> = {
+              hit: mine && touched,
+              crit: mine && touched && a.crit,
+              missed: mine && a.dodged,
+              dodge: !mine && a.dodged,
+              hurt: !mine && touched,
+            }
+            const ok = moments[t.on] ?? (mine && !a.plain && rollMatches(t.on, a.roll, a.faces))
+            if (!ok) flag('relique de coup hors de son moment', r, i, `${relic.id} sur ${t.on}`)
+            else see('relique de coup')
+          }
+        }
+      }
+    }
   }
 
   return { audit, problems, seen }

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Arena } from '../game/arenas'
-import { SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
+import { other, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
 import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
@@ -11,8 +11,12 @@ import { Die } from './Die'
 import { Fighter, type Received } from './Fighter'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
+import { SignalLayer } from './SignalLayer'
+import { SkillBar } from './SkillBar'
+import { trayStates } from '../game/states'
+import { SceneBackdrop, SceneOnTarget } from './SceneEvent'
 import { Icon } from './Icon'
-import { TONE_STYLE } from '../game/specials'
+import { SpecialLabel } from './SpecialLabel'
 
 interface Props {
   /** Combat déjà résolu, que cet écran met en scène */
@@ -43,8 +47,12 @@ const SHAKE: Keyframe[] = [
 
 export function FightScreen({ script, arena, onEnd, test }: Props) {
   const { fighters } = script
-  const { hp, statuses, forms, dice, strike, blow, fx, log, turn, winner, active, pulse, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
+  const { hp, statuses, forms, dice, strike, blow, fx, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
     useCombat(script, onEnd, { test: test !== undefined })
+
+  // Zones d'état : les états génériques de chacun, ses statuts et les auras de l'adversaire qui agissent sur lui
+  const trays = useMemo(() => ([0, 1] as Side[]).map((side) => trayStates(statuses[side], statuses[other(side)])), [statuses])
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
   const diceColor = dice.owner === null ? '#e7e5e4' : SIDE_STYLE[dice.owner].hex
@@ -99,36 +107,62 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   // Passage de main : le camp dont c'est le tour s'allume, l'autre se tamise (rien avant l'initiative ni après le K.O.)
   const turnOf = (side: Side) => (active === null ? undefined : active === side ? 'active' : 'waiting')
   const pulseOf = (side: Side) => (pulse?.side === side ? pulse : undefined)
+  const signalOf = (side: Side) => (signal?.side === side ? signal : undefined)
+  const relicPulseOf = (side: Side) => (relicPulse?.side === side ? relicPulse : undefined)
+  // Hauteur d'ancrage du décor (le second terme de `focus`, « 50% 70% » → « 70% »)
+  const focusY = arena?.focus.split(' ')[1] ?? '50%'
 
   return (
     <div
-      className={`arena relative flex h-full flex-col ${paused ? 'is-paused' : ''}`}
+      ref={rootRef}
+      className={`arena relative flex h-full flex-col overflow-hidden ${paused ? 'is-paused' : ''}`}
       style={{ '--speed': speed } as CSSProperties}
     >
-      {/* Barres de vie */}
-      <header className="relative z-[55] flex items-start gap-6 border-b border-stone-800 bg-stone-950/80 py-4 pl-8 pr-20">
-        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} character={fighters[0]} form={forms[0]} turn={turnOf(0)} pulse={pulseOf(0)} />
+      {/* Barres de vie : bande vitrée, l'arène passe dessous */}
+      <header className="fight-header relative z-[55] flex items-start gap-6 py-4 pl-8 pr-20">
+        <HpBar side={0} name={fighters[0].name} hp={hp[0]} maxHp={fighters[0].maxHp} character={fighters[0]} turn={turnOf(0)} relicUses={relicUses[0]} relicPulse={relicPulseOf(0)} />
         <div className="flex shrink-0 flex-col items-center pt-1">
           <span className="text-xs uppercase tracking-widest text-stone-500">Tour</span>
           <span className="font-display text-3xl font-extrabold tabular-nums">{turn || '–'}</span>
         </div>
-        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} character={fighters[1]} form={forms[1]} turn={turnOf(1)} pulse={pulseOf(1)} />
+        <HpBar side={1} name={fighters[1].name} hp={hp[1]} maxHp={fighters[1].maxHp} character={fighters[1]} turn={turnOf(1)} relicUses={relicUses[1]} relicPulse={relicPulseOf(1)} />
       </header>
+
+      {/* Ce que chacun sait faire (SkillBar) : sous l'en-tête, au bord de l'arène, au-dessus de son camp. Hors de
+          <main> pour ne pas trembler avec l'arène ; les sceaux restent cliquables au survol, le reste laisse passer */}
+      <div className="pointer-events-none absolute inset-x-0 top-[100px] z-[50] flex items-start justify-between px-8">
+        {([0, 1] as Side[]).map((side) => (
+          <div key={side} className="skill-bar-plate pointer-events-auto">
+            <SkillBar
+              character={fighters[side]}
+              side={side}
+              form={forms[side]}
+              statuses={statuses[side]}
+              pulse={pulseOf(side)}
+              signal={signalOf(side)}
+              align={side === 1 ? 'right' : 'left'}
+            />
+          </div>
+        ))}
+      </div>
 
       {/* Arène */}
       <main
         ref={arenaRef}
-        className={`relative flex flex-1 items-end justify-between overflow-hidden px-[13%] pt-6 ${arena ? 'bg-stone-950' : 'bg-black'}`}
+        className={`relative flex flex-1 items-end justify-between px-[13%] pt-6 ${arena ? 'bg-stone-950' : 'bg-black'}`}
       >
-        {/* Décor : assombri, désaturé et légèrement flou pour laisser les combattants au premier plan */}
+        {/* Décor : assombri et désaturé pour laisser les combattants au premier plan. Calé comme un object-cover
+            (pleine largeur, ancré à la hauteur de `focus`) mais en taille naturelle, pour déborder au-dessus de l'arène
+            et passer sous la bande vitrée de l'en-tête. Suppose une image moins large que 1600×(hauteur de l'arène) :
+            les fonds en 3:2 le sont. La scène coupe le reste (overflow-hidden sur la racine). */}
         {arena && (
           <>
             <img
               src={arena.image}
               alt=""
               draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] select-none object-cover"
-              style={{ filter: arena.filter, objectPosition: arena.focus }}
+              className="pointer-events-none absolute inset-x-0 w-full max-w-none select-none"
+              style={{ filter: arena.filter, top: focusY, transform: `translateY(-${focusY}) scale(1.04)` }}
             />
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,transparent_35%,rgba(12,10,9,0.85)_100%)]" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-stone-950/85 to-transparent" />
@@ -152,6 +186,9 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
           />
         ))}
 
+        {/* Événement de scène (Foudre…) : sous les combattants, sur tout le décor */}
+        {scene && <SceneBackdrop scene={scene} />}
+
         {/* Pieds posés sur la terre battue de l'arène, un peu en retrait du bord de l'écran ;
             combat test : plus haut, pour laisser la place au pavé du dé */}
         {([0, 1] as Side[]).map((side) => (
@@ -170,6 +207,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               statuses={statuses[side]}
               form={forms[side]}
             />
+            {scene?.target === side && <SceneOnTarget scene={scene} />}
             {/* Zone d'état : au-dessus de la tête (qui dépend de la taille du personnage). Elle passe devant le
                 cadre du combattant, qui la recouvrait chez le nain (plus petit) ; au survol, elle passe devant tout
                 (combattants, journal, commandes) pour que l'infobulle soit lisible. */}
@@ -177,7 +215,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               className="pointer-events-auto absolute left-1/2 z-[15] -translate-x-1/2 hover:z-[60]"
               style={{ bottom: `calc(${figureHeight(fighters[side].lookFor(forms[side])) * 100}% + 18px)` }}
             >
-              <StatusTray statuses={statuses[side]} />
+              <StatusTray states={trays[side]} side={side} cast={{ bearer: fighters[side], opponent: fighters[other(side)] }} />
             </div>
             {test && (
               <div className="absolute left-1/2 top-full z-30 mt-3 -translate-x-1/2">
@@ -216,29 +254,16 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               </div>
             ))}
           </div>
-          {/* Coup spécial : les badges s'empilent dans l'ordre où ils tombent (critique, Riposte, Furie des vents…),
-              chacun dans la couleur de sa famille (specials.ts) */}
-          <div className="flex min-h-10 max-w-[820px] flex-wrap items-center justify-center gap-x-6 gap-y-3">
+          {/* Zone de surcharge : ce qui change ce coup-ci, en colonne, dans l'ordre où ça s'applique (critique, esquive
+              assurée, bouclier, Riposte, relique…), tous à la largeur du plus long ; couleur de la source, hachures pour
+              le − (SpecialLabel ; docs/RESOLUTION.md, « Zone de surcharge ») */}
+          <div className="flex min-h-10 w-max flex-col items-stretch gap-2">
             {dice.forced && !dice.rolling && (
-              <span className="cheat-tag" title="Dé imposé en mode triche">
+              <span className="cheat-tag self-center" title="Dé imposé en mode triche">
                 Imposé
               </span>
             )}
-            {dice.owner !== null &&
-              dice.specials?.map((b) => {
-                const tone = TONE_STYLE[b.tone]
-                return (
-                  <span
-                    key={b.key}
-                    data-tone={b.tone}
-                    className="crit-badge special-badge inline-flex items-center gap-1.5 rounded-md px-3 py-1 font-display text-xl font-extrabold uppercase"
-                    style={{ background: tone.bg, color: tone.fg, boxShadow: `0 3px 0 ${tone.edge}` }}
-                  >
-                    {b.tone === 'precision' && <Icon name="crit" />}
-                    {b.label}
-                  </span>
-                )
-              })}
+            {dice.owner !== null && dice.specials?.map((b) => <SpecialLabel key={b.key} badge={b} />)}
           </div>
           {winner !== null && (
             <span className="fade-in font-display text-5xl font-extrabold text-amber-300 drop-shadow-[0_3px_0_#78350f]">
@@ -253,7 +278,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
         {logOpen && (
           <section
             aria-label="Journal du combat"
-            className="log-window absolute bottom-[76px] left-1/2 z-[45] flex h-[230px] w-[600px] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-stone-500/30 bg-stone-950/55 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-[3px]"
+            className="log-window absolute bottom-[76px] left-1/2 z-[45] flex h-[230px] w-[600px] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-stone-500/30 bg-stone-950/55 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
           >
             <header className="flex items-center justify-between border-b border-stone-500/20 px-4 py-1.5">
               <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-400">
@@ -303,6 +328,9 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
           {unread > 0 && <span className="hud-count">{unread > 99 ? '99+' : unread}</span>}
         </button>
       </nav>
+
+      {/* Signaux d'activation : du sceau d'une compétence (en-tête) à la zone d'état de sa cible */}
+      <SignalLayer signal={signal} root={rootRef} />
     </div>
   )
 }

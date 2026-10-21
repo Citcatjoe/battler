@@ -1,225 +1,252 @@
 import { useState } from 'react'
 import { footDrop, type Character } from '../../game/character'
-import { emptyRecord, ratios, useHistory } from '../../game/history'
+import { skillCatalog } from '../../game/catalog'
+import { emptyRecord, ratios, useHistory, type CharacterRecord } from '../../game/history'
+import { RULES } from '../../game/rules'
 import { CHARACTERS } from '../../game/roster'
 import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WIN_TEXT, WinBar } from '../RecordBits'
-import { STAT_LINES, StatSheet } from '../StatSheet'
-import { EventInfo } from '../EventInfo'
+import { StatSheet } from '../StatSheet'
 import { Icon } from '../Icon'
 import { Tabs } from '../Tabs'
+import { CharacterLink, formName, racePlural, SkillSummary } from './CodexBits'
+import type { CompendiumNav } from './sections'
 
 interface Props {
   characterId: string
-  /** Ouvre un autre personnage (ex. un adversaire de l'historique) */
-  onSelect: (id: string) => void
+  nav: CompendiumNav
   /** Onglet affiché à l'ouverture */
   initialTab?: SheetTab
 }
 
-export type SheetTab = 'sheet' | 'stats'
+export type SheetTab = 'sheet' | 'performance'
 
 /**
- * Fiche d'un personnage, dans le compendium : le modèle à gauche ; à droite, deux onglets.
- * - « Fiche » : ce qui définit le personnage (background, forces, événement, stats).
- * - « Statistiques » : ce qu'il a fait (palmarès, adversaires, derniers combats).
+ * Fiche d'un combattant, dans le compendium : sa grande figure au centre ; à droite, deux onglets.
+ * - « Fiche » : ce qui le définit (devise, histoire, forces, caractéristiques, compétences en résumé, qui mènent
+ *   à l'index des compétences et aux statuts qu'elles posent) ;
+ * - « Performances » : le résumé de ce qu'il a fait, lu dans le même historique que l'écran Statistiques
+ *   (aucun second calcul), avec un lien vers cet écran.
  */
-export function CharacterSheet({ characterId, onSelect, initialTab = 'sheet' }: Props) {
-  const roster = CHARACTERS
+export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props) {
   const history = useHistory()
   // Conservé en passant d'un personnage à l'autre
   const [tab, setTab] = useState<SheetTab>(initialTab)
-  const character = roster.find((c) => c.id === characterId) ?? roster[0]
+  const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0]
   const record = history.characters[character.id] ?? emptyRecord()
-  const r = ratios(record)
-
-  const matches = history.matches.filter((m) => m.fighters.includes(character.id)).slice(0, 5)
+  const skills = skillCatalog()
+    .flatMap((f) => f.skills)
+    .filter((s) => s.owners.includes(character))
 
   return (
-    <div className="relative isolate grid h-full min-h-0 grid-cols-[330px_1fr] gap-8">
-      {/* Le personnage en arrière-plan, grand, centré sur la colonne du modèle (qui reste vide) */}
-      <BackdropFigure key={character.id} character={character} />
+    <div className="grid h-full min-h-0 gap-6" style={{ gridTemplateColumns: `${FIGURE_COLUMN}px 1fr` }}>
+      {/* Colonne laissée vide : la grande illustration (CharacterFigure) passe derrière, en fond */}
       <div aria-hidden />
 
-      <div className="flex min-h-0 flex-col gap-4">
-        {/* Identité */}
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-stone-500">
-              {character.race} · {character.archetype}
-            </p>
-            <h2 className="font-display text-5xl font-extrabold text-amber-200">{character.name}</h2>
-          </div>
+      <div className="codex-panel flex min-h-0 flex-col gap-3 px-6 pt-4 pb-5">
+        <div>
+          <p className="codex-label">
+            {character.race} · {character.archetype}
+          </p>
+          <h2 className="font-display text-[44px] font-extrabold leading-tight text-amber-200">{character.name}</h2>
+          <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
         </div>
 
-        {/* Onglets */}
         <Tabs
           className="self-start"
           value={tab}
           onChange={setTab}
           tabs={[
             { id: 'sheet', label: 'Fiche', icon: 'scroll' },
-            { id: 'stats', label: 'Statistiques', icon: 'stats', hint: `${record.fights} combats` },
+            { id: 'performance', label: 'Performances', icon: 'stats', hint: `${record.fights} combats` },
           ]}
         />
 
         {tab === 'sheet' ? (
-          <div key={`sheet-${character.id}`} className="fade-in grid min-h-0 grid-cols-2 gap-8">
-            {/* Identité de jeu : qui il est, comment il se bat */}
-            <div className="flex min-h-0 flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
-                <p className="leading-snug text-stone-300">{character.lore.background}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <section>
-                  <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-emerald-400/80">Forces</h2>
-                  <ul className="flex flex-col gap-1 text-emerald-200">
-                    {character.lore.strengths.map((t) => (
-                      <li key={t}>▲ {t}</li>
-                    ))}
-                  </ul>
-                </section>
-                <section>
-                  <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-red-400/80">Faiblesses</h2>
-                  <ul className="flex flex-col gap-1 text-red-300">
-                    {character.lore.weaknesses.map((t) => (
-                      <li key={t}>▼ {t}</li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-              {/* Six compétences pour un personnage à formes : la liste défile dans son cadre */}
-              <section className="flex min-h-0 flex-1 flex-col">
-                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">Compétences</h2>
-                <div className="scroll-panel min-h-0 flex-1 overflow-y-auto pr-1">
-                  <EventInfo character={character} />
+          <div key={`sheet-${character.id}`} className="fade-in scroll-panel flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1 pr-3 pl-1">
+            <div className="grid grid-cols-[1fr_290px] gap-6">
+              <div className="flex flex-col gap-3">
+                <p className="font-body text-[16px] leading-snug text-ink-2">{character.lore.background}</p>
+                <div className="grid grid-cols-2 gap-4 font-body text-[15px]">
+                  <section>
+                    <h3 className="codex-label mb-1 text-(--good)!">Forces</h3>
+                    <ul className="flex flex-col gap-0.5 text-emerald-200">
+                      {character.lore.strengths.map((t) => (
+                        <li key={t}>▲ {t}</li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="codex-label mb-1 text-(--bad)!">Faiblesses</h3>
+                    <ul className="flex flex-col gap-0.5 text-red-300">
+                      {character.lore.weaknesses.map((t) => (
+                        <li key={t}>▼ {t}</li>
+                      ))}
+                    </ul>
+                  </section>
                 </div>
-              </section>
-            </div>
-
-            {/* Caractéristiques */}
-            <div className="flex flex-col gap-5">
-              <section className="rounded-xl border border-stone-800 bg-stone-900/50 p-5">
-                <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">Caractéristiques</h2>
+              </div>
+              <section className="codex-box">
+                <h3 className="codex-label mb-2">Caractéristiques</h3>
                 <StatSheet character={character} barClass="bg-ink-2" />
               </section>
             </div>
+
+            <section>
+              <div className="flex items-baseline justify-between gap-4 border-b border-line-2 pb-1">
+                <h3 className="codex-label">Compétences · {racePlural(character.race)}</h3>
+                <button type="button" className="codex-link text-[14px]" onClick={() => nav.go({ section: 'rules', id: 'dice-faces' })}>
+                  {RULES['dice-faces'].title} →
+                </button>
+              </div>
+              {skills.map((s) => (
+                <SkillSummary key={s.event.id} event={s.event} triggers={s.triggers} form={formName(character, s.event)} nav={nav} />
+              ))}
+            </section>
           </div>
         ) : (
-          <div key={`stats-${character.id}`} className="fade-in grid min-h-0 grid-cols-2 gap-8">
-            <div className="flex flex-col gap-5">
-              <p className="text-sm text-stone-500">
-                {record.played} joués, {record.simulated} simulés
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <Kpi label="Combats" value={record.fights} />
-                <Kpi label="Victoires" value={record.wins} />
-                <Kpi label="% victoire" value={fmtPct(r.winRate)} accent={r.winRate === null ? undefined : WIN_TEXT(r.winRate)} />
-                <Kpi label="Dégâts / combat" value={fmtNum(r.damagePerFight)} />
-                <Kpi label="Coups réussis" value={fmtPct(r.hitRate)} />
-                <Kpi label="Critiques" value={fmtPct(r.critRate)} accent="text-crit" />
-                <Kpi label="Esquives" value={fmtPct(r.dodgeRate)} accent="text-dodge" />
-                <Kpi label="Armure absorbée" value={record.absorbed} />
-                <Kpi label="Meilleur coup" value={record.bestHit || '—'} />
-                <Kpi
-                  label={
-                    <>
-                      <Icon name="trophy" /> Tournois
-                    </>
-                  }
-                  value={record.tournamentWins}
-                  accent="text-gold-300"
-                />
-                <Kpi
-                  label={
-                    <>
-                      <Icon name="event" /> Compétences
-                    </>
-                  }
-                  value={record.events}
-                  accent="text-arcane"
-                />
-                <Kpi label="PV regagnés" value={record.healed} accent="text-good" />
-              </div>
-            </div>
-
-            <div className="flex min-h-0 flex-col gap-5">
-              <section>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
-                  Contre chaque adversaire
-                </h3>
-                <ul className="flex flex-col gap-1">
-                  {roster.map((opp) => {
-                    const vs = record.opponents[opp.id]
-                    return (
-                      <li
-                        key={opp.id}
-                        className="grid grid-cols-[1.75rem_5.5rem_1fr_3.5rem] items-center gap-2 text-sm"
-                      >
-                        <MiniPortrait character={opp} size="h-7 w-7" />
-                        <span className="truncate text-stone-300">{opp.name}</span>
-                        <WinBar rate={vs ? vs.wins / vs.fights : null} />
-                        <span className="text-right text-xs text-stone-500">
-                          {vs ? `${vs.wins}/${vs.fights}` : '—'}
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
-
-              <section className="min-h-0">
-                <h3 className="mb-1 text-xs font-bold uppercase tracking-widest text-stone-500">Derniers combats</h3>
-                {matches.length === 0 ? (
-                  <p className="text-sm italic text-stone-500">Aucun combat pour l'instant.</p>
-                ) : (
-                  <ul>
-                    {matches.map((m) => (
-                      <MatchRow key={m.id} match={m} focus={character.id} />
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </div>
-          </div>
+          <Performance key={`performance-${character.id}`} character={character} record={record} nav={nav} />
         )}
       </div>
     </div>
   )
 }
 
+/** Onglet « Performances » : le palmarès, les adversaires et les derniers combats, avec le lien vers Statistiques. */
+function Performance({ character, record, nav }: { character: Character; record: CharacterRecord; nav: CompendiumNav }) {
+  const history = useHistory()
+  const r = ratios(record)
+  const matches = history.matches.filter((m) => m.fighters.includes(character.id)).slice(0, 5)
+  const open = (id: string) => nav.go({ section: 'characters', id })
+  return (
+    <div className="fade-in scroll-panel grid min-h-0 flex-1 grid-cols-2 gap-6 overflow-y-auto py-1 pr-3 pl-1">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="font-body text-[14px] text-ink-3">
+            {record.played} joués, {record.simulated} simulés
+          </p>
+          {nav.openRecords && (
+            <button type="button" className="codex-link text-[15px]" onClick={nav.openRecords}>
+              Voir dans Statistiques →
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Kpi label="Combats" value={record.fights} />
+          <Kpi label="Victoires" value={record.wins} />
+          <Kpi label="% victoire" value={fmtPct(r.winRate)} accent={r.winRate === null ? undefined : WIN_TEXT(r.winRate)} />
+          <Kpi label="Dégâts / combat" value={fmtNum(r.damagePerFight)} />
+          <Kpi label="Coups réussis" value={fmtPct(r.hitRate)} />
+          <Kpi label="Critiques" value={fmtPct(r.critRate)} accent="text-crit" />
+          <Kpi label="Esquives" value={fmtPct(r.dodgeRate)} accent="text-dodge" />
+          <Kpi label="Armure absorbée" value={record.absorbed} />
+          <Kpi label="Meilleur coup" value={record.bestHit || '—'} />
+          <Kpi
+            label={
+              <>
+                <Icon name="trophy" /> Tournois
+              </>
+            }
+            value={record.tournamentWins}
+            accent="text-gold-300"
+          />
+          <Kpi
+            label={
+              <>
+                <Icon name="event" /> Compétences
+              </>
+            }
+            value={record.events}
+            accent="text-arcane"
+          />
+          <Kpi label="PV regagnés" value={record.healed} accent="text-good" />
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-col gap-4">
+        <section>
+          <h3 className="codex-label mb-2">Contre chaque adversaire</h3>
+          <ul className="flex flex-col gap-1">
+            {CHARACTERS.map((opp) => {
+              const vs = record.opponents[opp.id]
+              return (
+                <li key={opp.id} className="grid grid-cols-[1.75rem_6rem_1fr_3.5rem] items-center gap-2 text-sm">
+                  <MiniPortrait character={opp} size="h-7 w-7" />
+                  <span className="truncate">
+                    <CharacterLink character={opp} nav={nav} />
+                  </span>
+                  <WinBar rate={vs ? vs.wins / vs.fights : null} />
+                  <span className="text-right font-data text-xs text-ink-3">{vs ? `${vs.wins}/${vs.fights}` : '—'}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+
+        <section className="min-h-0">
+          <h3 className="codex-label mb-1">Derniers combats</h3>
+          {matches.length === 0 ? (
+            <p className="text-sm italic text-ink-3">Aucun combat pour l'instant.</p>
+          ) : (
+            <ul>
+              {matches.map((m) => (
+                <MatchRow key={m.id} match={m} focus={character.id} onOpenCharacter={open} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+  )
+}
+
+/** Largeur de la colonne vide de la fiche, où se tient l'illustration (CharactersSection la centre dessus). */
+export const FIGURE_COLUMN = 400
+
 /**
- * Grande figure en fond : pieds en bas de l'écran, centrée sur la colonne du modèle, assombrie
- * et fondue sur les bords pour que la fiche reste lisible devant elle. Elle garde les tailles
- * relatives des personnages (`look.scale`, échelle resserrée de la STYLE_BIBLE § 2).
+ * Hauteur d'image d'un combattant d'échelle 1, en pixels de scène. Les images ont du vide au-dessus de la tête :
+ * même l'ogre (échelle 1,48, image plus haute que l'écran) garde la tête sous le haut de l'écran.
  */
-function BackdropFigure({ character }: { character: Character }) {
+const FIGURE_PX = 700
+
+/**
+ * La grande illustration du combattant, **en fond** de l'écran du compendium (section Combattants) : debout sur la
+ * colonne vide de la fiche, en grand, elle passe derrière le titre, les onglets, l'index et la fiche, fondue sur les
+ * côtés pour que le chevauchement reste léger, et dans le sol. Rien n'est coupé : l'image tient dans la hauteur de
+ * l'écran, et les combattants gardent leurs tailles relatives (`look.scale`, STYLE_BIBLE § 2).
+ * `center` : abscisse du centre de la colonne vide, en pixels depuis le bord gauche de l'écran.
+ */
+export function CharacterFigure({ character, center }: { character: Character; center: number }) {
   const { look } = character
   const flip = look.facing !== 'right'
+  const height = look.scale * FIGURE_PX
   return (
-    <div
-      aria-hidden
-      className="backdrop-figure pointer-events-none absolute -bottom-8 left-[165px] -z-10 h-[850px] w-[640px] -translate-x-1/2"
-    >
-      {/* Halo chaud derrière la silhouette */}
-      <div className="absolute inset-x-[8%] bottom-[4%] top-[18%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_55%,rgba(245,158,11,0.16)_0%,rgba(120,53,15,0.1)_40%,transparent_70%)] blur-2xl" />
-      <img
-        src={look.image}
-        alt=""
-        draggable={false}
-        className="absolute bottom-0 left-1/2 w-auto max-w-none -translate-x-1/2 select-none object-contain object-bottom"
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {/* Fondus sur l'enveloppe (centrés même quand l'image est retournée) : les côtés s'effacent sous les
+          panneaux ; le haut s'efface derrière le titre et les onglets, qui restent lisibles ; le bas dans le sol */}
+      <div
+        className="backdrop-figure absolute bottom-0 h-full w-[760px] -translate-x-1/2"
         style={{
-          height: `${look.scale * 100}%`,
-          bottom: look.footroom ? `${-footDrop(look) * 100}%` : undefined,
-          transform: flip ? 'scaleX(-1)' : undefined,
-          filter: `${look.tint ?? ''} brightness(0.62) saturate(0.85) contrast(1.05)`,
-          // Fondu : le bas se perd dans le sol, les côtés dans le décor
+          left: center,
           maskImage:
-            'linear-gradient(to top, transparent 0%, #000 26%, #000 82%, rgba(0,0,0,0.6) 100%), linear-gradient(to right, transparent 0%, #000 22%, #000 58%, transparent 96%)',
+            'linear-gradient(to right, transparent 0%, #000 24%, #000 76%, transparent 100%), linear-gradient(to bottom, transparent 10%, #000 24%, #000 88%, transparent 100%)',
           maskComposite: 'intersect',
-          WebkitMaskComposite: 'source-in',
         }}
-      />
+      >
+        {/* Halo chaud derrière la silhouette */}
+        <div className="absolute inset-x-[22%] bottom-[4%] top-[18%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_55%,rgba(245,158,11,0.16)_0%,rgba(120,53,15,0.1)_40%,transparent_70%)] blur-2xl" />
+        <img
+          src={look.image}
+          alt=""
+          draggable={false}
+          className="absolute bottom-0 left-1/2 w-auto max-w-none -translate-x-1/2 select-none object-contain object-bottom"
+          style={{
+            height,
+            bottom: look.footroom ? -look.footroom * height : undefined,
+            transform: flip ? 'scaleX(-1)' : undefined,
+            filter: `${look.tint ?? ''} saturate(0.95)`,
+          }}
+        />
+      </div>
     </div>
   )
 }

@@ -1,18 +1,21 @@
 import type { ReactNode } from 'react'
+import { getRelic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
-import { STAGE_WIDTH } from './Stage'
+import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
 import {
   allMatches,
   matchesInRound,
   matchKey,
   players,
   ROUNDS,
+  relicsOf,
   status,
   type MatchRef,
   type Tournament,
 } from '../game/tournament'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
+import { RelicRow } from './RelicSeal'
 
 /*
  * Arbre du tournoi (design system, refonte 0.47.0), en pixels de la scène 1600×900. Deux mises en page :
@@ -37,7 +40,8 @@ interface Geometry {
 }
 
 const GEOMETRY: Record<Layout, Geometry> = {
-  track: { top: 150, bottom: 880, margin: 24, widths: [208, 168, 168, 208], rowH: [38, 32, 32, 38], gap: 28 },
+  // Tours 2 et 3 à 184 px (168 avant la 0.75.0) : la place des reliques gagnées, à côté du nom
+  track: { top: 150, bottom: 880, margin: 24, widths: [208, 184, 184, 208], rowH: [38, 32, 32, 38], gap: 28 },
   setup: { top: 176, bottom: 884, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
 }
 
@@ -85,6 +89,18 @@ const LINE = 'rgba(232,200,140,0.22)'
 const LINE_FILLED = 'rgba(232,200,140,0.42)'
 const LINE_WON = '#B9862F'
 
+/** Hauteur réservée à l'infobulle d'une relique (la plus longue, marge comprise) pour choisir son côté. */
+const RELIC_TOOLTIP_ROOM = 300
+
+/**
+ * Côté de l'infobulle des reliques d'une ligne : au-dessus de la ligne du haut, au-dessous de celle du bas
+ * (l'autre participant du match reste lisible), sauf si elle sortirait de la scène.
+ */
+function relicTooltipSide(rowTop: number, rowH: number, row: 0 | 1): 'above' | 'below' {
+  if (row === 0) return rowTop >= RELIC_TOOLTIP_ROOM ? 'above' : 'below'
+  return rowTop + rowH + RELIC_TOOLTIP_ROOM <= STAGE_HEIGHT ? 'below' : 'above'
+}
+
 interface Props {
   /** Mode configuration : seules les cases du premier tour existent */
   slots?: (string | null)[]
@@ -112,12 +128,13 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
       const idx = players(tournament, ref)[row]
       if (idx === null) return null
       const e = tournament.entrants[idx]
-      return { idx, character: characterById(e.characterId), label: e.label }
+      // Reliques qu'il avait pour ce match : celles gagnées aux tours précédents
+      return { idx, character: characterById(e.characterId), label: e.label, relics: relicsOf(tournament, idx, ref.round).map(getRelic) }
     }
     if (ref.round !== 0 || !slots) return null
     const slot = 2 * ref.index + row
     const id = slots[slot]
-    return id ? { idx: slot, character: characterById(id), label: characterById(id).name } : null
+    return id ? { idx: slot, character: characterById(id), label: characterById(id).name, relics: [] } : null
   }
   /** Un match de configuration dont les deux cases sont remplies : sa ligne s'éclaire */
   const filled = (ref: MatchRef): boolean =>
@@ -212,6 +229,12 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                     {e.label}
                   </span>
                   {won && <span className="bracket-hp">{result!.hpLeft} PV</span>}
+                  <RelicRow
+                    relics={e.relics}
+                    size={18}
+                    tooltip={relicTooltipSide(b.cy - b.rowH + row * b.rowH, b.rowH, row)}
+                    align={right ? 'right' : 'left'}
+                  />
                 </>
               ) : editable ? (
                 <>

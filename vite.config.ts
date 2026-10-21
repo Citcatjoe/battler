@@ -47,4 +47,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), combatLogs()],
   // La version affichée en jeu vient de package.json : elle renvoie à l'entrée du CHANGELOG.
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  // Jamais de rechargement automatique : une partie en cours survit à toute modification du code.
+  // `hmr: false` coupe le remplacement à chaud ; `ws: false` coupe la connexion qui rechargeait
+  // la page au redémarrage du serveur (modification de ce fichier ou de package.json).
+  // Le serveur invalide toujours les fichiers modifiés : un rafraîchissement (F5) charge la
+  // nouvelle version.
+  server: { hmr: false, ws: false },
 })

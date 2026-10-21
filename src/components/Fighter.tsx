@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { figureHeight, footDrop, type Character } from '../game/character'
 import type { AppliedEffect, Side } from '../game/combat'
-import { atCap, effectBadge, TONE_CLASS } from '../game/narration'
+import { atCap, effectBadge, TONE_CLASS, type Badge } from '../game/narration'
 import { isAura, STATUSES, type Status } from '../game/statuses'
 import { poseImage, poseImages, poseOf } from '../game/poses'
 
@@ -25,7 +25,7 @@ interface Props {
   received?: Received
   state?: 'idle' | 'ko' | 'victory'
   /** Effets en cours d'affichage : titre et aura si ce combattant en est la source, badges s'il est visé */
-  fx?: { key: number; source: Side | null; title: string; effects: AppliedEffect[] }
+  fx?: { key: number; source: Side | null; title: string; effects: AppliedEffect[]; relic?: true; notes?: readonly (Badge & { target: Side })[] }
   /** Statuts actifs : aura de personnage, transparence, tremblement, lucioles (voir `statusLooks`) */
   statuses?: readonly Status[]
   /** Forme en cours (druide) : index dans `character.forms` ; un changement joue la métamorphose */
@@ -127,8 +127,9 @@ export function Fighter({
     return `translateX(${side === 0 ? -outer * 100 : outer * 100}%)`
   }
 
-  // L'esquive démarre avec l'élan, le recul n'arrive qu'à l'impact.
-  const reaction = received?.dodged ? 'dodge' : received?.landed ? 'hit' : ''
+  // L'esquive démarre avec l'élan. Un coup qui touche montre la posture « coup encaissé », sans plus ;
+  // seul un critique repousse aussi le combattant (demande de l'utilisateur, 0.68.x : le recul dit la puissance)
+  const reaction = received?.dodged ? 'dodge' : received?.landed && received.crit ? 'knockback' : ''
 
   // Les effets se placent par rapport à la silhouette, plus petite pour un nain.
   const scale = figureHeight(look)
@@ -143,7 +144,8 @@ export function Fighter({
    * Un seul texte par événement : le nom de la compétence (violet) sur son lanceur suffit pour le
    * statut qu'elle lui pose (bonus, ou malus qu'il s'inflige : l'Attente de l'ogre) (Aura de puissance pose Aura de puissance). Un bonus d'un autre nom
    * (Œil de faucon pose Critique assuré) devient le sous-titre du nom, au lieu d'un second texte.
-   * Restent des badges : PV, dégâts, malus posés, résistances (voir `TONE_CLASS`).
+   * Restent des badges : PV, dégâts, malus posés, résistances (voir `TONE_CLASS`), et les textes sans effet
+   * (`notes` : « Tour perdu »).
    */
   const mine = shownFx?.effects.filter((e) => e.target === side) ?? []
   const echoes = isSource && shownFx.title
@@ -152,12 +154,31 @@ export function Fighter({
   const subtitle = [...new Set(echoes.flatMap((e) => (e.type === 'applyStatus' ? [STATUSES[e.status].name] : [])))]
     .filter((name) => name !== shownFx?.title)
     .join(' · ')
-  const badges = mine.filter((e) => !echoes.includes(e)).map(effectBadge)
+  const badges: Badge[] = [
+    ...mine.filter((e) => !echoes.includes(e)).map(effectBadge),
+    ...(shownFx?.notes?.filter((n) => n.target === side) ?? []),
+  ]
+  /*
+   * Effets montrés avec l'impact d'un coup (le Poison de l'Aura de décoction et son « −7 ») : ce qui monte part
+   * au-dessus du chiffre des dégâts, qui tombe, pour que les deux ne se croisent pas. Décidé à l'apparition des
+   * effets (même rendu que l'impact) et gardé ensuite : un texte ne saute pas en cours de vol.
+   */
+  const landedNow = !!received?.landed && !received.dodged
+  const [withHit, setWithHit] = useState({ key: shownFx?.key, struck: landedNow })
+  if (shownFx && shownFx.key !== withHit.key) setWithHit({ key: shownFx.key, struck: landedNow })
+  const struck = withHit.struck && withHit.key === shownFx?.key
+  const badgeTop = (badge: Badge, i: number) => {
+    if (!struck) return at(30 + i * 9)
+    const same = badges.slice(0, i).filter((b) => b.rises === badge.rises).length
+    return badge.rises ? at(6 - same * 9) : at(30 + same * 9)
+  }
 
   // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, K.O., victoire
   const pose = poseOf({ state, lunging, received })
-  // Une vraie posture de K.O. (à terre) garde le grisé de l'animation, sans la bascule
-  const koClass = look.poses?.ko ? 'ko-posed' : 'ko'
+  // Sans posture de K.O., l'image bascule (`.ko`) ; avec, la chute est dans l'image. Le grisé passe par le
+  // filtre de l'enveloppe de l'image (plus bas), jamais par un conteneur plus petit qu'elle : dans Firefox, un
+  // filtre sur un parent coupe l'image qui déborde de la colonne du combattant
+  const koClass = look.poses?.ko ? '' : 'ko'
   // Précharge les postures : changer d'image ne doit pas clignoter au premier élan
   const allImages = (character.forms ?? [null]).flatMap((_, f) => poseImages(character.lookFor(f))).join('|')
   useEffect(() => {
@@ -170,11 +191,18 @@ export function Fighter({
     '--float-x': '0',
     '--float-origin': side === 0 ? 'left' : 'right',
   } as CSSProperties
-  // Contour lumineux de l'aura (couleur --aura, posée sur le combattant) en plus de l'ombre portée
+  // Contour lumineux de l'aura (couleur --aura, posée sur le combattant) en plus de l'ombre portée.
+  // Le grisé du K.O. ouvre toujours la liste (à 0 sinon) : le filtre passe en fondu de l'un à l'autre.
+  // Au K.O., l'aura s'éteint : son contour devient transparent (même liste de filtres, donc même fondu)
+  const ko = state === 'ko'
   const filter = [
     character.look.tint,
+    `grayscale(${ko ? 1 : 0}) brightness(${ko ? 0.5 : 1})`,
     'drop-shadow(0 10px 20px rgba(0,0,0,0.6))',
-    looks.aura && 'drop-shadow(0 0 2px var(--aura)) drop-shadow(0 0 12px var(--aura))',
+    looks.aura &&
+      (ko
+        ? 'drop-shadow(0 0 2px transparent) drop-shadow(0 0 12px transparent)'
+        : 'drop-shadow(0 0 2px var(--aura)) drop-shadow(0 0 12px var(--aura))'),
   ]
     .filter(Boolean)
     .join(' ')
@@ -184,9 +212,10 @@ export function Fighter({
       {/* ombre au sol */}
       <div className="absolute bottom-[1%] left-1/2 h-[5%] w-[80%] -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
       <div className={`relative h-full ${lunging ? (fastLunge ? 'lunge lunge-fast' : 'lunge') : ''}`}>
-        {/* Aura de personnage : halo qui pulse, cercle au sol et particules qui montent ; elle suit l'élan */}
+        {/* Aura de personnage : halo qui pulse, cercle au sol et particules qui montent ; elle suit l'élan.
+            Un combattant vaincu perd son aura : elle s'éteint en fondu (`char-aura-out`) */}
         {looks.aura && (
-          <div key={looks.aura.id} className="char-aura pointer-events-none absolute inset-0">
+          <div key={looks.aura.id} className={`char-aura pointer-events-none absolute inset-0 ${ko ? 'char-aura-out' : ''}`}>
             <div className="char-aura-halo absolute bottom-[2%] left-1/2 w-[110%] rounded-[50%] blur-xl" style={{ height: `${scale * 96}%` }} />
             <div className="char-aura-ring absolute bottom-[0.5%] left-1/2 h-[7%] w-[86%] rounded-[50%]" />
             {MOTES.map((m, k) => (
@@ -210,28 +239,37 @@ export function Fighter({
               if (!shown && !leaving) return null
               const fLook = character.lookFor(f)
               return (
-                <img
+                // Enveloppe exactement à la taille de l'image : elle porte la position, le filtre (ombre, aura,
+                // grisé), l'opacité et les fondus. Le retournement est sur l'image, sous le filtre : dans Firefox,
+                // un filtre dans un repère retourné est coupé au bord de l'écran du mauvais côté (l'ours du druide,
+                // dont la toile déborde de l'écran, perdait son museau à droite)
+                <div
                   key={`${f}-${shown ? morph.key : 'out'}`}
-                  src={shown ? poseImage(fLook, pose) : fLook.image}
-                  alt={shown ? character.name : ''}
-                  draggable={false}
                   // Largeur naturelle, centrée sur les pieds : une image large (ogre, homme-lézard, toile à postures)
                   // n'est plus rétrécie par la colonne, si bien que chacun garde sa vraie carrure
-                  className={`absolute bottom-0 select-none object-contain object-bottom transition-[opacity,filter] duration-300 ${
-                    anchor === 'inside'
-                        ? `w-auto max-w-none ${side === 0 ? 'left-0' : 'right-0'}`
-                        : 'left-1/2 w-auto max-w-none -translate-x-1/2'
+                  className={`absolute bottom-0 transition-[opacity,filter] duration-300 ${
+                    anchor === 'inside' ? (side === 0 ? 'left-0' : 'right-0') : 'left-1/2 -translate-x-1/2'
                   } ${morph.key > 0 ? (shown ? 'form-in' : 'form-out') : ''}`}
                   style={{
                     height: `${fLook.scale * 100}%`,
                     // Toile avec du vide sous les pieds (voleuse) : redescendue pour toucher le sol
                     bottom: fLook.footroom ? `${-footDrop(fLook) * 100}%` : undefined,
-                    transform: [insetShift(fLook, flipOf(f)), flipOf(f) ? 'scaleX(-1)' : ''].filter(Boolean).join(' ') || undefined,
+                    transform: insetShift(fLook, flipOf(f)) || undefined,
                     filter,
-                    // Translucide tant qu'il porte une esquive imposée (Esquive améliorée)
-                    opacity: shown ? looks.opacity : undefined,
+                    // Le K.O. grise et estompe l'image en fondu lent ; translucide tant qu'il porte une esquive
+                    // imposée (Esquive améliorée)
+                    transitionDuration: ko ? '900ms' : undefined,
+                    opacity: shown ? (ko ? 0.75 : looks.opacity) : undefined,
                   }}
-                />
+                >
+                  <img
+                    src={shown ? poseImage(fLook, pose) : fLook.image}
+                    alt={shown ? character.name : ''}
+                    draggable={false}
+                    className="block h-full w-auto max-w-none select-none"
+                    style={flipOf(f) ? { transform: 'scaleX(-1)' } : undefined}
+                  />
+                </div>
               )
             })}
           </div>
@@ -266,8 +304,9 @@ export function Fighter({
         )}
       </div>
 
-      {/* Aura de la compétence : sur le personnage qui la lance, le temps de l'effet */}
-      {fx && fx.source === side && (
+      {/* Aura de la compétence : sur le personnage qui la lance, le temps de l'effet. Une relique n'en a pas :
+          elle s'annonce sur son sceau, dans l'en-tête */}
+      {fx && fx.source === side && !fx.relic && (
         <div key={`aura-${fx.key}`} className="pointer-events-none absolute inset-0 z-30">
           <div
             style={at(45)}
@@ -294,7 +333,8 @@ export function Fighter({
               </div>
             )}
             {badges.map((badge, i) => (
-              <div key={i} style={at(30 + i * 9)} className={`damage-float float-text absolute inset-x-0 text-4xl ${TONE_CLASS[badge.tone]}`}>
+              // Le sens dit gain ou perte de la chose nommée (`Badge.rises`) : un statut gagné monte, même un malus
+              <div key={i} style={badgeTop(badge, i)} className={`${badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[badge.tone]}`}>
                 {badge.text}
               </div>
             ))}
@@ -316,7 +356,8 @@ export function Fighter({
                 )}
                 <div
                   style={at(18)}
-                  className={`damage-float float-text absolute inset-x-0 ${
+                  // Les PV perdus tombent ; un critique, lui, jaillit vers le haut (demande de l'utilisateur)
+                  className={`${hit.crit ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 ${
                     hit.crit
                       ? 'text-9xl text-amber-400 [-webkit-text-stroke:6px_#451a03]'
                       : `text-red-500 [-webkit-text-stroke:4px_#450a0a] ${hit.damage >= 10 ? 'text-7xl' : hit.damage >= 7 ? 'text-6xl' : 'text-5xl'}`

@@ -7,6 +7,7 @@ import {
   type Pair,
   type Side,
   type TriggeredEvent,
+  type Beat,
 } from './combat'
 import { lowerFirst, STATUSES, type StatusId } from './statuses'
 
@@ -15,7 +16,7 @@ import { lowerFirst, STATUSES, type StatusId } from './statuses'
  * des statuts : un nouveau statut ou effet n'a pas besoin de texte écrit à la main ailleurs.
  */
 
-export type LogKind = 'info' | 'initiative' | 'attack' | 'crit' | 'dodge' | 'event' | 'status' | 'ko'
+export type LogKind = 'info' | 'initiative' | 'attack' | 'crit' | 'dodge' | 'event' | 'relic' | 'status' | 'ko'
 
 export interface LogEntry {
   id: number
@@ -46,25 +47,43 @@ export const of = (name: string) => (/^[aeiouyhàâéèêëîïôûü]/i.test(na
 export const atCap = (e: AppliedEffect) =>
   e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks === 0 && !e.result.cancelled
 
+/**
+ * Texte flottant au-dessus d'un combattant. `rises` : son sens, qui dit gain ou perte de la chose nommée, pas
+ * bon ou mauvais (2026-10-21) : un statut gagné (bonus ou malus) ou des PV regagnés montent ; des PV perdus ou un
+ * statut perdu (dissipé, purifié) tombent ; un fait neutre (résisté, au maximum) monte. La couleur dit la polarité.
+ */
+export interface Badge {
+  text: string
+  tone: Tone
+  rises: boolean
+}
+
 /** Badge flottant au-dessus de la cible d'un effet. */
-export function effectBadge(e: AppliedEffect): { text: string; tone: Tone } {
+export function effectBadge(e: AppliedEffect): Badge {
   switch (e.type) {
     case 'heal':
-      return { text: `+${e.amount} PV`, tone: 'heal' }
+      return { text: `+${e.amount} PV`, tone: 'heal', rises: true }
     case 'damage':
-      return { text: `-${e.amount}`, tone: 'damage' }
+      return { text: `-${e.amount}`, tone: 'damage', rises: false }
     case 'applyStatus': {
       const def = STATUSES[e.status]
-      if (e.result.kind === 'blocked') return { text: `${def.name} résisté`, tone: 'neutral' }
-      if (e.result.kind === 'cancelled') return { text: `${def.name} neutralisé`, tone: 'neutral' }
-      if (atCap(e)) return { text: `${def.name} au maximum`, tone: 'neutral' }
-      return { text: def.name, tone: def.polarity }
+      if (e.result.kind === 'blocked') return { text: `${def.name} résisté`, tone: 'neutral', rises: true }
+      if (e.result.kind === 'cancelled') return { text: `${def.name} neutralisé`, tone: 'neutral', rises: true }
+      if (atCap(e)) return { text: `${def.name} au maximum`, tone: 'neutral', rises: true }
+      // Gagné, même un malus : il monte (Peur posée sur Naraxes), en fuchsia
+      return { text: def.name, tone: def.polarity, rises: true }
     }
     case 'cleanse':
-      // Bonus retiré par l'adversaire : « Aura de puissance dissipée » ; malus retirés : « Purifié »
-      if (e.removed.length && STATUSES[e.removed[0]].polarity === 'positive')
-        return { text: `${e.removed.map((id) => STATUSES[id].name).join(', ')} dissipé${e.removed.length > 1 ? 's' : ''}`, tone: 'negative' }
-      return { text: 'Purifié', tone: 'neutral' }
+      // Bonus retiré par l'adversaire : « Aura de puissance dissipée » ; malus retirés : « Purifié » ; rien à retirer :
+      // « Rien à purifier » (2026-10-21 : « Purifié » laissait croire qu'un malus était parti). Un statut perdu tombe.
+      if (!e.removed.length) return { text: 'Rien à purifier', tone: 'neutral', rises: true }
+      if (STATUSES[e.removed[0]].polarity === 'positive')
+        return {
+          text: `${e.removed.map((id) => STATUSES[id].name).join(', ')} dissipé${e.removed.length > 1 ? 's' : ''}`,
+          tone: 'negative',
+          rises: false,
+        }
+      return { text: 'Purifié', tone: 'neutral', rises: false }
   }
 }
 
@@ -106,6 +125,8 @@ const modifierText = (m: Attack['modifiers'][number]) => `${lowerFirst(statusLab
 
 const armorDetail = (attack: Attack) => {
   const parts = [
+    // Reliques de coup (Fer à quatre clous), avant le critique
+    ...(attack.relicBonus ?? []).map((b) => `${lowerFirst(b.name)} +${b.amount}`),
     // Auras et statuts qui ont changé la force du coup (puissance +2, intimidation −2…)
     ...attack.modifiers.filter((m) => !m.final).map(modifierText),
     attack.armorAbsorbed > 0 && `armure −${attack.armorAbsorbed}`,
@@ -172,16 +193,19 @@ export function eventLog(event: TriggeredEvent, fighters: Pair<Character>): Omit
   return { kind: 'event', side: event.side, text: effects ? `Compétence · ${event.name} ! ${effects}.` : `Compétence · ${event.name} !` }
 }
 
+/** Une relique se déclenche : « Relique · Osselet fendu ! Brokk perd 3 PV. » */
+export function relicLog(beat: Extract<Beat, { type: 'relic' }>, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  const effects = beat.effects.map((e) => effectText(e, fighters)).join(', ')
+  return { kind: 'relic', side: beat.side, text: effects ? `Relique · ${beat.name} ! ${effects}.` : `Relique · ${beat.name} !` }
+}
+
 export function statusTickLog(
   side: Side,
   status: StatusId,
   effects: AppliedEffect[],
   fighters: Pair<Character>,
 ): Omit<LogEntry, 'id'> {
-  // Arrêté par l'immunité de la victime (0.50.0) : rien ne se passe, on dit pourquoi
-  if (effects.length === 0 && STATUSES[status].stoppedByImmunity)
-    return { kind: 'status', side, text: `${statusLabel(status)} ${of(fighters[side].name)} · l'immunité de ${fighters[1 - side].name} l'arrête.` }
-  // Un statut qui agit sur l'adversaire dit à qui il appartient : « Aura de poison d'Ervald · … »
+  // Un statut qui agit sur l'adversaire dit à qui il appartient : « Aura glaciale d'Ervald · … »
   const owner = effects.some((e) => e.target !== side) ? ` ${of(fighters[side].name)}` : ''
   return {
     kind: 'status',

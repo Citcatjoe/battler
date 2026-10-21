@@ -97,11 +97,16 @@ function loadSamples(c: AudioContext) {
         })
 }
 
+/**
+ * Son et musique coupés par défaut (demande de l'utilisateur) : une première visite, un navigateur
+ * piloté par un test ou un stockage indisponible restent muets. Seul un « 0 » enregistré, posé par
+ * le bouton quand on rallume le son, le rétablit.
+ */
 function readMuted(key = MUTE_KEY) {
   try {
-    return localStorage.getItem(key) === '1'
+    return localStorage.getItem(key) !== '0'
   } catch {
-    return false
+    return true
   }
 }
 

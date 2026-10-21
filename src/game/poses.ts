@@ -33,7 +33,7 @@ export const POSES: Record<PoseId, { name: string; when: string; prompt: string 
   },
   hurt: {
     name: 'Coup encaissé',
-    when: "quand un coup le touche, sous le recul et l'éclair rouge",
+    when: 'quand un coup le touche ; un critique le fait en plus reculer',
     prompt: 'recoiling from a heavy blow, torso twisted back, one arm raised to shield the face, grimacing, both feet still on the ground',
   },
   ko: {

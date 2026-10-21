@@ -1,3 +1,4 @@
+import { STATES, type StateId } from '../game/states'
 import { STATUSES, type StatusId } from '../game/statuses'
 import type { CharacterEvent } from '../game/events'
 
@@ -37,7 +38,7 @@ export type IconName =
   | 'wind-fury'
   | 'evasion'
   | 'precision-aura'
-  | 'poison-aura'
+  | 'frost-aura'
   | 'power-aura'
   | 'intimidation-aura'
   | 'waiting'
@@ -52,6 +53,42 @@ export type IconName =
   | 'melodious-aura'
   | 'crescendo'
   | 'soloist'
+  // Planche v8 (2026-10-20) : Saignement et ses sources, Aura glaciale, relais du druide
+  | 'bleed'
+  | 'cleave'
+  | 'grudge'
+  | 'sap'
+  | 'grudge-aura'
+  | 'sap-aura'
+  // Planche A (2026-10-20) : druide
+  | 'thunderbolt'
+  | 'casting'
+  | 'bear-might'
+  | 'burn'
+  // Planche C (2026-10-20) : interface, son et paris
+  | 'music-on'
+  | 'music-off'
+  | 'purse'
+  | 'bet-token'
+  | 'twist'
+  | 'ticket'
+  // Planche v12 (2026-10-21) : emblèmes d'état, pièces gravées monochromes
+  | 'state-power'
+  | 'state-weakened'
+  | 'state-shield'
+  | 'state-sure-crit'
+  | 'state-crit-power'
+  | 'state-sure-dodge'
+  | 'state-extra-die'
+  | 'state-healing'
+  | 'state-drain'
+  | 'state-reflect'
+  | 'state-thorns'
+  | 'state-immunity'
+  | 'state-poison'
+  | 'state-bleed'
+  | 'state-burn'
+  | 'state-lost-turn'
 
 /**
  * Icône peinte de chaque statut. Facultative pour un statut « à venir » (repli sur une marque neutre,
@@ -70,7 +107,7 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   windFury: 'wind-fury',
   evasion: 'evasion',
   precisionAura: 'precision-aura',
-  poisonAura: 'poison-aura',
+  frostAura: 'frost-aura',
   powerAura: 'power-aura',
   intimidationAura: 'intimidation-aura',
   fear: 'fear',
@@ -83,15 +120,61 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   immunityAura: 'immunity-aura',
   waiting: 'waiting',
   firefly: 'fireflies',
-  // Brûlure des Feux follets (0.50.0) : l'icône des lucioles, en attendant la sienne
-  burn: 'fireflies',
+  burn: 'burn',
   rotAura: 'rot-aura',
-  // Provisoire : la Pourriture subie reprend l'icône de l'aura, en attendant la sienne (demandée)
+  // La Pourriture subie (hors jeu) reprend l'icône de l'aura
   rot: 'rot-aura',
   // Barde (0.41.0) : une icône pour la compétence et son statut, comme les auras
   whistling: 'whistle',
   falseNote: 'false-note',
   melodiousAura: 'melodious-aura',
+  bleed: 'bleed',
+  // Druide : l'empreinte d'ours brûlée (planche v8) va à l'Aura sauvage
+  casting: 'casting',
+  bearMight: 'bear-might',
+  wildAura: 'grudge-aura',
+}
+
+/**
+ * Emblème de chaque état de la zone d'état (`states.ts`, planche v12, 0.79.2). Un état n'a pas la grammaire d'une
+ * compétence : la compétence est l'identité du personnage (objet peint à sa palette, dans un sceau octogonal) ;
+ * l'état est un mot du vocabulaire commun, une pièce ronde et monochrome au symbole gravé, posée telle quelle,
+ * sans cadre (docs/STYLE_BIBLE.md § 7). Les états sans porteur gardent l'icône de leur statut, ou l'initiale.
+ */
+export const STATE_ICON: Partial<Record<StateId, IconName>> = {
+  power: 'state-power',
+  weakened: 'state-weakened',
+  shield: 'state-shield',
+  sureCrit: 'state-sure-crit',
+  critPower: 'state-crit-power',
+  sureDodge: 'state-sure-dodge',
+  extraDie: 'state-extra-die',
+  healing: 'state-healing',
+  drain: 'state-drain',
+  reflect: 'state-reflect',
+  thorns: 'state-thorns',
+  immunity: 'state-immunity',
+  poison: 'state-poison',
+  bleed: 'state-bleed',
+  burn: 'state-burn',
+  lostTurn: 'state-lost-turn',
+  rot: 'rot-aura',
+  breach: 'breach',
+  firefly: 'fireflies',
+}
+
+/** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */
+export function StateIcon({ id, className }: { id: StateId; className: string }) {
+  const name = STATE_ICON[id]
+  if (name) return <Icon name={name} className={className} />
+  return (
+    <span
+      aria-hidden
+      className={`flex items-center justify-center rounded-full border border-stone-500/60 bg-stone-800 font-display font-extrabold leading-none text-stone-300 ${className}`}
+    >
+      {STATES[id].name[0]}
+    </span>
+  )
 }
 
 /**
@@ -99,12 +182,8 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
  * et les infobulles montrent l'icône générique des compétences.
  */
 export const SKILL_ICON: Partial<Record<string, IconName>> = {
-  'life-bloom': 'life-bloom',
-  'bark-skin': 'bark-skin',
+  // Les lucioles qui lancent la Brûlure, plutôt que la Brûlure elle-même (deux niveaux de lecture, 0.79.0)
   firefly: 'fireflies',
-  charge: 'charge',
-  claw: 'claw',
-  'rot-aura': 'rot-aura',
   'waiting-1': 'waiting',
   'waiting-2': 'waiting',
   'waiting-3': 'waiting',
@@ -156,5 +235,18 @@ export function Icon({ name, className = 'h-[1.3em] w-[1.3em]' }: { name: IconNa
       draggable={false}
       className={`inline-block shrink-0 select-none align-[-0.3em] ${className}`}
     />
+  )
+}
+
+/**
+ * Icône d'une relique : l'icône peinte qui porte son id (`src/assets/icons/<id>.png`), sinon son initiale gravée
+ * en or, à la même taille : le sceau qui l'entoure (hexagone, RelicSeal) suffit à dire « relique ».
+ */
+export function RelicIcon({ id, name, className }: { id: string; name: string; className: string }) {
+  if (URLS[`../assets/icons/${id}.png`]) return <Icon name={id as IconName} className={className} />
+  return (
+    <span aria-hidden className={`relic-initial flex items-center justify-center font-display font-extrabold leading-none ${className}`}>
+      {name[0]}
+    </span>
   )
 }

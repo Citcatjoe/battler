@@ -75,8 +75,8 @@ Le « coup sacrifié » est la **règle implicite la plus dangereuse** du jeu. T
 | --- | --- | --- |
 | `naturalOne`, `naturalTwo`, `naturalThree` | **toutes** (9 familles) | — |
 | `naturalMax` | aucune | — |
-| `hit` | aucune | Aura de décoction, Aura de pourriture |
-| `hurt` | aucune | Épines |
+| `hit` | aucune | Aura de décoction (Aura de pourriture, sans porteur depuis la 0.71.0) |
+| `hurt` | aucune depuis la 0.73.0 (Rancune et Sève du druide, 0.71.0 à 0.72.0) | Épines |
 | `combatStart`, `turnStart`, `turnEnd`, `crit`, `missed`, `dodge`, `bloodied` | aucune | aucune |
 
 **Constat** : les compétences du roster n'utilisent que les trois faces du dé. Les dix autres déclencheurs sont prêts et testés ; deux seulement (`hit`, `hurt`) servent, et uniquement aux réactions des statuts.
@@ -90,14 +90,15 @@ Le « coup sacrifié » est la **règle implicite la plus dangereuse** du jeu. T
 | `limit` | nombre maximal par combat | non |
 | `form` | n'existe que sous une forme | druide |
 | `forfeitsHit` | le coup est sacrifié | 28 compétences sur 30 |
-| `reshapesHit` (`max` ou `reroll`, `bonus`, `noCrit`) | le coup est transformé | Charge, Coup de griffe |
+| `reshapesHit` (`max` ou `reroll`, `bonus`, `noCrit`) | le coup est transformé | aucune depuis la 0.73.0 (Charge, Coup de griffe avant) |
+| `scene` (0.73.0) | événement de scène joué par l'écran, présentation seule | Foudre |
 
 ### 2.5 Les effets (5)
 
 | Effet | Ce qu'il fait | Utilisé par |
 | --- | --- | --- |
-| `heal` | soigne, plafonné aux PV max | Rage du sang, Fleur de vie ; Aura de sainteté et Vol de vie, par leurs statuts |
-| `damage` | dégâts **directs** : ignorent armure, esquive et boucliers | uniquement via les statuts (poison, auras, épines, riposte, pièce, pourriture) |
+| `heal` | soigne, plafonné aux PV max | Aura de sainteté et Vol de vie, par leurs statuts (Fleur de vie retirée en 0.73.0) |
+| `damage` | dégâts **directs** : ignorent armure, esquive et boucliers | Foudre (0.73.0) ; sinon via les statuts (poison, auras, saignement, riposte, pièce, pourriture) |
 | `applyStatus` | pose un statut (immunité → garde → opposition → cumul, voir RESOLUTION § 6) | presque tout |
 | `cleanse` | retire des statuts d'une polarité (tous, ou les `count` derniers) | Purification, Aura d'immunité |
 | `release` | relâche un statut à jauges en dégâts directs | Rétribution |
@@ -108,20 +109,20 @@ Un statut est un assemblage de crochets. Chaque crochet agit à **un moment fixe
 
 | Crochet | Famille | Moment | Étape produite | Fichiers qui le lisent | Statuts qui l'utilisent |
 | --- | --- | --- | --- | --- | --- |
-| `modifyStats` | continu | chaque calcul | — (dans `attack`) | moteur | Brèche, Aura de précision, Luciole |
-| `modifyOutgoing` | continu | chaîne, étape 4 | `attack.modifiers` | moteur, audit | Affaibli, Aura de puissance |
+| `modifyStats` | continu | chaque calcul | — (dans `attack`) | moteur | Brèche, Aura de précision, Luciole, Incantation (d3, 0.73.0) |
+| `modifyOutgoing` | continu | chaîne, étape 4 | `attack.modifiers` | moteur, audit | Affaibli, Aura de puissance, Force de l'ours et Aura sauvage (0.73.0) |
 | `modifyIncoming` | continu | chaîne, étape 5 | `attack.modifiers` | moteur, audit | Vulnérable, Aura d'intimidation, Luciole |
 | `forcesCrit` | remplacement | chaîne, étape 3 | `attack.critForced` | moteur | Critique assuré |
 | `forcesDodge` | remplacement | chaîne, étape 2 | `attack.dodgeForced` | moteur, analyse | Esquive améliorée |
-| `shield` | remplacement | chaîne, étape 8 | `attack.shields` | 10 fichiers | Armure temporaire, Écorce épaisse |
+| `shield` | remplacement | chaîne, étape 8 | `attack.shields` | 10 fichiers | Armure temporaire (Écorce épaisse retirée en 0.73.0) |
 | `spentOnHurt` | usure | après l'application | — (état) | moteur | Luciole |
-| `decays` | usure | dans l'étape `statusTick` du statut | — (état) | moteur | Poison (0.36.4) |
+| `decays` | usure | dans l'étape `statusTick` ou `statusReaction` du statut | — (état) | moteur | Poison (0.36.4), Saignement (0.68.0) |
 | `drainsHit` | sur le coup | étape 10 | `statusReaction` | moteur, écran | Vol de vie |
 | `reflectsHit` | sur le coup | après le vol de vie | `statusReaction` | moteur, écran | Riposte |
 | `fillsOnHurt` | jauges | après le coup | — (état) | moteur | Rétribution |
-| `onTurnStart` | périodique | phase 1 | `statusTick` | moteur | Poison, Régénération, Aura de poison, Pourriture |
+| `onTurnStart` | périodique | phase 1 | `statusTick` | moteur | Poison, Régénération, Aura glaciale (pose du Poison sur l'adversaire, 0.69.0), Pourriture |
 | `onTurnEnd` | périodique | phase 3 | `statusTick` | moteur | Brûlure, Aura de sainteté |
-| `reactions` | déclenché | fenêtres | `statusReaction` | moteur | Épines (`hurt`), décoction et pourriture (`hit`) |
+| `reactions` | déclenché | fenêtres | `statusReaction` | moteur | Épines acérées et Saignement (`hurt`), décoction et pourriture (`hit`) |
 | `skipsAction` | contrôle | phase 2 | `skip` | moteur, écran | Peur, Étourdi |
 | `extraStrikes`, `extraDie` | action multiple | phase 2 | `flurry` | moteur, écran | Furie des vents, Coup de chance |
 | `coinToss` | remplacement d'action | phase 2 | `coin` | moteur, écran, son | Pile ou face |
@@ -153,7 +154,7 @@ Un personnage à formes (druide) alterne entre deux formes au début de chacun d
 
 ---
 
-## 3. La chronologie : 10 types d'étapes
+## 3. La chronologie : 11 types d'étapes
 
 C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène dans `useCombat`, et TypeScript refuse un type oublié (`beat satisfies never`).
 
@@ -169,6 +170,7 @@ C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène
 | `shift` | formes | nouvelle forme |
 | `flurry` | `extraStrikes` | nombre de coups, faces de chaque dé |
 | `coin` | `coinToss` | pile ou face, effets, imposé |
+| `relic` | une relique (0.75.0, [RELIQUES.md](RELIQUES.md)) : moment du coup, début de tour, seuil de PV | relique, nom, effets, rang du déclenchement ; le bonus de coup d'une relique est sur l'étape `attack` (`relicBonus`) |
 
 `statusReaction` regroupe trois mécaniques différentes (réaction, vol de vie, riposte). L'écran doit donc relire le registre pour savoir laquelle il montre (§ 7.2).
 
@@ -183,16 +185,17 @@ C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène
 | `attack` (normal) | dé qui roule puis retombe, élan (`lunge`), recul (`hit`) ou saut (`dodge`), étoile d'impact | `-N` en rouge (taille selon les dégâts), `ESQUIVE !` en cyan | Dé lancé, Dé posé (rien sur le max ni sur 1 à 3), élan muet, puis Coup ou Esquive | `attackLog` (modificateurs et armure détaillés) | statuts usés |
 | `attack` critique | badge `CRITIQUE ×N`, arrêt sur image (110 ms), éclair blanc (`crit-flash`), secousse forte | `CRITIQUE !` en ambre, chiffre `text-9xl` qui tremble (`crit-shake`) | Coup critique (Coup + Grondement) | idem | — |
 | `attack` sacrifié | dé seul, pas d'élan | — (la compétence qui suit parle) | dé seulement | « fait 2 : pas de dégâts » | — |
-| `attack` transformé | nom de la compétence jaillit avant l'élan | titre violet | Coup, comme un coup normal | « fait 1 : Charge ! » | — |
+| `attack` transformé | nom de la compétence jaillit avant l'élan | titre violet | Coup, comme un coup normal | « fait 1 : Charge ! » | — (sans porteur depuis la 0.73.0) |
 | `event` | halo violet sur le lanceur (`event-aura`) ; dégâts sur l'adversaire en vrais coups (élan, jauge par jauge) | titre violet, sous-titre pour un bonus d'un autre nom, badges sur la cible | déduit des effets (`cueOf`, § 4.4) ; Coup par jauge, Coup critique sur le dernier | `eventLog` | statut posé apparaît (`status-pop`) |
-| `statusTick` | badge ; titre sur le porteur s'il frappe l'adversaire | `-N`, `+N PV` | Ronge s'il fait des dégâts, sinon déduit (Soin) | `statusTickLog` | compteur qui rebondit |
+| `event` avec scène (0.73.0) | événement de scène (`SceneEvent.tsx`) : vue sur toute l'arène (Foudre : arène assombrie, puis blanchie) et vue sur la colonne de la cible (l'éclair) ; les effets tombent à l'impact (`SCENE_EVENTS`) | titre violet ; dégâts à l'impact | Coup critique à l'impact (Foudre) | `eventLog` | — |
+| `statusTick` | badge ; titre sur le porteur s'il frappe l'adversaire | `-N`, `+N PV` | Ronge s'il fait des dégâts, sinon déduit (Soin) | `statusTickLog` | compteur qui défile |
 | `statusReaction` | Épines : coup sans élan ; Riposte : contre-coup avec élan | titre violet, `-N` | Coup (Épines, Riposte) ou Soin (Vol de vie) | `statusReactionLog` | charge consommée |
-| `skip` | tremblement (Peur) | titre | Tour perdu | `skipLog` | charge consommée |
+| `skip` | tremblement (Peur) | « Tour perdu » (`STATES.lostTurn`) sur celui qui perd son action, en fuchsia, qui tombe ; ni titre ni aura | Tour perdu | `skipLog` | charge consommée |
 | `flurry` | tous les dés roulent ensemble, le second jaillit (`die-burst`, couleur `dieColor`) | titre | un seul Dé lancé et un seul Dé posé | `flurryLog` | statut consommé |
 | `shift` | fondu des silhouettes (`form-out`, `form-in`), éclair de sève, 14 feuilles | nom de la forme | Transformation, la même dans les deux sens | `shiftLog` | — |
 | `coin` | pièce qui tournoie et retombe | `Pile !` ou `Face…` ; coup lourd sur pile | Pièce lancée, Pièce retombe ; Coup critique sur pile | `coinLog` | statut consommé |
-| `statusDuration` | compteur qui rebondit, avec la variation | — | — | `statusDurationLog` | `status-count`, `status-delta` |
-| `statusExpire` | le médaillon montre son 0, puis s'efface | — | — | `statusExpireLog` | `status-leave` |
+| `statusDuration` | compteur qui défile vers le bas | — | — | `statusDurationLog` | `count-loss`, `count-in-down` |
+| `statusExpire` | le compteur du même médaillon descend à 0, puis le médaillon s'efface | — | — | `statusExpireLog` | `status-leave` |
 | fin | K.O. (chute) et victoire (balancement) | `K.O. !` | `ko`, `victory` | « s'effondre » | — |
 
 **Synchronisation** (`anticipate`) : l'effet d'un statut et le décompte de sa durée, s'ils tombent dans la même phase, sont montrés au même instant.
@@ -249,11 +252,11 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 
 | Groupe | Classes |
 | --- | --- |
-| **Coup** | `lunge` (750 ms), `lunge-fast`, `hit`, `dodge`, `impact`, `damage-float` (1,7 s), `dodge-text` (1,5 s), `crit-badge`, `crit-flash`, `crit-shake` |
+| **Coup** | `lunge` (750 ms), `lunge-fast`, `hit`, `dodge`, `impact`, `damage-float` (1,7 s), `dodge-text` (1,5 s), `special-badge` (labels de coup spécial, ex-`crit-badge`), `crit-flash`, `crit-shake` |
 | **Dé et pièce** | `die-rolling`, `die-landed`, `die-burst`, `die-slot`, `coin-flipping`, `coin-landed` |
 | **Compétences et statuts** | `event-aura`, `char-aura` (halo, anneau, particules), `status-tremble`, `firefly-orbit`, `firefly` |
 | **Métamorphose** | `form-out`, `form-in`, `morph-flash`, `morph-leaf` |
-| **Zone d'état** | `status-pop`, `status-count`, `status-delta`, `status-bump`, `status-leave`, `aura-token` |
+| **Zone d'état** | `status-pop`, `count-gain`, `count-loss`, `count-in-up` / `count-out-up`, `count-in-down` / `count-out-down`, `status-leave`, `aura-token` |
 | **Fin** | `ko`, `victory`, `fade-in` |
 | **Écrans** | `slide-in-left`, `slide-in-right`, `vs-slam`, `backdrop-figure`, `champion-rays`, `log-pop` |
 | **Mortes** | `status-aura`, `status-halo` (anciens halos de statut, plus utilisés) |
@@ -262,9 +265,9 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 
 ### 4.6 Les icônes
 
-Il y a 42 icônes peintes (`src/assets/icons/`). Deux tables les relient au jeu : `STATUS_ICON` (statut → icône) et `SKILL_ICON` (compétence → icône), toutes deux dans `Icon.tsx`. Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
+Il y a 75 icônes peintes (`src/assets/icons/`, 0.77.1). Trois tables les relient au jeu : `STATUS_ICON` (statut → icône) et `SKILL_ICON` (compétence → icône), dans `Icon.tsx`, et l'id de la relique (`RelicIcon` prend `src/assets/icons/<id>.png`). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
 
-Encore à fournir : la Pourriture subie (elle reprend celle de l'aura), et les statuts à venir (Brûlure, Vulnérable, Étourdi, Garde sacrée).
+Plus aucune icône en attente depuis la 0.77.1 : la liste unique (STYLE_BIBLE § 7, « Icônes à générer », une planche par type) est vide. Hors jeu, donc pas encore à générer : Vulnérable, Étourdi, Garde sacrée, Pourriture subie.
 
 ---
 
@@ -291,18 +294,18 @@ Chaque famille est un assemblage de trois briques sur les faces 1, 2 et 3. Les v
 
 | Famille | 1 | 2 | 3 (aura) | Briques mobilisées |
 | --- | --- | --- | --- | --- |
-| **Orc** | Rage du sang : `heal` 3 | Furie des vents : `extraStrikes` | Puissance : `modifyOutgoing` +2 | soin, rafale, sortant |
+| **Orc** | Pourfendre : un vrai coup sur un 1 ; s'il touche, Saignement 2 (`needsTouch`, 0.70.0 ; réaction `hurt` + `decays` du statut) | Furie des vents : `extraStrikes` | Puissance : `modifyOutgoing` +2 | plaie, rafale, sortant |
 | **Elfe** | Œil de faucon : `forcesCrit` | Esquive améliorée : `forcesDodge` + `opacity` | Précision : `modifyStats` (multiplicateur) | critique forcé, esquive forcée, stats |
-| **Nain** | Peau de pierre : `shield` 6 | Épines : réaction `hurt` 6 | Intimidation : `modifyIncoming` −2 | bouclier, réaction, entrant |
+| **Nain** | Peau de pierre : `shield` 6 | Épines acérées : réaction `hurt` → Saignement sur l'attaquant (0.68.0) | Intimidation : `modifyIncoming` −2 | bouclier, réaction, entrant |
 | **Mort-vivant** | Souffle de la tombe : poison (`onTurnStart`) | Vol de vie : `drainsHit` | Poison : `onTurnStart` sur l'adversaire | périodique, sur le coup |
 | **Prêtresse** | Peur : `skipsAction` + `tremble` | Purification : `cleanse` du dernier bonus | Sainteté : `onTurnEnd` soin | contrôle, purge, périodique |
 | **Voleuse** | Coup de chance : `extraStrikes` + d3 | Pile ou face : `coinToss` | Décoction : réaction `hit` → poison | rafale, pièce, réaction |
 | **Paladin** | Rétribution : `release` (`fillsOnHurt`) | Riposte : `reflectsHit` | Immunité : `cleanse` + `immune` | jauges, renvoi, immunité |
 | **Ogre** | Attente (malus sur soi) | Attente | Attente | aucune mécanique : un coup sacrifié et une marque |
-| **Druide, homme** | Fleur de vie : `heal` 3 | Écorce : `shield` 4 | Luciole : `modifyStats` + `modifyIncoming` + `spentOnHurt` | soin, bouclier, malus composite |
-| **Druide, ours** | Charge : `reshapesHit max` | Coup de griffe : `reshapesHit reroll` | Pourriture : réaction `hit` → `rot` sans durée | coup transformé, réaction |
+| **Druide, homme** (Incantation : `modifyStats`, d3) | Foudre : `damage` 5, `scene` | Feux follets : Brûlure 3 (`onTurnEnd`) | Aura sauvage : `modifyOutgoing` +2, pour l'ours | statut de forme, dégâts directs, périodique, sortant (0.73.0) |
+| **Druide, ours** (Force de l'ours : `modifyOutgoing` +4) | coup | coup | coup | statut de forme, sortant (0.73.0) |
 
-**Briques en sommeil** (prêtes et testées, mais posées par personne) : Régénération, Affaibli, Brèche, Brûlure, Vulnérable, Étourdi, Garde sacrée ; les conditions `when`, `chance` et `limit` ; dix déclencheurs ; `spentOnReaction` ; l'opposition (Poison ↔ Régénération ne se rencontrent jamais en jeu).
+**Briques en sommeil** (prêtes et testées, mais posées par personne) : Régénération (depuis la 0.73.0), Affaibli, Brèche, Vulnérable, Étourdi, Garde sacrée ; `reshapesHit` (depuis la 0.73.0) ; les conditions `when`, `chance` et `limit` ; dix déclencheurs ; `spentOnReaction` ; l'opposition (Poison ↔ Régénération ne se rencontrent jamais en jeu).
 
 **Interactions systémiques déjà observées** : ce sont les familles de briques qui se rencontrent, avec les mesures de [EQUILIBRAGE.md](EQUILIBRAGE.md).
 

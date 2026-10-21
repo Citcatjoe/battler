@@ -223,12 +223,16 @@ export function RecordsScreen({
                       <th />
                       {roster.map((c) => (
                         <th key={c.id} className="px-1 pb-1">
-                          <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => onOpenCharacter(c.id)}
+                            className="group flex flex-col items-center gap-0.5"
+                          >
                             <MiniPortrait character={c} size="h-8 w-8" />
-                            <span className="text-[13px] font-normal text-ink-3">
+                            <span className="text-[13px] font-normal text-ink-3 group-hover:text-gold-300">
                               {c.name}
                             </span>
-                          </div>
+                          </button>
                         </th>
                       ))}
                     </tr>
@@ -237,7 +241,13 @@ export function RecordsScreen({
                     {roster.map((row) => (
                       <tr key={row.id}>
                         <th className="pr-3 text-right font-body text-[14px] font-bold text-ink-2">
-                          {row.name}
+                          <button
+                            type="button"
+                            onClick={() => onOpenCharacter(row.id)}
+                            className="codex-link"
+                          >
+                            {row.name}
+                          </button>
                         </th>
                         {roster.map((col) => {
                           const vs = rec(row.id).opponents[col.id];
@@ -294,7 +304,7 @@ export function RecordsScreen({
             ) : (
               <ul className="min-h-0 flex-1 overflow-y-auto pr-1">
                 {history.matches.map((m) => (
-                  <MatchRow key={m.id} match={m} />
+                  <MatchRow key={m.id} match={m} onOpenCharacter={onOpenCharacter} />
                 ))}
               </ul>
             )}

@@ -19,6 +19,7 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - Onglet Tournoi de l'accueil : fond dédié (`src/assets/menu-tournament.jpg`, porte fortifiée de l'arène vue du parvis), qui remplace la rangée de tout le roster. La présentation et les boutons (« Commencer un tournoi », « Reprendre le tournoi ») sont sur la moitié droite, au style `.btn`.
 
 ### Modifié
+- **Vérification proportionnée** (2026-10-20, règle de l'utilisateur, dans `CLAUDE.md`) : un changement de gameplay se vérifie sans écran (`npm run check`, test ciblé, un seul `npm run balance` si l'équilibre peut bouger, traces). Aucun combat n'est joué dans le navigateur pour valider du gameplay, et le navigateur ne sert qu'aux changements de rendu. Le combat test, jugé peu fiable par l'utilisateur, est son outil et ne sert pas à valider : limite ajoutée à `docs/ETAT.md` et chantier § 19 dans `docs/TODO.md`.
 - **Fiche produit** (2026-10-19, vision donnée par l'utilisateur) : Battler est un auto-battler roguelike à regarder et à parier, avec deux terrains de jeu en parallèle (les combattants, les parieurs) et un double but (un jeu ludique, une expérience de développement). Écrite en tête de `docs/INTENTION.md`, résumée dans `CLAUDE.md` avec les repères de l'utilisateur, les nouveaux documents (PARIS, SORTS, FAMILLES, ETUDE_AUTOBATTLER, TODO), les outils de mesure et la conduite à tenir quand un autre agent travaille en même temps. Principes 8 à 10 ajoutés à `INTENTION.md` (personnage précis, paris sans effet sur le combat, jeu vidéo et non page web).
 - `docs/STYLE_BIBLE.md` réorganisée pour être reprise d'une session à l'autre (2026-10-19) :
   - une section « Par où commencer » (qui fait quoi, où regarder, points en suspens) ;
@@ -30,6 +31,450 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - **Boutons au style jeu vidéo** (`.btn`, `.btn-primary`, `.btn-round`, `.tabs` dans `index.css`) : plaques d'or ou de pierre au liseré de bronze, en relief, qui s'enfoncent au clic, avec du texte en Cinzel capitales et des icônes de taille fixe. Appliqués à l'écran de sélection (Statistiques et Son en médaillons, onglets Affrontement / Tournoi, Fiche, Au hasard, Combattre) et à l'écran d'affrontement (Changer, Jouer, Simuler).
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
+
+## [0.80.2] — 2026-10-21
+
+### Modifié
+- **Retombée en douceur d'un sceau déclenché** (demande de l'utilisateur) : le pic reste aussi vif, puis le sceau reste allumé un temps et s'éteint lentement, sur environ 2,6 s à ×1 ; son nom suit. Le spectateur voit ce qui vient de se déclencher (« je viens de me déclencher, je retombe jusqu'au prochain »). L'animation rejoint l'état de repos du sceau : éteint pour une compétence, allumé pour une aura active.
+
+### Corrigé
+- Un sceau en plein éclat était coupé net quand une autre compétence du même camp se déclenchait juste après (la barre ne retenait que la dernière face sortie) : chaque sceau garde son dernier déclenchement et va au bout de son animation.
+
+## [0.80.1] — 2026-10-21
+
+### Modifié
+- **Barre de compétences en combat** (demande de l'utilisateur) : au repos, les sceaux, les auras inactives et leurs noms sont bien plus discrets (presque gris, sombres, à demi effacés), pour qu'une compétence activée ou une aura active se distingue nettement.
+- **Tintement visuel au déclenchement** : quand une face sort, un éclat de lumière part du sceau de la compétence (ou de l'anneau de l'aura) et s'étend vite sur une grande partie de l'arène (≈ 0,5 s à ×1, en mode « screen »), suivi d'un anneau fin qui file plus loin encore ; le nom de la compétence s'éclaire un instant. Dans la couleur de la nature de la compétence ou de l'aura. Suit la vitesse et la pause.
+
+## [0.80.0] — 2026-10-21
+
+La zone de surcharge, et le sens des textes flottants (décisions de l'utilisateur).
+
+### Modifié
+- **Zone de surcharge** (la colonne de labels sous le dé, `docs/RESOLUTION.md` § 11) : elle montre ce qui change le coup en cours au-delà de sa règle de base, au moment où ça s'applique, dans l'ordre du livre de règles, et se vide à l'étape suivante. **Point de vue de l'attaquant** : + quand ça amplifie son action (critique, bonus de relique, Saignement qui coule, Vol de vie), − quand ça la réduit ou la contre (esquive assurée, bouclier, Fausse note, Riposte, Épines). **Couleur selon la source** (Coup, Compétence ou statut, Relique), le − hachuré ; le + sonne le ding, le − Malus reçu. Registre `specials.ts` refait (`SPECIAL_SOURCES`, `SPECIAL_SIGNS`, `isSurcharge`, `attackSpecials`) ; `SPECIAL_KINDS` retiré.
+- Sortent de la colonne, parce que leur sceau dit déjà qu'elles se déclenchent : Pile ou face, Furie des vents (et son « ×2 »), Coup de chance, Rétribution, doubles de la barde. Les auras permanentes n'y entrent jamais. Les reliques qui se déclenchent gardent leur label (elles n'ont pas de sceau dans la barre). Entrent : Esquive assurée, Armure temporaire (Peau de pierre) qui absorbe, Fausse note, Luciole.
+- **Sens des textes flottants** : il dit le gain ou la perte de la chose nommée, plus le bon ou le mauvais. Un statut gagné monte, même un malus (« Peur » posée sur Naraxes) ; un statut perdu (dissipé, purifié) tombe ; les PV perdus tombent, les PV regagnés montent ; le critique monte toujours. Avec l'impact d'un coup, un texte qui monte (Poison de l'Aura de décoction) part au-dessus du chiffre des dégâts au lieu de le croiser.
+- **Tour perdu** : « Tour perdu » (fuchsia, qui tombe) remplace le nom « Peur », qui réapparaissait et se lisait comme une nouvelle Peur.
+
+### Retiré
+- La variation flottante (« +2 », « −1 ») qui partait du compteur des médaillons de la zone d'état ; le chiffre défile toujours.
+
+## [0.79.7] — 2026-10-21
+
+### Modifié
+- **Une aura sur son porteur se lit sur son anneau, plus dans la zone d'état** (proposition validée par l'utilisateur) : une aura qui agit sur son porteur est une modification permanente, de l'identité, et elle doublait son propre anneau. Aura de puissance, Aura sauvage, Aura mélodieuse, Aura de précision, Aura de sainteté et Aura d'immunité ne mettent plus de Puissance, de Critique renforcé, de Soin ni d'Immunité dans la zone d'état. Leur anneau, dans la barre de compétences, affiche la valeur de leur effet (« +4 ») au lieu de leurs charges. La règle de forme du druide affiche la sienne (Force de l'ours « +3 », Incantation « d3 »). La zone d'état ne garde que ce qui arrive au personnage ; les seuls effets d'aura qui y restent sont les malus mis chez l'adversaire (Affaibli de l'intimidation, Poison de l'Aura glaciale ou de l'Aura de décoction).
+- Une aura posée sur soi n'envoie plus de signal : son anneau s'allume, là où le spectateur la voit s'activer.
+
+### Retiré
+- L'anneau tournoyant sur un état donné par une aura (0.79.4) : il n'y a plus rien à relier.
+
+## [0.79.6] — 2026-10-21
+
+### Modifié
+- **Anneau de l'aura : pour les bonus seulement** (décision de l'utilisateur) : un malus mis par une aura chez l'adversaire (l'Affaibli de l'Aura d'intimidation, le Poison de l'Aura glaciale ou de l'Aura de décoction) ne porte plus l'anneau tournoyant ; il est suivi comme tout autre malus. Seuls les bonus qu'une aura donne à son porteur le gardent (Puissance, Critique renforcé, Soin, Immunité).
+
+## [0.79.5] — 2026-10-21
+
+Retours de l'utilisateur sur les textes flottants, la synchronisation et les infobulles.
+
+### Modifié
+- **Plus de nom de compétence flottant au-dessus du lanceur** : son sceau, dans la barre de compétences, s'allume déjà quand elle part ; un coup spécial a en plus son label sous le dé. De même, une aura qui agit (Aura glaciale) n'écrit plus son nom (son anneau s'allume et envoie le signal), et un statut qui réagit avec un label (Riposte, Épines, Vol de vie) ne l'écrit plus au-dessus de son porteur. Un coup transformé ne garde que son label.
+- **Purge à vide** : « Rien à purifier » au lieu de « Purifié », qui laissait croire qu'un malus était parti. Ce texte ne s'affiche que si la compétence n'a rien fait d'autre, une seule fois : la Purification d'Ysolde sans bonus adverse ni malus à soi montre « Rien à purifier », puis la lumière frappe ; l'Aura d'immunité sans malus à retirer n'affiche plus rien de plus (`quietPurges`).
+- **Pourfendre** (Gorak) : le Saignement tombe à l'impact du coup qui touche, au lieu d'une étape à part après lui (comme le poison de l'Aura de décoction en 0.78.0) ; sauf si une Riposte s'intercale.
+- **Infobulles des compétences** : un statut posé sur l'adversaire est annoncé « Sur l'adversaire : … » (« Perd 3 PV au début de son prochain tour » se lisait comme une perte du lanceur : Souffle de la tombe, Feux follets, Pourfendre, Peur, Fausse note). La relâche de Rétribution dit aussi qu'elle frappe l'adversaire. Peur : « Perd sa prochaine action, terrifié ». Règle tenue par un test : tout effet subi par l'adversaire le nomme dans le texte de la compétence.
+
+## [0.79.4] — 2026-10-21
+
+### Ajouté
+- **Lien entre une aura et l'état qu'elle donne** (demande de l'utilisateur) : un état de la zone d'état donné par une aura active porte le même anneau tournoyant que l'aura, à sa couleur (`.state-aura`, `TrayState.aura`). Bonus ou malus : la Puissance de l'Aura de puissance, le Critique renforcé de l'Aura de précision, l'Affaibli que l'Aura d'intimidation met chez l'adversaire, le Poison de l'Aura glaciale ou de l'Aura de décoction chez l'adversaire. Pour un statut posé par une aura, le lien est possible plutôt que prouvé : le Poison d'Elaria tourne à la couleur de l'Aura glaciale d'Ervald même s'il vient en partie du Souffle de la tombe. Test dans `states.test.ts`.
+
+## [0.79.3] — 2026-10-21
+
+### Modifié
+- **Emblèmes d'état plus petits** (demande de l'utilisateur) : 48 px au lieu de 64, compteur et variation flottante réduits d'autant.
+- **Teinte légère selon la polarité** : la pièce monochrome prend un reflet vert pour un bonus, rouge pour un malus (`.state-tint`, mode de fusion « couleur » à 30 %, sans filtre). Un état sans nombre (Immunité, Tour perdu) dit de nouveau sa polarité.
+
+## [0.79.2] — 2026-10-21
+
+### Ajouté
+- **Emblèmes d'état** (planche v12, 16 icônes `state-*.png`) : chaque état de la zone d'état a sa pièce gravée, monochrome, au symbole commun à tous (Puissance, Affaibli, Bouclier, Critique assuré, Critique renforcé, Esquive assurée, Dé en plus, Soin, Drain, Renvoi, Épines, Immunité, Poison, Saignement, Brûlure, Tour perdu). Une compétence et l'état qu'elle pose ne montrent plus la même image (Œil de faucon et Critique assuré).
+- `scripts/slice-coins.py` : découpe d'une planche de pièces sur fond noir uni ou transparent, chaque pièce trouvée comme un disque, découpée en rond et mise à la même taille.
+
+### Modifié
+- **Zone d'état sans cadre** : l'emblème est posé tel quel, sans cerclage vert ou rouge ni fond ; le compteur se pose dessus. La polarité se lit au compteur (vert ou rouge) et à la rangée (bonus à gauche, malus à droite). Le bord en pointillés des dégâts périodiques (0.52.1) disparaît avec le cerclage.
+- Une compétence qui pose une aura en faisant autre chose au passage se fond aussi dans l'anneau de l'aura : l'Aura d'immunité d'Aldric (qui purge d'abord ses malus) apparaissait deux fois dans sa barre. L'infobulle de l'anneau dit ce qu'elle fait d'autre.
+- `docs/STYLE_BIBLE.md` § 7 : la grammaire des emblèmes d'état (« monochrome », « carved on a coin », pas de cadre, même taille) et son prompt.
+
+## [0.79.1] — 2026-10-21
+
+### Modifié
+- **Barre de compétences sortie de l'en-tête** (demande de l'utilisateur) : elle est posée juste dessous, au bord de l'arène, au-dessus du camp de chacun, sur un voile sombre qui la détache du décor. Plus grande : sceaux et auras de 56 px au lieu de 40, pastille du dé de 28 px, compteurs agrandis. **Le nom de chaque compétence et de chaque aura** est écrit sous son sceau (doré quand l'aura est active). Les sceaux sont moins éteints au repos, pour rester lisibles ; ils s'allument toujours quand leur face sort. Hors de l'arène qui tremble, la barre reste immobile pendant les gros coups.
+
+## [0.79.0] — 2026-10-21
+
+Deux niveaux de lecture en combat (demande de l'utilisateur) : ce que le personnage **sait faire** dans l'en-tête, ce qu'il **subit ou porte** dans la zone d'état. Constat de départ : 25 des 26 statuts posés par une compétence venaient d'une seule compétence, et 27 compétences sur 28 montraient l'icône de leur statut (Œil de faucon et Critique assuré). Aucune règle de combat ne change.
+
+### Ajouté
+- **États affichés** (`src/game/states.ts`) : un vocabulaire d'états génériques (Puissance, Affaibli, Bouclier, Critique assuré, Critique renforcé, Esquive assurée, Dé en plus, Soin, Drain, Renvoi, Épines, Immunité, Poison, Saignement, Brûlure, Tour perdu…) et la place de chaque statut (`STATUS_PLACE` : zone d'état, aura, forme ou mécanisme de compétence). Les statuts de même effet se **regroupent** en un médaillon au total signé (Aura sauvage et Force de l'ours : « Puissance +7 ») ; une aura qui agit sur l'adversaire y **relaie** son effet (Aura d'intimidation : « Affaibli −2 » chez lui). Infobulle : chaque part, son effet, et d'où elle vient (`originsOf`).
+- **Barre de compétences de l'en-tête** (`SkillBar.tsx`, à la place des dés de compétence) : un sceau octogonal par compétence, face du dé en pastille, éteint au repos et allumé quand sa face sort ; les auras à la suite, au médaillon rond dont l'anneau tourne quand elle est active (charges en pastille) ; les règles de forme du druide ; les jauges de Rétribution sur son sceau.
+- **Signal d'activation** (`SignalLayer.tsx`, `SkillSignal`) : une lueur file du sceau de la compétence ou de l'anneau de l'aura vers la zone d'état de la cible, et l'état y apparaît à son arrivée (340 ms à ×1, `SIGNAL_MS`), calée sur l'étape de la chronologie qui le pose.
+- Tests : `states.test.ts` (places, regroupement, relais, origines, cibles du signal, chronologie entière lisible) et rendus de la zone et de l'en-tête dans `screens.test.tsx`.
+
+### Modifié
+- **Zone d'état** : réservée aux états génériques. Les auras, les règles de forme et les mécanismes de compétence (Pile ou face, Furie des vents, Attente, jauges de Rétribution) n'y sont plus.
+- Infobulle d'une compétence : elle liste les **états** qu'elle fait apparaître et chez qui (l'Aura glaciale : Poison, adversaire), au lieu de ses statuts internes.
+- Feux follets montre ses lucioles (`fireflies`) et non plus l'icône de la Brûlure qu'il pose.
+- Icônes des états **provisoires** (`STATE_ICON`) : celles des statuts qui les alimentent, en attendant la planche des emblèmes d'état (16 icônes, prompt dans `docs/STYLE_BIBLE.md` § 7).
+
+## [0.78.0] — 2026-10-21
+
+Lot de retours de l'utilisateur sur les compétences, les labels, les sons et les écrans du tournoi.
+
+### Ajouté
+- **Labels des reliques** : une relique qui agit pose son label sous le dé, avec son icône, à l'instant où son bonus s'applique (« Fer à quatre clous +4 » quand le dé montre le 4) ; son sceau s'illumine au même instant (option `onShow` de `showEffects`).
+- **Un son par label** (`docs/SONS.md` § 4.4) : un label positif joue le ding de la pièce, un label négatif Malus reçu ; un seul son par polarité quand des labels tombent ensemble, et rien en plus quand le label a déjà son propre son.
+- **Tournoi sans reliques** : interrupteur **Reliques** sur l'écran de configuration du tournoi ; désactivé, personne ne gagne ni ne porte de relique, et l'arbre, l'écran de victoire et le sacre n'en montrent aucune. Le choix est gardé pour le tournoi suivant de la session ; l'historique (`battler:history:v1`) ne change pas.
+- Contrôles d'audit : pièce lancée aussitôt ou gardée, une charge par esquive imposée, relique de seuil sans limite. Série 13 du laboratoire (valeur de pile).
+
+### Modifié
+- **Pile ou face** (Naraxes) : la pièce part aussitôt, juste après le 2 qui la déclenche, au lieu de remplacer l'action suivante. **Pile vaut 10 dégâts au lieu de 20** (choix de l'utilisateur, `COIN_HEADS`) : sans compensation, Naraxes montait à 61,6 % et Ysolde tombait à 25 % contre lui. Naraxes **53,9 %**, son duel le plus net 64,5 % contre Ysolde.
+- **Esquive améliorée** (Elaria, relique Dé creux) se cumule : chaque charge esquive à coup sûr un coup reçu. Elaria 47,3 %.
+- **Labels : une couleur par type** (registre unique `SPECIAL_KINDS`, `src/game/specials.ts`) : Coup (ambre : critiques, coups transformés), Bonus (vert : Furie des vents, Pile ou face, Riposte, Vol de vie, Épines, Rétribution), Malus (rouge sang : Saignement), Relique (plaque sombre au liseré d'or). Le type se déduit de la mécanique ; `SpecialTone` devient `SpecialKind`. Le rose propre à la barde et le violet du Vol de vie disparaissent. Les labels s'empilent en colonne, droits et de même largeur (`SpecialLabel.tsx`).
+- **Coup + poison ensemble** : le poison de l'Aura de décoction tombe à l'impact du coup qui le pose (frappe + poison, frappe + poison), au lieu d'une étape à part après chaque coup.
+- Écran du champion : « Dégâts infligés » compte aussi les dégâts hors coups (Foudre, poison, saignement, brûlure, riposte, reliques), comme « Dégâts encaissés » ; la case donne la part hors coups.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changements voulus (pièce, pile, esquive, Dent de loup).
+
+### Corrigé
+- **Charges au maximum** : une compétence cumulable reposée à son plafond (Aura de sainteté à 3…) n'affiche plus que le texte neutre « … au maximum », sans titre de compétence, aura, label ni son.
+- **Dent de loup** ne se déclenche qu'une fois par combat (`charges: 1`) : un soin la réarmait à chaque remontée au-dessus de son seuil (vu dans un combat de l'utilisateur, Aldric contre Morgrut).
+- **Foudre** : les trois « -2 » s'affichent ; chaque chiffre était remplacé aussitôt par l'élan de l'éclair suivant.
+- **L'ours du druide à droite** n'est plus coupé à l'avant : Firefox coupait, du mauvais côté du bord de l'écran, une image retournée portant un filtre. Le filtre passe sur une enveloppe à la taille de l'image, le retournement sur l'image (`docs/POSTURES.md`).
+- **Un combattant vaincu perd son aura** : halo, cercle, particules et contour s'éteignent en fondu au K.O.
+- **Infobulles des reliques** dans l'arbre du tournoi : survoler un combattant ouvrait toutes ses infobulles l'une sur l'autre (`group-hover` sans nom) ; seule celle du sceau survolé s'ouvre, et elle change de côté près du bord de la scène.
+- **Écran du champion** : « Dégâts infligés » et « Dégâts encaissés » affichaient la même valeur (167) par coïncidence : les infligés oubliaient les dégâts hors coups (237 en vrai).
+
+## [0.77.1] — 2026-10-20
+
+Les 22 icônes en attente, générées par l'utilisateur en trois planches (une par type) et intégrées.
+
+### Ajouté
+- **Planche v9, druide** : `thunderbolt` (Foudre), `casting` (Incantation), `bear-might` (Force de l'ours), `burn` (Brûlure ; Feux follets la montre aussi). Fin des icônes provisoires `lightning`, `life-bloom`, `claw` et `fireflies` pour ces quatre-là ; `SKILL_ICON.thunderbolt` retiré, la Foudre trouve son icône par son id.
+- **Planche v10, reliques** : les douze icônes (`lead-pommel` … `hunter-trophy`), dans le sceau hexagonal à la place de l'initiale gravée. Aucune ligne de code : `RelicIcon` prend le fichier qui porte l'id.
+- **Planche v11, interface** : `music-on` et `music-off` (tambour et baguettes, barré de rouge) remplacent la note vectorielle du bouton de la musique (`MusicGlyph` retiré) ; paris : `purse` (en-tête des plateaux, classement de fin), `bet-token` (devant « Combien ? »), `twist` (bandeau du coup de théâtre, à la place de `coin-flip`), `ticket` (bouton « Parier » de l'affrontement, à la place de `coin-pile`).
+
+### Modifié
+- `docs/STYLE_BIBLE.md` § 7 : « Icônes à générer » devient la **liste unique de toutes les icônes en attente**, tous chantiers confondus, une planche par type (chaque type a sa grammaire) ; vide après cette livraison. Restent connus, pas encore à générer : les statuts hors jeu, les sceaux peints A-01, les icônes de commande N-01. Inventaire porté à 75 icônes, historique v9 à v11. Mentions périmées corrigées (Aura glaciale et Saignement ont leur icône depuis la v8) dans `ETAT.md`, `STATUTS.md`, `SYSTEMES.md` ; `TODO.md`, `PARIS.md`, `SONS.md`, `RELIQUES.md` à jour.
+
+## [0.77.0] — 2026-10-20
+
+Les douze premières reliques, trois par type : celles de l'exploration de l'autre agent, revues par l'utilisateur, dont le concept visuel est retenu (demande de l'utilisateur : « se fier au travail d'exploration de l'autre agent, quant à leur nombre et description »).
+
+### Ajouté
+- **Douze reliques** (`relics.ts`) : Contrepoids de plomb, Bottes de feutre, Cotte du mercenaire (Caractéristique) ; Osselet fendu, Dé creux, Fer à quatre clous (Coup) ; Cloche d'ouverture, Chapelet de l'ermite, Clepsydre du siège (Tour) ; Dent de loup, Collier de ronces, Trophée du chasseur (Seuil). Mesurées (`npm run relics`, 400 combats par duel) de +6,1 à +21,4 points ; Fanchon la plus avantagée par les reliques de coup (jusqu'à +25,9). Réglages proposés, non appliqués : `docs/RELIQUES.md` § 7.
+- **Moteur** : bonus de coup limité à une face (`onFace`, Fer à quatre clous : sur un 4, le coup de ce dé) ; seuil sur les PV de l'adversaire (`hpBelow` avec `who: 'opponent'`, Trophée du chasseur), l'effet restant sur le porteur ; tout soin réarme aussitôt les reliques de seuil qui lisent ces PV (`rearmThresholds` : un vol de vie suivi d'une Riposte sur le même coup ne fait plus manquer un passage sous le seuil). Contrôles d'audit (bonus de face, seuil adverse) et tests (face, seuil adverse, deux dés lus un par un, stat négative).
+- **Règle 7 vérifiée** : `validateRelics` refuse une relique qui pose un malus, ou qui vise l'adversaire avec autre chose que des dégâts directs (décision de l'utilisateur).
+- **Planche des douze icônes** : prompt complet (grille 4 × 4, grammaire d'illustration des reliques) et commande de découpe, `docs/RELIQUES.md` § 10.
+
+### Modifié
+- **Une relique s'annonce sur son sceau** (concept de l'autre agent) : quand elle agit, son sceau s'illumine dans l'en-tête et l'effet arrive sur sa cible, sans nom flottant ni aura sur le porteur ; ses dégâts directs partent sans élan.
+- Une relique de tour à une seule charge se décrit sans « puis à chacun de ses tours » (Cloche d'ouverture).
+- **`docs/RELIQUES.md` réunit tout** : la proposition `docs/RELIQUES_IDEES.md` (douze reliques, ce qui sépare une relique d'une compétence, grammaire d'illustration, chiffre de la règle lisible dans l'objet) y est fusionnée, puis retirée ; liens mis à jour (README, CLAUDE.md, STYLE_BIBLE, SONS, TODO).
+
+### Retiré
+- **Série de test de la 0.75.0** (Brassard de fer, Pierre à aiguiser, Chandelle des heures, Fiole du dernier souffle), remplacée par les douze.
+
+## [0.76.0] — 2026-10-20
+
+La Foudre du druide tombe en trois éclairs (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer »).
+
+### Ajouté
+- **Dégâts directs en plusieurs coups** (moteur, `hits` d'un effet `damage`) : `hits` coups de `amount` chacun, comptés ensemble (le détail dans `parts`, comme une relâche). Dégâts directs, donc jamais critiques, sans armure ni esquive. Validation (`hits` entier ≥ 2), contrôle d'audit « coups multiples », test dans `combat.test.ts`.
+- **Événement de scène à plusieurs impacts** (`SceneTiming.impacts` remplace `impact`) : chaque coup tombe sur son impact. La Foudre : l'arène s'assombrit, trois éclairs tombent l'un après l'autre (à 440, 800 et 1 160 ms) à trois endroits autour de la cible, chacun avec son éclat de lumière, son tonnerre et son « 2 ». Les trois chiffres sont égaux, aucun n'est doré : rien ne ressemble à un critique. Vu en trois captures (une par éclair).
+
+### Modifié
+- **Foudre** : 5 dégâts → **3 × 2** (6). **Compensation : Force de l'ours +4 → +3.** Sans elle, Thaldrin montait à 58,0 % et Brokk tombait à 31,5 % contre lui (au-delà de 65/35). Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup (toujours le plus haut du roster) ; ses duels de 38 à 62 % (Brokk à 38,5 %). Valeurs nettes : Foudre +15,6, Feux follets +11,6, Aura sauvage +5,5 points (400 combats par duel).
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- `docs/STYLE_BIBLE.md` § 7 : les icônes à peindre sont consignées dans une liste « Icônes à générer » (besoin, type, motif, icône provisoire), pour une génération d'un seul coup ; la planche v9 préparée à part est abandonnée.
+
+## [0.75.0] — 2026-10-20
+
+Les reliques : des objets gagnés en tournoi, un par victoire, qui changent le profil d'un combattant (demande de l'utilisateur, `docs/RELIQUES.md`).
+
+### Ajouté
+- **Moteur des reliques** (`relics.ts`, `combat.ts`) : quatre types déduits de la définition. **Caractéristique** (stats ajoutées à plat ; `Character.stats` les inclut, `baseStats` garde la base), **Coup** (bonus à la valeur de chaque coup qui touche, avant le critique, sans changer le jet ; ou effet sur un moment du coup), **Tour** (au début de son n-ième tour, puis tous les `cooldown` tours), **Seuil** (quand ses PV passent sous une part de ses PV max ; se réarme au-dessus). Charges, recharge et conditions ; aucun tirage. Nouvelle étape de chronologie `relic`, bonus noté sur le coup (`Attack.relicBonus`). Dans une fenêtre, les reliques agissent après les compétences ; les seuils après la mi-PV (`checkThresholds`). Règles écrites dans `RESOLUTION.md` (§ 3, étape 2 bis ; § 5).
+- **Série de test, une relique par type** : Brassard de fer (+1 armure), Pierre à aiguiser (+1 à chaque coup), Chandelle des heures (3e tour puis tous les 3 tours : Armure temporaire 3), Fiole du dernier souffle (sous 30 % : +10 PV, une fois). Mesurées de +11,9 à +16,4 points (400 combats par duel).
+- **Tournoi** : chaque victoire hors finale rapporte une relique, choisie parmi trois que le vainqueur n'a pas, au hasard (`withResult`, `MatchResult.relic`) ; il la porte aux matchs suivants (`matchFighters`, `relicsOf`), trois au plus. Les cotes des paris en tiennent compte.
+- **Écran de victoire : Récompense.** En tournoi, le bouton principal ouvre un menu superposé de trois grandes cartes ; la carte du vainqueur porte « Choix de… », l'observateur peut en imposer une autre (`chooseRelic`), puis retour à l'arbre. Un match simulé depuis l'arbre garde le choix du vainqueur.
+- **Reliques à l'écran** : sceaux hexagonaux à côté du nom en combat (infobulle, charges restantes, sceau éteint une fois dépensé, éclat quand la relique agit, nom flottant et effets comme une compétence, ligne dorée au journal) ; sous les dés à l'écran d'affrontement (la stat changée par une relique passe en or) ; dans l'arbre, à côté du nom, celles portées pour chaque match ; sous le nom du champion.
+- **Identité visuelle** : le sceau hexagonal biseauté (`RelicSeal`, `.relic-seal`), cadre d'or, jour sombre, plaque de cuir, biseau ; l'initiale gravée en or tant que l'icône peinte manque. L'hexagone n'appartient qu'aux reliques (l'octogone est aux compétences, le rond aux statuts). Le compendium passe du sceau rond à l'hexagone.
+- **Mesure** : `npm run relics` (`scripts/relics.report.ts`), apport de chaque relique pour chaque personnage, sur les mêmes graines avec et sans ; rapport dans `logs/relics/`.
+- **Trace** : en-tête des reliques de chaque camp, relu par `npm run logs` (`parseRelics`) pour rejouer les combats de tournoi ; chaque déclenchement et chaque bonus de coup. `battler.replay(graine, a, b, reliquesA, reliquesB)`.
+- **Audit** : `auditRelics` recompte stats, charges, recharge, tours prévus, passages sous le seuil et moments du coup ; l'audit du roster joue aussi des combats avec reliques.
+- `docs/RELIQUES.md` : décisions, règles, tournoi, interface, identité visuelle, catalogue et mesures, marche à suivre, prompt de la planche d'icônes des quatre reliques.
+
+### Modifié
+- **Arbre du tournoi** : colonnes des tours 2 et 3 élargies de 168 à 184 px, pour les reliques à côté du nom.
+- `checkBloodied` devient `checkThresholds` (mi-PV, puis seuils des reliques) ; `beatEffects` lit les effets de toute étape (statistiques, audit). Aucun changement pour un combat sans relique : l'empreinte de non-régression est inchangée.
+
+## [0.74.0] — 2026-10-20
+
+### Ajouté
+- **Compendium : section Reliques**, entre Statuts et Règles, pour les reliques en cours d'implémentation (`relics.ts`). Même disposition que les Statuts : index groupé par type (Caractéristique, Coup, Tour, Seuil) avec un filtre par type, détail à droite (quand, effet, statut posé en lien, type, obtention). Le texte vient de `describeRelic`. Sceau liseré d'or ; sans icône peinte, l'initiale de la relique (`RelicIcon` prendra l'icône `src/assets/icons/<id>.png` dès qu'elle existe).
+
+### Modifié
+- **Combattants : le personnage passe en fond** de tout l'écran du compendium, en grand, au lieu d'être coupé par sa colonne (l'orc, l'ogre). L'index et la fiche, encadrés, passent devant lui ; il s'efface sur les côtés, dans le sol et derrière le titre et les onglets. Les tailles relatives des combattants sont gardées.
+- **La fiche est dans un cadre** comme l'index : elle défile à l'intérieur, et le bas du cadre reste visible (Elaria, Thaldrin). Les sceaux des compétences et les pastilles de statut ne touchent plus le bord du cadre.
+
+## [0.73.0] — 2026-10-20
+
+Le druide refondu : un tour sur deux, l'homme lance la foudre ou le feu ; l'autre tour, la bête frappe (proposition de `docs/SORTS.md` § 18, choix de l'utilisateur : Foudre 5, aura sauvage pour l'ours seul, pas de Saignement, de gros coups).
+
+### Ajouté
+- **Statuts de forme** (moteur, `innate`, `CharacterForm.statuses`) : posés quand le personnage prend une forme, retirés quand il la quitte ; aucune purge ne les enlève, aucune immunité ne les bloque. Visibles dans la zone d'état, sans nombre. Contrôle dans l'audit (statuts de forme exacts à chaque étape, purges qui les ignorent), validation dans `validateRoster`, tests dans `combat.test.ts`.
+- **Incantation** (statut de forme de l'homme) : son dé devient un d3, chaque jet lance un sort. **Force de l'ours** (statut de forme de l'ours) : chaque coup fait +4, un 1, un 2 ou un 3 compris (l'ours n'a plus aucun sort).
+- **Foudre** (homme, sur un 1) : 5 dégâts directs. **Aura sauvage** (homme, sur un 3, cumulable) : +2 par charge aux coups, donc à ceux de l'ours.
+- **Événements de scène** (`scenes.ts`, `SceneEvent.tsx`, `CharacterEvent.scene`) : un gabarit pour les sorts et coups spéciaux à grand spectacle, présentation seulement. Le premier : la Foudre assombrit l'arène, un éclair (tracé SVG, branches, halo) tombe sur l'adversaire, l'arène blanchit un instant, et les dégâts s'affichent à l'impact. Il suit la vitesse et la pause du combat.
+
+### Modifié
+- **Thaldrin** : Feux follets (Brûlure 3) passe sur le 2 de l'homme ; fiche réécrite (plus soigneur : aucun soin ni armure ; l'homme ne frappe jamais).
+- **Équilibre** (400 combats par duel) : Thaldrin 50,7 → **54,0 %**, ses combats de 20,0 à **17,0 tours**, **11,1 dégâts par coup** (le plus haut du roster). Ses duels de 48 à 65 % (Brokk à 35,3 %, sous le plafond). Valeurs nettes : Foudre +10,8, Feux follets +10,3, Aura sauvage +4,7 points. La Force de l'ours à +3 donnait 45,9 % sans Saignement : passée à +4 (« de gros coups »).
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- Icônes provisoires : Foudre (l'éclair `lightning`), Incantation (`life-bloom`), Force de l'ours (`claw`), Aura sauvage (`grudge-aura`, l'empreinte d'ours de la planche v8).
+- Son (déduit des effets, non vérifiable à l'oreille) : la Foudre tombe avec le son du critique ; l'Aura sauvage joue Aura gagnée, les Feux follets Malus reçu.
+
+### Retiré
+- Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais des formes (Rancune, Sève) et ses deux auras (statuts `grudge`, `sap`, `grudgeAura`, `sapAura`), et `bonusPer` (moteur, audit, catalogue), qui ne servait qu'au relais. Les icônes `grudge`, `sap` et `sap-aura` restent dans `src/assets/icons`, sans usage.
+
+## [0.72.0] — 2026-10-20
+
+### Ajouté
+- **Compendium réorganisé : une donnée, une maison.** Quatre sections, chacune avec son propre filtre en haut à droite : **Combattants** (index compact et fiche), **Compétences** (index dense par race, filtre par nature), **Statuts** (bonus et malus réunis, filtre Tous / Bonus / Malus, détail à droite) et **Règles** (nouvelle). Les liens vont dans les deux sens : compétence → statut posé → compétences qui le posent → porteurs → fiche ; une pastille de compétence (« coup sacrifié », « s'il touche », condition…) mène à sa règle.
+- **Section Règles** (`src/game/rules.ts`) : les règles communes (tour, dés, esquive, critique, armure et dégâts, déclenchement des compétences, durée, charges et cumul des statuts) écrites une seule fois, regroupées depuis `FEATURES.md`, `statuses.ts` et `events.ts` sans être réécrites. Les cartes ne les répètent plus.
+- **Statuts** : fiche détaillée avec Effet, Consommation, Cumul (lien vers la règle), « Posé par » (compétences, porteurs, et statuts qui le posent eux-mêmes : Aura glaciale et Aura de décoction pour le Poison, Épines acérées pour le Saignement) et **Interactions** déduites du code (`statusLinks` : opposition, immunité, statut posé, renfort, purge).
+- **Fiche › Performances** (ex-onglet Statistiques de la fiche) : même historique que l'écran Statistiques, avec un lien « Voir dans Statistiques ».
+- **Écran Statistiques** : les noms des confrontations et des derniers combats mènent à la fiche du personnage, comme ceux du classement.
+- `docs/AUDIT_COMPENDIUM.md` : l'audit des compétences et des statuts fait avant la refonte (incohérences signalées, non corrigées).
+
+### Modifié
+- **Texte unique d'une compétence** (`describeSkill`, `events.ts`) : la fiche, l'index des compétences et l'infobulle des dés affichent la même rédaction. Elle dit enfin « s'il touche » (Pourfendre), les coups d'un double (Crescendo, Soliste), le renfort par charge (Rancune, Sève) ; `describeEvent` (rapports, tests) en dérive.
+- **Sceau rond** des index : l'icône peinte dans un cercle serti, liseré à la polarité (statut) ou à la nature (compétence), sans l'anneau vert.
+- Les faces identiques d'un même porteur n'ont qu'une ligne (Attente de l'ogre, dés 1, 2, 3).
+- Règles d'un statut rangées en Effet / Consommation / Cumul (`statusRuleSections` remplace `statusRules`) ; « Plafonné à 1 charges » disparaît (le plafond est un nombre, lié à sa règle).
+- La fiche d'un combattant garde sa grande illustration, désormais contenue dans sa colonne.
+
+### Corrigé
+- **Rétribution** (Aldric) est enfin listée dans les statuts : elle n'est pas posée mais relâchée, et le compendium ne comptait que les poses directes.
+- « par charge de Aura de rancune » → « par charge d'Aura de rancune ».
+
+### Retiré
+- `EventInfo.tsx`, `EffectLine` et les cartes de compétence et de statut (trois rédactions d'une compétence remplacées par une) ; `STATUS_DURATION_RULE` (la règle est dans `rules.ts`).
+
+## [0.71.2] — 2026-10-20
+
+### Ajouté
+- **Planche d'icônes v8** (`docs/STYLE_BIBLE.md` § 7, prompt et motifs) : Saignement (`bleed`), Pourfendre (`cleave`), Aura glaciale (`frost-aura`, encensoir givré), et le relais du druide : Rancune (`grudge`, croc d'ours à la braise ambre), Sève (`sap`, goutte de sève sur une écorce entaillée), Aura de rancune (`grudge-aura`, empreinte d'ours brûlée dans le chêne), Aura de sève (`sap-aura`, bois de cerf qui bourgeonne). Elles remplacent les icônes provisoires. Les compétences trouvent la leur par leur id.
+
+### Modifié
+- **Épines acérées** : icône `thorns` refaite, la même ronce aux épines ensanglantées.
+- `scripts/slice-icons.py` : quand les lueurs de deux icônes voisines se touchent, le morceau commun est réparti selon le cœur opaque le plus proche, au lieu de tout donner à une seule case (l'Aura glaciale avalait l'Aura de rancune).
+
+### Retiré
+- `poison-aura.png`, l'encensoir vert de l'ancienne Aura de poison, remplacé par `frost-aura`.
+
+## [0.71.1] — 2026-10-20
+
+### Modifié
+- **Compteur des médaillons d'état** (retour de l'utilisateur : « pas clair, et bugué ») : un seul geste, au même endroit, sur le compteur. Le chiffre défile dans sa fenêtre (vers le haut pour une hausse, vers le bas pour une baisse) ; le compteur s'élargit et s'éclaire, ou se tasse et s'assombrit ; la variation part du compteur, « +2 » monte et « −1 » tombe, comme les textes flottants du combat. Deux changements rapprochés s'enchaînent et leur variation se cumule. Retirés : le rebond à ×2,1, le cerclage qui se vidait à rebours (`CountDrain`), la variation en haut à droite du médaillon et le sursaut du médaillon quand une valeur cachée changeait. Plus aucun filtre animé sur le compteur.
+
+### Corrigé
+- **Un état épuisé ne descendait pas à 0** : son médaillon était recréé sous une autre clé, et renaissait directement à 0. C'est désormais le même médaillon qui descend à 0, puis s'efface.
+- **Un état reposé pendant sa sortie apparaissait en double** (le sortant et le nouveau côte à côte) : il reprend vie dans son médaillon (`trayAfter`, test dans `screens.test.tsx`).
+
+## [0.71.0] — 2026-10-20
+
+Rework du druide : une aura sur chaque 3, et le relais des formes (proposition A de `docs/SORTS.md` § 16, auras à +2, choix de l'utilisateur).
+
+### Ajouté
+- **Relais des formes** (Thaldrin) : touché sous forme humaine, il gagne une **Rancune** (`grudge`) : le prochain coup qui touche, celui de l'ours, fait +1 avant l'armure. Touché sous forme d'ours, il gagne une **Sève** (`sap`) : l'homme regagne 1 PV au début de son tour. Une seule à la fois, la nouvelle remplace l'ancienne. Compétences sur le coup encaissé (`hurt`) et la forme, vues dans tous les combats (3,8 Rancunes et 3,0 Sèves par combat).
+- **Aura de sève** (3 de l'homme, au lieu des Feux follets) et **Aura de rancune** (3 de l'ours, au lieu de l'Aura de pourriture) : chaque charge ajoute 2 à la Sève ou à la Rancune. Cumulables comme les autres auras (mesurées plafonnées à une charge au laboratoire : 50,1 %).
+- **Moteur** : `bonusPer` sur un effet `applyStatus` (`events.ts`) : la valeur posée grandit de `amount` par charge d'un statut du porteur. Contrôles dans l'audit de résolution (valeur du relais, Rancune dépensée au premier coup qui touche) et tests dans `combat.test.ts`.
+- Icônes provisoires (Rancune : Charge ; Sève : Régénération ; Aura de rancune : ancienne Aura de pourriture ; Aura de sève : Fleur de vie), les vraies à peindre (STYLE_BIBLE § 7, TODO § 15).
+- Fiche de Thaldrin : background, forces et faiblesses réécrites autour du relais.
+
+### Modifié
+- **Équilibre** (400 combats par duel) : Thaldrin 50,7 %, ses duels de 45 à 58 % (Ysolde contre lui : 35 % en 0.68.0, 45 % maintenant). Roster de 43,8 % (Ysolde) à 54,2 % (Ervald), pire duel inchangé (Brokk contre Ervald, 39 %). Valeurs nettes : Rancune +9,0, Sève +7,7, Charge +8,9, Coup de griffe +5,5, Écorce +3,5, Fleur de vie +2,6 ; les deux auras sont faibles (Aura de rancune +0,4, Aura de sève −1,0) : à +3, mesurées à 52,1 %.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- Son (déduit des effets, non vérifiable à l'oreille) : la Rancune et la Sève jouent Bonus gagné quand le druide est touché, les deux auras Aura gagnée.
+
+### Retiré
+- Les Feux follets et l'Aura de pourriture du druide. La Brûlure, la Pourriture et l'Aura de pourriture restent au registre, sans porteur.
+
+## [0.70.0] — 2026-10-20
+
+### Ajouté
+- **Pourfendre**, compétence du 1 de Gorak (proposition de l'utilisateur, version la plus forte retenue) : le 1 n'est plus sacrifié, c'est un vrai coup qui frappe pour sa valeur (Aura de puissance et critique compris, esquivable) et, **s'il touche**, pose Saignement 2. La plaie coule au coup suivant (RESOLUTION § 5, règle 9). Remplace la Saignée (sur un 1, sans coup : Saignement 2).
+- **Moteur** : `needsTouch` sur une compétence de jet (`events.ts`) : elle ne part que si son coup touche (règle de l'utilisateur : un coup doit toucher pour poser un malus physique), vérifié avant tout tirage ; contrôle dans `validateRoster`, dans l'audit de résolution et dans `combat.test.ts`.
+- À l'écran, le dé de compétence de Gorak s'allume à l'impact de Pourfendre (s'il touche), pas quand le dé tombe : l'esquive n'est pas annoncée d'avance. Rendu non vu à l'écran.
+
+### Modifié
+- **Équilibre** (400 combats par duel) : Gorak 49,4 → **51,1 %**, Pourfendre +5,0 points ; ses duels de 47 à 60 % (Ysolde). Roster de 43,3 % (Ysolde) à 54,3 % (Ervald), pire duel inchangé (Brokk contre Ervald, 39 %). Gorak ne sacrifie plus que 18 % de ses jets au lieu de 37 %. Variantes mesurées : Saignement 1, 47,8 % ; Saignement 3, 55,5 % (Ysolde 63 %).
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- Icône à produire : la Saignée devient Pourfendre (`cleave`, même motif de couperet ensanglanté, STYLE_BIBLE § 7).
+
+### Retiré
+- La Saignée (sur un 1, coup sacrifié, Saignement 2).
+
+## [0.69.0] — 2026-10-20
+
+Sixième passe sur les compétences (préparée et mesurée dans `docs/SORTS.md` § 15, choix de l'utilisateur).
+
+### Modifié
+- **Aura glaciale d'Ervald : elle pose du vrai Poison** (statut `frostAura`, ex-`poisonAura`). Au début de chacun de ses tours, 1 charge de Poison par charge d'aura sur l'adversaire, au lieu de 1 dégât direct par charge au début du tour adverse. Le Poison perd une charge à chaque tour : une charge d'aura le fige à sa valeur (après un Souffle de la tombe, 3 PV par tour au lieu de 3, 2, 1), deux charges le font grossir. Une seule règle d'affliction : l'immunité bloque, la Régénération annule, une purge enlève. Cumulable, sans compensation. Avant, l'aura doublait le Poison (même instant) et la Pourriture (même profil).
+- **Furie des vents en coups bruts** (demande de l'utilisateur) : sur un 2, Gorak frappe deux fois tout de suite, et le dé de ces coups ne donne que leur valeur : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence, donc sans Furie en chaîne. Avant, 36,5 % des coups de Furie tombaient sur une compétence et 22,5 % des Furies en relançaient une autre (jusqu'à trois). En compensation, **Gorak passe au d9 et à 19 % de critique** (d8 et 18 % avant ; au d8, il tombait à 39,8 %).
+- **Brûlure à une seule valeur** (accord de l'utilisateur) : posée sans durée, elle dure autant de tours que sa valeur (Brûlure 3 : 3 PV à la fin de ses 3 prochains tours). Les Feux follets ne changent pas de force. `validateRoster` refuse une durée en plus (`turnsFromStacks`).
+- **Purification double d'Ysolde** (choix de l'utilisateur) : elle retire aussi son propre dernier malus (poison, plaie, brûlure). Sans elle, l'Aura glaciale cumulable faisait tomber Ysolde à 41,3 %, sous le plancher.
+- **Équilibre** (400 combats par duel) : de 41,9 % (Ysolde) – 55,1 % (Aldric) à **43,4 % (Ysolde) – 54,8 % (Aldric)**. Gorak 47,9 → 49,4 %, Ervald 52,0 → 54,7 %, Ysolde 41,9 → 43,4 %, Thaldrin 51,8 → 50,5 %. Pire duel : Thaldrin contre Ysolde 64,8 % → Ervald contre Brokk 61,0 %. Valeurs nettes : Furie des vents +18,6, Aura glaciale +7,5, Souffle de la tombe +11,9, Purification +18,0 points.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- Trace d'un combat : un coup brut s'y signale (« coup brut de Furie, sans compétence »).
+- Son (déduit des effets, non vérifiable à l'oreille) : l'Aura glaciale joue Malus reçu à chaque tour d'Ervald, quand elle pose son poison, au lieu de Ronge.
+
+### Retiré
+- Les crochets propres à l'ancienne aura, `onOpponentTurnStart` et `stoppedByImmunity` (moteur, audit, narration), et `INSTANT_CHAIN`.
+
+## [0.68.3] — 2026-10-20
+
+### Modifié
+- **Coup encaissé** (demande de l'utilisateur) : un coup ordinaire ne montre plus que la posture « coup encaissé », sans recul ni éclair rouge. Seul un critique repousse en plus le combattant, à l'opposé de son adversaire, puis le ramène (`.knockback`, qui remplace `.hit`).
+- **Textes flottants** (demande de l'utilisateur) : une perte tombe (PV perdus, malus posé, bonus dissipé, `.damage-sink`) ; un gain ou un fait neutre monte. Un critique monte toujours, même si ce sont des PV perdus.
+
+### Corrigé
+- **Ogre décalé à droite sur l'écran de fin**, son corps sur son nom : sa toile est large (massue levée), et l'ancrage `inside` la calait par son bord, pas par sa silhouette. Morgrut, Ysolde, Aldric, Ervald, Elaria et Brokk reçoivent leur `bodyInset` (vide de la toile de chaque côté de la garde, mesuré sur le canal alpha), comme le druide et la barde. Effet aussi sur l'affrontement : ils touchent le bord de l'écran par leur silhouette.
+- **Croix claire dans les disques arrondis** (médaillons d'état, infobulles, pastilles des parieurs ; capture de l'utilisateur) : la scène était peinte en 1600×900 puis agrandie (`transform: scale`) ; sous une échelle fractionnaire, Firefox dessinait un disque à fond translucide en quatre quartiers, dont les jointures laissaient passer le décor. La scène est désormais mise à l'échelle par `zoom` (`Stage.tsx`) : elle est mise en page à la taille de l'écran. Non reproduit dans Firefox sans interface : à confirmer chez l'utilisateur.
+- **Ours du druide coupé à droite de l'écran** : l'éclair du coup reçu et le grisé du K.O. étaient des filtres sur un parent de l'image, et Firefox coupait l'image qui déborde de la colonne du combattant (vu : le haut de l'ours coupé net sous l'éclair). Plus aucun filtre sur un parent : le grisé du K.O. passe par le filtre de l'image elle-même, en fondu.
+
+## [0.68.2] — 2026-10-20
+
+### Modifié
+- **Son et musique coupés par défaut** (demande de l'utilisateur) : les deux boutons, celui du son et celui de la musique, commencent désactivés, et on les rallume à la main. Les navigateurs pilotés par les tests automatiques, qui partent d'un stockage vide, restent ainsi muets. Le choix reste mémorisé (`battler:muted`, `battler:music-muted`) : seul un son rallumé est enregistré comme tel. Un navigateur où le son avait déjà été rallumé garde ce choix. Test : `modules.test.ts`.
+
+## [0.68.1] — 2026-10-20
+
+### Ajouté
+- **Badge de modificateur du Saignement** (demande de l'utilisateur) : au centre, sous le dé, comme « Critique ×2 », un badge « Saignement +2 » tombe à l'impact du coup qui fait couler la plaie, dans une nouvelle couleur de famille, rouge sang sombre (`affliction`, `specials.ts`). Les PV de la plaie suivent l'impact d'un battement, sur la même frappe (son Ronge), au lieu d'une étape à part, plus d'une seconde après (`flowAt`, `bleedOut`, `useCombat.ts`). Une plaie séparée de son coup par une autre étape garde la sienne, avec le même badge.
+
+### Modifié
+- **Le coup qui ouvre une plaie ne la fait plus couler** (demande de l'utilisateur : l'observateur doit la voir, l'attendre, en profiter). Règle générale du moteur : pendant un coup, seuls les statuts présents à l'ouverture de ses fenêtres réagissent, avec les charges qu'ils avaient alors (`strikeBase`, `fireStrike`, `combat.ts`). Une plaie posée par ce coup attend le suivant ; des charges ajoutées à une plaie ouverte coulent à partir du coup suivant. Test dans `combat.test.ts`, contrôle mis à jour dans `audit.ts`.
+- Équilibre inchangé : dans le roster, aucun coup ne pose de plaie (la Saignée sacrifie son coup, les Épines acérées font saigner l'attaquant) ; l'empreinte de non-régression passe sans mise à jour. Les idées du laboratoire qui font saigner au coup baissent un peu (Flèche barbelée 2 : +9,0 → +7,1 points ; Griffe qui lacère : +4,6 → +3,9).
+
+## [0.68.0] — 2026-10-20
+
+### Ajouté
+- **Saignement**, nouveau malus (`bleed`, famille Affliction) : chaque coup qui touche le porteur lui fait perdre autant de PV que de charges, en ignorant l'armure, puis la plaie perd une charge (Saignement 2 : 2 puis 1 PV, sur les deux prochains coups reçus). Le Poison compte les tours, le Saignement compte les coups : plusieurs coups dans une action (Furie des vents, deux dés) vident la plaie d'un coup, une esquive ou une action perdue la laissent ouverte. Il se cumule, l'Aura d'immunité le bloque. Aucun nouveau personnage : il entre par Gorak et Brokk.
+- **Moteur** : un statut qui s'estompe (`decays`) perd aussi sa charge quand il réagit (`reactions`), juste après son effet et dans la même étape. Contrôle « saignement » dans l'audit de résolution (`audit.ts`), tests dans `combat.test.ts`.
+- Icônes à produire (`docs/STYLE_BIBLE.md` § 7) : le Saignement et la Saignée, avec leurs motifs. En attendant, le Saignement reprend le cœur fendu de la Brèche (statut à venir).
+
+### Modifié
+- **Gorak : Saignée remplace la Rage du sang** (sur un 1 : Saignement 2 sur l'adversaire, au lieu de +5 PV). Valeur nette +3,3 points (la Rage du sang valait +5,8) ; Gorak 50,9 → 47,9 %, dans le budget. Saignée 3 a été mesurée : 54,5 %, mais 71,5 % contre Ysolde.
+- **Brokk : Épines acérées** (statut `thorns`, même règle de pose) : chaque coup encaissé pose sur l'attaquant une charge de Saignement par charge d'épines, au lieu de lui renvoyer 1 dégât direct par charge. La punition attend que le nain touche à son tour. Valeur nette +3,7 → +5,0 points ; Brokk 48,3 → 50,4 %.
+- **Équilibre** (400 combats par duel) : de 41,9 % (Ysolde, 43,0 avant) à 55,1 % (Aldric, 54,0 avant) ; pire duel inchangé, Thaldrin contre Ysolde à 64,8 %. Gorak contre Ysolde 58,8 → 62,3 %, Brokk contre Ysolde 51 → 57 %. Ysolde passe 0,1 point sous les 42 %, dans la marge (±1,6) : une compensation est proposée dans `docs/SORTS.md` § 14, pas appliquée.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour : changement voulu.
+- Son : la plaie qui coule joue Ronge, comme le poison ; la Saignée joue Malus reçu ; les Épines acérées, qui posent un malus, jouent Malus reçu au lieu de Coup (`docs/SONS.md`). Non vérifiable à l'oreille par l'agent.
+- Laboratoire : la série 8 (`scripts/lab/ideas.ts`) utilise le vrai statut. La première passe l'imitait avec une charge de trop, qui gonflait chaque plaie posée par-dessus une autre : elle surestimait le Saignement (Saignée 2 annoncée à −0,6 point, −3,0 en vrai).
+
+### Retiré
+- La Rage du sang (+5 PV sur un 1), seule compétence de soin immédiat du roster.
+
+## [0.67.3] — 2026-10-20
+
+### Modifié
+- **Accueil, Gorak plus grand et monté** (retour de l'utilisateur : la hausse de la 0.67.2 ne se voyait pas). Derrière Ysolde, seule sa partie haute se voit : une hausse de taille ancrée sur les pieds montait à peine sa tête. Il passe à 47 % de la hauteur de l'écran (hausse doublée : 41 → 47 %) et ses pieds remontent de 83 à 80 % ; le sommet de sa tête passe de 377 à 295 px, au-dessus de l'auréole d'Ysolde (337 px). Il paraît désormais plus grand qu'Aldric, au milieu : c'est l'assombrissement qui le place au fond. Rentré à 22,5 % de la largeur, sa hache reste hors de l'allée (bord à 545 px).
+
+## [0.67.2] — 2026-10-20
+
+### Modifié
+- **Accueil, Gorak un peu plus grand** (demande de l'utilisateur) : à l'arrière gauche, 41 → 44 % de la hauteur de l'écran, pieds inchangés. Sa tête et ses épaulières dépassent maintenant franchement d'Ysolde. Il est rentré de 24 à 23,2 % de la largeur pour que sa hache reste hors de l'allée (bord à 545 px).
+
+## [0.67.1] — 2026-10-20
+
+### Modifié
+- **Accueil, côté gauche de la haie** (demande de l'utilisateur) : Ysolde devant, Aldric au milieu (au bord), Gorak derrière. Gorak est rentré de 25,5 à 24 % de la largeur pour que sa hache n'entre pas dans l'allée (son bord le plus proche s'arrête à 545 px, le logo commence vers 555). Tailles et plans inchangés. Gorak, derrière Ysolde, ne montre que sa tête et le fer de sa hache.
+
+## [0.67.0] — 2026-10-20
+
+### Ajouté
+- **Postures du druide (Thaldrin), sous ses deux formes**. Le roster entier a désormais ses cinq postures (attaque, esquive, coup encaissé, K.O., victoire).
+  - **Forme humaine** : une nouvelle garde tirée de ses planches (`druid-idle.png`), qui remplace `druid.png`. Même taille à l'écran qu'avant (scale 0,93 → 1,10, `headroom` 0,155), ancrage sur la silhouette dans l'affrontement (`bodyInset`), portrait recadré.
+  - **Forme d'ours, en vrai animal** (règle de l'utilisateur : sous cette forme, il est une bête) : à quatre pattes, il charge au galop gueule ouverte, recule en boule sous le coup, s'écarte d'un bond, s'effondre sur le flanc au K.O. et rugit campé sur ses pattes à la victoire. Il remplace l'ours debout (`druid-bear.png`). Aussi haut que le druide à 4 % près (bois compris) et une fois et demie plus long que haut : la métamorphose le fait grossir, plus grandir.
+- `slice-poses.py --sol` : pose chaque posture sur la ligne de sol de la garde. Les planches de l'ours faisaient flotter ses postures jusqu'à 121 px au-dessus du sol (le K.O. couché), celles du druide de 5 à 30 px.
+- `slice-poses.py --avant=<px>` : allonge la toile à l'arrière, pour avancer à l'écran un personnage très large. L'ours, trop long pour sa colonne, sortait de l'écran par l'arrière ; il est avancé de 130 px de toile.
+- Atelier des postures : une forme animale a ses propres blocs de prompt (style, langage du corps, mouvement), sans un mot d'anatomie humaine, et des planches de deux cases en paysage empilées (`POSTURES.md` § 0).
+- `docs/STYLE_BIBLE.md` : le prompt complet de la garde de l'ours à quatre pattes ; l'ours quitte le gabarit « titanesque » des silhouettes debout.
+
+### Modifié
+- Test de taille : l'ours à quatre pattes ne dépasse plus le druide ; il reste sous l'ogre et à sa hauteur, à 5 % près. Le test des postures couvre tout le roster et les deux formes du druide.
+
+### Retiré
+- `druid.png` et `druid-bear.png` (corbeille), remplacés par les gardes des postures. Planches sources dans `logs/atelier/sources/thaldrin/` et `thaldrin-ours/`.
+
+## [0.66.2] — 2026-10-20
+
+### Modifié
+- **Accueil, premier plan gauche** (retour de l'utilisateur) : Fanchon, trop riche en motifs et en détails, et trop mince, brouillait la lecture de la composition. Aldric la remplace : une silhouette compacte, deux grandes masses (acier, tabard rouge), en écho à la bannière rouge du décor, et deux chevaliers (Aldric, Ervald) qui encadrent l'allée. Ysolde passe à l'arrière, derrière lui : son auréole et sa masse dépassent de son épaule. Tailles et plans inchangés.
+
+## [0.66.1] — 2026-10-20
+
+### Modifié
+- **Accueil, choix du mode** (correction de l'utilisateur) : Duel et Tournoi sont deux choix de même rang, réunis dans **une seule pièce prestige** : un cadre octogonal de bronze et deux plaques d'or identiques (240 × 66 px, icône, filet clair, tranche, gravure), au lieu d'un bouton prestige pour Duel et d'un bouton serti pour Tournoi. Au focus clavier, le cadre passe en or clair et la plaque visée s'éclaire. Les lignes d'explication sont centrées sous chaque plaque (« Deux combattants, un vainqueur », raccourcie pour tenir sous la plaque ; celle du tournoi garde sa progression). Logo de 104 à 96 px, pour une allée plus étroite.
+- **Accueil, haie** : écart entre les plans resserré. Avant 51 à 52 % de la hauteur de l'écran (Fanchon, Ervald), milieu 46 % (Gorak, Elaria), arrière 41 % (Aldric, Naraxes), contre 58 % et 29 % avant : un avant énorme devant un arrière minuscule. Les avants sont des silhouettes étroites, pour laisser voir l'arrière qui dépasse derrière eux, entre l'avant et l'allée. Gorak passe au milieu, au bord gauche. Brokk et l'ogre essayés à l'arrière, puis retirés : Brokk restait minuscule, l'ogre cachait tout le plan.
+
+### Corrigé
+- **Arc d'Elaria coupé** par le bord droit de l'écran : elle est rentrée de 7 à 11 % de la largeur, et aucun combattant ne sort plus de l'écran (emprises mesurées sur le canal alpha des images).
+
+## [0.66.0] — 2026-10-20
+
+### Modifié
+- **Accueil : le seuil de l'arène** (maquette de l'utilisateur, `home-ref.png`). Le triptyque de trois arches laisse la place à une allée qui mène à la porte de l'arène, sous sa lumière.
+  - **Décor** : la porte de l'arène de la sélection (`menu-duel.jpg`) plutôt que le haut plateau (`menu-home.jpg`), sans porte, qui ne tenait pas l'idée du seuil. Bords assombris, voile sombre localisé sous le logo et les boutons.
+  - **Haie de six combattants** en garde, sur trois plans : avant (Gorak, Ervald, 57 à 58 % de la hauteur de l'écran, pieds près du bas), milieu (Aldric, Elaria, 47 à 48 %), arrière (Brokk, Naraxes, 29 à 32 %, près de la porte). Chaque plan est plus petit et plus sombre que le précédent. Tous regardent vers le centre (miroir à droite), à l'échelle par la hauteur, ancrés sur leurs pieds (`headroom` et `footroom` comptés), avec une ombre de contact en CSS. Les emplacements sont une liste (`src/components/homeHedge.ts` : personnage, côté, plan, taille, position), pour les changer ou les tirer au hasard plus tard. Aucun ne passe sous le logo ni sous les boutons.
+  - **Hiérarchie des modes** : Duel, l'action principale, en pièce prestige ; Tournoi, la secondaire, en bouton serti ; Combat test en lien discret, en bas au centre. Les lignes d'explication restent sous Duel et Tournoi (avec la progression d'un tournoi en cours) ; la phrase d'accroche sous le logo de la maquette n'est pas reprise, elle répétait celle du Duel.
+  - Rien ne disparaît : Statistiques, Compendium, son, musique, version, flèches entre les modes et Entrée.
+
+### Retiré
+- Le triptyque de l'accueil (arches SVG, styles `.triptych` et `.arch-*`). Ses illustrations (`arch-duel.jpg`, `arch-tournament.jpg`) et l'ancien fond (`menu-home.jpg`) restent dans `src/assets/`, inutilisés, pour pouvoir revenir en arrière.
+
+## [0.65.0] — 2026-10-20
+
+### Ajouté
+- **Postures de Brokk et de Morgrut** (atelier des postures) : garde, attaque, esquive, coup encaissé, K.O. et victoire, en quatre planches chacun, générées par l'utilisateur (sources dans `logs/atelier/sources/brokk/` et `morgrut/`).
+  - **Brokk, nouveau modèle** : un nain torse nu à la grande hache, création originale. Il remplace `dwarf.png`, le dernier placeholder tiré d'une œuvre existante (à la corbeille). Il regarde désormais vers la droite, comme le reste du roster. La hache dépasse de la tête, donc la taille est réglée sur le corps, comme pour Aldric : de la tête aux pieds, il occupe 71,6 % de la toile de 902×1098. `scale` 0,80 → 1,14, `headroom` 0,23, `footroom` 0,035 (la hache du K.O. descend sous les pieds), portrait recadré (`zoom` 4,6).
+  - **Morgrut** garde son modèle : la nouvelle garde remplace `ogre.png` (à la corbeille). La massue levée de la victoire rend la toile haute (1042×1232), et la garde n'en occupe que 70,3 %. `scale` 1,05 → 1,48 pour garder la même taille à l'écran (1,13 d'un humain), `headroom` 0,22, `footroom` 0,06 (la massue du coup encaissé et du K.O. descend sous les pieds), portrait recadré (`zoom` 4,6).
+  - Vu par capture : sélection, affrontement Brokk contre Morgrut, attaque et coup encaissé des deux en combat, victoire des deux sur l'écran de fin. Non vus : les K.O. et l'esquive de Brokk. L'esquive de Morgrut ne se verra pas en jeu, puisqu'il n'esquive jamais (0 %).
+
+### Corrigé
+- **Écran de fin** : le titre « COMBAT » passe devant le vainqueur. La massue levée de Morgrut le cachait.
+
+## [0.64.3] — 2026-10-20
+
+### Modifié
+- **En-tête du combat plus sombre** (demande de l'utilisateur), toujours vitré : voile de 70 à 50 % (au lieu de 60 à 38 %), et la vitre assombrit aussi le décor qu'elle floute (`brightness(0.7)`). Le décor se devine encore dessous.
+
+## [0.64.2] — 2026-10-20
+
+### Modifié
+- **En-tête du combat vitré** (demande de l'utilisateur) : la bande des noms, dés et PV n'est plus un aplat presque noir. C'est une vitre (voile sombre dégradé de 60 à 38 %, flou d'arrière-plan de 10 px, liseré de bronze, classe `.fight-header`), et le décor de l'arène passe dessous. `FightScreen` dessine le décor en taille naturelle, ancré à la hauteur de `focus` exactement comme l'ancien `object-cover`, pour qu'il déborde au-dessus de l'arène sans décaler le cadrage du sol ; la racine de l'écran coupe ce qui dépasse.
+
+### Retiré
+- **Flou des fonds** (demande de l'utilisateur) : plus de `blur(1px)` sur les neuf arènes (`arenas.ts`), ni de `blur(2px)` sur le fond de l'écran d'affrontement. Les panneaux posés sur les fonds (combattants, tableau du tournoi, barre de commandes, journal du combat, pavé du combat test) perdent leur flou d'arrière-plan et gardent leur voile. Seul l'en-tête du combat floute ce qu'il recouvre, pour l'effet de vitre.
+
+## [0.64.1] — 2026-10-20
+
+### Modifié
+- **Serveur de dev sans rechargement automatique** (demande de l'utilisateur) : modifier un fichier ne recharge plus la page, et une partie ou un tournoi en cours survit au travail sur le code. `vite.config.ts` coupe le remplacement à chaud (`server.hmr: false`) et la connexion WebSocket (`server.ws: false`), qui rechargeait la page au redémarrage du serveur (modification de `vite.config.ts` ou de `package.json`, donc à chaque montée de version). Le serveur invalide toujours les fichiers modifiés : **un rafraîchissement (F5) charge la nouvelle version**. Contrepartie : plus de calque d'erreur de Vite dans la page (les erreurs restent dans la console et le terminal), et la console signale au chargement que le client de Vite n'a pas pu se connecter.
+
+## [0.64.0] — 2026-10-20
+
+### Ajouté
+- **Combat test : menu déroulant d'arène** (demande de l'utilisateur), au centre du bandeau du haut, devant Recommencer et Menu, au même style que les sélecteurs de personnages. Il propose la forêt d'entraînement (Le Pré-aux-Guetteurs, toujours le décor de départ), puis les huit arènes des duels. Changer d'arène ne change que le décor : le combat en cours continue, et l'arène choisie reste pour les combats suivants du mode. La forêt d'entraînement reste absente des autres écrans.
 
 ## [0.63.0] — 2026-10-20
 

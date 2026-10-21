@@ -28,6 +28,13 @@ Exemple (deux planches de 1536×1024, deux cases chacune, la garde en première 
   est calée sur cette garde existante (même hauteur, mêmes pieds), et les nouvelles postures sont écrites
   sur SA toile (mêmes dimensions) : les postures déjà en place ne changent pas, la garde n'est pas réécrite.
   Exemple : `python scripts/slice-poses.py orc c.png:2x1:idle,hurt --fond --reference=src/assets/orc-idle.png`
+- `--sol` : pose chaque posture sur la ligne de sol de la garde (son point le plus bas sur celui de la garde).
+  Le générateur place la figure de chaque case un peu plus haut ou plus bas que la garde de sa planche ;
+  sans cela, une posture flotte ou s'enfonce. `--sol=ko,hurt` ne pose que ces postures. À éviter pour une
+  posture qui doit descendre sous les pieds (massue au sol, queue) ou décoller (saut).
+- `--avant=<px>` : pour un personnage très large (l'ours à quatre pattes), allonge la toile à l'arrière de
+  deux fois <px> : le jeu centrant la toile, la silhouette s'affiche <px> (en pixels de la toile) plus près
+  de l'adversaire, et son arrière ne sort plus de l'écran. Suppose un personnage qui regarde à droite.
 
 Dépendances : numpy, pillow, scipy (pour `--fond`).
 """
@@ -280,13 +287,29 @@ def main():
             canvas.alpha_composite(resized, (round(anchor[0] - feet[0]), round(anchor[1] - feet[1])))
             placed[pose] = canvas
 
+    # --sol : les postures demandées sont posées sur le sol de la garde (même point le plus bas). La toile de
+    # travail a de grandes marges vides : un décalage vertical par roulement ne coupe rien.
+    sol = next((a for a in flags if a == '--sol' or a.startswith('--sol=')), None)
+    if sol:
+        ground = bbox(placed['idle'])[3]
+        for pose in (sol.split('=', 1)[1].split(',') if '=' in sol else list(placed)):
+            if pose == 'idle' or pose not in placed:
+                continue
+            dy = ground - bbox(placed[pose])[3]
+            if dy:
+                placed[pose] = Image.fromarray(np.roll(np.asarray(placed[pose]), dy, axis=0), 'RGBA')
+                print(f'{pose:8} posée sur le sol ({dy:+d} px)')
+
     # Un seul rectangle pour toutes les postures : l'union des silhouettes, élargie pour rester centrée
     # sur les pieds de la garde. Le jeu centre l'image : sans cela, une attaque ample qui s'étire vers
     # l'avant élargirait la toile d'un seul côté et décalerait la garde vers l'arrière.
     boxes = [bbox(c) for c in placed.values()]
     half = max(anchor[0] - min(b[0] for b in boxes), max(b[2] for b in boxes) - anchor[0]) + MARGIN
+    # --avant=<px> : la toile s'allonge à l'arrière (à gauche, le personnage regarde à droite) de deux fois
+    # <px>. Le jeu centrant la toile, la silhouette s'affiche <px> plus loin vers l'adversaire
+    avant = next((int(a.split('=', 1)[1]) for a in flags if a.startswith('--avant=')), 0)
     rect = (
-        anchor[0] - half,
+        anchor[0] - half - 2 * avant,
         min(b[1] for b in boxes) - MARGIN,
         anchor[0] + half,
         max(b[3] for b in boxes) + MARGIN,

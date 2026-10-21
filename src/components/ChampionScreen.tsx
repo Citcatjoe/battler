@@ -7,6 +7,8 @@ import { MiniPortrait } from './RecordBits'
 import type { Wallets } from '../game/betting'
 import { Standings } from './Betting'
 import { PrestigeButton } from './PrestigeButton'
+import { getRelic } from '../game/relics'
+import { RelicRow } from './RelicSeal'
 
 interface Props {
   run: ChampionRun
@@ -28,7 +30,8 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
   const { totals } = run
   const final = run.matches[run.matches.length - 1]
   const tiles: { label: string; value: string | number; sub?: string; accent?: string }[] = [
-    { label: 'Dégâts infligés', value: totals.damage, sub: `${totals.hits} coups réussis sur ${totals.attacks}`, accent: 'text-red-300' },
+    // Infligés et encaissés se comptent de la même façon : coups qui touchent + dégâts d'effets (championRun)
+    { label: 'Dégâts infligés', value: totals.damage, sub: `${totals.hits}/${totals.attacks} coups · ${totals.effectDamage} hors coups`, accent: 'text-red-300' },
     { label: 'Critiques', value: totals.crits, sub: `${totals.critDamage} dégâts critiques`, accent: 'text-amber-300' },
     { label: 'Plus gros coup', value: totals.best || '—', accent: 'text-amber-200' },
     { label: 'PV regagnés', value: totals.healed, accent: 'text-emerald-300' },
@@ -60,6 +63,13 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
             {character.race} · {character.archetype} · {run.matches.length} victoires en {totals.turns} tours
             {final && <> · {final.hpLeft} PV restants en finale</>}
           </p>
+          {/* Les reliques gagnées en chemin : le profil qui l'a mené au titre */}
+          {run.relics.length > 0 && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Reliques</span>
+              <RelicRow relics={run.relics.map(getRelic)} size={44} tooltip="below" />
+            </div>
+          )}
         </header>
 
         {wallets && (

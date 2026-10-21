@@ -45,15 +45,15 @@ Un spectateur qui connaît les dix familles et les six fenêtres comprend n'impo
 
 | # | Famille | Question du spectateur | Côté bonus (aujourd'hui) | Côté malus (aujourd'hui) | Compteur lu par les reliques |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **Puissance** | ses coups font-ils plus mal ? | Aura de puissance | Affaibli _(inutilisé)_ | bonus de dégâts actuel |
-| 2 | **Garde** | encaisse-t-il moins ? | Armure temporaire, Écorce épaisse, Aura d'intimidation | Vulnérable, Brèche _(inutilisés)_, Luciole (+2 reçus) | points de bouclier |
+| 1 | **Puissance** | ses coups font-ils plus mal ? | Aura de puissance, Force de l'ours et Aura sauvage (druide, 0.73.0) | Affaibli _(inutilisé)_ | bonus de dégâts actuel |
+| 2 | **Garde** | encaisse-t-il moins ? | Armure temporaire, Aura d'intimidation (Écorce épaisse retirée en 0.73.0) | Vulnérable, Brèche _(inutilisés)_, Luciole (+2 reçus) | points de bouclier |
 | 3 | **Précision** | va-t-il critiquer ? | Critique assuré, Aura de précision | _(aucun ; piste : Aveuglé)_ | critiques forcés en attente |
 | 4 | **Esquive** | va-t-il éviter le coup ? | Esquive améliorée | Luciole (ne peut plus esquiver) | esquives forcées en attente |
 | 5 | **Tempo** | combien d'actions ? | Furie des vents | Peur, Étourdi _(inutilisé)_, Attente | actions gagnées ou perdues |
-| 6 | **Fortune** | que va donner le dé ? | Coup de chance, Pile ou face, Charge, Coup de griffe | _(aucun ; piste : Malchance)_ | jets modifiés |
-| 7 | **Affliction** | perd-il des PV à chaque tour ? | _(sur l'adversaire)_ Aura de poison, Aura de décoction, Aura de pourriture | Poison, Pourriture, Brûlure _(inutilisée)_ | charges d'affliction portées |
-| 8 | **Soin** | regagne-t-il des PV ? | Rage du sang, Fleur de vie, Aura de sainteté, Vol de vie, Régénération _(inutilisée)_ | _(piste : Hémorragie, soins réduits)_ | PV rendus |
-| 9 | **Représailles** | le frapper se paie-t-il ? | Épines, Riposte, Rétribution | _(aucun)_ | dégâts renvoyés ou stockés |
+| 6 | **Fortune** | que va donner le dé ? | Coup de chance, Pile ou face, Incantation (d3 du druide, 0.73.0) ; Charge et Coup de griffe retirés en 0.73.0 | _(aucun ; piste : Malchance)_ | jets modifiés |
+| 7 | **Affliction** | perd-il des PV à chaque tour ? | _(sur l'adversaire)_ Aura glaciale (pose du Poison, 0.69.0), Aura de décoction, Pourfendre, Épines acérées, Feux follets (de retour en 0.73.0), Foudre (dégâts directs, 0.73.0) ; Aura de pourriture sans porteur depuis la 0.71.0 | Poison, Saignement (0.68.0 : à chaque coup reçu), Brûlure (de retour en 0.73.0) ; Pourriture sans porteur depuis la 0.71.0 | charges d'affliction portées |
+| 8 | **Soin** | regagne-t-il des PV ? | Aura de sainteté, Vol de vie ; Régénération sans porteur depuis la 0.73.0 (Fleur de vie retirée ; Rage du sang jusqu'à la 0.67.3) | _(piste : Hémorragie, soins réduits)_ | PV rendus |
+| 9 | **Représailles** | le frapper se paie-t-il ? | Épines acérées (en plaie, 0.68.0), Riposte, Rétribution | _(aucun)_ | dégâts renvoyés ou stockés |
 | 10 | **Sceaux** | ses statuts tiennent-ils ? | Aura d'immunité, Garde sacrée _(inutilisée)_, Purification | _(piste : Sceau brisé, ne peut plus recevoir de bonus)_ | statuts bloqués ou retirés |
 
 Les 31 statuts actuels trouvent tous une place, sans créer de famille pour un seul statut.
@@ -62,9 +62,9 @@ Les 31 statuts actuels trouvent tous une place, sans créer de famille pour un s
 
 1. **Un statut appartient à une seule famille**, celle de son effet principal. Il prend sa couleur, son cadre et son son par défaut.
    - Seul cas mixte aujourd'hui : **Luciole**. Elle empêche d'esquiver (Esquive, côté malus) et fait subir +2 dégâts (Garde, côté malus). Je propose de la ranger en **Esquive**, ce que dit son nom et son histoire (« les lucioles trahissent le porteur »), et de traiter le +2 comme un effet secondaire, affiché dans sa décomposition. Voir la question Q4.
-2. **« Aura » n'est pas une famille, mais une durée** (`permanent`). Le double cadre doré qui existe déjà la signale. L'Aura de puissance est de la Puissance permanente ; l'Aura de poison, de l'Affliction permanente infligée à l'adversaire.
+2. **« Aura » n'est pas une famille, mais une durée** (`permanent`). Le double cadre doré qui existe déjà la signale. L'Aura de puissance est de la Puissance permanente ; l'Aura glaciale, de l'Affliction permanente infligée à l'adversaire.
 3. **Les convertisseurs** (« quand il touche, pose X ») appartiennent à la famille de ce qu'ils produisent. L'Aura de décoction et l'Aura de pourriture sont de l'Affliction.
-4. **Les compétences sans statut** (soin immédiat, Purification, Rétribution relâchée, Charge, Coup de griffe) ont aussi une famille. C'est ce qui permet à une relique de dire « vos compétences de Soin… ».
+4. **Les compétences sans statut** (soin immédiat, Purification, Rétribution relâchée, Foudre) ont aussi une famille. C'est ce qui permet à une relique de dire « vos compétences de Soin… ».
 5. **Avant de créer une 11e famille, il faut vérifier qu'aucune des dix ne convient.** Si une nouvelle famille est vraiment nécessaire, c'est une décision explicite, notée dans `SYSTEMES.md` (étude § 4.2).
 
 ### 2.2 Les axes qui se répondent
@@ -112,16 +112,16 @@ La règle de travail : pour chaque personnage, sa **signature**, ce dont on se s
 
 | Famille (race) | Signature, à garder | Familles principales | Compétences : 1 / 2 / 3 |
 | --- | --- | --- | --- |
-| Orcs | frapper fort, et deux fois | Puissance, Tempo, Soin | Rage du sang (Soin) / Furie des vents (Tempo) / Aura de puissance (Puissance) |
+| Orcs | frapper fort, et deux fois | Puissance, Tempo, Affliction | Pourfendre (Affliction, 0.70.0 ; Saignée en 0.68.0, Rage du sang, Soin, avant) / Furie des vents (Tempo) / Aura de puissance (Puissance) |
 | Elfes | ne pas être touchée, punir par le critique | Précision, Esquive | Œil de faucon (Précision) / Esquive améliorée (Esquive) / Aura de précision (Précision) |
-| Nains | tenir la ligne, faire payer chaque coup | Garde, Représailles | Peau de pierre (Garde) / Épines (Représailles) / Aura d'intimidation (Garde) |
-| Morts-vivants | ronger et drainer | Affliction, Soin | Souffle de la tombe (Affliction) / Vol de vie (Soin) / Aura de poison (Affliction) |
+| Nains | tenir la ligne, faire payer chaque coup | Garde, Représailles | Peau de pierre (Garde) / Épines acérées (Représailles, en Saignement depuis la 0.68.0) / Aura d'intimidation (Garde) |
+| Morts-vivants | ronger et drainer | Affliction, Soin | Souffle de la tombe (Affliction) / Vol de vie (Soin) / Aura glaciale (Affliction) |
 | Prêtresses | contrôler et durer | Tempo (malus), Sceaux, Soin | Peur (Tempo) / Purification (Sceaux) / Aura de sainteté (Soin) |
 | Voleuses | le hasard et le poison | Fortune, Affliction | Coup de chance (Fortune) / Pile ou face (Fortune) / Aura de décoction (Affliction) |
 | Paladins | rendre les coups | Représailles, Sceaux | Rétribution (Représailles) / Riposte (Représailles) / Aura d'immunité (Sceaux) |
 | Ogres | taper fort, attendre | Tempo (malus sur soi) | Attente / Attente / Attente |
-| Druide, forme humaine | soutenir | Soin, Garde, Esquive (malus) | Fleur de vie (Soin) / Écorce épaisse (Garde) / Luciole (Esquive) |
-| Druide, forme d'ours | déchirer | Fortune, Affliction | Charge (Fortune) / Coup de griffe (Fortune) / Aura de pourriture (Affliction) |
+| Druide, forme humaine | lancer des sorts (0.73.0, Incantation : d3, aucun coup) | Affliction, Puissance | Foudre (Affliction, dégâts directs) / Feux follets (Affliction) / Aura sauvage (Puissance, pour l'ours) ; avant la 0.73.0 : Fleur de vie, Écorce épaisse, Aura de sève, relais |
+| Druide, forme d'ours | frapper fort (0.73.0, Force de l'ours : +4) | Puissance | aucun sort : le 1, le 2 et le 3 frappent ; avant la 0.73.0 : Charge, Coup de griffe, Aura de rancune, relais |
 
 Constats :
 - **Chaque race garde un couple de familles qui lui est propre**, ce qui préserve l'identité. Les recoupements (Soin chez quatre races, Affliction chez trois, Représailles chez deux) sont voulus : c'est là que les reliques créeront des synergies croisées. Une relique de Représailles intéresse à la fois le nain et le paladin, mais pas de la même façon.
@@ -151,7 +151,7 @@ Légende du verdict :
 | Nain | 3 | Aura d'intimidation | Garde | environ +20 (Brokk) | identique |
 | Mort-vivant | 1 | Souffle de la tombe | Affliction | — | identique |
 | Mort-vivant | 2 | Vol de vie | Soin | environ +5 | **mécanique** : `drainsHit` devient « fenêtre `nextStrikeDealt` et réaction `hit` → soin du montant retiré » |
-| Mort-vivant | 3 | Aura de poison | Affliction | — | identique |
+| Mort-vivant | 3 | Aura glaciale | Affliction | — | identique (pose du Poison depuis la 0.69.0) |
 | Prêtresse | 1 | Peur | Tempo (malus) | environ +16 | identique |
 | Prêtresse | 2 | Purification | Sceaux | environ +10 | identique |
 | Prêtresse | 3 | Aura de sainteté | Soin | +42 à +44 | identique ; voir § 6.4 sur sa domination |

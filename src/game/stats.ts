@@ -1,4 +1,4 @@
-import { attacksOf, finalState, type CombatResult, type Pair, type Side } from './combat'
+import { attacksOf, beatEffects, finalState, type CombatResult, type Pair, type Side } from './combat'
 import { STATUSES, type StatusId } from './statuses'
 
 const isNegative = (id: StatusId) => STATUSES[id].polarity === 'negative'
@@ -39,10 +39,8 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
   const attacks = attacksOf(result)
   const final = finalState(result)
 
-  // Effets appliqués, quelle que soit leur origine (événement ou statut).
-  const applied = result.beats.flatMap((b) =>
-    b.type === 'event' ? b.event.effects : b.type === 'statusTick' || b.type === 'statusReaction' || b.type === 'coin' ? b.effects : [],
-  )
+  // Effets appliqués, quelle que soit leur origine (compétence, statut, pièce, relique).
+  const applied = result.beats.flatMap(beatEffects)
 
   const forSide = (side: Side): FighterStats => {
     // Un coup sacrifié par une compétence (Vol de vie) n'est ni porté ni esquivé ; seul son dé compte.

@@ -10,7 +10,12 @@ import elfDodgeImg from '../assets/elf-dodge.png'
 import elfHurtImg from '../assets/elf-hurt.png'
 import elfKoImg from '../assets/elf-ko.png'
 import elfVictoryImg from '../assets/elf-victory.png'
-import dwarfImg from '../assets/dwarf.png'
+import dwarfIdleImg from '../assets/dwarf-idle.png'
+import dwarfAttackImg from '../assets/dwarf-attack.png'
+import dwarfDodgeImg from '../assets/dwarf-dodge.png'
+import dwarfHurtImg from '../assets/dwarf-hurt.png'
+import dwarfKoImg from '../assets/dwarf-ko.png'
+import dwarfVictoryImg from '../assets/dwarf-victory.png'
 import undeadIdleImg from '../assets/undead-idle.png'
 import undeadAttackImg from '../assets/undead-attack.png'
 import undeadDodgeImg from '../assets/undead-dodge.png'
@@ -35,9 +40,24 @@ import paladinDodgeImg from '../assets/paladin-dodge.png'
 import paladinHurtImg from '../assets/paladin-hurt.png'
 import paladinKoImg from '../assets/paladin-ko.png'
 import paladinVictoryImg from '../assets/paladin-victory.png'
-import ogreImg from '../assets/ogre.png'
-import druidImg from '../assets/druid.png'
-import druidBearImg from '../assets/druid-bear.png'
+import ogreIdleImg from '../assets/ogre-idle.png'
+import ogreAttackImg from '../assets/ogre-attack.png'
+import ogreDodgeImg from '../assets/ogre-dodge.png'
+import ogreHurtImg from '../assets/ogre-hurt.png'
+import ogreKoImg from '../assets/ogre-ko.png'
+import ogreVictoryImg from '../assets/ogre-victory.png'
+import druidIdleImg from '../assets/druid-idle.png'
+import druidAttackImg from '../assets/druid-attack.png'
+import druidDodgeImg from '../assets/druid-dodge.png'
+import druidHurtImg from '../assets/druid-hurt.png'
+import druidKoImg from '../assets/druid-ko.png'
+import druidVictoryImg from '../assets/druid-victory.png'
+import bearIdleImg from '../assets/druid-bear-idle.png'
+import bearAttackImg from '../assets/druid-bear-attack.png'
+import bearDodgeImg from '../assets/druid-bear-dodge.png'
+import bearHurtImg from '../assets/druid-bear-hurt.png'
+import bearKoImg from '../assets/druid-bear-ko.png'
+import bearVictoryImg from '../assets/druid-bear-victory.png'
 import bardIdleImg from '../assets/bard-idle.png'
 import bardAttackImg from '../assets/bard-attack.png'
 import bardDodgeImg from '../assets/bard-dodge.png'
@@ -48,6 +68,10 @@ import { Character, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
 import { isDoubleTrigger, ROLL_TRIGGERS } from './events'
 import { STATUSES } from './statuses'
+
+/** Foudre du druide (0.76.0, demande de l'utilisateur) : trois éclairs de 2 dégâts directs chacun, jamais critiques. */
+const THUNDERBOLT = 2
+const THUNDERBOLT_HITS = 3
 
 /*
  * Archétypes par race :
@@ -61,17 +85,17 @@ import { STATUSES } from './statuses'
  * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md). Trois compétences,
  * sur un 1, un 2 et un 3 au dé (le 3 donne une aura permanente, voir plus bas). Depuis la 0.27.0,
  * ces jets n'infligent aucun dégât : ils servent seulement à déclencher la compétence (`forfeitsHit`).
- * - Orc : Rage du sang (1 : regagne 3 PV) ; Furie des vents (2 : frappe deux fois au tour suivant).
+ * - Orc : Pourfendre (1 : un vrai coup qui, s'il touche, pose Saignement 2) ; Furie des vents (2 : frappe deux fois tout de suite).
  * - Elfe : Œil de faucon (1 : prochain coup qui touche critique) ; Esquive améliorée (2 : esquive à coup sûr le prochain coup reçu,
  *   sans limite de durée depuis la 0.36.5).
- * - Nain : Peau de pierre (1 : +6 d'armure temporaire, cumulable) ; Épines (2 : jusqu'à son prochain tour, chaque coup
- *   encaissé renvoie 6 dégâts, deux fois contre une Furie des vents).
+ * - Nain : Peau de pierre (1 : +6 d'armure temporaire, cumulable) ; Épines acérées (2 : permanentes, chaque coup
+ *   encaissé fait saigner l'attaquant, une charge de Saignement par charge d'épines).
  * - Mort-vivant : Souffle de la tombe (1 : poison, 2 PV par tour pendant 3 tours) ; Vol de vie (2 : son prochain
  *   coup porté rend les PV qu'il retire ; esquivé, la charge est perdue ; un jet de 1 à 3 la laisse en place).
  * Auras du 3, permanentes et cumulables (chaque nouveau 3 ajoute une charge) : Orc, Aura de puissance
  * (+2 dégâts par charge) ; Elfe, Aura de précision (+1 au multiplicateur de critique par charge) ; Nain,
- * Aura d'intimidation (l'adversaire frappe 2 de moins par charge) ; Mort-vivant, Aura de poison (au début
- * de son tour, l'adversaire perd 1 PV par charge).
+ * Aura d'intimidation (l'adversaire frappe 2 de moins par charge) ; Mort-vivant, Aura glaciale (au début
+ * de son tour, 1 charge de Poison par charge sur l'adversaire, depuis la 0.69.0).
  */
 
 const gorak: CharacterDef = {
@@ -79,10 +103,11 @@ const gorak: CharacterDef = {
   name: 'Gorak',
   race: 'Orc',
   archetype: 'Brute',
-  // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique,
-  // Rage du sang à 5 PV. Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
-  // Dé de d10 à d8 (0.50.0) : compensation de la Furie des vents instantanée (sinon 64 %)
-  stats: { maxHp: 57, damageDie: 8, armor: 0, dodgeChance: 0.05, critChance: 0.18, critMultiplier: 2 },
+  // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique.
+  // Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
+  // Dé de d10 à d8 (0.50.0) : compensation de la Furie des vents instantanée (sinon 64 %).
+  // d9 et 19 % de critique (0.69.0, choix de l'utilisateur) : la Furie frappe en coups bruts ; au d8, Gorak tombait à 39,8 %
+  stats: { maxHp: 57, damageDie: 9, armor: 0, dodgeChance: 0.05, critChance: 0.19, critMultiplier: 2 },
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -97,18 +122,21 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (18 %)', 'Un jet raté le soigne (5 PV)'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : son 1 frappe et fait saigner'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   events: [
     {
-      id: 'blood-rage',
-      name: 'Rage du sang',
+      // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Le 1 frappe pour
+      // sa valeur (Aura de puissance et critique compris) et, s'il touche, pose Saignement 2 : un coup doit
+      // toucher pour poser un malus physique. La plaie coule au coup suivant (RESOLUTION § 5, règle 9).
+      // Version la plus forte des deux mesurées (Saignement 1 : −1,3 point), choisie par l'utilisateur.
+      id: 'cleave',
+      name: 'Pourfendre',
       nature: 'martial',
       trigger: 'naturalOne',
-      forfeitsHit: true,
-      // 5 PV (ceux de Murzug, 0.36.5) : avec moins de PV et des coups plus forts, 3 PV ne valaient rien
-      effects: [{ type: 'heal', amount: 5 }],
+      needsTouch: true,
+      effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }],
     },
     {
       id: 'wind-fury',
@@ -145,6 +173,9 @@ const elaria: CharacterDef = {
     facing: 'right',
     scale: 1.25,
     headroom: 0.22,
+    // Toile large (fente de l'attaque, arc levé) : la garde n'occupe que le milieu. L'écran de fin et
+    // l'affrontement la calent sur sa silhouette, pas sur sa toile
+    bodyInset: { left: 0.18, right: 0.181 },
     portrait: { x: 42, y: 25, zoom: 4.8 },
   },
   lore: {
@@ -192,7 +223,19 @@ const brokk: CharacterDef = {
   // Statistiques de Grimbald, son ancien jumeau (0.43.0) : d10 et 57 PV. Avec les siennes (d8, 68 PV), Ysolde
   // ne le battait qu'à 26 % (contre connu) ; ainsi, tous ses duels tiennent entre 45 et 60 %.
   stats: { maxHp: 57, damageDie: 10, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2.5 },
-  look: { image: dwarfImg, facing: 'left', scale: 0.8, portrait: { x: 38, y: 40, zoom: 2.8 } },
+  // Nouveau modèle et postures (atelier des postures, 2026-10-20), création originale qui remplace le
+  // placeholder. La hache dépasse de la tête : la taille se règle sur le corps (tête-pieds, 71,6 % de la
+  // toile), le reste compte dans `headroom` (comme Aldric). La hache du K.O. descend sous les pieds
+  look: {
+    image: dwarfIdleImg,
+    poses: { attack: dwarfAttackImg, dodge: dwarfDodgeImg, hurt: dwarfHurtImg, ko: dwarfKoImg, victory: dwarfVictoryImg },
+    facing: 'right',
+    scale: 1.14,
+    headroom: 0.23,
+    footroom: 0.035,
+    bodyInset: { left: 0.139, right: 0.139 },
+    portrait: { x: 60, y: 33, zoom: 4.6 },
+  },
   lore: {
     tagline: 'Ce qui passe la porte passe par moi.',
     background:
@@ -211,7 +254,7 @@ const brokk: CharacterDef = {
     },
     {
       id: 'thorns',
-      name: 'Épines',
+      name: 'Épines acérées',
       nature: 'martial',
       trigger: 'naturalTwo',
       forfeitsHit: true,
@@ -244,6 +287,7 @@ const ervald: CharacterDef = {
     facing: 'right',
     scale: 1.16,
     headroom: 0.15, // part vide au-dessus de la tête (l'épée levée de la victoire)
+    bodyInset: { left: 0.221, right: 0.222 },
     portrait: { x: 56, y: 19, zoom: 5 },
   },
   lore: {
@@ -272,12 +316,13 @@ const ervald: CharacterDef = {
       effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 2 }],
     },
     {
-      id: 'poison-aura',
+      id: 'frost-aura',
       name: 'Aura glaciale',
       nature: 'arcane',
       trigger: 'naturalThree',
       forfeitsHit: true,
-      effects: [{ type: 'applyStatus', status: 'poisonAura', stacks: 1 }],
+      // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
+      effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }],
     },
   ],
 }
@@ -301,6 +346,7 @@ const ysolde: CharacterDef = {
     facing: 'right',
     scale: 1.25,
     headroom: 0.245,
+    bodyInset: { left: 0.215, right: 0.215 },
     portrait: { x: 52, y: 28, zoom: 5 },
   },
   lore: {
@@ -327,7 +373,12 @@ const ysolde: CharacterDef = {
       forfeitsHit: true,
       // 0.42.0 : quand l'adversaire n'a aucun bonus à retirer, la lumière le blesse (dégâts directs) au lieu
       // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
-      effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent' } }],
+      // 0.69.0 (choix de l'utilisateur, SORTS.md § 14 et 15) : elle retire aussi son propre dernier malus (un
+      // poison, une plaie, une brûlure). L'Aura glaciale cumulable la mettait à 41,3 % ; ainsi, 43,4 %.
+      effects: [
+        { type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent' } },
+        { type: 'cleanse', polarity: 'negative', count: 1 },
+      ],
     },
     {
       id: 'holy-aura',
@@ -365,7 +416,7 @@ const naraxes: CharacterDef = {
     tagline: 'Pile, je gagne. Face, tu perds quand même.',
     background:
       "Coupe-bourse des marais de Sszeth, Naraxes vit de paris et de lames enduites. Elle joue tout sur un coup de chance, et ce qu'elle ne tue pas, son poison s'en charge.",
-    strengths: ['Bonne esquive (20 %)', 'Pile ou face : 20 dégâts', 'Lames empoisonnées (décoction)'],
+    strengths: ['Bonne esquive (20 %)', 'Pile ou face : 10 dégâts aussitôt', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
   events: [
@@ -418,6 +469,7 @@ const aldric: CharacterDef = {
     facing: 'right',
     scale: 1.24,
     headroom: 0.21,
+    bodyInset: { left: 0.198, right: 0.198 },
     portrait: { x: 55, y: 22, zoom: 5.2 },
   },
   lore: {
@@ -476,7 +528,20 @@ const morgrut: CharacterDef = {
   // Aucune compétence : un d14 et de la masse. Un jet de 1 à 3 (3 sur 14) le laisse attendre.
   // Aucun critique (il ne vise pas) : avec 8 % de critique et 66 PV, il gagnait 63 % de ses combats.
   stats: { maxHp: 63, damageDie: 14, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
-  look: { image: ogreImg, facing: 'right', scale: 1.05, portrait: { x: 63, y: 14, zoom: 3.2 } },
+  // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
+  // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
+  // massue du coup encaissé et du K.O. descend sous les pieds
+  look: {
+    image: ogreIdleImg,
+    poses: { attack: ogreAttackImg, dodge: ogreDodgeImg, hurt: ogreHurtImg, ko: ogreKoImg, victory: ogreVictoryImg },
+    facing: 'right',
+    scale: 1.48,
+    headroom: 0.22,
+    footroom: 0.06,
+    // Toile large (massue levée) : sans cela, l'écran de fin le décalait vers la droite, sur son nom
+    bodyInset: { left: 0.215, right: 0.214 },
+    portrait: { x: 56, y: 28, zoom: 4.6 },
+  },
   lore: {
     tagline: 'Taper. Attendre. Taper plus fort.',
     background:
@@ -493,28 +558,63 @@ const thaldrin: CharacterDef = {
   race: 'Sylvain',
   archetype: 'Druide',
   stats: { maxHp: 56, damageDie: 10, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
-  look: { image: druidImg, facing: 'right', scale: 0.93, portrait: { x: 47, y: 13, zoom: 3.2 } },
-  // Il change de forme au début de chacun de ses tours, sauf le premier
+  // Postures (atelier des postures, 2026-10-20). La garde (bâton et bois compris) occupe 83,9 % de la toile,
+  // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
+  look: {
+    image: druidIdleImg,
+    poses: { attack: druidAttackImg, dodge: druidDodgeImg, hurt: druidHurtImg, ko: druidKoImg, victory: druidVictoryImg },
+    facing: 'right',
+    scale: 1.1,
+    headroom: 0.155,
+    // Toile large (fente de l'attaque) : la garde n'en occupe que le milieu (pixels 217 à 785 sur 1004)
+    bodyInset: { left: 0.216, right: 0.217 },
+    portrait: { x: 62, y: 22, zoom: 4.2 },
+  },
+  // Il change de forme au début de chacun de ses tours, sauf le premier. Depuis la 0.73.0 (SORTS.md § 18),
+  // chaque forme a sa règle, un statut de forme : l'homme lance un sort à chaque jet (d3), l'ours frappe à +3
   forms: [
-    { id: 'human', name: 'Forme humaine' },
-    // L'ours (taille 1,10) dépasse le druide de forme humaine (1,00) : la métamorphose le fait grandir
-    { id: 'bear', name: "Forme d'ours", look: { image: druidBearImg, scale: 1.02, portrait: { x: 70, y: 17, zoom: 3.2 } } },
+    { id: 'human', name: 'Forme humaine', statuses: ['casting'] },
+    // L'ours est une bête à quatre pattes (règle de l'utilisateur, POSTURES.md § 0) : bois compris, à peine
+    // moins haut que le druide (96 %), et une fois et demie plus long que haut. La métamorphose le fait
+    // grossir, pas grandir. La garde occupe 90 % de la hauteur de sa toile. Si large qu'il sortait de l'écran
+    // par l'arrière : sa toile est allongée à l'arrière (slice-poses --avant=130), ce qui l'avance de
+    // 130 px de toile vers l'adversaire (la garde va des pixels 290 à 1286 sur 1318)
+    {
+      id: 'bear',
+      name: "Forme d'ours",
+      statuses: ['bearMight'],
+      look: {
+        image: bearIdleImg,
+        poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg },
+        scale: 0.98,
+        headroom: 0.088,
+        bodyInset: { left: 0.22, right: 0.024 },
+        portrait: { x: 98, y: 31, zoom: 4 },
+      },
+    },
   ],
   lore: {
     tagline: 'La forêt a deux visages.',
     background:
-      "Gardien des chênes anciens, Thaldrin soigne et protège sous sa forme d'homme, puis devient l'ours qui charge et déchire. Il change de peau à chaque tour.",
-    strengths: ['Deux formes, six compétences', 'Soin, écorce et lucioles', "Charge et griffes d'ours"],
-    weaknesses: ['Forme imposée à chaque tour', 'Esquive faible', 'Coups moyens'],
+      "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
+    strengths: ['Un sort à chaque tour d’homme (foudre, feu)', 'L’ours frappe toujours, et fort (+3)', 'Aura sauvage : un ours de plus en plus dangereux'],
+    weaknesses: ['Aucun soin ni armure', 'L’homme ne frappe jamais', 'Forme imposée à chaque tour'],
   },
+  // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme ne lance que des sorts, l'ours ne fait que frapper.
+  // Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais des formes et ses deux auras.
   events: [
-    { id: 'life-bloom', name: 'Fleur de vie', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] },
-    { id: 'bark-skin', name: 'Écorce épaisse', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 7 }] },
-    // 0.50.0 : Feux follets au lieu de la Luciole (jugée ennuyeuse par l'utilisateur) : une Brûlure de 3 pendant 3 tours
-    { id: 'firefly', name: 'Feux follets', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, turns: 3, target: 'opponent' }] },
-    { id: 'charge', name: 'Charge', nature: 'martial', trigger: 'naturalOne', form: 'bear', reshapesHit: { value: 'max', noCrit: true }, effects: [] },
-    { id: 'claw', name: 'Coup de griffe', nature: 'martial', trigger: 'naturalTwo', form: 'bear', reshapesHit: { value: 'reroll', bonus: 3 }, effects: [] },
-    { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', form: 'bear', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }] },
+    {
+      id: 'thunderbolt',
+      name: 'Foudre',
+      nature: 'arcane',
+      trigger: 'naturalOne',
+      form: 'human',
+      forfeitsHit: true,
+      scene: 'lightning',
+      effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent' }],
+    },
+    { id: 'firefly', name: 'Feux follets', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }] },
+    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }] },
   ],
 }
 
@@ -649,6 +749,12 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       lore.weaknesses.length > 3
     )
       problems.push(`${at} 1 à 3 forces et 1 à 3 faiblesses attendues`)
+    for (const f of d.forms ?? [])
+      for (const id of f.statuses ?? [])
+        if (!STATUSES[id]?.innate) problems.push(`${at} forme ${f.id} : ${id} n'est pas un statut de forme (innate)`)
+    for (const id of Object.keys(STATUSES) as (keyof typeof STATUSES)[])
+      if (STATUSES[id].innate && d.events.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
+        problems.push(`${at} ${id} est un statut de forme : seul le moteur le pose`)
     const eventIds = new Set<string>()
     for (const e of d.events) {
       if (eventIds.has(e.id)) problems.push(`${at} compétence en double (${e.id})`)
@@ -666,8 +772,13 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       if (e.chance !== undefined && !inRange(e.chance, 0, 1)) problems.push(`${at} ${e.id}.chance hors de [0, 1]`)
       if (e.forfeitsHit && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined))
         problems.push(`${at} ${e.id}.forfeitsHit : réservé aux déclencheurs du dé, sans chance`)
+      if (e.needsTouch && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined || e.forfeitsHit || e.reshapesHit))
+        problems.push(`${at} ${e.id}.needsTouch : réservé aux déclencheurs du dé, sans chance, forfeitsHit ni reshapesHit`)
       if (e.limit !== undefined && (!Number.isInteger(e.limit) || e.limit < 1))
         problems.push(`${at} ${e.id}.limit doit être un entier ≥ 1`)
+      for (const x of e.effects)
+        if (x.type === 'damage' && x.hits !== undefined && (!Number.isInteger(x.hits) || x.hits < 2))
+          problems.push(`${at} ${e.id} : hits est un entier ≥ 2 (sinon, un seul coup)`)
       for (const c of e.when ?? []) {
         if ((c.type === 'hpBelow' || c.type === 'hpAtLeast') && !(c.ratio > 0 && c.ratio <= 1))
           problems.push(`${at} ${e.id} : condition ${c.type}, ratio hors de ]0, 1]`)
@@ -684,6 +795,8 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
           problems.push(`${at} ${e.id} : durée invalide`)
         if (f.type === 'applyStatus' && f.turns !== undefined && STATUSES[f.status].decays)
           problems.push(`${at} ${e.id} : ${f.status} s'estompe de lui-même, sans durée en tours`)
+        if (f.type === 'applyStatus' && f.turns !== undefined && STATUSES[f.status].turnsFromStacks)
+          problems.push(`${at} ${e.id} : ${f.status} dure autant de tours que de charges, sans durée en plus`)
       }
     }
   }

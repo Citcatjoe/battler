@@ -8,14 +8,17 @@ import { recordMatch, recordTournamentWin } from './game/history'
 import {
   champion,
   championRun,
+  chooseRelic,
   createTournament,
   matchFighters,
+  matchKey,
   ROUND_NAMES,
   SLOTS,
   withResult,
   type MatchRef,
   type Tournament,
 } from './game/tournament'
+import { getRelic } from './game/relics'
 import { music, sfx } from './game/sound'
 import {
   cancelBet,
@@ -61,8 +64,8 @@ type Screen =
   | { name: 'fight'; script: CombatResult; arena: Arena }
   /** `bets` : règlement des paris du match, s'il y en avait */
   | { name: 'end'; result: CombatResult; bets?: BetsOutcome }
-  /** `from` : écran où revient le bouton retour */
-  | { name: 'compendium'; section: CompendiumSectionId; characterId: string; from: Origin | 'records' }
+  /** `from` : écran où revient le bouton retour ; `focus` : élément visé par un lien (compétence, statut, règle) */
+  | { name: 'compendium'; section: CompendiumSectionId; characterId: string; focus?: string; from: Origin | 'records' }
   | { name: 'records' }
   | { name: 'tournamentSetup' }
   | { name: 'bracket' }
@@ -93,6 +96,8 @@ export default function App() {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   /** Match de tournoi en cours via l'écran d'affrontement ; null en affrontement simple */
   const [activeMatch, setActiveMatch] = useState<MatchRef | null>(null)
+  /** Réglage de l'écran de configuration : tournoi avec ou sans reliques, gardé pour le tournoi suivant */
+  const [relicsEnabled, setRelicsEnabled] = useState(true)
 
   // Paris entre deux observateurs (docs/PARIS.md) : une bourse par tournoi, une autre pour les duels
   // de la session. En mémoire seulement, comme le tournoi.
@@ -338,6 +343,16 @@ export default function App() {
                           go({ name: 'champion' })
                         }
                       : backToBracket,
+                  // Récompense du vainqueur (hors finale) : son choix, que l'observateur peut changer
+                  reward: (() => {
+                    const relic = tournament.results[matchKey(activeMatch)]?.relic
+                    if (!relic) return undefined
+                    return {
+                      offer: relic.offer.map(getRelic),
+                      chosen: relic.chosen,
+                      onChoose: (id: string) => setTournament((t) => t && chooseRelic(t, activeMatch, id)),
+                    }
+                  })(),
                 }
               : undefined
           }
@@ -347,8 +362,17 @@ export default function App() {
         <CompendiumScreen
           section={screen.section}
           characterId={screen.characterId}
-          // Navigation interne : sans son de clic en double (les onglets jouent déjà le leur)
-          onNavigate={(to) => setScreen({ ...screen, ...to })}
+          focus={screen.focus}
+          // Navigation interne : sans son de clic en double (les onglets jouent déjà le leur). Un lien vers un
+          // combattant change le combattant affiché ; un lien vers une autre section vise l'un de ses éléments.
+          onNavigate={(to) =>
+            setScreen(
+              to.section === 'characters'
+                ? { ...screen, section: 'characters', characterId: to.id ?? screen.characterId }
+                : { ...screen, section: to.section, focus: to.id },
+            )
+          }
+          onOpenRecords={() => (screen.from === 'records' ? go({ name: 'records' }) : openRecords(screen.from))}
           onBack={() => go({ name: screen.from })}
           backLabel={backLabel(screen.from)}
         />
@@ -366,9 +390,11 @@ export default function App() {
           onChange={setSlots}
           betting={bettingSetup}
           onBettingChange={setBettingSetup}
+          relics={relicsEnabled}
+          onRelicsChange={setRelicsEnabled}
           onBack={() => go({ name: 'start' })}
           onValidate={(filled) => {
-            setTournament(createTournament(filled, (id) => createCharacter(id).name))
+            setTournament(createTournament(filled, (id) => createCharacter(id).name, { relics: relicsEnabled }))
             setActiveMatch(null)
             const names = bettingSetup.names.map((n, i) => n.trim() || DEFAULT_BETTOR_NAMES[i]) as Pair<string>
             setWallets(bettingSetup.enabled ? createWallets(names) : null)

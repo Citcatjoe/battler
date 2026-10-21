@@ -522,3 +522,447 @@ Taux de victoire : de 44,4–54,6 % à 44,0 % (Ysolde) – 54,6 % (Fanchon). Spe
 - **Feux follets au lieu de la Luciole** (« ennuyante ») : trois pistes mesurées (400 combats par duel) : Feux follets, Brûlure 3 pendant 3 tours, **0,0** ; Racines, l'adversaire perd sa prochaine action, −1,0 ; Ronces, ses 3 prochains coups lui coûtent 2 PV, −7,1. Feux follets retenus : même force, des dégâts visibles à chaque fin de tour adverse, la lignée des lucioles.
 - Mesures finales : de 43,0 % (Ysolde) à 54,0 % (Aldric) ; Feux follets +4,2, Écorce +2,4, Aura glaciale +4,6.
 
+## 14. Cinquième passe : le Saignement, sans nouveau personnage (0.68.0)
+
+Demande de l'utilisateur : introduire le saignement dans le jeu sans créer un personnage pour un nouveau concept, en favorisant l'apparition de synergies. Il a retenu les deux idées de Gorak et de Brokk.
+
+### La règle
+
+**Saignement N** : chaque coup qui touche le porteur lui fait perdre N PV en dégâts directs, puis la plaie perd une charge (2, puis 1). Le jeu avait déjà quatre afflictions qui comptent les tours (Poison, Pourriture, Brûlure, Aura glaciale) ; celle-ci compte les **coups**. Les synergies en découlent sans cas particulier :
+
+| Rôle | Qui | Pourquoi |
+| --- | --- | --- |
+| Vide la plaie | Gorak (Furie des vents), Fanchon (deux dés), Naraxes (d6 de Coup de chance) | plusieurs coups dans une action font couler toute la plaie dans la même action |
+| La laisse ouverte | Elaria (esquive), Ysolde (Peur), Morgrut (Attente) | sans coup qui touche, la plaie ne coule pas, mais ne se referme pas non plus |
+| Y trouve une utilité | Aldric (Aura d'immunité) | elle bloque un malus de plus dans le roster |
+
+Moteur : un statut qui s'estompe (`decays`) perd sa charge quand il réagit (`reactions.hurt`), juste après son effet (RESOLUTION § 4).
+
+### Laboratoire : deux passes, la première fausse
+
+La première passe (série 8, 300 combats par duel, règles 0.67.3) imitait la plaie avec les crochets existants : `spentOnHurt`, qui retire une charge **avant** la réaction, et une charge de plus pour compenser. Il restait alors une charge fantôme après le dernier écoulement, et chaque plaie posée par-dessus coulait d'un PV de trop par coup. Elle annonçait Saignée 2 à −0,6 point et Épines acérées à +6,8 à +8,4 ; le vrai statut donne −3,0 et +2,1. Leçon : une imitation de statut qui détourne un crochet doit être vérifiée sur une trace **avec cumul**, pas seulement sur une plaie neuve.
+
+Deuxième passe, sur le vrai statut et le kit livré (400 combats par duel, mêmes graines avant et après) :
+
+| Idée | Victoires | Δ | Pire duel après | Spectacle |
+| --- | --- | --- | --- | --- |
+| Gorak, Saignée 3 (au lieu de 2) | 47,9 → 54,5 % | +6,6 ± 0,8 | Ysolde 62,3 → **71,5 %** | neutre |
+| Gorak, Saignée 4 | 47,9 → 60,1 % | +12,2 ± 1,1 | Ysolde 79,3 % | retours −2,4 |
+| Thaldrin, Coup de griffe qui laisse Saignement 3 | 51,8 → 55,7 % | +3,9 ± 0,6 | Ysolde 67,5 % | retours −1,6 |
+| Thaldrin, même chose avec relance + 1 au lieu de + 3 | 51,8 → 53,9 % | +2,2 ± 0,6 | Ysolde 66,3 % | neutre |
+| Elaria, chaque critique laisse Saignement 1 | 48,8 → 50,8 % | +2,1 ± 0,5 | Morgrut 57,5 % | neutre |
+| Elaria, chaque critique laisse Saignement 2 | 48,8 → 55,9 % | +7,1 ± 0,8 | Morgrut 62,5 % | retours −2,7 |
+| Elaria, Œil de faucon qui laisse aussi Saignement 2 | 48,8 → 54,5 % | +5,8 ± 0,8 | Morgrut 60,0 % | neutre |
+| Brokk, Épines acérées à 1 charge par coup, quelle que soit la pile | 50,4 → 47,9 % | −2,5 ± 0,5 | Aldric 39,8 % | neutre |
+
+Règles 0.68.1 pour ces quatre lignes : la plaie posée par le coup qui touche (critique, griffe) ne coule plus sur ce même coup, elle attend le suivant (RESOLUTION § 5, règle 9). En 0.68.0, elle coulait aussitôt, et ces idées valaient un peu plus (Griffe qui lacère +4,6, Flèche barbelée 2 +9,0). Les autres lignes ne bougent pas : leur plaie est posée hors d'un coup qui touche. L'audit de résolution vérifie la règle.
+
+**Mise en scène (0.68.1, demande de l'utilisateur)** : « un sort qui doit provoquer ». La plaie s'ouvre et se voit (médaillon, compteur), on attend le coup qui la fera couler ; à l'impact de ce coup, un badge de modificateur « Saignement +2 » tombe sous le dé, comme « Critique ×2 », et les PV de la plaie suivent la frappe d'un battement.
+
+### Avant → après (0.67.3 → 0.68.0, roster de 10, 400 combats par duel)
+
+| Compétence | Valeur nette | Duels qui bougent |
+| --- | --- | --- |
+| Rage du sang (+5 PV) → Saignée (Saignement 2) | +5,8 → **+3,3** | Gorak contre Ysolde 58,8 → 62,3 %, Fanchon 47 → 42, Morgrut 54 → 48, Aldric 46 → 40 |
+| Épines → Épines acérées | +3,7 → **+5,0** | Brokk contre Ysolde 51 → 57 %, Gorak 49 → 53, Fanchon 56 → 60, Aldric 44 → 40 |
+
+**Taux de victoire** : de 43,0 (Ysolde) à 54,0 % (Aldric) avant, de **41,9** (Ysolde) à **55,1 %** (Aldric) après. Gorak 50,9 → 47,9, Brokk 48,3 → 50,4 ; les autres bougent de moins d'un point. Pire duel inchangé : Thaldrin contre Ysolde, 64,8 %. Apport du Saignement : 3,6 PV par combat pour Gorak, 4,1 pour Brokk.
+
+### Limites et proposition
+
+- **Ysolde à 41,9 %**, 0,1 point sous le budget (marge ±1,6). Elle perd surtout contre les deux porteurs de plaie. Hypothèse non vérifiée : une plaie n'expire jamais, elle finit donc toujours par couler dans ses combats longs (29 tours). **Proposition, non appliquée** : la *Purification double* (série 3 : elle retire aussi le dernier malus d'Ysolde, donc une plaie ou un poison), mesurée sur les règles 0.68.0 : 41,9 → **43,8 %** (+1,9 ± 0,4), pire duel Naraxes 38 → 40 %. Elle était « trop faible » en 0.36 (+1,0) faute de malus dans le roster ; le Saignement lui en donne.
+- **Gorak à 47,9 %** : dans le budget, mais 3 points sous la Rage du sang. Saignée 3 le remettrait à 54,5 %, au prix de 71,5 % contre Ysolde. Remplacée en 0.70.0 par Pourfendre (plus bas).
+- **Icônes** : le Saignement reprend le cœur fendu de la Brèche ; planche v7 (Saignement, Pourfendre, Épines acérées) prête dans STYLE_BIBLE § 7.
+- Rendu et son non vus : la plaie qui coule se montre comme le poison subi (sans titre, son Ronge).
+
+### 0.70.0 : Pourfendre, l'orc doit toucher pour faire saigner
+
+Proposition de l'utilisateur : « l'orc doit donner un coup pour appliquer un saignement ». Son 1 devient **Pourfendre** : il n'est plus sacrifié, c'est un vrai coup (valeur du dé, Aura de puissance, critique, esquive), et **s'il touche**, il pose Saignement 2. Deux décisions de l'utilisateur : un coup doit toucher pour poser un malus physique (crochet `needsTouch`, vérifié avant tout tirage) ; le 1 est un vrai coup, avec tout ce qui réagit aux coups (Épines acérées, Riposte, jauges de Rétribution, intimidation). La plaie posée par ce coup coule au suivant (règle 9).
+
+Mesures (règles 0.69.0, 400 combats par duel, mêmes graines avant et après) :
+
+| Version du 1 | Gorak | Δ | Pire duel | Spectacle |
+| --- | --- | --- | --- | --- |
+| Saignée 2 (sans coup, avant) | 49,4 % | — | Ysolde 58,5 % | — |
+| Pourfendre, Saignement 1, posé même sur une esquive (première mesure) | 48,1 % | −1,3 ± 1,4 | Ervald 41 % | neutre |
+| Pourfendre, Saignement 2, posé même sur une esquive (première mesure) | 51,9 % | +2,6 ± 1,4 | Ysolde 60 % | retours +1,2, fins serrées +1,7 |
+| **Pourfendre, Saignement 2, s'il touche (livré)** | **51,1 %** | +1,7 | Ysolde 60 % | — |
+| Pourfendre, Saignement 1, s'il touche | 47,8 % | −3,3 ± 0,6 | Ervald 40,8 % | neutre |
+| Pourfendre, Saignement 3, s'il touche | 55,5 % | +4,4 ± 0,7 | Ysolde 63 % | neutre |
+
+Valeur nette de Pourfendre : **+5,0** points ; Gorak ne sacrifie plus que 18 % de ses jets (37 % avant). Roster après : de 43,3 % (Ysolde) à 54,3 % (Ervald), pire duel inchangé (Brokk contre Ervald, 39 %).
+
+## 15. Sixième passe : Aura glaciale et poisons, Furie des vents, druide (livrée en 0.69.0, sauf le druide)
+
+**Demande** (2026-10-20) : l'Aura glaciale d'Ervald, autrefois de poison : comment marche-t-elle, est-elle redondante ? Repasser sur les poisons et harmoniser leur fonctionnement. La Furie des vents : frapper deux fois dès qu'elle se déclenche, sans repasser par le jet de compétence, les 1, 2 et 3 comptant comme valeur de frappe, au lieu de relancer sans fin. Le druide : rework de la dualité, ou retouche de sorts précis, en pensant aux synergies futures et au personnage.
+
+**Méthode** : audit des compétences (300 combats par duel, `logs/skills/2026-10-20-16-15-52_v0.68.0.md`), laboratoire série 9 (400 combats par duel, mêmes graines avant et après, règles 0.68.0, `LAB_SERIES=9`). La Furie en coups bruts demande un crochet du moteur : elle a été mesurée sur une copie du dépôt hors de l'arbre de travail, avec un paramètre `plain` dans `strikeOnce` (ni coup sacrifié, ni coup transformé, ni fenêtre de jet). Ce crochet n'existe pas dans le dépôt : ses idées ne figurent donc pas dans `ideas.ts`.
+
+### Aura glaciale : comment elle marche, et ce qui cloche
+
+**Règle actuelle** : bonus permanent posé sur Ervald par un 3, cumulable. Au début de chaque tour de l'adversaire, juste après ses propres statuts (donc après son Poison), il perd 1 PV par charge en dégâts directs. L'Aura d'immunité l'arrête, la Régénération non. Valeur nette **+4,8** (vue dans 61 % des combats, 0,92 fois par combat).
+
+**Redondante ? Oui, deux fois.**
+- **Avec le Poison du Souffle de la tombe** : même instant, même nature (des PV perdus au début du tour adverse, sans armure), deux médaillons et deux chiffres qui tombent ensemble. Le spectateur voit deux poisons sous deux noms.
+- **Avec la Pourriture du druide** : même profil (1 PV par charge au début de chaque tour de la victime, sans décroître). Seule différence : l'aura est sur Ervald, la Pourriture sur sa victime.
+
+**Elle coûte deux crochets propres** : `onOpponentTurnStart` et `stoppedByImmunity` n'existent que pour elle (moteur, audit, narration, test). Ils sont nés de deux corrections : « se résout quand ? » (0.45.0), puis « l'immunité ne l'arrête pas » (0.50.0). Un vrai Poison aurait réglé les deux d'office.
+
+**Restes du nom** : l'id est encore `poisonAura` (`poison-aura` pour la compétence et l'icône), plusieurs commentaires disent « Aura de poison », l'icône est verte, et PERSONNAGES.md § Morts-vivants décrit encore la règle d'avant la 0.45.0.
+
+### Les afflictions du jeu, côte à côte
+
+| Affliction | Qui la pose | Quand elle coule | Évolution | Valeurs | Immunité | Régénération |
+| --- | --- | --- | --- | --- | --- | --- |
+| Poison | Ervald (Souffle de la tombe, 3), Naraxes (Aura de décoction, 2 par coup) | début du tour de la victime | −1 par tour | une | bloque | s'annulent |
+| Pourriture | Thaldrin (Aura de pourriture, 1 par coup) | début du tour de la victime | jamais | une | bloque | non |
+| Brûlure | Thaldrin (Feux follets) | fin du tour de la victime | 3 tours, puis s'éteint | **deux** (3 PV, 3 tours), une nouvelle remplace l'ancienne | bloque | non |
+| Saignement | Gorak (Pourfendre, 0.70.0 ; Saignée avant), Brokk (Épines acérées) | à chaque coup reçu | −1 par coup | une | bloque | non |
+| Aura glaciale | Ervald (3) | début du tour de la victime | jamais | une | **crochet propre** | non |
+
+Trois axes suffisent à distinguer les afflictions : **le temps qui ronge et s'estompe** (Poison), **le temps qui brûle pour une durée** (Brûlure, en fin de tour), **les coups** (Saignement). La Pourriture et l'Aura glaciale ne font que doubler le Poison sans s'estomper.
+
+### Proposition 1 : l'Aura glaciale pose du Poison
+
+Au début de chacun de ses tours, l'aura pose **1 charge de Poison par charge d'aura** sur l'adversaire. Un seul statut, une seule règle : l'immunité le bloque, la Régénération l'annule, une purge l'enlève, sans crochet propre. La dynamique naît des règles existantes : le Poison perd une charge à chaque tour de la victime, l'aura lui en rend une à chaque tour d'Ervald. **Une charge d'aura fige le poison à sa valeur** : seule, elle fait 1 PV par tour, comme aujourd'hui ; après un Souffle de la tombe, elle garde le poison à 3 par tour au lieu de 3, 2, 1. *Le froid de la tombe conserve le poison* : c'est le chevalier liche « inévitable », qui « a tout son temps ». Deux charges le font grossir d'une charge par tour.
+
+En 0.45.0, cette piste avait été écartée : l'Aura d'immunité bloquait le poison et pas l'aura (Ervald à 31 % contre Gauvain). Depuis la 0.50.0, l'immunité arrête aussi l'aura : l'objection est tombée.
+
+| Variante | Ervald | Δ | Pire duel après | Lecture |
+| --- | --- | --- | --- | --- |
+| Cumulable, sans compensation | 52,0 → 55,4 % | +3,4 ± 0,7 | Ysolde 56,0 → 63,5 % | dans le budget, mais pèse sur Ysolde, déjà la plus basse |
+| Plafonnée à 2 charges | 52,0 → 55,2 % | +3,2 ± 0,7 | Ysolde 62,7 % | comme cumulable : 3 charges sont rares |
+| Plafonnée à 1 charge | 52,0 → 52,2 % | +0,2 ± 0,7 | Ysolde 58,3 % | neutre, mais environ un 3 sur trois tomberait à vide (1,5 aura posée par combat où on la voit) |
+| **Cumulable, Souffle de la tombe à Poison 2** | 52,0 → **49,2 %** | −2,8 ± 0,9 | Fanchon 45,8 → 41,5 % | **recommandée** : aucun 3 perdu, Ervald revient au milieu du roster, Ysolde épargnée |
+| Plafonnée à 1, Souffle à 2 | 52,0 → 45,5 % | −6,5 ± 0,9 | Fanchon 39,0 % | trop faible |
+
+Spectacle (cumulable, Souffle 2) : combats de 19,0 → 19,3 tours, meneur 0,53 → 0,56, retours 60,8 → 59,0 %.
+
+**Ce que la livraison toucherait** : `poisonAura` devient `frostAura` (id, compétence `frost-aura`, clé d'icône) ; `onOpponentTurnStart` et `stoppedByImmunity` disparaissent du moteur, de l'audit (`aura au tour adverse`, `aura arrêtée par l’immunité`), de la narration et des tests ; un test de la dynamique « fige » dans `combat.test.ts` ; `poison` cité dans `modules.test.ts` ; STATUTS, RESOLUTION, PERSONNAGES (§ Morts-vivants, réécrit), FEATURES. À vérifier à l'écran : l'aura n'a plus de chiffre propre, elle ajoute une charge au médaillon de Poison au début du tour d'Ervald (une capture). L'icône de l'aura est déjà à peindre (TODO § 15).
+
+**Synergies ouvertes** : un seul Poison nourri par trois sources (Souffle, Aura glaciale, Aura de décoction) ; toute relique ou tout édit « poison » touche Ervald et Naraxes à la fois ; la Purification double proposée pour Ysolde (§ 14) devient son contre ; la Fleur de vie du druide l'annule charge par charge.
+
+### Proposition 2 : la Furie des vents en coups bruts
+
+**Règle actuelle** (0.50.0) : sur un 2, Gorak frappe deux fois tout de suite, chaque coup avec son propre jet complet. Un 1, un 2 ou un 3 pendant ces coups déclenche la compétence et ne frappe pas ; un 2 relance une Furie, trois fois au plus par action. Mesures (Gorak contre le roster, 400 combats par duel) :
+
+| Mesure | Valeur |
+| --- | --- |
+| Furies par combat | 1,32 (1,02 sur le jet de l'action, 0,30 relancées pendant une Furie) |
+| Furies qui en relancent au moins une | 22,5 % ; 6,5 % vont jusqu'au plafond de trois |
+| Coups de Furie sacrifiés par un 1, un 2 ou un 3 | **36,5 %** (un tiers chacun) |
+| Valeur nette | **+26,9 points**, drapeau « écrasante » : la Furie est le cœur de l'orc |
+
+L'impression d'interminable est fondée, et un coup de Furie sur trois ne frappe pas. **Proposition de l'utilisateur** : les deux coups partent tout de suite, sans jet de compétence : leurs 1, 2 et 3 frappent pour leur valeur. Esquive et critique restent tirés à chaque coup. Plus de relance : la Furie dure deux coups, toujours.
+
+Ce que coûte la règle : les compétences gagnées pendant la rafale (Saignée, nouvelle Furie, charge d'Aura de puissance) valaient plus que les dégâts des coups sacrifiés. À dé égal, Gorak s'effondre :
+
+| Variante | Gorak | Δ | Pire duel après | Lecture |
+| --- | --- | --- | --- | --- |
+| Coups bruts, d8 (dé actuel) | 47,9 → 39,8 % | −8,1 ± 1,3 | Aldric 35,0 % | hors budget |
+| Coups bruts, d10 | 47,9 → 57,9 % | +10,0 ± 1,8 | Ysolde 72,3 % | duel extrême |
+| Coups bruts, d10, critique 14 % | 54,3 % | +6,4 ± 1,8 | Ysolde 69,0 % | duel extrême |
+| Coups bruts, d10, critique 12 % | 52,4 % | +4,5 ± 1,8 | Ysolde 65,8 % | à la limite |
+| Coups bruts, d10, critique 10 % | 50,5 % | +2,6 ± 1,8 | Ysolde 63,7 % | possible, mais Gorak perd ses critiques fréquents (sa fiche) |
+| **Coups bruts, d9, critique 18 %** | 47,9 → **49,2 %** | +1,3 ± 1,7 (non significatif) | Ysolde 62,3 → **60,0 %** | **recommandée** : neutre, garde les 18 % de critique, adoucit le pire duel |
+| Coups bruts, d9, critique 14 % | 45,6 % | −2,3 ± 1,7 | Aldric 39,3 % | inutile |
+
+Spectacle (d9) : combats de 17,1 tours inchangés, retours 60,6 → 61,9 %, fins serrées 39,3 → 40,6 %. Furies à l'écran : 0,90 par combat (61 % des combats), contre 1,32 aujourd'hui : moins de Furies, mais chacune frappe deux fois, à coup sûr. Le d9 rend à Gorak une partie du d10 qu'il avait perdu en 0.50.0 pour compenser la Furie instantanée.
+
+**Ce que la livraison toucherait** : les coups instantanés (`instantStrikes`, la Furie seulement) deviennent bruts dans `combat.ts` (ni `forfeits`, ni `reshapes`, ni fenêtres de jet), et `INSTANT_CHAIN` disparaît ; un drapeau sur `Attack` (coup brut) pour que l'audit accepte un 1 à 3 qui frappe (la copie mesurée levait « coup sacrifié incohérent » et « compétence mal déclenchée », attendus) et que l'écran ne l'annonce pas comme une compétence ; texte du statut ; Gorak au d9 ; RESOLUTION § 2, PERSONNAGES § Orcs, FEATURES ; test dans `combat.test.ts` et contrôle dans `audit.test.ts` ; empreinte de non-régression mise à jour.
+
+**Synergies ouvertes** : deux coups qui touchent presque toujours font de Gorak le meilleur porteur des effets « par coup qui touche » : sa Saignée coule deux fois par Furie, les Épines acérées de Brokk le punissent deux fois, une future relique « à chaque coup » se lit d'avance.
+
+### Proposition 3 : le druide, la dualité portée par ses deux auras
+
+**État** : Thaldrin 51,8 %, pire duel Ysolde 35/65, à la limite du budget. Ses six compétences, valeur nette (audit 0.68.0) et part des combats où on les voit : Charge +8,6 (38 %), Aura de pourriture +6,0 (36 %), Coup de griffe +4,5 (34 %), Feux follets +4,1 (39 %), Fleur de vie +3,1 (37 %), Écorce épaisse +2,4 (39 %). Aucune n'est cassée ; la dualité, elle, se réduit à l'alternance : les deux formes ne se parlent pas. Deux remarques de structure :
+- **Les Feux follets sont le seul 3 du roster qui ne pose pas d'aura** (règle des races : le 3 donne une aura permanente) ;
+- **l'Aura de pourriture double le Poison** (voir le tableau des afflictions), et c'est elle qui fait le duel contre Ysolde : la Pourriture use ses soins sans fin.
+
+La fiche du personnage donne la piste : *« l'ours qui garde rancune de ce que l'homme a subi, l'homme qui panse ce que l'ours a pris »*. Deux statuts d'essai la traduisent, sans crochet nouveau :
+- **Rancune** : son prochain coup qui touche fait +N, puis la rancune retombe (même crochet que la Fausse note, `spentOnHit`) ;
+- **Sève** : au début de son prochain tour, il regagne N PV (soin et durée d'un tour, existants).
+
+**Offerts en passif, ces liens écrasent tout** : un effet qui agit à chaque coup encaissé vaut cher.
+
+| Passif (sans compétence en échange) | Thaldrin | Δ | Pire duel après |
+| --- | --- | --- | --- |
+| Rancune +1 (coups encaissés sous forme humaine) | 58,8 % | +7,0 ± 0,9 | Ysolde 70,0 % |
+| Rancune +2 / +3 | 66,4 / 72,1 % | +14,6 / +20,3 | Fanchon 78,5 / 87,8 % |
+| Sève 1 / 2 (coups encaissés sous forme d'ours) | 56,9 / 62,8 % | +5,2 / +11,0 | Ysolde 67,8 / 71,5 % |
+| Rancune +1 et Sève 1 | 64,1 % | +12,3 ± 1,1 | Fanchon 75,5 % |
+| La Charge fait éclater l'Écorce restante (dégâts directs) | 52,0 % | +0,2 ± 0,2 | vue dans 4 % des combats : écartée |
+
+**Gagnés au dé, à la place des deux 3, ils tiennent le budget.** Chaque lien devient l'aura de sa forme, permanente et cumulable comme toutes les auras, et agit sur **chaque coup encaissé**, quelle que soit la forme du moment :
+
+| Variante | Thaldrin | Δ | Pire duel après |
+| --- | --- | --- | --- |
+| Aura de rancune +1 / +2 au lieu de la Pourriture | 45,7 / 48,5 % | −6,1 / −3,3 | Aldric 39,5 / 42,0 % |
+| **Aura de rancune +3 au lieu de la Pourriture** | **51,3 %** | −0,4 ± 0,6 (non significatif) | Ysolde 64,8 → **59,5 %** |
+| Aura de sève 1 / 3 au lieu des Feux follets | 48,4 / 55,6 % | −3,4 / +3,9 | Ysolde 61,5 / 65,0 % |
+| **Aura de sève 2 au lieu des Feux follets** | **52,2 %** | +0,4 ± 0,8 (non significatif) | Ysolde 63,5 % |
+| Kit : sève 2 et rancune +2 / sève 3 et rancune +3 | 48,1 / 53,9 % | −3,7 / +2,2 | Brokk 40,5 / Morgrut 60,8 % |
+| **Kit : Aura de sève 2 (homme) et Aura de rancune +3 (ours)** | **50,8 %** | −0,9 ± 1,0 (non significatif) | **Fanchon 57,3 %** : tous ses duels entre 43 et 57 % |
+
+Spectacle du kit : combats de 18,6 → 20,0 tours, meneur 0,43 → 0,49 changements par combat, retours 63,8 → 62,9 %, fins serrées 42,6 → 40,3 %.
+
+Deux chemins, au choix de l'utilisateur :
+- **A. Retouche d'un seul sort** : l'Aura de pourriture devient l'**Aura de rancune** (+3 sur le prochain coup qui touche, par coup encaissé et par charge). Neutre, et le pire duel du druide passe de 65 à 59,5 % contre Ysolde. L'ours se venge de tout ce que le druide encaisse ; les Feux follets, choisis par l'utilisateur en 0.50.0, restent.
+- **B. La dualité** : en plus, les Feux follets deviennent l'**Aura de sève** (2 PV au début de son prochain tour, par coup encaissé et par charge). L'homme soigne, protège et panse (Fleur de vie, Écorce, Sève) ; l'ours charge, déchire et rend les coups (Charge, Griffe, Rancune). Neutre, et le roster le plus resserré des mesures de la série : aucun duel du druide au-delà de 57/43. Prix : la Brûlure n'a plus de porteur, et le spectacle des dégâts en fin de tour adverse disparaît.
+
+Dans les deux cas, la Pourriture et l'Aura de pourriture quittent le jeu : l'harmonisation des poisons s'en trouve finie (il ne reste que Poison, Brûlure et Saignement, un axe chacun). **Non mesuré** : une version fidèle à la lettre de la fiche (la rancune ne s'arme que sous forme humaine, la sève que sous forme d'ours) ; une aura ne sait pas lire la forme, il faudrait un petit ajout au moteur, et des valeurs plus hautes pour la même force.
+
+**Synergies ouvertes** : le coup encaissé devient la ressource du druide. Il répond aux adversaires qui frappent souvent (Fanchon et ses deux dés, la Furie de Gorak, le Coup de chance de Naraxes) : des duels typés, sans contre écrit à la main. Une relique « quand il encaisse » ou une Armure temporaire qui absorbe sans empêcher le coup de compter (l'Écorce) deviennent des choix de construction.
+
+### Questions à trancher avant la passe
+
+1. **Aura glaciale** : cumulable avec Souffle à 2 (recommandée), plafonnée à 1 charge (neutre, des 3 perdus), ou cumulable sans compensation (55,4 %) ?
+2. **Furie des vents** : d9 et 18 % de critique (recommandée), ou d10 et 10 % ?
+3. **Druide** : chemin A (Aura de rancune seule), chemin B (les deux auras), ou rien ?
+4. **Brûlure** : c'est la dernière affliction à deux valeurs (3 PV, 3 tours, une nouvelle remplace l'ancienne). La passer à une seule valeur, sa durée égale à ses dégâts (Brûlure 3 : 3 PV à la fin de ses 3 prochains tours) ? Sans effet sur l'équilibre ; sans objet si le chemin B retire les Feux follets.
+
+### Limites
+
+- Le laboratoire ne modifie qu'un personnage à la fois : l'effet sur le taux global des adversaires (Ysolde surtout) se mesurera au `npm run balance` de la livraison.
+- La Furie en coups bruts est mesurée sur une copie patchée, pas sur le dépôt ; le crochet reste à écrire, avec son audit.
+- Rien n'a été vu à l'écran ni entendu : le médaillon de Poison qui grossit au tour d'Ervald, les badges des coups bruts (un 2 qui frappe ne doit pas s'annoncer comme une compétence), les nouvelles auras du druide (icônes à peindre : Aura de rancune, Aura de sève).
+
+### Décisions et livraison (0.69.0)
+
+Choix de l'utilisateur, puis livraison mesurée (`npm run balance`, 400 combats par duel, règles 0.69.0) :
+
+| Point | Décision | Après |
+| --- | --- | --- |
+| Aura glaciale | cumulable, **sans compensation** (livrée) : 1 Poison par charge au début du tour d'Ervald ; crochets `onOpponentTurnStart` et `stoppedByImmunity` retirés | Aura glaciale +7,5 points, Souffle de la tombe +11,9 ; Ervald 52,0 → **54,7 %** ; Brokk contre Ervald 39 % |
+| Furie des vents | coups bruts, **d9 et 19 % de critique** (variante de l'utilisateur, 19 % au lieu des 18 % recommandés) | Furie +18,6 points ; Gorak 47,9 → **49,4 %** |
+| Brûlure | une seule valeur, durée égale à la valeur (livrée, `turnsFromStacks`) ; Feux follets en Brûlure 3, même force | Feux follets +3,5 points ; Thaldrin 51,8 → 50,5 % |
+| Purification double d'Ysolde | livrée, devenue nécessaire : avec l'aura cumulable, Ysolde tombait à **41,3 %** sans elle | Purification +18,0 points ; Ysolde 41,9 → **43,4 %** (43,4 % au laboratoire) |
+| Druide | l'utilisateur veut aller plus loin que les chemins A et B : rework de la dualité, proposition à venir (§ 16) | non livré |
+
+Roster : de 43,4 % (Ysolde) à 54,8 % (Aldric), aucun duel hors limites. Duels les plus déséquilibrés : Brokk contre Ervald 39 %, Brokk contre Fanchon 60 %, Naraxes contre Ysolde 60 %.
+
+## 16. Le druide : une aura sur chaque 3, et le relais des formes (livré en 0.71.0)
+
+**Demande** (2026-10-20) : aller plus loin que les chemins A et B du § 15. Donner une aura au 3 de l'homme, puis articuler une mécanique de jeu identitaire autour de la dualité.
+
+**Méthode** : laboratoire, série 10 (400 combats par duel, mêmes graines avant et après, règles 0.69.0, Thaldrin à 50,5 %). La métamorphose provoquée change une règle du moteur : elle a été mesurée sur une copie du dépôt, supprimée depuis, comme la Furie en coups bruts au § 15.
+
+### Ce qui manque au druide
+
+- **Les deux formes ne se parlent pas.** L'alternance est subie (décision de l'utilisateur, 0.35.0 : il change de forme à chacun de ses tours). Rien de ce que fait l'homme ne compte pour l'ours, ni l'inverse : seuls ses statuts passent d'une forme à l'autre (Régénération, Armure temporaire, Aura de pourriture), sans lien de l'une à l'autre.
+- **Le 3 de l'homme n'est pas une aura** : c'est le seul 3 du roster dans ce cas (Feux follets, une Brûlure).
+- **Ses deux 3 sont des afflictions**, et l'Aura de pourriture double le Poison (§ 15). C'est elle qui fait son pire duel : la Pourriture use les soins d'Ysolde sans fin.
+- **Chaque compétence de forme se voit peu** : dans 34 à 39 % des combats (audit 0.68.0), puisqu'il faut le bon chiffre dans la bonne forme.
+
+Ce que doit faire la mécanique : se voir dans **chaque** combat, se dire en une phrase, aller **dans les deux sens**, et suivre la fiche du personnage : *« l'ours qui garde rancune de ce que l'homme a subi, l'homme qui panse ce que l'ours a pris »*.
+
+### Piste écartée : un relais compté coup par coup
+
+Chaque coup encaissé sous forme humaine arme +1 sur le prochain coup qui touche (Rancune) ; chaque coup encaissé sous forme d'ours rend 1 PV au tour suivant (Sève).
+
+| Variante | Thaldrin | Pire duel après |
+| --- | --- | --- |
+| Relais 1/1, sans rien d'autre | 62,9 % (+12,4) | Fanchon 45,5 → **75,5 %** |
+| Relais 1/1, auras +2/+1 au lieu de la Pourriture et des Feux follets | 56,9 % | Fanchon 76,5 % |
+| Même chose, griffe +0 et écorce 4 | 51,7 % | Fanchon 72,0 % |
+| Même chose, griffe +0 et critique 4 % | 51,1 % | Fanchon 71,5 % |
+
+Compté par coup, le relais écrase les adversaires qui frappent deux fois par action (Fanchon et ses deux dés) : aucune compensation de stats ne le ramène sous 65/35. **Écarté.**
+
+### Proposition A, recommandée : le relais par tour
+
+Le relais devient binaire : **touché au moins une fois** pendant le tour adverse, la forme du moment transmet quelque chose à l'autre.
+
+| | Relais (chaque combat) | 1 | 2 | 3 : l'aura de la forme |
+| --- | --- | --- | --- | --- |
+| **Homme** (soigner, protéger) | **Rancune** : s'il est touché, le prochain coup de l'ours qui touche fait **+1** | Fleur de vie (Régénération 2, 3 tours) | Écorce épaisse (Armure temporaire 7) | **Aura de sève** (au lieu des Feux follets) : la Sève vaut **4** |
+| **Ours** (charger, déchirer) | **Sève** : s'il est touché, l'homme regagne **1 PV** au début de son tour | Charge (valeur maximale du dé) | Coup de griffe (relance + 3) | **Aura de rancune** (au lieu de l'Aura de pourriture) : la Rancune vaut **+4** |
+
+Une nouvelle Rancune ou une nouvelle Sève remplace l'ancienne (une seule à la fois). La Rancune part sur le premier coup qui touche, la Sève au début du tour suivant.
+
+| Variante | Thaldrin | Δ | Pire duel après |
+| --- | --- | --- | --- |
+| Relais 1/1, en gardant la Pourriture et les Feux follets | 60,6 % | +10,2 ± 1,0 | Ysolde 59,3 → 68,5 % |
+| Relais 1/1, auras +2/+2 | 50,1 % | −0,4 ± 1,3 | Morgrut 53,5 → 57,3 % |
+| Relais 1/1, auras +3/+2 | 51,2 % | +0,7 ± 1,2 | Morgrut 58,8 % |
+| **Relais 1/1, auras +3/+3** | **52,1 %** | +1,7 ± 1,2 | **Morgrut 59,5 %** |
+| Relais 1/1, auras +4/+4 | 55,0 % | +4,6 ± 1,2 | Morgrut 64,3 % |
+| Relais 2/2 ou 3/3, auras +3/+3 | 65,0 / 74,7 % | +14,5 / +24,2 | Morgrut 75,5 / 85,0 % |
+
+Spectacle (relais 1/1, auras +3/+3) : 7,7 moments par combat, dans **100 %** des combats (contre 34 à 39 % pour chaque compétence de forme) ; combats de 18,7 → 20,0 tours, meneur 0,44 → 0,48, retours 63,8 → 62,4 %, fins serrées 42,1 → 40,9 %.
+
+**Pourquoi A** :
+- l'alternance, décidée par l'utilisateur, reste ; elle devient un **échange** : chaque tour dit ce que la forme précédente laisse à la suivante, et le médaillon le montre ;
+- les deux 3 deviennent des auras, chacune attachée à sa forme et à son lien ;
+- la Pourriture et la Brûlure quittent le jeu (la Brûlure reste au registre, sans porteur) : il ne reste que le Poison et le Saignement comme afflictions du roster ;
+- les compétences du 1 et du 2 s'y emboîtent sans retouche : l'Écorce absorbe le coup, mais l'homme est touché, la Rancune s'arme ; la Charge (valeur maximale) porte la Rancune, c'est le coup que l'on attend ; la Fleur de vie et la Sève s'additionnent.
+
+**Synergies ouvertes** : le coup encaissé devient la ressource du druide. Contre un adversaire qui frappe à chaque tour, le relais tourne à plein ; contre une esquiveuse ou la Peur d'Ysolde, il cale. La Purification d'Ysolde peut lui voler une Rancune armée ; une relique « quand il encaisse » ou « au changement de forme » parlerait directement à son identité.
+
+**Ce que la livraison toucherait** : deux statuts (Rancune : +N sur le prochain coup qui touche, `spentOnHit` ; Sève : N PV au début du tour suivant), deux auras, des compétences de forme sur le coup encaissé (`hurt` + `form`, existant). Mesurées, les auras ne comptent qu'une charge (le relais vaut +3 avec l'aura, quelle que soit la pile). Les rendre cumulables comme les autres demande un petit ajout au moteur (une valeur d'effet qui grandit avec les charges d'un statut), et une nouvelle mesure. Il faudrait quatre icônes à peindre : Rancune, Sève, Aura de rancune, Aura de sève.
+
+### Proposition B : la métamorphose provoquée
+
+L'alternance cesse : **l'ours sort quand on frappe l'homme**. Au début de son tour, le druide est ours s'il a été touché depuis son dernier tour, homme sinon. *Il porte en lui un ours qu'il ne maîtrise pas* (sa fiche) : c'est l'adversaire qui le réveille.
+
+| Variante | Thaldrin | Δ | Pire duel après |
+| --- | --- | --- | --- |
+| Métamorphose provoquée seule | 52,5 % | +2,0 ± 1,4 | Gorak 54,0 → 58,5 % |
+| Variante : il change de peau à chaque tour où il est touché | 49,6 % | −0,9 ± 1,4 | Aldric 40,5 % |
+| Provoquée, et les auras du relais sans relais de base | 43,6 % | −6,8 ± 1,6 | Brokk 33,8 % |
+| Provoquée, et le relais 1/1 avec auras +3/+3 | 55,1 % | +4,6 ± 1,7 | Gorak 62,3 % |
+
+Il est ours dans 58 % de ses actions (47 % aujourd'hui) : 80 % contre Fanchon, 64 % contre Gorak et Morgrut, 50 % contre Elaria. Il change de forme deux fois moins souvent (0,44 changement par action contre 0,92). Le combat choisit sa forme : des duels typés, mais **c'est revenir sur la décision « il change de forme à chaque tour »**, et la règle demande un ajout au moteur. Les auras sur les 3 y trouvent mal leur place (−6,8 seules).
+
+### Questions à trancher
+
+1. **A (relais par tour) ou B (métamorphose provoquée)** ? A est recommandée.
+2. **Valeurs de A** : auras +3/+3 (52,1 %, recommandée), ou +2/+2 (50,1 %, plus prudente) ?
+3. **Auras du druide** : plafonnées à une charge, comme mesuré et comme l'Aura d'immunité, ou cumulables comme les autres (petit ajout au moteur, puis nouvelle mesure) ?
+4. **Noms** : Rancune, Sève, Aura de rancune, Aura de sève, ou d'autres ?
+
+### Limites
+
+- Le laboratoire ne change que Thaldrin : l'effet sur les autres se mesurera au `npm run balance` de la livraison.
+- La proposition B a été mesurée sur une copie patchée du moteur, pas sur le dépôt.
+- Rien n'a été vu à l'écran : les médaillons de Rancune et de Sève à chaque tour, et le coup de l'ours qui porte la Rancune.
+
+### Décision et livraison (0.71.0)
+
+- **Proposition A** retenue par l'utilisateur : alternance forcée gardée, relais des formes (touché en homme : Rancune 1, dépensée par le prochain coup qui touche ; touché en ours : Sève 1, soignée au début du tour de l'homme), Aura de sève (3 de l'homme) et Aura de rancune (3 de l'ours).
+- **Auras à +2 par charge** (choix de l'utilisateur), **cumulables** comme les autres auras (règle commune) ; plafonnées à une charge au laboratoire : 50,1 %.
+- **Mesures** (`npm run balance`, 400 combats par duel) : Thaldrin **50,7 %**, ses duels de 45 à 58 % ; roster de 43,8 % (Ysolde) à 54,2 % (Ervald), pire duel inchangé (Brokk contre Ervald, 39 %). Valeurs nettes : Rancune +9,0 (3,8 par combat), Charge +8,9, Sève +7,7 (3,0 par combat), Coup de griffe +5,5, Écorce +3,5, Fleur de vie +2,6, Aura de rancune +0,4, Aura de sève −1,0.
+- **Les auras restent faibles** : à +3 par charge, Thaldrin mesuré à 52,1 % au laboratoire ; l'utilisateur garde +2. Levier disponible si le druide fléchit.
+- Moteur : `bonusPer` sur `applyStatus`. La Brûlure, la Pourriture et l'Aura de pourriture n'ont plus de porteur.
+
+## 17. Le druide, deuxième refonte : l'homme lance, l'ours frappe, le Bosquet pousse (refusée : trop complexe, voir § 18)
+
+**Demande** (2026-10-20) : le druide de la 0.71.0 reste « trop mou, il ne se passe rien, c'est lent ». Cadre donné par l'utilisateur : sous forme humaine, il ne fait que lancer des sorts (1 et 2), et son 3 est une aura ; sous forme d'ours, il ne lance plus rien et frappe avec +3 ; l'aura, commune ou par forme, est à définir ; introduire le Saignement chez l'ours ; pour la magie, sortir du cadre, par exemple un nouvel élément qui fait un événement sur la scène.
+
+**Méthode** : laboratoire, série 11 (400 combats par duel, sauf les deux premières grilles à 300, règles 0.71.2). Tout s'exprime avec les briques existantes : sous forme humaine, une compétence de début de tour pose un statut qui ramène son dé à un d3 (chaque jet est un sort) ; sous forme d'ours, un statut +3 ; le Bosquet, un statut d'aura lu par des compétences de début de tour selon la forme.
+
+### Le constat
+
+| Mesure (Thaldrin 0.71.2) | Valeur |
+| --- | --- |
+| Tours par combat | 20,0 (le roster : de 15,2 à 29,6) |
+| Jets sans dégâts | 20,8 % |
+| Relais | 3,8 Rancunes de +1 et 3,0 Sèves de 1 PV par combat : des chiffres trop petits pour se voir |
+
+### Le cadre seul ne suffit pas
+
+| Kit (homme d3, ours +3 sans compétence) | Thaldrin | Tours |
+| --- | --- | --- |
+| Fleur de vie / Écorce épaisse, sans Bosquet | 18,5 % | 27,9 |
+| Fleur de vie / Feux follets, sans Bosquet | 24,1 % | 21,4 |
+| Fleur de vie / Feux follets, Bosquet 3 PV / racines 3 | 70,3 % | 20,6 |
+| Fleur de vie / Racines (perte d'action), Bosquet 3 / 3, griffes | 79,4 % | 23,6 |
+
+Un homme qui ne frappe plus doit **faire mal avec ses sorts**, sinon le druide s'effondre ; les sorts défensifs et le contrôle (Racines) allongent les combats au lieu de les accélérer. Le Bosquet est le levier le plus fort : chaque point par palier vaut une dizaine de points de victoire.
+
+### Proposition : l'homme lance, l'ours frappe, le Bosquet pousse
+
+| | 1 | 2 | 3 | Toujours |
+| --- | --- | --- | --- | --- |
+| **Homme** (son dé devient un d3 : chaque jet est un sort) | **Feux follets** : Brûlure 3 sur l'adversaire | **Lance d'épines** : 5 dégâts directs | **Bosquet** (aura, cumulable) | ne frappe jamais |
+| **Ours** (aucun sort) | — | — | — | chaque coup fait **+3** (ses 1 à 3 frappent aussi) ; **Griffes** : chaque coup qui touche laisse **Saignement 1** |
+| **Bosquet** (une aura pour les deux formes) | | | | au début du tour de l'homme, il le soigne de 1 PV par palier ; au début du tour de l'ours, ses racines frappent l'adversaire, 1 dégât par palier (2 paliers au plus mesurés) |
+
+**Le Bosquet, l'élément hors cadre** : une aura qui ne vit pas en halo autour du druide, mais **sur la scène**. Un arbre pousse dans l'arène, du côté du druide, et grandit à chaque 3 de l'homme (pousse, arbuste, arbre). Il a deux visages, comme le druide : quand l'homme agit, la sève coule de l'arbre vers lui ; quand l'ours agit, les racines jaillissent du sol sous l'adversaire. C'est le premier élément de décor qui agit pendant un combat. Il ouvre une piste (TODO § 16) : des effets d'arène, des objets posés sur la scène par d'autres personnages.
+
+| Variante | Thaldrin | Δ | Pire duel | Tours | Fins serrées |
+| --- | --- | --- | --- | --- | --- |
+| Aujourd'hui (0.71.2) | 50,7 % | | Ysolde 55 % | 20,0 | 40,9 % |
+| Lance d'épines 6, griffes Saignement 1 | 56,5 % | +5,8 ± 2,1 | Ysolde 66,5 % | 18,0 | 43,1 % |
+| **Lance d'épines 5, griffes Saignement 1** | **52,9 %** | +2,1 ± 2,1 | Ysolde 63,7 % | **18,3** | **43,7 %** |
+| Lance d'épines 4, griffes Saignement 1 | 48,7 % | −2,0 ± 2,1 | Ysolde 59,8 % | 18,6 | 43,4 % |
+| Lance d'épines 6, griffes sur les critiques seulement (Saignement 3) | 52,5 % | +1,8 ± 2,1 | Ysolde 62,3 % | 18,4 | 42,3 % |
+| Lance d'épines 6, sans griffes | 50,7 % | 0,0 ± 2,1 | Ysolde 60,0 % | 18,6 | 43,1 % |
+| Bosquet qui soigne 2 sans racines | 53,8 % | +3,1 ± 2,1 | Brokk 65,8 % | 20,4 | 40,9 % |
+| Fleur de vie / Lance d'épines 6 (un homme soigneur) | 46,6 % | −3,5 ± 2,4 | Ervald 36,3 % | 21,9 | 36,7 % |
+
+**Pourquoi** : le combat du druide passe de 20,0 à 18,3 tours et devient plus serré (fins serrées 40,9 → 43,7 %). À chaque tour il se passe quelque chose de visible : un sort (pas un jet sacrifié), ou un coup d'ours qui touche presque toujours et laisse une plaie, plus le Bosquet au début du tour. Le Saignement trouve un porteur naturel : chaque coup de griffes ouvre une plaie, et le coup suivant de l'ours la fait couler. L'homme ne soigne plus que par son Bosquet : il devient le mage, l'ours la bête.
+
+**Risque** : Ysolde à 63,7 % contre lui, sous le plafond de 65 % mais c'est la plus basse du roster ; la Lance à 4 la ramène à 59,8 %.
+
+### Ce que la livraison demanderait
+
+- **Moteur** : des stats par forme (`forms[].stats` : le d3 de l'homme), et un bonus de dégâts de forme (+3 de l'ours) ; le Bosquet comme statut qui agit selon la forme du porteur (ou des compétences de début de tour, comme au laboratoire) ; un effet de soin ou de dégâts qui grandit avec les charges d'un statut (`bonusPer`, aujourd'hui sur `applyStatus` seulement).
+- **Écran** : un composant nouveau, le Bosquet sur la scène (trois tailles, un jaillissement de racines, un filet de sève), et un dé d3 pour l'homme.
+- **Images** : l'arbre en trois tailles et les racines (prompts à écrire, STYLE_BIBLE), les icônes Lance d'épines, Griffes, Bosquet.
+- Retirés : Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais (Rancune, Sève) et ses deux auras.
+
+### Questions à trancher
+
+1. **Lance d'épines à 5** (52,9 %) ou **à 4** (48,7 %, plus douce pour Ysolde) ?
+2. **Griffes** : Saignement 1 à chaque coup qui touche (recommandé), ou Saignement 3 sur les critiques seulement ?
+3. **Le Bosquet sur la scène** : d'accord pour un élément de décor qui pousse et agit ? Il demande des images.
+4. **L'homme n'est plus soigneur** (seul le Bosquet soigne) : acceptable pour sa fiche, « il soigne sous sa forme d'homme » ?
+
+## 18. Le druide simple : un mage, une bête, une aura (livré en 0.73.0)
+
+**Retour de l'utilisateur sur le § 17** : non. « On n'arrive déjà pas à définir le druide dans sa forme actuelle ; un Bosquet ajouterait une couche de complexité. » Le cadre reste le sien : l'homme ne fait que lancer des sorts (1 et 2) et pose une aura sur un 3 ; l'ours ne lance rien, frappe à +3 et fait saigner.
+
+### D'abord, le définir en une phrase
+
+> **Un tour sur deux, l'homme lance la foudre ou le feu ; l'autre tour, la bête frappe et déchire.**
+
+Chaque forme a un seul verbe, et aucune règle ne relie les deux formes en dehors de l'aura. Ce qui disparaît : les six compétences de forme, le relais (Rancune, Sève) et ses deux auras. Ce qui reste à retenir : 2 sorts, 1 aura, 2 règles de forme (le d3 de l'homme, le +3 de l'ours) et les griffes.
+
+### Le sort qui fait un événement sur la scène, sans règle en plus
+
+Le « hors cadre » demandé passe par l'écran, pas par une mécanique. **La Foudre** assombrit l'arène un instant et un éclair tombe sur l'adversaire ; **les Feux follets** tournent autour de lui tant qu'il brûle, avec l'orbite de lucioles qui existe déjà (`Fighter.tsx`, `firefly-orbit`). Le joueur voit un sort à chaque tour de l'homme, mais il n'y a rien de plus à comprendre.
+
+### Une erreur de mesure corrigée
+
+Au laboratoire, le d3 de l'homme et le +3 de l'ours sont imités par deux statuts posés au début de chaque tour. Comme ce sont des bonus, la Purification d'Ysolde les retirait à la place d'un vrai bonus : elle perdait son coup, et le druide écrasait Ysolde (de 93 à 99 % dans les essais). Ces statuts sont maintenant rangés à part, hors de portée des purges, comme le seraient de vraies stats de forme. **Les pires duels contre Ysolde du § 17 étaient faussés par cette imitation.**
+
+### Mesures (série 12, 400 combats par duel, Thaldrin 0.71.2 à 50,7 %, 20,0 tours)
+
+| Homme (1 / 2) | Aura | Griffes | Thaldrin | Pire duel | Tours | Fins serrées |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Foudre 5 / Feux follets (Brûlure 3)** | **sauvage, +2 par charge aux coups de l'ours** | **Saignement 1** | **51,5 %** | **Brokk 63,7 %** | **17,2** | **45,2 %** |
+| Foudre 4 / Feux follets | sauvage | Saignement 1 | 47,7 % | Brokk 60,5 % | 17,5 | 44,4 % |
+| Foudre 6 / Feux follets | sauvage | aucune | 49,8 % | Brokk 61,5 % | 17,4 | 45,7 % |
+| Foudre 6 / Soin 6 (un homme qui soigne) | sauvage | Saignement 1 | 49,6 % | Brokk 61,8 % | 20,0 | 41,2 % |
+| Foudre 5 / Feux follets | nature, +2 aux coups de l'ours et à la Foudre | Saignement 1 | 55,2 % | Brokk 67,0 % | 17,0 | 44,6 % |
+| Foudre 4 / Feux follets | nature | Saignement 1 | 51,9 % | Brokk 65,0 % | 17,2 | 44,2 % |
+| Foudre 6 / Racines (l'adversaire perd son action) | nature | Saignement 1 | 63,0 % | Brokk 74,3 % | 19,4 | 42,9 % |
+| Foudre 6 / Soin 6 | soin de 2 par charge à chaque tour | Saignement 1 | 66,7 % | Brokk 80,8 % | 28,3 | 27,1 % |
+
+Ce que montrent les mesures :
+- **Le kit recommandé accélère et resserre** : 20,0 → 17,2 tours (le druide passe parmi les combats rapides du roster, de 15,2 à 29,6 tours), fins serrées 40,9 → 45,2 %, retours 62,2 → 64,9 %. Il se voit à chaque tour : un sort, ou un coup d'ours qui touche presque toujours.
+- **Une aura de soin ou d'armure tue le rythme** : le combat traîne (28 à 82 tours) et le druide écrase tout. L'aura doit faire mal, pas durer.
+- **Le contrôle (Racines) allonge et écrase** : écarté.
+- **Un homme soigneur ne rend pas le combat plus rapide** (20,0 tours) : la Foudre et le feu, si.
+
+### La proposition
+
+| | 1 | 2 | 3 | À chaque tour |
+| --- | --- | --- | --- | --- |
+| **Homme** (son dé est un d3 : chaque jet est un sort) | **Foudre** : 5 dégâts directs | **Feux follets** : Brûlure 3 | **Aura sauvage** : +2 par charge aux coups de l'ours, cumulable | ne frappe jamais |
+| **Ours** (aucun sort) | | | | chaque coup fait **+3**, un 1, un 2 ou un 3 compris ; **Griffes** : chaque coup qui touche laisse **Saignement 1** |
+
+**L'aura** répond à « la même pour les deux formes, ou une pour les deux ? » : une seule, posée par l'homme, qui sert la bête. L'homme prépare, l'ours frappe. C'est la règle de l'Aura de puissance de Gorak, sous un autre nom ; la variante « nature » (elle renforce aussi la Foudre) coûte une règle de plus et sort du budget à Foudre 5.
+
+**Fiche** : il n'est plus soigneur. Forces : un sort à chaque tour d'homme ; un ours qui frappe toujours à +3 et fait saigner ; une aura qui rend l'ours de plus en plus dangereux. Faiblesses : aucun soin ni armure ; l'homme ne frappe jamais ; forme imposée.
+
+**Ce que la livraison demanderait** : des stats par forme (le dé de l'homme, un bonus de coup pour l'ours), plutôt que les statuts du laboratoire ; trois compétences sur l'homme (Foudre, Feux follets, Aura sauvage) et les griffes de l'ours ; la Foudre à l'écran (assombrissement, éclair) ; les icônes Foudre, Aura sauvage, Griffes ; le dé d3 de l'homme dans la zone des dés. Retirés : Fleur de vie, Écorce épaisse, Charge, Coup de griffe, Rancune, Sève, Aura de sève, Aura de rancune.
+
+### Questions à trancher
+
+1. **Le kit** : Foudre 5 / Feux follets (recommandé, 51,5 %, 17,2 tours), ou un homme qui soigne (Foudre 6 / Soin 6, 49,6 %, 20,0 tours) ?
+2. **L'aura** : sauvage, pour l'ours seul (recommandée), ou nature, pour l'ours et la Foudre (une règle de plus, Foudre à 4 pour rester dans le budget) ?
+3. **La Foudre à l'écran** : un éclair et un assombrissement de l'arène, sans rien d'autre dans les règles : d'accord ?
+
+### Décision et livraison (0.73.0)
+
+- **Foudre 5 / Feux follets** (choix de l'utilisateur) : sur le 1 de l'homme, 5 dégâts directs ; sur le 2, Brûlure 3. L'homme (statut de forme **Incantation**) lance un d3 et ne frappe jamais.
+- **Aura sauvage, pour l'ours seul** (choix de l'utilisateur) : +2 par charge aux coups, cumulable ; seul l'ours frappe.
+- **Pas de Saignement, une Force de l'ours à +4 au lieu de +3** : l'utilisateur veut de gros coups plutôt que des griffes qui font saigner. Sans Saignement, +3 donnait 45,9 % au laboratoire ; +4 donne 54,0 %, et 54,0 % sur le roster livré.
+- **Statuts de forme** (`innate`) : le d3 et le +4 sont de vrais statuts, posés et retirés avec la forme, hors de portée des purges et des immunités (la leçon de « Une erreur de mesure corrigée »).
+- **La Foudre à l'écran** : le premier **événement de scène** (`lightning` : l'arène s'assombrit, un éclair tombe sur la cible, l'arène blanchit, les dégâts à l'impact), présentation seule, gabarit pour les coups spéciaux d'autres personnages.
+
+Mesures (`npm run balance`, 400 combats par duel, règles 0.73.0) : Thaldrin 50,7 → **54,0 %**, ses combats de 20,0 à **17,0 tours**, **11,1 dégâts par coup** (le plus haut du roster) ; ses duels de 48 à 65 %, Brokk à 35,3 % contre lui (sous le plafond). Valeurs nettes : Foudre **+10,8**, Feux follets **+10,3**, Aura sauvage **+4,7** points. Apport des statuts : Force de l'ours 14,0 PV, Brûlure 8,6, Aura sauvage 5,5 par combat.
+
+**0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : 3 × 2 dégâts directs (6 au lieu de 5, `hits`), jamais critiques, un éclair par coup à l'écran. Compensation, choix de l'agent : Force de l'ours +4 → **+3** (sans elle, Thaldrin 58,0 % et Brokk 31,5 % contre lui). Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup ; ses duels de 38 à 62 % (Brokk 38,5 %). Valeurs nettes : Foudre **+15,6**, Feux follets **+11,6**, Aura sauvage **+5,5** points.

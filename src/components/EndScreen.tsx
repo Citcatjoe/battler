@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import type { Character } from '../game/character'
+import type { Relic } from '../game/relics'
+import { of } from '../game/narration'
 import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
 import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
@@ -7,13 +10,28 @@ import { Tabs, type TabDef } from './Tabs'
 import { CopyTraceButton } from './CopyTraceButton'
 import { BetsResult, type BetsOutcome } from './Betting'
 import { PrestigeButton } from './PrestigeButton'
+import { RelicCard, RelicRow } from './RelicSeal'
+
+/** Récompense d'un match de tournoi : l'offre, le choix du vainqueur, et de quoi le changer. */
+export interface RelicReward {
+  offer: readonly Relic[]
+  chosen: string
+  onChoose: (relic: string) => void
+}
 
 interface Props {
   result: CombatResult
   onReplay: () => void
   onMenu: () => void
-  /** En tournoi : remplace Revanche / Menu par un retour à l'arbre */
-  tournament?: { label: string; onContinue: () => void }
+  /**
+   * En tournoi : remplace Revanche / Menu par un retour à l'arbre. `reward` : la relique du vainqueur (hors
+   * finale), à choisir parmi l'offre ; `chosen` est le choix du vainqueur, que l'observateur peut changer.
+   */
+  tournament?: {
+    label: string
+    onContinue: () => void
+    reward?: RelicReward
+  }
   /** Onglet affiché à l'ouverture */
   initialTab?: EndTab
   /** Règlement des paris du match et classement des parieurs (docs/PARIS.md) : moitié droite de l'écran */
@@ -125,6 +143,8 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
     undefined,
   )
   const [details, setDetails] = useState(false)
+  const [rewardOpen, setRewardOpen] = useState(false)
+  const reward = tournament?.reward
   const w = stats[winner]
   const l = stats[loser]
   const totalDamage = w.totalDamage + l.totalDamage || 1
@@ -136,7 +156,8 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
         <div
           className={`pointer-events-none absolute -left-40 top-10 h-[700px] w-[700px] rounded-full opacity-30 blur-3xl ${winner === 0 ? 'bg-side-a' : 'bg-side-b'}`}
         />
-        <div className="relative flex items-center gap-4">
+        {/* Au-dessus du vainqueur : une arme levée en victoire (la massue de Morgrut) monte jusqu'au titre */}
+        <div className="relative z-20 flex items-center gap-4">
           <h2 className="font-display text-4xl font-extrabold tracking-[0.25em] text-amber-200">COMBAT</h2>
           <div className="codex-divider flex-1" />
           {result.mode === 'simulated' && (
@@ -193,9 +214,10 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
 
         <div className="relative mt-6 flex items-center gap-4">
           {tournament ? (
-            <PrestigeButton onClick={tournament.onContinue} title={tournament.label} className="flex-1">
+            // Une récompense à choisir : le bouton principal ouvre l'écran des reliques, qui mène à l'arbre
+            <PrestigeButton onClick={reward ? () => setRewardOpen(true) : tournament.onContinue} title={tournament.label} className="flex-1">
               <Icon name="trophy" className="btn-icon" />
-              <span>Continuer</span>
+              <span>{reward ? 'Récompense' : 'Continuer'}</span>
             </PrestigeButton>
           ) : (
             <>
@@ -236,6 +258,77 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
           </PrestigeButton>
         </div>
       )}
+
+      {tournament && reward && rewardOpen && (
+        <RewardMenu
+          winner={fighters[winner]}
+          reward={reward}
+          onBack={() => setRewardOpen(false)}
+          onContinue={(relic) => {
+            if (relic !== reward.chosen) reward.onChoose(relic)
+            tournament.onContinue()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Récompense de tournoi (docs/RELIQUES.md § Écran de récompense), menu superposé à l'écran de victoire : trois
+ * grandes cartes. Le vainqueur a déjà choisi (au hasard, sa carte porte « Choix de… ») ; un clic sur une autre
+ * carte décide à sa place. Ses reliques déjà portées sont rappelées en dessous.
+ */
+function RewardMenu({
+  winner,
+  reward,
+  onBack,
+  onContinue,
+}: {
+  winner: Character
+  reward: RelicReward
+  onBack: () => void
+  onContinue: (relic: string) => void
+}) {
+  const [picked, setPicked] = useState(reward.chosen)
+  const own = picked === reward.chosen
+  return (
+    <div className="desk-in absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 bg-black/95 px-20">
+      <header className="flex flex-col items-center gap-2 text-center">
+        <p className="text-sm font-bold uppercase tracking-[0.5em] text-gold-300">Récompense</p>
+        <h2 className="font-display text-5xl font-extrabold text-amber-100">{winner.name} gagne une relique</h2>
+        <p className="font-body text-xl text-ink-2">
+          {reward.offer.length > 1
+            ? `${winner.name} a fait son choix parmi ${reward.offer.length} : cliquez sur une autre carte pour décider à sa place.`
+            : `Une seule relique manque encore à ${winner.name} : elle lui revient.`}
+        </p>
+      </header>
+      <div className="flex items-stretch gap-8 pt-3">
+        {reward.offer.map((r) => (
+          <RelicCard
+            key={r.id}
+            relic={r}
+            selected={picked === r.id}
+            mark={r.id === reward.chosen ? `Choix ${of(winner.name)}` : picked === r.id ? 'Votre choix' : undefined}
+            onSelect={() => setPicked(r.id)}
+          />
+        ))}
+      </div>
+      {winner.relics.length > 0 && (
+        <div className="flex items-center gap-3 font-body text-[15px] text-ink-3">
+          Déjà portées :
+          <RelicRow relics={winner.relics} size={32} tooltip="above" />
+        </div>
+      )}
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="btn btn-md w-56">
+          <span>← Combat</span>
+        </button>
+        <PrestigeButton onClick={() => onContinue(picked)} className="w-96">
+          <Icon name="trophy" className="btn-icon" />
+          <span>{own ? 'Continuer' : 'Imposer ce choix'}</span>
+        </PrestigeButton>
+      </div>
     </div>
   )
 }

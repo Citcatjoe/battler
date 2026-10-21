@@ -84,6 +84,9 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [ ] **Palette sémantique** (la couleur par famille est refusée pour les médaillons, 0.52.1) : l'ambre réservé au critique (aujourd'hui aussi ton « positive » dans `narration.ts`) ; la polarité montrée par la forme du cadre plutôt que par le vert et le rouge (FAMILLES.md § 3). Maquette d'abord.
 - [ ] **Décomposition du coup** sous le chiffre de dégâts, maillon par maillon, à la Balatro (étude QW3).
 - [ ] **Charges « armées »** : montrer ce qui attend le prochain coup ou la prochaine action (étude QW4).
+- [x] **Deux niveaux de lecture** (0.79.0, demande du 2026-10-21) : compétences et auras dans l'en-tête, états génériques regroupés dans la zone d'état, signal d'activation du sceau vers la cible (STATUTS.md).
+- [ ] **Emblèmes d'état** : générer la planche des 16 icônes d'état (STYLE_BIBLE § 7), puis remplacer les icônes provisoires de `STATE_ICON`.
+- [ ] **Suites des deux niveaux** : sceaux de compétence sur l'écran de sélection et l'affrontement (aujourd'hui des dés), compendium « Bonus et malus » présenté par états génériques, signal des reliques qui posent un état, regroupement par les règles elles-mêmes (familles, § 12-13).
 - [x] ~~**Cadre d'icône par famille**~~ : essayé en 0.51.0, refusé (trop de couleurs) ; on garde vert et rouge, avec un bord en pointillés pour les dégâts périodiques (0.52.1).
 - [ ] **Repère de fenêtre** (prochaine action, prochain coup porté, prochain coup reçu, durée, aura).
 - [ ] **Fiche sensorielle dans les registres** (`present`) : son et mise en scène déclarés, plus devinés par `cueFor`. À caler sur SONS.md quand la refonte des sons sera validée (§ 10).
@@ -120,22 +123,36 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
 - [x] **Aura de sainteté** : plafond de 3 charges, compensé par la Purification de repli (0.42.0). Le plafond à 2 faisait plus de spectacle mais coûtait trop (SORTS.md § 10).
 - [x] **Audit de résolution** : la pièce est lue dans le registre (0.42.0).
 - [x] **Deuxième passe** (0.45.0, SORTS.md § 11) : Aura de poison (texte), Vol de vie, aura de la barde, Épines, Fausse note (l'immunité de Gauvain est sans objet depuis son retrait).
-- [ ] **Ysolde** à 43,1 % (0.50.0), la plus basse du roster, à un point du plancher de 42 %.
+- [x] **Ysolde** : Purification double livrée (0.69.0, SORTS.md § 15) ; elle retire aussi son dernier malus. 41,3 % sans elle avec l'Aura glaciale cumulable, **43,4 %** avec, la plus basse du roster.
+- [x] **Saignement sans nouveau personnage** (0.68.0, SORTS.md § 14) : Saignée de Gorak, Épines acérées de Brokk. Pistes mesurées, non livrées : critiques d'Elaria qui font saigner (Saignement 1 : +2,8 points), Coup de griffe du druide qui lacère (+2,9 à +4,6).
+- [x] **Pourfendre** (0.70.0, proposition de l'utilisateur) : le 1 de Gorak frappe et, s'il touche, pose Saignement 2 ; `needsTouch`. Gorak 49,4 → 51,1 %.
+- [x] **Icônes du Saignement** (0.71.2, planche v8) : Saignement, Pourfendre et Épines acérées retouchées.
 - [x] **Libellé du résultat de Pile ou face** (corrigé en 0.49.0 par la session de l'interface).
-- [ ] **Icônes à peindre** : Aura glaciale (l'ancienne icône est verte, celle du poison) et Brûlure des Feux follets (icône des lucioles en attendant).
+- [x] **Icônes à peindre** (0.71.2, planche v8, STYLE_BIBLE § 7) : Aura glaciale (encensoir givré, à la place de l'encensoir vert du poison) ; druide : Rancune, Sève, Aura de rancune, Aura de sève. Restent sans icône des statuts sans porteur (Pourriture, Brûlure, Vulnérable, Étourdi, Garde).
 - [x] **Siffloter, Fausse note** (0.46.0) : les doubles frappent aussi leurs coups.
 - [ ] **Écorce épaisse** (Thaldrin) « presque inutile » à la marge ; **Ouverture** **Ouverture** de la barde « écrasante » ; ses doubles « rares à l'écran » (un sur cinq jets, par construction). **Ysolde** à 44,4 %, la plus basse du roster de 10.
 - [ ] **Raccourcis `npm run lab` et `npm run skills`**, une fois la refonte des sons terminée (`package.json`).
 - [ ] **Premier ajout au moteur pour les sorts** : un effet à l'expiration d'un statut (compte à rebours, écho, réserve relâchée). Ensuite : agir sur le dé adverse (Sabotage, Prophétie).
+- [x] **Sixième passe, préparée le 2026-10-20** ([SORTS.md](SORTS.md) § 15, laboratoire série 9) : livrée en 0.69.0, le druide en 0.71.0.
+  - [x] **Aura glaciale et poisons** (0.69.0) : elle pose 1 charge de Poison par charge au début du tour d'Ervald, cumulable sans compensation ; `poisonAura` devient `frostAura`, crochets `onOpponentTurnStart` et `stoppedByImmunity` retirés. Ervald 52,0 → 54,7 %.
+  - [x] **Furie des vents en coups bruts** (0.69.0) : deux coups tout de suite, les 1 à 3 frappent pour leur valeur, plus de relance ; Gorak au d9 et 19 % de critique, 47,9 → 49,4 %.
+  - [x] **Druide, rework de la dualité** (0.71.0, proposition A de SORTS § 16, auras à +2 au choix de l'utilisateur) : relais des formes (touché en homme : Rancune, +1 au prochain coup qui touche ; touché en ours : Sève, 1 PV au début du tour de l'homme), Aura de sève et Aura de rancune sur les 3. Thaldrin 50,7 %, ses duels de 45 à 58 % ; Rancune +9,0, Sève +7,7. Les auras restent faibles (+0,4 et −1,0 ; à +3, 52,1 %).
+  - [x] **Brûlure à une seule valeur** (0.69.0) : durée égale à la valeur ; Feux follets en Brûlure 3, même force (+3,5 points).
+- [x] **Druide, deuxième refonte** (0.73.0, SORTS § 18 ; retour de l'utilisateur : « trop mou, lent ») : l'homme ne lance que des sorts (d3 : Foudre 5 avec son éclair sur la scène, Feux follets, Aura sauvage), l'ours frappe à +4 sans sort ni Saignement. Thaldrin 54,0 %, combats de 20,0 à 17,0 tours, 11,1 dégâts par coup ; 0.76.0 : Foudre en trois éclairs de 2, ours +3, 49,8 %.
+- [x] **Icônes à générer** (0.77.1, planches v9 à v11 ; STYLE_BIBLE § 7, liste unique « Icônes à générer », en un seul lot le moment venu, une planche par type) : A. druide (Foudre, Incantation, Force de l'ours, Brûlure) ; B. douze reliques ; C. interface (musique allumée et coupée ; bourse, jeton, coup de théâtre, guichet des paris). Chacune avec son besoin, son type, son motif et son icône provisoire.
 
 ## 16. Reliques, tournoi et méta
 
 - [ ] **Séparer les suites de hasard** (une pour le dé de chaque combattant, une pour les effets), pour pouvoir rejouer un combat « sans la relique » à l'identique. Change toutes les graines : empreinte à mettre à jour, volontairement.
-- [ ] **Première série de reliques** (environ six), construites sur les familles (FAMILLES.md § 7), avec les déclencheurs déjà disponibles. Impact visé : 5 à 15 points chacune, 20 au plus.
+- [x] **Système de reliques** (0.75.0, demande du 2026-10-20, [RELIQUES.md](RELIQUES.md)) : quatre types (Caractéristique, Coup, Tour, Seuil), charges, recharge, conditions, étape `relic` de la chronologie, audit ; une relique par victoire de tournoi (choix parmi 3, au hasard, modifiable sur l'écran de victoire), visible en combat, à l'affrontement, dans l'arbre, sur l'écran du champion ; `npm run relics` pour les mesurer.
+- [x] **Série de test** (0.75.0) : une relique par type, de +11,9 à +16,4 points ; retirée en 0.77.0 au profit de la première série.
+- [x] **Première série de contenu** (0.77.0) : les douze reliques de l'exploration de l'autre agent, trois par type, revues par l'utilisateur ([RELIQUES.md](RELIQUES.md) § 7) ; moteur étendu (bonus d'une face, seuil sur l'adversaire, aucun malus sur l'adversaire, deux dés lus un par un). Mesurées de +6,1 à +21,4 points.
+- [x] **Icônes des douze reliques** (0.77.1, planche v10, prompt dans [RELIQUES.md](RELIQUES.md) § 10).
+- [ ] **Réglages proposés** (à valider, RELIQUES.md § 7) : Dent de loup (+21,4), Cotte du mercenaire (+18,1), Chapelet de l'ermite (+16,3), Dé creux sur Fanchon (+25,9).
 - [ ] **Modes par emplacement** : Aléatoire (graine), Imposé (verrou manuel), Aucun (témoin).
-- [ ] **Tournoi** : 1 relique au départ, **dépouille** après chaque victoire, **étape** de mi-tableau (choix parmi 3), 3 emplacements au plus.
-- [ ] **Choix automatique** : offre de 3 reliques tirées, note par goût, synergie et contexte, puis tirage pondéré (pas toujours la meilleure), expliqué dans le journal. En option, plus tard : la mémoire des personnages d'un tournoi à l'autre.
-- [ ] **Montrer l'influence** : l'icône de la relique s'illumine quand elle agit ; le contrefactuel en fin de combat (« sans la Dent de loup, il perdait ») ; un tableau des reliques en fin de tournoi, et d'un tournoi à l'autre.
+- [ ] **Tournoi** : 1 relique au départ, **dépouille** après chaque victoire, **étape** de mi-tableau (choix parmi 3). Fait en 0.75.0 : une relique par victoire, 3 au plus.
+- [ ] **Choix automatique** pondéré : note par goût, synergie et contexte, puis tirage pondéré (pas toujours la meilleure), expliqué dans le journal. Aujourd'hui (0.75.0) : tirage à parts égales dans l'offre. En option, plus tard : la mémoire des personnages d'un tournoi à l'autre.
+- [ ] **Montrer l'influence** : fait en 0.75.0, le sceau s'illumine quand la relique agit. Reste : le contrefactuel en fin de combat (« sans la Dent de loup, il perdait ») ; un tableau des reliques en fin de tournoi, et d'un tournoi à l'autre.
 - [ ] **Édit de tournoi** : une règle changée pour tout un tournoi. Plus tard, des effets d'arène.
 - [ ] **Paris entre deux observateurs** (règles validées le 2026-10-18 : [PARIS.md](PARIS.md)). Livraison par étapes :
   - [x] P1 : module de règles `betting.ts` et ses tests (cotes simulées, mises, règlement, coups de théâtre, prime de relance) ; pas encore visible en jeu ;
@@ -143,7 +160,7 @@ Grands axes issus de l'étude [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) et de
   - [ ] P3 : guichet de tour dans l'arbre (les matchs simulés depuis l'arbre ne sont pas encore pariés) ;
   - [x] P4 (0.37.0) : coups de théâtre à l'écran ;
   - [x] 0.38.0 : refonte demandée par l'utilisateur : guichet de jeu vidéo, cotes cachées, mises fixes (50, 100, 200) et rattrapage du dernier, deux parieurs de l'ordinateur (Borin, Zlatka), écran de fin en deux moitiés (combat, paris), classement dans l'arbre et sur l'écran du champion ;
-  - [ ] P5 : sons propres aux paris, icônes peintes (bourse, jeton, coup de théâtre, guichet, à demander).
+  - [ ] P5 : sons propres aux paris, icônes peintes (bourse, jeton, coup de théâtre, guichet : faites en 0.77.1, planche v11). Reste : les sons.
 
 ## 17. Plus tard
 
@@ -159,5 +176,11 @@ But : tester si changer l'image du combattant au fil des animations renforce l'i
 - [ ] Juger l'immersion à l'écran (utilisateur) ; voir l'esquive et le K.O. en combat joué.
 - [x] Orc : coup encaissé ajouté (`--reference`). Voleuse : cinq postures en trois planches (0.40.0).
 - [x] **Une même règle d'affichage pour tous** (0.40.0) : largeur naturelle et échelle resserrée (nain 0,86 → ogre 1,13), après l'essai « réaliste » rejeté. Un personnage à postures garde sa taille.
-- [ ] Puis généraliser au roster (3 générations par famille avec les planches de trois cases), à commencer par le nain, dernier placeholder. Seulement des postures communes à tous, jamais une posture de capacité.
+- [ ] Puis généraliser au roster (3 générations par famille avec les planches de trois cases), à commencer par le nain, dernier placeholder. Seulement des postures communes à tous, jamais une posture de capacité. Fait pour tous sauf le druide : Ervald (0.54.0), Aldric (0.56.0), Ysolde (0.57.0), Elaria (0.58.0), Brokk avec un nouveau modèle original et Morgrut (0.65.0).
 
+## 19. Combat test : le rendre fiable (signalé le 2026-10-20)
+
+L'utilisateur a constaté plusieurs anomalies dès l'ouverture du combat test (0.60.0 à 0.64.0). Ce mode sert à décortiquer la résolution : tant qu'il n'est pas fiable, il ne sert pas à valider le gameplay, et on ne le corrige que sur demande.
+
+- [ ] Lister les anomalies constatées (description de l'utilisateur, trace `_triche` dans `logs/combats/` quand il y en a une).
+- [ ] Pour chacune, trancher : défaut de l'écran du combat test, ou défaut du moteur (rejeu de la trace par `npm run logs`).

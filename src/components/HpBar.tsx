@@ -1,25 +1,25 @@
 import type { CSSProperties } from 'react'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Side } from '../game/combat'
-import type { SkillPulse } from '../game/useCombat'
-import { SkillDice } from './SkillDice'
+import type { RelicPulse } from '../game/useCombat'
+import { RelicRow } from './RelicSeal'
 
 interface Props {
   side: Side
   name: string
-  /** En combat : ses trois dés de compétence suivent le nom, pour s'en souvenir */
+  /** En combat : ses reliques suivent le nom */
   character?: Character
-  /** Forme en cours (druide) : ses dés montrent les compétences de cette forme */
-  form?: number
   hp: number
   maxHp: number
   /** En combat : son tour (son camp s'allume) ou celui de l'adversaire (il se tamise) */
   turn?: 'active' | 'waiting'
-  /** En combat : le dé de compétence qui vient de sortir pulse */
-  pulse?: SkillPulse
+  /** En combat : déclenchements de ses reliques jusqu'ici (charges restantes) */
+  relicUses?: Readonly<Record<string, number>>
+  /** En combat : la relique qui vient d'agir s'illumine */
+  relicPulse?: RelicPulse
 }
 
-export function HpBar({ side, name, hp, maxHp, character, form, turn, pulse }: Props) {
+export function HpBar({ side, name, hp, maxHp, character, turn, relicUses, relicPulse }: Props) {
   const pct = (hp / maxHp) * 100
   const style = SIDE_STYLE[side]
   const low = pct <= 25
@@ -32,16 +32,9 @@ export function HpBar({ side, name, hp, maxHp, character, form, turn, pulse }: P
       <div className={`flex w-full items-baseline justify-between gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
         <span className={`flex items-center gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
           <span className={`hp-camp-name font-display text-2xl font-extrabold tracking-wide ${style.accent}`}>{name}</span>
-          {character && (
-            <SkillDice
-              character={character}
-              form={form ?? 0}
-              size={turn === undefined ? 'sm' : 'header'}
-              tooltip="below"
-              align={side === 1 ? 'right' : 'left'}
-              pulse={pulse}
-              dim={turn !== undefined}
-            />
+          {/* Ses reliques (tournoi) suivent le nom ; ses compétences sont sous l'en-tête, sur l'arène (SkillBar) */}
+          {character && character.relics.length > 0 && (
+            <RelicRow relics={character.relics} size={36} tooltip="below" align={side === 1 ? 'right' : 'left'} uses={relicUses} pulse={relicPulse} />
           )}
         </span>
         <span className="font-data text-[15px] font-medium tabular-nums text-ink-2">

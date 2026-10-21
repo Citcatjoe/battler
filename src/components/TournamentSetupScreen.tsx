@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
+import { RELICS } from '../game/relics'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
@@ -8,6 +9,7 @@ import { Bracket } from './Bracket'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
 import { PrestigeButton } from './PrestigeButton'
+import { RelicSeal } from './RelicSeal'
 import { SkillDice } from './SkillDice'
 
 interface Props {
@@ -18,14 +20,20 @@ interface Props {
   /** Paris entre deux joueurs (docs/PARIS.md) : activés, et les noms des deux parieurs */
   betting: { enabled: boolean; names: [string, string] }
   onBettingChange: (betting: { enabled: boolean; names: [string, string] }) => void
+  /** Système de reliques pour ce tournoi (docs/RELIQUES.md) ; le choix reste pour le tournoi suivant */
+  relics: boolean
+  onRelicsChange: (relics: boolean) => void
 }
+
+/** Le sceau qui illustre l'interrupteur des reliques : la forme hexagonale suffit à dire « relique ». */
+const SWITCH_RELIC = RELICS[0]
 
 /**
  * Configuration de l'arbre (refonte 0.47.0) : on choisit un combattant dans la grande palette centrale
  * (le « pinceau »), puis on clique les cases du premier tour, aux deux extrémités de l'arbre. Les lignes
  * de l'arbre convergent vers la palette, qui porte aussi le compte et les actions (Compléter, Vider, Valider).
  */
-export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, betting, onBettingChange }: Props) {
+export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, betting, onBettingChange, relics, onRelicsChange }: Props) {
   const roster = CHARACTERS
   const ids = CHARACTER_IDS
   const [brushId, setBrushId] = useState(ids[0])
@@ -64,36 +72,69 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
             Configuration du tournoi
           </h1>
         </div>
-        <div className="flex items-center gap-2 pt-12 font-body text-[15px]">
-          <label className="flex cursor-pointer items-center gap-2 text-ink-2">
-            <input
-              type="checkbox"
-              checked={betting.enabled}
-              onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
-              className="h-4 w-4 accent-amber-500"
-            />
-            <Icon name="coin-pile" className="h-5 w-5" /> Paris entre
-          </label>
-          {([0, 1] as const).map((i) => [
-            i === 1 && (
-              <span key="et" className="text-ink-3">
-                et
+        <div className="flex items-center gap-8 pt-8">
+          {/* Interrupteur des reliques : grand format, le sceau s'éteint quand le système est désactivé */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={relics}
+            onClick={() => {
+              sfx.click()
+              onRelicsChange(!relics)
+            }}
+            title={relics ? 'Chaque victoire offre une relique au vainqueur (hors finale)' : 'Tournoi sans reliques : personne n’en gagne ni n’en porte'}
+            className={`flex h-16 items-center gap-3 rounded-(--r-sm) border-2 bg-surface-1/90 pl-3 pr-4 text-left shadow-(--shadow-2) transition-colors ${
+              relics ? 'border-gold-500/80' : 'border-line-2 hover:border-gold-500/50'
+            }`}
+          >
+            <RelicSeal relic={SWITCH_RELIC} size={44} spent={!relics} />
+            <span className="flex w-40 flex-col leading-tight">
+              <span className={`font-display text-[22px] font-semibold ${relics ? 'text-gold-200' : 'text-ink-2'}`}>Reliques</span>
+              <span className={`font-body text-[14px] font-bold uppercase tracking-wider ${relics ? 'text-good' : 'text-ink-3'}`}>
+                {relics ? 'Activées' : 'Désactivées'}
               </span>
-            ),
-            <input
-              key={i}
-              value={betting.names[i]}
-              disabled={!betting.enabled}
-              maxLength={16}
-              aria-label={`Parieur ${i + 1}`}
-              onChange={(e) => {
-                const names: [string, string] = [...betting.names]
-                names[i] = e.target.value
-                onBettingChange({ ...betting, names })
-              }}
-              className={`h-9 w-36 rounded-(--r-xs) border bg-surface-1 px-2 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
-            />,
-          ])}
+            </span>
+            {/* Le curseur : à droite et en or quand elles sont actives */}
+            <span
+              aria-hidden
+              className={`relative h-8 w-16 shrink-0 rounded-full border-2 transition-colors ${relics ? 'border-gold-400 bg-gold-500/40' : 'border-line-2 bg-surface-0'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-6 w-6 rounded-full shadow-(--shadow-2) transition-all duration-150 ${relics ? 'left-[34px] bg-gold-300' : 'left-0.5 bg-ink-3'}`}
+              />
+            </span>
+          </button>
+          <div className="flex items-center gap-2 font-body text-[15px]">
+            <label className="flex cursor-pointer items-center gap-2 text-ink-2">
+              <input
+                type="checkbox"
+                checked={betting.enabled}
+                onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
+                className="h-4 w-4 accent-amber-500"
+              />
+              <Icon name="coin-pile" className="h-5 w-5" /> Paris entre
+            </label>
+            {([0, 1] as const).map((i) => [
+              i === 1 && (
+                <span key="et" className="text-ink-3">
+                  et
+                </span>
+              ),
+              <input
+                key={i}
+                value={betting.names[i]}
+                disabled={!betting.enabled}
+                maxLength={16}
+                aria-label={`Parieur ${i + 1}`}
+                onChange={(e) => {
+                  const names: [string, string] = [...betting.names]
+                  names[i] = e.target.value
+                  onBettingChange({ ...betting, names })
+                }}
+                className={`h-9 w-36 rounded-(--r-xs) border bg-surface-1 px-2 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
+              />,
+            ])}
+          </div>
         </div>
       </header>
 

@@ -36,6 +36,8 @@ export function StatSheet({
     <dl className="flex flex-col gap-1">
       {STAT_LINES.map((l) => {
         const v = character.stats[l.key]
+        // Une relique de caractéristique l'a changée : la valeur passe en or, avec l'apport en infobulle
+        const base = character.baseStats[l.key]
         return (
           <div key={l.key} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2">
             <dt className="font-body text-[15px] font-medium text-ink-2">{l.label}</dt>
@@ -45,7 +47,12 @@ export function StatSheet({
                 style={{ width: `${MAX[l.key] ? (v / MAX[l.key]) * 100 : 0}%` }}
               />
             </div>
-            <dd className="text-right font-data text-[14px] font-medium tabular-nums text-ink-1">{l.format(v)}</dd>
+            <dd
+              className={`text-right font-data text-[14px] font-medium tabular-nums ${v !== base ? 'text-gold-300' : 'text-ink-1'}`}
+              title={v !== base ? `${l.format(base)} sans ses reliques` : undefined}
+            >
+              {l.format(v)}
+            </dd>
           </div>
         )
       })}

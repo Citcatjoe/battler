@@ -29,6 +29,14 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
+## Personnalité (2026-10-20)
+
+**Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.
+
+Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il se bat**, **pistes** (idées non mesurées). Trois motifs reviennent et peuvent servir à de futurs personnages : **la foule** (Gorak et Fanchon jouent pour le public), **le hasard** (Naraxes le cherche, Morgrut le subit) et **le temps** (Brokk, Ervald et Ysolde gagnent quand le combat dure).
+
+---
+
 ## Principes du roster
 
 1. **Une race = un archétype de combat lisible.** On doit pouvoir dire en une phrase *comment il gagne* et *comment il perd*.
@@ -57,11 +65,15 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ## Orcs : encaisser
 
-**Compétence du 1 : Rage du sang** (+3 PV, sans dépasser le maximum ; +5 avant la 0.28.0). Le jet le plus faible devient du soin : l'orc, qui n'esquive pas, compense par de l'endurance. C'est la compétence la plus modeste du roster (valeur nette d'environ +2 à +3 points) : les orcs ont déjà la Furie et la puissance.
+**Compétence du 1 : Pourfendre** (0.70.0, à la place de la Saignée). Le 1 n'est plus sacrifié : c'est un vrai coup, qui frappe pour sa valeur (Aura de puissance et critique compris), et **s'il touche**, il ouvre une plaie : Saignement 2, qui coule à partir du coup suivant (2 puis 1 PV). Esquivé, il ne pose rien : un coup doit toucher pour poser un malus physique. Voir plus bas, « 0.70.0, Pourfendre ».
+
+**Saignée** (0.68.0 à 0.69.0) : sur un 1, sans coup, Saignement 2 sur l'adversaire. Voir plus bas, « 0.68.0, Saignée ».
+
+**Rage du sang** (retirée en 0.68.0) : +3 PV, sans dépasser le maximum (+5 avant la 0.28.0, et +5 pour Gorak depuis la 0.43.0). Le jet le plus faible devenait du soin : l'orc, qui n'esquive pas, compensait par de l'endurance. C'était la compétence la plus modeste du roster (valeur nette d'environ +2 à +3 points, +5,8 en 0.67.3 avec 5 PV).
 
 **0.36.5, une Rage du sang propre à Murzug** (audit des compétences, `docs/SORTS.md` § 8) : elle ne lui valait que +0,6 point, contre +2,0 pour Gorak. Avec moins de PV et des coups plus forts, 3 PV ne comptaient presque pas pour lui. Murzug soigne désormais 5 PV (compétence `blood-rage-murzug`) : valeur nette +4,2 points, Murzug de 49,7 à 51,7 %. Gorak garde 3 PV (+1,0 point mesuré, dans le bruit). C'est la première compétence propre à une variante : Gorak et Murzug commencent à se distinguer par leur kit, pas seulement par leurs stats.
 
-**Compétence du 2 : Furie des vents** (🌪️ pendant 1 tour : à sa prochaine action, l'orc frappe deux fois). Le coup du 2 frappe normalement. Les deux coups suivants sont résolus chacun à part : dé, esquive, critique, et leurs propres compétences. Un 1 soigne, et un 2 relance une Furie pour l'action d'après. La Furie est consommée au début de l'action, et deux 2 de suite n'en donnent qu'une. Environ 1,1 Furie par combat. Elle est perdue si l'orc est étourdi.
+**Compétence du 2 : Furie des vents** (instantanée depuis la 0.50.0, en coups bruts depuis la 0.69.0). Sur un 2, l'orc frappe deux fois tout de suite, dans la même action. Ce sont des **coups bruts** : leur dé ne donne que leur valeur, un 1, un 2 ou un 3 frappe pour sa valeur, sans déclencher de compétence, donc sans Furie en chaîne. Chaque coup est résolu à part : esquive, critique, armure. Environ 0,9 Furie par combat (0.69.0). Voir plus bas, « 0.69.0, Furie en coups bruts ».
 
 **Compétence du 3 : Aura de puissance** (💪 permanente, cumulable). Chaque coup inflige 2 de plus par charge, avant l'armure : un 10 fait 12, puis 14 après un second 3. Le bonus s'ajoute après le critique et vaut pour chacun des coups d'une Furie des vents. Il est réduit par l'Aura d'intimidation d'un nain. Les orcs l'obtiennent dans environ deux combats sur trois, avec 1,5 charge en moyenne une fois obtenue. « Un peu cheaté, mais c'est l'orc » : le cumul est voulu.
 
@@ -69,8 +81,13 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 > « Le roc des fosses de Kar-Dush. »
 
+**Personnalité : le champion des fosses.**
+- **Qui il est** : un vétéran des combats d'arène, fier, qui joue pour le public. Il paraît calme et sûr de lui, mais la colère monte à chaque coup reçu (choix de 2026-10-20 entre le « calme » de son image et le « coup manqué l'énerve » de sa fiche : l'un mène à l'autre).
+- **Comment il se bat** : de face, sans rien esquiver, parce qu'esquiver serait honteux devant la foule. Même son coup le plus maladroit pourfend et ouvre une plaie que ses rafales feront couler devant le public (Pourfendre, 0.70.0 ; Saignée en 0.68.0 ; avant, la douleur le soignait : Rage du sang), et quand il s'emballe, les coups partent par deux (Furie des vents).
+- **Pistes** : être plus fort à mesure qu'il perd des PV, ou réagir à la foule. Il fait un lien naturel avec le jeu des parieurs.
+
 - **Fantasy** : le champion des fosses, lent et inébranlable. C'est la référence de l'orc, et l'unité de taille du jeu (`scale: 1`).
-- **Stats** (0.43.0, celles de Murzug) : PV 57, d10, armure 0, esquive 5 %, critique 18 % ×2 ; Rage du sang à 5 PV. Jusqu'à la 0.42.0 : PV 61, critique 10 %, Rage du sang à 3 PV.
+- **Stats** (0.43.0, celles de Murzug) : PV 57, d9 depuis la 0.69.0 (d8 de la 0.50.0 à la 0.68.3), armure 0, esquive 5 %, critique 19 % ×2 (18 % avant la 0.69.0) ; Pourfendre (coup, puis Saignement 2 s'il touche) depuis la 0.70.0, Saignée en 0.68.0 et 0.69.0, Rage du sang à 5 PV avant. Jusqu'à la 0.42.0 : PV 61, critique 10 %, Rage du sang à 3 PV.
 - **Comment il gagne** : ses PV absorbent les pics de dégâts, et son d10 frappe régulièrement fort.
 - **Comment il perd** : il prend tous les coups, et n'a aucune réponse face à l'usure du nain.
 - **Mesures** : 50,0 % de victoires (0.26.0), environ 19 tours par combat. Duels les plus durs : les elfes (44 % contre Elaria, 45 % contre Sylwen).
@@ -96,6 +113,19 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.50.0, Furie des vents instantanée** (demande de l'utilisateur) : le 2 tombe, et Gorak frappe deux fois tout de suite, dans la même action ; un 2 pendant ces coups relance la Furie (3 fois au plus). Sans compensation, Gorak montait à 64 % (deux coups de d4 au lieu de son dé : encore 58 %) : son **dé passe de d10 à d8**, et Gorak revient à 50,9 %. La Furie vaut désormais +27,7 points : elle est le cœur de l'orc. Ses combats se décident plus vite (retours de 64 à 59 %).
 
+**0.68.0, Saignée** (demande de l'utilisateur : introduire le saignement sans nouveau personnage, en favorisant les synergies). Sur un 1, Saignement 2 sur l'adversaire au lieu de +5 PV. Le Saignement compte les coups, et Gorak est celui qui en porte le plus par action : sa Furie des vents vide la plaie dans la même rafale. Mesures (400 combats par duel, même graines avant et après) :
+- valeur nette +3,3 points, contre +5,8 pour la Rage du sang à 5 PV ; Gorak 50,9 → **47,9 %**, dans le budget, combats plus courts (19,0 → 17,1 tours) ;
+- duels qui bougent : Ysolde 58,8 → 62,3 %, Fanchon 47 → 42 %, Morgrut 54 → 48 %, Aldric 46 → 40 % (l'Aura d'immunité bloque la plaie), Brokk 51 → 47 % (ses Épines acérées le font saigner à son tour) ;
+- Saignée 3 mesurée : 54,5 %, mais 71,5 % contre Ysolde, hors budget ; Saignée 4 : 60,1 %.
+- La première mesure au laboratoire (−0,6 point) était fausse : l'imitation du statut laissait une charge fantôme qui gonflait chaque plaie posée par-dessus (SORTS.md § 14).
+
+**0.69.0, Furie en coups bruts** (demande de l'utilisateur). Les deux coups de la Furie ne déclenchent plus de compétence : leur dé ne donne que leur valeur. Avant, 36,5 % des coups de Furie tombaient sur un 1, un 2 ou un 3 et étaient sacrifiés, et 22,5 % des Furies en relançaient une autre (jusqu'à trois). Au d8, Gorak tombait à 39,8 % ; compensation : **d9 et 19 % de critique** (variante choisie par l'utilisateur, 18 % recommandés). Mesures (400 combats par duel) : Furie des vents +18,6 points (+27,7 en 0.50.0) ; Gorak 47,9 → **49,4 %** ; duels qui bougent : Ysolde 62 → 59 %, Ervald 45 → 43 %, Fanchon 42 → 47 %.
+
+**0.70.0, Pourfendre** (proposition de l'utilisateur : « l'orc doit donner un coup pour appliquer un saignement »). Le 1 devient un vrai coup qui, s'il touche, pose Saignement 2 (version la plus forte des deux proposées, choisie par l'utilisateur ; règle `needsTouch` : un coup doit toucher pour poser un malus physique). Mesures (400 combats par duel) :
+- valeur nette **+5,0** points ; Gorak 49,4 → **51,1 %** ; ses duels de 47 % (Ervald) à 60 % (Ysolde) ;
+- Gorak ne sacrifie plus que 18 % de ses jets (37 % avant) : seuls le 2 et le 3 restent des jets de compétence sans dégâts ;
+- variantes : Saignement 1, 47,8 % ; Saignement 3, 55,5 % (Ysolde 63 %). Posée même sur une esquive, la version 2 montait à 51,9 % : la règle « s'il touche » coûte 0,8 point.
+
 ## Elfes : éviter et punir
 
 **Image** : `elf.png`, une chasseresse de la nuit qui bande son arc en croissant de lune, en bleu nuit et argent (0.30.1). Elle remplace l'ancienne elfe lie-de-vin, une placeholder tirée d'une œuvre existante. Le design prévu pour une « Chasseresse de la nuit » distincte (STYLE_BIBLE) sert maintenant de modèle à Elaria et à Sylwen.
@@ -104,6 +134,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Compétence du 2 : Esquive améliorée** (💨 sans durée depuis la 0.36.5 : le prochain coup reçu est esquivé à coup sûr). L'esquive vaut pour le prochain coup reçu, sans tirage, et la charge est consommée. **0.36.5** : elle durait un tour, et s'éteignait sans servir une fois sur trois quand l'adversaire sacrifiait son coup (jet de 1 à 3) ou perdait son tour, le même défaut que la Riposte avant la 0.32.0 (audit des compétences, `docs/SORTS.md` § 8). Valeur nette de +6,7 à +10,3 points pour Elaria (49,0 → 52,1 %), de +7,5 à +9,9 pour Sylwen. Contre une Furie des vents, elle n'annule que le premier des deux coups. Un coup sacrifié (Vol de vie) ne la consomme pas. Environ 1,3 esquive imposée par combat.
 
+**2026-10-21, Esquive améliorée cumulable** (demande de l'utilisateur) : les charges s'additionnent (`stacking: 'add'`, sans plafond) ; chaque coup reçu esquivé à coup sûr en use une. Deux 2 avant le prochain coup adverse, ou un 2 et un jet maximal avec le Dé creux, valent donc deux esquives. **Mesure** (`npm run balance`, 0.77.1, même lot que la pièce de Naraxes) : Elaria de 47,6 à **46,6 %** (± 1,6), valeur nette de l'Esquive de +9,6 à **+10,1 points**, apport de 1,1 à 1,2 coup esquivé par combat. Le cumul est rare (le prochain coup adverse use la charge avant qu'un deuxième 2 tombe) ; la baisse d'Elaria vient surtout de Naraxes, plus forte, contre qui elle passe de 49 à 35 %.
+
 **Compétence du 3 : Aura de précision** (🦅 permanente). Le multiplicateur de critique gagne +1 : ×2 devient ×3 pour Elaria, ×2,4 devient ×3,4 pour Sylwen. Le critique assuré d'Œil de faucon en profite aussi. Elle est cumulable depuis la 0.28.0 : +1 par charge, ×4 après deux 3. Les elfes l'obtiennent dans trois combats sur quatre.
 
 **Réglage 0.26.0** : avec les auras, les elfes tombaient à 45-46 % de victoires, et les orcs montaient à 54,7 %. Les elfes gagnent 3 PV (Elaria 51, Sylwen 53), et les orcs en perdent 2 (Gorak 59, Murzug 55).
@@ -111,6 +143,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Elaria · Rôdeuse
 
 > « Un souffle, une flèche. »
+
+**Personnalité : la chasseresse solitaire.**
+- **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.
+- **Comment elle se bat** : elle observe, se dérobe, et attend l'ouverture. Un tir manqué lui sert à régler le suivant (Œil de faucon). Elle frappe peu, mais au bon endroit.
+- **Pistes** : marquer une cible, punir l'adversaire qui la rate, prendre l'avantage au premier tour.
 
 - **Fantasy** : l'éclaireuse insaisissable, jamais là où l'on frappe.
 - **Stats** (0.43.0, celles de Sylwen) : PV 50, d8, armure 0, esquive 26 %, critique 17 % ×2,4. Jusqu'à la 0.42.0 : PV 48, esquive 33 %, critique 22 % ×2.
@@ -138,11 +175,20 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ## Nains : user l'adversaire
 
+**Image** : `dwarf-idle.png` et ses cinq postures (0.65.0), un nain torse nu, cheveux et barbe roux cuivré tressés de laiton, pagne rouge brodé, grande hache à un tranchant. C'est une création originale, générée dans l'atelier des postures. Elle remplace `dwarf.png`, un placeholder tiré d'une œuvre existante, le dernier du roster.
+
 **Compétence du 1 : Peau de pierre** (🛡️ +6 d'armure temporaire, +4 avant la 0.28.0). Ce bonus se cumule, absorbe des points (jamais sous 1 dégât) et s'use en encaissant. Il renforce le nain qui tient la ligne. C'est désormais sa seule protection.
 
-**Compétence du 2 : Épines** (🌵 6 pendant 1 tour, depuis la 0.29.0). Le jet du 2 ne frappe pas, il pose les Épines. Jusqu'au début du prochain tour du nain, **chaque** coup qui le touche lui retire ses PV normalement, puis renvoie 6 dégâts directs à l'attaquant. Ces dégâts ignorent armure, esquive et boucliers. **Contre une Furie des vents, les deux coups sont punis, soit 12 dégâts** : c'est le genre d'interaction surprenante que l'utilisateur veut favoriser. Jusqu'en 0.28.0, les épines valaient 4 et ne punissaient que le premier coup : leur valeur nette était presque nulle (+1 à +5 points de victoire). Elle est maintenant d'environ +9,5 points pour Brokk et +3,6 pour Grimbald. Environ 6,4 dégâts renvoyés par combat pour Brokk.
+**Compétence du 2 : Épines acérées** (0.68.0 ; avant : Épines). Le jet du 2 ne frappe pas, il pose une charge d'épines, permanente et cumulable. **Chaque** coup qui touche le nain lui retire ses PV normalement, puis pose sur l'attaquant 1 charge de Saignement par charge d'épines. La plaie ne coule pas tout de suite : elle attend que le nain touche à son tour. Voir plus bas, « 0.68.0, Épines acérées ».
+
+**Épines, de la 0.29.0 à la 0.44.0** (🌵 6 pendant 1 tour). Jusqu'au début du prochain tour du nain, chaque coup qui le touchait renvoyait 6 dégâts directs à l'attaquant, deux fois contre une Furie des vents (12 dégâts) : le genre d'interaction surprenante que l'utilisateur veut favoriser. Jusqu'en 0.28.0, elles valaient 4 et ne punissaient que le premier coup (valeur nette de +1 à +5 points) ; ensuite, environ +9,5 points pour Brokk et +3,6 pour Grimbald.
 
 **0.45.0, Épines permanentes** (demande de l'utilisateur) : chaque 2 au dé ajoute une charge d'épines, sans durée ; chaque coup encaissé renvoie 1 dégât direct par charge, jusqu'à la fin du combat. Valeur nette : Brokk +9,9 → **+10,9**, Grimbald +5,0 → **+4,3**. Le spectateur les voit agir à presque chaque coup : 6,9 réactions par combat chez Brokk, au lieu de 3,9. À 2 dégâts par charge, Brokk montait à 64 % : trop fort.
+
+**0.68.0, Épines acérées** (demande de l'utilisateur, avec la Saignée de Gorak). Chaque coup encaissé pose sur l'attaquant 1 charge de Saignement par charge d'épines, au lieu de lui renvoyer 1 dégât direct par charge. La punition change de forme : elle s'accumule sur l'attaquant (une Furie des vents contre 3 épines : 6 charges), puis coule à chaque coup du nain. Le gardien qui tient la porte fait payer au retour. Mesures (400 combats par duel) :
+- valeur nette +3,7 → **+5,0** points ; Brokk 48,3 → **50,4 %** ; aucune compensation nécessaire (la première mesure, +6,8 au laboratoire, était gonflée par la même charge fantôme que la Saignée) ;
+- duels qui bougent : Ysolde 51 → 57 %, Gorak 49 → 53 %, Fanchon 56 → 60 % (ses deux dés lui posent deux plaies par action), Aldric 44 → 40 % (immunisé) ;
+- variante « 1 charge par coup, quelle que soit la pile d'épines » : Brokk 47,9 %, et les charges d'épines ne servent plus à rien : écartée.
 
 **Compétence du 3 : Aura d'intimidation** (😠 permanente, portée par le nain). Les coups de son adversaire infligent 2 de moins, avant l'armure : un 10 devient 8. Elle se combine aux autres calculs : une Aura de puissance de l'orc (+2) l'annule, et un coup ne descend jamais sous 1. Elle est cumulable depuis la 0.28.0 : −2 par charge, −4 après deux 3. C'est la compétence qui fait du nain un tank (valeur nette d'environ +20 points pour Brokk), à la place de l'armure passive perdue. Brokk l'obtient dans trois combats sur quatre, Grimbald dans près de deux sur trois.
 
@@ -151,6 +197,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Brokk · Gardien
 
 > « Ce qui passe la porte passe par moi. »
+
+**Personnalité : le roc.**
+- **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
+- **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Épines acérées), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
+- **Pistes** : devenir plus fort quand le combat dure, résister à tout ce qui déplace ou fait perdre un tour.
 
 - **Fantasy** : le gardien qui ne recule jamais.
 - **Stats** (0.43.0, celles de Grimbald) : PV 57, d10, armure 0, esquive 6 %, critique 10 % ×2,5. Jusqu'à la 0.42.0 : PV 68, d8, critique 8 %. Il est petit à l'écran.
@@ -187,7 +238,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **Réglage 0.25.0** : le coup sacrifié coûte cher. Sans compensation, les morts-vivants tombaient à 43,5 %. Ervald passe de 56 à 60 PV, et Caldrec de 54 à 58.
 
-**Compétence du 3 : Aura glaciale** (☣️ permanente, cumulable, portée par le mort-vivant). Au début de chacun de ses tours, **avant son coup**, son adversaire perd 1 PV par charge. Ce sont des dégâts directs, sans armure, esquive ni bouclier. Chaque nouveau 3 ajoute une charge : 2 PV par tour, puis 3… À l'écran, le nom de l'aura flotte au-dessus du mort-vivant, et le « −1 » tombe sur l'adversaire avant l'élan du coup. Environ 7 PV par combat pour Ervald (aura obtenue dans trois combats sur quatre, 1,8 charge en moyenne), 4,5 pour Caldrec.
+**Compétence du 3 : Aura glaciale** (permanente, cumulable, portée par le mort-vivant ; règle de la 0.69.0). Au début de chacun de ses tours, avant son coup, elle pose sur l'adversaire **1 charge de Poison par charge d'aura**. C'est du vrai Poison : il agit au début des tours de la victime et perd une charge à chaque fois. Une charge d'aura le fige donc à sa valeur (après un Souffle de la tombe, 3 PV par tour au lieu de 3, 2, 1), deux charges le font grossir d'1 par tour. L'immunité le bloque, la Régénération l'annule, une purge l'enlève. Jusqu'à la 0.68.3, l'aura infligeait 1 dégât direct par charge (voir les paragraphes suivants).
 
 **0.45.0, ce n'est pas un poison, mais elle agit avec lui** (note de l'utilisateur : « se résout quand ? comme le poison normal ? »). Avant, elle frappait au début du tour du **porteur** ; elle frappe désormais **au début du tour de l'adversaire, juste après ses poisons**, dans la même étape (choix de l'utilisateur). Elle reste des dégâts directs, sans décroître : une version qui pose de vrais Poisons a été mesurée, et l'Aura d'immunité du paladin les bloque (Ervald à **31 % contre Gauvain**) ; à deux charges, les poisons s'empilaient (Ervald battait Brokk à 67 %). Valeur nette +11,0 → **+13,8** (Ervald), +4,1 → **+6,2** (Caldrec) : elle frappe dès le tour où elle est posée. Avec le Vol de vie à deux charges, Ervald passe de 47,5 à **54,6 %** (roster de 10 personnages, 0.45.0).
 
@@ -196,6 +247,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Ervald · Chevalier liche
 
 > « La mort l'a rendu, pas pardonné. »
+
+**Personnalité : le devoir qui ne meurt pas.**
+- **Qui il est** : un soldat mort à son poste et revenu par devoir. Il est froid, sans haine ni colère ; il n'a plus rien à perdre, et il a donc tout son temps.
+- **Comment il se bat** : il ne cherche pas le coup décisif. Il ronge l'adversaire (poison, Aura glaciale) et reprend sur les vivants la vie qu'on lui a prise (Vol de vie). Il est inévitable plutôt que puissant.
+- **Pistes** : se relever une fois, profiter des statuts qui s'accumulent, gêner les soins adverses.
 
 - **Fantasy** : le capitaine tombé en défendant Ostremort, revenu sous son étendard pourpre. Il ne fatigue jamais.
 - **Stats** (0.43.0, celles de Caldrec) : PV 56, d10, armure 0, esquive 8 %, critique 16 % ×2. Jusqu'à la 0.42.0 : PV 58, d8, armure 1, critique 12 %. Il est grand à l'écran.
@@ -222,6 +278,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.50.0, l'immunité arrête l'aura** : l'Aura d'immunité du paladin arrête désormais l'Aura de poison (le journal le dit). L'utilisateur, en jeu, pensait l'immunité inefficace. Aura de poison +5,4 → +4,7 ; Ervald 54,4 → 51,8 %.
 
+**0.69.0, l'aura pose du vrai Poison** (sixième passe, SORTS.md § 15, choix de l'utilisateur). L'aura faisait doublon : avec le Poison (même instant, au début du tour adverse) et avec la Pourriture du druide (même profil, des PV perdus chaque tour sans décroître). Elle pose désormais du Poison, qui suit une seule règle d'affliction. La piste avait été écartée en 0.45.0, parce que l'immunité bloquait le poison et pas l'aura ; l'objection est tombée en 0.50.0, quand l'immunité s'est mise à arrêter l'aura aussi. Cumulable, sans compensation (choix de l'utilisateur). Mesures (400 combats par duel) : Aura glaciale **+7,5** points, Souffle de la tombe +11,9 ; Ervald 52,0 → **54,7 %** ; pire duel : Brokk à 39 % contre lui (46 % avant).
+
 ## Humains : contrôler
 
 **Image** : `human.png`, une prêtresse solaire à la masse sacrée (0.30.0). L'utilisateur avait demandé « un prêtre » : l'image générée est une prêtresse, la famille est donc au féminin.
@@ -234,6 +292,8 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.42.0, Purification de repli** (audit des compétences) : quand l'adversaire n'a aucun bonus à retirer, la lumière lui inflige **5 dégâts directs** au lieu de tomber à vide (54 % des déclenchements avant). Gâchis de 54 % à 0 %, valeur nette de +8,3 à **+12,8 points** (Bérengère de même). Contre Brokk, qui a presque toujours un bonus, rien ne change : un éclat à chaque Purification le faisait tomber à 23,7 % contre Ysolde.
 
+**0.69.0, Purification double** (choix de l'utilisateur). La Purification retire aussi le dernier malus d'Ysolde (poison, plaie, brûlure), en plus du dernier bonus adverse (ou des 5 dégâts de repli). Elle est devenue nécessaire avec l'Aura glaciale cumulable : sans elle, Ysolde tombait à **41,3 %**, sous le plancher. Avec : 43,4 % au laboratoire ; dans le roster, 41,9 → **43,4 %**, Purification **+18,0** points. Elle reste la plus basse du roster ; Naraxes la bat à 60 %.
+
 **Compétence du 3 : Aura de sainteté** (🕊️ permanente, cumulable). Elle regagne 2 PV par charge à la fin de chacun de ses tours. C'est la compétence qui la porte : **+42 à +44 points de victoire**, la plus forte du roster.
 
 **0.42.0, plafond de 3 charges** (6 PV par tour au plus). Valeur nette presque inchangée (+41,2 points, Bérengère +38,1), mais avec la Purification de repli, ses combats deviennent plus disputés : retours de 39,5 à 45,6 %, fins serrées de 16 à 22 %, de 36 à 33 tours. Le plafond à 2 faisait encore mieux à l'écran (fins serrées à 26 %), mais coûtait trop : prêtresses à 43 %, ou Brokk sous 25 % avec un éclat plus fort. Ysolde de 47,1 à **48,6 %**, Bérengère de 46,0 à **48,2 %**.
@@ -245,6 +305,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Ysolde · Prêtresse solaire
 
 > « Le soleil ne frappe pas. Il juge. »
+
+**Personnalité : la juge.**
+- **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
+- **Comment elle se bat** : elle laisse l'adversaire se condamner lui-même. Elle le paralyse de crainte (Peur), efface ce qui le salit (Purification) et tient bon dans sa lumière (sainteté). Ses coups sont faibles, et ce n'est pas eux qui comptent.
+- **Pistes** : sanctionner les fautes adverses (un jet raté, un statut posé), un « jugement » qui grossit au fil du combat.
 
 - **Stats** : PV 52, d7, armure 0, esquive 8 %, critique 10 % ×2.
 - **Comment elle gagne** : elle tient, se soigne, terrifie et purifie. Les combats s'allongent en sa faveur.
@@ -274,6 +339,10 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 **0.42.0, pile à 20 qui touche** (FAMILLES.md § 6.2 A, choix de l'utilisateur) : pile passe de 15 à 20 dégâts directs et compte comme un coup qui touche (l'Aura de décoction empoisonne). Face reste vide : la dualité nette et sa mise en scène sonore (tintement, son du critique) sont l'intérêt de la compétence. Une face qui frappe normalement avait été proposée (+5 points), puis refusée pour cette raison. Valeur nette de −5,0 à **+0,0** (Naraxes) et de −4,0 à **+0,6** (Ssythra). Naraxes de 49,4 à **52,9 %**, Ssythra de 50,3 à **53,6 %**. Prix accepté par l'utilisateur : Ysolde tombe à 35 % contre l'une et l'autre, deux contres connus de plus (EQUILIBRAGE.md).
 
+**2026-10-21, la pièce part aussitôt** (demande de l'utilisateur) : le 2 qui déclenche Pile ou face lance la pièce juste après, dans la même action, au lieu de remplacer le dé de l'action suivante. Le 2 reste un coup sacrifié ; pile vaut toujours 20 dégâts qui touchent, face rien. La voleuse ne perd donc plus de jet de dé : la pièce devient un pur gain. **Mesure** (`npm run balance`, 0.77.1) : valeur nette de Pile ou face de +0,4 à **+12,4 points**, apport de 7,7 à 8,8 PV par combat ; Naraxes de 49,8 à **61,6 %** (± 1,6), **hors tolérance**. Duels au-delà de 65/35 : Ysolde 60 → **75 %**, Brokk 55 → **66 %**, Elaria 51 → **65 %**. Compensation proposée, non appliquée (laboratoire, série 13, 200 combats par duel, base 62,3 %) : pile à 10 → 54,1 % (pire duel Ysolde 65,5 %), à 12 → 56,3 % (Ysolde 71 %), à 15 → 58,7 % (Ysolde 73 %). Pile à 10 rentre dans la tolérance ; Ysolde reste un contre limite.
+
+**2026-10-21, pile à 10** (choix de l'utilisateur parmi les compensations du laboratoire, série 13 : 10 → 54,1 %, 12 → 56,3 %, 15 → 58,7 %, base 62,3 %) : pile passe de 20 à **10** dégâts directs qui touchent (`COIN_HEADS`, statuses.ts), la pièce restant lancée aussitôt. Les PV, dernier levier, ne bougent pas. **Mesure** (`npm run balance`, 0.77.1) : Naraxes de 61,6 à **53,9 %** (± 1,6) ; valeur nette de Pile ou face de +12,4 à **+4,7 points**, apport de 8,8 à 4,7 PV par combat. Duels : Ysolde 75 → **64,5 %** (contre connu, juste sous 65/35), Brokk 66 → 59 %, Elaria 65 → 59 %. Plus aucun personnage hors tolérance ni duel au-delà de 65/35.
+
 **Compétence du 3 : Aura de décoction** (🧪 permanente, cumulable). Chaque coup qui touche pose sur la cible 2 charges de poison par charge d'aura (0.36.4 ; avant : 1 charge pendant 4 tours) ; le poison se résout comme le poison ordinaire, et s'estompe d'une charge par tour. Valeur nette d'environ +9 à +13 points en 0.30.0. **Mesure 0.36.4** (1 000 combats par duel) : avec 1 charge, Naraxes 38,2 % et Ssythra 39,4 % ; avec **2**, 48,3 % et 47,7 % ; avec 3, 54,6 % et 53,4 %. Ssythra bat Bérengère à 63,7 %, contre connu.
 
 **Réglage 0.30.0** :
@@ -285,6 +354,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Naraxes · Voleuse
 
 > « Pile, je gagne. Face, tu perds quand même. »
+
+**Personnalité : la joueuse.**
+- **Qui elle est** : insolente et opportuniste, elle ne se bat jamais à la loyale. Elle aime le risque plus que la victoire elle-même.
+- **Comment elle se bat** : elle esquive, empoisonne ses lames et mise tout sur un coup de chance (Coup de chance, Pile ou face). Quand le hasard ne paie pas, le poison finit le travail.
+- **Pistes** : parier sur son propre jet, voler un bonus, tricher avec le dé (relancer, échanger). C'est un écho direct aux parieurs.
 
 - **Stats** : PV 50, d10, armure 0, esquive 20 %, critique 14 % ×2.
 - **Comment elle gagne** : elle esquive, empoisonne, et un pile tombe parfois au bon moment.
@@ -324,6 +398,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 > « Chaque coup reçu est une dette. »
 
+**Personnalité : le créancier.**
+- **Qui il est** : un paladin rigide et discipliné. Sa ferveur est réelle mais contenue : il encaisse en silence, et il compte (choix de 2026-10-20 entre le « fanatique » de son image et le « tient le compte » de sa fiche : le fanatique n'apparaît qu'au moment où il rend les coups, dans sa posture d'attaque par exemple).
+- **Comment il se bat** : il laisse venir les coups, les note comme des dettes, puis paie d'un seul revers (Rétribution, Riposte). Rien ne le détourne de sa voie (Aura d'immunité).
+- **Pistes** : des serments (une condition à tenir pour gagner un bonus), des dettes qui se transmettent ou qui expirent.
+
 - **Stats** (0.43.0, celles de Gauvain) : PV 54, d8, armure 0, esquive 7 %, critique 17 % ×2,5. Jusqu'à la 0.42.0 : PV 60, esquive 2 %, critique 12 %.
 - **Comment il gagne** : il encaisse, remplit ses jauges et relâche une rétribution énorme au bon moment, ou un critique lourd.
 - **Comment il perd** : contre un adversaire qui frappe peu fort (Brokk), ses jauges restent maigres.
@@ -344,7 +423,7 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ## Ogre : taper, attendre, taper plus fort
 
-**Image** : `ogre.png`, un ogre ventru, casque cabossé et massue cloutée, un papillon posé dessus (0.35.0).
+**Image** : `ogre-idle.png` et ses cinq postures (0.65.0), un ogre ventru, casque cabossé et massue cloutée, un papillon posé dessus. C'est le modèle de `ogre.png` (0.35.0), qu'elles remplacent. Morgrut n'esquive jamais (0 %) : sa posture d'esquive existe pour la règle commune, mais ne se voit pas en jeu.
 
 **Philosophie** (décision de l'utilisateur) : bête comme ses pieds, il n'a **aucune compétence**. Sur un 1, un 2 ou un 3, il gagne **Attente** (montre à gousset) : il ne frappe pas ce tour-là et attend son prochain jet. En contrepartie, il tape très fort, avec un **d14**.
 
@@ -353,6 +432,11 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 ### Morgrut · Cogneur
 
 > « Taper. Attendre. Taper plus fort. »
+
+**Personnalité : le gros distrait.**
+- **Qui il est** : simple, lent d'esprit, et pas méchant du tout : il s'émerveille d'un papillon. Il ne se bat pas par haine, on lui a juste dit de taper.
+- **Comment il se bat** : il tape très fort quand il comprend ce qu'il fait, et sinon il attend (Attente). Il ne vise pas (aucun critique) et n'esquive pas : il n'y pense même pas.
+- **Pistes** : se laisser distraire, profiter d'un hasard heureux sans le chercher, s'énerver d'un coup si on l'agace trop.
 
 - **Stats** : PV 63, d14, armure 0, esquive 0 %, critique 0 % (×2).
 - **Comment il gagne** : 11 jets sur 14 frappent, en moyenne pour 9 dégâts.
@@ -372,19 +456,15 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ## Druide : deux visages
 
-**Images** : `druid.png` (forme humaine, bois de cerf, bâton et magie verte) et `druid-bear.png` (ours humanoïde aux runes émeraude), en 0.35.0.
+**Images** : `druid.png` (forme humaine, bois de cerf, bâton et magie verte) et `druid-bear.png` (ours humanoïde aux runes émeraude), en 0.35.0. **Depuis la 0.67.0**, chaque forme a ses cinq postures (`druid-*.png`, `druid-bear-*.png`, [POSTURES.md](POSTURES.md) § 4), et l'ours n'est plus un ours humanoïde dressé : c'est une bête à quatre pattes (règle de l'utilisateur, « sous cette forme il est un animal »). Il charge au galop gueule ouverte, recule en boule sous un coup, s'écarte d'un bond, tombe sur le flanc et rugit campé sur ses pattes. Aussi haut que le druide (96 %, bois compris) et une fois et demie plus long que haut : la métamorphose le fait grossir, plus grandir. Rien ne change au combat.
 
-**Philosophie** (décision de l'utilisateur) : au début de chacun de ses tours, sauf le premier, il **change de forme**. Ses trois compétences dépendent de sa forme.
-- **Forme humaine** (soutien) :
-  - **Fleur de vie** (1) : Régénération 2 pendant 3 tours (0.42.0 ; +3 PV d'un coup avant). Le soin continue sous la forme d'ours. Valeur nette de +0,3 à **+2,2** (Thaldrin) et de +1,1 à **+3,4** (Brannoc) ;
-  - **Écorce épaisse** (2) : un bouclier de 5 (4 avant la 0.36.5), qui se cumule. À 4, sa valeur nette était de +0,4 point (Thaldrin) et +1,9 (Brannoc) ; à 5, +2,3 et +2,4. À 6, Thaldrin battait Bérengère à 65/35, au-delà du budget ;
-  - **Luciole** (3) : un malus de **3 charges** sur l'adversaire (0.35.1, une seule auparavant), qui ne peut plus esquiver et subit **+2 dégâts** à chaque coup encaissé (0.35.2) ; une charge part à chaque coup encaissé, et les charges se cumulent.
-- **Forme d'ours** (attaque) :
-  - **Charge** (1) : un coup à la valeur maximale du dé, jamais critique ;
-  - **Coup de griffe** (2) : le dé est relancé en secret, le coup vaut ce jet plus 3 ;
-  - **Aura de pourriture** (3) : une aura cumulable. Chaque coup qui touche pose, par charge d'aura, une charge de Pourriture (1 dégât au début de chaque tour de la cible) qui ne s'estompe pas.
-
-Le 1 et le 2 de l'ours ne sacrifient pas le coup, ils le transforment. Le jet affiché reste le 1 ou le 2.
+**Philosophie** (décision de l'utilisateur) : au début de chacun de ses tours, sauf le premier, il **change de forme** (homme d'abord). Depuis la 0.73.0, chaque forme a son **statut de forme** (`innate`), posé quand il la prend et retiré quand il la quitte, jamais purgé ni bloqué.
+- **Forme humaine, le mage** : statut **Incantation**. Son dé devient un d3 et chaque jet lance un sort ; l'homme ne frappe jamais.
+  - **Foudre** (1) : 3 fois 2 dégâts directs à l'adversaire (0.76.0 ; 5 avant), avec l'événement de scène `lightning` (trois éclairs tombent l'un après l'autre autour de la cible) ;
+  - **Feux follets** (2) : Brûlure 3 sur l'adversaire ;
+  - **Aura sauvage** (3, cumulable) : +2 par charge à ses coups, donc à ceux de l'ours.
+- **Forme d'ours, la bête** : statut **Force de l'ours**. Aucun sort : son 1, son 2 et son 3 frappent aussi, et chaque coup fait +3 avant l'armure (+4 de la 0.73.0 à la 0.75.0).
+- Aucun soin ni armure. Fleur de vie, Écorce épaisse, Charge, Coup de griffe et le relais des formes (Rancune, Sève, leurs auras) sont retirés en 0.73.0 (voir l'historique ci-dessous).
 
 **Mesures des compétences** (valeur nette, 0.35.0) :
 
@@ -407,8 +487,13 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 > « La forêt a deux visages. »
 
-- **Stats** : PV 56, d10, armure 0, esquive 8 %, critique 8 % ×2 (10 % jusqu'à la 0.35.1).
-- **Mesures** : 48,0 % de victoires (0.35.0). Il bat les prêtresses à 60-62 % (la Pourriture use leurs soins), mais perd contre Aldric (38 %) et les ogres (44 %).
+**Personnalité : l'homme et la bête.**
+- **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
+- **Comment il se bat** : la forme lui est imposée à chaque tour. L'homme lance un sort à chaque tour (Foudre, Feux follets, Aura sauvage) sans jamais frapper ; l'ours frappe toujours, et fort (+3, plus l'Aura sauvage que l'homme a accumulée).
+- **Forces** : un sort à chaque tour d'homme (foudre, feu), l'ours frappe toujours et fort (+3), Aura sauvage : un ours de plus en plus dangereux. **Faiblesses** : aucun soin ni armure, l'homme ne frappe jamais, forme imposée à chaque tour.
+
+- **Stats** : PV 56, d10 (d3 sous Incantation), armure 0, esquive 8 %, critique 8 % ×2 (10 % jusqu'à la 0.35.1).
+- **Mesures** : 48,0 % de victoires (0.35.0) ; 50,7 % en 0.71.0 ; 54,0 % en 0.73.0 ; **49,8 %** en 0.76.0, 17,4 tours par combat, 10,1 dégâts par coup (le plus haut du roster), ses duels de 38 à 62 %.
 
 ### Brannoc · Druide d'automne · retiré en 0.43.0
 
@@ -419,6 +504,14 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 - **Mesures** : 49,4 % (0.35.0). Il bat les prêtresses à 66 % : contre connu (EQUILIBRAGE.md).
 
 **0.50.0, Écorce à 7, Feux follets** : l'Écorce épaisse absorbe 7 points au lieu de 5 (+0,8 → **+2,4**) et pose désormais la même **Armure temporaire** que la Peau de pierre du nain (une seule règle, deux compétences). La Luciole, jugée ennuyeuse par l'utilisateur, laisse place aux **Feux follets** : une Brûlure de 3 pendant 3 tours sur l'adversaire, même valeur (+4,2), mais des dégâts qui se voient à chaque fin de tour. Écartées : Racines (−1,0, trop proche de la Peur d'Ysolde) et Ronces (−7). Thaldrin 49,1 → 51,4 %.
+
+**0.69.0, Brûlure à une valeur** : la Brûlure dure autant de tours que sa valeur. Les Feux follets posent une **Brûlure 3** (une seule valeur, 3 PV à la fin des 3 prochains tours de l'adversaire), de même force qu'avant ; une nouvelle Brûlure remplace l'ancienne. Valeur nette +3,5 points ; Thaldrin 51,8 → 50,5 %. L'utilisateur veut aller plus loin sur le druide : rework de la dualité, proposition à venir (SORTS.md § 16).
+
+**0.71.0, le relais des formes** (proposition A de SORTS.md § 16, choix de l'utilisateur) : l'alternance forcée reste, mais chaque coup reçu sert l'autre forme. Touché en homme, il gagne une Rancune (+1 au prochain coup qui touche, celui de l'ours) ; touché en ours, une Sève (1 PV au début du tour de l'homme). Le 3 de chaque forme devient une aura qui nourrit le relais : **Aura de sève** (au lieu des Feux follets) et **Aura de rancune** (au lieu de l'Aura de pourriture), +2 par charge (l'utilisateur a gardé +2 ; à +3, 52,1 % au laboratoire). Cumulables comme les autres auras (plafonnées à une charge au laboratoire : 50,1 %). Mesures (400 combats par duel) : Thaldrin 50,5 → **50,7 %**, ses duels de 45 à 58 % (Ysolde contre lui : 35 % en 0.68.0, 45 % maintenant). Valeurs nettes : Rancune **+9,0** (3,8 par combat), Charge +8,9, Sève **+7,7** (3,0 par combat), Coup de griffe +5,5, Écorce +3,5, Fleur de vie +2,6, Aura de rancune +0,4, Aura de sève −1,0 : les auras restent faibles. La Brûlure, la Pourriture et l'Aura de pourriture n'ont plus de porteur.
+
+**0.73.0, le mage et la bête** (SORTS.md § 18, série 12 ; retour de l'utilisateur : « trop mou, lent ») : l'alternance forcée reste, mais les deux formes ne font plus la même chose. L'homme (Incantation, d3) lance un sort à chaque tour : **Foudre** 5 dégâts directs (valeur choisie par l'utilisateur), **Feux follets** (Brûlure 3) de retour, **Aura sauvage** +2 par charge aux coups, pour l'ours seul (choix de l'utilisateur). L'ours (Force de l'ours) frappe à chaque tour. Le Saignement prévu sur l'ours est abandonné : l'utilisateur veut de gros coups ; à +3 sans Saignement, 45,9 % au laboratoire, d'où **+4**. Retirés : Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais et ses auras. Mesures (400 combats par duel) : Thaldrin 50,7 → **54,0 %**, ses combats de 20,0 à **17,0 tours**, **11,1 dégâts par coup** ; ses duels de 48 à 65 % (Brokk à 35,3 % contre lui, sous le plafond). Valeurs nettes : Foudre +10,8, Feux follets +10,3, Aura sauvage +4,7 points ; apport des statuts : Force de l'ours 14,0 PV, Brûlure 8,6, Aura sauvage 5,5 par combat. La Foudre inaugure les **événements de scène** (ARCHITECTURE.md).
+
+**0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : la Foudre fait 3 fois 2 dégâts directs (6 au lieu de 5), jamais critiques, sans armure ni esquive. À l'écran, trois éclairs tombent l'un après l'autre à gauche, à droite puis au centre de la cible, chacun avec son « 2 ». **Compensation, choix de l'agent** : Force de l'ours +4 → **+3**. Sans elle, Thaldrin montait à 58,0 % et Brokk tombait à 31,5 % contre lui, au-delà de 65/35. Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup (toujours le plus haut) ; ses duels de 38 à 62 % (Brokk 38,5 % contre lui). Valeurs nettes : Foudre +15,6, Feux follets +11,6, Aura sauvage +5,5 points (400 combats par duel).
 
 ## Barde : deux dés, et la musique sur les doubles
 
@@ -452,6 +545,11 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 > « Deux dés, une chanson, aucune fausse note. Sauf chez vous. »
 
+**Personnalité : l'artiste de foire.**
+- **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
+- **Comment elle se bat** : deux dés, deux mains, un rythme. Elle frappe vite et léger, et quand les dés s'accordent, c'est la musique qui frappe (les doubles). Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée.
+- **Pistes** : réagir au public ou aux paris, enchaîner (un double qui en prépare un autre), un rappel en fin de combat.
+
 - **Stats** : PV 46, 2 × d5, armure 0, esquive 12 %, critique 5 % ×2.
 - **Mesures** : 52,3 % (0.41.0). Duels de 45 à 62 %, sauf contre Brokk (29 %, contre connu).
 
@@ -471,22 +569,20 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne.
+Taux de victoire de la ligne contre la colonne. Règles 0.76.0, 400 combats par duel (`npm run balance`, `logs/balance/`).
 
-| | Gorak | Murzug | Elaria | Sylwen | Brokk | Grimbald | Ervald | Caldrec | Ysolde | Bérengère | Naraxes | Ssythra | **Global** |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 49 % | 44 % | 48 % | 42 % | 49 % | 55 % | 50 % | 47 % | 50 % | 55 % | 56 % | **49,4 %** |
-| **Murzug** | 51 % | — | 47 % | 47 % | 43 % | 48 % | 56 % | 50 % | 55 % | 57 % | 53 % | 56 % | **51,1 %** |
-| **Elaria** | 56 % | 54 % | — | 49 % | 49 % | 52 % | 46 % | 48 % | 47 % | 49 % | 53 % | 56 % | **50,6 %** |
-| **Sylwen** | 53 % | 53 % | 51 % | — | 51 % | 50 % | 46 % | 43 % | 46 % | 46 % | 55 % | 58 % | **50,0 %** |
-| **Brokk** | 58 % | 57 % | 51 % | 50 % | — | 50 % | 49 % | 56 % | 28 % | 29 % | 41 % | 44 % | **46,6 %** |
-| **Grimbald** | 51 % | 52 % | 48 % | 50 % | 50 % | — | 53 % | 50 % | 47 % | 51 % | 50 % | 54 % | **50,5 %** |
-| **Ervald** | 46 % | 45 % | 55 % | 55 % | 51 % | 47 % | — | 44 % | 40 % | 40 % | 50 % | 54 % | **47,7 %** |
-| **Caldrec** | 50 % | 50 % | 53 % | 57 % | 44 % | 50 % | 56 % | — | 57 % | 55 % | 56 % | 57 % | **53,1 %** |
-| **Ysolde** | 53 % | 45 % | 54 % | 54 % | 72 % | 53 % | 60 % | 43 % | — | 45 % | 43 % | 40 % | **51,0 %** |
-| **Bérengère** | 50 % | 43 % | 52 % | 54 % | 71 % | 50 % | 61 % | 45 % | 56 % | — | 42 % | 36 % | **50,8 %** |
-| **Naraxes** | 45 % | 47 % | 47 % | 46 % | 59 % | 50 % | 50 % | 44 % | 57 % | 58 % | — | 52 % | **50,3 %** |
-| **Ssythra** | 45 % | 44 % | 44 % | 42 % | 56 % | 46 % | 46 % | 43 % | 60 % | 64 % | 48 % | — | **48,9 %** |
+| | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **Gorak** | — | 49 % | 51 % | 47 % | 60 % | 52 % | 50 % | 54 % | 55 % | 49 % | **51,7 %** |
+| **Elaria** | 51 % | — | 52 % | 42 % | 49 % | 49 % | 44 % | 55 % | 46 % | 42 % | **47,6 %** |
+| **Brokk** | 50 % | 48 % | — | 39 % | 55 % | 45 % | 40 % | 58 % | 39 % | 60 % | **48,0 %** |
+| **Ervald** | 53 % | 59 % | 61 % | — | 57 % | 55 % | 45 % | 58 % | 57 % | 47 % | **54,6 %** |
+| **Ysolde** | 41 % | 52 % | 46 % | 43 % | — | 40 % | 43 % | 43 % | 52 % | 43 % | **44,6 %** |
+| **Naraxes** | 48 % | 51 % | 55 % | 46 % | 60 % | — | 44 % | 47 % | 47 % | 50 % | **49,8 %** |
+| **Aldric** | 51 % | 56 % | 60 % | 55 % | 57 % | 56 % | — | 53 % | 54 % | 40 % | **53,5 %** |
+| **Morgrut** | 46 % | 45 % | 42 % | 42 % | 57 % | 53 % | 48 % | — | 51 % | 48 % | **47,8 %** |
+| **Thaldrin** | 46 % | 54 % | 62 % | 43 % | 48 % | 53 % | 46 % | 50 % | — | 47 % | **49,8 %** |
+| **Fanchon** | 51 % | 58 % | 40 % | 53 % | 57 % | 50 % | 60 % | 53 % | 53 % | — | **52,8 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 
@@ -494,6 +590,7 @@ Taux de victoire de la ligne contre la colonne.
 
 ## Ajouter un personnage : check-list de design
 
+- [ ] Sa personnalité, en trois points (qui il est, comment il se bat, pistes), écrite avant ses compétences : voir « Personnalité ».
 - [ ] En une phrase, comment il gagne et comment il perd. Sa place doit être distincte de celle des personnages existants.
 - [ ] Ses stats sont dérivées de l'archétype de sa race, ou une nouvelle race est définie avec son événement.
 - [ ] Son événement (ou celui de sa race) prolonge son identité.

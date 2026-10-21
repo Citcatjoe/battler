@@ -38,24 +38,8 @@ export function SoundToggle() {
         aria-pressed={musicMuted}
         className="btn btn-round h-10 w-10 [--icon:20px]"
       >
-        <MusicGlyph off={musicSilent} />
+        <Icon name={musicSilent ? 'music-off' : 'music-on'} className="btn-icon" />
       </button>
     </div>
-  )
-}
-
-/**
- * Note de musique, provisoire : dessin vectoriel (jamais un caractère emoji) en attendant les icônes
- * peintes `music-on` et `music-off` (demandées à l'utilisateur, STYLE_BIBLE § 7). Barrée quand la
- * musique est coupée, ou que tout le son l'est.
- */
-function MusicGlyph({ off }: { off: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" className="btn-icon" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ color: off ? 'var(--text-3)' : 'var(--gold-300)' }}>
-      <path d="M9 18V5l11-2v13" />
-      <circle cx="6" cy="18" r="3" fill="currentColor" stroke="none" />
-      <circle cx="17" cy="16" r="3" fill="currentColor" stroke="none" />
-      {off && <path d="M3 3l18 18" stroke="var(--bad)" strokeWidth={2.2} />}
-    </svg>
   )
 }

@@ -1,20 +1,22 @@
 import type { Character } from '../game/character'
-import { describeCondition, doubleFace, DOUBLE_TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
-import { EffectLine } from './compendium/SkillsSection'
+import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, DOUBLE_TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
+import { STATES, statesPosedBy } from '../game/states'
+import { POLARITY_STYLE } from '../game/statuses'
+import { StateIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
 import type { SkillPulse } from '../game/useCombat'
 
-type Face = 1 | 2 | 3 | 4 | 5
+export type Face = 1 | 2 | 3 | 4 | 5
 
 /** Les trois faces qui déclenchent une compétence de race, dans l'ordre. */
-const FACES: { face: Face; trigger: Trigger }[] = [
+export const FACES: { face: Face; trigger: Trigger }[] = [
   { face: 1, trigger: 'naturalOne' },
   { face: 2, trigger: 'naturalTwo' },
   { face: 3, trigger: 'naturalThree' },
 ]
 
 /** Personnage à deux dés (barde) : une compétence par double, du double 1 au double 5. */
-const DOUBLES: { face: Face; trigger: Trigger }[] = ([1, 2, 3, 4, 5] as const).map((face) => ({
+export const DOUBLES: { face: Face; trigger: Trigger }[] = ([1, 2, 3, 4, 5] as const).map((face) => ({
   face,
   trigger: DOUBLE_TRIGGERS[face],
 }))
@@ -70,7 +72,7 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
       {(character.twinDice ? DOUBLES : FACES).map(({ face, trigger }) => {
         const event = character.events.find((e) => e.trigger === trigger && (!e.form || e.form === formId))
         return (
-          <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event?.nature ?? 'neutral'}>
+          <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}>
             {/* Le dé qui sort : il s'allume un instant, comme un tintement, dans la couleur de la nature de la
                 compétence ; la clé relance l'éclat quand la même face sort deux fois de suite */}
             {event && pulse?.face === face && <span key={`wave-${pulse.key}`} aria-hidden className="skill-die-pulse" />}
@@ -85,14 +87,15 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
   )
 }
 
-const BOX = { sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
+const BOX = { xs: 'skill-die-xs h-[28px] w-[28px] p-[4px] rounded-[7px]', sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
 
-function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
+/** Une face de dé de compétence (ses points), ou un double (deux dés décalés). Aussi en pastille des sceaux (SkillBar). */
+export function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
   const box = BOX[size]
   const die = (
     <div
       aria-label={double ? undefined : `Dé ${face}`}
-      className={`skill-die grid grid-cols-3 grid-rows-3 rounded-lg ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
+      className={`skill-die grid grid-cols-3 grid-rows-3 ${size === 'xs' ? '' : 'rounded-lg'} ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
     >
       {PIPS[face].map(([x, y]) => (
         <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />
@@ -103,7 +106,7 @@ function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof
   // Un double : le même dé deux fois, le second décalé derrière le premier
   return (
     <div aria-label={`Double ${face}`} className="relative">
-      <div className="absolute left-1.5 top-1.5 opacity-60" aria-hidden>
+      <div className={`absolute opacity-60 ${size === 'xs' ? 'left-[3px] top-[3px]' : 'left-1.5 top-1.5'}`} aria-hidden>
         {die}
       </div>
       <div className="relative">{die}</div>
@@ -111,13 +114,14 @@ function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof
   )
 }
 
-const ALIGN = {
+export const ALIGN = {
   left: 'left-0',
   center: 'left-1/2 -translate-x-1/2',
   right: 'right-0',
 }
 
-function SkillTooltip({
+/** Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). */
+export function SkillTooltip({
   event,
   face,
   placement,
@@ -128,18 +132,10 @@ function SkillTooltip({
   placement: 'above' | 'below'
   align: 'left' | 'center' | 'right'
 }) {
-  const reshape = event.reshapesHit
   const double = doubleFace(event.trigger)
-  const terms = [
-    ...(double !== undefined ? ['À la place des deux coups du tour'] : []),
-    ...(event.forfeitsHit ? ["Le jet n'inflige aucun dégât"] : []),
-    ...(reshape?.value === 'max' ? ['Frappe pour la valeur maximale de son dé'] : []),
-    ...(reshape?.value === 'reroll' ? [`Relance son dé et ajoute ${reshape.bonus ?? 0}`] : []),
-    ...(reshape?.noCrit ? ['Jamais critique'] : []),
-    ...(event.when ?? []).map((c) => `si ${describeCondition(c)}`),
-    ...(event.chance !== undefined && event.chance < 1 ? [`${Math.round(event.chance * 100)} % de chances`] : []),
-    ...(event.limit !== undefined ? [`${event.limit} fois max. par combat`] : []),
-  ]
+  // Le même texte que le compendium (describeSkill) : pastilles en tête, puis l'effet et les statuts posés
+  const { text, tags } = describeSkill(event)
+  const states = statesPosedBy(event.effects)
   return (
     <div
       role="tooltip"
@@ -156,24 +152,24 @@ function SkillTooltip({
           {double !== undefined ? 'Double' : 'Dé'} {face}
         </span>
       </div>
-      {terms.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{terms.join(' · ')}</p>}
+      {tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{tags.map((t) => t.label).join(' · ')}</p>}
       <div className="codex-divider my-2.5" />
-      {event.effects.length === 0 && (
-        <p className="font-body text-[15px] text-ink-1">
-          {event.volley && double !== undefined
-            ? event.merged
-              ? `Un seul coup de ${event.volley * double} (${event.volley} × ${double}).`
-              : `${event.volley} coups de ${double}.`
-            : "Un coup porté, plus puissant qu'un coup ordinaire."}
-        </p>
+      {text && <p className="font-body text-[15px] leading-snug text-ink-1">{text}</p>}
+      {/* Les états qu'elle fait apparaître dans la zone d'état, et chez qui (le vocabulaire commun, states.ts) */}
+      {states.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+          {states.map((p) => (
+            <li key={`${p.state}-${p.target}`} className="flex items-center gap-1.5 font-body text-[14px] font-bold text-ink-1">
+              <StateIcon id={p.state} className="h-6 w-6" />
+              {STATES[p.state].name}
+              <span className={`font-normal ${STATES[p.state].polarity === 'positive' ? 'text-good' : 'text-bad'}`}>
+                {POLARITY_STYLE[STATES[p.state].polarity].label.toLowerCase()}
+                {p.target === 'opponent' ? ' · adversaire' : ' · sur soi'}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
-      <ul className="space-y-2.5">
-        {event.effects.map((effect, i) => (
-          <li key={i}>
-            <EffectLine effect={effect} skillName={event.name} />
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

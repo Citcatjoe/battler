@@ -17,7 +17,7 @@ export interface LabIdea {
    * 3 = petite touche sur une compétence existante signalée par l'audit (`scripts/skills.report.ts`) ;
    * 4 = les six compétences signalées par l'audit 0.39.1, touches seules et kits compensés (SORTS.md § 10)
    */
-  series: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  series: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13
   /** Personnage modifié (id du roster) */
   character: string
   name: string
@@ -766,6 +766,634 @@ const SERIES_7: LabIdea[] = [
   },
 ]
 
+/*
+ * Série 8 : le Saignement (statut `bleed`, livré en 0.68.0 avec la Saignée de Gorak et les Épines acérées
+ * de Brokk). La première passe (2026-10-20, règles 0.67.3) imitait la plaie avec `spentOnHurt` et une
+ * charge de plus : une charge fantôme restait après le dernier écoulement, et chaque nouvelle plaie
+ * posée par-dessus coulait d'un PV de trop par coup. Elle surestimait le Saignement (Saignée 2 mesurée à
+ * −0,6 point, −3,0 en vrai). Ces idées utilisent maintenant le vrai statut (SORTS.md § 11).
+ */
+const bleed = (n: number) => ({ type: 'applyStatus', status: 'bleed', stacks: n, target: 'opponent' }) as const
+const SERIES_8: LabIdea[] = [
+  // Pourfendre (0.70.0) : le 1 frappe pour sa valeur et, s'il touche, pose Saignement 2. Variantes de sa plaie.
+  // (Les Saignées 3 et 4, mesurées sur l'ancien kit, sont dans SORTS.md § 14.)
+  ...[1, 3].map((n) => ({
+    series: 8 as const, id: `gorak-pourfendre-${n}`, character: 'gorak', name: `Pourfendre ${n}`, schema: 'Pont', family: 'Affliction',
+    pitch: `Sur un 1, le coup frappe et, s'il touche, pose Saignement ${n} au lieu de 2.`,
+    apply: swap('cleave', [bleed(n)]),
+    watch: ['cleave', 'bleed'],
+  })),
+  {
+    series: 8, id: 'thaldrin-griffe-saignante', character: 'thaldrin', name: 'Griffe qui lacère', schema: 'Ajout', family: 'Affliction',
+    pitch: 'Le Coup de griffe (relance + 3) laisse aussi Saignement 3.',
+    apply: replace('claw', (e) => ({ ...e, effects: [...e.effects, bleed(3)] })),
+    watch: ['claw', 'bleed'],
+  },
+  {
+    series: 8, id: 'thaldrin-griffe-saignante-compensee', character: 'thaldrin', name: 'Griffe qui lacère, relance + 1', schema: 'Retouche compensée', family: 'Affliction',
+    pitch: 'Le Coup de griffe relance + 1 au lieu de + 3, et laisse Saignement 3.',
+    apply: replace('claw', (e) => ({ ...e, reshapesHit: { value: 'reroll', bonus: 1 }, effects: [...e.effects, bleed(3)] })),
+    watch: ['claw', 'bleed'],
+  },
+  ...[1, 2].map((n) => ({
+    series: 8 as const, id: `elaria-fleche-barbelee-${n}`, character: 'elaria', name: `Flèche barbelée ${n}`, schema: 'Pont', family: 'Affliction',
+    pitch: `Chacun de ses critiques laisse Saignement ${n}.`,
+    apply: add({ id: 'barbed-arrow', name: 'Flèche barbelée', nature: 'finesse', trigger: 'crit', effects: [bleed(n)] }),
+    watch: ['barbed-arrow', 'bleed'],
+  })),
+  {
+    series: 8, id: 'elaria-oeil-barbele', character: 'elaria', name: 'Œil de faucon barbelé', schema: 'Pont', family: 'Affliction',
+    pitch: 'Sur un 1, en plus du critique assuré, la flèche marquée laisse Saignement 2 tout de suite.',
+    apply: replace('hawk-eye', (e) => ({ ...e, effects: [...e.effects, bleed(2)] })),
+    watch: ['hawk-eye', 'bleed'],
+  },
+  {
+    series: 8, id: 'brokk-epines-acerees-1', character: 'brokk', name: 'Épines acérées, 1 par coup', schema: 'Retouche', family: 'Représailles',
+    pitch: 'Chaque coup encaissé pose 1 charge de Saignement sur l’attaquant, quel que soit le nombre d’épines.',
+    statuses: { labThornsBleed1: { ...STATUSES.thorns, reactions: { hurt: () => [bleed(1)] } } },
+    apply: swap('thorns', [{ type: 'applyStatus', status: 'labThornsBleed1' as never, stacks: 1 }]),
+    watch: ['thorns', 'bleed'],
+  },
+]
+
+/*
+ * Série 9 : préparation de la sixième passe (2026-10-20, SORTS.md § 15). Aura glaciale qui pose du vrai
+ * Poison (une seule règle d'affliction pour Ervald, sans crochet propre), et dualité du druide (l'ours
+ * garde rancune de ce que l'homme a subi, l'homme panse ce que l'ours a pris, l'écorce éclate sous la
+ * Charge). La Furie des vents en coups bruts demande un crochet du moteur : mesurée à part (§ 15).
+ * Depuis la 0.69.0, l'Aura glaciale qui pose du Poison (cumulable) est la règle livrée : les idées d'Ervald
+ * ci-dessous ne mesurent plus que leurs variantes (plafond, Souffle 2) par rapport à elle. Les séries 5 et 7
+ * visent l'ancien `poisonAura` et ne s'appliquent plus.
+ */
+/** Aura glaciale qui pose, au début du tour d'Ervald, 1 charge de Poison par charge d'aura (règle de la 0.69.0). */
+const frostPoison = (cap?: number): StatusDef => ({ ...STATUSES.frostAura, maxStacks: cap })
+const frostAs = (status: string) => swap('frost-aura', [{ type: 'applyStatus', status: status as never, stacks: 1 }])
+/** Rancune : le prochain coup du druide qui touche fait +`bonus` par charge, puis la rancune retombe. */
+const grudge = (bonus: number): StatusDef => ({
+  name: 'Rancune',
+  polarity: 'positive',
+  summary: `Son prochain coup qui touche fait ${bonus} de plus par charge, avant l'armure. Se cumule.`,
+  describe: (st) => `Son prochain coup qui touche fait +${bonus * st.stacks}`,
+  badge: (st) => `+${bonus * st.stacks}`,
+  counter: 'stacks',
+  stacking: 'add',
+  modifyOutgoing: (damage, st) => damage + bonus * st.stacks,
+  spentOnHit: true,
+})
+/** Sève : au début de son prochain tour, le druide regagne autant de PV que de charges. */
+const SAP: StatusDef = {
+  name: 'Sève',
+  polarity: 'positive',
+  summary: 'Au début de son prochain tour, le porteur regagne autant de PV que de charges. Se cumule.',
+  describe: (st) => `Regagne ${st.stacks} PV au début de son prochain tour`,
+  badge: (st) => `+${st.stacks}`,
+  counter: 'stacks',
+  stacking: 'add',
+  onTurnStart: (st) => [{ type: 'heal', amount: st.stacks }],
+  expiresAt: 'turnStart',
+}
+const grudgeOn = (bonus: number) =>
+  add({ id: 'lab-rancune', name: 'Rancune', nature: 'martial', trigger: 'hurt', form: 'human', effects: [{ type: 'applyStatus', status: `labGrudge${bonus}` as never, stacks: 1 }] })
+const sapOn = (heal: number) =>
+  add({ id: 'lab-seve', name: 'Sève', nature: 'arcane', trigger: 'hurt', form: 'bear', effects: [{ type: 'applyStatus', status: 'labSap' as never, stacks: heal, turns: 1 }] })
+/** Aura de rancune (3 de l'ours) : chaque coup encaissé, quelle que soit la forme, arme Rancune +`bonus` par charge d'aura. */
+const grudgeAura = (bonus: number): StatusDef => ({
+  name: 'Aura de rancune',
+  look: { aura: 'rgba(180,83,9,0.55)' },
+  polarity: 'positive',
+  summary: `Chaque coup encaissé arme +${bonus} par charge sur son prochain coup qui touche. Permanente.`,
+  describe: (st) => `Chaque coup encaissé arme +${bonus * st.stacks} sur son prochain coup qui touche`,
+  badge: (st) => `+${bonus * st.stacks}`,
+  stacking: 'add',
+  reactions: { hurt: (st) => [{ type: 'applyStatus', status: `labGrudge${bonus}` as never, stacks: st.stacks }] },
+})
+/** Aura de sève (3 de l'homme) : chaque coup encaissé rend `heal` PV par charge au début de son prochain tour. */
+const sapAura = (heal: number): StatusDef => ({
+  name: 'Aura de sève',
+  look: { aura: 'rgba(132,204,22,0.5)' },
+  polarity: 'positive',
+  summary: `Chaque coup encaissé lui rend ${heal} PV par charge au début de son prochain tour. Permanente.`,
+  describe: (st) => `Chaque coup encaissé lui rend ${heal * st.stacks} PV au début de son prochain tour`,
+  badge: (st) => `+${heal * st.stacks}`,
+  stacking: 'add',
+  reactions: { hurt: (st) => [{ type: 'applyStatus', status: 'labSap' as never, stacks: heal * st.stacks, turns: 1 }] },
+})
+const grudgeAuraOn = (bonus: number) => swap('rot-aura', [{ type: 'applyStatus', status: `labGrudgeAura${bonus}` as never, stacks: 1 }])
+const sapAuraOn = (heal: number) => swap('firefly', [{ type: 'applyStatus', status: `labSapAura${heal}` as never, stacks: 1 }])
+const shards = add({
+  id: 'lab-eclats',
+  name: 'Éclats d’écorce',
+  nature: 'martial',
+  trigger: 'naturalOne',
+  form: 'bear',
+  when: [{ type: 'hasStatus', who: 'self', status: 'bonusArmor' }],
+  effects: [{ type: 'release', status: 'bonusArmor', min: 1, target: 'opponent' }],
+})
+const SERIES_9: LabIdea[] = [
+  ...[undefined, 2, 1].map((cap) => ({
+    series: 9 as const, id: `ervald-givre-poison${cap ? `-${cap}` : ''}`, character: 'ervald',
+    name: `Aura glaciale qui pose du Poison${cap ? `, ${cap} charge${cap > 1 ? 's' : ''} au plus` : ''}`, schema: 'Harmonisation', family: 'Affliction',
+    pitch: `Au début de chacun de ses tours, l’aura pose 1 charge de Poison par charge d’aura${cap ? ` (${cap} au plus)` : ''} : un seul statut, une seule règle (immunité, Régénération, purification).`,
+    statuses: { [`labFrostPoison${cap ?? ''}`]: frostPoison(cap) },
+    apply: frostAs(`labFrostPoison${cap ?? ''}`),
+    watch: ['poison-aura', 'poison'],
+  })),
+  {
+    series: 9, id: 'ervald-givre-poison-souffle-2', character: 'ervald', name: 'Aura glaciale qui pose du Poison (cumulable), Souffle 2', schema: 'Harmonisation compensée', family: 'Affliction',
+    pitch: 'L’aura reste cumulable (chaque 3 ajoute une charge de Poison par tour) ; le Souffle de la tombe pose Poison 2 au lieu de 3.',
+    statuses: { labFrostPoison: frostPoison() },
+    apply: all(frostAs('labFrostPoison'), swap('grave-breath', [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }])),
+    watch: ['poison-aura', 'poison'],
+  },
+  {
+    series: 9, id: 'ervald-givre-poison-1-souffle-2', character: 'ervald', name: 'Aura glaciale qui pose du Poison (1 au plus), Souffle 2', schema: 'Harmonisation compensée', family: 'Affliction',
+    pitch: 'Comme ci-dessus, plafonnée à 1 charge ; le Souffle de la tombe pose Poison 2 au lieu de 3.',
+    statuses: { labFrostPoison1: frostPoison(1) },
+    apply: all(frostAs('labFrostPoison1'), swap('grave-breath', [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }])),
+    watch: ['poison-aura', 'poison'],
+  },
+  ...[1, 2, 3].map((bonus) => ({
+    series: 9 as const, id: `thaldrin-rancune-${bonus}`, character: 'thaldrin', name: `Rancune +${bonus}`, schema: 'Dualité (homme → ours)', family: 'Puissance',
+    pitch: `Chaque coup encaissé sous forme humaine arme +${bonus} sur son prochain coup qui touche : l’ours garde rancune de ce que l’homme a subi.`,
+    statuses: { [`labGrudge${bonus}`]: grudge(bonus) },
+    apply: grudgeOn(bonus),
+    watch: ['lab-rancune'],
+  })),
+  {
+    series: 9, id: 'thaldrin-rancune-3-unique', character: 'thaldrin', name: 'Rancune +3, une charge au plus', schema: 'Dualité (homme → ours)', family: 'Puissance',
+    pitch: 'Être touché sous forme humaine arme +3 sur son prochain coup qui touche, sans cumul.',
+    statuses: { labGrudge3Once: { ...grudge(3), maxStacks: 1 } },
+    apply: add({ id: 'lab-rancune', name: 'Rancune', nature: 'martial', trigger: 'hurt', form: 'human', effects: [{ type: 'applyStatus', status: 'labGrudge3Once' as never, stacks: 1 }] }),
+    watch: ['lab-rancune'],
+  },
+  // Les liens portés par les auras du 3 : la dualité se gagne au dé au lieu d'être offerte
+  ...[1, 2, 3].map((bonus) => ({
+    series: 9 as const, id: `thaldrin-aura-rancune-${bonus}`, character: 'thaldrin', name: `Aura de rancune +${bonus} au lieu de la pourriture`, schema: 'Dualité (aura de l’ours)', family: 'Puissance',
+    pitch: `Le 3 de l’ours pose une Aura de rancune : chaque coup encaissé arme +${bonus} par charge sur son prochain coup qui touche. La Pourriture quitte le jeu.`,
+    statuses: { [`labGrudge${bonus}`]: grudge(bonus), [`labGrudgeAura${bonus}`]: grudgeAura(bonus) },
+    apply: grudgeAuraOn(bonus),
+    watch: ['rot-aura'],
+  })),
+  ...[1, 2, 3].map((heal) => ({
+    series: 9 as const, id: `thaldrin-aura-seve-${heal}`, character: 'thaldrin', name: `Aura de sève ${heal} au lieu des Feux follets`, schema: 'Dualité (aura de l’homme)', family: 'Soin',
+    pitch: `Le 3 de l’homme pose une Aura de sève : chaque coup encaissé lui rend ${heal} PV par charge au début de son prochain tour.`,
+    statuses: { labSap: SAP, [`labSapAura${heal}`]: sapAura(heal) },
+    apply: sapAuraOn(heal),
+    watch: ['firefly'],
+  })),
+  ...[2, 3].map((n) => ({
+    series: 9 as const, id: `thaldrin-auras-dualite-${n}`, character: 'thaldrin', name: `Kit : Aura de sève ${n} (homme) et Aura de rancune +${n} (ours)`, schema: 'Dualité (les deux auras)', family: 'Puissance + Soin',
+    pitch: 'Les deux 3 deviennent les deux liens : l’homme encaisse et se soigne, l’ours encaisse et se venge. Ni Pourriture ni Brûlure.',
+    statuses: { [`labGrudge${n}`]: grudge(n), [`labGrudgeAura${n}`]: grudgeAura(n), labSap: SAP, [`labSapAura${n}`]: sapAura(n) },
+    apply: all(grudgeAuraOn(n), sapAuraOn(n)),
+    watch: ['rot-aura', 'firefly'],
+  })),
+  {
+    series: 9, id: 'thaldrin-auras-dualite-3-2', character: 'thaldrin', name: 'Kit : Aura de sève 2 (homme) et Aura de rancune +3 (ours)', schema: 'Dualité (les deux auras)', family: 'Puissance + Soin',
+    pitch: 'Les deux réglages neutres pris seuls, ensemble : l’homme encaisse et se soigne de 2, l’ours encaisse et frappe de +3. Ni Pourriture ni Brûlure.',
+    statuses: { labGrudge3: grudge(3), labGrudgeAura3: grudgeAura(3), labSap: SAP, labSapAura2: sapAura(2) },
+    apply: all(grudgeAuraOn(3), sapAuraOn(2)),
+    watch: ['rot-aura', 'firefly'],
+  },
+  {
+    series: 9, id: 'thaldrin-seve-1', character: 'thaldrin', name: 'Sève 1', schema: 'Dualité (ours → homme)', family: 'Soin',
+    pitch: 'Chaque coup encaissé sous forme d’ours lui rend 1 PV au début de son prochain tour.',
+    statuses: { labSap: SAP },
+    apply: sapOn(1),
+    watch: ['lab-seve'],
+  },
+  {
+    series: 9, id: 'thaldrin-dualite-1', character: 'thaldrin', name: 'Kit : Rancune +1 et Sève 1', schema: 'Dualité (les deux sens)', family: 'Puissance + Soin',
+    pitch: 'Les deux liens, au plus bas : ce que l’homme encaisse arme l’ours de +1 par coup, ce que l’ours encaisse rend 1 PV par coup à l’homme.',
+    statuses: { labGrudge1: grudge(1), labSap: SAP },
+    apply: all(grudgeOn(1), sapOn(1)),
+    watch: ['lab-rancune', 'lab-seve'],
+  },
+  {
+    series: 9, id: 'thaldrin-seve-2', character: 'thaldrin', name: 'Sève 2', schema: 'Dualité (ours → homme)', family: 'Soin',
+    pitch: 'Chaque coup encaissé sous forme d’ours lui rend 2 PV au début de son prochain tour : l’homme panse ce que l’ours a pris.',
+    statuses: { labSap: SAP },
+    apply: sapOn(2),
+    watch: ['lab-seve'],
+  },
+  {
+    series: 9, id: 'thaldrin-eclats', character: 'thaldrin', name: 'Charge qui fait éclater l’écorce', schema: 'Dualité (homme → ours)', family: 'Garde + Puissance',
+    pitch: 'Sur la Charge de l’ours, l’Écorce épaisse qui reste éclate : autant de dégâts directs que de points d’écorce, et l’écorce disparaît.',
+    apply: shards,
+    watch: ['lab-eclats'],
+  },
+  {
+    series: 9, id: 'thaldrin-dualite', character: 'thaldrin', name: 'Kit : Rancune +2 et Sève 2', schema: 'Dualité (les deux sens)', family: 'Puissance + Soin',
+    pitch: 'Les deux liens à la fois : ce que l’homme encaisse arme l’ours, ce que l’ours encaisse soigne l’homme.',
+    statuses: { labGrudge2: grudge(2), labSap: SAP },
+    apply: all(grudgeOn(2), sapOn(2)),
+    watch: ['lab-rancune', 'lab-seve'],
+  },
+]
+
+/*
+ * Série 10 : le druide, rework de la dualité (2026-10-20, demande de l'utilisateur, SORTS.md § 16). Une aura
+ * sur chaque 3, et une mécanique d'identité : le relais des formes. Ce que l'homme encaisse arme l'ours
+ * (Rancune), ce que l'ours encaisse soigne l'homme (Sève) ; les deux auras du 3 amplifient le relais.
+ * Compensations cherchées dans l'ordre d'EQUILIBRAGE.md : valeurs des compétences, puis stats, PV en dernier.
+ * Livré en 0.71.0 (relais par tour, auras à +2, statuts `grudge`, `sap`, `grudgeAura`, `sapAura`) : ces idées
+ * visent l'ancien kit (Feux follets, Aura de pourriture) et ne s'appliquent plus telles quelles.
+ */
+interface DruidKit {
+  /** Relais de base : Rancune +N par coup encaissé sous forme humaine */
+  grudge?: number
+  /** Relais de base : Sève N par coup encaissé sous forme d'ours */
+  sap?: number
+  /** Aura de rancune (3 de l'ours, au lieu de la Pourriture) : +N par coup encaissé et par charge */
+  grudgeAura?: number
+  /** Aura de sève (3 de l'homme, au lieu des Feux follets) : N PV par coup encaissé et par charge */
+  sapAura?: number
+  /** Coup de griffe : relance + N (3 aujourd'hui) */
+  claw?: number
+  /** Écorce épaisse : Armure temporaire N (7 aujourd'hui) */
+  bark?: number
+  /** Fleur de vie : Régénération N pendant 3 tours (2 aujourd'hui) */
+  bloom?: number
+  crit?: number
+  maxHp?: number
+}
+const druidKit = (k: DruidKit) => {
+  const statuses: Record<string, StatusDef> = { labSap: SAP }
+  const steps: ((c: Character) => Character)[] = []
+  if (k.grudge) {
+    statuses[`labGrudge${k.grudge}`] = grudge(k.grudge)
+    steps.push(grudgeOn(k.grudge))
+  }
+  if (k.sap) steps.push(sapOn(k.sap))
+  if (k.grudgeAura) {
+    statuses[`labGrudge${k.grudgeAura}`] = grudge(k.grudgeAura)
+    statuses[`labGrudgeAura${k.grudgeAura}`] = grudgeAura(k.grudgeAura)
+    steps.push(grudgeAuraOn(k.grudgeAura))
+  }
+  if (k.sapAura) {
+    statuses[`labSapAura${k.sapAura}`] = sapAura(k.sapAura)
+    steps.push(sapAuraOn(k.sapAura))
+  }
+  if (k.claw !== undefined) steps.push(replace('claw', (e) => ({ ...e, reshapesHit: { value: 'reroll', bonus: k.claw } })))
+  if (k.bark !== undefined) steps.push(swap('bark-skin', [{ type: 'applyStatus', status: 'bonusArmor', stacks: k.bark }]))
+  if (k.bloom !== undefined) steps.push(swap('life-bloom', [{ type: 'applyStatus', status: 'regeneration', stacks: k.bloom, turns: 3 }]))
+  if (k.crit !== undefined || k.maxHp !== undefined)
+    steps.push((c) => c.adjusted({ stats: { ...(k.crit !== undefined && { critChance: k.crit }), ...(k.maxHp !== undefined && { maxHp: k.maxHp }) } }))
+  return { statuses, apply: all(...steps) }
+}
+const kitName = (k: DruidKit) =>
+  [
+    k.grudge || k.sap ? `relais ${k.grudge ?? 0}/${k.sap ?? 0}` : 'sans relais',
+    k.grudgeAura || k.sapAura ? `auras rancune +${k.grudgeAura ?? 0}, sève ${k.sapAura ?? 0}` : '',
+    k.claw !== undefined ? `griffe +${k.claw}` : '',
+    k.bark !== undefined ? `écorce ${k.bark}` : '',
+    k.bloom !== undefined ? `fleur ${k.bloom}` : '',
+    k.crit !== undefined ? `critique ${Math.round(k.crit * 100)} %` : '',
+    k.maxHp !== undefined ? `${k.maxHp} PV` : '',
+  ]
+    .filter(Boolean)
+    .join(', ')
+const KITS: Record<string, DruidKit> = {
+  relais: { grudge: 1, sap: 1 },
+  'relais-auras-3-2': { grudge: 1, sap: 1, grudgeAura: 3, sapAura: 2 },
+  'relais-auras-2-1': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1 },
+  'relais-auras-1-1': { grudge: 1, sap: 1, grudgeAura: 1, sapAura: 1 },
+  'relais-auras-2-1-griffe-0': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1, claw: 0 },
+  'relais-auras-2-1-griffe-0-ecorce-4': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1, claw: 0, bark: 4 },
+  'relais-auras-2-1-crit-4': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1, crit: 0.04 },
+  'relais-auras-2-1-griffe-0-crit-4': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1, claw: 0, crit: 0.04 },
+  'relais-auras-2-1-pv-50': { grudge: 1, sap: 1, grudgeAura: 2, sapAura: 1, maxHp: 50 },
+}
+const SERIES_10: LabIdea[] = Object.entries(KITS).map(([id, k]) => ({
+  series: 10 as const,
+  id: `thaldrin-${id}`,
+  character: 'thaldrin',
+  name: `Druide : ${kitName(k)}`,
+  schema: 'Dualité (relais des formes)',
+  family: 'Puissance + Soin',
+  pitch: 'Ce que l’homme encaisse arme l’ours (Rancune), ce que l’ours encaisse soigne l’homme (Sève) ; les auras du 3 amplifient le relais.',
+  ...druidKit(k),
+  watch: ['lab-rancune', 'lab-seve', 'rot-aura', 'firefly'],
+}))
+
+/*
+ * Relais par tour (série 10, deuxième passe) : compté coup par coup, le relais écrasait les adversaires qui
+ * frappent deux fois (Fanchon 45 → 75 %). Ici, il est binaire : touché au moins une fois sous forme
+ * humaine, l'ours frappe +N sur son prochain coup qui touche ; touché sous forme d'ours, l'homme regagne
+ * N PV au début de son tour. L'aura du 3 de chaque forme augmente la valeur de son relais.
+ */
+const relayGrudge: StatusDef = {
+  name: 'Rancune',
+  polarity: 'positive',
+  summary: 'Son prochain coup qui touche fait autant de dégâts de plus que la valeur, avant l’armure. Une nouvelle Rancune remplace l’ancienne.',
+  describe: (st) => `Son prochain coup qui touche fait +${st.stacks}`,
+  badge: (st) => `+${st.stacks}`,
+  counter: 'stacks',
+  stacking: 'refresh',
+  modifyOutgoing: (damage, st) => damage + st.stacks,
+  spentOnHit: true,
+}
+const relaySap: StatusDef = { ...SAP, stacking: 'refresh', summary: 'Au début de son prochain tour, il regagne autant de PV que la valeur.' }
+const relayMark = (name: string, color: string): StatusDef => ({
+  name,
+  look: { aura: color },
+  polarity: 'positive',
+  summary: `${name} : son relais vaut davantage. Permanente.`,
+  describe: () => 'Son relais vaut davantage',
+  badge: (st) => String(st.stacks),
+  stacking: 'add',
+})
+interface RelayKit extends Omit<DruidKit, 'grudge' | 'sap' | 'grudgeAura' | 'sapAura'> {
+  /** Rancune armée par un coup encaissé sous forme humaine */
+  g: number
+  /** Sève armée par un coup encaissé sous forme d'ours */
+  s: number
+  /** En plus avec l'Aura de rancune (3 de l'ours, au lieu de la Pourriture) */
+  ga?: number
+  /** En plus avec l'Aura de sève (3 de l'homme, au lieu des Feux follets) */
+  sa?: number
+}
+const relayKit = (k: RelayKit) => {
+  const base = druidKit({ claw: k.claw, bark: k.bark, bloom: k.bloom, crit: k.crit, maxHp: k.maxHp })
+  const on = (form: 'human' | 'bear', status: string, stacks: number, when?: CharacterEvent['when']): CharacterEvent => ({
+    id: `lab-relais-${form}${when ? '-aura' : ''}`,
+    name: form === 'human' ? 'Rancune' : 'Sève',
+    nature: form === 'human' ? 'martial' : 'arcane',
+    trigger: 'hurt',
+    form,
+    ...(when && { when }),
+    effects: [{ type: 'applyStatus', status: status as never, stacks, ...(form === 'bear' && { turns: 1 }) }],
+  })
+  const events = [on('human', 'labRelayGrudge', k.g), on('bear', 'labRelaySap', k.s)]
+  const steps = [base.apply]
+  if (k.ga) {
+    events.push(on('human', 'labRelayGrudge', k.g + k.ga, [{ type: 'hasStatus', who: 'self', status: 'labGrudgeMark' as never }]))
+    steps.push(swap('rot-aura', [{ type: 'applyStatus', status: 'labGrudgeMark' as never, stacks: 1 }]))
+  }
+  if (k.sa) {
+    events.push(on('bear', 'labRelaySap', k.s + k.sa, [{ type: 'hasStatus', who: 'self', status: 'labSapMark' as never }]))
+    steps.push(swap('firefly', [{ type: 'applyStatus', status: 'labSapMark' as never, stacks: 1 }]))
+  }
+  return {
+    statuses: {
+      ...base.statuses,
+      labRelayGrudge: relayGrudge,
+      labRelaySap: relaySap,
+      labGrudgeMark: relayMark('Aura de rancune', 'rgba(180,83,9,0.55)'),
+      labSapMark: relayMark('Aura de sève', 'rgba(132,204,22,0.5)'),
+    },
+    apply: all(...steps, add(...events)),
+  }
+}
+const RELAY_KITS: Record<string, RelayKit> = {
+  'relais-tour-2-2': { g: 2, s: 2 },
+  'relais-tour-3-3': { g: 3, s: 3 },
+  'relais-tour-2-2-auras-2-2': { g: 2, s: 2, ga: 2, sa: 2 },
+  'relais-tour-2-2-auras-3-3': { g: 2, s: 2, ga: 3, sa: 3 },
+  'relais-tour-3-3-auras-3-3': { g: 3, s: 3, ga: 3, sa: 3 },
+  'relais-tour-1-1-auras-3-3': { g: 1, s: 1, ga: 3, sa: 3 },
+  'relais-tour-1-1': { g: 1, s: 1 },
+  'relais-tour-1-1-auras-2-2': { g: 1, s: 1, ga: 2, sa: 2 },
+  'relais-tour-1-1-auras-3-2': { g: 1, s: 1, ga: 3, sa: 2 },
+  'relais-tour-1-1-auras-4-4': { g: 1, s: 1, ga: 4, sa: 4 },
+}
+const SERIES_10_RELAY: LabIdea[] = Object.entries(RELAY_KITS).map(([id, k]) => ({
+  series: 10 as const,
+  id: `thaldrin-${id}`,
+  character: 'thaldrin',
+  name: `Druide : relais par tour ${k.g}/${k.s}${k.ga || k.sa ? `, auras +${k.ga ?? 0}/+${k.sa ?? 0}` : ''}${kitName({ claw: k.claw, bark: k.bark, bloom: k.bloom, crit: k.crit, maxHp: k.maxHp }).replace('sans relais', '')}`,
+  schema: 'Dualité (relais par tour)',
+  family: 'Puissance + Soin',
+  pitch: 'Touché sous forme humaine : l’ours frappe plus fort au prochain coup. Touché sous forme d’ours : l’homme se soigne à son tour. Les auras du 3 augmentent le relais.',
+  ...relayKit(k),
+  watch: ['lab-relais-human', 'lab-relais-bear', 'rot-aura', 'firefly'],
+}))
+
+/*
+ * Série 11 : le druide refondu (2026-10-20, demande de l'utilisateur, SORTS.md § 17). L'homme ne fait que
+ * lancer des sorts (un d3 : 1 et 2 sont des sorts, 3 son aura) ; l'ours ne lance plus rien, il frappe à
+ * +3 (ses 1 à 3 frappent aussi) et fait saigner. L'aura est le Bosquet, commun aux deux formes : un arbre
+ * qui pousse sur la scène, qui soigne l'homme et dont les racines s'en prennent à l'adversaire quand
+ * l'ours agit. La forme se lit avec des compétences de début de tour (`turnStart` + `form`).
+ */
+const DRUID_KIT = ['life-bloom', 'bark-skin', 'sap-aura', 'charge', 'claw', 'grudge-aura', 'grudge', 'sap']
+// Les deux statuts de forme imitent des stats de forme (le d3 de l'homme, le +3 de l'ours). En bonus, la
+// Purification d'Ysolde les retirait à la place d'un vrai bonus (aura, Régénération) : on les range en malus
+// pour que rien ne les vise, comme le feraient de vraies stats de forme (séries 11 et 12 rejouées ainsi).
+const CASTING: StatusDef = {
+  name: 'Incantation',
+  polarity: 'negative',
+  summary: 'Sous forme humaine, le druide ne frappe pas : son dé devient un d3, chaque jet est un sort.',
+  describe: () => 'Son dé devient un d3 : chaque jet est un sort',
+  badge: () => 'd3',
+  stacking: 'refresh',
+  expiresAt: 'turnStart',
+  modifyStats: (s) => ({ ...s, damageDie: 3 }),
+}
+const bearMight = (bonus: number): StatusDef => ({
+  name: 'Force de l’ours',
+  polarity: 'negative',
+  summary: `Sous forme d’ours, chaque coup fait +${bonus}.`,
+  describe: () => `Chaque coup fait +${bonus}`,
+  badge: () => `+${bonus}`,
+  stacking: 'refresh',
+  expiresAt: 'turnStart',
+  modifyOutgoing: (damage) => damage + bonus,
+})
+const GROVE: StatusDef = {
+  name: 'Bosquet',
+  look: { aura: 'rgba(132,204,22,0.5)' },
+  polarity: 'positive',
+  summary: 'Un arbre pousse sur la scène : il soigne l’homme, ses racines frappent quand l’ours agit. Permanente.',
+  describe: (st) => `Bosquet de taille ${st.stacks}`,
+  badge: (st) => String(st.stacks),
+  stacking: 'add',
+}
+type Spell = { name: string; effects: CharacterEvent['effects'] }
+const SPELLS: Record<string, Spell> = {
+  fleur: { name: 'Fleur de vie', effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] },
+  soin: { name: 'Soin de sève', effects: [{ type: 'heal', amount: 6 }] },
+  ecorce: { name: 'Écorce épaisse', effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 7 }] },
+  follets: { name: 'Feux follets', effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }] },
+  racines: { name: 'Racines', effects: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }] },
+  epines: { name: 'Lance d’épines', effects: [{ type: 'damage', amount: 6, target: 'opponent' }] },
+  epines5: { name: 'Lance d’épines (5)', effects: [{ type: 'damage', amount: 5, target: 'opponent' }] },
+  epines4: { name: 'Lance d’épines (4)', effects: [{ type: 'damage', amount: 4, target: 'opponent' }] },
+}
+interface NewDruid {
+  one: keyof typeof SPELLS
+  two: keyof typeof SPELLS
+  /** Bonus de l'ours sur chaque coup */
+  might: number
+  /** Saignement posé par chaque coup de l'ours qui touche */
+  bleed?: number
+  /** Saignement posé par chaque critique de l'ours (au lieu de chaque coup) */
+  critBleed?: number
+  /** Bosquet : PV rendus à l'homme et effet des racines quand l'ours agit, par palier de taille (1, 2) */
+  groveHeal: number
+  groveRoots: { kind: 'damage' | 'bleed'; amount: number }
+  maxHp?: number
+}
+const newDruid = (k: NewDruid) => {
+  const spell = (trigger: 'naturalOne' | 'naturalTwo', key: keyof typeof SPELLS): CharacterEvent => ({
+    id: `lab-sort-${key}`, name: SPELLS[key].name, nature: 'arcane', trigger, form: 'human', forfeitsHit: true, effects: SPELLS[key].effects,
+  })
+  const tiers = [1, 2].flatMap((level): CharacterEvent[] => {
+    const when: CharacterEvent['when'] = [{ type: 'hasStatus', who: 'self', status: 'labGrove' as never, stacks: level }]
+    const roots: CharacterEvent['effects'] =
+      k.groveRoots.kind === 'damage'
+        ? [{ type: 'damage', amount: k.groveRoots.amount, target: 'opponent' }]
+        : [{ type: 'applyStatus', status: 'bleed', stacks: k.groveRoots.amount, target: 'opponent' }]
+    return [
+      { id: `lab-bosquet-soin-${level}`, name: 'Bosquet', nature: 'arcane', trigger: 'turnStart', form: 'human', when, effects: [{ type: 'heal', amount: k.groveHeal }] },
+      { id: `lab-bosquet-racines-${level}`, name: 'Racines du bosquet', nature: 'arcane', trigger: 'turnStart', form: 'bear', when, effects: roots },
+    ]
+  })
+  const events: CharacterEvent[] = [
+    { id: 'lab-incantation', name: 'Incantation', nature: 'arcane', trigger: 'turnStart', form: 'human', effects: [{ type: 'applyStatus', status: 'labCasting' as never, stacks: 1, turns: 1 }] },
+    { id: 'lab-force', name: 'Force de l’ours', nature: 'martial', trigger: 'turnStart', form: 'bear', effects: [{ type: 'applyStatus', status: `labMight${k.might}` as never, stacks: 1, turns: 1 }] },
+    spell('naturalOne', k.one),
+    spell('naturalTwo', k.two),
+    { id: 'lab-bosquet', name: 'Bosquet', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'labGrove' as never, stacks: 1 }] },
+    ...tiers,
+    ...(k.bleed ? [{ id: 'lab-griffes', name: 'Griffes', nature: 'martial', trigger: 'hit', form: 'bear', effects: [{ type: 'applyStatus', status: 'bleed', stacks: k.bleed, target: 'opponent' }] } as CharacterEvent] : []),
+    ...(k.critBleed ? [{ id: 'lab-griffes', name: 'Griffes', nature: 'martial', trigger: 'crit', form: 'bear', effects: [{ type: 'applyStatus', status: 'bleed', stacks: k.critBleed, target: 'opponent' }] } as CharacterEvent] : []),
+  ]
+  return {
+    statuses: { labCasting: CASTING, [`labMight${k.might}`]: bearMight(k.might), labGrove: GROVE },
+    apply: all(remove(...DRUID_KIT), add(...events), ...(k.maxHp ? [stats({ maxHp: k.maxHp })] : [])),
+  }
+}
+const NEW_DRUIDS: Record<string, NewDruid> = {
+  'follets-epines-bosquet-1-1-griffes-1': { one: 'follets', two: 'epines', might: 3, bleed: 1, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+  'follets-epines5-bosquet-1-1-griffes-1': { one: 'follets', two: 'epines5', might: 3, bleed: 1, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+  'follets-epines4-bosquet-1-1-griffes-1': { one: 'follets', two: 'epines4', might: 3, bleed: 1, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+  'follets-epines-bosquet-1-0-griffes-1': { one: 'follets', two: 'epines', might: 3, bleed: 1, groveHeal: 1, groveRoots: { kind: 'damage', amount: 0 } },
+  'follets-epines-bosquet-2-0-griffes-1': { one: 'follets', two: 'epines', might: 3, bleed: 1, groveHeal: 2, groveRoots: { kind: 'damage', amount: 0 } },
+  'soin-epines-bosquet-1-1-griffes-1': { one: 'soin', two: 'epines', might: 3, bleed: 1, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+  'follets-epines-bosquet-1-1-griffes-crit': { one: 'follets', two: 'epines', might: 3, critBleed: 3, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+  'follets-epines-bosquet-1-1': { one: 'follets', two: 'epines', might: 3, groveHeal: 1, groveRoots: { kind: 'damage', amount: 1 } },
+}
+const SERIES_11: LabIdea[] = Object.entries(NEW_DRUIDS).map(([id, k]) => ({
+  series: 11 as const,
+  id: `thaldrin-refonte-${id}`,
+  character: 'thaldrin',
+  name: `Refonte : ${SPELLS[k.one].name} / ${SPELLS[k.two].name}, ours +${k.might}${k.bleed ? `, griffes Saignement ${k.bleed}` : ''}, Bosquet ${k.groveHeal} PV / racines ${k.groveRoots.kind === 'damage' ? `${k.groveRoots.amount} dégâts` : `Saignement ${k.groveRoots.amount}`}${k.maxHp ? `, ${k.maxHp} PV` : ''}`,
+  schema: 'Refonte (deux formes, un bosquet)',
+  family: 'Soin + Puissance + Affliction',
+  pitch: 'L’homme ne lance que des sorts (d3), l’ours ne fait que frapper (+3) ; le Bosquet, aura commune, soigne l’un et frappe pour l’autre.',
+  ...newDruid(k),
+  watch: ['lab-bosquet', 'lab-griffes', `lab-sort-${k.one}`, `lab-sort-${k.two}`],
+}))
+
+/*
+ * Série 12 : le druide simple (2026-10-20, retour de l'utilisateur : le Bosquet ajoute une couche ; « on
+ * n'arrive déjà pas à définir le druide »). Une phrase : l'homme lance un sort à chaque tour, l'ours frappe
+ * fort et fait saigner, une seule aura vaut pour les deux. Aucune mécanique en plus : le spectacle des sorts
+ * passe par la scène (foudre, lucioles), pas par une règle (SORTS.md § 18). Livré en 0.73.0 (Foudre 5, Feux
+ * follets, Aura sauvage, ours +4 sans Saignement) : ces idées partent de l'ancien kit et ne s'appliquent plus.
+ */
+const WILD_AURA: StatusDef = {
+  name: 'Aura sauvage',
+  look: { aura: 'rgba(132,204,22,0.5)' },
+  polarity: 'positive',
+  summary: 'Le porteur regagne 2 PV par charge à la fin de chacun de ses tours, quelle que soit sa forme. Permanente.',
+  describe: (st) => `Regagne ${2 * st.stacks} PV à la fin de chacun de ses tours`,
+  badge: (st) => `+${2 * st.stacks}`,
+  stacking: 'add',
+  maxStacks: 3,
+  onTurnEnd: (st) => [{ type: 'heal', amount: 2 * st.stacks }],
+}
+const BARK_AURA: StatusDef = {
+  name: 'Aura d’écorce',
+  look: { aura: 'rgba(120,83,45,0.55)' },
+  polarity: 'positive',
+  summary: 'L’armure du porteur gagne 1 par charge, quelle que soit sa forme. Permanente.',
+  describe: (st) => `Armure +${st.stacks}`,
+  badge: (st) => `+${st.stacks}`,
+  stacking: 'add',
+  modifyStats: (s, st) => ({ ...s, armor: s.armor + st.stacks }),
+}
+type SimpleSpell = { name: string; effects: CharacterEvent['effects'] }
+const simpleSpells = (key: string): SimpleSpell => {
+  const [kind, value] = [key.replace(/\d+$/, ''), Number(key.match(/\d+$/)?.[0] ?? 0)]
+  if (kind === 'foudre') return { name: `Foudre (${value})`, effects: [{ type: 'damage', amount: value, target: 'opponent' }] }
+  if (kind === 'soin') return { name: `Soin (${value})`, effects: [{ type: 'heal', amount: value }] }
+  if (kind === 'follets') return { name: 'Feux follets', effects: [{ type: 'applyStatus', status: 'burn', stacks: value || 3, target: 'opponent' }] }
+  if (kind === 'racines') return { name: 'Racines', effects: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }] }
+  throw new Error(`sort inconnu : ${key}`)
+}
+interface SimpleDruid {
+  one: string
+  two: string
+  aura: 'sauvage' | 'ecorce' | 'puissance' | 'nature'
+  might: number
+  bleed: number
+  maxHp?: number
+}
+const simpleDruid = (k: SimpleDruid) => {
+  const spell = (trigger: 'naturalOne' | 'naturalTwo', key: string): CharacterEvent => {
+    const s = simpleSpells(key)
+    return { id: `lab-sort-${trigger}`, name: s.name, nature: 'arcane', trigger, form: 'human', forfeitsHit: true, effects: s.effects }
+  }
+  // « nature » : une seule aura pour les deux formes, qui fait plus mal sous les deux : +2 par charge aux coups
+  // de l'ours (Aura de puissance) et +2 par palier à la Foudre de l'homme (paliers de laboratoire, 2 au plus)
+  const aura = { sauvage: 'labWildAura', ecorce: 'labBarkAura', puissance: 'powerAura', nature: 'powerAura' }[k.aura]
+  const natureBolt = (level: number): CharacterEvent => ({
+    id: `lab-foudre-nature-${level}`, name: 'Foudre (aura)', nature: 'arcane', trigger: 'naturalOne', form: 'human', forfeitsHit: true,
+    when: [{ type: 'hasStatus', who: 'self', status: 'powerAura', stacks: level }],
+    effects: [{ type: 'damage', amount: 2, target: 'opponent' }],
+  })
+  const events: CharacterEvent[] = [
+    { id: 'lab-incantation', name: 'Incantation', nature: 'arcane', trigger: 'turnStart', form: 'human', effects: [{ type: 'applyStatus', status: 'labCasting' as never, stacks: 1, turns: 1 }] },
+    { id: 'lab-force', name: 'Force de l’ours', nature: 'martial', trigger: 'turnStart', form: 'bear', effects: [{ type: 'applyStatus', status: `labMight${k.might}` as never, stacks: 1, turns: 1 }] },
+    spell('naturalOne', k.one),
+    spell('naturalTwo', k.two),
+    { id: 'lab-aura', name: 'Aura', nature: 'arcane', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: aura as never, stacks: 1 }] },
+    ...(k.bleed ? [{ id: 'lab-griffes', name: 'Griffes', nature: 'martial', trigger: 'hit', form: 'bear', effects: [{ type: 'applyStatus', status: 'bleed', stacks: k.bleed, target: 'opponent' }] } as CharacterEvent] : []),
+    ...(k.aura === 'nature' ? [natureBolt(1), natureBolt(2)] : []),
+  ]
+  return {
+    statuses: { labCasting: CASTING, [`labMight${k.might}`]: bearMight(k.might), labWildAura: WILD_AURA, labBarkAura: BARK_AURA },
+    apply: all(remove(...DRUID_KIT), add(...events), ...(k.maxHp ? [stats({ maxHp: k.maxHp })] : [])),
+  }
+}
+const SIMPLE_DRUIDS: SimpleDruid[] = [
+  { one: 'foudre5', two: 'follets3', aura: 'puissance', might: 3, bleed: 1 },
+  { one: 'foudre5', two: 'follets3', aura: 'puissance', might: 3, bleed: 0 },
+  { one: 'foudre5', two: 'follets3', aura: 'puissance', might: 4, bleed: 0 },
+  { one: 'foudre5', two: 'follets3', aura: 'puissance', might: 5, bleed: 0 },
+  { one: 'foudre4', two: 'follets3', aura: 'puissance', might: 4, bleed: 0 },
+]
+const SERIES_12: LabIdea[] = SIMPLE_DRUIDS.map((k) => ({
+  series: 12 as const,
+  id: `thaldrin-simple-${k.one}-${k.two}-${k.aura}-ours${k.might}-griffes${k.bleed}${k.maxHp ? `-pv${k.maxHp}` : ''}`,
+  character: 'thaldrin',
+  name: `Simple : ${simpleSpells(k.one).name} / ${simpleSpells(k.two).name}, aura ${k.aura}, ours +${k.might}, griffes ${k.bleed}${k.maxHp ? `, ${k.maxHp} PV` : ''}`,
+  schema: 'Refonte simple (un sort par tour, une bête, une aura)',
+  family: 'Puissance + Affliction',
+  pitch: 'L’homme lance un sort à chaque tour, l’ours frappe à +3 et fait saigner, une aura pour les deux.',
+  ...simpleDruid(k),
+  watch: ['lab-sort-naturalOne', 'lab-sort-naturalTwo', 'lab-aura', 'lab-griffes'],
+}))
+
+/* --- Série 13 (2026-10-21) : la pièce de Pile ou face part aussitôt, juste après le 2 qui la pose, au lieu de
+   remplacer le dé de l'action suivante. Naraxes passe de 49,8 à 61,6 % : pistes de compensation par la valeur de pile.
+   Résultats (base 62,3 %) : 10 → 54,1 %, 12 → 56,3 %, 15 → 58,7 %. Décision de l'utilisateur : « Pile à 10 », livrée
+   (`COIN_HEADS`, statuses.ts). Les idées se rejouent désormais contre une base déjà à 10. --- */
+const SERIES_13: LabIdea[] = [10, 12, 15].map((damage) => ({
+  series: 13 as const,
+  id: `naraxes-pile-aussitot-${damage}`,
+  character: 'naraxes',
+  name: `Pile aussitôt à ${damage}`,
+  schema: 'Compensation',
+  family: 'Fortune',
+  pitch: `La pièce part aussitôt ; pile : ${damage} dégâts directs qui touchent (au lieu de 20) ; face, rien.`,
+  statuses: { [`labPileNow${damage}`]: { ...COIN, coinToss: { damage, headsTouches: true } } },
+  apply: replace('coin-flip', (e) => ({ ...e, effects: [{ type: 'applyStatus', status: `labPileNow${damage}` as never, stacks: 1 }] })),
+  watch: ['coin-flip'],
+}))
+
 export const IDEAS: readonly LabIdea[] = [
   {
     series: 1,
@@ -1218,5 +1846,12 @@ export const IDEAS: readonly LabIdea[] = [
   ...SERIES_5,
   ...SERIES_6,
   ...SERIES_7,
+  ...SERIES_8,
+  ...SERIES_9,
+  ...SERIES_10,
+  ...SERIES_10_RELAY,
+  ...SERIES_11,
+  ...SERIES_12,
+  ...SERIES_13,
 ]
 

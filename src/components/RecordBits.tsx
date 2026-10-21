@@ -48,20 +48,34 @@ export function Kpi({ label, value, accent }: { label: ReactNode; value: string 
 
 const nameOf = (id: string, fallback: string) => ROSTER.find((c) => c.id === id)?.name ?? fallback
 
-/** Une ligne d'historique ; `focus` met en avant le point de vue d'un personnage. */
-export function MatchRow({ match, focus }: { match: MatchRecord; focus?: string }) {
-  const [a, b] = [0, 1].map((i) => nameOf(match.fighters[i], match.names[i]))
+/**
+ * Une ligne d'historique ; `focus` met en avant le point de vue d'un personnage. `onOpenCharacter` : les noms
+ * deviennent des liens vers la fiche du personnage (personnages encore au roster seulement).
+ */
+export function MatchRow({ match, focus, onOpenCharacter }: { match: MatchRecord; focus?: string; onOpenCharacter?: (id: string) => void }) {
   const focusSide = focus ? match.fighters.indexOf(focus) : -1
   const won = focusSide === -1 ? null : match.winner === focusSide
+  const name = (i: 0 | 1) => {
+    const id = match.fighters[i]
+    const text = nameOf(id, match.names[i])
+    const style = match.winner === i ? 'font-bold text-ink-1' : 'text-ink-2'
+    return onOpenCharacter && ROSTER.some((c) => c.id === id) ? (
+      <button type="button" className={`codex-link ${style}`} onClick={() => onOpenCharacter(id)}>
+        {text}
+      </button>
+    ) : (
+      <span className={style}>{text}</span>
+    )
+  }
   return (
     <li className="flex items-center gap-2 border-b border-line-1 py-1.5 font-body text-[14px]">
       {won !== null && (
         <span className={`w-5 font-bold ${won ? 'text-good' : 'text-bad'}`}>{won ? 'V' : 'D'}</span>
       )}
       <span className="flex-1 truncate">
-        <span className={match.winner === 0 ? 'font-bold text-ink-1' : 'text-ink-2'}>{a}</span>
+        {name(0)}
         <span className="text-ink-off"> vs </span>
-        <span className={match.winner === 1 ? 'font-bold text-ink-1' : 'text-ink-2'}>{b}</span>
+        {name(1)}
       </span>
       <span className="font-data text-[13px] text-ink-3">{match.turns} t.</span>
       {match.tournament && (

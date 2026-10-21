@@ -2,6 +2,7 @@ import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { DOUBLE_TRIGGERS, TRIGGERS, type Trigger } from './events'
 import { atCap, of } from './narration'
+import { RELIC_KINDS, relicKind, relicLine } from './relics'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
 
 /*
@@ -39,7 +40,7 @@ function statusText(s: Status) {
   return `${label(s.id)} ${s.stacks} charge${s.stacks > 1 ? 's' : ''}${turns}${shown}`
 }
 
-function phaseOf(beat: Beat): string {
+function phaseOf(beat: Beat, fighters: Pair<Character>): string {
   switch (beat.type) {
     case 'statusTick':
     case 'statusDuration':
@@ -51,6 +52,9 @@ function phaseOf(beat: Beat): string {
       return triggerPhase(beat.trigger)
     case 'shift':
       return 'début'
+    // Une relique de tour part au début du tour ; les autres, sur un coup (ou un seuil franchi pendant l'action)
+    case 'relic':
+      return fighters[beat.side].relics.find((r) => r.id === beat.relic)?.trigger?.type === 'turn' ? 'début' : 'action'
     default:
       return 'action'
   }
@@ -97,18 +101,21 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       const att = fighters[a.attacker]
       const defSide = other(a.attacker)
       const def = fighters[defSide]
-      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
+      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
       const modifier = (m: (typeof a.modifiers)[number]) =>
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
       if (a.forfeited) return [`${head} · coup sacrifié par une compétence, aucun dégât (ni esquive ni critique)`]
       if (a.dodged)
         return [`${head} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
+      const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0)
       const steps = [
+        // Reliques de coup (Fer à quatre clous) : avant le critique
+        ...(a.relicBonus ?? []).map((b) => `relique ${b.name} +${b.amount}`),
         a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
         // Auras et statuts qui changent la force du coup, avec leur porteur
         ...early.map(modifier),
-        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(a.roll * a.critMultiplier) : a.roll) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
+        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round((a.roll + bonus) * a.critMultiplier) : a.roll + bonus) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
         ...Object.entries(a.shields).map(([id, n]) => `${label(id as StatusId)} −${n}`),
         // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
@@ -160,9 +167,15 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     }
     case 'coin':
       return [
-        `${label(beat.status)} : ${fighters[beat.side].name} lance une pièce au lieu de son dé → ${beat.heads ? 'PILE' : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,
+        `${label(beat.status)} : ${fighters[beat.side].name} lance aussitôt une pièce → ${beat.heads ? 'PILE' : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,
         ...(beat.heads ? effects(beat.effects) : []),
       ]
+    case 'relic': {
+      const relic = fighters[beat.side].relics.find((r) => r.id === beat.relic)
+      const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}` : 'relique inconnue'
+      const left = relic?.charges !== undefined ? `, ${relic.charges - beat.uses} charge${relic.charges - beat.uses > 1 ? 's' : ''} restante${relic.charges - beat.uses > 1 ? 's' : ''}` : ''
+      return [`Relique « ${beat.name} » ${of(fighters[beat.side].name)} (${kind}, déclenchement n° ${beat.uses}${left})`, ...effects(beat.effects)]
+    }
   }
 }
 
@@ -190,6 +203,12 @@ export function traceCombat(result: CombatResult): CombatTrace {
     fighterLine(fighters[1], 1),
     `Initiative (d10) : ${initiative.map((r) => `${r[0]}–${r[1]}`).join(', relance sur égalité, ')} → ${fighters[first].name} commence`,
     ...(result.forcedRolls ? [`${FORCED_PREFIX}${formatForcedRolls(result.forcedRolls)}`] : []),
+    // Reliques (tournoi) : `npm run logs` relit leurs identifiants pour rejouer le combat
+    ...([0, 1] as const).flatMap((s) =>
+      fighters[s].relics.length
+        ? [`${RELICS_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].relics.map((r) => `${r.id} « ${r.name} » (${relicLine(r)})`).join(' ; ')}`]
+        : [],
+    ),
   ]
 
   const turns: TraceTurn[] = []
@@ -201,7 +220,7 @@ export function traceCombat(result: CombatResult): CombatTrace {
       turns.push(block)
     }
     const [head, ...rest] = beatLines(beat, fighters, before)
-    block.lines.push(`[${phaseOf(beat)}] ${head}`, ...rest, statusesLine(beat.state, fighters))
+    block.lines.push(`[${phaseOf(beat, fighters)}] ${head}`, ...rest, statusesLine(beat.state, fighters))
     before = beat.state
   }
 
@@ -220,6 +239,19 @@ export const turnTitle = (t: TraceTurn, fighters: Pair<Character>) =>
   t.active === undefined ? 'Ouverture' : `Tour ${t.turn} · ${fighters[t.active].name} actif`
 
 const eventName = (c: Character, id: string) => c.events.find((e) => e.id === id)?.name ?? id
+
+/** En-tête des reliques d'un camp : « Reliques (gauche, Gorak) : wolf-fang « Dent de loup » (…) ; … » */
+export const RELICS_PREFIX = 'Reliques ('
+
+/** Lecture inverse de l'en-tête des reliques : leurs identifiants par camp, dans l'ordre d'obtention. */
+export function parseRelics(text: string): Pair<string[]> {
+  const relics: Pair<string[]> = [[], []]
+  for (const line of text.split('\n').filter((l) => l.startsWith(RELICS_PREFIX))) {
+    const side = line.startsWith(`${RELICS_PREFIX}${SIDE_LABEL[0]},`) ? 0 : 1
+    relics[side] = [...line.matchAll(/([a-z]+(?:-[a-z]+)*) « /g)].map((m) => m[1])
+  }
+  return relics
+}
 
 /** En-tête des dés imposés (mode triche) : `npm run logs` la relit pour rejouer le combat. */
 export const FORCED_PREFIX = 'Dés imposés (mode triche, rang de dé = valeur) : '

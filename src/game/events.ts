@@ -1,3 +1,5 @@
+import type { SceneEventId } from './scenes'
+import type { RuleId } from './rules'
 import { lowerFirst, STATUSES, type Polarity, type StatusId } from './statuses'
 
 /*
@@ -30,26 +32,29 @@ export type Trigger =
   | 'hurt'
   | 'bloodied'
 
-/** Libellés affichés. L'ordre d'évaluation sur un même coup est fixé par le moteur (combat.ts, étape 4). */
-export const TRIGGERS: Record<Trigger, { label: string }> = {
-  combatStart: { label: 'Au début du combat' },
-  turnStart: { label: 'Au début de chacun de ses tours' },
-  turnEnd: { label: 'À la fin de chacun de ses tours' },
-  naturalOne: { label: 'Sur un 1 au dé de dégâts' },
-  naturalTwo: { label: 'Sur un 2 au dé de dégâts' },
-  naturalThree: { label: 'Sur un 3 au dé de dégâts' },
-  naturalMax: { label: 'Sur un jet maximal au dé de dégâts' },
-  doubleOne: { label: 'Sur un double 1 (deux dés)' },
-  doubleTwo: { label: 'Sur un double 2 (deux dés)' },
-  doubleThree: { label: 'Sur un double 3 (deux dés)' },
-  doubleFour: { label: 'Sur un double 4 (deux dés)' },
-  doubleFive: { label: 'Sur un double 5 (deux dés)' },
-  hit: { label: 'Quand il touche' },
-  crit: { label: 'Quand il porte un critique' },
-  missed: { label: 'Quand son coup est esquivé' },
-  dodge: { label: 'Quand il esquive' },
-  hurt: { label: 'Quand il encaisse un coup' },
-  bloodied: { label: 'La première fois qu’il passe sous la moitié de ses PV' },
+/**
+ * Libellés affichés : `label` en toutes lettres, `short` pour un index (« dé 1 »). L'ordre d'évaluation sur un
+ * même coup est fixé par le moteur (combat.ts, étape 4).
+ */
+export const TRIGGERS: Record<Trigger, { label: string; short: string }> = {
+  combatStart: { label: 'Au début du combat', short: 'début du combat' },
+  turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
+  turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
+  naturalOne: { label: 'Sur un 1 au dé de dégâts', short: 'dé 1' },
+  naturalTwo: { label: 'Sur un 2 au dé de dégâts', short: 'dé 2' },
+  naturalThree: { label: 'Sur un 3 au dé de dégâts', short: 'dé 3' },
+  naturalMax: { label: 'Sur un jet maximal au dé de dégâts', short: 'dé max.' },
+  doubleOne: { label: 'Sur un double 1 (deux dés)', short: 'double 1' },
+  doubleTwo: { label: 'Sur un double 2 (deux dés)', short: 'double 2' },
+  doubleThree: { label: 'Sur un double 3 (deux dés)', short: 'double 3' },
+  doubleFour: { label: 'Sur un double 4 (deux dés)', short: 'double 4' },
+  doubleFive: { label: 'Sur un double 5 (deux dés)', short: 'double 5' },
+  hit: { label: 'Quand il touche', short: 'touche' },
+  crit: { label: 'Quand il porte un critique', short: 'critique' },
+  missed: { label: 'Quand son coup est esquivé', short: 'esquivé' },
+  dodge: { label: 'Quand il esquive', short: 'esquive' },
+  hurt: { label: 'Quand il encaisse un coup', short: 'coup encaissé' },
+  bloodied: { label: 'La première fois qu’il passe sous la moitié de ses PV', short: 'mi-PV' },
 }
 
 /** Cible d'un effet, relative au porteur de l'événement. */
@@ -57,8 +62,11 @@ export type Target = 'self' | 'opponent'
 
 export type Effect =
   | { type: 'heal'; amount: number; target?: Target }
-  /** Dégâts directs : ignorent l'armure, l'esquive et les boucliers */
-  | { type: 'damage'; amount: number; target?: Target }
+  /**
+   * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. `hits`
+   * (0.76.0, Foudre) : autant de coups de `amount` chacun, comptés ensemble ; l'écran en fait autant d'impacts.
+   */
+  | { type: 'damage'; amount: number; hits?: number; target?: Target }
   | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target }
   /**
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count`
@@ -127,6 +135,13 @@ export interface CharacterEvent {
    */
   reshapesHit?: { value: 'max' | 'reroll'; bonus?: number; noCrit?: boolean }
   /**
+   * La compétence d'un jet ne se déclenche que si le coup qu'elle accompagne touche (Pourfendre, 0.70.0) :
+   * un coup doit toucher pour poser un malus physique (règle de l'utilisateur). Le jet n'est pas sacrifié,
+   * c'est un vrai coup (esquive, critique, modificateurs) ; ses effets arrivent dans les fenêtres de ce coup.
+   * Réservé aux déclencheurs du dé, sans `chance`, `forfeitsHit` ni `reshapesHit`.
+   */
+  needsTouch?: boolean
+  /**
    * Compétence d'un double (personnage à deux dés, `twinDice`) qui attaque : l'action devient `volley`
    * coups dont le dé vaut la face du double (Crescendo : trois coups de 4). Réservé aux déclencheurs
    * doubleOne à doubleFive.
@@ -138,6 +153,12 @@ export interface CharacterEvent {
   form?: string
   /** Nature de la compétence, pour sa carte (défaut : DEFAULT_SKILL_NATURE). Présentation seulement. */
   nature?: SkillNature
+  /**
+   * Événement de scène (0.73.0) : l'écran le joue sur toute l'arène quand la compétence part (la Foudre du
+   * druide assombrit l'arène et un éclair tombe sur l'adversaire). Présentation seulement : registre
+   * `SCENE_EVENTS` (`scenes.ts`) pour le rythme, `SceneEvent.tsx` pour le rendu.
+   */
+  scene?: SceneEventId
 }
 
 /** Déclencheurs liés à la valeur du dé, connus dès le jet. */
@@ -180,14 +201,15 @@ export function describeEffect(effect: Effect): string {
     case 'heal':
       return effect.target === 'opponent' ? `soigne l'adversaire de ${effect.amount} PV` : `+${effect.amount} PV`
     case 'damage':
-      return `${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}`
+      return `${effect.hits ? `${effect.hits} fois ` : ''}${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}`
     case 'applyStatus': {
       const def = STATUSES[effect.status]
-      const status = { id: effect.status, stacks: effect.stacks, turns: effect.turns }
+      const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
+      const status = { id: effect.status, stacks: effect.stacks, turns }
       return `${def.name}${on ? ` ${on}` : ''} : ${lowerFirst(def.describe(status))}`
     }
     case 'release':
-      return `relâche ${STATUSES[effect.status].name} : la somme de ses jauges en dégâts directs (au moins ${effect.min})`
+      return `relâche ${STATUSES[effect.status].name} : la somme de ses jauges en dégâts directs${on ? ` ${on}` : ''} (au moins ${effect.min})`
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
       const orElse = effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''
@@ -219,16 +241,69 @@ export function describeCondition(c: Condition): string {
   }
 }
 
-export function describeEvent(e: CharacterEvent) {
-  const odds = e.chance !== undefined && e.chance < 1 ? ` (${Math.round(e.chance * 100)} % de chances)` : ''
-  const cap = e.limit !== undefined ? ` · ${e.limit} fois max. par combat` : ''
-  const when = e.when?.length ? ` · si ${e.when.map(describeCondition).join(' et ')}` : ''
-  const forfeit = e.forfeitsHit ? 'pas de dégâts, mais ' : ''
+/** « de » élidé devant une voyelle : « de Poison », « d'Aura de rancune ». */
+export const deName = (name: string) => (/^[aeiouyàâéèêëîïôûüh]/i.test(name) ? `d'${name}` : `de ${name}`)
+
+/** Une pastille d'une compétence (forme, coup sacrifié, condition…) et la règle commune qu'elle cite. */
+export interface SkillTag {
+  label: string
+  rule: RuleId
+}
+
+export interface SkillDescription {
+  /** L'effet, une phrase par effet */
+  text: string
+  /** Les pastilles, dans l'ordre de lecture */
+  tags: SkillTag[]
+  /** Les statuts que la compétence pose (ou relâche, Rétribution), avec leur cible : une pastille qui mène au statut */
+  posed: { status: StatusId; target: Target }[]
+}
+
+/**
+ * Ce que fait une compétence, en clair. C'est la seule rédaction d'une compétence : le compendium (index et
+ * fiche) et l'infobulle des dés l'affichent depuis cette source. Ce qui relève d'une règle commune (coup
+ * sacrifié, coup transformé, conditions…) n'est pas répété dans le texte : c'est une pastille qui cite la règle.
+ * `formName` : le nom de la forme requise (personnage à formes), affiché en pastille.
+ */
+export function describeSkill(e: CharacterEvent, formName?: string): SkillDescription {
   const r = e.reshapesHit
-  const reshape = r
-    ? `${r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`}${r.noCrit ? ', jamais critique' : ''}`
-    : ''
   const face = doubleFace(e.trigger)
-  const volley = e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : ''
-  return `${forfeit}${[volley, reshape, ...e.effects.map(describeEffect)].filter(Boolean).join(', ')}${odds}${when}${cap}`
+  const parts = [
+    e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : '',
+    r ? (r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`) : '',
+    ...e.effects.map((effect) => {
+      if (effect.type !== 'applyStatus') return describeEffect(effect)
+      const def = STATUSES[effect.status]
+      const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
+      const text = lowerFirst(def.describe({ id: effect.status, stacks: effect.stacks, turns }))
+      // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
+      // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21)
+      return effect.target === 'opponent' ? `sur l'adversaire : ${text}` : text
+    }),
+  ]
+    .filter(Boolean)
+    .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
+  const tags: SkillTag[] = [
+    ...(formName ? [{ label: formName, rule: 'forms' as const }] : []),
+    ...(e.forfeitsHit ? [{ label: 'coup sacrifié', rule: 'forfeit' as const }] : []),
+    ...(e.needsTouch ? [{ label: "s'il touche", rule: 'needs-touch' as const }] : []),
+    ...(r ? [{ label: r.noCrit ? 'coup transformé, jamais critique' : 'coup transformé', rule: 'reshape' as const }] : []),
+    ...(e.volley ? [{ label: e.merged ? 'coups fondus en un' : 'double qui frappe', rule: 'volley' as const }] : []),
+    ...(e.when ?? []).map((c) => ({ label: `si ${describeCondition(c)}`, rule: 'conditions' as const })),
+    ...(e.chance !== undefined && e.chance < 1 ? [{ label: `${Math.round(e.chance * 100)} % de chances`, rule: 'skill' as const }] : []),
+    ...(e.limit !== undefined ? [{ label: `${e.limit} fois max. par combat`, rule: 'skill' as const }] : []),
+  ]
+  return {
+    text: parts.join(' '),
+    tags,
+    posed: e.effects.flatMap((effect) =>
+      effect.type === 'applyStatus' ? [{ status: effect.status, target: effect.target ?? 'self' }] : effect.type === 'release' ? [{ status: effect.status, target: 'self' as const }] : [],
+    ),
+  }
+}
+
+/** Une compétence en une ligne (rapports, tests) : son texte, puis ses pastilles. Même source que l'écran. */
+export function describeEvent(e: CharacterEvent) {
+  const { text, tags } = describeSkill(e)
+  return [text, ...tags.map((t) => t.label)].filter(Boolean).join(' · ')
 }

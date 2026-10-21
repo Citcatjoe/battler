@@ -61,7 +61,7 @@ export function TwistBanner({ twist, names, line, size = 'lg' }: { twist?: Twist
   const target = twist.kind === 'boost' ? ` · ${pickLabel(twist.pick, names, line)}` : ''
   return (
     <div className={`twist-ribbon flex items-center justify-center gap-3 ${size === 'lg' ? 'px-12 py-2.5' : 'px-6 py-1'}`}>
-      <Icon name="coin-flip" className={size === 'lg' ? 'h-9 w-9' : 'h-5 w-5'} />
+      <Icon name="twist" className={size === 'lg' ? 'h-9 w-9' : 'h-5 w-5'} />
       <div className="text-center">
         <p className={`font-display font-extrabold uppercase tracking-[0.2em] text-amber-100 ${size === 'lg' ? 'text-xl' : 'text-xs'}`}>
           Coup de théâtre : {t.name}
@@ -214,7 +214,7 @@ function BetBoard({ bettor, wallets, odds, fighters, onBet, onCancel, delay }: B
           <span className={`font-display text-4xl font-extrabold ${style.text}`}>{wallets.bettors[bettor].name}</span>
         </div>
         <span className="flex items-center gap-2 font-display text-3xl font-extrabold tabular-nums text-amber-100">
-          <Icon name="coin-pile" className="h-8 w-8" />
+          <Icon name="purse" className="h-8 w-8" />
           {wallets.purses[bettor].toLocaleString('fr-FR')}
         </span>
       </header>
@@ -230,7 +230,10 @@ function BetBoard({ bettor, wallets, odds, fighters, onBet, onCancel, delay }: B
       </div>
 
       <div className="px-6 pb-5 pt-5">
-        <p className="mb-2 font-display text-sm font-bold uppercase tracking-[0.3em] text-amber-300/80">Combien ?</p>
+        <p className="mb-2 flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.3em] text-amber-300/80">
+          <Icon name="bet-token" className="h-6 w-6" />
+          Combien ?
+        </p>
         <div className="flex items-center justify-between gap-4">
           <div className="flex gap-3">
             {choices.map((c) => {
@@ -427,7 +430,7 @@ export function BetsResult({ outcome, fighterNames }: { outcome: BetsOutcome; fi
                 {moved > 0 ? `+${moved}` : moved < 0 ? `−${-moved}` : '='}
               </span>
               <span className="flex w-36 items-center justify-end gap-2 font-display text-2xl font-extrabold tabular-nums text-amber-100">
-                <Icon name="coin-pile" className="h-6 w-6" />
+                <Icon name="purse" className="h-6 w-6" />
                 <CountUp from={before[b]} to={after[b]} />
               </span>
               <span className="w-6">{i === 0 && <Icon name="trophy" className="h-6 w-6" />}</span>

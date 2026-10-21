@@ -21,10 +21,14 @@ src/
     character.ts         CharacterStats, CharacterDef, classe Character (pure donnée), variant()
     poses.ts             postures d'un combattant (POSES, poseOf, poseImage) : l'image change au fil du combat (docs/POSTURES.md)
     statuses.ts          REGISTRE des statuts (auras bonus/malus) : règles + présentation
+    states.ts            états affichés (0.79.0) : vocabulaire générique de la zone d'état, place de chaque statut
+                         (zone, aura, forme, mécanisme), regroupement, relais des auras, cibles du signal
+    relics.ts            REGISTRE des reliques (RELICS) : types, rédaction (describeRelic), validation, offre de tournoi (drawOffer, autoPick) ; docs/RELIQUES.md
     events.ts            déclencheurs (TRIGGERS), effets (Effect), CharacterEvent
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
     arenas.ts            ARENAS : cadres visuels des combats (image, cadrage, traitement)
-    catalog.ts           vues de lecture sur les registres : statusCatalog, statusSources, skillCatalog (compendium)
+    catalog.ts           vues de lecture sur les registres : statusCatalog, statusSources, statusLinks (interactions), skillCatalog (compendium)
+    rules.ts             RULES : les règles communes, écrites une seule fois (section Règles du compendium)
     combat.ts            MOTEUR : simulateCombat, resolveAttack, effectiveStats, chronologie
     stats.ts             computeStats : bilan d'un combat lu dans la chronologie
     narration.ts         textes du journal et badges, générés depuis le registre
@@ -33,20 +37,28 @@ src/
     audit.ts             audit de résolution d'un combat, règle par règle (createAudit)
     analysis.ts          analyse d'équilibre : taux, profils, valeur nette des compétences, apport des statuts (npm run balance)
     useCombat.ts         hook qui rejoue la chronologie avec timing, pause et vitesse
+    scenes.ts            événements de scène (SceneEventId, rythme SCENE_EVENTS : impacts, durée) : présentation seule, le moteur ne les lit pas
     history.ts           historique localStorage, useHistory, normalize
-    tournament.ts        arbre à 16 : création, état des matchs, résultats, fillSlots
+    tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), fillSlots
     betting.ts           paris : quatre parieurs (deux de l'ordinateur), cotes simulées, mises fixes, règlement, coups de théâtre (docs/PARIS.md)
     sound.ts             sfx.*, fichiers son (SOUND_NAMES, MIX), vitesse et réglage muet
     *.test.ts            tests (moteur, modules, équilibre, non-régression)
     test-utils.ts        personnages de test aux jets prévisibles
-  components/            écrans (*Screen.tsx), briques d'interface (Tabs, StatusTray…), screens.test.tsx
+  components/            écrans (*Screen.tsx), briques d'interface (Tabs, StatusTray, SkillBar, SignalLayer…), screens.test.tsx
     Betting.tsx          guichet du match (plateaux, tuiles, pièces), rappel sous le VS, classement, résultat des paris de l'écran de fin (aucune règle : tout vient de betting.ts)
+    SceneEvent.tsx       rendu des événements de scène (SCENE_VIEWS : Backdrop sur toute l'arène, OnTarget sur la colonne de la cible), monté par FightScreen
     SkillSeal.tsx        fenêtre octogonale du sceau d'une compétence (asset A-01 à venir, repli sur l'icône peinte)
+    RelicSeal.tsx        sceau hexagonal d'une relique, rangée de sceaux avec infobulle (RelicRow), carte de récompense (RelicCard)
+    SpecialLabel.tsx     label de la zone de surcharge sous le dé (couleur de sa source, hachures du − ; specials.ts ; docs/design-system.md § 3.1)
     VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement
     PrestigeButton.tsx   bouton principal d'un écran (pièce prestige du design system, un seul par écran)
+    HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
+    homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
-    compendium/          CompendiumScreen, registre des verticales (sections.tsx), CharactersSection,
-                         CharacterSheet (fiche personnage), SkillsSection, StatusesSection
+    compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
+                         CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
+                         (Fiche, Performances), SkillsSection, StatusesSection, RelicsSection, RulesSection,
+                         CodexBits (sceaux ronds, pastilles de statut et de règle, encadrés, résumé d'une compétence)
 ```
 
 ## Principe central : un moteur, une chronologie
@@ -75,6 +87,7 @@ Pair<Character> ──▶ simulateCombat ──▶ CombatResult { initiative, be
 | `statusReaction` | réaction d'un statut (Épines sur `hurt`, Vol de vie sur `hit`) |
 | `skip` | action perdue (Étourdi) |
 | `flurry` | un statut donne plusieurs coups à l'action (Furie des vents) |
+| `relic` | une relique se déclenche (moment du coup, début de tour, seuil de PV) : porteur, relique, effets, rang du déclenchement (`uses`) ; le bonus de coup d'une relique est noté sur le coup (`Attack.relicBonus`) |
 
 - Lecture d'un résultat : `attacksOf`, `eventsOf`, `finalState`. On ne fouille jamais les `beats` à la main dans les écrans.
 
@@ -90,9 +103,10 @@ Les règles sont spécifiées dans **[RESOLUTION.md](RESOLUTION.md)**. Côté co
 | Contrôle (action perdue) | étape « Phase 2 » de la boucle (`skipsAction`) |
 | Chaîne de calcul d'une attaque | `resolveAttack` (ordre des tirages fixe : dé → esquive → critique) |
 | Application d'un statut : immunité → garde → opposition → cumul | `resolveApplication` (`statuses.ts`), appelée par `applyEffect` |
-| Vérification d'état (K.O.) après chaque effet | `applyEffects`, `fallen`, `checkBloodied` |
+| Vérification d'état (K.O.) après chaque effet, puis seuils de PV (mi-PV, reliques de seuil) | `applyEffects`, `fallen`, `checkThresholds` |
+| Reliques : après les compétences dans chaque fenêtre ; charges, recharge, conditions ; bonus de coup | `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` |
 
-Étapes de la chronologie : `attack`, `event`, `statusTick` (avec `phase`), `statusDuration` et `statusExpire` (avec `phase`), `statusReaction` (le vol de vie en est une, sur `hit`), `skip`, `flurry` (coups multiples). Chacune a sa mise en scène dans `useCombat` : un `switch` exhaustif (`satisfies never`) refuse un type oublié.
+Étapes de la chronologie : `attack`, `event`, `statusTick` (avec `phase`), `statusDuration` et `statusExpire` (avec `phase`), `statusReaction` (le vol de vie en est une, sur `hit`), `skip`, `flurry` (coups multiples), `relic`. Chacune a sa mise en scène dans `useCombat` : un `switch` exhaustif (`satisfies never`) refuse un type oublié. Les effets d'une étape, quelle que soit leur source, se lisent avec `beatEffects` (stats, audit).
 
 Les stats effectives (`effectiveStats`) = stats de base modifiées par les statuts, puis bornées : armure ≥ 0, chances dans [0, 1], dé ≥ 1, multiplicateur ≥ 1. Les PV max ne changent jamais.
 
@@ -103,11 +117,16 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
    - **Postures** (facultatives, [POSTURES.md](POSTURES.md)) : la garde générée d'abord, puis une planche par posture avec la garde en première case, puis `python scripts/slice-poses.py <nom> a.png:2x1:idle,attack … --fond`. Dans `look` : `image: <nom>-idle.png`, `poses: { attack, dodge, hurt, ko, victory }` (une posture absente retombe sur la garde), `scale` calculé sur la part de la toile qu'occupe la garde et `headroom` (part vide au-dessus de la tête), portrait recadré. `figureHeight(look)` (`character.ts`) donne la hauteur du personnage dans son conteneur, pour placer la zone d'état et les effets. Si la toile est bien plus large que la garde (fente de l'attaque), `bodyInset: { left, right }` (vide de part et d'autre de la garde, en part de la largeur) cale l'ancrage `inside` sur la silhouette.
 2. Dans `roster.ts`, créer un `CharacterDef` : stats, `look` (`image`, `facing`, `scale` selon l'échelle resserrée de `STYLE_BIBLE.md` § 2, cadrage du portrait `{x, y, zoom}`), `lore` (fiche courte) et `events`. Puis ajouter sa section dans `docs/PERSONNAGES.md` (voir la check-list en fin de document).
 3. Un seul personnage par famille (0.43.0) : plus de variantes de coloris (`variant()` et `baseId` sont retirés).
-   - **Personnage à formes** (druide) : `forms: [{ id, name }, { id, name, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence.
+   - **Personnage à formes** (druide) : `forms: [{ id, name, statuses? }, { id, name, statuses?, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence.
+   - **Statuts de forme** (0.73.0) : `statuses` d'une forme liste des statuts marqués `innate: true` dans `STATUSES` (Incantation, Force de l'ours). Le moteur les pose au début du combat (première forme) et à chaque `shift`, et retire ceux de la forme quittée ; une purge (`cleanse`) les ignore, aucune immunité ne les bloque. `validateRoster` refuse un statut de forme non `innate` et une compétence qui pose un statut `innate` ; l'audit vérifie à chaque étape que le porteur a exactement les statuts de sa forme.
    - **Personnage à deux dés** (barde) : `twinDice: true`. L'action devient une paire (étape `pair`, `twinAction` dans `combat.ts`). Ses compétences sont sur les doubles (`doubleOne` à `doubleFive`, `DOUBLE_TRIGGERS`), sans `chance` ni `forfeitsHit` (`validateRoster`) ; `volley: n` pour attaquer (n coups de la face), avec `merged` pour un seul coup qui vaut leur somme. Les coups de la paire portent `preset` (aucun dé lancé) ; le combat test compte les dés par étape avec `diceOf` et `rankAt`.
-   - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (Charge, Coup de griffe), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
+   - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (sans porteur depuis la 0.73.0 ; Charge et Coup de griffe avant), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
+   - **Événement de scène** (0.73.0, Foudre) : `scene: '<id>'` sur la compétence. Voir « Ajouter un événement de scène ».
 4. L'ajouter à `ROSTER`. La sélection (rangée par famille via `FAMILIES`), les fiches, les statistiques et le tournoi le prennent en compte automatiquement.
 5. `npm run check` : `validateRoster` vérifie les données, le test d'équilibre vérifie la tolérance (entre 42 et 58 %, aucun duel au-delà de 65/35) ; `npm run balance` donne le rapport détaillé (docs/EQUILIBRAGE.md), et l'empreinte de non-régression doit être mise à jour (`npx vitest run -u`), puisque le roster a changé.
+
+### Ajouter une relique
+Une entrée dans `RELICS` (`relics.ts`), un seul type (`stats`, `rollBonus`, ou `trigger` + `effects`), son icône `src/assets/icons/<id>.png` ; puis `npm run check` et `npm run relics`. Marche à suivre, règles et mesures : [RELIQUES.md](RELIQUES.md) § 8. Côté moteur : `Character.relics` (stats ajoutées à plat dans `stats`, la base dans `baseStats`, `withRelics`), `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` ; contrôle dans `auditRelics` (`audit.ts`) ; trace : en-tête relu par `parseRelics` (`npm run logs`).
 
 ### Ajouter une arène
 1. Préparer l'image (16:9, sol dégagé en bas au centre, voir `docs/STYLE_BIBLE.md`), la ranger dans `src/assets/arena-<lieu>.jpg`.
@@ -115,7 +134,7 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 3. L'écran d'affrontement la propose automatiquement, ainsi que le tirage « Au hasard ».
 
 ### Ajouter un événement à un personnage
-Ajouter une entrée `{ id, name, trigger, effects, chance?, limit?, when?, forfeitsHit? }` dans son `events`. Aucun autre fichier à toucher. `forfeitsHit` (déclencheurs du dé seulement, sans `chance`) sacrifie le coup qui déclenche la compétence : le moteur le sait dès le jet (`forfeits`, `combat.ts`).
+Ajouter une entrée `{ id, name, trigger, effects, chance?, limit?, when?, forfeitsHit?, needsTouch? }` dans son `events`. Aucun autre fichier à toucher. `forfeitsHit` (déclencheurs du dé seulement, sans `chance`) sacrifie le coup qui déclenche la compétence : le moteur le sait dès le jet (`forfeits`, `combat.ts`). `needsTouch` (0.70.0, Pourfendre ; déclencheurs du dé, sans `chance`, `forfeitsHit` ni `reshapesHit`) garde le coup et ne déclenche la compétence que s'il touche (`strikeTouched`, `fireStrike`).
 
 `when` est une liste de **conditions**, toutes requises, vérifiées au moment du déclencheur et **avant** le tirage de `chance` (une condition fausse ne consomme pas de hasard) :
 
@@ -156,13 +175,14 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | `expiresAt` | moment où la durée se décompte : `turnStart` (défaut) ou `turnEnd` |
 | `modifyIncoming` | modifie les dégâts reçus par le porteur avant l'armure |
 | `skipsAction` | le porteur perd son action (une charge par tour perdu) |
-| `reactions` | effets déclenchés par un `Trigger`, du point de vue du porteur (sans chaîne) |
-| `spentOnReaction` | le statut disparaît après avoir réagi une fois (Épines) |
+| `reactions` | effets déclenchés par un `Trigger`, du point de vue du porteur (sans chaîne) ; dans les fenêtres d'un coup, seuls les statuts présents à leur ouverture réagissent, avec leurs charges d'alors (`strikeBase`, 0.68.1) |
+| `spentOnReaction` | le statut disparaît après avoir réagi une fois (prêt, posé par personne) |
+| `decays` | le statut perd une charge chaque fois qu'il agit : au début ou à la fin du tour (Poison), ou après une réaction (Saignement, 0.68.0), dans la même étape que son effet |
 | `look` | présentation seulement : liseré (`glow`), halo d'aura (`aura`), transparence (`opacity`), tremblement (`motion: 'tremble'`), couleur du dé supplémentaire (`dieColor`) |
 | `wards` | bloque la pose de statuts (une polarité ou une liste) ; une charge par blocage |
 | `opposes` | statut contraire, réciproque (test) : charges annulées une à une |
 
-La durée est portée par l'instance : `turns` (facultatif) correspond au nombre de tours du porteur avant expiration, jamais décomptée à la fin du tour où le statut a été posé (`FighterState.fresh`) ; sans `turns`, le statut dure jusqu'à épuisement de ses charges. La zone d'état (`StatusTray`, avec le nombre choisi par `statusCounter`), les auras au sol, le journal, les badges et le compendium suivent automatiquement : `statusRules` traduit les crochets, le cumul et le plafond en phrases, et `statusCatalog` (`catalog.ts`) indique qui pose chaque statut. Enfin, on ajoute le statut au catalogue de `docs/STATUTS.md`.
+La durée est portée par l'instance : `turns` (facultatif) correspond au nombre de tours du porteur avant expiration, jamais décomptée à la fin du tour où le statut a été posé (`FighterState.fresh`) ; sans `turns`, le statut dure jusqu'à épuisement de ses charges. La zone d'état (`StatusTray`, avec le nombre choisi par `statusCounter`), les auras au sol, le journal, les badges et le compendium suivent automatiquement : `statusRuleSections` traduit les crochets en phrases (Effet, Consommation) et renvoie le cumul et le plafond aux règles communes (`rules.ts`), `statusCatalog` (`catalog.ts`) indique qui le met en jeu (compétence, relâche, ou autre statut par ses crochets) et `statusLinks` ses interactions. Depuis la 0.79.0, il faut aussi lui donner **sa place** dans `STATUS_PLACE` (`states.ts`, le type l'exige) : `tray` et l'état générique qu'il alimente (un état existant de `STATES` de préférence : c'est le vocabulaire commun ; sa part du total si l'état en compte un), `aura` et ses relais (l'état qu'elle fait apparaître chez son porteur ou chez l'adversaire), `form` ou `skill`. L'en-tête (`SkillBar`), la zone d'état (`StatusTray`) et le signal d'activation (`SignalLayer`) suivent. Un état nouveau s'ajoute à `STATES`, avec son icône dans `STATE_ICON` (`Icon.tsx`). Enfin, on ajoute le statut au catalogue de `docs/STATUTS.md`.
 
 S'il faut un **nouveau type de crochet** (ex. renvoi de dégâts), on l'ajoute à `StatusDef` et on l'appelle à un endroit précis de `simulateCombat` ou de `resolveAttack`, puis on le teste dans `combat.test.ts`.
 
@@ -171,13 +191,23 @@ S'il faut un **nouveau type de crochet** (ex. renvoi de dégâts), on l'ajoute �
 2. Appeler `fire(side, 'nouveau')` au bon moment dans `simulateCombat`, et documenter cet ordre ici.
 3. Ajouter un test dans `combat.test.ts` (section « événements »).
 
+### Ajouter un événement de scène
+Présentation seule (0.73.0) : un sort ou un coup spécial à grand spectacle, joué sur toute l'arène quand la compétence part, avant que ses effets tombent. Le moteur ne le lit pas.
+1. Un identifiant dans `SceneEventId` et son rythme dans `SCENE_EVENTS` (`scenes.ts`) : `impacts` (instants des coups, en ms à ×1 ; 0.76.0, remplace `impact`) et `length` (durée totale). Chaque coup tombe sur son impact (`playBlows(…, schedule)`, `useCombat`) : un sort en plusieurs coups porte un effet `damage` avec `hits` (`{ type: 'damage', amount: 2, hits: 3 }`, comptés ensemble, détail dans `parts`), et autant d'impacts.
+2. Son rendu dans `SCENE_VIEWS` (`SceneEvent.tsx`) : `Backdrop` (toute l'arène, sous les combattants, avec un éclat par-dessus) et, s'il vise quelqu'un, `OnTarget` (dans la colonne de la cible).
+3. `scene: '<id>'` sur la compétence (`CharacterEvent.scene`, `roster.ts`). `useCombat` expose l'événement en cours (état `scene`), au rythme de la vitesse et de la pause ; `FightScreen` le monte. Exemple : `lightning` (Foudre du druide : trois éclairs, `impacts: [440, 800, 1160]`, `length: 1750`).
+
 ### Ajouter un type d'effet
 Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test.
 
-### Ajouter une verticale au compendium
-1. Écrire le composant de la section dans `src/components/compendium/` : il occupe toute la hauteur disponible (`h-full min-h-0`) et défile lui-même si besoin.
-2. L'ajouter à `CompendiumSectionId` et à `COMPENDIUM_SECTIONS` (`sections.tsx`) : `id`, `label`, `icon`, et `render(nav)`. `nav` donne le personnage courant et `onSelectCharacter`, pour renvoyer vers une fiche.
-3. Les données viennent des registres, ou d'une vue de `catalog.ts`, jamais d'un texte recopié.
+### Ajouter un label de la zone de surcharge
+Présentation seule (2026-10-21) ; ce qui entre dans la zone, l'ordre et le point de vue : [RESOLUTION.md](RESOLUTION.md) § 11. Le registre unique `specials.ts` construit chaque label (`attackSpecials` pour ce qui se lit dans un `Attack`, `reactionSpecial` pour une étape de réaction, `relicSpecial` pour une relique qui se déclenche, `statusSpecial` dessous) : sa source donne sa couleur (`SPECIAL_SOURCES`, [design-system.md](design-system.md) § 3.1), son signe, vu de l'attaquant, donne son son (`SPECIAL_SIGNS`, [SONS.md](SONS.md) § 4.4). `useCombat.ts` ne fait que poser le label avec `addSpecial(spec)` à l'instant où il s'applique : jamais de libellé, de couleur, de signe ni de son au point d'appel. Un statut est une surcharge par sa mécanique (`isSurcharge`) : rien à déclarer pour un nouveau statut de ces familles. Une nouvelle surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du livre de règles ; une nouvelle source s'ajoute à `SPECIAL_SOURCES`, avec sa ligne dans design-system.md.
+
+### Ajouter une section au compendium
+Principe : **une donnée, une maison**. Chaque information est décrite dans une seule section ; ailleurs, elle n'apparaît qu'en résumé, avec un lien vers elle. Le texte d'une compétence vient de `describeSkill` (`events.ts`), celui d'un statut de son registre et de `statusRuleSections`, une règle commune de `RULES` (`rules.ts`) : aucun composant ne rédige.
+1. Écrire le composant de la section dans `src/components/compendium/` : il reçoit `SectionProps` (`nav`, `focus`, `filter`), occupe toute la hauteur disponible (`h-full min-h-0`) et défile lui-même **dans un cadre visible** (`codex-panel`, avec un peu de marge intérieure pour que les sceaux ne touchent pas le bord) : rien ne déborde. `focus` est l'élément visé par un lien (`useFocusRef` le fait défiler au centre).
+2. L'ajouter à `CompendiumSectionId` et à `COMPENDIUM_SECTIONS` (`sections.tsx`) : `id`, `label`, `count` facultatif, `placeholder` du filtre, `render(props)` et, au besoin, `backdrop(props)` : un fond dessiné derrière tout l'écran (en `-z-10`, l'écran isole sa pile), comme le combattant de la section Combattants. Un lien vers un élément se fait par `nav.go({ section, id })`.
+3. Les données viennent des registres, ou d'une vue de `catalog.ts`, jamais d'un texte recopié. Une règle commune se cite par son id (pastille vers la section Règles) au lieu d'être répétée.
 4. L'ajouter au test de rendu (`screens.test.tsx` parcourt déjà `COMPENDIUM_SECTIONS`) et à `FEATURES.md` § 9.
 
 ## Vérifier une résolution, déboguer un combat
@@ -196,7 +226,7 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 ## Données persistées
 
 - `battler:history:v1` : totaux par personnage, bilans par adversaire, 300 derniers combats. `normalize` complète un historique enregistré par une version antérieure. Un changement incompatible impose de changer la clé (`v2`).
-- `battler:muted` : réglage du son.
+- `battler:muted` et `battler:music-muted` : réglages du son et de la musique. Absents, ils valent « coupé » (0.68.2) ; seul `'0'` rallume.
 - Le tournoi n'est jamais persisté.
 
 ## Tests (`npm test`, ou `npm run check` pour typecheck + tests)

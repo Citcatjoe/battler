@@ -23,7 +23,7 @@ Il décrit **ce qui est décidé**. Les points marqués *OUVERT* ne doivent pas 
 :root {
   /* surfaces */
   --bg-0: #0E0B09;  --bg-1: #16120F;  --bg-2: #1F1914;  --bg-3: #2A221B;
-  --scrim: rgba(14,11,9,.80);            /* voile de panneau sur illustration, + backdrop-filter: blur(6px) */
+  --scrim: rgba(14,11,9,.80);            /* voile de panneau sur illustration (sans flou depuis la 0.64.2) */
 
   /* texte */
   --text-1: #F3EADB; --text-2: #BFB2A1; --text-3: #8C8174; --text-off: #5C5249;
@@ -94,6 +94,7 @@ Il décrit **ce qui est décidé**. Les points marqués *OUVERT* ne doivent pas 
 | **Fonctionnel** (~85 % de l'écran) | Rectangle, rayon 2–4, filet simple, plat | Tableaux, jauges, listes, tooltips, pastilles, corps des panneaux |
 | **Prestige** (≤ 3 par écran) | Octogone (4 coins coupés), cadre + jour + plaque, tranche | Bouton Combattre, onglets majeurs, sceau VS |
 | **Lame** | 2 coins opposés coupés, contour + trait de tête 2 px | Cartes de compétence uniquement |
+| **Hexagone** (0.75.0) | Pointe en haut, cadre d'or éclairé du haut à gauche + jour 2 px + plaque de cuir + biseau, ombre qui suit la forme | Reliques uniquement (`RelicSeal`, `.relic-seal`, docs/RELIQUES.md § 5). Le rond reste aux statuts, l'octogone aux compétences et au prestige |
 
 Détails de construction autorisés : chanfrein, cadre + jour + plaque, serti (double filet en box-shadow), tranche (uniquement sur ce qui se presse), gravure (CTA et VS uniquement), encoche sous l'onglet majeur actif.
 Interdits : équerres de camp, lignes de liaison du VS (non retenues pour l'instant), ornements d'angle, textures de panneaux.
@@ -122,12 +123,28 @@ Contraintes techniques :
 | Boutons secondaires (Au hasard…) | Serti (variante A) : fond `--bg-2`, texte `--gold-300`, tranche sombre 2 px. Rectangle rayon 2. |
 | Boutons icône | Ronds 48 px, serti. Pas de chanfrein (inutile à cette taille). `aria-label` obligatoire. |
 | Bouton tertiaire | Transparent, contour `--line-2`, Alegreya 15/500. |
-| Panneau de combattant | Fonctionnel : fond `--scrim` + flou 6 px, rayon 2, contour 1 px `rgba(232,200,140,.16)`, **liseré de camp 2 px en tête** (`inset 0 2px 0 var(--side-x)`). Pas d'équerres. |
+| Panneau de combattant | Fonctionnel : fond `--scrim` (sans flou depuis la 0.64.2), rayon 2, contour 1 px `rgba(232,200,140,.16)`, **liseré de camp 2 px en tête** (`inset 0 2px 0 var(--side-x)`). Pas d'équerres. |
 | Cartes de compétence | Lame. La couleur dépend de la **nature** de la compétence : martiale = `--gold-500`, adresse = `--armor`, arcane = `--arcane`, neutre = `--text-3` (ajout de l'utilisateur, 0.39.1 : l'Attente de l'ogre). Fenêtre du sceau octogonale. Glyphe natif en repli tant que A-01 n'existe pas. |
 | Jauges, stats, tableaux, tooltips, pastilles | Inchangés (V1.0). Barre 4–6 px, rayon 2, piste = `--side-x-track`, valeur IBM Plex Mono alignée à droite. |
 | Portrait | Composant réutilisable : carré, visage centré ~40 % de hauteur, recadré depuis l'illustration en pied. États : repos, survol, choisi A / B (2 px couleur du camp), pris en face (opacité 45 %), focus, indisponible. **Nombre et colonnes non figés.** |
 
 Taux de victoire : < 40 % rouille `#A86B4A`, 40–59 % laiton `#C9A65A`, ≥ 60 % `--good`. Le chiffre est toujours affiché.
+
+Infobulles au survol (2026-10-21) : une seule visible à la fois, celle de l'élément survolé. Son déclencheur est un **groupe nommé** (`group/relic` sur l'élément, `group-hover/relic:` sur l'infobulle) : un `group-hover` nu réagit au survol de n'importe quel ancêtre `group` (une ligne de l'arbre, une case) et ouvre ensemble toutes les infobulles qu'il contient. Près d'un bord de la scène, l'infobulle change de côté plutôt que d'être coupée.
+
+### 3.1 Labels de la zone de surcharge (2026-10-21)
+
+Les labels qui tombent sous le dé quand quelque chose change le coup en cours (« Critique ×2 », « Armure temporaire −6 », « Saignement +2 », une relique) : la **zone de surcharge**, définie dans [RESOLUTION.md](RESOLUTION.md) § 11 (ce qui y entre, l'ordre, le point de vue). Ils ont **une couleur par source**, jamais par compétence, par personnage ni par polarité (demande de l'utilisateur : « une couleur par type de modificateur : coup, relique, autre… », dans la ligne du refus des dix couleurs de familles, « c'est carnaval », FAMILLES.md § 3). Le **signe** (+ amplifie l'action de l'attaquant, − la réduit ou la contre) se lit au « + / − » du chiffre, aux hachures du − et au son. Registre unique : `SPECIAL_SOURCES` et `SPECIAL_SIGNS` (`src/game/specials.ts`) ; un point d'appel ne donne jamais une couleur, un signe ni un son. Rendu : `SpecialLabel` (`src/components/SpecialLabel.tsx`).
+
+| Source | Ce qu'elle marque | Fond | Texte | Tranche | Hachures du − |
+|---|---|---|---|---|---|
+| Coup (`strike`) | le dé et le critique : critique, critique assuré (avec l'icône du critique) | ambre `#fbbf24`, réservé au critique | `#1c1917` | `#92400e` | sombres |
+| Compétence ou statut (`skill`) | un statut ou une compétence qui change ce coup : Esquive assurée, Armure temporaire, Luciole, Fausse note, Vol de vie, Riposte, Saignement, Épines acérées | ivoire neutre `#e9dfc8` : il ne dit ni bonus ni malus, le signe s'en charge | `#1f1a14` | `#7a6a4f` | sombres |
+| Relique (`relic`) | une relique qui renforce le coup (« Fer à quatre clous +4 ») ou qui se déclenche ; avec l'icône de la relique | plaque sombre `#24170a`, liseré `--gold-400` | `--gold-200` | `--gold-700` | dorées |
+
+- **Marque du −** : de fines hachures diagonales (135°, 3 px sur 8) dans la teinte de la source, à 16 % (`.special-badge[data-sign='minus']`, variable `--hatch`). Discrète, elle garde la couleur de la source lisible et se voit sur toutes les plaques, claires comme sombres. Le + n'a aucune marque.
+- **Disposition** : en colonne sous le dé, dans l'ordre où les surcharges s'appliquent, tous à la largeur du plus long, droits (sans inclinaison), 8 px d'écart. Ils apparaissent en grossissant (`.special-badge`, 0,45 s) et restent jusqu'à l'étape suivante (jet suivant, coup suivant d'une rafale).
+- **Étendre** : un nouveau statut qui change un coup reçoit sa source et son signe par sa mécanique (`isSurcharge`, `statusSpecial`), sans rien déclarer. Une nouvelle source ne s'ajoute qu'à `SPECIAL_SOURCES`, avec sa couleur, ses hachures et sa ligne ici ; un test vérifie que deux sources n'ont jamais la même couleur.
 
 ---
 

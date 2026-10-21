@@ -1,7 +1,7 @@
 {
   "name": "battler",
   "private": true,
-  "version": "0.63.0",
+  "version": "0.80.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "check": "tsc -p . && vitest run",
     "balance": "vitest run --config vitest.balance.config.ts scripts/balance.report.ts --silent=false",
-    "logs": "vitest run --config vitest.balance.config.ts scripts/logs.report.ts --silent=false"
+    "logs": "vitest run --config vitest.balance.config.ts scripts/logs.report.ts --silent=false",
+    "relics": "vitest run --config vitest.balance.config.ts scripts/relics.report.ts --silent=false"
   },
   "dependencies": {
     "react": "^19.3.1",

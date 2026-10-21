@@ -1,209 +1,202 @@
-import { useCallback, useState, type CSSProperties } from 'react'
-import { hurtsEachTurn, isAura, POLARITY_STYLE, STATUSES, statusCounter, type Polarity, type Status, type StatusId } from '../game/statuses'
-import { Icon, StatusIcon } from './Icon'
+import { useState } from 'react'
+import type { Character } from '../game/character'
+import { originsOf, STATES, stateValueText, type StateId, type TrayState } from '../game/states'
+import { POLARITY_STYLE, STATUSES, type Polarity } from '../game/statuses'
+import { Icon, StateIcon } from './Icon'
 
-const RING: Record<Polarity, string> = {
-  positive: 'border-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.55)]',
-  negative: 'border-red-500 shadow-[0_0_14px_rgba(239,68,68,0.6)]',
-}
-const DELTA: Record<Polarity, string> = {
-  positive: 'text-emerald-200 [-webkit-text-stroke:1px_#064e3b]',
-  negative: 'text-red-200 [-webkit-text-stroke:1px_#450a0a]',
-}
 const COUNT: Record<Polarity, string> = {
   positive: 'border-emerald-400 text-emerald-100',
   negative: 'border-red-500 text-red-100',
 }
 
-/** Un état affiché : présent, ou « sortant » (il montre son 0 puis quitte la zone). */
-interface TrayItem {
-  status: Status
+/** Un état affiché : présent, ou « sortant » (il montre son 0 puis quitte la zone). Un seul médaillon par état. */
+export interface TrayItem {
+  state: TrayState
   leaving: boolean
-  key: string
 }
 
-let ghostId = 0
-
 /**
- * Garde l'ordre des états et retient ceux qui viennent de disparaître : un état épuisé ou
- * expiré reste le temps de montrer son nombre passer à 0, puis s'efface (fin de son animation).
+ * Les médaillons après un changement d'états. Garde l'ordre et retient ceux qui viennent de disparaître :
+ * un état épuisé ou expiré reste, sortant, le temps que son nombre descende à 0, puis s'efface (fin de son
+ * animation). C'est le même médaillon (même clé, son id) : son compteur s'anime vers 0 au lieu de renaître
+ * à 0. Un état reposé pendant sa sortie reprend vie dans ce médaillon, au lieu d'en ouvrir un second.
  */
-function useTrayItems(statuses: readonly Status[]) {
-  const [items, setItems] = useState<TrayItem[]>(() => statuses.map((s) => ({ status: s, leaving: false, key: s.id })))
-  const [prev, setPrev] = useState(statuses)
-  if (statuses !== prev) {
-    setPrev(statuses)
-    const byId = new Map<StatusId, Status>(statuses.map((s) => [s.id, s]))
-    const next: TrayItem[] = []
-    for (const item of items) {
-      const live = byId.get(item.status.id)
-      if (live && !item.leaving) next.push({ ...item, status: live })
-      else if (!live && !item.leaving) next.push({ ...item, leaving: true, key: `${item.status.id}-out-${ghostId++}` })
-      else if (item.leaving) next.push(item)
-    }
-    for (const s of statuses)
-      if (!next.some((i) => !i.leaving && i.status.id === s.id)) next.push({ status: s, leaving: false, key: s.id })
-    setItems(next)
+export function trayAfter(items: readonly TrayItem[], states: readonly TrayState[]): TrayItem[] {
+  const byId = new Map<StateId, TrayState>(states.map((s) => [s.id, s]))
+  const next = items.map((item) => {
+    const live = byId.get(item.state.id)
+    return live ? { state: live, leaving: false } : { ...item, leaving: true }
+  })
+  for (const s of states) if (!next.some((i) => i.state.id === s.id)) next.push({ state: s, leaving: false })
+  return next
+}
+
+function useTrayItems(states: readonly TrayState[]) {
+  const [items, setItems] = useState<TrayItem[]>(() => states.map((s) => ({ state: s, leaving: false })))
+  const [prev, setPrev] = useState(states)
+  if (states !== prev) {
+    setPrev(states)
+    setItems(trayAfter(items, states))
   }
-  const remove = (key: string) => setItems((list) => list.filter((i) => i.key !== key))
+  const remove = (id: StateId) => setItems((list) => list.filter((i) => !(i.leaving && i.state.id === id)))
   return { items, remove }
 }
 
+/** Les deux combattants, pour dire d'où vient chaque état dans son infobulle (facultatif). */
+export interface TrayCast {
+  bearer: Character
+  opponent: Character
+}
+
 /**
- * Zone d'état d'un combattant, posée sur l'arène au-dessus de lui : bonus à gauche, malus à
- * droite. Chaque état = une icône et un seul nombre (tours restants ou charges, voir `statusCounter`),
- * et une infobulle au survol. Les animations suivent la vitesse et la pause du combat (--speed, .is-paused).
+ * Zone d'état d'un combattant, posée sur l'arène au-dessus de lui : ce qu'il subit ou porte en ce moment,
+ * en états génériques (`states.ts`), bonus à gauche, malus à droite. Ses compétences et ses auras, elles,
+ * sont dans l'en-tête (SkillBar). Chaque état = une icône et un seul nombre, et une infobulle au survol qui
+ * dit ce qui le compose et d'où il vient. Les animations suivent la vitesse et la pause du combat
+ * (--speed, .is-paused). `data-tray` : la cible des signaux d'activation (SignalLayer).
  */
-export function StatusTray({ statuses }: { statuses: readonly Status[] }) {
-  const { items, remove } = useTrayItems(statuses)
-  const of = (p: Polarity) => items.filter((i) => STATUSES[i.status.id].polarity === p)
-  // L'aura de personnage ouvre la rangée des bonus
-  const bonus = of('positive').sort((a, b) => Number(isAura(b.status.id)) - Number(isAura(a.status.id)))
+export function StatusTray({ states, cast, side }: { states: readonly TrayState[]; cast?: TrayCast; side?: number }) {
+  const { items, remove } = useTrayItems(states)
+  const of = (p: Polarity) => items.filter((i) => STATES[i.state.id].polarity === p)
+  const bonus = of('positive')
   const malus = of('negative')
-  if (items.length === 0) return null
   return (
-    <div className="flex items-center gap-3" aria-label="États actifs">
-      <div className="flex gap-2">
-        {bonus.map((i) => (
-          <StatusToken key={i.key} status={i.status} leaving={i.leaving} onLeft={() => remove(i.key)} />
-        ))}
-      </div>
-      {bonus.length > 0 && malus.length > 0 && <span className="h-11 w-px bg-stone-400/40" />}
-      <div className="flex gap-2">
-        {malus.map((i) => (
-          <StatusToken key={i.key} status={i.status} leaving={i.leaving} onLeft={() => remove(i.key)} />
-        ))}
-      </div>
+    <div className="flex min-h-px min-w-px items-center gap-3" aria-label="États actifs" data-tray={side}>
+      {bonus.length > 0 && (
+        <div className="flex gap-2">
+          {bonus.map((i) => (
+            <StatusToken key={i.state.id} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.id)} />
+          ))}
+        </div>
+      )}
+      {bonus.length > 0 && malus.length > 0 && <span className="h-9 w-px bg-stone-400/40" />}
+      {malus.length > 0 && (
+        <div className="flex gap-2">
+          {malus.map((i) => (
+            <StatusToken key={i.state.id} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.id)} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
 /**
- * Mise en évidence d'une résolution : chaque fois que le nombre affiché change (charges usées,
- * tour décompté, cumul…), il rebondit en même temps qu'il change et sa variation (−1, +2) flotte
- * au-dessus. Si seule une valeur cachée change (ex. charges d'un statut qui affiche ses tours),
- * c'est le médaillon entier qui sursaute. L'état précédent est retenu pendant le rendu
- * (« état dérivé » de React), pour que l'animation parte au même rendu que la nouvelle valeur.
+ * Le nombre d'un médaillon et son dernier changement, retenus pendant le rendu (« état dérivé » de React)
+ * pour que l'animation parte au même rendu que la nouvelle valeur : `from` et `dir`, le nombre d'avant et le
+ * sens du changement, pour le défilement du chiffre. Seul le nombre affiché compte : une valeur cachée qui
+ * change (les charges d'un état qui montre ses tours) n'anime rien.
  */
-function useChange(value: number | undefined, hidden: string) {
-  const [prev, setPrev] = useState({ value, hidden })
-  const [change, setChange] = useState<{ key: number; delta: number | null }>({ key: 0, delta: null })
-  if (prev.value !== value || prev.hidden !== hidden) {
-    const delta = value !== undefined && prev.value !== undefined && value !== prev.value ? value - prev.value : null
-    setPrev({ value, hidden })
-    setChange({ key: change.key + 1, delta })
+function useCount(value: number | undefined) {
+  const [count, setCount] = useState({ value, key: 0, from: value, dir: 0 })
+  if (count.value !== value) {
+    const step = value !== undefined && count.value !== undefined ? value - count.value : 0
+    setCount({ value, key: count.key + 1, from: count.value, dir: Math.sign(step) })
   }
-  return change
+  return count
 }
 
-function StatusToken({ status, leaving, onLeft }: { status: Status; leaving: boolean; onLeft: () => void }) {
-  const def = STATUSES[status.id]
-  const live = statusCounter(status)
-  // Un état sortant affiche 0 : ses charges ou ses tours sont épuisés.
-  const counter = live && leaving ? { ...live, value: 0 } : live
-  const change = useChange(counter?.value, leaving ? 'out' : `${status.stacks}/${status.turns ?? ''}`)
-  const changed = change.key > 0
-  // Aura de personnage : double contour et anneau tournant (voir .aura-token)
-  const aura = isAura(status.id)
+/**
+ * Un médaillon d'état. Quand son nombre change, un seul geste, au même endroit, sur le compteur :
+ * - le chiffre défile : une hausse monte (l'ancien sort par le haut), une baisse descend ;
+ * - le compteur s'élargit et s'éclaire pour une hausse, se tasse et s'assombrit pour une baisse.
+ * Aucune variation ne flotte depuis le compteur (2026-10-21) : les textes flottants du combat suffisent.
+ * Seulement des transformations et de l'opacité : aucun filtre, que Firefox dessine mal sur ces petits éléments.
+ */
+function StatusToken({ state, leaving, cast, onLeft }: { state: TrayState; leaving: boolean; cast?: TrayCast; onLeft: () => void }) {
+  const def = STATES[state.id]
+  // Un état sortant affiche 0 : ses charges, ses tours ou son total sont épuisés. Le compteur y descend.
+  const value = state.value !== undefined && leaving ? 0 : state.value
+  const count = useCount(value)
+  const text = (v: number | undefined) => (v === undefined ? undefined : stateValueText({ ...state, value: v }))
+  const pulse = count.dir > 0 ? 'count-gain' : count.dir < 0 ? 'count-loss' : ''
   return (
     <div
       onAnimationEnd={(e) => {
         if (e.animationName === 'status-leave') onLeft()
       }}
-      // Bord en pointillés : l'état fait perdre des PV à chaque tour (Poison, Brûlure, Pourriture, 0.52.1)
-      className={`group relative h-16 w-16 rounded-full hover:z-10 bg-stone-950/75 ${hurtsEachTurn(status.id) ? 'border-[3px] border-dashed' : 'border-2'} ${RING[def.polarity]} ${aura ? 'aura-token mx-1' : ''} ${leaving ? 'status-leave' : 'status-pop'}`}
-      style={aura ? ({ '--aura': def.look!.aura } as CSSProperties) : undefined}
+      // L'emblème est posé tel quel, sans cadre (0.79.2) : une pièce ronde, toutes à la même taille. La polarité
+      // se lit au compteur (vert ou rouge) et à la rangée (bonus à gauche, malus à droite)
+      className={`group relative h-12 w-12 rounded-full hover:z-10 ${leaving ? 'status-leave' : 'status-pop'}`}
+      data-state={state.id}
+      data-polarity={def.polarity}
     >
-      {/* Sursaut du médaillon : relancé par la clé à chaque changement */}
-      <div key={change.key} className={`absolute inset-0 ${changed ? 'status-bump' : ''}`}>
-        <StatusIcon id={status.id} className="absolute inset-0.5 h-[calc(100%-4px)] w-[calc(100%-4px)]" />
-      </div>
-      {counter && (
+      <StateIcon id={state.id} className="absolute inset-0 h-full w-full" />
+      {/* Teinte légère de la pièce monochrome : un reflet vert pour un bonus, rouge pour un malus (.state-tint) */}
+      <span aria-hidden className="state-tint" />
+      {value !== undefined && (
         <span
-          // La clé relance le rebond au moment exact où le nombre change
-          key={`count-${change.key}`}
-          className={`absolute -bottom-2 -right-2 flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${COUNT[def.polarity]} ${change.delta === null ? '' : change.delta > 0 ? 'status-count' : 'status-count-down'}`}
+          // La clé relance le geste au moment exact où le nombre change
+          key={`count-${count.key}`}
+          className={`absolute -bottom-1.5 -right-2 z-[1] flex h-6 min-w-6 items-center justify-center rounded-full border bg-stone-950 px-1 font-display text-sm font-extrabold leading-none ${COUNT[def.polarity]} ${pulse}`}
         >
-          {counter.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
-          {counter.value}
-          {/* Le compteur décroît (charge usée, tour décompté) : pas le rebond de la hausse, mais une lueur et un
-              cerclage dont le trait s'efface à rebours, de la part perdue (de 3 à 2, un tiers), puis disparaît */}
-          {change.delta !== null && change.delta < 0 && counter.value - change.delta > 0 && (
-            <CountDrain kept={(100 * counter.value) / (counter.value - change.delta)} />
-          )}
+          {state.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
+          {/* Fenêtre du chiffre : l'ancien en sort, le nouveau y entre */}
+          <span className="relative block h-[1em] overflow-hidden whitespace-nowrap">
+            {count.dir !== 0 && count.from !== undefined && (
+              <span aria-hidden className={`absolute inset-x-0 top-0 text-center ${count.dir > 0 ? 'count-out-up' : 'count-out-down'}`}>
+                {text(count.from)}
+              </span>
+            )}
+            <span className={`block ${count.dir > 0 ? 'count-in-up' : count.dir < 0 ? 'count-in-down' : ''}`}>{text(value)}</span>
+          </span>
         </span>
       )}
-      {change.delta !== null && (
-        <span
-          key={`delta-${change.key}`}
-          aria-hidden
-          className={`status-delta pointer-events-none absolute -right-4 -top-4 font-display text-lg font-extrabold ${DELTA[def.polarity]}`}
-        >
-          {change.delta > 0 ? `+${change.delta}` : `−${-change.delta}`}
-        </span>
-      )}
-      {!leaving && <StatusTooltip status={status} />}
+      {!leaving && <StatusTooltip state={state} cast={cast} />}
     </div>
   )
 }
 
 /**
- * Cerclage d'un compteur qui décroît : un trait plein qui s'efface à rebours jusqu'à la part gardée (`kept`, en %),
- * doublé d'un trait flou pour la lueur, puis qui disparaît. Animé par la Web Animations API : Firefox n'applique
- * pas une variable CSS dans les images clés du trait. La durée suit la vitesse du combat (--speed).
+ * Infobulle au survol, centrée au-dessus du médaillon : le nom générique, sa polarité, ce qu'il veut dire, puis
+ * chaque statut qui le compose, avec son effet actuel, ce qu'il en reste et d'où il vient (« Œil de faucon
+ * (Elaria) »). Fonctionne aussi en pause.
  */
-function CountDrain({ kept }: { kept: number }) {
-  const animate = useCallback(
-    (svg: SVGSVGElement | null) => {
-      if (!svg?.animate) return
-      const speed = Number(getComputedStyle(svg).getPropertyValue('--speed')) || 1
-      const end = kept - 100
-      const frames: Keyframe[] = [
-        { strokeDashoffset: 0, opacity: 0 },
-        { strokeDashoffset: 0, opacity: 1, offset: 0.12 },
-        { strokeDashoffset: end, opacity: 1, offset: 0.7 },
-        { strokeDashoffset: end, opacity: 0 },
-      ]
-      for (const circle of svg.querySelectorAll('circle')) circle.animate(frames, { duration: 1000 / speed, easing: 'ease-in-out', fill: 'both' })
-    },
-    [kept],
-  )
-  return (
-    <svg ref={animate} aria-hidden viewBox="0 0 36 36" className="count-drain pointer-events-none absolute -inset-1.5 -rotate-90 overflow-visible">
-      <circle className="count-drain-glow" cx="18" cy="18" r="16" pathLength="100" />
-      <circle cx="18" cy="18" r="16" pathLength="100" />
-    </svg>
-  )
-}
-
-/** Infobulle au survol, centrée au-dessus du médaillon : nom, polarité, effet actuel et ce qu'il reste. Fonctionne aussi en pause. */
-function StatusTooltip({ status }: { status: Status }) {
-  const def = STATUSES[status.id]
-  const charges = `${status.stacks} charge${status.stacks > 1 ? 's' : ''}`
-  const turns =
-    status.turns !== undefined ? `${status.turns} tour${status.turns > 1 ? 's' : ''} restant${status.turns > 1 ? 's' : ''}` : null
+function StatusTooltip({ state, cast }: { state: TrayState; cast?: TrayCast }) {
+  const def = STATES[state.id]
   return (
     <div
       role="tooltip"
-      className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-3 w-60 -translate-x-1/2 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-3 py-2.5 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
+      className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-3 w-72 -translate-x-1/2 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-3 py-2.5 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display text-base font-extrabold leading-tight text-ink-1">{def.name}</span>
-        <span
-          className={`shrink-0 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${isAura(status.id) ? 'border-line-2 bg-ink-1/10 text-ink-1' : POLARITY_STYLE[def.polarity].chip}`}
-        >
-          {isAura(status.id) ? 'Aura' : POLARITY_STYLE[def.polarity].label}
+        <span className="font-display text-base font-extrabold leading-tight text-ink-1">
+          {state.unit === 'amount' ? `${def.name} ${stateValueText(state)}` : def.name}
+        </span>
+        <span className={`shrink-0 rounded-(--r-xs) border px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider ${POLARITY_STYLE[def.polarity].chip}`}>
+          {POLARITY_STYLE[def.polarity].label}
         </span>
       </div>
-      <p className="mt-1 font-body text-[15px] leading-snug text-ink-1">{def.describe(status)}</p>
-      <p className="mt-1.5 flex items-center gap-1.5 font-body text-[13px] font-medium text-ink-3">
-        {turns && (
-          <>
-            <Icon name="turns" className="h-3 w-3" /> {turns} ·{' '}
-          </>
-        )}
-        {charges}
-      </p>
+      <p className="mt-0.5 font-body text-[13px] font-medium text-ink-3">{def.summary}</p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {state.sources.map((source) => {
+          const s = source.status
+          const turns = s.turns !== undefined ? `${s.turns} tour${s.turns > 1 ? 's' : ''} restant${s.turns > 1 ? 's' : ''}` : null
+          const origins = cast
+            ? source.from === 'self'
+              ? originsOf(s.id, cast.bearer, cast.opponent)
+              : [`${STATUSES[s.id].name} (${cast.opponent.name})`]
+            : []
+          return (
+            <li key={`${source.from}-${s.id}`} className="font-body text-[15px] leading-snug text-ink-1">
+              {/* Le statut qui compose l'état, quand son nom dit plus que l'état (Aura de puissance, Force de l'ours) */}
+              {STATUSES[s.id].name !== def.name && source.from === 'self' && <span className="font-bold">{STATUSES[s.id].name} : </span>}
+              {source.text ?? STATUSES[s.id].describe(s)}
+              {(turns || origins.length > 0) && (
+                <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-ink-3">
+                  {turns && (
+                    <>
+                      <Icon name="turns" className="h-3 w-3" /> {turns}
+                    </>
+                  )}
+                  {turns && origins.length > 0 && ' · '}
+                  {origins.length > 0 && `Vient de : ${origins.join(', ')}`}
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

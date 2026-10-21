@@ -2,6 +2,7 @@ import type { Character } from './character'
 import { finalState, type CombatResult, type Pair } from './combat'
 import { computeStats, type FighterStats } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
+import { autoPick, drawOffer, getRelic } from './relics'
 import { createCharacter } from './roster'
 
 /*
@@ -36,11 +37,22 @@ export interface MatchResult {
   stats?: Pair<FighterStats>
   /** Compétences déclenchées par chaque côté, par nom */
   skills?: Pair<Record<string, number>>
+  /**
+   * Récompense du vainqueur (docs/RELIQUES.md) : les reliques proposées, et celle qu'il garde. Absente après la
+   * finale, ou s'il n'y a plus rien à proposer. `chosen` est d'abord le choix du vainqueur (au hasard dans
+   * l'offre) ; l'observateur peut le changer sur l'écran de victoire (`chooseRelic`).
+   */
+  relic?: { offer: string[]; chosen: string }
 }
 
 export interface Tournament {
   entrants: Entrant[]
   results: Record<string, MatchResult>
+  /**
+   * Système de reliques (docs/RELIQUES.md) : choisi sur l'écran de configuration. Désactivé, aucune victoire
+   * n'offre de relique, donc personne n'en porte pendant ce tournoi.
+   */
+  relics: boolean
 }
 
 export interface MatchRef {
@@ -54,8 +66,11 @@ export type MatchStatus = 'done' | 'ready' | 'pending'
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI']
 
-/** Crée le tournoi à partir des 16 cases (ids de personnages), dans l'ordre de l'arbre. */
-export function createTournament(slots: string[], nameOf: (id: string) => string): Tournament {
+/**
+ * Crée le tournoi à partir des 16 cases (ids de personnages), dans l'ordre de l'arbre. `relics` : le système
+ * de reliques est actif (par défaut) ou non pour tout le tournoi.
+ */
+export function createTournament(slots: string[], nameOf: (id: string) => string, { relics = true }: { relics?: boolean } = {}): Tournament {
   if (slots.length !== SLOTS) throw new Error(`Il faut ${SLOTS} participants`)
   const total = new Map<string, number>()
   slots.forEach((id) => total.set(id, (total.get(id) ?? 0) + 1))
@@ -65,7 +80,7 @@ export function createTournament(slots: string[], nameOf: (id: string) => string
     seen.set(id, n)
     return { characterId: id, label: total.get(id)! > 1 ? `${nameOf(id)} ${ROMAN[n - 1]}` : nameOf(id) }
   })
-  return { entrants, results: {} }
+  return { entrants, results: {}, relics }
 }
 
 /** Les deux participants d'un match (null tant que le tour précédent n'est pas joué). */
@@ -97,25 +112,44 @@ export function currentRound(t: Tournament): number | null {
 export const champion = (t: Tournament): number | null =>
   t.results[matchKey({ round: ROUNDS - 1, index: 0 })]?.winner ?? null
 
-/** Les deux combattants d'un match, sous leur nom de tournoi. */
+/**
+ * Reliques d'un participant, dans l'ordre d'obtention : une par match gagné avant le tour `beforeRound`
+ * (toutes par défaut). Elles se déduisent des résultats : rien d'autre ne les stocke.
+ */
+export function relicsOf(t: Tournament, entrant: number, beforeRound = ROUNDS): string[] {
+  return allMatches().flatMap((ref) => {
+    const r = t.results[matchKey(ref)]
+    return r?.relic && r.winner === entrant && ref.round < beforeRound ? [r.relic.chosen] : []
+  })
+}
+
+/** Les deux combattants d'un match, sous leur nom de tournoi et avec les reliques gagnées aux tours précédents. */
 export function matchFighters(t: Tournament, ref: MatchRef): [Character, Character] {
   const [a, b] = players(t, ref)
   if (a === null || b === null) throw new Error('Match pas encore prêt')
-  const make = (i: number) => createCharacter(t.entrants[i].characterId).withName(t.entrants[i].label)
+  const make = (i: number) =>
+    createCharacter(t.entrants[i].characterId)
+      .withName(t.entrants[i].label)
+      .withRelics(relicsOf(t, i, ref.round).map(getRelic))
   return [make(a), make(b)]
 }
 
 /**
- * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi).
- * Refuse un match déjà joué ou pas encore prêt : l'appelant ne doit alors rien enregistrer.
+ * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi), avec la récompense du vainqueur
+ * (hors finale, et si le tournoi a ses reliques) : `OFFER_SIZE` reliques qu'il n'a pas encore, et son choix,
+ * tiré au hasard (`rng`).
+ * Refuse un match déjà joué ou pas encore prêt, ou un combat dont les combattants (personnages, reliques)
+ * ne sont pas ceux du match : l'appelant ne doit alors rien enregistrer.
  */
-export function withResult(t: Tournament, ref: MatchRef, result: CombatResult): Tournament {
+export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, rng: Rng = defaultRng): Tournament {
   if (status(t, ref) !== 'ready') throw new Error(`Match ${matchKey(ref)} non jouable (${status(t, ref)})`)
   const [a, b] = players(t, ref) as [number, number]
-  const expected = [t.entrants[a].characterId, t.entrants[b].characterId]
-  if (result.fighters[0].id !== expected[0] || result.fighters[1].id !== expected[1])
-    throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
+  const expected = [a, b].map((i) => `${t.entrants[i].characterId}+${relicsOf(t, i, ref.round).join(',')}`)
+  const actual = result.fighters.map((f) => `${f.id}+${f.relics.map((r) => r.id).join(',')}`)
+  if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
+  const offer = t.relics && ref.round < ROUNDS - 1 ? drawOffer(relicsOf(t, winner), rng) : []
+  const chosen = autoPick(offer, rng)
   return {
     ...t,
     results: {
@@ -129,9 +163,23 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult): 
         players: [a, b],
         stats: computeStats(result),
         skills: [skillCounts(result, 0), skillCounts(result, 1)],
+        ...(chosen && { relic: { offer, chosen } }),
       },
     },
   }
+}
+
+/**
+ * L'observateur choisit la relique du vainqueur, parmi l'offre (écran de victoire). Refusé si la relique
+ * n'est pas proposée, ou si le vainqueur a déjà joué son match suivant : il s'est battu avec l'autre.
+ */
+export function chooseRelic(t: Tournament, ref: MatchRef, relic: string): Tournament {
+  const r = t.results[matchKey(ref)]
+  if (!r?.relic || !r.relic.offer.includes(relic)) throw new Error(`Relique ${relic} non proposée au match ${matchKey(ref)}`)
+  // Son match suivant (il n'y a pas de récompense après la finale) : s'il est joué, la relique a servi
+  const next = matchKey({ round: ref.round + 1, index: ref.index >> 1 })
+  if (t.results[next]) throw new Error(`Match ${next} déjà joué : la relique ne change plus`)
+  return { ...t, results: { ...t.results, [matchKey(ref)]: { ...r, relic: { ...r.relic, chosen: relic } } } }
 }
 
 const skillCounts = (result: CombatResult, side: 0 | 1) => {
@@ -154,9 +202,15 @@ export interface RunMatch {
 export interface ChampionRun {
   entrant: Entrant
   matches: RunMatch[]
+  /**
+   * Dégâts symétriques : `damage` (infligés) = ses coups qui touchent + les dégâts d'effets subis par
+   * l'adversaire (Foudre, poison, saignement, brûlure, riposte, reliques…) ; `damageTaken` (encaissés) = les
+   * coups de l'adversaire + les dégâts d'effets qu'il a subis. `effectDamage` : la part d'effets de `damage`.
+   */
   totals: {
     turns: number
     damage: number
+    effectDamage: number
     hits: number
     attacks: number
     crits: number
@@ -170,6 +224,8 @@ export interface ChampionRun {
   }
   /** Compétences déclenchées sur tout le tournoi, de la plus fréquente à la plus rare */
   skills: [string, number][]
+  /** Reliques gagnées en chemin, dans l'ordre d'obtention */
+  relics: string[]
 }
 
 /** Bilan du champion (null tant que la finale n'est pas jouée). Les bilans manquants comptent pour 0. */
@@ -177,7 +233,7 @@ export function championRun(t: Tournament): ChampionRun | null {
   const champ = champion(t)
   if (champ === null) return null
   const matches: RunMatch[] = []
-  const totals = { turns: 0, damage: 0, hits: 0, attacks: 0, crits: 0, critDamage: 0, best: 0, dodges: 0, healed: 0, events: 0, absorbed: 0, damageTaken: 0 }
+  const totals = { turns: 0, damage: 0, effectDamage: 0, hits: 0, attacks: 0, crits: 0, critDamage: 0, best: 0, dodges: 0, healed: 0, events: 0, absorbed: 0, damageTaken: 0 }
   const skills = new Map<string, number>()
   for (const ref of allMatches()) {
     const r = t.results[matchKey(ref)]
@@ -190,7 +246,12 @@ export function championRun(t: Tournament): ChampionRun | null {
     matches.push({ round: ref.round, opponent, turns: r.turns, hpLeft: r.hpLeft, mode: r.mode, stats: mine })
     totals.turns += r.turns
     if (mine) {
-      totals.damage += mine.totalDamage
+      // Infligés : les dégâts d'effets de l'adversaire comptent comme ceux du champion (ils viennent de ses
+      // compétences, de ses reliques et des statuts qu'il a posés), comme ses propres dégâts d'effets comptent
+      // dans ses dégâts encaissés.
+      const effectDealt = theirs?.effectDamageTaken ?? 0
+      totals.damage += mine.totalDamage + effectDealt
+      totals.effectDamage += effectDealt
       totals.hits += mine.hits
       totals.attacks += mine.attacks
       totals.crits += mine.crits
@@ -204,7 +265,7 @@ export function championRun(t: Tournament): ChampionRun | null {
     }
     for (const [name, n] of Object.entries(r.skills?.[side] ?? {})) skills.set(name, (skills.get(name) ?? 0) + n)
   }
-  return { entrant: t.entrants[champ], matches, totals, skills: [...skills].sort((x, y) => y[1] - x[1]) }
+  return { entrant: t.entrants[champ], matches, totals, skills: [...skills].sort((x, y) => y[1] - x[1]), relics: relicsOf(t, champ) }
 }
 
 /**

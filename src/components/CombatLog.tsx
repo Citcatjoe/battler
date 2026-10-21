@@ -23,6 +23,8 @@ export function CombatLog({ entries }: { entries: LogEntry[] }) {
               ? 'border-amber-400 font-bold text-amber-300'
               : e.kind === 'event'
                 ? 'border-violet-400 font-bold text-violet-200'
+                : e.kind === 'relic'
+                  ? 'border-gold-300 font-bold text-gold-200'
                 : e.kind === 'status'
                   ? 'border-fuchsia-400/70 text-fuchsia-200'
                   : e.kind === 'crit'

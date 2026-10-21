@@ -4,6 +4,7 @@ import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
+import { RelicRow } from './RelicSeal'
 import { SkillDice } from './SkillDice'
 import { StatSheet } from './StatSheet'
 import { Icon } from './Icon'
@@ -67,7 +68,7 @@ export function MatchupScreen({
             alt=""
             draggable={false}
             className="fade-in pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-            style={{ objectPosition: getArena(arena).focus, filter: 'brightness(0.4) saturate(0.75) blur(2px)' }}
+            style={{ objectPosition: getArena(arena).focus, filter: 'brightness(0.4) saturate(0.75)' }}
           />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(87,83,78,0.25)_0%,rgba(12,10,9,0.55)_55%,rgba(12,10,9,0.9)_100%)]" />
         </>
@@ -114,7 +115,7 @@ export function MatchupScreen({
             title="Ouvre le guichet du match : chaque joueur peut parier avant le combat"
             className="btn btn-md w-56"
           >
-            <Icon name="coin-pile" className="btn-icon" />
+            <Icon name="ticket" className="btn-icon" />
             <span>
               Parier
               {betting.odds &&
@@ -226,6 +227,8 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
           <StatSheet character={character} barClass={style.bar} trackClass={style.track} />
         </div>
         <SkillDice character={character} align={side === 1 ? 'right' : 'left'} />
+        {/* Reliques gagnées aux tours précédents (tournoi) : elles comptent dans les cotes, on les montre aux parieurs */}
+        <RelicRow relics={character.relics} size={44} tooltip="above" align={side === 1 ? 'right' : 'left'} />
       </div>
     </div>
   )

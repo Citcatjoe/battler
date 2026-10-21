@@ -148,7 +148,7 @@ Ce qu'il expose (0.38.0) :
 | Fonction | Rôle |
 | --- | --- |
 | `createWallets(names)` | les deux joueurs et les deux parieurs de l'ordinateur (`BOTS`), 1 000 Deniers chacun |
-| `priceMatch(fighters, key)` | les six issues d'un match, leurs probabilités et cotes, la ligne de durée, le coup de théâtre |
+| `priceMatch(fighters, key)` | les six issues d'un match, leurs probabilités et cotes, la ligne de durée, le coup de théâtre. Les combattants d'un match de tournoi portent leurs reliques (0.75.0, [RELIQUES.md](RELIQUES.md)) : les cotes en tiennent compte, et les parieurs les voient sur l'écran d'affrontement |
 | `stakeChoices`, `placeBet`, `cancelBet`, `cancelMatch` | les mises proposées (`STAKES`, `POKER_STAKE`), poser, remplacer ou retirer un pari |
 | `worthOf`, `ranking`, `isLast`, `isTrailing` | fortune et classement ; « distancé » ouvre le coup de poker et le gain doublé |
 | `botBet`, `placeBotBets` | le pari de Borin et de Zlatka, à la graine du match |
@@ -202,7 +202,7 @@ Chaque étape est jouable, testée et documentée.
 
 ## 5. Ce qu'il faut te demander
 
-Ce sont des icônes peintes, la règle « aucun emoji » s'applique. Les icônes de pièce existantes (`coin-face`, `coin-pile`) peuvent servir pour la mise en attendant.
+Ce sont des icônes peintes, la règle « aucun emoji » s'applique. Les icônes de pièce existantes (`coin-face`, `coin-pile`) peuvent servir pour la mise en attendant. **Faites en 0.77.1** (planche v11, STYLE_BIBLE § 7) : bourse (`purse`) dans l'en-tête de chaque plateau et le classement de fin ; jeton (`bet-token`) devant « Combien ? », les boutons de mise restant des pièces dessinées avec leur montant ; embrasse de rideau (`twist`) dans le bandeau du coup de théâtre ; ticket (`ticket`) sur le bouton « Parier » de l'affrontement.
 - **Bourse** (pour l'en-tête et les tickets) ;
 - **Jeton** (pour les boutons de mise) ;
 - **Coup de théâtre** (pour le bandeau) ;
