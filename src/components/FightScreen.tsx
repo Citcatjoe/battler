@@ -5,6 +5,8 @@ import { useCombat } from '../game/useCombat'
 import { SHAKE, SHAKE_HEAVY, TIMING_VARS } from '../game/timing'
 import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
+import { CombatVcr, useVcrOpen } from './CombatVcr'
+import { vcrToggle } from '../game/debugConsole'
 import { CombatLog } from './CombatLog'
 import { CopyTraceButton } from './CopyTraceButton'
 import { Coin } from './Coin'
@@ -48,12 +50,14 @@ const SHAKE_KEYS: Keyframe[] = [
 
 export function FightScreen({ script, arena, onEnd, test }: Props) {
   const { fighters } = script
-  const { hp, statuses, forms, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
-    useCombat(script, onEnd, { test: test !== undefined })
+  // Magnétoscope (outil de développement : `battler.vcr()` ou la touche V), jamais en combat test
+  const vcrOpen = useVcrOpen() && !test
+  const rootRef = useRef<HTMLDivElement>(null)
+  const { hp, statuses, forms, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved, vcr } =
+    useCombat(script, onEnd, { test: test !== undefined, vcr: vcrOpen ? rootRef : undefined })
 
   // Zones d'état : les états génériques de chacun, ses statuts et les auras de l'adversaire qui agissent sur lui
   const trays = useMemo(() => ([0, 1] as Side[]).map((side) => trayStates(statuses[side], statuses[other(side)])), [statuses])
-  const rootRef = useRef<HTMLDivElement>(null)
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
   const diceColor = dice.owner === null ? '#e7e5e4' : SIDE_STYLE[dice.owner].hex
@@ -94,10 +98,11 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   }, [logOpen, log.length])
   const unread = logOpen ? 0 : log.length - seen
 
-  // Raccourci clavier : J ouvre ou ferme le journal.
+  // Raccourcis clavier : J ouvre ou ferme le journal ; V, le magnétoscope (serveur de dev, hors combat test).
   const toggleRef = useRef((_: string) => {})
   toggleRef.current = (key) => {
     if (key === 'j') setLogOpen(!logOpen)
+    if (key === 'v' && import.meta.env.DEV && !test) vcrToggle.set(!vcrToggle.get())
   }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -339,6 +344,10 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
           {unread > 0 && <span className="hud-count">{unread > 99 ? '99+' : unread}</span>}
         </button>
       </nav>
+
+      {vcrOpen && (
+        <CombatVcr vcr={vcr} beats={resolved.beats} fighters={fighters} speed={speed} setSpeed={setSpeed} paused={paused} setPaused={setPaused} />
+      )}
 
       {/* Signaux d'activation : du sceau d'une compétence (en-tête) à la zone d'état de sa cible */}
       <SignalLayer signal={signal} root={rootRef} />

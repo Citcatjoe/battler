@@ -20,6 +20,8 @@ import { traceCombat, traceText, turnTitle } from './trace'
  *                              regarde à l'écran. Une seule fois ; battler.play(null) l'annule. Les combattants se
  *                              choisissent à l'écran, dans le même ordre (gauche, droite) que la graine notée.
  *   copy(battler.dump())     → copie les traces de tous les combats gardés (un tournoi entier), du plus ancien au plus récent
+ *   battler.vcr()            → ouvre ou ferme le magnétoscope de combat (serveur de dev seulement ; touche V en combat) :
+ *                              pause, pas à pas, retour en arrière, ralenti, durées de timing.ts (docs/MOTEUR_V2.md § 8)
  */
 
 // Un tournoi compte 15 combats : on en garde assez pour un tournoi et quelques duels.
@@ -35,6 +37,35 @@ export function nextSeed(): number {
   return seed
 }
 
+/* Magnétoscope de combat (outil de développement) : ouvert ou fermé, retenu d'une session à l'autre. */
+const VCR_KEY = 'battler:vcr'
+let vcrOpen = (() => {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(VCR_KEY) === '1'
+  } catch {
+    return false
+  }
+})()
+const vcrListeners = new Set<() => void>()
+
+/** Le magnétoscope (`useSyncExternalStore`) : état, abonnement, bascule. */
+export const vcrToggle = {
+  get: () => vcrOpen,
+  subscribe(listener: () => void) {
+    vcrListeners.add(listener)
+    return () => void vcrListeners.delete(listener)
+  },
+  set(open: boolean) {
+    vcrOpen = open
+    try {
+      localStorage.setItem(VCR_KEY, open ? '1' : '0')
+    } catch {
+      // Stockage indisponible : l'état vaut pour cette session
+    }
+    for (const listener of vcrListeners) listener()
+  },
+}
+
 declare global {
   interface Window {
     battler?: {
@@ -43,6 +74,7 @@ declare global {
       dump: () => string
       replay: (seed: number, left: string, right: string, leftRelics?: string[], rightRelics?: string[]) => CombatResult
       play: (seed: number | null) => void
+      vcr: (open?: boolean) => boolean
     }
   }
 }
@@ -120,6 +152,15 @@ export function installDebugConsole() {
       }
       pendingSeed = seed
       console.log(`Battler · graine ${seed} retenue pour le prochain combat (Jouer, Simuler ou match de tournoi).`)
+    },
+    vcr: (open = !vcrToggle.get()) => {
+      vcrToggle.set(open)
+      console.log(
+        open
+          ? 'Battler · magnétoscope ouvert (serveur de dev, hors combat test ; touche V en combat).'
+          : 'Battler · magnétoscope fermé.',
+      )
+      return open
     },
   }
 }

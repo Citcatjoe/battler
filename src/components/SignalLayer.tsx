@@ -22,7 +22,9 @@ export function SignalLayer({ signal, root }: { signal: SkillSignal | null; root
   const [flights, setFlights] = useState<Flight[]>([])
   useLayoutEffect(() => {
     const el = root.current
-    if (!signal || !el) return
+    // Plus de signal (le magnétoscope reconstruit une position) : les vols en cours partent avec lui
+    if (!signal) return setFlights((list) => (list.length > 0 ? [] : list))
+    if (!el) return
     const box = el.getBoundingClientRect()
     const scale = box.width / el.offsetWidth || 1
     const center = (node: Element) => {

@@ -32,6 +32,18 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.82.0] — 2026-10-21
+
+### Ajouté
+- **Magnétoscope de combat** (serveur de dev seulement, `docs/MOTEUR_V2.md` § 8), pour régler le rythme des combats. On l'ouvre avec la touche V en combat ou `battler.vcr()` en console, et il reste ouvert d'un combat à l'autre.
+  - Commandes : pause, pas à pas d'un instant à l'autre (→), moment suivant (Maj+→), moment précédent (←), retour au début du moment, ralenti ×0,25 et ×0,5, et un curseur pour glisser dans le moment.
+  - La barre du moment montre ses temps à l'échelle, chacun avec le nom de sa constante de `timing.ts` et sa durée (« WIND 300 ms »), le temps en cours en or, et les sons et changements d'écran à leur instant.
+  - En reculant, l'écran est recalculé à partir de la mise en scène et les animations se placent à leur vrai instant, sans aucun son. Aucune dépendance nouvelle.
+- Mise en scène : chaque moment liste ses temps (`Moment.spans`), chacun avec le nom de sa constante (`hold('WIND')`). Un test vérifie qu'ils couvrent exactement la durée de chaque moment.
+
+### Corrigé
+- Un signal d'activation pouvait laisser une clé React en double après un retour en arrière (`SignalLayer`).
+
 ## [0.81.1] — 2026-10-21 (branche `moteur-v2`)
 
 ### Ajouté

@@ -54,6 +54,21 @@ describe('mise en scène', () => {
     }
   })
 
+  it('les attentes de chaque moment se suivent sans trou, font sa durée et nomment leur constante', () => {
+    for (const { moments } of corpus)
+      for (const m of moments) {
+        let end = 0
+        for (const span of m.spans) {
+          expect(span.at).toBe(end)
+          expect(span.ms).toBeGreaterThan(0)
+          // Une constante de timing.ts, ou le libellé en français d'une durée calculée
+          if (/^[A-Z_]+$/.test(span.name)) expect(T[span.name as keyof typeof T]).toBe(span.ms)
+          end += span.ms
+        }
+        expect(end).toBe(m.duration)
+      }
+  })
+
   it('un moment, une étape racine et ce qui en découle, dans le même tour', () => {
     for (const { result, moments } of corpus)
       for (const m of moments)

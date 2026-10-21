@@ -1566,6 +1566,113 @@ body {
   border-radius: 9999px;
 }
 
+/* ---------- Magnétoscope du combat (outil de développement, docs/MOTEUR_V2.md § 8) ----------
+   Même plaque que le HUD, posée au-dessus de lui sur le sol de l'arène, entre les combattants. Une frise des
+   attentes du moment (constante de timing.ts et durée), le curseur dessus, les sons au-dessus, les cues dessous. */
+.vcr {
+  padding: 10px 18px 8px;
+  background: linear-gradient(180deg, rgba(38, 31, 26, 0.88), rgba(18, 14, 11, 0.92));
+  border: 1px solid #000;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.4), inset 0 6px 10px -6px rgba(255, 230, 180, 0.15);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
+  color: #d6c3a1;
+}
+.vcr-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.vcr-title {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fde68a;
+  text-shadow: 0 1px 0 #000;
+}
+.vcr-time { display: flex; gap: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; color: #a8a29e; }
+.vcr-time b { color: #fbbf24; font-weight: 700; }
+.vcr-ticks {
+  position: relative;
+  height: 14px;
+  font-size: 9px;
+  line-height: 14px;
+}
+.vcr-ticks-screen { height: 28px; }
+.vcr-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: 0 3px;
+  white-space: nowrap;
+  color: #d6d3d1;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
+}
+.vcr-tick[data-row='1'] { top: 14px; }
+.vcr-ticks-sound .vcr-tick { color: #fcd34d; background: rgba(120, 53, 15, 0.6); }
+.vcr-track {
+  position: relative;
+  height: 28px;
+  margin: 2px 0;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.25);
+}
+.vcr-span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 28px;
+  white-space: nowrap;
+  text-overflow: clip;
+  color: #d6c3a1;
+  background: rgba(68, 64, 60, 0.75);
+  border-right: 1px solid rgba(0, 0, 0, 0.8);
+}
+.vcr-span:nth-child(even) { background: rgba(87, 83, 78, 0.75); }
+/* Durée calculée (pas une constante de timing.ts) : en italique */
+.vcr-span[data-named='false'] { font-style: italic; color: #a8a29e; }
+.vcr-span[data-current='true'] { color: #2b1704; background: linear-gradient(180deg, #fde68a 0%, #f2bf4f 45%, #c4851f 100%); }
+.vcr-mark {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+.vcr-head-line {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: #f43f5e;
+  box-shadow: 0 0 6px rgba(244, 63, 94, 0.8);
+  pointer-events: none;
+}
+/* Le curseur couvre la frise, invisible : la frise est sa piste, le trait rouge sa position */
+.vcr-scrub {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.vcr-controls { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px; }
+.vcr .hud-speed { width: 46px; }
+
 /* ---------- Combat test : pavé du dé, sous chaque combattant ----------
    Même verre fumé que le journal (console), liseré violet pour signaler un outil hors jeu.
    Le pavé du combattant attendu s'allume à la couleur de son camp (--camp), l'autre s'efface. */

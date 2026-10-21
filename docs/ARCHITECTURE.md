@@ -33,7 +33,7 @@ src/
     stats.ts             computeStats : bilan d'un combat lu dans la chronologie
     narration.ts         textes du journal et badges, générés depuis le registre
     trace.ts             trace de résolution complète d'un combat (traceCombat, traceText), lue dans la chronologie
-    debugConsole.ts      trace dans la console du navigateur et sur le disque ; window.battler (trace, traces, dump, replay)
+    debugConsole.ts      trace dans la console du navigateur et sur le disque ; window.battler (trace, traces, dump, replay, play, vcr) ; bascule du magnétoscope (vcrToggle)
     audit.ts             audit de résolution d'un combat, règle par règle (createAudit)
     analysis.ts          analyse d'équilibre : taux, profils, valeur nette des compétences, apport des statuts (npm run balance)
     timing.ts            le rythme du combat à l'écran : une durée nommée par battement (ms à ×1), et TIMING_VARS, les variables CSS qui en dérivent
@@ -52,6 +52,7 @@ src/
     SkillSeal.tsx        fenêtre octogonale du sceau d'une compétence (asset A-01 à venir, repli sur l'icône peinte)
     RelicSeal.tsx        sceau hexagonal d'une relique, rangée de sceaux avec infobulle (RelicRow), carte de récompense (RelicCard)
     SpecialLabel.tsx     label de la zone de surcharge sous le dé (couleur de sa source, hachures du − ; specials.ts ; docs/design-system.md § 3.1)
+    CombatVcr.tsx        magnétoscope de combat (dev seulement, touche V ou battler.vcr()) : pause, pas à pas, retour, ralenti, attentes du moment avec leur constante de timing.ts (docs/MOTEUR_V2.md § 8)
     VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement
     PrestigeButton.tsx   bouton principal d'un écran (pièce prestige du design system, un seul par écran)
     HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
@@ -117,7 +118,8 @@ Le contrat complet : [MOTEUR_V2.md](MOTEUR_V2.md) § 4 et 5.
 - **`stage(result, { test })`** (fonction pure, testée sans navigateur dans `staging.test.ts`) découpe la chronologie en **moments** : une étape racine et celles qui en découlent par `cause`, dans le même tour, jamais d'après l'étape voisine. Chaque moment est une liste de **cues** datées (`at`, ms à ×1 depuis son début) sur un canal : `dice`, `strike`, `blow`, `float`, `aura`, `special`, `specialsClear`, `sound`, `hp`, `statuses`, `log`, `skillPulse`, `relicPulse`, `relicUse`, `signal`, `scene`, `form`, `turn`, `winner`. Le premier moment est l'ouverture (initiative), le dernier la fin du combat. `rolls` : les points d'attente du combat test (avant chaque étape qui lance des dés).
 - Ce que `stage` décide : ce qui tombe à l'impact d'un coup (la plaie qui coule, le poison posé par le coup, la compétence qui accompagne un coup qui touche), la compétence qui tombe avec son dé (coup sacrifié, double), les décomptes montrés avec l'effet de leur statut, les PV de chaque partie d'une série de coups (de proche en proche, vérifiés contre l'état du moteur en développement), un seul son par nom et par instant.
 - **`useCombat`** applique les cues à leur instant avec une seule horloge (`requestAnimationFrame`, vitesse, pause) : l'écran est le résultat de `applyCue(view, cue)` (pure, exportée), les sons sont joués tels quels. Les textes flottants sont une liste par combattant (`View.floats`), chacun retiré après `FLOAT_LIFE` à l'horloge du combat. Mode triche : imposer un dé relance `simulateCombat` puis `stage`, et la lecture reprend au même instant du même moment.
-- **`timing.ts`** : toutes les durées. Les animations CSS qui doivent rester d'accord avec elles lisent `--t-lunge`, `--t-lunge-fast`, `--t-signal`, `--t-coin-spin`, `--t-read`, `--t-float`, `--t-title`, posées sur `.arena` par `FightScreen` (`TIMING_VARS`). La secousse de l'arène (`SHAKE`, `SHAKE_HEAVY`) suit la vitesse et se fige en pause.
+- **`timing.ts`** : toutes les durées. Les animations CSS qui doivent rester d'accord avec elles lisent `--t-lunge`, `--t-lunge-fast`, `--t-signal`, `--t-coin-spin`, `--t-read`, `--t-float`, `--t-title`, posées sur `.arena` par `FightScreen` (`TIMING_VARS`). La secousse de l'arène (`SHAKE`, `SHAKE_HEAVY`) suit la vitesse et se fige en pause. `stage` n'attend que par `hold('NOM')` (une constante de `timing.ts`) ou `wait(ms, 'libellé')` (durée calculée) : chaque moment garde ses attentes nommées (`Moment.spans`).
+- **Magnétoscope** (développement, `CombatVcr.tsx`, [MOTEUR_V2.md](MOTEUR_V2.md) § 8) : avec l'option `vcr` (la racine de l'arène), `useCombat` publie sa position (`vcr.snapshot`) et se déplace (`vcr.seek`, `stepCue`, `nextMoment`, `prevMoment`, `restartMoment`) en repliant les cues avec `applyCue` ; il recale les animations CSS de l'arène (`flushSync` instant par instant, `currentTime`). Désactivé en combat test.
 - Ajouter un type d'étape : sa mise en scène dans `stageBeat` (`staging.ts`), ses durées dans `timing.ts`, son contrôle dans `staging.test.ts`. Ajouter un canal : son type dans `CueBody`, son effet dans `applyCue`.
 
 Les stats effectives (`effectiveStats`) = stats de base modifiées par les statuts, puis bornées : armure ≥ 0, chances dans [0, 1], dé ≥ 1, multiplicateur ≥ 1. Les PV max ne changent jamais.

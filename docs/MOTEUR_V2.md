@@ -90,6 +90,8 @@ interface Moment {
   duration: number
   /** Combat test : avant les cues de `at`, les dés jusqu'au rang `upTo` (exclu) doivent être choisis */
   rolls: { at: number; upTo: number }[]
+  /** Les attentes du moment, contiguës depuis 0 (leur somme vaut `duration`), chacune avec ce qui l'a produite */
+  spans: { at: number; ms: number; name: string }[]
 }
 type Cue = { at: number } & (
   | { channel: 'dice'; dice: DiceState }               // plateau de dés (état complet, sans ses labels)
@@ -144,6 +146,7 @@ Précisions de l'implémentation (étape 2 livrée) :
 - PV : chaque étape retire ses effets (ou ses `parts`, coup par coup) des PV à l'écran. Quand les étapes appliquées sont exactement toutes celles jusqu'à une étape, les PV doivent valoir son `state.hp` ; sinon `stage` lève une erreur en développement (et se recale sur l'état du moteur en production).
 - Sons : `sound` n'émet qu'un son par nom et par instant, ce qui couvre la règle 4 de SONS.md § 4.4 (un son par signe) et sa règle 5 (un label se tait quand l'effet joue déjà ce son) ; l'ancien paramètre `silent` disparaît.
 - Clés : celles des coups, auras et textes flottants viennent de `stage` (un compteur, identique tant que la chronologie l'est) ; celles des labels, du journal, des éclats, des signaux et des scènes viennent du lecteur.
+- Attentes nommées (`spans`) : la mise en scène n'avance son instant que par `hold('WIND')` (une constante numérique de `timing.ts`, nom vérifié par TypeScript) ou par `wait(ms, 'libellé')` pour une durée calculée (seul cas : `rythme de la scène`, l'écart imposé par les impacts d'un événement de scène). Les options `lead`/`hold` de `showEffects` prennent un nom de constante (`hold: 'WOUND_HOLD'`) ou `lead: 0` (sans attente). Un test vérifie, sur tout le corpus, que les attentes se suivent sans trou, font la durée du moment et valent leur constante.
 
 ## 5. Étape 3 : le lecteur
 
@@ -179,3 +182,33 @@ Relevées en écrivant la v2 (2026-10-21), par rapport au rejoueur impératif de
 7. **Un rythme exact.** Avant, chaque attente se terminait à l'image suivante et perdait ce qui dépassait (jusqu'à ~16 ms par attente, une soixantaine d'attentes par tour) ; l'horloge unique reporte ce reste. Le combat est donc un peu plus court qu'en 0.80.2, et sa durée ne dépend plus de la cadence d'affichage.
 8. **Mode triche : reprise au même instant du même moment** (voir § 5), au lieu de « l'étape suivante ». Visuellement identique, sauf qu'un dé imposé au milieu d'un moment ne rejoue rien de ce qui précède.
 9. **Détails sans effet visible attendu** : les statuts sont aussi rafraîchis à l'étape d'un coup transformé et d'une paire (identiques en pratique) ; une Furie instantanée est reconnue par sa cause (la compétence qui l'a posée) au lieu de « l'étape précédente est une compétence », et la lecture courte de cette compétence par la rafale qu'elle cause.
+
+## 8. Magnétoscope (outil de développement)
+
+Pour régler le rythme (`timing.ts`) en regardant le combat : pause, ralenti, pas à pas de cue en cue, retour en arrière, curseur dans le moment, et la constante qui produit chaque tranche de temps.
+
+**Ouvrir** : en combat, la touche **V**, ou `battler.vcr()` en console (`battler.vcr(false)` le ferme). L'état est retenu (`localStorage`, `battler:vcr`). Seulement sur le serveur de dev (`import.meta.env.DEV`), jamais en combat test (le mode triche y attend les dés : pas de retour en arrière avant un dé choisi).
+
+**Le panneau** (au-dessus du HUD, sur le sol de l'arène) :
+- en-tête : `Moment i / n · tour t · ce que joue le moment` (« Coup de Gorak », « Poison (début de tour) », « « Rétribution » d'Aldric »), à droite l'attente en cours (« WIND 300 ms ») et l'instant dans le moment ;
+- la frise : les attentes du moment (`spans`) à l'échelle, chacune avec sa constante et sa durée (en italique, une durée calculée), l'attente en cours en or, le trait rouge à l'instant présent. **Cliquer ou glisser sur la frise** place la lecture à cet instant (curseur) ;
+- au-dessus de la frise, les sons de chaque instant (nom du son) ; dessous, ce qui change à l'écran (`dés`, `coup`, `PV`, `texte`, `statuts`, `journal`…), sur deux rangs ;
+- commandes : moment précédent, recommencer le moment, Lecture/Pause, pas suivant (prochain instant de cues, au besoin le moment suivant), moment suivant ; vitesses ×0,25, ×0,5 et ×1 (le HUD garde ×1, ×2, ×4).
+
+**Clavier**, panneau ouvert : Espace (pause), → (pas), Maj+→ (moment suivant), ← (début du moment, puis moment précédent).
+
+**Régler le rythme** : se mettre en pause sur le moment à régler, le parcourir pas à pas ou au ralenti, repérer sur la frise l'attente trop longue ou trop courte (son nom est celui de la constante de `timing.ts`), changer la constante, puis rafraîchir la page (F5 : le serveur de dev ne recharge pas tout seul) et revoir le même combat avec `battler.play(graine)`.
+
+**Fonctionnement** (`useCombat`, option `vcr`) :
+- `vcr.seek(mi, at)` : l'écran devient le résultat de toutes les cues des moments précédents et de celles du moment `mi` jusqu'à `at` compris (`applyCue`, le même pli que la lecture ; aucun son). L'horloge vaut la somme des durées précédentes plus `at` ; les textes flottants échus sont retirés. La lecture reprend de là.
+- `stepCue`, `nextMoment`, `prevMoment`, `restartMoment` s'appuient sur `seek`. Chaque commande met d'abord le combat en pause.
+- `vcr.snapshot` (`{ moments, mi, at, clock }`) est publié à chaque déplacement, à chaque changement de moment et au plus toutes les 100 ms pendant la lecture, seulement quand le panneau est ouvert.
+- **Animations CSS** : un élément monté par un déplacement démarrerait ses animations à 0. Le lecteur rend donc d'abord un écran vidé de l'éphémère (coup, aura, textes, dés), puis le début du moment précédent, puis chaque instant de cues jusqu'à la cible avec `flushSync`, en avançant entre deux toutes les animations finies de l'arène (`getAnimations({ subtree: true })`, `currentTime`) du temps écoulé divisé par la vitesse. Elles restent figées par la pause (`.is-paused`). Un élan saisi au milieu d'un coup est donc à sa vraie position. Les éclats déjà passés avant ce point de départ (signal, sceau, relique, scène) ne rejouent pas.
+- Changer de vitesse, panneau ouvert, garde la progression des animations CSS en cours (leur `currentTime` suit le rapport des vitesses).
+
+**Limites** :
+- Les boucles infinies (ambiance) et les transitions CSS (barres de vie, halos de tour) ne sont pas recalées : une transition rejoue depuis la valeur d'avant le déplacement.
+- Un élément déjà à l'écran au début du moment précédent (texte flottant long, aura) repart de ce point, pas de son vrai début.
+- La secousse de l'arène en cours est arrêtée par un déplacement ; elle repart si le coup qui la provoque est rejoué.
+- Le journal ouvert passe en partie sous le panneau.
+- Hors magnétoscope, changer de vitesse au milieu d'une animation la fait toujours sauter (comportement d'avant).

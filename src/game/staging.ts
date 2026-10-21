@@ -214,6 +214,19 @@ export interface RollMark {
   upTo: number
 }
 
+/** Une constante numérique de `timing.ts` (une durée nommée). */
+export type TimingName = { [K in keyof typeof T]: (typeof T)[K] extends number ? K : never }[keyof typeof T]
+
+/**
+ * Une attente du moment, avec ce qui l'a produite : le nom d'une constante de `timing.ts`, ou un libellé pour une
+ * durée calculée. Les attentes d'un moment se suivent sans trou et font sa durée (le magnétoscope les montre).
+ */
+export interface Span {
+  at: number
+  ms: number
+  name: TimingName | string
+}
+
 export interface Moment {
   /** Étapes du moteur couvertes par ce moment, dans l'ordre (vide : ouverture, fin du combat) */
   beats: number[]
@@ -224,6 +237,8 @@ export interface Moment {
   /** Durée totale du moment (le suivant commence à `duration`) */
   duration: number
   rolls: RollMark[]
+  /** Les attentes du moment, dans l'ordre : contiguës depuis 0, leur somme vaut `duration` */
+  spans: Span[]
 }
 
 export interface StageOptions {
@@ -348,14 +363,14 @@ interface ShowOpts {
   cue?: SfxName | null
   /** Son de chaque coup de la série */
   impact?: (damage: number, heavy: boolean) => SfxName
-  /** Attente avant l'apparition : 0 quand l'effet tombe avec le dé qui le déclenche */
-  lead?: number
+  /** 0 : l'effet tombe avec le dé qui le déclenche, sans attente (sinon `LEAD`) */
+  lead?: 0
   /** Label de surcharge posé à l'apparition */
   special?: SpecialSpec
   /** À l'apparition, avec le son et les textes (le sceau d'une relique qui s'illumine) */
   onShow?: () => void
-  /** Temps de lecture après l'effet */
-  hold?: number
+  /** Temps de lecture après l'effet (sinon `READ_HOLD`) */
+  hold?: TimingName
   /** Effet d'une relique : ni aura ni titre sur la source */
   relic?: true
   /** Instants des impacts depuis l'apparition (événement de scène) */
@@ -397,7 +412,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   let settledUpTo = -1
 
   const begin = (ids: number[], turn: number, owner: Side) => {
-    moment = { beats: ids, turn, owner, cues: [], duration: 0, rolls: [] }
+    moment = { beats: ids, turn, owner, cues: [], duration: 0, rolls: [], spans: [] }
     moments.push(moment)
     t = 0
     heard = new Set()
@@ -407,9 +422,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     // Tri stable : à instant égal, l'ordre d'émission
     moment.cues.sort((x, y) => x.at - y.at)
   }
-  const wait = (ms: number) => {
+  /** Attend `ms` ; `name` dit d'où vient cette durée (constante de `timing.ts` ou libellé d'une durée calculée). */
+  const wait = (ms: number, name: string) => {
+    if (ms > 0) moment.spans.push({ at: t, ms, name })
     t += ms
   }
+  /** Attend la durée nommée `name` de `timing.ts`. */
+  const hold = (name: TimingName) => wait(T[name], name)
   const emit = (body: CueBody, at = t) => moment.cues.push({ at, ...body } as Cue)
   /** Jamais deux fois le même son au même instant (SONS.md § 4.4, règles 4 et 5) */
   const sound = (cue: SfxName, arg?: number, at = t) => {
@@ -563,11 +582,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    */
   function showEffects(source: Side | null, title: string, effects: readonly AppliedEffect[], apply: () => void, o: ShowOpts = {}) {
     const hits = source !== null && o.blows ? effects.filter((e) => e.type === 'damage' && e.target !== source && e.amount > 0) : []
-    wait(o.lead ?? T.LEAD)
+    if (o.lead !== 0) hold('LEAD')
     const aim = o.signal !== undefined && source !== null ? signalTargets(effects) : undefined
     if (aim) {
       emit({ channel: 'signal', signal: { side: source!, from: o.signal!, ...aim } })
-      wait(T.SIGNAL)
+      hold('SIGNAL')
     }
     o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)
@@ -575,13 +594,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showFx({ source, title, effects: effects.filter((e) => !hits.includes(e)), notes: o.notes }, o.relic)
     if (o.special) addSpecial(o.special)
     if (hits.length > 0 && source !== null) {
-      wait(T.BLOWS_LEAD)
+      hold('BLOWS_LEAD')
       blows(source, hits, o.blows === 'lunge', o.impact ?? ((_, heavy) => (heavy ? 'crit' : 'hit')), o.schedule?.map((x) => x - T.BLOWS_LEAD))
       apply()
-      wait(T.BLOWS_HOLD)
+      hold('BLOWS_HOLD')
     } else {
       apply()
-      wait(o.hold ?? T.READ_HOLD)
+      hold(o.hold ?? 'READ_HOLD')
     }
     setAura(null)
   }
@@ -605,22 +624,22 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       const at = schedule?.[k]
       const heavy = at === undefined && (parts.length > 1 ? k === parts.length - 1 : part.n >= HEAVY_BLOW)
       const id = key++
-      const wind = lunge ? T.BLOW_WIND : T.BLOW_WIND_REACTION
+      const wind: TimingName = lunge ? 'BLOW_WIND' : 'BLOW_WIND_REACTION'
       // Au rythme imposé, le chiffre du coup précédent reste à l'écran jusqu'à l'élan de celui-ci
       if (at !== undefined) {
-        wait(Math.max(0, at - wind - elapsed))
+        wait(Math.max(0, at - T[wind] - elapsed), 'rythme de la scène')
         elapsed = Math.max(elapsed, at)
       }
       setBlow({ key: id, from, to: part.to, damage: part.n, heavy, lunge, landed: false })
-      wait(wind)
-      if (heavy) wait(T.HEAVY_FREEZE) // arrêt sur image avant le gros coup
+      hold(wind)
+      if (heavy) hold('HEAVY_FREEZE') // arrêt sur image avant le gros coup
       sound(impact(part.n, heavy))
       const next = [...hp] as Pair<number>
       next[part.to] = Math.max(0, next[part.to] - part.n)
       showHp(next)
       setBlow({ key: id, from, to: part.to, damage: part.n, heavy, lunge, landed: true })
       onLand?.()
-      if (at === undefined || k === parts.length - 1) wait(k === parts.length - 1 ? T.BLOW_LAST_HOLD : T.BLOW_HOLD)
+      if (at === undefined || k === parts.length - 1) hold(k === parts.length - 1 ? 'BLOW_LAST_HOLD' : 'BLOW_HOLD')
     }
     setBlow(null)
   }
@@ -638,7 +657,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    */
   function bleedOut(flow: Extract<Beat, { type: 'statusReaction' }>) {
     addSpecial(reactionSpecial(flow.status, 'defender', flow.effects)!)
-    wait(T.BLEED_DELAY)
+    hold('BLEED_DELAY')
     sound('rot')
     showFx({ source: null, title: '', effects: flow.effects })
     settle(flow)
@@ -673,7 +692,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
     setDice({ ...shown, values: [0], rolling: true })
     sound('diceRoll', T.DICE_ROLL)
-    wait(T.DICE_ROLL)
+    hold('DICE_ROLL')
     sound('diceLand')
     // Une compétence qui accompagne le coup (Pourfendre) ne part que s'il touche : son dé s'allume à l'impact
     const onHit = !attack.forfeited && !attack.reshaped
@@ -686,22 +705,22 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       settle(beat, base)
       showStatuses(beat.id)
       log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
-      if (!grouped) wait(T.FORFEIT_HOLD)
+      if (!grouped) hold('FORFEIT_HOLD')
       return
     }
 
-    wait(T.DICE_READ)
+    hold('DICE_READ')
     if (attack.crit) {
       patchDice({ crit: true, critForced: attack.critForced })
       for (const s of specials.crit) addSpecial(s)
-      wait(T.CRIT_ANNOUNCE)
+      hold('CRIT_ANNOUNCE')
     }
 
     // Élan vers l'adversaire, muet ; l'impact (ou l'esquive) tombe au milieu de l'animation
     const id = key++
     setStrike({ ...attack, key: id, landed: false })
-    wait(T.WIND)
-    if (attack.crit && !attack.dodged) wait(T.CRIT_FREEZE)
+    hold('WIND')
+    if (attack.crit && !attack.dodged) hold('CRIT_FREEZE')
     sound(attack.dodged ? 'dodge' : attack.crit ? 'crit' : 'hit')
     settle(beat, base)
     showStatuses(beat.id)
@@ -717,7 +736,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       absorbed.add(flow.id)
       bleedOut(flow)
     }
-    wait(flow ? T.STRIKE_FLOW_HOLD : T.STRIKE_HOLD)
+    hold(flow ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD')
     setStrike(null)
     if (flow || rides.length > 0) setAura(null)
   }
@@ -739,13 +758,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       settle(beat, base)
       showStatuses(beat.id)
       log(attackLog(beat.turn, attack, fighters, hp[other(attack.attacker)]))
-      wait(grouped ? T.VOLLEY_FORFEIT_SNAP : T.VOLLEY_FORFEIT_HOLD)
+      hold(grouped ? 'VOLLEY_FORFEIT_SNAP' : 'VOLLEY_FORFEIT_HOLD')
       return
     }
     const id = key++
     setStrike({ ...attack, key: id, landed: false, fast: true })
-    wait(T.VOLLEY_WIND)
-    if (attack.crit && !attack.dodged) wait(T.VOLLEY_CRIT_FREEZE)
+    hold('VOLLEY_WIND')
+    if (attack.crit && !attack.dodged) hold('VOLLEY_CRIT_FREEZE')
     sound(attack.dodged ? 'dodge' : attack.crit ? 'crit' : 'hit')
     settle(beat, base)
     showStatuses(beat.id)
@@ -760,7 +779,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       absorbed.add(flow.id)
       bleedOut(flow)
     }
-    wait(flow ? T.VOLLEY_FLOW_HOLD : T.VOLLEY_STRIKE_HOLD)
+    hold(flow ? 'VOLLEY_FLOW_HOLD' : 'VOLLEY_STRIKE_HOLD')
     setStrike(null)
     if (flow || rides.length > 0) setAura(null)
   }
@@ -784,16 +803,16 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const landed = { ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced) }
     if (flat) {
       setDice(landed)
-      wait(T.VOLLEY_FLAT)
+      hold('VOLLEY_FLAT')
       return
     }
     setDice({ ...shown, values: attacks.map(() => 0), rolling: true })
     // Un seul dé lancé et un seul dé posé pour toute la rafale : un instant, un son
     sound('diceRoll', T.DICE_ROLL_MANY)
-    wait(T.DICE_ROLL_MANY)
+    hold('DICE_ROLL_MANY')
     sound('diceLand')
     setDice(landed)
-    wait(T.DICE_LAND_HOLD)
+    hold('DICE_LAND_HOLD')
   }
 
   /**
@@ -814,11 +833,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           stageVolleyStrike(beat, volley.pointed ? index : undefined, face, !!skill)
           const last = volley.next === volley.strikes.length
           if (last) volley = null
-          if (!skill) wait(last ? T.STRIKE_REST : T.VOLLEY_GAP)
+          if (!skill) hold(last ? 'STRIKE_REST' : 'VOLLEY_GAP')
           break
         }
         stageAttack(beat, face, !!skill)
-        if (!skill) wait(T.STRIKE_REST)
+        if (!skill) hold('STRIKE_REST')
         break
       }
       case 'event': {
@@ -853,7 +872,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             lead: timing || snapped.has(beat.id) ? 0 : undefined,
             ...(timing && { schedule: timing.impacts, impact: () => 'crit' as const }),
             // Furie instantanée : ses frappes suivent vite (son nom est déjà tombé avec le dé)
-            hold: children[beat.id].some((b) => b.type === 'flurry') ? T.FLURRY_CHAIN_HOLD : undefined,
+            hold: children[beat.id].some((b) => b.type === 'flurry') ? 'FLURRY_CHAIN_HOLD' : undefined,
             signal: beat.event.eventId,
           },
         )
@@ -907,7 +926,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
               : def.drainsHit
                 ? { cue: 'heal' }
                 : wound > 0
-                  ? { cue: 'rot', lead: 0, hold: T.WOUND_HOLD }
+                  ? { cue: 'rot', lead: 0, hold: 'WOUND_HOLD' }
                   : {}),
             special,
             // L'Aura de décoction empoisonne à chaque coup : la lueur part de son anneau
@@ -983,7 +1002,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side, label: `${fighters[beat.side].name} · deux dés`, volley: true }
         setDice({ ...shown, values: [0, 0], rolling: true })
         sound('diceRoll', T.DICE_ROLL_MANY)
-        wait(T.DICE_ROLL_MANY)
+        hold('DICE_ROLL_MANY')
         sound('diceLand')
         // Un double, quel qu'il soit : le « ding » de la chance, en même temps que les dés (SONS.md § 4.1)
         if (beat.rolls[0] === beat.rolls[1]) sound('coinWin')
@@ -993,7 +1012,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         showStatuses(beat.id)
         // Un double qui a sa compétence : elle tombe avec la paire (étape suivante, sans attente)
         if (name) snapped.add(skill!.id)
-        else wait(T.DICE_LAND_HOLD)
+        else hold('DICE_LAND_HOLD')
         log(pairLog(beat.turn, beat.side, beat.rolls, name, fighters))
         break
       }
@@ -1005,13 +1024,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         showStatuses(beat.id)
         setDice({ ...shown, coin: {} })
         sound('coinToss', T.COIN_SPIN)
-        wait(T.COIN_SPIN)
+        hold('COIN_SPIN')
         sound('coinLand')
         setDice({ ...shown, coin: { heads: beat.heads }, label: beat.heads ? 'PILE !' : 'FACE…', forced: beat.forced })
         // Le résultat tombe d'un bloc : la pièce, son libellé, le « ding » de la réussite et le texte flottant
         if (beat.heads) sound('coinWin')
         showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
-        wait(T.COIN_READ)
+        hold('COIN_READ')
         if (beat.heads)
           blows(beat.side, beat.effects, true, () => 'crit', undefined, () => {
             for (const ride of rides) {
@@ -1021,7 +1040,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           })
         settle(beat, base)
         log(coinLog(beat.turn, beat.side, beat.heads, beat.effects, fighters))
-        wait(beat.heads ? T.COIN_HEADS_HOLD : T.COIN_TAILS_HOLD)
+        hold(beat.heads ? 'COIN_HEADS_HOLD' : 'COIN_TAILS_HOLD')
         setAura(null)
         break
       }
@@ -1031,7 +1050,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         settle(beat)
         showStatuses(beat.id)
         log(statusDurationLog(beat.side, beat.changes, fighters))
-        if (!shown) wait(T.COUNT_HOLD)
+        if (!shown) hold('COUNT_HOLD')
         break
       }
       case 'statusExpire': {
@@ -1040,7 +1059,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         settle(beat)
         showStatuses(beat.id)
         log(statusExpireLog(beat.side, beat.statuses, fighters))
-        if (!shown) wait(T.COUNT_HOLD)
+        if (!shown) hold('COUNT_HOLD')
         break
       }
       case 'relic': {
@@ -1096,7 +1115,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   const [lastA, lastB] = result.initiative[result.initiative.length - 1]
   const first: Side = lastA > lastB ? 0 : 1
   begin([], 0, first)
-  if (!test) wait(T.INTRO)
+  if (!test) hold('INTRO')
   log({ kind: 'info', text: `${a.name} (${a.maxHp} PV) affronte ${b.name} (${b.maxHp} PV) !` })
   // Initiative : chacun lance un dé, le plus haut commence (relance sur égalité). Combat test : seulement notée
   const initDice = { ...IDLE_DICE, faces: INITIATIVE_DIE, label: 'Initiative' }
@@ -1104,17 +1123,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (!test) {
       setDice({ ...initDice, values: [0, 0], rolling: true })
       sound('diceRoll', T.DICE_ROLL_MANY)
-      wait(T.DICE_ROLL_MANY)
+      hold('DICE_ROLL_MANY')
       sound('diceLand')
       setDice({ ...initDice, values: [ia, ib] })
     }
     log({ kind: 'initiative', text: `Initiative — ${a.name} : ${ia}, ${b.name} : ${ib}` })
-    if (!test) wait(T.INITIATIVE_READ)
+    if (!test) hold('INITIATIVE_READ')
     if (ia === ib) log({ kind: 'info', text: 'Égalité ! On relance.' })
   }
   log({ kind: 'info', text: `${fighters[first].name} frappe en premier.`, side: first })
   if (test) setDice({ ...IDLE_DICE, owner: first, label: turnLabel(fighters[first].name) })
-  else wait(T.FIRST_READ)
+  else hold('FIRST_READ')
   active = first
   emit({ channel: 'turn', turn: 0, active })
   finish()
@@ -1143,7 +1162,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       active = root.owner
       setDice({ ...IDLE_DICE, owner: active, label: turnLabel(fighters[active].name) })
       emit({ channel: 'turn', turn: root.turn, active })
-      wait(T.HANDOVER)
+      hold('HANDOVER')
     } else emit({ channel: 'turn', turn: root.turn, active })
     for (const id of ids) {
       // Une étape déjà jouée avec son coup n'a plus rien à montrer à sa place (ses statuts restent à jour)
@@ -1171,9 +1190,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   emit({ channel: 'turn', turn: lastBeat?.turn ?? 0, active: null })
   patchDice({ label: 'K.O.' })
   sound('ko')
-  wait(T.KO_HOLD)
+  hold('KO_HOLD')
   sound('victory')
-  wait(T.VICTORY_HOLD)
+  hold('VICTORY_HOLD')
   finish()
 
   return moments
