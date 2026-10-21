@@ -8,7 +8,7 @@ import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
-import { PrestigeButton } from './PrestigeButton'
+import { BackLink, Button } from './kit'
 import { RelicSeal } from './RelicSeal'
 import { SkillDice } from './SkillDice'
 
@@ -65,10 +65,8 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
       {/* Titre, paris : au-dessus de l'arbre, qui occupe toute la scène */}
       <header className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
-          <button onClick={onBack} className="btn-tertiary h-8 px-3 text-[13px]">
-            ← Retour
-          </button>
-          <h1 className="on-illus mt-2 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">
+          <BackLink onClick={onBack}>Retour</BackLink>
+          <h1 className="on-illus mt-1 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">
             Configuration du tournoi
           </h1>
         </div>
@@ -199,35 +197,32 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
               <SkillDice character={brush} size="sm" tooltip="above" align="right" />
             </div>
 
-            {/* Compte et actions : Valider est la seule pièce prestige de l'écran */}
+            {/* Compte et actions : Valider est le seul bouton primaire de l'écran */}
             <div className="mt-auto flex items-center gap-3 pt-4">
               <span className={`font-data text-[22px] font-semibold tabular-nums ${complete ? 'text-good' : 'text-ink-2'}`}>
                 {filled} / {SLOTS}
               </span>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="hasard"
                 onClick={() => {
                   sfx.click()
                   onChange(fillSlots(slots, ids))
                 }}
                 disabled={complete}
-                className="btn btn-sm"
                 title="Remplit les cases vides en équilibrant le roster ; les cases placées à la main sont conservées"
               >
-                <Icon name="dice" className="btn-icon" />
-                <span>Compléter</span>
-              </button>
-              <button onClick={() => onChange(Array(SLOTS).fill(null))} disabled={filled === 0} className="btn-tertiary h-9 px-3">
+                Compléter
+              </Button>
+              <Button variant="tertiary" size="sm" onClick={() => onChange(Array(SLOTS).fill(null))} disabled={filled === 0}>
                 Vider
-              </button>
-              <PrestigeButton
-                size="md"
-                className="ml-auto w-[280px]"
-                onClick={() => complete && onValidate(slots as string[])}
-                disabled={!complete}
-              >
-                <Icon name="trophy" className="btn-icon" />
-                <span>Valider l'arbre</span>
-              </PrestigeButton>
+              </Button>
+              <div className="ml-auto">
+                <Button variant="primary" size="xl" icon="tournoi" onClick={() => complete && onValidate(slots as string[])} disabled={!complete}>
+                  Valider l'arbre
+                </Button>
+              </div>
             </div>
           </div>
         }
