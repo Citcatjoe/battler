@@ -87,7 +87,8 @@ body {
   min-height: 100vh;
 }
 
-/* Vitesse globale : les durées sont divisées par --speed. */
+/* Vitesse globale : les durées sont divisées par --speed. Les durées qui doivent tomber d'accord avec le rythme de la
+   mise en scène (--t-lunge, --t-signal…) viennent de game/timing.ts (TIMING_VARS), posées sur .arena par FightScreen. */
 .arena {
   --speed: 1;
 }
@@ -101,7 +102,7 @@ body {
 
 /* ---------- Élan d'attaque ---------- */
 .lunge {
-  animation: lunge calc(750ms / var(--speed)) cubic-bezier(0.5, 0, 0.3, 1) both;
+  animation: lunge calc(var(--t-lunge) / var(--speed)) cubic-bezier(0.5, 0, 0.3, 1) both;
 }
 /* --dir vaut 1 (vers la droite) ou -1 (vers la gauche) */
 @keyframes lunge {
@@ -128,7 +129,7 @@ body {
 
 /* ---------- Esquive : synchronisée avec l'élan de l'attaquant ---------- */
 .dodge {
-  animation: dodge calc(750ms / var(--speed)) cubic-bezier(0.4, 0, 0.3, 1) both;
+  animation: dodge calc(var(--t-lunge) / var(--speed)) cubic-bezier(0.4, 0, 0.3, 1) both;
 }
 /* --dir du défenseur : il saute à l'opposé de l'attaquant */
 @keyframes dodge {
@@ -158,7 +159,7 @@ body {
 }
 
 .dodge-text {
-  animation: dodge-text calc(1500ms / var(--speed)) ease-out both;
+  animation: dodge-text calc(var(--t-title) / var(--speed)) ease-out both;
 }
 @keyframes dodge-text {
   0% { transform: translate(var(--float-x, -50%), 0) scale(0.6) skewX(-12deg); opacity: 0; }
@@ -196,7 +197,7 @@ body {
    Le sens dit gain ou perte de la chose nommée (`damage-float` monte, `damage-sink` tombe) : un statut
    gagné ou des PV regagnés montent, des PV perdus ou un statut perdu tombent ; un critique monte toujours. */
 .damage-float {
-  animation: damage-float calc(1700ms / var(--speed)) ease-out both;
+  animation: damage-float calc(var(--t-float) / var(--speed)) ease-out both;
 }
 @keyframes damage-float {
   0% { transform: translate(var(--float-x, -50%), 0) scale(0.4); opacity: 0; }
@@ -206,7 +207,7 @@ body {
   100% { transform: translate(var(--float-x, -50%), -100px) scale(1); opacity: 0; }
 }
 .damage-sink {
-  animation: damage-sink calc(1700ms / var(--speed)) ease-in both;
+  animation: damage-sink calc(var(--t-float) / var(--speed)) ease-in both;
 }
 @keyframes damage-sink {
   0% { transform: translate(var(--float-x, -50%), 0) scale(0.4); opacity: 0; }
@@ -283,7 +284,7 @@ body {
 
 /* ---------- Événements ---------- */
 .event-aura {
-  animation: event-aura calc(1300ms / var(--speed, 1)) ease-out both;
+  animation: event-aura calc(var(--t-read) / var(--speed, 1)) ease-out both;
 }
 @keyframes event-aura {
   0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
@@ -1413,7 +1414,7 @@ body {
 /* ---------- Furie des vents : deux dés, deux coups en rafale ---------- */
 /* Élan raccourci : les deux coups s'enchaînent presque sans pause. */
 .lunge.lunge-fast {
-  animation-duration: calc(420ms / var(--speed));
+  animation-duration: calc(var(--t-lunge-fast) / var(--speed));
 }
 /* Le second dé jaillit en tournoyant, dans une bourrasque bleutée. */
 .die-burst {
@@ -1449,7 +1450,7 @@ body {
 }
 /* En l'air : elle monte, tournoie très vite et redescend. */
 .coin-flipping {
-  animation: coin-flip calc(1200ms / var(--speed)) cubic-bezier(0.3, 0, 0.4, 1) infinite;
+  animation: coin-flip calc(var(--t-coin-spin) / var(--speed)) cubic-bezier(0.3, 0, 0.4, 1) infinite;
 }
 @keyframes coin-flip {
   0% { transform: translateY(0) rotateY(0) rotateX(12deg); }
@@ -1902,7 +1903,7 @@ body {
   offset-rotate: 0deg;
   background: radial-gradient(circle, #fff 0 25%, var(--tone) 55%, transparent 72%);
   box-shadow: 0 0 18px 6px var(--tone), 0 0 44px 14px color-mix(in srgb, var(--tone) 45%, transparent);
-  animation: signal-fly calc(340ms / var(--speed)) cubic-bezier(0.45, 0, 0.7, 1) both;
+  animation: signal-fly calc(var(--t-signal) / var(--speed)) cubic-bezier(0.45, 0, 0.7, 1) both;
 }
 @keyframes signal-fly {
   0% { offset-distance: 0%; opacity: 0; transform: scale(0.6); }
