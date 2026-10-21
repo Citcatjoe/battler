@@ -32,6 +32,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.81.1] — 2026-10-21 (branche `moteur-v2`)
+
+### Ajouté
+- **Revoir un combat à l'écran** : en console, `battler.play(graine)` fait jouer le prochain combat (Jouer, Simuler ou match de tournoi) avec cette graine, une seule fois ; `battler.play(null)` l'annule. On choisit les combattants à l'écran, dans l'ordre (gauche, droite) de la graine notée. Cela permet de regarder une situation repérée en simulation, par exemple `battler.play(5)` avec Naraxes à gauche et Aldric à droite : au tour 8, une Riposte s'intercale entre le coup et le poison de la décoction.
+
 ## [0.81.0] — 2026-10-21 (branche `moteur-v2`)
 
 Refonte du passage du moteur à l'écran, d'après l'audit du 2026-10-21 (`docs/MOTEUR_V2.md`). Les règles sont inchangées et l'empreinte de non-régression est identique. L'état d'avant est le tag `avant-moteur-v2`.

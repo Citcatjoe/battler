@@ -1,6 +1,7 @@
 import type { Character } from './character'
 import type { Pair } from './combat'
 import { simulateCombat, type CombatResult } from './combat'
+import { randomSeed } from './rng'
 import { getRelic } from './relics'
 import { createCharacter } from './roster'
 import { traceCombat, traceText, turnTitle } from './trace'
@@ -15,12 +16,24 @@ import { traceCombat, traceText, turnTitle } from './trace'
  *   battler.traces           → les derniers combats (résultats complets)
  *   battler.replay(graine, 'gorak', 'brokk') → rejoue un combat à l'identique et l'affiche
  *   battler.replay(graine, 'gorak', 'brokk', ['wolf-fang'], []) → idem, avec les reliques de chaque camp
+ *   battler.play(graine)     → le prochain combat lancé (Jouer, Simuler, match de tournoi) prend cette graine : on le
+ *                              regarde à l'écran. Une seule fois ; battler.play(null) l'annule. Les combattants se
+ *                              choisissent à l'écran, dans le même ordre (gauche, droite) que la graine notée.
  *   copy(battler.dump())     → copie les traces de tous les combats gardés (un tournoi entier), du plus ancien au plus récent
  */
 
 // Un tournoi compte 15 combats : on en garde assez pour un tournoi et quelques duels.
 const KEEP = 40
 const traces: CombatResult[] = []
+/** Graine imposée au prochain combat (`battler.play`), consommée par `nextSeed` */
+let pendingSeed: number | null = null
+
+/** Graine du prochain combat : celle imposée en console (une seule fois), sinon une au hasard. */
+export function nextSeed(): number {
+  const seed = pendingSeed ?? randomSeed()
+  pendingSeed = null
+  return seed
+}
 
 declare global {
   interface Window {
@@ -29,6 +42,7 @@ declare global {
       trace: (back?: number) => string | undefined
       dump: () => string
       replay: (seed: number, left: string, right: string, leftRelics?: string[], rightRelics?: string[]) => CombatResult
+      play: (seed: number | null) => void
     }
   }
 }
@@ -93,6 +107,19 @@ export function installDebugConsole() {
       const result = simulateCombat(fighters, { seed })
       reportCombat(result)
       return result
+    },
+    play: (seed) => {
+      if (seed === null) {
+        pendingSeed = null
+        console.log('Battler · graine imposée annulée : le prochain combat sera tiré au hasard.')
+        return
+      }
+      if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+        console.warn('Battler · graine invalide : un entier de 0 à 4294967295.')
+        return
+      }
+      pendingSeed = seed
+      console.log(`Battler · graine ${seed} retenue pour le prochain combat (Jouer, Simuler ou match de tournoi).`)
     },
   }
 }

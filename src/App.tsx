@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Character } from './game/character'
 import { simulateCombat, type CombatResult, type Pair } from './game/combat'
 import { createCharacter } from './game/roster'
-import { randomSeed } from './game/rng'
-import { reportCombat } from './game/debugConsole'
+import { nextSeed, reportCombat } from './game/debugConsole'
 import { recordMatch, recordTournamentWin } from './game/history'
 import {
   champion,
@@ -75,9 +74,12 @@ type Screen =
 const matchTitle = (ref: MatchRef) =>
   ref.round === ROUND_NAMES.length - 1 ? 'Finale' : `${ROUND_NAMES[ref.round]} · Match ${ref.index + 1}`
 
-/** Résout un combat avec une graine (pour pouvoir le rejouer) et écrit sa trace dans la console. */
+/**
+ * Résout un combat avec une graine (pour pouvoir le rejouer) et écrit sa trace dans la console. La graine est tirée
+ * au hasard, sauf si la console en impose une (`battler.play`, debugConsole.ts).
+ */
 function runCombat(fighters: Pair<Character>): CombatResult {
-  const result = simulateCombat(fighters, { seed: randomSeed() })
+  const result = simulateCombat(fighters, { seed: nextSeed() })
   reportCombat(result)
   return result
 }
