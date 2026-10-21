@@ -1,7 +1,7 @@
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, DOUBLE_TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, DOUBLE_TRIGGERS, ROLL_TRIGGERS, TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
 import { STATES, statesPosedBy } from '../game/states'
-import { POLARITY_STYLE } from '../game/statuses'
+import { POLARITY_STYLE, STATUSES } from '../game/statuses'
 import { StateIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
 import type { SkillPulse } from '../game/staging'
@@ -61,16 +61,40 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
         {forms.map((f, k) => (
           <div key={f.id} className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
             <SkillDice character={character} tooltip={tooltip} align={align} size="sm" form={k} />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">{f.name}</span>
+            {/* Le nom de la forme dit ses règles au survol (le d3 de l'homme, le +3 de l'ours) : la rangée de l'ours
+                n'a aucune compétence, ses dés vides ne disaient rien */}
+            <span className="group relative cursor-help text-[11px] font-bold uppercase tracking-wider text-stone-400 hover:z-[70]">
+              {f.name}
+              {(f.statuses ?? []).length > 0 && (
+                <span
+                  role="tooltip"
+                  className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
+                    tooltip === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
+                  } ${ALIGN[align]}`}
+                >
+                  <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">{f.name}</span>
+                  {(f.statuses ?? []).map((id) => (
+                    <span key={id} className="mt-1.5 block font-body text-[15px] font-normal leading-snug text-ink-1">
+                      {STATUSES[id].summary}
+                    </span>
+                  ))}
+                  <span className="mt-1.5 block font-body text-[13px] font-medium text-ink-3">Il change de forme à chacun de ses tours, sauf le premier.</span>
+                </span>
+              )}
+            </span>
           </div>
         ))}
       </div>
     )
   const formId = forms?.[form ?? 0].id
+  const own = character.events.filter((e) => !e.form || e.form === formId)
+  const faces = character.twinDice ? DOUBLES : FACES
+  // Les compétences hors dé (l'Ouverture de la barde, au début du combat) : un sceau à la suite des dés
+  const offDice = own.filter((e) => !faces.some((f) => f.trigger === e.trigger) && !ROLL_TRIGGERS.includes(e.trigger))
   return (
     <ul className={`flex gap-2 ${dim ? 'skill-dice-dim' : ''}`} aria-label={`Compétences de ${character.name}`}>
-      {(character.twinDice ? DOUBLES : FACES).map(({ face, trigger }) => {
-        const event = character.events.find((e) => e.trigger === trigger && (!e.form || e.form === formId))
+      {faces.map(({ face, trigger }) => {
+        const event = own.find((e) => e.trigger === trigger)
         return (
           <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}>
             {/* Le dé qui sort : il s'allume un instant, comme un tintement, dans la couleur de la nature de la
@@ -83,9 +107,18 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
           </li>
         )
       })}
+      {offDice.map((e) => (
+        <li key={e.id} className="skill-die-slot group relative cursor-help hover:z-[70]" data-nature={e.nature ?? DEFAULT_SKILL_NATURE}>
+          <SkillSeal id={e.id} size={SEAL_SIZE[size]} />
+          <SkillTooltip event={e} placement={tooltip} align={align} />
+        </li>
+      ))}
     </ul>
   )
 }
+
+/** Taille du sceau d'une compétence hors dé, au plus près de la hauteur des dés de la rangée (tailles de SkillSeal). */
+const SEAL_SIZE = { sm: 32, header: 40, md: 40 } as const
 
 const BOX = { xs: 'skill-die-xs h-[28px] w-[28px] p-[4px] rounded-[7px]', sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
 
@@ -120,7 +153,10 @@ export const ALIGN = {
   right: 'right-0',
 }
 
-/** Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). */
+/**
+ * Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). `face` : la face du dé ou du double qui
+ * la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »).
+ */
 export function SkillTooltip({
   event,
   face,
@@ -128,7 +164,7 @@ export function SkillTooltip({
   align,
 }: {
   event: CharacterEvent
-  face: number
+  face?: number
   placement: 'above' | 'below'
   align: 'left' | 'center' | 'right'
 }) {
@@ -149,7 +185,7 @@ export function SkillTooltip({
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          {double !== undefined ? 'Double' : 'Dé'} {face}
+          {face === undefined ? TRIGGERS[event.trigger].short : `${double !== undefined ? 'Double' : 'Dé'} ${face}`}
         </span>
       </div>
       {tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{tags.map((t) => t.label).join(' · ')}</p>}

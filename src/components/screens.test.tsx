@@ -382,15 +382,17 @@ describe('écrans', () => {
     expect(tray).toContain('role="tooltip"')
     expect(tray).toContain('Poison')
     expect(tray).toContain('3 tours restants')
-    // Regroupés : Affaibli, Fausse note et l'Aura d'intimidation adverse font un seul Affaibli, qui dit d'où il vient
+    // Regroupés par moment : l'Aura d'intimidation adverse fait un Affaibli, qui dit d'où il vient ; la Fausse note,
+    // qui ne gâche que le prochain coup, après l'armure, a son propre état
     const weak = renderToString(
       <StatusTray
         states={trayStates([{ id: 'falseNote', stacks: 1 }], [{ id: 'intimidationAura', stacks: 1 }])}
         cast={{ bearer: createCharacter('fanchon'), opponent: createCharacter('brokk') }}
       />,
     )
-    expect(weak.match(/data-state="/g)).toHaveLength(1)
-    expect(weak).toContain('Affaibli −7')
+    expect(weak.match(/data-state="/g)).toHaveLength(2)
+    expect(weak).toContain('Affaibli −2')
+    expect(weak).toContain('Coup gâché −5')
     expect(weak).toContain('Aura d&#x27;intimidation (Brokk)')
     // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille
     const bar = renderToString(<SkillBar character={createCharacter('gorak')} side={0} statuses={[{ id: 'powerAura', stacks: 2 }]} />)

@@ -3,6 +3,7 @@ import type { CharacterEvent, Effect } from './events'
 import {
   FALSE_NOTE,
   isAura,
+  STATUS_IDS,
   STATUSES,
   statusCounter,
   WHISTLE_HEAL,
@@ -44,6 +45,7 @@ export type StateId =
   | 'breach'
   | 'vulnerable'
   | 'firefly'
+  | 'spoiled'
 
 export interface StateDef {
   /** Nom générique, le même quel que soit le personnage qui l'a posé */
@@ -62,25 +64,28 @@ export const STATES: Record<StateId, StateDef> = {
   // Puissance et Critique renforcé : sans source depuis la 0.79.7 (les auras qui les donnaient se lisent sur leur
   // anneau) ; gardés dans le vocabulaire, avec leur emblème, pour une compétence ou une relique à venir
   power: { name: 'Puissance', polarity: 'positive', summary: 'Ses coups font plus de dégâts.', counter: 'amount' },
-  weakened: { name: 'Affaibli', polarity: 'negative', summary: 'Ses coups font moins de dégâts.', counter: 'amount' },
+  weakened: { name: 'Affaibli', polarity: 'negative', summary: "Ses coups font moins de dégâts, avant l'armure.", counter: 'amount' },
   shield: { name: 'Bouclier', polarity: 'positive', summary: "Absorbe des dégâts après l'armure, puis s'épuise.", counter: 'status' },
   sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Son prochain coup qui touche est critique.', counter: 'status' },
   critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Ses critiques frappent plus fort (multiplicateur).', counter: 'amount' },
   sureDodge: { name: 'Esquive assurée', polarity: 'positive', summary: 'Il esquive à coup sûr le prochain coup reçu.', counter: 'status' },
-  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Il lance des dés de plus à sa prochaine action : autant de coups.', counter: 'status' },
+  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Il lance des dés de plus à sa prochaine action, chacun résolu comme un jet.', counter: 'status' },
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
   drain: { name: 'Drain', polarity: 'positive', summary: "Ses prochains coups qui touchent lui rendent les PV qu'ils retirent.", counter: 'status' },
   reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup qui le touche renvoie une part des dégâts.', counter: 'status' },
   thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup encaissé fait saigner l'attaquant.", counter: 'status' },
-  immunity: { name: 'Immunité', polarity: 'positive', summary: "Aucun malus ne l'atteint.", counter: 'none' },
+  immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut plus lui être posé.', counter: 'none' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
-  bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup reçu.', counter: 'status' },
-  burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à chacun de ses tours.', counter: 'status' },
+  bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
+  burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
   rot: { name: 'Pourriture', polarity: 'negative', summary: "Il perd des PV à chacun de ses tours, jusqu'à ce qu'on le purifie.", counter: 'status' },
   lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
   breach: { name: 'Brèche', polarity: 'negative', summary: 'Son armure est réduite.', counter: 'status' },
   vulnerable: { name: 'Vulnérable', polarity: 'negative', summary: 'Il subit plus de dégâts à chaque coup.', counter: 'status' },
   firefly: { name: 'Luciole', polarity: 'negative', summary: 'Il ne peut plus esquiver et chaque coup reçu lui fait plus mal.', counter: 'status' },
+  // Fausse note (audit du 2026-10-21) : un seul coup, après l'armure ; l'additionner à Affaibli (chaque coup, avant
+  // l'armure) donnait un total qu'aucun coup ne subit
+  spoiled: { name: 'Coup gâché', polarity: 'negative', summary: "Son prochain coup qui touche fera moins de dégâts, retirés après l'armure.", counter: 'amount' },
 }
 
 /** Ce qu'un statut verse à un état : sur son porteur (`self`) ou sur l'adversaire de son porteur (une aura qui agit sur lui). */
@@ -97,21 +102,22 @@ export interface Relay {
  * Où se montre un statut :
  * - `tray` : dans la zone d'état, sous l'état générique qu'il alimente ;
  * - `aura` : dans l'en-tête, en anneau qui tourne ; son effet est relayé dans la zone (`relays`) ;
- * - `form` : règle de forme (druide), dans l'en-tête ; son effet peut être relayé (Force de l'ours : Puissance) ;
- * - `skill` : mécanisme interne d'une compétence, montré sur son sceau (les jauges de Rétribution), ou par
- *   le seul éclat du sceau et le badge du coup (Pile ou face, Furie des vents, Attente).
+ * - `form` et `skill` : un mécanisme (`StatusDef.mechanic`), lu dans sa définition : règle de forme (druide), dans
+ *   l'en-tête ; mécanisme d'une compétence, montré sur son sceau (les jauges de Rétribution), ou par le seul éclat
+ *   du sceau et le badge du coup (Pile ou face, Furie des vents, Attente).
  */
 export interface StatusPlace {
   place: 'tray' | 'aura' | 'form' | 'skill'
   relays: readonly Relay[]
-  /** Compté sur le sceau de la compétence qui le pose ou le relâche (les jauges de Rétribution) */
+  /** Compté sur le sceau de la compétence qui le pose ou le relâche (les jauges de Rétribution, `fillsOnHurt`) */
   onSeal?: true
 }
 
 const tray = (state: StateId, amount?: (s: Status) => number): StatusPlace => ({ place: 'tray', relays: [{ state, on: 'self', amount }] })
-const header = (place: 'aura' | 'form' | 'skill', ...relays: Relay[]): StatusPlace => ({ place, relays })
+const aura = (...relays: Relay[]): StatusPlace => ({ place: 'aura', relays })
 
-export const STATUS_PLACE: Record<StatusId, StatusPlace> = {
+/** Place des statuts qui ne sont pas des mécanismes (bonus et malus) ; celle d'un mécanisme découle de `mechanic`. */
+const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   guaranteedCrit: tray('sureCrit'),
   bonusArmor: tray('shield'),
   poison: tray('poison'),
@@ -132,36 +138,36 @@ export const STATUS_PLACE: Record<StatusId, StatusPlace> = {
   rot: tray('rot'),
   bleed: tray('bleed'),
   whistling: tray('healing', () => WHISTLE_HEAL),
-  falseNote: tray('weakened', (s) => FALSE_NOTE * s.stacks),
+  falseNote: tray('spoiled', (s) => FALSE_NOTE * s.stacks),
 
   // Une aura sur son porteur est une modification permanente, de l'identité : elle se lit sur son anneau (sa
   // valeur, `badge`), dans la barre de compétences, et ne se relaie pas dans la zone d'état (0.79.7)
-  powerAura: header('aura'),
-  wildAura: header('aura'),
-  melodiousAura: header('aura'),
-  precisionAura: header('aura'),
-  holyAura: header('aura'),
-  immunityAura: header('aura'),
+  powerAura: aura(),
+  wildAura: aura(),
+  melodiousAura: aura(),
+  precisionAura: aura(),
+  holyAura: aura(),
+  immunityAura: aura(),
   // Les coups de l'adversaire font moins mal au nain : c'est l'adversaire qui est affaibli, un malus comme un autre
-  intimidationAura: header('aura', {
+  intimidationAura: aura({
     state: 'weakened',
     on: 'opponent',
     amount: (s) => 2 * s.stacks,
     describe: (s) => `Ses coups lui font ${2 * s.stacks} de moins, avant l'armure, pour le reste du combat`,
   }),
   // Ces trois-là posent de vrais statuts (Poison, Pourriture) : ils s'affichent d'eux-mêmes chez la cible
-  frostAura: header('aura'),
-  decoctionAura: header('aura'),
-  rotAura: header('aura'),
-
-  casting: header('form'),
-  bearMight: header('form'),
-
-  retribution: { ...header('skill'), onSeal: true },
-  coinFlip: header('skill'),
-  windFury: header('skill'),
-  waiting: header('skill'),
+  frostAura: aura(),
+  decoctionAura: aura(),
+  rotAura: aura(),
 }
+
+/** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */
+export const STATUS_PLACE = Object.fromEntries(
+  STATUS_IDS.map((id): [StatusId, StatusPlace] => {
+    const { mechanic, fillsOnHurt } = STATUSES[id]
+    return [id, mechanic ? { place: mechanic, relays: [], ...(fillsOnHurt && { onSeal: true as const }) } : DISPLAYED[id]!]
+  }),
+) as Record<StatusId, StatusPlace>
 
 /** Une part d'un état affiché : le statut qui la verse, et à qui il appartient. */
 export interface StateSource {

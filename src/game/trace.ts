@@ -43,8 +43,7 @@ function statusText(s: Status) {
 function phaseOf(beat: Beat, fighters: Pair<Character>): string {
   switch (beat.type) {
     case 'statusTick':
-    case 'statusDuration':
-    case 'statusExpire':
+    case 'statusAge':
       return beat.phase === 'turnStart' ? 'début' : 'fin'
     case 'event':
       return triggerPhase(beat.event.trigger)
@@ -136,19 +135,20 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
           : `${label(beat.status)} agit sur ${fighters[beat.side].name}`,
         ...effects(beat.effects),
       ]
-    case 'statusReaction':
+    case 'statusReaction': {
+      const head = `${label(beat.status)} ${of(fighters[beat.side].name)} réagit (${TRIGGERS[beat.trigger].label.toLowerCase()})`
+      // Jauges (Rétribution) : le coup est rangé, sans effet à appliquer
+      const gauge = STATUSES[beat.status].fillsOnHurt ? after.statuses[beat.side].find((s) => s.id === beat.status) : undefined
+      if (gauge) return [head, `    → coup rangé dans les jauges : ${(gauge.slots ?? []).join(' · ')} (${gauge.stacks} à relâcher)`]
+      return [head, ...effects(beat.effects)]
+    }
+    case 'statusAge':
       return [
-        `${label(beat.status)} ${of(fighters[beat.side].name)} réagit (${TRIGGERS[beat.trigger].label.toLowerCase()})`,
-        ...effects(beat.effects),
+        `usure sur ${fighters[beat.side].name} : ${[
+          ...beat.changes.map((c) => `${label(c.status)} ${c.from} → ${c.to} tour${c.to > 1 ? 's' : ''}`),
+          ...beat.expired.map((id) => `${label(id)} s'éteint`),
+        ].join(', ')}`,
       ]
-    case 'statusDuration':
-      return [
-        `durée décomptée sur ${fighters[beat.side].name} : ${beat.changes
-          .map((c) => `${label(c.status)} ${c.from} → ${c.to} tour${c.to > 1 ? 's' : ''}`)
-          .join(', ')}`,
-      ]
-    case 'statusExpire':
-      return [`durée écoulée sur ${fighters[beat.side].name} : ${beat.statuses.map(label).join(', ')} expire${beat.statuses.length > 1 ? 'nt' : ''}`]
     case 'skip':
       return [`${label(beat.status)} : ${fighters[beat.side].name} perd son action (une charge consommée)`]
     case 'shift':

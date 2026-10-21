@@ -1,7 +1,8 @@
 import { attacksOf, beatEffects, finalState, type CombatResult, type Pair, type Side } from './combat'
-import { STATUSES, type StatusId } from './statuses'
+import { isMechanic, STATUSES, type StatusId } from './statuses'
 
-const isNegative = (id: StatusId) => STATUSES[id].polarity === 'negative'
+/** Un malus au sens des statistiques : un mécanisme (l'Attente de l'ogre) n'en est pas un. */
+const isNegative = (id: StatusId) => STATUSES[id].polarity === 'negative' && !isMechanic(id)
 
 /** Bilan d'un combattant sur un combat, calculé uniquement à partir de la chronologie. */
 export interface FighterStats {

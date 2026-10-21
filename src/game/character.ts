@@ -94,7 +94,7 @@ export interface CharacterForm {
   look?: Partial<CharacterLook>
   /**
    * Statuts de forme (0.73.0) : posés tant qu'il a cette forme, retirés quand il la quitte. Ce sont les
-   * règles de la forme (le d3 de l'homme, le +3 de l'ours) ; ils doivent être `innate` (validateRoster).
+   * règles de la forme (le d3 de l'homme, le +3 de l'ours) ; ils doivent être `mechanic: 'form'` (validateRoster).
    */
   statuses?: readonly StatusId[]
 }

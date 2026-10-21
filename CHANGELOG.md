@@ -32,6 +32,20 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.84.0] — 2026-10-21
+
+Audit de fidélité entre les règles affichées, les données et le moteur, après le moteur v2 (trois rapports : règles du compendium, compétences, statuts et reliques). Les règles qui n'existaient que pour l'ancien affichage sont corrigées (décisions de l'utilisateur). L'empreinte de non-régression change.
+
+### Modifié
+- **Une seule règle pour « un coup qui touche »** : le Vol de vie, la Riposte et le remplissage des jauges de Rétribution sont des réactions ordinaires des fenêtres du coup (« quand il touche », « quand il encaisse »), dans l'ordre de pose. Ils partent donc aussi sur pile (Pile ou face), comme les Épines, le Saignement et l'Aura de décoction. Avant, ils étaient codés à part et la pièce les ignorait (0 Riposte sur 385 piles).
+- **Plus de plaie différée** : un statut posé ou renforcé pendant un coup réagit à ce coup quand sa fenêtre vient ensuite. Le Saignement de Pourfendre coule dès le coup qui l'ouvre, et les Épines du Collier de ronces réagissent au coup qui fait passer le porteur sous 50 %. Cette règle (`strikeBase`) existait pour que l'écran montre la plaie avant qu'elle coule ; la mise en scène v2 n'en a plus besoin.
+- **Coups bruts** (Furie des vents) : aucune relique de face ne s'y déclenche. Le Fer à quatre clous suit maintenant l'Osselet fendu et le Dé creux.
+- **Mécanismes de compétence et de forme** (`mechanic` : jauges de Rétribution, Pile ou face, Furie des vents, Attente, formes du druide) : ni bonus ni malus. Aucune purge ne les retire (la Purification n'efface plus les jauges d'Aldric), aucune immunité ni garde ne les bloque, et ils ne comptent pas dans les statistiques de malus. Le compendium les présente avec leur compétence.
+- **Usure d'une phase** : décompte et expiration en une seule étape (`statusAge`, cause : l'effet du statut) au lieu de deux. La Furie des vents n'a plus de durée.
+- **Textes** : les 28 règles du compendium sont revues. Coup sacrifié, Double qui frappe (Crescendo : un coup de 12), Faces de compétence (exceptions de l'ogre, du druide et de la barde), Un tour (Étourdi retiré, compétences et reliques de début et de fin), Critique (multiplicateurs réels), Pose d'un statut (immunité), Dégâts directs (ce ne sont pas des coups) et Durée sont réécrites. Coup transformé est masquée, faute de compétence qui l'utilise, et Tour de la pose est fondue dans Durée. Pastilles : plus de « Durée » sur les auras, et des règles citées là où elles s'appliquent.
+- Statuts, compétences et reliques corrigés : Aura de précision (« +1 au multiplicateur », et non « ×2 devient ×3 »), Coup de chance (un second jet, qui peut déclencher une compétence), Pile ou face, Purification, Rétribution, Riposte, Foudre, Pourfendre, Peau de pierre, Chapelet de l'ermite, Collier de ronces, types de reliques. Formes du druide et Ouverture de la barde visibles sur les fiches ; esquive de la Cotte du mercenaire affichée bornée à 0 %.
+- Équilibre (`npm run balance`, 0.77.1 → 0.84.0) : Gorak 51,0 → 52,2 %, les autres à ±0,3 point. Roster de 43,7 % (Ysolde) à 53,8 % (Ervald, Aldric) ; duel le plus net, Naraxes contre Ysolde, 64,5 %.
+
 ## [0.83.0] — 2026-10-21
 
 ### Ajouté

@@ -161,6 +161,8 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   rot: 'rot-aura',
   breach: 'breach',
   firefly: 'fireflies',
+  // La note fausse de la barde, peinte pour la compétence : c'est elle qui gâche le coup
+  spoiled: 'false-note',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

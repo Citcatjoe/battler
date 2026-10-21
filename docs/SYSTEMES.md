@@ -117,9 +117,9 @@ Un statut est un assemblage de crochets. Chaque crochet agit à **un moment fixe
 | `shield` | remplacement | chaîne, étape 8 | `attack.shields` | 10 fichiers | Armure temporaire (Écorce épaisse retirée en 0.73.0) |
 | `spentOnHurt` | usure | après l'application | — (état) | moteur | Luciole |
 | `decays` | usure | dans l'étape `statusTick` ou `statusReaction` du statut | — (état) | moteur | Poison (0.36.4), Saignement (0.68.0) |
-| `drainsHit` | sur le coup | étape 10 | `statusReaction` | moteur, écran | Vol de vie |
-| `reflectsHit` | sur le coup | après le vol de vie | `statusReaction` | moteur, écran | Riposte |
-| `fillsOnHurt` | jauges | après le coup | — (état) | moteur | Rétribution |
+| `drainsHit` | sur le coup | fenêtre `hit` de l'attaquant (esquivé : charge perdue au coup) | `statusReaction` | moteur, écran | Vol de vie |
+| `reflectsHit` | sur le coup | fenêtre `hurt` du défenseur, à son rang de pose | `statusReaction` | moteur, écran | Riposte |
+| `fillsOnHurt` | jauges | fenêtre `hurt` du défenseur, à son rang de pose (vide : après ses statuts) | `statusReaction` sans effet | moteur | Rétribution |
 | `onTurnStart` | périodique | phase 1 | `statusTick` | moteur | Poison, Régénération, Aura glaciale (pose du Poison sur l'adversaire, 0.69.0), Pourriture |
 | `onTurnEnd` | périodique | phase 3 | `statusTick` | moteur | Brûlure, Aura de sainteté |
 | `reactions` | déclenché | fenêtres | `statusReaction` | moteur | Épines acérées et Saignement (`hurt`), décoction et pourriture (`hit`) |
@@ -130,7 +130,7 @@ Un statut est un assemblage de crochets. Chaque crochet agit à **un moment fixe
 | `wards` | application | à la pose | `applyStatus.result` | registre | Garde sacrée (à venir) |
 | `opposes` | application | à la pose | `applyStatus.result` | registre | Poison ↔ Régénération |
 | `stacking`, `maxStacks` | cumul | à la pose | — | registre | tous |
-| `turns`, `expiresAt` | durée | phase 1 ou 3 | `statusDuration`, `statusExpire` | moteur | statuts à durée |
+| `turns`, `expiresAt` | durée | phase 1 ou 3 | `statusAge` | moteur | statuts à durée |
 | `spentOnReaction` | usure | après réaction | — | moteur | aucun (prêt) |
 
 **Statut composite** : depuis la 0.35.2, Luciole combine trois crochets (`modifyStats`, `modifyIncoming`, `spentOnHurt`). C'est la preuve que les crochets se composent bien. Mais la règle « un statut = un comportement temporel » (RESOLUTION § 2) devient « un statut = un **ensemble** de comportements, chacun à son moment ».
@@ -163,16 +163,15 @@ C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène
 | `attack` | chaque coup | jet, faces, esquive, critique, modificateurs, armure, boucliers, dégâts, sacrifié ou transformé, imposé |
 | `event` | une compétence | nom, déclencheur, effets appliqués |
 | `statusTick` | `onTurnStart` ou `onTurnEnd` | phase, statut, effets |
-| `statusDuration` | décompte | tours avant → après |
-| `statusExpire` | fin de durée | statuts expirés |
-| `statusReaction` | `reactions`, `drainsHit`, `reflectsHit` | statut, déclencheur, effets |
+| `statusAge` | usure de la phase | décomptes (tours avant → après) et statuts éteints, en une étape |
+| `statusReaction` | `reactions`, `drainsHit`, `reflectsHit`, `fillsOnHurt` | statut, déclencheur, effets |
 | `skip` | `skipsAction` | statut qui fait perdre l'action |
 | `shift` | formes | nouvelle forme |
 | `flurry` | `extraStrikes` | nombre de coups, faces de chaque dé |
 | `coin` | `coinToss` | pile ou face, effets, imposé |
 | `relic` | une relique (0.75.0, [RELIQUES.md](RELIQUES.md)) : moment du coup, début de tour, seuil de PV | relique, nom, effets, rang du déclenchement ; le bonus de coup d'une relique est sur l'étape `attack` (`relicBonus`) |
 
-`statusReaction` regroupe trois mécaniques différentes (réaction, vol de vie, riposte). L'écran doit donc relire le registre pour savoir laquelle il montre (§ 7.2).
+`statusReaction` regroupe quatre mécaniques (réaction déclarée, vol de vie, riposte, jauges), toutes dans les fenêtres du coup. L'écran doit donc relire le registre pour savoir laquelle il montre (§ 7.2).
 
 ---
 
@@ -194,8 +193,7 @@ C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène
 | `flurry` | tous les dés roulent ensemble, le second jaillit (`die-burst`, couleur `dieColor`) | titre | un seul Dé lancé et un seul Dé posé | `flurryLog` | statut consommé |
 | `shift` | fondu des silhouettes (`form-out`, `form-in`), éclair de sève, 14 feuilles | nom de la forme | Transformation, la même dans les deux sens | `shiftLog` | — |
 | `coin` | pièce qui tournoie et retombe | `Pile !` ou `Face…` ; coup lourd sur pile | Pièce lancée, Pièce retombe ; Coup critique sur pile | `coinLog` | statut consommé |
-| `statusDuration` | compteur qui défile vers le bas | — | — | `statusDurationLog` | `count-loss`, `count-in-down` |
-| `statusExpire` | le compteur du même médaillon descend à 0, puis le médaillon s'efface | — | — | `statusExpireLog` | `status-leave` |
+| `statusAge` | compteurs qui défilent vers le bas ; un médaillon éteint montre son 0, puis s'efface | — | — | `statusAgeLog` | `count-loss`, `count-in-down`, `status-leave` |
 | fin | K.O. (chute) et victoire (balancement) | `K.O. !` | `ko`, `victory` | « s'effondre » | — |
 
 **Synchronisation** (`anticipate`) : l'effet d'un statut et le décompte de sa durée, s'ils tombent dans la même phase, sont montrés au même instant.
@@ -360,13 +358,14 @@ Exemples concrets de connaissances implicites :
 - **Un nouveau statut de renvoi de dégâts** devra être ajouté à la main dans la branche `statusReaction`, sinon il sera joué comme des Épines.
 - **Le coup transformé** est retrouvé par l'écran en relisant la définition de la compétence (`events.find(…).reshapesHit`).
 
-### 7.3 Le coup : une chaîne codée à la main
+### 7.3 Le coup : ce qui reste codé à la main
 
-Les fenêtres (`reactions`) sont génériques : un statut y branche ce qu'il veut. En revanche, tout ce qui se passe **juste après un coup** est écrit à la main dans `strikeOnce`, dans un ordre fixe : jauges, usure (`spentOnHurt`), vol de vie, riposte, puis les fenêtres. Chaque nouvelle mécanique « au coup » ajoute une étape à cette suite, et son ordre par rapport aux autres se décide au cas par cas.
+Depuis le 2026-10-21 (décision de l'utilisateur), tout ce qui réagit à un coup qui touche passe par les fenêtres génériques : Vol de vie dans `hit` de l'attaquant, Riposte et jauges de Rétribution dans `hurt` du défenseur, à leur rang parmi ses statuts. Seules restent écrites à la main dans `strikeOnce`, avant les fenêtres, l'usure au coup (`spentOnHurt`, `spentOnHit`) et la charge de Vol de vie perdue sur une esquive. Une pile qui touche ouvre les mêmes fenêtres, donc les mêmes réactions.
 
-Deux couplages croisés en découlent :
+Un couplage croisé demeure :
 - **Jauges** : Rétribution ne se remplit que si le personnage possède une compétence qui la relâche. Le moteur parcourt pour cela les compétences du défenseur : un statut dépend du roster.
-- **« Pas de chaîne »** : la règle vaut pour les réactions. La Riposte et le vol de vie, codés à part, la respectent par construction, et non par la règle.
+
+La Riposte et le vol de vie, devenus des réactions, respectent « pas de chaîne » par la règle même.
 
 ### 7.4 Les lectures qui réinterprètent
 

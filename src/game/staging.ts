@@ -34,8 +34,7 @@ import {
   relicLog,
   shiftLog,
   skipLog,
-  statusDurationLog,
-  statusExpireLog,
+  statusAgeLog,
   statusReactionLog,
   statusTickLog,
   type Badge,
@@ -900,6 +899,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         break
       }
       case 'statusReaction': {
+        // Jauges qui se remplissent (Rétribution) : rien à jouer, le sceau compte le coup rangé dès que l'état est montré
+        if (beat.effects.length === 0) {
+          settle(beat)
+          showStatuses(beat.id)
+          break
+        }
         // Riposte, Épines, Vol de vie, Saignement : une réaction au coup en cours, vue de l'attaquant (le maître du tour)
         const def = STATUSES[beat.status]
         const reflects = def.reflectsHit !== undefined
@@ -1044,21 +1049,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         setAura(null)
         break
       }
-      case 'statusDuration': {
-        // Le compteur rebondit sur sa nouvelle valeur, sauf s'il l'a déjà fait avec l'effet du statut
-        const shown = beat.changes.every((c) => previews.some((p) => p.until === beat.id && p.status === c.status))
+      case 'statusAge': {
+        // Le compteur rebondit sur sa nouvelle valeur (ou l'état passe à 0 et quitte la zone d'état), sauf s'il l'a déjà
+        // fait avec l'effet du statut
+        const shown = [...beat.changes.map((c) => c.status), ...beat.expired].every((id) => previews.some((p) => p.until === beat.id && p.status === id))
         settle(beat)
         showStatuses(beat.id)
-        log(statusDurationLog(beat.side, beat.changes, fighters))
-        if (!shown) hold('COUNT_HOLD')
-        break
-      }
-      case 'statusExpire': {
-        // L'état passe à 0 sous les yeux du joueur, puis quitte la zone d'état (StatusTray)
-        const shown = beat.statuses.every((id) => previews.some((p) => p.until === beat.id && p.status === id))
-        settle(beat)
-        showStatuses(beat.id)
-        log(statusExpireLog(beat.side, beat.statuses, fighters))
+        log(statusAgeLog(beat.side, beat.changes, beat.expired, fighters))
         if (!shown) hold('COUNT_HOLD')
         break
       }
@@ -1093,19 +1090,18 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   }
 
   /**
-   * Quand un statut agit, le décompte de sa durée ou son expiration (même tour, même camp, même phase) sont montrés en
-   * même temps que son effet : le « −2 » et le compteur qui passe de 3 à 2 (ou à 0) tombent ensemble. Ces changements
+   * Quand un statut agit, l'usure de la phase qui le concerne (même tour, même camp, même phase) est montrée en même
+   * temps que son effet : le « −2 » et le compteur qui passe de 3 à 2 (ou à 0) tombent ensemble. Ces changements
    * d'avance restent appliqués jusqu'à l'étape qui les réalise.
    */
   function previewCounts(tick: Extract<Beat, { type: 'statusTick' }>) {
     for (let j = tick.id + 1; j < beats.length; j++) {
       const next = beats[j]
       if (next.turn !== tick.turn) break
-      if ((next.type !== 'statusDuration' && next.type !== 'statusExpire') || next.side !== tick.side || next.phase !== tick.phase) continue
-      if (next.type === 'statusDuration') {
-        const change = next.changes.find((c) => c.status === tick.status)
-        if (change) previews.push({ side: tick.side, status: tick.status, turns: change.to, until: j })
-      } else if (next.statuses.includes(tick.status)) previews.push({ side: tick.side, status: tick.status, until: j })
+      if (next.type !== 'statusAge' || next.side !== tick.side || next.phase !== tick.phase) continue
+      const change = next.changes.find((c) => c.status === tick.status)
+      if (change) previews.push({ side: tick.side, status: tick.status, turns: change.to, until: j })
+      else if (next.expired.includes(tick.status)) previews.push({ side: tick.side, status: tick.status, until: j })
     }
   }
 

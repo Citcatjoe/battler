@@ -131,7 +131,7 @@ function Seal({
         {count !== undefined && <Count text={String(count)} />}
       </div>
       {event && <span key={lit !== undefined ? `name-${lit}` : 'name'} className={`skill-bar-name ${lit !== undefined ? 'is-lit' : ''}`}>{event.name}</span>}
-      {event && <SkillTooltip event={event} face={face ?? doubleFace(event.trigger) ?? 0} placement="below" align={align} />}
+      {event && <SkillTooltip event={event} face={face ?? doubleFace(event.trigger)} placement="below" align={align} />}
     </li>
   )
 }
@@ -192,13 +192,21 @@ function AuraToken({
           </span>
         </div>
         <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">{active ? def.describe(status) : def.summary}</p>
-        {/* Les compétences qui la posent, et ce qu'elles font d'autre au passage (l'Aura d'immunité purge ses malus) */}
+        {/* Les compétences qui la posent : leur face, les charges posées, leurs pastilles (coup sacrifié, double qui
+            remplace les deux coups), et ce qu'elles font d'autre au passage (l'Aura d'immunité purge ses malus) */}
         {posing.map((e) => {
           const f = skillFaceOf(e.trigger)
           const extra = e.effects.filter((x) => x.type !== 'applyStatus' || x.status !== id)
+          const posed = e.effects.find((x) => x.type === 'applyStatus' && x.status === id)
+          const stacks = posed?.type === 'applyStatus' ? posed.stacks : 0
+          const notes = [
+            f !== undefined ? `${doubleFace(e.trigger) !== undefined ? 'double' : 'dé'} ${f}` : TRIGGERS[e.trigger].short,
+            stacks > 0 ? `+${stacks} charge${stacks > 1 ? 's' : ''}` : '',
+            ...describeSkill(e).tags.filter((t) => t.rule !== 'auras' && t.rule !== 'max-stacks').map((t) => t.label),
+          ].filter(Boolean)
           return (
             <p key={e.id} className="mt-1.5 font-body text-[13px] font-medium text-ink-3">
-              Posée par {e.name} ({f !== undefined ? `${doubleFace(e.trigger) !== undefined ? 'double' : 'dé'} ${f}` : TRIGGERS[e.trigger].short})
+              Posée par {e.name} ({notes.join(', ')})
               {extra.length > 0 && ` : ${describeSkill({ ...e, effects: extra }).text}`}
             </p>
           )

@@ -82,8 +82,8 @@ function readSkill(r: CombatResult, side: Side, e: CharacterEvent, into: Measure
       )
       if (b.event.effects.length && empty) into.wasted++
     }
-    if (b.type === 'statusExpire')
-      for (const p of losable) if (b.side === (p.opponent ? 1 - side : side) && b.statuses.includes(p.status)) into.lost++
+    if (b.type === 'statusAge')
+      for (const p of losable) if (b.side === (p.opponent ? 1 - side : side) && b.expired.includes(p.status)) into.lost++
   }
   into.fired += fired
   if (fired > 0) into.seenIn++

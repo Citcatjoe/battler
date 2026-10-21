@@ -79,18 +79,18 @@ const THUNDERBOLT_HITS = 3
  * - Elfe : agile, peu de PV, esquive et critiques fréquents.
  * - Nain : tank, le plus de PV et une armure temporaire qui s'use, critiques rares mais lourds.
  * - Mort-vivant : affliction, endurant et peu esquiveur, il empoisonne l'adversaire.
- * - Humain (prêtresse) : contrôle, un petit dé mais des compétences sur la moitié de ses jets.
+ * - Humain (prêtresse) : contrôle, un petit dé (d7) mais des compétences sur 3 de ses 7 faces.
  * - Homme-lézard (voleuse) : chance et poison, esquive et critiques, coups de dés à double tranchant.
  * Un seul personnage par famille depuis la 0.43.0 (les jumeaux de coloris sont retirés, chacun garde
  * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md). Trois compétences,
- * sur un 1, un 2 et un 3 au dé (le 3 donne une aura permanente, voir plus bas). Depuis la 0.27.0,
- * ces jets n'infligent aucun dégât : ils servent seulement à déclencher la compétence (`forfeitsHit`).
+ * sur un 1, un 2 et un 3 au dé (le 3 donne une aura permanente, voir plus bas). Depuis la 0.27.0, la
+ * plupart de ces jets sacrifient leur coup : ils servent seulement à déclencher la compétence (`forfeitsHit`).
  * - Orc : Pourfendre (1 : un vrai coup qui, s'il touche, pose Saignement 2) ; Furie des vents (2 : frappe deux fois tout de suite).
  * - Elfe : Œil de faucon (1 : prochain coup qui touche critique) ; Esquive améliorée (2 : esquive à coup sûr le prochain coup reçu,
  *   sans limite de durée depuis la 0.36.5).
  * - Nain : Peau de pierre (1 : +6 d'armure temporaire, cumulable) ; Épines acérées (2 : permanentes, chaque coup
  *   encaissé fait saigner l'attaquant, une charge de Saignement par charge d'épines).
- * - Mort-vivant : Souffle de la tombe (1 : poison, 2 PV par tour pendant 3 tours) ; Vol de vie (2 : son prochain
+ * - Mort-vivant : Souffle de la tombe (1 : Poison 3, qui s'estompe : 3, 2 puis 1 PV) ; Vol de vie (2 : son prochain
  *   coup porté rend les PV qu'il retire ; esquivé, la charge est perdue ; un jet de 1 à 3 la laisse en place).
  * Auras du 3, permanentes et cumulables (chaque nouveau 3 ajoute une charge) : Orc, Aura de puissance
  * (+2 dégâts par charge) ; Elfe, Aura de précision (+1 au multiplicateur de critique par charge) ; Nain,
@@ -183,7 +183,7 @@ const elaria: CharacterDef = {
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
     strengths: ['Meilleure esquive (26 %)', 'Critiques dévastateurs (×2,4)', 'Un jet raté prépare un critique'],
-    weaknesses: ['PV modestes (50)', 'Petit dé (d8)', "Peine face à l'armure"],
+    weaknesses: ['PV modestes (50)', 'Petit dé (d8)', "Peine face aux boucliers et à l'intimidation"],
   },
   events: [
     {
@@ -751,9 +751,9 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       problems.push(`${at} 1 à 3 forces et 1 à 3 faiblesses attendues`)
     for (const f of d.forms ?? [])
       for (const id of f.statuses ?? [])
-        if (!STATUSES[id]?.innate) problems.push(`${at} forme ${f.id} : ${id} n'est pas un statut de forme (innate)`)
+        if (STATUSES[id]?.mechanic !== 'form') problems.push(`${at} forme ${f.id} : ${id} n'est pas un statut de forme (mechanic: 'form')`)
     for (const id of Object.keys(STATUSES) as (keyof typeof STATUSES)[])
-      if (STATUSES[id].innate && d.events.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
+      if (STATUSES[id].mechanic === 'form' && d.events.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
         problems.push(`${at} ${id} est un statut de forme : seul le moteur le pose`)
     const eventIds = new Set<string>()
     for (const e of d.events) {

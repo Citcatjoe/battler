@@ -101,7 +101,7 @@ describe('mise en scène', () => {
     expect(blows).toBeGreaterThan(100)
   })
 
-  it("le poison de l'Aura de décoction tombe à l'impact du coup qui le pose, même si une Riposte suit le coup", () => {
+  it("le poison de l'Aura de décoction tombe à l'impact du coup qui le pose, même avec une Riposte sur ce coup", () => {
     let rides = 0
     let riposted = 0
     for (const { result, moments } of corpus)
@@ -116,7 +116,7 @@ describe('mise en scène', () => {
         const floats = at(m, 'float', impact).flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' ? [c.float.badge.text] : []))
         for (const text of posed) expect(floats).toContain(text)
         rides++
-        if (childrenOf(result.beats)[hit.id].some((b) => b.type === 'statusReaction' && STATUSES[b.status].reflectsHit && b.id < beat.id)) riposted++
+        if (childrenOf(result.beats)[hit.id].some((b) => b.type === 'statusReaction' && STATUSES[b.status].reflectsHit)) riposted++
       }
     expect(rides).toBeGreaterThan(50)
     expect(riposted).toBeGreaterThan(0)
@@ -160,8 +160,8 @@ describe('mise en scène', () => {
       for (const tick of result.beats) {
         if (tick.type !== 'statusTick' || !tick.effects.some((e) => e.type === 'damage')) continue
         const later = result.beats.filter((b) => b.id > tick.id && b.turn === tick.turn && 'phase' in b && b.phase === tick.phase && 'side' in b && b.side === tick.side)
-        const change = later.flatMap((b) => (b.type === 'statusDuration' ? b.changes.filter((c) => c.status === tick.status) : []))[0]
-        const gone = later.some((b) => b.type === 'statusExpire' && b.statuses.includes(tick.status))
+        const change = later.flatMap((b) => (b.type === 'statusAge' ? b.changes.filter((c) => c.status === tick.status) : []))[0]
+        const gone = later.some((b) => b.type === 'statusAge' && b.expired.includes(tick.status))
         if (!change && !gone) continue
         const m = momentOf(moments, tick.id)
         // Le « −N » du statut, et les statuts montrés au même instant

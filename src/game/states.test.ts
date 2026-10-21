@@ -10,7 +10,9 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
       const place = STATUS_PLACE[id]
       expect(place, id).toBeDefined()
       if (isAura(id)) expect(place.place, id).toBe('aura')
-      if (STATUSES[id].innate) expect(place.place, id).toBe('form')
+      // Un mécanisme se place d'après sa définition (une seule source) ; un bonus ou un malus n'est jamais en en-tête de mécanisme
+      expect(['form', 'skill'].includes(place.place), id).toBe(STATUSES[id].mechanic !== undefined)
+      if (STATUSES[id].mechanic) expect(place.place, id).toBe(STATUSES[id].mechanic)
       // Un statut de la zone d'état alimente exactement un état, sur son porteur
       if (place.place === 'tray') expect(place.relays.map((r) => r.on), id).toEqual(['self'])
       // Un état à total sait compter chaque part qui l'alimente
@@ -24,10 +26,12 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     expect(heal).toMatchObject({ id: 'healing', value: 5, unit: 'amount' })
     expect(heal.sources.map((s) => s.status.id)).toEqual(['regeneration', 'whistling'])
     expect(stateValueText(heal)).toBe('+5')
-    // Fausse note et Affaibli : un seul « Affaibli », compté en négatif
-    const [weak] = trayStates([{ id: 'falseNote', stacks: 1 }, { id: 'weakened', stacks: 2 }], [])
-    expect(weak).toMatchObject({ id: 'weakened', value: 7 })
-    expect(stateValueText(weak)).toBe('−7')
+    // Fausse note et Affaibli : deux états, car ils ne frappent pas au même moment (audit du 2026-10-21) : Affaibli
+    // retire à chaque coup, avant l'armure ; la Fausse note au seul prochain coup qui touche, après l'armure
+    const [note, weak] = trayStates([{ id: 'falseNote', stacks: 1 }, { id: 'weakened', stacks: 2 }], [])
+    expect(note).toMatchObject({ id: 'spoiled', value: 5 })
+    expect(weak).toMatchObject({ id: 'weakened', value: 2 })
+    expect(stateValueText(weak)).toBe('−2')
   })
 
   it('une aura qui agit sur l’adversaire relaie son effet dans la zone de l’adversaire', () => {

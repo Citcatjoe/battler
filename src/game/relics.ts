@@ -1,5 +1,5 @@
 import type { CharacterStats } from './character'
-import { describeCondition, describeEffect, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
+import { describeCondition, describeEffect, ROLL_TRIGGERS, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, shuffle, type Rng } from './rng'
 import { STATUSES, type StatusId } from './statuses'
 
@@ -41,7 +41,10 @@ export interface Relic {
   stats?: RelicStats
   /** Coup : ajouté à la valeur de chacun de ses coups qui touchent, avant le critique */
   rollBonus?: number
-  /** Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4) */
+  /**
+   * Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4). Relique de
+   * face : un coup brut (Furie des vents) ne l'éveille pas, comme il n'ouvre aucune fenêtre du dé (2026-10-21).
+   */
   onFace?: number
   /** Coup, tour ou seuil : le moment où elle se déclenche, et ses effets (du point de vue du porteur) */
   trigger?: RelicTrigger
@@ -59,9 +62,12 @@ export type RelicKind = 'stat' | 'strike' | 'turn' | 'threshold'
 /** Les quatre types, dans l'ordre de lecture : nom et ce qu'ils font, pour l'infobulle et le compendium. */
 export const RELIC_KINDS: Record<RelicKind, { label: string; summary: string }> = {
   stat: { label: 'Caractéristique', summary: 'Ajoute des stats de base, à plat, pour tout le combat.' },
-  strike: { label: 'Coup', summary: "Agit sur ses coups : la valeur de chaque coup, ou un moment du coup (il touche, esquive, encaisse…)." },
-  turn: { label: 'Tour', summary: 'Se déclenche au début d’un de ses tours, puis à intervalle régulier.' },
-  threshold: { label: 'Seuil', summary: 'Se déclenche quand ses PV passent sous un seuil.' },
+  strike: {
+    label: 'Coup',
+    summary: "Agit sur ses coups : la valeur d'un coup, ou un moment du coup (une face de ses dés, il touche, esquive, encaisse…). Les coups bruts (Furie des vents) n'éveillent aucune relique de face.",
+  },
+  turn: { label: 'Tour', summary: 'Se déclenche au début d’un de ses tours (une fois, ou à intervalle régulier), après ses statuts de début de tour et avant son action.' },
+  threshold: { label: 'Seuil', summary: 'Se déclenche quand ses PV, ou ceux de l’adversaire, passent sous un seuil.' },
 }
 
 export function relicKind(r: Relic): RelicKind {
@@ -197,9 +203,9 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`)
 /** Une stat ajoutée, en clair : « +1 armure », « +5 % d'esquive ». */
 const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   maxHp: (v) => `${signed(v)} PV max`,
-  damageDie: (v) => `${signed(v)} face${Math.abs(v) > 1 ? 's' : ''} à son dé de dégâts`,
+  damageDie: (v) => `${signed(v)} face${Math.abs(v) > 1 ? 's' : ''} à son dé de dégâts (sauf un dé fixé par une forme, comme le d3 de l'Incantation)`,
   armor: (v) => `${signed(v)} armure`,
-  dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive`,
+  dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive${v < 0 ? ' (jamais sous 0 %)' : ''}`,
   critChance: (v) => `${signed(Math.round(v * 100))} % de critique`,
   critMultiplier: (v) => `${signed(v).replace('.', ',')} au multiplicateur de critique`,
 }
@@ -218,9 +224,11 @@ export interface RelicDescription {
 /** La seule rédaction d'une relique : infobulle, compendium, écran de récompense et rapports la lisent. */
 export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
+  // Une face de dé : n'importe lequel de ses jets (le d6 de Coup de chance compris), pas un coup brut
+  const face = t?.type === 'strike' && ROLL_TRIGGERS.includes(t.on)
   const moment = !t
     ? r.onFace !== undefined
-      ? `Sur un ${r.onFace} au dé de dégâts, si le coup touche`
+      ? `Sur un ${r.onFace} à l'un de ses dés, si le coup touche`
       : r.rollBonus
         ? 'À chacun de ses coups qui touchent'
         : 'En permanence'
@@ -228,7 +236,11 @@ export function describeRelic(r: Relic): RelicDescription {
       ? `Au début de son ${t.turn === 1 ? '1er' : `${t.turn}e`} tour${r.charges === 1 ? '' : r.cooldown ? `, puis tous les ${r.cooldown} tours` : ', puis à chacun de ses tours'}`
       : t.type === 'hpBelow'
         ? `Quand ${t.who === 'opponent' ? 'les PV de l’adversaire passent' : 'ses PV passent'} sous ${Math.round(t.ratio * 100)} %`
-        : TRIGGERS[t.on].label
+        : face
+          ? t.on === 'naturalMax'
+            ? "Sur le jet maximal d'un de ses dés"
+            : `Sur un ${ROLL_TRIGGERS.indexOf(t.on) + 1} à l'un de ses dés`
+          : TRIGGERS[t.on].label
   const parts = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
     r.rollBonus ? `${signed(r.rollBonus)} à la valeur ${r.onFace !== undefined ? 'de ce coup' : 'du coup'}, avant le critique` : '',
@@ -236,10 +248,16 @@ export function describeRelic(r: Relic): RelicDescription {
   ]
     .filter(Boolean)
     .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
+  // Posée au passage d'un seuil, une réaction aux coups encaissés réagit déjà au coup qui l'a fait franchir
+  const reactsAtOnce = t?.type === 'hpBelow' && (r.effects ?? []).some((e) => e.type === 'applyStatus' && STATUSES[e.status].reactions?.hurt)
   const tags = [
+    ...(face ? ['que le coup touche ou non', 'pas sur les coups bruts (Furie des vents)'] : []),
+    ...(r.onFace !== undefined ? ['pas sur les coups bruts (Furie des vents)'] : []),
+    ...(t?.type === 'turn' ? ['après ses statuts de début de tour, avant son action'] : []),
+    ...(reactsAtOnce ? ['dès le coup qui fait passer le seuil'] : []),
     ...(r.when ?? []).map((c) => `si ${describeCondition(c)}`),
     ...(r.charges !== undefined ? [r.charges === 1 ? 'une fois par combat' : `${r.charges} fois par combat`] : []),
-    ...(r.cooldown && t?.type !== 'turn' ? [`recharge : ${r.cooldown} tours`] : []),
+    ...(r.cooldown && t?.type !== 'turn' ? [`recharge : ${r.cooldown} de ses tours`] : []),
   ]
   const posed = (r.effects ?? []).flatMap((e) => (e.type === 'applyStatus' ? [{ status: e.status, target: e.target ?? ('self' as const) }] : []))
   return { moment, text: parts.join(' '), tags, posed }

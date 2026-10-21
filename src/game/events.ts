@@ -63,18 +63,17 @@ export type Target = 'self' | 'opponent'
 export type Effect =
   | { type: 'heal'; amount: number; target?: Target }
   /**
-   * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. `hits`
-   * (0.76.0, Foudre) : autant de coups de `amount` chacun, comptés ensemble ; l'écran en fait autant d'impacts.
+   * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. Ce ne sont pas
+   * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
+   * d'affichage, `hits` fois `amount` appliqués en une seule perte ; l'écran en fait autant d'impacts.
    */
   | { type: 'damage'; amount: number; hits?: number; target?: Target }
   | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target }
   /**
-   * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count`
-   * derniers posés (ex. Purification : le dernier bonus de l'adversaire, aura comprise)
-   */
-  /**
-   * Retire des statuts d'une polarité (`count` : seulement les derniers posés). `orElse` : effet joué à
-   * la place quand il n'y a rien à retirer (Purification, 0.42.0 : la lumière blesse au lieu de tomber à vide).
+   * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count` derniers
+   * apparus (un statut renforcé garde son rang). Les mécanismes de compétence et de forme ne se retirent pas.
+   * `orElse` : effet joué à la place quand il n'y a rien à retirer (Purification, 0.42.0 : la lumière blesse au
+   * lieu de tomber à vide).
    */
   | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number; orElse?: Exclude<Effect, { type: 'cleanse' }> }
   /**
@@ -128,10 +127,11 @@ export interface CharacterEvent {
    */
   forfeitsHit?: boolean
   /**
-   * Le coup qui déclenche la compétence est transformé au lieu d'être sacrifié (druide en ours) :
-   * `max` frappe pour la valeur maximale du dé (Charge), `reroll` relance le dé, en secret, et
-   * ajoute `bonus` (Coup de griffe). `noCrit` : le coup ne peut pas être critique. C'est un coup
-   * normal ensuite (esquive, modificateurs, armure, boucliers). Mêmes réserves que `forfeitsHit`.
+   * Le coup qui déclenche la compétence est transformé au lieu d'être sacrifié : `max` frappe pour la valeur
+   * maximale du dé, `reroll` relance le dé, en secret, et ajoute `bonus`. `noCrit` : le coup ne peut pas être
+   * critique. C'est un coup normal ensuite (esquive, modificateurs, armure, boucliers). Mêmes réserves que
+   * `forfeitsHit`. Sans porteur depuis la 0.73.0 (retrait de Charge et de Coup de griffe) : la règle « Coup
+   * transformé » est tue tant qu'aucune compétence ne s'en sert (`hiddenRules`, catalog.ts).
    */
   reshapesHit?: { value: 'max' | 'reroll'; bonus?: number; noCrit?: boolean }
   /**
@@ -143,7 +143,7 @@ export interface CharacterEvent {
   needsTouch?: boolean
   /**
    * Compétence d'un double (personnage à deux dés, `twinDice`) qui attaque : l'action devient `volley`
-   * coups dont le dé vaut la face du double (Crescendo : trois coups de 4). Réservé aux déclencheurs
+   * coups dont le dé vaut la face du double (Siffloter : deux coups de 1). Réservé aux déclencheurs
    * doubleOne à doubleFive.
    */
   volley?: number
@@ -201,7 +201,7 @@ export function describeEffect(effect: Effect): string {
     case 'heal':
       return effect.target === 'opponent' ? `soigne l'adversaire de ${effect.amount} PV` : `+${effect.amount} PV`
     case 'damage':
-      return `${effect.hits ? `${effect.hits} fois ` : ''}${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}`
+      return `${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}${effect.hits ? `, ${effect.hits} fois (${effect.hits * effect.amount} en tout)` : ''}`
     case 'applyStatus': {
       const def = STATUSES[effect.status]
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
@@ -213,9 +213,11 @@ export function describeEffect(effect: Effect): string {
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
       const orElse = effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''
-      if (effect.count === undefined) return `retire les ${kind}${on ? ` ${on}` : ''}${orElse}`
-      const what = effect.count === 1 ? `le dernier ${kind} posé` : `les ${effect.count} derniers ${kind} posés`
-      return `retire ${what}${on ? ` ${on}` : ''}, avec toutes ses charges${orElse}`
+      // « Le plus récent » : le dernier apparu ; un statut renforcé garde son rang (applyStatus)
+      const whose = effect.target === 'opponent' ? "à l'adversaire son" : 'son propre'
+      if (effect.count === undefined) return `retire ${effect.target === 'opponent' ? `tous les ${kind} de l'adversaire` : `tous ses ${kind}`}${orElse}`
+      const what = effect.count === 1 ? `${whose} ${kind} le plus récent` : `${whose.replace(/son( propre)?$/, 'ses')} ${effect.count} ${kind} les plus récents`
+      return `retire ${what} (un ${kind} renforcé garde son rang), avec toutes ses charges${orElse}`
     }
   }
 }
@@ -262,33 +264,52 @@ export interface SkillDescription {
 /**
  * Ce que fait une compétence, en clair. C'est la seule rédaction d'une compétence : le compendium (index et
  * fiche) et l'infobulle des dés l'affichent depuis cette source. Ce qui relève d'une règle commune (coup
- * sacrifié, coup transformé, conditions…) n'est pas répété dans le texte : c'est une pastille qui cite la règle.
- * `formName` : le nom de la forme requise (personnage à formes), affiché en pastille.
+ * sacrifié, double, dégâts directs, plafond, conditions…) n'est pas répété dans le texte : c'est une pastille
+ * qui cite la règle. `formName` : le nom de la forme requise (personnage à formes), affiché en pastille.
  */
 export function describeSkill(e: CharacterEvent, formName?: string): SkillDescription {
   const r = e.reshapesHit
   const face = doubleFace(e.trigger)
+  const effects = e.effects.map((effect, k) => {
+    // Un vrai coup qui doit toucher (Pourfendre) : ses effets n'arrivent que s'il touche
+    const touch = e.needsTouch && k === 0 ? "s'il touche, " : ''
+    if (effect.type !== 'applyStatus') return `${touch}${describeEffect(effect)}`
+    const def = STATUSES[effect.status]
+    const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
+    const text = lowerFirst(def.describe({ id: effect.status, stacks: effect.stacks, turns }))
+    // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
+    // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21). Posé par un coup
+    // qui touche, un statut qui réagit aux coups reçus réagit déjà à celui-ci (la plaie de Pourfendre coule aussitôt).
+    if (effect.target !== 'opponent') return `${touch}${text}`
+    return `${touch}sur l'adversaire${e.needsTouch && def.reactions?.hurt ? ', dès ce coup' : ''} : ${text}`
+  })
   const parts = [
     e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : '',
+    e.needsTouch ? 'frappe pour la valeur du dé' : '',
     r ? (r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`) : '',
-    ...e.effects.map((effect) => {
-      if (effect.type !== 'applyStatus') return describeEffect(effect)
-      const def = STATUSES[effect.status]
-      const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
-      const text = lowerFirst(def.describe({ id: effect.status, stacks: effect.stacks, turns }))
-      // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
-      // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21)
-      return effect.target === 'opponent' ? `sur l'adversaire : ${text}` : text
-    }),
+    ...effects,
   ]
     .filter(Boolean)
     .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
+  const posedIds = e.effects.flatMap((effect) => (effect.type === 'applyStatus' ? [effect.status] : []))
+  const direct = e.effects.some((x) => x.type === 'damage' || x.type === 'release' || (x.type === 'cleanse' && x.orElse?.type === 'damage'))
+  const caps = [...new Set(posedIds)].flatMap((id) => {
+    const def = STATUSES[id]
+    return !def.mechanic && def.maxStacks !== undefined && def.maxStacks > 1 ? [{ label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : []
+  })
   const tags: SkillTag[] = [
     ...(formName ? [{ label: formName, rule: 'forms' as const }] : []),
+    // Au début du combat : avant le premier tour, quel que soit le vainqueur de l'initiative (règle « Initiative »)
+    ...(e.trigger === 'combatStart' ? [{ label: 'avant le premier tour', rule: 'initiative' as const }] : []),
     ...(e.forfeitsHit ? [{ label: 'coup sacrifié', rule: 'forfeit' as const }] : []),
     ...(e.needsTouch ? [{ label: "s'il touche", rule: 'needs-touch' as const }] : []),
     ...(r ? [{ label: r.noCrit ? 'coup transformé, jamais critique' : 'coup transformé', rule: 'reshape' as const }] : []),
     ...(e.volley ? [{ label: e.merged ? 'coups fondus en un' : 'double qui frappe', rule: 'volley' as const }] : []),
+    // Un double sans coups à lui remplace les deux coups de l'action : ce tour-là, rien ne frappe
+    ...(face !== undefined && !e.volley ? [{ label: 'remplace les deux coups', rule: 'twin-dice' as const }] : []),
+    ...(direct ? [{ label: 'dégâts directs', rule: 'direct-damage' as const }] : []),
+    ...(posedIds.some((id) => STATUSES[id].look?.aura) ? [{ label: 'aura permanente', rule: 'auras' as const }] : []),
+    ...caps,
     ...(e.when ?? []).map((c) => ({ label: `si ${describeCondition(c)}`, rule: 'conditions' as const })),
     ...(e.chance !== undefined && e.chance < 1 ? [{ label: `${Math.round(e.chance * 100)} % de chances`, rule: 'skill' as const }] : []),
     ...(e.limit !== undefined ? [{ label: `${e.limit} fois max. par combat`, rule: 'skill' as const }] : []),

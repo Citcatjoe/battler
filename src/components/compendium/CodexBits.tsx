@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import type { Character } from '../../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill, TRIGGERS, type CharacterEvent, type SkillNature, type Target, type Trigger } from '../../game/events'
 import { RULES } from '../../game/rules'
-import { POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
+import { isMechanic, POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
 import { Icon, skillIcon, StatusIcon } from '../Icon'
 import type { CompendiumNav } from './sections'
 
@@ -51,10 +51,19 @@ export function useFocusRef<T extends HTMLElement = HTMLDivElement>(focus?: stri
   return ref
 }
 
-/** Sceau rond d'un statut, liseré à sa polarité. */
+/**
+ * Ton d'un statut dans le compendium : sa polarité (bonus, malus), ou neutre pour un mécanisme de compétence ou de
+ * forme, qui n'est ni l'un ni l'autre.
+ */
+export const statusTone = (id: StatusId) => (isMechanic(id) ? 'neutral' : STATUSES[id].polarity)
+
+/** Le mot d'un statut à côté de son nom : « bonus », « malus », ou « mécanisme ». */
+export const statusKindWord = (id: StatusId) => (isMechanic(id) ? 'mécanisme' : POLARITY_STYLE[STATUSES[id].polarity].label.toLowerCase())
+
+/** Sceau rond d'un statut, liseré à sa polarité (neutre pour un mécanisme). */
 export function StatusMedal({ id, size }: { id: StatusId; size: number }) {
   return (
-    <span className="seal" data-tone={STATUSES[id].polarity} style={{ width: size, height: size }}>
+    <span className="seal" data-tone={statusTone(id)} style={{ width: size, height: size }}>
       <StatusIcon id={id} className="h-full w-full" />
     </span>
   )
@@ -82,16 +91,17 @@ export function skillLine(event: CharacterEvent) {
 
 const TARGET_WORD: Record<Target, string> = { self: 'sur soi', opponent: 'adversaire' }
 
-/** Pastille d'un statut posé (nom, polarité, cible) : un lien vers sa fiche dans Statuts. */
+/** Pastille d'un statut posé (nom, polarité ou mécanisme, cible) : un lien vers sa fiche dans Statuts. */
 export function StatusChip({ status, target, nav }: { status: StatusId; target?: Target; nav: CompendiumNav }) {
   const def = STATUSES[status]
+  const tone = statusTone(status)
   return (
-    <button type="button" className="codex-chip" data-tone={def.polarity} onClick={() => nav.go({ section: 'statuses', id: status })}>
+    <button type="button" className="codex-chip" data-tone={tone} onClick={() => nav.go({ section: 'statuses', id: status })}>
       <StatusMedal id={status} size={26} />
       <span className="min-w-0 leading-tight">
         <span className="block truncate font-body text-[15px] font-bold text-ink-1">{def.name}</span>
         <span className="block font-body text-[13px] text-ink-3">
-          <span className={POLARITY_TEXT[def.polarity]}>{POLARITY_STYLE[def.polarity].label.toLowerCase()}</span>
+          <span className={tone === 'neutral' ? 'text-ink-2' : POLARITY_TEXT[tone]}>{statusKindWord(status)}</span>
           {target && ` · ${TARGET_WORD[target]}`}
         </span>
       </span>

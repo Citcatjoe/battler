@@ -77,7 +77,7 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | `shift` | Transformation |
 | `coin` | Pièce lancée, Pièce retombe ; sur pile, Pile réussie **en même temps** (0.55.0, demande de l'utilisateur : le résultat, son son, son badge et son texte tombent d'un bloc ; avant, 0,14 s après), puis, après un temps de lecture, Coup critique au coup ; sur face, rien de plus. La pièce seule ne disait pas assez si le pari était gagné (retour de l'utilisateur, 0.36.4). |
 | `pair` | Dés lancés, Dé posé ; sur un double, quel qu'il soit, Pile réussie en même temps que les dés (0.46.0, demande de l'utilisateur : le double doit s'entendre tout de suite). Les coups qui suivent sonnent comme des coups. |
-| `statusDuration`, `statusExpire` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
+| `statusAge` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
 | Fin du combat | KO, puis Victoire |
 
 Un coup de compétence (Rétribution, une jauge par coup) joue un Coup par jauge, l'un après l'autre ; le dernier, mis en scène comme un coup lourd, joue le Coup critique (décision de l'utilisateur). Un coup de compétence unique de 10 dégâts ou plus est aussi un coup lourd.

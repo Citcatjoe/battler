@@ -51,7 +51,7 @@ Règles de cause :
 | Coups d'une rafale (`flurry`) ou d'une paire | l'étape `flurry` ou `pair` |
 | Pièce (`coin`) | l'étape qui a posé Pile ou face (le coup ou l'événement) |
 | Relique sur un moment du coup | le coup |
-| `statusDuration` / `statusExpire` qui suivent l'effet d'un statut dans la même phase | le `statusTick` de ce statut quand il existe |
+| `statusAge` (usure de la phase : décomptes et extinctions en une étape, 2026-10-21) qui suit l'effet d'un statut dans la même phase | le `statusTick` de ce statut quand il existe |
 | Réaction à une réaction (Épines provoquées par une Riposte…) | l'étape qui l'a déclenchée |
 
 Autres changements :

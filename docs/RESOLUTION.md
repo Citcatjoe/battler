@@ -38,7 +38,7 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     1. Effets de début de tour des statuts de l'actif (onTurnStart) : bonus, puis malus. Un bonus peut
        viser l'adversaire : l'Aura glaciale (0.69.0) pose ici 1 Poison par charge sur lui, avant le coup
        de l'actif ; l'immunité, l'opposition et la purge s'appliquent à ce Poison comme à tout autre.
-    2. Durées « début » de l'actif : −1 tour (étape statusDuration), expiration à 0 (statusExpire)
+    2. Durées « début » de l'actif : −1 tour, expiration à 0, dans une seule étape statusAge (2026-10-21)
     3. Fenêtre « turnStart » (actif)
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
@@ -69,11 +69,14 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
       ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
       bloodied (seuil) → naturalOne → naturalTwo → naturalMax (actif)
       coup esquivé : missed (actif) → dodge (défenseur)
-      coup touché : hit → crit (actif) → hurt (défenseur)
+      coup touché : hit → crit (actif) → hurt (défenseur). Vol de vie réagit dans `hit` (actif), Riposte et
+      jauges de Rétribution dans `hurt` (défenseur), à leur rang parmi ses statuts (ordre de pose ; une jauge
+      encore vide passe après eux), puis les compétences, puis les reliques (2026-10-21)
+      coup brut (Furie des vents, `plain`) : ni fenêtre du dé ni relique de face, seulement esquive ou touche
       coup sacrifié (`forfeitsHit`) : ni l'un ni l'autre, seules les fenêtres du dé s'ouvrent
   Phase 3 · FIN DE TOUR (actif)
     1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus
-    2. Durées « fin » de l'actif : −1 tour, expiration à 0
+    2. Durées « fin » de l'actif : −1 tour, expiration à 0 (une seule étape statusAge)
     3. Fenêtre « turnEnd » (actif)
 
 FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà de 1 000 tours,
@@ -89,7 +92,7 @@ FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà 
 À l'écran, chaque résolution doit être **lisible comme un moment** : le joueur voit la cause et sa conséquence ensemble, dans l'ordre du moteur. La mise en scène (`stage`, `staging.ts`) regroupe les étapes par leur `cause`, jamais d'après l'étape voisine ([MOTEUR_V2.md](MOTEUR_V2.md) § 4).
 
 - **Une valeur qui change se voit changer** : le nombre de l'état rebondit au moment de la résolution, avec sa variation (−1, +2).
-- **Cause et conséquence ensemble** : l'effet d'un statut (le « −2 » d'une brûlure) et le décompte de sa durée (3 → 2) qui suit dans la même phase sont montrés au même instant. Un statut qui s'estompe (le poison) perd sa charge dans l'étape même de son effet : le « −3 » et le compteur qui passe à 2 tombent ensemble (`previewCounts`, `staging.ts` : le décompte du même statut, même tour, même camp, même phase). L'étape du moteur reste distincte ; seul l'affichage les réunit.
+- **Cause et conséquence ensemble** : l'effet d'un statut (le « −2 » d'une brûlure) et l'usure qui suit dans la même phase (étape `statusAge` : décompte 3 → 2 et extinction) sont montrés au même instant ; l'étape `statusAge` a pour cause l'effet du statut qu'elle use (`statusTick`). Un statut qui s'estompe (le poison) perd sa charge dans l'étape même de son effet : le « −3 » et le compteur qui passe à 2 tombent ensemble. L'étape du moteur reste distincte ; seul l'affichage les réunit.
 - **Rien ne disparaît sans avoir montré son 0** : un état épuisé ou expiré affiche d'abord son 0, puis quitte la zone d'état (`StatusTray`).
 - **Une réaction au coup tombe avec son impact** (0.68.1) : la plaie qui coule (Saignement) est jouée sur la frappe qui la fait couler. Son label de surcharge (« Saignement +2 », § 11) tombe sous le dé au moment de l'impact, comme « Critique ×2 », puis ses PV perdus et son compteur qui baisse suivent d'un battement (`flowOf`, `bleedOut`, `staging.ts`). De même, le statut que le coup pose sur sa cible (poison de l'Aura de décoction, Saignement de Pourfendre) tombe à son impact (`ridesOf`, `landRide`). Les étapes du moteur restent distinctes ; elles ont le coup pour cause, si bien qu'une autre étape intercalée (Riposte) ne les sépare plus de lui (moteur v2).
 - Ces règles valent pour toute résolution à venir : un nouveau type d'étape doit dire, dans `stage` (`staging.ts`), avec quoi il est montré.
@@ -149,7 +152,7 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | 8 bis | **Dégâts finaux** | Statuts de l'attaquant, dans l'ordre de pose, après tout le reste ; au moins 1 (0.41.0). Ni l'armure ni l'intimidation ne les rognent | `modifyFinal` (Aura mélodieuse, Fausse note) |
 | 9 | **Application** | PV retirés, sans descendre sous 0. Les dégâts du coup sont comptés en entier, excès du coup fatal compris (overkill, depuis la 0.34.0) | — |
 | 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application ; un statut `spentOnHit` de l'attaquant qui touche disparaît (Fausse note) | `spentOnHurt`, `spentOnHit` |
-| 10 | **Vol de vie** | Si l'attaquant porte un statut `drainsHit`, le coup porté consomme une charge. S'il a touché, l'attaquant regagne les PV réellement retirés (plafonnés à ses PV max). Esquivé, la charge est perdue sans soin, au moment du coup. Un coup sacrifié (jet de compétence) n'est pas un coup porté : la charge reste. Étape `statusReaction`, avant les fenêtres du coup. | `drainsHit` (Vol de vie) |
+| 10 | **Vol de vie (esquive)** | Un coup esquivé consomme une charge de Vol de vie (`drainsHit`) sans soin, au moment du coup. Sur un coup qui touche, le Vol de vie n'est pas une étape de la chaîne : c'est une réaction de la fenêtre `hit` (§ 5, règle 9), qui rend les PV retirés (plafonnés aux PV max) et use une charge. Un coup sacrifié n'est pas porté : la charge reste. | `drainsHit` (Vol de vie) |
 
 Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
 
@@ -164,15 +167,15 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
 | **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable, Aura d'immunité (armure +1) | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
-| **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusExpire` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
+| **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusAge` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines acérées et Saignement quand le porteur encaisse ; Pourfendre, sur un 1, seulement si son coup touche (`needsTouch`, 0.70.0) | `CharacterEvent` ; `reactions` d'un statut |
 | **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, coup sacrifié, bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1 bis, 2, 3 et 8 ; `forfeitsHit`, `forcesDodge`, `wards`, `immunities` |
-| **Sur le coup** | Juste après l'application d'un coup qui touche | Vol de vie | `drainsHit` (étape 10) |
+| **Sur le coup** | Dans les fenêtres d'un coup qui touche (ou d'une pile qui touche) : `hit` de l'attaquant, `hurt` du défenseur | Vol de vie (`hit`), Riposte et jauges de Rétribution (`hurt`) | `drainsHit`, `reflectsHit`, `fillsOnHurt` |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
 | **Action multiple** | Au début de l'action du porteur | Furie des vents (deux coups) | `extraStrikes` |
 | **Deux dés** | À l'action, pour un personnage qui lance deux dés | la barde : deux coups, ou une compétence sur un double | `twinDice`, déclencheurs `doubleOne`… `doubleFive`, `volley` |
 | **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant), d'intimidation (entrant), de précision (stats), glaciale (périodique : pose du Poison sur l'adversaire, 0.69.0) | crochets existants, statut sans `turns` |
-| **Statut de forme** (0.73.0) | Tant que le personnage garde la forme : posé quand il la prend (ouverture pour la première, étape `shift` ensuite), retiré quand il la quitte. Jamais purgé (une purge l'ignore), jamais bloqué (immunité, garde) | Incantation (d3, un sort par jet), Force de l'ours (+3 à chaque coup ; +4 jusqu'à la 0.75.0) | `StatusDef.innate`, `CharacterForm.statuses` |
+| **Mécanisme de compétence** (2026-10-21) | Statut qui porte la règle d'une compétence ou d'une forme (`StatusDef.mechanic` : `skill` pour les jauges de Rétribution, Pile ou face, Furie des vents, Attente ; `form` pour Incantation et Force de l'ours, posés tant que le personnage garde la forme). Jamais purgé, jamais bloqué (immunité, garde, opposition), jamais compté comme bonus ou malus dans les statistiques ; le compendium le présente comme une mécanique de sa compétence | Rétribution, Furie des vents, Incantation | `StatusDef.mechanic`, `isMechanic`, `CharacterForm.statuses` |
 
 ---
 
@@ -186,7 +189,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 6. **Pas de chaîne** : les effets produits par une réaction ou un événement ne déclenchent pas d'autre réaction (la plaie qui coule ne déclenche pas `hurt`, les dégâts de Riposte non plus). Seules exceptions : les **seuils de PV**, qui sont des états et peuvent se déclencher après n'importe quelle perte de PV : `bloodied`, puis les reliques de seuil (0.75.0, `checkThresholds` ; sur ses PV ou, 0.77.0, sur ceux de l'adversaire). Une relique de seuil ne repart qu'après être remontée au-dessus de son seuil (tout soin la réarme aussitôt, `rearmThresholds`) : cette règle exclut toute boucle infinie. Depuis le 2026-10-21, les trois reliques de seuil du registre sont à une charge (Dent de loup comprise) : le réarmement ne sert plus qu'à une future relique de seuil à recharge, et l'audit refuse une relique de seuil sans charge ni recharge.
 7. **Un statut retiré ne résout plus rien** : un statut annulé ou consommé pendant une fenêtre n'agit plus dans cette fenêtre.
 8. **Pas de hasard caché** : une condition fausse ou un mécanisme non utilisé ne consomme aucun tirage. Une relique ne tire jamais : sans déclenchement, un combat avec elle est identique au combat sans elle (test de `combat.test.ts`).
-9. **Un coup ne réagit qu'à ce qui existait avant lui** (0.68.1, demande de l'utilisateur) : dans les fenêtres d'un coup (`hit`, `crit`, `hurt`, `missed`, `dodge`), seuls les statuts présents à leur ouverture réagissent, avec les charges qu'ils avaient alors (`strikeBase`, `fireStrike`). Un statut posé pendant ce coup attend le suivant. C'est ce qui rend une plaie visible avant qu'elle coule : l'observateur la voit s'ouvrir, puis attend le coup qui la fera couler.
+9. **Une fenêtre réagit à ce qui est là quand elle s'ouvre** (2026-10-21, décision de l'utilisateur ; remplace la règle de la 0.68.1 et son `strikeBase`) : chaque fenêtre d'un coup (`naturalOne`… `hit`, `crit`, `hurt`, `missed`, `dodge`) fait réagir les statuts présents à son ouverture, avec leurs charges du moment. Un statut posé ou grossi dans une fenêtre précédente du même coup réagit donc dans les suivantes : la plaie que Pourfendre ouvre dans `naturalOne` coule dans le `hurt` de ce coup ; les Épines posées par le seuil que le coup fait franchir (Collier de ronces) réagissent à ce même coup. Un statut posé dans la fenêtre en cours attend la suivante (règle 6, pas de chaîne). Vol de vie, Riposte et jauges de Rétribution sont des réactions comme les autres : ils suivent cette règle, sur un coup comme sur une pile qui touche.
 
 ---
 
@@ -220,25 +223,25 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Épines acérées (2) : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : 2 charges de Saignement posées sur l'attaquant (0.68.0 ; avant, 2 dégâts directs renvoyés). Elles ne coulent pas tout de suite : la plaie attend que le nain touche à son tour. Les épines restent pour les coups suivants. |
 | Furie des vents contre Épines acérées | **Chaque** coup qui touche le nain déclenche les épines : avec 3 charges, 3 + 3 = 6 charges de Saignement sur l'orc, qui couleront 6, 5, 4… sur les prochains coups du nain. |
 | Saignement (2) : le porteur encaisse un coup | Fenêtre `hurt` du porteur, après les réactions posées avant la plaie : 2 dégâts directs (ignorent armure et bouclier), puis la plaie passe à 1, dans la même étape. Le coup suivant fait couler 1, et la plaie disparaît. |
-| Saignement posé par le coup qui touche | Les fenêtres de l'attaquant (`hit`, `crit`) passent avant le `hurt` du défenseur, mais la plaie posée par ce coup (critique, griffe) n'existait pas à l'ouverture des fenêtres : elle ne coule pas (règle 9). Le coup suivant la fait couler. Une plaie de 2 grossie de 2 par un coup coule de 2 sur ce coup (ses charges d'avant), puis passe à 3. |
+| Saignement posé par le coup qui touche | Une plaie posée dans une fenêtre de l'attaquant (`naturalOne`, `hit`, `crit`) existe à l'ouverture du `hurt` du défenseur : elle coule sur ce coup (règle 9). Une plaie de 2 grossie de 2 par le coup coule de 4, puis passe à 3. |
 | Saignement contre esquive, Peur ou coup sacrifié | Aucun coup ne touche : la plaie ne coule pas et ne perd rien. Elle attend le prochain coup qui touche, sans limite de durée. |
-| Pourfendre (Gorak) : le 1 touche, ou est esquivé | Le 1 n'est pas sacrifié : c'est un vrai coup (critique, Aura de puissance, intimidation, épines, riposte). S'il touche, la fenêtre du 1 (`naturalOne`, avant `hit` et `hurt`) pose Saignement 2, qui ne coule pas sur ce coup (règle 9). S'il est esquivé, rien n'est posé : un coup doit toucher pour poser un malus physique (`needsTouch`, vérifié avant tout tirage). |
+| Pourfendre (Gorak) : le 1 touche, ou est esquivé | Le 1 n'est pas sacrifié : c'est un vrai coup (critique, Aura de puissance, intimidation, épines, riposte). S'il touche, la fenêtre du 1 (`naturalOne`, avant `hit` et `hurt`) pose Saignement 2, qui coule aussitôt dans le `hurt` de ce coup (règle 9). S'il est esquivé, rien n'est posé : un coup doit toucher pour poser un malus physique (`needsTouch`, vérifié avant tout tirage). |
 | Furie des vents contre Saignement (2) | Le premier coup de la rafale fait couler 2, le deuxième 1 : la plaie est vidée dans la même action. |
 | Furie des vents contre Esquive améliorée | Le premier coup est esquivé à coup sûr et consomme une charge ; le second est résolu normalement (tirage d'esquive) s'il n'en reste plus, sinon esquivé à coup sûr lui aussi (cumulable depuis le 2026-10-21). |
 | Esquive améliorée posée deux fois (2026-10-21) | Les charges s'additionnent : deux charges, deux coups reçus esquivés à coup sûr, une charge par esquive. |
-| Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : le coup frappe pour la valeur du dé, sans compétence ; aucune Furie ne se relance. |
+| Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : le coup frappe pour la valeur du dé, sans compétence ni relique de face (le Fer à quatre clous ne renforce pas un 4 de Furie, 2026-10-21) ; aucune Furie ne se relance. |
 | Vol de vie : deux 2 de suite, ou un 1 ou un 3 | Le jet suivant est encore un coup sacrifié : aucun coup n'est porté, rien n'est volé, la charge reste (non cumulable, 1 charge au plus). Elle attend le prochain vrai coup. |
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
-| Vol de vie contre Épines acérées | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (étape 10), puis la fenêtre `hurt` du nain pose le Saignement sur lui. |
+| Vol de vie contre Épines acérées | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (sa fenêtre `hit`), puis la fenêtre `hurt` du nain pose le Saignement sur lui. |
 | Coup sacrifié contre Esquive améliorée, Épines acérées ou Saignement | Le coup n'a pas lieu : il ne consomme ni l'esquive imposée, ni les épines, ni la plaie. |
 | Aura glaciale (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 charges de Poison posées sur l'adversaire, avant le coup (0.69.0). Ce Poison agit au début du tour suivant de la victime et perd une charge à chaque fois : il grossit d'1 par tour. Immunisée, la victime ne reçoit rien. |
 | Aura de puissance (2 charges) sur un critique de 5 ×2 | Critique d'abord (10), puis sortant : 10 + 4 = 14, puis l'armure. Chaque coup d'une Furie des vents reçoit le bonus. |
 | Aura de puissance (1) contre Aura d'intimidation | Sortant puis entrant : un 6 devient 6 + 2 − 2 = 6. Un 1 contre l'intimidation seule : 1 − 2 = −1, plancher à 1. |
-| Riposte et Vol de vie, Épines acérées | Le coup touche le paladin : l'attaquant vole d'abord sa vie (étape 10), puis la Riposte renvoie la moitié des PV retirés, puis la fenêtre `hurt` (épines, saignement). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
-| Rétribution : jauges | Chaque coup qui touche le paladin range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, saignement, pièce) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la somme, au moins 1. |
+| Riposte et Vol de vie, Épines acérées | Le coup touche le paladin : l'attaquant vole d'abord sa vie (fenêtre `hit`), puis, dans le `hurt` du paladin, ses statuts réagissent dans l'ordre de pose (Riposte, jauges, épines, saignement). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
+| Rétribution : jauges | Chaque coup qui touche le paladin, et chaque pile qui touche, range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, saignement, riposte) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la somme, au moins 1. Les jauges sont un mécanisme : aucune purge ne les retire. |
 | Aura d'immunité | Posée sur un 3 : les malus du paladin sont d'abord purgés, puis toute pose de malus est bloquée (« protégé par Aura d'immunité »), sans usure. Une Purification adverse peut retirer l'aura. |
 | Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière. La Furie, instantanée depuis la 0.50.0, ne peut pas se faire voler son action : elle frappe dans celle où elle est posée. La pièce non plus depuis le 2026-10-21 : elle part juste après le coup qui la pose. |
-| Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de puissance à 6 charges disparaît d'un coup. Une Furie ou un Vol de vie en attente peuvent aussi être purifiés. |
+| Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de puissance à 6 charges disparaît d'un coup. Un Vol de vie en attente peut aussi être purifié ; une Furie ou les jauges de Rétribution, mécanismes de compétence, jamais. |
 | Coup de chance : le d3 | Un d3 tombe toujours sur 1, 2 ou 3 : il ne frappe jamais et déclenche toujours une compétence de la voleuse (un nouveau Coup de chance, Pile ou face ou l'aura). |
 | Pile ou face et Aura de décoction | Depuis la 0.42.0, pile compte comme un coup qui touche : la décoction empoisonne juste après la pièce. Face ne touche pas. |
 | Aura de sainteté et poison | Le poison agit au début du tour du porteur, la sainteté à sa fin : la prêtresse empoisonnée perd puis regagne dans le même tour. |

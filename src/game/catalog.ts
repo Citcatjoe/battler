@@ -1,5 +1,7 @@
 import type { Character } from './character'
 import { deName, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
+import type { RuleId } from './rules'
+import { RELICS, type Relic } from './relics'
 import { CHARACTERS } from './roster'
 import { POLARITY_STYLE, STATUS_IDS, STATUSES, statusRuleSections, type Polarity, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
 
@@ -13,19 +15,23 @@ import { POLARITY_STYLE, STATUS_IDS, STATUSES, statusRuleSections, type Polarity
  * Ce qui met un statut en jeu :
  * - `skill` : une compétence le pose directement (Souffle de la tombe → Poison) ;
  * - `status` : un autre statut le pose par ses effets de tour ou ses réactions (Aura glaciale → Poison) ;
- * - `release` : une compétence le relâche, ce qui le fait remplir pendant le combat (Rétribution).
+ * - `release` : une compétence le relâche, ce qui le fait remplir pendant le combat (Rétribution) ;
+ * - `form` : la forme d'un personnage le porte (règles de forme du druide) ;
+ * - `relic` : une relique le pose (Collier de ronces → Épines acérées).
  */
 export type StatusSource =
   | { kind: 'skill'; character: Character; event: CharacterEvent; target: Target; stacks: number; turns?: number }
   | { kind: 'status'; status: StatusId }
   | { kind: 'release'; character: Character; event: CharacterEvent }
   | { kind: 'form'; character: Character; form: string }
+  | { kind: 'relic'; relic: Relic; target: Target }
 
-/** Une interaction d'un statut, avec ce vers quoi elle mène (un autre statut ou une compétence). */
+/** Une interaction d'un statut, avec ce vers quoi elle mène (un autre statut, une compétence ou une relique). */
 export interface StatusLink {
   text: string
   status?: StatusId
   skill?: { event: CharacterEvent; character: Character }
+  relic?: Relic
 }
 
 export interface StatusEntry {
@@ -55,7 +61,7 @@ const posedByStatus = (id: StatusId) =>
 /** Toutes les compétences du roster, avec leur porteur. */
 const skillsOf = (characters: readonly Character[]) => characters.flatMap((character) => character.events.map((event) => ({ character, event })))
 
-export function statusSources(id: StatusId, characters: readonly Character[] = CHARACTERS): StatusSource[] {
+export function statusSources(id: StatusId, characters: readonly Character[] = CHARACTERS, relics: readonly Relic[] = RELICS): StatusSource[] {
   const skills = skillsOf(characters)
   const direct = skills.flatMap(({ character, event }) =>
     event.effects.flatMap((e): StatusSource[] =>
@@ -67,22 +73,31 @@ export function statusSources(id: StatusId, characters: readonly Character[] = C
   const released = skills.flatMap(({ character, event }): StatusSource[] =>
     event.effects.some((e) => e.type === 'release' && e.status === id) ? [{ kind: 'release', character, event }] : [],
   )
-  // Un statut posé par un autre statut n'est en jeu que si celui-ci l'est (directement)
+  // Un statut posé par un autre statut n'est en jeu que si celui-ci l'est (directement, par une compétence ou une relique)
+  const posesDirectly = (effects: readonly Effect[], other: StatusId) => effects.some((e) => e.type === 'applyStatus' && e.status === other)
   const byStatus = STATUS_IDS.filter((other) => other !== id && posedByStatus(other).includes(id)).flatMap((other): StatusSource[] =>
-    skills.some(({ event }) => event.effects.some((e) => e.type === 'applyStatus' && e.status === other)) ? [{ kind: 'status', status: other }] : [],
+    skills.some(({ event }) => posesDirectly(event.effects, other)) || relics.some((r) => posesDirectly(r.effects ?? [], other))
+      ? [{ kind: 'status', status: other }]
+      : [],
   )
   // Statut de forme (0.73.0) : posé par le moteur tant que le personnage a la forme qui le déclare
   const forms = characters.flatMap((character): StatusSource[] =>
     (character.forms ?? []).filter((f) => f.statuses?.includes(id)).map((f) => ({ kind: 'form', character, form: f.name })),
   )
-  return [...direct, ...released, ...byStatus, ...forms]
+  const byRelic = relics.flatMap((relic) =>
+    (relic.effects ?? []).flatMap((e): StatusSource[] => (e.type === 'applyStatus' && e.status === id ? [{ kind: 'relic', relic, target: e.target ?? 'self' }] : [])),
+  )
+  return [...direct, ...released, ...byStatus, ...forms, ...byRelic]
 }
 
 /** Tous les statuts : bonus d'abord, puis malus ; ceux en jeu avant ceux à venir. */
 export function statusCatalog(characters: readonly Character[] = CHARACTERS): StatusEntry[] {
   const entries = STATUS_IDS.map((id) => {
     const sources = statusSources(id, characters)
-    return { id, def: STATUSES[id], rules: statusRuleSections(id), sources, inGame: sources.length > 0 }
+    const rules = statusRuleSections(id)
+    // Une compétence qui le pose pour quelques tours lui donne une durée, même si sa définition n'en parle pas
+    if (!rules.lifetime && sources.some((s) => s.kind === 'skill' && s.turns !== undefined)) rules.lifetime = 'duration'
+    return { id, def: STATUSES[id], rules, sources, inGame: sources.length > 0 }
   })
   const rank = (e: StatusEntry) => (e.def.polarity === 'positive' ? 0 : 2) + (e.inGame ? 0 : 1)
   return entries.sort((a, b) => rank(a) - rank(b))
@@ -109,7 +124,7 @@ export function statusLinks(id: StatusId, characters: readonly Character[] = CHA
   if (def.immune) links.push({ text: `Bloque la pose de tous les ${polarityWord(def.immune)}.` })
   if (def.wards?.polarity) links.push({ text: `Bloque la pose des ${polarityWord(def.wards.polarity)}, une charge par blocage.` })
   for (const other of STATUS_IDS) {
-    if (def.innate) break
+    if (def.mechanic) break
     if (other === id || !inGame.has(other)) continue
     const o = STATUSES[other]
     if (o.immune === def.polarity || o.wards?.polarity === def.polarity || o.wards?.statuses?.includes(id))
@@ -117,11 +132,19 @@ export function statusLinks(id: StatusId, characters: readonly Character[] = CHA
   }
   // Statuts qu'il pose
   for (const posed of posedByStatus(id)) links.push({ text: `Pose ${STATUSES[posed].name}.`, status: posed })
-  // Purges : les compétences qui retirent les statuts de sa polarité (sauf un statut de forme, qui ne se purge pas)
-  for (const { character, event } of skills)
-    if (!def.innate && event.effects.some((e) => e.type === 'cleanse' && e.polarity === def.polarity))
-      links.push({ text: `Peut être retiré par ${event.name}.`, skill: { event, character } })
+  // Purges : les compétences et reliques qui retirent les statuts de sa polarité (sauf un mécanisme, qui ne se purge pas)
+  const purges = (effects: readonly Effect[]) => !def.mechanic && effects.some((e) => e.type === 'cleanse' && e.polarity === def.polarity)
+  for (const { character, event } of skills) if (purges(event.effects)) links.push({ text: `Peut être retiré par ${event.name}.`, skill: { event, character } })
+  for (const relic of RELICS) if (purges(relic.effects ?? [])) links.push({ text: `Peut être retiré par la relique ${relic.name}.`, relic })
   return links
+}
+
+/**
+ * Règles qu'aucune compétence en jeu n'applique, tues par la section Règles : un Coup transformé n'a plus de
+ * porteur depuis le retrait de Charge et de Coup de griffe (0.73.0), mais la mécanique reste au moteur.
+ */
+export function hiddenRules(characters: readonly Character[] = CHARACTERS): RuleId[] {
+  return characters.some((c) => c.events.some((e) => e.reshapesHit)) ? [] : ['reshape']
 }
 
 /** Une compétence et les personnages qui la possèdent. */

@@ -10,7 +10,7 @@ import { STAT_KEYS } from './character'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DOUBLE_TRIGGERS, rollMatches, ROLL_TRIGGERS, type Trigger } from './events'
 import { withRelicStats } from './relics'
-import { STATUSES, type Status } from './statuses'
+import { isMechanic, STATUSES, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
 
@@ -59,6 +59,70 @@ export function createAudit() {
     const form = [0, 0]
     const inForm = (side: number, e: { form?: string }) => !e.form || e.form === r.fighters[side].forms?.[form[side]].id
     const stateBefore = (i: number) => (i ? r.beats[i - 1].state : init)
+    /**
+     * Un coup qui touche (attaque, ou pile qui touche) : une seule règle depuis le 2026-10-21. Ce qui réagit à un coup
+     * qui touche réagit dans ses fenêtres, avec ce coup pour cause : Vol de vie (une charge, les PV retirés rendus),
+     * Riposte (une charge, la part renvoyée), jauges (le coup rangé), Épines, Saignement (toutes ses charges, même
+     * celles posées par ce coup, puis une de moins).
+     */
+    const touchControls = (i: number, striker: Side, dealt: number) => {
+      const target = (1 - striker) as Side
+      const s = r.beats[i].state
+      const coin = r.beats[i].type === 'coin'
+      const caused = r.beats.filter((x) => x.cause === i)
+      const died = caused.some((x) => x.state.hp.some((h) => h === 0))
+      const reaction = (id: string) => caused.find((x): x is Extract<Beat, { type: 'statusReaction' }> => x.type === 'statusReaction' && x.status === id)
+      const before = (x: Beat) => r.beats[x.id - 1].state
+      // Vol de vie
+      const drained = reaction('lifesteal')
+      if (find(s.statuses[striker], 'lifesteal') && !drained && !died) flag('vol de vie non appliqué', r, i, '')
+      if (drained) {
+        const was = before(drained)
+        const heal = drained.effects[0]
+        if (heal?.type !== 'heal' || heal.amount !== Math.min(dealt, r.fighters[striker].maxHp - was.hp[striker])) flag('vol de vie : montant faux', r, i, `${JSON.stringify(heal)} vs dealt ${dealt}`)
+        if ((find(drained.state.statuses[striker], 'lifesteal')?.stacks ?? 0) !== (find(was.statuses[striker], 'lifesteal')?.stacks ?? 0) - 1) flag('vol de vie non consommé', r, i, '')
+        see(coin ? 'pile : vol de vie' : 'vol de vie')
+      }
+      // Riposte
+      const riposted = reaction('riposte')
+      if (find(s.statuses[target], 'riposte') && !riposted && !died) flag('riposte non déclenchée', r, i, '')
+      if (riposted) {
+        const was = before(riposted)
+        const back = riposted.effects[0]
+        if (back?.type !== 'damage' || back.target !== striker || back.amount !== Math.round(dealt * STATUSES.riposte.reflectsHit!)) flag('riposte : montant faux', r, i, `${JSON.stringify(back)} vs dealt ${dealt}`)
+        if ((find(riposted.state.statuses[target], 'riposte')?.stacks ?? 0) !== (find(was.statuses[target], 'riposte')?.stacks ?? 0) - 1) flag('riposte non consommée', r, i, '')
+        see(coin ? 'pile : riposte' : 'riposte')
+      }
+      // Jauges (Rétribution) : le coup est rangé dans la plus récente
+      for (const id of Object.keys(STATUSES) as (keyof typeof STATUSES)[]) {
+        if (!STATUSES[id].fillsOnHurt || !r.fighters[target].events.some((e) => e.effects.some((x) => x.type === 'release' && x.status === id))) continue
+        const filled = reaction(id)
+        if (!filled) {
+          if (!died) flag('jauges non remplies', r, i, id)
+          continue
+        }
+        const slots = find(filled.state.statuses[target], id)?.slots ?? []
+        if (slots[slots.length - 1] !== dealt || slots.length > STATUSES[id].fillsOnHurt!.slots) flag('jauges : coup mal rangé', r, i, `${slots.join(' · ')} vs ${dealt}`)
+        else see(coin ? 'pile : jauges' : 'jauges')
+      }
+      // Épines
+      if (find(s.statuses[target], 'thorns') && !reaction('thorns') && !died) flag('épines non déclenchées', r, i, '')
+      // Saignement : la plaie coule de toutes les charges qu'elle a quand sa fenêtre s'ouvre, puis en perd une
+      const flow = reaction('bleed')
+      if (flow) {
+        const was = find(before(flow).statuses[target], 'bleed')?.stacks ?? 0
+        const amount = flow.effects.reduce((t, e) => t + (e.type === 'damage' && e.target === target ? e.amount : 0), 0)
+        if (amount !== was) flag('saignement : montant faux', r, i, `${amount} vs ${was}`)
+        const left = find(flow.state.statuses[target], 'bleed')?.stacks ?? 0
+        if (flow.state.hp[target] > 0 && left !== was - 1) flag('saignement non estompé', r, i, `${was} → ${left}`)
+        else see('saignement')
+        // Plaie ouverte par ce coup (Pourfendre) : elle coule aussitôt (2026-10-21, plus de plaie différée)
+        if (!find(s.statuses[target], 'bleed')) see('saignement sur le coup qui l’ouvre')
+      } else {
+        const end = caused.length ? caused[caused.length - 1].state : s
+        if (find(end.statuses[target], 'bleed') && !died) flag('saignement non déclenché', r, i, '')
+      }
+    }
     r.beats.forEach((b: Beat, i) => {
       if (b.type === 'shift') {
         see('changement de forme')
@@ -78,7 +142,7 @@ export function createAudit() {
         const forms = r.fighters[side].forms
         if (!forms) continue
         const expected = [...(forms[form[side]].statuses ?? [])].sort().join()
-        const actual = s.statuses[side].filter((x) => STATUSES[x.id].innate).map((x) => x.id).sort().join()
+        const actual = s.statuses[side].filter((x) => STATUSES[x.id].mechanic === 'form').map((x) => x.id).sort().join()
         if (actual !== expected) flag('statuts de forme incohérents', r, i, `${actual} au lieu de ${expected}`)
         else if (expected) see('statut de forme')
       }
@@ -106,7 +170,7 @@ export function createAudit() {
           const applied = b.event.effects[k]
           if (effect.type !== 'cleanse' || !effect.orElse || !applied) return
           const target = effect.target === 'opponent' ? 1 - b.event.side : b.event.side
-          const had = prev.statuses[target].some((x) => STATUSES[x.id].polarity === effect.polarity && !STATUSES[x.id].innate)
+          const had = prev.statuses[target].some((x) => STATUSES[x.id].polarity === effect.polarity && !isMechanic(x.id))
           if (applied.type === 'cleanse' && applied.removed.length === 0) flag('purge à vide malgré son repli', r, i, b.event.name)
           if (applied.type !== 'cleanse' && had) flag('repli joué alors qu’il y avait à retirer', r, i, b.event.name)
           if (applied.type !== 'cleanse') see('repli de purge')
@@ -124,22 +188,36 @@ export function createAudit() {
           const applied = b.event.effects[k]
           if (effect.type !== 'cleanse' || applied?.type !== 'cleanse') return
           const target = effect.target === 'opponent' ? 1 - b.event.side : b.event.side
-          const matching = prev.statuses[target].filter((x) => STATUSES[x.id].polarity === effect.polarity && !STATUSES[x.id].innate).map((x) => x.id)
+          const matching = prev.statuses[target].filter((x) => STATUSES[x.id].polarity === effect.polarity && !isMechanic(x.id)).map((x) => x.id)
           const expected = effect.count === undefined ? matching : matching.slice(-effect.count)
           if (applied.removed.join() !== expected.join()) flag('purge : mauvais statuts retirés', r, i, `${applied.removed.join()} vs ${expected.join()}`)
           if (target === b.event.side && effect.polarity === 'negative' && applied.removed.length) see('purge de ses malus')
+          if (prev.statuses[target].some((x) => isMechanic(x.id) && STATUSES[x.id].polarity === effect.polarity)) see('purge face à un mécanisme')
         })
       }
-      // Un statut de durée ne perd un tour que pendant une étape statusDuration
-      if (b.type !== 'statusDuration')
+      // Un statut de durée ne perd un tour que pendant une étape statusAge
+      if (b.type !== 'statusAge')
         for (const side of [0, 1] as const)
           for (const st of s.statuses[side]) {
             const was = find(prev.statuses[side], st.id)
             if (was?.turns !== undefined && st.turns !== undefined && st.turns < was.turns && b.type !== 'event' && b.type !== 'statusReaction')
               flag('durée décomptée hors de son étape', r, i, `${st.id} ${was.turns}→${st.turns} (${b.type})`)
           }
-      if (b.type === 'statusDuration' || b.type === 'statusExpire' || b.type === 'statusTick') {
+      if (b.type === 'statusAge' || b.type === 'statusTick') {
         if (b.side !== active(b.turn)) flag('phase de statut sur le mauvais camp', r, i, `${b.type} côté ${b.side}`)
+      }
+      // Usure (2026-10-21, une seule étape) : chaque décompte et chaque extinction annoncés se lisent dans l'état
+      if (b.type === 'statusAge') {
+        if (b.changes.length === 0 && b.expired.length === 0) flag('usure vide', r, i, '')
+        for (const c of b.changes)
+          if (find(s.statuses[b.side], c.status)?.turns !== c.to || c.to !== c.from - 1) flag('usure : décompte faux', r, i, `${c.status} ${c.from}→${c.to}`)
+        for (const id of b.expired) if (find(s.statuses[b.side], id)) flag('usure : statut éteint encore présent', r, i, id)
+        if (b.changes.length && b.expired.length) see('usure : décompte et extinction ensemble')
+      }
+      // Mécanismes (2026-10-21) : jamais bloqués, annulés ni purgés
+      for (const e of beatEffects(b)) {
+        if (e.type === 'applyStatus' && isMechanic(e.status) && e.result.kind !== 'applied') flag('mécanisme bloqué ou annulé', r, i, `${e.status} ${e.result.kind}`)
+        if (e.type === 'cleanse' && e.removed.some(isMechanic)) flag('mécanisme purgé', r, i, e.removed.join())
       }
       // Une seule valeur (Brûlure, 0.69.0) : posé sans durée, il dure autant de tours que de charges
       if (b.type === 'event')
@@ -197,10 +275,11 @@ export function createAudit() {
         else if (a.dodgeForced && find(s.statuses[def], 'evasion')) see('esquive imposée cumulée')
         if (!a.dodged && !a.forfeited) {
           // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
-          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face
-          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || x.onFace === a.roll) ? x.rollBonus : 0), 0)
+          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, et jamais sur un coup brut (2026-10-21)
+          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || (!a.plain && x.onFace === a.roll)) ? x.rollBonus : 0), 0)
           if (bonus !== (a.relicBonus ?? []).reduce((t, x) => t + x.amount, 0)) flag('bonus de relique incohérent', r, i, `${bonus}`)
           else if (bonus) see('bonus de relique')
+          if (a.plain && r.fighters[att].relics.some((x) => x.onFace === a.roll)) see('coup brut sans relique de face')
           const value = (a.reshaped?.value ?? a.roll) + bonus
           let raw = a.crit ? Math.round(value * a.critMultiplier) : value
           for (const st of prev.statuses[att]) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
@@ -220,49 +299,7 @@ export function createAudit() {
           if (a.dealt !== a.damage) flag('dégâts comptés faux', r, i, '')
           const forcing = find(prev.statuses[att], 'guaranteedCrit')
           if (!!forcing !== a.critForced) flag('critique assuré incohérent', r, i, '')
-          // Vol de vie
-          const drain = find(prev.statuses[att], 'lifesteal')
-          const next = r.beats[i + 1]
-          const drained = next?.type === 'statusReaction' && next.status === 'lifesteal'
-          if (drain && s.hp[def] > 0 && !drained) flag('vol de vie non appliqué', r, i, '')
-          if (!drain && drained) flag('vol de vie sans charge', r, i, '')
-          // Une charge par coup qui touche (deux charges par Vol de vie depuis la 0.45.0)
-          const left = find(r.beats[i + 1]?.state.statuses[att] ?? [], 'lifesteal')?.stacks ?? 0
-          if (drain && s.hp[def] > 0 && left !== drain.stacks - 1) flag('vol de vie non consommé', r, i, `${drain.stacks} → ${left}`)
-          if (drained && next.effects[0].type === 'heal' && next.effects[0].amount !== Math.min(a.dealt, r.fighters[att].maxHp - s.hp[att]))
-            flag('vol de vie : montant faux', r, i, `${next.effects[0].amount} vs dealt ${a.dealt}`)
-          // Épines : réaction attendue dans les étapes qui suivent (avant le prochain coup)
-          const thorns = find(prev.statuses[def], 'thorns')
-          if (thorns && s.hp[def] > 0) {
-            const after = r.beats.slice(i + 1)
-            const stop = after.findIndex((x) => x.type === 'attack' || x.turn !== b.turn)
-            const window = stop < 0 ? after : after.slice(0, stop)
-            const reacted = window.some((x) => x.type === 'statusReaction' && x.status === 'thorns')
-            const attackerDead = window.some((x) => x.state.hp[att] === 0)
-            if (!reacted && !attackerDead && !window.some((x) => x.state.hp[def] === 0)) flag('épines non déclenchées', r, i, '')
-          }
-          // Saignement (0.68.1) : chaque coup qui touche un porteur de plaie la fait couler des charges qu'elle
-          // avait avant ce coup (une plaie posée ou grossie par ce même coup attend le suivant), puis elle en perd une
-          if (s.hp[def] > 0) {
-            const after = r.beats.slice(i + 1)
-            const stop = after.findIndex((x) => x.type === 'attack' || x.turn !== b.turn)
-            const window = stop < 0 ? after : after.slice(0, stop)
-            const at = window.findIndex((x) => x.type === 'statusReaction' && x.status === 'bleed')
-            const flow = window[at]
-            const open = find(s.statuses[def], 'bleed')?.stacks ?? 0
-            if (!flow) {
-              const knockedOut = window.some((x) => x.state.hp[def] === 0 || x.state.hp[att] === 0)
-              if (open > 0 && !knockedOut) flag('saignement non déclenché', r, i, '')
-            } else if (flow.type === 'statusReaction') {
-              const was = find((at === 0 ? s : window[at - 1].state).statuses[def], 'bleed')?.stacks ?? 0
-              const amount = flow.effects.reduce((t, e) => t + (e.type === 'damage' && e.target === def ? e.amount : 0), 0)
-              if (open === 0) flag('saignement : coule sur le coup qui le pose', r, i, `${amount}`)
-              else if (amount !== open) flag('saignement : montant faux', r, i, `${amount} vs ${open}`)
-              const left = find(flow.state.statuses[def], 'bleed')?.stacks ?? 0
-              if (flow.state.hp[def] > 0 && left !== was - 1) flag('saignement non estompé', r, i, `${was} → ${left}`)
-              else see('saignement')
-            }
-          }
+          if (s.hp[def] > 0) touchControls(i, att as Side, a.dealt)
         } else if (a.damage !== 0 || a.dealt !== 0) flag('coup nul avec dégâts', r, i, '')
         // Vol de vie (0.29.0) : esquivé, la charge est perdue ; jet de compétence, elle reste (ou est renouvelée)
         if (find(prev.statuses[att], 'lifesteal')) {
@@ -302,12 +339,14 @@ export function createAudit() {
         const strike = r.beats.slice(0, i).reverse().find((x) => x.type === 'attack')
         if (!strike || strike.turn !== b.turn) flag('pièce sans le coup qui la lance', r, i, '')
         else see('pièce lancée aussitôt')
-        // Pile qui touche : la réaction « quand il touche » d'une Aura de décoction suit la pièce
+        // Pile qui touche : un coup qui touche de ses dégâts (mêmes contrôles qu'une attaque qui touche)
+        if (b.heads && toss?.headsTouches && s.hp[1 - b.side] > 0) touchControls(i, b.side, dmg)
+        // La réaction « quand il touche » d'une Aura de décoction a la pièce pour cause
         if (b.heads && toss?.headsTouches && find(s.statuses[b.side], 'decoctionAura') && s.hp[1 - b.side] > 0) {
-          // Une relique (seuil franchi par la pièce) peut s'intercaler avant les fenêtres du coup
-          const next = r.beats.slice(i + 1).find((x) => x.type !== 'relic')
-          if (!(next?.type === 'statusReaction' && next.status === 'decoctionAura')) flag('pile qui touche sans décoction', r, i, '')
-          else see('pile qui touche')
+          const caused = r.beats.filter((x) => x.cause === i)
+          const poisoned = caused.some((x) => x.type === 'statusReaction' && x.status === 'decoctionAura')
+          if (!poisoned && !caused.some((x) => x.state.hp.some((h) => h === 0))) flag('pile qui touche sans décoction', r, i, '')
+          else if (poisoned) see('pile qui touche')
         }
       }
       if (b.type === 'flurry') {
@@ -419,26 +458,6 @@ export function createAudit() {
         else if (e.result.kind === 'applied') see('aura glaciale')
       }
     })
-    // Durées de « 1 tour » : Furie et Vol de vie doivent survivre jusqu'à l'action suivante du porteur
-    r.beats.forEach((b, i) => {
-      if (b.type !== 'event') return
-      for (const e of b.event.effects) {
-        if (e.type !== 'applyStatus' || e.result.kind !== 'applied') continue
-        if (e.status !== 'windFury' && e.status !== 'lifesteal') continue
-        // Furie instantanée (0.50.0) : elle frappe dans l'action même, rien n'attend l'action suivante
-        if (STATUSES[e.status].instantStrikes) continue
-        const side = e.target
-        const nextTurn = r.beats.find((x) => x.turn === b.turn + 2)
-        if (!nextTurn) continue
-        const atStart = r.beats.filter((x) => x.turn === b.turn + 2)[0]
-        const prevState = r.beats[r.beats.indexOf(atStart) - 1].state
-        // Une Purification adverse peut l'avoir retiré entre-temps
-        const purged = r.beats
-          .slice(i, r.beats.indexOf(atStart))
-          .some((x) => (x.type === 'event' ? x.event.effects : []).some((f) => f.type === 'cleanse' && f.removed.includes(e.status)))
-        if (!find(prevState.statuses[side], e.status) && !purged) flag(`${e.status} perdu avant l'action suivante`, r, i, '')
-      }
-    })
     auditRelics(r)
     // Fin : un seul perdant à 0
     const fin = r.beats[r.beats.length - 1].state
@@ -485,7 +504,7 @@ export function createAudit() {
         if (!cause) flag('pièce sans cause', r, i, '')
         else see('cause : pièce')
       }
-      if ((b.type === 'statusDuration' || b.type === 'statusExpire') && cause) {
+      if (b.type === 'statusAge' && cause) {
         if (cause.type !== 'statusTick' || cause.side !== b.side || cause.phase !== b.phase || cause.turn !== b.turn)
           flag("décompte causé par autre chose que l'effet de son statut", r, i, cause.type)
         else see('cause : décompte après son effet')

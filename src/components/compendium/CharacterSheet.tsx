@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { footDrop, type Character } from '../../game/character'
 import { skillCatalog } from '../../game/catalog'
 import { emptyRecord, ratios, useHistory, type CharacterRecord } from '../../game/history'
-import { RULES } from '../../game/rules'
+import { RULES, type RuleId } from '../../game/rules'
 import { CHARACTERS } from '../../game/roster'
 import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WIN_TEXT, WinBar } from '../RecordBits'
 import { StatSheet } from '../StatSheet'
 import { Icon } from '../Icon'
 import { Tabs } from '../Tabs'
-import { CharacterLink, formName, racePlural, SkillSummary } from './CodexBits'
+import { STATUSES } from '../../game/statuses'
+import { CharacterLink, formName, SkillSummary, StatusMedal } from './CodexBits'
 import type { CompendiumNav } from './sections'
 
 interface Props {
@@ -93,15 +94,41 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
 
             <section>
               <div className="flex items-baseline justify-between gap-4 border-b border-line-2 pb-1">
-                <h3 className="codex-label">Compétences · {racePlural(character.race)}</h3>
-                <button type="button" className="codex-link text-[14px]" onClick={() => nav.go({ section: 'rules', id: 'dice-faces' })}>
-                  {RULES['dice-faces'].title} →
+                <h3 className="codex-label">Compétences de {character.name}</h3>
+                <button type="button" className="codex-link text-[14px]" onClick={() => nav.go({ section: 'rules', id: skillRule(character) })}>
+                  {RULES[skillRule(character)].title} →
                 </button>
               </div>
               {skills.map((s) => (
                 <SkillSummary key={s.event.id} event={s.event} triggers={s.triggers} form={formName(character, s.event)} nav={nav} />
               ))}
             </section>
+
+            {/* Les règles de chaque forme (druide) : ce que la forme fait de lui, au-delà de ses compétences */}
+            {character.forms && (
+              <section>
+                <h3 className="codex-label border-b border-line-2 pb-1">Règles de forme</h3>
+                {character.forms.map((f) =>
+                  (f.statuses ?? []).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="flex w-full items-start gap-3 border-b border-line-1 py-2.5 text-left last:border-b-0"
+                      onClick={() => nav.go({ section: 'statuses', id })}
+                    >
+                      <StatusMedal id={id} size={42} />
+                      <span className="min-w-0">
+                        <span className="block font-display text-[17px] font-bold text-ink-1">
+                          {f.name} · {STATUSES[id].name}
+                        </span>
+                        <span className="block font-body text-[15px] leading-snug text-ink-2">{STATUSES[id].summary}</span>
+                      </span>
+                    </button>
+                  )),
+                )}
+                <p className="pt-1.5 font-body text-[14px] text-ink-3">{RULES.forms.text}</p>
+              </section>
+            )}
           </div>
         ) : (
           <Performance key={`performance-${character.id}`} character={character} record={record} nav={nav} />
@@ -110,6 +137,9 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
     </div>
   )
 }
+
+/** La règle qui dit où sont ses compétences : sur ses doubles (barde), selon sa forme (druide), ou sur son dé. */
+const skillRule = (c: Character): RuleId => (c.twinDice ? 'twin-dice' : c.forms ? 'forms' : 'dice-faces')
 
 /** Onglet « Performances » : le palmarès, les adversaires et les derniers combats, avec le lien vers Statistiques. */
 function Performance({ character, record, nav }: { character: Character; record: CharacterRecord; nav: CompendiumNav }) {

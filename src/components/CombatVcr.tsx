@@ -58,10 +58,8 @@ function momentTitle(moment: Moment, index: number, beats: readonly Beat[], figh
       return `« ${beat.event.name} » ${of(fighters[beat.event.side].name)}`
     case 'statusTick':
       return `${STATUSES[beat.status].name} (${phaseOf(beat.phase)})`
-    case 'statusDuration':
-      return `Décompte (${phaseOf(beat.phase)})`
-    case 'statusExpire':
-      return `Expiration (${phaseOf(beat.phase)})`
+    case 'statusAge':
+      return `Usure (${phaseOf(beat.phase)})`
     case 'statusReaction':
       return `${STATUSES[beat.status].name} (réaction)`
     case 'skip':

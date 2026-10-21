@@ -5,7 +5,7 @@ import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatR
 import { cueOf } from './cues'
 import { describeEffect, describeEvent, describeSkill, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
-import { attackLog, coinLog, effectBadge, effectText, eventLog, statusDurationLog, statusReactionLog, statusTickLog } from './narration'
+import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, rollDie, seededRng, shuffle } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
@@ -97,7 +97,7 @@ describe('catalogue des statuts', () => {
     const who = (id: StatusId) =>
       catalog
         .find((e) => e.id === id)!
-        .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : `${s.kind}:${s.character.id}`))
+        .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
     // Poison : posé par Ervald, et aussi par deux auras (effet de tour, réaction)
     expect(who('poison')).toEqual(['skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
@@ -108,6 +108,9 @@ describe('catalogue des statuts', () => {
     // Statuts de forme (0.73.0) : posés par la forme du druide, pas par une compétence
     expect(who('casting')).toEqual(['form:thaldrin'])
     expect(who('bearMight')).toEqual(['form:thaldrin'])
+    // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
+    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk'])
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'skill:elaria'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -141,6 +144,9 @@ describe('catalogue des statuts', () => {
     expect(statusLinks('wildAura').some((l) => l.skill?.event.id === 'purification')).toBe(true)
     // Immunité : chaque malus en jeu renvoie à l'aura qui le bloque
     expect(texts('fear')).toContain('immunityAura')
+    // Purge par une relique (Chapelet de l'ermite) ; un mécanisme (jauges de Rétribution) ne se purge pas
+    expect(statusLinks('poison').some((l) => l.relic?.id === 'hermit-beads')).toBe(true)
+    expect(statusLinks('retribution').some((l) => l.skill || l.relic)).toBe(false)
   })
   it('bord en pointillés : seuls les états qui font perdre des PV à leur porteur à chaque tour (0.52.1)', async () => {
     const { hurtsEachTurn } = await import('./statuses')
@@ -513,7 +519,7 @@ describe('trace de résolution', () => {
     const before = result.beats[tick - 1].state.hp[1]
     const text = traceText(result)
     expect(text).toContain('Poison agit sur brokk')
-    expect(text).toContain('[début] durée décomptée sur brokk : Poison 3 → 2 tours')
+    expect(text).toContain('[début] usure sur brokk : Poison 3 → 2 tours')
     expect(text).toContain(`2 dégâts directs à brokk, sans armure, esquive ni bouclier (brokk ${before} → ${before - 2} PV)`)
   })
 })
@@ -537,8 +543,8 @@ describe('aucun emoji dans les textes du jeu', () => {
               return [statusReactionLog(beat.side, beat.status, beat.effects, r.fighters).text]
             case 'coin':
               return [coinLog(beat.turn, beat.side, beat.heads, beat.effects, r.fighters).text]
-            case 'statusDuration':
-              return [statusDurationLog(beat.side, beat.changes, r.fighters).text]
+            case 'statusAge':
+              return [statusAgeLog(beat.side, beat.changes, beat.expired, r.fighters).text]
             default:
               return []
           }

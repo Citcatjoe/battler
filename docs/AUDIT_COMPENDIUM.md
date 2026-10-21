@@ -17,6 +17,39 @@ Audit en lecture seule des données des compétences et des statuts, demandé pa
 - Écarts entre documents et code de la section 6 (Gorak, Fanchon, Ervald, Écorce, Fausse note, Vol de vie, Coup de chance…).
 - **Interactions d'ordre de résolution** : `statusLinks` déduit l'opposition, l'immunité, la garde, le statut posé, le renfort et la purge. L'ordre (Vol de vie, puis Riposte, puis Épines ; la plaie qui ne coule pas sur le coup qui l'ouvre ; Fausse note contre Furie ; sainteté contre Poison) ne se déduit pas : proposition, une courte liste explicite d'interactions dans `catalog.ts`, une phrase et deux ids chacune, testée contre `RESOLUTION.md`.
 
+## Suite donnée (0.84.0, audit de fidélité du 2026-10-21)
+
+Trois audits en lecture seule ont confronté le compendium au moteur (règles, statuts et reliques, compétences et fiches). Décisions de l'utilisateur appliquées : « un coup qui touche » est une seule règle, pile comprise (Vol de vie, Riposte et jauges de Rétribution réagissent dans les fenêtres du coup) ; la plaie différée (`strikeBase`) est retirée : un statut posé ou grossi pendant un coup réagit à ce coup si sa fenêtre vient après ; les coups bruts n'éveillent aucune relique de face ; les mécanismes (`mechanic`) ne sont ni bonus ni malus, jamais purgés ni bloqués. Les textes décrivent ce comportement.
+
+**Points de cet audit-ci (0.72.0)** :
+
+| Point | État en 0.84.0 |
+|---|---|
+| Aura de précision « ×2 devient ×3 » (I-8) | Corrigé : « Son multiplicateur de critique gagne +1 » (`statuses.ts`) |
+| Coup de chance « frappe 2 fois » (I-4) | Corrigé : un d6 par charge, chacun un jet complet, compétence au lieu d'un coup sur 1 à 3 (`statuses.ts`, `states.ts`) |
+| Peur cumulable plafonnée à 1 (I-3) | Corrigé : non cumulable (`stacking: 'refresh'`, même comportement) |
+| Règle « Cumulable » et la durée | Corrigé (`rules.ts`, `stacking-add`) |
+| « Un tour, trois phases » cite Étourdi | Corrigé : la Peur, l'ordre réel des étapes (`rules.ts`, `phases`) |
+| I-1, I-2 | Corrigés (0.72.0) |
+| I-5 Furie des vents « durée » | Corrigé : `expiresAt` retiré, la Furie est un mécanisme sans durée ni cumul |
+| I-6 crochets sans phrase | Corrigé pour `spentOnHurt`, `strikeCharges`, l'expiration de l'Attente et `modifyStats` (une phrase par stat touchée, avec sa règle). `counter` reste sans phrase : c'est de l'affichage |
+| I-7 Luciole contre l'esquive imposée | Corrigé dans le texte (« une esquive imposée passe quand même ») ; statut hors jeu |
+| I-9, I-10 commentaires périmés | Corrigés |
+| I-11 icônes | Corrigé pour les statuts en jeu ; Vulnérable, Étourdi, Garde sacrée hors jeu |
+| I-12 cumul écrit dans le résumé et la pastille | Ouvert, voulu : le résumé sert aussi en combat, où il n'y a pas de pastille |
+| I-13 même phrase pour l'Esquive améliorée et la Riposte | Gardé : la même règle vaut pour les deux |
+| § 3, liste explicite des interactions d'ordre | En partie sans objet : les règles « S'il touche », « Coup sacrifié », « Dégâts directs » et la réaction « dès le coup » disent désormais l'ordre. La liste explicite (`catalog.ts`) reste ouverte |
+| § 6, écarts de `FEATURES.md` (Gorak, Fanchon, étape 1, intro § 3, déclencheurs, Furie, Pile ou face, Durées, Aura glaciale, overkill) et de `roster.ts` (commentaires, lore d'Elaria) | Corrigés |
+| § 6, écarts de `STATUTS.md`, `RESOLUTION.md`, `PERSONNAGES.md` | Lot moteur (livre de règles) : voir ces documents |
+
+**Règles (`rules.ts`)** : `dice-faces`, `forfeit`, `reshape`, `volley` (FAUX) ; `phases`, `crit`, `final-damage`, `direct-damage`, `duration`, `auras`, `application` (INCOMPLET) ; `modifiers`, `conditions`, `stacking-add` (AMBIGU) : tous corrigés. `damage-die` réécrite sans phrase d'écran ; `cast-turn` fondue dans `duration` et retirée ; `reshape` (aucun porteur) tue par la section Règles (`hiddenRules`, `catalog.ts`). `initiative`, `ko`, `twin-dice`, `dodge`, `polarity`, `stacking-refresh` précisées.
+
+**Citations** : C-1 (la fiche cite Faces de compétence, Deux dés ou Formes selon le personnage, `CharacterSheet.tsx`), C-2 (chaque phrase d'effet d'un statut cite sa règle : esquive, critique, boucliers, modificateurs, dégâts finaux, dégâts directs, armure, dé de dégâts, pose, phases), C-3 (« Durée » seulement pour un statut qui peut en avoir une, « Auras » pour une aura, y compris en pied de fiche), C-4 (pastilles « remplace les deux coups », « dégâts directs », « aura permanente », plafond), C-5 : corrigés. Règles désormais citées : `initiative` (« avant le premier tour », Ouverture), `phases`, `damage-die`, `twin-dice`, `dodge`, `crit`, `modifiers`, `armor`, `shields`, `final-damage`, `direct-damage`, `polarity`, `auras`, `application`. Jamais citée : `ko` (aucune compétence ni statut n'en dépend). `conditions` et `skill` (chance, limite) restent sans pastille faute de compétence qui en ait.
+
+**Statuts et reliques** : S1, S2, S8 (FAUX), S3, S10, S13 (INCOMPLET), S4 à S7, S9, S11, S12, S14, S15 (AMBIGU) : corrigés (`statuses.ts`, `states.ts` avec l'état « Coup gâché » de la Fausse note, `catalog.ts` avec les reliques dans « Posé par » et les purges du Chapelet). R1 (esquive négative bornée à 0 % à la fiche, `StatSheet.tsx`, et « jamais sous 0 % » sur la Cotte), R2 à R8 : corrigés (`relics.ts`). D1 (`RESOLUTION.md`, règle 9) : la règle a changé (plaie différée retirée), lot moteur. V1 à V8 : traités par le moteur (V1 et V2 retirés, V3 réactions génériques, V5 étape `statusAge`, V7 et V8 corrigés) ; V6 dit par la règle « Dégâts directs ».
+
+**Compétences et fiches** : F1, F2 (FAUX), I1 à I7 (INCOMPLET), A1 à A9 (AMBIGU) : corrigés (`events.ts`, `statuses.ts`, `SkillDice.tsx` avec l'Ouverture et les règles de forme au survol, `SkillBar.tsx` avec les charges et pastilles d'une aura, `StatSheet.tsx`, `CharacterSheet.tsx`, `roster.ts`). Forme : « 2 charges de Poison », « pour le reste du combat », et le journal neutre (« 5 dégâts infligés à Brokk » au lieu de « Il inflige »). Résidu R1 (statuts-véhicules) : ce sont des mécanismes, présentés comme tels ; R2 (plaie différée) : retiré.
+
 ## 1. Textes des compétences
 
 **Il n'y a aucun champ de description libre.** `CharacterEvent` (`src/game/events.ts:109-152`) n'a que `id, name, trigger, effects, chance, limit, when, forfeitsHit, reshapesHit, needsTouch, volley, merged, form, nature`. Tout le texte est généré, mais par **trois constructeurs différents** :

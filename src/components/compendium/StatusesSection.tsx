@@ -2,40 +2,46 @@ import { useState } from 'react'
 import type { Character } from '../../game/character'
 import { statusCatalog, statusLinks, type StatusEntry } from '../../game/catalog'
 import type { CharacterEvent, Target } from '../../game/events'
-import { RULES } from '../../game/rules'
-import { POLARITY_STYLE, STATUSES, type Polarity } from '../../game/statuses'
+import type { Relic } from '../../game/relics'
+import { RULES, type RuleId } from '../../game/rules'
+import { isMechanic, POLARITY_STYLE, STATUSES, type Polarity, type RuleLine } from '../../game/statuses'
+import { RelicSeal } from '../RelicSeal'
 import { CharacterLink, CodexBox, racePlural, skillLine, SkillMedal, StatusMedal, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
 
-type PolarityFilter = Polarity | 'all'
+/** Un bonus, un malus, ou un mécanisme de compétence ou de forme (ni l'un ni l'autre). */
+type Kind = Polarity | 'mechanic'
+type KindFilter = Kind | 'all'
 
-const FILTERS: { id: PolarityFilter; label: string }[] = [
-  { id: 'all', label: 'Tous' },
-  { id: 'positive', label: POLARITY_STYLE.positive.label },
-  { id: 'negative', label: POLARITY_STYLE.negative.label },
-]
+const KIND_LABEL: Record<Kind, string> = { positive: POLARITY_STYLE.positive.label, negative: POLARITY_STYLE.negative.label, mechanic: 'Mécanismes' }
+const KIND_TONE: Record<Kind, string> = { positive: 'text-good!', negative: 'text-bad!', mechanic: 'text-ink-2!' }
+const KINDS: Kind[] = ['positive', 'negative', 'mechanic']
+
+const kindOf = (e: StatusEntry): Kind => (isMechanic(e.id) ? 'mechanic' : e.def.polarity)
 
 /**
- * Section « Statuts » : bonus et malus réunis dans un seul index (polarité dite par la couleur et par le mot),
- * et le détail du statut choisi : effet, consommation, cumul, qui le pose, interactions. Seuls les statuts mis
- * en jeu par une compétence y figurent ; les statuts « à venir » restent dans docs/STATUTS.md.
+ * Section « Statuts » : bonus et malus réunis dans un seul index (polarité dite par la couleur et par le mot), et à
+ * part les mécanismes des compétences et des formes (jauges de Rétribution, Pile ou face, règles de forme du druide),
+ * qui ne sont ni l'un ni l'autre. À droite, le détail du statut choisi : effet, consommation, cumul, qui le pose,
+ * interactions. Seuls les statuts mis en jeu (compétence, forme ou relique) y figurent ; les statuts « à venir »
+ * restent dans docs/STATUTS.md.
  */
 export function StatusesSection({ nav, focus, filter }: SectionProps) {
-  const [polarity, setPolarity] = useState<PolarityFilter>('all')
+  const [kind, setKind] = useState<KindFilter>('all')
   const focusRef = useFocusRef<HTMLButtonElement>(focus)
   const inGame = statusCatalog().filter((e) => e.inGame)
-  const count = (p: PolarityFilter) => inGame.filter((e) => p === 'all' || e.def.polarity === p).length
-  const shown = inGame.filter((e) => (polarity === 'all' || e.def.polarity === polarity) && matches(filter, e.def.name, e.def.summary))
+  const count = (k: KindFilter) => inGame.filter((e) => k === 'all' || kindOf(e) === k).length
+  const shown = inGame.filter((e) => (kind === 'all' || kindOf(e) === kind) && matches(filter, e.def.name, e.def.summary))
   const selected = inGame.find((e) => e.id === focus) ?? shown[0] ?? inGame[0]
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="flex gap-2">
-        {FILTERS.map((f) => (
-          <button key={f.id} type="button" className="codex-pill" aria-pressed={polarity === f.id} onClick={() => setPolarity(f.id)}>
-            {f.id !== 'all' && <span className="seal h-3 w-3" data-tone={f.id} />}
-            {f.label}
-            <span className="font-data text-[13px] font-normal text-ink-3">{count(f.id)}</span>
+        {(['all', ...KINDS] as KindFilter[]).map((k) => (
+          <button key={k} type="button" className="codex-pill" aria-pressed={kind === k} onClick={() => setKind(k)}>
+            {k !== 'all' && <span className="seal h-3 w-3" data-tone={k === 'mechanic' ? 'neutral' : k} />}
+            {k === 'all' ? 'Tous' : KIND_LABEL[k]}
+            <span className="font-data text-[13px] font-normal text-ink-3">{count(k)}</span>
           </button>
         ))}
       </div>
@@ -43,13 +49,13 @@ export function StatusesSection({ nav, focus, filter }: SectionProps) {
       <div className="grid min-h-0 flex-1 grid-cols-[520px_1fr] gap-6">
         <nav aria-label="Statuts" className="codex-panel scroll-panel min-h-0 overflow-y-auto">
           {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">Aucun statut ne correspond.</p>}
-          {(['positive', 'negative'] as Polarity[]).map((p) => {
-            const group = shown.filter((e) => e.def.polarity === p)
+          {KINDS.map((k) => {
+            const group = shown.filter((e) => kindOf(e) === k)
             if (group.length === 0) return null
             return (
-              <section key={p}>
-                <h3 className={`codex-label bg-surface-2/70 px-4 py-1.5 ${p === 'positive' ? 'text-good!' : 'text-bad!'}`}>
-                  {POLARITY_STYLE[p].label} · {group.length}
+              <section key={k}>
+                <h3 className={`codex-label bg-surface-2/70 px-4 py-1.5 ${KIND_TONE[k]}`}>
+                  {KIND_LABEL[k]} · {group.length}
                 </h3>
                 {group.map((e) => (
                   <button
@@ -87,15 +93,17 @@ interface Poser {
 
 function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }) {
   const { def, rules } = entry
+  const mechanic = def.mechanic
   const posers: Poser[] = []
   for (const s of entry.sources) {
-    // Un statut de forme (druide) n'a pas de compétence qui le pose : le moteur le pose avec la forme
-    if (s.kind === 'status' || s.kind === 'form') continue
+    if (s.kind !== 'skill' && s.kind !== 'release') continue
     const known = posers.find((p) => p.event.id === s.event.id)
     if (known) known.owners.push(s.character)
     else posers.push({ event: s.event, owners: [s.character], ...(s.kind === 'skill' ? { target: s.target } : { released: true }) })
   }
   const byStatus = entry.sources.flatMap((s) => (s.kind === 'status' ? [s.status] : []))
+  const byRelic = entry.sources.flatMap((s) => (s.kind === 'relic' ? [{ relic: s.relic, target: s.target }] : []))
+  const byForm = entry.sources.flatMap((s) => (s.kind === 'form' ? [{ character: s.character, form: s.form }] : []))
   const links = statusLinks(entry.id)
 
   return (
@@ -106,44 +114,48 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
           <div className="flex items-center gap-3">
             <h2 className="font-display text-4xl font-extrabold text-amber-100">{def.name}</h2>
             <span
-              className={`rounded-(--r-xs) border px-2 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-[0.2em] ${POLARITY_STYLE[def.polarity].chip}`}
+              className={`rounded-(--r-xs) border px-2 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-[0.2em] ${
+                mechanic ? 'border-line-2 bg-ink-1/10 text-ink-1' : POLARITY_STYLE[def.polarity].chip
+              }`}
             >
-              {POLARITY_STYLE[def.polarity].label}
+              {mechanic === 'form' ? 'Règle de forme' : mechanic === 'skill' ? 'Mécanisme' : POLARITY_STYLE[def.polarity].label}
             </span>
           </div>
           <p className="mt-1 font-body text-[17px] leading-snug text-ink-2">{def.summary}</p>
         </div>
       </header>
 
-      <div className={`grid gap-3 ${rules.effect.length > 0 ? 'grid-cols-[1.6fr_1.2fr_1fr]' : 'grid-cols-2'}`}>
+      <div className={`grid gap-3 ${rules.stacking ? (rules.effect.length > 0 ? 'grid-cols-[1.6fr_1.2fr_1fr]' : 'grid-cols-2') : 'grid-cols-2'}`}>
         {rules.effect.length > 0 && (
           <CodexBox title="Effet">
-            {rules.effect.map((t) => (
-              <p key={t}>{t}</p>
+            {rules.effect.map((l) => (
+              <Line key={l.text} line={l} nav={nav} />
             ))}
           </CodexBox>
         )}
         <CodexBox title="Consommation">
-          {rules.consumption.map((t) => (
-            <p key={t}>{t}</p>
+          {rules.consumption.map((l) => (
+            <Line key={l.text} line={l} nav={nav} />
           ))}
-          <RuleLink nav={nav} id="duration" />
+          {rules.lifetime && <RuleLink nav={nav} id={rules.lifetime} />}
         </CodexBox>
-        <CodexBox title="Cumul">
-          <RuleLink nav={nav} id={rules.stacking} />
-          {rules.maxStacks !== undefined && (
-            <p>
-              <button type="button" className="codex-link" onClick={() => nav.go({ section: 'rules', id: 'max-stacks' })}>
-                {RULES['max-stacks'].title}
-              </button>{' '}
-              : {rules.maxStacks} charge{rules.maxStacks > 1 ? 's' : ''}
-            </p>
-          )}
-        </CodexBox>
+        {rules.stacking && (
+          <CodexBox title="Cumul">
+            <RuleLink nav={nav} id={rules.stacking} />
+            {rules.maxStacks !== undefined && (
+              <p>
+                <button type="button" className="codex-link" onClick={() => nav.go({ section: 'rules', id: 'max-stacks' })}>
+                  {RULES['max-stacks'].title}
+                </button>{' '}
+                : {rules.maxStacks} charge{rules.maxStacks > 1 ? 's' : ''}
+              </p>
+            )}
+          </CodexBox>
+        )}
       </div>
 
       <section>
-        <h3 className="codex-label mb-1 border-b border-line-2 pb-1">Posé par</h3>
+        <h3 className="codex-label mb-1 border-b border-line-2 pb-1">{mechanic ? 'Mécanisme de' : 'Posé par'}</h3>
         {posers.map((p) => (
           <div key={p.event.id} className="flex items-center gap-3 border-b border-line-1 py-2.5">
             <SkillMedal event={p.event} size={40} />
@@ -167,6 +179,17 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
             </p>
           </div>
         ))}
+        {byForm.map(({ character, form }) => (
+          <div key={`${character.id}-${form}`} className="flex items-center gap-3 border-b border-line-1 py-2.5">
+            <StatusMedal id={entry.id} size={40} />
+            <p className="font-body text-[15px] text-ink-2">
+              {form} de <CharacterLink character={character} nav={nav} /> : tant qu'il a cette forme
+            </p>
+          </div>
+        ))}
+        {byRelic.map(({ relic, target }) => (
+          <RelicSource key={relic.id} relic={relic} target={target} nav={nav} />
+        ))}
         {byStatus.map((id) => (
           <div key={id} className="flex items-center gap-3 border-b border-line-1 py-2.5">
             <StatusMedal id={id} size={40} />
@@ -187,11 +210,20 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
             <div key={l.text} className="flex items-center gap-3 border-b border-line-1 py-2">
               {l.status && <StatusMedal id={l.status} size={32} />}
               {l.skill && <SkillMedal event={l.skill.event} size={32} />}
-              {l.status || l.skill ? (
+              {l.relic && <RelicSeal relic={l.relic} size={32} />}
+              {l.status || l.skill || l.relic ? (
                 <button
                   type="button"
                   className="codex-link text-left font-body text-[15px]"
-                  onClick={() => nav.go(l.status ? { section: 'statuses', id: l.status } : { section: 'skills', id: l.skill?.event.id })}
+                  onClick={() =>
+                    nav.go(
+                      l.status
+                        ? { section: 'statuses', id: l.status }
+                        : l.relic
+                          ? { section: 'relics', id: l.relic.id }
+                          : { section: 'skills', id: l.skill?.event.id },
+                    )
+                  }
                 >
                   {l.text}
                 </button>
@@ -203,18 +235,54 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
         </section>
       )}
 
-      <button type="button" className="codex-link mt-auto self-start font-body text-[14px] text-ink-3" onClick={() => nav.go({ section: 'rules', id: 'duration' })}>
-        Durée, charges et cumul : règles communes à tous les statuts →
+      {/* Le pied de fiche mène à la règle de vie du statut (Durée, ou Auras pour une aura), jamais à « Durée » pour un
+          statut qui n'en a pas */}
+      <button
+        type="button"
+        className="codex-link mt-auto self-start font-body text-[14px] text-ink-3"
+        onClick={() => nav.go({ section: 'rules', id: mechanic ? 'polarity' : (rules.lifetime ?? 'polarity') })}
+      >
+        {mechanic ? 'Bonus, malus et mécanismes : règles communes →' : 'Bonus, malus, durée et cumul : règles communes à tous les statuts →'}
       </button>
     </article>
   )
 }
 
+/** Une relique qui pose le statut : son sceau, son nom (lien vers Reliques), sa cible. */
+function RelicSource({ relic, target, nav }: { relic: Relic; target: Target; nav: CompendiumNav }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-line-1 py-2.5">
+      <RelicSeal relic={relic} size={40} />
+      <div className="min-w-0 flex-1">
+        <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go({ section: 'relics', id: relic.id })}>
+          {relic.name}
+        </button>
+        <p className="font-body text-[14px] text-ink-3">Relique{target === 'opponent' ? " · sur l'adversaire" : ' · sur soi'}</p>
+      </div>
+    </div>
+  )
+}
+
+/** Une phrase de la fiche, suivie du lien vers la règle commune qu'elle applique. */
+function Line({ line, nav }: { line: RuleLine; nav: CompendiumNav }) {
+  return (
+    <p>
+      {line.text}
+      {line.rule && (
+        <>
+          {' '}
+          <RuleLink nav={nav} id={line.rule} />
+        </>
+      )}
+    </p>
+  )
+}
+
 /** Lien vers une règle commune, par son titre (« Cumulable », « Durée »). */
-function RuleLink({ nav, id }: { nav: CompendiumNav; id: 'duration' | 'stacking-add' | 'stacking-refresh' }) {
+function RuleLink({ nav, id }: { nav: CompendiumNav; id: RuleId }) {
   return (
     <button type="button" className="codex-link self-start text-left" onClick={() => nav.go({ section: 'rules', id })}>
-      {id === 'duration' ? 'Durée : règle commune' : RULES[id].title}
+      {RULES[id].title} →
     </button>
   )
 }

@@ -46,8 +46,8 @@ describe('non-régression des règles', () => {
         const r = simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(hash(`${a}-${b}`)) })
         const attacks = attacksOf(r)
         const sig = attacks.map((x) => `${x.roll}${x.dodged ? 'd' : x.crit ? 'c' : ''}${x.damage}`).join(',')
-        // Les décomptes de durée (étape de présentation, 0.23.0) ne comptent pas : l'empreinte reste celle des règles.
-        const others = r.beats.filter((x) => x.type !== 'attack' && x.type !== 'statusDuration').length
+        // L'usure des statuts (étape de présentation, 0.23.0 ; `statusAge` depuis le 2026-10-21) ne compte pas : l'empreinte reste celle des règles.
+        const others = r.beats.filter((x) => x.type !== 'attack' && x.type !== 'statusAge').length
         lines.push(`${a}-${b} w${r.winner} t${r.turns} e${others} ${sig}`)
       }
     expect(lines).toMatchSnapshot()

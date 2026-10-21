@@ -163,7 +163,7 @@ export function attackLog(
     return {
       kind: attack.crit ? 'crit' : 'attack',
       side: attack.attacker,
-      text: `Tour ${turn} · ${att.name} fait ${attack.roll} : ${move} !${crit} Il inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
+      text: `Tour ${turn} · ${att.name} fait ${attack.roll} : ${move} !${crit} ${attack.damage} dégâts infligés à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
     }
   }
   if (attack.dodged) {
@@ -277,19 +277,13 @@ export function coinLog(turn: number, side: Side, heads: boolean, effects: Appli
   }
 }
 
-/** Durées décomptées : « Poison sur Brokk : encore 2 tours » */
-export function statusDurationLog(side: Side, changes: DurationChange[], fighters: Pair<Character>): Omit<LogEntry, 'id'> {
-  return {
-    kind: 'status',
-    side,
-    text: `${changes.map((c) => `${statusLabel(c.status)} sur ${fighters[side].name} : encore ${plural(c.to, 'tour')}`).join(', ')}.`,
-  }
-}
-
-export function statusExpireLog(side: Side, statuses: StatusId[], fighters: Pair<Character>): Omit<LogEntry, 'id'> {
-  return {
-    kind: 'status',
-    side,
-    text: `${statuses.map(statusLabel).join(', ')} se dissipe${statuses.length > 1 ? 'nt' : ''} sur ${fighters[side].name}.`,
-  }
+/**
+ * Usure d'une phase : « Poison sur Brokk : encore 2 tours. » puis « Brûlure se dissipe sur Brokk. » (2026-10-21 : une
+ * seule étape `statusAge` pour les décomptes et les extinctions)
+ */
+export function statusAgeLog(side: Side, changes: DurationChange[], expired: StatusId[], fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  const name = fighters[side].name
+  const counted = changes.map((c) => `${statusLabel(c.status)} sur ${name} : encore ${plural(c.to, 'tour')}`).join(', ')
+  const gone = expired.length ? `${expired.map(statusLabel).join(', ')} se dissipe${expired.length > 1 ? 'nt' : ''} sur ${name}` : ''
+  return { kind: 'status', side, text: `${[counted, gone].filter(Boolean).join('. ')}.` }
 }
