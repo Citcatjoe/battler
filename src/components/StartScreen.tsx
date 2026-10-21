@@ -10,7 +10,7 @@ import { Portrait } from './Portrait'
 import { StatSheet } from './StatSheet'
 import { SkillDice } from './SkillDice'
 import { Icon } from './Icon'
-import { PrestigeButton } from './PrestigeButton'
+import { BackLink, Button, IconButton } from './kit'
 import { VsSeal } from './VsSeal'
 
 interface Props {
@@ -90,26 +90,12 @@ export function StartScreen(props: Props) {
         </>
       )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[30%] bg-gradient-to-t from-stone-950/85 to-transparent" />
-      <button
-        onClick={() => onOpenRecords(fighters)}
-        title="Statistiques"
-        aria-label="Statistiques"
-        className="btn btn-round absolute left-4 top-4"
-      >
-        <Icon name="stats" className="btn-icon" />
-      </button>
+      <IconButton onClick={() => onOpenRecords(fighters)} icon="statistiques" label="Statistiques" className="absolute left-4 top-4" />
       {/* Accès provisoire au compendium : son intégration définitive sur l'accueil reste à définir */}
-      <button
-        onClick={() => onOpenCompendium(fighters)}
-        title="Compendium"
-        aria-label="Compendium"
-        className="btn btn-round absolute left-20 top-4"
-      >
-        <Icon name="scroll" className="btn-icon" />
-      </button>
-      <button onClick={onHome} className="btn-tertiary absolute left-36 top-[22px] z-20">
-        ← Menu
-      </button>
+      <IconButton onClick={() => onOpenCompendium(fighters)} icon="compendium" label="Compendium" className="absolute left-20 top-4" />
+      <BackLink onClick={onHome} className="absolute left-36 top-4 z-20">
+        Menu
+      </BackLink>
       <header className="relative z-20 text-center">
         <h1 className="font-display text-6xl font-extrabold tracking-widest text-amber-200 drop-shadow-[0_4px_0_#78350f]">
           BATTLER
@@ -144,10 +130,9 @@ export function StartScreen(props: Props) {
           <RosterRail roster={roster} picked={picked} active={active} onActivate={setActive} onPick={pickOnRail} />
 
           {/* Lancer le duel : centré sous le « VS », seul en bas de l'écran */}
-          <PrestigeButton onClick={() => onStart(fighters)} className="w-96 shrink-0">
-            <Icon name="swords" className="btn-icon" />
-            <span>Combattre</span>
-          </PrestigeButton>
+          <Button variant="primary" size="xl" icon="combattre" onClick={() => onStart(fighters)} className="w-96 shrink-0">
+            Combattre
+          </Button>
         </>
       )}
       <span className="absolute bottom-2 right-4 font-mono text-xs text-stone-600">v{__APP_VERSION__}</span>
@@ -172,15 +157,14 @@ function TournamentIntro({ tournamentProgress, onNewTournament, onResumeTourname
           </p>
         </div>
         <div className="flex flex-col items-center gap-3">
-          <PrestigeButton onClick={onNewTournament} className="w-[460px] text-[22px] tracking-[0.1em]">
-            <span>{tournamentProgress ? 'Nouveau tournoi' : 'Créer un tournoi'}</span>
-          </PrestigeButton>
+          <Button variant="primary" size="xl" icon="tournoi" onClick={onNewTournament} className="w-[460px]">
+            {tournamentProgress ? 'Nouveau tournoi' : 'Créer un tournoi'}
+          </Button>
           {tournamentProgress && (
             <>
-              <button onClick={onResumeTournament} className="btn btn-md w-[460px]">
-                <Icon name="swords" className="btn-icon" />
-                <span>Reprendre le tournoi</span>
-              </button>
+              <Button variant="secondary" size="md" icon="combattre" onClick={onResumeTournament} className="w-[460px]">
+                Reprendre le tournoi
+              </Button>
               <p className="text-sm text-stone-400">{tournamentProgress}</p>
             </>
           )}
@@ -283,14 +267,7 @@ function SidePanel({ side, character, active, onActivate, onRandom, onOpenSheet 
             >
               {character.name}
             </h2>
-            <button
-              onClick={onOpenSheet}
-              title={`Fiche de ${character.name}`}
-              aria-label={`Fiche de ${character.name}`}
-              className="btn btn-round h-9 w-9 shrink-0 [--icon:20px]"
-            >
-              <Icon name="scroll" className="btn-icon" />
-            </button>
+            <IconButton onClick={onOpenSheet} icon="chroniques" size="sm" label={`Fiche de ${character.name}`} className="shrink-0" />
           </div>
           <p className="on-illus mt-1 font-body text-[17px] text-ink-2">
             {character.race} · {character.archetype}
@@ -305,10 +282,9 @@ function SidePanel({ side, character, active, onActivate, onRandom, onOpenSheet 
           <SkillDice character={character} align={right ? 'right' : 'left'} />
         </div>
 
-        <button onClick={onRandom} className="btn btn-md w-full">
-          <Icon name="dice" className="btn-icon" />
-          <span>Au hasard</span>
-        </button>
+        <Button variant="secondary" size="md" icon="hasard" onClick={onRandom} className="w-full">
+          Au hasard
+        </Button>
       </div>
 
       {/* Cliquer le personnage donne la main à son camp sur le rail */}
