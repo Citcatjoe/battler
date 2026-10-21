@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Tabs } from '../Tabs'
+import { BackLink, Glyph } from '../kit'
 import { COMPENDIUM_SECTIONS, type CompendiumSectionId, type CompendiumTarget } from './sections'
 
 interface Props {
@@ -19,7 +20,7 @@ interface Props {
  * Compendium : le savoir du jeu, en quatre sections (combattants, compétences, statuts, règles). Chaque section
  * a son propre filtre, en haut à droite ; les liens d'une section à l'autre passent par `onNavigate`.
  */
-export function CompendiumScreen({ section, characterId, focus, onNavigate, onOpenRecords, onBack, backLabel = '← Retour' }: Props) {
+export function CompendiumScreen({ section, characterId, focus, onNavigate, onOpenRecords, onBack, backLabel = 'Retour' }: Props) {
   const current = COMPENDIUM_SECTIONS.find((s) => s.id === section) ?? COMPENDIUM_SECTIONS[0]
   const [filters, setFilters] = useState<Partial<Record<CompendiumSectionId, string>>>({})
   const filter = filters[current.id] ?? ''
@@ -34,19 +35,20 @@ export function CompendiumScreen({ section, characterId, focus, onNavigate, onOp
       {current.backdrop?.(props)}
       <header className="flex items-end justify-between gap-8 pr-14">
         <div>
-          <button onClick={onBack} className="text-sm font-bold text-stone-400 hover:text-stone-100">
-            {backLabel}
-          </button>
+          <BackLink onClick={onBack}>{backLabel}</BackLink>
           <h1 className="font-display text-5xl font-extrabold text-amber-200">Compendium</h1>
         </div>
-        <input
-          type="search"
-          className="codex-filter"
-          placeholder={current.placeholder}
-          aria-label={current.placeholder}
-          value={filter}
-          onChange={(e) => setFilters({ ...filters, [current.id]: e.target.value })}
-        />
+        <label className="flex items-center gap-2 text-ink-3">
+          <Glyph name="filtrer" size={18} />
+          <input
+            type="search"
+            className="codex-filter"
+            placeholder={current.placeholder}
+            aria-label={current.placeholder}
+            value={filter}
+            onChange={(e) => setFilters({ ...filters, [current.id]: e.target.value })}
+          />
+        </label>
       </header>
       <Tabs
         value={current.id}

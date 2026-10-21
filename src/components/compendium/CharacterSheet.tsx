@@ -56,8 +56,8 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: 'sheet', label: 'Fiche', icon: 'scroll' },
-            { id: 'performance', label: 'Performances', icon: 'stats', hint: `${record.fights} combats` },
+            { id: 'sheet', label: 'Fiche' },
+            { id: 'performance', label: 'Performances', hint: `${record.fights} combats` },
           ]}
         />
 
