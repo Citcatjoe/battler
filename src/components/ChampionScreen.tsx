@@ -6,7 +6,7 @@ import { Icon } from './Icon'
 import { MiniPortrait } from './RecordBits'
 import type { Wallets } from '../game/betting'
 import { Standings } from './Betting'
-import { PrestigeButton } from './PrestigeButton'
+import { BackLink, Button, Glyph } from './kit'
 import { getRelic } from '../game/relics'
 import { RelicRow } from './RelicSeal'
 
@@ -103,7 +103,7 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
                   <span className="font-mono text-xs tabular-nums text-stone-400">
                     {m.turns} tours · {m.hpLeft} PV
                   </span>
-                  <Icon name={m.mode === 'simulated' ? 'lightning' : 'swords'} className="h-5 w-5 opacity-70" />
+                  <Glyph name={m.mode === 'simulated' ? 'simuler' : 'combattre'} size={18} className="text-ink-3" />
                 </li>
               ))}
             </ol>
@@ -125,17 +125,14 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
           </section>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <PrestigeButton onClick={onNewTournament} size="md" className="w-72">
-            <Icon name="trophy" className="btn-icon" />
-            <span>Nouveau tournoi</span>
-          </PrestigeButton>
-          <button onClick={onBracket} className="btn btn-md w-56">
-            <span>Voir l'arbre</span>
-          </button>
-          <button onClick={onMenu} className="btn btn-md w-40">
-            <span>Menu</span>
-          </button>
+        <div className="flex items-center gap-6 pt-2">
+          <Button variant="primary" size="xl" icon="tournoi" onClick={onNewTournament}>
+            Nouveau tournoi
+          </Button>
+          <Button variant="secondary" size="md" onClick={onBracket}>
+            Voir l'arbre
+          </Button>
+          <BackLink onClick={onMenu}>Menu</BackLink>
         </div>
       </div>
     </div>
