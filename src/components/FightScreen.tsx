@@ -18,7 +18,7 @@ import { SignalLayer } from './SignalLayer'
 import { SkillBar } from './SkillBar'
 import { trayStates } from '../game/states'
 import { SceneBackdrop, SceneOnTarget } from './SceneEvent'
-import { Icon } from './Icon'
+import { Button, Glyph, IconButton, SegmentedControl, Tool } from './kit'
 import { SpecialLabel } from './SpecialLabel'
 
 interface Props {
@@ -34,7 +34,7 @@ interface Props {
   test?: { toolbar: ReactNode }
 }
 
-const SPEEDS = [1, 2, 4]
+const SPEEDS = [1, 2, 4].map((s) => ({ value: s, label: `×${s}`, title: `Vitesse ×${s}` }))
 
 // Journal masqué au premier combat ; s'il est ouvert, il le reste pour les combats suivants de la session.
 let logOpenInSession = false
@@ -298,17 +298,11 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
           >
             <header className="flex items-center justify-between border-b border-stone-500/20 px-4 py-1.5">
               <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-400">
-                <Icon name="scroll" /> Journal
+                <Glyph name="journal" size={16} /> Journal
               </span>
               <span className="flex items-center gap-1">
                 <CopyTraceButton result={resolved} />
-                <button
-                  onClick={() => setLogOpen(false)}
-                  className="rounded px-1.5 text-stone-500 hover:bg-stone-800/60 hover:text-stone-200"
-                  title="Masquer le journal (J)"
-                >
-                  ✕
-                </button>
+                <IconButton onClick={() => setLogOpen(false)} icon="fermer" size="sm" label="Masquer le journal (J)" />
               </span>
             </header>
             <div className="min-h-0 flex-1 [mask-image:linear-gradient(to_bottom,transparent_0,black_18px)]">
@@ -319,30 +313,27 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
       </main>
 
 
-      {/* Commandes : barre de jeu discrète (plaque de pierre au liseré de bronze), hors de l'arène pour ne pas trembler avec elle */}
-      <nav aria-label="Commandes du combat" className="hud absolute bottom-5 left-1/2 z-40 -translate-x-1/2">
-        <button onClick={() => setPaused(!paused)} className="hud-btn w-[118px]" aria-pressed={paused} title={paused ? "Reprendre le combat" : "Mettre en pause"}>
-          <span className="hud-glyph">{paused ? '▶' : '❚❚'}</span>
-          {paused ? 'Reprendre' : 'Pause'}
-        </button>
-        <span className="hud-sep" />
-        <div className="hud-speeds" role="group" aria-label="Vitesse">
-          {SPEEDS.map((s) => (
-            <button key={s} onClick={() => setSpeed(s)} aria-pressed={s === speed} className="hud-speed" title={`Vitesse ×${s}`}>
-              ×{s}
-            </button>
-          ))}
-        </div>
-        <span className="hud-sep" />
-        <button
-          onClick={() => setLogOpen(!logOpen)}
-          aria-pressed={logOpen}
+      {/* Barre de lecture du UI kit, hors de l'arène pour ne pas trembler avec elle */}
+      <nav aria-label="Commandes du combat" className="bt-playbar absolute bottom-5 left-1/2 z-40 -translate-x-1/2">
+        {paused ? (
+          <Button variant="resume" size="sm" icon="lecture" onClick={() => setPaused(false)} title="Reprendre le combat">
+            Reprendre
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" icon="pause" onClick={() => setPaused(true)} title="Mettre en pause">
+            Pause
+          </Button>
+        )}
+        <SegmentedControl label="Vitesse" options={SPEEDS} value={speed} onChange={setSpeed} />
+        <span className="bt-playbar__sep" />
+        <Tool
+          icon="journal"
+          label={logOpen ? 'Masquer le journal (J)' : 'Afficher le journal (J)'}
           title={logOpen ? 'Masquer le journal (J)' : 'Afficher le journal (J)'}
-          className="hud-btn"
-        >
-          <Icon name="scroll" /> Journal
-          {unread > 0 && <span className="hud-count">{unread > 99 ? '99+' : unread}</span>}
-        </button>
+          pressed={logOpen}
+          dot={unread > 0}
+          onClick={() => setLogOpen(!logOpen)}
+        />
       </nav>
 
       {vcrOpen && (
