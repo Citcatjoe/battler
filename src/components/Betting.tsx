@@ -27,7 +27,7 @@ import type { Pair, Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Icon } from './Icon'
 import { Portrait } from './Portrait'
-import { PrestigeButton } from './PrestigeButton'
+import { Button, Glyph } from './kit'
 
 /*
  * Paris entre observateurs (docs/PARIS.md), présentés comme un menu de jeu : de grandes tuiles,
@@ -115,15 +115,14 @@ export function BettingDesk({ wallets, odds, fighters, onBet, onCancel, onClose,
       <div className="mb-8 mt-auto grid w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-6">
         <div>
           {onReset && (
-            <button onClick={onReset} className="btn btn-md w-72">
-              <span>Bourses à zéro</span>
-            </button>
+            <Button variant="secondary" size="md" icon="reinitialiser" onClick={onReset} className="w-72">
+              Bourses à zéro
+            </Button>
           )}
         </div>
-        <PrestigeButton onClick={onClose} className="w-96">
-          <Icon name="swords" className="btn-icon" />
-          <span>Au combat</span>
-        </PrestigeButton>
+        <Button variant="primary" size="xl" icon="combattre" onClick={onClose} className="w-96">
+          Au combat
+        </Button>
         <p className="text-right text-sm text-stone-400">
           {bots.map((b) => wallets.bettors[b].name).join(' et ')} ont aussi misé.
           <br />
@@ -318,7 +317,7 @@ export function Standings({ wallets }: { wallets: Wallets }) {
             <BotTag def={wallets.bettors[b]} />
           </span>
           <span className="font-mono text-sm tabular-nums text-stone-100">{worthOf(wallets, b).toLocaleString('fr-FR')}</span>
-          {i === 0 && <Icon name="trophy" className="h-4 w-4" />}
+          {i === 0 && <Glyph name="tournoi" size={16} className="text-gold-300" />}
         </div>
       ))}
     </div>
@@ -433,7 +432,7 @@ export function BetsResult({ outcome, fighterNames }: { outcome: BetsOutcome; fi
                 <Icon name="purse" className="h-6 w-6" />
                 <CountUp from={before[b]} to={after[b]} />
               </span>
-              <span className="w-6">{i === 0 && <Icon name="trophy" className="h-6 w-6" />}</span>
+              <span className="w-6">{i === 0 && <Glyph name="tournoi" size={24} className="text-gold-300" />}</span>
             </div>
           )
         })}
