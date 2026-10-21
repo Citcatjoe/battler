@@ -12,6 +12,7 @@ import {
 } from "./RecordBits";
 import { Icon } from "./Icon";
 import { Tabs } from "./Tabs";
+import { BackLink, Button } from "./kit";
 
 interface Props {
   onOpenCharacter: (id: string) => void;
@@ -23,7 +24,7 @@ interface Props {
 export function RecordsScreen({
   onOpenCharacter,
   onBack,
-  backLabel = "← Retour à la sélection",
+  backLabel = "Retour à la sélection",
 }: Props) {
   const roster = CHARACTERS;
   const history = useHistory();
@@ -35,12 +36,7 @@ export function RecordsScreen({
     <div className="fade-in flex h-full flex-col gap-6 px-12 py-8">
       <header className="flex items-end justify-between pr-14">
         <div>
-          <button
-            onClick={onBack}
-            className="text-sm font-bold text-stone-400 hover:text-stone-100"
-          >
-            {backLabel}
-          </button>
+          <BackLink onClick={onBack}>{backLabel}</BackLink>
           <h1 className="font-display text-5xl font-extrabold text-amber-200">
             Statistiques
           </h1>
@@ -66,21 +62,20 @@ export function RecordsScreen({
             >
               Effacer
             </button>
-            <button
-              onClick={() => setConfirmReset(false)}
-              className="btn-tertiary"
-            >
+            <Button variant="tertiary" size="sm" onClick={() => setConfirmReset(false)}>
               Annuler
-            </button>
+            </Button>
           </div>
         ) : (
-          <button
+          <Button
+            variant="tertiary"
+            size="sm"
+            icon="reinitialiser"
             onClick={() => setConfirmReset(true)}
             disabled={history.totalMatches === 0}
-            className="btn-tertiary"
           >
             Réinitialiser
-          </button>
+          </Button>
         )}
       </header>
 
@@ -94,8 +89,8 @@ export function RecordsScreen({
             value={tab}
             onChange={setTab}
             tabs={[
-              { id: "table", label: "Classement", icon: "stats" },
-              { id: "matrix", label: "Confrontations", icon: "swords" },
+              { id: "table", label: "Classement" },
+              { id: "matrix", label: "Confrontations" },
             ]}
           />
           {/* Tableau par personnage */}
