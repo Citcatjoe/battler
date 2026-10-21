@@ -86,13 +86,15 @@ FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà 
 
 ### Mise en scène d'une résolution
 
-À l'écran, chaque résolution doit être **lisible comme un moment** : le joueur voit la cause et sa conséquence ensemble, dans l'ordre du moteur.
+À l'écran, chaque résolution doit être **lisible comme un moment** : le joueur voit la cause et sa conséquence ensemble, dans l'ordre du moteur. La mise en scène (`stage`, `staging.ts`) regroupe les étapes par leur `cause`, jamais d'après l'étape voisine ([MOTEUR_V2.md](MOTEUR_V2.md) § 4).
 
 - **Une valeur qui change se voit changer** : le nombre de l'état rebondit au moment de la résolution, avec sa variation (−1, +2).
-- **Cause et conséquence ensemble** : l'effet d'un statut (le « −2 » d'une brûlure) et le décompte de sa durée (3 → 2) qui suit dans la même phase sont montrés au même instant. Un statut qui s'estompe (le poison) perd sa charge dans l'étape même de son effet : le « −3 » et le compteur qui passe à 2 tombent ensemble (`anticipate`, `useCombat.ts`). L'étape du moteur reste distincte ; seul l'affichage les réunit.
+- **Cause et conséquence ensemble** : l'effet d'un statut (le « −2 » d'une brûlure) et le décompte de sa durée (3 → 2) qui suit dans la même phase sont montrés au même instant. Un statut qui s'estompe (le poison) perd sa charge dans l'étape même de son effet : le « −3 » et le compteur qui passe à 2 tombent ensemble (`previewCounts`, `staging.ts` : le décompte du même statut, même tour, même camp, même phase). L'étape du moteur reste distincte ; seul l'affichage les réunit.
 - **Rien ne disparaît sans avoir montré son 0** : un état épuisé ou expiré affiche d'abord son 0, puis quitte la zone d'état (`StatusTray`).
-- **Une réaction au coup tombe avec son impact** (0.68.1) : la plaie qui coule (Saignement) est jouée sur la frappe qui la fait couler. Son label de surcharge (« Saignement +2 », § 11) tombe sous le dé au moment de l'impact, comme « Critique ×2 », puis ses PV perdus et son compteur qui baisse suivent d'un battement (`flowAt`, `bleedOut`, `useCombat.ts`). Son étape du moteur reste distincte, juste après le coup ; si une autre étape les sépare (Riposte), la plaie garde sa propre étape, avec le même label.
-- Ces règles valent pour toute résolution à venir : un nouveau type d'étape doit dire, dans `useCombat`, avec quoi il est montré.
+- **Une réaction au coup tombe avec son impact** (0.68.1) : la plaie qui coule (Saignement) est jouée sur la frappe qui la fait couler. Son label de surcharge (« Saignement +2 », § 11) tombe sous le dé au moment de l'impact, comme « Critique ×2 », puis ses PV perdus et son compteur qui baisse suivent d'un battement (`flowOf`, `bleedOut`, `staging.ts`). De même, le statut que le coup pose sur sa cible (poison de l'Aura de décoction, Saignement de Pourfendre) tombe à son impact (`ridesOf`, `landRide`). Les étapes du moteur restent distinctes ; elles ont le coup pour cause, si bien qu'une autre étape intercalée (Riposte) ne les sépare plus de lui (moteur v2).
+- Ces règles valent pour toute résolution à venir : un nouveau type d'étape doit dire, dans `stage` (`staging.ts`), avec quoi il est montré.
+
+**Ce que le moteur dit de chaque étape** (moteur v2, [MOTEUR_V2.md](MOTEUR_V2.md) § 3) : chaque étape (`Beat`) porte son rang (`id`), la phase du tour où elle a lieu (`phase` : `shift`, `turnStart`, `action`, `turnEnd` ; l'ouverture compte comme `turnStart`), le maître du tour (`owner`) et, sauf pour une étape racine (jet de l'action, effet de phase, rafale, paire), sa **cause** (`cause`, le rang de l'étape qui l'a provoquée). Une réaction au coup, une compétence de son dé, une relique sur un moment du coup ont le coup pour cause, même si une autre étape (Riposte) s'intercale ; les fenêtres ouvertes par une pièce qui touche ont la pièce pour cause ; la compétence d'un double et les coups d'une paire ou d'une rafale ont la paire ou la rafale ; une pièce et des coups instantanés ont l'étape qui a posé leur statut ; un seuil franchi a l'étape qui l'a fait franchir ; un décompte ou une expiration, l'effet de tour de son statut quand il en a un. L'écran regroupe par cause, jamais par voisinage. `audit.ts` vérifie ces liens.
 
 ### Qui fixe le moment d'une résolution
 
@@ -295,7 +297,7 @@ Pour vérifier qu'un combat suit bien ces règles, la **trace de résolution** d
 | un crochet de statut | `StatusDef` + un appel à un endroit précis de `simulateCombat` / `resolveAttack` | le placer dans la structure (§ 2) ou la chaîne de calcul (§ 3), l'ajouter à `statusRules`, et le tester |
 | un déclencheur | `Trigger`, `TRIGGERS`, un `fire(…)` | le placer dans une fenêtre existante ou nouvelle, en respectant « actif d'abord » |
 | une règle d'application | `resolveApplication` (`statuses.ts`) | la placer dans l'ordre du § 6 |
-| une étape de chronologie | `Beat` (`combat.ts`) | lui donner sa mise en scène dans `useCombat` : TypeScript refuse un type d'étape oublié |
+| une étape de chronologie | `Beat` (`combat.ts`) | lui donner sa mise en scène dans `stage` (`staging.ts`), et sa `cause` : TypeScript refuse un type d'étape oublié |
 | un label de la zone de surcharge | `specials.ts` | rien à déclarer pour un statut : sa mécanique le range (§ 11) ; une nouvelle source de surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du § 3 |
 
 ---

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Side } from '../game/combat'
-import type { RelicPulse } from '../game/useCombat'
+import type { RelicPulse } from '../game/staging'
 import { RelicRow } from './RelicSeal'
 
 interface Props {

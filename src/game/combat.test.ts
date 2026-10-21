@@ -208,7 +208,7 @@ describe('statuts', () => {
       ]),
     ])
     const hits = attacksOf(r).filter((a) => a.attacker === 0)
-    expect(hits[0]).toMatchObject({ raw: 6, damage: 2, shieldAbsorbed: 4, shields: { bonusArmor: 4 } })
+    expect(hits[0]).toMatchObject({ raw: 6, damage: 2, shieldAbsorbed: 4, shields: [{ status: 'bonusArmor', absorbed: 4 }] })
     expect(hits[1]).toMatchObject({ damage: 6, shieldAbsorbed: 0 })
   })
 
@@ -1809,5 +1809,144 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(parseRelics(text)).toEqual([RELIC_IDS, ['wolf-fang']])
     expect(text).not.toMatch(EMOJI)
     expect(parseRelics(traceText(simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 5 })))).toEqual([[], []])
+  })
+})
+
+describe('causes des étapes (moteur v2, docs/MOTEUR_V2.md § 3)', () => {
+  const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
+  const causeOf = (r: CombatResult, b: Beat) => (b.cause === undefined ? undefined : r.beats[b.cause])
+
+  it('chaque étape porte son rang ; une cause désigne toujours une étape antérieure', () => {
+    for (const r of rosterCombats(1))
+      r.beats.forEach((b, i) => {
+        expect(b.id).toBe(i)
+        if (b.cause !== undefined) expect(b.cause).toBeLessThan(i)
+      })
+  })
+
+  it("poison de l'Aura de décoction (Naraxes) : il a pour cause le coup qui touche (ou la pièce qui touche)", () => {
+    let poisons = 0
+    for (const r of rosterCombats(4))
+      for (const b of ofType(r, 'statusReaction')) {
+        if (b.status !== 'decoctionAura') continue
+        const cause = causeOf(r, b)
+        if (cause?.type === 'attack') expect(cause.attack.attacker).toBe(b.side)
+        else expect(cause?.type === 'coin' && cause.side === b.side).toBe(true)
+        poisons++
+      }
+    expect(poisons).toBeGreaterThan(20)
+  })
+
+  it('saignement qui coule : il a pour cause le coup qui le fait couler', () => {
+    const bleed = ev('combatStart', [{ type: 'applyStatus', status: 'bleed', stacks: 3 }])
+    const r = run([testCharacter('a', { maxHp: 60 }, [bleed]), testCharacter('b', { maxHp: 200 })])
+    const flows = ofType(r, 'statusReaction').filter((b) => b.status === 'bleed')
+    expect(flows).toHaveLength(3)
+    for (const f of flows) {
+      const cause = causeOf(r, f)
+      expect(cause?.type === 'attack' && cause.attack.attacker === 1 && cause.turn === f.turn).toBe(true)
+    }
+  })
+
+  it('Riposte et poison sur le même coup : la Riposte intercalée ne sépare pas le poison de son coup', () => {
+    const r = run([
+      testCharacter('a', { maxHp: 200, damageDie: 6 }, [ev('combatStart', [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }])]),
+      testCharacter('b', { maxHp: 200 }, [ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])]),
+    ])
+    let both = 0
+    for (const strike of ofType(r, 'attack')) {
+      if (strike.attack.attacker !== 0 || strike.attack.dodged) continue
+      const caused = r.beats.filter((b) => b.cause === strike.id)
+      const riposte = caused.find((b) => b.type === 'statusReaction' && b.status === 'riposte')
+      const poison = caused.find((b) => b.type === 'statusReaction' && b.status === 'decoctionAura')
+      if (!riposte || !poison) continue
+      // La Riposte vient juste après le coup, le poison ensuite : non voisin du coup, mais de même cause
+      expect(riposte.id).toBe(strike.id + 1)
+      expect(poison.id).toBeGreaterThan(riposte.id)
+      both++
+    }
+    expect(both).toBeGreaterThan(3)
+  })
+
+  it('Pourfendre (Gorak, needsTouch) : la compétence a pour cause le coup du 1 qui touche', () => {
+    let cuts = 0
+    for (const r of rosterCombats(4))
+      for (const b of ofType(r, 'event')) {
+        if (b.event.eventId !== 'cleave') continue
+        const cause = causeOf(r, b)
+        expect(cause?.type === 'attack' && cause.attack.roll === 1 && !cause.attack.dodged && cause.attack.attacker === b.event.side).toBe(true)
+        cuts++
+      }
+    expect(cuts).toBeGreaterThan(20)
+  })
+
+  it('double (Fanchon) : sa compétence et ses coups ont la paire pour cause ; sans double, les deux coups aussi', () => {
+    let doubles = 0
+    let pairs = 0
+    for (const r of rosterCombats(4))
+      for (const p of ofType(r, 'pair')) {
+        pairs++
+        const caused = r.beats.filter((b) => b.cause === p.id)
+        const strikes = caused.filter((b) => b.type === 'attack')
+        if (p.double !== undefined) {
+          doubles++
+          expect(caused[0]).toMatchObject({ type: 'event', event: { side: p.side } })
+        } else if (p.turn < r.turns) expect(strikes).toHaveLength(2)
+        for (const s of strikes) expect(s.type === 'attack' && s.attack.preset).toBe(true)
+      }
+    expect(pairs).toBeGreaterThan(50)
+    expect(doubles).toBeGreaterThan(5)
+  })
+
+  it('rafale : chaque coup a la rafale pour cause ; des coups instantanés ont pour cause ce qui a posé leur charge', () => {
+    let volleys = 0
+    let bursts = 0
+    for (const r of rosterCombats(4))
+      for (const f of ofType(r, 'flurry')) {
+        const strikes = r.beats.filter((b) => b.type === 'attack' && b.cause === f.id)
+        if (f.turn < r.turns) expect(strikes).toHaveLength(f.strikes)
+        if (STATUSES[f.status].instantStrikes) {
+          expect(causeOf(r, f)).toBeDefined()
+          bursts++
+        } else {
+          expect(f.cause).toBeUndefined()
+          volleys++
+        }
+      }
+    expect(volleys).toBeGreaterThan(0)
+    expect(bursts).toBeGreaterThan(0)
+  })
+
+  it("pièce : elle a pour cause l'étape qui l'a posée ; pile qui touche, les réactions du coup ont la pièce pour cause", () => {
+    let coins = 0
+    for (let seed = 1; seed < 40; seed++) {
+      const r = run(
+        [
+          testCharacter('a', { maxHp: 200 }, [
+            ev('combatStart', [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }]),
+            ev('naturalOne', [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }], 'coin'),
+          ]),
+          testCharacter('b', { maxHp: 200 }),
+        ],
+        seed,
+      )
+      for (const c of ofType(r, 'coin')) {
+        expect(causeOf(r, c)).toMatchObject({ type: 'event', event: { eventId: 'coin', side: 0 } })
+        if (c.heads && c.id + 1 < r.beats.length) expect(r.beats[c.id + 1]).toMatchObject({ type: 'statusReaction', status: 'decoctionAura', cause: c.id })
+        coins++
+      }
+    }
+    expect(coins).toBeGreaterThan(20)
+  })
+
+  it('décompte et expiration : ils ont pour cause l’effet de tour de leur statut', () => {
+    let linked = 0
+    for (const r of rosterCombats(2))
+      for (const b of r.beats) {
+        if ((b.type !== 'statusDuration' && b.type !== 'statusExpire') || b.cause === undefined) continue
+        expect(causeOf(r, b)).toMatchObject({ type: 'statusTick', side: b.side, phase: b.phase, turn: b.turn })
+        linked++
+      }
+    expect(linked).toBeGreaterThan(20)
   })
 })

@@ -36,7 +36,9 @@ src/
     debugConsole.ts      trace dans la console du navigateur et sur le disque ; window.battler (trace, traces, dump, replay)
     audit.ts             audit de résolution d'un combat, règle par règle (createAudit)
     analysis.ts          analyse d'équilibre : taux, profils, valeur nette des compétences, apport des statuts (npm run balance)
-    useCombat.ts         hook qui rejoue la chronologie avec timing, pause et vitesse
+    timing.ts            le rythme du combat à l'écran : une durée nommée par battement (ms à ×1), et TIMING_VARS, les variables CSS qui en dérivent
+    staging.ts           MISE EN SCÈNE : stage(result) → moments de cues datées, fonction pure (docs/MOTEUR_V2.md § 4)
+    useCombat.ts         LECTEUR : hook qui joue les moments avec une seule horloge (vitesse, pause, arrêt) ; applyCue, mode triche
     scenes.ts            événements de scène (SceneEventId, rythme SCENE_EVENTS : impacts, durée) : présentation seule, le moteur ne les lit pas
     history.ts           historique localStorage, useHistory, normalize
     tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), fillSlots
@@ -70,16 +72,16 @@ Pair<Character> ──▶ simulateCombat ──▶ CombatResult { initiative, be
                                               │
               ┌───────────────────────────────┼──────────────────────────────┐
               ▼                               ▼                              ▼
-   useCombat (rejoue les beats)     computeStats (bilan)        withResult (arbre) / recordMatch (historique)
+   stage → useCombat (rejoue)     computeStats (bilan)        withResult (arbre) / recordMatch (historique)
 ```
 
 - **Seul `simulateCombat` applique des règles et tire des dés.** Jouer un combat ne fait que rejouer son résultat. Les écrans ne recalculent rien.
 - **Le hasard est injecté** (`{ rng }`). Avec `seededRng(graine)`, un combat est reproductible à l'identique, ce qui le rend testable. Par défaut, `Math.random` est utilisé.
-- **La chronologie** (`beats`) est une suite d'étapes, chacune avec l'état complet qui en résulte (`state` : PV et statuts des deux camps) :
+- **La chronologie** (`beats`) est une suite d'étapes, chacune avec l'état complet qui en résulte (`state` : PV et statuts des deux camps). Chaque étape porte aussi ses champs communs (`BeatFields`, [MOTEUR_V2.md](MOTEUR_V2.md) § 3) : son rang `id` (index dans `beats`), sa `phase` (`shift`, `turnStart`, `action`, `turnEnd`), le maître du tour `owner` donné par le moteur, et `cause`, le rang de l'étape qui l'a provoquée (absent pour une étape racine ; règles dans [RESOLUTION.md](RESOLUTION.md) § 2, « Ce que le moteur dit de chaque étape »). Une étape émise n'est plus jamais modifiée après coup.
 
 | Étape | Contenu |
 | --- | --- |
-| `attack` | dé, faces, coup sacrifié (`forfeited`), esquive (imposée ou non, `dodgeForced`), critique (forcé ou non), dégâts bruts, armure, boucliers, force du coup (`damage`) et PV réellement retirés (`dealt`, plafonnés aux PV restants : c'est la valeur comptée dans les stats) |
+| `attack` | dé, faces, coup sacrifié (`forfeited`), esquive (imposée ou non, `dodgeForced`, et son statut `dodgeBy`), critique (forcé ou non, `critForced`, et son statut `critBy`), dégâts bruts, armure, boucliers (`shields`, liste ordonnée `{ status, absorbed }`), force du coup (`damage`) et PV réellement retirés (`dealt`, plafonnés aux PV restants : c'est la valeur comptée dans les stats) |
 | `event` | événement déclenché : porteur, déclencheur, effets réellement appliqués |
 | `statusTick` | effet de début de tour d'un statut (ex. poison) |
 | `statusDuration` | durées décomptées (tours restants avant → après), sans expiration |
@@ -106,7 +108,17 @@ Les règles sont spécifiées dans **[RESOLUTION.md](RESOLUTION.md)**. Côté co
 | Vérification d'état (K.O.) après chaque effet, puis seuils de PV (mi-PV, reliques de seuil) | `applyEffects`, `fallen`, `checkThresholds` |
 | Reliques : après les compétences dans chaque fenêtre ; charges, recharge, conditions ; bonus de coup | `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` |
 
-Étapes de la chronologie : `attack`, `event`, `statusTick` (avec `phase`), `statusDuration` et `statusExpire` (avec `phase`), `statusReaction` (le vol de vie en est une, sur `hit`), `skip`, `flurry` (coups multiples), `relic`. Chacune a sa mise en scène dans `useCombat` : un `switch` exhaustif (`satisfies never`) refuse un type oublié. Les effets d'une étape, quelle que soit leur source, se lisent avec `beatEffects` (stats, audit).
+Étapes de la chronologie : `attack`, `event`, `statusTick` (avec `phase`), `statusDuration` et `statusExpire` (avec `phase`), `statusReaction` (le vol de vie en est une, sur `hit`), `skip`, `flurry` (coups multiples), `pair`, `coin`, `shift`, `relic`. Chacune a sa mise en scène dans `stage` (`staging.ts`) : un `switch` exhaustif (`satisfies never`) refuse un type oublié. Les effets d'une étape, quelle que soit leur source, se lisent avec `beatEffects` (stats, audit).
+
+## Du moteur à l'écran (staging.ts, useCombat.ts, timing.ts)
+
+Le contrat complet : [MOTEUR_V2.md](MOTEUR_V2.md) § 4 et 5.
+
+- **`stage(result, { test })`** (fonction pure, testée sans navigateur dans `staging.test.ts`) découpe la chronologie en **moments** : une étape racine et celles qui en découlent par `cause`, dans le même tour, jamais d'après l'étape voisine. Chaque moment est une liste de **cues** datées (`at`, ms à ×1 depuis son début) sur un canal : `dice`, `strike`, `blow`, `float`, `aura`, `special`, `specialsClear`, `sound`, `hp`, `statuses`, `log`, `skillPulse`, `relicPulse`, `relicUse`, `signal`, `scene`, `form`, `turn`, `winner`. Le premier moment est l'ouverture (initiative), le dernier la fin du combat. `rolls` : les points d'attente du combat test (avant chaque étape qui lance des dés).
+- Ce que `stage` décide : ce qui tombe à l'impact d'un coup (la plaie qui coule, le poison posé par le coup, la compétence qui accompagne un coup qui touche), la compétence qui tombe avec son dé (coup sacrifié, double), les décomptes montrés avec l'effet de leur statut, les PV de chaque partie d'une série de coups (de proche en proche, vérifiés contre l'état du moteur en développement), un seul son par nom et par instant.
+- **`useCombat`** applique les cues à leur instant avec une seule horloge (`requestAnimationFrame`, vitesse, pause) : l'écran est le résultat de `applyCue(view, cue)` (pure, exportée), les sons sont joués tels quels. Les textes flottants sont une liste par combattant (`View.floats`), chacun retiré après `FLOAT_LIFE` à l'horloge du combat. Mode triche : imposer un dé relance `simulateCombat` puis `stage`, et la lecture reprend au même instant du même moment.
+- **`timing.ts`** : toutes les durées. Les animations CSS qui doivent rester d'accord avec elles lisent `--t-lunge`, `--t-lunge-fast`, `--t-signal`, `--t-coin-spin`, `--t-read`, `--t-float`, `--t-title`, posées sur `.arena` par `FightScreen` (`TIMING_VARS`). La secousse de l'arène (`SHAKE`, `SHAKE_HEAVY`) suit la vitesse et se fige en pause.
+- Ajouter un type d'étape : sa mise en scène dans `stageBeat` (`staging.ts`), ses durées dans `timing.ts`, son contrôle dans `staging.test.ts`. Ajouter un canal : son type dans `CueBody`, son effet dans `applyCue`.
 
 Les stats effectives (`effectiveStats`) = stats de base modifiées par les statuts, puis bornées : armure ≥ 0, chances dans [0, 1], dé ≥ 1, multiplicateur ≥ 1. Les PV max ne changent jamais.
 
@@ -193,15 +205,15 @@ S'il faut un **nouveau type de crochet** (ex. renvoi de dégâts), on l'ajoute �
 
 ### Ajouter un événement de scène
 Présentation seule (0.73.0) : un sort ou un coup spécial à grand spectacle, joué sur toute l'arène quand la compétence part, avant que ses effets tombent. Le moteur ne le lit pas.
-1. Un identifiant dans `SceneEventId` et son rythme dans `SCENE_EVENTS` (`scenes.ts`) : `impacts` (instants des coups, en ms à ×1 ; 0.76.0, remplace `impact`) et `length` (durée totale). Chaque coup tombe sur son impact (`playBlows(…, schedule)`, `useCombat`) : un sort en plusieurs coups porte un effet `damage` avec `hits` (`{ type: 'damage', amount: 2, hits: 3 }`, comptés ensemble, détail dans `parts`), et autant d'impacts.
+1. Un identifiant dans `SceneEventId` et son rythme dans `SCENE_EVENTS` (`scenes.ts`) : `impacts` (instants des coups, en ms à ×1 ; 0.76.0, remplace `impact`) et `length` (durée totale). Chaque coup tombe sur son impact (`blows(…, schedule)`, `staging.ts`) : un sort en plusieurs coups porte un effet `damage` avec `hits` (`{ type: 'damage', amount: 2, hits: 3 }`, comptés ensemble, détail dans `parts`), et autant d'impacts.
 2. Son rendu dans `SCENE_VIEWS` (`SceneEvent.tsx`) : `Backdrop` (toute l'arène, sous les combattants, avec un éclat par-dessus) et, s'il vise quelqu'un, `OnTarget` (dans la colonne de la cible).
-3. `scene: '<id>'` sur la compétence (`CharacterEvent.scene`, `roster.ts`). `useCombat` expose l'événement en cours (état `scene`), au rythme de la vitesse et de la pause ; `FightScreen` le monte. Exemple : `lightning` (Foudre du druide : trois éclairs, `impacts: [440, 800, 1160]`, `length: 1750`).
+3. `scene: '<id>'` sur la compétence (`CharacterEvent.scene`, `roster.ts`). La mise en scène émet la cue `scene` quand la compétence part ; `useCombat` expose l'événement en cours (état `scene`), au rythme de la vitesse et de la pause ; `FightScreen` le monte. Exemple : `lightning` (Foudre du druide : trois éclairs, `impacts: [440, 800, 1160]`, `length: 1750`).
 
 ### Ajouter un type d'effet
 Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test.
 
 ### Ajouter un label de la zone de surcharge
-Présentation seule (2026-10-21) ; ce qui entre dans la zone, l'ordre et le point de vue : [RESOLUTION.md](RESOLUTION.md) § 11. Le registre unique `specials.ts` construit chaque label (`attackSpecials` pour ce qui se lit dans un `Attack`, `reactionSpecial` pour une étape de réaction, `relicSpecial` pour une relique qui se déclenche, `statusSpecial` dessous) : sa source donne sa couleur (`SPECIAL_SOURCES`, [design-system.md](design-system.md) § 3.1), son signe, vu de l'attaquant, donne son son (`SPECIAL_SIGNS`, [SONS.md](SONS.md) § 4.4). `useCombat.ts` ne fait que poser le label avec `addSpecial(spec)` à l'instant où il s'applique : jamais de libellé, de couleur, de signe ni de son au point d'appel. Un statut est une surcharge par sa mécanique (`isSurcharge`) : rien à déclarer pour un nouveau statut de ces familles. Une nouvelle surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du livre de règles ; une nouvelle source s'ajoute à `SPECIAL_SOURCES`, avec sa ligne dans design-system.md.
+Présentation seule (2026-10-21) ; ce qui entre dans la zone, l'ordre et le point de vue : [RESOLUTION.md](RESOLUTION.md) § 11. Le registre unique `specials.ts` construit chaque label (`attackSpecials` pour ce qui se lit dans un `Attack`, `reactionSpecial` pour une étape de réaction, `relicSpecial` pour une relique qui se déclenche, `statusSpecial` dessous) : sa source donne sa couleur (`SPECIAL_SOURCES`, [design-system.md](design-system.md) § 3.1), son signe, vu de l'attaquant, donne son son (`SPECIAL_SIGNS`, [SONS.md](SONS.md) § 4.4). `staging.ts` ne fait que poser le label avec `addSpecial(spec)` à l'instant où il s'applique (une cue `special`, et la cue `sound` de son signe) : jamais de libellé, de couleur, de signe ni de son au point d'appel. Un statut est une surcharge par sa mécanique (`isSurcharge`) : rien à déclarer pour un nouveau statut de ces familles. Une nouvelle surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du livre de règles ; une nouvelle source s'ajoute à `SPECIAL_SOURCES`, avec sa ligne dans design-system.md.
 
 ### Ajouter une section au compendium
 Principe : **une donnée, une maison**. Chaque information est décrite dans une seule section ; ailleurs, elle n'apparaît qu'en résumé, avec un lien vers elle. Le texte d'une compétence vient de `describeSkill` (`events.ts`), celui d'un statut de son registre et de `statusRuleSections`, une règle commune de `RULES` (`rules.ts`) : aucun composant ne rédige.

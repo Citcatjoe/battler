@@ -9,7 +9,7 @@ import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter } from '../game/roster'
 import { STATUS_IDS } from '../game/statuses'
-import { skillFaceAt, skillFaceOf, turnLabel } from '../game/useCombat'
+import { fxFloats, turnLabel, type Float, type FxSpec } from '../game/staging'
 import { attackSpecials, isSurcharge, relicSpecial, SPECIAL_SIGNS, SPECIAL_SOURCES, statusSpecial } from '../game/specials'
 import { isAura, STATUSES, type StatusId } from '../game/statuses'
 import { EMOJI, testCharacter } from '../game/test-utils'
@@ -47,6 +47,8 @@ const fighters = [createCharacter('gorak'), createCharacter('brokk')] as [
   ReturnType<typeof createCharacter>,
 ]
 const result = simulateCombat(fighters, { rng: seededRng(9) })
+/** Les textes flottants d'un effet à côté d'un combattant, avec leur clé (comme les pose le lecteur) */
+const floatsOf = (fx: FxSpec, side: 0 | 1) => fxFloats(fx, side).map((f, key) => ({ key, ...f }) as Float)
 
 // Combat qui se termine par un poison, sans coup final du vainqueur
 const poisoned: CombatResult = simulateCombat(
@@ -192,32 +194,6 @@ describe('écrans', () => {
     expect(turnLabel('Gorak')).toBe('Au tour de Gorak')
   })
 
-  it('le dé qui pulse est celui du jet qui déclenche la compétence', () => {
-    let pulses = 0
-    for (const x of CHARACTER_IDS)
-      for (const y of CHARACTER_IDS)
-        for (const seed of [1, 2, 3]) {
-          const pair = [createCharacter(x), createCharacter(y)] as [ReturnType<typeof createCharacter>, ReturnType<typeof createCharacter>]
-          const { beats } = simulateCombat(pair, { rng: seededRng(seed) })
-          beats.forEach((beat, i) => {
-            if (beat.type === 'attack') {
-              const face = skillFaceAt(beats, pair, i)
-              // Un coup ordinaire (ni compétence, ni coup transformé) ne fait rien pulser ; sinon, c'est la face du dé
-              if (face !== undefined && !beat.attack.reshaped) expect(beat.attack.roll).toBe(face)
-            }
-            // Toute compétence sur un 1, 2 ou 3 a son coup, dont le dé pulse sur cette face
-            if (beat.type === 'event' && ['naturalOne', 'naturalTwo', 'naturalThree'].includes(beat.event.trigger)) {
-              let j = i - 1
-              while (j >= 0 && !(beats[j].turn === beat.turn && beats[j].type === 'attack')) j--
-              expect(j, `${beat.event.name} sans coup`).toBeGreaterThanOrEqual(0)
-              expect(skillFaceAt(beats, pair, j)).toBe(skillFaceOf(beat.event.trigger))
-              pulses++
-            }
-          })
-        }
-    expect(pulses).toBeGreaterThan(50)
-  })
-
   it("zone de surcharge : n'y entrent que les statuts qui changent ce coup-ci, sans aura ni action déclenchée (registre unique)", () => {
     const surcharges = STATUS_IDS.filter(isSurcharge).sort()
     // Critique et esquive imposés, bouclier, modificateurs qui s'usent sur le coup, réactions au coup. Pas d'aura
@@ -268,6 +244,7 @@ describe('écrans', () => {
       forfeited: false,
       crit: true,
       critForced: true,
+      critBy: 'guaranteedCrit',
       critMultiplier: 2,
       relicBonus: [{ relic: 'four-nail-shoe', name: 'Fer à quatre clous', amount: 4 }],
       modifiers: [
@@ -275,7 +252,7 @@ describe('écrans', () => {
         { status: 'firefly', by: 'defender', delta: 2 },
         { status: 'falseNote', by: 'attacker', delta: -10, final: true },
       ],
-      shields: { bonusArmor: 6 },
+      shields: [{ status: 'bonusArmor', absorbed: 6 }],
     } satisfies typeof base.attack
     const { roll, crit, impact } = attackSpecials(attack)
     const show = (list: typeof roll) => list.map((s) => `${s.label} ${s.sign}`)
@@ -283,7 +260,7 @@ describe('écrans', () => {
     expect(show(crit)).toEqual(['Critique assuré plus', 'Critique ×2 plus'])
     expect(show(impact)).toEqual(['Luciole +2 plus', 'Armure temporaire −6 minus', 'Fausse note −10 minus'])
     // Esquive imposée : elle annule le reste du coup
-    const dodged = attackSpecials({ ...base.attack, dodged: true, dodgeForced: true, forfeited: false, crit: false, critForced: false, relicBonus: undefined, modifiers: [], shields: {} })
+    const dodged = attackSpecials({ ...base.attack, dodged: true, dodgeForced: true, dodgeBy: 'evasion', forfeited: false, crit: false, critForced: false, relicBonus: undefined, modifiers: [], shields: [] })
     expect(show([...dodged.roll, ...dodged.crit, ...dodged.impact])).toEqual(['Esquive assurée minus'])
     // Sur tout le roster : aucun emoji, et un coup sacrifié n'a aucune surcharge
     for (const x of CHARACTER_IDS)
@@ -293,58 +270,6 @@ describe('écrans', () => {
         for (const s of all) expect(s.label).not.toMatch(EMOJI)
         if (beat.attack.forfeited) expect(all).toEqual([])
       }
-  })
-
-  it("le poison de l'Aura de décoction suit immédiatement le coup qui le pose (joué à son impact)", () => {
-    let rides = 0
-    for (const foe of CHARACTER_IDS)
-      for (const seed of [1, 2, 3, 4, 5, 6]) {
-        const { beats } = simulateCombat([createCharacter('naraxes'), createCharacter(foe)], { seed })
-        beats.forEach((beat, i) => {
-          if (beat.type !== 'statusReaction' || beat.status !== 'decoctionAura') return
-          const hit = beats[i - 1]
-          // Seule exception : la Riposte du défenseur, qui répond au coup avant ; le poison garde alors sa propre étape
-          if (hit.type === 'statusReaction' && STATUSES[hit.status].reflectsHit) return
-          const striker = hit.type === 'attack' ? hit.attack.attacker : hit.type === 'coin' ? hit.side : undefined
-          expect(striker, `graine ${seed} contre ${foe}`).toBe(beat.side)
-          rides++
-        })
-      }
-    expect(rides).toBeGreaterThan(100)
-  })
-
-  it('le Saignement de Pourfendre suit immédiatement le coup qui touche (joué à son impact, 2026-10-21)', () => {
-    let rides = 0
-    for (const foe of CHARACTER_IDS)
-      for (const seed of [1, 2, 3, 4, 5, 6]) {
-        const { beats } = simulateCombat([createCharacter('gorak'), createCharacter(foe)], { seed })
-        beats.forEach((beat, i) => {
-          if (beat.type !== 'event' || beat.event.eventId !== 'cleave') return
-          const hit = beats[i - 1]
-          // Seule exception, comme pour le poison : la Riposte du défenseur répond au coup avant ; le Saignement garde son étape
-          if (hit.type === 'statusReaction' && STATUSES[hit.status].reflectsHit) return
-          expect(hit.type === 'attack' && hit.attack.attacker === beat.event.side && !hit.attack.dodged, `graine ${seed} contre ${foe}`).toBe(true)
-          rides++
-        })
-      }
-    expect(rides).toBeGreaterThan(20)
-  })
-
-  it('une compétence sur le dé tombe avec son jet (regroupement)', () => {
-    let grouped = 0
-    for (const x of CHARACTER_IDS)
-      for (const y of CHARACTER_IDS) {
-        const pair = [createCharacter(x), createCharacter(y)] as [ReturnType<typeof createCharacter>, ReturnType<typeof createCharacter>]
-        const { beats } = simulateCombat(pair, { rng: seededRng(4) })
-        beats.forEach((beat, i) => {
-          // Un coup sacrifié par une compétence du dé est suivi directement de cette compétence : le rejoueur les joue ensemble
-          if (beat.type === 'attack' && beat.attack.forfeited && skillFaceAt(beats, pair, i) !== undefined) {
-            expect(beats[i + 1]?.type).toBe('event')
-            grouped++
-          }
-        })
-      }
-    expect(grouped).toBeGreaterThan(50)
   })
 
   it("chaque compétence montre sa vraie icône (pas l'étoile générique) dans son sceau", () => {
@@ -500,20 +425,20 @@ describe('écrans', () => {
         character={fighters[0]}
         side={0}
         statuses={statuses}
-        fx={{ key: 1, source: 0, title: 'Test', effects }}
+        floats={floatsOf({ source: 0, title: 'Test', effects }, 0)}
       />,
     )
   })
 
   it('textes flottants : un malus posé monte, « Tour perdu » tombe, sans titre de compétence', () => {
     const fear = { type: 'applyStatus' as const, target: 1 as const, status: 'fear' as const, stacks: 1, result: { kind: 'applied' as const, stacks: 1 } }
-    const posed = renderToString(<Fighter character={fighters[1]} side={1} fx={{ key: 1, source: null, title: '', effects: [fear] }} />)
+    const posed = renderToString(<Fighter character={fighters[1]} side={1} floats={floatsOf({ source: null, title: '', effects: [fear] }, 1)} />)
     expect(posed).toMatch(/class="damage-float[^"]*"[^>]*>Peur</)
     const lost = renderToString(
       <Fighter
         character={fighters[1]}
         side={1}
-        fx={{ key: 2, source: null, title: '', effects: [], notes: [{ target: 1, text: STATES.lostTurn.name, tone: 'negative', rises: false }] }}
+        floats={floatsOf({ source: null, title: '', effects: [], notes: [{ target: 1, text: STATES.lostTurn.name, tone: 'negative', rises: false }] }, 1)}
       />,
     )
     expect(lost).toMatch(/class="damage-sink[^"]*"[^>]*>Tour perdu</)

@@ -287,7 +287,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
    * touche le porteur rouvre la plaie ; plusieurs coups dans une action (Furie des vents, deux dés) la
    * vident d'un coup, une esquive ou une action perdue la laissent ouverte. Depuis la 0.68.1, la plaie
    * qu'un coup ouvre ou grossit ne coule qu'au coup suivant (`strikeBase`, combat.ts) : l'observateur la
-   * voit, l'attend, et son écoulement s'affiche à l'impact (badge « Saignement +2 », useCombat.ts).
+   * voit, l'attend, et son écoulement s'affiche à l'impact (badge « Saignement +2 », staging.ts).
    */
   bleed: {
     name: 'Saignement',

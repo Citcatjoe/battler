@@ -84,6 +84,8 @@ export interface Attack {
   dodged: boolean
   /** Esquive imposée par un statut du défenseur (ex. « Esquive améliorée »), sans tirage */
   dodgeForced: boolean
+  /** Le statut du défenseur qui a imposé l'esquive (présent si `dodgeForced`) */
+  dodgeBy?: StatusId
   /** Coup sacrifié par une compétence (`forfeitsHit`) : aucun dégât, ni esquive ni critique */
   forfeited: boolean
   /** Dé imposé par l'observateur (mode triche, `forcedRolls`) ; absent d'un combat normal */
@@ -104,6 +106,8 @@ export interface Attack {
   crit: boolean
   /** Critique imposé par un statut (ex. « Critique assuré ») */
   critForced: boolean
+  /** Le statut de l'attaquant qui a imposé le critique (présent si `critForced`) */
+  critBy?: StatusId
   critMultiplier: number
   /** Dégâts avant l'armure (après critique et modificateurs) */
   raw: number
@@ -122,9 +126,10 @@ export interface Attack {
   floored: boolean
   /** Modificateurs de dégâts appliqués avant l'armure, dans l'ordre (sortants de l'attaquant, puis entrants du défenseur) */
   modifiers: AttackModifier[]
-  /** Retenus par les boucliers, par statut */
+  /** Retenus par les boucliers, au total */
   shieldAbsorbed: number
-  shields: Partial<Record<StatusId, number>>
+  /** Retenus par chaque bouclier, dans l'ordre d'application (ordre de pose des statuts du défenseur) */
+  shields: { status: StatusId; absorbed: number }[]
   /**
    * Bonus de coup des reliques de l'attaquant (Fer à quatre clous), ajoutés à la valeur du coup avant le
    * critique ; seulement sur un coup qui touche
@@ -158,8 +163,30 @@ export interface DurationChange {
   to: number
 }
 
+/**
+ * Moment du tour où une étape a lieu : changement de forme, début de tour, action, fin de tour.
+ * Les étapes de l'ouverture (fenêtre « combatStart », tour 0) sont rangées en `turnStart`.
+ */
+export type BeatPhase = 'shift' | TurnPhase | 'action'
+
+/** Champs communs à toutes les étapes (docs/MOTEUR_V2.md § 3). */
+export interface BeatFields {
+  /** Rang de l'étape dans `beats`, à partir de 0 */
+  id: number
+  /** `id` de l'étape qui a provoqué celle-ci ; absent pour une étape racine (jet de l'action, début de phase) */
+  cause?: number
+  phase: BeatPhase
+  /** Celui dont c'est le tour (tour 0, l'ouverture : celui qui ne commence pas, comme l'alternance le veut) */
+  owner: Side
+  turn: number
+  state: Snapshot
+}
+
 /** Une étape de la chronologie, avec l'état qui en résulte. */
-export type Beat = { turn: number; state: Snapshot } & (
+export type Beat = BeatFields & BeatBody
+
+/** Le contenu propre à chaque type d'étape. */
+export type BeatBody =
   | { type: 'attack'; attack: Attack }
   | { type: 'event'; event: TriggeredEvent }
   /** Effet de tour d'un statut (ex. poison au début, brûlure à la fin) */
@@ -188,7 +215,6 @@ export type Beat = { turn: number; state: Snapshot } & (
    * ou quand ses PV passent sous son seuil. `uses` : ses déclenchements dans ce combat, celui-ci compris.
    */
   | { type: 'relic'; side: Side; relic: string; name: string; effects: AppliedEffect[]; uses: number }
-)
 
 export interface CombatResult {
   fighters: Pair<Character>
@@ -325,7 +351,7 @@ export function resolveAttack(
     ...(forcedRoll !== undefined && { forced: true as const }),
     ...(preset !== undefined && { preset: true as const }),
     critMultiplier: att.critMultiplier,
-    shields: {},
+    shields: [] as Attack['shields'],
     armor: def.armor,
     floored: false,
     dodgeForced: false,
@@ -336,9 +362,10 @@ export function resolveAttack(
   if (forfeits(roll, faces)) return { ...base, ...nothing, dodged: false, forfeited: true }
   const reshaped = reshape(roll, faces)
   // Esquive imposée : pas de tirage (les combats sans ce statut gardent la même suite de hasard).
-  const dodgeForced = defenderStatuses.some((s) => STATUSES[s.id].forcesDodge)
+  const dodgeBy = defenderStatuses.find((s) => STATUSES[s.id].forcesDodge)?.id
+  const dodgeForced = dodgeBy !== undefined
   if (dodgeForced || chance(rng, def.dodgeChance)) {
-    return { ...base, ...nothing, ...(reshaped && { reshaped }), dodgeForced, dodged: true }
+    return { ...base, ...nothing, ...(reshaped && { reshaped }), dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
   // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul)
@@ -348,7 +375,8 @@ export function resolveAttack(
   const value = (reshaped?.value ?? roll) + relicBonus.reduce((t, b) => t + b.amount, 0)
 
   // Un coup transformé « sans critique » (Charge) ne tire pas le critique et ne consomme pas un critique assuré
-  const critForced = !reshaped?.noCrit && attackerStatuses.some((s) => STATUSES[s.id].forcesCrit)
+  const critBy = reshaped?.noCrit ? undefined : attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
+  const critForced = critBy !== undefined
   const crit = reshaped?.noCrit ? false : critForced || chance(rng, att.critChance)
   let raw = crit ? Math.round(value * att.critMultiplier) : value
   // Dégâts sortants (statuts de l'attaquant), puis entrants (statuts du défenseur), dans l'ordre de pose.
@@ -371,19 +399,20 @@ export function resolveAttack(
 
   const afterArmor = Math.max(1, raw - def.armor)
   let damage = afterArmor
-  const shields: Partial<Record<StatusId, number>> = {}
+  const shields: Attack['shields'] = []
   for (const s of defenderStatuses) {
     if (!STATUSES[s.id].shield || damage <= 1) continue
     const taken = Math.min(s.stacks, damage - 1)
     if (taken > 0) {
-      shields[s.id] = taken
+      shields.push({ status: s.id, absorbed: taken })
       damage -= taken
     }
   }
   // Le plancher a joué si l'armure aurait tout retenu, ou si un bouclier n'a pas pu prendre le dernier point.
   const floored =
     raw - def.armor < 1 ||
-    (damage === 1 && defenderStatuses.some((s) => STATUSES[s.id].shield && s.stacks > (shields[s.id] ?? 0)))
+    (damage === 1 &&
+      defenderStatuses.some((s) => STATUSES[s.id].shield && s.stacks > (shields.find((x) => x.status === s.id)?.absorbed ?? 0)))
   // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers, au moins 1
   const shielded = damage
   let finalFloor = false
@@ -406,6 +435,7 @@ export function resolveAttack(
     dodged: false,
     crit,
     critForced,
+    ...(critBy && { critBy }),
     raw,
     damage,
     armorAbsorbed: raw - afterArmor,
@@ -484,6 +514,24 @@ export function simulateCombat(
   ) as Pair<FighterState>
   const beats: Beat[] = []
   let turn = 0
+  const first: Side = roll[0] > roll[1] ? 0 : 1
+  /** Phase et maître du tour en cours, recopiés dans chaque étape (l'ouverture, tour 0, appartient à celui qui ne commence pas) */
+  let phase: BeatPhase = 'turnStart'
+  let owner: Side = other(first)
+  /**
+   * Dernière étape qui a posé chaque statut, par camp : la pièce (Pile ou face) et les coups instantanés (Furie
+   * des vents) ont pour cause l'étape qui a posé leur statut. Un effet s'applique juste avant l'émission de
+   * l'étape qui le porte, d'où `beats.length`.
+   */
+  const posedBy: Pair<Partial<Record<StatusId, number>>> = [{}, {}]
+  /** Dernier coup émis : cause de repli des coups instantanés dont le statut n'a pas d'auteur connu */
+  let lastStrike = -1
+  /** Émet une étape avec ses champs communs (rang, cause, phase, maître du tour, état) ; renvoie son rang. */
+  const push = (body: BeatBody, cause?: number): number => {
+    const id = beats.length
+    beats.push({ id, ...(cause !== undefined && { cause }), phase, owner, turn, state: snapshot(), ...body })
+    return id
+  }
   /**
    * Statuts des deux camps à l'ouverture des fenêtres du coup en cours (null hors d'un coup). Un statut
    * posé pendant ce coup ne réagit pas à ce coup, et des charges ajoutées pendant le coup attendent le
@@ -492,12 +540,12 @@ export function simulateCombat(
   let strikeBase: Pair<Status[]> | null = null
   /** Le coup en cours a-t-il touché ? Une compétence `needsTouch` (Pourfendre) ne part que s'il touche. */
   let strikeTouched = false
-  /** Fenêtres d'un coup (`hit`, `hurt`…), avec les statuts du moment comme référence (`strikeBase`). */
-  const fireStrike = (list: [Side, Trigger][], touched: boolean) => {
+  /** Fenêtres d'un coup (`hit`, `hurt`…), avec les statuts du moment comme référence (`strikeBase`) ; `cause` : le coup (ou la pièce). */
+  const fireStrike = (list: [Side, Trigger][], touched: boolean, cause: number) => {
     strikeBase = [states[0].statuses, states[1].statuses]
     strikeTouched = touched
     try {
-      return fireAll(list)
+      return fireAll(list, cause)
     } finally {
       strikeBase = null
       strikeTouched = false
@@ -563,6 +611,7 @@ export function simulateCombat(
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
         state.statuses = list
         if (outcome.kind === 'applied') state.fresh.add(effect.status)
+        if (outcome.kind === 'applied') posedBy[target][effect.status] = beats.length
         return {
           type: 'applyStatus',
           target,
@@ -611,9 +660,10 @@ export function simulateCombat(
   /**
    * Fenêtre de déclenchement pour un camp : réactions de ses statuts (ordre de pose), puis
    * événements de son personnage (ordre de définition), puis ses reliques (ordre d'obtention).
-   * Renvoie le perdant s'il y a K.O.
+   * Renvoie le perdant s'il y a K.O. `cause` : l'étape qui a ouvert la fenêtre (le coup, la pièce, la paire,
+   * l'étape qui a franchi un seuil) ; aucune pour une fenêtre de phase (début ou fin de tour, ouverture).
    */
-  function fire(side: Side, trigger: Trigger): Side | undefined {
+  function fire(side: Side, trigger: Trigger, cause?: number): Side | undefined {
     // Statuts présents à l'ouverture de la fenêtre : une réaction ne réagit pas à elle-même.
     for (const status of [...states[side].statuses]) {
       const react = STATUSES[status.id].reactions?.[trigger]
@@ -627,8 +677,8 @@ export function simulateCombat(
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== status.id)
       // Saignement : la plaie agit avec ses charges d'avant, puis perd une charge dans la même étape
       else if (def.decays) states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
-      beats.push({ type: 'statusReaction', turn, side, status: status.id, trigger, effects, state: snapshot() })
-      const down = fallen() ?? checkThresholds()
+      const id = push({ type: 'statusReaction', side, status: status.id, trigger, effects }, cause)
+      const down = fallen() ?? checkThresholds(id)
       if (down !== undefined) return down
     }
     for (const event of fighters[side].events) {
@@ -636,13 +686,8 @@ export function simulateCombat(
       if (event.trigger !== trigger || (event.needsTouch && !strikeTouched) || !canFire(side, event)) continue
       states[side].fired[event.id] = (states[side].fired[event.id] ?? 0) + 1
       const effects = applyEffects(side, event.effects)
-      beats.push({
-        type: 'event',
-        turn,
-        state: snapshot(),
-        event: { side, eventId: event.id, name: event.name, trigger, effects },
-      })
-      const down = fallen() ?? checkThresholds()
+      const id = push({ type: 'event', event: { side, eventId: event.id, name: event.name, trigger, effects } }, cause)
+      const down = fallen() ?? checkThresholds(id)
       if (down !== undefined) return down
     }
     // Reliques : un moment du coup, ou le début d'un de ses tours (à partir du tour de la relique)
@@ -650,7 +695,7 @@ export function simulateCombat(
       const t = relic.trigger
       const due = t?.type === 'strike' ? t.on === trigger : t?.type === 'turn' && trigger === 'turnStart' && states[side].turnsTaken >= t.turn
       if (!due) continue
-      const down = fireRelic(side, relic)
+      const down = fireRelic(side, relic, cause)
       if (down !== undefined) return down
     }
     return undefined
@@ -706,7 +751,7 @@ export function simulateCombat(
    * Relique prête : il lui reste une charge, sa recharge est passée, ses conditions sont remplies. Aucun
    * tirage : une relique n'a pas de chance de déclenchement.
    */
-  function fireRelic(side: Side, relic: Relic): Side | undefined {
+  function fireRelic(side: Side, relic: Relic, cause?: number): Side | undefined {
     const s = states[side]
     const uses = s.relicUses[relic.id] ?? 0
     if (relic.charges !== undefined && uses >= relic.charges) return undefined
@@ -715,20 +760,21 @@ export function simulateCombat(
     s.relicUses[relic.id] = uses + 1
     if (relic.cooldown) s.relicReady[relic.id] = s.turnsTaken + relic.cooldown
     const effects = applyEffects(side, relic.effects ?? [])
-    beats.push({ type: 'relic', turn, side, relic: relic.id, name: relic.name, effects, uses: uses + 1, state: snapshot() })
-    return fallen() ?? checkThresholds()
+    const id = push({ type: 'relic', side, relic: relic.id, name: relic.name, effects, uses: uses + 1 }, cause)
+    return fallen() ?? checkThresholds(id)
   }
 
   /**
    * Seuils de PV, après chaque changement de PV : « bloodied » (la première fois sous la moitié), puis les
    * reliques de seuil, qui partent quand les PV passent sous le leur et se réarment s'ils remontent au-dessus.
+   * `cause` : l'étape dont le changement de PV est vérifié ; elle devient la cause de ce qui se déclenche.
    */
-  function checkThresholds(): Side | undefined {
+  function checkThresholds(cause: number): Side | undefined {
     for (const side of SIDES) {
       const s = states[side]
       if (!s.bloodied && s.hp > 0 && s.hp < fighters[side].maxHp / 2) {
         s.bloodied = true
-        const down = fire(side, 'bloodied')
+        const down = fire(side, 'bloodied', cause)
         if (down !== undefined) return down
       }
       for (const relic of fighters[side].relics) {
@@ -740,7 +786,7 @@ export function simulateCombat(
         if (hp >= fighters[watched].maxHp * t.ratio) s.relicBelow.delete(relic.id)
         else if (hp > 0 && !s.relicBelow.has(relic.id)) {
           s.relicBelow.add(relic.id)
-          const down = fireRelic(side, relic)
+          const down = fireRelic(side, relic, cause)
           if (down !== undefined) return down
         }
       }
@@ -749,9 +795,9 @@ export function simulateCombat(
   }
 
   /** Enchaîne des fenêtres et s'arrête au premier K.O. */
-  function fireAll(list: [Side, Trigger][]) {
+  function fireAll(list: [Side, Trigger][], cause?: number) {
     for (const [side, trigger] of list) {
-      const down = fire(side, trigger)
+      const down = fire(side, trigger, cause)
       if (down !== undefined) return down
     }
     return undefined
@@ -765,6 +811,8 @@ export function simulateCombat(
     const order: Polarity[] = ['positive', 'negative']
     const ticking = order.flatMap((p) => states[side].statuses.filter((s) => STATUSES[s.id].polarity === p))
     const faded: StatusId[] = []
+    /** Étape d'effet de chaque statut dans cette phase : son décompte et son expiration en découlent */
+    const ticks = new Map<StatusId, number>()
     for (const status of ticking) {
       const def = STATUSES[status.id]
       const tick = phase === 'turnStart' ? def.onTurnStart?.(status) : def.onTurnEnd?.(status)
@@ -776,8 +824,9 @@ export function simulateCombat(
         states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
         if (!states[side].statuses.some((s) => s.id === status.id)) faded.push(status.id)
       }
-      beats.push({ type: 'statusTick', turn, phase, side, status: status.id, effects, state: snapshot() })
-      const down = fallen() ?? checkThresholds()
+      const id = push({ type: 'statusTick', phase, side, status: status.id, effects })
+      ticks.set(status.id, id)
+      const down = fallen() ?? checkThresholds(id)
       if (down !== undefined) return down
     }
     // Un statut posé pendant ce tour n'est pas décompté à sa fin : « 1 tour » dure jusqu'au prochain.
@@ -795,9 +844,9 @@ export function simulateCombat(
         : []
     })
     states[side].statuses = kept
-    if (changes.length) beats.push({ type: 'statusDuration', turn, phase, side, changes, state: snapshot() })
+    if (changes.length) push({ type: 'statusDuration', phase, side, changes }, changes.map((c) => ticks.get(c.status)).find((t) => t !== undefined))
     const gone = [...faded, ...expired]
-    if (gone.length) beats.push({ type: 'statusExpire', turn, phase, side, statuses: gone, state: snapshot() })
+    if (gone.length) push({ type: 'statusExpire', phase, side, statuses: gone }, gone.map((s) => ticks.get(s)).find((t) => t !== undefined))
     return undefined
   }
 
@@ -818,8 +867,9 @@ export function simulateCombat(
    * Un coup complet de `attacker`, fenêtres comprises. Renvoie le perdant s'il y a K.O.
    * `preset` : valeur déjà tirée par la paire (personnage à deux dés), sans nouveau dé.
    * `plain` : coup brut (Furie des vents), dont le jet ne déclenche aucune compétence.
+   * `cause` : l'étape `flurry` ou `pair` dont ce coup fait partie ; aucune pour le coup simple de l'action.
    */
-  function strikeOnce(attacker: Side, die?: number, preset?: number, merged?: Attack['reshaped'], plain = false): Side | undefined {
+  function strikeOnce(attacker: Side, die?: number, preset?: number, merged?: Attack['reshaped'], plain = false, cause?: number): Side | undefined {
     const defender = other(attacker)
     const att = states[attacker]
     const def = states[defender]
@@ -835,17 +885,9 @@ export function simulateCombat(
       (roll, faces) => merged ?? (plain ? undefined : reshapes(attacker, roll, faces)),
       preset,
     )
-    if (outcome.critForced) {
-      const forcing = att.statuses.find((s) => STATUSES[s.id].forcesCrit)!
-      att.statuses = consumeStatus(att.statuses, forcing.id, 1)
-    }
-    if (outcome.dodgeForced) {
-      const forcing = def.statuses.find((s) => STATUSES[s.id].forcesDodge)!
-      def.statuses = consumeStatus(def.statuses, forcing.id, 1)
-    }
-    for (const [id, taken] of Object.entries(outcome.shields) as [StatusId, number][]) {
-      def.statuses = consumeStatus(def.statuses, id, taken)
-    }
+    if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
+    if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)
+    for (const { status, absorbed } of outcome.shields) def.statuses = consumeStatus(def.statuses, status, absorbed)
     // Fausse note : le coup du porteur qui touche l'a subie, elle disparaît avec toutes ses charges (`spentOnHit`)
     if (!outcome.dodged && !outcome.forfeited) att.statuses = att.statuses.filter((x) => !STATUSES[x.id].spentOnHit)
     // Vol de vie sur un coup esquivé : la charge est perdue sans soin, au moment même du coup.
@@ -853,11 +895,9 @@ export function simulateCombat(
     if (drain && outcome.dodged) att.statuses = consumeStatus(att.statuses, drain.id, 1)
     const dealt = outcome.damage
     def.hp = Math.max(0, def.hp - dealt)
-    beats.push({ type: 'attack', turn, attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) }, state: snapshot() })
-    if (def.hp === 0) return defender
-
-    // Jauges (Rétribution) : le coup qui touche range ses dégâts chez le défenseur qui sait les relâcher
-    if (!outcome.dodged && !outcome.forfeited && dealt > 0) {
+    // Jauges (Rétribution) : le coup qui touche range ses dégâts chez le défenseur qui sait les relâcher. Le
+    // remplissage fait partie du coup : l'étape du coup le montre (sauf K.O., où rien ne se range)
+    if (!outcome.dodged && !outcome.forfeited && dealt > 0 && def.hp > 0) {
       for (const id of Object.keys(STATUSES) as StatusId[]) {
         const fill = STATUSES[id].fillsOnHurt
         if (!fill || !fighters[defender].events.some((e) => e.effects.some((x) => x.type === 'release' && x.status === id))) continue
@@ -866,9 +906,11 @@ export function simulateCombat(
         const gauge: Status = { id, stacks: slots.reduce((t, n) => t + n, 0), slots }
         def.statuses = old ? def.statuses.map((s) => (s.id === id ? gauge : s)) : [...def.statuses, gauge]
       }
-      // Le remplissage fait partie du coup : l'étape du coup le montre
-      beats[beats.length - 1].state = snapshot()
     }
+    const strike = push({ type: 'attack', attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) } }, cause)
+    lastStrike = strike
+    if (def.hp === 0) return defender
+
     // Vol de vie : le coup qui touche rend les PV qu'il vient de retirer (esquivé : voir plus haut ;
     // sacrifié, jet de compétence : aucun coup n'est porté, la charge reste).
     const touched = !outcome.dodged && !outcome.forfeited
@@ -878,7 +920,7 @@ export function simulateCombat(
     if (drain && touched) {
       att.statuses = consumeStatus(att.statuses, drain.id, 1)
       const effects = applyEffects(attacker, [{ type: 'heal', amount: dealt }])
-      beats.push({ type: 'statusReaction', turn, side: attacker, status: drain.id, trigger: 'hit', effects, state: snapshot() })
+      push({ type: 'statusReaction', side: attacker, status: drain.id, trigger: 'hit', effects }, strike)
     }
 
     // Riposte (après le vol de vie de l'attaquant, comme une réaction au coup encaissé) : le coup qui touche renvoie une part des PV retirés à l'attaquant ; la charge est consommée
@@ -886,12 +928,12 @@ export function simulateCombat(
     if (riposte && def.hp > 0) {
       def.statuses = consumeStatus(def.statuses, riposte.id, 1)
       const effects = applyEffects(defender, [{ type: 'damage', amount: Math.round(dealt * STATUSES[riposte.id].reflectsHit!), target: 'opponent' }])
-      beats.push({ type: 'statusReaction', turn, side: defender, status: riposte.id, trigger: 'hurt', effects, state: snapshot() })
+      push({ type: 'statusReaction', side: defender, status: riposte.id, trigger: 'hurt', effects }, strike)
       if (fallen() !== undefined) return fallen()
     }
 
     // Fenêtres du coup
-    const down = checkThresholds()
+    const down = checkThresholds(strike)
     if (down !== undefined) return down
     const hitTriggers: [Side, Trigger][] = plain
       ? []
@@ -902,18 +944,19 @@ export function simulateCombat(
       if (outcome.crit) hitTriggers.push([attacker, 'crit'])
       hitTriggers.push([defender, 'hurt'])
     }
-    const fell = fireStrike(hitTriggers, touched)
+    const fell = fireStrike(hitTriggers, touched, strike)
     if (fell !== undefined) return fell
     // Pile ou face (2026-10-21) : la pièce part aussitôt, juste après le coup pendant lequel elle a été posée
-    return tossCoin(attacker) ?? tossCoin(defender)
+    return tossCoin(attacker, strike) ?? tossCoin(defender, strike)
   }
 
   /**
    * Pile ou face : si `side` détient une pièce, il la lance tout de suite (pile = 1 sur un d2, un rang de dé).
    * Pile, les dégâts directs de la pièce ; s'ils « touchent » (0.42.0), les fenêtres du coup s'ouvrent
    * (l'Aura de décoction empoisonne). Le statut est consommé. Renvoie le perdant s'il y a K.O.
+   * La pièce a pour cause l'étape qui l'a posée, à défaut le coup `strike` qui la fait partir.
    */
-  function tossCoin(side: Side): Side | undefined {
+  function tossCoin(side: Side, strike: number): Side | undefined {
     const coin = states[side].statuses.find((s) => STATUSES[s.id].coinToss)
     if (!coin) return undefined
     states[side].statuses = states[side].statuses.filter((s) => s.id !== coin.id)
@@ -921,10 +964,13 @@ export function simulateCombat(
     const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
     const toss = STATUSES[coin.id].coinToss!
     const effects = heads ? applyEffects(side, [{ type: 'damage', amount: toss.damage, target: 'opponent' }]) : []
-    beats.push({ type: 'coin', turn, side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }), state: snapshot() })
-    const down = fallen() ?? checkThresholds()
+    const id = push(
+      { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
+      posedBy[side][coin.id] ?? strike,
+    )
+    const down = fallen() ?? checkThresholds(id)
     if (down !== undefined || !heads || !toss.headsTouches) return down
-    return fireStrike([[side, 'hit'], [other(side), 'hurt']], true)
+    return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, id)
   }
 
   /**
@@ -943,30 +989,29 @@ export function simulateCombat(
     const trigger = rolls[0] === rolls[1] ? DOUBLE_TRIGGERS[rolls[0]] : undefined
     // Même règle que le déclenchement (forme, limite, conditions), sans tirage : `validateRoster` refuse `chance` ici
     const skill = trigger && fighters[attacker].events.find((e) => e.trigger === trigger && canFire(attacker, e))
-    beats.push({
+    const pair = push({
       type: 'pair',
-      turn,
       side: attacker,
       rolls,
       faces,
       ...(skill && { double: rolls[0] }),
       ...(draws.some((d) => d.forced) && { forced: [draws[0].forced, draws[1].forced] as [boolean, boolean] }),
-      state: snapshot(),
     })
     if (!skill) {
       for (const roll of rolls) {
-        const down = strikeOnce(attacker, undefined, roll)
+        const down = strikeOnce(attacker, undefined, roll, undefined, false, pair)
         if (down !== undefined) return down
       }
       return undefined
     }
-    const down = fire(attacker, trigger!)
+    const down = fire(attacker, trigger!, pair)
     if (down !== undefined) return down
     // `merged` : un seul coup qui vaut la somme (Soliste : 3 × 5 = 15), comme un coup transformé : le dé
     // affiché reste celui du double, la valeur du coup est la somme
-    if (skill.merged && skill.volley) return strikeOnce(attacker, undefined, rolls[0], { event: skill.id, value: skill.volley * rolls[0], noCrit: false })
+    if (skill.merged && skill.volley)
+      return strikeOnce(attacker, undefined, rolls[0], { event: skill.id, value: skill.volley * rolls[0], noCrit: false }, false, pair)
     for (let k = 0; k < (skill.volley ?? 0); k++) {
-      const down = strikeOnce(attacker, undefined, rolls[0])
+      const down = strikeOnce(attacker, undefined, rolls[0], undefined, false, pair)
       if (down !== undefined) return down
     }
     return undefined
@@ -978,8 +1023,9 @@ export function simulateCombat(
   ])
   if (down !== undefined) return end(other(down), 'ko')
 
-  let attacker: Side = roll[0] > roll[1] ? 0 : 1
+  let attacker: Side = first
   for (turn = 1; turn <= MAX_TURNS; turn++) {
+    owner = attacker
     const defender = other(attacker)
     const att = states[attacker]
     const def = states[defender]
@@ -992,19 +1038,22 @@ export function simulateCombat(
       const leaving = fighters[attacker].forms?.[att.form].statuses ?? []
       att.form = 1 - att.form
       att.statuses = [...att.statuses.filter((s) => !leaving.includes(s.id)), ...formStatuses(fighters[attacker], att.form)]
-      beats.push({ type: 'shift', turn, side: attacker, form: att.form, state: snapshot() })
+      phase = 'shift'
+      push({ type: 'shift', side: attacker, form: att.form })
     }
     att.turnsTaken++
 
     // Phase 1 · Début de tour
+    phase = 'turnStart'
     down = statusPhase(attacker, 'turnStart') ?? fire(attacker, 'turnStart')
     if (down !== undefined) return end(other(down), 'ko')
 
     // Phase 2 · Action : un statut de contrôle fait perdre l'action, sinon on attaque.
+    phase = 'action'
     const control = att.statuses.find((s) => STATUSES[s.id].skipsAction)
     if (control) {
       att.statuses = consumeStatus(att.statuses, control.id, 1)
-      beats.push({ type: 'skip', turn, side: attacker, status: control.id, state: snapshot() })
+      push({ type: 'skip', side: attacker, status: control.id })
     } else if (fighters[attacker].twinDice) {
       down = twinAction(attacker)
       if (down !== undefined) return end(other(down), 'ko')
@@ -1015,16 +1064,18 @@ export function simulateCombat(
       const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes && !STATUSES[s.id].instantStrikes)
       const own = effectiveStats(fighters[attacker], att.statuses).damageDie
       const faces = [own]
+      let volley: number | undefined
       if (flurry) {
         const def = STATUSES[flurry.id]
         const extra = def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1)
         for (let k = 0; k < extra; k++) faces.push(def.extraDie ?? own)
         // Charges en réserve (`strikeCharges: 'one'`) : une seule est dépensée, les autres attendent
         att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
-        beats.push({ type: 'flurry', turn, side: attacker, status: flurry.id, strikes: faces.length, faces, state: snapshot() })
+        volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: faces.length, faces })
       }
+      // Tous les coups d'une rafale, celui de l'action compris, ont la rafale pour cause
       for (const [k, die] of faces.entries()) {
-        down = strikeOnce(attacker, k === 0 ? undefined : die)
+        down = strikeOnce(attacker, k === 0 ? undefined : die, undefined, undefined, false, volley)
         if (down !== undefined) return end(other(down), 'ko')
       }
       // Coups instantanés (Furie des vents) : une charge gagnée pendant le coup de l'action frappe tout de
@@ -1034,15 +1085,20 @@ export function simulateCombat(
         const def = STATUSES[burst.id]
         const extra = Array.from({ length: def.extraStrikes ?? 1 }, () => def.extraDie ?? own)
         att.statuses = consumeStatus(att.statuses, burst.id, 1)
-        beats.push({ type: 'flurry', turn, side: attacker, status: burst.id, strikes: extra.length, faces: extra, state: snapshot() })
+        // Ils ont pour cause l'étape qui a posé la charge (Furie des vents sur un 2), à défaut le coup de l'action
+        const burstBeat = push(
+          { type: 'flurry', side: attacker, status: burst.id, strikes: extra.length, faces: extra },
+          posedBy[attacker][burst.id] ?? lastStrike,
+        )
         for (const die of extra) {
-          down = strikeOnce(attacker, die, undefined, undefined, true)
+          down = strikeOnce(attacker, die, undefined, undefined, true, burstBeat)
           if (down !== undefined) return end(other(down), 'ko')
         }
       }
     }
 
     // Phase 3 · Fin de tour
+    phase = 'turnEnd'
     down = statusPhase(attacker, 'turnEnd') ?? fire(attacker, 'turnEnd')
     if (down !== undefined) return end(other(down), 'ko')
 

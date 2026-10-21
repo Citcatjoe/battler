@@ -32,6 +32,24 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.81.0] — 2026-10-21 (branche `moteur-v2`)
+
+Refonte du passage du moteur à l'écran, d'après l'audit du 2026-10-21 (`docs/MOTEUR_V2.md`). Les règles sont inchangées et l'empreinte de non-régression est identique. L'état d'avant est le tag `avant-moteur-v2`.
+
+### Ajouté
+- **Étapes du moteur avec leur cause** : chaque étape (`Beat`) porte `id`, `cause` (l'étape qui l'a provoquée), `phase` et `owner` (à qui est le tour). Un coup dit quel statut a imposé l'esquive ou le critique (`dodgeBy`, `critBy`), et ses boucliers sont listés dans l'ordre. Contrôles `cause : …` dans l'audit.
+- **Mise en scène pure** (`src/game/staging.ts`) : `stage()` transforme un combat en moments, chacun une liste de cues datées (dés, coup, textes flottants, labels, sons, PV, zone d'état, journal…), regroupées par cause et non plus par voisinage. 18 tests sans navigateur (`staging.test.ts`).
+- **Table des durées** (`src/game/timing.ts`) : chaque temps du rythme a un nom. Les durées CSS liées au rythme en dérivent (`--t-*`).
+
+### Modifié
+- **`useCombat` devient un lecteur** : une horloge unique (vitesse, pause, arrêt) applique les cues. Il remplace environ 950 lignes de script impératif et supprime `flowAt`, `rideAt`, `anticipate`, `grouped`, `ownerOf` et les fonctions `play*`.
+- **Rendu** (détail dans `docs/MOTEUR_V2.md` § 7) :
+  - les textes flottants ne s'écrasent plus ;
+  - la plaie qui coule et les statuts posés par un coup tombent toujours à son impact, même quand une Riposte s'intercale ;
+  - un seul son par nom et par instant ;
+  - la pause fige aussi la secousse et les textes ;
+  - le rythme est exact et ne dépend plus de la cadence d'affichage.
+
 ## [0.80.2] — 2026-10-21
 
 ### Modifié

@@ -1,6 +1,6 @@
 # Les règles du son
 
-Ce document fait foi pour tout ce qu'on entend dans le jeu : quels sons existent, ce que chacun veut dire, quand il joue, et comment une nouvelle compétence ou un nouveau statut reçoit le sien. Le code suit ce document (`sound.ts`, `useCombat.ts`) ; s'ils divergent, c'est le code qu'on corrige.
+Ce document fait foi pour tout ce qu'on entend dans le jeu : quels sons existent, ce que chacun veut dire, quand il joue, et comment une nouvelle compétence ou un nouveau statut reçoit le sien. Le code suit ce document (`sound.ts`, `staging.ts`, qui date chaque son du combat ; `useCombat.ts` ne fait que les jouer) ; s'ils divergent, c'est le code qu'on corrige.
 
 > **Statut : validé par l'utilisateur (0.36.2), appliqué dans le code.** Proposé en 0.36.1 ; l'utilisateur a tranché les questions ouvertes (§ 8) et choisi à l'oreille le fichier de chaque son (0.36.3, § 7). Qui joue quel son : § 9.
 
@@ -122,7 +122,7 @@ Un label (badge sous le dé : « Critique ×2 », « Armure temporaire −6 », 
 
 Hors de la colonne, donc sans son de label : Pile ou face, la Furie des vents, Coup de chance, Rétribution, les doubles (Crescendo, Soliste), les auras. La pièce sur pile et le double gardent leur propre ding (§ 4.1).
 
-Le code : `addSpecial` (`useCombat.ts`) pose le label et joue son son (`labelCue`) ; `silent` marque le cas de la règle 5, calculé par `showEffects`.
+Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe ; `sound` n'émet qu'un son par nom et par instant, ce qui règle à la fois la règle 4 (deux labels du même signe) et la règle 5 (un effet qui joue déjà ce son dans la même frappe).
 
 ## 5. Mixage
 

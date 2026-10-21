@@ -122,24 +122,21 @@ export function statusSpecial(id: StatusId, bearer: SpecialBearer, amount?: numb
  * - `impact`, à l'impact : les modificateurs qui s'usent sur ce coup (4-5 : Luciole), les boucliers (8), les dégâts
  *   finaux qui s'usent sur ce coup (8 bis : Fausse note). Un modificateur d'aura ou d'état durable n'y est pas.
  * Un coup sacrifié n'en a aucune. Les réactions au coup (Vol de vie, Riposte, Saignement) ont leur propre étape.
- * `Attack` ne dit que le fait d'un critique ou d'une esquive imposés : leur statut est celui du registre qui l'impose.
+ * Le statut d'un critique ou d'une esquive imposés est celui que le moteur nomme (`critBy`, `dodgeBy`).
  */
 export function attackSpecials(attack: Attack): { roll: SpecialSpec[]; crit: SpecialSpec[]; impact: SpecialSpec[] } {
-  const ids = Object.keys(STATUSES) as StatusId[]
   const roll: (SpecialSpec | undefined)[] = []
   const crit: (SpecialSpec | undefined)[] = []
   const impact: (SpecialSpec | undefined)[] = []
   if (!attack.forfeited) {
-    const dodger = ids.find((id) => STATUSES[id].forcesDodge)
-    if (attack.dodged && attack.dodgeForced && dodger) roll.push(statusSpecial(dodger, 'defender'))
+    if (attack.dodged && attack.dodgeBy) roll.push(statusSpecial(attack.dodgeBy, 'defender'))
     for (const b of attack.relicBonus ?? [])
       roll.push({ label: withAmount(b.name, 'plus', b.amount), source: 'relic', sign: 'plus', icon: { relic: b.relic, name: b.name } })
-    const critter = ids.find((id) => STATUSES[id].forcesCrit)
-    if (attack.crit && attack.critForced && critter) crit.push(statusSpecial(critter, 'attacker'))
+    if (attack.crit && attack.critBy) crit.push(statusSpecial(attack.critBy, 'attacker'))
     if (attack.crit) crit.push({ label: `Critique ${multiplier(attack.critMultiplier)}`, source: 'strike', sign: 'plus' })
     const [before, final] = [attack.modifiers.filter((m) => !m.final), attack.modifiers.filter((m) => m.final)]
     impact.push(...before.map((m) => statusSpecial(m.status, m.by, m.delta)))
-    impact.push(...(Object.entries(attack.shields) as [StatusId, number][]).map(([id, taken]) => statusSpecial(id, 'defender', -taken)))
+    impact.push(...attack.shields.map((s) => statusSpecial(s.status, 'defender', -s.absorbed)))
     impact.push(...final.map((m) => statusSpecial(m.status, m.by, m.delta)))
   }
   const kept = (list: (SpecialSpec | undefined)[]) => list.filter((s): s is SpecialSpec => s !== undefined)

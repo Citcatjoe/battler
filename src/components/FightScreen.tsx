@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import type { Arena } from '../game/arenas'
 import { other, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
+import { SHAKE, SHAKE_HEAVY, TIMING_VARS } from '../game/timing'
 import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
 import { CombatLog } from './CombatLog'
@@ -36,7 +37,7 @@ const SPEEDS = [1, 2, 4]
 // Journal masqué au premier combat ; s'il est ouvert, il le reste pour les combats suivants de la session.
 let logOpenInSession = false
 
-const SHAKE: Keyframe[] = [
+const SHAKE_KEYS: Keyframe[] = [
   { transform: 'translate(0, 0)' },
   { transform: 'translate(-7px, 4px)' },
   { transform: 'translate(6px, -4px)' },
@@ -47,7 +48,7 @@ const SHAKE: Keyframe[] = [
 
 export function FightScreen({ script, arena, onEnd, test }: Props) {
   const { fighters } = script
-  const { hp, statuses, forms, dice, strike, blow, fx, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
+  const { hp, statuses, forms, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved } =
     useCombat(script, onEnd, { test: test !== undefined })
 
   // Zones d'état : les états génériques de chacun, ses statuts et les auras de l'adversaire qui agissent sur lui
@@ -61,16 +62,25 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   const heavyHit = (strike?.landed && !strike.dodged && strike.crit) || (blow?.landed && blow.heavy)
   const hitKey = strike?.key ?? blow?.key
 
-  // Secousse de l'arène sur les gros coups (sans remonter les combattants).
+  // Secousse de l'arène sur les gros coups (sans remonter les combattants). Elle suit la vitesse et se fige en pause,
+  // comme les animations CSS
   const arenaRef = useRef<HTMLElement>(null)
+  const shaking = useRef<Animation | undefined>(undefined)
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
   useEffect(() => {
     if (!shake) return
     const crit = heavyHit
-    arenaRef.current?.animate(crit ? SHAKE.map((k) => ({ transform: `${k.transform} scale(1.02)` })) : SHAKE, {
-      duration: (crit ? 500 : 350) / speed,
+    shaking.current = arenaRef.current?.animate(crit ? SHAKE_KEYS.map((k) => ({ transform: `${k.transform} scale(1.02)` })) : SHAKE_KEYS, {
+      duration: (crit ? SHAKE_HEAVY : SHAKE) / speed,
       easing: 'linear',
     })
+    if (pausedRef.current) shaking.current?.pause()
   }, [shake, hitKey, heavyHit, speed])
+  useEffect(() => {
+    if (paused) shaking.current?.pause()
+    else if (shaking.current?.playState === 'paused') shaking.current.play()
+  }, [paused])
 
   const [logOpen, setLogOpenState] = useState(logOpenInSession)
   const setLogOpen = (open: boolean) => {
@@ -116,7 +126,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
     <div
       ref={rootRef}
       className={`arena relative flex h-full flex-col overflow-hidden ${paused ? 'is-paused' : ''}`}
-      style={{ '--speed': speed } as CSSProperties}
+      style={{ '--speed': speed, ...TIMING_VARS } as CSSProperties}
     >
       {/* Barres de vie : bande vitrée, l'arène passe dessous */}
       <header className="fight-header relative z-[55] flex items-start gap-6 py-4 pl-8 pr-20">
@@ -203,7 +213,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               lunging={lungingSide === side}
               fastLunge={strike ? strike.fast : blow !== null}
               received={receivedBy(side)}
-              fx={fx ?? undefined}
+              aura={aura?.source === side ? aura.key : undefined}
+              floats={floats[side]}
               statuses={statuses[side]}
               form={forms[side]}
             />

@@ -96,11 +96,8 @@ function statusValues(r: CombatResult, side: Side, into: Map<StatusId, { total: 
       if (benefits(bearer, m.status)) add(m.status, Math.abs(m.delta), 'PV')
     }
     if (a.attacker !== side) {
-      for (const [id, n] of Object.entries(a.shields) as [StatusId, number][]) add(id, n, 'PV')
-      if (a.dodgeForced) {
-        const id = (Object.keys(STATUSES) as StatusId[]).find((s) => STATUSES[s].forcesDodge)
-        if (id) add(id, 1, 'coups')
-      }
+      for (const s of a.shields) add(s.status, s.absorbed, 'PV')
+      if (a.dodgeBy) add(a.dodgeBy, 1, 'coups')
     }
     if (a.attacker === side && flurry) {
       if (flurry.skip > 0) flurry.skip--

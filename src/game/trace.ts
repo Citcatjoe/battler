@@ -117,7 +117,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         ...early.map(modifier),
         `avant armure ${a.raw}${a.raw > (a.crit ? Math.round((a.roll + bonus) * a.critMultiplier) : a.roll + bonus) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
-        ...Object.entries(a.shields).map(([id, n]) => `${label(id as StatusId)} −${n}`),
+        ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
         // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
         ...a.modifiers.filter((m) => m.final).map((m) => `${modifier(m)} (dégâts finaux)`),
         `dégâts ${a.damage}${a.floored ? ' (plancher : un coup qui touche inflige au moins 1)' : ''}`,

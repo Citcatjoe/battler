@@ -37,7 +37,7 @@ describe('audit de résolution', () => {
     const report = [...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)
     expect(report).toEqual([])
     // L'audit a bien rencontré chaque mécanique
-    for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup'])
+    for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet'])
       expect(seen[k], k).toBeGreaterThan(0)
   })
 })

@@ -130,7 +130,7 @@ const armorDetail = (attack: Attack) => {
     // Auras et statuts qui ont changé la force du coup (puissance +2, intimidation −2…)
     ...attack.modifiers.filter((m) => !m.final).map(modifierText),
     attack.armorAbsorbed > 0 && `armure −${attack.armorAbsorbed}`,
-    ...Object.entries(attack.shields).map(([id, n]) => `${lowerFirst(statusLabel(id as StatusId))} −${n}`),
+    ...attack.shields.map((s) => `${lowerFirst(statusLabel(s.status))} −${s.absorbed}`),
     // Dégâts finaux (Aura mélodieuse, Fausse note), après l'armure et les boucliers
     ...attack.modifiers.filter((m) => m.final).map(modifierText),
   ]

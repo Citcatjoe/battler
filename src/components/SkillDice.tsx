@@ -4,7 +4,7 @@ import { STATES, statesPosedBy } from '../game/states'
 import { POLARITY_STYLE } from '../game/statuses'
 import { StateIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
-import type { SkillPulse } from '../game/useCombat'
+import type { SkillPulse } from '../game/staging'
 
 export type Face = 1 | 2 | 3 | 4 | 5
 

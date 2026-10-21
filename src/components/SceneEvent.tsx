@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { SCENE_EVENTS, type SceneEventId } from '../game/scenes'
-import type { SceneFx } from '../game/useCombat'
+import type { SceneFx } from '../game/staging'
 
 /*
  * Événements de scène (0.73.0) : le rendu des `scene` des compétences (rythme dans game/scenes.ts).

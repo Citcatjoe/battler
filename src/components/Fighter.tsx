@@ -1,7 +1,8 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { figureHeight, footDrop, type Character } from '../game/character'
-import type { AppliedEffect, Side } from '../game/combat'
-import { atCap, effectBadge, TONE_CLASS, type Badge } from '../game/narration'
+import type { Side } from '../game/combat'
+import { TONE_CLASS } from '../game/narration'
+import type { Float } from '../game/staging'
 import { isAura, STATUSES, type Status } from '../game/statuses'
 import { poseImage, poseImages, poseOf } from '../game/poses'
 
@@ -24,8 +25,10 @@ interface Props {
   fastLunge?: boolean
   received?: Received
   state?: 'idle' | 'ko' | 'victory'
-  /** Effets en cours d'affichage : titre et aura si ce combattant en est la source, badges s'il est visé */
-  fx?: { key: number; source: Side | null; title: string; effects: AppliedEffect[]; relic?: true; notes?: readonly (Badge & { target: Side })[] }
+  /** Aura d'une compétence qui agit, sur son lanceur : sa clé relance l'animation (`EffectFx`) */
+  aura?: number
+  /** Textes flottants à côté du combattant, chacun avec sa clé (staging.ts, `Float`) : aucun n'en écrase un autre */
+  floats?: readonly Float[]
   /** Statuts actifs : aura de personnage, transparence, tremblement, lucioles (voir `statusLooks`) */
   statuses?: readonly Status[]
   /** Forme en cours (druide) : index dans `character.forms` ; un changement joue la métamorphose */
@@ -85,16 +88,6 @@ const MOTES = [
   { left: 42, delay: 2.3, size: 4 },
 ]
 
-/**
- * Garde la dernière valeur reçue (repérée par sa clé) quand l'écran l'efface : les textes flottants
- * finissent leur animation, plus longue que le coup lui-même, au lieu d'être coupés net.
- */
-function useLast<T extends { key: number }>(value: T | undefined): T | undefined {
-  const [last, setLast] = useState(value)
-  if (value !== undefined && value.key !== last?.key) setLast(value)
-  return value ?? last
-}
-
 export function Fighter({
   character,
   side,
@@ -102,7 +95,8 @@ export function Fighter({
   fastLunge = false,
   received,
   state = 'idle',
-  fx,
+  aura,
+  floats = [],
   statuses = [],
   form = 0,
   className = '',
@@ -134,44 +128,6 @@ export function Fighter({
   // Les effets se placent par rapport à la silhouette, plus petite pour un nain.
   const scale = figureHeight(look)
   const at = (pct: number) => ({ top: `${(1 - scale) * 100 + scale * pct}%` })
-
-  // Textes flottants : à l'extérieur de la silhouette (à gauche du combattant de gauche, à droite de
-  // celui de droite), sur le décor, plus lisible que sur le personnage. Ils survivent à l'effacement du coup.
-  const shownFx = useLast(fx)
-  const hit = useLast(received?.landed ? received : undefined)
-  const isSource = shownFx !== undefined && shownFx.source === side
-  /*
-   * Un seul texte par événement : le nom de la compétence (violet) sur son lanceur suffit pour le
-   * statut qu'elle lui pose (bonus, ou malus qu'il s'inflige : l'Attente de l'ogre) (Aura de puissance pose Aura de puissance). Un bonus d'un autre nom
-   * (Œil de faucon pose Critique assuré) devient le sous-titre du nom, au lieu d'un second texte.
-   * Restent des badges : PV, dégâts, malus posés, résistances (voir `TONE_CLASS`), et les textes sans effet
-   * (`notes` : « Tour perdu »).
-   */
-  const mine = shownFx?.effects.filter((e) => e.target === side) ?? []
-  const echoes = isSource && shownFx.title
-    ? mine.filter((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && !atCap(e))
-    : []
-  const subtitle = [...new Set(echoes.flatMap((e) => (e.type === 'applyStatus' ? [STATUSES[e.status].name] : [])))]
-    .filter((name) => name !== shownFx?.title)
-    .join(' · ')
-  const badges: Badge[] = [
-    ...mine.filter((e) => !echoes.includes(e)).map(effectBadge),
-    ...(shownFx?.notes?.filter((n) => n.target === side) ?? []),
-  ]
-  /*
-   * Effets montrés avec l'impact d'un coup (le Poison de l'Aura de décoction et son « −7 ») : ce qui monte part
-   * au-dessus du chiffre des dégâts, qui tombe, pour que les deux ne se croisent pas. Décidé à l'apparition des
-   * effets (même rendu que l'impact) et gardé ensuite : un texte ne saute pas en cours de vol.
-   */
-  const landedNow = !!received?.landed && !received.dodged
-  const [withHit, setWithHit] = useState({ key: shownFx?.key, struck: landedNow })
-  if (shownFx && shownFx.key !== withHit.key) setWithHit({ key: shownFx.key, struck: landedNow })
-  const struck = withHit.struck && withHit.key === shownFx?.key
-  const badgeTop = (badge: Badge, i: number) => {
-    if (!struck) return at(30 + i * 9)
-    const same = badges.slice(0, i).filter((b) => b.rises === badge.rises).length
-    return badge.rises ? at(6 - same * 9) : at(30 + same * 9)
-  }
 
   // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, K.O., victoire
   const pose = poseOf({ state, lunging, received })
@@ -306,8 +262,8 @@ export function Fighter({
 
       {/* Aura de la compétence : sur le personnage qui la lance, le temps de l'effet. Une relique n'en a pas :
           elle s'annonce sur son sceau, dans l'en-tête */}
-      {fx && fx.source === side && !fx.relic && (
-        <div key={`aura-${fx.key}`} className="pointer-events-none absolute inset-0 z-30">
+      {aura !== undefined && (
+        <div key={`aura-${aura}`} className="pointer-events-none absolute inset-0 z-30">
           <div
             style={at(45)}
             className="event-aura absolute left-1/2 aspect-square w-[130%] rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.55)_0%,rgba(167,139,250,0.15)_45%,transparent_70%)]"
@@ -322,34 +278,32 @@ export function Fighter({
         </div>
       )}
 
+      {/* Textes flottants : devant le combattant, du côté de l'adversaire. Chacun vit sa vie (sa clé, sa durée) ;
+          ceux d'un même instant se rangent en colonne, ce qui monte avec un coup passe au-dessus de son chiffre */}
       <div className={`pointer-events-none absolute inset-y-0 z-30 w-[250px] ${side === 0 ? 'text-left' : 'text-right'}`} style={column}>
-        {shownFx && (isSource || badges.length > 0) && (
-          <div key={`fx-${shownFx.key}`} className="absolute inset-0">
-            {isSource && shownFx.title && (
+        {floats.map((f) => (
+          <div key={f.key} className="absolute inset-0">
+            {f.kind === 'title' ? (
               // Nom de la compétence : même texte flottant qu'ESQUIVE ou CRITIQUE, en violet
               <div style={at(4)} className="dodge-text float-text absolute inset-x-0 text-3xl text-violet-300 [-webkit-text-stroke:3px_#2e1065]">
-                {shownFx.title} !
-                {subtitle && <span className="mt-1 block text-xl text-violet-200 [-webkit-text-stroke:2px_#2e1065]">{subtitle}</span>}
+                {f.text} !
+                {f.subtitle && <span className="mt-1 block text-xl text-violet-200 [-webkit-text-stroke:2px_#2e1065]">{f.subtitle}</span>}
               </div>
-            )}
-            {badges.map((badge, i) => (
+            ) : f.kind === 'badge' ? (
               // Le sens dit gain ou perte de la chose nommée (`Badge.rises`) : un statut gagné monte, même un malus
-              <div key={i} style={badgeTop(badge, i)} className={`${badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[badge.tone]}`}>
-                {badge.text}
+              <div
+                style={f.lift ? at(6 - f.row * 9) : at(30 + f.row * 9)}
+                className={`${f.badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[f.badge.tone]}`}
+              >
+                {f.badge.text}
               </div>
-            ))}
-          </div>
-        )}
-
-        {hit && (
-          <div key={`fx${hit.key}`} className="absolute inset-0">
-            {hit.dodged ? (
+            ) : f.dodged ? (
               <div style={at(18)} className="dodge-text float-text absolute inset-x-0 text-4xl text-cyan-200 [-webkit-text-stroke:3px_#164e63]">
                 ESQUIVE !
               </div>
             ) : (
               <>
-                {hit.crit && (
+                {f.crit && (
                   <div style={at(12)} className="dodge-text float-text absolute inset-x-0 text-3xl text-amber-300 [-webkit-text-stroke:3px_#78350f]">
                     CRITIQUE !
                   </div>
@@ -357,19 +311,19 @@ export function Fighter({
                 <div
                   style={at(18)}
                   // Les PV perdus tombent ; un critique, lui, jaillit vers le haut (demande de l'utilisateur)
-                  className={`${hit.crit ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 ${
-                    hit.crit
+                  className={`${f.crit ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 ${
+                    f.crit
                       ? 'text-9xl text-amber-400 [-webkit-text-stroke:6px_#451a03]'
-                      : `text-red-500 [-webkit-text-stroke:4px_#450a0a] ${hit.damage >= 10 ? 'text-7xl' : hit.damage >= 7 ? 'text-6xl' : 'text-5xl'}`
+                      : `text-red-500 [-webkit-text-stroke:4px_#450a0a] ${f.damage >= 10 ? 'text-7xl' : f.damage >= 7 ? 'text-6xl' : 'text-5xl'}`
                   }`}
                 >
                   {/* Un critique tremble sous le choc */}
-                  <span className={`inline-block ${hit.crit ? 'crit-shake' : ''}`}>-{hit.damage}</span>
+                  <span className={`inline-block ${f.crit ? 'crit-shake' : ''}`}>-{f.damage}</span>
                 </div>
               </>
             )}
           </div>
-        )}
+        ))}
       </div>
     </div>
   )

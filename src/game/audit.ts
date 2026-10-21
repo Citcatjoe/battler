@@ -8,7 +8,7 @@
  */
 import { STAT_KEYS } from './character'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
-import { DOUBLE_TRIGGERS, rollMatches } from './events'
+import { DOUBLE_TRIGGERS, rollMatches, ROLL_TRIGGERS, type Trigger } from './events'
 import { withRelicStats } from './relics'
 import { STATUSES, type Status } from './statuses'
 
@@ -46,6 +46,7 @@ export function createAudit() {
         if (value !== Math.min(die.faces, Math.max(1, asked))) flag('dé imposé ignoré', r, i, `rang ${rank - 1} : ${value} au lieu de ${asked}`)
       })
     })
+    auditCauses(r)
     // Statuts de forme (0.73.0) : un personnage à formes commence avec ceux de sa première forme
     const startStatuses = (side: 0 | 1) => (r.fighters[side].forms?.[0].statuses ?? []).map((id) => ({ id, stacks: 1 }))
     const init: Snapshot = { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [startStatuses(0), startStatuses(1)] }
@@ -442,6 +443,54 @@ export function createAudit() {
     // Fin : un seul perdant à 0
     const fin = r.beats[r.beats.length - 1].state
     if (fin.hp[1 - r.winner] !== 0 && r.endedBy === 'ko') flag('fin incohérente', r, r.beats.length - 1, '')
+  }
+
+  /**
+   * Champs communs des étapes (docs/MOTEUR_V2.md § 3) : rang, maître du tour, phase, et causes. Le maître du tour
+   * se recompte depuis l'initiative (les tours alternent ; l'ouverture, tour 0, revient à celui qui ne commence pas).
+   */
+  function auditCauses(r: CombatResult) {
+    const last = r.initiative[r.initiative.length - 1]
+    const first: Side = last[0] > last[1] ? 0 : 1
+    /** Moments d'un coup : ses réactions et compétences viennent d'un coup (ou d'une pièce qui touche) */
+    const strikeMoments: Trigger[] = [...ROLL_TRIGGERS, 'hit', 'crit', 'hurt', 'missed', 'dodge']
+    const actionTypes: Beat['type'][] = ['attack', 'flurry', 'pair', 'skip', 'coin']
+    r.beats.forEach((b, i) => {
+      if (b.id !== i) flag("rang d'étape faux", r, i, `id ${b.id}`)
+      const owner: Side = b.turn % 2 === 1 ? first : first === 0 ? 1 : 0
+      if (b.owner !== owner) flag('maître du tour faux', r, i, `${b.owner} au lieu de ${owner}`)
+      if (i > 0 && b.turn === r.beats[i - 1].turn && b.owner !== r.beats[i - 1].owner) flag('maître du tour qui change dans le tour', r, i, '')
+      if ((b.type === 'shift') !== (b.phase === 'shift')) flag('phase de changement de forme fausse', r, i, b.phase)
+      if (actionTypes.includes(b.type) && b.phase !== 'action') flag("étape d'action hors de l'action", r, i, `${b.type} en ${b.phase}`)
+      const cause = b.cause === undefined ? undefined : r.beats[b.cause]
+      if (b.cause !== undefined && !(b.cause >= 0 && b.cause < i)) flag('cause postérieure ou absente', r, i, `cause ${b.cause}`)
+      const trigger = b.type === 'statusReaction' ? b.trigger : b.type === 'event' ? b.event.trigger : undefined
+      if (trigger && strikeMoments.includes(trigger)) {
+        if (cause?.type !== 'attack' && cause?.type !== 'coin') flag('réaction au coup sans le coup pour cause', r, i, `${trigger} ← ${cause?.type}`)
+        else if (b.type === 'statusReaction') see('cause : réaction au coup')
+      }
+      if (trigger && Object.values(DOUBLE_TRIGGERS).includes(trigger)) {
+        if (cause?.type !== 'pair') flag('compétence de double sans la paire pour cause', r, i, `${cause?.type}`)
+        else see('cause : compétence de double')
+      }
+      if (b.type === 'attack') {
+        if (cause && cause.type !== 'flurry' && cause.type !== 'pair') flag("coup causé par autre chose qu'une rafale ou une paire", r, i, cause.type)
+        if (b.attack.preset && cause?.type !== 'pair') flag('coup de paire sans la paire pour cause', r, i, `${cause?.type}`)
+        if (cause?.type === 'flurry') see('cause : coup de rafale')
+        if (cause?.type === 'pair') see('cause : coup de paire')
+        if (b.attack.dodgeForced !== (b.attack.dodgeBy !== undefined)) flag('esquive imposée sans son statut', r, i, `${b.attack.dodgeBy}`)
+        if (b.attack.critForced !== (b.attack.critBy !== undefined)) flag('critique assuré sans son statut', r, i, `${b.attack.critBy}`)
+      }
+      if (b.type === 'coin') {
+        if (!cause) flag('pièce sans cause', r, i, '')
+        else see('cause : pièce')
+      }
+      if ((b.type === 'statusDuration' || b.type === 'statusExpire') && cause) {
+        if (cause.type !== 'statusTick' || cause.side !== b.side || cause.phase !== b.phase || cause.turn !== b.turn)
+          flag("décompte causé par autre chose que l'effet de son statut", r, i, cause.type)
+        else see('cause : décompte après son effet')
+      }
+    })
   }
 
   /**

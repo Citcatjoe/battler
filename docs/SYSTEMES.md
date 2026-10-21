@@ -14,14 +14,14 @@ Il prépare une réflexion à venir : penser chaque mécanique comme un **systè
 
 ```
  DONNÉES                MOTEUR              CHRONOLOGIE           LECTURES
- roster.ts      ──┐                                          ┌──▶ useCombat  ──▶ Fighter, StatusTray, dés, HUD  (écran)
+ roster.ts      ──┐                                          ┌──▶ stage → useCombat ──▶ Fighter, StatusTray, dés, HUD  (écran)
  (personnages,    │                                          ├──▶ narration  (journal, textes flottants)
   compétences)    ├──▶ simulateCombat ──▶ beats[] + état ────┼──▶ trace      (lecture sans navigateur)
  statuses.ts      │    (règles, dés)     après chaque étape  ├──▶ audit      (revérifie chaque règle)
  (statuts,        │                                          ├──▶ stats      (bilan d'un combat)
   crochets)     ──┘                                          ├──▶ analysis   (équilibrage, valeurs nettes)
                                                              └──▶ history, tournament (historique, tournoi)
- PRÉSENTATION hors registre : Icon.tsx (icônes), sound.ts (sons), index.css (animations), useCombat (choix du son et du rythme)
+ PRÉSENTATION hors registre : Icon.tsx (icônes), sound.ts (sons), index.css (animations), staging.ts (choix du son et des instants), timing.ts (durées)
 ```
 
 | Couche | Rôle | Fichiers | Contrat |
@@ -29,7 +29,7 @@ Il prépare une réflexion à venir : penser chaque mécanique comme un **systè
 | **Données** | Ce que sont les personnages et les statuts | `roster.ts`, `character.ts`, `events.ts`, `statuses.ts` | Aucun nom de statut en dur ailleurs |
 | **Moteur** | Applique les règles et tire les dés | `combat.ts`, `rng.ts` | Seul endroit où l'on tire au sort ; pur à graine près |
 | **Chronologie** | Ce qui s'est passé, dans l'ordre | `Beat` (`combat.ts`) | Chaque étape porte l'état qui en résulte ; c'est **l'interface unique** entre le moteur et tout le reste |
-| **Lectures** | Interprètent la chronologie | `useCombat`, `narration`, `trace`, `audit`, `stats`, `analysis`, `history` | Ne recalculent aucune règle |
+| **Lectures** | Interprètent la chronologie | `staging` (et son lecteur `useCombat`), `narration`, `trace`, `audit`, `stats`, `analysis`, `history` | Ne recalculent aucune règle |
 | **Présentation** | Montre et fait entendre | `Fighter.tsx`, `StatusTray.tsx`, `FightScreen.tsx`, `index.css`, `sound.ts`, `Icon.tsx` | Rien n'est tiré au sort à l'affichage (positions fixes) |
 | **Interface** | Navigation et outils | écrans, `HpBar`, `SkillDice`, `CheatPad`, compendium | Scène fixe 1600×900 |
 
@@ -156,7 +156,7 @@ Un personnage à formes (druide) alterne entre deux formes au début de chacun d
 
 ## 3. La chronologie : 11 types d'étapes
 
-C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène dans `useCombat`, et TypeScript refuse un type oublié (`beat satisfies never`).
+C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène dans `stage` (`staging.ts`), et TypeScript refuse un type oublié (`beat satisfies never`).
 
 | Étape | Produite par | Contenu |
 | --- | --- | --- |
@@ -242,17 +242,17 @@ Les règles sont dans [SONS.md](SONS.md), qui fait foi ; cette section ne garde 
 | `MIX`, `LEVEL` | `sound.ts` | volume de chaque son, par niveau d'intensité |
 | `UNTIMED`, `setSoundSpeed` | `sound.ts` | sons jamais écourtés ; vitesse du combat |
 | `cueOf` | `cues.ts` | le son d'une compétence ou d'un statut, déduit de ses effets (aura, polarité, type d'effet), sans aucun nom en dur |
-| `strikeSound`, `cueFor` | `useCombat.ts` | le son d'un coup (Esquive, Coup critique, Coup) ; l'appel de `cueOf` |
+| `addSpecial`, `sound` | `staging.ts` | le son d'un coup (Esquive, Coup critique, Coup), l'appel de `cueOf`, le son du signe d'un label ; un seul son par nom et par instant |
 
 **Comment un son est choisi.** Aucun statut ni aucune compétence ne déclare son son. Les étapes du combat ont chacune le leur (SONS.md § 4.1) ; une compétence prend le premier son qui correspond à ce qu'elle a produit (`cueOf`, SONS.md § 4.2). Un nouveau contenu ne touche donc jamais au son, sauf s'il crée une nouvelle signification.
 
 ### 4.5 Les animations (CSS)
 
-Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4), et `.is-paused` les fige.
+Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4), et `.is-paused` les fige (la secousse de l'arène aussi, depuis le moteur v2).
 
 | Groupe | Classes |
 | --- | --- |
-| **Coup** | `lunge` (750 ms), `lunge-fast`, `hit`, `dodge`, `impact`, `damage-float` (1,7 s), `dodge-text` (1,5 s), `special-badge` (labels de coup spécial, ex-`crit-badge`), `crit-flash`, `crit-shake` |
+| **Coup** | `lunge` (`--t-lunge`), `lunge-fast` (`--t-lunge-fast`), `hit`, `dodge`, `impact`, `damage-float` (`--t-float`), `dodge-text` (`--t-title`), `special-badge` (labels de coup spécial, ex-`crit-badge`), `crit-flash`, `crit-shake` |
 | **Dé et pièce** | `die-rolling`, `die-landed`, `die-burst`, `die-slot`, `coin-flipping`, `coin-landed` |
 | **Compétences et statuts** | `event-aura`, `char-aura` (halo, anneau, particules), `status-tremble`, `firefly-orbit`, `firefly` |
 | **Métamorphose** | `form-out`, `form-in`, `morph-flash`, `morph-leaf` |
@@ -261,7 +261,7 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 | **Écrans** | `slide-in-left`, `slide-in-right`, `vs-slam`, `backdrop-figure`, `champion-rays`, `log-pop` |
 | **Mortes** | `status-aura`, `status-halo` (anciens halos de statut, plus utilisés) |
 
-**Le rythme**, lui, n'est pas dans le CSS : il est donné par 34 attentes (`wait`) écrites en dur dans `useCombat`, de 60 à 1 300 ms. L'élan de 750 ms et l'impact à 300 ms, par exemple, doivent rester d'accord entre le CSS et le code.
+**Le rythme**, lui, n'est pas dans le CSS : il est dans la table nommée de `timing.ts` (une constante par battement, de 60 à 1 300 ms), que la mise en scène (`staging.ts`) utilise pour dater ses cues. Les durées CSS qui doivent rester d'accord avec lui (l'élan de 750 ms et son impact à 300 ms, le vol d'un signal, la pièce, l'aura d'une compétence, la vie d'un texte flottant) lisent les variables `--t-*` qui en dérivent (`TIMING_VARS`, posées sur `.arena`).
 
 ### 4.6 Les icônes
 
@@ -331,7 +331,7 @@ On compte les fichiers (hors tests) qui doivent connaître chaque mécanique. Pl
 | Mécanique | Fichiers | Lesquels |
 | --- | --- | --- |
 | Coup sacrifié (`forfeitsHit`) | **12** | moteur, événements, roster, écran, journal, trace, audit, stats, analyse, fin de combat, compendium, dés de compétence |
-| Formes | **12** | personnage, moteur, roster, `useCombat`, `Fighter`, écran de combat, journal, trace, audit, compendium, infobulles, dés de compétence |
+| Formes | **12** | personnage, moteur, roster, `staging`, `Fighter`, écran de combat, journal, trace, audit, compendium, infobulles, dés de compétence |
 | Bouclier (`shield`) | **10** | moteur, registre, journal, trace, audit, stats, analyse, fin de combat, compendium, icônes |
 | Coup transformé | **9** | moteur, événements, roster, écran, journal, trace, audit, compendium, dés de compétence |
 | Purge (`cleanse`) | 8 | moteur, événements, roster, écran, journal, trace, audit, compendium |
@@ -349,10 +349,10 @@ Le registre de `statuses.ts` se dit « entièrement décrit ici, règles ET pré
 | --- | --- |
 | Nom, description, couleur d'aura, mouvement | `statuses.ts` (`look`) |
 | Icône | `Icon.tsx` (`STATUS_ICON`) |
-| Son | `useCombat.ts` (`cueFor` et branches par type d'étape) |
-| Texte flottant (ton, écho, sous-titre) | `narration.ts` (`effectBadge`) et `Fighter.tsx` (heuristique d'écho) |
-| Mise en scène (coup avec élan, réaction sans élan) | `useCombat.ts`, selon `reflectsHit` ou `drainsHit` |
-| Rythme | 34 attentes en dur dans `useCombat.ts` |
+| Son | `staging.ts` (`cueOf` et branches par type d'étape) |
+| Texte flottant (ton, écho, sous-titre) | `narration.ts` (`effectBadge`) et `staging.ts` (`fxFloats`, heuristique d'écho) |
+| Mise en scène (coup avec élan, réaction sans élan) | `staging.ts`, selon `reflectsHit` ou `drainsHit` |
+| Rythme | table nommée de `timing.ts` |
 
 Exemples concrets de connaissances implicites :
 - **Un futur Étourdi sonnera comme la Peur** : toute étape `skip` joue Tour perdu. C'est voulu depuis la 0.36.2 (`SONS.md`, un son par signification).

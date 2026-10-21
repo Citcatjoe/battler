@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react'
-import type { SkillSignal } from '../game/useCombat'
+import type { SkillSignal } from '../game/staging'
 
 interface Flight {
   key: string
@@ -14,8 +14,8 @@ const TONE = { positive: '#6ee7b7', negative: '#fca5a5' }
 
 /**
  * Signaux d'activation (0.79.0) : une lueur part du sceau d'une compétence ou de l'anneau d'une aura, dans
- * l'en-tête, et file en arc vers la zone d'état de chaque cible, où l'effet apparaît à son arrivée (`SIGNAL_MS`,
- * réglé par useCombat). Les positions se lisent dans la page (`data-signal`, `data-tray`) et se ramènent à la
+ * l'en-tête, et file en arc vers la zone d'état de chaque cible, où l'effet apparaît à son arrivée (`timing.SIGNAL`,
+ * la durée de `.signal-orb`). Les positions se lisent dans la page (`data-signal`, `data-tray`) et se ramènent à la
  * scène de 1600×900, quelle que soit sa mise à l'échelle. Le vol suit la vitesse et la pause du combat.
  */
 export function SignalLayer({ signal, root }: { signal: SkillSignal | null; root: RefObject<HTMLElement | null> }) {
