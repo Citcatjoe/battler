@@ -26,6 +26,8 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [AUDIT_COMPENDIUM.md](AUDIT_COMPENDIUM.md) | Audit des textes des compétences et des statuts (0.72.0) : incohérences entre code, textes générés et documents, propositions de reformulation et d'interactions |
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
 | **Direction artistique** | [STYLE_BIBLE.md](STYLE_BIBLE.md) | Style visuel, contraintes des images, prompts de génération |
+| | [design-system.md](design-system.md) | Tokens (couleurs, formes, polices) et composants de l'interface |
+| | [ui-kit/README.md](ui-kit/README.md) | **Source de vérité des contrôles** : boutons, onglets, barre de lecture, glyphes de commande (`battler-ui-kit.css`, `BattlerIcon.jsx`, page et capture de référence). On copie, on ne réinterprète pas |
 
 ## Où documenter quoi
 
@@ -40,6 +42,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | change l'ordre ou le moment d'une résolution, ou ajoute un crochet ou une règle d'application | `RESOLUTION.md`, d'abord : le code suit la règle écrite |
 | ajoute une verticale au compendium, un registre ou un module | `ARCHITECTURE.md` |
 | ajoute une image | `STYLE_BIBLE.md` (références) et, pour une arène, `FEATURES.md` § 5 |
+| ajoute ou change un bouton, un onglet ou une icône de commande | `ui-kit/README.md` : composants de `src/components/kit.tsx` seulement, glyphe de `BattlerIcon` ; jamais d'image peinte dans une commande |
 | ajoute ou change un son, ou une compétence qui produirait un effet sans son | `SONS.md` d'abord : le son se déduit de l'effet, le code suit la règle écrite |
 | change une règle des paris | `PARIS.md` d'abord, puis `FEATURES.md` § 10 |
 | essaie une idée de compétence, ou audite les compétences | `SORTS.md` (laboratoire, audit, résultats) |

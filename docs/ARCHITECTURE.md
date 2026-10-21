@@ -54,7 +54,9 @@ src/
     SpecialLabel.tsx     label de la zone de surcharge sous le dé (couleur de sa source, hachures du − ; specials.ts ; docs/design-system.md § 3.1)
     CombatVcr.tsx        magnétoscope de combat (dev seulement, touche V ou battler.vcr()) : pause, pas à pas, retour, ralenti, attentes du moment avec leur constante de timing.ts (docs/MOTEUR_V2.md § 8)
     VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement
-    PrestigeButton.tsx   bouton principal d'un écran (pièce prestige du design system, un seul par écran)
+    kit.tsx              contrôles du UI kit (docs/ui-kit/) : Button, IconButton, ModePair, SegmentedControl, Tool, BackLink, Glyph ; ne posent que les classes du kit
+    BattlerIcon.jsx      glyphes de commande, copiés tels quels de docs/ui-kit/ (types : BattlerIcon.d.ts)
+    Tabs.tsx             onglets mineurs du kit (.bt-tabs)
     HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
     homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
@@ -62,6 +64,8 @@ src/
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
                          (Fiche, Performances), SkillsSection, StatusesSection, RelicsSection, RulesSection,
                          CodexBits (sceaux ronds, pastilles de statut et de règle, encadrés, résumé d'une compétence)
+  dev/                   KitReference.tsx : page de développement `?kit` (serveur de dev seulement), les contrôles du kit
+                         disposés comme docs/ui-kit/reference.html, pour comparer leur capture à reference.png
 ```
 
 ## Principe central : un moteur, une chronologie

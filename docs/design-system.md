@@ -116,13 +116,8 @@ Contraintes techniques :
 
 | Composant | Traitement |
 |---|---|
-| Combattre (`.btn--primary`, XL) | Prestige : octogone 14 px, cadre bronze, jour, plaque `--gold-400`, tranche 4 px, gravure. 360 × 72. Un seul par écran. |
-| Onglets majeurs (mode de jeu) | Prestige : rail octogonal 10 px cadre bronze ; onglet actif = plaque or chanfreinée 6 px + tranche 3 px + encoche 8 × 14 px sous l'actif. |
-| Onglets mineurs (sous-vues) | Soulignés : actif = soulignement 2 px `--gold-400` + texte `--gold-300`. Jamais en or plein. |
+| Contrôles (boutons, paire de modes, onglets mineurs, boutons icône, barre de lecture, lien de retour) | **UI kit** ([ui-kit/README.md](ui-kit/README.md), 0.83.0) : `battler-ui-kit.css` importé tel quel, composants de `src/components/kit.tsx`, glyphes de commande de `BattlerIcon`. Primaire XL 72 px (un seul par écran), secondaire 52, petit 40, bouton icône 48 / 44. Jamais d'image peinte dans une commande. |
 | Sceau VS | Octogone 96 px (coupe 28), cadre `--gold-500`, jour, plaque `--bg-1`, gravure or 40 %. Sans lignes de liaison. |
-| Boutons secondaires (Au hasard…) | Serti (variante A) : fond `--bg-2`, texte `--gold-300`, tranche sombre 2 px. Rectangle rayon 2. |
-| Boutons icône | Ronds 48 px, serti. Pas de chanfrein (inutile à cette taille). `aria-label` obligatoire. |
-| Bouton tertiaire | Transparent, contour `--line-2`, Alegreya 15/500. |
 | Panneau de combattant | Fonctionnel : fond `--scrim` (sans flou depuis la 0.64.2), rayon 2, contour 1 px `rgba(232,200,140,.16)`, **liseré de camp 2 px en tête** (`inset 0 2px 0 var(--side-x)`). Pas d'équerres. |
 | Cartes de compétence | Lame. La couleur dépend de la **nature** de la compétence : martiale = `--gold-500`, adresse = `--armor`, arcane = `--arcane`, neutre = `--text-3` (ajout de l'utilisateur, 0.39.1 : l'Attente de l'ogre). Fenêtre du sceau octogonale. Glyphe natif en repli tant que A-01 n'existe pas. |
 | Jauges, stats, tableaux, tooltips, pastilles | Inchangés (V1.0). Barre 4–6 px, rayon 2, piste = `--side-x-track`, valeur IBM Plex Mono alignée à droite. |

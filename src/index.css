@@ -301,19 +301,14 @@ body {
   to { opacity: 1; transform: scaleX(1.05); }
 }
 
-/* ---------- Boutons de jeu ----------
-   .btn : plaque de pierre sombre au liseré de bronze (action secondaire)
-   Le bouton principal de l'écran est une pièce prestige : composant PrestigeButton (.prestige).
-   .btn-sm / .btn-md / .btn-lg : hauteur, texte et taille d'icône (--icon)
-   .btn-round : médaillon rond, icône seule (le libellé passe par title et aria-label)
-   .tabs / .tab : sélecteur de mode, l'onglet actif porte aria-pressed="true"
-   L'icône d'un bouton prend la classe .btn-icon pour suivre --icon.
-   Dans @layer components : les utilitaires Tailwind (absolute, w-96…) gardent la priorité. */
+/* ---------- Bouton de pierre du combat test ----------
+   Les contrôles du jeu viennent du UI kit (docs/ui-kit/, composants de kit.tsx). Seul le combat test,
+   outil de l'utilisateur laissé hors du kit, garde ses .btn .btn-sm (TestFightScreen.tsx).
+   Dans @layer components : les utilitaires Tailwind gardent la priorité. */
 @layer components {
   /* Bouton secondaire : serti, variante A du design system (fond --bg-2, texte --gold-300,
      filet bronze, jour du fond, filet gravé, tranche sombre de 2 px). Rectangle de rayon 2. */
   .btn {
-    --icon: 22px;
     --plate: var(--bg-2);
     --rim: var(--frame);
     --depth: #070504;
@@ -366,345 +361,16 @@ body {
     cursor: not-allowed;
     transform: none;
   }
-  /* Icône éteinte avec le bouton, comme sur la pièce prestige */
-  .btn:disabled .btn-icon { filter: grayscale(1) brightness(0.6); }
   .btn:focus-visible {
     outline: 2px solid var(--gold-200);
     outline-offset: 2px;
-  }
-  .btn-icon {
-    width: var(--icon);
-    height: var(--icon);
-    vertical-align: middle;
-    filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.8));
   }
   /* Cinzel réserve la place des jambages : on recentre les capitales sur l'icône. */
   .btn > span {
     transform: translateY(0.05em);
   }
 
-  .btn-sm { --icon: 20px; height: 36px; padding: 0 0.9em; font-size: 11px; }
-  .btn-md { --icon: 28px; height: 54px; font-size: 16px; }
-  .btn-lg { --icon: 40px; height: 76px; font-size: 28px; letter-spacing: 0.16em; }
-
-  /* Bouton icône : rond de 48 px, serti, sans chanfrein. aria-label obligatoire. */
-  .btn-round {
-    --icon: 28px;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border-radius: var(--r-round);
-  }
-
-  /* Onglets majeurs (choix du mode de jeu), pièce prestige du design system :
-     rail octogonal (coupe 10 px) au cadre bronze sur un jour sombre ; onglet actif = plaque
-     d'or chanfreinée (6 px) avec tranche de 3 px, et une encoche sous lui qui désigne l'écran.
-     Les couches sont des pseudo-éléments découpés : le rail lui-même ne l'est pas, pour que
-     son ombre (drop-shadow) et l'encoche dépassent. */
-  .tabs {
-    --cut: var(--cut-m);
-    position: relative;
-    isolation: isolate;
-    display: inline-flex;
-    gap: 4px;
-    padding: 6px;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
-  }
-  .tabs::before,
-  .tabs::after {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    --c: var(--cut);
-    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  }
-  .tabs::before {
-    inset: 0;
-    background: var(--frame);
-  }
-  .tabs::after {
-    --c: calc(var(--cut) - 1.2px);
-    inset: var(--frame-gap);
-    background: var(--bg-1);
-    box-shadow: inset 0 0 0 1px var(--bg-0), var(--hl);
-  }
-  .tab {
-    --icon: 26px;
-    --plate: transparent;
-    --c: var(--cut-s);
-    position: relative;
-    z-index: 0; /* contexte propre : la plaque (::before) passe au-dessus du rail */
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6em;
-    height: 44px;
-    padding: 0 1.3em;
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--text-2);
-    transition: color 150ms;
-    user-select: none;
-  }
-  /* plaque de l'onglet (chanfrein de 6 px) */
-  .tab::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: var(--plate);
-    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-    transition: background-color 150ms;
-  }
-  .tab > span {
-    transform: translateY(0.05em);
-  }
-  .tab .btn-icon {
-    filter: grayscale(0.7) brightness(0.75);
-    transition: filter 150ms;
-  }
-  .tab:hover {
-    --plate: rgba(237, 196, 106, 0.08);
-    color: var(--text-1);
-  }
-  .tab:hover .btn-icon {
-    filter: none;
-  }
-  .tab[aria-selected='true'] {
-    --plate: var(--gold-400);
-    color: var(--on-gold);
-    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.55);
-  }
-  .tab[aria-selected='true']::before {
-    box-shadow: inset 0 1px 0 rgba(255, 246, 220, 0.55), inset 0 calc(-1 * var(--tranche-tab)) 0 var(--gold-700);
-  }
-  .tab[aria-selected='true'] .btn-icon {
-    filter: drop-shadow(0 1px 1px rgba(60, 30, 0, 0.6));
-  }
-  /* encoche : petite pointe d'or sous l'onglet actif, posée sur le bord bas du rail */
-  .tab[aria-selected='true']::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: calc(100% + 6px);
-    width: 14px;
-    height: 8px;
-    transform: translateX(-50%);
-    background: var(--gold-400);
-    clip-path: polygon(0 0, 100% 0, 50% 100%);
-  }
-  .tab:focus-visible {
-    outline: 2px solid var(--gold-200);
-    outline-offset: -4px;
-  }
-
-  /* Onglets mineurs (sous-vues, design system) : soulignés, jamais en or plein.
-     Actif : soulignement 2 px --gold-400 et texte --gold-300 (aria-selected="true"). */
-  .tabs-minor {
-    display: inline-flex;
-    gap: 4px;
-    box-shadow: inset 0 -1px 0 var(--line-1);
-  }
-  .tab-minor {
-    --icon: 24px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55em;
-    min-height: 44px;
-    padding: 0 0.9em;
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--text-2);
-    transition: color 150ms, box-shadow 150ms;
-    user-select: none;
-  }
-  .tab-minor > span {
-    transform: translateY(0.05em);
-  }
-  .tab-minor .btn-icon {
-    filter: grayscale(0.7) brightness(0.75);
-    transition: filter 150ms;
-  }
-  .tab-minor:hover {
-    color: var(--text-1);
-  }
-  .tab-minor:hover .btn-icon,
-  .tab-minor[aria-selected='true'] .btn-icon {
-    filter: none;
-  }
-  .tab-minor[aria-selected='true'] {
-    color: var(--gold-300);
-    box-shadow: inset 0 -2px 0 var(--gold-400);
-  }
-  .tab-minor:focus-visible {
-    outline: none;
-    box-shadow: var(--focus);
-  }
-  .tab-minor[aria-selected='true']:focus-visible {
-    box-shadow: inset 0 -2px 0 var(--gold-400), var(--focus);
-  }
-
-  /* Bouton tertiaire (design system) : transparent, contour --line-2, Alegreya Sans 15/500. */
-  .btn-tertiary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5em;
-    min-height: 36px;
-    padding: 0 0.9em;
-    font-family: var(--font-body);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--text-2);
-    background: transparent;
-    border: 1px solid var(--line-2);
-    border-radius: var(--r-xs);
-    transition: color 150ms, border-color 150ms, background-color 150ms;
-  }
-  .btn-tertiary:hover:not(:disabled) {
-    color: var(--text-1);
-    border-color: var(--line-active);
-  }
-  .btn-tertiary:active:not(:disabled) {
-    transform: translateY(1px);
-  }
-  .btn-tertiary:focus-visible {
-    outline: none;
-    box-shadow: var(--focus);
-  }
-  .btn-tertiary:disabled {
-    color: var(--text-off);
-    border-color: var(--line-1);
-    cursor: not-allowed;
-  }
-}
-
-/* ---------- Pièce prestige : bouton principal (design system, recette prestige) ----------
-   Couches empilées, toutes en octogone : cadre --frame (le bouton), jour --bg-0 (::before, 2 px),
-   plaque d'or (::after, 4 px) avec filet clair et tranche, gravure (.prestige-engrave, 10 px du
-   bord). Ombre portée par drop-shadow sur l'enveloppe (.prestige) : le clip-path coupe box-shadow.
-   Focus : le cadre passe en --gold-200 (l'anneau serait coupé). Les états changent les couleurs
-   des couches, jamais la forme. */
-@layer components {
-  .prestige {
-    --cut: var(--cut-l);
-    --oct: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)),
-      calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
-    display: inline-flex;
-    height: 72px;
-    font-size: 26px;
-    letter-spacing: 0.16em;
-    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
-  }
-  .prestige-md {
-    --cut: var(--cut-m);
-    height: 54px;
-    font-size: 16px;
-  }
-  .prestige-btn {
-    --frame-c: var(--frame);
-    --plate: var(--gold-400);
-    --tranche: var(--tranche-btn);
-    position: relative;
-    isolation: isolate;
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    clip-path: var(--oct);
-    background: var(--frame-c);
-    font-family: var(--font-display);
-    font-weight: 700;
-    line-height: 1;
-    text-transform: uppercase;
-    white-space: nowrap;
-    color: var(--on-gold);
-    transition: transform 80ms ease-out;
-    user-select: none;
-  }
-  .prestige-btn::before,
-  .prestige-btn::after,
-  .prestige-engrave {
-    content: '';
-    position: absolute;
-    z-index: -1;
-  }
-  /* jour : chaque retrait de d px raccourcit le chanfrein d'environ 0,6 × d */
-  .prestige-btn::before {
-    --c: calc(var(--cut) - 1.2px);
-    inset: var(--frame-gap);
-    background: var(--bg-0);
-    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  }
-  .prestige-btn::after {
-    --c: calc(var(--cut) - 2.4px);
-    inset: 4px;
-    background: var(--plate);
-    box-shadow: inset 0 1px 0 rgba(255, 246, 220, 0.55), inset 0 calc(-1 * var(--tranche)) 0 var(--gold-700);
-    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-    transition: background-color 150ms, box-shadow 80ms;
-  }
-  /* gravure : un octogone d'un pixel, à 10 px du bord (anneau en evenodd) */
-  .prestige-engrave {
-    --c: calc(var(--cut) - 6px);
-    --d: calc(var(--c) + 0.4px);
-    inset: 10px 10px calc(10px + var(--tranche));
-    z-index: 0; /* au-dessus de la plaque (::after, peinte après le contenu) */
-    background: var(--engrave);
-    clip-path: polygon(evenodd,
-      var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-      calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c), var(--c) 0,
-      var(--d) 1px, 1px var(--d), 1px calc(100% - var(--d)), var(--d) calc(100% - 1px),
-      calc(100% - var(--d)) calc(100% - 1px), calc(100% - 1px) calc(100% - var(--d)),
-      calc(100% - 1px) var(--d), calc(100% - var(--d)) 1px, var(--d) 1px);
-  }
-  .prestige-md .prestige-engrave { inset: 8px 8px calc(8px + var(--tranche)); --c: calc(var(--cut) - 4.8px); }
-  .prestige-label {
-    --icon: 40px;
-    position: relative;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55em;
-    padding: 0 1.2em calc(var(--tranche) / 2);
-    text-shadow: 0 1px 0 rgba(255, 238, 180, 0.55);
-  }
-  .prestige-md .prestige-label { --icon: 28px; }
-  /* Cinzel réserve la place des jambages : on recentre les capitales sur l'icône. */
-  .prestige-label > span { transform: translateY(0.05em); }
-  .prestige-label .btn-icon {
-    filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.6)) drop-shadow(0 2px 2px rgba(60, 30, 0, 0.5));
-  }
-
-  .prestige-btn:hover { --plate: var(--gold-300); }
-  .prestige-btn:active {
-    --tranche: 2px;
-    transform: translateY(1px);
-  }
-  .prestige-btn:focus-visible {
-    outline: none;
-    --frame-c: var(--gold-200);
-  }
-  .prestige-btn:disabled {
-    --plate: var(--bg-3);
-    --frame-c: var(--line-bronze);
-    color: var(--text-off);
-    text-shadow: none;
-    cursor: not-allowed;
-    transform: none;
-  }
-  .prestige-btn:disabled .btn-icon { filter: grayscale(1) brightness(0.6); }
+  .btn-sm { height: 36px; padding: 0 0.9em; font-size: 11px; }
 }
 
 /* ---------- Sceau VS (design system, pièce prestige) ----------
@@ -1487,22 +1153,9 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.07), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-/* ---------- Barre de commandes du combat (HUD) ----------
-   Plaque de pierre sombre au liseré de bronze, dans l'esprit des .btn, mais basse et translucide pour
-   rester discrète : boutons-textes en Cinzel, vitesse en trois gemmes, compteurs en pastilles. */
-.hud {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 44px;
-  padding: 0 10px;
-  background: linear-gradient(180deg, rgba(38, 31, 26, 0.82), rgba(18, 14, 11, 0.86));
-  border: 1px solid #000;
-  /* Coins coupés : une plaque, pas une pilule de lecteur vidéo */
-  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
-  box-shadow: inset 0 0 0 1px rgba(217, 160, 80, 0.4), inset 0 6px 10px -6px rgba(255, 230, 180, 0.15);
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
-}
+/* ---------- Commandes du magnétoscope (outil de développement) ----------
+   La barre de lecture du combat vient du UI kit (.bt-playbar) ; ces boutons-textes et ces gemmes de vitesse ne
+   servent plus qu'au magnétoscope (CombatVcr.tsx), en attendant sa refonte sur le kit. */
 .hud-btn {
   display: inline-flex;
   align-items: center;
@@ -1553,17 +1206,6 @@ body {
 .hud-speed[aria-pressed='true'] {
   color: #2b1704;
   background: linear-gradient(180deg, #fde68a 0%, #f2bf4f 45%, #c4851f 100%);
-}
-.hud-count {
-  min-width: 18px;
-  padding: 0 4px;
-  font-family: var(--font-sans);
-  font-size: 10px;
-  line-height: 16px;
-  letter-spacing: 0;
-  color: #1c1917;
-  background: #f59e0b;
-  border-radius: 9999px;
 }
 
 /* ---------- Magnétoscope du combat (outil de développement, docs/MOTEUR_V2.md § 8) ----------
@@ -2332,97 +1974,12 @@ body {
 .home-link:hover { color: var(--gold-200); text-decoration: underline; text-underline-offset: 3px; }
 .home-link:focus-visible { outline: 2px solid var(--gold-200); outline-offset: 2px; color: var(--gold-200); }
 
-/* Choix du mode : une seule pièce prestige (recette prestige du design system). Cadre octogonal
-   bronze (::before, coupe 14 px), jour sombre (::after, 2 px), puis deux plaques d'or identiques
-   (coupe 9 px, celle du cadre à 8 px du bord), avec filet clair, tranche et gravure. Les deux choix
-   sont de même rang : aucun n'est mis en avant. Focus : le cadre passe en --gold-200 et la plaque
-   s'éclaire (l'anneau serait coupé par le clip-path). */
-.mode-rail {
-  --cut: var(--cut-l);
-  --rail-frame: var(--frame);
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  grid-template-columns: 240px 240px;
-  gap: 6px;
-  padding: 8px;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .6));
-}
-.mode-rail:has(.mode-plate:focus-visible) { --rail-frame: var(--gold-200); }
-.mode-rail::before,
-.mode-rail::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  --c: var(--cut);
-  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-    calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-}
-.mode-rail::before { inset: 0; background: var(--rail-frame); transition: background-color 150ms; }
-.mode-rail::after { --c: calc(var(--cut) - 1.2px); inset: var(--frame-gap); background: var(--bg-0); }
-.mode-plate {
-  --c: 9px;
-  --plate: var(--gold-400);
-  --tranche: var(--tranche-btn);
-  --icon: 32px;
-  position: relative;
-  z-index: 0;
-  display: flex;
-  height: 66px;
-  align-items: center;
-  justify-content: center;
-  background: var(--plate);
-  box-shadow: inset 0 1px 0 rgba(255, 246, 220, .55), inset 0 calc(-1 * var(--tranche)) 0 var(--gold-700);
-  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
-    calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--on-gold);
-  outline: none;
-  transition: background-color 150ms, box-shadow 80ms, transform 80ms ease-out;
-  user-select: none;
-}
-.mode-plate:hover,
-.mode-plate:focus-visible { --plate: var(--gold-300); }
-.mode-plate:active { --tranche: 2px; transform: translateY(1px); }
-/* Gravure : un octogone d'un pixel, à 8 px du bord de la plaque (anneau en evenodd) */
-.mode-engrave {
-  --e: calc(var(--c) - 4.8px);
-  --d: calc(var(--e) + 0.4px);
-  position: absolute;
-  inset: 8px 8px calc(8px + var(--tranche));
-  background: var(--engrave);
-  clip-path: polygon(evenodd,
-    var(--e) 0, calc(100% - var(--e)) 0, 100% var(--e), 100% calc(100% - var(--e)),
-    calc(100% - var(--e)) 100%, var(--e) 100%, 0 calc(100% - var(--e)), 0 var(--e), var(--e) 0,
-    var(--d) 1px, 1px var(--d), 1px calc(100% - var(--d)), var(--d) calc(100% - 1px),
-    calc(100% - var(--d)) calc(100% - 1px), calc(100% - 1px) calc(100% - var(--d)),
-    calc(100% - 1px) var(--d), calc(100% - var(--d)) 1px, var(--d) 1px);
-}
-.mode-label {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: .5em;
-  padding-bottom: calc(var(--tranche) / 2);
-  text-shadow: 0 1px 0 rgba(255, 238, 180, .55);
-}
-.mode-label > span { transform: translateY(.05em); }
-.mode-label .btn-icon {
-  filter: drop-shadow(0 1px 0 rgba(255, 240, 200, .6)) drop-shadow(0 2px 2px rgba(60, 30, 0, .5));
-}
-/* Les lignes d'explication, chacune centrée sous sa plaque */
+/* Les lignes d'explication, chacune centrée sous sa plaque de la paire de modes (.bt-modepair : 294 px, 4 px d'écart) */
 .mode-hints {
   display: grid;
-  grid-template-columns: 240px 240px;
-  gap: 6px;
-  padding: 0 8px;
+  grid-template-columns: 294px 294px;
+  gap: 4px;
+  padding: 0 4px;
   justify-items: center;
   text-align: center;
 }

@@ -41,6 +41,7 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 - Un seul moteur : `simulateCombat` applique toutes les règles et produit une chronologie (`beats`) ; l'écran ne fait que la rejouer. Ne jamais tirer de dés ni recalculer une règle dans l'interface.
 - Aucun `Math.random` dans les règles : tout passe par un `Rng` injecté (`rng.ts`).
 - **Jamais d'emoji** dans un texte affiché (textes flottants, journal, descriptions, infobulles, écrans) : chaque compétence et chaque état a son icône peinte. S'il en manque une, la demander à l'utilisateur. Des tests le vérifient (`EMOJI`).
+- **Contrôles : le UI kit seulement** (`docs/ui-kit/README.md`, règle permanente de l'utilisateur, 0.83.0). Boutons, onglets, liens de retour, barre de lecture : composants de `src/components/kit.tsx`, glyphes de `BattlerIcon` ; on copie le kit, on ne le réinterprète pas. Les images peintes sont réservées au contenu (compétences, statuts, reliques, objets, portraits) : **jamais dans un bouton de commande**.
 - Statuts, déclencheurs et effets se définissent dans leur registre (`statuses.ts`, `events.ts`) ; aucun nom de statut en dur dans les composants. Marche à suivre : `docs/ARCHITECTURE.md`, section « Étendre le jeu ».
 - Toute nouvelle mécanique arrive avec ses tests dans `combat.test.ts`.
 - Scène fixe de 1600×900 (`Stage.tsx`) : pas de breakpoints `sm:` ni d'unités `vh` dans les écrans.

@@ -32,6 +32,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.83.0] — 2026-10-21
+
+### Ajouté
+- **UI kit** (`docs/ui-kit/`, source de vérité des contrôles) : `battler-ui-kit.css` importé tel quel (`main.tsx`), `BattlerIcon.jsx` copié dans les composants (types dans `BattlerIcon.d.ts`), et des composants fins qui ne posent que ses classes (`src/components/kit.tsx` : `Button`, `IconButton`, `ModePair`, `SegmentedControl`, `Tool`, `BackLink`, `Glyph`).
+- Page de développement `?kit` (serveur de dev seulement, `src/dev/KitReference.tsx`) : les composants disposés comme `reference.html`. Capturée à 1440 px dans Firefox, elle est identique à `reference.html` rendue par Firefox (aucun pixel ne diffère de plus de 1 %).
+
+### Modifié
+- **Tous les contrôles passent au kit**, écran par écran : accueil (paire de modes Duel | Tournoi, boutons ronds), sélection, présentation et configuration du tournoi, arbre, affrontement, guichet des paris, combat (barre de lecture), fin de combat, récompense, champion, statistiques, compendium, boutons du son. Un seul primaire XL (72 px) par écran, secondaires de 52 px, petits de 40 px, boutons icône de 48 et 44 px.
+- **Glyphes de commande au lieu des icônes peintes** dans les commandes (épées, trophée, dé, éclair, ticket, parchemin, barres, son, musique) : les images peintes restent au contenu et aucun fichier n'est supprimé. Les pastilles « Simulé », « Vainqueur » et joué ou simulé de l'arbre et du champion prennent aussi leur glyphe.
+- Son et musique coupés : glyphe barré et couleur atténuée (`aria-pressed="false"`), au lieu d'une barre rouge peinte ; le bouton de la musique passe à 48 px.
+- Un seul style de retour (`.bt-back`) : « ← Menu », « ← Retour », « ← Retour à la sélection », « ← Combat », et « Menu » des écrans de fin et du champion. L'affrontement garde un secondaire : « Changer » (duel) ou « Arbre » (tournoi).
+- Barre de lecture du combat : Pause (ou Reprendre, en or), vitesses ×1 ×2 ×4 en sélecteur segmenté, outil Journal avec un **point or** quand des lignes arrivent, au lieu du compteur chiffré. En-tête du journal : « Copier la trace » et Fermer en boutons icône.
+- Onglets mineurs (`.bt-tabs`) sans icône, compteur en `.bt-count` (compendium, fiche, statistiques, écran de fin).
+
+### Retiré
+- `PrestigeButton` et les styles devenus inutiles : `.prestige*`, `.btn-md`, `.btn-lg`, `.btn-round`, `.btn-icon`, `.btn-tertiary`, onglets `.tabs`, `.tab`, `.tabs-minor`, `.tab-minor`, `.mode-rail` et ses plaques, `.hud` et `.hud-count`. Restent `.btn .btn-sm` (combat test, hors kit) et les `.hud-btn` du magnétoscope, en attendant sa refonte.
+
 ## [0.82.0] — 2026-10-21
 
 ### Ajouté
