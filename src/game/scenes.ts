@@ -8,11 +8,11 @@
  * 1. un identifiant dans `SceneEventId` et son rythme dans `SCENE_EVENTS` (ici) ;
  * 2. son rendu dans `SCENE_VIEWS` (`components/SceneEvent.tsx`) : un fond sur toute l'arène (`Backdrop`)
  *    et, s'il vise quelqu'un, une marque posée sur sa cible (`OnTarget`) ;
- * 3. `scene: '<id>'` sur la compétence (roster.ts). Une compétence en plusieurs coups (`hits` d'un effet
- *    `damage`) fait tomber un coup par impact.
+ * 3. `scene: '<id>'` sur la compétence (roster.ts) ou sur la relique (relics.ts, reliques élémentaires, 0.85.0).
+ *    Un effet `damage` en plusieurs coups (`hits`) fait tomber un coup par impact.
  */
 
-export type SceneEventId = 'lightning'
+export type SceneEventId = 'lightning' | 'emberRain' | 'gale' | 'hoarfrost' | 'stoneWall'
 
 export interface SceneTiming {
   /**
@@ -22,10 +22,29 @@ export interface SceneTiming {
   impacts: readonly number[]
   /** Durée totale de l'événement à l'écran (ms à ×1), impacts compris */
   length: number
+  /**
+   * Qui l'événement vise (0.85.0) : l'adversaire du lanceur (défaut : l'éclair tombe sur lui, un coup par impact), ou
+   * le lanceur lui-même (la gangue de givre se referme sur lui ; ses effets tombent au premier impact).
+   */
+  aim?: 'opponent' | 'self'
+  /** L'arène tremble à chaque impact (météores, roche qui jaillit) : la secousse des gros coups (FightScreen) */
+  quake?: true
 }
 
 export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   // Foudre (druide, 0.76.0) : l'arène s'assombrit, trois éclairs tombent l'un après l'autre autour de la
   // cible (un coup de 2 chacun), puis la lumière revient
   lightning: { impacts: [440, 800, 1160], length: 1750 },
+  // Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : le sceau de l'objet se brise, sa magie envahit l'arène.
+  // Braise captive : le ciel rougit, trois météores tombent en diagonale sur l'adversaire (un coup de 2 chacun)
+  emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true },
+  // Conque des vents : l'esquive appelle le vent, trois lames d'air traversent l'arène vers l'adversaire
+  gale: { impacts: [420, 640, 860], length: 1450 },
+  // Larme de givre : le givre gagne l'écran, une gangue se referme sur le porteur et éclate (purge et soin)
+  hoarfrost: { impacts: [760], length: 1650, aim: 'self' },
+  // Géode fendue : l'arène tremble, des colonnes de roche jaillissent autour du porteur (le bouclier)
+  stoneWall: { impacts: [380], length: 1350, aim: 'self', quake: true },
 }
+
+/** Le camp visé par un événement lancé par `source` (l'adversaire, ou le lanceur lui-même). */
+export const sceneTarget = (id: SceneEventId, source: 0 | 1): 0 | 1 => (SCENE_EVENTS[id].aim === 'self' ? source : source === 0 ? 1 : 0)

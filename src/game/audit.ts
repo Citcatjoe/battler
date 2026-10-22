@@ -591,9 +591,13 @@ export function createAudit() {
               pending = null
             }
             if (b.type === 'relic' && b.side === side && b.relic === relic.id) {
-              const before = r.beats[i - 1]?.state.hp[watched] ?? r.fighters[watched].maxHp
+              // Le passage se lit sur l'étape vérifiée (sa cause), pas sur la précédente : une autre relique du même
+              // passage a pu soigner entre les deux (Larme de givre puis Trophée adverse, 0.85.0)
+              const at = b.cause ?? i - 1
+              const before = r.beats[at]?.state.hp[watched] ?? r.fighters[watched].maxHp
               if (before >= threshold || before <= 0) flag('relique de seuil au-dessus de son seuil', r, i, `${before} PV`)
               else see('relique de seuil')
+              if (r.beats[i - 1]?.state.hp[watched] >= threshold) see('relique de seuil après un soin du même passage')
               pending = null
             }
             const hp = b.state.hp[watched]

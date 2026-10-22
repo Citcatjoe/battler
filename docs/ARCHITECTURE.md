@@ -41,7 +41,11 @@ src/
     useCombat.ts         LECTEUR : hook qui joue les moments avec une seule horloge (vitesse, pause, arrêt) ; applyCue, mode triche
     scenes.ts            événements de scène (SceneEventId, rythme SCENE_EVENTS : impacts, durée) : présentation seule, le moteur ne les lit pas
     history.ts           historique localStorage, useHistory, normalize
-    tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), fillSlots
+    tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), fillSlots, labelEntrants
+    season.ts            phase de saison facultative avant l'arbre (0.86.0) : calendrier aller-retour (seasonSchedule, Berger), graine par match,
+                         bilans compacts, simulation sans trace ni historique (simulateSeasonMatches), classement et départage
+                         (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS)
+    epithets.ts          noms uniques des participants (0.87.0) : EPITHETS, huit épithètes par personnage, et uniqueNames (tirage par Rng)
     betting.ts           paris : quatre parieurs (deux de l'ordinateur), cotes simulées, mises fixes, règlement, coups de théâtre (docs/PARIS.md)
     sound.ts             sfx.*, fichiers son (SOUND_NAMES, MIX), vitesse et réglage muet
     *.test.ts            tests (moteur, modules, équilibre, non-régression)
@@ -60,6 +64,8 @@ src/
     HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
     homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
+    SeasonScreen.tsx     phase de saison : classement en deux colonnes et ligne de qualification, journée et ses matchs, simulation (aucune règle : tout vient de season.ts)
+    SeasonSlots.tsx      configuration d'un tournoi avec saison : les cases des participants de la saison, sur deux colonnes aux places des extrémités de l'arbre (SETUP_GEOMETRY de Bracket.tsx)
     compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
                          (Fiche, Performances), SkillsSection, StatusesSection, RelicsSection, RulesSection,

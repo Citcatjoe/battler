@@ -1,20 +1,27 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
 import { RELICS } from '../game/relics'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
+import { SEASON_SIZES, type SeasonSize } from '../game/season'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
+import { SeasonSlots } from './SeasonSlots'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
-import { BackLink, Button } from './kit'
+import { BackLink, Button, Glyph, SegmentedControl } from './kit'
 import { RelicSeal } from './RelicSeal'
 import { SkillDice } from './SkillDice'
 
 interface Props {
+  /** Les 16 cases de l'arbre (tournoi sans saison) */
   slots: (string | null)[]
   onChange: (slots: (string | null)[]) => void
+  /** Les cases des participants de la saison (au moins la plus grande taille ; seules les `season.size` premières servent) */
+  seasonSlots: (string | null)[]
+  onSeasonSlotsChange: (slots: (string | null)[]) => void
+  /** Les cases remplies du mode choisi : l'arbre, ou les participants de la saison */
   onValidate: (slots: string[]) => void
   onBack: () => void
   /** Paris entre deux joueurs (docs/PARIS.md) : activés, et les noms des deux parieurs */
@@ -23,23 +30,104 @@ interface Props {
   /** Système de reliques pour ce tournoi (docs/RELIQUES.md) ; le choix reste pour le tournoi suivant */
   relics: boolean
   onRelicsChange: (relics: boolean) => void
+  /** Noms uniques : une épithète du personnage par participant, au lieu des chiffres romains (epithets.ts) */
+  uniqueNames: boolean
+  onUniqueNamesChange: (uniqueNames: boolean) => void
+  /** Phase de saison avant l'arbre (season.ts) et nombre de participants ; le choix reste pour le tournoi suivant */
+  season: { enabled: boolean; size: SeasonSize }
+  onSeasonChange: (season: { enabled: boolean; size: SeasonSize }) => void
 }
 
 /** Le sceau qui illustre l'interrupteur des reliques : la forme hexagonale suffit à dire « relique ». */
 const SWITCH_RELIC = RELICS[0]
 
 /**
- * Configuration de l'arbre (refonte 0.47.0) : on choisit un combattant dans la grande palette centrale
- * (le « pinceau »), puis on clique les cases du premier tour, aux deux extrémités de l'arbre. Les lignes
- * de l'arbre convergent vers la palette, qui porte aussi le compte et les actions (Compléter, Vider, Valider).
+ * Interrupteur compact de la configuration (Reliques, Phase de saison) : l'illustration s'éteint quand il est
+ * coupé. `states` : l'état écrit sous le nom, actif puis coupé (« Activées », « Désactivées »).
  */
-export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, betting, onBettingChange, relics, onRelicsChange }: Props) {
+function SetupSwitch({
+  on,
+  onToggle,
+  label,
+  states,
+  visual,
+  title,
+}: {
+  on: boolean
+  onToggle: () => void
+  label: string
+  states: [string, string]
+  visual?: ReactNode
+  title: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        sfx.click()
+        onToggle()
+      }}
+      title={title}
+      className={`flex h-11 items-center gap-2 rounded-(--r-sm) border-2 bg-surface-1/90 pl-2 pr-3 text-left shadow-(--shadow-2) transition-colors ${
+        on ? 'border-gold-500/80' : 'border-line-2 hover:border-gold-500/50'
+      }`}
+    >
+      {visual}
+      <span className="flex flex-col whitespace-nowrap leading-none">
+        <span className={`font-display text-[17px] font-semibold ${on ? 'text-gold-200' : 'text-ink-2'}`}>{label}</span>
+        <span className={`mt-0.5 font-body text-[11px] font-bold uppercase tracking-wider ${on ? 'text-good' : 'text-ink-3'}`}>
+          {on ? states[0] : states[1]}
+        </span>
+      </span>
+      {/* Le curseur : à droite et en or quand il est actif */}
+      <span
+        aria-hidden
+        className={`relative ml-1 h-6 w-11 shrink-0 rounded-full border-2 transition-colors ${on ? 'border-gold-400 bg-gold-500/40' : 'border-line-2 bg-surface-0'}`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full shadow-(--shadow-2) transition-all duration-150 ${on ? 'left-[22px] bg-gold-300' : 'left-0.5 bg-ink-3'}`}
+        />
+      </span>
+    </button>
+  )
+}
+
+/**
+ * Configuration du tournoi (refonte 0.47.0) : on choisit un combattant dans la grande palette centrale
+ * (le « pinceau »), puis on clique les cases. Sans saison, ce sont les cases du premier tour, aux deux extrémités
+ * de l'arbre, dont les lignes convergent vers la palette. Avec la saison (0.86.1), ce sont les participants de la
+ * saison, sur deux colonnes : l'arbre reste vide jusqu'à la fin de la saison. La palette porte aussi le compte et
+ * les actions (Compléter, Vider, Valider).
+ */
+export function TournamentSetupScreen({
+  slots: bracketSlots,
+  onChange: onBracketChange,
+  seasonSlots,
+  onSeasonSlotsChange,
+  onValidate,
+  onBack,
+  betting,
+  onBettingChange,
+  relics,
+  onRelicsChange,
+  uniqueNames,
+  onUniqueNamesChange,
+  season,
+  onSeasonChange,
+}: Props) {
   const roster = CHARACTERS
   const ids = CHARACTER_IDS
   const [brushId, setBrushId] = useState(ids[0])
   const brush = roster.find((c) => c.id === brushId)!
+  // Les cases du mode choisi : les participants de la saison, ou les 16 cases de l'arbre
+  const slots = season.enabled ? seasonSlots.slice(0, season.size) : bracketSlots
+  const onChange = (next: (string | null)[]) =>
+    season.enabled ? onSeasonSlotsChange([...next, ...seasonSlots.slice(season.size)]) : onBracketChange(next)
   const filled = slots.filter(Boolean).length
-  const complete = filled === SLOTS
+  const complete = filled === slots.length
+  const Board = season.enabled ? SeasonSlots : Bracket
 
   const set = (slot: number, id: string | null) => {
     if (slots[slot] === id) return
@@ -70,38 +158,35 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
             Configuration du tournoi
           </h1>
         </div>
-        <div className="flex items-center gap-8 pt-8">
-          {/* Interrupteur des reliques : grand format, le sceau s'éteint quand le système est désactivé */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={relics}
-            onClick={() => {
-              sfx.click()
-              onRelicsChange(!relics)
-            }}
-            title={relics ? 'Chaque victoire offre une relique au vainqueur (hors finale)' : 'Tournoi sans reliques : personne n’en gagne ni n’en porte'}
-            className={`flex h-16 items-center gap-3 rounded-(--r-sm) border-2 bg-surface-1/90 pl-3 pr-4 text-left shadow-(--shadow-2) transition-colors ${
-              relics ? 'border-gold-500/80' : 'border-line-2 hover:border-gold-500/50'
-            }`}
-          >
-            <RelicSeal relic={SWITCH_RELIC} size={44} spent={!relics} />
-            <span className="flex w-40 flex-col leading-tight">
-              <span className={`font-display text-[22px] font-semibold ${relics ? 'text-gold-200' : 'text-ink-2'}`}>Reliques</span>
-              <span className={`font-body text-[14px] font-bold uppercase tracking-wider ${relics ? 'text-good' : 'text-ink-3'}`}>
-                {relics ? 'Activées' : 'Désactivées'}
-              </span>
-            </span>
-            {/* Le curseur : à droite et en or quand elles sont actives */}
-            <span
-              aria-hidden
-              className={`relative h-8 w-16 shrink-0 rounded-full border-2 transition-colors ${relics ? 'border-gold-400 bg-gold-500/40' : 'border-line-2 bg-surface-0'}`}
-            >
-              <span
-                className={`absolute top-0.5 h-6 w-6 rounded-full shadow-(--shadow-2) transition-all duration-150 ${relics ? 'left-[34px] bg-gold-300' : 'left-0.5 bg-ink-3'}`}
-              />
-            </span>
-          </button>
+        <div className="flex flex-col items-end gap-3 pt-2">
+          <div className="flex items-center gap-4">
+            {/* Phase de saison : un championnat aller-retour avant l'arbre (sa taille se choisit dans le panneau) */}
+            <SetupSwitch
+              on={season.enabled}
+              onToggle={() => onSeasonChange({ ...season, enabled: !season.enabled })}
+              label="Phase de saison"
+              states={['Activée', 'Désactivée']}
+              title={
+                season.enabled
+                  ? `Championnat aller-retour à ${season.size} avant l'arbre : les ${SLOTS} premiers s'y qualifient. Ni relique ni pari pendant la saison.`
+                  : "Pas de saison : l'arbre seul"
+              }
+              visual={
+                <span className={`flex h-7 w-7 items-center justify-center ${season.enabled ? 'text-gold-300' : 'text-ink-3'}`}>
+                  <Glyph name="tournoi" size={20} />
+                </span>
+              }
+            />
+            {/* Interrupteur des reliques : le sceau s'éteint quand le système est désactivé */}
+            <SetupSwitch
+              on={relics}
+              onToggle={() => onRelicsChange(!relics)}
+              label="Reliques"
+              states={['Activées', 'Désactivées']}
+              title={relics ? 'Chaque victoire offre une relique au vainqueur (hors finale)' : 'Tournoi sans reliques : personne n’en gagne ni n’en porte'}
+              visual={<RelicSeal relic={SWITCH_RELIC} size={28} spent={!relics} />}
+            />
+          </div>
           <div className="flex items-center gap-2 font-body text-[15px]">
             <label className="flex cursor-pointer items-center gap-2 text-ink-2">
               <input
@@ -136,17 +221,31 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
         </div>
       </header>
 
-      <Bracket
+      {/* Avec la saison, les cases de ses participants ; l'arbre ne se peuple qu'à la fin de la saison */}
+      <Board
         slots={slots}
         slotHint={{ id: brush.id, name: brush.name }}
         onSlotClick={(slot) => set(slot, brushId)}
         onSlotClear={(slot) => set(slot, null)}
         center={
           <div className="bracket-panel flex h-full w-full flex-col px-6 pb-5 pt-4">
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-center gap-4">
               <h2 className="font-display text-[22px] font-semibold tracking-wide text-ink-1">Les combattants</h2>
-              <p className="font-body text-[15px] text-ink-3">
-                Choisissez-en un, puis cliquez les cases de l'arbre. Les doublons sont permis.
+              <SetupSwitch
+                on={uniqueNames}
+                onToggle={() => onUniqueNamesChange(!uniqueNames)}
+                label="Noms uniques"
+                states={['Activés', 'Désactivés']}
+                title={
+                  uniqueNames
+                    ? 'Chaque participant reçoit une épithète de son personnage (Gorak le Borgne, Elaria Flèche-Grise)'
+                    : 'Les doublons sont numérotés (Gorak I, Gorak II)'
+                }
+              />
+              <p className="ml-auto text-right font-body text-[14px] leading-snug text-ink-3">
+                Choisissez-en un, puis cliquez les cases {season.enabled ? 'de la saison' : "de l'arbre"}.
+                <br />
+                Les doublons sont permis.
               </p>
             </div>
 
@@ -197,10 +296,30 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
               <SkillDice character={brush} size="sm" tooltip="above" align="right" />
             </div>
 
+            {/* Phase de saison : sa taille, qui la joue, et ce qui en sort */}
+            {season.enabled && (
+              <div className="mt-3 flex items-center gap-3">
+                <span className="shrink-0 font-display text-[18px] font-semibold text-gold-300">Saison à</span>
+                <SegmentedControl
+                  label="Participants de la saison"
+                  options={SEASON_SIZES.map((n) => ({ value: n, label: String(n), title: `${n} participants, ${n * (n - 1)} matchs de saison` }))}
+                  value={season.size}
+                  onChange={(size) => {
+                    sfx.click()
+                    onSeasonChange({ ...season, size })
+                  }}
+                />
+                <p className="min-w-0 flex-1 font-body text-[14px] leading-snug text-ink-2">
+                  {season.size} participants, aller-retour ({season.size * (season.size - 1)} matchs). L'arbre attend la fin de la saison : les {SLOTS}{' '}
+                  premiers y entrent en têtes de série.
+                </p>
+              </div>
+            )}
+
             {/* Compte et actions : Valider est le seul bouton primaire de l'écran */}
             <div className="mt-auto flex items-center gap-3 pt-4">
               <span className={`font-data text-[22px] font-semibold tabular-nums ${complete ? 'text-good' : 'text-ink-2'}`}>
-                {filled} / {SLOTS}
+                {filled} / {slots.length}
               </span>
               <Button
                 variant="secondary"
@@ -215,12 +334,12 @@ export function TournamentSetupScreen({ slots, onChange, onValidate, onBack, bet
               >
                 Compléter
               </Button>
-              <Button variant="tertiary" size="sm" onClick={() => onChange(Array(SLOTS).fill(null))} disabled={filled === 0}>
+              <Button variant="tertiary" size="sm" onClick={() => onChange(Array(slots.length).fill(null))} disabled={filled === 0}>
                 Vider
               </Button>
               <div className="ml-auto">
                 <Button variant="primary" size="xl" icon="tournoi" onClick={() => complete && onValidate(slots as string[])} disabled={!complete}>
-                  Valider l'arbre
+                  {season.enabled ? 'Lancer la saison' : "Valider l'arbre"}
                 </Button>
               </div>
             </div>

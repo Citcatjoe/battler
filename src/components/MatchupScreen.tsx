@@ -217,7 +217,8 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
       </div>
       <div className={`relative z-20 mb-16 flex flex-col gap-3 ${side === 1 ? 'items-end text-right' : ''}`}>
         <div>
-          <h2 className={`on-illus font-display text-5xl font-semibold ${style.accent}`}>{character.name}</h2>
+          {/* Un nom de tournoi long (épithète, 0.87.0) passe en plus petit */}
+          <h2 className={`on-illus font-display ${character.name.length > 14 ? 'text-4xl' : 'text-5xl'} font-semibold ${style.accent}`}>{character.name}</h2>
           <p className="on-illus font-body text-lg text-ink-2">
             {character.race} · {character.archetype}
           </p>

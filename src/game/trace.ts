@@ -2,7 +2,7 @@ import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { DOUBLE_TRIGGERS, TRIGGERS, type Trigger } from './events'
 import { atCap, of } from './narration'
-import { RELIC_KINDS, relicKind, relicLine } from './relics'
+import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
 
 /*
@@ -172,7 +172,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       ]
     case 'relic': {
       const relic = fighters[beat.side].relics.find((r) => r.id === beat.relic)
-      const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}` : 'relique inconnue'
+      const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}${relic.element ? `, ${elementLabel(relic).toLowerCase()}, scène ${relic.scene}` : ''}` : 'relique inconnue'
       const left = relic?.charges !== undefined ? `, ${relic.charges - beat.uses} charge${relic.charges - beat.uses > 1 ? 's' : ''} restante${relic.charges - beat.uses > 1 ? 's' : ''}` : ''
       return [`Relique « ${beat.name} » ${of(fighters[beat.side].name)} (${kind}, déclenchement n° ${beat.uses}${left})`, ...effects(beat.effects)]
     }

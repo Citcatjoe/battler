@@ -1702,8 +1702,10 @@ describe('reliques (docs/RELIQUES.md)', () => {
 
   it('le registre est valide, chaque type a ses trois reliques, et aucune ne pose de malus sur l’adversaire', () => {
     expect(validateRelics()).toEqual([])
-    expect(RELICS).toHaveLength(12)
-    for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(RELICS.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
+    // Les douze de la 0.77.0, trois par type, puis les quatre élémentaires de la 0.85.0 (une par élément)
+    const plain = RELICS.filter((r) => !r.element)
+    expect(plain).toHaveLength(12)
+    for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
     expect(validateRelics([relic({ stats: { armor: 1 }, rollBonus: 1 })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'turn', turn: 0 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'hpBelow', ratio: 1.2 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
@@ -1769,6 +1771,41 @@ describe('reliques (docs/RELIQUES.md)', () => {
       })
     }
     expect(ones).toBeGreaterThan(0)
+  })
+
+  it('seuil : un même coup fait passer deux seuils ; le soin de la première relique n’efface pas le passage de la seconde', () => {
+    // 0.85.0 : un critique fait passer B de 20 à 5 PV, sous sa Larme (35 %) et sous le Trophée de A (30 %). La Larme
+    // le remonte à 10 PV, au-dessus de 30 % : le Trophée part quand même, son passage a eu lieu sur le coup
+    const trophy = relic({ id: 'test-trophy', trigger: { type: 'hpBelow', ratio: 0.3, who: 'opponent' }, charges: 1, effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] })
+    const tear = relic({ id: 'test-tear', trigger: { type: 'hpBelow', ratio: 0.35 }, charges: 1, effects: [{ type: 'heal', amount: 5 }] })
+    // La Larme est à gauche : elle part la première (les camps dans l'ordre), avant le Trophée
+    const r = run([
+      testCharacter('b', { maxHp: 20, damageDie: 1 }).withRelics([tear]),
+      testCharacter('a', { maxHp: 50, damageDie: 1, critChance: 1, critMultiplier: 15 }).withRelics([trophy]),
+    ])
+    const fires = ofType(r, 'relic')
+    expect(fires.slice(0, 2).map((b) => b.relic)).toEqual(['test-tear', 'test-trophy'])
+    expect(fires[0].state.hp[0]).toBe(10)
+    // Les deux ont pour cause le coup qui a fait passer les seuils
+    expect(fires[0].cause).toBe(fires[1].cause)
+  })
+
+  it('reliques élémentaires : un élément et sa scène, des impacts pour chaque coup, le moteur ne lit pas la scène', () => {
+    const elemental = RELICS.filter((r) => r.element)
+    expect(elemental.map((r) => r.element).sort()).toEqual(['earth', 'fire', 'frost', 'wind'])
+    // Validation : élément sans scène, scène inconnue, scène sans déclencheur, impacts qui ne comptent pas les coups
+    expect(validateRelics([relic({ element: 'fire', trigger: { type: 'turn', turn: 1 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
+    expect(validateRelics([relic({ element: 'fire', scene: 'emberRain', stats: { armor: 1 } })])).toHaveLength(1)
+    const rain = relic({ element: 'fire', scene: 'emberRain', trigger: { type: 'turn', turn: 1 }, effects: [{ type: 'damage', amount: 2, hits: 2, target: 'opponent' }] })
+    expect(validateRelics([rain])).toEqual(['test-relic : scène à 3 impacts pour 2 coups'])
+    expect(validateRelics([{ ...rain, effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }] }])).toEqual([])
+    // Présentation seulement : la même relique sans sa scène donne exactement le même combat
+    for (const r of elemental)
+      for (const seed of [1, 2, 3]) {
+        const fight = (x: Relic) => simulateCombat([createCharacter('elaria').withRelics([x]), createCharacter('gorak')], { seed })
+        const { element: _e, scene: _s, ...bare } = r
+        expect(fight(r).beats.map((b) => b.state)).toEqual(fight(bare).beats.map((b) => b.state))
+      }
   })
 
   it('tour : la relique part au début de son n-ième tour, puis tous les `cooldown` tours, dans la limite de ses charges', () => {

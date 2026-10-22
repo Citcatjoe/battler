@@ -40,7 +40,8 @@ import {
   type Badge,
   type LogEntry,
 } from './narration'
-import { SCENE_EVENTS, type SceneEventId } from './scenes'
+import { RELICS } from './relics'
+import { SCENE_EVENTS, sceneTarget, type SceneEventId } from './scenes'
 import { signalTargets, STATES, STATUS_PLACE } from './states'
 import { attackSpecials, reactionSpecial, relicSpecial, SPECIAL_SIGNS, type SpecialBadge, type SpecialSign, type SpecialSpec } from './specials'
 import { STATUSES, type Polarity, type Status, type StatusId } from './statuses'
@@ -854,7 +855,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const effects = quietPurges(beat.event.effects)
         // Aura cumulable déjà à son maximum : rien ne s'active, seul le texte neutre « … au maximum » s'affiche
         const idle = capped(effects)
-        if (def?.scene) emit({ channel: 'scene', scene: { id: def.scene, source: beat.event.side, target: other(beat.event.side) } })
+        if (def?.scene) emit({ channel: 'scene', scene: { id: def.scene, source: beat.event.side, target: sceneTarget(def.scene, beat.event.side) } })
         const base = hp
         // Aucun nom flottant au-dessus du lanceur : son sceau dans la barre de compétences s'allume déjà
         showEffects(
@@ -1064,6 +1065,19 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // instant (+ si son porteur est l'attaquant, − sinon). Un effet refusé par le plafond n'a pas de label
         const idle = capped(beat.effects)
         const base = hp
+        // Relique élémentaire (0.85.0) : son sceau se brise et la scène part d'abord. Vers l'adversaire, ses coups tombent
+        // sur les impacts (comme la Foudre) ; sur le porteur, ses effets tombent au premier impact, puis la scène s'achève
+        const sceneId = RELICS.find((r) => r.id === beat.relic)?.scene
+        const timing = sceneId ? SCENE_EVENTS[sceneId] : undefined
+        const onSelf = timing?.aim === 'self'
+        if (sceneId && timing) {
+          emit({ channel: 'scene', scene: { id: sceneId, source: beat.side, target: sceneTarget(sceneId, beat.side) } })
+          // Sur le porteur, son sceau se brise dès le début ; il se rallume quand l'effet tombe
+          if (onSelf) {
+            emit({ channel: 'relicPulse', side: beat.side, relics: [beat.relic] })
+            wait(timing.impacts[0], 'rythme de la scène')
+          }
+        }
         showEffects(
           beat.side,
           '',
@@ -1079,8 +1093,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             relic: true,
             onShow: () => emit({ channel: 'relicPulse', side: beat.side, relics: [beat.relic] }),
             special: idle ? undefined : relicSpecial(beat.relic, beat.name, beat.side === beat.owner ? 'attacker' : 'defender'),
+            ...(timing && { lead: 0 as const }),
+            ...(timing && !onSelf && { schedule: timing.impacts, impact: () => (sceneId === 'gale' ? 'hit' : 'crit') as SfxName }),
           },
         )
+        // La scène sur le porteur va jusqu'au bout (la gangue qui éclate, la poussière qui retombe)
+        if (timing && onSelf) wait(timing.length - timing.impacts[0] - T.READ_HOLD, 'fin de la scène')
         break
       }
       default:

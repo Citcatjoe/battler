@@ -38,6 +38,8 @@ import { RecordsScreen } from './RecordsScreen'
 import { StartScreen } from './StartScreen'
 import { HomeScreen } from './HomeScreen'
 import { TournamentSetupScreen } from './TournamentSetupScreen'
+import { SeasonScreen } from './SeasonScreen'
+import { createSeasonTournament, DEFAULT_SEASON_SIZE, pendingOfDay, simulateSeasonMatches } from '../game/season'
 import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from './Betting'
 import { createWallets, placeBet, placeBotBets, priceMatch, settleMatch, worthOf, type MatchOdds } from '../game/betting'
 
@@ -318,15 +320,23 @@ describe('écrans', () => {
   it('tournoi', () => {
     const slots = fillSlots(Array(SLOTS).fill(null), CHARACTER_IDS, seededRng(3))
     const betting = { enabled: true, names: ['karma', 'MiaMiaM'] as [string, string] }
+    const season = { enabled: false, size: DEFAULT_SEASON_SIZE }
     const setup = renderToString(
-      <TournamentSetupScreen slots={slots} onChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} relics onRelicsChange={noop} />,
+      <TournamentSetupScreen slots={slots} onChange={noop} seasonSlots={Array(32).fill(null)} onSeasonSlotsChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} relics onRelicsChange={noop} uniqueNames={false} onUniqueNamesChange={noop} season={season} onSeasonChange={noop} />,
     )
     expect(setup).toContain('role="switch" aria-checked="true"')
     const setupOff = renderToString(
-      <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} />,
+      <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} seasonSlots={fillSlots(Array(32).fill(null), CHARACTER_IDS, seededRng(4))} onSeasonSlotsChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} uniqueNames onUniqueNamesChange={noop} season={{ ...season, enabled: true }} onSeasonChange={noop} />,
     )
     expect(setupOff).toContain('Désactivées')
     expect(setupOff.match(EMOJI)?.[0]).toBeUndefined()
+    // Phase de saison : classement et journée, sans emoji
+    let s = createSeasonTournament(fillSlots(Array(20).fill(null), CHARACTER_IDS, seededRng(3)), (id) => createCharacter(id).name, { seed: 1 })
+    s = simulateSeasonMatches(s, pendingOfDay(s.season!, 0))
+    const seasonHtml = renderToString(
+      <SeasonScreen season={s.season!} running={null} onPlay={noop} onSimulateDay={noop} onSimulateSeason={noop} onStop={noop} onStartBracket={noop} onMenu={noop} />,
+    )
+    expect(seasonHtml.match(EMOJI)?.[0]).toBeUndefined()
     let t = createTournament(slots, (id) => createCharacter(id).name)
     t = withResult(
       t,

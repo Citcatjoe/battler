@@ -831,6 +831,17 @@ export function simulateCombat(
    * `cause` : l'étape dont le changement de PV est vérifié ; elle devient la cause de ce qui se déclenche.
    */
   function checkThresholds(cause: number): Side | undefined {
+    // Les passages se lisent sur les PV du changement vérifié (0.85.0) : une relique déclenchée pendant cette même
+    // vérification (Larme de givre qui soigne) n'efface pas le passage d'une autre relique (Trophée adverse, même coup)
+    const crossed = new Set<string>()
+    for (const side of SIDES)
+      for (const relic of fighters[side].relics) {
+        const t = relic.trigger
+        if (t?.type !== 'hpBelow') continue
+        const watched = t.who === 'opponent' ? other(side) : side
+        const hp = states[watched].hp
+        if (hp > 0 && hp < fighters[watched].maxHp * t.ratio && !states[side].relicBelow.has(relic.id)) crossed.add(`${side}:${relic.id}`)
+      }
     for (const side of SIDES) {
       const s = states[side]
       if (!s.bloodied && s.hp > 0 && s.hp < fighters[side].maxHp / 2) {
@@ -844,8 +855,9 @@ export function simulateCombat(
         // Le seuil lit les PV du porteur, ou ceux de l'adversaire (Trophée du chasseur) ; l'effet reste au porteur
         const watched = t.who === 'opponent' ? other(side) : side
         const hp = states[watched].hp
-        if (hp >= fighters[watched].maxHp * t.ratio) s.relicBelow.delete(relic.id)
-        else if (hp > 0 && !s.relicBelow.has(relic.id)) {
+        const passed = crossed.has(`${side}:${relic.id}`)
+        if (!passed && hp >= fighters[watched].maxHp * t.ratio) s.relicBelow.delete(relic.id)
+        else if ((passed || hp > 0) && !s.relicBelow.has(relic.id)) {
           s.relicBelow.add(relic.id)
           const down = fireRelic(side, relic, cause)
           if (down !== undefined) return down

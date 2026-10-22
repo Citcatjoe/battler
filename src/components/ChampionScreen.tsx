@@ -58,10 +58,14 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
           <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.4em] text-amber-300">
             <Icon name="trophy" className="h-7 w-7" /> Champion du tournoi
           </p>
-          <h1 className="champion-name font-display text-8xl font-extrabold leading-none">{run.entrant.label}</h1>
+          {/* Un nom de tournoi long (épithète, 0.87.0) passe en plus petit */}
+          <h1 className={`champion-name font-display ${run.entrant.label.length > 14 ? 'text-6xl' : 'text-8xl'} font-extrabold leading-none`}>
+            {run.entrant.label}
+          </h1>
           <p className="mt-2 text-lg text-stone-400">
             {character.race} · {character.archetype} · {run.matches.length} victoires en {totals.turns} tours
             {final && <> · {final.hpLeft} PV restants en finale</>}
+            {run.entrant.seasonRank && <> · {run.entrant.seasonRank === 1 ? '1er' : `${run.entrant.seasonRank}e`} de la saison</>}
           </p>
           {/* Les reliques gagnées en chemin : le profil qui l'a mené au titre */}
           {run.relics.length > 0 && (

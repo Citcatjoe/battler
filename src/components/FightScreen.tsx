@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import type { Arena } from '../game/arenas'
 import { other, SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
 import { useCombat } from '../game/useCombat'
+import { SCENE_EVENTS } from '../game/scenes'
 import { SHAKE, SHAKE_HEAVY, TIMING_VARS } from '../game/timing'
 import { figureHeight } from '../game/character'
 import { CheatPad } from './CheatPad'
@@ -81,9 +82,28 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
     })
     if (pausedRef.current) shaking.current?.pause()
   }, [shake, hitKey, heavyHit, speed])
+  // Événement de scène qui fait trembler l'arène (météores, roche qui jaillit, 0.85.0) : une secousse lourde à chacun de
+  // ses impacts, calée sur son rythme (SCENE_EVENTS)
+  const quaking = useRef<Animation[]>([])
+  const speedRef = useRef(speed)
+  speedRef.current = speed
   useEffect(() => {
-    if (paused) shaking.current?.pause()
-    else if (shaking.current?.playState === 'paused') shaking.current.play()
+    if (!scene || !SCENE_EVENTS[scene.id].quake) return
+    const pace = speedRef.current
+    quaking.current = SCENE_EVENTS[scene.id].impacts.flatMap(
+      (at) =>
+        arenaRef.current?.animate(
+          SHAKE_KEYS.map((k) => ({ transform: `${k.transform} scale(1.02)` })),
+          { duration: SHAKE_HEAVY / pace, delay: at / pace, easing: 'linear' },
+        ) ?? [],
+    )
+    if (pausedRef.current) for (const a of quaking.current) a.pause()
+  }, [scene])
+  useEffect(() => {
+    for (const a of [shaking.current, ...quaking.current]) {
+      if (paused) a?.pause()
+      else if (a?.playState === 'paused') a.play()
+    }
   }, [paused])
 
   const [logOpen, setLogOpenState] = useState(logOpenInSession)

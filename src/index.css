@@ -2033,6 +2033,291 @@ body {
   70%, 100% { opacity: 0; transform: scale(1.6); }
 }
 
+/* Reliques élémentaires (0.85.0, SceneEvent.tsx, docs/RELIQUES.md § 12). Deux horloges, comme la Foudre :
+   - ce qui frappe (météore, lame d'air) vit `--scene-length` (sa vie) et part après `--scene-delay`, hérité de son
+     enveloppe, qui place son pic sur l'impact (SCENE_EVENTS) ; le pic est la part écrite dans ses keyframes ;
+   - ce qui couvre l'événement (ciel, voile, gangue, roche) vit toute sa durée : l'éclatement y est placé à la part de
+     `impacts[0]` (givre : 760 / 1650 = 46 % ; roche : 380 / 1350 = 28 %).
+   Les particules (cendres, traits de vent, feuilles, flocons) ont leur propre durée et leur retard `--d`. */
+.scene-meteor,
+.scene-meteor-blast,
+.scene-meteor-spark,
+.scene-gust,
+.scene-gust-ring {
+  animation-delay: var(--scene-delay, 0ms) !important;
+}
+
+/* Feu : Pluie de braises */
+.scene-ember-sky {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(234, 88, 12, 0.35) 0%, transparent 60%),
+    linear-gradient(to bottom, rgba(69, 10, 10, 0.85) 0%, rgba(124, 45, 18, 0.5) 50%, rgba(30, 8, 4, 0.75) 100%);
+  animation: scene-dark calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+.scene-flash-ember {
+  background: radial-gradient(ellipse at 50% 55%, rgba(254, 243, 199, 0.7) 0%, rgba(249, 115, 22, 0.35) 40%, transparent 80%);
+}
+.scene-ash {
+  background: #fdba74;
+  box-shadow: 0 0 6px 1px #f97316;
+  animation: scene-ash calc(1400ms / var(--speed)) ease-out both;
+  animation-delay: calc(var(--d) / var(--speed));
+}
+@keyframes scene-ash {
+  0% { opacity: 0; transform: translate(0, 0); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift), calc(-1 * var(--rise))); }
+}
+.scene-meteor {
+  left: 0;
+  top: 0;
+  animation: scene-meteor calc(var(--scene-length) / var(--speed)) cubic-bezier(0.55, 0, 0.9, 0.6) both;
+}
+/* Il accélère en tombant, et disparaît dans son explosion (58 % de sa vie) */
+@keyframes scene-meteor {
+  0% { opacity: 0; transform: translate(var(--fx), var(--fy)); }
+  10% { opacity: 1; }
+  58% { opacity: 1; transform: translate(0, 0); }
+  60%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+.scene-meteor-head {
+  left: -32px;
+  top: -32px;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #ffffff 0%, #fef3c7 22%, #fb923c 48%, rgba(220, 38, 38, 0.6) 64%, rgba(220, 38, 38, 0) 74%);
+  filter: drop-shadow(0 0 16px rgba(249, 115, 22, 0.95));
+}
+.scene-meteor-tail {
+  left: 0;
+  top: -22px;
+  width: 600px;
+  height: 44px;
+  transform-origin: 0 50%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, rgba(255, 251, 235, 1) 0%, rgba(253, 186, 116, 0.9) 14%, rgba(234, 88, 12, 0.6) 40%, rgba(127, 29, 29, 0.25) 75%, rgba(68, 10, 10, 0) 100%);
+  filter: blur(2px) drop-shadow(0 0 10px rgba(249, 115, 22, 0.8));
+}
+.scene-meteor-blast {
+  left: -160px;
+  top: -160px;
+  width: 320px;
+  height: 320px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(253, 224, 71, 0.8) 18%, rgba(249, 115, 22, 0.55) 42%, rgba(127, 29, 29, 0) 70%);
+  animation: scene-meteor-blast calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-meteor-blast {
+  0%, 56% { opacity: 0; transform: scale(0.2); }
+  61% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+.scene-meteor-spark {
+  left: -4px;
+  top: -4px;
+  background: #fef3c7;
+  box-shadow: 0 0 8px 2px #f97316;
+  animation: scene-meteor-spark calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+/* Des éclats projetés, qui retombent */
+@keyframes scene-meteor-spark {
+  0%, 57% { opacity: 0; transform: translate(0, 0); }
+  60% { opacity: 1; transform: translate(0, 0); }
+  82% { opacity: 1; transform: translate(var(--sx), var(--sy)); }
+  100% { opacity: 0; transform: translate(calc(var(--sx) * 1.15), calc(var(--sy) + 70px)); }
+}
+
+/* Vent : Bourrasque */
+.scene-gale-tint {
+  background: linear-gradient(90deg, rgba(100, 116, 139, 0.3), rgba(203, 213, 225, 0.22), rgba(100, 116, 139, 0.3));
+  animation: scene-dark calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+.scene-streak {
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  animation: scene-streak calc(560ms / var(--speed)) ease-in-out both;
+  animation-delay: calc(var(--d) / var(--speed));
+}
+@keyframes scene-streak {
+  0% { opacity: 0; transform: translateX(calc(var(--dir) * -1000px)) scaleX(0.6); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(calc(var(--dir) * 1000px)) scaleX(1.2); }
+}
+.scene-leaf {
+  margin-left: -11px;
+  animation: scene-leaf calc(950ms / var(--speed)) ease-in both;
+  animation-delay: calc(var(--d) / var(--speed));
+}
+@keyframes scene-leaf {
+  0% { opacity: 0; transform: translate(calc(var(--dir) * -900px), 0) rotate(0deg); }
+  10% { opacity: 1; }
+  50% { transform: translate(0, -40px) rotate(calc(var(--spin) * 0.5)); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--dir) * 900px), 30px) rotate(var(--spin)); }
+}
+.scene-gust {
+  left: -80px;
+  top: -150px;
+  filter: drop-shadow(0 0 12px rgba(186, 230, 253, 0.9));
+  animation: scene-gust calc(var(--scene-length) / var(--speed)) cubic-bezier(0.5, 0, 0.8, 0.6) both;
+}
+/* La lame arrive du côté du lanceur, traverse sa cible (55 % de sa vie) et s'éteint derrière elle */
+@keyframes scene-gust {
+  0% { opacity: 0; transform: translateX(calc(var(--dir) * -560px)) scaleX(0.6); }
+  25% { opacity: 1; }
+  55% { opacity: 1; transform: translateX(calc(var(--dir) * 20px)) scaleX(1); }
+  78%, 100% { opacity: 0; transform: translateX(calc(var(--dir) * 160px)) scaleX(1.1); }
+}
+.scene-gust-ring {
+  left: -110px;
+  top: -110px;
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 18px rgba(186, 230, 253, 0.8), inset 0 0 18px rgba(186, 230, 253, 0.6);
+  animation: scene-gust-ring calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-gust-ring {
+  0%, 53% { opacity: 0; transform: scale(0.3, 0.5); }
+  58% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.6, 1.9); }
+}
+
+/* Givre : la gangue */
+.scene-frost-veil {
+  background: radial-gradient(ellipse at 50% 50%, rgba(8, 24, 44, 0.3) 25%, rgba(125, 180, 220, 0.45) 68%, rgba(224, 242, 254, 0.9) 100%);
+  animation: scene-frost-veil calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+@keyframes scene-frost-veil {
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.scene-frost-fern {
+  filter: drop-shadow(0 0 6px rgba(186, 230, 253, 0.9));
+  animation: scene-frost-fern calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+/* Propriété `scale` seule : elle grandit depuis son coin (transform-origin en ligne) */
+@keyframes scene-frost-fern {
+  0% { opacity: 0; scale: 0.2; }
+  40% { opacity: 0.9; scale: 1; }
+  82% { opacity: 0.9; scale: 1; }
+  100% { opacity: 0; scale: 1.05; }
+}
+.scene-flake {
+  background: #f0f9ff;
+  box-shadow: 0 0 4px #bae6fd;
+  animation: scene-flake calc(1500ms / var(--speed)) linear both;
+  animation-delay: calc(var(--d) / var(--speed));
+}
+@keyframes scene-flake {
+  0% { opacity: 0; transform: translate(0, 0); }
+  15% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(var(--drift), 520px); }
+}
+.scene-shard {
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 8px rgba(186, 230, 253, 0.85));
+  animation: scene-shard calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+/* Les cristaux montent du sol, penchés vers le porteur, puis la gangue éclate à l'impact (46 %) */
+@keyframes scene-shard {
+  0% { opacity: 0; transform: translate(0, 0) rotate(var(--tilt)) scaleY(0); }
+  8% { opacity: 1; }
+  38% { transform: translate(0, 0) rotate(var(--tilt)) scaleY(1.05); }
+  46% { opacity: 1; transform: translate(0, 0) rotate(var(--tilt)) scaleY(1); }
+  72%, 100% { opacity: 0; transform: translate(var(--bx), var(--by)) rotate(calc(var(--tilt) + var(--spin))) scaleY(0.8); }
+}
+.scene-frost-burst {
+  margin-left: -190px;
+  margin-bottom: -190px;
+  width: 380px;
+  height: 380px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(186, 230, 253, 0.7) 30%, rgba(56, 189, 248, 0) 70%);
+  animation: scene-frost-burst calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-frost-burst {
+  0%, 44% { opacity: 0; transform: scale(0.3); }
+  48% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+.scene-frost-mist {
+  margin-left: -280px;
+  width: 560px;
+  height: 130px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse, rgba(224, 242, 254, 0.7) 0%, rgba(186, 230, 253, 0.3) 45%, transparent 72%);
+  filter: blur(6px);
+  animation: scene-frost-veil calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+
+/* Terre : le rempart */
+.scene-stone-tint {
+  background: radial-gradient(ellipse at 50% 100%, rgba(120, 80, 30, 0.3) 0%, rgba(28, 20, 12, 0.62) 70%);
+  animation: scene-dark calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+.scene-crack path {
+  stroke-dasharray: 1;
+  animation: scene-crack calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+/* La fissure court du porteur vers les bords, jusqu'à l'impact (28 %), puis se referme en fondu */
+@keyframes scene-crack {
+  0% { opacity: 0; stroke-dashoffset: 1; }
+  4% { opacity: 1; }
+  28% { stroke-dashoffset: 0; }
+  82% { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 0; }
+}
+.scene-pillar {
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7));
+  animation: scene-pillar calc(var(--scene-length) / var(--speed)) ease-out both;
+  animation-delay: calc(var(--delay) / var(--speed));
+}
+/* Les colonnes jaillissent à l'impact, dépassent un peu, tiennent, puis rentrent sous terre */
+@keyframes scene-pillar {
+  0%, 18% { transform: translateY(105%) rotate(var(--lean)); }
+  27% { transform: translateY(-7%) rotate(var(--lean)); }
+  32% { transform: translateY(0) rotate(var(--lean)); }
+  74% { transform: translateY(0) rotate(var(--lean)); }
+  100% { transform: translateY(105%) rotate(var(--lean)); }
+}
+.scene-vein {
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.95));
+}
+.scene-debris {
+  margin-left: -8px;
+  border-radius: 30%;
+  border: 2px solid #1c1917;
+  background: #78716c;
+  animation: scene-debris calc(var(--scene-length) / var(--speed)) linear both;
+}
+@keyframes scene-debris {
+  0%, 25% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  28% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  52% { transform: translate(calc(var(--x) * 0.7), var(--up)) rotate(calc(var(--spin) * 0.5)); }
+  80% { opacity: 1; transform: translate(var(--x), 0) rotate(var(--spin)); }
+  100% { opacity: 0; transform: translate(var(--x), 0) rotate(var(--spin)); }
+}
+.scene-dust {
+  margin-left: -320px;
+  width: 640px;
+  height: 180px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse, rgba(168, 140, 100, 0.75) 0%, rgba(120, 100, 70, 0.35) 45%, transparent 72%);
+  filter: blur(6px);
+  animation: scene-dust calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-dust {
+  0%, 25% { opacity: 0; transform: scale(0.4); }
+  34% { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: translateY(-50px) scale(1.4, 1.9); }
+}
+
 /* ---------- Reliques (docs/RELIQUES.md § Identité visuelle) ----------
    Sceau hexagonal à bord biseauté : cadre d'or éclairé du haut à gauche (.relic-seal-frame), jour sombre
    (::before, 2 px), plaque de cuir brun (.relic-seal-plate) et son biseau (::after, clair en haut, sombre en

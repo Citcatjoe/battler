@@ -4,6 +4,7 @@ import { simulateCombat, type CombatResult, type Pair } from './game/combat'
 import { createCharacter } from './game/roster'
 import { nextSeed, reportCombat } from './game/debugConsole'
 import { recordMatch, recordTournamentWin } from './game/history'
+import { randomSeed, seededRng } from './game/rng'
 import {
   champion,
   championRun,
@@ -17,6 +18,23 @@ import {
   type MatchRef,
   type Tournament,
 } from './game/tournament'
+import {
+  createSeasonTournament,
+  currentDay,
+  DEFAULT_SEASON_SIZE,
+  SEASON_SIZES,
+  inSeason,
+  matchCount,
+  pendingOfDay,
+  playedCount,
+  seasonFighters,
+  seasonMatchSeed,
+  simulateSeasonMatches,
+  startBracket,
+  WIN_POINTS,
+  withSeasonResult,
+  type SeasonSize,
+} from './game/season'
 import { getRelic } from './game/relics'
 import { music, sfx } from './game/sound'
 import {
@@ -46,6 +64,7 @@ import type { CompendiumSectionId } from './components/compendium/sections'
 import { RecordsScreen } from './components/RecordsScreen'
 import { TournamentSetupScreen } from './components/TournamentSetupScreen'
 import { BracketScreen } from './components/BracketScreen'
+import { SeasonScreen } from './components/SeasonScreen'
 import { SoundToggle } from './components/SoundToggle'
 import { Stage } from './components/Stage'
 import { ChampionScreen } from './components/ChampionScreen'
@@ -68,6 +87,8 @@ type Screen =
   | { name: 'records' }
   | { name: 'tournamentSetup' }
   | { name: 'bracket' }
+  /** Phase de saison d'un tournoi (classement, journées), avant l'arbre */
+  | { name: 'season' }
   /** Sacre du champion, à la fin d'un tournoi */
   | { name: 'champion' }
 
@@ -76,10 +97,11 @@ const matchTitle = (ref: MatchRef) =>
 
 /**
  * Résout un combat avec une graine (pour pouvoir le rejouer) et écrit sa trace dans la console. La graine est tirée
- * au hasard, sauf si la console en impose une (`battler.play`, debugConsole.ts).
+ * au hasard, sauf si la console en impose une (`battler.play`, debugConsole.ts), ou imposée par l'appelant (match
+ * de saison : graine dérivée de celle de la saison).
  */
-function runCombat(fighters: Pair<Character>): CombatResult {
-  const result = simulateCombat(fighters, { seed: nextSeed() })
+function runCombat(fighters: Pair<Character>, seed = nextSeed()): CombatResult {
+  const result = simulateCombat(fighters, { seed })
   reportCombat(result)
   return result
 }
@@ -95,11 +117,21 @@ export default function App() {
 
   // Tournoi : en mémoire uniquement, perdu au rechargement de la page.
   const [slots, setSlots] = useState<(string | null)[]>(() => Array(SLOTS).fill(null))
+  /** Cases des participants de la saison, à la plus grande taille ; la configuration n'en montre que la taille choisie */
+  const [seasonSlots, setSeasonSlots] = useState<(string | null)[]>(() => Array(Math.max(...SEASON_SIZES)).fill(null))
   const [tournament, setTournament] = useState<Tournament | null>(null)
   /** Match de tournoi en cours via l'écran d'affrontement ; null en affrontement simple */
   const [activeMatch, setActiveMatch] = useState<MatchRef | null>(null)
+  /** Match de saison en cours via l'écran d'affrontement (numéro dans la saison) */
+  const [activeSeasonMatch, setActiveSeasonMatch] = useState<number | null>(null)
+  /** Simulation de saison en cours : une journée, ou toute la saison, journée par journée */
+  const [seasonRun, setSeasonRun] = useState<'day' | 'all' | null>(null)
   /** Réglage de l'écran de configuration : tournoi avec ou sans reliques, gardé pour le tournoi suivant */
   const [relicsEnabled, setRelicsEnabled] = useState(true)
+  /** Noms uniques (une épithète par participant au lieu des chiffres romains), gardé pour le tournoi suivant */
+  const [uniqueNames, setUniqueNames] = useState(false)
+  /** Phase de saison avant l'arbre (désactivée par défaut) et nombre de participants, gardés pour le tournoi suivant */
+  const [seasonSetup, setSeasonSetup] = useState<{ enabled: boolean; size: SeasonSize }>({ enabled: false, size: DEFAULT_SEASON_SIZE })
 
   // Paris entre deux observateurs (docs/PARIS.md) : une bourse par tournoi, une autre pour les duels
   // de la session. En mémoire seulement, comme le tournoi.
@@ -115,7 +147,8 @@ export default function App() {
   const [reliefRound, setReliefRound] = useState(0)
   const [odds, setOdds] = useState<MatchOdds | null>(null)
   const betKey = activeMatch ? `t-${activeMatch.round}-${activeMatch.index}` : `d-${duelNumber}`
-  const purse = activeMatch ? wallets : duelWallets
+  // Pas de paris pendant la saison : ni bourse, ni cotes
+  const purse = activeSeasonMatch !== null ? null : activeMatch ? wallets : duelWallets
   // Dernière bourse connue : deux paris posés dans la même image ne s'écrasent pas
   const purseRef = useRef(purse)
   purseRef.current = purse
@@ -150,6 +183,19 @@ export default function App() {
     if (next !== purseRef.current) setPurse(next)
   }, [screen.name, odds]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Simulation de saison : une journée par tâche, pour que l'écran suive (classement, journée) sans se figer.
+  // Ni trace ni historique pour ces combats (season.ts, `simulateSeasonMatches`).
+  useEffect(() => {
+    if (!seasonRun || screen.name !== 'season' || !tournament || !inSeason(tournament)) return
+    const day = currentDay(tournament.season)
+    if (day === null) return setSeasonRun(null)
+    const id = setTimeout(() => {
+      setTournament(simulateSeasonMatches(tournament, pendingOfDay(tournament.season, day)))
+      if (seasonRun === 'day') setSeasonRun(null)
+    }, 0)
+    return () => clearTimeout(id)
+  }, [seasonRun, tournament, screen.name])
+
   /** Prime de relance d'un tournoi au premier match d'un nouveau tour ; renvoie les bourses à jour. */
   const reliefFor = (w: Wallets, round: number) => {
     if (round <= reliefRound) return w
@@ -182,7 +228,11 @@ export default function App() {
   // écrite au départ, est enregistrée à part (fichier « _triche » dans logs/combats/).
   const finish = (result: CombatResult) => {
     if (result.forcedRolls) reportCombat(result)
-    if (activeMatch && tournament) applyResults(tournament, [[activeMatch, result]])
+    // Match de saison regardé : comme un match de l'arbre, il compte dans l'historique (sans récompense)
+    if (activeSeasonMatch !== null && tournament) {
+      setTournament(withSeasonResult(tournament, activeSeasonMatch, result))
+      if (!result.forcedRolls) recordMatch(result, { tournament: true })
+    } else if (activeMatch && tournament) applyResults(tournament, [[activeMatch, result]])
     else if (!result.forcedRolls) recordMatch(result)
     // Règlement des paris du match : mise × cote au gagnant ; combat triché, mises rendues
     let bets: Extract<Screen, { name: 'end' }>['bets']
@@ -200,13 +250,14 @@ export default function App() {
       }
       if (entries.some((e) => e.kind === 'settle' && e.won)) sfx.coinWin()
     }
-    if (!activeMatch) setDuelNumber((n) => n + 1)
+    if (!activeMatch && activeSeasonMatch === null) setDuelNumber((n) => n + 1)
     setScreen({ name: 'end', result, bets })
   }
 
   /** Nouveau duel : prime de relance d'un parieur ruiné. */
   const toDuel = () => {
     setActiveMatch(null)
+    setActiveSeasonMatch(null)
     setDuelWallets((w) => relief(w, 'Nouveau duel'))
     go({ name: 'matchup' })
   }
@@ -215,12 +266,32 @@ export default function App() {
     if (!tournament) return
     if (wallets) setWallets(reliefFor(wallets, ref.round))
     setActiveMatch(ref)
+    setActiveSeasonMatch(null)
     setFighters(matchFighters(tournament, ref))
     go({ name: 'matchup' })
   }
 
+  const openSeasonMatch = (number: number) => {
+    if (!tournament || !inSeason(tournament)) return
+    setActiveMatch(null)
+    setActiveSeasonMatch(number)
+    setFighters(seasonFighters(tournament.season, number))
+    go({ name: 'matchup' })
+  }
+
+  /** Match de saison regardé : sa graine dérive de celle de la saison (hors saison, graine habituelle) */
+  const seasonSeed = () =>
+    activeSeasonMatch !== null && tournament?.season ? seasonMatchSeed(tournament.season, activeSeasonMatch) : nextSeed()
+
+  /** Titre d'un match de saison à l'écran d'affrontement */
+  const seasonMatchTitle = (number: number) => {
+    const half = (tournament?.season?.entrants.length ?? 0) / 2
+    return `Saison · Journée ${Math.floor(number / half) + 1} · Match ${(number % half) + 1}`
+  }
+
   const progress = (() => {
     if (!tournament || champion(tournament) !== null) return null
+    if (inSeason(tournament)) return `Saison : ${playedCount(tournament.season)} / ${matchCount(tournament.season)} matchs joués`
     return `${Object.keys(tournament.results).length} / 15 matchs joués`
   })()
 
@@ -236,6 +307,11 @@ export default function App() {
   const backToBracket = () => {
     setActiveMatch(null)
     go({ name: 'bracket' })
+  }
+
+  const backToSeason = () => {
+    setActiveSeasonMatch(null)
+    go({ name: 'season' })
   }
 
   return (
@@ -278,26 +354,27 @@ export default function App() {
           }}
           tournamentProgress={progress}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
-          onResumeTournament={() => go({ name: 'bracket' })}
+          onResumeTournament={() => go({ name: tournament && inSeason(tournament) ? 'season' : 'bracket' })}
         />
       )}
       {screen.name === 'matchup' && (
         <MatchupScreen
           fighters={fighters}
-          title={activeMatch ? matchTitle(activeMatch) : undefined}
-          back={activeMatch ? { label: 'Arbre', icon: 'retour' } : undefined}
+          title={activeMatch ? matchTitle(activeMatch) : activeSeasonMatch !== null ? seasonMatchTitle(activeSeasonMatch) : undefined}
+          back={activeMatch ? { label: 'Arbre', icon: 'retour' } : activeSeasonMatch !== null ? { label: 'Saison', icon: 'retour' } : undefined}
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
-          onPlay={() => go({ name: 'fight', script: runCombat(fighters), arena: resolveArena(arenaChoice) })}
+          onPlay={() => go({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena: resolveArena(arenaChoice) })}
           onSimulate={() => {
             sfx.click()
-            finish(runCombat(fighters))
+            finish(runCombat(fighters, seasonSeed()))
           }}
           onBack={() => {
             // Revenir avant le combat annule les paris du match : les mises sont rendues
             if (purse) setPurse(cancelMatch(purse, betKey))
             if (activeMatch) backToBracket()
+            else if (activeSeasonMatch !== null) backToSeason()
             else go({ name: 'start' })
           }}
           betting={
@@ -330,7 +407,12 @@ export default function App() {
           onReplay={toDuel}
           onMenu={() => go({ name: 'start' })}
           tournament={
-            activeMatch && tournament
+            activeSeasonMatch !== null
+              ? {
+                  label: `${screen.result.fighters[screen.result.winner].name} prend les ${WIN_POINTS} points du match.`,
+                  onContinue: backToSeason,
+                }
+              : activeMatch && tournament
               ? {
                   label:
                     activeMatch.round === ROUND_NAMES.length - 1
@@ -391,23 +473,65 @@ export default function App() {
         <TournamentSetupScreen
           slots={slots}
           onChange={setSlots}
+          seasonSlots={seasonSlots}
+          onSeasonSlotsChange={setSeasonSlots}
           betting={bettingSetup}
           onBettingChange={setBettingSetup}
           relics={relicsEnabled}
           onRelicsChange={setRelicsEnabled}
+          uniqueNames={uniqueNames}
+          onUniqueNamesChange={setUniqueNames}
+          season={seasonSetup}
+          onSeasonChange={setSeasonSetup}
           onBack={() => go({ name: 'start' })}
           onValidate={(filled) => {
-            setTournament(createTournament(filled, (id) => createCharacter(id).name, { relics: relicsEnabled }))
+            const nameOf = (id: string) => createCharacter(id).name
+            // Saison : `filled` sont ses participants, dans l'ordre de tirage ; l'arbre reste vide jusqu'à la fin de la
+            // saison (startBracket). Les cases de l'arbre de la configuration ne servent pas.
+            setTournament(
+              seasonSetup.enabled
+                ? createSeasonTournament(filled, nameOf, { relics: relicsEnabled, seed: randomSeed(), uniqueNames })
+                : createTournament(filled, nameOf, { relics: relicsEnabled, epithets: uniqueNames ? seededRng(randomSeed()) : undefined }),
+            )
             setActiveMatch(null)
+            setActiveSeasonMatch(null)
+            setSeasonRun(null)
             const names = bettingSetup.names.map((n, i) => n.trim() || DEFAULT_BETTOR_NAMES[i]) as Pair<string>
             setWallets(bettingSetup.enabled ? createWallets(names) : null)
             setDuelWallets((w) => ({ ...w, bettors: w.bettors.map((b, i) => (i < names.length ? { ...b, name: names[i] } : b)) }))
             setReliefRound(0)
-            go({ name: 'bracket' })
+            go({ name: seasonSetup.enabled ? 'season' : 'bracket' })
           }}
         />
       )}
-      {screen.name === 'bracket' && tournament && (
+      {screen.name === 'season' && tournament && inSeason(tournament) && (
+        <SeasonScreen
+          season={tournament.season}
+          running={seasonRun}
+          onPlay={openSeasonMatch}
+          onSimulateDay={() => {
+            sfx.click()
+            setSeasonRun('day')
+          }}
+          onSimulateSeason={() => {
+            sfx.click()
+            setSeasonRun('all')
+          }}
+          onStop={() => {
+            sfx.click()
+            setSeasonRun(null)
+          }}
+          onStartBracket={() => {
+            setTournament(startBracket(tournament))
+            go({ name: 'bracket' })
+          }}
+          onMenu={() => {
+            setSeasonRun(null)
+            go({ name: 'home' })
+          }}
+        />
+      )}
+      {screen.name === 'bracket' && tournament && !inSeason(tournament) && (
         <BracketScreen
           tournament={tournament}
           wallets={wallets}

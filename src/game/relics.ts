@@ -1,6 +1,7 @@
 import type { CharacterStats } from './character'
 import { describeCondition, describeEffect, ROLL_TRIGGERS, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, shuffle, type Rng } from './rng'
+import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { STATUSES, type StatusId } from './statuses'
 
 /*
@@ -29,6 +30,26 @@ export type RelicTrigger =
    */
   | { type: 'hpBelow'; ratio: number; who?: Target }
 
+/**
+ * Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : quatre fragments d'un même vieux sort, scellés chacun dans un
+ * objet. Une relique ordinaire garde sa magie contenue ; une relique élémentaire brise son sceau quand elle agit, et
+ * sa magie envahit l'arène (un événement de scène, `scene`). Ce n'est pas un type : chacune est d'un des quatre types.
+ */
+export type RelicElement = 'fire' | 'frost' | 'wind' | 'earth'
+
+export const RELIC_ELEMENTS: Record<RelicElement, { label: string }> = {
+  fire: { label: 'Feu' },
+  frost: { label: 'Givre' },
+  wind: { label: 'Vent' },
+  earth: { label: 'Terre' },
+}
+
+/** Ce qui sépare une relique élémentaire des autres, pour l'infobulle et le compendium. */
+export const ELEMENTAL_SUMMARY = 'Relique élémentaire : quand elle agit, son sceau se brise et sa magie envahit l’arène.'
+
+/** « Élémentaire · Feu » (vide pour une relique ordinaire) : infobulle, carte de récompense, compendium, trace. */
+export const elementLabel = (r: Pick<Relic, 'element'>) => (r.element ? `Élémentaire · ${RELIC_ELEMENTS[r.element].label}` : '')
+
 /** Stats de base ajoutées à plat par une relique (0,05 d'esquive = 5 points de pourcentage). */
 export type RelicStats = Partial<CharacterStats>
 
@@ -55,6 +76,9 @@ export interface Relic {
   charges?: number
   /** Tours du porteur avant de pouvoir se déclencher de nouveau (défaut : aucun) */
   cooldown?: number
+  /** Relique élémentaire : son élément, et l'événement de scène joué quand elle agit (présentation seulement) */
+  element?: RelicElement
+  scene?: SceneEventId
 }
 
 export type RelicKind = 'stat' | 'strike' | 'turn' | 'threshold'
@@ -179,6 +203,54 @@ export const RELICS: readonly Relic[] = [
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
   },
+  /*
+   * Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : une par élément, réparties sur les types. Leur sceau se
+   * brise quand elles agissent (événement de scène) ; le spectacle reste rare, une ou deux fois par combat.
+   */
+  {
+    id: 'caged-ember',
+    name: 'Braise captive',
+    flavor: 'Une braise vivante dans une cage de quatre barreaux. Au quatrième tour, la cage cède, et le ciel brûle.',
+    element: 'fire',
+    scene: 'emberRain',
+    trigger: { type: 'turn', turn: 4 },
+    charges: 1,
+    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }],
+  },
+  {
+    id: 'frost-tear',
+    name: 'Larme de givre',
+    flavor: 'Une larme de glace qui ne fond pas, fêlée près de la pointe. Quand tout saigne, elle gèle la plaie.',
+    element: 'frost',
+    scene: 'hoarfrost',
+    trigger: { type: 'hpBelow', ratio: 0.35 },
+    charges: 1,
+    effects: [
+      { type: 'cleanse', polarity: 'negative' },
+      { type: 'heal', amount: 5 },
+    ],
+  },
+  {
+    id: 'wind-conch',
+    name: 'Conque des vents',
+    flavor: 'Un coquillage à deux tours de spire où souffle encore une tempête. Qui l’esquive l’entend répondre.',
+    element: 'wind',
+    scene: 'gale',
+    trigger: { type: 'strike', on: 'dodge' },
+    charges: 2,
+    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }],
+  },
+  {
+    id: 'split-geode',
+    name: 'Géode fendue',
+    flavor: 'Une géode ouverte en deux, deux gros cristaux ambrés au fond. Frappée, la terre se lève autour du porteur.',
+    element: 'earth',
+    scene: 'stoneWall',
+    trigger: { type: 'strike', on: 'hurt' },
+    charges: 2,
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 4 }],
+  },
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
@@ -296,6 +368,18 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     if (t?.type === 'turn' && (!Number.isInteger(t.turn) || t.turn < 1)) at('tour : entier ≥ 1')
     if (t?.type === 'hpBelow' && !(t.ratio > 0 && t.ratio < 1)) at('seuil : part des PV entre 0 et 1')
     if (t?.type === 'strike' && !(STRIKE_TRIGGERS as readonly string[]).includes(t.on)) at(`moment de coup inconnu : ${t.on}`)
+    // Relique élémentaire : un élément et sa scène, toujours ensemble, sur une relique qui se déclenche. Une scène qui
+    // vise l'adversaire fait tomber un coup par impact : autant d'impacts que de coups de ses dégâts directs
+    if ((r.element === undefined) !== (r.scene === undefined)) at('une relique élémentaire a un élément et une scène')
+    if (r.scene) {
+      const timing = SCENE_EVENTS[r.scene]
+      if (!timing) at(`scène inconnue : ${r.scene}`)
+      else if (!r.trigger) at('une scène demande un déclencheur')
+      else if (timing.aim !== 'self') {
+        const blows = (r.effects ?? []).reduce((n, e) => n + (e.type === 'damage' && e.target === 'opponent' ? (e.hits ?? 1) : 0), 0)
+        if (blows !== timing.impacts.length) at(`scène à ${timing.impacts.length} impacts pour ${blows} coups`)
+      } else if (timing.impacts.length !== 1) at('une scène sur le porteur a un seul impact')
+    }
     for (const e of r.effects ?? []) {
       if (e.type === 'applyStatus' && !STATUSES[e.status]) at(`statut inconnu : ${e.status}`)
       if (e.type === 'release') at('une relique ne relâche pas de jauges')

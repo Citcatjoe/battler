@@ -1,6 +1,6 @@
 # Reliques
 
-_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
+_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20), quatre reliques élémentaires en 0.85.0 (§ 12). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
 
 **Une relique est un objet gagné en tournoi qui change le profil d'un combattant** : une stat, la valeur de ses coups, ou un effet à un moment précis. Après chaque victoire, le vainqueur en choisit une parmi trois ; après trois victoires, il en porte trois, et ce n'est plus tout à fait le même combattant. C'est la première « variable qui pèse sur l'issue » de la fiche produit ([INTENTION.md](INTENTION.md), principe 11).
 
@@ -56,7 +56,7 @@ Règles communes ([RESOLUTION.md](RESOLUTION.md) § 3 et § 5) :
 2. **Aucun hasard.** Pas de `chance` : si le moment arrive et qu'elle est prête, elle agit. Sans déclenchement, un combat avec elle est identique au combat sans elle (test `combat.test.ts`).
 3. **Charges** : déclenchements par combat (`charges`, illimité par défaut). **Recharge** : `cooldown` tours du porteur avant de repartir. **Conditions** : `when`, les mêmes que les compétences.
 4. **Le bonus de coup ne change pas le jet.** Un 1 reste un 1 pour les compétences du dé ; seule la valeur du coup grandit. Un coup esquivé ou sacrifié n'en profite pas. Un bonus de face (`onFace`) ne vaut que pour le coup dont le dé fait cette face.
-5. **Seuil** : il part au passage sous le seuil (un coup, un poison, un effet), jamais sur le coup qui met K.O. Il se réarme dès qu'un soin remonte les PV au-dessus du seuil (`rearmThresholds`), même si une perte les refait passer dessous avant la vérification suivante (vol de vie puis Riposte sur le même coup). Une recharge ou une condition fausse au moment du passage consomme ce passage. **Une relique de seuil a une charge ou une recharge** (2026-10-21, retour de l'utilisateur sur la Dent de loup) : sans l'une ni l'autre, chaque soin la réarmait et elle repartait à chaque nouvelle chute. L'audit (`audit.ts`, « relique de seuil sans limite ») le vérifie.
+5. **Seuil** : il part au passage sous le seuil (un coup, un poison, un effet), jamais sur le coup qui met K.O. Le passage se lit sur les PV du changement vérifié : deux reliques passées sous leur seuil par un même coup partent toutes les deux, même si la première soigne (0.85.0 : Larme de givre puis Trophée du chasseur adverse ; avant, le soin de la Larme effaçait le passage du Trophée). Il se réarme dès qu'un soin remonte les PV au-dessus du seuil (`rearmThresholds`), même si une perte les refait passer dessous avant la vérification suivante (vol de vie puis Riposte sur le même coup). Une recharge ou une condition fausse au moment du passage consomme ce passage. **Une relique de seuil a une charge ou une recharge** (2026-10-21, retour de l'utilisateur sur la Dent de loup) : sans l'une ni l'autre, chaque soin la réarmait et elle repartait à chaque nouvelle chute. L'audit (`audit.ts`, « relique de seuil sans limite ») le vérifie.
 6. **Effets** : ceux des compétences (soin, dégâts directs, pose de statut, purge), du point de vue du porteur. Pas de relâche de jauges.
 7. **Jamais de malus sur l'adversaire.** Un statut posé par une relique est un bonus de son porteur ; vers l'adversaire, seuls les dégâts directs. Permis aussi : un bonus qui réagit plus tard contre l'adversaire (les Épines du Collier de ronces font saigner l'attaquant quand il frappe : c'est l'effet des Épines, pas de la relique). `validateRelics` refuse tout le reste.
 8. **Deux dés : chaque dé se lit seul.** « Sur un 1 » part dès qu'un des deux dés fait 1 (un double 1 qui frappe deux coups de 1 l'éveille deux fois) ; le jet maximal est celui d'un seul dé ; un bonus de face va au coup du dé qui l'a déclenché (sur 4 et 5 avec ses d5, le Fer renforce le coup du 4). Un double sans coup (le double 3 de Fanchon, une aura) n'ouvre pas les moments du jet.
@@ -343,3 +343,35 @@ Le script déduit la grille du nombre de noms (12 : 4 × 4) et ignore les cases 
 - Pas de relique en duel : seulement en tournoi.
 - Le choix automatique est un tirage simple ; le choix pondéré par goût, synergie et contexte reste à faire ([TODO.md](TODO.md) § 16).
 - Pas encore : dépouille du vaincu, relique de départ, étape de mi-tableau, modes Aléatoire / Imposé / Aucun, contrefactuel « sans la relique » en fin de combat, tableau des reliques en fin de tournoi.
+
+## 12. Les reliques élémentaires (0.85.0)
+
+_Proposition du 2026-10-21, validée par l'utilisateur (« pas sûr qu'elles restent en jeu en l'état, mais la logique pourrait être conservée »)._
+
+**Le concept.** Quatre fragments d'un même vieux sort, scellés chacun dans un objet : Feu, Givre, Vent, Terre. Une relique ordinaire garde sa magie **contenue** (§ 6.2). Une relique élémentaire **brise son sceau** quand elle agit : la magie sort de l'objet et envahit l'arène. C'est ce qui les distingue, et non une couleur de famille (refusée) ni un cinquième type : chacune est d'un des quatre types, avec ses règles.
+
+**Règles.**
+- `element` (`fire`, `frost`, `wind`, `earth`) et `scene` (un événement de scène, `scenes.ts`) vont toujours ensemble, sur une relique qui se déclenche (`validateRelics`).
+- La scène est de la présentation : le moteur ne la lit pas. La même relique sans sa scène donne le même combat (test).
+- Une scène qui vise l'adversaire a un impact par coup de dégâts directs (`hits`) : chaque coup tombe sur son impact, comme la Foudre. Une scène sur le porteur (`aim: 'self'`) a un seul impact : ses effets (purge, soin, bouclier) tombent à cet instant, et le moment dure jusqu'à la fin de la scène.
+- Le spectacle reste rare : une ou deux fois par combat. Un grand moment qui revient à chaque tour cesse d'en être un.
+- Règle 7 respectée : vers l'adversaire, seulement des dégâts directs.
+
+| Relique | Élément, type | Règle | Scène | Apport mesuré | Déclenchements |
+| --- | --- | --- | --- | --- | --- |
+| Braise captive (`caged-ember`) | Feu, Tour | au début de son 4e tour, une fois : 3 × 2 dégâts directs | `emberRain` : le ciel rougit, des cendres montent, trois météores tombent en diagonale du côté du porteur et explosent sur l'adversaire, l'arène tremble à chaque impact | +11,8 (Ysolde +7,2 à Gorak +14,1) | 1,0 |
+| Larme de givre (`frost-tear`) | Givre, Seuil | sous 35 % de ses PV, une fois : retire tous ses malus, +5 PV | `hoarfrost` : voile froid, fougères de givre dans les quatre coins, flocons ; une gangue de cristaux monte autour du porteur et éclate à 760 ms (purge et soin) | +10,6 (Morgrut +8,2 à Fanchon +13,2) | 0,9 |
+| Conque des vents (`wind-conch`) | Vent, Coup | quand il esquive, deux fois par combat : 3 × 2 dégâts directs | `gale` : traits de vent et feuilles du porteur vers l'adversaire, trois lames d'air en croissant, un anneau à chaque impact | +6,4 (Morgrut 0 à Elaria +17,1) | 0,5 |
+| Géode fendue (`split-geode`) | Terre, Coup | quand il encaisse un coup, deux fois, recharge 3 : Armure temporaire 4 | `stoneWall` : le sol se fend sous le porteur (fissures ambrées), des colonnes de roche veinées d'ambre jaillissent sur ses flancs, des éclats retombent, l'arène tremble | +13,7 (Aldric +9,3 à Thaldrin +16,2) | 2,0 |
+
+Mesure : `npm run relics`, 400 combats par duel, 2026-10-21. Variantes écartées avant la proposition (300 combats par duel) : Braise 3 × 3 (+17,8), Larme à 8 PV (+15,6), Terre sur un critique (+5,0, trop rare pour faire spectacle), Conque sans limite de charges (+7,2, mais Elaria +24,8). La **Conque est typée** à dessein : nulle pour Morgrut, qui n'esquive jamais, forte pour Elaria ; c'est l'inverse de la Cotte du mercenaire.
+
+**Mise en scène.** Le composant est l'**événement de scène** (`SceneEvent.tsx` : `Backdrop` sur toute l'arène, `OnTarget` sur la cible ; rythme dans `SCENE_EVENTS`), le même que la Foudre du druide. Tout est en SVG et en CSS, sans image : formes générées dans le composant (éclairs, croissants, cristaux, colonnes, fougères), hasard d'affichage stable par événement (`jitter`, jamais `Math.random`), animations CSS qui suivent la vitesse et la pause (`--speed`). La secousse de l'arène (`quake`) reprend celle des gros coups (Web Animations, `FightScreen`). L'étape `relic` de `staging.ts` lance la scène ; le sceau s'illumine au début (et de nouveau à l'impact pour une scène sur le porteur), le label de la relique se pose sous le dé comme pour toute relique.
+
+**Son.** Les coups d'une scène reprennent le choix de la Foudre : le son de critique pour chaque météore, celui d'un coup pour chaque lame d'air ; purge, soin et bouclier gardent le son déduit de leurs effets ([SONS.md](SONS.md) § 4.2). Aucun son propre à la scène : à décider dans SONS.md si on en veut un (souffle, grondement, cristal).
+
+**Illustration à venir** (§ 6 : objet immobile, patiné, avec son attache ; le chiffre dans l'objet). Ici, la magie est visible **dans** l'objet, encore enfermée : c'est elle qui sortira en combat.
+- Braise captive : une braise vivante dans une petite cage de fer forgé à **quatre** barreaux, suspendue à une chaîne (le 4e tour).
+- Larme de givre : une larme de glace qui ne fond pas, sertie d'argent terni, fêlée **aux 35 centièmes** de sa hauteur, sur un cordon (le seuil).
+- Conque des vents : un coquillage spiralé à **deux** tours de spire, percé et pendu à une lanière (deux charges).
+- Géode fendue : une géode ouverte en deux, **deux** gros cristaux ambrés au fond, cerclée d'une lanière de cuir (deux charges).

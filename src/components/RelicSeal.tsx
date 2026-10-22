@@ -1,4 +1,4 @@
-import { describeRelic, RELIC_KINDS, relicKind, type Relic } from '../game/relics'
+import { describeRelic, elementLabel, RELIC_KINDS, relicKind, type Relic } from '../game/relics'
 import { POLARITY_STYLE, STATUSES } from '../game/statuses'
 import { RelicIcon, StatusIcon } from './Icon'
 
@@ -77,6 +77,7 @@ export function RelicTooltip({
           {RELIC_KINDS[relicKind(relic)].label}
         </span>
       </div>
+      {relic.element && <p className="mt-1 font-body text-[13px] font-bold uppercase tracking-wider text-gold-300">{elementLabel(relic)}</p>}
       <p className="mt-1 font-body text-[13px] font-medium text-gold-300">{[moment, ...tags].join(' · ')}</p>
       <div className="codex-divider my-2.5" />
       <p className="font-body text-[15px] leading-snug text-ink-1">{text}</p>
@@ -151,6 +152,7 @@ export function RelicCard({ relic, selected, mark, onSelect }: { relic: Relic; s
       <span className="rounded-(--r-xs) border border-gold-500/60 bg-gold-500/15 px-2 py-px font-body text-[13px] font-bold uppercase tracking-[0.2em] text-gold-300">
         {RELIC_KINDS[relicKind(relic)].label}
       </span>
+      {relic.element && <span className="font-body text-[14px] font-bold uppercase tracking-[0.15em] text-gold-300">{elementLabel(relic)}</span>}
       <span className="font-body text-[15px] font-bold text-gold-300">{[moment, ...tags].join(' · ')}</span>
       <span className="font-body text-[18px] leading-snug text-ink-1">{text}</span>
       <span className="mt-auto font-body text-[14px] italic leading-snug text-ink-3">{relic.flavor}</span>

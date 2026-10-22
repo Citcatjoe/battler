@@ -4,11 +4,14 @@ import { computeStats, type FighterStats } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
 import { autoPick, drawOffer, getRelic } from './relics'
 import { createCharacter } from './roster'
+import type { Season } from './season'
+import { uniqueNames } from './epithets'
 
 /*
  * Tournoi à élimination directe, 16 participants : huitièmes, quarts, demies, finale.
  * Les participants d'un match se déduisent des vainqueurs du tour précédent :
  * le match i du tour r oppose les vainqueurs des matchs 2i et 2i+1 du tour r-1.
+ * Facultative, une phase de saison (season.ts) peut précéder l'arbre : ses 16 premiers y entrent.
  */
 
 export const SLOTS = 16
@@ -22,6 +25,8 @@ export interface Entrant {
   characterId: string
   /** Nom affiché, numéroté si le personnage est présent plusieurs fois (« Gorak II ») */
   label: string
+  /** Rang au classement final de la saison, s'il y en a eu une (tête de série dans l'arbre) */
+  seasonRank?: number
 }
 
 export interface MatchResult {
@@ -46,6 +51,7 @@ export interface MatchResult {
 }
 
 export interface Tournament {
+  /** Les 16 participants de l'arbre, dans son ordre ; vide tant que la phase de saison n'est pas terminée */
   entrants: Entrant[]
   results: Record<string, MatchResult>
   /**
@@ -53,6 +59,8 @@ export interface Tournament {
    * n'offre de relique, donc personne n'en porte pendant ce tournoi.
    */
   relics: boolean
+  /** Phase de saison qui précède l'arbre (season.ts) ; absente : l'arbre seul, comme avant la 0.86.0 */
+  season?: Season
 }
 
 export interface MatchRef {
@@ -64,23 +72,43 @@ export const matchKey = ({ round, index }: MatchRef) => `${round}-${index}`
 
 export type MatchStatus = 'done' | 'ready' | 'pending'
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI']
+/** Chiffres romains, pour numéroter les doublons (jusqu'à 39, plus qu'il n'y a de cases). */
+function roman(n: number): string {
+  const units = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']
+  return 'X'.repeat(Math.floor(n / 10)) + units[n % 10]
+}
+
+/**
+ * Participants nommés à partir de leurs ids : un doublon prend son numéro en chiffres romains (Gorak I, Gorak II…).
+ * `epithets` (interrupteur « Noms uniques », 0.87.0) : chacun reçoit plutôt une épithète de son personnage, tirée
+ * avec ce hasard (« Gorak le Borgne », epithets.ts).
+ */
+export function labelEntrants(ids: readonly string[], nameOf: (id: string) => string, epithets?: Rng): Entrant[] {
+  if (epithets) {
+    const labels = uniqueNames(ids, nameOf, epithets)
+    return ids.map((id, i) => ({ characterId: id, label: labels[i] }))
+  }
+  const total = new Map<string, number>()
+  ids.forEach((id) => total.set(id, (total.get(id) ?? 0) + 1))
+  const seen = new Map<string, number>()
+  return ids.map((id) => {
+    const n = (seen.get(id) ?? 0) + 1
+    seen.set(id, n)
+    return { characterId: id, label: total.get(id)! > 1 ? `${nameOf(id)} ${roman(n)}` : nameOf(id) }
+  })
+}
 
 /**
  * Crée le tournoi à partir des 16 cases (ids de personnages), dans l'ordre de l'arbre. `relics` : le système
- * de reliques est actif (par défaut) ou non pour tout le tournoi.
+ * de reliques est actif (par défaut) ou non pour tout le tournoi. `epithets` : noms uniques, tirés avec ce hasard.
  */
-export function createTournament(slots: string[], nameOf: (id: string) => string, { relics = true }: { relics?: boolean } = {}): Tournament {
+export function createTournament(
+  slots: string[],
+  nameOf: (id: string) => string,
+  { relics = true, epithets }: { relics?: boolean; epithets?: Rng } = {},
+): Tournament {
   if (slots.length !== SLOTS) throw new Error(`Il faut ${SLOTS} participants`)
-  const total = new Map<string, number>()
-  slots.forEach((id) => total.set(id, (total.get(id) ?? 0) + 1))
-  const seen = new Map<string, number>()
-  const entrants = slots.map((id) => {
-    const n = (seen.get(id) ?? 0) + 1
-    seen.set(id, n)
-    return { characterId: id, label: total.get(id)! > 1 ? `${nameOf(id)} ${ROMAN[n - 1]}` : nameOf(id) }
-  })
-  return { entrants, results: {}, relics }
+  return { entrants: labelEntrants(slots, nameOf, epithets), results: {}, relics }
 }
 
 /** Les deux participants d'un match (null tant que le tour précédent n'est pas joué). */
@@ -269,9 +297,10 @@ export function championRun(t: Tournament): ChampionRun | null {
 }
 
 /**
- * Remplit les cases vides en équilibrant le roster (chaque personnage 2 ou 3 fois sur 16),
- * en tenant compte des cases déjà choisies à la main et en évitant si possible
- * qu'un personnage affronte son double au premier tour.
+ * Remplit les cases vides en équilibrant le roster (chaque personnage autant de fois que possible : 2 ou 3 fois
+ * sur 16, 3 ou 4 sur 32 avec dix personnages), en tenant compte des cases déjà choisies à la main et en évitant
+ * si possible qu'un personnage affronte son double au premier tour (cases 2i et 2i+1). Vaut pour tout nombre
+ * pair de cases : l'arbre (16) comme la saison (20, 24 ou 32).
  */
 export function fillSlots(slots: readonly (string | null)[], ids: readonly string[], rng: Rng = defaultRng): string[] {
   const count = new Map(ids.map((id) => [id, 0]))

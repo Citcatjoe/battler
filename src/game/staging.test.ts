@@ -290,6 +290,42 @@ describe('mise en scène', () => {
     expect(bolts).toBeGreaterThan(5)
   })
 
+  it('reliques élémentaires : la scène part avec la relique, sur sa cible, et ses effets tombent sur ses impacts', () => {
+    for (const relic of RELICS.filter((r) => r.scene)) {
+      const timing = SCENE_EVENTS[relic.scene!]
+      let fires = 0
+      for (const foe of CHARACTER_IDS)
+        for (const seed of [1, 2, 3, 4]) {
+          // Elaria esquive (Conque), Gorak encaisse et frappe fort (Géode, Larme) ; la Braise part à son 4e tour
+          const result = simulateCombat([createCharacter('elaria').withRelics([relic]), createCharacter(foe)], { seed })
+          const moments = stage(result)
+          for (const beat of result.beats) {
+            if (beat.type !== 'relic' || beat.side !== 0) continue
+            const m = momentOf(moments, beat.id)
+            // La relique peut partir dans le moment d'une autre scène (Larme de givre sous la Foudre du druide)
+            // Deux déclenchements dans un moment (deux esquives) : chacun sa scène, dans l'ordre
+            const own = m.beats.filter((id) => result.beats[id].type === 'relic' && result.beats[id].side === 0)
+            const scene = m.cues.filter((c) => c.channel === 'scene' && c.scene.id === relic.scene)[own.indexOf(beat.id)]!
+            expect(scene, relic.id).toMatchObject({ scene: { id: relic.scene, source: 0, target: timing.aim === 'self' ? 0 : 1 } })
+            if (timing.aim === 'self') {
+              // Sur le porteur : l'effet tombe au premier impact, et le moment laisse la scène aller au bout
+              const use = m.cues.find((c) => c.channel === 'relicUse')!
+              expect(use.at - scene.at).toBe(timing.impacts[0])
+              expect(m.duration - scene.at).toBeGreaterThanOrEqual(timing.length)
+            } else {
+              const landed = m.cues
+                .filter((c) => c.channel === 'blow' && c.blow?.landed && c.at >= scene.at && c.at < scene.at + timing.length)
+                .map((c) => c.at - scene.at)
+              expect(landed, relic.id).toEqual(timing.impacts.slice(0, landed.length))
+              expect(landed.length).toBeGreaterThan(0)
+            }
+            fires++
+          }
+        }
+      expect(fires, relic.id).toBeGreaterThan(3)
+    }
+  })
+
   it('le dé qui pulse est celui du jet qui déclenche la compétence', () => {
     let pulses = 0
     for (const { result } of corpus) {

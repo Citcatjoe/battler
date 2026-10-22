@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { describeRelic, OFFER_SIZE, RELIC_KINDS, relicKind, RELICS, type Relic, type RelicKind } from '../../game/relics'
+import { describeRelic, ELEMENTAL_SUMMARY, elementLabel, OFFER_SIZE, RELIC_KINDS, relicKind, RELICS, type Relic, type RelicKind } from '../../game/relics'
 import { RelicSeal } from '../RelicSeal'
 import { CodexBox, StatusChip, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
@@ -111,6 +111,12 @@ function RelicDetail({ relic, nav }: { relic: Relic; nav: CompendiumNav }) {
       <CodexBox title={`Type · ${RELIC_KINDS[kind].label}`}>
         <p>{RELIC_KINDS[kind].summary}</p>
       </CodexBox>
+
+      {relic.element && (
+        <CodexBox title={elementLabel(relic)}>
+          <p>{ELEMENTAL_SUMMARY}</p>
+        </CodexBox>
+      )}
 
       <p className="mt-auto font-body text-[14px] text-ink-3">
         Une relique se gagne en tournoi : à chaque victoire, le vainqueur en choisit une parmi {OFFER_SIZE}.

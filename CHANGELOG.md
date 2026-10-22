@@ -32,6 +32,59 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.87.0] — 2026-10-22
+
+### Ajouté
+- **Noms uniques** (demande de l'utilisateur) : petit interrupteur « Noms uniques » à côté de « Les combattants », sur la configuration du tournoi (arbre seul ou cases de saison), désactivé par défaut et gardé pour le tournoi suivant de la session. Activé, chaque participant reçoit au lancement le nom de son personnage suivi d'une épithète tirée de son propre registre (« Gorak le Borgne », « Elaria Flèche-Grise », « Thaldrin Racine-Profonde »), à la place des chiffres romains (Gorak II). Un personnage reste un personnage précis : seul le surnom change.
+  - `src/game/epithets.ts` : huit épithètes par personnage, fidèles à sa fiche. « Compléter » en met au plus 4 du même sur 32 cases avec dix personnages : le double de marge. Au-delà (cases posées à la main), une épithète resservie prend un numéro (« Gorak le Borgne II ») : les noms restent distincts.
+  - Tirage déterministe : à la graine de la saison (sur un hasard à part de celui des matchs), ou à une graine tirée au lancement pour l'arbre seul. Même graine, mêmes noms.
+  - Noms longs : plus petits sur l'affrontement, l'écran de fin et l'écran du champion ; tronqués proprement dans l'arbre et le classement. L'historique (`battler:history:v1`) garde, comme avant, le nom affiché de chaque combat : son format ne change pas.
+  - Tests : registre suffisant pour le maximum de « Compléter », épithètes distinctes et sans emoji, 32 noms distincts et reproductibles, noms distincts même au-delà du registre.
+
+### Modifié
+- **Classement de saison en une seule liste** (demande de l'utilisateur : la colonne « hors qualification » était trompeuse) : du 1er au dernier, dans un panneau qui défile ; juste après le 16e, une **ligne de qualification** en or, libellée (« au-dessus, qualifiés pour l'arbre · en dessous, non qualifiés », puis « éliminés » quand la saison est finie) ; les suivants sont atténués. Colonnes plus larges, texte plus grand. Le reste de l'écran de saison ne change pas.
+
+## [0.86.1] — 2026-10-22
+
+### Corrigé
+- **Phase de saison : l'arbre est vide au départ** (correction de l'utilisateur : une saison de football, puis des playoffs). Saison activée, la configuration ne fait plus remplir les 16 cases de l'arbre : elle montre les **cases des participants de la saison** (20, 24 ou 32, sur deux colonnes aux places des extrémités de l'arbre), à remplir avec le même pinceau ou par « Compléter » ; « Lancer la saison » n'est actif que quand toutes sont pleines. Plus aucun participant n'est tiré à la validation, et aucune case de l'arbre de la configuration n'entre dans le tournoi. L'arbre ne se peuple qu'à la fin de la saison, avec les 16 premiers du classement en têtes de série ; les autres sont éliminés. L'écran de l'arbre ne s'ouvre pas pendant la saison. Saison désactivée : rien ne change. Les cases de saison sont gardées à part pour la session ; changer la taille ne perd pas celles au-delà.
+- **Interrupteurs de la configuration plus compacts** (Phase de saison, Reliques) : 44 px de haut au lieu de 64, visuel de 28 px, nom en 17 px, curseur réduit.
+- Test : pendant la saison l'arbre est vide, et à la fin ses entrants sont exactement les 16 premiers du classement d'une saison simulée, dans l'ordre des têtes de série.
+
+## [0.86.0] — 2026-10-22
+
+### Ajouté
+- **Phase de saison du tournoi** (demande de l'utilisateur), facultative, avant l'arbre à 16 : interrupteur « Phase de saison » sur l'écran de configuration (désactivé par défaut), taille au choix dans le panneau (20, 24 ou 32 participants, 24 par défaut). Les 16 cases de l'arbre en font partie ; les autres participants sont tirés à la validation en équilibrant le roster (`fillSlots`, généralisé à tout nombre pair de cases). Sans la saison, le tournoi est inchangé.
+  - **Championnat aller-retour** en journées (tableau circulaire de Berger) : chacun rencontre chacun deux fois, camps inversés au retour, un match par participant et par journée ; 2(n−1) journées, 992 matchs à 32.
+  - **Points** : victoire 3, défaite 0 (le moteur ne produit jamais de nul : la limite de tours désigne aussi un vainqueur). **Départage** : points, différence de PV (dégâts infligés − dégâts subis, comptés comme le bilan du champion), confrontations directes entre les ex aequo, ordre de tirage.
+  - **Qualification** : les 16 premiers entrent dans l'arbre en têtes de série (1–16, 8–9, 5–12, 4–13, 3–14, 6–11, 7–10, 2–15 ; le 1er et le 2e ne peuvent se croiser qu'en finale), sous leur nom de saison. Dans l'arbre, le numéro d'une case est le rang de saison ; l'écran du champion rappelle son rang.
+  - **Pendant la saison** : ni relique gagnée ni portée, ni pari, ni récompense. Les paris et les reliques reprennent dans l'arbre.
+  - **Écran de saison** : classement en deux colonnes (les 16 premiers, sous la ligne de qualification, et les autres : rang, portrait, nom, joués, victoires, défaites, différence, points), la journée en cours et ses matchs (Affronter, ou le résultat), journées précédentes et suivantes, Simuler la journée, Simuler la saison (journée par journée, Interrompre), puis Passer à l'arbre.
+  - **Hasard reproductible** : chaque match a une graine dérivée de la graine de la saison et de son numéro ; une saison se rejoue à l'identique. Seul un bilan compact de chaque match est gardé (vainqueur, tours, PV restants, dégâts, graine).
+  - **Traces et historique** : un match de saison regardé (Affronter) écrit sa trace et entre dans l'historique, comme un match de l'arbre ; les matchs simulés en masse, non (des centaines de combats par tournoi fausseraient les statistiques). Le format de l'historique ne change pas.
+- Module `season.ts` (calendrier, résultats, classement, qualification), écran `SeasonScreen.tsx`, tests `season.test.ts` (calendrier pour 20, 24 et 32, points et départage, têtes de série, aucune relique en saison, reproductibilité, tournoi sans saison inchangé).
+
+### Mesuré
+- Saison de 32 (992 combats) : 160 à 190 ms sous Node, environ 0,5 s dans Firefox, une journée par tâche (4 à 11 ms par journée sous Node). Un tournoi de 32 en mémoire pèse environ 100 Ko.
+
+## [0.85.0] — 2026-10-21
+
+Quatre **reliques élémentaires** (proposition validée par l'utilisateur) : quatre fragments d'un même vieux sort, scellés chacun dans un objet. Une relique ordinaire garde sa magie contenue ; une relique élémentaire brise son sceau quand elle agit, et sa magie envahit l'arène (un événement de scène, comme les éclairs du druide). `docs/RELIQUES.md` § 12.
+
+### Ajouté
+- **Braise captive** (Feu, Tour) : au début de son 4e tour, une fois, *Pluie de braises* : 3 impacts de 2 dégâts directs. Scène : le ciel rougit, des cendres montent, trois météores traversent l'arène en diagonale et explosent sur l'adversaire ; l'arène tremble à chaque impact.
+- **Larme de givre** (Givre, Seuil) : quand ses PV passent sous 35 %, une fois, elle retire tous ses malus et rend 5 PV. Scène : le givre gagne l'écran depuis les quatre coins, une gangue de cristaux se referme sur le porteur puis vole en éclats ; la purge et le soin tombent à l'éclatement.
+- **Conque des vents** (Vent, Coup) : quand il esquive, deux fois par combat, *Bourrasque* : 3 coups de 2 dégâts directs. Scène : traits de vent et feuilles qui traversent l'arène du porteur vers l'adversaire, trois lames d'air qui le frappent.
+- **Géode fendue** (Terre, Coup) : quand il encaisse un coup, deux fois par combat, recharge de 3 tours, *Rempart* : Armure temporaire 4. Scène : le sol se fend sous le porteur, des colonnes de roche veinées d'ambre jaillissent sur ses flancs, des éclats retombent ; l'arène tremble.
+- Moteur et mise en scène : `Relic.element` et `Relic.scene` (`validateRelics` : élément et scène ensemble, un impact par coup de dégâts directs, un seul impact sur le porteur) ; visée d'un événement de scène (`SceneTiming.aim` : l'adversaire, ou le lanceur) et secousse (`quake`) ; l'étape `relic` lance la scène et cale ses coups sur ses impacts, comme la Foudre. Infobulle, carte de récompense, compendium et trace disent « Élémentaire · Feu ».
+- Tests : registre et validation, scène sans effet sur le combat, coups sur les impacts, effets sur le porteur au premier impact.
+
+### Corrigé
+- **Deux seuils passés sur le même coup** : le soin d'une relique de seuil n'efface plus le passage d'une autre relique sous son seuil sur ce même coup. Cas trouvé par l'audit : un critique fait tomber Gorak de 40 à 16 PV, sous sa Larme de givre (35 %) et sous le Trophée du chasseur d'Elaria (30 %) ; la Larme le remontait à 21 PV avant que le Trophée ne lise ses PV, et le Trophée ne partait pas. Les passages se lisent maintenant sur les PV du changement vérifié (`checkThresholds`). Test construit dans `combat.test.ts`, audit qui lit le seuil sur l'étape cause. Aucun combat sans relique ne change (empreinte identique).
+
+### Mesuré
+- `npm run relics` (400 combats par duel) : Braise captive +11,8 (Ysolde +7,2 à Gorak +14,1), Larme de givre +10,6 (Morgrut +8,2 à Fanchon +13,2), Conque des vents +6,4 (Morgrut 0, qui n'esquive jamais, à Elaria +17,1), Géode fendue +13,7 (Aldric +9,3 à Thaldrin +16,2). Les quatre dans la cible de 5 à 15 points.
+
 ## [0.84.1] — 2026-10-21
 
 ### Modifié

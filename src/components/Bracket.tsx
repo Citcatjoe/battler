@@ -45,6 +45,9 @@ const GEOMETRY: Record<Layout, Geometry> = {
   setup: { top: 176, bottom: 884, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
 }
 
+/** Géométrie de la configuration : les cases de la saison (SeasonSlots) reprennent celle des cases de l'arbre. */
+export const SETUP_GEOMETRY = GEOMETRY.setup
+
 interface Box {
   x: number
   /** Centre vertical */
@@ -214,9 +217,10 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
               const lost = !!(result && e && result.winner !== e.idx)
               const slot = 2 * ref.index + row
               const editable = !!slots && leaf
+              // Numéro de la case ; après une saison, le rang de saison du participant (tête de série)
               const seed = (
                 <span className="bracket-seed" aria-hidden>
-                  {slot + 1}
+                  {(tournament && leaf && tournament.entrants[slot]?.seasonRank) || slot + 1}
                 </span>
               )
               const portraitSize = leaf ? (layout === 'setup' ? 'h-8 w-8' : 'h-7 w-7') : 'h-6 w-6'

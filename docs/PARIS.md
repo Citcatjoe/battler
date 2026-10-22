@@ -30,7 +30,7 @@ _Document de référence des paris. Première version jouable en 0.37.0 ; **règ
 
 ### 1.2 Parier
 
-- **Facultatif** pour les joueurs ; **les parieurs de l'ordinateur parient sur chaque match**, y compris ceux simulés depuis l'arbre.
+- **Facultatif** pour les joueurs ; **les parieurs de l'ordinateur parient sur chaque match**, y compris ceux simulés depuis l'arbre. **Pas de pari pendant la phase de saison** d'un tournoi (0.86.0, FEATURES.md § 8) : les bourses attendent l'arbre, où les paris reprennent comme sans saison.
 - **Un pari par parieur et par match**, choisi parmi six issues (§ 1.3).
 - **Mise** : une pièce parmi **50 (Prudent), 100 (Franc), 200 (Audacieux)**. Le **coup de poker (400)** n'est proposé qu'au **dernier du classement, quand il est distancé** (à égalité générale, personne ne l'est).
 - **La mise quitte la bourse dès qu'elle est posée.** Toucher à nouveau l'issue choisie retire le pari ; changer d'issue ou de pièce le remplace.

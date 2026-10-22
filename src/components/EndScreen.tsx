@@ -172,7 +172,10 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
           </div>
           <div className="relative z-20 mb-8 min-w-0">
             <p className="text-sm font-bold uppercase tracking-[0.4em] text-amber-300">Vainqueur</p>
-            <h1 className={`font-display text-7xl font-extrabold leading-none ${SIDE_STYLE[winner].accent}`}>{fighters[winner].name}</h1>
+            {/* Un nom de tournoi long (épithète, 0.87.0) passe en plus petit plutôt que sur trois lignes */}
+            <h1 className={`font-display ${fighters[winner].name.length > 11 ? 'text-5xl' : 'text-7xl'} font-extrabold leading-none ${SIDE_STYLE[winner].accent}`}>
+              {fighters[winner].name}
+            </h1>
             <p className="mt-1 text-base text-stone-500">
               {fighters[winner].race} · {fighters[winner].archetype}
             </p>
