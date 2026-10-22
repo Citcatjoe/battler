@@ -339,7 +339,7 @@ Le script déduit la grille du nombre de noms (12 : 4 × 4) et ignore les cases 
 ## 11. Limites et suite
 
 - **Rendu vu** (0.75.0) : captures Firefox sans interface de l'en-tête du combat (sceaux, infobulle), de l'écran de récompense, de l'arbre et de l'affrontement. **Pas vu** : l'annonce sur le sceau sans nom flottant (0.77.0), l'éclat en mouvement, les infobulles au survol réel, le son (non vérifiable).
-- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7). L'initiale gravée reste le repli d'une future relique sans icône.
+- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), et celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12). L'initiale gravée reste le repli d'une future relique sans icône.
 - Réglages proposés au § 7, non appliqués.
 - Pas de relique en duel : seulement en tournoi.
 - Le choix automatique est un tirage simple ; le choix pondéré par goût, synergie et contexte reste à faire ([TODO.md](TODO.md) § 16).
@@ -371,8 +371,10 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-21. Variantes écartée
 
 **Son.** Les coups d'une scène reprennent le choix de la Foudre : le son de critique pour chaque météore, celui d'un coup pour chaque lame d'air ; purge, soin et bouclier gardent le son déduit de leurs effets ([SONS.md](SONS.md) § 4.2). Aucun son propre à la scène : à décider dans SONS.md si on en veut un (souffle, grondement, cristal).
 
-**Illustration à venir** (§ 6 : objet immobile, patiné, avec son attache ; le chiffre dans l'objet). Ici, la magie est visible **dans** l'objet, encore enfermée : c'est elle qui sortira en combat.
-- Braise captive : une braise vivante dans une petite cage de fer forgé à **quatre** barreaux, suspendue à une chaîne (le 4e tour).
-- Larme de givre : une larme de glace qui ne fond pas, sertie d'argent terni, fêlée **aux 35 centièmes** de sa hauteur, sur un cordon (le seuil).
-- Conque des vents : un coquillage spiralé à **deux** tours de spire, percé et pendu à une lanière (deux charges).
-- Géode fendue : une géode ouverte en deux, **deux** gros cristaux ambrés au fond, cerclée d'une lanière de cuir (deux charges).
+**Illustration** (planche v13, intégrée en 0.91.2 ; § 6 : objet immobile, patiné, avec son attache ; le chiffre dans l'objet). Ici, la magie est visible **dans** l'objet, encore enfermée : c'est elle qui sortira en combat. Motifs demandés, et ce que montre l'icône retenue :
+- Braise captive : une braise vivante dans une petite cage de fer forgé à **quatre** barreaux, suspendue à une chaîne (le 4e tour). Retenue : une cage ronde comme une lanterne, la braise rouge et orange entre les barreaux.
+- Larme de givre : une larme de glace qui ne fond pas, sertie d'argent terni, fêlée **aux 35 centièmes** de sa hauteur, sur un cordon (le seuil). Retenue : griffe d'argent, fougères de givre dans la glace, une fêlure au tiers de la hauteur en partant du bas. La phrase d'ambiance (`flavor`) dit encore « fêlée près de la pointe » : à accorder.
+- Conque des vents : un coquillage spiralé à **deux** tours de spire, percé et pendu à une lanière (deux charges). Retenue : ivoire et sable, un tourbillon turquoise dans l'ouverture ; la spirale compte un peu plus de deux tours.
+- Géode fendue : une géode ouverte en deux, **deux** gros cristaux ambrés au fond, cerclée d'une lanière de cuir (deux charges). Retenue : les deux moitiés côte à côte, un cristal ambré dans chacune, ceinturées de cuir et d'une boucle de bronze.
+
+Prompt de la planche (2 × 2), au gabarit du § 10, avec un paragraphe propre aux reliques élémentaires : [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, « Planches passées », v13.

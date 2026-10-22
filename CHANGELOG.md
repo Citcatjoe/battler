@@ -32,6 +32,12 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.91.2] — 2026-10-22
+
+### Ajouté
+- **Icônes des quatre reliques élémentaires** (planche v13, `docs/STYLE_BIBLE.md` § 7) : Braise captive (`caged-ember`, une braise vivante dans une cage ronde à quatre barreaux, pendue à sa chaîne), Larme de givre (`frost-tear`, une larme de glace sertie d'argent terni, fêlée au tiers de sa hauteur), Conque des vents (`wind-conch`, un coquillage spiralé où tourne un vent enfermé, sur sa lanière), Géode fendue (`split-geode`, une géode ouverte en deux, deux gros cristaux ambrés, cerclée de cuir). La magie de l'élément se voit dans l'objet, encore enfermée : c'est elle qui sort en combat. Plus aucune relique n'affiche son initiale. Aucune ligne de code : `RelicIcon` prend le fichier qui porte l'id.
+- **Première planche générée par l'agent, avec Artlist** (GPT Image 2.5, fond transparent, les douze reliques de la v10 jointes comme référence de style) : deux planches, la meilleure version de chaque relique retenue (trois de la seconde, la géode de la première). Méthode notée dans `docs/STYLE_BIBLE.md` § 8.
+
 ## [0.91.0] — 2026-10-22
 
 ### Ajouté

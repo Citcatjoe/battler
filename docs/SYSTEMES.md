@@ -263,9 +263,9 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 
 ### 4.6 Les icônes
 
-Il y a 75 icônes peintes (`src/assets/icons/`, 0.77.1). Trois tables les relient au jeu : `STATUS_ICON` (statut → icône) et `SKILL_ICON` (compétence → icône), dans `Icon.tsx`, et l'id de la relique (`RelicIcon` prend `src/assets/icons/<id>.png`). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
+Il y a 95 icônes peintes (`src/assets/icons/`, 0.91.2). Trois tables les relient au jeu, dans `Icon.tsx` : `STATUS_ICON` (statut → icône), `STATE_ICON` (état de la zone d'état → emblème gravé) et `SKILL_ICON` (compétence → icône) ; une relique prend le fichier qui porte son id (`RelicIcon`). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
 
-Plus aucune icône en attente depuis la 0.77.1 : la liste unique (STYLE_BIBLE § 7, « Icônes à générer », une planche par type) est vide. Hors jeu, donc pas encore à générer : Vulnérable, Étourdi, Garde sacrée, Pourriture subie.
+Plus aucune icône en attente depuis la 0.91.2 (les quatre reliques élémentaires, planche v13) : la liste unique (STYLE_BIBLE § 7, « Icônes à générer », une planche par type) est vide. Hors jeu, donc pas encore à générer : Vulnérable, Étourdi, Garde sacrée, Pourriture subie.
 
 ---
 

@@ -6,7 +6,7 @@ Ce document fixe la direction artistique de Battler et donne des prompts prêts 
 
 ## Par où commencer
 
-L'utilisateur génère les images dans ChatGPT à partir des prompts de ce document, puis les dépose à la racine du projet. L'agent les traite, les range et met ce document à jour. Un autre agent tient la mécanique (`roster.ts`, `statuses.ts`, combat) : pour un réglage de code qui le concerne (échelle d'un personnage, branchement d'une icône sur un nouveau statut), on lui écrit une consigne, que l'utilisateur transmet.
+L'utilisateur génère les images dans ChatGPT à partir des prompts de ce document, puis les dépose à la racine du projet. L'agent les traite, les range et met ce document à jour. Depuis le 2026-10-22, l'agent peut aussi générer lui-même par Artlist, quand le serveur est branché dans sa session (section 8, point 6). Un autre agent tient la mécanique (`roster.ts`, `statuses.ts`, combat) : pour un réglage de code qui le concerne (échelle d'un personnage, branchement d'une icône sur un nouveau statut), on lui écrit une consigne, que l'utilisateur transmet.
 
 | Demande | Où regarder | Outil |
 | --- | --- | --- |
@@ -1001,6 +1001,10 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 73 | `bet-token` | Titre « Combien ? » des mises (guichet, v11) | Jeton de bronze cranté, couronne de laurier |
 | 74 | `twist` | Bandeau du coup de théâtre (v11 ; remplace `coin-flip` dans le bandeau) | Embrasse de rideau de velours rouge, gland doré |
 | 75 | `ticket` | Bouton « Parier » de l'affrontement (v11) | Ticket de pari déchiré, épinglé, traits d'encre illisibles |
+| 92 | `caged-ember` | Braise captive (relique élémentaire, Feu, v13) | Cage ronde de fer forgé à quatre barreaux, braise rouge et orange enfermée, chaîne |
+| 93 | `frost-tear` | Larme de givre (relique élémentaire, Givre, v13) | Larme de glace bleu pâle dans une griffe d'argent terni, fougères de givre, fêlure au tiers, lanière |
+| 94 | `wind-conch` | Conque des vents (relique élémentaire, Vent, v13) | Coquillage spiralé ivoire, tourbillon turquoise dans l'ouverture, lanière nouée |
+| 95 | `split-geode` | Géode fendue (relique élémentaire, Terre, v13) | Géode ouverte en deux moitiés, un cristal ambré dans chacune, sanglée de cuir, boucle de bronze |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1187,6 +1191,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v11, interface (6 icônes, 3×3, intégrée le 2026-10-20 ; références jointes : `sound-on`, `sound-off`, `coin-pile`, `trophy` ; or et bronze, cuir, bois, vieux papier, « moins de lueur, silhouette plus simple ») :** 1. a small bronze hand drum with a leather skin, two crossed wooden drumsticks resting on it · 2. the exact same drum with a bold red diagonal slash · 3. a fat leather coin purse tied with a cord, a few gold coins peeking out · 4. a single round bronze betting token, notched rim, an engraved laurel ring · 5. a heavy red velvet stage curtain rope ending in a big gold tassel · 6. a torn paper betting ticket with a punched hole, pinned by a brass pin, illegible ink strokes.
 
+**v13, reliques élémentaires (4 icônes, 2×2, intégrée le 2026-10-22, générée par l'agent avec Artlist : GPT Image 2.5, fond transparent ; référence jointe : les douze reliques de la v10 composées en une planche 4 × 3) :** gabarit de la planche des douze (RELIQUES.md § 10), matériaux « aged iron, tarnished silver, worn dark leather, old bone, warm bronze », et ce paragraphe ajouté après RELICS : _« These four are ELEMENTAL relics: each one holds a fragment of an old spell (fire, frost, wind, earth), SEALED inside it. The element is clearly visible INSIDE the object, bright and alive but still locked in: nothing bursts out, no flames, frost, wind or rocks leave the object, no background glow behind any icon. »_ 1. a small cage of black forged iron with exactly FOUR thick vertical bars, round like a lantern, a living ember trapped inside glowing orange and red, its light only between the bars, hanging from a short iron chain; NOT a wire cage, NOT a tooth · 2. a teardrop of pale blue ice that never melts, set in a claw of tarnished silver, frost feathers frozen inside it, one sharp crack across it at about one third of its height from the bottom, hanging from a thin leather cord · 3. a spiral sea shell, ivory and sand with a pale teal inner sheen, exactly TWO turns of spiral, a faint swirl of trapped wind visible deep in its opening, pierced near the tip and hung from a knotted leather strap · 4. a rough grey stone geode split open in half, showing a hollow lined with small crystals and exactly TWO large glowing amber crystals at its heart, bound by a worn leather strap with a bronze buckle. Le « NOT a wire cage, NOT a tooth » tient la Braise loin de la Dent de loup (croc dans une cage de fil de fer).
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1213,6 +1219,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v13 | 2026-10-22 | 92 à 95 | Les quatre reliques élémentaires. Première planche générée par l'agent (Artlist, GPT Image 2.5, deux planches d'un coup) : vrai canal alpha, découpe sans retouche. Retenues : Braise, Larme et Conque de la seconde planche (cage ronde à quatre barreaux, fêlure au tiers, spirale lisible), Géode de la première (les deux moitiés se lisent mieux qu'une géode entière ceinturée). |
 | v12 | 2026-10-21 | 76 à 91 | Emblèmes d'état, nouvelle grammaire : pièces gravées monochromes. Deux versions générées : la première (or, bronze et couleurs, vrai canal alpha) était trop proche des compétences ; la seconde, retenue, ajoute « monochrome » et « carved on a coin ». Fond noir uni, pas de canal alpha : découpe en disque par `scripts/slice-coins.py`, sans retouche (rayons de 136 à 139 px). |
 | v11 | 2026-10-20 | 70 à 75 | Interface : musique, bourse, jeton, coup de théâtre, ticket. Vrai canal alpha ; une poussière de 89 px près du tambour, effacée avant la découpe. La corde de l'embrasse (`twist`) est coupée net au bord de sa case, visible en grand. |
 | v10 | 2026-10-20 | 58 à 69 | Les douze reliques. Vrai canal alpha, découpe sans retouche ; icônes plus grandes que leur case (avertissements du script sans conséquence). |
@@ -1240,6 +1247,11 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
    - **Toujours vérifier le fichier** avant de le traiter : `python -c "from PIL import Image; print(Image.open('x.png').mode)"` (RGBA = canal alpha ; il faut encore qu'une partie des pixels soit transparente).
    - Si un damier arrive, relancer dans la même conversation : _« Convert this into a real RGBA PNG with a true transparent alpha channel, no checkerboard. »_
    - Le détourage sur gris abîme les fourrures et cheveux fins. Piste non retenue pour l'instant (choix de l'utilisateur) : un script `scripts/generate-image.ts` qui appelle l'API avec une vraie transparence (clé API, images payantes).
+6. **Générer par Artlist (agent, depuis le 2026-10-22).** Quand le serveur Artlist est branché dans la session, l'agent génère lui-même, sans passer par ChatGPT :
+   - modèle **GPT Image 2.5** (image à image), carré `1:1`, `background: "transparent"` : le canal alpha est réel (planche v13, vérifiée) ; `num_images: 2` donne deux planches pour le prix de deux images (200 crédits la paire en v13), et on garde la meilleure version de chaque icône ;
+   - référence de style : composer les icônes voisines déjà intégrées en une planche (les PNG de 128 px agrandis dans une grille sur fond transparent), la téléverser, puis la joindre à la génération ;
+   - le prompt est le même que pour ChatGPT (gabarit de la section 7) ; découpe et contrôle inchangés (`slice-icons.py`, une planche de contrôle par planche générée) ;
+   - aucune source déposée à la racine : les planches restent dans le dossier temporaire de la session.
 
 ## 9. Check-list avant d'intégrer une image
 
