@@ -1,5 +1,5 @@
 import type { Character } from './character'
-import { DOUBLE_TRIGGERS, rollMatches, ROLL_TRIGGERS, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
+import { doubleTrigger, faceTrigger, isRollTrigger, rollMatches, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
@@ -31,10 +31,10 @@ import {
  *               → fenêtre « turnStart »
  *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un coup, ou plusieurs
  *               (`extraStrikes`, consommé au début de l'action), chacun résolu en entier à son tour :
- *               dé → coup sacrifié (`forfeitsHit`) → esquive → critique → dégâts sortants → dégâts entrants
- *               → armure → boucliers
- *               → fenêtres du coup : bloodied, naturalOne, naturalTwo, naturalMax (pas pour un coup brut), puis
- *                 esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt (défenseur).
+ *               dé → coup sacrifié (`forfeitsHit`) → esquive → reliques de coup, face dorée → critique → dégâts
+ *               sortants → dégâts entrants → armure → boucliers
+ *               → fenêtres du coup : bloodied, la face du dé (naturalOne… face:7), naturalMax (pas pour un coup brut),
+ *                 puis esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt (défenseur).
  *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction. Seuls les statuts
  *                 présents au début du coup réagissent dans ses fenêtres (`strikeBase`, règle 9).
  *     Phase 3 · Fin de tour : effets `onTurnEnd` (bonus, puis malus) → durées « fin » → fenêtre « turnEnd »
@@ -139,6 +139,11 @@ export interface Attack {
    * critique ; seulement sur un coup qui touche
    */
   relicBonus?: { relic: string; name: string; amount: number }[]
+  /**
+   * Face dorée (forge du dé, 0.88.0) : ajouté à la valeur du coup qui touche, avant le critique, quand son dé fait
+   * cette face ; jamais pour un coup brut, comme une relique de face
+   */
+  gild?: number
 }
 
 /** Un statut qui a changé la force d'un coup (ex. Aura de puissance +2, Aura d'intimidation −2). */
@@ -384,7 +389,9 @@ export function resolveAttack(
   const relicBonus = attacker.relics.flatMap((r) =>
     r.rollBonus && (r.onFace === undefined || (!plain && r.onFace === roll)) ? [{ relic: r.id, name: r.name, amount: r.rollBonus }] : [],
   )
-  const value = (reshaped?.value ?? roll) + relicBonus.reduce((t, b) => t + b.amount, 0)
+  // Face dorée (forge du dé) : même règle qu'une relique de face
+  const gild = plain ? 0 : (attacker.gilded[roll] ?? 0)
+  const value = (reshaped?.value ?? roll) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
 
   // Un coup transformé « sans critique » (Charge) ne tire pas le critique et ne consomme pas un critique assuré
   const critBy = reshaped?.noCrit ? undefined : attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
@@ -441,6 +448,7 @@ export function resolveAttack(
     ...base,
     ...(reshaped && { reshaped }),
     ...(relicBonus.length > 0 && { relicBonus }),
+    ...(gild > 0 && { gild }),
     shields,
     modifiers,
     floored: damage === 1 && (floored || finalFloor),
@@ -930,7 +938,7 @@ export function simulateCombat(
       (e) =>
         e.forfeitsHit &&
         inForm(side, e) &&
-        ROLL_TRIGGERS.includes(e.trigger) &&
+        isRollTrigger(e.trigger) &&
         rollMatches(e.trigger, roll, faces) &&
         (e.limit === undefined || (states[side].fired[e.id] ?? 0) < e.limit) &&
         (!e.when || e.when.every((c) => conditionMet(side, c))),
@@ -988,7 +996,7 @@ export function simulateCombat(
       if (down !== undefined) return down
       const hitTriggers: [Side, Trigger][] = plain
         ? []
-        : ROLL_TRIGGERS.filter((t) => rollMatches(t, outcome.roll, outcome.faces)).map((t) => [attacker, t])
+        : [faceTrigger(outcome.roll), ...(outcome.roll === outcome.faces && outcome.faces > 1 ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
       if (outcome.dodged) hitTriggers.push([attacker, 'missed'], [defender, 'dodge'])
       else if (touched) {
         hitTriggers.push([attacker, 'hit'])
@@ -1043,7 +1051,7 @@ export function simulateCombat(
       return { roll: forceRoll(rollDie(rng, faces), faces, forced), forced: forced !== undefined }
     })
     const rolls: [number, number] = [draws[0].roll, draws[1].roll]
-    const trigger = rolls[0] === rolls[1] ? DOUBLE_TRIGGERS[rolls[0]] : undefined
+    const trigger = rolls[0] === rolls[1] ? doubleTrigger(rolls[0]) : undefined
     // Même règle que le déclenchement (forme, limite, conditions), sans tirage : `validateRoster` refuse `chance` ici
     const skill = trigger && fighters[attacker].events.find((e) => e.trigger === trigger && canFire(attacker, e))
     const pair = push({

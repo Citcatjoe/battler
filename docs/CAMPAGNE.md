@@ -1,6 +1,6 @@
 # Campagne : réflexion sur un mode aventure
 
-_Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Rien n'est décidé ni engagé** : c'est un plan de travail pour la discussion. À la demande de l'utilisateur, ce document reste **isolé** : il n'est pas encore relié à `README.md`, `TODO.md`, `INTENTION.md` ni `ETAT.md`, pour ne pas mêler ces pistes aux chantiers en cours._
+_Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Les règles du prototype sont fixées** (§ 1, six passes de questions jusqu'au 2026-10-22) ; **le prototype est livré en 0.88.0** (§ 18 : ce qui est codé, les choix de l'agent, les premières mesures). Les règles en vigueur sont aussi dans [FEATURES.md](FEATURES.md) § 11._
 
 ---
 
@@ -12,7 +12,7 @@ _Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Rien n'est décidé 
 - **le dé qui se forge** est le cœur de la progression et de l'action (§ 4) ;
 - **l'équipement, ce sont les reliques**, de tous types, sans inventaire (§ 5) ;
 - **le spectacle n'est pas que le combat serré** : une campagne doit aussi laisser le champion écraser, et que ce soit beau à voir (§ 6) ;
-- **une partie perdue doit quand même ouvrir des perspectives** : la forme reste à trouver ; l'héritage d'une face est gardé en réserve (§ 8) ;
+- **une défaite met fin à la partie, mais laisse un héritage** : la prochaine partie du même personnage commence avec une amélioration gagnée dans la précédente, choisie parmi trois. Première version, exploratoire, qui sert aussi le développement (§ 8) ;
 - **un levier immédiat, hors campagne** : le bilan des reliques sur l'écran de victoire (§ 9).
 
 ---
@@ -58,6 +58,44 @@ _Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Rien n'est décidé 
 | Reliques en campagne | **La règle « jamais de malus sur l'adversaire » ne s'applique pas** en campagne. |
 | Champion de référence | Laissé à l'agent : voir § 6.3. |
 | Nœuds du prototype | **Une forge de dé et une relique tous les deux combats normaux.** Rien d'autre pour le moment : ni marchand, ni repos, ni événement, ni trésor. |
+
+**Réponses de la quatrième passe (2026-10-22)** :
+
+| Question | Décision |
+| --- | --- |
+| Nombre maximal de faces | **Seules les faces libres se forgent**, celles qui ne portent pas une compétence d'origine. Ysolde (d7, compétences sur 1, 2 et 3) ne forge que ses faces 4 à 7. **Agrandir est le seul moyen de gagner de la place** (§ 4.4). |
+| Offre de forge | **Trois opérations**, comme les reliques. **Le joueur choisit la face visée** ; un choix automatique par défaut permet de regarder la partie en pilote automatique. |
+| Progression après une partie | **L'héritage** : le champion suivant reprend **une relique ou une face forgée** de la partie précédente. Plus simple à mettre en place que la renommée ; c'est une exploration, qui aide aussi le développement (commencer plus fort pour tester la fin d'un acte), et elle pourra changer (§ 8). |
+| Boss | **Un boss commun** à tous les champions (§ 6.3). |
+
+**Réponses de la cinquième passe (2026-10-22)** :
+
+| Question | Décision |
+| --- | --- |
+| Élites, marchand, trésors | **Gardés pour plus tard**, pas abandonnés : le prototype n'en intègre aucun. |
+| Fin d'une partie | **Une défaite met fin à la partie.** |
+| Qui hérite | **Le même personnage seulement**, pour le moment : on n'hérite pas d'une partie jouée avec un autre. |
+| Ce qu'on hérite | **Un choix parmi trois** améliorations (reliques ou faces forgées) **gagnées pendant la dernière partie** de ce personnage. |
+| Plafond d'Agrandir | **Aucun.** La taille du dé n'est bornée que par le nombre d'occasions de forger. |
+| Agrandir et Retailler | **Ils agissent sur le haut du dé** : Agrandir ajoute des faces au-dessus de la plus haute, Retailler retire la plus haute. |
+
+**Réponses de la sixième passe (2026-10-22)** :
+
+| Question | Décision |
+| --- | --- |
+| Face héritée au-dessus du dé d'origine | **Le plus simple** : on ne propose que les faces qui existent dans le dé d'origine. |
+| Partie sans gain | **Elle n'efface pas l'héritage** : on hérite de la dernière partie qui a rapporté quelque chose. |
+| Victoire contre le boss | **Elle laisse aussi un héritage.** |
+| Retailler et compétences d'origine | **Une réduction ne retire jamais une compétence d'origine** : les faces d'origine sont irréductibles. |
+
+**Septième passe, après le prototype (2026-10-22)** :
+
+| Question | Décision |
+| --- | --- |
+| Longueur de l'acte | **Cinq combats normaux avant le boss**, pour trois reliques et deux forges. |
+| Récompenses | **Une par combat normal gagné**, d'un seul type : une relique ou une forge. L'écran de victoire y mène. Ordre retenu par l'agent : relique, forge, relique, forge, relique. |
+| Piste de l'acte | **Un losange par récompense**, quel que soit son type, comme avant. |
+| Difficulté | **La courbe montante recommandée** (§ 18.3), recalculée pour cinq combats : 95, 90, 87, 84, 81 %, boss 45 %. |
 
 ---
 
@@ -134,15 +172,20 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 - **Des échanges autant que des gains.** Agrandir et Retailler troquent des compétences contre des dégâts, ou l'inverse. Ces choix protègent le spectacle et gardent les personnages typés.
 - **Tout se mesure en lot** : 10 personnages × 5 opérations, en une passe de laboratoire (valeur nette et spectacle).
 - **Une face reste lisible de loin** : rune, or, chiffre romain ; jamais un texte.
-- **Le kit d'origine reste l'identité** : les trois compétences d'un personnage restent les siennes ; la forge ajoute, déplace ou renforce, elle ne réécrit pas qui il est.
+- **Le kit d'origine reste l'identité** : les trois compétences d'un personnage restent les siennes, sur leurs faces ; la forge ajoute ou renforce, elle ne déplace rien et ne réécrit pas qui il est.
 
-### 4.4 Questions ouvertes
+### 4.4 Décisions
 
 - **Décidé** : Contrepoids de plomb devient l'opération Agrandir ; la relique quitte le tirage.
 - **Décidé : une forge adaptée à chacun.** La barde grave et dore ses **doubles** (une compétence sur le double 4, un double doré), l'ogre grave sur ses **faces d'Attente** (1 à 3 sur son d14), qui ne font rien aujourd'hui. À mesurer.
 - **Décidé : un personnage ne déplace pas ses compétences d'origine.**
-- **Décidé, à préciser** : le nombre maximal de faces « correspond au dé du personnage » (§ 17).
-- **À voir** : à quelle occasion, à quel rythme et dans quel contexte la forge est proposée. Pour le prototype : une forge tous les deux combats normaux (§ 6.3).
+- **Décidé : seules les faces libres se forgent.** Graver et Dorer ne visent qu'une face qui ne porte pas de compétence d'origine : sur le d7 d'Ysolde, les faces 4 à 7. **Agrandir est le seul moyen d'ouvrir de la place** : deux faces libres de plus.
+- **Décidé : l'offre de forge.** Trois opérations proposées ; le joueur choisit la face visée, avec un choix automatique par défaut.
+- **Décidé : pas de plafond pour Agrandir.** Le dé n'est borné que par le nombre d'occasions de forger : trois dans le prototype, soit six faces de plus au plus.
+- **Décidé : Agrandir et Retailler agissent sur le haut du dé.** Agrandir ajoute deux faces libres au-dessus de la plus haute ; Retailler retire la plus haute face, **forgée ou non** : retailler un dé dont le haut est doré, c'est perdre cette dorure.
+- **Décidé : les faces d'origine sont irréductibles.** Une réduction ne retire jamais une compétence d'origine : Retailler n'est plus proposé quand la plus haute face porte une compétence d'origine. Toutes sont sur 1, 2 et 3 (`roster.ts`, aucun `naturalMax`) : avec trois forges au plus, seul le d5 de la barde peut atteindre cette limite.
+- **Repère mesuré** : au d6, Ysolde gagnait 63 % de ses combats (`roster.ts`), d'où son d7 ; Retailler peut donc être une opération très forte.
+- **Rythme du prototype** : une forge tous les deux combats normaux (§ 6.3).
 
 ---
 
@@ -150,7 +193,7 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 
 - **L'équipement, ce sont les reliques**, de tous types (Caractéristique, Coup, Tour, Seuil : [RELIQUES.md](RELIQUES.md)).
 - **Pas d'inventaire** : une relique gagnée est portée tout de suite. Le système est déjà en place dans l'interface : sceaux en combat, à l'affrontement, dans l'arbre et sur l'écran du champion ; menu Récompense.
-- **Où on les gagne** : élites, boss, trésors, marchand.
+- **Où on les gagne** : dans le prototype, une relique tous les deux combats normaux (§ 6.3), et l'héritage (§ 8). Élites, trésors et marchand sont **gardés pour plus tard** : le prototype n'en intègre aucun.
 - **Les douze reliques mesurées** vont de +6,1 à +21,4 points ([RELIQUES.md](RELIQUES.md) § 7). En campagne, cet écart devient une rareté plutôt qu'un défaut.
 
 **Décisions** :
@@ -196,10 +239,11 @@ Slay the Spire fonctionne ainsi : des rencontres fixées par acte, pas ajustées
 **Décidé : le mélange.** Les combats ordinaires sont réglés automatiquement sur le champion de référence ; les **élites et le boss sont écrits à la main**, comme des personnages précis (un adversaire, ses reliques, éventuellement son dé forgé), puis vérifiés par simulation.
 
 **Le prototype (décisions du 2026-10-22, et choix de l'agent pour le champion de référence)** :
-- **huit nœuds** : sept combats normaux, puis le boss. Les élites sont mises de côté pour le prototype. L'itinéraire reste un choix : à chaque étape, plusieurs adversaires possibles, avec leur bande de danger (§ 6.4) ;
-- **récompenses** : après les combats normaux 2, 4 et 6, **une forge de dé et une relique**, soit trois forges et trois reliques avant le boss. Rien d'autre ;
-- **le champion de référence** suit exactement ce rythme : le personnage tiré, nu au départ, qui reçoit aux mêmes moments une opération de forge et une relique **choisies au hasard dans l'offre**, comme le choix automatique du tournoi. On en simule un grand nombre, pour lisser le hasard des choix ;
-- **cibles de départ**, à mesurer avant d'être fixées : un combat normal se règle pour que le champion de référence le gagne **environ 70 %** du temps (65 à 75 %) ; le boss, écrit à la main, se vérifie autour de **45 %** (40 à 50 %) contre lui. Un champion mieux forgé que la moyenne fait mieux : c'est la démonstration.
+- **six nœuds** (0.89.0 ; huit en 0.88.0) : cinq combats normaux, puis le boss. Les élites sont gardées pour plus tard, hors du prototype. L'itinéraire reste un choix : à chaque étape, plusieurs adversaires possibles, avec leur bande de danger (§ 6.4). **Une défaite met fin à la partie** ;
+- **récompenses** (0.89.0) : après chaque combat normal gagné, **une relique ou une forge**, dans l'ordre relique, forge, relique, forge, relique : trois reliques et deux forges avant le boss. Rien d'autre ;
+- **le champion de référence** suit exactement ce rythme : le personnage tiré, nu au départ, qui reçoit aux mêmes moments les mêmes récompenses, **choisies au hasard dans l'offre**, comme le choix automatique du tournoi. On en simule un grand nombre, pour lisser le hasard des choix ;
+- **cibles** (0.89.0, courbe montante, § 18.3) : le champion de référence gagne **95, 90, 87, 84 puis 81 %** de ses combats normaux, de la démonstration à la tension ; le boss, écrit à la main, se règle à **45 %** contre lui, le drame. Un champion mieux forgé que la moyenne fait mieux : c'est la démonstration.
+- **Décidé : un boss commun** à tous les champions. Il se vérifie contre le champion de référence de **chaque** personnage tirable : la cible de 40 à 50 % doit tenir pour tous.
 
 ### 6.4 Montrer le danger sans dévoiler les cotes
 
@@ -237,13 +281,27 @@ La mesure se fait toujours **sur un combat**, en lisant sa chronologie. Aujourd'
 | --- | --- | --- | --- |
 | **Renommée** | des points gagnés selon la profondeur atteinte et le spectacle produit, même en cas de défaite ; dépensés en **déblocages** : nouvelles opérations de forge, reliques ajoutées au tirage, nouveaux champions, choix de la relique de départ | Hades, Slay the Spire [mémoire] | faible : ça élargit les choix, sans ajouter de puissance brute |
 | **Héritage de l'arme** | le prochain champion reprend **une face forgée** du précédent : l'arme passe de main en main, et elle a une histoire | Rogue Legacy [mémoire] | moyen : de la puissance permanente, à borner (une face, pas plus) |
-| **Saison** | une suite de parties avec un classement et un bilan de saison ; entre deux saisons, on devient plus fort pour de bon | Tape to Tape (vérifié : « grow permanently stronger » entre les saisons) | moyen : la puissance accumulée fausse la courbe |
+| **Saison** | sortie de la campagne : c'est une extension du tournoi, livrée en 0.87.0 (phase de saison) | Tape to Tape | — |
 | **Paliers de difficulté** | après une victoire, la campagne suivante est plus dure | Ascension de Slay the Spire [mémoire] | faible |
 | **Fantômes** | tes anciens champions deviennent les boss des parties suivantes | Super Auto Pets, The Bazaar [mémoire] | faible |
 
 **Contrainte** : la courbe nominale (§ 6.3) ne connaît pas la puissance permanente. Si elle grossit trop, le premier acte n'est plus qu'une démonstration. D'où une préférence pour les **déblocages** (des choix nouveaux) plutôt que les **bonus bruts** (des stats permanentes), et un héritage borné.
 
-**Correction (2026-10-22)** : les « saisons » de l'utilisateur ne sont pas une progression de la campagne, mais une **extension du tournoi** : une phase de championnat aller-retour avec plus de combattants, dont les seize premiers passent dans l'arbre actuel, sans relique ni forge pendant cette phase. Elle est confiée à un chantier à part, hors de ce document. **Pour la campagne, la progression après une défaite reste à trouver** parmi les pistes du tableau ci-dessus ; l'**héritage d'une face** est gardé en réserve, pour un moment opportun.
+**Correction (2026-10-22)** : les « saisons » de l'utilisateur ne sont pas une progression de la campagne, mais une **extension du tournoi**, livrée en 0.87.0 (phase de saison).
+
+**Décidé (2026-10-22) : l'héritage, dans une première version.** C'est le plus simple à mettre en place, et c'est aussi un outil de développement : commencer plus fort pour essayer la fin d'un acte sans rejouer le début. **Exploratoire : ça pourra changer.**
+
+La règle :
+- **une partie se termine par une défaite ou par la victoire contre le boss ; les deux laissent un héritage** ;
+- **on n'hérite que de soi-même** : la prochaine partie de Gorak hérite de la dernière partie de Gorak, jamais de celle d'un autre personnage (pour le moment) ;
+- au départ, le joueur **choisit une amélioration parmi trois**, tirées parmi les reliques et les faces forgées **gagnées pendant cette dernière partie**. S'il en a gagné moins de trois, il choisit parmi celles-là ;
+- **une partie sans gain n'efface rien** (défaite au premier combat, avant la première récompense) : on hérite alors de la dernière partie qui a rapporté quelque chose ;
+- **seules les faces du dé d'origine se proposent** : une face forgée au-dessus (le 11 doré d'un Gorak agrandi en d11, qui repart en d9) n'est pas proposée. Agrandir et Retailler, qui ne sont pas des faces, ne s'héritent pas (confirmé).
+
+Ce que ça implique :
+- le champion de référence (§ 6.3) ne reçoit pas d'héritage : un champion hérité dépasse la courbe nominale, et c'est voulu (la démonstration). À mesurer : de combien une relique ou une face héritée relève sa probabilité de victoire sur l'acte ;
+- l'héritage ne s'accumule pas : on ne garde qu'une amélioration, et seulement ce qui a été **gagné** pendant la partie ; un objet hérité ne se transmet pas à nouveau, sinon une même relique suivrait le personnage indéfiniment (confirmé) ;
+- la mémoire est **par personnage** : la sauvegarde (§ 13) garde, pour chacun, les gains de sa dernière partie qui a rapporté quelque chose.
 
 ---
 
@@ -351,21 +409,23 @@ Seule une idée sur cinq ou six survit à la mesure. **Créer en lot dans un cad
 
 ```mermaid
 flowchart LR
-  Champ[Choix du champion] --> Carte[Carte d'acte]
-  Carte --> Noeud{Nœud}
-  Noeud -->|combat, élite| Combat[Combat automatique] --> Recomp[Relique ou opération de forge]
-  Noeud -->|forge, marchand, repos, événement| Etape[Étape]
+  Champ[Champion tiré parmi trois] --> Herit[Héritage : une relique ou une face]
+  Herit --> Carte[Carte d'acte]
+  Carte --> Combat[Combat normal automatique]
+  Combat -->|après chaque combat gagné| Recomp[Une relique ou une forge]
   Recomp --> Carte
-  Etape --> Carte
-  Carte --> Boss[Boss] --> Bilan[Bilan : reliques, dé, renommée]
+  Combat --> Carte
+  Carte -->|après le combat 5| Boss[Boss commun]
+  Boss --> Bilan[Bilan : reliques, dé]
+  Combat -->|défaite| Bilan
   Bilan --> Champ
 ```
 
-**Si l'on démarre un jour, dans cet ordre** :
-1. **Tout de suite, hors campagne** : le bilan des reliques sur l'écran de victoire (§ 9).
-2. **La base** : faces généralisées (« sur la face n ») et grammaire de la forge (§ 4), mesurée au laboratoire ; sauvegarde (§ 13) ; suites de hasard séparées (TODO § 16).
-3. **Un acte jouable de bout en bout** : huit nœuds (sept combats normaux, puis le boss), une forge et une relique tous les deux combats normaux, un champion tiré parmi trois, la courbe nominale et un boss écrit à la main (§ 6.3), les mesures de démonstration (§ 7).
-4. **La progression entre les parties** : à choisir parmi les pistes du § 8.
+**L'ordre suivi** (prototype 0.88.0 : étapes 2 à 4 faites, § 18) :
+1. **Tout de suite, hors campagne** : le bilan des reliques sur l'écran de victoire (§ 9). _Pas encore fait._
+2. **La base** : faces généralisées (« sur la face n ») et grammaire de la forge (§ 4) ; sauvegarde (§ 13). _Fait ; la mesure de la forge au laboratoire et les suites de hasard séparées (TODO § 16) restent à faire._
+3. **Un acte jouable de bout en bout** : six nœuds (cinq combats normaux, puis le boss), une relique ou une forge après chaque combat normal, un champion tiré parmi trois, la courbe nominale et un boss écrit à la main (§ 6.3). _Fait ; les mesures de démonstration (§ 7) restent à faire._
+4. **La progression entre les parties** : l'héritage d'une relique ou d'une face (§ 8). _Fait._
 5. **La présence** (§ 10), puis le test du plafond des images fixes sur Gorak (§ 12).
 6. **La coopération** : deux champions, une route ; puis le relais (§ 11).
 
@@ -373,9 +433,101 @@ flowchart LR
 
 ## 17. Questions ouvertes
 
-_Questions réglées les 2026-10-21 et 2026-10-22 : voir § 1. Restent :_
+_Questions réglées du 2026-10-21 au 2026-10-22 : voir § 1. Lectures confirmées le 2026-10-22 : une réduction ne retire jamais une face qui porte une compétence d'origine (le dé peut descendre sous sa taille d'origine, tant que la face du haut est libre) ; un objet hérité ne se transmet pas à nouveau ; Agrandir et Retailler ne s'héritent pas._
 
-1. **Le nombre maximal de faces** « correspond au dé du personnage » : est-ce (a) le dé ne dépasse jamais sa taille d'origine, et Agrandir ne fait que rendre les faces perdues par Retailler ; (b) chaque personnage a sa propre taille maximale (Gorak : d9 au départ, d12 au plus, par exemple) ; ou (c) on peut graver au plus autant de faces que le dé en compte ?
-2. **La forge proposée** : combien d'opérations dans l'offre (trois, comme les reliques ?), et qui choisit la face visée : le joueur, ou l'opération elle-même ?
-3. **Après une défaite** : quelle progression pour la campagne (§ 8) ?
-4. **Le boss** : un personnage précis par champion tiré, ou un boss commun à tous ?
+**Question réglée depuis le prototype** : la cible d'un combat normal, remplacée par une courbe montante (septième passe, § 18.3). Restent à mesurer au laboratoire : la force de chaque opération de forge par personnage (Retailler en tête : Ysolde gagnait 63 % au d6), et l'apport d'un héritage sur la réussite d'un acte.
+
+---
+
+## 18. Le prototype livré (0.88.0)
+
+### 18.1 Ce qui est codé
+
+| Brique | Où | Ce qu'elle fait |
+| --- | --- | --- |
+| Faces au-delà du 3 | `events.ts` | déclencheurs `face:N` et `double:N` (`faceTrigger`, `doubleTrigger`) : une compétence peut partir sur n'importe quelle face |
+| Forge du dé | `forge.ts`, `Character.withForge` | les cinq opérations du § 4.2, en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend : le tournoi peut la donner tel quel (`ARCHITECTURE.md`, « Donner la forge du dé à un mode ») |
+| Face dorée | `combat.ts` (`Attack.gild`) | +2 avant le critique, règle d'une relique de face ([RESOLUTION.md](RESOLUTION.md) § 3, étape 2 ter) |
+| Campagne | `campaign.ts` | partie, boss, réglage sur le champion de référence, bandes de danger, récompenses, héritage, sauvegarde |
+| Écrans | `CampaignScreen.tsx`, `ForgedDie.tsx` | choix du champion et de l'héritage, carte de l'acte, récompense (forge puis relique), fin de partie ; le combat passe par l'affrontement et l'écran de fin habituels |
+| Mesure | `npm run campaign` | parties en pilote automatique, par champion (§ 18.3) |
+
+### 18.2 Les choix de l'agent (à revoir)
+
+Ce que les décisions du § 1 ne fixaient pas, choisi au plus simple :
+- **Le levier du réglage, ce sont les PV de l'adversaire**, et lui seul : les adversaires normaux sont des personnages du roster **nus** (ni relique ni forge). Une dichotomie sur les PV, entre le quart et le triple de ses PV d'origine, à graines fixes. Les PV, « dernier levier » de l'équilibre du roster, sont ici un réglage de rencontre, pas une retouche de personnage (§ 6.2).
+- **Le champion de référence** : douze versions du personnage, huit combats chacune par essai de PV, côtés alternés.
+- **Deux adversaires par nœud**, jamais le champion, jamais le dernier adversaire.
+- **Bandes de danger** : Sûr à partir de 72 % de victoire estimée (160 combats contre le champion réel), Risqué de 50 à 72 %, Mortel en dessous.
+- **Les PV ne se gardent pas** d'un combat à l'autre, puisqu'il n'y a ni repos ni soin entre les combats.
+- **Le boss** : Le Colosse (§ 18.4), réglé lui aussi par ses PV, à 45 % contre le champion de référence du personnage tiré : la cible tient ainsi pour tous les champions.
+- **Graver** puise dans les compétences du dé des autres combattants (sur leur 1, leur 2 ou leur 3) : elles ont déjà leur icône peinte, et leurs statuts sont ceux du roster (§ 14). Une compétence d'un personnage à formes est gravée sans forme.
+- **Aiguiser** : un rang ajoute une charge à chaque statut cumulable (sous son plafond), +2 aux dégâts, soins et relâches, et un coup aux doubles qui frappent ; un statut qui ne cumule pas ne gagne rien (la face n'est pas proposée). Le nom porte le rang (« Pourfendre II »).
+- **Une face dont la compétence sacrifie le coup ne se dore pas** (la dorure ne servirait jamais).
+- **Abandonner** une partie compte comme une défaite, héritage compris.
+- **Les combats de campagne n'entrent pas dans l'historique** (adversaires aux PV réglés, boss hors du roster).
+- **Icônes** : aucune icône peinte pour les opérations de forge ; leur carte montre une face de dé (or, « II », « d11 ») ou le sceau de la compétence gravée. Le glyphe de la plaque Campagne est celui des chroniques (le parchemin), faute de glyphe propre dans le kit.
+- **L'ordre des récompenses** (0.89.0) : relique, forge, relique, forge, relique. La première est une relique, plus lisible tout de suite qu'une face forgée ; les deux forges tombent au milieu de l'acte.
+
+### 18.3 Mesures (`npm run campaign`, pilote automatique)
+
+Pilote automatique : un adversaire au hasard parmi les deux, la récompense du choix par défaut.
+
+**Acte 0.88.0** (sept combats à 70 %, forge et relique après les victoires 2, 4 et 6 ; 20 parties par champion, 200 en tout) :
+
+| Champion | Victoires moyennes | Atteint le boss | Gagne l'acte | Chance moyenne avant combat |
+| --- | --- | --- | --- | --- |
+| Gorak | 2,0 | 10 % | 5 % | 67 % |
+| Elaria | 1,5 | 0 % | 0 % | 71 % |
+| Brokk | 1,8 | 10 % | 5 % | 70 % |
+| Ervald | 1,9 | 10 % | 5 % | 69 % |
+| Ysolde | 1,4 | 0 % | 0 % | 70 % |
+| Naraxes | 2,2 | 5 % | 0 % | 70 % |
+| Aldric | 2,4 | 5 % | 5 % | 68 % |
+| Morgrut | 1,1 | 0 % | 0 % | 69 % |
+| Thaldrin | 2,8 | 25 % | 15 % | 71 % |
+| Fanchon | 1,9 | 10 % | 5 % | 72 % |
+| **Tous** | | **8 %** | **4 %** | |
+
+**Lecture** : le réglage fait ce qu'on lui demande (la chance avant chaque combat est de 67 à 72 %, pour une cible de 70 %), et c'est la cible qui pose problème. Avec une défaite qui termine la partie, sept combats à 70 % donnent 0,7⁷ = 8 % de chances d'atteindre le boss, puis 45 % de le battre : **4 % d'actes gagnés**, exactement ce que mesure le pilote automatique. Un joueur qui choisit bien ses adversaires et sa forge fera mieux, mais pas d'un ordre de grandeur. Écart par champion sur 20 parties : indicatif seulement (Thaldrin à 15 % pourrait être du bruit).
+
+**Proposition faite alors** (cible d'un combat normal → boss atteint → acte gagné, boss à 45 %, pour sept combats) :
+
+| Cible par combat normal | Boss atteint | Acte gagné |
+| --- | --- | --- |
+| 70 % | 8 % | 4 % |
+| 85 % | 32 % | 14 % |
+| 90 % | 48 % | 22 % |
+| 93 % | 60 % | 27 % |
+
+Recommandée : une courbe qui monte le long de l'acte (démonstration au début, tension à la fin). **Retenue par l'utilisateur** (septième passe), sur un acte resserré à cinq combats.
+
+**Acte 0.89.0** (cinq combats à 95, 90, 87, 84 et 81 %, boss à 45 % ; une récompense par victoire ; 30 parties par champion, 300 en tout). Attendu pour le champion de référence : 0,95 × 0,90 × 0,87 × 0,84 × 0,81 = **51 %** des parties atteignent le boss, **23 %** gagnent l'acte.
+
+| Champion | Victoires moyennes | Atteint le boss | Gagne l'acte | Chance moyenne avant combat |
+| --- | --- | --- | --- | --- |
+| Gorak | 4,1 | 43 % | 30 % | 84 % |
+| Elaria | 3,4 | 40 % | 13 % | 85 % |
+| Brokk | 3,7 | 47 % | 37 % | 84 % |
+| Ervald | 3,4 | 43 % | 17 % | 84 % |
+| Ysolde | 3,8 | 43 % | 30 % | 84 % |
+| Naraxes | 4,3 | 60 % | 20 % | 83 % |
+| Aldric | 3,6 | 47 % | 17 % | 84 % |
+| Morgrut | 4,6 | 70 % | 50 % | 83 % |
+| Thaldrin | 3,9 | 57 % | 43 % | 83 % |
+| Fanchon | 4,0 | 57 % | 27 % | 82 % |
+| **Tous** | | **51 %** | **28 %** | |
+
+**Lecture** : le boss est atteint exactement comme prévu (51 %). L'acte est gagné un peu plus souvent que prévu (28 % au lieu de 23 %) : le boss tombe 55 % du temps au lieu de 45. Explication probable, non vérifiée : un effet de sélection, les champions qui arrivent au boss étant en moyenne mieux forgés et mieux équipés que le champion de référence sur lequel le boss est réglé (ou simplement le bruit de 153 combats contre le boss). Par champion, 30 parties ne suffisent pas (environ ± 9 points) : Morgrut à 50 % et Elaria à 13 % sont à revérifier avec plus de parties avant d'en conclure quoi que ce soit.
+
+### 18.4 Le boss : Le Colosse
+
+Un personnage précis, écrit à la main (§ 6.3), commun à tous les champions : l'ogre qui règne sur l'arène. De chaque champion brisé, il a gardé une technique et un trophée.
+
+| | |
+| --- | --- |
+| Stats d'origine | 70 PV (réglés pour chaque champion), d12, armure 0, esquive 4 %, critique 8 % ×2 |
+| Faces | 1 : Peau de pierre (Brokk) ; 2 : Pourfendre (Gorak) ; 3 : Aura d'intimidation (Brokk) |
+| Reliques | Cotte du mercenaire, Dent de loup |
+| Forge | le 11 et le 12 dorés |
+| Image | celle de Morgrut, assombrie et rougie : **provisoire**, une image propre est à générer |

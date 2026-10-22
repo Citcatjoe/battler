@@ -36,6 +36,23 @@ import {
   type SeasonSize,
 } from './game/season'
 import { getRelic } from './game/relics'
+import {
+  ACT_FIGHTS,
+  BOSS,
+  championOf,
+  isBossNode,
+  loadHeritage,
+  loadRun,
+  opponentOf,
+  recordHeritage,
+  saveRun,
+  startRun,
+  withEncounters,
+  withFightResult,
+  withReward,
+  type CampaignRun,
+  type Encounter,
+} from './game/campaign'
 import { music, sfx } from './game/sound'
 import {
   cancelBet,
@@ -68,6 +85,7 @@ import { SeasonScreen } from './components/SeasonScreen'
 import { SoundToggle } from './components/SoundToggle'
 import { Stage } from './components/Stage'
 import { ChampionScreen } from './components/ChampionScreen'
+import { CampaignScreen } from './components/CampaignScreen'
 
 /** Écrans d'où l'on ouvre le compendium ou les statistiques, et où l'on y revient */
 type Origin = 'home' | 'start'
@@ -91,6 +109,8 @@ type Screen =
   | { name: 'season' }
   /** Sacre du champion, à la fin d'un tournoi */
   | { name: 'champion' }
+  /** Campagne : choix du champion, carte de l'acte, récompense, fin de partie (docs/CAMPAGNE.md) */
+  | { name: 'campaign' }
 
 const matchTitle = (ref: MatchRef) =>
   ref.round === ROUND_NAMES.length - 1 ? 'Finale' : `${ROUND_NAMES[ref.round]} · Match ${ref.index + 1}`
@@ -133,6 +153,16 @@ export default function App() {
   /** Phase de saison avant l'arbre (désactivée par défaut) et nombre de participants, gardés pour le tournoi suivant */
   const [seasonSetup, setSeasonSetup] = useState<{ enabled: boolean; size: SeasonSize }>({ enabled: false, size: DEFAULT_SEASON_SIZE })
 
+  // Campagne (docs/CAMPAGNE.md) : la partie en cours est enregistrée (campaign.ts, `saveRun`), et l'héritage de
+  // chaque personnage aussi ; la rencontre en cours ne vit qu'en mémoire, le temps d'un combat.
+  const [campaignRun, setCampaignRunState] = useState<CampaignRun | null>(loadRun)
+  const [heritage, setHeritage] = useState(loadHeritage)
+  const [activeEncounter, setActiveEncounter] = useState<Encounter | null>(null)
+  const setCampaignRun = (run: CampaignRun | null) => {
+    saveRun(run)
+    setCampaignRunState(run)
+  }
+
   // Paris entre deux observateurs (docs/PARIS.md) : une bourse par tournoi, une autre pour les duels
   // de la session. En mémoire seulement, comme le tournoi.
   const [bettingSetup, setBettingSetup] = useState<{ enabled: boolean; names: Pair<string> }>({
@@ -147,8 +177,8 @@ export default function App() {
   const [reliefRound, setReliefRound] = useState(0)
   const [odds, setOdds] = useState<MatchOdds | null>(null)
   const betKey = activeMatch ? `t-${activeMatch.round}-${activeMatch.index}` : `d-${duelNumber}`
-  // Pas de paris pendant la saison : ni bourse, ni cotes
-  const purse = activeSeasonMatch !== null ? null : activeMatch ? wallets : duelWallets
+  // Pas de paris pendant la saison ni en campagne : ni bourse, ni cotes
+  const purse = activeSeasonMatch !== null || activeEncounter ? null : activeMatch ? wallets : duelWallets
   // Dernière bourse connue : deux paris posés dans la même image ne s'écrasent pas
   const purseRef = useRef(purse)
   purseRef.current = purse
@@ -158,6 +188,14 @@ export default function App() {
     else setDuelWallets(w)
   }
   const oddsId = `${betKey}:${fighters[0].id}-${fighters[1].id}`
+
+  // Campagne : les rencontres du nœud en cours se règlent par simulation (quelques milliers de combats), après
+  // l'affichage de la carte, pour qu'elle apparaisse aussitôt
+  useEffect(() => {
+    if (screen.name !== 'campaign' || !campaignRun || campaignRun.outcome || campaignRun.reward || campaignRun.encounters) return
+    const id = setTimeout(() => setCampaignRun(withEncounters(campaignRun)), 60)
+    return () => clearTimeout(id)
+  }, [screen.name, campaignRun]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tapis sonore (docs/SONS.md § 10) : une boucle au hasard pendant chaque combat joué, en fondu
   const fightScript = screen.name === 'fight' ? screen.script : null
@@ -228,8 +266,17 @@ export default function App() {
   // écrite au départ, est enregistrée à part (fichier « _triche » dans logs/combats/).
   const finish = (result: CombatResult) => {
     if (result.forcedRolls) reportCombat(result)
+    // Campagne : le combat fait avancer la partie, sans historique (adversaires aux PV réglés, boss hors du roster)
+    if (activeEncounter && campaignRun) {
+      const next = withFightResult(campaignRun, activeEncounter, result)
+      if (next.outcome) {
+        recordHeritage(next)
+        setHeritage(loadHeritage())
+      }
+      setCampaignRun(next)
+    }
     // Match de saison regardé : comme un match de l'arbre, il compte dans l'historique (sans récompense)
-    if (activeSeasonMatch !== null && tournament) {
+    else if (activeSeasonMatch !== null && tournament) {
       setTournament(withSeasonResult(tournament, activeSeasonMatch, result))
       if (!result.forcedRolls) recordMatch(result, { tournament: true })
     } else if (activeMatch && tournament) applyResults(tournament, [[activeMatch, result]])
@@ -250,7 +297,7 @@ export default function App() {
       }
       if (entries.some((e) => e.kind === 'settle' && e.won)) sfx.coinWin()
     }
-    if (!activeMatch && activeSeasonMatch === null) setDuelNumber((n) => n + 1)
+    if (!activeMatch && activeSeasonMatch === null && !activeEncounter) setDuelNumber((n) => n + 1)
     setScreen({ name: 'end', result, bets })
   }
 
@@ -314,14 +361,44 @@ export default function App() {
     go({ name: 'season' })
   }
 
+  /** Partie de campagne en cours, sous la plaque de l'accueil */
+  const campaignProgress =
+    campaignRun && !campaignRun.outcome ? (isBossNode(campaignRun) ? BOSS.name : `Combat ${campaignRun.wins + 1} sur ${ACT_FIGHTS}`) : null
+
+  /** Une rencontre de la carte : le champion à gauche, l'adversaire réglé à droite, par l'écran d'affrontement */
+  const openEncounter = (encounter: Encounter) => {
+    if (!campaignRun) return
+    setActiveMatch(null)
+    setActiveSeasonMatch(null)
+    setActiveEncounter(encounter)
+    setFighters([championOf(campaignRun), opponentOf(encounter)])
+    go({ name: 'matchup' })
+  }
+
+  const backToCampaign = () => {
+    setActiveEncounter(null)
+    go({ name: 'campaign' })
+  }
+
+  /** Ce qui attend le champion après un combat de campagne (la partie est déjà à jour) */
+  const campaignLabel = (run: CampaignRun) => {
+    const name = championOf(run).name
+    if (run.outcome === 'lost') return `${name} tombe : la partie s'arrête.`
+    if (run.outcome === 'won') return `${name} terrasse ${BOSS.name} : l'acte est gagné !`
+    if (run.reward) return `${name} gagne : ${run.reward.kind === 'relic' ? 'une relique' : 'une forge du dé'} l'attend.`
+    return isBossNode(run) ? `${name} gagne : ${BOSS.name} l'attend.` : `${name} gagne : combat ${run.wins + 1} sur ${ACT_FIGHTS}.`
+  }
+
   return (
     <Stage>
       <SoundToggle />
       {screen.name === 'home' && (
         <HomeScreen
           tournamentProgress={progress}
+          campaignProgress={campaignProgress}
           onChoose={(choice) => {
             if (choice === 'test') return go({ name: 'test' })
+            if (choice === 'campaign') return go({ name: 'campaign' })
             setMode(choice)
             go({ name: 'start' })
           }}
@@ -360,12 +437,32 @@ export default function App() {
       {screen.name === 'matchup' && (
         <MatchupScreen
           fighters={fighters}
-          title={activeMatch ? matchTitle(activeMatch) : activeSeasonMatch !== null ? seasonMatchTitle(activeSeasonMatch) : undefined}
-          back={activeMatch ? { label: 'Arbre', icon: 'retour' } : activeSeasonMatch !== null ? { label: 'Saison', icon: 'retour' } : undefined}
+          title={
+            activeEncounter && campaignRun
+              ? `Campagne · ${activeEncounter.boss ? 'Boss' : `Combat ${campaignRun.wins + 1} sur ${ACT_FIGHTS}`}`
+              : activeMatch
+                ? matchTitle(activeMatch)
+                : activeSeasonMatch !== null
+                  ? seasonMatchTitle(activeSeasonMatch)
+                  : undefined
+          }
+          back={
+            activeEncounter
+              ? { label: 'Carte', icon: 'retour' }
+              : activeMatch
+                ? { label: 'Arbre', icon: 'retour' }
+                : activeSeasonMatch !== null
+                  ? { label: 'Saison', icon: 'retour' }
+                  : undefined
+          }
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
-          onPlay={() => go({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena: resolveArena(arenaChoice) })}
+          onPlay={() => {
+            // Le cri de guerre signe le lancement du combat animé, à la place du clic (SONS.md § 3)
+            sfx.warCry()
+            setScreen({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena: resolveArena(arenaChoice) })
+          }}
           onSimulate={() => {
             sfx.click()
             finish(runCombat(fighters, seasonSeed()))
@@ -373,7 +470,8 @@ export default function App() {
           onBack={() => {
             // Revenir avant le combat annule les paris du match : les mises sont rendues
             if (purse) setPurse(cancelMatch(purse, betKey))
-            if (activeMatch) backToBracket()
+            if (activeEncounter) backToCampaign()
+            else if (activeMatch) backToBracket()
             else if (activeSeasonMatch !== null) backToSeason()
             else go({ name: 'start' })
           }}
@@ -407,7 +505,15 @@ export default function App() {
           onReplay={toDuel}
           onMenu={() => go({ name: 'start' })}
           tournament={
-            activeSeasonMatch !== null
+            activeEncounter && campaignRun
+              ? {
+                  label: campaignLabel(campaignRun),
+                  onContinue: backToCampaign,
+                  icon: 'chroniques',
+                  // Une victoire mène à sa récompense : le bouton le dit
+                  ...(campaignRun.reward && { action: campaignRun.reward.kind === 'relic' ? 'Relique' : 'Forge du dé' }),
+                }
+              : activeSeasonMatch !== null
               ? {
                   label: `${screen.result.fighters[screen.result.winner].name} prend les ${WIN_POINTS} points du match.`,
                   onContinue: backToSeason,
@@ -565,6 +671,35 @@ export default function App() {
           wallets={wallets}
           onBracket={() => go({ name: 'bracket' })}
           onNewTournament={() => go({ name: 'tournamentSetup' })}
+          onMenu={() => go({ name: 'home' })}
+        />
+      )}
+      {screen.name === 'campaign' && (
+        <CampaignScreen
+          run={campaignRun}
+          heritage={heritage}
+          onStart={(championId, seed, item) => {
+            sfx.click()
+            setCampaignRun(startRun(championId, seed, item))
+          }}
+          onFight={openEncounter}
+          onReward={(gain) => {
+            sfx.click()
+            if (campaignRun) setCampaignRun(withReward(campaignRun, gain))
+          }}
+          onAbandon={() => {
+            if (!campaignRun) return
+            sfx.click()
+            // Abandonner compte comme une défaite : la partie s'arrête, et laisse son héritage
+            const lost: CampaignRun = { ...campaignRun, outcome: 'lost', encounters: undefined }
+            recordHeritage(lost)
+            setHeritage(loadHeritage())
+            setCampaignRun(lost)
+          }}
+          onNewRun={() => {
+            sfx.click()
+            setCampaignRun(null)
+          }}
           onMenu={() => go({ name: 'home' })}
         />
       )}

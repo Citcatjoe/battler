@@ -1,33 +1,30 @@
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, DOUBLE_TRIGGERS, ROLL_TRIGGERS, TRIGGERS, type CharacterEvent, type Trigger } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, doubleTrigger, faceTrigger, isRollTrigger, rollFace, triggerText, type CharacterEvent, type Trigger } from '../game/events'
 import { STATES, statesPosedBy } from '../game/states'
 import { POLARITY_STYLE, STATUSES } from '../game/statuses'
 import { StateIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
 import type { SkillPulse } from '../game/staging'
 
-export type Face = 1 | 2 | 3 | 4 | 5
+/**
+ * Les faces de compétence d'un personnage, dans l'ordre : 1, 2 et 3 (les doubles 1 à 5 pour deux dés), puis celles que
+ * la forge du dé a gravées au-delà (docs/CAMPAGNE.md § 4). En-tête du combat, sélection, affrontement.
+ */
+export function skillFaces(character: Character, events: readonly CharacterEvent[]): { face: number; trigger: Trigger }[] {
+  const twin = character.twinDice
+  const base = twin ? [1, 2, 3, 4, 5] : [1, 2, 3]
+  const engraved = events.map((e) => (twin ? doubleFace(e.trigger) : rollFace(e.trigger))).filter((f): f is number => f !== undefined && !base.includes(f))
+  return [...base, ...new Set(engraved.sort((a, b) => a - b))].map((face) => ({ face, trigger: twin ? doubleTrigger(face) : faceTrigger(face) }))
+}
 
-/** Les trois faces qui déclenchent une compétence de race, dans l'ordre. */
-export const FACES: { face: Face; trigger: Trigger }[] = [
-  { face: 1, trigger: 'naturalOne' },
-  { face: 2, trigger: 'naturalTwo' },
-  { face: 3, trigger: 'naturalThree' },
-]
-
-/** Personnage à deux dés (barde) : une compétence par double, du double 1 au double 5. */
-export const DOUBLES: { face: Face; trigger: Trigger }[] = ([1, 2, 3, 4, 5] as const).map((face) => ({
-  face,
-  trigger: DOUBLE_TRIGGERS[face],
-}))
-
-/** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). */
-const PIPS: Record<Face, [number, number][]> = {
+/** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). Au-delà de 6, son chiffre. */
+const PIPS: Record<number, [number, number][]> = {
   1: [[1, 1]],
   2: [[0, 0], [2, 2]],
   3: [[0, 0], [1, 1], [2, 2]],
   4: [[0, 0], [2, 0], [0, 2], [2, 2]],
   5: [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]],
+  6: [[0, 0], [0, 1], [0, 2], [2, 0], [2, 1], [2, 2]],
 }
 
 interface Props {
@@ -88,9 +85,9 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
     )
   const formId = forms?.[form ?? 0].id
   const own = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = character.twinDice ? DOUBLES : FACES
+  const faces = skillFaces(character, own)
   // Les compétences hors dé (l'Ouverture de la barde, au début du combat) : un sceau à la suite des dés
-  const offDice = own.filter((e) => !faces.some((f) => f.trigger === e.trigger) && !ROLL_TRIGGERS.includes(e.trigger))
+  const offDice = own.filter((e) => !faces.some((f) => f.trigger === e.trigger) && !isRollTrigger(e.trigger))
   return (
     <ul className={`flex gap-2 ${dim ? 'skill-dice-dim' : ''}`} aria-label={`Compétences de ${character.name}`}>
       {faces.map(({ face, trigger }) => {
@@ -123,16 +120,17 @@ const SEAL_SIZE = { sm: 32, header: 40, md: 40 } as const
 const BOX = { xs: 'skill-die-xs h-[28px] w-[28px] p-[4px] rounded-[7px]', sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
 
 /** Une face de dé de compétence (ses points), ou un double (deux dés décalés). Aussi en pastille des sceaux (SkillBar). */
-export function DieFace({ face, size, empty, double }: { face: Face; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
+export function DieFace({ face, size, empty, double }: { face: number; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
   const box = BOX[size]
+  const pips = PIPS[face]
   const die = (
     <div
       aria-label={double ? undefined : `Dé ${face}`}
-      className={`skill-die grid grid-cols-3 grid-rows-3 ${size === 'xs' ? '' : 'rounded-lg'} ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
+      className={`skill-die ${pips ? 'grid grid-cols-3 grid-rows-3' : 'skill-die-number'} ${size === 'xs' ? '' : 'rounded-lg'} ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
     >
-      {PIPS[face].map(([x, y]) => (
-        <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />
-      ))}
+      {pips
+        ? pips.map(([x, y]) => <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />)
+        : face}
     </div>
   )
   if (!double) return die
@@ -185,7 +183,7 @@ export function SkillTooltip({
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          {face === undefined ? TRIGGERS[event.trigger].short : `${double !== undefined ? 'Double' : 'Dé'} ${face}`}
+          {face === undefined ? triggerText(event.trigger).short : `${double !== undefined ? 'Double' : 'Dé'} ${face}`}
         </span>
       </div>
       {tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{tags.map((t) => t.label).join(' · ')}</p>}

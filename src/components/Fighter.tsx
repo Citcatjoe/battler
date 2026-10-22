@@ -35,11 +35,12 @@ interface Props {
   form?: number
   className?: string
   /**
-   * Ancrage d'une image plus large que sa colonne : `center` (défaut) la centre sur les pieds ;
+   * Ancrage d'une image plus large que sa colonne : `center` (défaut) centre la toile sur la colonne ;
+   * `body` centre la silhouette (toile à postures plus large que la garde : `look.bodyInset`), pour une carte ;
    * `inside` garde son bord extérieur dans la colonne (près du bord de l'écran) et la fait déborder vers le
    * centre, derrière les panneaux.
    */
-  anchor?: 'center' | 'inside'
+  anchor?: 'center' | 'body' | 'inside'
 }
 
 /**
@@ -112,10 +113,12 @@ export function Fighter({
   /**
    * Ancrage `inside` : la toile est poussée vers le bord de l'écran du vide qui entoure la garde de ce
    * côté (`look.bodyInset`), pour que ce soit la silhouette, et non la toile, qui touche le bord.
+   * Ancrage `body` : la toile est décalée pour que la silhouette, et non la toile, soit au centre de la colonne.
    */
   const insetShift = (look: { bodyInset?: { left: number; right: number } }, flipped: boolean) => {
-    if (anchor !== 'inside' || !look.bodyInset) return ''
+    if (anchor === 'center' || !look.bodyInset) return ''
     const { left, right } = look.bodyInset
+    if (anchor === 'body') return `translateX(${((flipped ? left - right : right - left) / 2) * 100}%)`
     // Vide du côté du bord de l'écran, une fois l'image retournée ou non
     const outer = side === 0 ? (flipped ? right : left) : flipped ? left : right
     return `translateX(${side === 0 ? -outer * 100 : outer * 100}%)`

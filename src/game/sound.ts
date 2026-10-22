@@ -29,8 +29,8 @@ let speed = 1
 export const SOUND_NAMES = [
   'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
   'hit', 'crit-rumble', 'dodge',
-  'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'heal',
-  'shift', 'ko', 'victory', 'click', 'clash',
+  'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'fizz', 'heal',
+  'shift', 'ko', 'victory', 'click', 'clash', 'war-cry',
 ] as const
 export type SoundName = (typeof SOUND_NAMES)[number]
 
@@ -75,15 +75,17 @@ const MIX: Record<SoundName, number> = {
   dispel: LEVEL[3],
   stun: LEVEL[3],
   rot: LEVEL[4],
+  fizz: LEVEL[4],
   heal: LEVEL[3],
   shift: LEVEL[2],
   ko: LEVEL[1],
   victory: LEVEL[2],
   click: LEVEL[4],
   clash: LEVEL[1],
+  'war-cry': LEVEL[2],
 }
 /** Sons hors du rythme du combat : jamais écourtés par la vitesse. */
-const UNTIMED = new Set<SoundName>(['click', 'clash', 'ko', 'victory'])
+const UNTIMED = new Set<SoundName>(['click', 'clash', 'war-cry', 'ko', 'victory'])
 
 function loadSamples(c: AudioContext) {
   for (const [name, urls] of Object.entries(SAMPLE_URLS))
@@ -468,6 +470,12 @@ export const sfx = {
     noise({ dur: 0.4, filter: 'highpass', freq: 5000, gain: 0.04 })
   },
 
+  /** Grésillement : le poison agit (une bouffée de vapeur toxique, « pchhhit »), discret, sans choc. */
+  fizz() {
+    if (play('fizz')) return
+    noise({ dur: 0.5, filter: 'highpass', freq: 4500, gain: 0.12 })
+  },
+
   /** Soin : des PV regagnés, arpège doux et clair. */
   heal() {
     if (play('heal')) return
@@ -511,5 +519,12 @@ export const sfx = {
     if (play('clash')) return
     tone({ freq: 110, to: 30, dur: 0.9, gain: 0.85 })
     noise({ dur: 0.5, freq: 3000, to: 300, gain: 0.4 })
+  },
+
+  /** Cri de guerre : le bouton « Jouer » lance le combat animé (il remplace le clic de ce bouton). */
+  warCry() {
+    if (play('war-cry')) return
+    tone({ freq: 380, to: 200, dur: 1.4, type: 'sawtooth', gain: 0.08 })
+    noise({ dur: 1.2, filter: 'bandpass', freq: 1200, to: 600, q: 1.2, gain: 0.15 })
   },
 }

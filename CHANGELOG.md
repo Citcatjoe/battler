@@ -32,6 +32,48 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.91.0] — 2026-10-22
+
+### Ajouté
+- **Cri de guerre au lancement du combat** (demande de l'utilisateur) : le bouton « Jouer » de l'écran d'affrontement, qui lance le combat animé (duel, tournoi, saison, campagne), joue un cri de guerre de 1,74 s (`war-cry.mp3`, niveau 2, jamais écourté par la vitesse) à la place du clic. Généré avec ElevenLabs (API de bruitages), proposition 1 sur 3 retenue à la mesure ; les trois sont dans `logs/sons/war-cry/`. Vocabulaire de `docs/SONS.md` porté à 23 sons.
+- **ElevenLabs dans le projet** : clé posée dans `.env.local` (ignoré par git) par `npx @elevenlabs/cli onboard`, SDK `@elevenlabs/elevenlabs-js` en dépendance de développement, et `npm run sfx` (`scripts/gen-sfx.mjs`) pour générer des propositions de bruitage. La clé n'est lue que par Node, jamais par le code du navigateur.
+
+### Modifié
+- **Ouverture du combat** : 1 400 ms de silence avant les dés de l'initiative au lieu de 500 (`INTRO`, `timing.ts`), pour que le cri de guerre retombe avant que les dés roulent (`SONS.md`, règle 8). Le combat test, qui saute l'ouverture, ne change pas.
+
+## [0.90.0] — 2026-10-22
+
+### Ajouté
+- **Grésillement, le son du poison** (demande de l'utilisateur) : quand le poison agit, au début du tour de son porteur, il joue un « pchhhit » bref et discret de vapeur toxique (`fizz.mp3`, 0,6 s, niveau 4). Il ne partage plus Ronge, que gardent Pourriture, Brûlure et Saignement. Le son se déclare dans le registre du statut (`tickSound`, `statuses.ts`) ; il pourra servir plus tard à d'autres maux laissés par un coup (magie…). Test dans `staging.test.ts` : chaque poison qui agit grésille, chaque autre statut qui ronge garde Ronge. Vocabulaire de `docs/SONS.md` porté à 22 sons.
+- Le fichier est **généré avec Artlist** : faute de générateur de bruitages, et le forfait AI Suite ne téléchargeant pas les bruitages du catalogue, c'est la piste son d'une vidéo Veo 3.1 Lite (une bouffée de fumée toxique qui gicle d'une éraflure d'armure), coupée à son attaque puis traitée par `scripts/process-sounds.py` (fenêtre `fizz` : 0,6 s). Provenance dans `src/assets/sounds/SOURCES.md`.
+
+## [0.89.0] — 2026-10-22
+
+### Modifié
+- **Campagne : un acte plus court, une récompense par victoire** (demande de l'utilisateur) : cinq combats normaux puis le boss (six nœuds au lieu de huit). Chaque combat normal gagné rapporte **une** récompense, tour à tour une relique et une forge du dé : relique, forge, relique, forge, relique, soit trois reliques et deux forges dans l'acte. L'écran de victoire mène directement à la récompense (bouton « Relique » ou « Forge du dé »). Sur la piste de l'acte, un losange entre chaque combat, quelle que soit la récompense (son infobulle dit laquelle).
+- **Courbe nominale montante** (recommandation de l'agent, retenue par l'utilisateur) : le champion de référence gagne 95, 90, 87, 84 puis 81 % de ses combats normaux, et 45 % contre le boss, au lieu de 70 % partout. Attendu : 51 % des parties atteignent le boss, 23 % gagnent l'acte (mesure dans `docs/CAMPAGNE.md` § 18.3). Le champion de référence reçoit ses récompenses au même rythme que le joueur.
+- Sauvegarde de la partie en cours : `battler:campaign:v2` (une partie de la 0.88.0 est oubliée) ; les héritages sont gardés.
+
+### Corrigé
+- Choix du champion et adversaires de la carte : les combattants sont centrés dans leur carte, sur leur silhouette et non sur leur toile (ancrage `body` de `Fighter`).
+
+## [0.88.0] — 2026-10-22
+
+### Ajouté
+- **Campagne** (prototype de `docs/CAMPAGNE.md`, règles tranchées avec l'utilisateur) : troisième mode de l'accueil. Un champion tiré parmi trois mène seul un acte de huit nœuds, sept combats normaux puis le boss ; deux adversaires proposés à chaque nœud, avec leur bande de danger (Sûr, Risqué, Mortel, sans chiffre) ; une défaite met fin à la partie. Après les victoires 2, 4 et 6 : une forge du dé puis une relique, le champion ayant déjà choisi (choix modifiable). Fin de partie : parcours, dé forgé, héritage.
+  - **Réglage par simulation** (`campaign.ts`) : chaque adversaire est un personnage du roster dont seuls les PV se règlent, pour que le champion de référence (le même personnage, forgé et équipé au hasard au même rythme, douze versions) gagne environ 70 % du temps, 45 % contre le boss ; la bande de danger se calcule contre le champion réel.
+  - **Le boss**, commun : **Le Colosse** (image de Morgrut assombrie), trois techniques du roster sur ses faces 1 à 3, deux reliques, un d12 doré sur le 11 et le 12.
+  - **Héritage** : une partie terminée lègue au même personnage ses reliques et ses opérations de forge valables sur son dé d'origine ; il en reprend une, parmi trois au plus, à sa partie suivante. Une partie sans gain n'efface rien.
+  - **Sauvegarde** : partie en cours (`battler:campaign:v1`) et héritages (`battler:campaign-heritage:v1`) dans le navigateur. Les combats de campagne n'entrent pas dans l'historique.
+  - `npm run campaign` (`scripts/campaign.report.ts`) : parties en pilote automatique par champion, profondeur, boss atteint, acte gagné (`logs/campaign/`).
+- **Forge du dé** (`forge.ts`), utilisable par tout mode (`Character.withForge`) : Graver (une compétence du dé d'un autre combattant sur une face libre, ou à la place d'une Attente de l'ogre), Dorer (+2 au coup de cette face, avant le critique, jamais sur un coup brut), Agrandir (+2 faces), Retailler (la plus haute face, jamais une compétence d'origine), Aiguiser (un rang de plus : charges, dégâts, soins, coups d'un double). La barde grave et aiguise ses doubles. Composants `ForgedDie` (le dé face par face) et `ForgeCard`.
+- **Faces au-delà du 3** dans le moteur : déclencheurs `face:N` et `double:N` (`faceTrigger`, `doubleTrigger`, `triggerText`), sceaux et faces chiffrées dans l'en-tête du combat et à l'affrontement ; label « Face dorée +2 » sous le dé ; `Attack.gild`.
+- Trace : en-tête `Forge (…)`, relu par `npm run logs` (avec les PV réglés et le boss) ; audit : taille du dé et dorures recomptées.
+
+### Modifié
+- `DOUBLE_TRIGGERS` remplacé par `doubleTrigger`, `ROLL_TRIGGERS.includes` par `isRollTrigger` ; l'Attente de l'ogre porte `idle` (face libre pour la forge, sans effet en combat). Empreinte de non-régression inchangée.
+- Accueil : la paire de modes porte trois plaques (Duel, Tournoi, Campagne).
+
 ## [0.87.0] — 2026-10-22
 
 ### Ajouté

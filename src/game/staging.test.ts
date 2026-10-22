@@ -181,6 +181,20 @@ describe('mise en scène', () => {
     expect(counted + expired).toBeGreaterThan(20)
   })
 
+  it('le poison qui agit grésille ; les autres statuts qui rongent gardent Ronge (SONS.md § 9.3)', () => {
+    const heard = { poison: 0, other: 0 }
+    for (const { result, moments } of corpus)
+      for (const tick of result.beats) {
+        if (tick.type !== 'statusTick' || !tick.effects.some((e) => e.type === 'damage')) continue
+        const poison = tick.status === 'poison'
+        const sounds = momentOf(moments, tick.id).cues.flatMap((c) => (c.channel === 'sound' ? [c.cue] : []))
+        expect(sounds, tick.status).toContain(poison ? 'fizz' : 'rot')
+        heard[poison ? 'poison' : 'other']++
+      }
+    expect(heard.poison).toBeGreaterThan(10)
+    expect(heard.other).toBeGreaterThan(10)
+  })
+
   it('la Peur : « Tour perdu » tombe sur celui qui perd son action, avec son son', () => {
     let skips = 0
     for (const { result, moments } of corpus)

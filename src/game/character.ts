@@ -1,5 +1,6 @@
 import type { PoseId } from './poses'
 import type { CharacterEvent } from './events'
+import { forgedEvents, forgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
 import type { StatusId } from './statuses'
 
@@ -127,6 +128,11 @@ export interface CharacterDef {
    * `stats` ; leurs autres effets sont appliqués par le moteur.
    */
   relics?: readonly Relic[]
+  /**
+   * Forge du dé (campagne, docs/CAMPAGNE.md § 4) : journal d'opérations, rejoué sur `stats` et `events` d'origine.
+   * Le dé forgé remplace `damageDie`, les gravures et les rangs s'ajoutent aux compétences, les dorures au coup.
+   */
+  forge?: readonly ForgeStep[]
 }
 
 /**
@@ -138,17 +144,22 @@ export class Character {
   readonly name: string
   readonly race: string
   readonly archetype: string
-  /** Stats de combat : celles du personnage, plus celles de ses reliques */
+  /** Stats de combat : celles du personnage (dé forgé compris), plus celles de ses reliques */
   readonly stats: Readonly<CharacterStats>
-  /** Stats du personnage seul, sans ses reliques */
+  /** Stats du personnage seul, dé forgé compris, sans ses reliques */
   readonly baseStats: Readonly<CharacterStats>
   readonly look: Readonly<CharacterLook>
   readonly lore: CharacterLore
+  /** Compétences : celles d'origine, plus celles de sa forge (gravées, aiguisées) */
   readonly events: readonly CharacterEvent[]
   readonly immunities: readonly StatusId[]
   readonly forms?: readonly [CharacterForm, CharacterForm]
   readonly twinDice: boolean
   readonly relics: readonly Relic[]
+  /** Journal de forge de son dé (vide : dé d'origine) */
+  readonly forge: readonly ForgeStep[]
+  /** Bonus des faces dorées, par face (forge du dé) : lu par le moteur à chaque coup */
+  readonly gilded: Readonly<Record<number, number>>
   readonly #def: CharacterDef
 
   constructor(def: CharacterDef) {
@@ -157,12 +168,15 @@ export class Character {
     this.name = def.name
     this.race = def.race
     this.archetype = def.archetype
-    this.baseStats = Object.freeze({ ...def.stats })
+    this.forge = def.forge ?? []
+    const forged = this.forge.length > 0 ? forgeState(def, this.forge) : undefined
+    this.baseStats = Object.freeze(forged ? { ...def.stats, damageDie: forged.size } : { ...def.stats })
     this.relics = def.relics ?? []
-    this.stats = Object.freeze(withRelicStats(def.stats, this.relics))
+    this.stats = Object.freeze(withRelicStats(this.baseStats, this.relics))
     this.look = Object.freeze({ ...def.look })
     this.lore = def.lore
-    this.events = def.events
+    this.events = forged ? forgedEvents(def, forged) : def.events
+    this.gilded = Object.freeze(forged ? Object.fromEntries(forged.gilded) : {})
     this.immunities = def.immunities ?? []
     this.forms = def.forms
     this.twinDice = !!def.twinDice
@@ -189,6 +203,16 @@ export class Character {
   /** Même personnage, avec ces reliques (elles remplacent les précédentes). */
   withRelics(relics: readonly Relic[]) {
     return new Character({ ...this.#def, relics })
+  }
+
+  /** Même personnage, avec ce journal de forge (il remplace le précédent). */
+  withForge(forge: readonly ForgeStep[]) {
+    return new Character({ ...this.#def, forge })
+  }
+
+  /** Sa définition, avant forge et reliques : la forge se rejoue dessus (forge.ts). */
+  get definition(): CharacterDef {
+    return this.#def
   }
 
   /** Même personnage avec des stats ou des compétences modifiées : sert aux essais d'équilibrage (analysis.ts). */

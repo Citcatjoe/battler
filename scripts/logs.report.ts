@@ -8,10 +8,12 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { createAudit } from '../src/game/audit'
-import { simulateCombat, type CombatResult } from '../src/game/combat'
-import { CHARACTER_IDS, createCharacter } from '../src/game/roster'
-import { parseForcedRolls, parseRelics, traceText } from '../src/game/trace'
+import { simulateCombat, type CombatResult, type Pair } from '../src/game/combat'
+import { BOSS, campaignCharacter } from '../src/game/campaign'
+import { CHARACTER_IDS, ENGRAVABLE_SKILLS } from '../src/game/roster'
+import { parseForcedRolls, parseForge, parseRelics, traceText } from '../src/game/trace'
 import { getRelic, RELIC_IDS } from '../src/game/relics'
+import type { ForgeStep } from '../src/game/forge'
 import pkg from '../package.json' with { type: 'json' }
 
 const DIR = 'logs/combats'
@@ -39,11 +41,14 @@ it('rapport des combats joués', () => {
   const skipped: string[] = []
   for (const file of files) {
     const [, , a, b, seed] = NAME.exec(file)!
-    if (!CHARACTER_IDS.includes(a) || !CHARACTER_IDS.includes(b)) {
+    // Campagne (0.88.0) : le boss est un combattant connu, hors du roster
+    const known = [...CHARACTER_IDS, BOSS.id]
+    if (!known.includes(a) || !known.includes(b)) {
       skipped.push(`${file} (personnage inconnu)`)
       continue
     }
-    // Les noms viennent de l'en-tête (« Gorak II » en tournoi), les règles de l'identifiant, les reliques de leur ligne
+    // Les noms viennent de l'en-tête (« Gorak II » en tournoi), les règles de l'identifiant, les reliques de leur ligne,
+    // la forge du dé de la sienne, et les PV (réglés en campagne) de la ligne de chaque combattant
     const text = readFileSync(`${DIR}/${file}`, 'utf8')
     const names = /^=== Battler · (.+) contre (.+) · graine/.exec(text)
     const relics = parseRelics(text)
@@ -51,8 +56,20 @@ it('rapport des combats joués', () => {
       skipped.push(`${file} (relique inconnue)`)
       continue
     }
-    const fighter = (id: string, side: 0 | 1, name?: string) =>
-      (name ? createCharacter(id).withName(name) : createCharacter(id)).withRelics(relics[side].map(getRelic))
+    let forge: Pair<ForgeStep[]>
+    try {
+      forge = parseForge(text, ENGRAVABLE_SKILLS)
+    } catch {
+      skipped.push(`${file} (forge illisible)`)
+      continue
+    }
+    const hp = text.split('\n').slice(1, 3).map((line) => Number(/\) : (\d+) PV/.exec(line)?.[1]))
+    const fighter = (id: string, side: 0 | 1, name?: string) => {
+      const base = campaignCharacter(id)
+      const built = (name ? base.withName(name) : base).withForge(forge[side]).withRelics(relics[side].map(getRelic))
+      const delta = hp[side] - built.maxHp
+      return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp + delta } }) : built
+    }
     const r = simulateCombat([fighter(a, 0, names?.[1]), fighter(b, 1, names?.[2])], { seed: Number(seed), forcedRolls: parseForcedRolls(text) })
     // La trace écrite et la trace rejouée doivent être identiques ; sinon, les règles ont changé depuis
     const same = traceText(r) === text

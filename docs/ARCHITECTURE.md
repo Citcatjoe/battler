@@ -24,7 +24,12 @@ src/
     states.ts            états affichés (0.79.0) : vocabulaire générique de la zone d'état, place de chaque statut
                          (zone, aura, forme, mécanisme), regroupement, relais des auras, cibles du signal
     relics.ts            REGISTRE des reliques (RELICS) : types, rédaction (describeRelic), validation, offre de tournoi (drawOffer, autoPick) ; docs/RELIQUES.md
-    events.ts            déclencheurs (TRIGGERS), effets (Effect), CharacterEvent
+    events.ts            déclencheurs (TRIGGERS nommés, faces au-delà du 3 : `face:7`, `double:6` ; faceTrigger, doubleTrigger, rollFace,
+                         triggerText), effets (Effect), CharacterEvent
+    forge.ts             forge du dé (0.88.0, CAMPAGNE.md § 4) : journal d'opérations (ForgeStep), rejoué sur la définition d'origine
+                         (forgeState, forgedEvents, forgedFaces), offre et choix automatique (drawForgeOffer, autoForge), validité
+    campaign.ts          campagne (0.88.0) : partie (CampaignRun), boss, réglage des rencontres sur le champion de référence
+                         (referenceChampions, tuneHp, encountersFor), récompenses, héritage, sauvegarde
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
     arenas.ts            ARENAS : cadres visuels des combats (image, cadrage, traitement)
     catalog.ts           vues de lecture sur les registres : statusCatalog, statusSources, statusLinks (interactions), skillCatalog (compendium)
@@ -65,6 +70,9 @@ src/
     homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
     SeasonScreen.tsx     phase de saison : classement en deux colonnes et ligne de qualification, journée et ses matchs, simulation (aucune règle : tout vient de season.ts)
+    CampaignScreen.tsx   campagne : choix du champion et de son héritage, carte de l'acte (piste, champion, adversaires et leur bande de
+                         danger), récompense (forge puis relique), fin de partie (aucune règle : campaign.ts et forge.ts)
+    ForgedDie.tsx        dé forgé face par face (sceau, rune, or, rang, attente ; choix d'une face) et carte d'une opération de forge
     SeasonSlots.tsx      configuration d'un tournoi avec saison : les cases des participants de la saison, sur deux colonnes aux places des extrémités de l'arbre (SETUP_GEOMETRY de Bracket.tsx)
     compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
@@ -142,7 +150,7 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 3. Un seul personnage par famille (0.43.0) : plus de variantes de coloris (`variant()` et `baseId` sont retirés).
    - **Personnage à formes** (druide) : `forms: [{ id, name, statuses? }, { id, name, statuses?, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence.
    - **Statuts de forme** (0.73.0) : `statuses` d'une forme liste des statuts marqués `innate: true` dans `STATUSES` (Incantation, Force de l'ours). Le moteur les pose au début du combat (première forme) et à chaque `shift`, et retire ceux de la forme quittée ; une purge (`cleanse`) les ignore, aucune immunité ne les bloque. `validateRoster` refuse un statut de forme non `innate` et une compétence qui pose un statut `innate` ; l'audit vérifie à chaque étape que le porteur a exactement les statuts de sa forme.
-   - **Personnage à deux dés** (barde) : `twinDice: true`. L'action devient une paire (étape `pair`, `twinAction` dans `combat.ts`). Ses compétences sont sur les doubles (`doubleOne` à `doubleFive`, `DOUBLE_TRIGGERS`), sans `chance` ni `forfeitsHit` (`validateRoster`) ; `volley: n` pour attaquer (n coups de la face), avec `merged` pour un seul coup qui vaut leur somme. Les coups de la paire portent `preset` (aucun dé lancé) ; le combat test compte les dés par étape avec `diceOf` et `rankAt`.
+   - **Personnage à deux dés** (barde) : `twinDice: true`. L'action devient une paire (étape `pair`, `twinAction` dans `combat.ts`). Ses compétences sont sur les doubles (`doubleOne` à `doubleFive`, puis `double:6`… pour un dé forgé : `doubleTrigger`), sans `chance` ni `forfeitsHit` (`validateRoster`) ; `volley: n` pour attaquer (n coups de la face), avec `merged` pour un seul coup qui vaut leur somme. Les coups de la paire portent `preset` (aucun dé lancé) ; le combat test compte les dés par étape avec `diceOf` et `rankAt`.
    - **Coup transformé** : `reshapesHit: { value: 'max' | 'reroll', bonus?, noCrit? }` au lieu de `forfeitsHit` (sans porteur depuis la 0.73.0 ; Charge et Coup de griffe avant), avec `effects: []`. L'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
    - **Événement de scène** (0.73.0, Foudre) : `scene: '<id>'` sur la compétence. Voir « Ajouter un événement de scène ».
 4. L'ajouter à `ROSTER`. La sélection (rangée par famille via `FAMILIES`), les fiches, les statistiques et le tournoi le prennent en compte automatiquement.
@@ -150,6 +158,13 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 
 ### Ajouter une relique
 Une entrée dans `RELICS` (`relics.ts`), un seul type (`stats`, `rollBonus`, ou `trigger` + `effects`), son icône `src/assets/icons/<id>.png` ; puis `npm run check` et `npm run relics`. Marche à suivre, règles et mesures : [RELIQUES.md](RELIQUES.md) § 8. Côté moteur : `Character.relics` (stats ajoutées à plat dans `stats`, la base dans `baseStats`, `withRelics`), `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` ; contrôle dans `auditRelics` (`audit.ts`) ; trace : en-tête relu par `parseRelics` (`npm run logs`).
+
+### Donner la forge du dé à un mode (tournoi, duel…)
+La forge est une donnée du personnage, comme ses reliques (`forge.ts`, règles : [CAMPAGNE.md](CAMPAGNE.md) § 4). Pour qu'un mode la donne (une forge par victoire de tournoi, par exemple) :
+1. Garder le journal du participant (`ForgeStep[]`), comme `relicsOf` garde ses reliques dans `tournament.ts`.
+2. À la récompense : `drawForgeOffer(personnage.definition, journal, rng, ENGRAVABLE_SKILLS)`, le choix par défaut `autoForge(…)`, puis `withForgeStep(…)` pour l'ajouter (une opération impossible lève une erreur).
+3. Au combat : `createCharacter(id).withForge(journal).withRelics(…)`. Le moteur, la trace (en-tête `Forge (…)`, relu par `npm run logs`), l'audit, la barre des compétences et les cotes suivent sans rien de plus.
+4. À l'écran : `ForgeCard` pour l'offre, `ForgedDie` (avec `targets` et `onPick`) pour choisir la face, comme la récompense de `CampaignScreen`.
 
 ### Ajouter une arène
 1. Préparer l'image (16:9, sol dégagé en bas au centre, voir `docs/STYLE_BIBLE.md`), la ranger dans `src/assets/arena-<lieu>.jpg`.
@@ -211,7 +226,7 @@ La durée est portée par l'instance : `turns` (facultatif) correspond au nombre
 S'il faut un **nouveau type de crochet** (ex. renvoi de dégâts), on l'ajoute à `StatusDef` et on l'appelle à un endroit précis de `simulateCombat` ou de `resolveAttack`, puis on le teste dans `combat.test.ts`.
 
 ### Ajouter un déclencheur
-1. L'ajouter au type `Trigger` et à `TRIGGERS` (libellé).
+1. L'ajouter au type `NamedTrigger` et à `TRIGGERS` (libellé). Une face du dé ou un double au-delà de ceux du roster n'a pas besoin d'un nom : `faceTrigger(n)` donne `face:n` (au-delà du 3), `doubleTrigger(n)` donne `double:n` (au-delà du 5), et `triggerText` les libelle.
 2. Appeler `fire(side, 'nouveau')` au bon moment dans `simulateCombat`, et documenter cet ordre ici.
 3. Ajouter un test dans `combat.test.ts` (section « événements »).
 
@@ -251,8 +266,10 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 
 ## Données persistées
 
-- `battler:history:v1` : totaux par personnage, bilans par adversaire, 300 derniers combats. `normalize` complète un historique enregistré par une version antérieure. Un changement incompatible impose de changer la clé (`v2`).
+- `battler:history:v1` : totaux par personnage, bilans par adversaire, 300 derniers combats. `normalize` complète un historique enregistré par une version antérieure. Un changement incompatible impose de changer la clé (`v2`). Les combats de campagne n'y entrent pas.
 - `battler:muted` et `battler:music-muted` : réglages du son et de la musique. Absents, ils valent « coupé » (0.68.2) ; seul `'0'` rallume.
+- `battler:campaign:v2` (0.89.0 ; `v1` en 0.88.0, oubliée) : la partie de campagne en cours (`CampaignRun` : graine, champion, journal de forge, reliques, gains, combats, rencontres du nœud, récompense en attente : une relique ou une forge). Illisible avec les règles du moment (forge impossible), elle est oubliée (`loadRun`).
+- `battler:campaign-heritage:v1` (0.88.0) : par personnage, les gains héritables de sa dernière partie qui a rapporté quelque chose.
 - Le tournoi n'est jamais persisté.
 
 ## Tests (`npm test`, ou `npm run check` pour typecheck + tests)
@@ -265,6 +282,7 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 | `audit.test.ts` | audit de résolution (`audit.ts`, `createAudit`) : milliers de combats revérifiés étape par étape |
 | `scripts/logs.report.ts` | rapport des combats joués (`npm run logs`) : rejoue `logs/combats/` depuis les graines, compare, audite, résume ; écrit dans `logs/reports/` |
 | `scripts/balance.report.ts` | rapport d'équilibre détaillé (`npm run balance`, config `vitest.balance.config.ts`), écrit dans `logs/balance/` |
+| `scripts/campaign.report.ts` | mesure de la campagne (`npm run campaign`, `CAMPAIGN_RUNS` parties par champion en pilote automatique) : profondeur, boss atteint, acte gagné ; écrit dans `logs/campaign/` |
 | `components/screens.test.tsx` | rendu de chaque écran avec de vraies données |
 
 **Empreinte de non-régression** : si elle casse alors qu'aucune règle ne devait changer, c'est un effet de bord. Si le changement est voulu, on met à jour l'instantané avec `npx vitest run -u` et on le note dans le CHANGELOG.

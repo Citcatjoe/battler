@@ -12,7 +12,8 @@ import { lowerFirst, STATUSES, type Polarity, type StatusId } from './statuses'
  * Ajouter un type d'effet = étendre `Effect`, `applyEffect` (combat.ts) et `describeEffect`.
  */
 
-export type Trigger =
+/** Les déclencheurs nommés : ceux du roster, des statuts et des reliques, libellés dans `TRIGGERS`. */
+export type NamedTrigger =
   | 'combatStart'
   | 'turnStart'
   | 'turnEnd'
@@ -33,10 +34,21 @@ export type Trigger =
   | 'bloodied'
 
 /**
- * Libellés affichés : `label` en toutes lettres, `short` pour un index (« dé 1 »). L'ordre d'évaluation sur un
- * même coup est fixé par le moteur (combat.ts, étape 4).
+ * Une face au-delà de 3 (0.88.0, forge du dé, docs/CAMPAGNE.md § 4) : `face:7` se déclenche sur un 7 au dé de dégâts.
+ * Les faces 1 à 3 gardent leur nom (`naturalOne`…) : une face n'a qu'un seul déclencheur (`faceTrigger`).
  */
-export const TRIGGERS: Record<Trigger, { label: string; short: string }> = {
+export type FaceTrigger = `face:${number}`
+
+/** Un double au-delà de 5 (barde au dé agrandi) : `double:6`. Les doubles 1 à 5 gardent leur nom (`doubleTrigger`). */
+export type DoubleTrigger = `double:${number}`
+
+export type Trigger = NamedTrigger | FaceTrigger | DoubleTrigger
+
+/**
+ * Libellés affichés : `label` en toutes lettres, `short` pour un index (« dé 1 »). L'ordre d'évaluation sur un
+ * même coup est fixé par le moteur (combat.ts, étape 4). Un déclencheur de face se lit avec `triggerText`.
+ */
+export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = {
   combatStart: { label: 'Au début du combat', short: 'début du combat' },
   turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
   turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
@@ -55,6 +67,15 @@ export const TRIGGERS: Record<Trigger, { label: string; short: string }> = {
   dodge: { label: 'Quand il esquive', short: 'esquive' },
   hurt: { label: 'Quand il encaisse un coup', short: 'coup encaissé' },
   bloodied: { label: 'La première fois qu’il passe sous la moitié de ses PV', short: 'mi-PV' },
+}
+
+/** Le libellé de n'importe quel déclencheur, faces et doubles de la forge compris. */
+export function triggerText(t: Trigger): { label: string; short: string } {
+  if (t in TRIGGERS) return TRIGGERS[t as NamedTrigger]
+  const face = rollFace(t)
+  if (face !== undefined) return { label: `Sur un ${face} au dé de dégâts`, short: `dé ${face}` }
+  const double = doubleFace(t)
+  return { label: `Sur un double ${double} (deux dés)`, short: `double ${double}` }
 }
 
 /** Cible d'un effet, relative au porteur de l'événement. */
@@ -159,38 +180,51 @@ export interface CharacterEvent {
    * `SCENE_EVENTS` (`scenes.ts`) pour le rythme, `SceneEvent.tsx` pour le rendu.
    */
   scene?: SceneEventId
+  /**
+   * Face d'attente (l'Attente de l'ogre) : ce n'est pas une compétence, sa face est libre pour la forge du dé, qui y
+   * grave une compétence à sa place (forge.ts, docs/CAMPAGNE.md § 4.4). Sans effet sur le combat.
+   */
+  idle?: true
 }
 
-/** Déclencheurs liés à la valeur du dé, connus dès le jet. */
-export const ROLL_TRIGGERS: readonly Trigger[] = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax']
+/** Déclencheurs nommés liés à la valeur du dé, connus dès le jet (reliques de coup). */
+export const ROLL_TRIGGERS: readonly NamedTrigger[] = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax']
+
+const NATURAL_FACES: readonly NamedTrigger[] = ['naturalOne', 'naturalTwo', 'naturalThree']
+const NAMED_DOUBLES: readonly NamedTrigger[] = ['doubleOne', 'doubleTwo', 'doubleThree', 'doubleFour', 'doubleFive']
+
+/** Le seul déclencheur d'une face du dé : `naturalOne` à `naturalThree`, puis `face:4`, `face:5`… */
+export const faceTrigger = (face: number): Trigger => NATURAL_FACES[face - 1] ?? `face:${face}`
 
 /**
- * Déclencheurs d'un double, pour un personnage à deux dés (`twinDice`), par face : connus dès le jet de
- * la paire. Un double qui a sa compétence remplace toute l'action (docs/RESOLUTION.md § 2).
+ * Le seul déclencheur d'un double, pour un personnage à deux dés (`twinDice`) : `doubleOne` à `doubleFive`, puis
+ * `double:6`… Connu dès le jet de la paire. Un double qui a sa compétence remplace toute l'action (docs/RESOLUTION.md § 2).
  */
-export const DOUBLE_TRIGGERS: Readonly<Record<number, Trigger>> = {
-  1: 'doubleOne',
-  2: 'doubleTwo',
-  3: 'doubleThree',
-  4: 'doubleFour',
-  5: 'doubleFive',
+export const doubleTrigger = (face: number): Trigger => NAMED_DOUBLES[face - 1] ?? `double:${face}`
+
+/** La face d'un déclencheur de face (naturalTwo : 2, face:7 : 7), ou undefined (le jet maximal n'a pas de face fixe). */
+export function rollFace(t: Trigger): number | undefined {
+  const named = NATURAL_FACES.indexOf(t as NamedTrigger)
+  if (named >= 0) return named + 1
+  return t.startsWith('face:') ? Number(t.slice(5)) : undefined
 }
 
-export const isDoubleTrigger = (t: Trigger) => Object.values(DOUBLE_TRIGGERS).includes(t)
-
-/** La face d'un déclencheur de double (doubleFour : 4), ou undefined. */
-export const doubleFace = (t: Trigger) => {
-  const face = Object.entries(DOUBLE_TRIGGERS).find(([, x]) => x === t)?.[0]
-  return face === undefined ? undefined : Number(face)
+/** La face d'un déclencheur de double (doubleFour : 4, double:6 : 6), ou undefined. */
+export function doubleFace(t: Trigger): number | undefined {
+  const named = NAMED_DOUBLES.indexOf(t as NamedTrigger)
+  if (named >= 0) return named + 1
+  return t.startsWith('double:') ? Number(t.slice(7)) : undefined
 }
+
+export const isDoubleTrigger = (t: Trigger) => doubleFace(t) !== undefined
+
+/** Déclencheur du dé : une face, ou le jet maximal. */
+export const isRollTrigger = (t: Trigger) => t === 'naturalMax' || rollFace(t) !== undefined
 
 /** Le déclencheur du dé correspond-il à ce jet ? */
 export function rollMatches(trigger: Trigger, roll: number, faces: number) {
-  if (trigger === 'naturalOne') return roll === 1
-  if (trigger === 'naturalTwo') return roll === 2
-  if (trigger === 'naturalThree') return roll === 3
   if (trigger === 'naturalMax') return roll === faces && faces > 1
-  return false
+  return rollFace(trigger) === roll
 }
 
 const who = (target: Target | undefined) => (target === 'opponent' ? "à l'adversaire" : '')

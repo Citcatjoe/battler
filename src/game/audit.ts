@@ -8,7 +8,8 @@
  */
 import { STAT_KEYS } from './character'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
-import { DOUBLE_TRIGGERS, rollMatches, ROLL_TRIGGERS, type Trigger } from './events'
+import { doubleTrigger, isDoubleTrigger, isRollTrigger, rollMatches, type Trigger } from './events'
+import { forgeState } from './forge'
 import { withRelicStats } from './relics'
 import { isMechanic, STATUSES, type Status } from './statuses'
 
@@ -293,7 +294,11 @@ export function createAudit() {
           if (bonus !== (a.relicBonus ?? []).reduce((t, x) => t + x.amount, 0)) flag('bonus de relique incohérent', r, i, `${bonus}`)
           else if (bonus) see('bonus de relique')
           if (a.plain && r.fighters[att].relics.some((x) => x.onFace === a.roll)) see('coup brut sans relique de face')
-          const value = (a.reshaped?.value ?? a.roll) + bonus
+          // Face dorée (forge du dé) : la dorure de la face de ce dé, jamais sur un coup brut
+          const gild = a.plain ? 0 : (r.fighters[att].gilded[a.roll] ?? 0)
+          if (gild !== (a.gild ?? 0)) flag('face dorée incohérente', r, i, `${a.gild ?? 0} au lieu de ${gild}`)
+          else if (gild) see('face dorée')
+          const value = (a.reshaped?.value ?? a.roll) + bonus + gild
           let raw = a.crit ? Math.round(value * a.critMultiplier) : value
           for (const st of prev.statuses[att]) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
           for (const st of prev.statuses[def]) raw = STATUSES[st.id].modifyIncoming?.(raw, st) ?? raw
@@ -329,7 +334,7 @@ export function createAudit() {
         }
         if (s.hp[def] > 0)
           for (const e of r.fighters[att].events) {
-            if (!['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax'].includes(e.trigger) || !inForm(att, e)) continue
+            if (!isRollTrigger(e.trigger) || !inForm(att, e)) continue
             // Pourfendre (0.70.0) : une compétence `needsTouch` attend que son coup touche
             const should = !a.plain && rollMatches(e.trigger, a.roll, a.faces) && !(e.needsTouch && a.dodged)
             const did = after.some((x) => x.type === 'event' && x.event.eventId === e.id)
@@ -417,7 +422,7 @@ export function createAudit() {
         if (!c.twinDice) flag('paire sans deux dés', r, i, '')
         if (b.side !== active(b.turn)) flag('paire hors de son tour', r, i, '')
         const isDouble = b.rolls[0] === b.rolls[1]
-        const skill = isDouble ? c.events.find((e) => e.trigger === DOUBLE_TRIGGERS[b.rolls[0]] && inForm(b.side, e)) : undefined
+        const skill = isDouble ? c.events.find((e) => e.trigger === doubleTrigger(b.rolls[0]) && inForm(b.side, e)) : undefined
         if ((b.double !== undefined) !== !!skill) flag('double incohérent', r, i, `${b.rolls} double ${b.double}`)
         const rest = r.beats.slice(i + 1).filter((x) => x.turn === b.turn)
         const strikes = rest.filter((x) => x.type === 'attack')
@@ -438,7 +443,7 @@ export function createAudit() {
           strikes.forEach((x, k) => {
             if (x.type === 'attack' && x.attack.roll !== b.rolls[k]) flag('paire : valeur des coups', r, i, `${x.attack.roll} au lieu de ${b.rolls[k]}`)
           })
-          if (rest.some((x) => x.type === 'event' && DOUBLE_TRIGGERS[b.rolls[0]] === x.event.trigger)) flag('compétence de double sans double', r, i, '')
+          if (rest.some((x) => x.type === 'event' && doubleTrigger(b.rolls[0]) === x.event.trigger)) flag('compétence de double sans double', r, i, '')
         }
       }
       if (b.type === 'attack' && b.attack.preset) {
@@ -485,7 +490,7 @@ export function createAudit() {
     const last = r.initiative[r.initiative.length - 1]
     const first: Side = last[0] > last[1] ? 0 : 1
     /** Moments d'un coup : ses réactions et compétences viennent d'un coup (ou d'une pièce qui touche) */
-    const strikeMoments: Trigger[] = [...ROLL_TRIGGERS, 'hit', 'crit', 'hurt', 'missed', 'dodge']
+    const strikeMoments: Trigger[] = ['hit', 'crit', 'hurt', 'missed', 'dodge']
     const actionTypes: Beat['type'][] = ['attack', 'flurry', 'pair', 'skip', 'coin']
     r.beats.forEach((b, i) => {
       if (b.id !== i) flag("rang d'étape faux", r, i, `id ${b.id}`)
@@ -497,11 +502,11 @@ export function createAudit() {
       const cause = b.cause === undefined ? undefined : r.beats[b.cause]
       if (b.cause !== undefined && !(b.cause >= 0 && b.cause < i)) flag('cause postérieure ou absente', r, i, `cause ${b.cause}`)
       const trigger = b.type === 'statusReaction' ? b.trigger : b.type === 'event' ? b.event.trigger : undefined
-      if (trigger && strikeMoments.includes(trigger)) {
+      if (trigger && (isRollTrigger(trigger) || strikeMoments.includes(trigger))) {
         if (cause?.type !== 'attack' && cause?.type !== 'coin') flag('réaction au coup sans le coup pour cause', r, i, `${trigger} ← ${cause?.type}`)
         else if (b.type === 'statusReaction') see('cause : réaction au coup')
       }
-      if (trigger && Object.values(DOUBLE_TRIGGERS).includes(trigger)) {
+      if (trigger && isDoubleTrigger(trigger)) {
         if (cause?.type !== 'pair') flag('compétence de double sans la paire pour cause', r, i, `${cause?.type}`)
         else see('cause : compétence de double')
       }
@@ -539,6 +544,14 @@ export function createAudit() {
     const lastTurn = r.beats[r.beats.length - 1].turn
     for (const side of [0, 1] as const) {
       const f = r.fighters[side]
+      // Dé forgé (campagne) : la taille et les dorures sont celles du journal rejoué ; une gravure part sur sa face
+      if (f.forge.length) {
+        see('dé forgé')
+        const forged = forgeState(f.definition, f.forge)
+        if (f.baseStats.damageDie !== forged.size) flag('forge : taille du dé fausse', r, 0, `${f.baseStats.damageDie} au lieu de ${forged.size}`)
+        if (JSON.stringify(f.gilded) !== JSON.stringify(Object.fromEntries(forged.gilded))) flag('forge : dorures fausses', r, 0, f.id)
+        if (r.beats.some((b) => b.type === 'event' && b.event.side === side && /^(face|double):/.test(b.event.trigger))) see('compétence gravée au-delà du 3')
+      }
       if (!f.relics.length) continue
       see('reliques portées')
       const stats = withRelicStats(f.baseStats, f.relics)

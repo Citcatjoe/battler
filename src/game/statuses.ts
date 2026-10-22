@@ -1,5 +1,5 @@
 import type { CharacterStats } from './character'
-import { TRIGGERS, type Effect, type Trigger } from './events'
+import { triggerText, type Effect, type Trigger } from './events'
 import type { RuleId } from './rules'
 
 /*
@@ -169,6 +169,11 @@ export interface StatusDef {
   onTurnStart?: (s: Status) => Effect[]
   /** Effets appliqués au porteur à la fin de chacun de ses tours (phase 3) */
   onTurnEnd?: (s: Status) => Effect[]
+  /**
+   * Son de ses dégâts quand il agit (`statusTick`), au lieu de Ronge : décision de l'utilisateur (2026-10-22,
+   * `docs/SONS.md` § 8). Seul le Poison a le sien, le Grésillement.
+   */
+  tickSound?: 'fizz'
   /** Moment où la durée (`turns`) est décomptée : début (défaut) ou fin des tours du porteur */
   expiresAt?: 'turnStart' | 'turnEnd'
   /**
@@ -290,6 +295,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     decays: true,
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
+    tickSound: 'fizz',
     opposes: 'regeneration',
   },
   /*
@@ -878,7 +884,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     const hurts = react({ id, stacks: 1 }).some((e) => e.type === 'damage')
     say(
       effect,
-      `Réagit ${lowerFirst(TRIGGERS[trigger].label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''} ; sans réaction en chaîne. Posé pendant un coup, il ne réagit pas à ce coup : il agit dès le coup suivant (renforcé pendant un coup, il y réagit avec ses charges du début du coup).`,
+      `Réagit ${lowerFirst(triggerText(trigger).label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''} ; sans réaction en chaîne. Posé pendant un coup, il ne réagit pas à ce coup : il agit dès le coup suivant (renforcé pendant un coup, il y réagit avec ses charges du début du coup).`,
       hurts ? 'direct-damage' : undefined,
     )
   }

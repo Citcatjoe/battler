@@ -11,8 +11,11 @@
 
 /* ---------- Ouverture et fin ---------- */
 
-/** Silence avant le premier jet d'initiative (pas en combat test) */
-export const INTRO = 500
+/**
+ * Silence avant le premier jet d'initiative (pas en combat test). 1 400 ms depuis la 0.91.0 (500 avant) : le cri de
+ * guerre du bouton « Jouer » (1,74 s) y retombe avant que les dés roulent (SONS.md, règle 8)
+ */
+export const INTRO = 1400
 /** Lecture d'un jet d'initiative, une fois les deux dés posés */
 export const INITIATIVE_READ = 1000
 /** Lecture de « … frappe en premier » avant le premier tour */

@@ -22,7 +22,7 @@ import {
 } from './combat'
 import type { Character } from './character'
 import { cueOf } from './cues'
-import { doubleFace, type Trigger } from './events'
+import { doubleFace, rollFace, type Trigger } from './events'
 import {
   atCap,
   attackLog,
@@ -248,9 +248,8 @@ export interface StageOptions {
 
 /* ---------- Lectures de la chronologie ---------- */
 
-/** Face des dés de compétence (en-tête) qui correspond à un déclencheur du dé. */
-const NATURAL_FACE: Partial<Record<Trigger, number>> = { naturalOne: 1, naturalTwo: 2, naturalThree: 3 }
-export const skillFaceOf = (trigger: Trigger) => NATURAL_FACE[trigger] ?? doubleFace(trigger)
+/** Face des dés de compétence (en-tête) qui correspond à un déclencheur du dé : sa face, ou son double. */
+export const skillFaceOf = (trigger: Trigger) => rollFace(trigger) ?? doubleFace(trigger)
 
 /** Annonce du passage de main, avec l'élision devant une voyelle (« Au tour d'Elaria »). */
 export const turnLabel = (name: string) => (/^[aeiouyàâäéèêëîïôöûü]/i.test(name) ? `Au tour d'${name}` : `Au tour de ${name}`)
@@ -895,7 +894,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             showStatuses(beat.id)
             log(statusTickLog(beat.side, beat.status, beat.effects, fighters))
           },
-          { ...(harms && { cue: 'rot' as const }), ...(fromRing && { signal: beat.status }) },
+          { ...(harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }), ...(fromRing && { signal: beat.status }) },
         )
         break
       }

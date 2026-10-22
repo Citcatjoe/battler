@@ -67,7 +67,7 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     critique, modificateurs et fenêtres du coup comme un coup normal.
     Sinon, un seul coup. Pour CHAQUE COUP, entièrement résolu avant le suivant :
       ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
-      bloodied (seuil) → naturalOne → naturalTwo → naturalMax (actif)
+      bloodied (seuil) → la face du dé (naturalOne, naturalTwo, naturalThree, puis face:4… pour un dé forgé) → naturalMax (actif)
       coup esquivé : missed (actif) → dodge (défenseur)
       coup touché : hit → crit (actif) → hurt (défenseur). Vol de vie réagit dans `hit` (actif), Riposte et
       jauges de Rétribution dans `hurt` (défenseur), à leur rang parmi ses statuts (ordre de pose ; une jauge
@@ -143,6 +143,7 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | 1 bis | **Coup transformé** | Si une compétence du jet a `reshapesHit` (sous la bonne forme), le coup n'est pas sacrifié : sa valeur devient le maximum du dé (`max`) ou un nouveau jet secret plus un bonus (`reroll`). `noCrit` : pas de tirage de critique, et un critique assuré n'est pas consommé | `reshapesHit` (sans porteur depuis la 0.73.0 ; Charge et Coup de griffe avant) |
 | 2 | **Esquive** | Imposée par un statut du défenseur (`forcesDodge`, sans tirage, une charge consommée), sinon le défenseur tire contre sa chance d'esquive. Une esquive annule tout le coup (remplacement). | `forcesDodge` (Esquive améliorée), `modifyStats` (esquive) |
 | 2 bis | **Bonus de relique** (0.75.0) | Sur un coup qui touche, les reliques de coup de l'attaquant ajoutent leur bonus à la valeur du coup (le jet, ou la valeur d'un coup transformé), avant le critique ; un bonus de face (`onFace`, 0.77.0) ne vaut que si le dé de ce coup fait cette face : un 4 avec le Fer à quatre clous vaut 8, puis 16 en critique ×2. Le jet affiché et les compétences du jet restent ceux du dé naturel. Aucun tirage. | `Relic.rollBonus`, `Relic.onFace` ([RELIQUES.md](RELIQUES.md)) |
+| 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : jamais sur un coup brut (Furie des vents), chaque dé de la paire se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
 | 3 | **Critique** | Forcé par un statut (`forcesCrit`, sans tirage), sinon tirage contre sa chance de critique. Le jet est multiplié, puis arrondi. | `forcesCrit`, `modifyStats` |
 | 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli) |
 | 5 | **Dégâts entrants** | Statuts du défenseur, dans l'ordre de pose | `modifyIncoming` (Vulnérable) |
@@ -334,6 +335,7 @@ La colonne de labels sous le dé. **Définition validée par l'utilisateur (2026
 | --- | --- | --- | --- | --- |
 | résultat du dé | Esquive assurée | `Attack.dodgeForced` (Esquive améliorée du défenseur) | Compétence ou statut | − |
 | résultat du dé | « Fer à quatre clous +4 » | `Attack.relicBonus` | Relique | + |
+| résultat du dé | « Face dorée +2 » (forge du dé) | `Attack.gild` | Coup | + |
 | avant l'élan | Critique assuré | `Attack.critForced` | Coup | + |
 | avant l'élan | « Critique ×2 » | `Attack.crit`, `critMultiplier` | Coup | + |
 | impact | « Luciole +2 » | `Attack.modifiers` d'un statut `spentOnHurt` du défenseur | Compétence ou statut | + |

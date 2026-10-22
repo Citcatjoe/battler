@@ -87,7 +87,7 @@ export function IconButton({
   )
 }
 
-/** Paire de modes : deux choix de même rang dans un même cadre (écran titre : Duel | Tournoi). */
+/** Paire de modes : des choix de même rang dans un même cadre (écran titre : Duel | Tournoi | Campagne). */
 export function ModePair({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="bt-modepair" role="group" aria-label={label}>

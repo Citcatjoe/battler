@@ -65,8 +65,8 @@ import bardHurtImg from '../assets/bard-hurt.png'
 import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
 import { Character, type CharacterDef } from './character'
-import type { CharacterEvent } from './events'
-import { isDoubleTrigger, ROLL_TRIGGERS } from './events'
+import { isDoubleTrigger, isRollTrigger, type CharacterEvent } from './events'
+import { isEngravable } from './forge'
 import { STATUSES } from './statuses'
 
 /** Foudre du druide (0.76.0, demande de l'utilisateur) : trois éclairs de 2 dégâts directs chacun, jamais critiques. */
@@ -510,13 +510,17 @@ const aldric: CharacterDef = {
   ],
 }
 
-/** Attente : un 1, un 2 ou un 3 laisse l'ogre planté là, sans frapper (il n'a aucune compétence). */
+/**
+ * Attente : un 1, un 2 ou un 3 laisse l'ogre planté là, sans frapper (il n'a aucune compétence). Face d'attente
+ * (`idle`) : la forge du dé peut y graver une compétence, qui la remplace (docs/CAMPAGNE.md § 4.4).
+ */
 const waitOn = (trigger: 'naturalOne' | 'naturalTwo' | 'naturalThree', face: number): CharacterEvent => ({
   id: `waiting-${face}`,
   name: 'Attente',
   nature: 'neutral',
   trigger,
   forfeitsHit: true,
+  idle: true,
   effects: [{ type: 'applyStatus', status: 'waiting', stacks: 1, turns: 1 }],
 })
 
@@ -713,6 +717,12 @@ export const CHARACTERS: readonly Character[] = ROSTER.map((def) => new Characte
 
 export const CHARACTER_IDS: readonly string[] = CHARACTERS.map((c) => c.id)
 
+/**
+ * Les compétences qu'on peut graver sur un dé forgé (forge.ts, Graver) : celles du dé simple de tout le roster (un 1,
+ * un 2 ou un 3), avec un effet. La forge en tire une ; elle ne la grave jamais sur son propre propriétaire.
+ */
+export const ENGRAVABLE_SKILLS: readonly CharacterEvent[] = ROSTER.flatMap((c) => c.events.filter(isEngravable))
+
 
 export function createCharacter(id: string): Character {
   const character = CHARACTERS.find((c) => c.id === id)
@@ -760,19 +770,19 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       if (eventIds.has(e.id)) problems.push(`${at} compétence en double (${e.id})`)
       eventIds.add(e.id)
       if (e.effects.length === 0 && !e.reshapesHit && !e.volley) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
-      if (e.reshapesHit && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined || e.forfeitsHit))
+      if (e.reshapesHit && (!isRollTrigger(e.trigger) || e.chance !== undefined || e.forfeitsHit))
         problems.push(`${at} ${e.id}.reshapesHit : réservé aux déclencheurs du dé, sans chance ni forfeitsHit`)
       if (isDoubleTrigger(e.trigger) && (!d.twinDice || e.chance !== undefined || e.forfeitsHit))
         problems.push(`${at} ${e.id} : un double est réservé aux personnages à deux dés (twinDice), sans chance ni forfeitsHit`)
       if (e.volley !== undefined && (!isDoubleTrigger(e.trigger) || !Number.isInteger(e.volley) || e.volley < 1))
         problems.push(`${at} ${e.id}.volley : un entier ≥ 1, réservé aux doubles`)
-      if (d.twinDice && ROLL_TRIGGERS.includes(e.trigger))
+      if (d.twinDice && isRollTrigger(e.trigger))
         problems.push(`${at} ${e.id} : un personnage à deux dés n'a de compétences que sur les doubles`)
       if (e.form && !d.forms?.some((f) => f.id === e.form)) problems.push(`${at} ${e.id}.form : forme inconnue (${e.form})`)
       if (e.chance !== undefined && !inRange(e.chance, 0, 1)) problems.push(`${at} ${e.id}.chance hors de [0, 1]`)
-      if (e.forfeitsHit && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined))
+      if (e.forfeitsHit && (!isRollTrigger(e.trigger) || e.chance !== undefined))
         problems.push(`${at} ${e.id}.forfeitsHit : réservé aux déclencheurs du dé, sans chance`)
-      if (e.needsTouch && (!ROLL_TRIGGERS.includes(e.trigger) || e.chance !== undefined || e.forfeitsHit || e.reshapesHit))
+      if (e.needsTouch && (!isRollTrigger(e.trigger) || e.chance !== undefined || e.forfeitsHit || e.reshapesHit))
         problems.push(`${at} ${e.id}.needsTouch : réservé aux déclencheurs du dé, sans chance, forfeitsHit ni reshapesHit`)
       if (e.limit !== undefined && (!Number.isInteger(e.limit) || e.limit < 1))
         problems.push(`${at} ${e.id}.limit doit être un entier ≥ 1`)

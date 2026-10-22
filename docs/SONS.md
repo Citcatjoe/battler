@@ -26,9 +26,9 @@ Bilan de la 0.36.0, jugé par l'utilisateur comme « une véritable cacophonie �
 5. **Le timbre ressemble à la chose.** Le poison est liquide et discret (bulles, grésillement, vapeur), pas un choc. Un soin est doux et clair. Un coup est un choc. Chaque son a sa description au § 3, qui sert aussi de consigne de recherche.
 6. **L'intensité suit l'importance.** Quatre niveaux (§ 3) : ce qui décide du combat (coup critique, KO) passe au-dessus de ce qui revient à chaque tour (dés, poison qui ronge). Les effets périodiques et l'interface restent discrets.
 7. **Le silence est permis.** Ce qui se voit déjà et revient souvent sans rien changer (un compteur qui baisse, un bonus qui expire) ne sonne pas.
-8. **Un son tient dans sa fenêtre.** Il se termine avant l'instant suivant à ×1 (durées du § 3). À ×2 et ×4, il est écourté au prorata, avec un fondu ; seuls le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
+8. **Un son tient dans sa fenêtre.** Il se termine avant l'instant suivant à ×1 (durées du § 3). À ×2 et ×4, il est écourté au prorata, avec un fondu ; seuls le clic, le choc du face-à-face, le cri de guerre, le KO et la victoire jouent en entier.
 
-## 3. Le vocabulaire : 21 sons
+## 3. Le vocabulaire : 23 sons
 
 Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 
@@ -49,15 +49,17 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Malus reçu | un malus posé sur un combattant, ou un label − (qui réduit ou contre l'action de l'attaquant) qui tombe sous le dé (2026-10-21, § 4.4) | synthé magique en mineur, sombre | 3 | 0,4 à 0,7 s |
 | | Dissipation | un bonus ou un malus retiré par une compétence | synthé magique qui descend dans les notes | 3 | 0,3 à 0,6 s |
 | | Tour perdu | le combattant ne peut pas agir (peur, étourdissement) | raclement ou craquement sourd, lugubre | 3 | 0,6 à 0,9 s |
-| | Ronge | un statut fait perdre des PV à son porteur (poison, pourriture, brûlure, saignement quand un coup le touche) | à trouver : liquide qui bouillonne et vapeur toxique (0.36.1), ou gémissement d'âme lugubre (piste de la livraison 0.36.3) ; discret, aucun choc | 4 | 0,3 à 0,5 s |
+| | Ronge | un statut fait perdre des PV à son porteur (pourriture, brûlure, saignement quand un coup le touche) ; le poison a le sien, Grésillement | à trouver : liquide qui bouillonne et vapeur toxique (0.36.1), ou gémissement d'âme lugubre (piste de la livraison 0.36.3) ; discret, aucun choc | 4 | 0,3 à 0,5 s |
+| | Grésillement | le poison agit sur son porteur (0.90.0, décision de l'utilisateur, § 8). Pensé pour servir plus tard à d'autres maux laissés par un coup (magie…), sur décision écrite | « pchhhit » : bouffée de vapeur toxique, attaque sèche puis chute ; pas un son d'impact principal | 4 | 0,5 à 0,6 s |
 | | Soin | des PV regagnés, quelle qu'en soit la source | synthé léger, notes ascendantes, bénéfique ; le fichier retenu est un tintement très bref | 3 | 0,05 à 0,7 s |
 | **Formes** | Transformation | le druide change de forme, dans un sens comme dans l'autre | aura magique qui éclate, scintillante | 2 | 0,8 à 1,2 s |
 | **Fin** | KO | le perdant s'effondre | corps et armure qui tombent lourdement | 1 | 0,3 à 1,5 s |
 | | Victoire | le combat est gagné | fanfare glorieuse, cuivres et éclat ; **surtout pas rétro** (ni chiptune, ni 8 bits) | 2 | 1,5 à 5 s |
 | **Interface** | Clic | un bouton | clic sec, bois ou métal léger | 4 | 0,05 à 0,1 s |
 | | Choc du face-à-face | la présentation du duel | choc glorieux, épique | 1 | 0,6 à 4 s |
+| | Cri de guerre | le bouton « Jouer » lance le combat animé (0.91.0, décision de l'utilisateur, § 8) ; il remplace le clic de ce bouton | un seul guerrier qui hurle en chargeant, voix rauque, sans paroles ni foule ni écho | 2 | 1,5 à 2 s, tenu dans l'ouverture du combat (`INTRO`, 1 400 ms) |
 
-Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 21 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
+Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 23 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
 
 **Retirés par rapport à la 0.36.0** (33 sons) : dé au maximum (décision de l'utilisateur), élan (décision : l'impact suffit à faire sonner un coup), les trois paliers d'impact (fondus dans Coup), annonce du critique, carillon d'événement, peur (devient Malus reçu quand elle est posée, puis Tour perdu), purification (Dissipation), épines et parade (Coup), vol de vie (Soin), attente de l'ogre (Malus reçu), Furie des vents (Bonus gagné), pile et face (Pièce retombe, la même sur les deux faces, puis Coup critique sur pile), druide vers ours et ours vers druide (Transformation), rugissement et griffes (Coup).
 
@@ -71,7 +73,7 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | `attack` | Dé lancé, Dé posé, puis Coup, Coup critique ou Esquive. L'élan vers l'adversaire est muet : seul l'impact sonne. Un jet de compétence (1, 2 ou 3) s'arrête au Dé posé : le son de la compétence suit. Un coup transformé (Charge, Coup de griffe) sonne comme un coup. |
 | `flurry` (Furie des vents) | Un seul Dé lancé pour tous les dés, un seul Dé posé ; puis le son de chaque coup, qui se suivent sans se chevaucher |
 | `event` (compétence) | Le son déduit de ses effets (§ 4.2) |
-| `statusTick` | Ronge si le statut inflige des dégâts ; Soin s'il soigne |
+| `statusTick` | Ronge si le statut inflige des dégâts, ou le son propre que son registre déclare (`tickSound` : Grésillement pour le Poison, 0.90.0) ; Soin s'il soigne |
 | `statusReaction` | Coup si le statut renvoie des dégâts (Riposte), même pour un gros renvoi ; Soin s'il soigne (Vol de vie) ; Ronge s'il fait perdre des PV à son propre porteur (Saignement, 0.68.0 ; depuis la 0.68.1, joué un battement après l'impact du coup qui fait couler la plaie, sur la même frappe) ; sinon le son déduit de ses effets (§ 4.2), par exemple Malus reçu quand l'Aura de décoction empoisonne ou quand les Épines acérées font saigner. Un statut posé par le coup qui vient de toucher (l'Aura de décoction, 2026-10-21) tombe avec l'impact de ce coup : son Malus reçu suit le Coup d'un battement (0,12 s), sur la même frappe, comme le Ronge du Saignement |
 | `skip` | Tour perdu |
 | `shift` | Transformation |
@@ -142,6 +144,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 - Un seul fichier par son : `src/assets/sounds/<nom>.mp3`, traité par `scripts/process-sounds.py` (silence de tête coupé, durée ramenée à sa fenêtre, intensité égalisée). La provenance de chaque fichier est notée dans `src/assets/sounds/SOURCES.md`.
 - Le choix du fichier se fait **à l'oreille, par l'utilisateur** : l'agent ne peut rien écouter. Parmi les 67 fichiers de la 0.36.0, certains peuvent servir (un impact pour Coup, un roulement pour Dé lancé) ; les autres sons sont à chercher d'après le timbre du § 3.
 - Un son sans fichier garde sa version synthétisée en repli.
+- **Générer un bruitage** (0.91.0) : `npm run sfx -- --out logs/sons/<son> --text "<description en anglais>" --duration <s> --count 3` écrit des propositions avec ElevenLabs (modèle de bruitages, clé dans `.env.local`, lue par Node seul et jamais par le navigateur). On les écoute, puis le fichier retenu passe par `process-sounds.py`.
 
 **Le code** : `sfx.<son>()` dans `sound.ts`, un appel par signification ; la règle du § 4.2 est `cueOf` (`cues.ts`), testée sur tout le roster (`modules.test.ts`).
 
@@ -165,12 +168,14 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Dissipation | `dispel`, `sfx.dispel` | `dispel.mp3` | `dispel-5` | 0,35 s |
 | Tour perdu | `stun`, `sfx.stun` | `stun.mp3` | `stun-1` | 0,61 s |
 | Ronge | `rot`, `sfx.rot` | **aucun** : son synthétisé discret | aucune retenue | |
+| Grésillement | `fizz`, `sfx.fizz` | `fizz.mp3` | **généré par l'agent avec Artlist** (0.90.0) : son d'une vidéo Veo 3.1 Lite (une bouffée de fumée toxique qui gicle d'une éraflure d'armure), coupé à son attaque, décroissance linéaire ajoutée ; voir `SOURCES.md` | 0,60 s |
 | Soin | `heal`, `sfx.heal` | `heal.mp3` | `heal-1` | 0,09 s (tintement bref) |
 | Transformation | `shift`, `sfx.shift` | `shift.mp3` | `shift-3` | 1,19 s |
 | KO | `ko`, `sfx.ko` | `ko.mp3` | `ko-1` | 0,38 s |
 | Victoire | `victory`, `sfx.victory` | `victory.mp3` | `victory-1` | 3,88 s |
 | Clic | `click`, `sfx.click` | `click.mp3` | `click-1` | 0,10 s |
 | Choc du face-à-face | `clash`, `sfx.clash` | `clash.mp3` | `clash-2` | 3,47 s |
+| Cri de guerre | `war-cry`, `sfx.warCry` | `war-cry.mp3` | **généré par l'agent avec ElevenLabs** (0.91.0) : proposition 1 sur 3 (`logs/sons/war-cry/`), voir `SOURCES.md` | 1,74 s |
 
 ## 8. Décisions de l'utilisateur
 
@@ -191,6 +196,8 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Coup et Grondement (0.36.4) | Remplacés par `hit.wav` et `crit.wav`, déposés par l'utilisateur. |
 | Le volume (0.36.4) | « On n'entend rien » : plus de gain partout. |
 | La musique de fond (0.48.0) | Trois boucles déposées par l'utilisateur, « tapis sonore » des combats : une au hasard, quelle que soit l'arène, en boucle, « pas trop fort, bonne intégration ». Voir § 10. |
+| Le poison (2026-10-22, 0.90.0) | « Un son spécial pour le poison quand il tick », qui ne partage plus Ronge : « pas un son d'impact principal, plutôt un "pchhhhit" qui évoque un mal laissé par un coup ». Il pourra servir à des effets semblables (magie…), mais pour l'instant au poison seul : Grésillement, généré avec Artlist. |
+| Le lancement du combat (2026-10-22, 0.91.0) | « Un son de cri de guerre, pas trop long, 2 secondes peut-être, qui signe le clic » sur le bouton qui lance le combat animé : « Jouer » de l'écran d'affrontement, dans tous les modes (choix de l'utilisateur, plutôt que « Combattre » de la sélection, que suit le Choc du face-à-face). Généré avec ElevenLabs. L'ouverture du combat passe de 500 à 1 400 ms pour que le cri retombe avant les dés de l'initiative (règle 8). |
 
 ## 9. Index : qui joue quel son
 
@@ -214,13 +221,15 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Malus reçu | Souffle de la tombe, Peur, Attente, Feux follets (0.73.0), Pourfendre (après son coup, s'il touche) ; l'Aura de décoction qui empoisonne, à l'impact du coup qui touche ; les Épines acérées qui font saigner l'attaquant (0.68.0) ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur (0.69.0) ; un label − sous le dé : Esquive assurée, bouclier qui absorbe, Fausse note, Riposte, relique du défenseur ; les Épines, dont le Malus reçu de leur effet parle déjà (2026-10-21, § 4.4) |
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi |
-| Ronge | Poison, Pourriture et Brûlure qui agissent sur leur porteur (dont le Poison posé par l'Aura glaciale) ; le Saignement qui coule quand un coup touche son porteur (0.68.0) |
+| Ronge | Pourriture et Brûlure qui agissent sur leur porteur ; le Saignement qui coule quand un coup touche son porteur (0.68.0) |
+| Grésillement | le Poison qui agit sur son porteur, au début de son tour (dont le Poison posé par l'Aura glaciale ou l'Aura de décoction) (0.90.0) |
 | Soin | le vol de vie (Vol de vie) ; l'Aura de sainteté et la Régénération qui soignent (la Régénération est sans porteur depuis la 0.73.0) |
 | Transformation | le druide qui change de forme, dans les deux sens |
 | KO | la fin du combat, par K.O. ou à la limite de tours |
 | Victoire | juste après le KO |
 | Clic | les boutons de l'interface |
 | Choc du face-à-face | l'écran de présentation du duel |
+| Cri de guerre | le bouton « Jouer » de l'écran d'affrontement, qui lance le combat animé (duel, tournoi, saison, campagne) |
 
 ### 9.2 Par personnage
 
@@ -247,9 +256,10 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 
 | Statut | Quand il agit | Son |
 | --- | --- | --- |
-| Poison, Pourriture | début du tour du porteur | Ronge |
+| Poison | début du tour du porteur | Grésillement (0.90.0 ; Ronge avant) |
+| Pourriture | début du tour du porteur | Ronge |
 | Brûlure | fin du tour du porteur | Ronge |
-| Aura glaciale | début du tour du porteur, Poison posé sur l'adversaire | Malus reçu (0.69.0 ; Ronge avant, quand elle infligeait des dégâts directs). Le Poison qu'elle nourrit joue Ronge au début du tour de la victime |
+| Aura glaciale | début du tour du porteur, Poison posé sur l'adversaire | Malus reçu (0.69.0 ; Ronge avant, quand elle infligeait des dégâts directs). Le Poison qu'elle nourrit joue Grésillement au début du tour de la victime |
 | Régénération | début du tour du porteur | Soin |
 | Aura de sainteté | fin du tour du porteur | Soin |
 | Épines acérées | le porteur est touché | Malus reçu (Saignement posé sur l'attaquant ; Coup jusqu'à la 0.67.3, quand elles renvoyaient des dégâts) |
@@ -269,7 +279,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Écran | Sons |
 | --- | --- |
 | Tous les écrans | Clic sur les boutons |
-| Présentation du duel | Choc du face-à-face |
+| Présentation du duel | Choc du face-à-face ; Cri de guerre sur « Jouer » |
 | Combat | tous les sons ci-dessus, puis KO et Victoire |
 
 ## 10. Musique de fond des combats (0.48.0)

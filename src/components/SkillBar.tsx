@@ -1,12 +1,12 @@
 import { useState, type CSSProperties } from 'react'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, TRIGGERS, type CharacterEvent } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, triggerText, type CharacterEvent } from '../game/events'
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
 import { STATUSES, type Status, type StatusId } from '../game/statuses'
 import { skillFaceOf, type SkillPulse, type SkillSignal } from '../game/staging'
 import { Icon, skillIcon, STATUS_ICON, StatusIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
-import { ALIGN, DieFace, DOUBLES, FACES, SkillTooltip, type Face } from './SkillDice'
+import { ALIGN, DieFace, SkillTooltip, skillFaces } from './SkillDice'
 
 interface Props {
   character: Character
@@ -35,7 +35,7 @@ interface Props {
 export function SkillBar({ character, side, form = 0, statuses, pulse, signal, align = 'left' }: Props) {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = character.twinDice ? DOUBLES : FACES
+  const faces = skillFaces(character, events)
   const faceEvent = (trigger: CharacterEvent['trigger']) => events.find((e) => e.trigger === trigger)
   // Les compétences hors dé (Ouverture : au début du combat) qui ne posent pas d'aura ont aussi leur sceau
   const offDice = events.filter((e) => skillFaceOf(e.trigger) === undefined && !auraOfSkill(e))
@@ -105,7 +105,7 @@ function Seal({
 }: {
   side: number
   event?: CharacterEvent
-  face?: Face
+  face?: number
   double?: boolean
   statuses: readonly Status[]
   lit?: number
@@ -156,7 +156,7 @@ function AuraToken({
   const lit = useLastLit(litNow)
   const def = STATUSES[id]
   const posing = character.events.filter((e) => auraOfSkill(e) === id)
-  const onFace = posing.map((e) => skillFaceOf(e.trigger)).find((f) => f !== undefined) as Face | undefined
+  const onFace = posing.map((e) => skillFaceOf(e.trigger)).find((f) => f !== undefined)
   const icon = posing.length > 0 ? skillIcon(posing.find((e) => skillFaceOf(e.trigger) !== undefined) ?? posing[0]) : STATUS_ICON[id]
   const active = status !== undefined
   // Le signal part de l'aura elle-même, et de chacune des compétences qui la posent
@@ -200,7 +200,7 @@ function AuraToken({
           const posed = e.effects.find((x) => x.type === 'applyStatus' && x.status === id)
           const stacks = posed?.type === 'applyStatus' ? posed.stacks : 0
           const notes = [
-            f !== undefined ? `${doubleFace(e.trigger) !== undefined ? 'double' : 'dé'} ${f}` : TRIGGERS[e.trigger].short,
+            f !== undefined ? `${doubleFace(e.trigger) !== undefined ? 'double' : 'dé'} ${f}` : triggerText(e.trigger).short,
             stacks > 0 ? `+${stacks} charge${stacks > 1 ? 's' : ''}` : '',
             ...describeSkill(e).tags.filter((t) => t.rule !== 'auras' && t.rule !== 'max-stacks').map((t) => t.label),
           ].filter(Boolean)

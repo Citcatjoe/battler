@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import type { Character } from '../../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, TRIGGERS, type CharacterEvent, type SkillNature, type Target, type Trigger } from '../../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type SkillNature, type Target, type Trigger } from '../../game/events'
 import { RULES } from '../../game/rules'
 import { isMechanic, POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
 import { Icon, skillIcon, StatusIcon } from '../Icon'
@@ -80,13 +80,13 @@ export function SkillMedal({ event, size }: { event: CharacterEvent; size: numbe
 
 /** Déclencheurs d'une ligne : « dé 1 », ou « dés 1, 2, 3 » quand des faces identiques sont réunies. */
 export function triggerShort(triggers: readonly Trigger[]) {
-  if (triggers.length === 1) return TRIGGERS[triggers[0]].short
-  return `dés ${triggers.map((t) => TRIGGERS[t].short.replace('dé ', '')).join(', ')}`
+  if (triggers.length === 1) return triggerText(triggers[0]).short
+  return `dés ${triggers.map((t) => triggerText(t).short.replace('dé ', '')).join(', ')}`
 }
 
 /** « Compétence d'adresse · sur un 1 au dé de dégâts » : nature et déclencheur en toutes lettres. */
 export function skillLine(event: CharacterEvent) {
-  return `Compétence ${NATURE_OF[natureOf(event)]} · ${TRIGGERS[event.trigger].label.toLowerCase()}`
+  return `Compétence ${NATURE_OF[natureOf(event)]} · ${triggerText(event.trigger).label.toLowerCase()}`
 }
 
 const TARGET_WORD: Record<Target, string> = { self: 'sur soi', opponent: 'adversaire' }

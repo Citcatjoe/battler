@@ -171,6 +171,7 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 - **Règle** : +2 faces à son dé de dégâts.
 - **Pourquoi** : la seule stat qui change aussi la **fréquence des compétences**. Les faces 1 à 3 restent les compétences : un dé plus grand frappe plus fort, mais déclenche moins souvent. Ysolde passe de 3 jets sur 7 à 3 sur 9 : son Aura de sainteté tombe moins souvent (+1,3 seulement). Morgrut passe de 3 Attentes sur 14 à 3 sur 16 : gain pur. Fanchon (deux d5 → deux d7) : moins de doubles. Une relique qui récompense les combattants nus et coûte aux combattants à compétences : un vrai choix.
 - **Illustration** : un pommeau ou un contrepoids de plomb, rond et lourd, cerclé d'une bague de fer, avec le trou du rivet par où on le fixe à une arme. Marques de lime.
+- **En campagne** (0.88.0, décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4) : elle devient l'opération de forge **Agrandir** et quitte le tirage des reliques de campagne (`CAMPAIGN_RELICS`). Elle reste dans celui du tournoi.
 
 #### Bottes de feutre
 - **Règle** : +6 % d'esquive.

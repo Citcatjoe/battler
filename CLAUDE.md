@@ -25,6 +25,7 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 - `docs/PERSONNAGES.md` : philosophie et décisions de design de chaque personnage. À mettre à jour (mesures comprises) dès qu'on touche un personnage, ses stats ou son événement.
 - `docs/PARIS.md` : le jeu des parieurs (règles, maths, interface, étapes). Toute modification des paris commence par ce document.
 - `docs/RELIQUES.md` : les reliques (ce qui les sépare des compétences, règles des quatre types, récompense de tournoi, interface, identité hexagonale et grammaire d'illustration, les douze reliques mesurées par `npm run relics`, prompt de leur planche). Toute relique ou règle de relique commence par ce document.
+- `docs/CAMPAGNE.md` : la campagne et la forge du dé (décisions de l'utilisateur, prototype livré en 0.88.0, choix de l'agent, mesures par `npm run campaign`). Toute règle de campagne ou de forge commence par ce document.
 - `docs/TODO.md` : la liste des chantiers, dont la réflexion auto-battler (§ 11 à 17).
 - `docs/SORTS.md` : idées de sorts, laboratoire et audit des compétences, avec leurs résultats ; `docs/FAMILLES.md` : proposition de familles d'effets ; `docs/ETUDE_AUTOBATTLER.md` : l'étude de fond (limites, jeux de référence, pistes reliques et métas).
 

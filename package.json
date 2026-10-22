@@ -1,7 +1,7 @@
 {
   "name": "battler",
   "private": true,
-  "version": "0.87.0",
+  "version": "0.91.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,13 +12,16 @@
     "check": "tsc -p . && vitest run",
     "balance": "vitest run --config vitest.balance.config.ts scripts/balance.report.ts --silent=false",
     "logs": "vitest run --config vitest.balance.config.ts scripts/logs.report.ts --silent=false",
-    "relics": "vitest run --config vitest.balance.config.ts scripts/relics.report.ts --silent=false"
+    "relics": "vitest run --config vitest.balance.config.ts scripts/relics.report.ts --silent=false",
+    "campaign": "vitest run --config vitest.balance.config.ts scripts/campaign.report.ts --silent=false",
+    "sfx": "node --env-file=.env.local scripts/gen-sfx.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.74.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",

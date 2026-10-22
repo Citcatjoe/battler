@@ -429,6 +429,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **Réglage 0.35.0** : avec 8 % de critique et 66 PV, Morgrut gagnait 63 % de ses combats, et Gnashka 67 %, avec des duels jusqu'à 74/26. Le dé est le levier le plus fort (passer au d12 lui ôtait 19 points), mais le d14 est la proposition de l'utilisateur. On a donc retiré le critique (il ne vise pas, ce qui va avec son personnage) : 57,3 %. Puis 63 PV au lieu de 66 : 51,7 %. Valeur des trois Attente : de −1,5 à −3,8 points chacune ; c'est le prix de son gros dé.
 
+**Forge du dé (0.88.0, campagne)** : ses trois Attente sont des **faces d'attente** (`idle`), pas des compétences : la forge peut y graver une compétence, qui la remplace (décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4). En duel et en tournoi, rien ne change. Son image sert aussi, assombrie, au boss de la campagne, **Le Colosse** : un autre ogre, plus grand et plus vieux (provisoire, en attendant une image propre).
+
 ### Morgrut · Cogneur
 
 > « Taper. Attendre. Taper plus fort. »

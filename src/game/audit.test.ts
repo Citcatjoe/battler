@@ -8,9 +8,13 @@
  */
 import { describe, expect, it } from 'vitest'
 import { createAudit } from './audit'
+import { BOSS } from './campaign'
+import { Character } from './character'
 import { simulateCombat } from './combat'
+import { autoForge, drawForgeOffer, withForgeStep, type ForgeStep } from './forge'
 import { RELICS, type Relic } from './relics'
-import { CHARACTER_IDS, createCharacter } from './roster'
+import { seededRng } from './rng'
+import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 
 const { audit, problems, seen } = createAudit()
 
@@ -40,5 +44,32 @@ describe('audit de résolution', () => {
     // (Naraxes n'a pas de Vol de vie) : combat.test.ts le prouve par un combat construit.
     for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut sans relique de face'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
+  it('aucune anomalie pour des personnages forgés au hasard, ni pour le boss', () => {
+    const { audit, problems, seen } = createAudit()
+    /** Six forges choisies au hasard dans les offres, comme le champion de référence. */
+    const forged = (id: string, seed: number) => {
+      const c = createCharacter(id)
+      const rng = seededRng(seed)
+      let steps: ForgeStep[] = []
+      for (let k = 0; k < 6; k++) {
+        const step = autoForge(c.definition, steps, drawForgeOffer(c.definition, steps, rng, ENGRAVABLE_SKILLS), rng)
+        if (step) steps = withForgeStep(c.definition, steps, step)
+      }
+      return c.withForge(steps)
+    }
+    let n = 0
+    for (const a of CHARACTER_IDS)
+      for (const b of [...CHARACTER_IDS, BOSS.id])
+        for (let k = 0; k < 6; k++) {
+          const right = b === BOSS.id ? new Character(BOSS) : forged(b, 300 + n)
+          audit(simulateCombat([forged(a, 100 + n), right], { seed: 9000 + n }))
+          n++
+        }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'paire de dés']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

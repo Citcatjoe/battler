@@ -5,7 +5,7 @@ import { HEDGE_PLANES, HOME_HEDGE, type HedgeSlot } from './homeHedge'
 import { Glyph, IconButton, ModePair, ModePairItem, type GlyphName } from './kit'
 import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
 
-export type HomeChoice = 'test' | 'duel' | 'tournament'
+export type HomeChoice = 'test' | 'duel' | 'tournament' | 'campaign'
 
 interface Props {
   onChoose: (choice: HomeChoice) => void
@@ -13,20 +13,23 @@ interface Props {
   onOpenCompendium: () => void
   /** Tournoi en cours : progression affichée sous la plaque « Tournoi » */
   tournamentProgress: string | null
+  /** Partie de campagne en cours : progression affichée sous la plaque « Campagne » */
+  campaignProgress: string | null
 }
 
-/** Les deux modes principaux, côte à côte dans la paire de modes du UI kit, dans l'ordre affiché */
+/** Les modes principaux, côte à côte dans la paire de modes du UI kit, dans l'ordre affiché */
 const MODES: { id: HomeChoice; label: string; icon: GlyphName }[] = [
   { id: 'duel', label: 'Duel', icon: 'combattre' },
   { id: 'tournament', label: 'Tournoi', icon: 'tournoi' },
+  { id: 'campaign', label: 'Campagne', icon: 'chroniques' },
 ]
 
 /**
  * L'accueil : le seuil de l'arène. Une haie de combattants (homeHedge.ts) accompagne le joueur vers la
  * porte et sa lumière ; le logo et le choix du mode sont posés au premier plan, dans l'allée centrale.
- * Duel et Tournoi sont deux choix de même rang, deux plaques d'or dans un même cadre ; Combat test est un lien.
+ * Duel, Tournoi et Campagne sont trois choix de même rang, des plaques d'or dans un même cadre ; Combat test est un lien.
  */
-export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tournamentProgress }: Props) {
+export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tournamentProgress, campaignProgress }: Props) {
   /** Au clavier, comme un menu de jeu : les flèches passent d'un mode à l'autre, Entrée l'ouvre */
   const onKey = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
@@ -79,6 +82,7 @@ export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tourname
         <div className="mode-hints mt-3">
           <span className="home-hint">Deux combattants, un vainqueur</span>
           <span className="home-hint">{tournamentProgress ? `En cours · ${tournamentProgress}` : '16 participants, élimination directe'}</span>
+          <span className="home-hint">{campaignProgress ? `En cours · ${campaignProgress}` : 'Un champion, un dé à forger, un boss'}</span>
         </div>
       </nav>
 

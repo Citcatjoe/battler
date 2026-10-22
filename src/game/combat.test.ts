@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { attacksOf, diceOf, dieAt, effectiveStats, finalState, MAX_TURNS, rollsDie, simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
-import { rollMatches, type CharacterEvent } from './events'
+import { doubleTrigger, faceTrigger, rollMatches, type CharacterEvent } from './events'
+import { autoForge, drawForgeOffer, FORGE_OFFER_SIZE, forgedFaces, forgeState, GILD_BONUS, offerTargets, stepOf, withForgeStep, type ForgeBase, type ForgeStep } from './forge'
 import { seededRng } from './rng'
-import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
 import { BEAR_MIGHT, DECOCTION_POISON, STATUSES, stacksOf, type Status, type StatusId } from './statuses'
 import { EMOJI, testCharacter } from './test-utils'
 import { getRelic, RELIC_IDS, relicKind, relicLine, RELICS, validateRelics, type Relic } from './relics'
-import { parseForcedRolls, parseRelics, traceText } from './trace'
+import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
 
 const run = (fighters: Pair<ReturnType<typeof testCharacter>>, seed = 1) =>
   simulateCombat(fighters, { rng: seededRng(seed) })
@@ -2202,5 +2203,238 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
     ])
     const ages = ofType(r, 'statusAge').filter((b) => b.side === 1)
     expect(ages[0]).toMatchObject({ phase: 'turnStart', changes: [{ status: 'weakened', from: 3, to: 2 }], expired: ['poison'] })
+  })
+})
+
+describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const def = (id: string) => createCharacter(id).definition
+  /** Le journal est-il rejouable sur la définition d'origine ? */
+  const valid = (base: ForgeBase, steps: readonly ForgeStep[]) => {
+    try {
+      forgeState(base, steps)
+      return true
+    } catch {
+      return false
+    }
+  }
+  const causeOf = (r: CombatResult, b: Beat) => (b.cause === undefined ? undefined : r.beats[b.cause])
+
+  it('gravure au-delà du 3 : part exactement sur sa face, sacrifie le coup si la compétence le sacrifie, jamais sur un coup brut', () => {
+    const gorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 7, skill: skill('fear') }])
+    let sevens = 0
+    let plainSevens = 0
+    for (let seed = 0; seed < 80; seed++) {
+      const r = simulateCombat([gorak, createCharacter('brokk')], { seed })
+      // Chaque Peur a pour cause un coup de Gorak dont le dé fait 7, jamais un coup brut
+      for (const b of ofType(r, 'event').filter((x) => x.event.eventId === 'fear')) {
+        const cause = causeOf(r, b)
+        expect(b.event.trigger).toBe(faceTrigger(7))
+        expect(cause?.type === 'attack' && cause.attack.attacker === 0 && cause.attack.roll === 7 && !cause.attack.plain).toBe(true)
+      }
+      for (const b of ofType(r, 'attack')) {
+        const a = b.attack
+        if (a.attacker !== 0 || a.roll !== 7) continue
+        if (a.plain) {
+          plainSevens++
+          expect(a.forfeited).toBe(false)
+          expect(r.beats.some((x) => x.type === 'event' && x.cause === b.id)).toBe(false)
+          continue
+        }
+        sevens++
+        expect(a.forfeited).toBe(true)
+        if (b.state.hp.every((h) => h > 0)) expect(r.beats.some((x) => x.type === 'event' && x.event.eventId === 'fear' && x.cause === b.id)).toBe(true)
+      }
+    }
+    expect(sevens).toBeGreaterThan(0)
+    expect(plainSevens).toBeGreaterThan(0)
+  })
+
+  it('dorure : +2 au coup qui touche quand le dé fait sa face, avant le critique, jamais sur un coup brut', () => {
+    // Dé à 1 face doré, critique assuré ×2 : (1 + 2) × 2 = 6
+    const r = run([testCharacter('a', { critChance: 1 }).withForge([{ op: 'gild', face: 1 }]), testCharacter('b', { maxHp: 40 })])
+    for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ roll: 1, gild: GILD_BONUS, crit: true, raw: 6 })
+    let eights = 0
+    let plainEights = 0
+    for (let seed = 0; seed < 60; seed++) {
+      const g = simulateCombat([createCharacter('gorak').withForge([{ op: 'gild', face: 8 }]), createCharacter('brokk')], { seed })
+      for (const a of attacksOf(g).filter((x) => x.attacker === 0 && !x.dodged && !x.forfeited)) {
+        expect(a.gild ?? 0, `jet ${a.roll}${a.plain ? ' brut' : ''}`).toBe(a.roll === 8 && !a.plain ? GILD_BONUS : 0)
+        if (a.roll === 8) a.plain ? plainEights++ : eights++
+      }
+    }
+    expect(eights).toBeGreaterThan(0)
+    expect(plainEights).toBeGreaterThan(0)
+  })
+
+  it('graver et dorer : seulement une face libre ; une gravure qui sacrifie le coup ne se dore pas', () => {
+    const ervald = def('ervald')
+    // Faces d'origine (1 à 3) : ni gravure ni dorure
+    expect(valid(ervald, [{ op: 'gild', face: 2 }])).toBe(false)
+    expect(valid(ervald, [{ op: 'engrave', face: 3, skill: skill('cleave') }])).toBe(false)
+    // Hors du dé : refusé
+    expect(valid(ervald, [{ op: 'gild', face: 11 }])).toBe(false)
+    // Une face gravée ne se regrave pas ; une compétence ne se grave qu'une fois, jamais une des siennes
+    expect(valid(ervald, [{ op: 'engrave', face: 5, skill: skill('cleave') }, { op: 'engrave', face: 5, skill: skill('fear') }])).toBe(false)
+    expect(valid(ervald, [{ op: 'engrave', face: 5, skill: skill('cleave') }, { op: 'engrave', face: 6, skill: skill('cleave') }])).toBe(false)
+    expect(valid(ervald, [{ op: 'engrave', face: 5, skill: skill('grave-breath') }])).toBe(false)
+    // Pourfendre frappe : sa face se dore ; la Peur sacrifie le coup : sa face ne se dore pas
+    expect(valid(ervald, [{ op: 'engrave', face: 5, skill: skill('cleave') }, { op: 'gild', face: 5 }])).toBe(true)
+    expect(valid(ervald, [{ op: 'engrave', face: 6, skill: skill('fear') }, { op: 'gild', face: 6 }])).toBe(false)
+    expect(() => createCharacter('ervald').withForge([{ op: 'gild', face: 2 }])).toThrow()
+  })
+
+  it('retailler : enlève la face du haut avec sa gravure, sa dorure et son rang ; jamais une compétence d’origine', () => {
+    const ervald = def('ervald')
+    const steps: ForgeStep[] = [{ op: 'engrave', face: 10, skill: skill('cleave') }, { op: 'gild', face: 10 }, { op: 'sharpen', face: 10 }, { op: 'trim' }]
+    const state = forgeState(ervald, steps)
+    expect(state.size).toBe(9)
+    expect([...state.engraved.keys(), ...state.gilded.keys(), ...state.ranks.keys()]).toEqual([])
+    const trimmed = createCharacter('ervald').withForge(steps)
+    expect(trimmed.baseStats.damageDie).toBe(9)
+    expect(trimmed.gilded).toEqual({})
+    expect(trimmed.events.map((e) => e.id)).toEqual(def('ervald').events.map((e) => e.id))
+    // Agrandir après : les faces 10 et 11 reviennent libres, Pourfendre se grave à nouveau, sans son ancien rang
+    const regrown = [...steps, { op: 'enlarge' } as const, { op: 'engrave', face: 11, skill: skill('cleave') } as const]
+    expect(offerTargets(ervald, regrown.slice(0, -1), { op: 'engrave', skill: skill('cleave') })).toEqual([4, 5, 6, 7, 8, 9, 10, 11])
+    const faces = forgedFaces(ervald, regrown)
+    expect(faces).toHaveLength(11)
+    expect(faces[10]).toMatchObject({ engraved: { id: 'cleave', trigger: faceTrigger(11) }, gild: 0, rank: 0 })
+    expect(faces[9]).toMatchObject({ gild: 0, rank: 0 })
+    expect(faces[9].engraved).toBeUndefined()
+    // Sous la taille d'origine, jusqu'à la dernière face libre : Gorak (compétences sur 1 à 3) descend à un d3, pas plus bas
+    const gorak = def('gorak')
+    const trims = Array.from({ length: 6 }, () => ({ op: 'trim' }) as const)
+    expect(forgeState(gorak, trims).size).toBe(3)
+    expect(() => forgeState(gorak, [...trims, { op: 'trim' }])).toThrow()
+    // Les faces d'Attente de l'ogre portent une compétence d'origine : elles ne se retaillent pas non plus
+    expect(valid(def('morgrut'), Array.from({ length: 12 }, () => ({ op: 'trim' }) as const))).toBe(false)
+    expect(valid(def('morgrut'), Array.from({ length: 11 }, () => ({ op: 'trim' }) as const))).toBe(true)
+    // Jamais sous une face
+    expect(valid(testCharacter('a').definition, [{ op: 'trim' }])).toBe(false)
+  })
+
+  it('ogre : une gravure sur une face d’Attente la remplace (le 1 frappe et pourfend, plus d’Attente sur le 1)', () => {
+    const morgrut = createCharacter('morgrut').withForge([{ op: 'engrave', face: 1, skill: skill('cleave') }])
+    expect(morgrut.events.map((e) => e.id)).toEqual(['waiting-2', 'waiting-3', 'cleave'])
+    expect(morgrut.events.find((e) => e.id === 'cleave')?.trigger).toBe('naturalOne')
+    expect(forgedFaces(morgrut.definition, morgrut.forge)[0]).toMatchObject({ idle: false, engraved: { id: 'cleave' } })
+    let ones = 0
+    for (let seed = 0; seed < 60; seed++) {
+      const r = simulateCombat([morgrut, createCharacter('ysolde')], { seed })
+      expect(ofType(r, 'event').some((b) => b.event.eventId === 'waiting-1')).toBe(false)
+      for (const b of ofType(r, 'attack').filter((x) => x.attack.attacker === 0 && x.attack.roll === 1)) {
+        expect(b.attack.forfeited).toBe(false)
+        const cut = r.beats.some((x) => x.type === 'event' && x.event.eventId === 'cleave' && x.cause === b.id)
+        if (b.attack.dodged) expect(cut).toBe(false)
+        else if (b.state.hp.every((h) => h > 0)) {
+          expect(cut).toBe(true)
+          ones++
+        }
+      }
+      for (const b of ofType(r, 'event').filter((x) => x.event.eventId === 'cleave')) {
+        const cause = causeOf(r, b)
+        expect(cause?.type === 'attack' && cause.attack.roll === 1 && !cause.attack.dodged).toBe(true)
+      }
+    }
+    expect(ones).toBeGreaterThan(0)
+  })
+
+  it('deux dés : la gravure vise un double au-delà de 5 (après Agrandir), sans forme du dé simple ; la dorure vaut pour chaque dé', () => {
+    const fanchon = def('fanchon')
+    expect(offerTargets(fanchon, [], { op: 'engrave', skill: skill('fear') })).toEqual([])
+    expect(offerTargets(fanchon, [{ op: 'enlarge' }], { op: 'engrave', skill: skill('fear') })).toEqual([6, 7])
+    const bard = createCharacter('fanchon').withForge([{ op: 'enlarge' }, { op: 'engrave', face: 6, skill: skill('fear') }, { op: 'gild', face: 7 }])
+    const fear = bard.events.find((e) => e.id === 'fear')!
+    expect(fear.trigger).toBe(doubleTrigger(6))
+    expect([fear.forfeitsHit, fear.needsTouch, fear.chance]).toEqual([undefined, undefined, undefined])
+    expect(createCharacter('fanchon').withForge([{ op: 'enlarge' }, { op: 'engrave', face: 6, skill: skill('cleave') }]).events.find((e) => e.id === 'cleave')?.needsTouch).toBeUndefined()
+    let doubles = 0
+    let gilded = 0
+    for (let seed = 0; seed < 150; seed++) {
+      const r = simulateCombat([bard, createCharacter('morgrut')], { seed })
+      for (const p of ofType(r, 'pair').filter((x) => x.side === 0)) {
+        const strikes = r.beats.filter((x) => x.type === 'attack' && x.cause === p.id)
+        if (p.rolls[0] === 6 && p.rolls[1] === 6) {
+          // Le double 6 lance la Peur à la place des deux coups
+          expect(p.double).toBe(6)
+          expect(r.beats[p.id + 1]).toMatchObject({ type: 'event', event: { eventId: 'fear', trigger: doubleTrigger(6) } })
+          expect(strikes).toEqual([])
+          doubles++
+        }
+      }
+      for (const a of attacksOf(r).filter((x) => x.attacker === 0 && x.preset && !x.dodged)) {
+        expect(a.gild ?? 0).toBe(a.roll === 7 ? GILD_BONUS : 0)
+        if (a.gild) gilded++
+      }
+    }
+    expect(doubles).toBeGreaterThan(0)
+    expect(gilded).toBeGreaterThan(0)
+  })
+
+  it('aiguiser : un rang de plus (charges sous le plafond, +2 soin, dégâts et libération, +1 coup de volée)', () => {
+    const sharp = (id: string, steps: ForgeStep[], skillId: string) => createCharacter(id).withForge(steps).events.find((e) => e.id === skillId)!
+    const once = sharp('gorak', [{ op: 'sharpen', face: 1 }], 'cleave')
+    const twice = sharp('gorak', [{ op: 'sharpen', face: 1 }, { op: 'sharpen', face: 1 }], 'cleave')
+    expect(once.name).toBe('Pourfendre II')
+    expect(twice.name).toBe('Pourfendre III')
+    expect([once.effects[0], twice.effects[0]]).toMatchObject([{ stacks: 3 }, { stacks: 4 }])
+    // Seules les compétences de la face aiguisée changent
+    expect(createCharacter('gorak').withForge([{ op: 'sharpen', face: 1 }]).events.filter((e) => e.id !== 'cleave')).toEqual(def('gorak').events.filter((e) => e.id !== 'cleave'))
+    expect(sharp('thaldrin', [{ op: 'sharpen', face: 1 }], 'thunderbolt').effects[0]).toMatchObject({ type: 'damage', amount: 4 })
+    expect(sharp('aldric', [{ op: 'sharpen', face: 1 }], 'retribution').effects[0]).toMatchObject({ type: 'release', min: 3 })
+    expect(sharp('fanchon', [{ op: 'sharpen', face: 1 }], 'whistle').volley).toBe(3)
+    // Une gravure s'aiguise sur sa face
+    expect(sharp('ervald', [{ op: 'engrave', face: 5, skill: skill('cleave') }, { op: 'sharpen', face: 5 }], 'cleave').effects[0]).toMatchObject({ stacks: 3 })
+    // Rien à gagner (statut qui ne cumule pas, statut au plafond) : la face n'est pas proposée, l'opération est refusée
+    expect(offerTargets(def('ysolde'), [], { op: 'sharpen' })).not.toContain(1)
+    expect(offerTargets(def('ervald'), [], { op: 'sharpen' })).not.toContain(2)
+    expect(valid(def('aldric'), [{ op: 'sharpen', face: 2 }])).toBe(false)
+    expect(valid(def('gorak'), [{ op: 'sharpen', face: 5 }])).toBe(false)
+    // L'Aura de sainteté (plafond 3) monte à 3 en deux rangs, puis sa face n'est plus proposée
+    const holy: ForgeStep[] = [{ op: 'sharpen', face: 3 }, { op: 'sharpen', face: 3 }]
+    expect(sharp('ysolde', holy, 'holy-aura').effects[0]).toMatchObject({ stacks: STATUSES.holyAura.maxStacks })
+    expect(offerTargets(def('ysolde'), holy, { op: 'sharpen' })).not.toContain(3)
+    expect(() => forgeState(def('ysolde'), [...holy, { op: 'sharpen', face: 3 }])).toThrow()
+  })
+
+  it('offre : des opérations différentes, toutes jouables ; le choix automatique est toujours valide', () => {
+    for (const id of CHARACTER_IDS) {
+      const base = def(id)
+      const rng = seededRng(id.length * 31)
+      let steps: ForgeStep[] = []
+      for (let k = 0; k < 8; k++) {
+        const offer = drawForgeOffer(base, steps, rng, ENGRAVABLE_SKILLS)
+        expect(offer.length).toBeLessThanOrEqual(FORGE_OFFER_SIZE)
+        expect(new Set(offer.map((o) => o.op)).size).toBe(offer.length)
+        for (const o of offer) {
+          const targets = offerTargets(base, steps, o)
+          if (o.op === 'enlarge' || o.op === 'trim') expect(valid(base, [...steps, stepOf(o)]), `${id} ${o.op}`).toBe(true)
+          else {
+            expect(targets.length, `${id} ${o.op}`).toBeGreaterThan(0)
+            for (const face of targets) expect(valid(base, [...steps, stepOf(o, face)]), `${id} ${o.op} ${face}`).toBe(true)
+          }
+        }
+        const step = autoForge(base, steps, offer, rng)
+        if (!step) break
+        steps = withForgeStep(base, steps, step)
+        expect(createCharacter(id).withForge(steps).baseStats.damageDie).toBe(forgeState(base, steps).size)
+      }
+      expect(steps.length).toBeGreaterThan(0)
+    }
+    expect(() => withForgeStep(def('gorak'), [], { op: 'gild', face: 1 })).toThrow()
+  })
+
+  it('trace : l’en-tête de forge se relit et rejoue le combat à l’identique', () => {
+    const left = createCharacter('gorak').withForge([{ op: 'engrave', face: 7, skill: skill('fear') }, { op: 'gild', face: 8 }, { op: 'enlarge' }, { op: 'sharpen', face: 1 }])
+    const right = createCharacter('morgrut').withForge([{ op: 'engrave', face: 1, skill: skill('cleave') }, { op: 'trim' }])
+    const r = simulateCombat([left, right], { seed: 5 })
+    const text = traceText(r)
+    const forge = parseForge(text, ENGRAVABLE_SKILLS)
+    expect(forge).toEqual([left.forge, right.forge])
+    const replay = simulateCombat([createCharacter('gorak').withForge(forge[0]), createCharacter('morgrut').withForge(forge[1])], { seed: 5 })
+    expect(traceText(replay)).toBe(text)
+    // Un camp sans forge relit un journal vide
+    expect(parseForge(traceText(simulateCombat([left, createCharacter('brokk')], { seed: 5 })), ENGRAVABLE_SKILLS)[1]).toEqual([])
   })
 })

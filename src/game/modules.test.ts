@@ -7,12 +7,31 @@ import { describeEffect, describeEvent, describeSkill, TRIGGERS, type Effect } f
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, rollDie, seededRng, shuffle } from './rng'
-import { CHARACTER_IDS, CHARACTERS, createCharacter, ROSTER, validateRoster } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
 import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
 import { Character, figureHeight } from './character'
 import { EMOJI, testCharacter } from './test-utils'
 import { traceCombat, traceText } from './trace'
+import {
+  ACT_FIGHTS,
+  ACT_LENGTH,
+  BOSS,
+  CAMPAIGN_RELICS,
+  campaignCharacter,
+  championOf,
+  heritableGains,
+  isBossNode,
+  loadHeritage,
+  recordHeritage,
+  referenceChampions,
+  rewardChoice,
+  REWARDS,
+  startRun,
+  withFightResult,
+  withReward,
+  type Encounter,
+} from './campaign'
 import { STATUS_IDS, statusCounter, type StatusId } from './statuses'
 import {
   allMatches,
@@ -712,3 +731,119 @@ describe('postures (docs/POSTURES.md)', () => {
   })
 })
 
+describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
+  const encounter: Encounter = { characterId: 'brokk', maxHp: 57, chance: 0.5 }
+  const bossEncounter: Encounter = { characterId: BOSS.id, maxHp: BOSS.stats.maxHp, boss: true, chance: 0.4 }
+  // Le champion est toujours à gauche (camp 0) : un combat gagné, un combat perdu
+  const won = simulateCombat([testCharacter('a', { maxHp: 100 }), testCharacter('b', { maxHp: 1 })], { seed: 1 })
+  const lost = simulateCombat([testCharacter('a', { maxHp: 1 }), testCharacter('b', { maxHp: 100 })], { seed: 1 })
+  const fear = ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')!
+
+  it('le boss est un personnage valide, à son dé forgé', () => {
+    expect(validateRoster([BOSS])).toEqual([])
+    expect(campaignCharacter(BOSS.id).gilded).toEqual({ 11: 2, 12: 2 })
+  })
+
+  it('un acte : une récompense par combat normal gagné, dans l’ordre de REWARDS, le boss au dernier nœud, sa défaite gagne la partie', () => {
+    let run = startRun('gorak', 12)
+    const rewarded: string[] = []
+    while (!isBossNode(run)) {
+      run = withFightResult(run, encounter, won)
+      expect(run.outcome).toBeUndefined()
+      expect(run.reward).toBeDefined()
+      rewarded.push(run.reward!.kind)
+      const gain = rewardChoice(run.reward!)
+      expect(gain).toBeDefined()
+      run = withReward(run, gain)
+      expect(run.reward).toBeUndefined()
+    }
+    expect(rewarded).toEqual([...REWARDS])
+    expect(run.wins).toBe(ACT_FIGHTS)
+    // Les gains sont les choix appliqués, dans l'ordre : deux forges et trois reliques différentes
+    expect(run.gains.filter((g) => g.kind === 'forge').map((g) => g.kind === 'forge' && g.step)).toEqual(run.forge)
+    expect(run.gains.filter((g) => g.kind === 'relic').map((g) => g.kind === 'relic' && g.relic)).toEqual(run.relics)
+    expect(run.forge).toHaveLength(2)
+    expect(new Set(run.relics).size).toBe(3)
+    expect(run.relics.every((r) => CAMPAIGN_RELICS.includes(r))).toBe(true)
+    expect(championOf(run).forge).toEqual(run.forge)
+    const end = withFightResult(run, bossEncounter, won)
+    expect(end).toMatchObject({ outcome: 'won', wins: ACT_LENGTH, fights: { length: ACT_LENGTH } })
+    expect(end.fights[ACT_FIGHTS]).toMatchObject({ opponentId: BOSS.id, boss: true, won: true })
+    expect(end.reward).toBeUndefined()
+  })
+
+  it('le champion de référence reçoit les récompenses déjà gagnées au nœud : aucune au premier, toutes au boss', () => {
+    const [first] = referenceChampions('gorak', 0, 4)
+    expect(first.forge).toEqual([])
+    expect(first.relics).toEqual([])
+    for (const ref of referenceChampions('gorak', ACT_FIGHTS, 4)) {
+      expect(ref.forge).toHaveLength(REWARDS.filter((k) => k === 'forge').length)
+      expect(ref.relics).toHaveLength(REWARDS.filter((k) => k === 'relic').length)
+    }
+  })
+
+  it('une défaite termine la partie sans avancer ; la perte du boss aussi', () => {
+    const rewarded = withFightResult(startRun('gorak', 3), encounter, won)
+    const first = withReward(rewarded, rewardChoice(rewarded.reward!))
+    const end = withFightResult(first, encounter, lost)
+    expect(end).toMatchObject({ outcome: 'lost', wins: 1 })
+    expect(end.fights.map((f) => f.won)).toEqual([true, false])
+    expect(end.reward).toBeUndefined()
+    expect(withFightResult({ ...first, wins: ACT_FIGHTS }, bossEncounter, lost)).toMatchObject({ outcome: 'lost', wins: ACT_FIGHTS })
+  })
+
+  it('héritage : les reliques et les opérations valides seules sur le dé d’origine ; ni Agrandir, ni Retailler', () => {
+    let run = startRun('gorak', 5)
+    run = withReward(run, { kind: 'forge', step: { op: 'enlarge' } })
+    run = withReward(run, { kind: 'relic', relic: 'wolf-fang' })
+    // Le 10 n'existe que sur le dé agrandi : sa dorure ne s'hérite pas
+    run = withReward(run, { kind: 'forge', step: { op: 'gild', face: 10 } })
+    run = withReward(run, { kind: 'forge', step: { op: 'trim' } })
+    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } })
+    run = withReward(run, { kind: 'relic', relic: 'mercenary-mail' })
+    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } })
+    // Aiguiser une gravure : seule sur le dé d'origine, le 8 ne porte rien
+    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 8 } })
+    // Aiguiser une compétence d'origine : vaut seule
+    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 1 } })
+    expect(heritableGains(run)).toEqual([
+      { kind: 'relic', relic: 'wolf-fang' },
+      { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } },
+      { kind: 'relic', relic: 'mercenary-mail' },
+      { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } },
+      { kind: 'forge', step: { op: 'sharpen', face: 1 } },
+    ])
+  })
+
+  it('héritage choisi au départ : il équipe le champion, sans entrer dans les gains ; une forge impossible est refusée', () => {
+    const engraved = startRun('gorak', 7, { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } })
+    expect(engraved).toMatchObject({ forge: [{ op: 'engrave', face: 7 }], relics: [], gains: [] })
+    expect(championOf(engraved).events.some((e) => e.id === 'fear')).toBe(true)
+    expect(heritableGains(engraved)).toEqual([])
+    const relic = startRun('gorak', 7, { kind: 'relic', relic: 'wolf-fang' })
+    expect(relic).toMatchObject({ forge: [], relics: ['wolf-fang'], gains: [] })
+    expect(() => startRun('gorak', 7, { kind: 'forge', step: { op: 'gild', face: 1 } })).toThrow()
+  })
+
+  it('sauvegarde de l’héritage : les gains d’une partie remplacent ceux du personnage ; une partie sans gain n’efface rien', () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => stored.get(k) ?? null,
+      setItem: (k: string, v: string) => void stored.set(k, v),
+    })
+    try {
+      const first = withReward(withReward(startRun('gorak', 1), { kind: 'forge', step: { op: 'enlarge' } }), { kind: 'relic', relic: 'wolf-fang' })
+      recordHeritage(first)
+      expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'wolf-fang' }] })
+      // Que des gains non héritables (Agrandir) : rien n'est effacé
+      recordHeritage(withReward(startRun('gorak', 2), { kind: 'forge', step: { op: 'enlarge' } }))
+      recordHeritage(startRun('gorak', 3))
+      expect(loadHeritage().gorak).toEqual([{ kind: 'relic', relic: 'wolf-fang' }])
+      recordHeritage(withReward(startRun('gorak', 4), { kind: 'relic', relic: 'mercenary-mail' }))
+      recordHeritage(withReward(startRun('brokk', 4), { kind: 'relic', relic: 'wolf-fang' }))
+      expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'mercenary-mail' }], brokk: [{ kind: 'relic', relic: 'wolf-fang' }] })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})

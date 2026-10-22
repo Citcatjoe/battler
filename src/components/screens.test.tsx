@@ -7,7 +7,10 @@ import { describe, expect, it } from 'vitest'
 import { ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
-import { CHARACTER_IDS, createCharacter } from '../game/roster'
+import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
+import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type PendingReward } from '../game/campaign'
+import { Character } from '../game/character'
+import { CampaignScreen } from './CampaignScreen'
 import { STATUS_IDS } from '../game/statuses'
 import { fxFloats, turnLabel, type Float, type FxSpec } from '../game/staging'
 import { attackSpecials, isSurcharge, relicSpecial, SPECIAL_SIGNS, SPECIAL_SOURCES, statusSpecial } from '../game/specials'
@@ -78,7 +81,7 @@ const render = (node: React.ReactNode) => {
 describe('écrans', () => {
   it('accueil, sélection, affrontement, combat, fin', () => {
     for (const progress of [null, '3 / 15'])
-      render(<HomeScreen onChoose={noop} onOpenRecords={noop} onOpenCompendium={noop} tournamentProgress={progress} />)
+      render(<HomeScreen onChoose={noop} onOpenRecords={noop} onOpenCompendium={noop} tournamentProgress={progress} campaignProgress={progress} />)
     render(
       <StartScreen
         initial={fighters}
@@ -471,5 +474,30 @@ describe('écrans', () => {
     // Un nouvel état s'ajoute après les autres, l'ordre est gardé
     items = trayAfter(items, trayStates([{ id: 'fear', stacks: 1 }, { id: 'poison', stacks: 3 }], []))
     expect(items.map((i) => i.state.id)).toEqual(['poison', 'lostTurn'])
+  })
+
+  it('campagne : chaque étape se rend, avec un dé forgé au-delà de ses faces d’origine', () => {
+    const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
+    // Un champion qui a déjà forgé : une gravure sur le 9, une dorure, et le boss en face
+    let run = startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' })
+    run = { ...run, forge: [{ op: 'enlarge' }, { op: 'engrave', face: 10, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'gild', face: 8 }] }
+    const encounters: Encounter[] = [
+      { characterId: 'brokk', maxHp: 44, chance: 0.8 },
+      { characterId: 'ysolde', maxHp: 61, chance: 0.4 },
+    ]
+    render(<CampaignScreen {...props} run={null} />)
+    render(<CampaignScreen {...props} run={null} heritage={Object.fromEntries(CHARACTER_IDS.map((id) => [id, [{ kind: 'relic' as const, relic: 'wolf-fang' }]]))} />)
+    render(<CampaignScreen {...props} run={run} />)
+    render(<CampaignScreen {...props} run={{ ...run, encounters }} />)
+    render(<CampaignScreen {...props} run={{ ...run, wins: ACT_FIGHTS, encounters: [{ characterId: BOSS.id, maxHp: 90, boss: true, chance: 0.45 }] }} />)
+    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'trim' }, { op: 'sharpen' }], choice: { op: 'gild', face: 5 } }
+    const relic: PendingReward = { kind: 'relic', offer: ['felt-boots', 'wolf-fang'], choice: 'felt-boots' }
+    for (const reward of [forge, relic]) render(<CampaignScreen {...props} run={{ ...run, wins: 2, reward }} />)
+    for (const outcome of ['won', 'lost'] as const) render(<CampaignScreen {...props} run={{ ...run, outcome, gains: [{ kind: 'relic', relic: 'felt-boots' }] }} />)
+    // Le combat d'un champion forgé contre le boss : l'en-tête montre la compétence gravée sur le 10
+    const pair: [Character, Character] = [championOf(run), new Character(BOSS)]
+    const fight = renderToString(<FightScreen script={simulateCombat(pair, { seed: 3 })} arena={null} onEnd={noop} />)
+    expect(fight).toContain('aria-label="Dé 10"')
+    render(<MatchupScreen fighters={pair} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
   })
 })

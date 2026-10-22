@@ -1470,6 +1470,18 @@ body {
   background: radial-gradient(circle at 35% 35%, #fef3c7, #f59e0b 70%);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
+/* Une face au-delà de 6 (forge du dé) : son chiffre, de la couleur des points */
+.skill-die-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+  color: #fbbf24;
+  font-size: 15px;
+}
+.skill-die-xs.skill-die-number { font-size: 12px; }
 /* Dés de compétence en combat (en-tête) : éteints au repos, ils ne s'allument qu'un instant quand leur
    face sort, comme le tintement d'une clochette : un éclat bref et ample dans la couleur de la nature de
    la compétence (data-nature, comme les cartes en lame), puis retour à l'état éteint. Variable --pulse et
@@ -1977,7 +1989,8 @@ body {
 /* Les lignes d'explication, chacune centrée sous sa plaque de la paire de modes (.bt-modepair : 294 px, 4 px d'écart) */
 .mode-hints {
   display: grid;
-  grid-template-columns: 294px 294px;
+  grid-auto-flow: column;
+  grid-auto-columns: 294px;
   gap: 4px;
   padding: 0 4px;
   justify-items: center;
@@ -2444,3 +2457,121 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+
+/* ---------- Dé forgé (campagne, ForgedDie.tsx, docs/CAMPAGNE.md § 4) ----------
+   Une tuile par face, lisible de loin : le chiffre, ou le sceau de sa compétence (liseré de sa nature) ; une gravure a
+   le liseré violet des runes, une dorure la plaque d'or, un rang son chiffre romain ; une face d'attente est éteinte.
+   En choix de face (forge), les faces visables sont cerclées d'or en pointillé, les autres s'éteignent. */
+.forge-face {
+  --nature: var(--line-2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 0;
+  padding: 0;
+  background: linear-gradient(160deg, #2e2720 0%, #1c1713 60%, #120f0c 100%);
+  box-shadow: inset 0 0 0 1px var(--nature), inset 0 4px 6px -3px rgba(255, 255, 255, 0.18), 0 3px 0 #0a0806, 0 6px 12px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-1);
+  transition: transform 140ms, opacity 140ms, outline-color 140ms;
+}
+.forge-face[data-size='sm'] { font-size: 17px; border-radius: 6px; }
+.forge-face[data-size='lg'] { font-size: 34px; border-radius: 14px; }
+.forge-face[data-nature='martial'] { --nature: var(--gold-500); }
+.forge-face[data-nature='finesse'] { --nature: var(--armor); }
+.forge-face[data-nature='arcane'] { --nature: var(--arcane); }
+.forge-face[data-nature='neutral'] { --nature: var(--text-3); }
+.forge-face[data-engraved] {
+  box-shadow: inset 0 0 0 2px var(--arcane), inset 0 0 12px color-mix(in srgb, var(--arcane) 45%, transparent), 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent), 0 3px 0 #0a0806;
+}
+.forge-face[data-gild] {
+  background: linear-gradient(160deg, var(--gold-200) 0%, var(--gold-400) 55%, var(--gold-500) 100%);
+  color: var(--on-gold);
+  box-shadow: inset 0 0 0 1px #fff6dc88, inset 0 -4px 0 #8a6424, 0 0 14px rgba(237, 196, 106, 0.45), 0 3px 0 #0a0806;
+}
+.forge-face[data-idle] { opacity: 0.4; }
+.forge-face[data-target] { cursor: pointer; outline: 2px dashed var(--gold-300); outline-offset: 3px; }
+.forge-face[data-target]:hover { transform: translateY(-3px); }
+.forge-face[aria-pressed='true'] { outline: 3px solid var(--gold-200); outline-offset: 3px; transform: translateY(-4px); }
+.forge-face[data-off] { opacity: 0.3; }
+.forge-face:disabled { cursor: default; }
+.forge-face-num {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  font-size: 11px;
+  color: var(--text-2);
+  text-shadow: 0 1px 2px #000;
+}
+.forge-face[data-gild] .forge-face-num { color: var(--on-gold); text-shadow: none; }
+.forge-face-rank {
+  position: absolute;
+  right: -5px;
+  top: -7px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: var(--gold-300);
+  color: var(--on-gold);
+  font: 800 11px/13px var(--font-display);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Campagne (CampaignScreen.tsx) ----------
+   La piste de l'acte : un jalon par nœud (fait, en cours, à venir), le boss au bout, et la forge entre deux jalons. */
+.act-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 9999px;
+  background: var(--bg-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  font: 800 20px/1 var(--font-display);
+  color: var(--text-3);
+  overflow: hidden;
+}
+.act-node[data-state='done'] { box-shadow: inset 0 0 0 2px var(--gold-500); color: var(--gold-200); }
+.act-node[data-state='lost'] { box-shadow: inset 0 0 0 2px var(--side-b, #ee4a72); }
+.act-node[data-state='current'] { box-shadow: 0 0 0 3px var(--gold-300), 0 0 22px rgba(237, 196, 106, 0.5); color: var(--gold-200); }
+.act-node[data-boss] { width: 68px; height: 68px; }
+.act-link { height: 2px; width: 34px; background: var(--line-2); }
+.act-link[data-done] { background: var(--gold-500); }
+.act-forge {
+  width: 14px;
+  height: 14px;
+  rotate: 45deg;
+  background: var(--bg-3);
+  box-shadow: inset 0 0 0 1px var(--gold-500);
+}
+.act-forge[data-done] { background: var(--gold-400); }
+.danger-chip {
+  padding: 3px 12px;
+  border-radius: 2px;
+  font: 700 14px/20px var(--font-body);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.danger-chip[data-band='safe'] { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.5); }
+.danger-chip[data-band='risky'] { background: rgba(237, 196, 106, 0.15); color: var(--gold-200); box-shadow: inset 0 0 0 1px var(--gold-500); }
+.danger-chip[data-band='deadly'] { background: rgba(238, 74, 114, 0.18); color: #fda4af; box-shadow: inset 0 0 0 1px rgba(238, 74, 114, 0.6); }
+.encounter-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 400px;
+  padding: 40px 24px 24px;
+  border-radius: var(--r-sm, 4px);
+  border: 1px solid var(--line-2);
+  background: linear-gradient(180deg, transparent 0%, var(--bg-1) 55%);
+  transition: transform 160ms, border-color 160ms, box-shadow 160ms;
+}
+.encounter-card:hover { transform: translateY(-4px); border-color: var(--gold-500); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }

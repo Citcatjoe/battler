@@ -1,6 +1,7 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
-import { DOUBLE_TRIGGERS, TRIGGERS, type Trigger } from './events'
+import { doubleTrigger, triggerText, type CharacterEvent, type Trigger } from './events'
+import type { ForgeStep } from './forge'
 import { atCap, of } from './narration'
 import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
@@ -107,10 +108,11 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       if (a.forfeited) return [`${head} · coup sacrifié par une compétence, aucun dégât (ni esquive ni critique)`]
       if (a.dodged)
         return [`${head} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
-      const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0)
+      const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
       const steps = [
-        // Reliques de coup (Fer à quatre clous) : avant le critique
+        // Reliques de coup (Fer à quatre clous), puis face dorée (forge du dé) : avant le critique
         ...(a.relicBonus ?? []).map((b) => `relique ${b.name} +${b.amount}`),
+        ...(a.gild ? [`face dorée +${a.gild}`] : []),
         a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
         // Auras et statuts qui changent la force du coup, avec leur porteur
         ...early.map(modifier),
@@ -126,7 +128,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     }
     case 'event': {
       const e = beat.event
-      return [`Compétence « ${e.name} » ${of(fighters[e.side].name)} (${TRIGGERS[e.trigger].label.toLowerCase()})`, ...effects(e.effects)]
+      return [`Compétence « ${e.name} » ${of(fighters[e.side].name)} (${triggerText(e.trigger).label.toLowerCase()})`, ...effects(e.effects)]
     }
     case 'statusTick':
       return [
@@ -136,7 +138,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         ...effects(beat.effects),
       ]
     case 'statusReaction': {
-      const head = `${label(beat.status)} ${of(fighters[beat.side].name)} réagit (${TRIGGERS[beat.trigger].label.toLowerCase()})`
+      const head = `${label(beat.status)} ${of(fighters[beat.side].name)} réagit (${triggerText(beat.trigger).label.toLowerCase()})`
       // Jauges (Rétribution) : le coup est rangé, sans effet à appliquer
       const gauge = STATUSES[beat.status].fillsOnHurt ? after.statuses[beat.side].find((s) => s.id === beat.status) : undefined
       if (gauge) return [head, `    → coup rangé dans les jauges : ${(gauge.slots ?? []).join(' · ')} (${gauge.stacks} à relâcher)`]
@@ -160,7 +162,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     case 'pair': {
       const c = fighters[beat.side]
       const forced = beat.forced ? beat.rolls.map((r, k) => `${r}${beat.forced![k] ? ' [imposé]' : ''}`) : beat.rolls
-      const skill = beat.double !== undefined ? c.events.find((e) => e.trigger === DOUBLE_TRIGGERS[beat.double!])?.name : undefined
+      const skill = beat.double !== undefined ? c.events.find((e) => e.trigger === doubleTrigger(beat.double!))?.name : undefined
       return [
         `${c.name} lance ses deux dés (d${beat.faces}) : ${forced.join(' et ')} → ${skill ? `double ${beat.double} : « ${skill} », à la place des deux coups` : beat.rolls[0] === beat.rolls[1] ? `double ${beat.rolls[0]} sans compétence : deux coups` : 'deux coups, un par dé'}`,
       ]
@@ -209,6 +211,10 @@ export function traceCombat(result: CombatResult): CombatTrace {
         ? [`${RELICS_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].relics.map((r) => `${r.id} « ${r.name} » (${relicLine(r)})`).join(' ; ')}`]
         : [],
     ),
+    // Forge du dé (campagne) : `npm run logs` relit son journal pour rejouer le combat
+    ...([0, 1] as const).flatMap((s) =>
+      fighters[s].forge.length ? [`${FORGE_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].forge.map(forgeToken).join(' ; ')}`] : [],
+    ),
   ]
 
   const turns: TraceTurn[] = []
@@ -251,6 +257,32 @@ export function parseRelics(text: string): Pair<string[]> {
     relics[side] = [...line.matchAll(/([a-z]+(?:-[a-z]+)*) « /g)].map((m) => m[1])
   }
   return relics
+}
+
+/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 7 cleave ; gild 9 ; enlarge » (journal, dans l'ordre). */
+export const FORGE_PREFIX = 'Forge ('
+
+const forgeToken = (step: ForgeStep) =>
+  step.op === 'engrave' ? `engrave ${step.face} ${step.skill.id}` : step.op === 'gild' || step.op === 'sharpen' ? `${step.op} ${step.face}` : step.op
+
+/** Lecture inverse de l'en-tête de forge : le journal de chaque camp ; `skills` : où retrouver une compétence gravée. */
+export function parseForge(text: string, skills: readonly CharacterEvent[]): Pair<ForgeStep[]> {
+  const forge: Pair<ForgeStep[]> = [[], []]
+  for (const line of text.split('\n').filter((l) => l.startsWith(FORGE_PREFIX))) {
+    const side = line.startsWith(`${FORGE_PREFIX}${SIDE_LABEL[0]},`) ? 0 : 1
+    forge[side] = line
+      .slice(line.indexOf(') : ') + 4)
+      .split(' ; ')
+      .map((token): ForgeStep => {
+        const [op, face, id] = token.split(' ')
+        if (op === 'enlarge' || op === 'trim') return { op }
+        if (op === 'gild' || op === 'sharpen') return { op, face: Number(face) }
+        const skill = skills.find((e) => e.id === id)
+        if (op !== 'engrave' || !skill) throw new Error(`Forge illisible : ${token}`)
+        return { op, face: Number(face), skill }
+      })
+  }
+  return forge
 }
 
 /** En-tête des dés imposés (mode triche) : `npm run logs` la relit pour rejouer le combat. */

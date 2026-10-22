@@ -407,14 +407,16 @@ Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la 
 
 ## 6. Son
 
-Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 sons, ce que chacun veut dire, son de chaque étape du combat, son d'une nouvelle compétence. Le bouton muet en haut à droite est mémorisé (`battler:muted`). **Son et musique sont coupés par défaut** (0.68.2) : on les rallume avec leurs boutons, et ce choix est gardé.
+Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 23 sons, ce que chacun veut dire, son de chaque étape du combat, son d'une nouvelle compétence. Le bouton muet en haut à droite est mémorisé (`battler:muted`). **Son et musique sont coupés par défaut** (0.68.2) : on les rallume avec leurs boutons, et ce choix est gardé.
 
 - **Un son = une signification = un fichier** (`src/assets/sounds/<son>.mp3`), joué avec la Web Audio API. Un son sans fichier joue sa version synthétisée.
 - **Un instant = un son.** Seul le Coup critique en joue deux ensemble (Coup et Grondement).
 - **Le son d'une compétence se déduit de ses effets** (`cueOf`) : aura posée, aura retirée, malus posé, bonus posé, statut retiré, soin ; les dégâts sonnent avec leurs coups. Une nouvelle compétence n'a donc rien à déclarer.
+- **Le poison grésille** (0.90.0, décision de l'utilisateur) : quand il agit, au début du tour de son porteur, il joue Grésillement (`fizz.mp3`, un « pchhhit » bref de vapeur toxique, discret) au lieu de Ronge, que gardent Pourriture, Brûlure et Saignement. Le son propre d'un statut se déclare dans son registre (`tickSound`, `statuses.ts`).
+- **Cri de guerre** (0.91.0, décision de l'utilisateur) : le bouton « Jouer » de l'écran d'affrontement, qui lance le combat animé dans tous les modes, joue un cri de guerre (`war-cry.mp3`, 1,74 s) au lieu du clic. L'ouverture du combat (`INTRO`) passe de 500 à 1 400 ms : le cri retombe avant les dés de l'initiative.
 - **Silences** : l'élan, le jet maximal, les faces de compétence (1, 2 et 3), les durées qui baissent et les statuts qui expirent ne sonnent pas.
-- **Vitesse** : à ×2 et ×4, les sons du combat sont écourtés au prorata, avec un fondu. Le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
-- **Ajouter ou remplacer un fichier** : traiter la source avec `scripts/process-sounds.py`, copier le fichier retenu sous le nom du son (`SOUND_NAMES`), régler son volume dans `MIX`.
+- **Vitesse** : à ×2 et ×4, les sons du combat sont écourtés au prorata, avec un fondu. Le clic, le choc du face-à-face, le cri de guerre, le KO et la victoire jouent en entier.
+- **Ajouter ou remplacer un fichier** : traiter la source avec `scripts/process-sounds.py`, copier le fichier retenu sous le nom du son (`SOUND_NAMES`), régler son volume dans `MIX`. **Générer un bruitage** (0.91.0) : `npm run sfx` (ElevenLabs, `scripts/gen-sfx.mjs`, clé dans `.env.local`) écrit des propositions dans `logs/sons/<son>/`.
 - **Musique de fond** (0.48.0, [SONS.md](SONS.md) § 10) : pendant chaque combat joué, une boucle tirée au hasard parmi trois (`src/assets/music/`), quelle que soit l'arène, en boucle sous les effets. Elle entre en fondu, s'efface au KO pour laisser ressortir le KO et la victoire, puis s'arrête en fondu à l'écran de fin. Chaque piste est égalisée à −29 LUFS, environ 15 dB sous les effets. Elle a son propre bus, hors du compresseur des effets, et le bouton du son la coupe aussi. Un second bouton, sous celui du son, coupe la musique seule (0.53.0), et ce choix est gardé d'une partie à l'autre.
 
 | Version | Changement |
@@ -424,6 +426,8 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 20 
 | 0.68.2 | Son et musique coupés par défaut, rallumés à la main (choix gardé) |
 | 0.77.1 | Bouton de la musique : icône peinte (tambour et baguettes, barré de rouge quand la musique est coupée) à la place de la note dessinée |
 | 0.83.0 | Boutons du son et de la musique en boutons icône du UI kit, tous deux de 48 px : glyphes au trait (haut-parleur, note), glyphe barré et couleur atténuée quand ils sont coupés, plus de barre rouge peinte |
+| 0.90.0 | Grésillement : le poison qui agit a son propre son, généré avec Artlist (piste son d'une vidéo Veo 3.1 Lite), au lieu de Ronge |
+| 0.91.0 | Cri de guerre sur « Jouer », généré avec ElevenLabs ; ouverture du combat portée à 1 400 ms ; `npm run sfx` pour générer des bruitages |
 | 0.48.0 | Musique de fond des combats : trois boucles déposées par l'utilisateur, une au hasard par combat, égalisées et discrètes |
 | 0.9.0 | Son d'événement |
 | 0.35.4 | Plus de son de déception sur un 1 au dé |
@@ -560,3 +564,40 @@ Un jeu dans le jeu pour les observateurs, en Deniers fictifs. **Aucun effet sur 
 | 0.37.0 | Première version jouable : guichet du match, trois marchés, cotes simulées, coups de théâtre, règlement sur l'écran de fin, bourses dans l'arbre, prime de relance, noms des parieurs dans la configuration du tournoi |
 | 0.38.0 | Refonte : guichet de jeu vidéo (tuiles, pièces, tampon), cotes cachées jusqu'au règlement, mises fixes, coup de poker et gain doublé du dernier, Mise doublée au lieu de Tout ou rien, deux parieurs de l'ordinateur (Borin, Zlatka), écran de fin en deux moitiés, classement dans l'arbre et sur l'écran du champion |
 | 0.77.1 | Icônes peintes : bourse (en-tête des plateaux, classement), jeton (« Combien ? »), embrasse de rideau (coup de théâtre), ticket (bouton « Parier ») |
+
+## 11. Campagne et forge du dé
+
+Prototype (0.88.0) du mode décrit dans [CAMPAGNE.md](CAMPAGNE.md) : les règles ci-dessous sont celles qui ont été tranchées avec l'utilisateur (§ 1 de ce document).
+
+**Règles actuelles**
+
+- **Entrée** : la troisième plaque de la paire de modes de l'accueil, **Campagne**, avec sa ligne « En cours · Combat 3 sur 5 » quand une partie est commencée.
+- **Le champion** : trois personnages tirés au sort ; on en choisit un. Il mène seul l'acte. S'il a un héritage, on choisit d'abord une amélioration parmi trois au plus (voir Héritage).
+- **L'acte** (0.89.0) : six nœuds, **cinq combats normaux puis le boss**. À chaque combat normal, **deux adversaires** proposés (jamais le champion, jamais le dernier adversaire), chacun avec sa **bande de danger** : Sûr, Risqué ou Mortel, estimée par simulation contre le champion tel qu'il est ; le chiffre reste caché. Le combat passe par l'écran d'affrontement habituel (Jouer ou Simuler), sans paris ; l'écran de fin ramène à la carte (**Carte** à l'affrontement). Sur la piste de l'acte, un losange entre deux combats marque la récompense, quelle qu'elle soit (son infobulle dit laquelle) ; il se remplit d'or une fois reçue.
+- **Une défaite met fin à la partie.** La victoire contre le boss aussi. **Abandonner** la partie compte comme une défaite.
+- **Les PV ne se gardent pas** d'un combat à l'autre : chaque combat commence à PV pleins.
+- **Réglage des rencontres** (§ 6.3) : chaque adversaire est un personnage du roster dont seuls les **PV** sont réglés par simulation, pour qu'un **champion de référence** le batte selon une **courbe montante** : **95, 90, 87, 84 puis 81 %** aux cinq combats normaux, **45 %** contre le boss. Le champion de référence, c'est le même personnage, sans héritage, qui reçoit aux mêmes moments les mêmes récompenses, choisies au hasard (douze versions simulées). Un champion mieux forgé que la moyenne dépasse la courbe : il écrase ; un champion mal forgé souffre.
+- **Récompense** (0.89.0) : chaque combat normal gagné rapporte **une** récompense, tour à tour **relique, forge, relique, forge, relique** : trois reliques et deux forges dans l'acte. L'écran de victoire y mène (bouton **Relique** ou **Forge du dé**). Une relique : trois proposées, parmi toutes sauf le Contrepoids de plomb, devenu l'opération Agrandir ; une forge : trois opérations, puis la face qu'elle vise. Le champion a déjà choisi (« Choix de… ») : l'observateur peut choisir autre chose.
+- **Le boss**, commun à tous : **Le Colosse**, l'ogre qui règne sur l'arène (image de Morgrut assombrie). Il a pris trois techniques à des champions brisés (Peau de pierre sur le 1, Pourfendre sur le 2, Aura d'intimidation sur le 3), deux trophées (Cotte du mercenaire, Dent de loup) et un couperet d12 doré sur le 11 et le 12.
+- **Héritage** : une partie terminée, gagnée ou perdue, lègue au **même personnage** ses gains : ses reliques, et ses opérations de forge sur une face de son dé d'origine qui valent seules (gravure, dorure, compétence d'origine aiguisée). Agrandir et Retailler ne s'héritent pas, ni un objet déjà hérité. Au départ de sa partie suivante, il en reprend **une**, choisie parmi trois au plus. Une partie sans gain n'efface pas l'héritage précédent.
+- **Sauvegarde** : la partie en cours (`battler:campaign:v2` depuis la 0.89.0) et les héritages (`battler:campaign-heritage:v1`) sont gardés dans le navigateur ; une partie illisible (règles changées depuis) est oubliée.
+- **Historique** : les combats de campagne n'entrent pas dans les statistiques (adversaires aux PV réglés, boss hors du roster) ; ils écrivent leur trace dans `logs/combats/`, et `npm run logs` les rejoue (forge, PV réglés et boss compris).
+
+**Forge du dé** (`forge.ts`, § 4) : le dé, c'est l'arme. Une forge est un journal d'opérations, rejoué sur le personnage d'origine ; n'importe quel mode peut en donner une (`Character.withForge`).
+
+| Opération | Effet | Ce qu'on voit sur le dé |
+| --- | --- | --- |
+| **Graver** | une compétence du dé d'un autre combattant (sur son 1, son 2 ou son 3) prend une face libre ; sur une face d'Attente de l'ogre, elle la remplace. Elle garde ses règles (coup sacrifié, « s'il touche ») | le sceau de la compétence, liseré violet des runes |
+| **Dorer** | +2 à la valeur des coups de cette face, avant le critique ; jamais sur un coup brut (label « Face dorée +2 » sous le dé) | une face d'or |
+| **Agrandir** | deux faces libres au-dessus de la plus haute ; pas de plafond | le dé grandit |
+| **Retailler** | la plus haute face disparaît, forgée ou non ; jamais une face qui porte une compétence d'origine | le dé rapetisse |
+| **Aiguiser** | la compétence de la face monte d'un rang : une charge de plus par statut cumulable (sous son plafond), +2 à ses dégâts, soins et relâches, un coup de plus pour un double qui frappe | un chiffre romain (II, III…) |
+
+- **Faces libres** : une compétence d'origine ne se déplace jamais ; seules les faces qui n'en portent pas se gravent ou se dorent. Une face qui porte une compétence qui sacrifie le coup ne se dore pas.
+- **La barde** (deux dés) : Graver et Aiguiser visent un **double** ; ses cinq doubles sont pris, elle grave donc au-delà du 5 après Agrandir. Une compétence gravée sur un double remplace les deux coups. La dorure vaut pour chaque dé qui fait sa face.
+- **Où on le voit** : sur la carte de l'acte, la récompense et la fin de partie, toutes les faces du dé (`ForgedDie`) ; en combat et à l'affrontement, les compétences gravées au-delà du 3 ont leur sceau et leur face (un chiffre au-delà de 6) ; « Pourfendre II » dans l'en-tête et le journal ; « Face dorée +2 » sous le dé.
+
+| Version | Changement |
+| --- | --- |
+| 0.88.0 | Prototype de la campagne (champion tiré parmi trois, sept combats et le boss, deux adversaires par nœud avec leur bande de danger, réglage par simulation, forge et relique après les victoires 2, 4 et 6, héritage, sauvegarde) et forge du dé (cinq opérations) |
+| 0.89.0 | Acte de cinq combats et le boss ; une récompense par victoire (relique, forge, relique, forge, relique), annoncée par l'écran de victoire ; courbe nominale montante (95 → 81 %, boss 45 %) ; combattants centrés sur leur silhouette dans les cartes |

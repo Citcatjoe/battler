@@ -125,8 +125,9 @@ const modifierText = (m: Attack['modifiers'][number]) => `${lowerFirst(statusLab
 
 const armorDetail = (attack: Attack) => {
   const parts = [
-    // Reliques de coup (Fer à quatre clous), avant le critique
+    // Reliques de coup (Fer à quatre clous), puis face dorée (forge du dé), avant le critique
     ...(attack.relicBonus ?? []).map((b) => `${lowerFirst(b.name)} +${b.amount}`),
+    attack.gild && `face dorée +${attack.gild}`,
     // Auras et statuts qui ont changé la force du coup (puissance +2, intimidation −2…)
     ...attack.modifiers.filter((m) => !m.final).map(modifierText),
     attack.armorAbsorbed > 0 && `armure −${attack.armorAbsorbed}`,

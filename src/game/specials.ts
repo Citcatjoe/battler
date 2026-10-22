@@ -117,7 +117,8 @@ export function statusSpecial(id: StatusId, bearer: SpecialBearer, amount?: numb
 /**
  * Les surcharges d'un coup lisibles dans son `Attack`, dans l'ordre du livre de règles (RESOLUTION.md § 3), rangées
  * par instant de la mise en scène :
- * - `roll`, au résultat du dé : l'esquive imposée (étape 2 : elle annule le reste), le bonus de relique (2 bis) ;
+ * - `roll`, au résultat du dé : l'esquive imposée (étape 2 : elle annule le reste), le bonus de relique (2 bis), la face
+ *   dorée de la forge (2 bis, couleur du coup : c'est le dé lui-même) ;
  * - `crit`, juste avant l'élan : le critique assuré, puis le critique (3) ;
  * - `impact`, à l'impact : les modificateurs qui s'usent sur ce coup (4-5 : Luciole), les boucliers (8), les dégâts
  *   finaux qui s'usent sur ce coup (8 bis : Fausse note). Un modificateur d'aura ou d'état durable n'y est pas.
@@ -132,6 +133,7 @@ export function attackSpecials(attack: Attack): { roll: SpecialSpec[]; crit: Spe
     if (attack.dodged && attack.dodgeBy) roll.push(statusSpecial(attack.dodgeBy, 'defender'))
     for (const b of attack.relicBonus ?? [])
       roll.push({ label: withAmount(b.name, 'plus', b.amount), source: 'relic', sign: 'plus', icon: { relic: b.relic, name: b.name } })
+    if (attack.gild) roll.push({ label: withAmount('Face dorée', 'plus', attack.gild), source: 'strike', sign: 'plus' })
     if (attack.crit && attack.critBy) crit.push(statusSpecial(attack.critBy, 'attacker'))
     if (attack.crit) crit.push({ label: `Critique ${multiplier(attack.critMultiplier)}`, source: 'strike', sign: 'plus' })
     const [before, final] = [attack.modifiers.filter((m) => !m.final), attack.modifiers.filter((m) => m.final)]

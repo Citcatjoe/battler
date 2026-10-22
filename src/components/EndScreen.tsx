@@ -5,7 +5,7 @@ import { of } from '../game/narration'
 import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
 import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
-import { BackLink, Button, Glyph } from './kit'
+import { BackLink, Button, Glyph, type GlyphName } from './kit'
 import { Tabs, type TabDef } from './Tabs'
 import { CopyTraceButton } from './CopyTraceButton'
 import { BetsResult, type BetsOutcome } from './Betting'
@@ -23,13 +23,17 @@ interface Props {
   onReplay: () => void
   onMenu: () => void
   /**
-   * En tournoi : remplace Revanche / Menu par un retour à l'arbre. `reward` : la relique du vainqueur (hors
-   * finale), à choisir parmi l'offre ; `chosen` est le choix du vainqueur, que l'observateur peut changer.
+   * En tournoi, en saison ou en campagne : remplace Revanche / Menu par la suite (l'arbre, la saison, la carte de
+   * l'acte). `reward` : la relique du vainqueur (tournoi, hors finale), à choisir parmi l'offre ; `chosen` est le choix
+   * du vainqueur, que l'observateur peut changer. `icon` : le glyphe du bouton (le tournoi par défaut) ; `action` : son
+   * texte, quand la suite est une récompense ailleurs (campagne : « Relique », « Forge du dé »).
    */
   tournament?: {
     label: string
     onContinue: () => void
     reward?: RelicReward
+    icon?: GlyphName
+    action?: string
   }
   /** Onglet affiché à l'ouverture */
   initialTab?: EndTab
@@ -220,12 +224,12 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
             <Button
               variant="primary"
               size="xl"
-              icon="tournoi"
+              icon={tournament.icon ?? 'tournoi'}
               onClick={reward ? () => setRewardOpen(true) : tournament.onContinue}
               title={tournament.label}
               className="flex-1"
             >
-              {reward ? 'Récompense' : 'Continuer'}
+              {reward ? 'Récompense' : (tournament.action ?? 'Continuer')}
             </Button>
           ) : (
             <>
