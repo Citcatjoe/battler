@@ -72,11 +72,18 @@ src/
     RelicSeal.tsx        sceau hexagonal d'une relique, rangée de sceaux avec infobulle (RelicRow), carte de récompense (RelicCard)
     SpecialLabel.tsx     label de la zone de surcharge sous le dé (couleur de sa source, hachures du − ; specials.ts ; docs/design-system.md § 3.1)
     CombatVcr.tsx        magnétoscope de combat (dev seulement, touche V ou battler.vcr()) : pause, pas à pas, retour, ralenti, attentes du moment avec leur constante de timing.ts (docs/MOTEUR_V2.md § 8)
-    VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement
+    VsSeal.tsx           sceau « VS » (pièce prestige), accueil et affrontement ; TrophySeal, le même octogone à la coupe gravée, au-dessus de la finale de l'arbre
     kit.tsx              contrôles du UI kit (docs/ui-kit/) : Button, IconButton, ModePair, SegmentedControl, Tool, BackLink, Glyph ; ne posent que les classes du kit
     BattlerIcon.jsx      glyphes de commande, copiés tels quels de docs/ui-kit/ (types : BattlerIcon.d.ts)
-    Tabs.tsx             onglets mineurs du kit (.bt-tabs)
+    Tabs.tsx             onglets mineurs du kit (.bt-tabs) ; `lead` : repère avant le libellé (pastille d'un camp)
     HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
+    TournamentIntroScreen.tsx  présentation du tournoi (créer, reprendre), entre l'accueil et la configuration
+    MatchupScreen.tsx    écran d'affrontement unique (0.100.0), avant chaque combat de duel, d'arbre, de saison ou de campagne :
+                         `mode` (MatchupMode, calculé par App.tsx) règle la hauteur des fiches (Layout), les reliques, le retour
+                         (BACK_LABEL) ; MatchupCard (fiche à géométrie fixe), ArenaSlider, FighterPicker (sélecteur du duel),
+                         Simuler et Parier en SquareButton (DUEL_BETTING : pas de Parier en duel), COMBATTRE en bas
+    StatSheet.tsx        stats d'un personnage en barres (STAT_LINES) ; `compare` : meilleur de chaque ligne face à l'adversaire,
+                         sur les valeurs affichées (dé en faces, esquive bornée à 0, multiplicateur sans critique perdant)
     homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
     SeasonScreen.tsx     phase de saison : classement en une liste (construction de chacun) et ligne de qualification, journée et ses matchs (récompense de la journée), simulation (aucune règle : tout vient de season.ts)
@@ -100,7 +107,10 @@ src/
   dev/                   pages de développement (serveur de dev seulement) : KitReference.tsx (`?kit`), les contrôles du kit
                          disposés comme docs/ui-kit/reference.html, pour comparer leur capture à reference.png ;
                          MatchupReference.tsx (`?matchup=<cas>`), l'écran d'affrontement sur les cas des références
-                         docs/ref/affrontement-*.png (fiches factices construites par les vraies fonctions du jeu)
+                         docs/ref/affrontement-*.png (duel, duel-droit, tournoi, saison-son, et les cas de la géométrie fixe ;
+                         fiches factices construites par les vraies fonctions du jeu, panneau du son ouvert par SoundToggle initialOpen) ;
+                         BracketReference.tsx (`?bracket=survol|paris|reel|fini`), l'arbre du tournoi sur un tournoi factice
+                         (createTournament, simulateCombat), carte survolée et panneau Paris forcés (docs/ref/tournoi-*.png)
 ```
 
 ## Principe central : un moteur, une chronologie
@@ -283,7 +293,7 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 - `Stage.tsx` dessine une scène fixe de **1600×900**, mise à l'échelle par `transform`. Dans les écrans, on raisonne en pixels de cette scène : pas de breakpoints `sm:` ni d'unités `vh`.
 - Les animations de combat dépendent de la variable CSS `--speed`. Le tremblement de l'arène passe par la Web Animations API sur une ref.
 - `Fighter` affiche l'image (orientation, échelle, teinte), les effets du coup, l'aura et le titre de l'événement dont il est la source, les badges des effets qui le visent, et une aura au sol pour ses statuts actifs : verte pour les bonus, rouge pour les malus.
-- L'arbre du tournoi (`Bracket.tsx`) est placé en pixels absolus avec des connecteurs SVG. Sa racine est en `pointer-events-none`.
+- L'arbre du tournoi (`Bracket.tsx`) est placé en pixels absolus avec des connecteurs SVG. Sa racine est en `pointer-events-none`. En suivi, `next` cadre d'or le prochain match ; les actions d'un match prêt (`SquareButton size="sm"`) n'apparaissent qu'au survol, au focus ou sur écran tactile (`.bracket-actions`, `index.css`).
 
 ## Données persistées
 

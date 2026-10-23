@@ -561,47 +561,9 @@ body {
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
   }
 
-  /* Rail des combattants de l'accueil (0.43.0) : un panneau fonctionnel, une carte par personnage.
-     Le camp qui choisit est un onglet mineur à sa couleur ; une carte choisie porte le liseré de son
-     camp (2 px), les deux s'il est choisi des deux côtés. La forme ne change jamais. */
-  .roster-rail {
-    padding: 10px 16px 14px;
-    background: var(--scrim);
-    border: 1px solid rgba(232, 200, 140, 0.16);
-    border-radius: var(--r-xs);
-    box-shadow: var(--hl), var(--shadow-2);
-  }
-  .rail-camp {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 2px 2px 5px;
-    border-bottom: 2px solid transparent;
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--text-3);
-    transition: color 150ms, border-color 150ms;
-  }
-  .rail-camp:hover { color: var(--text-2); }
-  .rail-camp[aria-selected='true'][data-side='a'] { color: var(--side-a-hi); border-color: var(--side-a); }
-  .rail-camp[aria-selected='true'][data-side='b'] { color: var(--side-b-hi); border-color: var(--side-b); }
-  .rail-camp:focus-visible { outline: none; box-shadow: var(--focus); }
-  .rail-camp-arrow {
-    width: 0;
-    height: 0;
-    border-block: 5px solid transparent;
-    opacity: 0;
-    transition: opacity 150ms;
-  }
-  .rail-camp-arrow[data-dir='left'] { border-right: 7px solid currentColor; }
-  .rail-camp-arrow[data-dir='right'] { border-left: 7px solid currentColor; }
-  .rail-camp[aria-selected='true'] .rail-camp-arrow { opacity: 1; }
-
+  /* Carte de personnage (0.43.0, rail de l'ancienne sélection du duel) : portrait et nom, au liseré fin. Seule la
+     palette du tournoi s'en sert encore (`.roster-card-lg`). La forme ne change jamais. */
   .roster-card {
-    --cursor: var(--side-a);
     position: relative;
     display: flex;
     width: 80px;
@@ -612,16 +574,12 @@ body {
     box-shadow: 0 0 0 1px var(--line-2), var(--hl);
     transition: box-shadow 150ms, transform 150ms, filter 150ms;
   }
-  .roster-card[data-cursor='b'] { --cursor: var(--side-b); }
   .roster-card:hover {
     transform: translateY(-2px);
     filter: brightness(1.12);
-    box-shadow: 0 0 0 1px var(--cursor), var(--hl);
+    box-shadow: 0 0 0 1px var(--gold-500), var(--hl);
   }
   .roster-card:active { transform: translateY(1px); }
-  .roster-card[data-a] { box-shadow: 0 0 0 2px var(--side-a); }
-  .roster-card[data-b] { box-shadow: 0 0 0 2px var(--side-b); }
-  .roster-card[data-a][data-b] { box-shadow: 0 0 0 2px var(--side-a), 0 0 0 4px var(--side-b); }
   .roster-card:focus-visible { outline: none; box-shadow: var(--focus); }
   .roster-card-face {
     height: 84px;
@@ -641,22 +599,6 @@ body {
     white-space: nowrap;
     color: var(--text-1);
   }
-  .roster-card[data-a] .roster-card-name,
-  .roster-card[data-b] .roster-card-name { color: var(--gold-200); }
-  .roster-card-tag {
-    position: absolute;
-    top: 3px;
-    min-width: 18px;
-    padding: 1px 4px;
-    border-radius: var(--r-xs);
-    font-family: var(--font-data);
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.3;
-    color: var(--bg-0);
-  }
-  .roster-card-tag[data-side='a'] { left: 3px; background: var(--side-a); }
-  .roster-card-tag[data-side='b'] { right: 3px; background: var(--side-b); }
 
   /* Grande carte de la palette du tournoi (0.47.0) : même carte, plus grande ; le pinceau choisi en or
      (sélection hors camp), avec le nombre de cases déjà prises. Visage à 120 px (170 avant le panneau
@@ -685,17 +627,46 @@ body {
   }
   .roster-card-count[data-used] { color: var(--gold-200); box-shadow: 0 0 0 1px var(--gold-700); }
 
-  /* Arbre du tournoi (0.47.0) : cases fonctionnelles (rectangle, filet, liseré d'or quand le match est
-     prêt : c'est une action), numéro de case aux extrémités, vainqueur en or, perdant éteint. */
+  /* Arbre du tournoi (0.47.0, cartes épurées en 0.100.0) : cases fonctionnelles (rectangle, filet), numéro de case
+     aux extrémités, vainqueur en or, perdant éteint. Seul le prochain match est cadré d'or, avec son étiquette ;
+     un match prêt survolé (ou au focus) prend un liseré or et montre ses deux actions côté intérieur. */
   .bracket-match {
     display: flex;
     flex-direction: column;
     border-radius: var(--r-xs);
     background: rgba(22, 18, 15, 0.94);
     box-shadow: 0 0 0 1px var(--line-2), var(--hl), var(--shadow-2);
+    transition: box-shadow 150ms;
   }
   .bracket-match[data-final] { box-shadow: 0 0 0 1px var(--frame), var(--hl), var(--shadow-2); }
-  .bracket-match[data-state='ready'] { box-shadow: 0 0 0 2px var(--gold-400), var(--hl), var(--shadow-2); }
+  .bracket-match[data-state='ready']:hover,
+  .bracket-match[data-state='ready']:focus-within,
+  .bracket-match[data-state='ready'][data-hover] { box-shadow: 0 0 0 1px var(--gold-500), var(--hl), var(--shadow-2); }
+  .bracket-match[data-next],
+  .bracket-match[data-next]:hover,
+  .bracket-match[data-next]:focus-within {
+    box-shadow: 0 0 0 2px var(--gold-400), 0 0 18px rgba(231, 182, 92, 0.25), var(--hl), var(--shadow-2);
+  }
+  .bracket-next-tag {
+    position: absolute;
+    top: -11px;
+    left: 8px;
+    z-index: 1;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background: var(--gold-400);
+    font-family: var(--font-data);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--bg-0);
+  }
+  .bracket-next-tag[data-side='right'] { left: auto; right: 8px; }
+  /* La place des actions, côté intérieur, est réservée sur un match prêt : elles ne couvrent jamais le nom */
+  .bracket-match[data-state='ready'] > .bracket-row { padding-right: 38px; }
+  .bracket-match[data-state='ready'] > .bracket-row.flex-row-reverse { padding-right: 8px; padding-left: 38px; }
   .bracket-row {
     position: relative;
     display: flex;
@@ -749,11 +720,26 @@ body {
   .bracket-name[data-leaf] { font-size: 16px; }
   .bracket-name[data-won] { font-weight: 700; color: var(--gold-200); }
   .bracket-name[data-lost] { color: var(--text-off); text-decoration: line-through; }
-  .bracket-hp {
-    flex-shrink: 0;
-    font-family: var(--font-data);
-    font-size: 13px;
-    color: var(--text-3);
+  .bracket-actions {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 2px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms;
+  }
+  .bracket-actions[data-side='right'] { right: auto; left: 2px; }
+  .bracket-match:hover > .bracket-actions,
+  .bracket-match:focus-within > .bracket-actions,
+  .bracket-match[data-hover] > .bracket-actions { opacity: 1; pointer-events: auto; }
+  /* Écran tactile (pas de survol, pointeur grossier) : les actions restent visibles */
+  @media (hover: none) and (pointer: coarse) {
+    .bracket-actions { opacity: 1; pointer-events: auto; }
   }
   .bracket-empty {
     flex: 1;
@@ -788,27 +774,6 @@ body {
   }
   .bracket-row.flex-row-reverse .bracket-clear { right: auto; left: 6px; }
   .bracket-clear:hover { color: var(--bad); }
-  /* Actions d'un match prêt : petites plaques sous la case (serti), Affronter en or (l'action principale) */
-  .bracket-action {
-    display: inline-flex;
-    height: 28px;
-    align-items: center;
-    gap: 5px;
-    padding: 0 9px;
-    border-radius: var(--r-xs);
-    background: var(--bg-2);
-    box-shadow: inset 0 0 0 1px var(--line-2), var(--hl);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-2);
-    transition: background-color 150ms, color 150ms, box-shadow 150ms;
-  }
-  .bracket-action[data-primary] { color: var(--gold-300); box-shadow: inset 0 0 0 1px var(--frame), var(--hl); }
-  .bracket-action:hover { background: var(--bg-3); color: var(--text-1); }
-  .bracket-action[data-primary]:hover { color: var(--gold-200); box-shadow: inset 0 0 0 1px var(--gold-400), var(--hl); }
-  .bracket-action:active { transform: translateY(1px); }
-  .bracket-action:focus-visible { outline: none; box-shadow: var(--focus); }
   .bracket-result {
     position: absolute;
     left: 0;
@@ -830,7 +795,17 @@ body {
     border-radius: var(--r-xs);
     box-shadow: var(--hl), var(--shadow-3);
   }
+  /* Panneau « Paris » de l'arbre (0.100.0, docs/ref/tournoi-paris-ouverts.png) : au-dessus du bouton Paris */
+  .bets-panel {
+    width: 333px;
+    border-radius: var(--r-xs);
+    background: rgba(22, 18, 15, 0.97);
+    box-shadow: 0 0 0 1px var(--frame), var(--hl), var(--shadow-3);
+  }
 }
+/* Sceau de la finale (0.100.0) : le sceau VS, la coupe gravée à la place des lettres. Hors couche : le kit
+   (.bt-glyph, sans couche) l'emporterait sur une règle de @layer components */
+.vs-seal-plate > .seal-glyph { width: 40px; height: 40px; stroke-width: 1.5; }
 
 /* ---------- Compendium : cartes encadrées ---------- */
 @layer components {
@@ -1813,6 +1788,57 @@ body {
   text-shadow: 0 2px 0 #000;
 }
 .matchup-arena-index { font: 500 12px/1 var(--font-data); letter-spacing: 0.2em; color: var(--text-3); white-space: nowrap; }
+
+/* ---------- Affrontement, duel : sélecteur de combattants (MatchupScreen.tsx, FighterPicker, 0.100.0) ----------
+   Sous les fiches (docs/ref/affrontement-duel.png × 10/9) : panneau sombre, onglets du kit (le camp qui choisit, avec
+   la pastille de sa couleur), « Au hasard », puis une rangée de portraits sans nom (tuiles du design system). Le
+   portrait d'un camp : cadre de 2 px à sa couleur et repère dans son coin (gauche : haut gauche ; droite : haut
+   droit) ; choisi des deux côtés, les deux cadres. Au-delà de dix portraits, la rangée défile à l'horizontale. */
+.matchup-picker {
+  padding: 11px 15px 13px;
+  background: var(--scrim);
+  border: 1px solid rgba(232, 200, 140, 0.16);
+  border-radius: var(--r-xs);
+  box-shadow: var(--hl), var(--shadow-2);
+}
+.bt-tabs.matchup-picker-tabs { border-bottom-color: transparent; }
+.matchup-picker-dot {
+  position: relative;
+  top: -1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  opacity: 0.55;
+}
+.matchup-picker-dot[data-side='a'] { background: var(--side-a); }
+.matchup-picker-dot[data-side='b'] { background: var(--side-b); }
+[aria-selected='true'] > .matchup-picker-dot { opacity: 1; }
+.matchup-picker-row {
+  display: flex;
+  gap: 8px;
+  /* 2 px de marge autour des tuiles : le cadre d'un camp (box-shadow) n'est pas rogné par le défilement */
+  margin: 2px -2px -2px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 160, 80, 0.45) transparent;
+}
+.matchup-picker-tile {
+  display: block;
+  width: 76px;
+  height: 79px;
+}
+.matchup-picker-tile[data-both] { box-shadow: 0 0 0 2px var(--side-a), 0 0 0 4px var(--side-b); }
+.matchup-picker-mark {
+  position: absolute;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px var(--bg-0);
+}
+.matchup-picker-mark[data-side='a'] { left: 4px; background: var(--side-a); }
+.matchup-picker-mark[data-side='b'] { right: 4px; background: var(--side-b); }
 
 /* ---------- Écran du champion ---------- */
 .champion-screen { background: radial-gradient(ellipse at 30% 60%, #2a2118 0%, #0c0a09 70%); }

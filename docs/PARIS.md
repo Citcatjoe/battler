@@ -127,7 +127,7 @@ Mesuré sur 2 000 tournois simulés (15 matchs, deux joueurs qui parient au hasa
 
 ### 2.3 L'arbre et le champion
 
-- **Dans l'en-tête de l'arbre**, le classement des quatre parieurs (rang, nom, marque IA, fortune, trophée au premier).
+- **Dans l'arbre** (0.100.0, `docs/ref/tournoi-paris-ouverts.png`) : plus de bandeau permanent. Le bouton carré **Paris**, à gauche du grand bouton, porte une pastille « n/2 » (les joueurs qui ont misé sur un match du tour en cours : pari en attente ou réglé au journal, clés `t-<tour>-`). Il ouvre au-dessus de lui le panneau **Paris** (`BettingPanel`) : classement des quatre parieurs (rang, pastille de couleur, nom, marque IA, fortune), « mises de ce tour n / 2 », et « Les mises se font depuis l'écran d'affrontement. ». Fermeture : son bouton, un clic ailleurs, Échap. La « cagnotte » de la maquette n'existe pas dans les règles : elle n'est pas affichée.
 - **Sur l'écran du champion**, le classement final des parieurs, sous le titre.
 - **Les matchs simulés depuis l'arbre** : seuls Borin et Zlatka y parient. Le guichet de tour (P3) laissera les joueurs parier sur un tour entier.
 
@@ -165,10 +165,11 @@ Mesuré en 0.37.0 : coter un match (400 combats) prend de 36 à 65 ms pour un du
 | Fichier | Rôle |
 | --- | --- |
 | `App.tsx` | les bourses du tournoi et de la session de duel ; cotes du match ; paris de l'ordinateur ; règlement dans `finish` et dans la simulation depuis l'arbre ; prime de relance au changement de tour |
-| `components/Betting.tsx` | `BettingDesk` (guichet et plateaux), `BetSummary` (sous le « VS »), `Standings` (classement en ligne), `BetsResult` (moitié droite de l'écran de fin), `TwistBanner` |
+| `components/Betting.tsx` | `BettingDesk` (guichet et plateaux), `BetSummary` (sous le « VS »), `BettingPanel` (panneau Paris de l'arbre) et `humansWhoBet`, `Standings` (classement en ligne de l'écran du champion), `BetsResult` (moitié droite de l'écran de fin), `TwistBanner` |
 | `MatchupScreen.tsx` | le bouton Parier et le guichet |
 | `EndScreen.tsx` | les deux moitiés (combat, paris) ; les statistiques détaillées dans une superposition |
-| `BracketScreen.tsx`, `ChampionScreen.tsx` | le classement des parieurs |
+| `BracketScreen.tsx` | le bouton et le panneau Paris |
+| `ChampionScreen.tsx` | le classement des parieurs |
 | `TournamentSetupScreen.tsx` | la case et les deux noms |
 | `index.css` | tuiles, pièces, tampon, ruban et entrées animées du guichet |
 

@@ -38,7 +38,7 @@ Un emblème peint ne va **jamais** dans un bouton de commande. Sinon « Combattr
 | Secondaire | `.bt-btn--secondary.bt-btn--md` | 52 |
 | Petit (barre de lecture, Réinitialiser) | `.bt-btn--sm` | 40 |
 | Bouton icône rond | `.bt-iconbtn` / `--sm` | 48 / 44 |
-| Bouton carré (glyphe seul) | `.bt-square` | 44 × 44 |
+| Bouton carré (glyphe seul) | `.bt-square` / `--sm` | 44 × 44 / 28 × 28 |
 | Outil (journal, magnétoscope) | `.bt-tool` | 40 |
 | Onglet mineur | `.bt-tabs [role=tab]` | 44 |
 | Lien de retour | `.bt-back` | 44 (zone cliquable) |
@@ -71,6 +71,7 @@ Ajoutés au kit avec l'accord de l'utilisateur, pour les actions secondaires en 
 
 **Anatomie**
 - `.bt-square` : 44 × 44, coins de 2 px, le serti du secondaire (plaque `--bg-2`, filet `--frame`, puis filet bronze à 4 px), glyphe de 20 px en `--gold-300`. Survol : plaque `--bg-3`, filets or, glyphe `--gold-200`. Pressé : plaque `--bg-1`, descend d'un pixel. Focus : anneau `--focus`. Désactivé : plaque `--bg-1`, glyphe `--text-off`, filet `--line-1`.
+- `.bt-square--sm` (`<SquareButton size="sm">`) : 28 × 28, glyphe de 16, serti resserré (filet bronze à 3 px), sans pastille. Réservé aux actions d'une carte de l'arbre du tournoi (Affronter, Simuler), qui doivent tenir dans une ligne de 32 px (`docs/ref/tournoi-arbre-survol.png`).
 - `.bt-badge` : pastille de compteur, cartouche `--bg-0` de 16 px de haut (22 px de large au moins), filet `--gold-500`, IBM Plex Mono 10 / 500, chiffres tabulaires, texte `--text-1`. Dans un `.bt-square`, elle s'accroche en bas à droite, débordant de 6 px.
 
 **Usage**

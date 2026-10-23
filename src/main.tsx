@@ -41,11 +41,21 @@ if (import.meta.env.DEV && params.has('kit')) {
     ),
   )
 } else if (import.meta.env.DEV && params.has('matchup')) {
-  // Page de développement de l'écran d'affrontement (?matchup=reel|limite|reel-inverse|limite-inverse|druide|barde)
+  // Page de développement de l'écran d'affrontement
+  // (?matchup=duel|duel-droit|tournoi|saison-son|reel|limite|reel-inverse|limite-inverse|druide|barde)
   void import('./dev/MatchupReference').then(({ MatchupReference }) =>
     root.render(
       <StrictMode>
         <MatchupReference />
+      </StrictMode>,
+    ),
+  )
+} else if (import.meta.env.DEV && params.has('bracket')) {
+  // Page de développement de l'arbre du tournoi (?bracket=survol|paris|reel|fini)
+  void import('./dev/BracketReference').then(({ BracketReference }) =>
+    root.render(
+      <StrictMode>
+        <BracketReference />
       </StrictMode>,
     ),
   )

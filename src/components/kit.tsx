@@ -89,19 +89,27 @@ export function IconButton({
 
 /**
  * Bouton carré 44 × 44 (ajout au kit validé par l'utilisateur) : une action secondaire en glyphe seul, au serti du
- * secondaire (Parier, Simuler sous le VS ; Paris, Simuler le tour, Affronter dans l'arbre). Le libellé passe par
- * `aria-label` et `title` ; `badge` accroche une pastille de compteur en bas à droite (« 0/2 », « ×8 »).
+ * secondaire (Parier, Simuler sous le VS ; Paris, Simuler le tour dans l'arbre). Le libellé passe par `aria-label`
+ * et `title` ; `badge` accroche une pastille de compteur en bas à droite (« 0/2 », « ×8 »). `size="sm"` : 28 × 28,
+ * glyphe de 16, sans pastille (actions d'une carte de l'arbre : Affronter, Simuler).
  */
 export function SquareButton({
   icon,
   label,
   badge,
+  size = 'md',
   className = '',
   ...button
-}: { icon: GlyphName; label: string; badge?: string; className?: string } & ButtonAttrs) {
+}: { icon: GlyphName; label: string; badge?: string; size?: 'md' | 'sm'; className?: string } & ButtonAttrs) {
   return (
-    <button type="button" aria-label={badge ? `${label} (${badge})` : label} title={label} className={`bt-square ${className}`} {...button}>
-      <Glyph name={icon} />
+    <button
+      type="button"
+      aria-label={badge ? `${label} (${badge})` : label}
+      title={label}
+      className={`bt-square ${size === 'sm' ? 'bt-square--sm' : ''} ${className}`}
+      {...button}
+    >
+      <Glyph name={icon} size={size === 'sm' ? 16 : 20} />
       {badge && <Badge aria-hidden>{badge}</Badge>}
     </button>
   )
@@ -173,7 +181,7 @@ export function Tool({
   )
 }
 
-/** Lien de retour, le seul style de « retour » du jeu (Menu, Retour à la sélection…). */
+/** Lien de retour, le seul style de « retour » du jeu (Menu, Tournoi, Retour aux statistiques…). */
 export function BackLink({ className = '', children, ...button }: { className?: string; children: ReactNode } & ButtonAttrs) {
   return (
     <button type="button" className={`bt-back ${className}`} {...button}>

@@ -1,3 +1,5 @@
+import { Glyph } from './kit'
+
 /**
  * Sceau « VS » (design system, pièce prestige) : octogone de 96 px, coupe de 28 px, cadre
  * --gold-500, jour sombre, plaque --bg-1 et gravure d'or (.vs-seal de index.css). Purement
@@ -9,6 +11,17 @@ export function VsSeal({ className = '' }: { className?: string }) {
       <span className="vs-seal-plate" aria-hidden>
         {/* Cinzel réserve la place des jambages : sans correction, les capitales sont 0,05 em trop haut */}
         <span className="translate-y-[0.05em]">VS</span>
+      </span>
+    </span>
+  )
+}
+
+/** Sceau de la finale de l'arbre : même octogone que le sceau VS, la coupe (glyphe `tournoi`) gravée au centre. */
+export function TrophySeal({ className = '' }: { className?: string }) {
+  return (
+    <span className={`vs-seal ${className}`} role="img" aria-label="Finale">
+      <span className="vs-seal-plate" aria-hidden>
+        <Glyph name="tournoi" className="seal-glyph" />
       </span>
     </span>
   )

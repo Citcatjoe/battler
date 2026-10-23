@@ -1,12 +1,13 @@
+import { useEffect, useRef, useState } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { createCharacter } from '../game/roster'
-import { champion, currentRound, players, readyMatches, ROUND_NAMES, type MatchRef, type Tournament } from '../game/tournament'
+import { champion, currentRound, readyMatches, ROUND_NAMES, ROUNDS, type MatchRef, type Tournament } from '../game/tournament'
+import { humansOf, type Wallets } from '../game/betting'
 import { Bracket } from './Bracket'
 import { Fighter } from './Fighter'
-import { Icon } from './Icon'
-import type { Wallets } from '../game/betting'
-import { Standings } from './Betting'
-import { BackLink, Button, Glyph } from './kit'
+import { BettingPanel, humansWhoBet } from './Betting'
+import { BackLink, Button, Glyph, SquareButton } from './kit'
+import { TrophySeal } from './VsSeal'
 
 interface Props {
   tournament: Tournament
@@ -16,20 +17,44 @@ interface Props {
   onChampion: () => void
   onNewTournament: () => void
   onMenu: () => void
-  /** Bourses des deux parieurs (docs/PARIS.md) ; absent : tournoi sans paris */
+  /** Bourses des parieurs (docs/PARIS.md) ; absent : tournoi sans paris */
   wallets?: Wallets | null
+  /** Page de référence seulement : panneau Paris ouvert d'emblée, carte montrée survolée */
+  initialBetsOpen?: boolean
+  hovered?: MatchRef
 }
 
-/** Suivi du tournoi : l'arbre, les matchs à venir et, à la fin, le champion. */
-export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNewTournament, onMenu, wallets }: Props) {
+/**
+ * Suivi du tournoi (refonte 0.100.0, docs/ref/tournoi-arbre-survol.png) : l'intitulé du tour au centre, l'arbre, et en
+ * bas le grand bouton « Prochain combat » entre le bouton Paris (panneau du classement) et « Simuler le tour ».
+ */
+export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNewTournament, onMenu, wallets, initialBetsOpen = false, hovered }: Props) {
   const round = currentRound(tournament)
   const winnerIdx = champion(tournament)
   const winner = winnerIdx === null ? null : tournament.entrants[winnerIdx]
   const ready = readyMatches(tournament).filter((m) => m.round === round)
   const doneCount = Object.keys(tournament.results).length
-  // Le prochain match de l'arbre, dans l'ordre de l'arbre : le bouton « Combattre » l'ouvre, comme un clic sur lui
+  // Le prochain match, dans l'ordre de l'arbre : le grand bouton l'ouvre, comme « Affronter » sur sa carte
   const next = ready[0]
-  const nextNames = next && players(tournament, next).map((i) => (i === null ? '?' : tournament.entrants[i].label))
+  // Mises des joueurs sur ce tour (clés de pari `t-<tour>-<match>`, App.tsx) ; tournoi fini : sur la finale
+  const placed = wallets ? humansWhoBet(wallets, `t-${round ?? ROUNDS - 1}-`).length : 0
+
+  const [betsOpen, setBetsOpen] = useState(initialBetsOpen)
+  const betsRef = useRef<HTMLDivElement>(null)
+  // Le panneau se ferme par Échap ou par un clic hors de lui (et hors de son bouton)
+  useEffect(() => {
+    if (!betsOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setBetsOpen(false)
+    const onDown = (e: PointerEvent) => {
+      if (!betsRef.current?.contains(e.target as Node)) setBetsOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointerdown', onDown)
+    }
+  }, [betsOpen])
 
   return (
     <div className="fade-in relative isolate h-full">
@@ -42,72 +67,96 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
         style={{ filter: 'brightness(0.2) saturate(0.7)' }}
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
-      <header className="absolute inset-x-0 top-0 z-10 flex items-start justify-between px-8 pr-20 pt-5">
-        <div>
-          <BackLink onClick={onMenu}>Menu</BackLink>
-          <h1 className="on-illus mt-1 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">Tournoi</h1>
-          <p className="mt-1 font-body text-[15px] text-ink-2">
-            {round === null ? 'Tournoi terminé' : ROUND_NAMES[round]} · {doneCount} / 15 matchs joués
-          </p>
-          {wallets && (
-            <div className="mt-2" title="Classement des parieurs. Les joueurs parient en ouvrant un match (Affronter) ; Borin et Zlatka parient sur tous les matchs.">
-              <Standings wallets={wallets} />
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-4 pt-6">
-          {ready.length > 0 && (
-            <Button variant="secondary" size="md" icon="simuler" onClick={() => onSimulate(ready)} title="Simule tous les matchs prêts de ce tour">
-              Simuler le tour ({ready.length})
-            </Button>
-          )}
-          {next && (
-            <Button
-              variant="primary"
-              size="xl"
-              icon="combattre"
-              onClick={() => onPlay(next)}
-              title={`Prochain match : ${nextNames.join(' contre ')} (${ROUND_NAMES[next.round]})`}
-            >
-              Combattre
-            </Button>
-          )}
-          {winner && (
-            <Button variant="secondary" size="md" icon="tournoi" onClick={onChampion}>
-              Le champion
-            </Button>
-          )}
-          {winner && (
-            <Button variant="primary" size="xl" icon="tournoi" onClick={onNewTournament}>
-              Nouveau tournoi
-            </Button>
-          )}
-        </div>
+
+      <BackLink onClick={onMenu} className="absolute left-9 top-10 z-10">
+        Menu
+      </BackLink>
+      <header className="pointer-events-none absolute inset-x-0 top-7 z-10 flex flex-col items-center text-center">
+        <p className="font-display text-[14px] font-semibold uppercase tracking-[0.3em] text-ink-2">Tournoi</p>
+        <h1 className="on-illus mt-1 font-display text-[36px] font-bold uppercase leading-none tracking-wide text-gold-300">
+          {round === null ? 'Tournoi terminé' : ROUND_NAMES[round]}
+        </h1>
+        <p className="mt-3 font-data text-[13px] text-ink-3">{doneCount} / 15 combats joués</p>
       </header>
 
       <Bracket
         tournament={tournament}
         onPlay={onPlay}
         onSimulate={(ref) => onSimulate([ref])}
+        next={next}
+        hovered={hovered}
         center={
           winner ? (
             <div key="champion" className="fade-in flex flex-col items-center">
-              <div className="h-[230px]">
+              <div className="mt-14 h-[150px]">
                 <Fighter character={createCharacter(winner.characterId)} side={0} state="victory" />
               </div>
               <p className="flex items-center gap-1.5 font-display text-[15px] font-bold uppercase tracking-[0.16em] text-gold-300">
                 <Glyph name="tournoi" size={18} /> Champion
               </p>
-              <p className="font-display text-[32px] font-semibold text-gold-200">{winner.label}</p>
+              <p className="font-display text-[28px] font-semibold leading-tight text-gold-200">{winner.label}</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center pt-16 text-center">
-              <Icon name="trophy" className="h-28 w-28" />
-              <p className="mt-4 font-display text-[22px] font-semibold tracking-wide text-ink-2">Finale</p>
+            <div className="flex flex-col items-center pt-[102px]">
+              <TrophySeal />
+              <p className="mt-6 font-display text-[16px] font-bold uppercase tracking-[0.3em] text-ink-1">Finale</p>
             </div>
           )
         }
       />
+
+      {/* Le grand bouton reste au centre ; Paris à sa gauche, Simuler le tour (ou, à la fin, Le champion) à sa droite */}
+      <footer className="absolute inset-x-0 bottom-7 z-20 flex items-center gap-6">
+        <div className="flex flex-1 justify-end">
+          <div ref={betsRef} className="relative flex w-[60px] justify-center">
+          {wallets && (
+            <>
+              {betsOpen && (
+                <div className="absolute bottom-[calc(100%+40px)] left-[-34px]">
+                  <BettingPanel id="bracket-bets" wallets={wallets} placed={placed} />
+                </div>
+              )}
+              <SquareButton
+                icon="parier"
+                label="Paris"
+                badge={`${placed}/${humansOf(wallets).length}`}
+                aria-expanded={betsOpen}
+                aria-controls="bracket-bets"
+                onClick={() => setBetsOpen((o) => !o)}
+              />
+            </>
+          )}
+          </div>
+        </div>
+        <Button
+          variant="primary"
+          size="xl"
+          icon={winner ? 'tournoi' : 'combattre'}
+          disabled={!winner && !next}
+          onClick={() => (winner ? onNewTournament() : next && onPlay(next))}
+          className="w-[440px]"
+        >
+          {winner ? 'Nouveau tournoi' : 'Prochain combat'}
+        </Button>
+        <div className="flex flex-1 justify-start">
+          {winner ? (
+            <Button variant="secondary" size="md" icon="tournoi" onClick={onChampion}>
+              Le champion
+            </Button>
+          ) : (
+            ready.length > 0 && (
+              <div className="flex w-[60px] justify-center">
+                <SquareButton
+                  icon="simuler"
+                  label={`Simuler le tour (${ready.length} combat${ready.length > 1 ? 's' : ''})`}
+                  badge={`×${ready.length}`}
+                  onClick={() => onSimulate(ready)}
+                />
+              </div>
+            )
+          )}
+        </div>
+      </footer>
     </div>
   )
 }

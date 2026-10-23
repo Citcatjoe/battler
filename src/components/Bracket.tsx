@@ -1,26 +1,15 @@
 import type { ReactNode } from 'react'
-import { getRelic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
-import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
-import {
-  allMatches,
-  matchesInRound,
-  matchKey,
-  players,
-  ROUNDS,
-  relicsOf,
-  status,
-  type MatchRef,
-  type Tournament,
-} from '../game/tournament'
+import { STAGE_WIDTH } from './Stage'
+import { allMatches, matchesInRound, matchKey, players, ROUNDS, status, type MatchRef, type Tournament } from '../game/tournament'
 import { Portrait } from './Portrait'
-import { Glyph } from './kit'
-import { RelicRow } from './RelicSeal'
+import { Glyph, SquareButton } from './kit'
 
 /*
- * Arbre du tournoi (design system, refonte 0.47.0), en pixels de la scène 1600×900. Deux mises en page :
- * - `track` (suivi) : les quatre tours, les deux moitiés convergent vers la finale au centre. Les cases
- *   du premier tour, aux extrémités, sont plus larges et plus hautes que les suivantes.
+ * Arbre du tournoi (design system, refonte 0.47.0, cartes épurées en 0.100.0), en pixels de la scène 1600×900.
+ * Deux mises en page :
+ * - `track` (suivi) : les quatre tours, les deux moitiés convergent vers la finale au centre. Les cartes ne
+ *   montrent que le portrait, le nom et, au premier tour, la tête de série (docs/ref/tournoi-arbre-survol.png).
  * - `setup` (configuration) : seul le premier tour se remplit. Ses cases sont grandes, les tours
  *   suivants ne sont plus que des jonctions, et les lignes convergent vers le grand panneau central
  *   (la palette des combattants et les règles), qui prend toute la place libérée et monte jusque sous le titre.
@@ -42,9 +31,9 @@ interface Geometry {
 }
 
 const GEOMETRY: Record<Layout, Geometry> = {
-  // Tours 2 et 3 à 184 px (168 avant la 0.75.0) : la place des reliques gagnées, à côté du nom. Premier tour à 236 px
-  // (208 avant la 0.96.0) : après une saison, chacun y arrive avec ses trois reliques
-  track: { top: 150, bottom: 880, centerTop: 150, margin: 24, widths: [236, 184, 184, 208], rowH: [38, 32, 32, 38], gap: 24 },
+  // Cotes de docs/ref/tournoi-arbre-survol.png (1440×810, ×10/9) : cartes de 64 px, premier tour à 244 px. Le haut
+  // du panneau central laisse la place au champion, sous le titre ; le sceau de la finale se pose plus bas
+  track: { top: 115, bottom: 739, centerTop: 120, margin: 36, widths: [244, 167, 156, 178], rowH: [32, 32, 32, 32], gap: 30 },
   // Le panneau de la configuration monte jusque sous le titre de l'écran (palette et règles)
   setup: { top: 176, bottom: 884, centerTop: 120, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
 }
@@ -93,17 +82,11 @@ const LINE = 'rgba(232,200,140,0.22)'
 const LINE_FILLED = 'rgba(232,200,140,0.42)'
 const LINE_WON = '#B9862F'
 
-/** Hauteur réservée à l'infobulle d'une relique (la plus longue, marge comprise) pour choisir son côté. */
-const RELIC_TOOLTIP_ROOM = 300
-
-/**
- * Côté de l'infobulle des reliques d'une ligne : au-dessus de la ligne du haut, au-dessous de celle du bas
- * (l'autre participant du match reste lisible), sauf si elle sortirait de la scène.
- */
-function relicTooltipSide(rowTop: number, rowH: number, row: 0 | 1): 'above' | 'below' {
-  if (row === 0) return rowTop >= RELIC_TOOLTIP_ROOM ? 'above' : 'below'
-  return rowTop + rowH + RELIC_TOOLTIP_ROOM <= STAGE_HEIGHT ? 'below' : 'above'
-}
+/** Libellés et glyphes des deux actions d'un match prêt (petits boutons carrés du kit, au survol de la carte). */
+const ACTIONS = [
+  { icon: 'combattre', label: 'Affronter' },
+  { icon: 'simuler', label: 'Simuler' },
+] as const
 
 interface Props {
   /** Mode configuration : seules les cases du premier tour existent */
@@ -116,6 +99,10 @@ interface Props {
   /** Actions sur un match prêt */
   onPlay?: (ref: MatchRef) => void
   onSimulate?: (ref: MatchRef) => void
+  /** Suivi : le prochain match (celui du grand bouton), cadré d'or avec l'étiquette « PROCHAIN » */
+  next?: MatchRef
+  /** Page de référence seulement : une carte montrée comme survolée */
+  hovered?: MatchRef
   /** Contenu libre affiché au centre (palette, trophée…) */
   center?: ReactNode
   /**
@@ -125,7 +112,7 @@ interface Props {
   seeds?: readonly number[]
 }
 
-export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint, onPlay, onSimulate, center, seeds }: Props) {
+export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint, onPlay, onSimulate, center, seeds, next, hovered }: Props) {
   const layout: Layout = slots ? 'setup' : 'track'
   const matches = allMatches()
   const zone = centerZone(layout)
@@ -137,13 +124,12 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
       const idx = players(tournament, ref)[row]
       if (idx === null) return null
       const e = tournament.entrants[idx]
-      // Reliques qu'il avait pour ce match : celles gagnées aux tours précédents
-      return { idx, character: characterById(e.characterId), label: e.label, relics: relicsOf(tournament, idx, ref.round).map(getRelic) }
+      return { idx, character: characterById(e.characterId), label: e.label }
     }
     if (ref.round !== 0 || !slots) return null
     const slot = 2 * ref.index + row
     const id = slots[slot]
-    return id ? { idx: slot, character: characterById(id), label: characterById(id).name, relics: [] } : null
+    return id ? { idx: slot, character: characterById(id), label: characterById(id).name } : null
   }
   /** Un match de configuration dont les deux cases sont remplies : sa ligne s'éclaire */
   const filled = (ref: MatchRef): boolean =>
@@ -209,14 +195,22 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
         const st = tournament ? status(tournament, ref) : 'pending'
         const result = tournament?.results[matchKey(ref)]
         const right = b.side === 'right'
+        const isNext = !!next && matchKey(next) === matchKey(ref)
         return (
           <div
             key={matchKey(ref)}
             data-state={st === 'ready' ? 'ready' : result ? 'done' : 'pending'}
             data-final={isFinal || undefined}
+            data-next={isNext || undefined}
+            data-hover={(!!hovered && matchKey(hovered) === matchKey(ref)) || undefined}
             className="bracket-match pointer-events-auto absolute"
             style={{ left: b.x, top: b.cy - b.rowH, width: b.w, height: b.rowH * 2 }}
           >
+            {isNext && (
+              <span className="bracket-next-tag" data-side={b.side}>
+                Prochain
+              </span>
+            )}
             {([0, 1] as const).map((row) => {
               const e = entrantAt(ref, row)
               const won = !!(result && e && result.winner === e.idx)
@@ -230,7 +224,7 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                   {rank}
                 </span>
               )
-              const portraitSize = leaf ? (layout === 'setup' ? 'h-8 w-8' : 'h-7 w-7') : 'h-6 w-6'
+              const portraitSize = layout === 'setup' ? 'h-8 w-8' : 'h-6 w-6'
               const content = e ? (
                 <>
                   <span className={`bracket-face ${portraitSize}`} data-lost={lost || undefined}>
@@ -239,17 +233,6 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                   <span className="bracket-name" data-won={won || undefined} data-lost={lost || undefined} data-leaf={leaf || undefined}>
                     {e.label}
                   </span>
-                  {won && <span className="bracket-hp">{result!.hpLeft} PV</span>}
-                  {/* Le vainqueur montre ses PV à la place de ses reliques : il les porte dans la case du tour suivant.
-                      En finale, il n'y en a plus : le champion garde les siennes ici */}
-                  {(!won || isFinal) && (
-                    <RelicRow
-                      relics={e.relics}
-                      size={22}
-                      tooltip={relicTooltipSide(b.cy - b.rowH + row * b.rowH, b.rowH, row)}
-                      align={right ? 'right' : 'left'}
-                    />
-                  )}
                 </>
               ) : editable ? (
                 <>
@@ -306,16 +289,18 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
               )
             })}
 
+            {/* Affronter, Simuler : côté intérieur de la carte (vers la finale), visibles au survol, au focus et au toucher */}
             {st === 'ready' && (
-              <div className="absolute -bottom-9 left-0 right-0 flex justify-center gap-1.5">
-                <button onClick={() => onPlay?.(ref)} className="bracket-action" data-primary title="Ouvrir l'écran d'affrontement">
-                  <Glyph name="combattre" size={16} />
-                  Affronter
-                </button>
-                <button onClick={() => onSimulate?.(ref)} className="bracket-action" title="Simuler ce match directement">
-                  <Glyph name="simuler" size={16} />
-                  Simuler
-                </button>
+              <div className="bracket-actions" data-side={b.side}>
+                {ACTIONS.map((a, k) => (
+                  <SquareButton
+                    key={a.icon}
+                    size="sm"
+                    icon={a.icon}
+                    label={a.label}
+                    onClick={() => (k === 0 ? onPlay : onSimulate)?.(ref)}
+                  />
+                ))}
               </div>
             )}
             {result && (

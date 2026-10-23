@@ -42,7 +42,8 @@ import { SeasonReport } from './CombatReport'
 import { getRelic, RELICS } from '../game/relics'
 import { MatchupScreen } from './MatchupScreen'
 import { RecordsScreen } from './RecordsScreen'
-import { StartScreen } from './StartScreen'
+import { TournamentIntroScreen } from './TournamentIntroScreen'
+import { StatSheet } from './StatSheet'
 import { HomeScreen } from './HomeScreen'
 import { TournamentSetupScreen } from './TournamentSetupScreen'
 import { SeasonScreen } from './SeasonScreen'
@@ -86,45 +87,21 @@ describe('écrans', () => {
   it('accueil, sélection, affrontement, combat, fin', () => {
     for (const progress of [null, '3 / 15'])
       render(<HomeScreen onChoose={noop} onOpenRecords={noop} onOpenCompendium={noop} tournamentProgress={progress} campaignProgress={progress} />)
-    render(
-      <StartScreen
-        initial={fighters}
-        mode="duel"
-        onHome={noop}
-        onStart={noop}
-        onOpenCharacter={noop}
-        onOpenRecords={noop}
-        onOpenCompendium={noop}
-        tournamentProgress={null}
-        onNewTournament={noop}
-        onResumeTournament={noop}
-      />,
-    )
-    render(
-      <StartScreen
-        initial={fighters}
-        mode="tournament"
-        onHome={noop}
-        onStart={noop}
-        onOpenCharacter={noop}
-        onOpenRecords={noop}
-        onOpenCompendium={noop}
-        tournamentProgress="3 / 15"
-        onNewTournament={noop}
-        onResumeTournament={noop}
-      />,
-    )
+    for (const progress of [null, '3 / 15'])
+      render(<TournamentIntroScreen onHome={noop} tournamentProgress={progress} onNewTournament={noop} onResumeTournament={noop} />)
     for (const arena of [...ARENAS.map((a) => a.id), RANDOM_ARENA])
-      render(
-        <MatchupScreen
-          fighters={fighters}
-          arena={arena}
-          onArenaChange={noop}
-          onPlay={noop}
-          onSimulate={noop}
-          onBack={noop}
-        />,
-      )
+      for (const mode of ['duel', 'tournament', 'season', 'campaign'] as const)
+        render(
+          <MatchupScreen
+            mode={mode}
+            fighters={fighters}
+            arena={arena}
+            onArenaChange={noop}
+            onPlay={noop}
+            onSimulate={noop}
+            onBack={noop}
+          />,
+        )
     for (const arena of ARENAS) render(<FightScreen script={result} arena={arena} onEnd={noop} />)
     // Paris : écran d'affrontement, guichet (avec et sans coup de théâtre), écran de fin avec classement
     const odds = priceMatch(fighters, 'test', 40)
@@ -133,11 +110,12 @@ describe('écrans', () => {
     if (!bet.ok) throw new Error(bet.reason)
     const wallets = bet.wallets
     const betting = { wallets, odds, onBet: () => null, onCancel: noop }
-    render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />)
-    render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={{ ...betting, odds: null }} />)
+    render(<MatchupScreen mode="tournament" fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />)
+    render(<MatchupScreen mode="tournament" fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={{ ...betting, odds: null }} />)
     // Rang au-dessus du nom : un badge, son chiffre seul, sans texte autour ; aucun badge pour un opposant sans rang
     const ranked = renderToString(
       <MatchupScreen
+        mode="season"
         fighters={fighters}
         ranks={[12, null]}
         arena={RANDOM_ARENA}
@@ -256,7 +234,7 @@ describe('écrans', () => {
   it('fiche d’affrontement : six places de reliques, « +N » au-delà, « Aucune relique » sans', () => {
     const many = createCharacter('ervald').withRelics(RELICS.slice(0, 10))
     const html = renderToString(
-      <MatchupScreen fighters={[createCharacter('gorak'), many]} arena={RANDOM_ARENA} onArenaChange={() => {}} onPlay={() => {}} onSimulate={() => {}} onBack={() => {}} />,
+      <MatchupScreen mode="tournament" fighters={[createCharacter('gorak'), many]} arena={RANDOM_ARENA} onArenaChange={() => {}} onPlay={() => {}} onSimulate={() => {}} onBack={() => {}} />,
     )
     expect(html).toContain('Aucune relique')
     expect(html.match(/class="group\/relic/g)).toHaveLength(6)
@@ -264,6 +242,47 @@ describe('écrans', () => {
     // Les deux fiches, et le sélecteur d'arène avec son index au lieu des points
     expect(html.match(/class="matchup-card/g)).toHaveLength(2)
     expect(html).toContain('matchup-arena-index')
+    // Hors duel : pas de sélecteur de combattants ; le retour mène à l'arbre
+    expect(html).not.toContain('matchup-picker')
+    expect(html).toContain('Tournoi</button>')
+  })
+
+  it('affrontement en duel : sélecteur de combattants, ni reliques ni Parier, Simuler en bouton carré', () => {
+    const pair = [createCharacter('gorak'), createCharacter('ervald')] as const
+    const odds = priceMatch([...pair], 'test', 20)
+    const betting = { wallets: createWallets(), odds, onBet: () => null, onCancel: noop }
+    const duel = renderToString(
+      <MatchupScreen mode="duel" fighters={[...pair]} arena={RANDOM_ARENA} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />,
+    )
+    // Un portrait par personnage du roster, sans nom écrit ; les deux camps choisis, chacun à sa couleur
+    expect(duel.match(/matchup-picker-tile/g)).toHaveLength(CHARACTER_IDS.length)
+    expect(duel).toContain('data-selection="a"')
+    expect(duel).toContain('data-selection="b"')
+    expect(duel).not.toContain('<span>Reliques</span>')
+    expect(duel).not.toContain('Aucune relique')
+    expect(duel).not.toContain('title="Parier"')
+    expect(duel).toContain('aria-label="Simuler le combat"')
+    expect(duel).toContain('Menu</button>')
+    // Hors duel, le même guichet ouvre un bouton Parier avec son compteur
+    const run = renderToString(
+      <MatchupScreen mode="tournament" fighters={[...pair]} arena={RANDOM_ARENA} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />,
+    )
+    expect(run).toContain('title="Parier"')
+    expect(run).toContain('bt-badge')
+  })
+
+  it('comparaison des stats : le meilleur de chaque ligne surligné à la couleur de son camp, rien à égalité', () => {
+    const base = createCharacter('gorak')
+    const strong = base.adjusted({ stats: { maxHp: base.stats.maxHp + 10 } })
+    const html = renderToString(<StatSheet character={strong} barClass="" compare={{ rival: base, side: 1 }} />)
+    // PV seuls meilleurs : une ligne surlignée, au rose du camp droit ; l'adversaire n'en a aucune
+    expect(html.match(/data-best="true"/g)).toHaveLength(1)
+    expect(html).toContain('bg-side-b/15')
+    expect(renderToString(<StatSheet character={base} barClass="" compare={{ rival: strong, side: 0 }} />)).not.toContain('data-best')
+    // Multiplicateur sans critique : « — », il ne gagne jamais
+    const noCrit = base.adjusted({ stats: { critChance: 0, critMultiplier: 9 } })
+    const crit = renderToString(<StatSheet character={noCrit} barClass="" compare={{ rival: base, side: 0 }} />)
+    expect(crit).not.toContain('data-best')
   })
 
   it('zone de compétence du combat : le dé qui roule allume brièvement le sceau de la face montrée, sans éclat', () => {
@@ -472,14 +491,22 @@ describe('écrans', () => {
       simulateCombat(matchFighters(t, { round: 0, index: 0 }), { rng: seededRng(4) }),
     )
     render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
-    render(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} wallets={createWallets()} />)
+    const live = renderToString(
+      <BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} wallets={createWallets()} initialBetsOpen />,
+    )
+    // Un seul prochain match cadré d'or ; les actions des matchs prêts, Paris (0/2) et son panneau
+    expect(live.match(/data-next="true"/g)).toHaveLength(1)
+    expect(live).toContain('aria-label="Affronter"')
+    expect(live).toContain('aria-label="Paris (0/2)"')
+    expect(live).toContain('aria-label="Simuler le tour (7 combats) (×7)"')
+    expect(live).toContain('mises de ce tour 0 / 2')
     // Tournoi complet : l'arbre terminé, puis l'écran du champion et son bilan cumulé
     let seed = 10
     for (const ref of allMatches()) if (!t.results[matchKey(ref)]) t = withResult(t, ref, simulateCombat(matchFighters(t, ref), { seed: seed++ }))
     const tree = renderToString(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
     expect(tree.match(EMOJI)?.[0]).toBeUndefined()
-    // Les reliques gagnées s'affichent dans l'arbre, sur les matchs des tours suivants
-    for (const id of championRun(t)!.relics) expect(tree).toContain(`aria-label="${getRelic(id).name}"`)
+    // Les cartes de l'arbre ne montrent plus les reliques : seulement portrait, nom et tête de série
+    for (const id of championRun(t)!.relics) expect(tree).not.toContain(`aria-label="${getRelic(id).name}"`)
     const run = championRun(t)!
     expect(run.matches).toHaveLength(4)
     expect(run.totals.damage).toBeGreaterThan(0)
@@ -503,7 +530,7 @@ describe('écrans', () => {
     expect(hud).toContain('data-spent="true"')
     expect(hud).toContain('Dépensée pour ce combat')
     expect(hud.match(EMOJI)?.[0]).toBeUndefined()
-    render(<MatchupScreen fighters={[holder, createCharacter('gorak')]} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
+    render(<MatchupScreen mode="tournament" fighters={[holder, createCharacter('gorak')]} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
     // Écran de victoire d'un match de tournoi : le bouton principal mène à la récompense
     const reward = { kind: 'relic' as const, offer: RELICS.slice(0, 3), chosen: RELICS[1].id, onChoose: noop }
     const end = renderToString(<EndScreen result={result} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop, reward }} />)
@@ -645,6 +672,6 @@ describe('écrans', () => {
     const pair: [Character, Character] = [championOf(run), new Character(BOSS)]
     const fight = renderToString(<FightScreen script={simulateCombat(pair, { seed: 3 })} arena={null} onEnd={noop} />)
     expect(fight).toContain('aria-label="Dé 10"')
-    render(<MatchupScreen fighters={pair} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
+    render(<MatchupScreen mode="campaign" fighters={pair} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
   })
 })

@@ -37,10 +37,10 @@ import { Button, Glyph } from './kit'
 
 /** Couleur de chaque parieur, distincte des camps (bleu, rose) et de l'ambre du critique. */
 export const BETTOR_STYLE = [
-  { text: 'text-emerald-300', border: 'border-emerald-400/70', glow: 'shadow-[0_0_40px_rgba(52,211,153,0.25)]', bg: 'from-emerald-950/60' },
-  { text: 'text-fuchsia-300', border: 'border-fuchsia-400/70', glow: 'shadow-[0_0_40px_rgba(232,121,249,0.25)]', bg: 'from-fuchsia-950/60' },
-  { text: 'text-slate-300', border: 'border-slate-400/60', glow: '', bg: 'from-slate-900/60' },
-  { text: 'text-orange-300', border: 'border-orange-400/60', glow: '', bg: 'from-orange-950/60' },
+  { text: 'text-emerald-300', dot: 'bg-emerald-400', border: 'border-emerald-400/70', glow: 'shadow-[0_0_40px_rgba(52,211,153,0.25)]', bg: 'from-emerald-950/60' },
+  { text: 'text-fuchsia-300', dot: 'bg-fuchsia-400', border: 'border-fuchsia-400/70', glow: 'shadow-[0_0_40px_rgba(232,121,249,0.25)]', bg: 'from-fuchsia-950/60' },
+  { text: 'text-slate-300', dot: 'bg-slate-400', border: 'border-slate-400/60', glow: '', bg: 'from-slate-900/60' },
+  { text: 'text-orange-300', dot: 'bg-orange-400', border: 'border-orange-400/60', glow: '', bg: 'from-orange-950/60' },
 ] as const
 const styleOf = (b: Bettor) => BETTOR_STYLE[b % BETTOR_STYLE.length]
 
@@ -306,7 +306,47 @@ export function BetSummary({ wallets, odds, fighterNames }: { wallets: Wallets; 
   )
 }
 
-/** Classement des parieurs, en ligne (en-tête de l'arbre du tournoi). */
+/**
+ * Joueurs (pas l'ordinateur) qui ont misé sur un des matchs dont la clé commence par `prefix` : paris en attente ou
+ * déjà réglés (journal). Arbre du tournoi : `t-<tour>-`, les mises de ce tour.
+ */
+export const humansWhoBet = (wallets: Wallets, prefix: string): Bettor[] =>
+  humansOf(wallets).filter(
+    (b) =>
+      Object.entries(wallets.bets).some(([key, bets]) => key.startsWith(prefix) && !!bets[b]) ||
+      wallets.ledger.some((e) => e.kind === 'settle' && e.bettor === b && e.key.startsWith(prefix)),
+  )
+
+/**
+ * Panneau « Paris » de l'arbre du tournoi (docs/ref/tournoi-paris-ouverts.png) : le classement des parieurs, avec
+ * leur fortune, et les mises des joueurs sur ce tour. On n'y parie pas : les mises se font à l'affrontement.
+ */
+export function BettingPanel({ wallets, placed, id }: { wallets: Wallets; placed: number; id?: string }) {
+  return (
+    <div id={id} role="dialog" aria-label="Paris" className="bets-panel">
+      <div className="flex items-baseline justify-between px-4 pb-2.5 pt-3.5">
+        <span className="font-display text-[14px] font-bold uppercase tracking-[0.16em] text-gold-300">Paris</span>
+        <span className="font-data text-[12px] text-ink-3">{`mises de ce tour ${placed} / ${humansOf(wallets).length}`}</span>
+      </div>
+      <ol>
+        {ranking(wallets).map((b, i) => (
+          <li key={b} className="flex h-[41px] items-center gap-3 border-t border-line-1 px-4">
+            <span className="w-4 font-data text-[12px] text-ink-3">{i + 1}</span>
+            <span className={`h-2 w-2 rounded-full ${styleOf(b).dot}`} aria-hidden />
+            <span className="flex-1 font-body text-[15px] font-bold text-ink-1">
+              {wallets.bettors[b].name}
+              <BotTag def={wallets.bettors[b]} />
+            </span>
+            <span className="font-data text-[14px] tabular-nums text-gold-300">{worthOf(wallets, b).toLocaleString('fr-FR')}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="border-t border-line-1 px-4 py-3 font-body text-[13px] text-ink-3">Les mises se font depuis l'écran d'affrontement.</p>
+    </div>
+  )
+}
+
+/** Classement des parieurs, en ligne (écran du champion). */
 export function Standings({ wallets }: { wallets: Wallets }) {
   return (
     <div className="flex items-center gap-2">

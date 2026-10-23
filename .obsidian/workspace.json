@@ -190,6 +190,8 @@
   },
   "active": "9efb25744e45e1b6",
   "lastOpenFiles": [
+    "src/components/TournamentIntroScreen.tsx",
+    "src/dev/BracketReference.tsx",
     "src/components/Switch.tsx",
     "docs/ref/affrontement-geometrie-regles.png",
     "docs/ref/prompt-affrontement-et-tournoi.md",
@@ -213,8 +215,6 @@
     "dist/index.html",
     "dist/assets/victory-CDzLCgG8.mp3",
     "dist/assets/stun-gdqtJsLg.mp3",
-    "dist/assets/shift-1dOi0Jrs.mp3",
-    "dist/assets/ko-vNoc-9K4.mp3",
     "docs/PROGRESSION.md"
   ]
 }

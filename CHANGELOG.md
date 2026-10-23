@@ -32,6 +32,22 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.100.0] — 2026-10-23
+
+Brief de l'utilisateur `docs/ref/prompt-affrontement-et-tournoi.md` et ses sept références ; décisions du 2026-10-23 (pas de paris en duel, retours et titres actuels, son vraiment indépendant, ajouts au kit, comparaison des dés provisoire, pas de tête de série dans un arbre sans saison).
+
+### Ajouté
+- **UI kit** : bouton carré à glyphe seul (`SquareButton`, `.bt-square`, 44 px, variante `sm` de 28 px pour les cartes de l'arbre) et pastille de compteur (`Badge`, `.bt-badge`), documentés dans `docs/ui-kit/README.md` et montrés sur la page `?kit`. Interrupteur partagé `Switch` (celui du panneau Règles).
+- Pages de développement : `?matchup=duel|duel-droit|tournoi|saison-son` en plus des cas existants, et `?bracket=survol|paris|reel|fini` (`src/dev/BracketReference.tsx`).
+
+### Modifié
+- **Son** : un seul bouton rond en haut à droite ouvre un panneau avec deux interrupteurs, **Musique** et **Effets sonores**, vraiment indépendants : couper les effets ne coupe plus la musique (`sound.ts`). Les deux clés sauvegardées et les défauts (coupés) sont gardés.
+- **Écran d'affrontement unique** : « Duel » de l'accueil y mène directement ; l'écran de sélection du duel disparaît (`StartScreen.tsx` retiré, l'intro du tournoi devient `TournamentIntroScreen.tsx`). En duel : intitulé « Duel », combattants remis à nu (kit de base, jamais de forge ni de relique), pas de tête de série, pas de section Reliques, et sous les fiches le sélecteur de combattants (onglets Gauche / Droite, Au hasard, portraits sans nom, cadre et repère à la couleur du camp, défilement au-delà de dix). Partout : retour en haut à gauche (Menu, Tournoi, Saison, Carte), **COMBATTRE** centré en bas, Simuler en bouton carré sous le VS, Parier (pastille « n/2 ») seulement dans l'arbre ; les paris du duel sont coupés (`DUEL_BETTING`, code gardé), la saison reste sans paris. **Comparaison des stats** : sur chaque ligne, le meilleur des deux est surligné à la couleur de son camp, rien en cas d'égalité ; le dé compare le nombre de faces (druide : sa plus grande forme ; barde : un dé), en attendant une règle définitive.
+- **Arbre du tournoi** : en haut, « ← Menu » et l'intitulé du tour avec « n / 15 combats joués » ; en bas, **PROCHAIN COMBAT** au centre, Paris à gauche (panneau du classement des parieurs et des mises du tour, au lieu du bandeau permanent) et Simuler le tour à droite (pastille « ×n »). Seule la carte du prochain combat est cadrée d'or, avec l'étiquette PROCHAIN ; la finale a un sceau octogonal au glyphe de la coupe. Les cartes ne montrent plus que portrait, nom et numéro ; Affronter et Simuler deviennent deux petits boutons carrés côté intérieur, visibles au survol, au focus et au toucher.
+
+### Retiré
+- Écran de sélection du duel, boutons Changer / Arbre / Saison / Carte en bas de l'affrontement, bandeau des parieurs de l'arbre, reliques et PV sur les cartes de l'arbre.
+
 ## [0.99.5] — 2026-10-23
 
 ### Modifié
