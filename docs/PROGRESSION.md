@@ -11,6 +11,7 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Constat mesuré** : les reliques s'additionnent sans interagir (§ 3). Chaque ajout vit dans son coin ; les rares interactions sont des accidents.
 - **La direction** (§ 2) : le plaisir se déplace du combat serré, à l'issue de pile ou face, vers **la conséquence visible d'un build**. Le duel équilibré reste le point de départ ; la progression en est le cœur.
 - **Le socle** (§ 6, décidé, **livré en 0.105.0**) : un **d6 pour tous, aux faces imprimées**. Kit de référence de **deux compétences** ; en campagne, **la signature seule** au départ. « Sur un 4 » veut dire la face 4. Copier une face et Refondre remplacent Agrandir et Retailler. Dés livrés et mesures au § 6.8.
+- **L'attaque de base** (§ 6 bis, demande de l'utilisateur du 2026-10-23, **prochaine phase, avant tout le reste**) : chaque personnage a une **valeur d'attaque**, de type DP ou DM, infligée à **chaque jet** ; le dé ne fait plus de dégâts, il ne sert qu'à déclencher des compétences qui se **greffent** sur le coup de base, le **modifient** ou le **remplacent**. Une valeur commune que les reliques et les compétences peuvent lire : le socle des synergies. Questions ouvertes au § 19.
 - **Ce que chaque personnage peut apprendre** (§ 7) : un **répertoire** écrit pour lui, en deux fils de synergie, plus un petit fonds commun. Proposition complète pour les dix personnages, et un essai possible avec les seules compétences existantes.
 - **Pas de familles comme règle** (§ 8) : les synergies s'accrochent à des **choses concrètes du combat** (un statut, un moment, un type de dégâts, un compteur du dé), pas à une catégorie.
 - **Trois types de dégâts** (§ 9) : DP, DM, DT, **déclarés** sur chaque source (pas déduits de l'armure), avec des valeurs par défaut qui limitent la saisie à une dizaine de cas. Les récompenses qui font boule de neige sur un type (« +2 à tous les DM ») sont indispensables.
@@ -19,7 +20,7 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Durée des combats** (§ 12) : un build agressif ramène un combat de 8 à 4 tours ; la durée doit **venir du contenu** (reliques, compétences, stats qui font durer), pas d'un calcul qui force une cible.
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
-- **Le plan** (§ 18) : neuf phases, des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
+- **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
 
 ---
 
@@ -87,6 +88,15 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 | Signature | **La montrer à l'écran.** |
 
 Retours de jeu qui les accompagnent : un dé trop grand ; peu de reliques et de choix ; des premiers combats sans intérêt (Brokk battu au premier combat par une Fanchon à 13 PV, à 0,3 % de probabilité : « mauvaise expérience ») ; le Critique assuré d'Elaria plus agréable qu'une aura qui demande une face précise parmi dix ; un acte gagné par Ervald avec un build direct (Cloche, Retailler, Feux follets).
+
+### 1.6 Sixième passe (2026-10-23, après la 0.105.0)
+
+| Question | Décision |
+| --- | --- |
+| Le dé en combat montre-t-il la valeur imprimée ? | **Non** : il montre le numéro de la face. Avec l'attaque de base (§ 6 bis), la question disparaît : les faces n'auront plus de valeur. |
+| Osselet fendu, Fer à quatre clous « sur les dés » | La mise en évidence sur certaines faces venait d'une proposition de maquette (Claude Design), pas du jeu : **rien n'est dessiné sur les faces**, ces reliques restent des événements (« sur un 4 »). |
+| Courbe de la campagne | **Plus basse au début** (environ 90 % au premier combat au lieu de 98 %) : des premiers combats disputés, au prix de moins de parties qui atteignent le boss. Appliquée au recalage de la campagne qui suit l'attaque de base (§ 18, phase 5 bis), puisque ce recalage refait toutes les rencontres. |
+| Suite | **Avant toute chose, un changement de mécanique** : l'attaque de base (§ 6 bis). Il touche tout, mais assouplit tout ce qui viendra ensuite. Les auras de signature et la durée (phase 7) attendent. |
 
 ---
 
@@ -360,7 +370,89 @@ Faces 1 et 2 : les deux compétences du kit (§ 7.3) ; faces 3 à 6 : les coups,
 - **Forge** (§ 6.5) : Copier une face (sur la face de coup la plus faible ; deux faces au plus par compétence ; un coup ne se copie que sur plus faible que lui) et Refondre (les faces de coup frappent pour leur moyenne, arrondie au-dessus). Agrandir et Retailler retirés.
 - **Contrepoids** (§ 19, point 3) : il devient une relique de critique (+1 au multiplicateur, −4 % de critique), mesurée +3,5 (Elaria +17,2, Fanchon −3,2). Une relique ne change plus la taille du dé (`validateRelics`).
 - **Hors kit** : les compétences quittées restent au personnage (`reserve`), gravables, citées « hors kit » au compendium, en tête de son répertoire de campagne.
-- **Restent à faire** : le druide et la barde à la signature seule (le druide ne peut qu'Aiguiser en forge) ; le dé qui roule en combat montre le numéro de la face, pas la valeur imprimée (question posée à l'utilisateur).
+- **Restent à faire** : le druide et la barde à la signature seule (le druide ne peut qu'Aiguiser en forge). Le dé qui roule montre le numéro de la face (décidé, § 1.6). Les valeurs imprimées ne vivront qu'une version : l'attaque de base les remplace (§ 6 bis).
+
+---
+
+## 6 bis. L'attaque de base : un coup à chaque jet (demande de l'utilisateur, 2026-10-23 ; proposition, rien de codé)
+
+### 6 bis.1 La demande
+
+L'utilisateur, après la 0.105.0 : « dans la perspective de produire des reliques et autres qui lisent des valeurs et de favoriser les synergies, les personnages auront désormais une **valeur d'attaque**, exprimée en DD (dégâts directs) ou DM (magiques), une valeur fixe ou une petite fourchette, servant de **coup de base infligé à chaque jet** de dé ou coup pendant un affrontement. Les valeurs de dé obtenues ne servent qu'à **déclencher des compétences** qui viennent se **greffer** sur le coup de base, le **remplacer** dans certains cas (la Furie des vents) ou le **modifier** (ajout de poison, par exemple). La sortie en dégâts est liée à une valeur qui appartient à l'identité du personnage, et les possibilités du dé s'assouplissent : il y a toujours une sortie de dégâts. Au niveau des reliques et des compétences, les possibilités augmentent. » Priorité : **avant toute chose**.
+
+### 6 bis.2 La règle proposée
+
+- **L'attaque** est une stat de la feuille (§ 10) : une valeur (fixe ou petite fourchette, § 19, question 7) et un type, DP ou DM (question 6). Elle remplace le dé de dégâts et les valeurs imprimées de la 0.105.0.
+- **Chaque action porte un coup de base** de la valeur d'attaque, avec toutes les règles d'un coup : esquive, critique, modificateurs (Aura de puissance), armure, boucliers, réactions (Riposte, Épines, Vol de vie). Deux dés (la barde) : deux coups de base.
+- **Le dé ne fait plus de dégâts.** Il désigne une face ; la face déclenche sa compétence, ou rien (une **face nue** : le coup de base seul). « Sur un 4 » reste la face 4 : l'Osselet, le Fer et le Dé creux ne changent pas ; la dorure ajoute +2 au coup de base de sa face.
+- **Trois relations** entre une compétence et le coup de base, déclarées sur la compétence (elles remplacent `forfeitsHit`, `needsTouch` et `reshapesHit`) :
+
+| Relation | Ce qui se passe | Exemples |
+| --- | --- | --- |
+| **Greffe** (par défaut) | le coup de base part, la compétence s'ajoute | Peau de pierre (le coup et le bouclier), une aura, Purification, Peur |
+| **Modifie** | la compétence change ce coup-là | Pourfendre (s'il touche, Saignement), Vol de vie (ce coup soigne), un poison posé par ce coup, Pile ou face (pile : ce coup ×2) |
+| **Remplace** | le coup de base ne part pas ; la compétence le remplace | Furie des vents (deux coups de base), Crescendo et Soliste (un coup de base ×N), Coup de chance (un coup de base de plus) |
+
+- **Le coup sacrifié n'est plus la règle** : 23 des 30 compétences du roster le portent aujourd'hui (`forfeitsHit`), plus l'Attente de l'ogre. Une compétence qui ne frappe pas devient une compétence qui **remplace** le coup par rien : un choix déclaré et rare, pas un défaut.
+
+### 6 bis.3 Ce que ça change
+
+| Sujet | 0.105.0 | Avec l'attaque de base |
+| --- | --- | --- |
+| Dégâts d'un jet | la valeur imprimée de la face ; rien sur une face qui sacrifie le coup | l'attaque, sur toutes les faces |
+| Une face de compétence | un échange : la compétence contre un coup | un **gain pur** : les valeurs des compétences sont à revoir, ou les PV |
+| Valeurs imprimées, Refondre | l'identité du dé, une opération de forge | retirées ; Refondre à remplacer (question 10) |
+| Dorer | +2 à la valeur d'une face | +2 au coup de base sur cette face (même effet) |
+| Copier une face | double une compétence ou un coup | double une compétence ; copier une face nue n'a plus d'objet |
+| Quatre faces de compétence au plus | garder deux faces de coup | plus de raison mécanique (question 11) |
+| Graver | une compétence contre un coup | une compétence de plus, sans rien perdre : la forge devient une **construction de déclencheurs** |
+| Furie des vents | deux coups bruts aux valeurs des faces | deux coups de base |
+| Coup de chance | un d6 de plus, qui frappe pour son jet | un coup de base de plus |
+| La barde | deux coups aux valeurs imprimées ; Crescendo 12, Soliste 15 | deux coups de base, plus petits ; Crescendo et Soliste en multiples de l'attaque |
+| Le druide | homme : un sort, jamais de coup ; ours : coups de 3 à 8, +3 | homme : un petit coup DM et son sort ; ours : un gros coup DP (question 12) |
+| Morgrut | une Attente, des coups de 7 à 11 | la plus forte attaque, l'Attente n'a plus de sens (question 12) |
+| La feuille (§ 10) | « Coups 5 à 7 » | « Attaque 6 · DP » : un seul nombre, lisible sur une télévision |
+| Le spectacle | les dégâts varient avec le dé | ils ne varient plus que par le critique, l'esquive et les compétences (avec une attaque fixe) |
+
+### 6 bis.4 Repère mesuré : ce que frappe un jet aujourd'hui
+
+Calcul sur les dés de la 0.105.0 (`roster.ts`), hors critique, esquive et effets des compétences : la somme des valeurs des faces qui frappent, divisée par six. Les deux coups bruts de la Furie (une fois sur six) sont comptés pour Gorak ; la pièce de Naraxes ne l'est pas.
+
+| Personnage | Faces qui frappent | Coup moyen quand il frappe | Dégâts de coup par jet |
+| --- | --- | --- | --- |
+| Gorak | 1, 3 à 6 (et la Furie sur le 2) | 5,4 | 6,2 (4,5 sans la Furie) |
+| Elaria | 3 à 6 | 6,0 | 4,0 |
+| Brokk | 3 à 6 | 8,0 | 5,3 |
+| Ervald | 3 à 6 | 7,0 | 4,7 |
+| Ysolde | 3 à 6 | 7,0 | 4,7 |
+| Naraxes | 3 à 6 | 7,0 | 4,7 |
+| Aldric | 3 à 6 | 5,5 | 3,7 |
+| Morgrut | 2 à 6 | 9,0 | 7,5 |
+| Thaldrin, ours | 1 à 6 | 8,5 (Force de l'ours comprise) | 8,5 ; homme : 0 (des sorts seulement) |
+| Fanchon, par dé | 1 à 6 | 3,2 | 3,2, deux dés |
+
+**Lecture** :
+- **Deux ancrages possibles pour l'attaque.** Au **jet** (dernière colonne, 4 à 8) : les dégâts de coup par tour restent ceux d'aujourd'hui, et les compétences, désormais gratuites, s'ajoutent par-dessus ; un coup paraît plus petit qu'aujourd'hui (Elaria 4 au lieu de 5 à 7). Au **coup** (avant-dernière colonne, 5,5 à 9) : de l'ordre de +30 à +50 % de dégâts de coup par tour [estimation : rapport des deux colonnes], à compenser par les compétences, puis les PV en dernier. Le laboratoire tranchera sur quatre personnages (phase 5 bis), comme pour le d6.
+- **La granularité** : avec une attaque de 4 à 8, « +1 Attaque » vaut +12 à +25 % des coups ; « +2 », jusqu'à +50 %. Les reliques qui écrivent l'attaque seront grossières à cette échelle (question 8).
+- **Les compétences gagnent toutes** : celles qui sacrifiaient le coup lui ajoutent maintenant leur effet. À coup égal, Peau de pierre ou Œil de faucon valent un coup de plus par déclenchement : leurs valeurs baissent, ou les PV montent.
+
+### 6 bis.5 Ce que ça ouvre
+
+- **Une valeur que tout peut lire** : une compétence ou une relique s'écrit en multiple de l'attaque, et grandit avec elle. « Crescendo : un coup ×3 » ; « Pile : ce coup ×2 » ; « Vol de vie : soigne la moitié du coup » ; « Lame enduite : chaque coup de base pose 1 Poison » ; « Riposte : la moitié du coup reçu » (déjà relative). C'est la **feuille lue par compteur** du § 10.3, avec le compteur le plus central du jeu.
+- **Des reliques qui écrivent la feuille** (§ 10.2) : « +1 Attaque » ; « Attaque DM : +1 par impact » (§ 9.4) ; et des **paliers** (P6) : « Attaque 8 ou plus : … ».
+- **Le dé s'assouplit** : chaque face peut porter une compétence sans perdre de dégâts. Le choix de la face compte encore (Fer sur le 4, Dé creux sur le 6), Copier double un déclencheur, Dorer pèse sur le coup de base.
+- **Les types prennent corps** (§ 9) : le coup de base porte le type du personnage. Un build DM existe dès la feuille, au lieu de dépendre de trois sorts ; les bonus par type (phase 7) touchent chaque jet.
+- **Les compétences se lisent mieux** : « ce coup pose 2 Poison », au lieu de « ce jet ne frappe pas, mais pose 2 Poison ».
+
+### 6 bis.6 Risques
+
+- **Tout l'équilibre est à refaire** : dix personnages, 30 compétences (dont 23 qui sacrifiaient le coup), 16 reliques, le boss, la courbe de la campagne. Une phase aussi lourde que la conversion au d6.
+- **La variance baisse** avec une attaque fixe : des combats plus prévisibles, des paris moins ouverts. À mesurer (spectacle, `scripts/lab/spectacle.ts`) avant de trancher la question 7.
+- **Les valeurs imprimées de la 0.105.0 ne vivent qu'une version** : `strikes`, `strikeValue`, `Attack.printed` et Refondre se retirent.
+- **Les traces d'avant** ne se rejouent plus à l'identique (`npm run logs`).
+
+- **Implique** : [RESOLUTION.md](RESOLUTION.md) d'abord (coup de base, relations) ; `character.ts`, `combat.ts`, `events.ts`, `forge.ts`, `roster.ts` ; l'audit (`audit.ts`) et la trace ; la fiche (`StatSheet`), le compendium (règles, pastille « coup sacrifié » remplacée), la mise en scène (une compétence qui se greffe tombe avec le coup : [MISE_EN_SCENE.md](MISE_EN_SCENE.md)) ; PERSONNAGES, STATUTS, FEATURES. Le format de l'historique (`battler:history:v1`) ne change pas.
+- **Brique connue** : `damage.ts` (types DP, DM, DT, déjà sur chaque dégât), `hooks.ts` (accroches), la chaîne d'attaque du moteur v2.
 
 ---
 
@@ -555,7 +647,7 @@ La fiche d'un personnage, ce sont aujourd'hui **six stats** (`CharacterStats`, `
 | Stat             | Rôle                                    | Valeurs du roster             | Ce qui la modifie aujourd'hui                                             |
 | ---------------- | --------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
 | PV (`maxHp`)     | durée de vie                            | 46 (Fanchon) à 63 (Morgrut)   | rien ; les PV des adversaires de campagne servent de réglage de rencontre |
-| Dé (`damageDie`) | dégâts **et** fréquence des compétences | d5 × 2 à d14                  | la forge (Agrandir, Retailler), le Contrepoids                            |
+| Dé (`damageDie`) | dégâts **et** fréquence des compétences | d6 imprimé depuis la 0.105.0 | la forge ; **remplacé par l'attaque** (§ 6 bis) : le dé ne fera plus que déclencher |
 | Armure           | retirée de chaque coup reçu             | **0 pour les dix**            | la Cotte (+2), l'Armure temporaire                                        |
 | Esquive          | chance d'éviter un coup                 | 0 % (Morgrut) à 26 % (Elaria) | les Bottes (+6 %), la Cotte (−8 %)                                        |
 | Critique         | chance de critique                      | 0 % (Morgrut) à 19 % (Gorak)  | rien                                                                      |
@@ -579,6 +671,7 @@ La fiche d'un personnage, ce sont aujourd'hui **six stats** (`CharacterStats`, `
 
 - **Les stats**, qui peuvent progresser à plat (décidé : comme les Bottes) ;
 - **les six faces** du d6 ;
+- **l'attaque** (§ 6 bis) : une valeur et un type, DP ou DM, le compteur le plus lu ;
 - **des compteurs**, que les briques qui lisent consultent : faces dorées, faces copiées, rangs, compétences gravées, charges d'un statut, dégâts infligés par type ;
 - **les reliques**.
 
@@ -719,6 +812,8 @@ La durée devient une **conséquence** des choix. On la **mesure** (un indicateu
 - **Brique connue** : les reliques de type Caractéristique (`stats`), les soins et boucliers des compétences, `combatReport`.
 
 **Effet de bord à connaître** : quand les PV montent, un bonus à plat (« +2 aux DM ») pèse relativement moins ; un bonus en pourcentage garderait sa force. C'est plutôt sain : les bonus à plat s'usent, ceux qui font boule de neige doivent être choisis.
+
+**Avec l'attaque de base** (§ 6 bis) : chaque jet frappe, et les compétences s'ajoutent au coup au lieu de le remplacer. Les combats raccourcissent si rien ne compense ; la durée se mesure dès le laboratoire de la phase 5 bis, et se règle par le contenu (§ 12.2), les PV en dernier.
 
 ---
 
@@ -881,6 +976,7 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | d6, refactor à résultats identiques | décidé | moyen | non (preuve) | — |
 | d6 à deux compétences, conversion du roster | décidé | lourd | **oui** | refactor, essai |
+| Attaque de base (§ 6 bis) : un coup à chaque jet, compétences greffées, modifiantes ou remplaçantes | décidé (demande de l'utilisateur), questions au § 19 | lourd | **oui** | d6 |
 | Forge : Copier une face, Refondre | décidé | moyen | non | d6 |
 | Répertoires, essai avec l'existant | proposé | faible | non | — |
 | Répertoires, contenu (environ 35 compétences) | proposé | lourd | non (campagne) | essai |
@@ -904,6 +1000,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 | --- | --- | --- | --- |
 | Moteur : le dé | une liste de faces imprimées au lieu de `damageDie` ; les deux dés de la barde et les formes du druide dans ce format | `character.ts`, `combat.ts`, [RESOLUTION.md](RESOLUTION.md) | moyen (refactor à résultats identiques) |
 | Moteur : la forge | Copier une face, Refondre ; la limite de faces de compétence ; le retrait d'Agrandir, de Retailler et du Contrepoids | `forge.ts`, `relics.ts` | moyen |
+| Moteur : l'attaque | la stat `attack` (valeur, type), le coup de base à chaque action, les relations greffe, modifie, remplace ; le retrait des valeurs imprimées et de Refondre | `character.ts`, `combat.ts`, `events.ts`, `forge.ts`, [RESOLUTION.md](RESOLUTION.md) | lourd |
 | Moteur : les types de dégâts | ~~l'étiquette DP, DM, DT et sa source sur chaque dégât~~ (faite, 0.102.0 : `damage.ts`) ; les bonus par type, par impact | `combat.ts`, `events.ts`, `damage.ts` | faible |
 | Moteur : des moments | soin reçu, bouclier vidé, jet modifié, Attente (action perdue) ; plus tard, suite et répétition (P3) | `events.ts` (`TRIGGERS`) | faible chacun |
 | Données : les répertoires | une liste par personnage, le fonds commun ; l'offre qui tire dedans (carte garantie, écho, libre) | `roster.ts`, `forge.ts`, `campaign.ts`, `season.ts` | faible |
@@ -939,7 +1036,8 @@ flowchart LR
   P3 --> P4[4 Essai du d6]
   P4 --> P5[5 Conversion et forge d6]
   P2 --> P6[6 Campagne longue]
-  P5 --> P6
+  P5 --> P5B[5 bis Attaque de base]
+  P5B --> P6
   P6 --> P7[7 Types à l'écran, reliques de durée et de type]
   P7 --> P8[8 Lots de contenu]
 ```
@@ -953,7 +1051,8 @@ flowchart LR
 | **3. Dé en liste de faces** (faite, 0.105.0) | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques (commit intermédiaire) | — |
 | **4. Essai du d6** (fait, 0.105.0, essais jetables pendant la conversion) | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre (4) | non (essais) | taux avant → après (§ 6.8) | les dés retouchés (§ 6.8) |
 | **5. Conversion et forge d6** (faite, 0.105.0 ; à jouer) | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir et de Retailler ; Contrepoids en relique de critique | **oui**, volontairement | `npm run balance` à 800 combats par duel : 48,2 à 51,6 %, aucun duel au-delà de 65/35 ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
-| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5). Reste : Thaldrin et Fanchon à la signature seule ; répertoires relus pour le d6 ; auras de signature | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
+| **5 bis. L'attaque de base** (décidée, 2026-10-23 ; **prochaine**) | RESOLUTION.md d'abord ; la stat `attack` et le coup de base ; les relations greffe, modifie, remplace ; essai au laboratoire sur Gorak, Ysolde, Aldric et Morgrut (ancrage au jet ou au coup, § 6 bis.4) ; conversion des dix personnages et de leurs compétences ; forge sans valeurs imprimées ; reliques réécrites (le Fer sur le coup de base) et les premières qui lisent l'attaque ; recalage de la campagne avec la courbe abaissée (§ 1.6) | **oui**, volontairement | `npm run balance` (42 à 58 %, aucun duel au-delà de 65/35) ; durée et spectacle mesurés ; `npm run relics`, `npm run campaign` ; empreinte mise à jour et notée au CHANGELOG | les valeurs d'attaque, l'échelle, les compétences qui remplacent |
+| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5). Reste : Thaldrin et Fanchon à la signature seule ; répertoires relus pour le d6 ; auras de signature ; la courbe abaissée vient avec la phase 5 bis | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
 | **7. Types à l'écran, durée, types en bonus** | la couleur des chiffres par type et par source ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison | `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 
@@ -970,4 +1069,14 @@ Toutes les questions posées ont une réponse (§ 1). Restent des choix que les 
 2. ~~**Les dés de Fanchon et du druide** en d6~~ : § 6.8 (0.105.0).
 3. ~~**Le remplaçant du Contrepoids de plomb**~~ : il devient une relique de critique (0.105.0).
 4. **Le montant des bonus par impact** (« +1 » ou « +2 » aux DM sur un sort à trois impacts) : phase 7.
-5. **La courbe de l'acte long** et la place des forges, après les parties de l'utilisateur : phase 6.
+5. **La courbe de l'acte long** : plus basse au début (décidé, § 1.6) ; ses valeurs exactes et la place des forges, au recalage de la phase 5 bis, puis après les parties de l'utilisateur.
+
+**L'attaque de base (§ 6 bis), points de friction posés à l'utilisateur le 2026-10-23** :
+
+6. **Le type** : « DD (dégâts directs) » veut-il dire DP ? Dans le jeu, « dégâts directs » nomme déjà les dégâts qui ignorent l'esquive, l'armure et le critique (poison, Foudre) ; le coup de base, lui, est un coup. Proposition : DP ou DM, toujours avec les règles d'un coup ; le type ne compte que pour les bonus par type (les défenses par type restent pour plus tard, § 15.3). DM pour la forme humaine du druide et pour Ysolde ; DP pour les autres.
+7. **Fixe ou petite fourchette** : proposition, une valeur fixe (« Attaque 6 » : lisible, une relique +1 se lit telle quelle) ; la variance reste au critique, à l'esquive et aux compétences. Une fourchette (« 5 à 7 ») garde du hasard dans chaque coup, au prix d'un tirage de plus et d'une lecture moins nette.
+8. **L'échelle des nombres** : garder l'échelle actuelle (attaque de 4 à 8, PV autour de 55, reliques à +1) ou tout doubler (attaque de 8 à 16, PV autour de 110) pour des bonus plus fins. Proposition : l'échelle actuelle ; doubler réécrit tous les nombres du jeu.
+9. **Le coup sacrifié** : proposition, il disparaît ; toute compétence se greffe par défaut, seules la Furie, Crescendo, Soliste et Coup de chance remplacent le coup. Pile ou face devient « pile : ce coup ×2 ; face : ce coup normal ».
+10. **Refondre** n'a plus d'objet. Proposition : le retirer, et le remplacer par une opération qui écrit l'attaque (« Tremper l'arme : +1 Attaque »), puisque le dé est l'arme ; ou ne rien mettre à sa place.
+11. **La limite de quatre faces de compétence** (campagne) protégeait deux faces de coup. Proposition : la garder pour le moment (lisibilité, des faces nues pour les reliques de face), et la mesurer.
+12. **Morgrut, le druide, la barde** : Morgrut, la plus forte attaque et plus d'Attente ; le druide, deux attaques selon sa forme (homme : petite, DM, et son sort ; ours : grande, DP) ; la barde, deux coups de base plus petits, Crescendo et Soliste en multiples de l'attaque.
