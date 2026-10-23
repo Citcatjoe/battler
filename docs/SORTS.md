@@ -966,3 +966,92 @@ Ce que montrent les mesures :
 Mesures (`npm run balance`, 400 combats par duel, règles 0.73.0) : Thaldrin 50,7 → **54,0 %**, ses combats de 20,0 à **17,0 tours**, **11,1 dégâts par coup** (le plus haut du roster) ; ses duels de 48 à 65 %, Brokk à 35,3 % contre lui (sous le plafond). Valeurs nettes : Foudre **+10,8**, Feux follets **+10,3**, Aura sauvage **+4,7** points. Apport des statuts : Force de l'ours 14,0 PV, Brûlure 8,6, Aura sauvage 5,5 par combat.
 
 **0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : 3 × 2 dégâts directs (6 au lieu de 5, `hits`), jamais critiques, un éclair par coup à l'écran. Compensation, choix de l'agent : Force de l'ours +4 → **+3** (sans elle, Thaldrin 58,0 % et Brokk 31,5 % contre lui). Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup ; ses duels de 38 à 62 % (Brokk 38,5 %). Valeurs nettes : Foudre **+15,6**, Feux follets **+11,6**, Aura sauvage **+5,5** points.
+
+## 19. Revue des compétences sur l'attaque de base (phase 5 ter, audit du 2026-10-24, règles 0.106.1)
+
+_Demande de l'utilisateur : « on sait qu'on doit repasser sur les compétences : le d6, et maintenant la mécanique d'attaque et de dé ». Audit lancé à sa demande ; rien n'est encore changé dans le roster._
+
+### Ce qui a changé pour les compétences
+
+Jusqu'à la 0.105.0, une compétence **coûtait son coup** : sa valeur nette était un échange. Depuis la 0.106.0, elle se **greffe** sur un coup qui part de toute façon : elle est un gain pur, et sa valeur se lit seule. Deux conséquences : la grille de l'audit signale « écrasante » bien plus souvent (un gain pur dépasse vite 20 points), et les compétences qui agissent **à chaque coup** (auras de coup) ont doublé de poids, puisqu'il y a désormais un coup à chaque jet.
+
+### Mesure 1 : chaque compétence dans son kit (`scripts/skills.report.ts`, 200 combats par duel)
+
+Valeur : points de victoire perdus si on la retire (sa face devient nue, le coup part quand même). Rapport complet : `logs/skills/2026-10-23-23-52-53_v0.106.1.md`.
+
+| Personnage | Face 1 | Valeur | Face 2 | Valeur | Écart dans le kit |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Pourfendre | +8,0 | **Furie des vents** | +19,5 | la signature porte le kit |
+| Elaria | **Œil de faucon** | +20,6 | Esquive améliorée | +16,7 | équilibré |
+| Brokk | Peau de pierre | +19,3 | **Épines acérées** | +20,2 | équilibré |
+| Ervald | Vol de vie | +23,4 | **Aura glaciale** | +17,9 | équilibré |
+| Ysolde | Purification | +18,4 | **Aura de sainteté** | +31,7 | la signature écrase |
+| Naraxes | **Pile ou face** | **+4,5** | Aura de décoction | **+41,9** | la signature ne pèse rien |
+| Aldric | **Rétribution** | **+38,0** | Riposte | +12,6 | la signature écrase |
+| Thaldrin (homme) | Foudre, faces 1 à 3 | +18,5 | Feux follets, faces 4 à 6 | +35,8 | — |
+| Fanchon | Ouverture (début du combat) | +25,2 | cinq doubles à compétence | +1,5 à +5,0 chacun, +15,0 ensemble | les doubles sont « rares à l'écran » (vus dans 17 % des combats chacun) |
+
+En gras : la signature. Drapeaux de lecture : Purification (texte de 265 caractères), Pourfendre (173), Pile ou face (147).
+
+### Mesure 2 : chaque compétence gravée (mesure jetable, 200 combats par duel)
+
+Ce que vaut une gravure en campagne : la compétence gravée sur la face 3 (nue) de huit hôtes (tous sauf le druide et la barde), contre le roster, avant → après. C'est la valeur d'un choix de forge.
+
+| Compétence | Moyenne | De … à … |
+| --- | --- | --- |
+| Rétribution | **+27,8** | Naraxes +23,7 à Ysolde +30,6 |
+| Aura de décoction | **+27,3** | Aldric +24,1 à Ysolde +30,6 |
+| Aura de sainteté | **+22,9** | Morgrut +21,3 à Ervald +24,6 |
+| Aura d'intimidation | **+21,9** | Aldric +15,8 à Ysolde +29,0 |
+| Peur | +20,4 | Naraxes +18,0 à Ysolde +25,2 |
+| Vol de vie | +19,9 | Aldric +15,5 à Ysolde +23,9 |
+| Aura de puissance | +19,6 | Naraxes +16,5 à Elaria +21,8 |
+| Aura sauvage | +19,6 | **identique à l'Aura de puissance, hôte par hôte** |
+| Purification | +17,6 | Naraxes +13,5 à Elaria +20,6 |
+| Souffle de la tombe | +17,4 | Naraxes +13,8 à Ervald +20,4 |
+| Aura d'immunité | +17,3 | Naraxes +14,0 à Ysolde +21,1 |
+| Feux follets | +16,3 | Naraxes +11,8 à Ysolde +18,1 |
+| Esquive améliorée | +15,9 | Naraxes +12,3 à Ysolde +21,0 |
+| Peau de pierre | +14,8 | Aldric +8,3 à Ysolde +19,3 |
+| Furie des vents | +14,7 | Naraxes +10,4 à Morgrut +20,9 |
+| Riposte | +14,4 | Naraxes +9,6 à Gorak +16,1 |
+| Œil de faucon | +14,3 | Naraxes +9,7 à Morgrut +21,4 |
+| Épines acérées | +13,1 | Naraxes +8,9 à Gorak +15,6 |
+| Aura glaciale | +12,8 | Aldric +10,3 à Ysolde +14,4 |
+| Foudre (une face) | +9,0 | Naraxes +5,4 à Gorak +10,6 |
+| Pile ou face | +8,3 | Aldric +5,3 à Morgrut +10,9 |
+| Pourfendre | +7,2 | Naraxes +5,0 à Brokk +9,2 |
+| Aura de précision | +7,2 | Morgrut +0,4 à Elaria +12,8 |
+| Coup de chance | **+3,3** | **Morgrut −3,7** à Ysolde +8,3 |
+
+**Lecture** :
+- **L'écart est de 1 à 8** entre la meilleure et la pire gravure (+27,8 contre +3,3) : un choix de forge n'en est pas un quand deux compétences valent huit fois les autres. Repère proposé, comme pour les reliques : une gravure entre **8 et 20 points**.
+- **Les auras qui agissent à chaque coup ont doublé** (Décoction, Intimidation : un coup à chaque jet depuis la 0.106.0) ; la Rétribution remplit ses trois jauges à chaque tour adverse.
+- **Un doublon** : l'Aura sauvage et l'Aura de puissance ont la même règle (+2 par charge aux coups, après le critique) et la même valeur sur chaque hôte. Le texte de l'Aura sauvage est faux depuis la 0.106.0 (« elle sert l'ours, le seul qui frappe » : l'homme frappe aussi).
+- **Naraxes** est la plus déséquilibrée dans son kit : sa signature (Pile ou face, +4,5) ne pèse rien, son Aura de décoction (+41,9) fait tout. En campagne, partie de sa signature seule, elle joue sans ce qui la fait gagner en duel.
+- **Naraxes est le plus mauvais hôte** de presque toutes les gravures, **Ysolde le meilleur**. Hypothèse, non mesurée : Naraxes gagne déjà ses combats par l'Aura de décoction, une face de plus y change moins ; les soins d'Ysolde font durer ses combats, et une compétence a plus de tours pour agir.
+- **La barde** : un double donné tombe 1 fois sur 36 ; ses cinq doubles à compétence ensemble (+15,0) pèsent moins que son Ouverture (+25,2). Ce n'est pas une compétence à retoucher, c'est la question de son identité.
+
+### Proposition (à valider, rien n'est codé ; chaque changement passera au laboratoire avant livraison)
+
+| Compétence | Verdict | Proposition | Compensation, si le personnage sort de la tolérance |
+| --- | --- | --- | --- |
+| Furie, Œil de faucon, Esquive améliorée, Peau de pierre, Épines acérées, Aura glaciale, Souffle de la tombe, Purification, Riposte, Aura d'immunité, Vol de vie, Aura de puissance, Feux follets, Peur | **garder** | valeurs inchangées (gravure de +12,8 à +20,4) ; Purification : texte à raccourcir | — |
+| Rétribution | **baisser** | relâche **la moitié** des jauges (arrondi au-dessus), ou deux jauges au lieu de trois ; à choisir au laboratoire | Riposte de 2 à 3 charges, ou +1 attaque |
+| Aura de décoction | **baisser** | **1 Poison** par charge et par coup (au lieu de 2) | Pile ou face renforcée (ligne suivante) |
+| Pile ou face (signature) | **renforcer, lire l'attaque** | pile : **ce coup ×3** (au lieu de ×2) ; face : le coup normal. Un gros coup sur deux, le joueur de hasard | — |
+| Aura de sainteté (signature) | **baisser** | 2 charges au plus (au lieu de 3) | Purification ou +1 attaque |
+| Aura d'intimidation (hors kit) | **baisser** | −1 par charge (au lieu de −2) : sur une attaque de 5, −2 retirait 40 % de chaque coup | — |
+| Aura sauvage (hors kit) | **différencier** | **+1 à l'attaque par charge** : elle écrit la feuille (la ligne « Attaque » monte), compte avant le critique, sert l'homme et l'ours ; l'Aura de puissance garde +2 après le critique | — |
+| Coup de chance (hors kit) | **réécrire** | se **greffe** au lieu de remplacer : le coup part, et l'action suivante a un jet de plus (la règle actuelle fait perdre un coup pour en gagner un plus tard : Morgrut y perd) | — |
+| Pourfendre | **renforcer, lire l'attaque** | s'il touche : **Saignement égal à la moitié du coup** (au lieu de 2) ; texte raccourci | — |
+| Aura de précision (hors kit) | **renforcer** | +1 au multiplicateur **et +5 % de critique** par charge (sans critique, Morgrut n'en tire rien : +0,4) | — |
+| Foudre | garder | 3 × 1 sur trois faces ; seule elle vaut +9,0 gravée, à la limite basse | — |
+| La barde | **question d'identité** | voir ci-dessous | — |
+
+### Questions à trancher
+
+1. **Le repère de 8 à 20 points par gravure** : d'accord pour régler les compétences sur cette bande, comme les reliques ?
+2. **Les signatures** : Pile ou face doit-elle porter Naraxes (pile ×3, et la Décoction baissée), ou la signature de Naraxes devient-elle l'Aura de décoction ?
+3. **L'Aura sauvage** : +1 à l'attaque par charge (une aura qui écrit la feuille), ou on la retire comme doublon ?
+4. **La barde** : ses doubles restent un spectacle rare (chacun 1 fois sur 36) et l'Ouverture porte son kit ; ou on rend les doubles plus fréquents (un double sur deux dés de trois faces, par exemple) ; ou ses compétences passent sur les faces, comme les autres, et ses deux dés ne servent plus qu'à frapper deux fois ?
