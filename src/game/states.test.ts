@@ -55,7 +55,7 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
   })
 
   it('un mécanisme de compétence et une règle de forme ne vont pas dans la zone d’état', () => {
-    for (const id of ['retribution', 'coinFlip', 'windFury', 'waiting', 'casting'] as const)
+    for (const id of ['retribution', 'coinFlip', 'windFury', 'casting'] as const)
       expect(trayStates([{ id, stacks: 1 }], []), id).toEqual([])
   })
 

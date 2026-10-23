@@ -65,6 +65,40 @@ Les deux contres connus (Brokk–Fanchon, Naraxes–Ysolde) sont revenus sous 63
 
 ---
 
+## L'attaque de base (0.106.0)
+
+**Règles v2, phase 5 bis** (décisions de l'utilisateur du 2026-10-23, [RESOLUTION.md](RESOLUTION.md) § 3 bis) : chaque personnage a une **attaque**, une petite fourchette (`attackMin` à `attackMax` : un écart de 2 au plus pour tous, `validateRoster` en tolère 3 pour une exception d'identité) et un **type** de coup (`attackKind`) : DM (magique) pour Ysolde et la forme humaine du druide, DD pour tous les autres. Le type ne compte que pour l'étiquette et les bonus par type (aucun aujourd'hui). Chaque jet porte un **coup de base**, tiré dans la fourchette, avec toute la chaîne d'un coup (esquive, critique, modificateurs, armure, boucliers, réactions). Le dé ne fait plus de dégâts : il désigne une face. Une face nue ne porte que le coup ; une face de compétence **greffe** sa compétence (par défaut : ses effets, puis le coup), la **modifie** (Pourfendre, Pile ou face) ou la **remplace** (Furie des vents, Coup de chance, Crescendo, Soliste). Les valeurs imprimées de la 0.105.0 et l'Attente de l'ogre sont retirées.
+
+Mesuré à 800 combats par duel (`BALANCE_N=800 npm run balance`), 0.105.0 → 0.106.0 :
+
+| Personnage | Attaque | Type | PV | Changements | Taux | Tours par combat | Pire et meilleur duel |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Gorak | 5 à 6 | DD | 57 | Pourfendre modifie, Furie des vents remplace | 48,7 → 50,5 % | 15,8 → 14,9 | Elaria 44 %, Ysolde 56 % |
+| Elaria | 4 à 5 | DD | 53 | esquive 26 → 22 %, critique 17 → 15 % | 49,2 → 48,9 % | 20,4 → 18,0 | Ysolde et Aldric 42 %, Morgrut 62 % |
+| Brokk | 5 à 6 | DD | 57 | critique ×2,5 → ×2,2 | 49,9 → 51,5 % | 18,1 → 17,0 | Naraxes 46 %, Fanchon 57 % |
+| Ervald | 4 à 6 | DD | 56 | aucun | 49,3 → 49,8 % | 18,7 → 17,9 | Naraxes 41 %, Morgrut 57 % |
+| Ysolde | 4 à 6 | DM | 52 | aucun | 50,9 → 49,1 % | 20,7 → 18,5 | Gorak et Morgrut 44 %, Elaria 58 % |
+| Naraxes | 4 à 5 | DD | 50 | Pile ou face modifie (pile : ce coup ×2), Coup de chance remplace | 50,7 → 52,2 % | 16,1 → 15,1 | Thaldrin 49 %, Ervald 59 % |
+| Aldric | 3 à 5 | DD | 54 | aucun | 50,2 → 50,3 % | 15,4 → 14,6 | Thaldrin 43 %, Elaria 58 % |
+| Morgrut | 7 à 9 | DD | 63 → 59 | plus d'Attente, six faces nues | 51,4 → 48,8 % | 16,4 → 15,1 | Elaria 38 %, Thaldrin 59 % |
+| Thaldrin | 3 à 4 (homme DM ; ours DD, +3 de la Force de l'ours) | DM / DD | 56 | Foudre 3×2 → 3×1 | 51,6 → 49,4 % | 16,1 → 15,4 | Morgrut 41 %, Aldric 57 % |
+| Fanchon | 2 à 4, deux coups (deux dés) | DD | 46 | critique 5 → 10 %, Crescendo ×4 et Soliste ×5 (un coup de base à la place des deux) | 48,2 → 49,5 % | 14,0 → 13,1 | Brokk 43 %, Ervald et Ysolde 55 % |
+
+**Ordre des leviers** ([EQUILIBRAGE.md](EQUILIBRAGE.md) § 5). Les compétences deviennent gratuites : un jet de compétence ne sacrifie plus son coup. D'abord les valeurs des compétences (la Foudre, qui gagnait un coup de base en plus de ses trois éclairs, passe à 3×1 ; Crescendo et Soliste réglés sur un coup de base), puis l'attaque et les stats secondaires (Elaria, Brokk, Fanchon), les PV en dernier : Morgrut seul, sans compétence ni critique, n'avait pas d'autre levier que son attaque, déjà la plus forte (7 à 9).
+
+**Durée** : 17,2 → 16,0 tours par combat en moyenne (−7 %), soit environ 8,6 → 8,0 tours par combattant. La baisse est légère : aucune compensation par le contenu n'a été jugée nécessaire.
+
+**Duels les plus déséquilibrés** (800 combats) : aucun au-delà de 65/35.
+- Elaria contre Morgrut, 61,9 % : l'ogre n'esquive pas et ne vise pas ; elle esquive un coup sur cinq.
+- Ervald contre Naraxes, 40,8 %.
+- Morgrut contre Thaldrin, 58,8 %.
+- Elaria contre Ysolde, 42,0 %.
+- Aldric contre Elaria, 57,8 %.
+
+**Valeurs nettes** : toutes positives (l'Attente valait −3,7 et les Feux follets −3,1 en 0.105.0). Les plus fortes : Aura de décoction +41,8, Rétribution +38,7, Feux follets +36,1, Aura de sainteté +32,6. Les doubles de la barde restent petits (de +2,2 à +5,3), Ouverture +26,1.
+
+---
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.
@@ -118,6 +152,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 > « Le roc des fosses de Kar-Dush. »
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Pourfendre (frappe pour 4) et Furie des vents, coups de 5, 5, 6, 7 ; Aura de puissance hors kit. 51,0 → 48,7 %. Voir « Le d6 imprimé ».
+
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DD), 57 PV ; Pourfendre modifie son coup de base (Saignement 2 s'il touche), la Furie des vents remplace le coup du 2 par deux coups de base, chacun avec son dé. 48,7 → 50,5 %, 15,8 → 14,9 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le champion des fosses.**
 - **Qui il est** : un vétéran des combats d'arène, fier, qui joue pour le public. Il paraît calme et sûr de lui, mais la colère monte à chaque coup reçu (choix de 2026-10-20 entre le « calme » de son image et le « coup manqué l'énerve » de sa fiche : l'un mène à l'autre).
@@ -184,6 +220,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Œil de faucon et Esquive améliorée, coups de 5, 6, 6, 7 ; Aura de précision hors kit ; 53 PV (50), dernier levier. 47,3 → 49,2 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DD), 53 PV ; esquive 26 → 22 %, critique 17 → 15 % (×2,4). Œil de faucon greffé rend critique le coup de base de son propre jet. 49,2 → 48,9 %, 20,4 → 18,0 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : la chasseresse solitaire.**
 - **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.
 - **Comment elle se bat** : elle observe, se dérobe, et attend l'ouverture. Un tir manqué lui sert à régler le suivant (Œil de faucon). Elle frappe peu, mais au bon endroit.
@@ -240,6 +278,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Peau de pierre et Épines acérées, coups de 7, 7, 8, 10 ; Aura d'intimidation hors kit. 47,4 → 49,9 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DD), 57 PV ; critique ×2,5 → ×2,2 (10 %). 49,9 → 51,5 %, 18,1 → 17,0 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : le roc.**
 - **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
 - **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Épines acérées), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
@@ -291,6 +331,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 > « La mort l'a rendu, pas pardonné. »
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Vol de vie et Aura glaciale, coups de 6, 6, 7, 9 ; Souffle de la tombe hors kit. 53,9 → 49,3 %. Voir « Le d6 imprimé ».
+
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6 (DD), 56 PV, aucun autre changement ; Vol de vie greffé draine le coup de base de son propre jet. 49,3 → 49,8 %, 18,7 → 17,9 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le devoir qui ne meurt pas.**
 - **Qui il est** : un soldat mort à son poste et revenu par devoir. Il est froid, sans haine ni colère ; il n'a plus rien à perdre, et il a donc tout son temps.
@@ -352,6 +394,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Purification et Aura de sainteté, coups de 6, 7, 7, 8 ; Peur hors kit. 43,9 → 50,9 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6, **magique (DM)**, 52 PV, aucun autre changement. 50,9 → 49,1 %, 20,7 → 18,5 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : la juge.**
 - **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
 - **Comment elle se bat** : elle laisse l'adversaire se condamner lui-même. Elle le paralyse de crainte (Peur), efface ce qui le salit (Purification) et tient bon dans sa lumière (sainteté). Ses coups sont faibles, et ce n'est pas eux qui comptent.
@@ -403,6 +447,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Pile ou face et Aura de décoction, coups de 6, 7, 7, 8 ; Coup de chance hors kit. 53,7 → 50,7 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DD), 50 PV ; Pile ou face modifie son coup (s'il touche, la pièce : pile, ce coup ×2, au lieu de 10 dégâts fixes) ; Coup de chance remplace le coup de son jet (l'action suivante a un jet complet de plus par charge). 50,7 → 52,2 %, 16,1 → 15,1 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : la joueuse.**
 - **Qui elle est** : insolente et opportuniste, elle ne se bat jamais à la loyale. Elle aime le risque plus que la victoire elle-même.
 - **Comment elle se bat** : elle esquive, empoisonne ses lames et mise tout sur un coup de chance (Coup de chance, Pile ou face). Quand le hasard ne paie pas, le poison finit le travail.
@@ -448,6 +494,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Rétribution et Riposte, coups de 4, 5, 6, 7 ; Aura d'immunité hors kit. 53,9 → 50,2 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 3 à 5 (DD), 54 PV, aucun autre changement. 50,2 → 50,3 %, 15,4 → 14,6 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : le créancier.**
 - **Qui il est** : un paladin rigide et discipliné. Sa ferveur est réelle mais contenue : il encaisse en silence, et il compte (choix de 2026-10-20 entre le « fanatique » de son image et le « tient le compte » de sa fiche : le fanatique n'apparaît qu'au moment où il rend les coups, dans sa posture d'attaque par exemple).
 - **Comment il se bat** : il laisse venir les coups, les note comme des dettes, puis paie d'un seul revers (Rétribution, Riposte). Rien ne le détourne de sa voie (Aura d'immunité).
@@ -471,31 +519,33 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **0.50.0, Riposte à deux charges** : ses deux prochains coups encaissés renvoient chacun la moitié des dégâts. +2,7 → **+7,1** ; Aldric 49,0 → 54,1 %, ses combats se retournent un peu plus (retours de 61 à 62,5 %). À 100 % de renvoi, Thaldrin passait à 65 % contre lui.
 
-## Ogre : taper, attendre, taper plus fort
+## Ogre : taper, taper encore, taper plus fort
 
 **Image** : `ogre-idle.png` et ses cinq postures (0.65.0), un ogre ventru, casque cabossé et massue cloutée, un papillon posé dessus. C'est le modèle de `ogre.png` (0.35.0), qu'elles remplacent. Morgrut n'esquive jamais (0 %) : sa posture d'esquive existe pour la règle commune, mais ne se voit pas en jeu.
 
-**Philosophie** (décision de l'utilisateur) : bête comme ses pieds, il n'a **aucune compétence**. Sur un 1, un 2 ou un 3, il gagne **Attente** (montre à gousset) : il ne frappe pas ce tour-là et attend son prochain jet. En contrepartie, il tape très fort, avec un **d14**.
+**Philosophie** (décision de l'utilisateur) : bête comme ses pieds, il n'a **aucune compétence**. De la 0.35.0 à la 0.105.0, un 1, un 2 ou un 3 lui donnait **Attente** (montre à gousset) : il ne frappait pas ce tour-là. En contrepartie, il tapait très fort, avec un **d14**. **Depuis la 0.106.0** (décision de l'utilisateur), l'Attente est retirée : ses six faces sont nues, chaque jet frappe, et il a la plus forte attaque du roster (7 à 9).
 
 **Réglage 0.35.0** : avec 8 % de critique et 66 PV, Morgrut gagnait 63 % de ses combats, et Gnashka 67 %, avec des duels jusqu'à 74/26. Le dé est le levier le plus fort (passer au d12 lui ôtait 19 points), mais le d14 est la proposition de l'utilisateur. On a donc retiré le critique (il ne vise pas, ce qui va avec son personnage) : 57,3 %. Puis 63 PV au lieu de 66 : 51,7 %. Valeur des trois Attente : de −1,5 à −3,8 points chacune ; c'est le prix de son gros dé.
 
-**Forge du dé (0.88.0, campagne)** : ses trois Attente sont des **faces d'attente** (`idle`), pas des compétences : la forge peut y graver une compétence, qui la remplace (décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4). En duel et en tournoi, rien ne change. Son image sert aussi, assombrie, au boss de la campagne, **Le Colosse** : un autre ogre, plus grand et plus vieux (provisoire, en attendant une image propre).
+**Forge du dé (0.88.0, campagne)** : ses trois Attente étaient des **faces d'attente** (`idle`), pas des compétences : la forge pouvait y graver une compétence, qui la remplaçait (décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4). Depuis la 0.106.0, ce sont des faces nues comme les autres : la forge les remplit. Son image sert aussi, assombrie, au boss de la campagne, **Le Colosse** : un autre ogre, plus grand et plus vieux (provisoire, en attendant une image propre).
 
 ### Morgrut · Cogneur
 
-> « Taper. Attendre. Taper plus fort. »
+> « Taper. Taper encore. Taper plus fort. »
 
 **2026-10-23, le d6 imprimé (0.105.0)** : une seule Attente (sur le 1), coups de 7, 8, 9, 10, 11 ; plus de d14 ni de trois Attentes. 47,4 → 51,4 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : plus d'Attente (décision de l'utilisateur), six faces nues ; attaque 7 à 9 (DD), la plus forte du roster ; **59 PV (63)**, son seul autre levier. 51,4 → 48,8 %, 16,4 → 15,1 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : le gros distrait.**
 - **Qui il est** : simple, lent d'esprit, et pas méchant du tout : il s'émerveille d'un papillon. Il ne se bat pas par haine, on lui a juste dit de taper.
-- **Comment il se bat** : il tape très fort quand il comprend ce qu'il fait, et sinon il attend (Attente). Il ne vise pas (aucun critique) et n'esquive pas : il n'y pense même pas.
+- **Comment il se bat** : il tape, à chaque jet, plus fort que tout le monde (depuis la 0.106.0 ; avant, il attendait sur un jet qu'il ne comprenait pas, l'Attente). Il ne vise pas (aucun critique) et n'esquive pas : il n'y pense même pas.
 - **Pistes** : se laisser distraire, profiter d'un hasard heureux sans le chercher, s'énerver d'un coup si on l'agace trop.
 
-- **Stats** : PV 63, d14, armure 0, esquive 0 %, critique 0 % (×2).
-- **Comment il gagne** : 11 jets sur 14 frappent, en moyenne pour 9 dégâts.
-- **Comment il perd** : contre Brokk (36 %), dont l'intimidation rogne ses gros coups, et contre l'esquive des elfes (44 à 49 %).
-- **Mesures** : 51,7 % de victoires (0.35.0, 400 combats par duel), environ 19 tours par combat. Il bat les prêtresses à 61-62 %.
+- **Stats** (0.106.0) : PV 59, attaque 7 à 9 (DD), six faces nues, armure 0, esquive 0 %, critique 0 % (×2). En 0.35.0 : PV 63, d14.
+- **Comment il gagne** : chaque jet frappe, en moyenne pour 8 dégâts.
+- **Comment il perd** : contre l'esquive d'Elaria (38 %) et contre Ervald (43 %).
+- **Mesures** : 48,8 % de victoires (0.106.0, 800 combats par duel), 15,1 tours par combat ; il bat Thaldrin à 59 %. En 0.35.0 : 51,7 %, environ 19 tours.
 
 ### Gnashka · Ogre des cavernes · retiré en 0.43.0
 
@@ -542,6 +592,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 > « La forêt a deux visages. »
 
 **2026-10-23, le d6 imprimé (0.105.0)** : homme, Foudre sur 1, 2, 3 et Feux follets sur 4, 5, 6 (plus de d3) ; ours, coups de 3 à 8 (+3 Force de l'ours) ; Aura sauvage hors kit. 49,4 → 51,6 %. Voir « Le d6 imprimé ».
+
+**2026-10-23, l'attaque de base (0.106.0)** : une seule attaque, 3 à 4, dont le type suit la forme (`CharacterForm.attackKind`) : l'homme frappe en magique (DM) et chaque sort se greffe sur ce coup ; l'ours frappe en direct (DD), avec sa Force de l'ours (+3), gardée. Foudre 3×2 → 3×1 (elle gagne un coup de base). 51,6 → 49,4 %, 16,1 → 15,4 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
@@ -603,6 +655,8 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 **2026-10-23, le d6 imprimé (0.105.0)** : deux d6 (deux d5 avant), chaque dé 1, 2, 3, 4, 5, 4 ; doubles 1 à 5 inchangés, double 6 sans compétence (deux coups de 4). 52,1 → 48,2 %. Voir « Le d6 imprimé ».
 
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 2 à 4 (DD), deux coups de base par action (un par dé) ; un double à compétence se greffe sur les deux coups, sauf Crescendo (×4) et Soliste (×5), qui les remplacent par un seul coup de base multiplié ; critique 5 → 10 %. 48,2 → 49,5 %, 14,0 → 13,1 tours par combat. Voir « L'attaque de base ».
+
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
 - **Comment elle se bat** : deux dés, deux mains, un rythme. Elle frappe vite et léger, et quand les dés s'accordent, c'est la musique qui frappe (les doubles). Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée.
@@ -627,20 +681,20 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne. Règles 0.76.0, 400 combats par duel (`npm run balance`, `logs/balance/`).
+Taux de victoire de la ligne contre la colonne. Règles 0.106.0 (l'attaque de base), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/`).
 
 | | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 49 % | 51 % | 47 % | 60 % | 52 % | 50 % | 54 % | 55 % | 49 % | **51,7 %** |
-| **Elaria** | 51 % | — | 52 % | 42 % | 49 % | 49 % | 44 % | 55 % | 46 % | 42 % | **47,6 %** |
-| **Brokk** | 50 % | 48 % | — | 39 % | 55 % | 45 % | 40 % | 58 % | 39 % | 60 % | **48,0 %** |
-| **Ervald** | 53 % | 59 % | 61 % | — | 57 % | 55 % | 45 % | 58 % | 57 % | 47 % | **54,6 %** |
-| **Ysolde** | 41 % | 52 % | 46 % | 43 % | — | 40 % | 43 % | 43 % | 52 % | 43 % | **44,6 %** |
-| **Naraxes** | 48 % | 51 % | 55 % | 46 % | 60 % | — | 44 % | 47 % | 47 % | 50 % | **49,8 %** |
-| **Aldric** | 51 % | 56 % | 60 % | 55 % | 57 % | 56 % | — | 53 % | 54 % | 40 % | **53,5 %** |
-| **Morgrut** | 46 % | 45 % | 42 % | 42 % | 57 % | 53 % | 48 % | — | 51 % | 48 % | **47,8 %** |
-| **Thaldrin** | 46 % | 54 % | 62 % | 43 % | 48 % | 53 % | 46 % | 50 % | — | 47 % | **49,8 %** |
-| **Fanchon** | 51 % | 58 % | 40 % | 53 % | 57 % | 50 % | 60 % | 53 % | 53 % | — | **52,8 %** |
+| **Gorak** | — | 44 % | 49 % | 50 % | 56 % | 50 % | 48 % | 54 % | 51 % | 53 % | **50,5 %** |
+| **Elaria** | 56 % | — | 47 % | 47 % | 42 % | 50 % | 42 % | 62 % | 45 % | 49 % | **48,9 %** |
+| **Brokk** | 51 % | 53 % | — | 51 % | 52 % | 46 % | 51 % | 48 % | 55 % | 57 % | **51,5 %** |
+| **Ervald** | 50 % | 53 % | 49 % | — | 49 % | 41 % | 55 % | 57 % | 50 % | 45 % | **49,8 %** |
+| **Ysolde** | 44 % | 58 % | 48 % | 52 % | — | 50 % | 46 % | 44 % | 56 % | 45 % | **49,1 %** |
+| **Naraxes** | 51 % | 50 % | 54 % | 59 % | 51 % | — | 52 % | 54 % | 49 % | 52 % | **52,2 %** |
+| **Aldric** | 52 % | 58 % | 49 % | 45 % | 54 % | 48 % | — | 56 % | 43 % | 47 % | **50,3 %** |
+| **Morgrut** | 46 % | 38 % | 52 % | 43 % | 56 % | 46 % | 44 % | — | 59 % | 55 % | **48,8 %** |
+| **Thaldrin** | 49 % | 55 % | 45 % | 50 % | 44 % | 51 % | 57 % | 41 % | — | 51 % | **49,4 %** |
+| **Fanchon** | 47 % | 51 % | 43 % | 55 % | 55 % | 48 % | 53 % | 45 % | 49 % | — | **49,5 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 

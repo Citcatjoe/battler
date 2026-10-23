@@ -53,11 +53,11 @@ export const ENCOUNTER_CHOICES = 2
 export const HERITAGE_CHOICES = 3
 
 /**
- * Courbe nominale montante (§ 18.3 de CAMPAGNE.md, allongée en 0.104.0, PROGRESSION.md § 11.3) : la victoire visée du
- * champion de référence à chaque combat normal, de 98 à 89 %, un point par combat, puis le drame du boss (45 %).
- * Produit des dix : 51 % des champions de référence atteignent le boss, 23 % gagnent l'acte (comme l'acte de cinq).
+ * Courbe nominale (§ 18.3 de CAMPAGNE.md, allongée en 0.104.0, PROGRESSION.md § 11.3) : la victoire visée du champion
+ * de référence à chaque combat normal, puis le drame du boss (45 %). Abaissée au début en 0.106.0 (décision de
+ * l'utilisateur, « plus basse au début, vers 90 % ») : de 90 à 88 %.
  */
-export const NORMAL_TARGETS: readonly number[] = [0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92, 0.91, 0.9, 0.89]
+export const NORMAL_TARGETS: readonly number[] = [0.9, 0.9, 0.9, 0.89, 0.89, 0.89, 0.89, 0.88, 0.88, 0.88]
 export const BOSS_TARGET = 0.45
 
 /* ---------- Le boss ---------- */
@@ -76,10 +76,10 @@ export const BOSS: CharacterDef = {
   name: 'Le Colosse',
   race: 'Ogre',
   archetype: 'Champion de l’arène',
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : trois compétences sur le 1, le 2 et le 3, trois gros coups ; Pourfendre
-  // frappe pour 6. Le d12 d'avant frappait en moyenne 8 sur ses neuf faces de coup
-  stats: { maxHp: 70, damageDie: 6, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
-  strikes: [3, 6, 3, 10, 11, 12],
+  // Règles v2, phase 5 bis (0.106.0) : une attaque lourde, ses trois techniques sur le 1, le 2 et le 3 (Peau de pierre
+  // et l'Aura d'intimidation se greffent sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées
+  stats: { maxHp: 70, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
+  attackKind: 'direct',
   look: { ...rosterDef('morgrut').look, tint: 'brightness(0.72) sepia(0.35) hue-rotate(-20deg) saturate(1.4)' },
   lore: {
     tagline: 'Personne ne l’a jamais vu tomber. Personne ne l’a jamais vu de près, non plus.',

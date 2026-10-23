@@ -103,7 +103,7 @@ export function ForgeFaceTooltip({
         <p className="font-body text-[15px] leading-snug text-ink-1">{engraved || !now ? <New>{then.text}</New> : <Diff before={now.text} after={then.text} />}</p>
       ) : (
         <p className="font-body text-[15px] leading-snug text-ink-1">
-          {after.idle ? 'Attente : il ne frappe pas' : <Diff before={`Frappe de ${face.value}`} after={`Frappe de ${after.value}`} />}
+          {twin ? `Chaque dé qui fait ${face.face} porte le coup de base` : 'Le coup de base, sans compétence'}
         </p>
       )}
       {(face.gild > 0 || after.gild > 0) && <Gild from={face.gild} to={after.gild} />}

@@ -146,7 +146,7 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
   const attacks = attacksOf(result)
   const loser = other(winner)
   // Dernier coup porté par le vainqueur (le K.O. peut venir d'un effet, ex. poison)
-  const finisher = [...attacks].reverse().find((a) => a.attacker === winner && !a.dodged && !a.forfeited)
+  const finisher = [...attacks].reverse().find((a) => a.attacker === winner && !a.dodged && !a.replaced)
   const biggest = attacks.reduce<(typeof attacks)[number] | undefined>(
     (best, a) => (!best || a.dealt > best.dealt ? a : best),
     undefined,

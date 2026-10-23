@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES } from '../game/events'
 import {
   FORGE_OPS,
+  TEMPER_BONUS,
   forgedFaces,
   forgeState,
   GILD_BONUS,
@@ -72,12 +73,11 @@ export function ForgedDie({
               data-nature={skill ? (skill.nature ?? DEFAULT_SKILL_NATURE) : undefined}
               data-engraved={f.engraved ? '' : undefined}
               data-gild={f.gild ? '' : undefined}
-              data-idle={f.idle ? '' : undefined}
               data-target={target ? '' : undefined}
               data-off={targets && !target ? '' : undefined}
               style={{ width: TILE[size], height: TILE[size] }}
             >
-              {skill ? <SkillSeal id={skill.id} size={size === 'md' ? 40 : 32} /> : f.value}
+              {skill ? <SkillSeal id={skill.id} size={size === 'md' ? 40 : 32} /> : f.face}
               {skill && <span className="forge-face-num">{f.face}</span>}
               {f.rank > 0 && <span className="forge-face-rank">{rankLabel(f.rank)}</span>}
             </button>
@@ -171,7 +171,7 @@ export function useForgeChoice(character: Character, offer: readonly ForgeOffer[
   const [face, setFace] = useState(autoFace)
   const picked = offer[index]
   const targets = picked ? offerTargets(character.definition, character.forge, picked) : []
-  const ready = !picked || picked.op === 'reforge' || (face !== undefined && targets.includes(face))
+  const ready = !picked || !FORGE_OPS[picked.op].targeted || (face !== undefined && targets.includes(face))
   return {
     offer,
     autoIndex,
@@ -208,7 +208,7 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
       </div>
       <div className="flex flex-col items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">
-          {picked && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(picked, face), character.twinDice)) : `Son dé · d${character.stats.damageDie}`}
+          {picked && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(picked, face), character.twinDice)) : `Son dé · d${DIE_FACES}`}
         </span>
         <ForgedDie
           character={character}
@@ -224,10 +224,10 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
   )
 }
 
-/** Le signe d'une opération sans sceau, sur sa tuile : l'or de la dorure, le rang, la copie, la refonte. */
-const OP_TEXT: Record<Exclude<ForgeStep['op'], 'engrave'>, string> = { gild: `+${GILD_BONUS}`, sharpen: 'II', copy: '×2', reforge: '=' }
+/** Le signe d'une opération sans sceau, sur sa tuile : l'or de la dorure, le rang, la copie, la trempe. */
+const OP_TEXT: Record<Exclude<ForgeStep['op'], 'engrave'>, string> = { gild: `+${GILD_BONUS}`, sharpen: 'II', copy: '×2', temper: `+${TEMPER_BONUS}` }
 
-/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la copie, la refonte. */
+/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la copie, la trempe. */
 function StepTile({ step, size }: { step: ForgeStep; size: number }) {
   const text = step.op === 'engrave' ? undefined : OP_TEXT[step.op]
   return (
@@ -257,7 +257,7 @@ function ForgeTooltip({ base, steps, index, placement }: { base: ForgeBase; step
   const badge =
     'face' in step
       ? `${twin && step.op !== 'gild' ? 'Double' : 'Dé'} ${step.face}`
-      : `d${forgeState(base, steps.slice(0, index)).size} → d${forgeState(base, after).size}`
+      : `Attaque +${forgeState(base, after).temper - forgeState(base, steps.slice(0, index)).temper}`
   const position = placement === 'floating' ? '' : 'pointer-events-none invisible absolute left-0 top-full z-[70] mt-3 opacity-0 transition-opacity duration-150 group-hover/forge:visible group-hover/forge:opacity-100'
   return (
     <div role="tooltip" className={`w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2) ${position}`}>

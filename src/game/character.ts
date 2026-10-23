@@ -1,26 +1,32 @@
 import type { PoseId } from './poses'
+import type { AttackKind } from './damage'
 import type { CharacterEvent } from './events'
-import { faceValue, forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
+import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
 import type { StatusId } from './statuses'
 
 export interface CharacterStats {
   maxHp: number
-  /** Nombre de faces du dé de dégâts (1 à N) */
-  damageDie: number
+  /**
+   * L'attaque (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : chaque coup de base tire sa valeur entre
+   * `attackMin` et `attackMax`, bornes comprises. Une relique ou « Tremper l'arme » ajoutent aux deux.
+   */
+  attackMin: number
+  attackMax: number
   /** Dégâts retirés de chaque coup reçu (un coup inflige toujours au moins 1) */
   armor: number
   /** Probabilité d'esquiver une attaque, entre 0 et 1 */
   dodgeChance: number
   /** Probabilité de porter un coup critique, entre 0 et 1 */
   critChance: number
-  /** Multiplicateur des dégâts du dé en cas de critique */
+  /** Multiplicateur de la valeur du coup en cas de critique */
   critMultiplier: number
 }
 
 export const STAT_KEYS = [
   'maxHp',
-  'damageDie',
+  'attackMin',
+  'attackMax',
   'armor',
   'dodgeChance',
   'critChance',
@@ -95,9 +101,11 @@ export interface CharacterForm {
   look?: Partial<CharacterLook>
   /**
    * Statuts de forme (0.73.0) : posés tant qu'il a cette forme, retirés quand il la quitte. Ce sont les
-   * règles de la forme (le d3 de l'homme, le +3 de l'ours) ; ils doivent être `mechanic: 'form'` (validateRoster).
+   * règles de la forme (le sort de l'homme, le +3 de l'ours) ; ils doivent être `mechanic: 'form'` (validateRoster).
    */
   statuses?: readonly StatusId[]
+  /** Type du coup de base sous cette forme (règles v2, phase 5 bis : l'homme DM, l'ours DD) ; sinon celui du personnage */
+  attackKind?: AttackKind
 }
 
 export interface CharacterDef {
@@ -112,11 +120,10 @@ export interface CharacterDef {
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /**
-   * Valeurs imprimées (règles v2, phase 3, docs/RESOLUTION.md § 3) : ce que frappe chaque face du dé, de la face 1 à la
-   * dernière. Le jet désigne la face (« sur un 4 » : la face 4) ; la face frappe pour sa valeur. Absente, ou au-delà de
-   * sa longueur (faces ajoutées par la forge) : chaque face frappe pour son numéro.
+   * Type de son coup de base (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : DD (une arme) ou DM (la magie :
+   * Ysolde, le druide sous forme humaine). Une étiquette : aucune règle ne la lit encore.
    */
-  strikes?: readonly number[]
+  attackKind: AttackKind
   /**
    * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
    * d'une campagne. Sans signature (le combattant nu, les exceptions de structure), il y part avec son kit entier.
@@ -141,8 +148,8 @@ export interface CharacterDef {
    */
   forms?: readonly [CharacterForm, CharacterForm]
   /**
-   * Deux dés par action (la barde) : deux coups, un par dé ; un double déclenche la compétence de sa
-   * face (`doubleOne` à `doubleFive`) à la place des deux coups. Voir docs/RESOLUTION.md § 2.
+   * Deux dés par action (la barde) : deux coups de base, un par dé ; un double déclenche la compétence de sa
+   * face (`doubleOne` à `doubleFive`), qui se greffe sur les deux coups ou les remplace. Voir docs/RESOLUTION.md § 2.
    */
   twinDice?: true
   /**
@@ -152,7 +159,7 @@ export interface CharacterDef {
   relics?: readonly Relic[]
   /**
    * Forge du dé (campagne, docs/CAMPAGNE.md § 4) : journal d'opérations, rejoué sur `stats` et `events` d'origine.
-   * Le dé forgé remplace `damageDie`, les gravures et les rangs s'ajoutent aux compétences, les dorures au coup.
+   * Les gravures et les rangs s'ajoutent aux compétences, les dorures au coup de base, la trempe à l'attaque.
    */
   forge?: readonly ForgeStep[]
 }
@@ -166,9 +173,9 @@ export class Character {
   readonly name: string
   readonly race: string
   readonly archetype: string
-  /** Stats de combat : celles du personnage (dé forgé compris), plus celles de ses reliques */
+  /** Stats de combat : celles du personnage (forge comprise), plus celles de ses reliques */
   readonly stats: Readonly<CharacterStats>
-  /** Stats du personnage seul, dé forgé compris, sans ses reliques */
+  /** Stats du personnage seul, forge comprise (Tremper l'arme), sans ses reliques */
   readonly baseStats: Readonly<CharacterStats>
   readonly look: Readonly<CharacterLook>
   readonly lore: CharacterLore
@@ -183,7 +190,6 @@ export class Character {
   /** Bonus des faces dorées, par face (forge du dé) : lu par le moteur à chaque coup */
   readonly gilded: Readonly<Record<number, number>>
   readonly #def: CharacterDef
-  readonly #forged: ForgeState | undefined
 
   constructor(def: CharacterDef) {
     this.#def = def
@@ -193,8 +199,8 @@ export class Character {
     this.archetype = def.archetype
     this.forge = def.forge ?? []
     const forged = this.forge.length > 0 ? forgeState(def, this.forge) : undefined
-    this.#forged = forged
-    this.baseStats = Object.freeze(forged ? { ...def.stats, damageDie: forged.size } : { ...def.stats })
+    const temper = forged?.temper ?? 0
+    this.baseStats = Object.freeze({ ...def.stats, attackMin: def.stats.attackMin + temper, attackMax: def.stats.attackMax + temper })
     this.relics = def.relics ?? []
     this.stats = Object.freeze(withRelicStats(this.baseStats, this.relics))
     this.look = Object.freeze({ ...def.look })
@@ -206,9 +212,9 @@ export class Character {
     this.twinDice = !!def.twinDice
   }
 
-  /** Ce que frappe une face de son dé (règles v2, phase 3) : sa valeur imprimée, forge comprise, dorure non comprise. */
-  strikeValue(face: number): number {
-    return faceValue(this.#def, this.#forged, face)
+  /** Type du coup de base sous une forme donnée (index dans `forms`) : celui de la forme, sinon le sien. */
+  attackKindIn(form = 0): AttackKind {
+    return this.forms?.[form].attackKind ?? this.#def.attackKind
   }
 
   /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */
@@ -244,13 +250,12 @@ export class Character {
     return this.#def
   }
 
-  /** Même personnage avec des stats, des compétences ou des valeurs imprimées modifiées : essais d'équilibrage (analysis.ts). */
-  adjusted(changes: { stats?: Partial<CharacterStats>; events?: readonly CharacterEvent[]; strikes?: readonly number[] }) {
+  /** Même personnage avec des stats ou des compétences modifiées : essais d'équilibrage (analysis.ts). */
+  adjusted(changes: { stats?: Partial<CharacterStats>; events?: readonly CharacterEvent[] }) {
     return new Character({
       ...this.#def,
       stats: { ...this.#def.stats, ...changes.stats },
       events: changes.events ?? this.#def.events,
-      strikes: changes.strikes ?? this.#def.strikes,
     })
   }
 }

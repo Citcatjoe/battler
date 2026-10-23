@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { hashSeed } from '../game/analysis'
+import { DIE_FACES } from '../game/events'
 import {
   ACT_FIGHTS,
   ACT_LENGTH,
@@ -100,7 +101,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
               </div>
               <h2 className="font-display text-4xl font-extrabold text-ink-1">{c.name}</h2>
               <p className="font-body text-lg text-ink-2">
-                {c.race} · {c.archetype} · {c.twinDice ? '2' : ''}d{c.stats.damageDie}
+                {c.race} · {c.archetype} · {c.twinDice ? '2' : ''}d{DIE_FACES}
               </p>
               <SkillDice character={c} />
               <SignatureLine character={c} />
@@ -228,8 +229,8 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
         <SignatureLine character={champion} />
       </div>
       <div className="relative z-10 flex flex-col gap-2">
-        <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Son dé · d{champion.stats.damageDie}</span>
-        <ForgedDie character={champion} size={champion.stats.damageDie > 8 ? 'sm' : 'md'} tooltip="above" />
+        <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Son dé · d{DIE_FACES}</span>
+        <ForgedDie character={champion} size="md" tooltip="above" />
       </div>
       {champion.relics.length > 0 && (
         <div className="relative z-10 flex items-center gap-3">
@@ -419,7 +420,7 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
           <p className="text-sm font-bold uppercase tracking-[0.4em] text-amber-300">{won ? 'Acte gagné' : 'Fin de la partie'}</p>
           <h1 className="champion-name font-display text-7xl font-extrabold leading-none">{won ? `${BOSS.name} est tombé` : `${champion.name} est tombé`}</h1>
           <p className="mt-2 text-lg text-stone-400">
-            {champion.name} · {run.wins} victoire{run.wins > 1 ? 's' : ''} sur {ACT_LENGTH} · d{champion.stats.damageDie}
+            {champion.name} · {run.wins} victoire{run.wins > 1 ? 's' : ''} sur {ACT_LENGTH} · d{DIE_FACES}
           </p>
         </header>
         <div className="flex flex-col gap-2">

@@ -28,14 +28,12 @@ export type Hook =
   /** Un statut et ses charges (Poison sur l'adversaire, Esquive améliorée sur soi) */
   | `status:${StatusId}`
   | `moment:${Moment}`
-  /** Des dégâts infligés de ce type (DP, DM, DT) */
+  /** Des dégâts infligés de ce type (DD, DM, DT) */
   | `damage:${DamageKind}`
   /** Une face du dé qui tombe (« face:4 »), la face maximale, un double (deux dés) */
   | `face:${number}`
   | 'face:max'
   | 'double'
-  /** Toutes les faces à la fois : un dé plus grand rend chaque face plus rare (Contrepoids de plomb) */
-  | 'faces'
   /** Une stat de base */
   | `stat:${keyof CharacterStats}`
 
@@ -61,37 +59,36 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   weakened: { side: 'opponent' },
   exposed: { side: 'opponent' },
   burn: { side: 'opponent', produces: ['damage:temporal'] },
-  vulnerable: { side: 'opponent', produces: ['damage:physical'] },
+  vulnerable: { side: 'opponent', produces: ['damage:direct'] },
   stunned: { side: 'opponent' },
   thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bleed', 'damage:temporal'] },
   ward: { side: 'self' },
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
-  windFury: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
+  windFury: { side: 'self', produces: ['moment:hit', 'damage:direct'] },
   evasion: { side: 'self', produces: ['moment:dodge'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
-  powerAura: { side: 'self', produces: ['damage:physical'] },
+  powerAura: { side: 'self', produces: ['damage:direct'] },
   intimidationAura: { side: 'self' },
   precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['stat:critMultiplier'] },
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
+  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:direct'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
-  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:physical'] },
+  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:direct'] },
   retribution: { side: 'self', consumes: ['moment:hurt'] },
-  waiting: { side: 'self' },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
-  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:physical'] },
+  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:direct'] },
   rotAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:rot', 'damage:temporal'] },
   rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
-  melodiousAura: { side: 'self', produces: ['damage:physical'] },
+  melodiousAura: { side: 'self', produces: ['damage:direct'] },
   casting: { side: 'self' },
-  bearMight: { side: 'self', produces: ['damage:physical'] },
-  wildAura: { side: 'self', produces: ['damage:physical'] },
+  bearMight: { side: 'self', produces: ['damage:direct'] },
+  wildAura: { side: 'self', produces: ['damage:direct'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -132,8 +129,8 @@ export function eventHooks(e: CharacterEvent): Hooks {
   const on = triggerHook(e.trigger)
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
-  // Un coup transformé ou une volée frappe : des coups de plus
-  if (e.volley || e.reshapesHit) h.produces.push('moment:hit', 'damage:physical')
+  // Crescendo, Soliste : un coup de base multiplié, à la place des deux coups du double
+  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:direct')
   for (const effect of e.effects) addEffect(h, effect)
   return unique(h)
 }
@@ -141,7 +138,8 @@ export function eventHooks(e: CharacterEvent): Hooks {
 /** Une stat de relique : ce qu'elle produit si elle monte, ce qu'elle gêne si elle baisse. */
 const STAT_HOOK: Record<keyof CharacterStats, Hook> = {
   maxHp: 'stat:maxHp',
-  damageDie: 'stat:damageDie',
+  attackMin: 'stat:attackMin',
+  attackMax: 'stat:attackMax',
   armor: 'stat:armor',
   dodgeChance: 'moment:dodge',
   critChance: 'moment:crit',
@@ -151,13 +149,9 @@ const STAT_HOOK: Record<keyof CharacterStats, Hook> = {
 /** Les accroches d'une relique, déduites de son type : stats, bonus de coup, ou déclencheur et effets. */
 export function relicHooks(r: Relic): Hooks {
   const h: Hooks = { produces: [], consumes: [], hinders: [] }
-  for (const [k, v] of Object.entries(r.stats ?? {}) as [keyof CharacterStats, number][]) {
-    ;(v > 0 ? h.produces : h.hinders).push(STAT_HOOK[k])
-    // Un dé plus grand : chaque face tombe moins souvent
-    if (k === 'damageDie' && v > 0) h.hinders.push('faces')
-  }
+  for (const [k, v] of Object.entries(r.stats ?? {}) as [keyof CharacterStats, number][]) (v > 0 ? h.produces : h.hinders).push(STAT_HOOK[k])
   if (r.rollBonus) {
-    h.produces.push('damage:physical')
+    h.produces.push('damage:direct')
     if (r.onFace !== undefined) h.consumes.push(`face:${r.onFace}`)
   }
   if (r.trigger?.type === 'strike') {
@@ -169,22 +163,18 @@ export function relicHooks(r: Relic): Hooks {
   return unique(h)
 }
 
-/** Une accroche produite (ou gênée) touche-t-elle une accroche consommée ? « faces » touche toutes les faces. */
-export const touches = (given: Hook, wanted: Hook) =>
-  given === wanted || (given === 'faces' && (wanted.startsWith('face:') || wanted === 'double'))
-
 /** Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits. */
 export function linkBetween(a: Hooks, b: Hooks): { feeds: Hook[]; conflicts: Hook[] } {
-  const meet = (given: readonly Hook[], wanted: readonly Hook[]) => wanted.filter((w) => given.some((g) => touches(g, w)))
+  const meet = (given: readonly Hook[], wanted: readonly Hook[]) => wanted.filter((w) => given.includes(w))
   return {
     feeds: [...new Set([...meet(a.produces, b.consumes), ...meet(b.produces, a.consumes)])],
     conflicts: [...new Set([...meet(a.hinders, b.consumes), ...meet(b.hinders, a.consumes)])],
   }
 }
 
-/** Les briques d'un combattant construit : ses compétences (forge comprise, sans les Attentes) et ses reliques. */
+/** Les briques d'un combattant construit : ses compétences (forge comprise) et ses reliques. */
 export function buildBricks(c: Pick<Character, 'events' | 'relics'>): Hooks[] {
-  return [...c.events.filter((e) => !e.idle).map(eventHooks), ...c.relics.map(relicHooks)]
+  return [...c.events.map(eventHooks), ...c.relics.map(relicHooks)]
 }
 
 /** Ses accroches réunies : ce que l'ensemble de son build produit, consomme et gêne. */
@@ -220,7 +210,7 @@ function posed(effects: readonly Effect[]): { status: StatusId; side: Target }[]
  */
 export function validateHooks(events: readonly CharacterEvent[], relics: readonly Relic[]): string[] {
   const errors: string[] = []
-  for (const e of events) if (!e.idle && eventHooks(e).produces.length === 0) errors.push(`${e.id} : la compétence ne produit aucune accroche`)
+  for (const e of events) if (eventHooks(e).produces.length === 0) errors.push(`${e.id} : la compétence ne produit aucune accroche`)
   for (const r of relics) if (relicHooks(r).produces.length === 0) errors.push(`${r.id} : la relique ne produit aucune accroche`)
   const all = [...events.flatMap((e) => posed(e.effects)), ...relics.flatMap((r) => posed(r.effects ?? []))]
   for (const { status, side } of all)
@@ -245,10 +235,8 @@ export function kitSeeds(kit: readonly CharacterEvent[], pool: readonly Characte
     ...pool.filter((e) => !own.has(e.id)).map((e) => ({ name: e.name, hooks: eventHooks(e) })),
     ...relics.map((r) => ({ name: r.name, hooks: relicHooks(r) })),
   ]
-  return kit
-    .filter((e) => !e.idle)
-    .map((skill) => {
-      const made = eventHooks(skill).produces
-      return { skill, consumers: others.filter((o) => o.hooks.consumes.some((w) => made.some((g) => touches(g, w)))).map((o) => o.name) }
-    })
+  return kit.map((skill) => {
+    const made = eventHooks(skill).produces
+    return { skill, consumers: others.filter((o) => o.hooks.consumes.some((w) => made.includes(w))).map((o) => o.name) }
+  })
 }

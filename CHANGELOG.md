@@ -32,6 +32,41 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.106.0] — 2026-10-23
+
+Règles v2, phase 5 bis : **l'attaque de base** (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 6 bis, [docs/RESOLUTION.md](docs/RESOLUTION.md) § 3 bis), demande de l'utilisateur : « les personnages auront désormais une valeur d'attaque… servant de coup de base infligé à chaque jet ; les valeurs de dé ne servent qu'à déclencher des compétences ». Les combats changent volontairement : l'empreinte de non-régression est mise à jour.
+
+### Ajouté
+- **L'attaque** (`CharacterStats.attackMin`, `attackMax`, `CharacterDef.attackKind`, par forme pour le druide) : une petite fourchette et un type, **DD** ou **DM**. Chaque action porte un **coup de base** tiré dans la fourchette, avec toutes les règles d'un coup (esquive, critique, modificateurs, armure, boucliers, réactions). Deux dés : deux coups de base.
+- **Trois relations** d'une compétence au coup de base (`CharacterEvent.relation`) : **greffe** par défaut (la compétence au jet, puis le coup ; nouvelle étape `roll`), **modifie** (Pourfendre, Pile ou face : pile, ce coup compte double), **remplace** (Furie des vents, Crescendo, Soliste, Coup de chance).
+- **Tremper l'arme** (forge) : +1 à l'attaque, sans face visée, cumulable, héritable. Carte « +1 à l'attaque ».
+- Fiche : ligne « Attaque 5 à 6 DD » (la moyenne au survol), à la place de « Coups 5 à 7 ».
+- Règles du compendium « Le dé », « Coup de base » et « Greffe, modifie, remplace ».
+
+### Modifié
+- **Le dé ne fait plus de dégâts** : il désigne la face qui déclenche sa compétence, ou rien (face nue). Le Fer à quatre clous et la dorure s'ajoutent au coup de base de leur face.
+- **Le type physique s'appelle DD** (dégâts directs ; « DP » avant, renommé par l'utilisateur), dans le code (`DamageKind` `direct`) et les documents.
+- **Attaques et réglages** (800 combats par duel) : Gorak 5 à 6 ; Elaria 4 à 5 (esquive 26 → 22 %, critique 17 → 15 %) ; Brokk 5 à 6 (multiplicateur ×2,5 → ×2,2) ; Ervald 4 à 6 ; Ysolde 4 à 6, DM ; Naraxes 4 à 5 ; Aldric 3 à 5 ; Morgrut 7 à 9, 63 → 59 PV ; Thaldrin 3 à 4 (DM en homme, DD en ours, Force de l'ours +3 gardée), Foudre 3 × 2 → 3 × 1 ; Fanchon 2 à 4 par dé, critique 5 → 10 %, Crescendo un coup ×4, Soliste ×5.
+- **Copier une face** ne copie plus qu'une face de compétence, sur la face nue de plus petit numéro (non dorée d'abord).
+- **Campagne** : courbe abaissée au début (décision de l'utilisateur) : 90, 90, 90, 89, 89, 89, 89, 88, 88, 88 %, boss 45 % ; le Colosse réécrit (attaque 6 à 8, Peau de pierre et Aura d'intimidation greffées, Pourfendre qui modifie, dorure sur le 5 et le 6) ; sauvegarde `battler:campaign:v5` (une partie v4 est oubliée).
+- Pile ou face : le coup de pile est toujours lourd à l'écran (chiffre d'or, MISE_EN_SCENE M26).
+
+### Retiré
+- Le **coup sacrifié** (`forfeitsHit`), `needsTouch`, `reshapesHit` et la règle cachée « Coup transformé ».
+- Les **valeurs imprimées** de la 0.105.0 (`strikes`, `strikeValue`, `Attack.printed`, `ForgeState.printed`, le contrôle d'audit et la ligne de trace) et l'opération **Refondre**.
+- L'**Attente** de l'ogre (`waitOn`, `idle`, statut `waiting`) : ses faces sont nues.
+- `damageDie` des stats : le d6 est une constante (`DIE_FACES`).
+- Séries 1 à 13 de `scripts/lab/ideas.ts`, qui visaient des mécaniques disparues (résultats gardés dans `docs/SORTS.md`) ; série 14 : trois choix de cette phase.
+
+### Corrigé
+- `report.ts` : le dé d'une étape `roll` (compétence greffée) entre dans les faces jouées du rapport de combat.
+
+### Mesuré
+- `BALANCE_N=800 npm run balance` : de 48,8 % (Morgrut) à 52,2 % (Naraxes) ; pire duel Elaria contre Morgrut 61,9 % ; durée 17,2 → 16,0 tours par combat ; toutes les valeurs nettes des compétences positives (l'Attente valait −3,7).
+- `npm run relics` : Cotte du mercenaire +22,1 → **+28,2**, au-delà de 20 ; Collier de ronces +10,8 → +16,9 ; les autres à moins de 4 points de leur valeur d'avant.
+- `npm run campaign` (courbe abaissée) : boss atteint 27 % (48 % avant ; 31 % attendus), acte gagné 13 % (24 %) ; adversaires à 67 % de leurs PV de base au premier combat, 53 % au dixième ; 4,5 à 8,2 tours par combattant, 14,0 contre le boss.
+- Saisons de 20 (12 saisons) : victoires par participant de 2 à 32 (8 à 30 en 0.105.0) ; 11 participants sans construction complète (6 avant).
+
 ## [0.105.0] — 2026-10-23
 
 Règles v2, phases 3 à 5 et la campagne sur le d6 (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 6 et § 11.5), à la demande de l'utilisateur après son essai de la campagne longue : « le d6 est le plus game changing, avance tant que tu peux ». Les combats changent volontairement : l'empreinte de non-régression est mise à jour.

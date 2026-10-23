@@ -60,7 +60,7 @@ export interface Relic {
   flavor: string
   /** Caractéristique : stats ajoutées à plat */
   stats?: RelicStats
-  /** Coup : ajouté à la valeur de chacun de ses coups qui touchent, avant le critique (« +4 dégâts à la frappe ») */
+  /** Coup : ajouté au coup de base de chacun de ses coups qui touchent, avant le critique (« +4 dégâts à ce coup ») */
   rollBonus?: number
   /** Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4), coup brut compris */
   onFace?: number
@@ -273,12 +273,13 @@ const capitalize = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`
 const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`)
 
 /**
- * Une stat ajoutée, en clair : « +2 armure », « +6 % d'esquive ». Les exceptions se disent là où elles naissent :
- * une forme qui remplace le dé (l'Incantation) le dit elle-même, une esquive négative n'esquive jamais.
+ * Une stat ajoutée, en clair : « +2 armure », « +6 % d'esquive ». Une esquive négative n'esquive jamais. L'attaque se dit
+ * une fois, « +1 à l'attaque », pour son minimum et son maximum (`validateRelics` les veut égaux).
  */
 const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   maxHp: (v) => `${signed(v)} PV max`,
-  damageDie: (v) => `${signed(v)} face${Math.abs(v) > 1 ? 's' : ''} au dé`,
+  attackMin: (v) => `${signed(v)} à l'attaque`,
+  attackMax: () => '',
   armor: (v) => `${signed(v)} armure`,
   dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive`,
   critChance: (v) => `${signed(Math.round(v * 100))} % de critique`,
@@ -385,8 +386,8 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     const families = [r.stats !== undefined, r.rollBonus !== undefined, r.trigger !== undefined].filter(Boolean).length
     if (families !== 1) at('une relique a un seul type : stats, bonus de coup ou déclencheur')
     if (r.stats && Object.keys(r.stats).length === 0) at('stats vides')
-    // Le d6 imprimé (règles v2, 0.105.0) ne change pas de taille : une face au-delà de la 6e n'aurait pas de valeur imprimée
-    if (r.stats?.damageDie !== undefined) at('le dé a six faces : une relique ne le change pas')
+    // L'attaque s'écrit à plat sur toute sa fourchette : autant au minimum qu'au maximum
+    if ((r.stats?.attackMin ?? 0) !== (r.stats?.attackMax ?? 0)) at("l'attaque se change autant au minimum qu'au maximum")
     if (r.rollBonus !== undefined && (!Number.isInteger(r.rollBonus) || r.rollBonus === 0)) at('bonus de coup entier et non nul')
     if (r.onFace !== undefined && (r.rollBonus === undefined || !Number.isInteger(r.onFace) || r.onFace < 1)) at('face : un entier ≥ 1, avec un bonus de coup')
     if (r.trigger && !r.effects?.length) at('un déclencheur sans effet')

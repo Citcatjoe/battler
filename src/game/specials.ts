@@ -122,14 +122,14 @@ export function statusSpecial(id: StatusId, bearer: SpecialBearer, amount?: numb
  * - `crit`, juste avant l'élan : le critique assuré, puis le critique (3) ;
  * - `impact`, à l'impact : les modificateurs qui s'usent sur ce coup (4-5 : Luciole), les boucliers (8), les dégâts
  *   finaux qui s'usent sur ce coup (8 bis : Fausse note). Un modificateur d'aura ou d'état durable n'y est pas.
- * Un coup sacrifié n'en a aucune. Les réactions au coup (Vol de vie, Riposte, Saignement) ont leur propre étape.
+ * Un jet remplacé n'en a aucune. Les réactions au coup (Vol de vie, Riposte, Saignement) ont leur propre étape.
  * Le statut d'un critique ou d'une esquive imposés est celui que le moteur nomme (`critBy`, `dodgeBy`).
  */
 export function attackSpecials(attack: Attack): { roll: SpecialSpec[]; crit: SpecialSpec[]; impact: SpecialSpec[] } {
   const roll: (SpecialSpec | undefined)[] = []
   const crit: (SpecialSpec | undefined)[] = []
   const impact: (SpecialSpec | undefined)[] = []
-  if (!attack.forfeited) {
+  if (!attack.replaced) {
     if (attack.dodged && attack.dodgeBy) roll.push(statusSpecial(attack.dodgeBy, 'defender'))
     for (const b of attack.relicBonus ?? [])
       roll.push({ label: withAmount(b.name, 'plus', b.amount), source: 'relic', sign: 'plus', icon: { relic: b.relic, name: b.name } })

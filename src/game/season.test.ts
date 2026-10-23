@@ -174,13 +174,17 @@ describe('saison', () => {
         expect(fighters[side].forge.map(stepKey)).toEqual(build.forge.map(stepKey))
       })
     }
-    // Au bout de la saison, chacun a ses trois reliques et ses trois forges, même s'il a perdu ses premiers matchs
+    // Au bout de la saison, chacun a reçu une récompense par victoire, dans l'ordre, jusqu'aux six (trois de chaque) :
+    // une offre de forge n'est jamais vide (Tremper l'arme vaut toujours), rien ne bloque la construction
     season.entrants.forEach((_, i) => {
       const { relics, forge } = buildOf(season, i)
-      expect(relics).toHaveLength(3)
-      expect(forge).toHaveLength(3)
-      expect(new Set(relics).size).toBe(3)
+      const wins = seasonFixtures(season).filter((f) => (season.results[f.number].winner === 0 ? f.home : f.away) === i).length
+      const got = season.rewards.slice(0, Math.min(wins, season.rewards.length))
+      expect(relics).toHaveLength(got.filter((k) => k === 'relic').length)
+      expect(forge).toHaveLength(got.filter((k) => k === 'forge').length)
+      expect(new Set(relics).size).toBe(relics.length)
     })
+    expect(season.entrants.filter((_, i) => buildOf(season, i).relics.length === 3).length).toBeGreaterThan(season.entrants.length / 2)
     const [first] = seasonFixtures(season)
     const firstLoser = season.results[0].winner === 0 ? first.away : first.home
     expect(buildOf(season, firstLoser, 1)).toEqual({ relics: [], forge: [] })
@@ -277,10 +281,10 @@ describe('saison', () => {
       t = chooseSeasonReward(t, n1, step)
       expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([...held, step].map(stepKey))
     }
-    const targeted = forged.offer.find((o) => o.op !== 'reforge')!
+    const targeted = forged.offer.find((o) => o.op !== 'temper')!
     expect(() => chooseSeasonReward(t, n1, stepOf(targeted, 999))).toThrow()
-    const missing = (['reforge', 'gild', 'sharpen', 'copy'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
-    expect(() => chooseSeasonReward(t, n1, missing === 'reforge' ? { op: missing } : { op: missing, face: 1 })).toThrow()
+    const missing = (['temper', 'gild', 'sharpen', 'copy'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
+    expect(() => chooseSeasonReward(t, n1, missing === 'temper' ? { op: missing } : { op: missing, face: 1 })).toThrow()
   })
 
   it('sans reliques ni forge : ni récompense ni construction, et l’arbre n’en donne pas', () => {

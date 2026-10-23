@@ -69,33 +69,27 @@ import { faceTrigger, isDoubleTrigger, isRollTrigger, type CharacterEvent } from
 import { isEngravable } from './forge'
 import { STATUSES } from './statuses'
 
-/** Foudre du druide (0.76.0, demande de l'utilisateur) : trois éclairs de 2 dégâts directs chacun, jamais critiques. */
-const THUNDERBOLT = 2
+/**
+ * Foudre du druide (0.76.0, demande de l'utilisateur) : trois éclairs de dégâts directs, jamais critiques. 2 chacun
+ * jusqu'à la 0.105.0 ; 1 depuis la 0.106.0 (phase 5 bis) : la Foudre se greffe sur un coup de base magique.
+ */
+const THUNDERBOLT = 1
 const THUNDERBOLT_HITS = 3
 
 /*
  * Archétypes par race :
- * - Orc : brute, beaucoup de PV et un gros dé, mais lent à esquiver.
+ * - Orc : brute, beaucoup de PV, lent à esquiver.
  * - Elfe : agile, peu de PV, esquive et critiques fréquents.
- * - Nain : tank, le plus de PV et une armure temporaire qui s'use, critiques rares mais lourds.
+ * - Nain : tank, une armure temporaire qui s'use, critiques rares mais lourds.
  * - Mort-vivant : affliction, endurant et peu esquiveur, il empoisonne l'adversaire.
- * - Humain (prêtresse) : contrôle, un petit dé (d7) mais des compétences sur 3 de ses 7 faces.
- * - Homme-lézard (voleuse) : chance et poison, esquive et critiques, coups de dés à double tranchant.
+ * - Humain (prêtresse) : contrôle, une attaque magique et des soins.
+ * - Homme-lézard (voleuse) : chance et poison, esquive et critiques.
  * Un seul personnage par famille depuis la 0.43.0 (les jumeaux de coloris sont retirés, chacun garde
- * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md). Trois compétences,
- * sur un 1, un 2 et un 3 au dé (le 3 donne une aura permanente, voir plus bas). Depuis la 0.27.0, la
- * plupart de ces jets sacrifient leur coup : ils servent seulement à déclencher la compétence (`forfeitsHit`).
- * - Orc : Pourfendre (1 : un vrai coup qui, s'il touche, pose Saignement 2) ; Furie des vents (2 : frappe deux fois tout de suite).
- * - Elfe : Œil de faucon (1 : prochain coup qui touche critique) ; Esquive améliorée (2 : esquive à coup sûr le prochain coup reçu,
- *   sans limite de durée depuis la 0.36.5).
- * - Nain : Peau de pierre (1 : +6 d'armure temporaire, cumulable) ; Épines acérées (2 : permanentes, chaque coup
- *   encaissé fait saigner l'attaquant, une charge de Saignement par charge d'épines).
- * - Mort-vivant : Souffle de la tombe (1 : Poison 3, qui s'estompe : 3, 2 puis 1 PV) ; Vol de vie (2 : son prochain
- *   coup porté rend les PV qu'il retire ; esquivé, la charge est perdue ; un jet de 1 à 3 la laisse en place).
- * Auras du 3, permanentes et cumulables (chaque nouveau 3 ajoute une charge) : Orc, Aura de puissance
- * (+2 dégâts par charge) ; Elfe, Aura de précision (+1 au multiplicateur de critique par charge) ; Nain,
- * Aura d'intimidation (l'adversaire frappe 2 de moins par charge) ; Mort-vivant, Aura glaciale (au début
- * de son tour, 1 charge de Poison par charge sur l'adversaire, depuis la 0.69.0).
+ * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md).
+ * Règles v2, phase 5 bis (0.106.0, docs/RESOLUTION.md § 3 bis) : chacun a une attaque (une petite fourchette, DD ou
+ * DM), son coup de base à chaque jet ; le d6 ne fait plus de dégâts, ses faces 1 et 2 déclenchent ses deux
+ * compétences, qui se greffent sur le coup (défaut), le modifient (`relation: 'modify'`) ou le remplacent
+ * (`relation: 'replace'`) ; les faces 3 à 6 sont nues.
  */
 
 const gorak: CharacterDef = {
@@ -105,12 +99,11 @@ const gorak: CharacterDef = {
   archetype: 'Brute',
   // Statistiques de Murzug, son ancien jumeau (0.43.0, un personnage par famille) : 57 PV et 18 % de critique.
   // Avec les siennes (61 PV, 10 %), il gagnait 46,8 % contre les neuf autres, 50,4 % ainsi.
-  // Dé de d10 à d8 (0.50.0) : compensation de la Furie des vents instantanée (sinon 64 %).
-  // d9 et 19 % de critique (0.69.0, choix de l'utilisateur) : la Furie frappe en coups bruts ; au d8, Gorak tombait à 39,8 %
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Pourfendre sur le 1 (il frappe pour 4), Furie des vents sur le 2, coups
-  // de 5, 5, 6 et 7 ; l'Aura de puissance quitte le kit. Mesuré : 50,0 % (d9 et trois compétences avant : 51,0 %).
-  stats: { maxHp: 57, damageDie: 6, armor: 0, dodgeChance: 0.05, critChance: 0.19, critMultiplier: 2 },
-  strikes: [4, 3, 5, 5, 6, 7],
+  // d9 et 19 % de critique (0.69.0, choix de l'utilisateur) : la Furie frappe en coups bruts.
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Pourfendre sur le 1, Furie des vents sur le 2. Mesuré : 50,0 %.
+  // Attaque (phase 5 bis, 0.106.0) : voir docs/PERSONNAGES.md pour la mesure avant → après.
+  stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.05, critChance: 0.19, critMultiplier: 2 },
+  attackKind: 'direct',
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -125,7 +118,7 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : son 1 frappe et fait saigner'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : son 1 fait saigner'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   // Signature (règles v2, décision de l'utilisateur) : la Furie des vents, seule au départ d'une campagne
@@ -138,29 +131,28 @@ const gorak: CharacterDef = {
       name: 'Aura de puissance',
       nature: 'martial',
       trigger: 'naturalThree',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
     },
   ],
   events: [
     {
-      // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Le 1 frappe pour
-      // sa valeur (Aura de puissance et critique compris) et, s'il touche, pose Saignement 2 : un coup doit
-      // toucher pour poser un malus physique. La plaie coule au coup suivant (RESOLUTION § 5, règle 9).
-      // Version la plus forte des deux mesurées (Saignement 1 : −1,3 point), choisie par l'utilisateur.
+      // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Phase 5 bis : elle modifie
+      // son coup de base : s'il touche, Saignement 2 ; un coup doit toucher pour poser un malus physique. La plaie coule
+      // au coup suivant (RESOLUTION § 5, règle 9).
       id: 'cleave',
       name: 'Pourfendre',
       nature: 'martial',
       trigger: 'naturalOne',
-      needsTouch: true,
+      relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }],
     },
     {
+      // Phase 5 bis : elle remplace le coup du 2 par deux coups de base bruts, tout de suite
       id: 'wind-fury',
       name: 'Furie des vents',
       nature: 'martial',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
+      relation: 'replace',
       effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1 }],
     },
   ],
@@ -173,11 +165,12 @@ const elaria: CharacterDef = {
   archetype: 'Rôdeuse',
   // Statistiques de Sylwen, son ancienne jumelle (0.43.0) : même valeur (49,4 % contre 49,6 %), duels plus
   // resserrés (de 42 à 57 % au lieu de 40 à 62 %).
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Œil de faucon sur le 1, Esquive améliorée sur le 2, coups de 5, 6, 6 et
-  // 7 ; l'Aura de précision quitte le kit. 53 PV (50 avant) : le dernier levier, pour son duel contre Aldric (la
-  // Rétribution relâche ses critiques : 66 % sans eux, 63 % avec). Mesuré : 50,2 % (47,3 % avant).
-  stats: { maxHp: 53, damageDie: 6, armor: 0, dodgeChance: 0.26, critChance: 0.17, critMultiplier: 2.4 },
-  strikes: [3, 3, 5, 6, 6, 7],
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Œil de faucon sur le 1, Esquive améliorée sur le 2 ; l'Aura de précision
+  // quitte le kit. 53 PV (50 avant). Mesuré : 50,2 %.
+  // Phase 5 bis : 22 % d'esquive (26 avant) et 15 % de critique (17) : ses compétences, désormais gratuites, la portaient
+  // trop haut (Esquive améliorée et Œil de faucon greffés sur un coup).
+  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.22, critChance: 0.15, critMultiplier: 2.4 },
+  attackKind: 'direct',
   // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
@@ -195,8 +188,8 @@ const elaria: CharacterDef = {
     tagline: 'Un souffle, une flèche.',
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
-    strengths: ['Meilleure esquive (26 %)', 'Critiques dévastateurs (×2,4)', 'Un jet raté prépare un critique'],
-    weaknesses: ['PV modestes (53)', 'Coups légers (5 à 7)', "Peine face aux boucliers et à l'intimidation"],
+    strengths: ['Meilleure esquive (22 %)', 'Critiques dévastateurs (×2,4)', 'Œil de faucon : son 1 est critique'],
+    weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
   signature: 'hawk-eye',
   // Répertoire : la Chasse (Furie des vents, Pourfendre), la Fuite (Coup de chance, Riposte)
@@ -207,7 +200,6 @@ const elaria: CharacterDef = {
       name: 'Aura de précision',
       nature: 'finesse',
       trigger: 'naturalThree',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
     },
   ],
@@ -217,7 +209,7 @@ const elaria: CharacterDef = {
       name: 'Œil de faucon',
       nature: 'finesse',
       trigger: 'naturalOne',
-      forfeitsHit: true,
+      // Phase 5 bis : greffé, le Critique assuré rend critique le coup de base de ce jet même
       effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
     },
     {
@@ -225,9 +217,8 @@ const elaria: CharacterDef = {
       name: 'Esquive améliorée',
       nature: 'finesse',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
-      // s'éteignait sans servir une fois sur trois (coup adverse sacrifié ou tour perdu), comme la Riposte avant la 0.32.0.
+      // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
       effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
     },
   ],
@@ -240,10 +231,11 @@ const brokk: CharacterDef = {
   archetype: 'Gardien',
   // Statistiques de Grimbald, son ancien jumeau (0.43.0) : d10 et 57 PV. Avec les siennes (d8, 68 PV), Ysolde
   // ne le battait qu'à 26 % (contre connu) ; ainsi, tous ses duels tiennent entre 45 et 60 %.
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Peau de pierre sur le 1, Épines acérées sur le 2, coups de 7, 7, 8 et
-  // 10 ; l'Aura d'intimidation quitte le kit. Mesuré : 51,0 % (47,4 % avant).
-  stats: { maxHp: 57, damageDie: 6, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2.5 },
-  strikes: [3, 3, 7, 7, 8, 10],
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Peau de pierre sur le 1, Épines acérées sur le 2 ; l'Aura d'intimidation
+  // quitte le kit. Mesuré : 51,0 % (47,4 % avant).
+  // Phase 5 bis : critique ×2,2 (×2,5 avant), la compensation d'Épines acérées et de Peau de pierre, greffées sur un coup
+  stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2.2 },
+  attackKind: 'direct',
   // Nouveau modèle et postures (atelier des postures, 2026-10-20), création originale qui remplace le
   // placeholder. La hache dépasse de la tête : la taille se règle sur le corps (tête-pieds, 71,6 % de la
   // toile), le reste compte dans `headroom` (comme Aldric). La hache du K.O. descend sous les pieds
@@ -261,7 +253,7 @@ const brokk: CharacterDef = {
     tagline: 'Ce qui passe la porte passe par moi.',
     background:
       "Gardien héréditaire de la grande porte de Durnhold, Brokk n'a jamais reculé d'un pas. Il encaisse plus que quiconque, et chaque faux pas le rend plus dur encore.",
-    strengths: ['Coups lourds (7 à 10)', 'Peau de pierre cumulable', 'Critiques lourds (×2,5)'],
+    strengths: ['Attaque lourde', 'Peau de pierre cumulable', 'Critiques lourds (×2,2)'],
     weaknesses: ['Critiques peu fréquents (10 %)', 'Esquive faible', 'Lent à prendre l’avantage'],
   },
   // Signature (décision de l'utilisateur) : Épines acérées
@@ -274,7 +266,6 @@ const brokk: CharacterDef = {
       name: "Aura d'intimidation",
       nature: 'martial',
       trigger: 'naturalThree',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
     },
   ],
@@ -284,7 +275,6 @@ const brokk: CharacterDef = {
       name: 'Peau de pierre',
       nature: 'martial',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 6 }],
     },
     {
@@ -292,7 +282,6 @@ const brokk: CharacterDef = {
       name: 'Épines acérées',
       nature: 'martial',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
     },
   ],
@@ -305,10 +294,10 @@ const ervald: CharacterDef = {
   archetype: 'Chevalier liche',
   // Statistiques de Caldrec, son ancien jumeau (0.43.0) : d10, sans armure, 56 PV, 16 % de critique.
   // 48,8 % contre les neuf autres (46,7 % avec les siennes).
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Vol de vie sur le 1, Aura glaciale sur le 2, coups de 6, 6, 7 et 9 ; le
-  // Souffle de la tombe quitte le kit. Mesuré : 50,2 % (53,9 % avant).
-  stats: { maxHp: 56, damageDie: 6, armor: 0, dodgeChance: 0.08, critChance: 0.16, critMultiplier: 2 },
-  strikes: [3, 3, 6, 6, 7, 9],
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Vol de vie sur le 1, Aura glaciale sur le 2 ; le Souffle de la tombe
+  // quitte le kit. Mesuré : 50,2 % (53,9 % avant).
+  stats: { maxHp: 56, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.16, critMultiplier: 2 },
+  attackKind: 'direct',
   // Postures (atelier des postures, 2026-10-20) : la garde occupe 83,4 % de la toile ; la même hauteur
   // à l'écran qu'avant (0,98 × 0,99 de l'ancienne image) donne scale 0,97 / 0,834 = 1,16
   look: {
@@ -324,7 +313,7 @@ const ervald: CharacterDef = {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Vol de vie : son coup le soigne', 'Coups lourds (6 à 9)', 'Critiques fréquents (16 %)'],
+    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (16 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   signature: 'frost-aura',
@@ -336,7 +325,6 @@ const ervald: CharacterDef = {
       name: 'Souffle de la tombe',
       nature: 'arcane',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       // Poison 3 : 3, 2 puis 1 PV, les 6 PV de l'ancien poison 2 pendant 3 tours (0.36.4)
       effects: [{ type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
     },
@@ -347,7 +335,6 @@ const ervald: CharacterDef = {
       name: 'Vol de vie',
       nature: 'arcane',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 2 }],
     },
     {
@@ -355,7 +342,6 @@ const ervald: CharacterDef = {
       name: 'Aura glaciale',
       nature: 'arcane',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
       effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }],
     },
@@ -370,12 +356,11 @@ const ysolde: CharacterDef = {
   name: 'Ysolde',
   race: 'Humain',
   archetype: 'Prêtresse solaire',
-  // Petit dé (d7) : 3 jets sur 7 (1 à 3) déclenchent une compétence au lieu de frapper. Un d6 (un jet
-  // sur deux) la rendait trop dépendante de l'Aura de sainteté : 63 % de victoires, combats de 52 tours.
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Purification sur le 1, Aura de sainteté sur le 2, coups de 6, 6, 7 et
-  // 8 ; la Peur quitte le kit. Mesuré : 49,1 % (43,9 % avant, la plus basse du roster).
-  stats: { maxHp: 52, damageDie: 6, armor: 0, dodgeChance: 0.08, critChance: 0.1, critMultiplier: 2 },
-  strikes: [2, 2, 6, 7, 7, 8],
+  // Petit dé (d7) jusqu'à la 0.104.0 : 3 jets sur 7 (1 à 3) déclenchaient une compétence au lieu de frapper.
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Purification sur le 1, Aura de sainteté sur le 2 ; la Peur quitte le kit.
+  // Mesuré : 49,1 % (43,9 % avant, la plus basse du roster). Phase 5 bis : son attaque est magique (DM, la lumière).
+  stats: { maxHp: 52, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.1, critMultiplier: 2 },
+  attackKind: 'magical',
   // Postures (atelier des postures, 2026-10-20). La masse levée et le halo dépassent de la tête : la taille
   // se règle sur le corps (tête-pieds, 74 % de la toile), le reste compte dans `headroom` (comme Aldric)
   look: {
@@ -403,7 +388,6 @@ const ysolde: CharacterDef = {
       name: 'Peur',
       nature: 'arcane',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
     },
   ],
@@ -413,7 +397,6 @@ const ysolde: CharacterDef = {
       name: 'Purification',
       nature: 'arcane',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       // 0.42.0 : quand l'adversaire n'a aucun bonus à retirer, la lumière le blesse (dégâts directs) au lieu
       // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
       // 0.69.0 (choix de l'utilisateur, SORTS.md § 14 et 15) : elle retire aussi son propre dernier malus (un
@@ -428,7 +411,6 @@ const ysolde: CharacterDef = {
       name: 'Aura de sainteté',
       nature: 'arcane',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }],
     },
   ],
@@ -439,12 +421,11 @@ const naraxes: CharacterDef = {
   name: 'Naraxes',
   race: 'Homme-lézard',
   archetype: 'Voleuse',
-  // Gros dé (d10) : moins de jets de compétence (3 sur 10) et de plus gros coups. Avec un d8, Pile ou face
-  // et Coup de chance, qui ne frappent pas, la laissaient à 33 % de victoires.
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Pile ou face sur le 1, Aura de décoction sur le 2, coups de 6, 7, 7 et
-  // 8 ; Coup de chance quitte le kit. Mesuré : 51,5 % (53,7 % avant).
-  stats: { maxHp: 50, damageDie: 6, armor: 0, dodgeChance: 0.2, critChance: 0.14, critMultiplier: 2 },
-  strikes: [3, 3, 6, 7, 7, 8],
+  // Gros dé (d10) jusqu'à la 0.104.0 : moins de jets de compétence, de plus gros coups.
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Pile ou face sur le 1, Aura de décoction sur le 2 ; Coup de chance quitte
+  // le kit. Mesuré : 51,5 % (53,7 % avant).
+  stats: { maxHp: 50, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.2, critChance: 0.14, critMultiplier: 2 },
+  attackKind: 'direct',
   // Postures (0.40.0, docs/POSTURES.md) : la garde occupe 81 % de la toile commune, avec 14 % de vide
   // au-dessus de la tête (dague levée de l'attaque) : scale 1,10 pour sa taille 0,97.
   look: {
@@ -462,7 +443,7 @@ const naraxes: CharacterDef = {
     tagline: 'Pile, je gagne. Face, tu perds quand même.',
     background:
       "Coupe-bourse des marais de Sszeth, Naraxes vit de paris et de lames enduites. Elle joue tout sur un coup de chance, et ce qu'elle ne tue pas, son poison s'en charge.",
-    strengths: ['Bonne esquive (20 %)', 'Pile ou face : 10 dégâts aussitôt', 'Lames empoisonnées (décoction)'],
+    strengths: ['Bonne esquive (20 %)', 'Pile ou face : son coup compte double', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
   // Signature (décision de l'utilisateur) : Pile ou face, l'identité plutôt que la valeur
@@ -475,7 +456,8 @@ const naraxes: CharacterDef = {
       name: 'Coup de chance',
       nature: 'finesse',
       trigger: 'naturalOne',
-      forfeitsHit: true,
+      // Phase 5 bis : il remplace le coup de ce jet ; le dé qu'il donne, à l'action suivante, est un jet complet
+      relation: 'replace',
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
     },
   ],
@@ -485,7 +467,8 @@ const naraxes: CharacterDef = {
       name: 'Pile ou face',
       nature: 'finesse',
       trigger: 'naturalOne',
-      forfeitsHit: true,
+      // Phase 5 bis (décision de l'utilisateur) : elle modifie son coup ; s'il touche, la pièce : pile, ce coup ×2
+      relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
     },
     {
@@ -493,7 +476,6 @@ const naraxes: CharacterDef = {
       name: 'Aura de décoction',
       nature: 'finesse',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }],
     },
   ],
@@ -511,10 +493,10 @@ const aldric: CharacterDef = {
   // Critiques lourds (12 % ×2,5 depuis la 0.32.0, quand la riposte a cessé de s'éteindre à vide) : face à l'intimidation du nain, ses coups moyens ne passaient pas (Brokk le battait à 75 %).
   // Statistiques de Gauvain, son ancien jumeau (0.43.0) : 54 PV, 7 % d'esquive, 17 % de critique.
   // 50,1 % contre les neuf autres (52,7 % avec les siennes).
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : Rétribution sur le 1, Riposte sur le 2, coups de 4, 5, 6 et 7 ; l'Aura
-  // d'immunité quitte le kit. Mesuré : 50,2 % (53,9 % avant).
-  stats: { maxHp: 54, damageDie: 6, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
-  strikes: [3, 3, 4, 5, 6, 7],
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : Rétribution sur le 1, Riposte sur le 2 ; l'Aura d'immunité quitte le
+  // kit. Mesuré : 50,2 % (53,9 % avant).
+  stats: { maxHp: 54, attackMin: 3, attackMax: 5, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
+  attackKind: 'direct',
   // Nouveau modèle et postures (atelier des postures, 2026-10-20) : épée basse, plus rien au-dessus de la
   // tête que la hampe de la bannière. La taille se règle sur le corps (tête-pieds, 77 % de la toile) et non
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
@@ -543,7 +525,6 @@ const aldric: CharacterDef = {
       name: "Aura d'immunité",
       nature: 'arcane',
       trigger: 'naturalThree',
-      forfeitsHit: true,
       effects: [
         { type: 'cleanse', polarity: 'negative' },
         { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
@@ -556,7 +537,6 @@ const aldric: CharacterDef = {
       name: 'Rétribution',
       nature: 'arcane',
       trigger: 'naturalOne',
-      forfeitsHit: true,
       effects: [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }],
     },
     {
@@ -564,37 +544,24 @@ const aldric: CharacterDef = {
       name: 'Riposte',
       nature: 'martial',
       trigger: 'naturalTwo',
-      forfeitsHit: true,
       effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
     },
   ],
 }
-
-/**
- * Attente : un 1, un 2 ou un 3 laisse l'ogre planté là, sans frapper (il n'a aucune compétence). Face d'attente
- * (`idle`) : la forge du dé peut y graver une compétence, qui la remplace (docs/CAMPAGNE.md § 4.4).
- */
-const waitOn = (trigger: 'naturalOne' | 'naturalTwo' | 'naturalThree', face: number): CharacterEvent => ({
-  id: `waiting-${face}`,
-  name: 'Attente',
-  nature: 'neutral',
-  trigger,
-  forfeitsHit: true,
-  idle: true,
-  effects: [{ type: 'applyStatus', status: 'waiting', stacks: 1, turns: 1 }],
-})
 
 const morgrut: CharacterDef = {
   id: 'morgrut',
   name: 'Morgrut',
   race: 'Ogre',
   archetype: 'Cogneur',
-  // Aucune compétence : un d14 et de la masse. Un jet de 1 à 3 (3 sur 14) le laisse attendre.
-  // Aucun critique (il ne vise pas) : avec 8 % de critique et 66 PV, il gagnait 63 % de ses combats.
-  // d6 imprimé (règles v2, phase 5, 0.105.0) : une Attente sur le 1 (deux, au § 6.7 de PROGRESSION, le laissaient trop
-  // prévisible contre l'esquive d'Elaria : 65 % pour elle), coups de 7, 8, 9, 10 et 11. Mesuré : 52,1 % (47,4 % avant).
-  stats: { maxHp: 63, damageDie: 6, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
-  strikes: [1, 7, 8, 9, 10, 11],
+  // Aucune compétence : de la masse. Aucun critique (il ne vise pas) : avec 8 % de critique et 66 PV, il gagnait 63 %.
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : une Attente sur le 1, coups de 7 à 11. Mesuré : 52,1 %.
+  // Phase 5 bis (décision de l'utilisateur, 2026-10-23) : la plus forte attaque du roster, plus d'Attente ; ses six faces
+  // sont nues, la forge les remplit.
+  // 59 PV (63 avant) : la plus forte attaque (7 à 9) frappe à chaque jet ; sans compétence ni critique, les PV sont
+  // son seul autre levier.
+  stats: { maxHp: 59, attackMin: 7, attackMax: 9, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
+  attackKind: 'direct',
   // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
   // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
   // massue du coup encaissé et du K.O. descend sous les pieds
@@ -610,15 +577,15 @@ const morgrut: CharacterDef = {
     portrait: { x: 56, y: 28, zoom: 4.6 },
   },
   lore: {
-    tagline: 'Taper. Attendre. Taper plus fort.',
+    tagline: 'Taper. Taper encore. Taper plus fort.',
     background:
-      "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Quand il ne comprend pas ce qu'il fait, et ça arrive, il attend.",
-    strengths: ['Coups énormes (7 à 11)', 'Beaucoup de PV', 'Cinq faces sur six frappent'],
-    weaknesses: ['Aucune compétence', 'Sur un 1, il attend sans frapper', "Ni esquive ni critique"],
+      "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Les dés, il ne les regarde même pas : il tape.",
+    strengths: ['La plus forte attaque (7 à 9)', 'Beaucoup de PV', 'Frappe fort à chaque jet'],
+    weaknesses: ['Aucune compétence', 'Six faces nues', 'Ni esquive ni critique'],
   },
   // Répertoire : la Colère (Aura de puissance, Pourfendre), la Masse (Peau de pierre, Aura d'intimidation)
   repertoire: ['power-aura', 'cleave', 'stoneskin', 'intimidation-aura'],
-  events: [waitOn('naturalOne', 1)],
+  events: [],
 }
 
 const thaldrin: CharacterDef = {
@@ -627,10 +594,12 @@ const thaldrin: CharacterDef = {
   race: 'Sylvain',
   archetype: 'Druide',
   // d6 imprimé (règles v2, phase 5, 0.105.0) : sous forme humaine, la Foudre sur le 1, le 2 et le 3, les Feux follets
-  // sur le 4, le 5 et le 6 (les probabilités du d3 d'avant) ; l'ours frappe pour 2, 3, 4, 6, 7 et 8, plus sa Force.
-  // L'Aura sauvage quitte le kit. Mesuré : 47,4 % (49,4 % avant).
-  stats: { maxHp: 56, damageDie: 6, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
-  strikes: [3, 4, 5, 6, 7, 8],
+  // sur le 4, le 5 et le 6 (les probabilités du d3 d'avant). L'Aura sauvage quitte le kit. Mesuré : 47,4 %.
+  // Phase 5 bis (décision de l'utilisateur) : deux attaques selon sa forme. L'homme frappe d'un petit coup magique (DM),
+  // sur lequel son sort se greffe ; l'ours, de la même attaque en coup direct (DD), plus la Force de l'ours (+3, gardée :
+  // la règle de forme la plus lisible).
+  stats: { maxHp: 56, attackMin: 3, attackMax: 4, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
+  attackKind: 'magical',
   // Postures (atelier des postures, 2026-10-20). La garde (bâton et bois compris) occupe 83,9 % de la toile,
   // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
   look: {
@@ -646,7 +615,7 @@ const thaldrin: CharacterDef = {
   // Il change de forme au début de chacun de ses tours, sauf le premier. Depuis la 0.73.0 (SORTS.md § 18),
   // chaque forme a sa règle, un statut de forme : l'homme lance un sort à chaque jet, l'ours frappe à +3
   forms: [
-    { id: 'human', name: 'Forme humaine', statuses: ['casting'] },
+    { id: 'human', name: 'Forme humaine', statuses: ['casting'], attackKind: 'magical' },
     // L'ours est une bête à quatre pattes (règle de l'utilisateur, POSTURES.md § 0) : bois compris, à peine
     // moins haut que le druide (96 %), et une fois et demie plus long que haut. La métamorphose le fait
     // grossir, pas grandir. La garde occupe 90 % de la hauteur de sa toile. Si large qu'il sortait de l'écran
@@ -656,6 +625,7 @@ const thaldrin: CharacterDef = {
       id: 'bear',
       name: "Forme d'ours",
       statuses: ['bearMight'],
+      attackKind: 'direct',
       look: {
         image: bearIdleImg,
         poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg },
@@ -670,15 +640,15 @@ const thaldrin: CharacterDef = {
     tagline: 'La forêt a deux visages.',
     background:
       "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
-    strengths: ['Un sort à chaque tour d’homme (foudre, feu)', 'L’ours frappe toujours, et fort (+3)', 'La Foudre sur la moitié des faces'],
-    weaknesses: ['Aucun soin ni armure', 'L’homme ne frappe jamais', 'Forme imposée à chaque tour'],
+    strengths: ['Un sort à chaque tour d’homme (foudre, feu)', 'L’ours frappe fort (+3)', 'La Foudre sur la moitié des faces'],
+    weaknesses: ['Aucun soin ni armure', 'L’homme frappe peu', 'Forme imposée à chaque tour'],
   },
-  // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme ne lance que des sorts, l'ours ne fait que frapper.
-  // Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais des formes et ses deux auras.
+  // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
+  // aussi, d'un petit coup magique. Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe et ses deux auras.
   // Répertoire : l'Orage et le Feu en dégâts qui durent (Souffle de la tombe, Aura de décoction), la Bête (Aura de puissance, Épines acérées)
   repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns'],
   reserve: [
-    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }] },
+    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }] },
   ],
   // Un même sort sur trois faces : trois déclencheurs de la même compétence (une compétence par face)
   events: [
@@ -689,7 +659,6 @@ const thaldrin: CharacterDef = {
         nature: 'arcane',
         trigger: faceTrigger(face),
         form: 'human',
-        forfeitsHit: true,
         scene: 'lightning',
         effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent', source: 'lightning' }],
       }),
@@ -701,7 +670,6 @@ const thaldrin: CharacterDef = {
         nature: 'arcane',
         trigger: faceTrigger(face),
         form: 'human',
-        forfeitsHit: true,
         effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }],
       }),
     ),
@@ -709,9 +677,9 @@ const thaldrin: CharacterDef = {
 }
 
 /*
- * Barde (0.41.0, concept d'un ami de l'utilisateur) : un petit d5, mais deux dés à chaque action. Hors
- * double, deux coups séparés (esquive et critique chacun) ; sur un double, la compétence de sa face
- * remplace les deux coups (RESOLUTION.md § 2).
+ * Barde (0.41.0, concept d'un ami de l'utilisateur) : deux dés à chaque action. Hors double, deux coups de base
+ * (esquive et critique chacun) ; sur un double, la compétence de sa face se greffe sur les deux coups, ou les remplace
+ * (Crescendo, Soliste) (RESOLUTION.md § 2).
  * Équilibrage (0.41.0, choix de l'utilisateur après mesure) : appliqué à la lettre, le concept gagnait 45 %
  * mais perdait 87/13 contre Brokk, 78/22 contre Grimbald, 71/29 contre Ervald : l'intimidation, les épines
  * et l'armure rognent chacun de ses petits coups. D'où l'Ouverture (Aura mélodieuse dès le début, en dégâts
@@ -724,10 +692,11 @@ const fanchon: CharacterDef = {
   archetype: 'Saltimbanque',
   twinDice: true,
   // Esquive de 12 à 6 % (0.46.0) : compensation de Siffloter et de la Fausse note, qui frappent désormais
-  // Deux d6 imprimés (règles v2, phase 5, 0.105.0) : chaque dé frappe pour 1, 2, 3, 4, 5 et 4 (la face 6 frappe pour 4 :
-  // ses deux d5 d'avant, et un double 6 sans compétence, deux coups de 4). Mesuré : 49,4 % (52,1 % avant).
-  stats: { maxHp: 46, damageDie: 6, armor: 0, dodgeChance: 0.06, critChance: 0.05, critMultiplier: 2 },
-  strikes: [1, 2, 3, 4, 5, 4],
+  // Deux d6 imprimés (règles v2, phase 5, 0.105.0). Mesuré : 49,4 % (52,1 % avant).
+  // Phase 5 bis : deux coups de base par action, d'une petite attaque ; Crescendo et Soliste, un coup de base ×N.
+  // Phase 5 bis : 10 % de critique (5 avant), la compensation de sa petite attaque
+  stats: { maxHp: 46, attackMin: 2, attackMax: 4, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2 },
+  attackKind: 'direct',
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
@@ -743,8 +712,8 @@ const fanchon: CharacterDef = {
     tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Elle lance deux dés à chaque tour et frappe deux fois ; quand les dés s'accordent, c'est la musique qui frappe.",
-    strengths: ['Deux coups par tour', 'Aura dès son entrée en scène', 'Crescendo (12) et Soliste (15)'],
-    weaknesses: ['Petits coups (1 à 5)', 'Un double sur six seulement', 'Peu de PV (46)'],
+    strengths: ['Deux coups par tour', 'Aura dès son entrée en scène', 'Crescendo et Soliste : un coup multiplié'],
+    weaknesses: ['Petite attaque', 'Un double sur six seulement', 'Peu de PV (46)'],
   },
   // Répertoire, sur ses doubles : la Fortune (Coup de chance, Pile ou face), le Chant (Esquive améliorée, Aura de précision)
   repertoire: ['lucky-strike', 'coin-flip', 'evasion', 'precision-aura'],
@@ -761,8 +730,8 @@ const fanchon: CharacterDef = {
       name: 'Siffloter',
       nature: 'arcane',
       trigger: 'doubleOne',
-      // 0.46.0 : le double frappe aussi ses deux coups (il ne les sacrifie plus : « presque inutile » avant)
-      volley: 2,
+      // 0.46.0 : le double frappe aussi ses deux coups (il ne les sacrifie plus : « presque inutile » avant) ; phase 5 bis :
+      // il se greffe sur les deux coups de base
       effects: [{ type: 'applyStatus', status: 'whistling', stacks: 3 }],
     },
     {
@@ -770,8 +739,7 @@ const fanchon: CharacterDef = {
       name: 'Fausse note',
       nature: 'arcane',
       trigger: 'doubleTwo',
-      // 0.46.0 : le double frappe aussi ses deux coups
-      volley: 2,
+      // 0.46.0 : le double frappe aussi ses deux coups ; phase 5 bis : il se greffe sur les deux coups de base
       // 0.45.0 : 2 charges (le prochain coup adverse qui touche perd 10), pour la même raison
       effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 2, target: 'opponent' }],
     },
@@ -780,12 +748,13 @@ const fanchon: CharacterDef = {
       name: 'Aura mélodieuse',
       nature: 'arcane',
       trigger: 'doubleThree',
-      // 0.45.0 : 2 charges (le double 3 remplace deux coups : à 1 charge, l'aura coûtait des victoires)
+      // 0.45.0 : 2 charges ; phase 5 bis : le double 3 porte aussi ses deux coups de base
       effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 2 }],
     },
-    // Un seul gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois
-    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'doubleFour', volley: 3, merged: true, effects: [] },
-    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'doubleFive', volley: 3, merged: true, effects: [] },
+    // Un seul gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 bis : un
+    // coup de base ×N, qui remplace les deux coups du double
+    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'doubleFour', relation: 'replace', hitMultiplier: 4, effects: [] },
+    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'doubleFive', relation: 'replace', hitMultiplier: 5, effects: [] },
   ],
 }
 
@@ -848,7 +817,10 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     ids.add(d.id)
     const s = d.stats
     if (!Number.isInteger(s.maxHp) || s.maxHp < 1) problems.push(`${at} maxHp doit être un entier ≥ 1`)
-    if (!Number.isInteger(s.damageDie) || s.damageDie < 1) problems.push(`${at} damageDie doit être un entier ≥ 1`)
+    // L'attaque (règles v2, phase 5 bis) : une petite fourchette d'entiers, écart de 3 au plus (2 de règle, une exception)
+    if (!Number.isInteger(s.attackMin) || !Number.isInteger(s.attackMax) || s.attackMin < 1 || s.attackMax < s.attackMin)
+      problems.push(`${at} attaque : des entiers, 1 ≤ attackMin ≤ attackMax`)
+    if (s.attackMax - s.attackMin > 3) problems.push(`${at} attaque : une petite fourchette (écart de 3 au plus)`)
     if (!inRange(s.armor, 0)) problems.push(`${at} armor doit être ≥ 0`)
     if (!inRange(s.dodgeChance, 0, 1)) problems.push(`${at} dodgeChance hors de [0, 1]`)
     if (!inRange(s.critChance, 0, 1)) problems.push(`${at} critChance hors de [0, 1]`)
@@ -875,21 +847,20 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       const twin = seen.get(e.id)
       if (twin && JSON.stringify({ ...twin, trigger: '' }) !== JSON.stringify({ ...e, trigger: '' })) problems.push(`${at} compétence en double (${e.id})`)
       seen.set(e.id, e)
-      if (e.effects.length === 0 && !e.reshapesHit && !e.volley) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
-      if (e.reshapesHit && (!isRollTrigger(e.trigger) || e.chance !== undefined || e.forfeitsHit))
-        problems.push(`${at} ${e.id}.reshapesHit : réservé aux déclencheurs du dé, sans chance ni forfeitsHit`)
-      if (isDoubleTrigger(e.trigger) && (!d.twinDice || e.chance !== undefined || e.forfeitsHit))
-        problems.push(`${at} ${e.id} : un double est réservé aux personnages à deux dés (twinDice), sans chance ni forfeitsHit`)
-      if (e.volley !== undefined && (!isDoubleTrigger(e.trigger) || !Number.isInteger(e.volley) || e.volley < 1))
-        problems.push(`${at} ${e.id}.volley : un entier ≥ 1, réservé aux doubles`)
+      if (e.effects.length === 0 && !e.hitMultiplier) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
+      const onDie = isRollTrigger(e.trigger) || isDoubleTrigger(e.trigger)
+      if (e.relation && !onDie) problems.push(`${at} ${e.id}.relation : réservée aux compétences du dé et des doubles`)
+      if (e.relation === 'modify' && !isRollTrigger(e.trigger)) problems.push(`${at} ${e.id} : modifier son coup est réservé au dé simple`)
+      // Le moteur doit savoir dès le jet si le coup part : une compétence qui remplace n'a pas de probabilité
+      if (e.relation === 'replace' && e.chance !== undefined) problems.push(`${at} ${e.id} : une compétence qui remplace le coup, sans chance`)
+      if (e.hitMultiplier !== undefined && (e.relation !== 'replace' || !isDoubleTrigger(e.trigger) || !Number.isInteger(e.hitMultiplier) || e.hitMultiplier < 2))
+        problems.push(`${at} ${e.id}.hitMultiplier : un entier ≥ 2, sur un double qui remplace ses coups`)
+      if (isDoubleTrigger(e.trigger) && (!d.twinDice || e.chance !== undefined))
+        problems.push(`${at} ${e.id} : un double est réservé aux personnages à deux dés (twinDice), sans chance`)
       if (d.twinDice && isRollTrigger(e.trigger))
         problems.push(`${at} ${e.id} : un personnage à deux dés n'a de compétences que sur les doubles`)
       if (e.form && !d.forms?.some((f) => f.id === e.form)) problems.push(`${at} ${e.id}.form : forme inconnue (${e.form})`)
       if (e.chance !== undefined && !inRange(e.chance, 0, 1)) problems.push(`${at} ${e.id}.chance hors de [0, 1]`)
-      if (e.forfeitsHit && (!isRollTrigger(e.trigger) || e.chance !== undefined))
-        problems.push(`${at} ${e.id}.forfeitsHit : réservé aux déclencheurs du dé, sans chance`)
-      if (e.needsTouch && (!isRollTrigger(e.trigger) || e.chance !== undefined || e.forfeitsHit || e.reshapesHit))
-        problems.push(`${at} ${e.id}.needsTouch : réservé aux déclencheurs du dé, sans chance, forfeitsHit ni reshapesHit`)
       if (e.limit !== undefined && (!Number.isInteger(e.limit) || e.limit < 1))
         problems.push(`${at} ${e.id}.limit doit être un entier ≥ 1`)
       for (const x of e.effects)
@@ -916,8 +887,6 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       }
     }
     for (const e of d.reserve ?? []) if (seen.has(e.id)) problems.push(`${at} ${e.id} : à la fois dans le kit et hors kit`)
-    if (d.strikes && d.strikes.length !== s.damageDie) problems.push(`${at} valeurs imprimées : une par face du dé (${s.damageDie})`)
-    if (d.strikes?.some((v) => !Number.isInteger(v) || v < 0)) problems.push(`${at} valeurs imprimées : des entiers ≥ 0`)
     // Répertoire (règles v2) : des compétences gravables d'autres personnages (de tout le roster), sans doublon
     const others = ENGRAVABLE_SKILLS.filter((e) => ![...d.events, ...(d.reserve ?? [])].some((own) => own.id === e.id)).map((e) => e.id)
     for (const id of d.repertoire ?? []) if (!others.includes(id)) problems.push(`${at} répertoire : ${id} n'est pas une compétence gravable d'un autre personnage`)

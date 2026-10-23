@@ -154,38 +154,30 @@ export function attackLog(
   const att = fighters[attack.attacker]
   const def = fighters[attack.attacker === 0 ? 1 : 0]
   const defender = (attack.attacker === 0 ? 1 : 0) as Side
-  if (attack.forfeited) {
+  if (attack.replaced) {
     return {
       kind: 'attack',
       side: attack.attacker,
-      text: `Tour ${turn} · ${att.name} fait ${attack.roll} : pas de dégâts, sa compétence se déclenche.`,
+      text: `Tour ${turn} · ${att.name} fait ${attack.roll} : pas de coup, sa compétence le remplace.`,
     }
   }
-  // Coup transformé (Charge, Coup de griffe) : le nom de la compétence, puis le coup lui-même
-  const move = attack.reshaped ? att.events.find((e) => e.id === attack.reshaped!.event)?.name : undefined
-  if (move && !attack.dodged) {
-    const crit = attack.crit ? ` CRITIQUE ${multiplier(attack.critMultiplier)} !` : ''
-    return {
-      kind: attack.crit ? 'crit' : 'attack',
-      side: attack.attacker,
-      text: `Tour ${turn} · ${att.name} fait ${attack.roll} : ${move} !${crit} ${attack.damage} dégâts infligés à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
-    }
-  }
+  // Le coup de base : sa valeur tirée, multipliée par Crescendo ou Soliste
+  const value = attack.multiplier ? `${attack.value} ×${attack.multiplier}` : String(attack.value)
   if (attack.dodged) {
     return {
       kind: 'dodge',
       side: defender,
-      text: `Tour ${turn} · ${att.name} frappe (${attack.printed ?? attack.roll}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''} !`,
+      text: `Tour ${turn} · ${att.name} frappe (${value}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''} !`,
     }
   }
   if (attack.crit) {
     return {
       kind: 'crit',
       side: attack.attacker,
-      text: `Tour ${turn} · ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${attack.printed ?? attack.roll} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
+      text: `Tour ${turn} · ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${value} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
     }
   }
-  const flavor = attack.roll === attack.faces ? ' Coup maximal !' : attack.roll === 1 ? ' Une égratignure.' : ''
+  const flavor = attack.multiplier ? ` Coup ×${attack.multiplier} !` : attack.value === att.stats.attackMax && att.stats.attackMax > att.stats.attackMin ? ' Coup maximal !' : ''
   return {
     kind: 'attack',
     side: attack.attacker,
@@ -270,6 +262,11 @@ export function pairLog(turn: number, side: Side, rolls: [number, number], skill
   }
 }
 
+/** Un jet dont la face porte une compétence qui se greffe : le dé, avant la compétence et le coup de base */
+export function rollLog(turn: number, side: Side, roll: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  return { kind: 'attack', side, text: `Tour ${turn} · ${fighters[side].name} fait ${roll}.` }
+}
+
 /** Pile ou face */
 export function coinLog(turn: number, side: Side, heads: boolean, effects: AppliedEffect[], fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   const name = fighters[side].name
@@ -277,7 +274,7 @@ export function coinLog(turn: number, side: Side, heads: boolean, effects: Appli
     kind: 'status',
     side,
     text: heads
-      ? `Tour ${turn} · Pile ! ${effects.map((e) => effectText(e, fighters)).join(', ')}.`
+      ? `Tour ${turn} · Pile ! Le coup compte double : ${effects.map((e) => effectText(e, fighters)).join(', ')}.`
       : `Tour ${turn} · Face… ${name} ne gagne rien cette fois.`,
   }
 }

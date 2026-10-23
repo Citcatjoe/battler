@@ -74,7 +74,7 @@ export function triggerShort(triggers: readonly Trigger[]) {
   return `dés ${triggers.map((t) => triggerText(t).short.replace('dé ', '')).join(', ')}`
 }
 
-/** « Compétence d'adresse · sur un 1 au dé de dégâts » : nature et déclencheur en toutes lettres. */
+/** « Compétence d'adresse · sur un 1 au dé » : nature et déclencheur en toutes lettres. */
 export function skillLine(event: CharacterEvent) {
   return `Compétence ${NATURE_OF[natureOf(event)]} · ${triggerText(event.trigger).label.toLowerCase()}`
 }
@@ -119,7 +119,7 @@ export function StatusChip({ status, target, nav, from }: { status: StatusId; ta
   )
 }
 
-/** Pastilles d'une compétence (coup sacrifié, conditions…) : chacune mène à la règle commune qu'elle cite. */
+/** Pastilles d'une compétence (relation au coup, conditions…) : chacune mène à la règle commune qu'elle cite. */
 export function SkillTags({ event, nav, form }: { event: CharacterEvent; nav: CompendiumNav; form?: string }) {
   const { tags } = describeSkill(event, form)
   if (tags.length === 0) return null

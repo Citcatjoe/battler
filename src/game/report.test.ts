@@ -22,11 +22,13 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
     report.relics[id] = (report.relics[id] ?? 0) + 1
   }
   for (const line of traceText(result).split('\n')) {
-    const attack = line.match(new RegExp(`${name} attaque .*?: dé (\\d+) sur d\\d+`))
+    const attack = line.match(new RegExp(`${name} attaque .*?: dé (\\d+)`))
     if (attack) {
-      if (!line.includes('(dé de la paire)')) face(Number(attack[1]))
+      if (!line.includes('(dé déjà tiré)')) face(Number(attack[1]))
       for (const bonus of line.matchAll(/relique (.+?) \+\d+/g)) relic(bonus[1])
     }
+    const rolled = line.match(new RegExp(`${name} lance son dé : (\\d+)`))
+    if (rolled) face(Number(rolled[1]))
     const pair = line.match(new RegExp(`${name} lance ses deux dés \\(d\\d+\\) : (\\d+) et (\\d+)`))
     if (pair) [pair[1], pair[2]].forEach((r) => face(Number(r)))
     const fired = line.match(new RegExp(`^.*?Relique « (.+?) » ${of(name)} \\(`))
@@ -36,7 +38,7 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
 }
 
 describe('rapport de combat (report.ts)', () => {
-  it('compte exact sur une chronologie connue : dés lancés, paire, coup de la paire, reliques', () => {
+  it('compte exact sur une chronologie connue : dés lancés, jet greffé, paire, coup de la paire, reliques', () => {
     const attack = (attacker: 0 | 1, roll: number, extra: object = {}) => ({ type: 'attack', attack: { attacker, roll, faces: 6, ...extra } })
     const beats = [
       attack(0, 4, { relicBonus: [{ relic: 'four-nail-shoe', name: 'Fer à quatre clous', amount: 4 }] }),
@@ -47,12 +49,15 @@ describe('rapport de combat (report.ts)', () => {
       attack(0, 2, { preset: true }),
       attack(0, 2, { preset: true }),
       { type: 'coin', side: 1, status: 'heads', heads: true, effects: [] },
-      attack(1, 1, { forfeited: true }),
+      attack(1, 1, { replaced: true }),
+      // Un jet greffé : le dé tombe à l'étape `roll`, le coup qui suit le reprend
+      { type: 'roll', side: 1, roll: 3, faces: 6 },
+      attack(1, 3, { preset: true }),
       { type: 'relic', side: 1, relic: 'wolf-fang', name: 'Dent de loup', effects: [], uses: 2 },
     ] as unknown as Beat[]
     expect(combatReport({ beats })).toEqual([
       { relics: { 'four-nail-shoe': 1 }, faces: [0, 2, 0, 1] },
-      { relics: { 'wolf-fang': 2 }, faces: [1, 0, 0, 0, 0, 1] },
+      { relics: { 'wolf-fang': 2 }, faces: [1, 0, 1, 0, 0, 1] },
     ])
   })
 

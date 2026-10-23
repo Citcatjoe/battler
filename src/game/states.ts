@@ -104,7 +104,7 @@ export interface Relay {
  * - `aura` : dans l'en-tête, en anneau qui tourne ; son effet est relayé dans la zone (`relays`) ;
  * - `form` et `skill` : un mécanisme (`StatusDef.mechanic`), lu dans sa définition : règle de forme (druide), dans
  *   l'en-tête ; mécanisme d'une compétence, montré sur son sceau (les jauges de Rétribution), ou par le seul éclat
- *   du sceau et le badge du coup (Pile ou face, Furie des vents, Attente).
+ *   du sceau et le badge du coup (Pile ou face, Furie des vents).
  */
 export interface StatusPlace {
   place: 'tray' | 'aura' | 'form' | 'skill'

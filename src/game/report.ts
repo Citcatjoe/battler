@@ -14,9 +14,10 @@ export interface FighterReport {
    */
   relics: Record<string, number>
   /**
-   * Faces jouées : `faces[k]`, le nombre de dés tombés sur la face k + 1. Chaque dé lancé compte : le coup de l'action,
-   * les coups d'une rafale (Furie des vents, Coup de chance), chacun des deux dés d'une paire (la barde). Le coup qui
-   * reprend un dé de la paire ne relance rien, il ne compte pas une seconde fois ; une pièce n'est pas un dé.
+   * Faces jouées : `faces[k]`, le nombre de dés tombés sur la face k + 1. Chaque dé lancé compte : le coup de l'action
+   * (ou le jet d'une compétence greffée, étape `roll`), les coups d'une rafale (Furie des vents, Coup de chance), chacun
+   * des deux dés d'une paire (la barde). Le coup qui reprend un dé déjà tiré (paire, jet greffé) ne relance rien, il ne
+   * compte pas une seconde fois ; une pièce n'est pas un dé.
    */
   faces: number[]
 }
@@ -39,6 +40,7 @@ export function combatReport(result: Pick<CombatResult, 'beats'>): CombatReport 
   for (const beat of result.beats) {
     if (beat.type === 'relic') relic(beat.side, beat.relic)
     else if (beat.type === 'pair') for (const roll of beat.rolls) addFace(reports[beat.side], roll)
+    else if (beat.type === 'roll') addFace(reports[beat.side], beat.roll)
     else if (beat.type === 'attack') {
       const a = beat.attack
       if (!a.preset) addFace(reports[a.attacker], a.roll)

@@ -196,7 +196,7 @@ function AuraToken({
           </span>
         </div>
         <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">{active ? def.describe(status) : def.summary}</p>
-        {/* Les compétences qui la posent : leur face, les charges posées, leurs pastilles (coup sacrifié, double qui
+        {/* Les compétences qui la posent : leur face, les charges posées, leurs pastilles (relation au coup, double qui
             remplace les deux coups), et ce qu'elles font d'autre au passage (l'Aura d'immunité purge ses malus) */}
         {posing.map((e) => {
           const f = skillFaceOf(e.trigger)

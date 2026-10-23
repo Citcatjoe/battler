@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { effectiveStats } from '../game/combat'
-import { doubleTrigger, faceTrigger, type CharacterEvent } from '../game/events'
+import { DIE_FACES, doubleTrigger, faceTrigger, type CharacterEvent } from '../game/events'
 import { forgeState, rankLabel } from '../game/forge'
-import type { Status } from '../game/statuses'
 import { SegmentedControl } from './kit'
 import { SkillSeal } from './SkillSeal'
 import { ALIGN, SkillTooltip } from './SkillDice'
@@ -28,22 +26,16 @@ export interface DieCell {
   engraved: boolean
   /** Bonus de la dorure (0 : aucune) */
   gild: number
-  /** Ce que frappe la face (valeur imprimée, forge comprise), dorure non comprise */
-  value: number
   /** Rang de forge de sa compétence (0 : jamais aiguisée) */
   rank: number
 }
 
-/** Les statuts d'une forme hors combat (le d3 de l'Incantation), pour lire la taille de son dé. */
-const formStatuses = (character: Character, form: number): Status[] => (character.forms?.[form].statuses ?? []).map((id) => ({ id, stacks: 1 }))
-
-/** Les faces du dé d'un personnage, de 1 à la taille de son dé sous cette forme. */
+/** Les faces du dé d'un personnage, de 1 à 6, sous cette forme. */
 export function dieCells(character: Character, form = 0): DieCell[] {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const size = effectiveStats(character, formStatuses(character, form)).damageDie
   const forge = forgeState(character.definition, character.forge)
-  return Array.from({ length: size }, (_, k) => {
+  return Array.from({ length: DIE_FACES }, (_, k) => {
     const face = k + 1
     const trigger = character.twinDice ? doubleTrigger(face) : faceTrigger(face)
     const event = events.find((e) => e.trigger === trigger)
@@ -52,7 +44,6 @@ export function dieCells(character: Character, form = 0): DieCell[] {
       event,
       engraved: !!event && forge.engraved.get(face)?.id === event.id,
       gild: character.gilded[face] ?? 0,
-      value: character.strikeValue(face),
       rank: event ? (forge.ranks.get(event.id) ?? 0) : 0,
     }
   })
@@ -106,7 +97,7 @@ export function DieBuild({ character }: { character: Character }) {
 }
 
 function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 'left' | 'right' }) {
-  const { face, event, gild, rank, engraved, value } = cell
+  const { face, event, gild, rank, engraved } = cell
   // Cartouche : le chiffre d'une face à compétence, suivi du bonus d'une dorure (« 3+2 ») ; le bonus seul sur une face simple
   const plate = `${event ? face : ''}${gild ? `+${gild}` : ''}`
   return (
@@ -117,7 +108,7 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
           <SkillSeal id={event.id} size={SLOT} />
         ) : (
           <span aria-label={`Face ${face}`} className="skill-seal die-slot-plain" style={{ width: SLOT, height: SLOT }}>
-            {value}
+            {face}
           </span>
         )}
         {plate && <span className="die-slot-num">{plate}</span>}
@@ -143,7 +134,7 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
             </span>
           </div>
           <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">
-            {twin ? `Chaque dé qui fait ${face} frappe pour ${value}` : `Frappe pour ${value}`}
+            {twin ? `Chaque dé qui fait ${face} porte le coup de base` : 'Le coup de base, sans compétence'}
             {gild ? `, +${gild} (face dorée).` : '.'}
           </p>
         </div>

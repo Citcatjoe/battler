@@ -1,6 +1,7 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
-import { doubleTrigger, triggerText, type CharacterEvent, type Trigger } from './events'
+import { DAMAGE_KINDS } from './damage'
+import { DIE_FACES, doubleTrigger, relationOf, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
 import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
@@ -101,22 +102,26 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       const att = fighters[a.attacker]
       const defSide = other(a.attacker)
       const def = fighters[defSide]
-      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.printed !== undefined ? ` (face imprimée : coup de ${a.printed})` : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
+      const head = `${att.name} attaque ${def.name} : dé ${a.roll}${a.roll === DIE_FACES ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé déjà tiré)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}`
       const modifier = (m: (typeof a.modifiers)[number]) =>
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
-      if (a.forfeited) return [`${head} · coup sacrifié par une compétence, aucun dégât (ni esquive ni critique)`]
+      if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
+      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DD) »), multipliée par Crescendo ou Soliste
+      const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${DAMAGE_KINDS[a.kind].short})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
-        return [`${head} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
+        return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
       const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
+      const struck = a.value * (a.multiplier ?? 1) + bonus
       const steps = [
+        base,
         // Reliques de coup (Fer à quatre clous), puis face dorée (forge du dé) : avant le critique
         ...(a.relicBonus ?? []).map((b) => `relique ${b.name} +${b.amount}`),
         ...(a.gild ? [`face dorée +${a.gild}`] : []),
         a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
         // Auras et statuts qui changent la force du coup, avec leur porteur
         ...early.map(modifier),
-        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(((a.printed ?? a.roll) + bonus) * a.critMultiplier) : (a.printed ?? a.roll) + bonus) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
+        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(struck * a.critMultiplier) : struck) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
         ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
         // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
@@ -157,16 +162,19 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [`${fighters[beat.side].name} change de forme : ${fighters[beat.side].forms?.[beat.form].name ?? beat.form}`]
     case 'flurry':
       return [
-        `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque coup résolu à part (statut consommé)`,
+        `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque jet résolu à part (statut consommé)`,
       ]
     case 'pair': {
       const c = fighters[beat.side]
       const forced = beat.forced ? beat.rolls.map((r, k) => `${r}${beat.forced![k] ? ' [imposé]' : ''}`) : beat.rolls
-      const skill = beat.double !== undefined ? c.events.find((e) => e.trigger === doubleTrigger(beat.double!))?.name : undefined
+      const double = beat.double === undefined ? undefined : c.events.find((e) => e.trigger === doubleTrigger(beat.double!))
+      const skill = double?.name
       return [
-        `${c.name} lance ses deux dés (d${beat.faces}) : ${forced.join(' et ')} → ${skill ? `double ${beat.double} : « ${skill} », à la place des deux coups` : beat.rolls[0] === beat.rolls[1] ? `double ${beat.rolls[0]} sans compétence : deux coups` : 'deux coups, un par dé'}`,
+        `${c.name} lance ses deux dés (d${beat.faces}) : ${forced.join(' et ')} → ${skill ? `double ${beat.double} : « ${skill} », ${double && relationOf(double) === 'replace' ? 'à la place des deux coups' : 'puis les deux coups'}` : 'deux coups de base, un par dé'}`,
       ]
     }
+    case 'roll':
+      return [`${fighters[beat.side].name} lance son dé : ${beat.roll}${beat.forced ? ' [imposé]' : ''} → sa compétence se greffe, puis le coup de base`]
     case 'coin':
       return [
         `${label(beat.status)} : ${fighters[beat.side].name} lance aussitôt une pièce → ${beat.heads ? 'PILE' : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,
@@ -189,7 +197,7 @@ function statusesLine(state: Snapshot, fighters: Pair<Character>) {
 function fighterLine(c: Character, side: Side) {
   const s = c.stats
   const skills = c.events.map((e) => e.name).join(', ') || 'aucune'
-  return `${c.name} (${SIDE_LABEL[side]}, ${c.race}) : ${c.maxHp} PV, d${s.damageDie}, armure ${s.armor}, esquive ${percent(s.dodgeChance)}, critique ${percent(s.critChance)} ${multiplier(s.critMultiplier)} · compétences : ${skills}`
+  return `${c.name} (${SIDE_LABEL[side]}, ${c.race}) : ${c.maxHp} PV, attaque ${s.attackMin} à ${s.attackMax} ${DAMAGE_KINDS[c.attackKindIn(0)].short}, armure ${s.armor}, esquive ${percent(s.dodgeChance)}, critique ${percent(s.critChance)} ${multiplier(s.critMultiplier)} · compétences : ${skills}`
 }
 
 /** Trace structurée d'un combat (un bloc par tour). */
@@ -259,7 +267,7 @@ export function parseRelics(text: string): Pair<string[]> {
   return relics
 }
 
-/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 ; reforge » (journal, dans l'ordre). */
+/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 ; temper » (journal, dans l'ordre). */
 export const FORGE_PREFIX = 'Forge ('
 
 /** Lecture inverse de l'en-tête de forge : le journal de chaque camp ; `skills` : où retrouver une compétence gravée. */
@@ -272,7 +280,7 @@ export function parseForge(text: string, skills: readonly CharacterEvent[]): Pai
       .split(' ; ')
       .map((token): ForgeStep => {
         const [op, face, id] = token.split(' ')
-        if (op === 'reforge') return { op }
+        if (op === 'temper') return { op }
         if (op === 'gild' || op === 'sharpen' || op === 'copy') return { op, face: Number(face) }
         const skill = skills.find((e) => e.id === id)
         if (op !== 'engrave' || !skill) throw new Error(`Forge illisible : ${token}`)

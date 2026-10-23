@@ -196,8 +196,6 @@ describe('écrans', () => {
     const gorak = createCharacter('gorak')
     const cells = dieCells(gorak)
     expect(cells.map((c) => c.face)).toEqual([1, 2, 3, 4, 5, 6])
-    // Pourfendre et la Furie sur le 1 et le 2 ; les faces de coup montrent leur valeur imprimée
-    expect(cells.map((c) => c.event?.id ?? c.value)).toEqual(['cleave', 'wind-fury', 5, 5, 6, 7])
     // Le druide : un d6 sous ses deux formes, des sorts sous forme humaine, des coups sous l'ours
     const thaldrin = createCharacter('thaldrin')
     expect(dieCells(thaldrin, 0).every((c) => c.event)).toBe(true)
@@ -334,7 +332,7 @@ describe('écrans', () => {
     const attack = {
       ...base.attack,
       dodged: false,
-      forfeited: false,
+      replaced: false,
       crit: true,
       critForced: true,
       critBy: 'guaranteedCrit',
@@ -353,15 +351,15 @@ describe('écrans', () => {
     expect(show(crit)).toEqual(['Critique assuré plus', 'Critique ×2 plus'])
     expect(show(impact)).toEqual(['Luciole +2 plus', 'Armure temporaire −6 minus', 'Fausse note −10 minus'])
     // Esquive imposée : elle annule le reste du coup
-    const dodged = attackSpecials({ ...base.attack, dodged: true, dodgeForced: true, dodgeBy: 'evasion', forfeited: false, crit: false, critForced: false, relicBonus: undefined, modifiers: [], shields: [] })
+    const dodged = attackSpecials({ ...base.attack, dodged: true, dodgeForced: true, dodgeBy: 'evasion', replaced: false, crit: false, critForced: false, relicBonus: undefined, modifiers: [], shields: [] })
     expect(show([...dodged.roll, ...dodged.crit, ...dodged.impact])).toEqual(['Esquive assurée minus'])
-    // Sur tout le roster : aucun emoji, et un coup sacrifié n'a aucune surcharge
+    // Sur tout le roster : aucun emoji, et un jet remplacé n'a aucune surcharge
     for (const x of CHARACTER_IDS)
       for (const beat of simulateCombat([createCharacter(x), createCharacter('brokk')], { seed: 2 }).beats) {
         if (beat.type !== 'attack') continue
         const all = Object.values(attackSpecials(beat.attack)).flat()
         for (const s of all) expect(s.label).not.toMatch(EMOJI)
-        if (beat.attack.forfeited) expect(all).toEqual([])
+        if (beat.attack.replaced) expect(all).toEqual([])
       }
   })
 
@@ -649,7 +647,7 @@ describe('écrans', () => {
     const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
     // Un champion qui a déjà forgé : une gravure sur le 6, une copie, une dorure, et le boss en face
     let run = startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' })
-    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 5 }, { op: 'gild', face: 4 }] }
+    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 2 }, { op: 'gild', face: 4 }] }
     const encounters: Encounter[] = [
       { characterId: 'brokk', maxHp: 44, forge: [{ op: 'gild', face: 6 }], relics: ['wolf-fang'], chance: 0.8 },
       { characterId: 'ysolde', maxHp: 61, forge: [], relics: [], chance: 0.4 },
@@ -659,7 +657,7 @@ describe('écrans', () => {
     render(<CampaignScreen {...props} run={run} />)
     render(<CampaignScreen {...props} run={{ ...run, encounters }} />)
     render(<CampaignScreen {...props} run={{ ...run, wins: ACT_FIGHTS, encounters: [{ characterId: BOSS.id, maxHp: 90, forge: [], relics: [], boss: true, chance: 0.45 }] }} />)
-    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'reforge' }, { op: 'copy' }], choice: { op: 'gild', face: 5 } }
+    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'temper' }, { op: 'copy' }], choice: { op: 'gild', face: 5 } }
     const relic: PendingReward = { kind: 'relic', offer: ['felt-boots', 'wolf-fang'], choice: 'felt-boots' }
     for (const reward of [forge, relic]) render(<CampaignScreen {...props} run={{ ...run, wins: 2, reward }} />)
     for (const outcome of ['won', 'lost'] as const) render(<CampaignScreen {...props} run={{ ...run, outcome, gains: [{ kind: 'relic', relic: 'felt-boots' }] }} />)

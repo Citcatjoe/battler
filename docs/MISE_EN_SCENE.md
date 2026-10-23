@@ -51,11 +51,11 @@ Colonne « Contrôle » : le test qui vérifie la règle sur tout le corpus (`st
 
 | N° | Règle | Code | Contrôle |
 | --- | --- | --- | --- |
-| M7 | Le son « Dé posé » et la valeur du dé tombent ensemble. Plusieurs dés lancés ensemble (initiative, paire, rafale) : un seul roulement, un seul « Dé posé ». | `stageAttack`, `rollVolley`, `pair` | « rafales : les dés roulent ensemble » (rafale seule) |
+| M7 | Le son « Dé posé » et la valeur du dé tombent ensemble. Plusieurs dés lancés ensemble (initiative, paire, rafale) : un seul roulement, un seul « Dé posé ». Un jet greffé (étape `roll`, 0.106.0) roule son dé une seule fois, à cette étape : le coup de base qui suit part de ce dé, sans nouveau roulement ; dans une rafale (Coup de chance), son dé est déjà sur le plateau et ne roule pas de nouveau. | `stageAttack`, `roll`, `rollVolley`, `pair` | « rafales : les dés roulent ensemble » (rafale seule) ; « combat test : un point d'attente avant chaque étape qui lance des dés » (le jet greffé compte un dé) |
 | M8 | Les labels du jet tombent **avec le dé posé** (esquive assurée ; bonus d'une relique de coup, avec son sceau qui s'illumine). Ceux du critique tombent **avec l'annonce du critique**, ceux de l'impact **à l'impact**. | `rollSpecials`, `stageAttack` | aucun |
 | M9 | Un nouveau dé efface les labels du précédent ; en rafale, chaque coup efface ceux du coup d'avant. | `setDice`, `stageVolleyStrike` | aucun |
-| M10 | **Dé posé et labels, puis un battement, puis l'action.** Que l'action soit l'élan d'un coup ou une compétence déclenchée par la face du dé qui **remplace le coup** (coup sacrifié), elle part `DICE_READ` après le dé posé. Le dé de la compétence s'allume dans l'en-tête au dé posé. En rafale, la compétence suit d'un battement plus court (`VOLLEY_FORFEIT_SNAP`). | `stageAttack` (coup sacrifié), `snapped` | « une compétence sur le dé tombe un battement après son jet… » |
-| M11 | Une compétence qui **accompagne le coup** (Pourfendre, `needsTouch`) ne part que s'il touche : son dé de l'en-tête s'allume **à l'impact**, pas au dé posé. | `onHit`, `pulse` | « le dé qui pulse est celui du jet… » (la face, pas l'instant) |
+| M10 | **Dé posé et labels, puis un battement, puis l'action.** L'action part `DICE_READ` après le dé posé, quelle qu'elle soit : l'élan d'un coup ; une compétence **greffée** (étape `roll`, 0.106.0 : le dé tombe, le dé de la compétence s'allume dans l'en-tête avec lui, la compétence suit un battement après, puis le coup de base part de ce dé, sans second battement) ; une compétence qui **remplace le coup** (jet sans coup de base). En rafale, la compétence suit d'un battement plus court (`VOLLEY_FORFEIT_SNAP`). | `roll`, `stageAttack` (`rolled`, jet remplacé), `snapped` | « une compétence sur le dé tombe un battement après son jet… » (jet remplacé) ; « le dé qui pulse est celui du jet… » (la face d'un jet greffé) |
+| M11 | Une compétence qui **modifie son coup** (relation `modify` : Pourfendre ; Pile ou face, M26) ne part que s'il touche : son dé de l'en-tête s'allume **à l'impact**, pas au dé posé. | `onHit`, `pulse` | « le dé qui pulse est celui du jet… » (la face, pas l'instant) |
 | M12 | Double de la barde : les deux dés, le « ding » et le dé de la face tombent ensemble ; la compétence du double suit un battement après (`DICE_READ`), comme M10. | `pair` | « double de la barde… un battement après » |
 
 ### 3.3 Le coup et ce qu'il entraîne
@@ -86,9 +86,9 @@ Colonne « Contrôle » : le test qui vérifie la règle sur tout le corpus (`st
 
 | N° | Règle | Code | Contrôle |
 | --- | --- | --- | --- |
-| M26 | **Pile ou face** : le statut qui la permet est consommé quand la pièce part. Le résultat tombe d'un bloc (la pièce, « Pièce retombe », le « ding » sur pile, « Pile ! » ou « Face… ») ; puis, sur pile, un seul coup lourd, qui se comporte comme un coup : ce qu'il produit tombe à son impact (M14), ses réactions au milieu de sa lecture (M17). | `coin` | « pile ou face : pile tombe d'un bloc… » (le bloc et le coup lourd) |
-| M27 | **Rafale** : tous les dés roulent ensemble ; puis un coup rapide par dé, sans nouveau jet, le dé du coup en cours mis en avant. Une Furie instantanée (posée par le dé qui vient de tomber) fait apparaître ses dés à plat, sans répéter le nom, et la compétence qui la pose raccourcit sa lecture (`FLURRY_CHAIN_HOLD`). | `flurry`, `rollVolley` | « rafales : les dés roulent ensemble… » |
-| M28 | **Coup transformé** (Charge, Coup de griffe) : la compétence est jouée avec le coup ; à sa place, elle n'est que notée (état et journal). | `reshapesHit` | aucun |
+| M26 | **Pile ou face** : le statut qui la permet est consommé quand la pièce part, juste après le coup qu'elle modifie, s'il a touché. Le résultat tombe d'un bloc (la pièce, « Pièce retombe », le « ding » sur pile, « Pile ! » ou « Face… ») ; puis, sur pile, un seul coup lourd (ce coup, à nouveau : lourd quelle que soit sa force, chiffre doré et son du critique, 0.106.0), qui se comporte comme un coup : ce qu'il produit tombe à son impact (M14), ses réactions au milieu de sa lecture (M17). | `coin`, `blows` (`heavy`) | « pile ou face : pile tombe d'un bloc… » (le bloc et le coup lourd) |
+| M27 | **Rafale** : tous les dés roulent ensemble ; puis un coup rapide par dé, sans nouveau jet, le dé du coup en cours mis en avant. Les coups d'une rafale sont aussi ceux de ses jets greffés (Coup de chance, sous leur étape `roll`) : leur compétence suit son dé (M10), sans nouveau roulement. Une Furie instantanée (posée par le dé qui vient de tomber) fait apparaître ses dés à plat, sans répéter le nom, et la compétence qui la pose raccourcit sa lecture (`FLURRY_CHAIN_HOLD`). | `flurry`, `rollVolley` | « rafales : les dés roulent ensemble… » |
+| ~~M28~~ | ~~**Coup transformé** (Charge, Coup de griffe) : la compétence est jouée avec le coup ; à sa place, elle n'est que notée (état et journal).~~ Retirée en 0.106.0 avec `reshapesHit` : plus aucun coup transformé (une compétence greffe, modifie ou remplace son coup). | — | — |
 | M29 | **Tour perdu** : « Tour perdu » tombe sur celui qui perd son action (la conséquence, pas la cause), sans titre ni aura. | `skip` | « la Peur : « Tour perdu » tombe sur celui qui perd son action » |
 | M30 | **Changement de forme** : le nom de la forme et le fondu des silhouettes tombent ensemble, à l'apparition. | `shift` | « le druide change de forme » (la forme, pas l'instant) |
 
@@ -137,7 +137,7 @@ Les scènes (`scenes.ts`) portent leur propre rythme (`impacts`, `length`), que 
 
 ### 5.2 Ouvertes
 
-- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. **En partie tranchée (2026-10-23, [PROGRESSION.md](PROGRESSION.md) § 9)** : les dégâts ont un type (DP, DM, DT) et une source, déclarés sur chaque effet depuis la 0.102.0 (`damage.ts`), pas déduits de la `nature` ; leur couleur à l'écran, par type et par source, viendra avec la phase 7 des règles v2.
+- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. **En partie tranchée (2026-10-23, [PROGRESSION.md](PROGRESSION.md) § 9)** : les dégâts ont un type (DD, DM, DT) et une source, déclarés sur chaque effet depuis la 0.102.0 (`damage.ts`), pas déduits de la `nature` ; leur couleur à l'écran, par type et par source, viendra avec la phase 7 des règles v2.
 
 ## 6. Introduire une mécanique qui s'anime
 
@@ -169,7 +169,7 @@ Règles sans contrôle automatique, par ordre d'utilité (celles qui casseraient
 5. M16 : l'annonce du critique avant l'élan, l'arrêt sur image avant l'impact ;
 6. M34 et M36 : passage de main, fin du combat ;
 7. M11, M30 : contrôler aussi l'instant, pas seulement la face ou la forme ;
-8. M18, M25, M28, M31 à M33.
+8. M18, M25, M31 à M33.
 
 ## 8. Journal
 
@@ -177,3 +177,4 @@ Règles sans contrôle automatique, par ordre d'utilité (celles qui casseraient
 | --- | --- |
 | 2026-10-23 (0.96.3) | Document amorcé : 36 règles extraites des commentaires de `staging.ts`, quatre questions ouvertes. |
 | 2026-10-23 (0.97.0) | Retours de l'utilisateur appliqués dans le code. **M10** : un battement (`DICE_READ`) entre le dé posé et la compétence qui sacrifie le coup, comme avant l'élan d'un coup ; **M12** : de même pour la compétence d'un double. **M15** précisée : une plaie ouverte par un coup ne coule qu'au coup suivant. **M17** : les réactions au coup partent au milieu de sa lecture, plus après son repos (la Riposte touche environ 1 s plus tôt) ; le coup s'efface à son heure, ou à l'élan de la Riposte. **M37**, nouvelle : couleur des dégâts d'un statut par famille. Questions tranchées : Q1 (Vol de vie à l'impact, M14), Q2 (M21), Q3 (M3, avec M16 bis : jauges comptées à l'impact), Q4 (§ 4 : élans et départ des réactions déduits). Q5 ouverte. |
+| 2026-10-23 (0.106.0) | **L'attaque de base** (RESOLUTION § 3 bis) : une nouvelle étape `roll` pour un jet dont la face greffe sa compétence. **M7** : son dé roule une seule fois, à cette étape. **M10** : dé posé, dé de la compétence qui s'allume, battement, compétence greffée, puis le coup de base sans nouveau jet ; plus de coup sacrifié, seulement des jets remplacés. **M11** : la compétence qui modifie son coup (relation `modify`) remplace `needsTouch`. **M26** : le coup de pile répète le coup qu'il modifie ; il reste lourd même petit. **M27** : la rafale compte aussi les coups des jets greffés de Coup de chance. **M28** barrée (`reshapesHit` retiré). Une compétence greffée à scène (la Foudre) joue sa scène, puis le coup de base suit dans le même moment. |

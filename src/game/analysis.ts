@@ -19,8 +19,8 @@ export interface SkillStats {
   perCombat: number
   /**
    * Valeur nette, en points de taux de victoire : on rejoue les mêmes combats sans cette
-   * compétence (son jet redevient un coup normal). Positive = la compétence fait gagner ;
-   * négative = elle coûte plus (coup perdu) qu'elle ne rapporte. Absente si non mesurée.
+   * compétence (sa face redevient nue : le coup de base seul). Positive = la compétence fait gagner ;
+   * négative = elle coûte plus (un coup remplacé, par exemple) qu'elle ne rapporte. Absente si non mesurée.
    */
   value?: number
 }
@@ -43,8 +43,8 @@ export interface CharacterReport {
   turns: number
   /** Dégâts moyens d'un coup qui touche */
   perHit: number
-  /** Part des actions sans dégât à cause d'un jet de compétence (1, 2, 3) */
-  forfeitRate: number
+  /** Part des jets sans coup de base : remplacés par leur compétence (Furie des vents, Coup de chance) */
+  replacedRate: number
   skills: SkillStats[]
   statuses: StatusValue[]
 }
@@ -151,7 +151,7 @@ export function analyzeBalance(characters: readonly Character[], perPair = 400, 
     let hitDamage = 0
     let hits = 0
     let actions = 0
-    let forfeits = 0
+    let replaced = 0
     const skill = new Map<string, { name: string; fired: number }>()
     for (const e of me.events) skill.set(e.id, { name: e.name, fired: 0 })
     const values = new Map<StatusId, { total: number; unit: string }>()
@@ -173,7 +173,7 @@ export function analyzeBalance(characters: readonly Character[], perPair = 400, 
           if (b.type === 'event' && b.event.side === side) fired.set(b.event.eventId, (fired.get(b.event.eventId) ?? 0) + 1)
           if (b.type === 'attack' && b.attack.attacker === side) {
             actions++
-            if (b.attack.forfeited) forfeits++
+            if (b.attack.replaced) replaced++
             else if (!b.attack.dodged) {
               hits++
               hitDamage += b.attack.dealt
@@ -194,7 +194,7 @@ export function analyzeBalance(characters: readonly Character[], perPair = 400, 
       margin: 1.96 * Math.sqrt((rate * (1 - rate)) / fights),
       turns: turns / fights,
       perHit: hits ? hitDamage / hits : 0,
-      forfeitRate: actions ? forfeits / actions : 0,
+      replacedRate: actions ? replaced / actions : 0,
       skills: [...skill.entries()].map(([id, s]) => ({
         name: s.name,
         perCombat: s.fired / fights,
@@ -222,16 +222,16 @@ export function formatBalance(report: BalanceReport): string {
     ``,
     `## Taux de victoire et profil de combat`,
     ``,
-    `| Personnage | Victoires | ± (95 %) | Tours | Dégâts par coup | Jets sans dégâts |`,
+    `| Personnage | Victoires | ± (95 %) | Tours | Dégâts par coup | Jets remplacés |`,
     `| --- | --- | --- | --- | --- | --- |`,
     ...rows.map(
       (c) =>
-        `| ${c.name} | **${pct(c.winRate)}** | ${pct(c.margin)} | ${c.turns.toFixed(1)} | ${c.perHit.toFixed(1)} | ${pct(c.forfeitRate)} |`,
+        `| ${c.name} | **${pct(c.winRate)}** | ${pct(c.margin)} | ${c.turns.toFixed(1)} | ${c.perHit.toFixed(1)} | ${pct(c.replacedRate)} |`,
     ),
     ``,
     `## Compétences`,
     ``,
-    `Valeur nette : écart de taux de victoire avec la même compétence retirée (son jet redevient un coup normal), sur les mêmes combats. Négative : la compétence coûte plus qu'elle ne rapporte.`,
+    `Valeur nette : écart de taux de victoire avec la même compétence retirée (sa face redevient nue : le coup de base seul), sur les mêmes combats. Négative : la compétence coûte plus qu'elle ne rapporte.`,
     ``,
     `| Personnage | Compétence | Par combat | Valeur nette |`,
     `| --- | --- | --- | --- |`,

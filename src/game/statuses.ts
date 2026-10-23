@@ -44,7 +44,6 @@ export type StatusId =
   | 'immunityAura'
   | 'riposte'
   | 'retribution'
-  | 'waiting'
   | 'firefly'
   | 'rotAura'
   | 'rot'
@@ -105,7 +104,7 @@ export interface StatusDef {
     opacity?: number
     /** Animation du porteur : `tremble` (il tremble de gauche à droite, ex. Peur) */
     motion?: 'tremble' | 'fireflies'
-    /** Couleur du dé supplémentaire qu'il donne (`extraDie`) */
+    /** Couleur des dés supplémentaires qu'il donne (Coup de chance) */
     dieColor?: string
   }
 
@@ -127,10 +126,10 @@ export interface StatusDef {
   /**
    * Vol de vie : réagit dans la fenêtre `hit` du porteur, à chaque coup qui touche (pile de Pile ou face comprise), en
    * lui rendant les PV retirés ; une charge par réaction. Un coup esquivé consomme la charge sans rien rendre.
-   * Un jet de compétence (coup sacrifié) n'est pas un coup porté : la charge reste.
+   * Un jet remplacé (Furie des vents) ne porte pas de coup : la charge reste.
    */
   drainsHit?: boolean
-  /** Coups supplémentaires à sa prochaine action, chacun résolu indépendamment ; le statut est consommé en entier */
+  /** Coups supplémentaires à sa prochaine action (Coup de chance : des jets complets), chacun résolu à part */
   extraStrikes?: number
   /**
    * Charges de coups supplémentaires (0.46.0) : `all`, la prochaine action dépense toutes les charges
@@ -140,22 +139,19 @@ export interface StatusDef {
   strikeCharges?: 'all' | 'one'
   /**
    * Coups supplémentaires instantanés (0.50.0, Furie des vents) : une charge gagnée pendant l'action
-   * frappe dans cette même action, juste après le coup en cours, au lieu d'attendre l'action suivante.
-   * Depuis la 0.69.0, ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence de jet, donc
-   * sans nouvelle Furie en chaîne. Les reliques de face et la dorure, elles, lisent leur dé (2026-10-23).
+   * frappe dans cette même action, juste après le jet en cours, au lieu d'attendre l'action suivante.
+   * Ce sont des coups de base bruts (0.69.0), chacun avec son dé : leur face ne déclenche aucune compétence, donc aucune
+   * Furie en chaîne. Les reliques de face et la dorure, elles, lisent leur dé (2026-10-23).
    */
   instantStrikes?: boolean
-  /** Faces du dé des coups supplémentaires (défaut : le dé du porteur), ex. le d6 de Coup de chance */
-  extraDie?: number
   /**
-   * Pile ou face : le porteur lance aussitôt une pièce, juste après le coup pendant lequel le statut est posé
-   * (2026-10-21 ; avant, elle remplaçait le dé de sa prochaine action). Pile, l'adversaire perd `damage` PV
-   * (dégâts directs) ; face, rien. Le statut est consommé en entier.
-   * `headsTouches` : pile compte comme un coup qui touche de `damage` PV (fenêtres `hit` du porteur et `hurt` de
-   * l'adversaire) : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de
-   * vie, Riposte, jauges de Rétribution).
+   * Pile ou face (relation « modifie », règles v2) : le porteur lance aussitôt une pièce, juste après le coup qui a posé
+   * le statut. Pile, ce coup compte double : l'adversaire perd à nouveau les PV que le coup lui a retirés (DD) ; face,
+   * rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche (fenêtres `hit` du porteur et
+   * `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol
+   * de vie, Riposte, jauges de Rétribution).
    */
-  coinToss?: { damage: number; headsTouches?: boolean }
+  coinToss?: { headsTouches?: boolean }
   /**
    * S'estompe : chaque fois qu'il agit (`onTurnStart`, `onTurnEnd` ou une réaction), le statut perd une
    * charge, et disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3,
@@ -190,7 +186,7 @@ export interface StatusDef {
    * - `form` : statut de forme (0.73.0, druide), posé par le moteur quand le porteur prend la forme qui le déclare
    *   (`CharacterForm.statuses`) et retiré quand il la quitte ;
    * - `skill` : mécanisme d'une compétence, montré sur son sceau (jauges de Rétribution, Pile ou face, Furie des
-   *   vents, Attente).
+   *   vents).
    * Aucune purge ne l'enlève ; aucune immunité, garde ni opposition ne bloque sa pose ; il ne compte ni comme
    * bonus ni comme malus reçu dans les statistiques. Sa place à l'écran en découle (`STATUS_PLACE`, states.ts).
    */
@@ -218,7 +214,7 @@ export interface StatusDef {
   spentOnReaction?: boolean
   /**
    * Le statut disparaît, toutes charges comprises, dès qu'un coup DU porteur touche (ex. Fausse note :
-   * seul son prochain coup est affaibli). Un coup esquivé ou sacrifié ne le consomme pas.
+   * seul son prochain coup est affaibli). Un coup esquivé ne le consomme pas.
    */
   spentOnHit?: boolean
   /** Le porteur perd une charge chaque fois qu'un coup le touche (ex. Luciole : un coup inesquivable par charge) */
@@ -239,12 +235,6 @@ export const FALSE_NOTE = 5
 
 /** Charges de poison posées par coup qui touche, par charge d'Aura de décoction. */
 export const DECOCTION_POISON = 2
-
-/**
- * Dégâts directs de pile (Pile ou face). 2026-10-21 (choix de l'utilisateur, laboratoire série 13) : 10 au lieu
- * de 20, pour compenser la pièce lancée aussitôt (Naraxes 61,6 % avec 20 ; 54,1 % au laboratoire avec 10).
- */
-export const COIN_HEADS = 10
 
 /**
  * Druide : ce que l'ours ajoute à chacun de ses coups (Force de l'ours), et par charge d'Aura sauvage.
@@ -432,11 +422,11 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : une face de compétence frappe pour sa valeur imprimée, sans compétence.',
-    describe: () => 'Frappe deux fois tout de suite ; une face de compétence frappe pour sa valeur',
+    summary: 'Le jet qui la déclenche ne porte pas de coup : tout de suite, dans la même action, le porteur frappe deux fois, deux coups de base résolus à part, chacun avec son dé. Ce sont des coups bruts : leur face ne déclenche aucune compétence.',
+    describe: () => 'Deux coups de base tout de suite, sans compétence',
     badge: () => '×2',
     // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
-    // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas.
+    // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas (relation « remplace »).
     // 0.69.0 (demande de l'utilisateur) : coups bruts. Avant, un tiers des coups de Furie tombaient sur
     // une compétence (36,5 %), et une Furie sur cinq en relançait une autre (SORTS.md § 15).
     counter: 'stacks',
@@ -450,7 +440,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(165,243,252,0.8)', opacity: 0.45 },
     polarity: 'positive',
     summary:
-      "Le prochain coup reçu est esquivé à coup sûr, une charge par esquive. Se cumule : chaque charge esquive un coup de plus. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
+      "Le prochain coup reçu est esquivé à coup sûr, une charge par esquive. Se cumule : chaque charge esquive un coup de plus. Sans durée : elle attend ce coup, même si l'adversaire n'en porte pas (jet remplacé, tour perdu).",
     describe: (s) => (s.stacks > 1 ? `Esquive à coup sûr les ${s.stacks} prochains coups reçus${forTurns(s)}` : `Esquive à coup sûr le prochain coup reçu${forTurns(s)}`),
     badge: () => '100 %',
     // 2026-10-21 (demande de l'utilisateur) : cumulable, une charge par esquive. Avant : plafonnée à 1 (`refresh`).
@@ -476,9 +466,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
-    summary: `Le porteur lance aussitôt une pièce, juste après le jet qui l’a posé : pile, ${COIN_HEADS} dégâts directs qui comptent comme un coup qui touche (tout ce qui réagit à un coup part : Aura de décoction, Épines, Saignement, Riposte, Vol de vie, jauges de Rétribution) ; face, rien.`,
-    describe: () => `Une pièce lancée aussitôt : pile, ${COIN_HEADS} dégâts directs à l'adversaire, qui comptent comme un coup qui touche ; face, rien`,
-    badge: () => String(COIN_HEADS),
+    summary: 'Le porteur lance aussitôt une pièce, juste après le coup qui l’a posée : pile, ce coup compte double, l’adversaire perd à nouveau les PV qu’il lui a retirés, en dégâts directs qui comptent comme un coup qui touche (tout ce qui réagit à un coup part : Aura de décoction, Épines, Saignement, Riposte, Vol de vie, jauges de Rétribution) ; face, rien.',
+    describe: () => "Une pièce lancée aussitôt : pile, ce coup compte double (ses PV, à nouveau, comme un coup qui touche) ; face, rien",
+    badge: () => '×2',
     stacking: 'refresh',
     mechanic: 'skill',
     maxStacks: 1,
@@ -487,26 +477,26 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // Avant : valeur nette de −4 à −5 points, parce que la pièce prend la place d'un jet de dé.
     // 2026-10-21 (demande de l'utilisateur) : la pièce part aussitôt, juste après le jet de 2 qui l'a posée,
     // au lieu de remplacer le dé de l'action suivante.
-    coinToss: { damage: COIN_HEADS, headsTouches: true },
+    // Règles v2, phase 5 bis (décision de l'utilisateur, 2026-10-23) : pile, ce coup ×2, au lieu de 10 dégâts fixes
+    coinToss: { headsTouches: true },
   },
   luckyStrike: {
     name: 'Coup de chance',
     look: { glow: 'rgba(52,211,153,0.85)', dieColor: '#34d399' },
     polarity: 'positive',
     summary:
-      'À sa prochaine action, le porteur lance un d6 de plus par charge, en plus de son dé : chacun est un jet complet, résolu à part (esquive, critique ; sur 1, 2 ou 3, sa compétence au lieu d’un coup). Se cumule.',
+      'À sa prochaine action, le porteur lance un d6 de plus par charge, en plus de son dé : chacun est un jet complet, résolu à part (sa compétence, puis son coup de base). Se cumule.',
     describe: (s) =>
       s.stacks > 1
-        ? `À sa prochaine action, lance ${s.stacks} d6 en plus de son dé : autant de jets en plus, résolus à part ; sur 1, 2 ou 3, chacun déclenche sa compétence au lieu de frapper`
-        : 'À sa prochaine action, lance un d6 en plus de son dé : un second jet, résolu à part ; sur 1, 2 ou 3, il déclenche sa compétence au lieu de frapper',
+        ? `À sa prochaine action, lance ${s.stacks} d6 en plus de son dé : autant de jets complets en plus, chacun avec sa compétence et son coup de base`
+        : 'À sa prochaine action, lance un d6 en plus de son dé : un jet complet de plus, avec sa compétence et son coup de base',
     badge: (s) => `+${s.stacks}d6`,
     // 0.50.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
     counter: 'stacks',
     stacking: 'add',
     extraStrikes: 1,
     strikeCharges: 'all',
-    // d6 depuis la 0.36.5 : un d3 tombait toujours sur 1, 2 ou 3 et ne frappait jamais (valeur nette +0,7 à +2,7)
-    extraDie: 6,
+    // Règles v2, phase 5 bis : le jet qui le pose ne frappe pas (relation « remplace ») ; chaque jet donné est complet
   },
 
   /* Paladin (0.31.0). */
@@ -515,7 +505,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(253,230,138,0.9)' },
     polarity: 'positive',
     summary:
-      "Chaque charge : le prochain coup qui touche le porteur (pile comprise) renvoie à l'attaquant la moitié des PV retirés, arrondie au-dessus, en dégâts directs. Sans durée : elle attend ce coup, même si l'adversaire sacrifie les siens (jet de 1 à 3).",
+      "Chaque charge : le prochain coup qui touche le porteur (pile comprise) renvoie à l'attaquant la moitié des PV retirés, arrondie au-dessus, en dégâts directs. Sans durée : elle attend ce coup, même si l'adversaire n'en porte pas (jet remplacé, tour perdu).",
     describe: (s) =>
       s.stacks > 1
         ? `Ses ${s.stacks} prochains coups encaissés renvoient chacun la moitié de leurs dégâts (arrondie au-dessus) à l'attaquant`
@@ -596,7 +586,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     maxStacks: 1,
     immune: 'negative',
     // 0.42.0 : +1 d'armure tant que l'aura est là. Seule, l'immunité coûtait des victoires (−2,7 à
-    // −3,9 points) : peu d'adversaires posent des malus, et le 3 sacrifie son coup.
+    // −3,9 points) : peu d'adversaires posent des malus, et le 3 sacrifiait alors son coup.
     modifyStats: (stats, s) => ({ ...stats, armor: stats.armor + s.stacks }),
   },
   holyAura: {
@@ -622,20 +612,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     // Poison qui s'estompe (0.36.4) : voir EQUILIBRAGE.md pour la valeur
     reactions: { hit: (s) => [{ type: 'applyStatus', status: 'poison', stacks: DECOCTION_POISON * s.stacks, target: 'opponent' }] },
-  },
-
-  /* Ogre (0.35.0) : il n'a aucune compétence, un 1, un 2 ou un 3 le laisse planté là. */
-  waiting: {
-    name: 'Attente',
-    polarity: 'negative',
-    summary: "Le porteur n'a rien compris à son propre jet : il ne frappe pas et attend son prochain tour.",
-    describe: () => "N'a pas frappé ce tour-ci : il attend son prochain jet",
-    badge: () => '…',
-    stacking: 'refresh',
-    maxStacks: 1,
-    mechanic: 'skill',
-    // Retombe au début de son tour suivant, juste avant son nouveau jet
-    expiresAt: 'turnStart',
   },
 
   /* Druide (0.35.0). */
@@ -676,14 +652,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
 
   /*
    * Druide (0.73.0, SORTS.md § 18) : un tour sur deux, l'homme lance un sort ; l'autre tour, la bête frappe.
-   * Les deux règles de forme sont des mécanismes de forme (`mechanic: 'form'`), visibles dans l'en-tête.
+   * Les deux règles de forme sont des mécanismes de forme (`mechanic: 'form'`), visibles dans l'en-tête. Règles v2,
+   * phase 5 bis : l'homme frappe aussi, d'un coup de base magique (DM), sur lequel son sort se greffe ; l'ours, d'un coup
+   * de base direct (DD).
    */
   casting: {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
-    summary: 'Sous forme humaine, le druide ne frappe pas : chaque face de son dé lance un sort (une relique de dé ne sert que l’ours).',
-    describe: () => 'Chaque jet lance un sort',
+    summary: 'Sous forme humaine, chaque face du dé du druide lance un sort, qui se greffe sur son coup de base magique (DM).',
+    describe: () => 'Chaque jet lance un sort, puis un coup magique',
     badge: () => 'Sort',
     // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
     counter: 'turns',
@@ -697,7 +675,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
-    summary: `Sous forme d'ours, le druide ne lance aucun sort : chaque coup fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
+    summary: `Sous forme d'ours, le druide ne lance aucun sort : son coup de base est direct (DD) et fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
     describe: () => `Chaque coup fait +${BEAR_MIGHT}, après le critique et avant l'armure`,
     badge: () => `+${BEAR_MIGHT}`,
     counter: 'turns',
@@ -829,20 +807,19 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.drainsHit)
     say(
       effect,
-      'Le prochain coup du porteur qui touche (pile comprise) lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet sacrifié (une face de compétence) la laisse en place.',
+      'Le prochain coup du porteur qui touche (pile comprise) lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet remplacé (sans coup) la laisse en place.',
     )
   if (def.extraStrikes && def.instantStrikes)
     say(
       effect,
-      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : aucune compétence ne part, une face de compétence frappe pour sa valeur imprimée.`,
-      'dice-faces',
+      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : autant de coups de base, chacun avec son dé, esquive et critique résolus à part. Coups bruts : leur face ne déclenche aucune compétence.`,
+      'hit-relations',
     )
   else if (def.extraStrikes) {
-    const die = def.extraDie ? `d${def.extraDie}` : 'dé'
     say(
       effect,
-      `À sa prochaine action, le porteur lance ${def.extraStrikes === 1 ? `un ${die}` : `${def.extraStrikes} ${die}`} de plus${def.strikeCharges ? ' par charge' : ''}, en plus de son dé : autant de jets complets, chacun résolu à part (esquive, critique et compétences : sur une face de compétence, la compétence au lieu d'un coup).`,
-      'damage-die',
+      `À sa prochaine action, le porteur lance ${def.extraStrikes === 1 ? 'un d6' : `${def.extraStrikes} d6`} de plus${def.strikeCharges ? ' par charge' : ''}, en plus de son dé : autant de jets complets, chacun résolu à part (sa compétence, puis son coup de base, esquive et critique).`,
+      'die',
     )
     say(
       consumption,
@@ -856,7 +833,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.coinToss)
     say(
       effect,
-      `Le porteur lance aussitôt une pièce, juste après le coup pendant lequel le statut est posé : pile, ${def.coinToss.damage} dégâts directs à l'adversaire${def.coinToss.headsTouches ? ', qui comptent comme un coup qui touche (tout ce qui réagit quand il touche ou quand l’adversaire encaisse un coup part)' : ''} ; face, rien. Le statut est consommé.`,
+      `Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, ce coup compte double, l'adversaire perd à nouveau les PV qu'il lui a retirés, en dégâts directs${def.coinToss.headsTouches ? ' qui comptent comme un coup qui touche (tout ce qui réagit quand il touche ou quand l’adversaire encaisse un coup part)' : ''} ; face, rien. Le statut est consommé.`,
       'direct-damage',
     )
   if (def.forcesCrit) say(effect, 'Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.', 'crit')
@@ -867,10 +844,10 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     say(effect, "Modifie les dégâts finaux des coups du porteur, après l'armure et les boucliers ; un coup garde au moins 1 dégât.", 'final-damage')
   if (def.modifyStats) {
     // Ce que le statut change, lu sur des stats d'essai : chaque stat touchée renvoie à sa règle
-    const probe: CombatStats = { damageDie: 6, armor: 1, dodgeChance: 0.5, critChance: 0.5, critMultiplier: 2 }
+    const probe: CombatStats = { attackMin: 5, attackMax: 7, armor: 1, dodgeChance: 0.5, critChance: 0.5, critMultiplier: 2 }
     const changed = def.modifyStats(probe, { id, stacks: 1 })
     const lines: [keyof CombatStats, string, RuleId][] = [
-      ['damageDie', 'Remplace ou change le dé de dégâts du porteur.', 'damage-die'],
+      ['attackMin', "Change l'attaque du porteur.", 'base-hit'],
       ['armor', "Change l'armure du porteur (jamais sous 0).", 'armor'],
       ['dodgeChance', "Change sa chance d'esquive (entre 0 et 100 %).", 'dodge'],
       ['critChance', 'Change sa chance de critique (entre 0 et 100 %).', 'crit'],
@@ -918,7 +895,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
       'application',
     )
   if (def.decays) say(consumption, "S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
-  if (def.spentOnHit) say(consumption, 'Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ou sacrifié ne le consomme pas.')
+  if (def.spentOnHit) say(consumption, 'Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ne le consomme pas.')
   if (def.spentOnHurt) say(consumption, 'Perd une charge chaque fois qu’un coup touche le porteur.')
   if (def.turnsFromStacks) say(consumption, 'Une seule valeur : il dure autant de tours que de charges.', 'duration')
   else if (def.expiresAt === 'turnEnd') say(consumption, 'Sa durée se décompte à la fin des tours du porteur.', 'duration')

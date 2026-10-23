@@ -111,7 +111,7 @@ flowchart LR
 | Cotte du mercenaire | +2 armure, −8 % d'esquive | |
 | Osselet fendu | Sur un 1 : 3 dégâts directs | |
 | Dé creux | Sur un jet maximal : +1 Esquive améliorée | recharge 3 tours |
-| Fer à quatre clous | Sur un 4 : +4 dégâts à ce coup (0.105.0 : un événement, plus une face enrichie ; mécanique inchangée) | |
+| Fer à quatre clous | Sur un 4 : +4 dégâts à ce coup (0.105.0 : un événement, plus une face enrichie ; 0.106.0 : +4 au coup de base d'un jet de 4) | |
 | Cloche d'ouverture | Au 1er tour : +1 Critique assuré | |
 | Chapelet de l'ermite | Tous les 3 tours : retire son dernier malus, sinon +3 PV | |
 | Clepsydre du siège | Au 6e tour, puis tous les 4 tours : +1 Critique assuré (0.105.0 ; une Aura de puissance cumulée avant) | |
@@ -200,6 +200,29 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 
 **Lecture (0.105.0).** Le d6 rend les reliques de face plus fortes pour tous (une face sur six au lieu d'une sur sept à quatorze). La Clepsydre, devenue un Critique assuré, vaut le plus à ceux qui frappent fort (Brokk ×2,5) et à Morgrut, qui n'a aucun critique à lui. Le Contrepoids, devenu une relique de critique, est typé : il ne sert qu'à ceux qui critiquent souvent (Elaria +17,2), il gêne la barde. La Cotte et la Dent de loup restent au-delà de 20, comme en 0.77.0.
 
+**Sur l'attaque de base (0.106.0)**, même mesure (`npm run relics`, 400 combats par duel, roster de la 0.106.0) ; avant → après :
+
+| Relique | 0.105.0 → 0.106.0 |
+| --- | --- |
+| Contrepoids de plomb | +3,5 → +3,9 |
+| Bottes de feutre | +7,2 → +7,1 |
+| Cotte du mercenaire | +22,1 → **+28,2** |
+| Osselet fendu | +11,0 → +9,7 |
+| Dé creux | +17,0 → +14,0 |
+| Fer à quatre clous | +12,7 → +12,9 |
+| Cloche d'ouverture | +13,9 → +10,5 |
+| Chapelet de l'ermite | +17,3 → +16,7 |
+| Clepsydre du siège | +15,6 → +12,1 |
+| Dent de loup | +20,3 → +18,6 |
+| Collier de ronces | +10,8 → **+16,9** |
+| Trophée du chasseur | +10,3 → +10,1 |
+| Braise captive | +13,9 → +13,6 |
+| Larme de givre | +13,1 → +13,4 |
+| Conque des vents | +7,3 → +8,7 |
+| Géode fendue | +16,1 → +16,2 |
+
+**Lecture (0.106.0).** Deux reliques bougent nettement : la **Cotte du mercenaire** monte de +22,1 à **+28,2**, hors de la cible de 20 au plus (à régler) ; le **Collier de ronces** monte de +10,8 à +16,9. Les autres restent à moins de 4 points de leur valeur d'avant. La Dent de loup repasse sous 20 (+18,6). Le Fer à quatre clous garde sa valeur (+12,9) en ajoutant ses +4 au coup de base d'un 4.
+
 **Lecture.**
 - Neuf sur douze dans la cible ; trois au-dessus de 15 : Cotte +18,1, Chapelet +16,3, Dent de loup **+21,4** (au-delà de 20).
 - **Fanchon est la grande gagnante des reliques de coup** (Dé creux +25,9, Contrepoids +20,9, Fer +19,2, Osselet +18,0) : ses deux petits dés lancent deux fois plus de faces par tour, donc éveillent deux fois plus souvent une relique de face. C'est la règle 8 qui le veut ; c'est aussi une méta lisible (« la barde aux talismans »).
@@ -241,7 +264,7 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 
 #### Osselet fendu
 - **Règle** : sur un 1 : 3 dégâts directs à l'adversaire.
-- **Pourquoi** : le mauvais jet mord quand même. Pour Morgrut, l'Attente du 1 cesse d'être un tour vide. Pour les autres, le 1 porte déjà une compétence : la relique la double. Le petit dé en profite le plus (Fanchon +18,0).
+- **Pourquoi** : le mauvais jet mord quand même. Pour les autres, le 1 porte une compétence : la relique la double ; pour Morgrut, dont les six faces sont nues depuis la 0.106.0, elle s'ajoute à son coup de base (de la 0.35.0 à la 0.105.0, elle donnait un effet au tour vide de son Attente). Le petit dé en profite le plus (Fanchon +18,0 en 0.77.0).
 - **Illustration** : un osselet de mouton, fendu en long, la face creuse gravée d'un seul point. Percé, sur un cordon de cuir noué.
 
 #### Dé creux
@@ -250,8 +273,8 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 - **Illustration** : un dé cubique d'os, évidé et léger, posé sur sa face la plus haute, qui porte une couronne gravée à la place des points. Une petite chaîne passée dans un coin percé. Un cube, pour ne pas doubler l'icône `dice` (dé à vingt faces).
 
 #### Fer à quatre clous
-- **Règle** : sur un 4 : +4 à la valeur de ce coup, avant le critique. Affichée « Sur un 4 : +4 dégâts à ce coup » depuis la 0.105.0 (« +4 dégâts aux frappes de 4 » de la 0.95.0 à la 0.104.x) ; un 4 de Furie des vents compris depuis le 2026-10-23.
-- **Pourquoi** : un **événement** (retour de l'utilisateur, 2026-10-23) : quand le dé tombe sur 4, le coup prend +4 ; rien n'est marqué sur le dé, comme l'Osselet sur le 1. Sur le d6 imprimé, la face 4 frappe pour tous (le druide en ours compris) ; Pourfendre sur le 1 et les compétences restent sur les faces 1 et 2. Pour Fanchon, le bonus va au coup du dé qui a fait 4. Moteur : `rollBonus: 4, onFace: 4` (0.77.0).
+- **Règle** : sur un 4 : +4 au coup de base de ce jet, avant le critique (0.106.0 ; avant, +4 à la valeur imprimée de la face 4). Affichée « Sur un 4 : +4 dégâts à ce coup » depuis la 0.105.0 (« +4 dégâts aux frappes de 4 » de la 0.95.0 à la 0.104.x) ; un 4 de Furie des vents compris depuis le 2026-10-23.
+- **Pourquoi** : un **événement** (retour de l'utilisateur, 2026-10-23) : quand le dé tombe sur 4, le coup prend +4 ; rien n'est marqué sur le dé, comme l'Osselet sur le 1. Depuis la 0.106.0, chaque jet porte un coup de base : le 4 frappe pour tous (le druide sous ses deux formes compris), que sa face porte une compétence ou non. Pour Fanchon, le bonus va au coup du dé qui a fait 4. Moteur : `rollBonus: 4, onFace: 4` (0.77.0). Mesuré : +12,7 → +12,9 (0.106.0).
 - **Illustration** : un fer à cheval étroit, percé de quatre trous seulement, quatre clous encore plantés. Pendu à un clou par une ficelle. Pas de chiffre écrit : les quatre clous le disent.
 
 ### 7.3 Tour : au bout d'un certain nombre de ses tours

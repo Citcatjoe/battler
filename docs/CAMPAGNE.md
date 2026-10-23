@@ -112,7 +112,7 @@ _Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Les règles du proto
 | Question | Décision |
 | --- | --- |
 | Adversaires | **Plus sérieux, et ils grandissent avec l'acte**, « si on arrive à équilibrer » : chaque adversaire est construit comme un champion (§ 6.3). |
-| Le d6 | **Intégré** : la campagne passe au d6 imprimé, avec Copier une face et Refondre (§ 4.2). |
+| Le d6 | **Intégré** : la campagne passe au d6 imprimé, avec Copier une face et Refondre (§ 4.2). Refondre est remplacée par Tremper l'arme en 0.106.0, avec l'attaque de base. |
 | Signature | **Montrée à l'écran** : au choix du champion et sur la carte. |
 
 ---
@@ -183,14 +183,14 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 | **Retailler** | le dé perd une face | le dé rapetisse | compétences : 33 → 37,5 % des tours ; coup moyen hors compétences : 6,5 → 6 |
 | **Aiguiser** | une compétence monte d'un rang (Épines 6 → 8) | un chiffre romain sur la face | — |
 
-**Sur le d6 imprimé (0.105.0)** : Agrandir et Retailler sont retirés, le dé garde six faces. Ils sont remplacés par deux opérations ([PROGRESSION.md](PROGRESSION.md) § 6.5) :
+**Sur le d6 (0.105.0), puis sur l'attaque de base (0.106.0)** : Agrandir et Retailler sont retirés, le dé garde six faces, et le dé ne fait plus de dégâts : chaque jet porte le coup de base de l'attaque ([PROGRESSION.md](PROGRESSION.md) § 6.5 et § 6 bis). Deux opérations les remplacent :
 
 | Opération | Effet | Ce que dit sa carte |
 | --- | --- | --- |
-| **Copier une face** | la face choisie, telle qu'elle est (compétence et rang, ou coup et dorure), est copiée sur la face de coup la plus faible ; une compétence sur deux faces au plus ; un coup ne se copie que sur plus faible que lui | « Copie cette face sur ta face de coup la plus faible » |
-| **Refondre** | les faces de coup frappent toutes pour leur moyenne, arrondie au-dessus | « Tes faces de coup frappent pour leur moyenne » |
+| **Copier une face** | la compétence d'une face, telle qu'elle est (rang compris), est copiée sur la face nue de plus petit numéro, non dorée d'abord (sinon la plus petite ; la copie garde alors la dorure) ; une compétence sur deux faces au plus. Depuis la 0.106.0, seule une face de compétence se copie | « Copie sa compétence sur une face nue » |
+| **Tremper l'arme** (0.106.0, remplace Refondre) | +1 à l'attaque (au minimum et au maximum), sans face visée, cumulable | « +1 à l'attaque » |
 
-Une gravure, une dorure, une copie ou une refonte vaut sur le dé d'origine : toutes s'héritent (§ 8). Le druide, dont la forme humaine porte un sort sur chaque face, ne peut qu'Aiguiser (limite connue).
+Refondre (0.105.0 : les faces de coup frappaient toutes pour leur moyenne) disparaît avec les valeurs imprimées. Une gravure, une dorure, une copie ou un Tremper l'arme vaut sur le dé d'origine : toutes s'héritent (§ 8). Le druide, dont la forme humaine porte un sort sur chaque face, ne peut qu'Aiguiser ou Tremper l'arme (limite connue).
 
 **Gagner une compétence**, c'est **la graver** : il n'y a pas de catégorie « compétence » à côté de la forge.
 
@@ -206,7 +206,7 @@ Une gravure, une dorure, une copie ou une refonte vaut sur le dé d'origine : to
 ### 4.4 Décisions
 
 - **Décidé** : Contrepoids de plomb devient l'opération Agrandir ; la relique quitte le tirage.
-- **Décidé : une forge adaptée à chacun.** La barde grave et dore ses **doubles** (une compétence sur le double 4, un double doré), l'ogre grave sur ses **faces d'Attente** (1 à 3 sur son d14), qui ne font rien aujourd'hui. À mesurer.
+- **Décidé : une forge adaptée à chacun.** La barde grave et dore ses **doubles** (une compétence sur le double 4, un double doré), l'ogre grave sur ses **faces d'Attente** (1 à 3 sur son d14), qui ne font rien aujourd'hui. À mesurer. **Depuis la 0.106.0**, l'Attente est retirée : les six faces de l'ogre sont nues, et se gravent comme toute face nue.
 - **Décidé : un personnage ne déplace pas ses compétences d'origine.**
 - **Décidé : seules les faces libres se forgent.** Graver et Dorer ne visent qu'une face qui ne porte pas de compétence d'origine : sur le d7 d'Ysolde, les faces 4 à 7. **Agrandir est le seul moyen d'ouvrir de la place** : deux faces libres de plus.
 - **Décidé : l'offre de forge.** Trois opérations proposées ; le joueur choisit la face visée, avec un choix automatique par défaut.
@@ -215,7 +215,7 @@ Une gravure, une dorure, une copie ou une refonte vaut sur le dé d'origine : to
 - **Décidé : les faces d'origine sont irréductibles.** Une réduction ne retire jamais une compétence d'origine : Retailler n'est plus proposé quand la plus haute face porte une compétence d'origine. Toutes sont sur 1, 2 et 3 (`roster.ts`, aucun `naturalMax`) : avec trois forges au plus, seul le d5 de la barde peut atteindre cette limite.
 - **Repère mesuré** : au d6, Ysolde gagnait 63 % de ses combats (`roster.ts`), d'où son d7 ; Retailler peut donc être une opération très forte.
 - **Rythme du prototype** : une forge tous les deux combats normaux (§ 6.3).
-- **Depuis la 0.105.0 (d6 imprimé)** : le Contrepoids de plomb n'est plus Agrandir, il devient une relique de critique (+1 au multiplicateur, −4 % de critique) et revient dans toutes les offres. Les décisions sur Agrandir et Retailler ci-dessus sont historiques ; « seules les faces libres se forgent » et « une compétence d'origine ne se déplace jamais » restent.
+- **Depuis la 0.105.0 (d6)** : le Contrepoids de plomb n'est plus Agrandir, il devient une relique de critique (+1 au multiplicateur, −4 % de critique) et revient dans toutes les offres. Les décisions sur Agrandir et Retailler ci-dessus sont historiques ; « seules les faces libres se forgent » et « une compétence d'origine ne se déplace jamais » restent. Depuis la 0.106.0, une face libre, c'est une **face nue** (elle ne porte que le coup de base).
 
 ---
 
@@ -275,6 +275,7 @@ Slay the Spire fonctionne ainsi : des rencontres fixées par acte, pas ajustées
 - **cibles** (0.89.0, courbe montante, § 18.3) : le champion de référence gagne **95, 90, 87, 84 puis 81 %** de ses combats normaux, de la démonstration à la tension ; le boss, écrit à la main, se règle à **45 %** contre lui, le drame. Un champion mieux forgé que la moyenne fait mieux : c'est la démonstration.
 - **Décidé : un boss commun** à tous les champions. Il se vérifie contre le champion de référence de **chaque** personnage tirable : la cible de 40 à 50 % doit tenir pour tous.
 - **Adversaires construits (0.105.0, demande de l'utilisateur)** : au nœud k, l'adversaire part de sa signature (son kit entier pour Morgrut, Thaldrin et Fanchon) et reçoit les k récompenses que l'acte lui aurait données, tirées comme celles du champion de référence (`drawBuild`) ; ses PV le règlent ensuite sur la courbe. Mesuré : il garde de 46 % (premier combat) à 50 % (dixième) de ses PV de base ; boss atteint 48 %, acte gagné 24 % ([PROGRESSION.md](PROGRESSION.md) § 11.5).
+- **Courbe abaissée au début (0.106.0, décision de l'utilisateur)** : le champion de référence gagne **90, 90, 90, 89, 89, 89, 89, 88, 88, 88 %** de ses combats normaux (98 → 89 % avant), le boss reste à **45 %**. Attendu : boss atteint 31 %, acte gagné 14 %. Mesuré (`npm run campaign`, 12 parties par champion) : boss atteint 27 % (48 % avant), acte gagné 13 % (24 %) ; les adversaires gardent 67 % de leurs PV de base au premier combat, 53 % au dixième ; 4,5 à 8,2 tours par combattant, 14,0 contre le boss ([PROGRESSION.md](PROGRESSION.md) § 11.6).
 
 ### 6.4 Montrer le danger sans dévoiler les cotes
 
@@ -479,7 +480,7 @@ _Questions réglées du 2026-10-21 au 2026-10-22 : voir § 1. Lectures confirmé
 | Brique | Où | Ce qu'elle fait |
 | --- | --- | --- |
 | Faces au-delà du 3 | `events.ts` | déclencheurs `face:N` et `double:N` (`faceTrigger`, `doubleTrigger`) : une compétence peut partir sur n'importe quelle face |
-| Forge du dé | `forge.ts`, `Character.withForge` | les opérations du § 4.2 (depuis la 0.105.0 : Graver, Dorer, Aiguiser, Copier une face, Refondre), en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend. Le tournoi la donne depuis la 0.92.0 : construction de la saison, une forge toutes les deux victoires (en alternance avec les reliques), trois au plus ([FEATURES.md](FEATURES.md) § 8) |
+| Forge du dé | `forge.ts`, `Character.withForge` | les opérations du § 4.2 (depuis la 0.106.0 : Graver, Dorer, Aiguiser, Copier une face, Tremper l'arme ; Refondre de la 0.105.0 retirée), en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend. Le tournoi la donne depuis la 0.92.0 : construction de la saison, une forge toutes les deux victoires (en alternance avec les reliques), trois au plus ([FEATURES.md](FEATURES.md) § 8) |
 | Face dorée | `combat.ts` (`Attack.gild`) | +2 avant le critique, règle d'une relique de face, coup brut compris depuis la 0.95.0 ([RESOLUTION.md](RESOLUTION.md) § 3, étape 2 ter) |
 | Campagne | `campaign.ts` | partie, boss, réglage sur le champion de référence, bandes de danger, récompenses, héritage, sauvegarde |
 | Écrans | `CampaignScreen.tsx`, `ForgedDie.tsx` | choix du champion et de l'héritage, carte de l'acte, récompense (forge puis relique), fin de partie ; le combat passe par l'affrontement et l'écran de fin habituels |
@@ -496,7 +497,7 @@ Ce que les décisions du § 1 ne fixaient pas, choisi au plus simple :
 - **Le boss** : Le Colosse (§ 18.4), réglé lui aussi par ses PV, à 45 % contre le champion de référence du personnage tiré : la cible tient ainsi pour tous les champions.
 - **Graver** puise dans les compétences du dé des autres combattants (sur leur 1, leur 2 ou leur 3) : elles ont déjà leur icône peinte, et leurs statuts sont ceux du roster (§ 14). Une compétence d'un personnage à formes est gravée sans forme. **Depuis la 0.103.0** (règles v2, phase 2, un essai) : dans le **répertoire** du champion d'abord, et Graver est toujours proposée quand une face peut la recevoir ; la première relique proposée se tire à l'écho du build ([PROGRESSION.md](PROGRESSION.md) § 7.4).
 - **Aiguiser** : un rang ajoute une charge à chaque statut cumulable (sous son plafond), +2 aux dégâts, soins et relâches, et un coup aux doubles qui frappent ; un statut qui ne cumule pas ne gagne rien (la face n'est pas proposée). Le nom porte le rang (« Pourfendre II »). **Pas de rang maximal** (décision de l'utilisateur, 2026-10-23 : brider l'opération est un mauvais choix) : le nombre d'aiguisages se règle par le nombre d'occasions que le mode en donne.
-- **Une face dont la compétence sacrifie le coup ne se dore pas** (la dorure ne servirait jamais).
+- **Une face dont la compétence sacrifiait le coup ne se dorait pas** (0.88.0 à 0.105.0 ; la dorure n'aurait jamais servi). Depuis la 0.106.0, seules les faces nues se dorent.
 - **Abandonner** une partie compte comme une défaite, héritage compris.
 - **Les combats de campagne n'entrent pas dans l'historique** (adversaires aux PV réglés, boss hors du roster).
 - **Icônes** : aucune icône peinte pour les opérations de forge ; leur carte montre une face de dé (or, « II », « d11 ») ou le sceau de la compétence gravée. Le glyphe de la plaque Campagne est celui des chroniques (le parchemin), faute de glyphe propre dans le kit.
@@ -560,8 +561,8 @@ Un personnage précis, écrit à la main (§ 6.3), commun à tous les champions 
 
 | | |
 | --- | --- |
-| Stats d'origine | 70 PV (réglés pour chaque champion), d6 depuis la 0.105.0 (d12 avant), armure 0, esquive 4 %, critique 8 % ×2 |
-| Faces | 1 : Peau de pierre (Brokk) ; 2 : Pourfendre (Gorak), qui frappe pour 6 ; 3 : Aura d'intimidation (Brokk) ; 4 à 6 : coups de 10, 11 et 12 |
+| Stats d'origine | 70 PV (réglés pour chaque champion), attaque **6 à 8 DD** depuis la 0.106.0 (d6 aux faces imprimées en 0.105.0, d12 avant), armure 0, esquive 4 %, critique 8 % ×2 |
+| Faces | 1 : Peau de pierre (Brokk) et 3 : Aura d'intimidation (Brokk), greffées sur son coup ; 2 : Pourfendre (Gorak), qui modifie son coup (Saignement s'il touche) ; 4 à 6 : nues (0.106.0 ; coups de 10, 11 et 12 en 0.105.0, et Pourfendre frappait pour 6) |
 | Reliques | Cotte du mercenaire, Dent de loup |
-| Forge | le 5 et le 6 dorés (le 11 et le 12 jusqu'à la 0.104.x) |
+| Forge | le 5 et le 6 dorés : +2 à son coup de base sur ces faces (le 11 et le 12 jusqu'à la 0.104.x) |
 | Image | celle de Morgrut, assombrie et rougie : **provisoire**, une image propre est à générer |

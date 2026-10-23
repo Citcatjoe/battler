@@ -1,7 +1,7 @@
 /*
  * Audit de résolution : rejoue tous les duels du roster sur de nombreuses graines et revérifie
- * chaque étape de la chronologie, règle par règle (PV expliqués, chaîne de calcul, compétences du
- * dé, coup sacrifié, esquive imposée, « un coup qui touche » : vol de vie, riposte, jauges, épines,
+ * chaque étape de la chronologie, règle par règle (PV expliqués, chaîne de calcul, coup de base, compétences du
+ * dé et leur relation au coup, esquive imposée, « un coup qui touche » : vol de vie, riposte, jauges, épines,
  * saignement, pile comprise ; Furie et ses coups bruts, auras, Brûlure à une valeur, usure, mécanismes, reliques).
  * Né d'un audit demandé après un tournoi complet (0.26.1). Une anomalie donne son duel et sa
  * graine : `simulateCombat(f, { seed })` et `traceText` la rejouent.
@@ -41,8 +41,9 @@ describe('audit de résolution', () => {
     const report = [...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)
     expect(report).toEqual([])
     // L'audit a bien rencontré chaque mécanique que le roster peut produire. Pile + Vol de vie n'arrive pas
-    // (Naraxes n'a pas de Vol de vie) : combat.test.ts le prouve par un combat construit.
-    for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', 'type de dégâts DP', 'type de dégâts DM', 'type de dégâts DT'])
+    // (Naraxes n'a pas de Vol de vie), ni l'esquive imposée cumulée (chaque action adverse porte un coup qui use la
+    // charge) : combat.test.ts les prouve par des combats construits.
+    for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base DD', 'coup de base DM', 'coup de base multiplié', 'double qui se greffe sur ses coups', 'cause : jet greffé', 'esquive imposée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', 'type de dégâts DD', 'type de dégâts DM', 'type de dégâts DT'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
@@ -70,6 +71,6 @@ describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
           n++
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'paire de dés']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'paire de dés', 'attaque trempée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

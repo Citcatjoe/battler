@@ -39,9 +39,9 @@ export const DICE_READ = 350
 export const DICE_LAND_HOLD = 400
 /** Rafale instantanée (Furie des vents) : ses dés apparaissent à plat, un temps pour les voir */
 export const VOLLEY_FLAT = 250
-/** Coup sacrifié par une compétence sans compétence qui suive aussitôt : temps de lecture du dé */
+/** Jet remplacé par une compétence sans compétence qui suive aussitôt : temps de lecture du dé */
 export const FORFEIT_HOLD = 650
-/** Coup sacrifié d'une rafale : lecture du dé (`VOLLEY_FORFEIT_SNAP` si sa compétence suit aussitôt) */
+/** Jet remplacé d'une rafale : lecture du dé (`VOLLEY_FORFEIT_SNAP` si sa compétence suit aussitôt) */
 export const VOLLEY_FORFEIT_HOLD = 250
 export const VOLLEY_FORFEIT_SNAP = 120
 

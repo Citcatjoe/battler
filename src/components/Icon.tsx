@@ -122,7 +122,6 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   retribution: 'retribution',
   riposte: 'riposte',
   immunityAura: 'immunity-aura',
-  waiting: 'waiting',
   firefly: 'fireflies',
   burn: 'burn',
   rotAura: 'rot-aura',
@@ -190,9 +189,6 @@ export function StateIcon({ id, className }: { id: StateId; className: string })
 export const SKILL_ICON: Partial<Record<string, IconName>> = {
   // Les lucioles qui lancent la Brûlure, plutôt que la Brûlure elle-même (deux niveaux de lecture, 0.79.0)
   firefly: 'fireflies',
-  'waiting-1': 'waiting',
-  'waiting-2': 'waiting',
-  'waiting-3': 'waiting',
   whistle: 'whistle',
   'false-note': 'false-note',
   'melodious-aura': 'melodious-aura',

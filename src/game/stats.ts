@@ -1,7 +1,7 @@
 import { attacksOf, beatEffects, finalState, type CombatResult, type Pair, type Side } from './combat'
 import { isMechanic, STATUSES, type StatusId } from './statuses'
 
-/** Un malus au sens des statistiques : un mécanisme (l'Attente de l'ogre) n'en est pas un. */
+/** Un malus au sens des statistiques : un mécanisme (règle de forme ou de compétence) n'en est pas un. */
 const isNegative = (id: StatusId) => STATUSES[id].polarity === 'negative' && !isMechanic(id)
 
 /** Bilan d'un combattant sur un combat, calculé uniquement à partir de la chronologie. */
@@ -44,10 +44,10 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
   const applied = result.beats.flatMap(beatEffects)
 
   const forSide = (side: Side): FighterStats => {
-    // Un coup sacrifié par une compétence (Vol de vie) n'est ni porté ni esquivé ; seul son dé compte.
+    // Un jet remplacé par sa compétence (Furie des vents) n'est ni porté ni esquivé ; seul son dé compte.
     const rolls = attacks.filter((a) => a.attacker === side)
-    const mine = rolls.filter((a) => !a.forfeited)
-    const theirs = attacks.filter((a) => a.attacker !== side && !a.forfeited)
+    const mine = rolls.filter((a) => !a.replaced)
+    const theirs = attacks.filter((a) => a.attacker !== side && !a.replaced)
     const hits = mine.filter((a) => !a.dodged)
     const crits = hits.filter((a) => a.crit)
     // Dégâts comptés en entier, excès du coup fatal compris (overkill, 0.34.0).

@@ -181,21 +181,13 @@ export function statusLinks(id: StatusId, characters: readonly Character[] = CHA
   return links
 }
 
-/**
- * Règles qu'aucune compétence en jeu n'applique, tues par la section Règles : un Coup transformé n'a plus de
- * porteur depuis le retrait de Charge et de Coup de griffe (0.73.0), mais la mécanique reste au moteur.
- */
-export function hiddenRules(characters: readonly Character[] = CHARACTERS): RuleId[] {
-  return characters.some((c) => c.events.some((e) => e.reshapesHit)) ? [] : ['reshape']
-}
-
 /** Une compétence et les personnages qui la possèdent. */
 export interface SkillEntry {
   event: CharacterEvent
   owners: Character[]
   /**
-   * Déclencheurs de la ligne : une compétence identique sur plusieurs faces du même porteur (l'Attente de
-   * l'ogre, sur 1, 2 et 3) n'a qu'une ligne, qui les liste toutes.
+   * Déclencheurs de la ligne : une compétence identique sur plusieurs faces du même porteur (la Foudre du druide,
+   * sur 1, 2 et 3) n'a qu'une ligne, qui les liste toutes.
    */
   triggers: Trigger[]
   /** Les compétences réunies sur cette ligne (une seule, sauf faces identiques) */

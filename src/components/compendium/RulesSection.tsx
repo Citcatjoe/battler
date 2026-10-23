@@ -1,20 +1,17 @@
-import { hiddenRules } from '../../game/catalog'
 import { RULE_GROUPS, RULE_IDS, RULES, type RuleGroup } from '../../game/rules'
 import { useFocusRef } from './CodexBits'
 import { matches, type SectionProps } from './sections'
 
 /**
  * Section « Règles » : les règles communes, écrites une seule fois (rules.ts) et regroupées par thème. Les
- * compétences et les statuts y renvoient par leurs pastilles au lieu de les répéter. Une règle qu'aucune
- * compétence en jeu n'applique est tue (`hiddenRules`).
+ * compétences et les statuts y renvoient par leurs pastilles au lieu de les répéter.
  */
 export function RulesSection({ focus, filter }: SectionProps) {
   const focusRef = useFocusRef(focus)
-  const hidden = hiddenRules()
   const groups = (Object.keys(RULE_GROUPS) as RuleGroup[])
     .map((group) => ({
       group,
-      ids: RULE_IDS.filter((id) => RULES[id].group === group && !hidden.includes(id) && matches(filter, RULES[id].title, RULES[id].text)),
+      ids: RULE_IDS.filter((id) => RULES[id].group === group && matches(filter, RULES[id].title, RULES[id].text)),
     }))
     .filter((g) => g.ids.length > 0)
 

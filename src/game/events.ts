@@ -35,12 +35,12 @@ export type NamedTrigger =
   | 'bloodied'
 
 /**
- * Une face au-delà de 3 (0.88.0, forge du dé, docs/CAMPAGNE.md § 4) : `face:7` se déclenche sur un 7 au dé de dégâts.
+ * Une face au-delà de 3 (0.88.0, forge du dé, docs/CAMPAGNE.md § 4) : `face:4` se déclenche sur un 4 au dé.
  * Les faces 1 à 3 gardent leur nom (`naturalOne`…) : une face n'a qu'un seul déclencheur (`faceTrigger`).
  */
 export type FaceTrigger = `face:${number}`
 
-/** Un double au-delà de 5 (barde au dé agrandi) : `double:6`. Les doubles 1 à 5 gardent leur nom (`doubleTrigger`). */
+/** Le double 6 (deux dés) : `double:6`. Les doubles 1 à 5 gardent leur nom (`doubleTrigger`). */
 export type DoubleTrigger = `double:${number}`
 
 export type Trigger = NamedTrigger | FaceTrigger | DoubleTrigger
@@ -53,10 +53,10 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   combatStart: { label: 'Au début du combat', short: 'début du combat' },
   turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
   turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
-  naturalOne: { label: 'Sur un 1 au dé de dégâts', short: 'dé 1' },
-  naturalTwo: { label: 'Sur un 2 au dé de dégâts', short: 'dé 2' },
-  naturalThree: { label: 'Sur un 3 au dé de dégâts', short: 'dé 3' },
-  naturalMax: { label: 'Sur un jet maximal au dé de dégâts', short: 'dé max.' },
+  naturalOne: { label: 'Sur un 1 au dé', short: 'dé 1' },
+  naturalTwo: { label: 'Sur un 2 au dé', short: 'dé 2' },
+  naturalThree: { label: 'Sur un 3 au dé', short: 'dé 3' },
+  naturalMax: { label: 'Sur un 6 au dé (jet maximal)', short: 'dé max.' },
   doubleOne: { label: 'Sur un double 1 (deux dés)', short: 'double 1' },
   doubleTwo: { label: 'Sur un double 2 (deux dés)', short: 'double 2' },
   doubleThree: { label: 'Sur un double 3 (deux dés)', short: 'double 3' },
@@ -74,7 +74,7 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
 export function triggerText(t: Trigger): { label: string; short: string } {
   if (t in TRIGGERS) return TRIGGERS[t as NamedTrigger]
   const face = rollFace(t)
-  if (face !== undefined) return { label: `Sur un ${face} au dé de dégâts`, short: `dé ${face}` }
+  if (face !== undefined) return { label: `Sur un ${face} au dé`, short: `dé ${face}` }
   const double = doubleFace(t)
   return { label: `Sur un double ${double} (deux dés)`, short: `double ${double}` }
 }
@@ -88,7 +88,7 @@ export type Effect =
    * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. Ce ne sont pas
    * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
    * d'affichage, `hits` fois `amount` appliqués en une seule perte ; l'écran en fait autant d'impacts.
-   * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur type, DP, DM ou DT ; sans effet sur la règle.
+   * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur type, DD, DM ou DT ; sans effet sur la règle.
    */
   | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource }
   | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target }
@@ -125,12 +125,23 @@ export type Condition =
 /**
  * Nature d'une compétence, pour sa présentation seulement (couleur de sa carte, design system) :
  * martiale (force du corps ou de l'arme), adresse (agilité, précision, ruse, chance), arcane (magie,
- * foi, nature, mort) ou neutre (ni l'un ni l'autre : l'Attente de l'ogre). Sans effet sur le combat.
+ * foi, nature, mort) ou neutre (ni l'un ni l'autre). Sans effet sur le combat.
  */
 export type SkillNature = 'martial' | 'finesse' | 'arcane' | 'neutral'
 
 /** Nature retenue quand une compétence n'en déclare pas : l'arcane, le violet des cartes d'avant. */
 export const DEFAULT_SKILL_NATURE: SkillNature = 'arcane'
+
+/** Le dé de tous les combattants (règles v2) : un d6, dont le jet désigne une face. Il ne fait aucun dégât. */
+export const DIE_FACES = 6
+
+/**
+ * La relation d'une compétence du dé au coup de base (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) :
+ * - `graft` (défaut) : au jet, la compétence se résout, puis le coup de base part ;
+ * - `modify` : le coup de base part ; s'il touche, la compétence se déclenche (Pourfendre, Pile ou face) ;
+ * - `replace` : pas de coup de base ; la compétence fournit ses propres coups (Furie des vents, Crescendo…).
+ */
+export type HitRelation = 'graft' | 'modify' | 'replace'
 
 export interface CharacterEvent {
   id: string
@@ -144,34 +155,15 @@ export interface CharacterEvent {
   /** Conditions supplémentaires, toutes requises ; vérifiées avant le tirage de `chance` */
   when?: readonly Condition[]
   /**
-   * Le coup qui déclenche la compétence n'inflige aucun dégât : il n'y a ni esquive, ni critique,
-   * ni « touche » (ex. Vol de vie, sur un 2). Réservé aux déclencheurs du dé (naturalOne,
-   * naturalTwo, naturalThree, naturalMax), sans `chance` : le moteur doit le savoir dès que le dé est lancé.
+   * Relation au coup de base (défaut : `graft`). Réservé aux déclencheurs du dé et aux doubles ; `modify` au dé simple
+   * seulement, `replace` sans `chance` (le moteur doit savoir dès le jet si le coup part).
    */
-  forfeitsHit?: boolean
+  relation?: HitRelation
   /**
-   * Le coup qui déclenche la compétence est transformé au lieu d'être sacrifié : `max` frappe pour la valeur
-   * maximale du dé, `reroll` relance le dé, en secret, et ajoute `bonus`. `noCrit` : le coup ne peut pas être
-   * critique. C'est un coup normal ensuite (esquive, modificateurs, armure, boucliers). Mêmes réserves que
-   * `forfeitsHit`. Sans porteur depuis la 0.73.0 (retrait de Charge et de Coup de griffe) : la règle « Coup
-   * transformé » est tue tant qu'aucune compétence ne s'en sert (`hiddenRules`, catalog.ts).
+   * Crescendo, Soliste (deux dés) : la compétence remplace les deux coups de base du double par un seul, multiplié par
+   * ce nombre (avec `relation: 'replace'`).
    */
-  reshapesHit?: { value: 'max' | 'reroll'; bonus?: number; noCrit?: boolean }
-  /**
-   * La compétence d'un jet ne se déclenche que si le coup qu'elle accompagne touche (Pourfendre, 0.70.0) :
-   * un coup doit toucher pour poser un malus physique (règle de l'utilisateur). Le jet n'est pas sacrifié,
-   * c'est un vrai coup (esquive, critique, modificateurs) ; ses effets arrivent dans les fenêtres de ce coup.
-   * Réservé aux déclencheurs du dé, sans `chance`, `forfeitsHit` ni `reshapesHit`.
-   */
-  needsTouch?: boolean
-  /**
-   * Compétence d'un double (personnage à deux dés, `twinDice`) qui attaque : l'action devient `volley`
-   * coups dont le dé vaut la face du double (Siffloter : deux coups de 1). Réservé aux déclencheurs
-   * doubleOne à doubleFive.
-   */
-  volley?: number
-  /** Les `volley` coups n'en font qu'un, qui vaut leur somme (Soliste : un coup de 3 × 5 = 15) */
-  merged?: boolean
+  hitMultiplier?: number
   /** Forme requise (personnage à formes, ex. druide) : la compétence n'existe que sous cette forme */
   form?: string
   /** Nature de la compétence, pour sa carte (défaut : DEFAULT_SKILL_NATURE). Présentation seulement. */
@@ -182,12 +174,10 @@ export interface CharacterEvent {
    * `SCENE_EVENTS` (`scenes.ts`) pour le rythme, `SceneEvent.tsx` pour le rendu.
    */
   scene?: SceneEventId
-  /**
-   * Face d'attente (l'Attente de l'ogre) : ce n'est pas une compétence, sa face est libre pour la forge du dé, qui y
-   * grave une compétence à sa place (forge.ts, docs/CAMPAGNE.md § 4.4). Sans effet sur le combat.
-   */
-  idle?: true
 }
+
+/** La relation d'une compétence au coup de base, `graft` par défaut. */
+export const relationOf = (e: Pick<CharacterEvent, 'relation'>): HitRelation => e.relation ?? 'graft'
 
 /** Déclencheurs nommés liés à la valeur du dé, connus dès le jet (reliques de coup). */
 export const ROLL_TRIGGERS: readonly NamedTrigger[] = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax']
@@ -282,7 +272,7 @@ export function describeCondition(c: Condition): string {
 /** « de » élidé devant une voyelle : « de Poison », « d'Aura de rancune ». */
 export const deName = (name: string) => (/^[aeiouyàâéèêëîïôûüh]/i.test(name) ? `d'${name}` : `de ${name}`)
 
-/** Une pastille d'une compétence (forme, coup sacrifié, condition…) et la règle commune qu'elle cite. */
+/** Une pastille d'une compétence (forme, relation au coup, condition…) et la règle commune qu'elle cite. */
 export interface SkillTag {
   label: string
   rule: RuleId
@@ -299,16 +289,17 @@ export interface SkillDescription {
 
 /**
  * Ce que fait une compétence, en clair. C'est la seule rédaction d'une compétence : le compendium (index et
- * fiche) et l'infobulle des dés l'affichent depuis cette source. Ce qui relève d'une règle commune (coup
- * sacrifié, double, dégâts directs, plafond, conditions…) n'est pas répété dans le texte : c'est une pastille
+ * fiche) et l'infobulle des dés l'affichent depuis cette source. Ce qui relève d'une règle commune (relation au coup
+ * de base, double, dégâts directs, plafond, conditions…) n'est pas répété dans le texte : c'est une pastille
  * qui cite la règle. `formName` : le nom de la forme requise (personnage à formes), affiché en pastille.
  */
 export function describeSkill(e: CharacterEvent, formName?: string): SkillDescription {
-  const r = e.reshapesHit
   const face = doubleFace(e.trigger)
+  const relation = relationOf(e)
+  const modifies = relation === 'modify'
   const effects = e.effects.map((effect, k) => {
-    // Un vrai coup qui doit toucher (Pourfendre) : ses effets n'arrivent que s'il touche
-    const touch = e.needsTouch && k === 0 ? "s'il touche, " : ''
+    // Une compétence qui modifie son coup (Pourfendre) : ses effets n'arrivent que s'il touche
+    const touch = modifies && k === 0 ? "s'il touche, " : ''
     if (effect.type !== 'applyStatus') return `${touch}${describeEffect(effect)}`
     const def = STATUSES[effect.status]
     const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
@@ -318,14 +309,9 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     // qui touche, un statut qui réagit aux coups reçus ne réagit pas à celui-ci : il agit dès le coup suivant (règle 9,
     // la plaie de Pourfendre coule au prochain coup qui touche l'adversaire).
     if (effect.target !== 'opponent') return `${touch}${text}`
-    return `${touch}sur l'adversaire${e.needsTouch && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`
+    return `${touch}sur l'adversaire${modifies && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`
   })
-  const parts = [
-    e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : '',
-    e.needsTouch ? 'frappe pour la valeur de sa face' : '',
-    r ? (r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`) : '',
-    ...effects,
-  ]
+  const parts = [e.hitMultiplier ? `un seul coup de base ×${e.hitMultiplier}` : '', ...effects]
     .filter(Boolean)
     .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
   const posedIds = e.effects.flatMap((effect) => (effect.type === 'applyStatus' ? [effect.status] : []))
@@ -334,16 +320,14 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     const def = STATUSES[id]
     return !def.mechanic && def.maxStacks !== undefined && def.maxStacks > 1 ? [{ label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : []
   })
+  // Une compétence du dé dit sa relation au coup de base : se greffer est la règle, elle n'a pas de pastille
+  const onDie = isRollTrigger(e.trigger) || face !== undefined
   const tags: SkillTag[] = [
     ...(formName ? [{ label: formName, rule: 'forms' as const }] : []),
     // Au début du combat : avant le premier tour, quel que soit le vainqueur de l'initiative (règle « Initiative »)
     ...(e.trigger === 'combatStart' ? [{ label: 'avant le premier tour', rule: 'initiative' as const }] : []),
-    ...(e.forfeitsHit ? [{ label: 'coup sacrifié', rule: 'forfeit' as const }] : []),
-    ...(e.needsTouch ? [{ label: "s'il touche", rule: 'needs-touch' as const }] : []),
-    ...(r ? [{ label: r.noCrit ? 'coup transformé, jamais critique' : 'coup transformé', rule: 'reshape' as const }] : []),
-    ...(e.volley ? [{ label: e.merged ? 'coups fondus en un' : 'double qui frappe', rule: 'volley' as const }] : []),
-    // Un double sans coups à lui remplace les deux coups de l'action : ce tour-là, rien ne frappe
-    ...(face !== undefined && !e.volley ? [{ label: 'remplace les deux coups', rule: 'twin-dice' as const }] : []),
+    ...(onDie && modifies ? [{ label: 'modifie son coup', rule: 'hit-relations' as const }] : []),
+    ...(onDie && relation === 'replace' ? [{ label: face !== undefined ? 'remplace les deux coups' : 'remplace le coup', rule: 'hit-relations' as const }] : []),
     ...(direct ? [{ label: 'dégâts directs', rule: 'direct-damage' as const }] : []),
     ...(posedIds.some((id) => STATUSES[id].look?.aura) ? [{ label: 'aura permanente', rule: 'auras' as const }] : []),
     ...caps,

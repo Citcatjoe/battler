@@ -23,7 +23,8 @@ export type RuleId =
   | 'initiative'
   | 'phases'
   | 'ko'
-  | 'damage-die'
+  | 'die'
+  | 'base-hit'
   | 'twin-dice'
   | 'dodge'
   | 'crit'
@@ -34,10 +35,7 @@ export type RuleId =
   | 'direct-damage'
   | 'skill'
   | 'dice-faces'
-  | 'forfeit'
-  | 'needs-touch'
-  | 'reshape'
-  | 'volley'
+  | 'hit-relations'
   | 'conditions'
   | 'forms'
   | 'polarity'
@@ -63,22 +61,27 @@ export const RULES: Record<RuleId, Rule> = {
   phases: {
     group: 'turn',
     title: 'Un tour, trois phases',
-    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son coup, ou ses coups : deux dés, Furie des vents, Coup de chance ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
+    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son jet et son coup de base, ou ses coups : deux dés, Furie des vents, Coup de chance ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
   },
   ko: {
     group: 'turn',
     title: 'Fin du combat',
     text: "Le premier à 0 PV perd, que ce soit à cause d'un coup, d'un effet ou d'un statut. Plus rien ne se déclenche après un K.O. Une limite de sécurité arrête le combat à 1 000 tours ; il est alors gagné aux PV (à égalité, par celui de gauche).",
   },
-  'damage-die': {
+  die: {
     group: 'dice',
-    title: 'Dé de dégâts',
-    text: "L'attaquant lance son dé : un d6 aux faces imprimées (deux pour la barde). Le jet désigne une face (« sur un 4 » : la face 4) ; une face de coup frappe pour la valeur imprimée dessus, propre à chaque personnage. Le jet compte même si le coup est esquivé : les compétences de sa face se déclenchent.",
+    title: 'Le dé',
+    text: "L'attaquant lance un d6 (deux pour la barde). Le dé ne fait aucun dégât : il désigne une face (« sur un 4 » : la face 4), qui déclenche sa compétence, ou rien (une face nue). Les reliques de face et la dorure lisent aussi la face, que le coup touche ou non.",
+  },
+  'base-hit': {
+    group: 'dice',
+    title: 'Coup de base',
+    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DD (dégâts directs, une arme) ou DM (dégâts magiques). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Le type n'est qu'une étiquette pour l'instant.",
   },
   'twin-dice': {
     group: 'dice',
     title: 'Deux dés',
-    text: 'Un personnage à deux dés lance deux dés à chaque action. Hors double, deux coups séparés, un par dé (esquive et critique chacun). Sur un double qui a sa compétence, celle-ci remplace les deux coups : sans coups à elle (voir Double qui frappe), il ne frappe pas ce tour.',
+    text: "Un personnage à deux dés lance deux dés à chaque action : deux coups de base, un par dé (esquive et critique chacun). Sur un double qui a sa compétence, celle-ci se résout d'abord, puis les deux coups partent ; Crescendo et Soliste les remplacent par un seul coup de base multiplié.",
   },
   dodge: {
     group: 'dodge',
@@ -88,7 +91,7 @@ export const RULES: Record<RuleId, Rule> = {
   crit: {
     group: 'crit',
     title: 'Critique',
-    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (la valeur imprimée de sa face, plus un bonus de relique, ou la somme d'un coup fondu) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
+    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le coup de base, multiplié par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
   },
   modifiers: {
     group: 'damage',
@@ -123,27 +126,12 @@ export const RULES: Record<RuleId, Rule> = {
   'dice-faces': {
     group: 'skills',
     title: 'Faces de compétence',
-    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces frappent. Exceptions : l'ogre n'en a aucune (il attend sur le 1), le druide a un sort sur chaque face sous forme humaine et aucun en ours, la barde a les siennes sur ses doubles. D'autres compétences se gravent par la forge.",
+    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine et aucun en ours, la barde a les siennes sur ses doubles. D'autres compétences se gravent par la forge.",
   },
-  forfeit: {
+  'hit-relations': {
     group: 'skills',
-    title: 'Coup sacrifié',
-    text: "Une compétence du dé peut sacrifier son coup : ce jet ne frappe pas (ni esquive, ni critique, ni dégâts) et seule la compétence agit. Rien de ce qui attend un coup n'est usé : esquive imposée, Riposte, Vol de vie, Critique assuré, Fausse note et Saignement attendent le suivant.",
-  },
-  'needs-touch': {
-    group: 'skills',
-    title: "S'il touche",
-    text: "La compétence d'un jet ne se déclenche que si le coup qu'elle accompagne touche : un coup doit toucher pour poser un malus physique. Le jet n'est pas sacrifié, c'est un vrai coup (esquive, critique, modificateurs). Ce qu'elle pose ne réagit pas à ce coup : la plaie de Pourfendre coule dès le coup suivant qui touche l'adversaire.",
-  },
-  reshape: {
-    group: 'skills',
-    title: 'Coup transformé',
-    text: 'Au lieu de sacrifier le coup, la compétence le change (sa valeur, ou son critique). C’est ensuite un coup normal : esquive, modificateurs, armure, boucliers.',
-  },
-  volley: {
-    group: 'skills',
-    title: 'Double qui frappe',
-    text: "Une compétence d'un double qui attaque : l'action devient plusieurs coups qui frappent chacun pour la valeur imprimée du double (Siffloter : deux coups de 1). Fondus en un seul, ils valent leur somme (Crescendo : un coup de 3 × 4 = 12 ; Soliste : 15) ; ce coup peut être critique.",
+    title: 'Greffe, modifie, remplace',
+    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : Saignement, dès le coup suivant ; Pile ou face : pile, ce coup compte double). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base tout de suite ; Coup de chance : un jet de plus à l'action suivante ; Crescendo et Soliste : un seul coup de base multiplié).",
   },
   conditions: {
     group: 'skills',
@@ -153,12 +141,12 @@ export const RULES: Record<RuleId, Rule> = {
   forms: {
     group: 'skills',
     title: 'Formes',
-    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet en homme, +3 à chaque coup en ours) : ce sont des mécanismes, ni bonus ni malus.",
+    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; un coup de base direct à +3 en ours) : ce sont des mécanismes, ni bonus ni malus.",
   },
   polarity: {
     group: 'statuses',
     title: 'Bonus et malus',
-    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, Attente, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
+    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
   },
   duration: {
     group: 'statuses',

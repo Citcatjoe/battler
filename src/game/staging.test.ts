@@ -46,10 +46,10 @@ for (const skill of CHARACTERS.flatMap((c) => c.definition.reserve ?? []))
 
 /** Le moment qui couvre l'étape `id`. */
 const momentOf = (moments: Moment[], id: number) => moments.find((m) => m.beats.includes(id))!
-/** L'instant de l'impact de chaque coup (non sacrifié) d'un moment, par étape, dans l'ordre. */
+/** L'instant de l'impact de chaque coup (non remplacé) d'un moment, par étape, dans l'ordre. */
 function impacts(moment: Moment, beats: Beat[]): Map<number, number> {
   const landed = moment.cues.filter((c) => c.channel === 'strike' && c.strike?.landed).map((c) => c.at)
-  const strikes = moment.beats.filter((id) => beats[id].type === 'attack' && !(beats[id] as Extract<Beat, { type: 'attack' }>).attack.forfeited)
+  const strikes = moment.beats.filter((id) => beats[id].type === 'attack' && !(beats[id] as Extract<Beat, { type: 'attack' }>).attack.replaced)
   return new Map(strikes.map((id, k) => [id, landed[k]]))
 }
 const at = (moment: Moment, channel: Cue['channel'], when: number) => moment.cues.filter((c) => c.channel === channel && c.at === when)
@@ -227,11 +227,13 @@ describe('mise en scène', () => {
       for (const beat of result.beats) {
         if (beat.type !== 'flurry') continue
         const m = momentOf(moments, beat.id)
-        const strikes = childrenOf(result.beats)[beat.id].filter((b) => b.type === 'attack')
+        // Ses coups, et ceux de ses jets greffés (Coup de chance), sous leur étape `roll`
+        const children = childrenOf(result.beats)
+        const strikes = children[beat.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
         const volley = m.cues.find((c) => c.channel === 'dice' && c.dice.volley && c.dice.values.length === strikes.length)
         expect(volley, `rafale ${beat.id}`).toBeDefined()
         const fast = m.cues.filter((c) => c.channel === 'strike' && c.strike?.fast && !c.strike.landed).length
-        expect(fast).toBe(strikes.filter((b) => b.type === 'attack' && !b.attack.forfeited).length)
+        expect(fast).toBe(strikes.filter((b) => b.type === 'attack' && !b.attack.replaced).length)
         if (STATUSES[beat.status].instantStrikes) {
           expect(m.cues.some((c) => c.channel === 'dice' && c.dice.volley && c.dice.rolling)).toBe(false)
           instant++
@@ -307,8 +309,10 @@ describe('mise en scène', () => {
         if (beat.type !== 'event' || beat.event.eventId !== 'thunderbolt') continue
         const m = momentOf(moments, beat.id)
         const scene = m.cues.find((c) => c.channel === 'scene')!
-        const landed = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed).map((c) => c.at - scene.at)
-        expect(landed).toEqual(SCENE_EVENTS.lightning.impacts.slice(0, landed.length))
+        // Le coup de base greffé (et ce qu'il entraîne) suit la scène, dans le même moment
+        const { impacts, length } = SCENE_EVENTS.lightning
+        const landed = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.at < scene.at + length).map((c) => c.at - scene.at)
+        expect(landed).toEqual(impacts.slice(0, landed.length))
         expect(landed.length).toBeGreaterThan(0)
         bolts++
       }
@@ -354,18 +358,25 @@ describe('mise en scène', () => {
   it('le dé qui pulse est celui du jet qui déclenche la compétence', () => {
     let pulses = 0
     for (const { result } of corpus) {
-      const { beats, fighters } = result
+      const { beats } = result
       const children = childrenOf(beats)
       for (const beat of beats) {
         if (beat.type === 'attack') {
-          const face = skillFaceAt(beats, fighters, beat.id, children)
-          // Un coup ordinaire (ni compétence, ni coup transformé) ne fait rien pulser ; sinon, c'est la face du dé
-          if (face !== undefined && !beat.attack.reshaped) expect(beat.attack.roll).toBe(face)
+          const face = skillFaceAt(beats, beat.id, children)
+          // Un coup ordinaire (sans compétence) ne fait rien pulser ; sinon, c'est la face du dé
+          if (face !== undefined) expect(beat.attack.roll).toBe(face)
         }
-        // Toute compétence sur un 1, 2 ou 3 a pour cause son coup, dont le dé pulse sur cette face
+        // Toute compétence sur un 1, 2 ou 3 a pour cause son jet : l'étape `roll` quand elle se greffe (puis le coup, au dé
+        // déjà tiré), sinon le coup qu'elle modifie ou remplace ; le dé pulse sur sa face
         if (beat.type === 'event' && ['naturalOne', 'naturalTwo', 'naturalThree'].includes(beat.event.trigger)) {
-          expect(beats[beat.cause!]?.type, `${beat.event.name} sans coup`).toBe('attack')
-          expect(skillFaceAt(beats, fighters, beat.cause!, children)).toBe(skillFaceOf(beat.event.trigger))
+          const cause = beats[beat.cause!]
+          expect(cause?.type, `${beat.event.name} sans jet`).toMatch(/^(attack|roll)$/)
+          const face = skillFaceOf(beat.event.trigger)
+          if (cause.type === 'roll') {
+            expect(cause.roll).toBe(face)
+            const strike = children[cause.id].find((b) => b.type === 'attack')
+            if (strike) expect(skillFaceAt(beats, strike.id, children)).toBe(face)
+          } else expect(skillFaceAt(beats, cause.id, children)).toBe(face)
           pulses++
         }
       }
@@ -378,8 +389,8 @@ describe('mise en scène', () => {
     for (const { result, moments } of corpus) {
       const children = childrenOf(result.beats)
       for (const beat of result.beats) {
-        if (beat.type !== 'attack' || !beat.attack.forfeited || beat.attack.preset) continue
-        const face = skillFaceAt(result.beats, result.fighters, beat.id, children)
+        if (beat.type !== 'attack' || !beat.attack.replaced || beat.attack.preset) continue
+        const face = skillFaceAt(result.beats, beat.id, children)
         if (face === undefined) continue
         const m = momentOf(moments, beat.id)
         const pulse = m.cues.find((c) => c.channel === 'skillPulse' && c.face === face)!
@@ -397,7 +408,7 @@ describe('mise en scène', () => {
     for (const { result, moments } of corpus) {
       const children = childrenOf(result.beats)
       for (const hit of result.beats) {
-        if (hit.type !== 'attack' || hit.attack.forfeited) continue
+        if (hit.type !== 'attack' || hit.attack.replaced) continue
         const striker = hit.attack.attacker
         const first = children[hit.id].find((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed'))
         if (!first) continue
@@ -504,7 +515,12 @@ describe('mise en scène', () => {
     const moments = stage(result, { test: true })
     expect(moments[0].duration).toBe(0)
     const marks = moments.flatMap((m) => m.rolls)
-    expect(Math.max(...marks.map((r) => r.upTo))).toBe(result.beats.reduce((n, b) => n + (b.type === 'pair' ? 2 : b.type === 'coin' || (b.type === 'attack' && !b.attack.preset) ? 1 : 0), 0))
+    // Chaque dé lancé a son point : les deux de la paire, la pièce, le jet greffé (étape `roll`), le coup qui lance son
+    // dé. Une rafale annonce tous ses dés d'un coup, même si le K.O. arrête ses coups avant la fin
+    const dice = result.beats.reduce((n, b) => n + (b.type === 'pair' ? 2 : b.type === 'coin' || b.type === 'roll' || (b.type === 'attack' && !b.attack.preset) ? 1 : 0), 0)
+    const flurries = result.beats.reduce((n, b) => n + (b.type === 'flurry' ? b.strikes : 0), 0)
+    expect(Math.max(...marks.map((r) => r.upTo))).toBeGreaterThanOrEqual(dice)
+    expect(Math.max(...marks.map((r) => r.upTo))).toBeLessThanOrEqual(dice + flurries)
     for (const m of moments) expect(m.rolls.map((r) => r.at)).toEqual(m.rolls.map((r) => r.at).sort((p, q) => p - q))
   })
 })

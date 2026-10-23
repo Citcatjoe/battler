@@ -94,7 +94,8 @@ describe('catalogue des compétences', () => {
       for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
     // Faces identiques d'un même porteur : une seule ligne, qui liste ses déclencheurs (la Foudre du druide, sur 1 à 3)
     expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalOne', 'naturalTwo', 'naturalThree'])
-    expect(skills.filter((s) => s.event.name === 'Attente').map((s) => s.triggers)).toEqual([['naturalOne']])
+    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune
+    expect(skills.some((s) => s.owners.some((c) => c.id === 'morgrut'))).toBe(false)
     // Hors kit (règles v2, d6) : listée chez son personnage, sans face
     expect(skills.find((s) => s.event.id === 'power-aura')).toMatchObject({ outside: true, triggers: [], owners: [createCharacter('gorak')] })
     // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
@@ -106,7 +107,6 @@ describe('catalogue des compétences', () => {
     const skills = skillCatalog().flatMap((f) => f.skills)
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
     expect(skills.find((s) => s.event.id === 'cleave')!.event.nature).toBe('martial')
-    expect(skills.find((s) => s.event.id === 'waiting-1')!.event.nature).toBe('neutral')
   })
 
   it('un effet subi par l’adversaire le nomme dans le texte de la compétence (retour du 2026-10-21)', () => {
@@ -306,8 +306,8 @@ describe('stats', () => {
             if (final.hp[side] > 0) expect(counted).toBe(lost)
             else expect(counted).toBeGreaterThanOrEqual(lost)
             expect(s[side].hits + s[opp].dodges).toBe(s[side].attacks)
-            // Les coups sacrifiés (Vol de vie) ne comptent pas comme coups portés
-            expect(s[side].attacks + s[opp].attacks).toBe(attacksOf(r).filter((x) => !x.forfeited).length)
+            // Un jet remplacé sans coup de base (Coup de chance) ne compte pas comme coup porté
+            expect(s[side].attacks + s[opp].attacks).toBe(attacksOf(r).filter((x) => !x.replaced).length)
           }
         }
   })
@@ -546,7 +546,7 @@ describe('historique', () => {
 
 describe('trace de résolution', () => {
   const poisoner = () =>
-    testCharacter('ervald', { damageDie: 4 }, [
+    testCharacter('ervald', { attackMin: 2, attackMax: 2 }, [
       {
         id: 'venin',
         name: 'Venin',
@@ -554,7 +554,7 @@ describe('trace de résolution', () => {
         effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, turns: 3, target: 'opponent' }],
       },
     ])
-  const armored = () => testCharacter('brokk', { armor: 5, damageDie: 2 })
+  const armored = () => testCharacter('brokk', { armor: 5, attackMin: 1, attackMax: 1 })
 
   it('une graine rejoue le combat à l’identique et figure dans le résultat', () => {
     const a = simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 1234 })
@@ -724,8 +724,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture'])
     family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'whistle'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'false-note', 'cleave'])
-    // Crescendo et Soliste (barde) : leurs trois coups sonnent, la compétence est muette
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave'])
+    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette
     family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist'])
     // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak, ou Ervald pour l'Aura de puissance
     const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
@@ -734,7 +734,7 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const seen: Record<string, Set<string | null>> = {}
     for (const a of [...CHARACTERS, ...carriers])
       for (const b of CHARACTERS)
-        for (let seed = 1; seed <= 4; seed++)
+        for (let seed = 1; seed <= 6; seed++)
           for (const beat of simulateCombat([a, b], { rng: seededRng(seed) }).beats) {
             if (beat.type !== 'event') continue
             const blocked = beat.event.effects.some((e) => e.type === 'applyStatus' && e.result.kind !== 'applied')
@@ -860,10 +860,9 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       const left = own.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
       expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
     }
-    // Gorak : la Furie des vents sur le 2 ; le 1, quitté par Pourfendre, frappe pour sa valeur imprimée et se grave
+    // Gorak : la Furie des vents sur le 2 ; le 1, quitté par Pourfendre, est une face nue qui se grave
     const gorak = championOf(startRun('gorak', 1))
     expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalTwo'])
-    expect(gorak.strikeValue(1)).toBe(4)
     expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([1, 3, 4, 5, 6])
   })
 
@@ -882,7 +881,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('quatre faces de compétence au plus : la limite atteinte, plus de Graver, Dorer et Aiguiser restent', () => {
+  it('quatre faces de compétence au plus : la limite atteinte, plus de Graver ni de Copier ; Dorer, Aiguiser et Tremper restent', () => {
     const [a, b, c] = CAMPAIGN_REPERTOIRES.gorak
     const two = [a, b].map((skill, i) => ({ op: 'engrave' as const, face: 4 + i, skill }))
     // La signature et trois gravures : `MAX_SKILL_FACES` faces de compétence, la limite
@@ -894,8 +893,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
       expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
       expect(full.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(false)
-      // Copier une face reste possible, sur une face de coup seulement
-      for (const o of full.offer.filter((x) => x.op === 'copy')) expect(o).toEqual({ op: 'copy', strikesOnly: true })
+      // Copier ne copie qu'une compétence : à la limite, elle n'est plus proposée
+      expect(full.offer.some((o) => o.op === 'copy'), `graine ${k}`).toBe(false)
       expect(full.offer.length).toBeGreaterThan(0)
     }
   })
@@ -966,25 +965,25 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     let run = startRun('gorak', 5)
     run = withReward(run, { kind: 'forge', step: { op: 'gild', face: 5 } })
     run = withReward(run, { kind: 'relic', relic: 'wolf-fang' })
-    // Le coup de 7 copié sur le plus faible, le 1 que Pourfendre a quitté
-    run = withReward(run, { kind: 'forge', step: { op: 'copy', face: 6 } })
+    // La Furie des vents (le 2, seule au départ d'une campagne) copiée sur la face nue de plus petit numéro qui n'est pas dorée : le 1
+    run = withReward(run, { kind: 'forge', step: { op: 'copy', face: 2 } })
     run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } })
     run = withReward(run, { kind: 'relic', relic: 'mercenary-mail' })
-    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 3, skill: graveBreath } })
-    // Aiguiser une gravure : seule sur le dé d'origine, le 3 ne porte rien
-    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 3 } })
-    // Aiguiser une compétence d'origine (la signature, sur le 2) : vaut seule ; refondre aussi
+    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 6, skill: graveBreath } })
+    // Aiguiser une gravure : seule sur le dé d'origine, le 6 ne porte rien
+    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 6 } })
+    // Aiguiser une compétence d'origine (la signature, sur le 2) : vaut seule ; tremper l'arme aussi
     run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 2 } })
-    run = withReward(run, { kind: 'forge', step: { op: 'reforge' } })
+    run = withReward(run, { kind: 'forge', step: { op: 'temper' } })
     expect(heritableGains(run)).toEqual([
       { kind: 'forge', step: { op: 'gild', face: 5 } },
       { kind: 'relic', relic: 'wolf-fang' },
-      { kind: 'forge', step: { op: 'copy', face: 6 } },
+      { kind: 'forge', step: { op: 'copy', face: 2 } },
       { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } },
       { kind: 'relic', relic: 'mercenary-mail' },
-      { kind: 'forge', step: { op: 'engrave', face: 3, skill: graveBreath } },
+      { kind: 'forge', step: { op: 'engrave', face: 6, skill: graveBreath } },
       { kind: 'forge', step: { op: 'sharpen', face: 2 } },
-      { kind: 'forge', step: { op: 'reforge' } },
+      { kind: 'forge', step: { op: 'temper' } },
     ])
   })
 

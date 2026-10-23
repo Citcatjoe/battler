@@ -4,6 +4,7 @@ import { createWallets, priceMatch } from '../game/betting'
 import type { Character } from '../game/character'
 import type { Pair } from '../game/combat'
 import { offerTargets, withForgeStep, type ForgeStep } from '../game/forge'
+import { relationOf } from '../game/events'
 import { RELICS } from '../game/relics'
 import { createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
 import { MatchupScreen, type MatchupMode } from '../components/MatchupScreen'
@@ -21,10 +22,10 @@ import { Stage } from '../components/Stage'
  */
 
 /** Une opération de forge voulue ; la compétence d'une gravure est la première du roster qui convient. */
-type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'copy'; face: number } | { op: 'reforge' }
+type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'copy'; face: number } | { op: 'temper' }
 
 /** Compétences à graver, celles qui gardent le coup d'abord */
-const POOL = [...ENGRAVABLE_SKILLS].sort((a, b) => Number(!!a.forfeitsHit) - Number(!!b.forfeitsHit))
+const POOL = [...ENGRAVABLE_SKILLS].sort((a, b) => Number(relationOf(a) === 'replace') - Number(relationOf(b) === 'replace'))
 
 /**
  * Le personnage forgé selon le plan, chaque opération vérifiée par la forge. Une compétence qui ne gagne rien à un rang
@@ -77,7 +78,7 @@ function buildCases(): Record<string, Case> {
     mode: 'tournament',
     fighters: [
       forged(gorak, [{ op: 'engrave', face: 5 }, { op: 'sharpen', face: 2 }]).withRelics(relics(3)),
-      forged(ervald, [{ op: 'copy', face: 6 }, { op: 'engrave', face: 4 }])
+      forged(ervald, [{ op: 'copy', face: 1 }, { op: 'engrave', face: 4 }])
         .withName('Ervald le Revenu')
         .withRelics(relics(3, 3)),
     ],
@@ -88,7 +89,7 @@ function buildCases(): Record<string, Case> {
   const limit: Case = {
     mode: 'tournament',
     fighters: [
-      forged(gorak, [{ op: 'reforge' }, { op: 'gild', face: 6 }]),
+      forged(gorak, [{ op: 'temper' }, { op: 'gild', face: 6 }]),
       forged(ervald, [
         { op: 'engrave', face: 3 },
         { op: 'engrave', face: 4 },
@@ -114,7 +115,7 @@ function buildCases(): Record<string, Case> {
       mode: 'season',
       fighters: [
         forged(createCharacter('thaldrin'), [{ op: 'sharpen', face: 1 }]).withRelics(relics(2, 4)),
-        forged(createCharacter('morgrut'), [{ op: 'engrave', face: 1 }, { op: 'gild', face: 4 }, { op: 'copy', face: 6 }]).withRelics(
+        forged(createCharacter('morgrut'), [{ op: 'engrave', face: 1 }, { op: 'gild', face: 4 }, { op: 'copy', face: 1 }]).withRelics(
           relics(6),
         ),
       ],

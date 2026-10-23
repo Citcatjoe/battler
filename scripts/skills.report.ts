@@ -36,17 +36,13 @@ const T = {
   text: 140,
 }
 
-/** Compétences hors grille, par décision de design. */
-const EXEMPT: Record<string, string> = {
-  'waiting-1': "voulu : l'ogre n'a aucune compétence, c'est le prix de son d14",
-  'waiting-2': "voulu : l'ogre n'a aucune compétence, c'est le prix de son d14",
-  'waiting-3': "voulu : l'ogre n'a aucune compétence, c'est le prix de son d14",
-}
+/** Compétences hors grille, par décision de design (aucune depuis le retrait de l'Attente, 0.106.0). */
+const EXEMPT: Record<string, string> = {}
 
 /** Crochets qui imposent une usure « au prochain coup ou à la prochaine action » : effet différé, et charge qui peut se perdre. */
 const DELAYED: (keyof StatusDef)[] = ['forcesCrit', 'forcesDodge', 'drainsHit', 'extraStrikes', 'coinToss', 'reflectsHit']
 /** Crochets à surveiller pour l'aplatissement du moteur (FAMILLES.md, ETUDE § 4.1) */
-const SPECIAL: (keyof StatusDef)[] = [...DELAYED, 'extraDie', 'fillsOnHurt', 'spentOnHurt', 'immune', 'wards', 'skipsAction', 'shield']
+const SPECIAL: (keyof StatusDef)[] = [...DELAYED, 'fillsOnHurt', 'spentOnHurt', 'immune', 'wards', 'skipsAction', 'shield']
 
 const usesOf = (key: keyof StatusDef) => Object.values(STATUSES).filter((d) => d[key] !== undefined && d[key] !== false).length
 
@@ -66,7 +62,6 @@ function readSkill(r: CombatResult, side: Side, e: CharacterEvent, into: Measure
   const losable = postedBy(e).filter((p) => DELAYED.some((k) => STATUSES[p.status][k]))
   let fired = 0
   for (const b of r.beats) {
-    if (b.type === 'attack' && b.attack.attacker === side && b.attack.reshaped?.event === e.id) fired++
     if (b.type === 'event' && b.event.side === side && b.event.eventId === e.id) {
       fired++
       const empty = b.event.effects.every((f) =>
@@ -96,7 +91,6 @@ function readingFlags(e: CharacterEvent): string[] {
   if (text.length > T.text) flags.push(`texte long (${text.length} car.)`)
   const posted = postedBy(e)
   if (posted.some((p) => !p.opponent && DELAYED.some((k) => STATUSES[p.status][k]))) flags.push('effet différé')
-  if (e.reshapesHit?.value === 'reroll') flags.push('jet caché')
   if (e.effects.some((f) => f.type === 'cleanse' && f.target === 'opponent') || e.when?.some((c) => 'who' in c && c.who === 'opponent'))
     flags.push("dépend de l'adversaire")
   const unique = new Set<string>()

@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Side } from '../game/combat'
+import { DIE_FACES } from '../game/events'
 import type { CheatState } from '../game/useCombat'
 
 interface Props {
@@ -22,7 +23,7 @@ export function CheatPad({ side, fighter, cheat, onForce }: Props) {
   const mine = next?.side === side ? next : undefined
   const active = cheat.waiting && mine !== undefined
   // En attendant son tour, le pavé montre le dé du combattant
-  const faces = mine?.faces ?? fighter.stats.damageDie
+  const faces = mine?.faces ?? DIE_FACES
   const color = SIDE_STYLE[side].hex
 
   const keyRef = useRef((_: KeyboardEvent) => {})

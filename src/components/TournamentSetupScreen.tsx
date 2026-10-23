@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
+import { DIE_FACES } from '../game/events'
 import { GILD_BONUS } from '../game/forge'
 import { RELICS } from '../game/relics'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
@@ -440,7 +441,7 @@ function CharacterTooltip({ character: c }: { character: Character }) {
       </p>
       <div className="codex-divider my-2.5" />
       <p className="font-data text-[14px] leading-snug text-ink-1">
-        {c.maxHp} PV · {c.twinDice ? '2 × ' : ''}d{c.stats.damageDie} · esquive {percent(c.stats.dodgeChance)} · critique{' '}
+        {c.maxHp} PV · attaque {c.stats.attackMin} à {c.stats.attackMax} · {c.twinDice ? '2 × ' : ''}d{DIE_FACES} · esquive {percent(c.stats.dodgeChance)} · critique{' '}
         {percent(c.stats.critChance)} {multiplier(c.stats.critMultiplier)}
       </p>
     </div>

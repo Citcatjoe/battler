@@ -24,7 +24,7 @@ import {
 import type { Character } from './character'
 import { cueOf } from './cues'
 import { DAMAGE_SOURCES } from './damage'
-import { doubleFace, rollFace, type Trigger } from './events'
+import { doubleFace, relationOf, rollFace, type Trigger } from './events'
 import {
   atCap,
   attackLog,
@@ -34,6 +34,7 @@ import {
   flurryLog,
   pairLog,
   relicLog,
+  rollLog,
   shiftLog,
   skipLog,
   statusAgeLog,
@@ -260,22 +261,20 @@ export function childrenOf(beats: readonly Beat[]): Beat[][] {
 }
 
 /**
- * Face de compétence du coup `i` : la compétence que son dé déclenche (une étape `event` qu'il a provoquée, sur un
- * 1, 2 ou 3), ou le coup transformé (Charge, Coup de griffe). Undefined si le jet ne déclenche rien.
+ * Face de compétence du coup `i` : la compétence que son dé déclenche (une étape `event` provoquée par le coup, quand
+ * elle le modifie ou le remplace ; par son étape `roll`, quand elle s'y greffe). Undefined si le jet ne déclenche rien.
  */
-export function skillFaceAt(beats: readonly Beat[], fighters: Pair<Character>, i: number, children = childrenOf(beats)): number | undefined {
+export function skillFaceAt(beats: readonly Beat[], i: number, children = childrenOf(beats)): number | undefined {
   const beat = beats[i]
   if (beat?.type !== 'attack') return undefined
   const attack = beat.attack
-  if (attack.reshaped) {
-    const trigger = fighters[attack.attacker].events.find((e) => e.id === attack.reshaped!.event)?.trigger
-    return trigger && skillFaceOf(trigger)
-  }
-  for (const next of children[i])
-    if (next.type === 'event' && next.event.side === attack.attacker) {
-      const face = skillFaceOf(next.event.trigger)
-      if (face !== undefined) return face
-    }
+  const roll = beat.cause !== undefined && beats[beat.cause].type === 'roll' ? [beat.cause] : []
+  for (const from of [i, ...roll])
+    for (const next of children[from])
+      if (next.type === 'event' && next.event.side === attack.attacker) {
+        const face = skillFaceOf(next.event.trigger)
+        if (face !== undefined) return face
+      }
   return undefined
 }
 
@@ -606,7 +605,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         return (
           hit.type === 'attack' &&
           next.event.side === striker &&
-          !!fighters[striker].events.find((e) => e.id === next.event.eventId)?.needsTouch &&
+          relationOf(fighters[striker].events.find((e) => e.id === next.event.eventId) ?? {}) === 'modify' &&
           onTarget(next.event.effects)
         )
       return (
@@ -621,7 +620,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /** Étapes déjà jouées avec le coup qui les a provoquées : à leur place, il ne reste rien à montrer */
   const absorbed = new Set<number>()
   /**
-   * Étapes qui tombent sans attente de plus (`LEAD`) : la compétence d'un coup sacrifié ou d'un double, un battement
+   * Étapes qui tombent sans attente de plus (`LEAD`) : la compétence d'un jet remplacé ou d'un double, un battement
    * après son dé (M10, M12), et les réactions au coup, au milieu de sa lecture (M17)
    */
   const snapped = new Set<number>()
@@ -667,8 +666,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
   /**
    * Coups de compétence : chaque montant (ou chaque jauge d'une relâche) part comme un coup ; les PV tombent coup par
-   * coup, depuis ceux à l'écran. Le dernier d'une série est lourd. `schedule` (événement de scène) : l'instant de
-   * chaque impact ; les coups sont alors égaux, aucun n'est lourd. `onLand` : à chaque impact (`last` : le dernier).
+   * coup, depuis ceux à l'écran. Le dernier d'une série est lourd ; `heavy` : le coup est lourd quelle que soit sa force
+   * (le coup de pile, M26). `schedule` (événement de scène) : l'instant de chaque impact ; les coups sont alors égaux,
+   * aucun n'est lourd. `onLand` : à chaque impact (`last` : le dernier).
    * `lastHold` : la lecture après le dernier coup (sinon `BLOW_LAST_HOLD`). Le coup en cours s'efface au premier élan :
    * la Riposte part pendant que l'attaquant revient en place.
    */
@@ -677,7 +677,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     hits: readonly AppliedEffect[],
     lunge: boolean,
     impact: (damage: number, heavy: boolean) => SfxName,
-    o: { schedule?: readonly number[]; onLand?: (last: boolean) => void; lastHold?: TimingName } = {},
+    o: { schedule?: readonly number[]; onLand?: (last: boolean) => void; lastHold?: TimingName; heavy?: true } = {},
   ) {
     const parts = hits.flatMap((e) => (e.type === 'damage' ? (e.parts ?? [e.amount]).map((n) => ({ n, to: e.target })) : []))
     if (strike && parts.length > 0) setStrike(null)
@@ -685,7 +685,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     for (const [k, part] of parts.entries()) {
       const at = o.schedule?.[k]
       const last = k === parts.length - 1
-      const heavy = at === undefined && (parts.length > 1 ? last : part.n >= HEAVY_BLOW)
+      const heavy = at === undefined && (parts.length > 1 ? last : !!o.heavy || part.n >= HEAVY_BLOW)
       const id = key++
       const wind: TimingName = lunge ? 'BLOW_WIND' : 'BLOW_WIND_REACTION'
       // Au rythme imposé, le chiffre du coup précédent reste à l'écran jusqu'à l'élan de celui-ci
@@ -793,8 +793,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /** Rafale en cours (Furie des vents, paire) : ses coups, le prochain à jouer ; `pointed` : chaque coup désigne son dé */
   let volley: { strikes: number[]; next: number; pointed: boolean } | null = null
 
-  /** Le coup d'une action : le dé roule, retombe, l'élan part, l'impact tombe. */
-  function stageAttack(beat: Extract<Beat, { type: 'attack' }>, face: number | undefined, grouped: boolean) {
+  /**
+   * Le coup d'une action : le dé roule, retombe, l'élan part, l'impact tombe. `rolled` : le dé est déjà tombé (étape
+   * `roll`, et la compétence greffée qui a suivi) : le coup part de là, sans nouveau jet.
+   */
+  function stageAttack(beat: Extract<Beat, { type: 'attack' }>, face: number | undefined, grouped: boolean, rolled: boolean) {
     const { attack } = beat
     const { attacker, faces } = attack
     const shown = { ...IDLE_DICE, faces, owner: attacker, critMultiplier: attack.critMultiplier }
@@ -802,19 +805,24 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const after = consequencesOf(beat)
     const base = hp
 
-    setDice({ ...shown, values: [0], rolling: true })
-    sound('diceRoll', T.DICE_ROLL)
-    hold('DICE_ROLL')
-    sound('diceLand')
-    // Une compétence qui accompagne le coup (Pourfendre) ne part que s'il touche : son dé s'allume à l'impact
-    const onHit = !attack.forfeited && !attack.reshaped
-    if (!onHit) pulse(attacker, face)
-    setDice({ ...shown, values: [attack.roll], forced: attack.forced })
+    if (rolled) {
+      patchDice({ critMultiplier: attack.critMultiplier })
+      if (labels.length > 0) clearSpecials()
+    } else {
+      setDice({ ...shown, values: [0], rolling: true })
+      sound('diceRoll', T.DICE_ROLL)
+      hold('DICE_ROLL')
+      sound('diceLand')
+      // Une compétence qui remplace le coup s'allume avec le dé ; une compétence qui modifie le coup (Pourfendre) ne part
+      // que s'il touche : son dé s'allume à l'impact
+      if (attack.replaced) pulse(attacker, face)
+      setDice({ ...shown, values: [attack.roll], forced: attack.forced })
+    }
     rollSpecials(attack)
 
-    // Coup sacrifié par une compétence : pas d'élan ; la compétence qui suit prend le relais un battement après le dé
+    // Jet remplacé par sa compétence : pas d'élan ; la compétence qui suit prend le relais un battement après le dé
     // posé, comme l'élan d'un coup (docs/MISE_EN_SCENE.md, M10)
-    if (attack.forfeited) {
+    if (attack.replaced) {
       settle(beat, base)
       showStatuses(beat.id)
       log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
@@ -822,7 +830,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       return
     }
 
-    hold('DICE_READ')
+    if (!rolled) hold('DICE_READ')
     if (attack.crit) {
       patchDice({ crit: true, critForced: attack.critForced })
       for (const s of specials.crit) addSpecial(s)
@@ -839,7 +847,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showStatuses(beat.id)
     setStrike({ ...attack, key: id, landed: true })
     for (const s of specials.impact) addSpecial(s)
-    if (onHit) pulse(attacker, face)
+    if (!rolled) pulse(attacker, face)
     log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
     afterImpact(after, after.flow ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD', 'REACTION_LEAD')
   }
@@ -854,7 +862,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (labels.length > 0) clearSpecials()
     rollSpecials(attack)
     for (const s of specials.crit) addSpecial(s)
-    if (attack.forfeited) {
+    if (attack.replaced) {
       // Le dé de la rafale ressort, son dé de l'en-tête s'allume, et sa compétence suit sans attente
       pulse(attack.attacker, face)
       settle(beat, base)
@@ -932,9 +940,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (dice > 0) moment.rolls.push({ at: t, upTo: ranks[beat.id] + dice })
     switch (beat.type) {
       case 'attack': {
-        const face = skillFaceAt(beats, fighters, beat.id, children)
+        const face = skillFaceAt(beats, beat.id, children)
         // Le jet déclenche une compétence qui remplace le coup : tout tombe ensemble, au moment où le dé s'arrête
-        const skill = beat.attack.forfeited && face !== undefined ? children[beat.id].find((b) => b.type === 'event' && skillFaceOf(b.event.trigger) === face) : undefined
+        const skill = beat.attack.replaced && face !== undefined ? children[beat.id].find((b) => b.type === 'event' && skillFaceOf(b.event.trigger) === face) : undefined
         if (skill) snapped.add(skill.id)
         if (volley && volley.strikes.includes(beat.id)) {
           const index = volley.next++
@@ -944,20 +952,34 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           if (!skill) hold(last ? 'STRIKE_REST' : 'VOLLEY_GAP')
           break
         }
-        stageAttack(beat, face, !!skill)
+        // Un jet greffé : son dé est déjà tombé, sa compétence s'est déjà montrée (étape `roll`)
+        stageAttack(beat, face, !!skill, beat.cause !== undefined && beats[beat.cause].type === 'roll')
         if (!skill) hold('STRIKE_REST')
+        break
+      }
+      case 'roll': {
+        // Le dé tombe ; le sceau de la compétence greffée s'allume avec lui, et elle suit un battement après, comme l'élan
+        // d'un coup (M10). Dans une rafale (Coup de chance), le dé est déjà sur le plateau : il ne roule pas de nouveau
+        const grafts = children[beat.id].filter((b) => b.type === 'event')
+        for (const g of grafts) snapped.add(g.id)
+        const inVolley = !!volley && children[beat.id].some((b) => volley!.strikes.includes(b.id))
+        if (!inVolley) {
+          const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side }
+          setDice({ ...shown, values: [0], rolling: true })
+          sound('diceRoll', T.DICE_ROLL)
+          hold('DICE_ROLL')
+          sound('diceLand')
+          setDice({ ...shown, values: [beat.roll], forced: beat.forced })
+        }
+        if (grafts.length > 0) pulse(beat.side, beat.roll)
+        settle(beat)
+        showStatuses(beat.id)
+        log(rollLog(beat.turn, beat.side, beat.roll, fighters))
+        hold('DICE_READ')
         break
       }
       case 'event': {
         const def = fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
-        // Un coup transformé (Charge…) a déjà été joué avec le coup : la compétence n'est que notée
-        if (def?.reshapesHit) {
-          settle(beat)
-          showStatuses(beat.id)
-          log(eventLog(beat.event, fighters))
-          setAura(null)
-          break
-        }
         // Une compétence à événement de scène (Foudre) le lance d'abord : ses dégâts tombent sur ses impacts, sans élan
         const timing = def?.scene ? SCENE_EVENTS[def.scene] : undefined
         const effects = quietPurges(beat.event.effects)
@@ -1080,7 +1102,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         else showEffects(beat.side, STATUSES[beat.status].name, [], apply)
         // Tous les dés de la rafale roulent ensemble : en combat test, le joueur les choisit d'abord, un par un
         moment.rolls.push({ at: t, upTo: ranks[beat.id] + beat.strikes })
+        // Les coups de la rafale : ses coups, et ceux de ses jets greffés (Coup de chance), sous leur étape `roll`
         const strikes = children[beat.id]
+          .flatMap((b) => (b.type === 'roll' ? children[b.id] : [b]))
           .filter((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack')
           .slice(0, beat.strikes)
         if (strikes.length > 0) {
@@ -1117,7 +1141,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const strikes = children[beat.id]
           .filter((b) => b.type === 'attack')
           .map((b) => b.id)
-        volley = strikes.length > 0 ? { strikes, next: 0, pointed: beat.double === undefined } : null
+        volley = strikes.length > 0 ? { strikes, next: 0, pointed: strikes.length > 1 } : null
         const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side, volley: true }
         setDice({ ...shown, values: [0, 0], rolling: true })
         sound('diceRoll', T.DICE_ROLL_MANY)
@@ -1152,9 +1176,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         if (beat.heads) sound('coinWin')
         showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
         hold('COIN_READ')
-        // Pile : son coup lourd, puis ce qu'il entraîne, comme un coup (M26) ; ses réactions au milieu de sa lecture
+        // Pile : son coup lourd (ce coup, à nouveau ; lourd même petit), puis ce qu'il entraîne, comme un coup (M26) ; ses
+        // réactions au milieu de sa lecture
         if (beat.heads)
           blows(beat.side, beat.effects, true, () => 'crit', {
+            heavy: true,
             onLand: (last) => {
               if (!last) return
               settle(beat, base)
