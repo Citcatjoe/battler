@@ -24,7 +24,7 @@ interface Props {
 export function RecordsScreen({
   onOpenCharacter,
   onBack,
-  backLabel = "Retour à la sélection",
+  backLabel = "Retour au menu",
 }: Props) {
   const roster = CHARACTERS;
   const history = useHistory();

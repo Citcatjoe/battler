@@ -7,9 +7,10 @@ import { Switch } from './Switch'
  * Le son, en haut à droite de toutes les scènes : un seul bouton rond qui ouvre un petit panneau dessous, avec deux
  * interrupteurs indépendants, « Musique » et « Effets sonores » (couper les effets laisse la musique, et l'inverse).
  * Le glyphe n'est barré que si les deux sont coupés. Le panneau se ferme par le bouton, un clic ailleurs ou Échap.
+ * `initialOpen` : panneau ouvert d'emblée (page de développement, capture de référence).
  */
-export function SoundToggle() {
-  const [open, setOpen] = useState(false)
+export function SoundToggle({ initialOpen = false }: { initialOpen?: boolean }) {
+  const [open, setOpen] = useState(initialOpen)
   const [effectsMuted, setEffectsState] = useState(isMuted)
   const [musicMuted, setMusicState] = useState(isMusicMuted)
   const rootRef = useRef<HTMLDivElement>(null)

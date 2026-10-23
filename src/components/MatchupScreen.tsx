@@ -3,38 +3,68 @@ import { ARENAS, getArena, RANDOM_ARENA, resolveArena, type Arena, type ArenaCho
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { RELIC_KINDS, relicKind, type Relic } from '../game/relics'
+import { CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
+import { PortraitTile } from './Portrait'
 import { RelicSeal, RelicTooltip } from './RelicSeal'
 import { DieBuild } from './DieBuild'
 import { StatSheet } from './StatSheet'
-import { Button, type GlyphName } from './kit'
+import { Tabs } from './Tabs'
+import { BackLink, Button, SquareButton } from './kit'
 import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
 import { BetSummary, BettingDesk } from './Betting'
 import { VsSeal } from './VsSeal'
 
 /*
- * Écran d'affrontement à géométrie fixe (0.99.0, docs/ref/prompt-ecran-affrontement.md) : deux fiches de mêmes
- * dimensions, en miroir exact autour du sceau VS, dont aucune hauteur ne dépend du contenu (nom, dé, reliques). Les
- * cotes des références (1440 × 810) sont portées à la scène (1600 × 900) par 10/9 : une capture en 1440 × 810 retombe
- * sur les références.
+ * L'écran d'affrontement, unique (0.100.0, docs/ref/prompt-affrontement-et-tournoi.md) : le duel, le tournoi, la saison et
+ * la campagne y passent avant chaque combat. Deux fiches de même largeur, en miroir exact autour du sceau VS, dont
+ * aucune hauteur ne dépend du contenu (nom, dé, reliques) ; seul le contexte (`mode`) change leur hauteur et le bas de
+ * l'écran : en duel, fiches sans reliques et sélecteur de combattants dessous ; ailleurs, tête de série, forge, reliques.
+ * Les cotes des références (1440 × 810) sont portées à la scène (1600 × 900) par 10/9 : une capture en 1440 × 810
+ * retombe sur les références (affrontement-duel.png, affrontement-tournoi.png).
  */
+
+/** Contexte de l'affrontement, calculé par App.tsx (campagne, saison, arbre, sinon duel) */
+export type MatchupMode = 'duel' | 'tournament' | 'season' | 'campaign'
+
+/** Lien de retour, en haut à gauche : vers le contexte d'origine (l'arbre pour le tournoi, la carte pour la campagne) */
+const BACK_LABEL: Record<MatchupMode, string> = { duel: 'Menu', tournament: 'Tournoi', season: 'Saison', campaign: 'Carte' }
+
+/**
+ * Parier en duel : retiré (décision de l'utilisateur, 0.100.0) ; on parie là où une bourse de tournoi existe. Le code du
+ * guichet de duel reste (App.tsx garde la bourse de duel) : passer à `true` le rouvre.
+ */
+export const DUEL_BETTING = false
 
 /** Largeur d'une fiche, écart entre son bord intérieur et l'axe du sceau VS (px de scène) */
 const CARD_WIDTH = 378
 const CARD_GAP = 89
-/** Haut des fiches ; zone du nom (deux lignes, race · archétype) ; panneau (stats, dé, reliques) */
-const CARD_TOP = 159
-const NAME_ZONE = 124
-const PANEL_HEIGHT = 442
+/** Bord extérieur d'une fiche (côté écran), compté depuis le bord de l'écran (px de scène) */
+const CARD_OUTER = 800 - CARD_GAP - CARD_WIDTH
+
+/**
+ * Hauteurs d'une fiche selon le contexte (px de scène) : haut de la fiche, zone du nom (deux lignes, race · archétype),
+ * panneau (stats, dé, et reliques hors duel), centre du sceau VS. Le duel (96 px de nom, sans reliques) remonte et
+ * raccourcit ses fiches pour laisser la place au sélecteur de combattants.
+ */
+interface Layout {
+  cardTop: number
+  nameZone: number
+  panelHeight: number
+  vsCenter: number
+}
+const DUEL_LAYOUT: Layout = { cardTop: 131, nameZone: 107, panelHeight: 339, vsCenter: 408 }
+const RUN_LAYOUT: Layout = { cardTop: 159, nameZone: 124, panelHeight: 442, vsCenter: 497 }
+/** Centre des boutons carrés (Parier, Simuler) sous le centre du sceau VS */
+const ACTIONS_BELOW_VS = 102
 /** Places de la rangée de reliques, et côté d'une relique */
 const RELIC_SLOTS = 6
 const RELIC_SIZE = 49
 /** Rappel des paris au centre : masqué (le centre ne garde que le sceau VS), le compteur reste sur le bouton Parier */
 const SHOW_BET_SUMMARY = false
-/** Bord extérieur d'une fiche (côté écran), compté depuis le bord de l'écran ; haut de son panneau (px de scène) */
-const CARD_OUTER = 800 - CARD_GAP - CARD_WIDTH
-const PANEL_TOP = CARD_TOP + NAME_ZONE
+/** Sélecteur de combattants du duel : cadre (px de scène), au-dessus du bouton Combattre */
+const PICKER = { left: 368, top: 608, width: 864 }
 /**
  * Axe des illustrations : le milieu de l'espace entre le bord de l'écran et la fiche (px de scène). Le combattant y est
  * centré sur son corps (`anchor="body"`) : il ne recule plus hors de l'écran, et une toile large passe derrière le voile
@@ -51,26 +81,27 @@ const MASK_FADE = 16
  * zone du nom, l'écusson, race · archétype et ce qui est au-dessus. Miroir pour le camp droit. Générique : aucune toile
  * large (l'ogre) ne demande de réglage propre.
  */
-const FIGHTER_MASK: Record<Side, string> = {
-  0: `linear-gradient(to bottom, transparent ${PANEL_TOP}px, #000 ${PANEL_TOP + MASK_FADE}px), linear-gradient(to right, #000 ${CARD_OUTER - MASK_FADE}px, transparent ${CARD_OUTER}px)`,
-  1: `linear-gradient(to bottom, transparent ${PANEL_TOP}px, #000 ${PANEL_TOP + MASK_FADE}px), linear-gradient(to left, #000 ${CARD_OUTER - MASK_FADE}px, transparent ${CARD_OUTER}px)`,
-}
+const fighterMask = (side: Side, panelTop: number) =>
+  `linear-gradient(to bottom, transparent ${panelTop}px, #000 ${panelTop + MASK_FADE}px), linear-gradient(to ${side === 0 ? 'right' : 'left'}, #000 ${CARD_OUTER - MASK_FADE}px, transparent ${CARD_OUTER}px)`
 
 /** Rang d'un opposant à côté de son nom (lu dans le jeu, App.tsx, jamais recalculé ici) ; null : sans rang */
 type Rank = number | null
 
 interface Props {
+  /** Contexte : duel (sélecteur, kit de base), tournoi, saison ou campagne (progression) */
+  mode: MatchupMode
   fighters: Pair<Character>
   /** Lance le combat animé dans l'arène montrée en fond (celle tirée pour « au hasard ») */
   onPlay: (arena: Arena) => void
   onSimulate: () => void
+  /** Retour au contexte d'origine (lien en haut à gauche) */
   onBack: () => void
-  /** Bandeau au-dessus du duel, ex. « Quarts de finale · Match 2 » */
+  /** Duel : un portrait choisi dans le sélecteur, pour un camp */
+  onPick?: (side: Side, character: Character) => void
+  /** Intitulé au-dessus de l'arène, ex. « Quarts de finale · Match 2 » ; « Duel » par défaut en duel */
   title?: string
-  /** Rang de chaque opposant (classement de saison en cours, tête de série dans l'arbre) ; absent en duel libre */
+  /** Rang de chaque opposant (classement de saison en cours, tête de série dans l'arbre) ; jamais en duel */
   ranks?: Pair<Rank>
-  /** Bouton de retour (secondaire) : « Changer » en duel, « Arbre » en tournoi */
-  back?: { label: string; icon: GlyphName }
   /** Cadre du combat : une arène précise ou « au hasard » */
   arena: ArenaChoice
   onArenaChange: (arena: ArenaChoice) => void
@@ -87,20 +118,26 @@ interface Props {
   }
 }
 
-/** Écran d'affrontement : présente le duel et laisse choisir entre le jouer ou le simuler. */
+/** Écran d'affrontement : présente le combat et laisse choisir entre le jouer ou le simuler. */
 export function MatchupScreen({
+  mode,
   fighters,
   onPlay,
   onSimulate,
   onBack,
-  title = 'Affrontement',
-  back = { label: 'Changer', icon: 'changer' },
+  onPick,
+  title = mode === 'duel' ? 'Duel' : 'Affrontement',
   arena,
   onArenaChange,
   betting,
   ranks,
 }: Props) {
   const [desk, setDesk] = useState(false)
+  const duel = mode === 'duel'
+  const layout = duel ? DUEL_LAYOUT : RUN_LAYOUT
+  const panelTop = layout.cardTop + layout.nameZone
+  // Le guichet : seulement là où une bourse existe, jamais en duel (`DUEL_BETTING`)
+  const bets = betting && (!duel || DUEL_BETTING) ? betting : undefined
   // « Au hasard » : l'arène est tirée à l'ouverture de l'écran, montrée en fond, et c'est elle que le combat prend.
   // Décor seulement, aucune règle : le hasard de l'interface suffit (`resolveArena`).
   const [drawn] = useState(() => resolveArena(RANDOM_ARENA))
@@ -113,7 +150,7 @@ export function MatchupScreen({
   }, [])
 
   return (
-    <div className="relative h-full overflow-hidden bg-[radial-gradient(ellipse_at_50%_110%,#57534e_0%,#1c1917_45%,#0c0a09_80%)]">
+    <div className="relative h-full overflow-hidden bg-[radial-gradient(ellipse_at_50%_110%,#57534e_0%,#1c1917_45%,#0c0a09_80%)]" data-mode={mode}>
       {/* L'arène du combat en fond, en direct : son illustration à 45 % sous un voile sombre ; « Au hasard » montre celle
           qui a été tirée */}
       <img
@@ -132,15 +169,19 @@ export function MatchupScreen({
         <p className="text-sm font-bold uppercase leading-5 tracking-[0.5em] text-stone-500">{title}</p>
         <ArenaSlider value={arena} onChange={onArenaChange} />
       </header>
+      {/* Retour au contexte d'origine, en haut à gauche (le son est en haut à droite) */}
+      <BackLink onClick={onBack} className="absolute left-10 top-[36px] z-30">
+        {BACK_LABEL[mode]}
+      </BackLink>
 
       {/* Les illustrations, centrées sur leur corps dans l'espace entre le bord de l'écran et la fiche, chacune dans un
-          calque de toute la scène masqué au-dessus du panneau, au-delà du bord de la fiche (`FIGHTER_MASK`) : elles passent
+          calque de toute la scène masqué au-dessus du panneau, au-delà du bord de la fiche (`fighterMask`) : elles passent
           derrière le voile du panneau, jamais sous le nom */}
       {([0, 1] as Side[]).map((side) => (
         <div
           key={`fighter-${side}`}
           className="pointer-events-none absolute inset-0"
-          style={{ maskImage: FIGHTER_MASK[side], maskComposite: 'add', WebkitMaskImage: FIGHTER_MASK[side] }}
+          style={{ maskImage: fighterMask(side, panelTop), maskComposite: 'add', WebkitMaskImage: fighterMask(side, panelTop) }}
         >
           <div
             className={`absolute bottom-[117px] h-[667px] ${side === 0 ? 'slide-in-left' : 'slide-in-right'}`}
@@ -154,74 +195,138 @@ export function MatchupScreen({
       ))}
 
       {([0, 1] as Side[]).map((side) => (
-        <MatchupCard key={side} character={fighters[side]} side={side} rank={ranks?.[side] ?? null} />
+        <MatchupCard
+          key={side}
+          character={fighters[side]}
+          rival={fighters[side === 0 ? 1 : 0]}
+          side={side}
+          rank={duel ? null : (ranks?.[side] ?? null)}
+          layout={layout}
+          relics={!duel}
+        />
       ))}
 
       {/* Le centre : le sceau VS seul, sur l'axe. L'animation d'entrée est sur l'enveloppe : le sceau garde sa forme. */}
-      <div className="absolute left-1/2 top-[497px] -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: layout.vsCenter }}>
         <span className="vs-slam flex justify-center">
           {/* Le sceau des références (96 px en 1440 × 810), porté à la scène */}
           <span className="flex scale-[1.111]">
             <VsSeal />
           </span>
         </span>
-        {SHOW_BET_SUMMARY && betting && (
+        {SHOW_BET_SUMMARY && bets && (
           <div className="absolute left-1/2 top-full mt-6 -translate-x-1/2">
-            <BetSummary wallets={betting.wallets} odds={betting.odds} fighterNames={names} />
+            <BetSummary wallets={bets.wallets} odds={bets.odds} fighterNames={names} />
           </div>
         )}
       </div>
 
-      <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 items-center justify-center gap-6">
-        <Button variant="secondary" size="md" icon={back.icon} onClick={onBack} className="w-56">
-          {back.label}
-        </Button>
-        <Button variant="primary" size="xl" icon="combattre" onClick={() => onPlay(shown)} className="w-[352px]">
-          Jouer
-        </Button>
-        {betting && (
-          <Button
-            variant="secondary"
-            size="md"
+      {/* Actions secondaires sous le VS, en boutons carrés sans texte (infobulle) : Parier (avec ses mises), Simuler */}
+      <div
+        className="matchup-actions absolute left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-[17px]"
+        style={{ top: layout.vsCenter + ACTIONS_BELOW_VS }}
+      >
+        {bets && (
+          <SquareButton
             icon="parier"
+            label="Parier"
+            badge={`${bets.odds ? humansOf(bets.wallets).filter((b) => bets.wallets.bets[bets.odds!.key]?.[b]).length : 0}/${humansOf(bets.wallets).length}`}
             onClick={() => {
               sfx.click()
               setDesk(true)
             }}
-            title="Ouvre le guichet du match : chaque joueur peut parier avant le combat"
-            className="w-56"
-          >
-            Parier
-            {betting.odds &&
-              ` ${humansOf(betting.wallets).filter((b) => betting.wallets.bets[betting.odds!.key]?.[b]).length}/${humansOf(betting.wallets).length}`}
-          </Button>
+          />
         )}
-        <Button
-          variant="secondary"
-          size="md"
-          icon="simuler"
-          onClick={onSimulate}
-          title="Résout le combat instantanément, avec les mêmes règles, et affiche les scores"
-          className="w-56"
-        >
-          Simuler
+        <SquareButton icon="simuler" label="Simuler le combat" onClick={onSimulate} />
+      </div>
+
+      {duel && <FighterPicker fighters={fighters} onPick={onPick} />}
+
+      {/* Le combat : le bouton primaire, centré en bas, à la même place dans tous les contextes */}
+      <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 justify-center">
+        <Button variant="primary" size="xl" icon="combattre" onClick={() => onPlay(shown)} className="w-[398px]">
+          Combattre
         </Button>
       </div>
 
-      {betting && desk && (
+      {bets && desk && (
         <BettingDesk
-          wallets={betting.wallets}
-          odds={betting.odds}
+          wallets={bets.wallets}
+          odds={bets.odds}
           fighters={fighters}
-          onBet={betting.onBet}
-          onCancel={betting.onCancel}
-          onReset={betting.onReset}
+          onBet={bets.onBet}
+          onCancel={bets.onCancel}
+          onReset={bets.onReset}
           onClose={() => {
             sfx.click()
             setDesk(false)
           }}
         />
       )}
+    </div>
+  )
+}
+
+/** Onglets du sélecteur : le camp qui choisit, avec la pastille de sa couleur */
+const PICKER_TABS = [
+  { id: 'a', label: 'Gauche', lead: <span aria-hidden className="matchup-picker-dot" data-side="a" /> },
+  { id: 'b', label: 'Droite', lead: <span aria-hidden className="matchup-picker-dot" data-side="b" /> },
+] as const
+const SIDE_OF = { a: 0, b: 1 } as const
+
+/**
+ * Le sélecteur de combattants du duel, sous les fiches : onglets Gauche / Droite (le camp qui choisit), « Au hasard »
+ * pour ce camp, puis un portrait par personnage, sans nom (en infobulle). Choisir un portrait le donne au camp actif,
+ * puis la main passe en face. Le portrait choisi par un camp porte un cadre à sa couleur et un repère dans son coin ;
+ * les deux camps peuvent choisir le même. Au-delà de dix, la rangée défile à l'horizontale.
+ */
+function FighterPicker({ fighters, onPick }: { fighters: Pair<Character>; onPick?: (side: Side, character: Character) => void }) {
+  const [active, setActive] = useState<Side>(0)
+  const give = (side: Side, character: Character) => {
+    if (fighters[side].id === character.id) return false
+    sfx.click()
+    onPick?.(side, character)
+    return true
+  }
+  const pick = (character: Character) => {
+    if (give(active, character)) setActive(active === 0 ? 1 : 0)
+  }
+  const pickRandom = () => {
+    const others = CHARACTERS.filter((c) => c.id !== fighters[active].id)
+    give(active, others[Math.floor(Math.random() * others.length)])
+  }
+  return (
+    <div className="matchup-picker absolute z-20" style={PICKER}>
+      <div className="flex items-center justify-between">
+        <Tabs tabs={PICKER_TABS} value={active === 0 ? 'a' : 'b'} onChange={(id) => setActive(SIDE_OF[id])} className="matchup-picker-tabs" />
+        <Button variant="secondary" size="sm" icon="hasard" onClick={pickRandom} title={`Un combattant au hasard pour le camp ${active === 0 ? 'de gauche' : 'de droite'}`}>
+          Au hasard
+        </Button>
+      </div>
+      <ul className="matchup-picker-row" aria-label="Combattants">
+        {CHARACTERS.map((c) => {
+          const a = fighters[0].id === c.id
+          const b = fighters[1].id === c.id
+          return (
+            <li key={c.id} className="shrink-0">
+              <PortraitTile
+                character={c}
+                side={0}
+                state={a || b ? 'selected' : 'idle'}
+                selection={a ? 'a' : b ? 'b' : 'gold'}
+                data-both={(a && b) || undefined}
+                onClick={() => pick(c)}
+                title={c.name}
+                aria-label={`${c.name}${a ? ', à gauche' : ''}${b ? ', à droite' : ''}`}
+                className="matchup-picker-tile"
+              >
+                {a && <span aria-hidden className="matchup-picker-mark" data-side="a" />}
+                {b && <span aria-hidden className="matchup-picker-mark" data-side="b" />}
+              </PortraitTile>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -271,22 +376,37 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
 }
 
 /**
- * La fiche d'un combattant, à géométrie fixe : zone du nom (124 px, alignée en bas), panneau de 442 px (stats, dé de
- * douze emplacements, rangée de six reliques), chaque bloc à sa hauteur imposée. Les deux fiches ont le même cadre, en
- * miroir autour de l'axe ; seuls le nom et l'écusson passent du côté extérieur.
+ * La fiche d'un combattant, à géométrie fixe : zone du nom (alignée en bas), panneau (stats comparées à l'adversaire, dé
+ * de douze emplacements, et hors duel la rangée de six reliques), chaque bloc à sa hauteur imposée (`Layout`). Les deux
+ * fiches ont le même cadre, en miroir autour de l'axe ; seuls le nom et l'écusson passent du côté extérieur.
  */
-function MatchupCard({ character, side, rank }: { character: Character; side: Side; rank: Rank }) {
+function MatchupCard({
+  character,
+  rival,
+  side,
+  rank,
+  layout,
+  relics,
+}: {
+  character: Character
+  rival: Character
+  side: Side
+  rank: Rank
+  layout: Layout
+  /** Section Reliques (tournoi, saison, campagne) ; absente en duel, pas même « Aucune relique » */
+  relics: boolean
+}) {
   const style = SIDE_STYLE[side]
   const outer = side === 0 ? 'left' : 'right'
   return (
     <div
       className={`matchup-card absolute z-20 ${side === 0 ? 'slide-in-left' : 'slide-in-right'}`}
       data-side={side}
-      style={{ top: CARD_TOP, width: CARD_WIDTH, left: side === 0 ? 800 - CARD_GAP - CARD_WIDTH : 800 + CARD_GAP }}
+      style={{ top: layout.cardTop, width: CARD_WIDTH, left: side === 0 ? CARD_OUTER : 800 + CARD_GAP }}
     >
       {/* Le nom : deux lignes au plus, collé au panneau ; l'écusson au bord extérieur, sur sa ligne de base. Aucune
-          illustration ne passe dessous (`FIGHTER_MASK`) : il se lit sur le fond, sans voile */}
-      <div className={`relative flex items-end gap-[13px] pb-[12px] ${side === 1 ? 'flex-row-reverse text-right' : ''}`} style={{ height: NAME_ZONE }}>
+          illustration ne passe dessous (`fighterMask`) : il se lit sur le fond, sans voile */}
+      <div className={`relative flex items-end gap-[13px] pb-[12px] ${side === 1 ? 'flex-row-reverse text-right' : ''}`} style={{ height: layout.nameZone }}>
         {rank !== null && <RankBadge rank={rank} />}
         <div className="relative min-w-0 flex-1">
           <FighterName name={character.name} className={style.accent} align={outer} />
@@ -295,20 +415,30 @@ function MatchupCard({ character, side, rank }: { character: Character; side: Si
           </p>
         </div>
       </div>
-      <div className={`matchup-panel fighter-panel ${side === 1 ? 'side-b' : 'side-a'} flex flex-col px-[18px]`} style={{ height: PANEL_HEIGHT }}>
-        {/* Mêmes barres que sur l'écran de sélection, à la couleur du camp, lignes réparties sur une hauteur fixe */}
-        <StatSheet character={character} barClass={style.bar} trackClass={style.track} className="mt-[13px] h-[160px] shrink-0 justify-around" />
+      <div className={`matchup-panel fighter-panel ${side === 1 ? 'side-b' : 'side-a'} flex flex-col px-[18px]`} style={{ height: layout.panelHeight }}>
+        {/* Barres à la couleur du camp, lignes réparties sur une hauteur fixe ; le meilleur des deux surligné par ligne */}
+        <StatSheet
+          character={character}
+          barClass={style.bar}
+          trackClass={style.track}
+          compare={{ rival, side }}
+          className="mt-[13px] h-[160px] shrink-0 justify-around"
+        />
         <div className="matchup-rule mt-[12px]" />
         <div className="mt-[10px]">
           <DieBuild character={character} />
         </div>
-        <div className="matchup-rule mt-[16px]" />
-        {/* Reliques portées (tournoi, saison, campagne) : elles comptent dans les cotes, on les montre aux parieurs */}
-        <header className="matchup-section-head mt-[11px]">
-          <span>Reliques</span>
-          <span className="matchup-section-count">{character.relics.length}</span>
-        </header>
-        <RelicShelf relics={character.relics} />
+        {relics && (
+          <>
+            <div className="matchup-rule mt-[16px]" />
+            {/* Reliques portées : elles comptent dans les cotes, on les montre aux parieurs */}
+            <header className="matchup-section-head mt-[11px]">
+              <span>Reliques</span>
+              <span className="matchup-section-count">{character.relics.length}</span>
+            </header>
+            <RelicShelf relics={character.relics} />
+          </>
+        )}
       </div>
     </div>
   )

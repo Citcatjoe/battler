@@ -785,7 +785,7 @@ Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regar
 
 > **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1), le clair-obscur et le format paysage (section 5, « En bref »). Depuis la 0.63.0, tous les fonds sont en gouache : la sélection affiche `menu-duel.jpg` (même image que l'arche du duel), qui remplace le portail de l'ancien style (`menu-portal.jpg`, retiré). Le prompt du portail ci-dessous est de l'ancien style : on en garde les zones de l'écran, pas le rendu.
 
-L'écran de sélection (`StartScreen.tsx`) affiche un fond illustré, assombri en CSS (`brightness(0.6)`), avec un vignettage et un dégradé en bas. Ses contraintes diffèrent de celles d'une arène :
+L'écran de sélection (`StartScreen.tsx`, retiré en 0.100.0 ; ce fond reste celui de l'accueil) affichait un fond illustré, assombri en CSS (`brightness(0.6)`), avec un vignettage et un dégradé en bas. Ses contraintes diffèrent de celles d'une arène :
 
 | Zone de l'écran | Ce qu'il y a dessus | Ce que le fond doit offrir |
 | --- | --- | --- |
@@ -877,7 +877,7 @@ Au repos, l'arche est assombrie en CSS (`brightness(0.62)`, désaturée) ; au su
 
 ### Fond de l'écran de tournoi
 
-L'onglet « Tournoi » de `StartScreen.tsx` a son propre fond, `menu-tournament.jpg` : l'entrée monumentale de l'arène vue **de l'extérieur**. C'est le pendant du portail vu de l'intérieur, pour qu'on sente qu'on change d'écran. Aucun personnage n'y figure : le fond suffit, et l'écran n'a pas à être refait quand on ajoute un personnage.
+La présentation du tournoi (`TournamentIntroScreen.tsx`) a son propre fond, `menu-tournament.jpg` : l'entrée monumentale de l'arène vue **de l'extérieur**. C'est le pendant du portail vu de l'intérieur, pour qu'on sente qu'on change d'écran. Aucun personnage n'y figure : le fond suffit, et l'écran n'a pas à être refait quand on ajoute un personnage.
 
 | Zone de l'écran | Ce qu'il y a dessus | Ce que le fond doit offrir |
 | --- | --- | --- |

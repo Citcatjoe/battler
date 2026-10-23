@@ -4,6 +4,8 @@ import { sfx } from '../game/sound'
 export interface TabDef<T extends string> {
   id: T
   label: string
+  /** Repère avant le libellé (ex. la pastille de couleur d'un camp) */
+  lead?: ReactNode
   /** Compteur à droite du libellé (ex. « 12 combats »), en `.bt-count` */
   hint?: ReactNode
 }
@@ -37,6 +39,7 @@ export function Tabs<T extends string>({
             onChange(t.id)
           }}
         >
+          {t.lead}
           {t.label}
           {t.hint !== undefined && <span className="bt-count">{t.hint}</span>}
         </button>

@@ -48,7 +48,7 @@ interface Props {
 /**
  * Les compétences d'un personnage en trois dés (faces 1, 2 et 3) : au survol d'un dé, une
  * infobulle donne la compétence qu'il déclenche (version allégée de la carte du compendium, au
- * style de l'infobulle de la zone d'état). Sur l'écran de sélection et en tête du combat.
+ * style de l'infobulle de la zone d'état). En tête du combat et sur les fiches qui montrent un dé.
  */
 export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form, pulse, dim = false }: Props) {
   const forms = character.forms

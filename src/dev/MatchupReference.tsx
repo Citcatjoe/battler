@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ARENAS, RANDOM_ARENA, type ArenaChoice } from '../game/arenas'
 import { createWallets, priceMatch } from '../game/betting'
 import type { Character } from '../game/character'
@@ -6,15 +6,17 @@ import type { Pair } from '../game/combat'
 import { offerTargets, withForgeStep, type ForgeStep } from '../game/forge'
 import { RELICS } from '../game/relics'
 import { createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
-import { MatchupScreen } from '../components/MatchupScreen'
+import { MatchupScreen, type MatchupMode } from '../components/MatchupScreen'
 import { SoundToggle } from '../components/SoundToggle'
 import { Stage } from '../components/Stage'
 
 /*
  * Page de développement (`?matchup=<cas>` sur le serveur de dev) : l'écran d'affrontement avec des fiches factices,
  * construites par les vraies fonctions du jeu (personnage, forge du dé, reliques), pour comparer ses captures en
- * 1440 × 810 aux références (docs/ref/affrontement-reel.png, affrontement-limite.png). Cas : `reel`, `limite`,
- * `reel-inverse`, `limite-inverse`, `druide` (druide contre un d16 forgé et doré), `barde` (barde contre un dé doré).
+ * 1440 × 810 aux références (docs/ref/affrontement-*.png). Cas des références de l'écran unique (0.100.0) : `duel`
+ * (sélecteur au camp gauche), `duel-droit` (au camp droit), `tournoi` (tête de série, forge, reliques, Parier),
+ * `saison-son` (saison, panneau du son ouvert). Cas de la géométrie fixe (0.99.0) : `reel`, `limite`, `reel-inverse`,
+ * `limite-inverse`, `druide` (druide contre un d16 forgé et doré), `barde` (barde contre un dé doré).
  */
 
 /** Une opération de forge voulue ; la compétence d'une gravure est la première du roster qui convient. */
@@ -59,14 +61,21 @@ const gorak = createCharacter('gorak')
 const ervald = createCharacter('ervald')
 
 interface Case {
+  mode: MatchupMode
   fighters: Pair<Character>
   ranks?: Pair<number | null>
   arena: ArenaChoice
-  title: string
+  /** Intitulé ; absent : celui du contexte (« Duel ») */
+  title?: string
+  /** Duel : le camp qui choisit dans le sélecteur */
+  pickerSide?: 'gauche' | 'droite'
+  /** Panneau du son ouvert */
+  soundOpen?: boolean
 }
 
 function buildCases(): Record<string, Case> {
   const real: Case = {
+    mode: 'tournament',
     fighters: [
       forged(gorak, [{ op: 'engrave', face: 5 }, { op: 'sharpen', face: 3 }]).withRelics(relics(3)),
       forged(ervald, [{ op: 'enlarge' }, { op: 'trim' }, { op: 'engrave', face: 9 }])
@@ -78,6 +87,7 @@ function buildCases(): Record<string, Case> {
     title: 'Huitièmes de finale · Match 1',
   }
   const limit: Case = {
+    mode: 'tournament',
     fighters: [
       forged(gorak, [{ op: 'trim' }, { op: 'trim' }, { op: 'trim' }, { op: 'trim' }, { op: 'trim' }]),
       forged(ervald, [
@@ -98,7 +108,12 @@ function buildCases(): Record<string, Case> {
   const cases: Record<string, Case> = {
     reel: real,
     limite: limit,
+    duel: { mode: 'duel', fighters: [gorak, ervald], arena: ARENAS[2].id },
+    'duel-droit': { mode: 'duel', fighters: [gorak, ervald], arena: ARENAS[2].id, pickerSide: 'droite' },
+    tournoi: real,
+    'saison-son': { ...real, mode: 'season', title: 'Saison · Journée 1 · Match 4', soundOpen: true },
     druide: {
+      mode: 'season',
       fighters: [
         forged(createCharacter('thaldrin'), [{ op: 'gild', face: 5 }]).withRelics(relics(2, 4)),
         forged(createCharacter('morgrut'), [{ op: 'enlarge' }, { op: 'engrave', face: 6 }, { op: 'gild', face: 4 }, { op: 'engrave', face: 15 }]).withRelics(
@@ -109,13 +124,14 @@ function buildCases(): Record<string, Case> {
       title: 'Saison · Journée 2 · Match 3',
     },
     barde: {
+      mode: 'tournament',
       fighters: [
         forged(createCharacter('fanchon'), [{ op: 'enlarge' }, { op: 'engrave', face: 6 }, { op: 'gild', face: 6 }, { op: 'gild', face: 2 }]).withRelics(relics(1, 7)),
         forged(gorak, [{ op: 'gild', face: 4 }, { op: 'gild', face: 8 }, { op: 'engrave', face: 7 }]).withRelics(relics(7)),
       ],
       ranks: [null, 3],
       arena: ARENAS[5].id,
-      title: 'Duel',
+      title: 'Huitièmes de finale · Match 3',
     },
   }
   // Les deux mêmes fiches, camps inversés
@@ -128,24 +144,33 @@ export function MatchupReference() {
   const asked = new URLSearchParams(location.search).get('matchup') || 'reel'
   const [cases] = useState(buildCases)
   const shown = cases[asked] ?? cases.reel
+  const [fighters, setFighters] = useState(shown.fighters)
   const [arena, setArena] = useState<ArenaChoice>(shown.arena)
   const [odds] = useState(() => priceMatch(shown.fighters, 'dev', 40))
   const [wallets] = useState(createWallets)
+  // Duel au camp droit : l'onglet « Droite » du sélecteur, choisi comme le ferait le joueur
+  useEffect(() => {
+    if (shown.pickerSide !== 'droite') return
+    const tab = [...document.querySelectorAll<HTMLButtonElement>('.matchup-picker [role="tab"]')].find((t) => t.textContent === 'Droite')
+    tab?.click()
+  }, [shown.pickerSide])
   const noop = () => {}
   return (
     <Stage>
-      <SoundToggle />
+      <SoundToggle initialOpen={shown.soundOpen} />
       <MatchupScreen
-        fighters={shown.fighters}
+        mode={shown.mode}
+        fighters={fighters}
         ranks={shown.ranks}
         title={shown.title}
-        back={{ label: 'Arbre', icon: 'retour' }}
         arena={arena}
         onArenaChange={setArena}
         onPlay={noop}
         onSimulate={noop}
         onBack={noop}
-        betting={{ wallets, odds, onBet: () => null, onCancel: noop }}
+        onPick={(side, character) => setFighters((f) => (side === 0 ? [character, f[1]] : [f[0], character]))}
+        // Pas de paris en saison (la règle) : pas de bourse
+        betting={shown.mode === 'season' ? undefined : { wallets, odds, onBet: () => null, onCancel: noop }}
       />
     </Stage>
   )
