@@ -10,10 +10,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, NORMAL_TARGETS, opponentOf, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { simulateCombat } from '../src/game/combat'
+import { buildLinks } from '../src/game/hooks'
 import { pick, seededRng } from '../src/game/rng'
-import { CHARACTER_IDS, createCharacter } from '../src/game/roster'
+import { CHARACTER_IDS, createCharacter, repertoireOf } from '../src/game/roster'
 import pkg from '../package.json' with { type: 'json' }
 
 const RUNS = Number(process.env.CAMPAIGN_RUNS ?? 12)
@@ -64,6 +65,20 @@ it('mesure de la campagne (pilote automatique)', () => {
       `| ${createCharacter(id).name} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
   }
+  // Les builds d'un acte complet (cinq récompenses), tirés comme le champion de référence : sans combat, ils ne
+  // mesurent que l'offre. Diversité (compétences gravées distinctes) et cohérence (paires de briques qui se nourrissent)
+  const builds = CHARACTER_IDS.map((id) => {
+    const all = Array.from({ length: 10 }, (_, s) => referenceChampions(id, ACT_FIGHTS, hashSeed(`builds:${id}:${s}`))).flat()
+    const engraved = all.map((c) => c.forge.flatMap((f) => (f.op === 'engrave' ? [f.skill.id] : [])))
+    const own = new Set(repertoireOf(id).map((e) => e.id))
+    const flat = engraved.flat()
+    const links = all.map(buildLinks)
+    const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length
+    return {
+      line: `| ${createCharacter(id).name} | ${all.length} | ${mean(engraved.map((e) => e.length)).toFixed(2).replace('.', ',')} | ${flat.length ? pct(flat.filter((s) => own.has(s)).length / flat.length) : '—'} | ${new Set(flat).size} | ${mean(links.map((l) => l.linked)).toFixed(2).replace('.', ',')} | ${pct(mean(links.map((l) => l.linked / Math.max(1, l.pairs))))} |`,
+      linked: mean(links.map((l) => l.linked)),
+    }
+  })
   const expected = NORMAL_TARGETS.reduce((p, t) => p * t, 1)
   const out = [
     `# Campagne · règles ${pkg.version} · ${RUNS} parties par champion, pilote automatique`,
@@ -86,6 +101,14 @@ it('mesure de la campagne (pilote automatique)', () => {
         `| ${i + 1} | ${i} | ${n.fights} | ${pct(n.built / n.fights)} | ${pct(n.naked / n.fights)} | ${Math.round(((n.built - n.naked) / n.fights) * 100)} points | ${perFighter(n.turns, n.fights)} | ${perFighter(n.nakedTurns, n.fights)} |`,
     ),
     `| Boss | ${ACT_FIGHTS} | ${boss.fights} | | | | ${perFighter(boss.turns, boss.fights)} | |`,
+    '',
+    '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
+    '',
+    `Cinq récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
+    '',
+    '| Champion | Builds | Gravures par build | Du répertoire | Compétences gravées distinctes | Paires liées par build | Part des paires liées |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+    ...builds.map((b) => b.line),
   ].join('\n')
   console.log(out)
   mkdirSync('logs/campaign', { recursive: true })

@@ -1,6 +1,6 @@
 import type { CharacterDef } from './character'
 import { doubleFace, doubleTrigger, faceTrigger, rollFace, type CharacterEvent, type Effect } from './events'
-import { pick, shuffle, type Rng } from './rng'
+import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
 
 /*
@@ -270,11 +270,25 @@ function offerValid(base: ForgeBase, state: ForgeState, op: ForgeOpKind, pool: r
   return targetsIn(base, state, op).length > 0
 }
 
-/** L'offre d'une forge : `FORGE_OFFER_SIZE` opérations jouables, différentes, tirées au hasard. */
-export function drawForgeOffer(base: ForgeBase, steps: readonly ForgeStep[], rng: Rng, pool: readonly CharacterEvent[]): ForgeOffer[] {
+/**
+ * L'offre d'une forge : `FORGE_OFFER_SIZE` opérations jouables, différentes, tirées au hasard.
+ * `focus` (offre orientée, règles v2, docs/PROGRESSION.md § 13.2) : Graver est toujours proposée quand elle le peut, et
+ * sa compétence se tire au poids que `focus` lui donne (l'écho avec le build) au lieu de parts égales.
+ */
+export function drawForgeOffer(
+  base: ForgeBase,
+  steps: readonly ForgeStep[],
+  rng: Rng,
+  pool: readonly CharacterEvent[],
+  focus?: (skill: CharacterEvent) => number,
+): ForgeOffer[] {
   const state = forgeState(base, steps)
   const kinds = shuffle(rng, Object.keys(FORGE_OPS) as ForgeOpKind[]).filter((op) => offerValid(base, state, op, pool))
-  return kinds.slice(0, FORGE_OFFER_SIZE).map((op) => (op === 'engrave' ? { op, skill: pick(rng, engravable(base, state, pool)) } : { op }))
+  const chosen = focus ? [...kinds.filter((op) => op === 'engrave'), ...kinds.filter((op) => op !== 'engrave')] : kinds
+  const skills = engravable(base, state, pool)
+  return chosen
+    .slice(0, FORGE_OFFER_SIZE)
+    .map((op) => (op === 'engrave' ? { op, skill: focus ? pickWeighted(rng, skills, focus) : pick(rng, skills) } : { op }))
 }
 
 /** L'opération d'une offre sur une face (ignorée sans face). */

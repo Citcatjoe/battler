@@ -125,6 +125,8 @@ const gorak: CharacterDef = {
     strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : son 1 frappe et fait saigner'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
+  // Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : le Sang (Épines acérées, Vol de vie), la Furie (Œil de faucon, Aura de précision)
+  repertoire: ['thorns', 'life-steal', 'hawk-eye', 'precision-aura'],
   events: [
     {
       // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Le 1 frappe pour
@@ -185,6 +187,8 @@ const elaria: CharacterDef = {
     strengths: ['Meilleure esquive (26 %)', 'Critiques dévastateurs (×2,4)', 'Un jet raté prépare un critique'],
     weaknesses: ['PV modestes (50)', 'Petit dé (d8)', "Peine face aux boucliers et à l'intimidation"],
   },
+  // Répertoire : la Chasse (Furie des vents, Pourfendre), la Fuite (Coup de chance, Riposte)
+  repertoire: ['wind-fury', 'cleave', 'lucky-strike', 'riposte'],
   events: [
     {
       id: 'hawk-eye',
@@ -243,6 +247,8 @@ const brokk: CharacterDef = {
     strengths: ['Gros dé (d10)', 'Peau de pierre cumulable', 'Critiques lourds (×2,5)'],
     weaknesses: ['Critiques peu fréquents (10 %)', 'Esquive faible', 'Lent à prendre l’avantage'],
   },
+  // Répertoire : le Rempart (Aura d'immunité, Rétribution), les Représailles (Riposte, Pourfendre)
+  repertoire: ['immunity-aura', 'retribution', 'riposte', 'cleave'],
   events: [
     {
       id: 'stoneskin',
@@ -297,6 +303,8 @@ const ervald: CharacterDef = {
     strengths: ['Empoisonne sur un jet raté', 'Gros dé (d10)', 'Critiques fréquents (16 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
+  // Répertoire : le Poison (Aura de décoction, Feux follets), le Drain (Pourfendre, Peur)
+  repertoire: ['decoction-aura', 'firefly', 'cleave', 'fear'],
   events: [
     {
       id: 'grave-breath',
@@ -356,6 +364,8 @@ const ysolde: CharacterDef = {
     strengths: ['Compétences sur 3 jets sur 7', 'Peur : l’adversaire perd son tour', 'Se soigne chaque tour (sainteté)'],
     weaknesses: ['Petit dé (d7)', 'Peu de dégâts par coup', 'Esquive faible'],
   },
+  // Répertoire : la Lumière (Aura d'immunité, Rétribution), le Contrôle (Peau de pierre, Vol de vie)
+  repertoire: ['immunity-aura', 'retribution', 'stoneskin', 'life-steal'],
   events: [
     {
       id: 'fear',
@@ -419,6 +429,8 @@ const naraxes: CharacterDef = {
     strengths: ['Bonne esquive (20 %)', 'Pile ou face : 10 dégâts aussitôt', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
+  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée), le Poison (Souffle de la tombe, Aura glaciale)
+  repertoire: ['hawk-eye', 'evasion', 'grave-breath', 'frost-aura'],
   events: [
     {
       id: 'lucky-strike',
@@ -479,6 +491,8 @@ const aldric: CharacterDef = {
     strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Immunité aux malus et +1 d’armure (aura)'],
     weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure sans son aura'],
   },
+  // Répertoire : la Lumière (Purification, Vol de vie), l'Ombre du serment brisé (Peur, Souffle de la tombe)
+  repertoire: ['purification', 'life-steal', 'fear', 'grave-breath'],
   events: [
     {
       id: 'retribution',
@@ -553,6 +567,8 @@ const morgrut: CharacterDef = {
     strengths: ['Énorme dé (d14)', 'Beaucoup de PV', 'Coups dévastateurs'],
     weaknesses: ['Aucune compétence', 'Sur 1, 2 ou 3, il attend sans frapper', "Ni esquive ni critique"],
   },
+  // Répertoire : la Colère (Aura de puissance, Pourfendre), la Masse (Peau de pierre, Aura d'intimidation)
+  repertoire: ['power-aura', 'cleave', 'stoneskin', 'intimidation-aura'],
   events: [waitOn('naturalOne', 1), waitOn('naturalTwo', 2), waitOn('naturalThree', 3)],
 }
 
@@ -606,6 +622,8 @@ const thaldrin: CharacterDef = {
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme ne lance que des sorts, l'ours ne fait que frapper.
   // Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe, le relais des formes et ses deux auras.
+  // Répertoire : l'Orage et le Feu en dégâts qui durent (Souffle de la tombe, Aura de décoction), la Bête (Aura de puissance, Épines acérées)
+  repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns'],
   events: [
     {
       id: 'thunderbolt',
@@ -657,6 +675,8 @@ const fanchon: CharacterDef = {
     strengths: ['Deux coups par tour', 'Aura dès son entrée en scène', 'Crescendo (12) et Soliste (15)'],
     weaknesses: ['Petit dé (d5)', 'Un double sur cinq seulement', 'Peu de PV (46)'],
   },
+  // Répertoire, sur ses doubles : la Fortune (Coup de chance, Pile ou face), le Chant (Esquive améliorée, Aura de précision)
+  repertoire: ['lucky-strike', 'coin-flip', 'evasion', 'precision-aura'],
   events: [
     {
       id: 'overture',
@@ -723,6 +743,11 @@ export const CHARACTER_IDS: readonly string[] = CHARACTERS.map((c) => c.id)
  */
 export const ENGRAVABLE_SKILLS: readonly CharacterEvent[] = ROSTER.flatMap((c) => c.events.filter(isEngravable))
 
+/** Le répertoire d'un personnage (règles v2, phase 2) : les compétences gravables qu'il peut apprendre, dans l'ordre de sa fiche. */
+export function repertoireOf(id: string): CharacterEvent[] {
+  const ids = ROSTER.find((d) => d.id === id)?.repertoire ?? []
+  return ids.map((skill) => ENGRAVABLE_SKILLS.find((e) => e.id === skill)!)
+}
 
 export function createCharacter(id: string): Character {
   const character = CHARACTERS.find((c) => c.id === id)
@@ -809,6 +834,10 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
           problems.push(`${at} ${e.id} : ${f.status} dure autant de tours que de charges, sans durée en plus`)
       }
     }
+    // Répertoire (règles v2) : des compétences gravables d'autres personnages (de tout le roster), sans doublon
+    const others = ENGRAVABLE_SKILLS.filter((e) => !d.events.some((own) => own.id === e.id)).map((e) => e.id)
+    for (const id of d.repertoire ?? []) if (!others.includes(id)) problems.push(`${at} répertoire : ${id} n'est pas une compétence gravable d'un autre personnage`)
+    if (new Set(d.repertoire).size !== (d.repertoire ?? []).length) problems.push(`${at} répertoire : doublon`)
   }
   return problems
 }

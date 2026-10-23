@@ -111,6 +111,11 @@ export interface CharacterDef {
   lore: CharacterLore
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
+  /**
+   * Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : les compétences gravables d'autres personnages qu'il peut
+   * apprendre par la forge, en campagne ; deux fils de synergie, écrits pour lui. Sans effet sur le combat.
+   */
+  repertoire?: readonly string[]
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
   /**

@@ -6,8 +6,9 @@ import { cueOf } from './cues'
 import { describeEffect, describeEvent, describeSkill, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
-import { chance, rollDie, seededRng, shuffle } from './rng'
-import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
+import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER, validateRoster } from './roster'
+import { offerTargets } from './forge'
 import { computeStats } from './stats'
 import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
 import { Character, figureHeight } from './character'
@@ -18,6 +19,7 @@ import {
   ACT_LENGTH,
   BOSS,
   campaignCharacter,
+  drawReward,
   championOf,
   heritableGains,
   isBossNode,
@@ -218,6 +220,14 @@ describe('rng', () => {
     expect(Array.from({ length: 100 }, () => chance(rng, 0)).some(Boolean)).toBe(false)
     expect(Array.from({ length: 100 }, () => chance(rng, 1)).every(Boolean)).toBe(true)
     expect(shuffle(rng, [1, 2, 3, 4]).sort()).toEqual([1, 2, 3, 4])
+  })
+  it('pickWeighted tire au poids : jamais un poids nul, trois fois plus souvent un poids triple', () => {
+    const rng = seededRng(3)
+    const draws = Array.from({ length: 4000 }, () => pickWeighted(rng, ['a', 'b', 'c'], (x) => ({ a: 1, b: 3, c: 0 })[x]!))
+    const n = (x: string) => draws.filter((d) => d === x).length
+    expect(n('c')).toBe(0)
+    expect(n('b') / n('a')).toBeGreaterThan(2.6)
+    expect(n('b') / n('a')).toBeLessThan(3.4)
   })
 })
 
@@ -811,6 +821,45 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   it('le boss est un personnage valide, à son dé forgé', () => {
     expect(validateRoster([BOSS])).toEqual([])
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 11: 2, 12: 2 })
+  })
+
+  it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire', () => {
+    for (const id of CHARACTER_IDS) {
+      const own = repertoireOf(id).map((e) => e.id)
+      const def = createCharacter(id).definition
+      for (let k = 0; k < 20; k++) {
+        const reward = drawReward({ championId: id, forge: [], relics: [] }, 'forge', seededRng(k))
+        if (reward.kind !== 'forge') throw new Error('forge attendue')
+        const engrave = reward.offer.find((o) => o.op === 'engrave')
+        const room = offerTargets(def, [], { op: 'engrave', skill: repertoireOf(id)[0] }).length > 0
+        expect(!!engrave, `${id} graine ${k}`).toBe(room)
+        if (engrave?.op === 'engrave') expect(own).toContain(engrave.skill.id)
+      }
+    }
+  })
+
+  it('offre orientée : le répertoire épuisé, Graver puise dans tout le roster', () => {
+    const forge = repertoireOf('gorak').map((skill, i) => ({ op: 'engrave' as const, face: 4 + i, skill }))
+    for (let k = 0; k < 20; k++) {
+      const reward = drawReward({ championId: 'gorak', forge, relics: [] }, 'forge', seededRng(k))
+      const engrave = reward.kind === 'forge' ? reward.offer.find((o) => o.op === 'engrave') : undefined
+      if (engrave?.op !== 'engrave') throw new Error('Graver attendue : Gorak a encore des faces libres')
+      expect(forge.map((f) => f.skill.id)).not.toContain(engrave.skill.id)
+      expect(createCharacter('gorak').events.map((e) => e.id)).not.toContain(engrave.skill.id)
+    }
+  })
+
+  it('offre orientée : la première relique se tire à l’écho du build (le Dé creux appelle la Conque des vents)', () => {
+    let first = 0
+    let others = 0
+    for (let k = 0; k < 400; k++) {
+      const reward = drawReward({ championId: 'gorak', forge: [], relics: ['hollow-die'] }, 'relic', seededRng(k))
+      if (reward.kind !== 'relic') throw new Error('relique attendue')
+      if (reward.offer[0] === 'wind-conch') first++
+      if (reward.offer.slice(1).includes('wind-conch')) others++
+    }
+    // Libre, la Conque tomberait deux fois plus souvent dans les deux autres cartes qu'en première : orientée, l'inverse
+    expect(first).toBeGreaterThan(others)
   })
 
   it('un acte : une récompense par combat normal gagné, dans l’ordre de REWARDS, le boss au dernier nœud, sa défaite gagne la partie', () => {

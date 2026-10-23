@@ -2,9 +2,10 @@ import { hashSeed } from './analysis'
 import { Character, type CharacterDef } from './character'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
+import { buildHooks, echoOf, eventHooks, relicHooks } from './hooks'
 import { autoPick, drawOffer, FORGE_RELIC_IDS, getRelic } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
-import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, ROSTER } from './roster'
+import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER } from './roster'
 
 /*
  * Campagne (0.88.0, prototype de docs/CAMPAGNE.md ; acte resserré en 0.89.0) : un champion tiré parmi trois mène un
@@ -190,16 +191,36 @@ export function referenceChampions(championId: string, node: number, seed: numbe
     let forge: ForgeStep[] = []
     const relics: string[] = []
     for (const kind of REWARDS.slice(0, node)) {
-      if (kind === 'forge') {
-        const step = autoForge(def, forge, drawForgeOffer(def, forge, rng, ENGRAVABLE_SKILLS), rng)
-        if (step) forge = withForgeStep(def, forge, step)
-      } else {
-        const relic = autoPick(drawOffer(relics, rng, FORGE_RELIC_IDS), rng)
-        if (relic) relics.push(relic)
-      }
+      const reward = drawReward({ championId, forge, relics }, kind, rng)
+      if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
+      if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
     }
     return championOf({ championId, forge, relics })
   })
+}
+
+/** Poids d'une brique dans l'offre orientée : 1, plus `ECHO_WEIGHT` par accroche qui la relie au build (docs/PROGRESSION.md § 13.2). */
+export const ECHO_WEIGHT = 2
+
+/**
+ * La récompense d'un nœud, la même pour le joueur et le champion de référence (règles v2, phase 2, offre orientée) :
+ * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire** du champion (`repertoireOf` ; tout
+ *   le roster gravable une fois son répertoire épuisé), au poids de son écho avec le build ;
+ * - relique : la première carte au poids de son écho, les deux autres libres.
+ * Le choix par défaut reste au hasard dans l'offre.
+ */
+export function drawReward(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>, kind: RewardKind, rng: Rng): PendingReward {
+  const build = buildHooks(championOf(run))
+  if (kind === 'relic') {
+    const offer = drawOffer(run.relics, rng, FORGE_RELIC_IDS, (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
+    const choice = autoPick(offer, rng)
+    return { kind: 'relic', offer, ...(choice && { choice }) }
+  }
+  const def = createCharacter(run.championId).definition
+  const left = repertoireOf(run.championId).filter((s) => !run.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id))
+  const offer = drawForgeOffer(def, run.forge, rng, left.length ? left : ENGRAVABLE_SKILLS, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build))
+  const choice = autoForge(def, run.forge, offer, rng)
+  return { kind: 'forge', offer, ...(choice && { choice }) }
 }
 
 /** Part de victoires de chacun des `champions` contre `opponent`, `fights` combats chacun, côtés alternés. */
@@ -294,15 +315,7 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   const wins = run.wins + 1
   if (encounter.boss) return { ...next, wins, outcome: 'won' }
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
-  if (REWARDS[wins - 1] === 'relic') {
-    const offer = drawOffer(run.relics, rng, FORGE_RELIC_IDS)
-    const choice = autoPick(offer, rng)
-    return { ...next, wins, reward: { kind: 'relic', offer, ...(choice && { choice }) } }
-  }
-  const def = createCharacter(run.championId).definition
-  const offer = drawForgeOffer(def, run.forge, rng, ENGRAVABLE_SKILLS)
-  const choice = autoForge(def, run.forge, offer, rng)
-  return { ...next, wins, reward: { kind: 'forge', offer, ...(choice && { choice }) } }
+  return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng) }
 }
 
 /** Le choix du champion pour la récompense en attente, comme un gain (rien si l'offre était vide). */

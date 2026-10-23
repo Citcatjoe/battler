@@ -1,6 +1,6 @@
 import type { CharacterStats } from './character'
 import { describeCondition, rollFace, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
-import { pick, shuffle, type Rng } from './rng'
+import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { STATUSES, type StatusId } from './statuses'
 
@@ -423,12 +423,16 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
 /** Nombre de reliques proposées après une victoire. */
 export const OFFER_SIZE = 3
 
-/** L'offre d'une victoire : `OFFER_SIZE` reliques tirées parmi celles que le vainqueur n'a pas encore. */
-export function drawOffer(held: readonly string[], rng: Rng, pool: readonly string[] = RELIC_IDS): string[] {
-  return shuffle(
-    rng,
-    pool.filter((id) => !held.includes(id)),
-  ).slice(0, OFFER_SIZE)
+/**
+ * L'offre d'une victoire : `OFFER_SIZE` reliques tirées parmi celles que le vainqueur n'a pas encore.
+ * `focus` (offre orientée, règles v2, docs/PROGRESSION.md § 13.2) : la première se tire au poids que `focus` lui donne
+ * (l'écho avec le build), les autres restent libres, à parts égales.
+ */
+export function drawOffer(held: readonly string[], rng: Rng, pool: readonly string[] = RELIC_IDS, focus?: (id: string) => number): string[] {
+  const open = pool.filter((id) => !held.includes(id))
+  if (!focus || open.length === 0) return shuffle(rng, open).slice(0, OFFER_SIZE)
+  const echo = pickWeighted(rng, open, focus)
+  return [echo, ...shuffle(rng, open.filter((id) => id !== echo)).slice(0, OFFER_SIZE - 1)]
 }
 
 /**

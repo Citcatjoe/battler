@@ -191,7 +191,7 @@ Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (d�
 
 - [x] **0. Mesure** (0.101.0) : `npm run synergy` (log-cote), la durée dans `npm run campaign` et `npm run season`, « le build se voit-il ? » ; état de référence dans PROGRESSION.md § 3.1. Aucun combat changé.
 - [x] **1. Étiquettes** (0.102.0) : accroches de chaque brique (produit, consomme, gêne : `hooks.ts`), type DP, DM ou DT et source de chaque dégât (`damage.ts`), relevé du kit ouvert. Empreinte identique. Résultats dans PROGRESSION.md § 3.2 : les accroches prévoient la mesure, et il manque des consommateurs.
-- [ ] **2. Essai des répertoires** sur les dés actuels, avec les compétences existantes, et offre orientée (carte garantie, écho, libre), en campagne. Puis l'utilisateur joue.
+- [ ] **2. Essai des répertoires** (livré en 0.103.0, **à jouer par l'utilisateur**) : répertoire de quatre compétences existantes par personnage, Graver toujours proposée avec une compétence du répertoire, première relique à l'écho du build, en campagne. Mesure dans PROGRESSION.md § 7.4 : gravures 0,36 → 0,65 par acte, cohérence 0,86 → 1,08 paire liée (les compétences existantes produisent sans que rien ne les consomme).
 - [ ] **3. Dé en liste de faces**, à résultats identiques (RESOLUTION.md d'abord). Empreinte et audit identiques.
 - [ ] **4. Essai du d6** au laboratoire : Gorak, Ysolde, Aldric, Morgrut, depuis les dés de référence (PROGRESSION.md § 6.7) ; valeur imprimée de Pourfendre.
 - [ ] **5. Conversion et forge d6** : les dix personnages (Fanchon et le druide compris), Copier une face, Refondre, quatre faces de compétence au plus ; retrait d'Agrandir, de Retailler et du Contrepoids (remplaçant au tournoi). `npm run balance`, empreinte mise à jour volontairement.

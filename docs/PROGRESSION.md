@@ -111,11 +111,11 @@ Mesure jetable (script supprimé depuis ; P8 propose d'en faire un outil) : les 
 **Lecture** :
 - **Une seule vraie synergie** : Dé creux + Conque des vents (+0,24 en moyenne, +0,49 sur Fanchon, +0,44 sur Thaldrin). Le Dé creux **produit** une esquive, la Conque la **consomme**. C'est le mécanisme à généraliser.
 - **Les anti-synergies sont des conflits cachés sur le dé** : Contrepoids + Dé creux (−0,16 ; Fanchon −11,7 points : un dé plus grand rend le jet maximal plus rare), Contrepoids + Fer à quatre clous (−0,11 : le 4 plus rare), Cotte + Conque (−0,17 : −8 % d'esquive contre une relique d'esquive). Rien ne les annonce au joueur. **Le d6 supprime les deux premières.**
-- **Rien n'oriente les offres** : Graver tire au hasard uniforme dans les 27 compétences de `ENGRAVABLE_SKILLS` (`drawForgeOffer`, `forge.ts`) ; l'offre de reliques aussi.
+- **Rien n'oriente les offres** : Graver tire au hasard uniforme dans les 24 compétences de `ENGRAVABLE_SKILLS` (`drawForgeOffer`, `forge.ts`) ; l'offre de reliques aussi. (La première version de ce document disait 27 : il y en a 24, corrigé le 2026-10-23.)
 - **Le choix de la face visée est presque décoratif** : hors le 4 (Fer) et le jet maximal (Dé creux), graver sur le 5 ou sur le 8 donne la même fréquence.
 - **La taille du dé fausse la valeur des objets** : le Fer vaut de +3,6 (Thaldrin) à +19,2 points (Fanchon) ; une gravure occupe 1/7 du dé d'Ysolde et 1/14 de celui de Morgrut.
 
-**Estimation : pourquoi les builds ne se forment pas.** Une forge propose 3 des 5 opérations (Graver dans 60 % des offres), et Graver ne montre qu'une compétence sur 27. Si 5 de ces 27 compétences vont bien à un personnage, la chance d'en voir une à une forge est de 0,6 × 5/27 ≈ **11 %** ; sur les deux forges d'un acte, ≈ **21 %**.
+**Estimation : pourquoi les builds ne se forment pas.** Une forge propose 3 des 5 opérations (Graver dans 60 % des offres), et Graver ne montre qu'une compétence sur 24. Si 5 de ces 24 compétences vont bien à un personnage, la chance d'en voir une à une forge est de 0,6 × 5/24 ≈ **12,5 %** ; sur les deux forges d'un acte, ≈ **23 %**.
 
 ### 3.1 L'état de référence (phase 0, version 0.101.0)
 
@@ -382,19 +382,49 @@ La compétence retirée du kit n'est pas perdue : elle entre dans le répertoire
 
 **Lecture** : les auras (aujourd'hui toutes sur le 3) quittent le plus souvent le kit. Elles sont permanentes, donc lourdes à équilibrer dans un kit à deux compétences, et elles font de bonnes récompenses de campagne. Exceptions : l'Aura de sainteté d'Ysolde et l'Aura glaciale d'Ervald, qui sont leur identité ; à surveiller (l'Aura de sainteté vaut +36,0 points en 0.84.0). Brokk garde sa signature, Épines acérées, qui est pourtant sa compétence la moins forte (+4,6).
 
-### 7.4 Un essai sans contenu nouveau
+### 7.4 L'essai sans contenu nouveau (phase 2, livré en 0.103.0)
 
-L'utilisateur « ne se rend pas bien compte » : on peut **essayer les répertoires avant d'écrire une seule compétence**, sur les dés d'aujourd'hui.
-- **Implique** : la colonne « existantes » du § 7.2 comme répertoire de chaque champion ; l'offre de Graver tire dans le répertoire au lieu des 27 ; rien d'autre.
-- **Permet** : jouer une campagne et sentir la différence ; mesurer par `npm run campaign` la diversité des builds (combien de jeux de gravures distincts) et leur cohérence.
-- **Brique connue** : `drawForgeOffer` reçoit déjà son fonds (`pool`) en paramètre : passer le répertoire est une donnée, pas une règle.
-- **Coût** : faible.
+L'utilisateur « ne se rend pas bien compte » : on essaie les répertoires **avant d'écrire une seule compétence**, sur les dés d'aujourd'hui, en campagne seulement.
+
+**Les répertoires de l'essai** (`repertoire` de chaque personnage, `roster.ts`) : quatre compétences gravables d'autres personnages, deux par fil. Avec 24 compétences gravables et aucune nouvelle, les fils sont approximatifs : c'est le contenu qui manque, pas la structure.
+
+| Personnage | Fil 1 | Fil 2 |
+| --- | --- | --- |
+| Gorak | Sang : Épines acérées, Vol de vie | Furie : Œil de faucon, Aura de précision |
+| Elaria | Chasse : Furie des vents, Pourfendre | Fuite : Coup de chance, Riposte |
+| Brokk | Rempart : Aura d'immunité, Rétribution | Représailles : Riposte, Pourfendre |
+| Ervald | Poison : Aura de décoction, Feux follets | Drain : Pourfendre, Peur |
+| Ysolde | Lumière : Aura d'immunité, Rétribution | Contrôle : Peau de pierre, Vol de vie |
+| Naraxes | Fortune : Œil de faucon, Esquive améliorée | Poison : Souffle de la tombe, Aura glaciale |
+| Aldric | Lumière : Purification, Vol de vie | Ombre : Peur, Souffle de la tombe |
+| Morgrut | Colère : Aura de puissance, Pourfendre | Masse : Peau de pierre, Aura d'intimidation |
+| Thaldrin | Orage et Feu : Souffle de la tombe, Aura de décoction | Bête : Aura de puissance, Épines acérées |
+| Fanchon (sur ses doubles) | Fortune : Coup de chance, Pile ou face | Chant : Esquive améliorée, Aura de précision |
+
+**L'offre orientée** (`drawReward`, `campaign.ts`, § 13.2) : une forge propose **toujours Graver** quand une face peut la recevoir, sa compétence tirée dans le répertoire au poids de son écho avec le build (1, plus 2 par accroche partagée, `ECHO_WEIGHT`), puis dans tout le roster une fois le répertoire épuisé ; une relique, la première carte à l'écho, les deux autres libres. Le champion de référence reçoit les mêmes offres. La saison du tournoi n'est pas touchée.
+
+**Mesure** (`npm run campaign`, 30 parties par champion ; builds d'un acte complet, 120 par champion, tirés comme le champion de référence) :
+
+| Mesure | Avant (0.102.0) | Après (0.103.0) |
+| --- | --- | --- |
+| Gravures par build d'un acte (deux forges) | 0,36 | **0,65** |
+| Gravures prises dans le répertoire | 20 % environ | **100 %** |
+| Compétences gravées distinctes, par champion | 10 à 23 | 4 (le répertoire) |
+| Paires de briques liées par build (accroches) | 0,86 | **1,08** |
+| Boss atteint, acte gagné (300 parties) | 51 %, 28 % | 49 %, 22 % |
+| Apport du build aux nœuds 4 et 5 | +23, +25 points | +18, +22 points |
+
+**Lecture** :
+- **L'offre fait ce qu'on lui demande** : presque deux fois plus de gravures, toutes dans le répertoire. Le choix par défaut reste au hasard parmi trois opérations : une forge sur trois grave (0,65 sur deux forges). Fanchon grave peu (0,13) : ses cinq doubles sont pris, il lui faut d'abord Agrandir.
+- **La cohérence monte peu** (0,86 → 1,08 paire liée par build), et presque seulement chez Elaria (1,6 → 3,3 : Furie des vents, Coup de chance et Pourfendre multiplient les coups qui touchent, que son kit et les reliques consomment) et Gorak. Chez Brokk, Ervald, Ysolde, Aldric, Morgrut et Thaldrin, elle reste près de 0 : leurs compétences de répertoire **produisent** sans que rien ne les **consomme**. C'est le constat du § 3.2, confirmé : sans consommateurs (phase 8), un répertoire ne fait qu'une direction de thème, pas une synergie mesurable.
+- **La difficulté ne bouge pas de façon sûre** : 22 % d'actes gagnés, plus près des 23 % attendus que les 28 % d'avant (écart de l'ordre de deux fois le bruit de 300 parties). L'apport du build baisse un peu aux nœuds 4 et 5 : une gravure qui sacrifie un coup vaut moins qu'une dorure ou une relique, et Graver est maintenant toujours dans l'offre.
+- **Ce que la mesure ne dit pas** : si un build se lit mieux, et si le joueur sent une direction. C'est à l'utilisateur de jouer (§ 18, phase 2).
 
 ### 7.5 Le contenu à produire
 
 | Contenu | Nombre estimé |
 | --- | --- |
-| Compétences existantes réutilisées | 27 |
+| Compétences existantes réutilisées | 24 |
 | Idées du laboratoire, à remesurer | 8 |
 | Compétences « à écrire » du § 7.2 | environ 17 |
 | Fonds commun | 8 |
@@ -825,7 +855,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | **0. Mesure** (faite, 0.101.0) | `npm run synergy` (P8, log-cote) ; la durée des combats dans `npm run campaign` et `npm run season` ; une première mesure « le build se voit-il ? » (champion construit contre le même nu) | non | l'état de référence, § 3.1 | les cibles de synergie et de durée sont-elles les bonnes ? |
 | **1. Étiquettes** (faite, 0.102.0) | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le relevé du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; l'audit contrôle le type de chaque dégât ; résultats au § 3.2 | ce que doivent contenir les lots de contenu : des consommateurs |
-| **2. Essai des répertoires** (dés actuels) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (carte garantie, écho, libre, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après : diversité et cohérence des builds | **l'utilisateur joue** : la structure tient-elle ? |
+| **2. Essai des répertoires** (livré, 0.103.0 ; à jouer) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (Graver garantie dans le répertoire, première relique à l'écho, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après (§ 7.4) : gravures 0,36 → 0,65 par acte, toutes du répertoire ; paires liées 0,86 → 1,08 | **l'utilisateur joue** : la structure tient-elle ? |
 | **3. Dé en liste de faces** | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques | — |
 | **4. Essai du d6** | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, au laboratoire, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre | non (laboratoire) | taux et marge avant → après, valeur nette, durée | les dés de référence, retouchés ; la méthode pour les six autres |
 | **5. Conversion et forge d6** | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (sorts sur deux faces) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir, de Retailler et du Contrepoids, et son remplaçant au tournoi | **oui**, volontairement | `npm run balance` (42 à 58 %, aucun duel au-delà de 65/35) ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |

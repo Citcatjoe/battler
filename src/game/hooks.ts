@@ -1,4 +1,4 @@
-import type { CharacterStats } from './character'
+import type { Character, CharacterStats } from './character'
 import { damageKind, type DamageKind } from './damage'
 import { doubleFace, rollFace, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
 import type { Relic } from './relics'
@@ -180,6 +180,31 @@ export function linkBetween(a: Hooks, b: Hooks): { feeds: Hook[]; conflicts: Hoo
     feeds: [...new Set([...meet(a.produces, b.consumes), ...meet(b.produces, a.consumes)])],
     conflicts: [...new Set([...meet(a.hinders, b.consumes), ...meet(b.hinders, a.consumes)])],
   }
+}
+
+/** Les briques d'un combattant construit : ses compétences (forge comprise, sans les Attentes) et ses reliques. */
+export function buildBricks(c: Pick<Character, 'events' | 'relics'>): Hooks[] {
+  return [...c.events.filter((e) => !e.idle).map(eventHooks), ...c.relics.map(relicHooks)]
+}
+
+/** Ses accroches réunies : ce que l'ensemble de son build produit, consomme et gêne. */
+export function buildHooks(c: Pick<Character, 'events' | 'relics'>): Hooks {
+  const all = buildBricks(c)
+  return unique({ produces: all.flatMap((h) => h.produces), consumes: all.flatMap((h) => h.consumes), hinders: all.flatMap((h) => h.hinders) })
+}
+
+/**
+ * L'écho d'une brique dans un build (l'offre orientée, docs/PROGRESSION.md § 13.2) : combien d'accroches la relient à ce
+ * qu'il porte déjà, dans un sens ou dans l'autre. 0 : elle n'y touche rien.
+ */
+export const echoOf = (brick: Hooks, build: Hooks) => linkBetween(brick, build).feeds.length
+
+/** La cohérence d'un build : ses paires de briques qui se nourrissent, sur toutes ses paires. */
+export function buildLinks(c: Pick<Character, 'events' | 'relics'>): { linked: number; pairs: number } {
+  const bricks = buildBricks(c)
+  let linked = 0
+  for (let i = 0; i < bricks.length; i++) for (let j = i + 1; j < bricks.length; j++) if (linkBetween(bricks[i], bricks[j]).feeds.length) linked++
+  return { linked, pairs: (bricks.length * (bricks.length - 1)) / 2 }
 }
 
 /** Tous les statuts posés par un effet, avec le côté où il les pose (y compris ce que posent les statuts eux-mêmes). */

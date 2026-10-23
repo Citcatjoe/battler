@@ -31,6 +31,14 @@ export const chance = (rng: Rng, p: number) => rng() < p
 
 export const pick = <T>(rng: Rng, items: readonly T[]): T => items[Math.floor(rng() * items.length)]
 
+/** Un élément tiré au poids : `weight` (positif) dit combien de fois plus il a de chances qu'un élément de poids 1. Un tirage. */
+export function pickWeighted<T>(rng: Rng, items: readonly T[], weight: (item: T) => number): T {
+  const weights = items.map(weight)
+  let left = rng() * weights.reduce((s, w) => s + w, 0)
+  for (let i = 0; i < items.length; i++) if ((left -= weights[i]) < 0) return items[i]
+  return items[items.length - 1]
+}
+
 export function shuffle<T>(rng: Rng, items: readonly T[]): T[] {
   const a = [...items]
   for (let i = a.length - 1; i > 0; i--) {

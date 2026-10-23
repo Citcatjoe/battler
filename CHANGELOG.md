@@ -32,6 +32,21 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.103.0] — 2026-10-23
+
+Règles v2, phase 2 : l'essai des répertoires, en campagne (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 7.4). Aucune règle de combat ne change (empreinte identique) ; seules les offres de récompense de la campagne changent.
+
+### Ajouté
+- **Répertoires** (`repertoire` de chaque personnage, `roster.ts`, `repertoireOf`) : quatre compétences gravables d'autres personnages, écrites pour lui en deux fils (Gorak : Épines acérées, Vol de vie ; Œil de faucon, Aura de précision). `validateRoster` vérifie que ce sont des compétences gravables d'un autre personnage, sans doublon.
+- **Offre orientée en campagne** (`drawReward`, `campaign.ts`) : une forge propose toujours Graver quand une face peut la recevoir, avec une compétence du répertoire tirée à son écho avec le build (poids 1, plus 2 par accroche partagée ; tout le roster une fois le répertoire épuisé) ; une relique, la première carte tirée à l'écho, les deux autres libres. Le champion de référence reçoit les mêmes offres, et le réglage des rencontres en tient compte. Moteur : `focus` de `drawForgeOffer` et de `drawOffer`, `pickWeighted` (`rng.ts`), `buildHooks`, `echoOf` et `buildLinks` (`hooks.ts`).
+- **`npm run campaign`** : les builds d'un acte complet (120 par champion, sans combat) : gravures par build, part du répertoire, compétences gravées distinctes, paires de briques liées.
+
+### Mesuré
+- Avant → après (30 parties par champion, 120 builds) : gravures par acte 0,36 → 0,65, toutes dans le répertoire ; paires de briques liées par build 0,86 → 1,08, surtout chez Elaria (1,6 → 3,3) ; près de 0 chez six personnages, dont les compétences de répertoire produisent sans que rien ne les consomme. Boss atteint 51 → 49 %, acte gagné 28 → 22 % (23 % attendus).
+
+### Corrigé
+- `docs/PROGRESSION.md` : 24 compétences gravables, et non 27.
+
 ## [0.102.0] — 2026-10-23
 
 Règles v2, phase 1 : les étiquettes (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 18). Aucune règle de combat ne change : empreinte de non-régression identique.
