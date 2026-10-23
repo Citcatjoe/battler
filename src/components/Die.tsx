@@ -1,27 +1,43 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { defaultRng, rollDie } from '../game/rng'
 
+/** Pas du roulement : une nouvelle face toutes les 70 ms. */
+const ROLL_STEP = 70
+
+/**
+ * Les faces que montrent les dés, une seule source pour le dé de l'arène et la zone de compétence (SkillBar, 0.96.0).
+ * Pendant le roulement, une face au hasard par dé à chaque pas : pur décor, aucune règle n'en dépend (d'où
+ * `defaultRng`), et figé en pause. Retombés, les valeurs des beats (`values`). `tick` compte les pas du roulement : il
+ * relance le reflet de la face montrée dans la zone de compétence.
+ */
+export function useRollingFaces(values: readonly number[], faces: readonly number[], rolling: boolean, paused = false) {
+  const [roll, setRoll] = useState<{ faces: number[]; tick: number }>({ faces: [], tick: 0 })
+  const sizes = faces.join(',')
+  // Avant de peindre : le premier pas remplace aussitôt les faces du roulement précédent
+  useLayoutEffect(() => {
+    if (!rolling || paused || !sizes) return
+    const dice = sizes.split(',').map(Number)
+    const step = () => setRoll((r) => ({ faces: dice.map((f) => rollDie(defaultRng, f)), tick: r.tick + 1 }))
+    step()
+    const id = setInterval(step, ROLL_STEP)
+    return () => clearInterval(id)
+  }, [rolling, paused, sizes])
+  return rolling ? roll : { faces: [...values], tick: roll.tick }
+}
+
 interface Props {
+  /** Valeur tombée (0 tant qu'il roule) */
   value: number
+  /** Face montrée en ce moment (useRollingFaces) */
+  face: number
   faces: number
   rolling: boolean
   color?: string
   size?: number
 }
 
-/** Dé stylisé : affiche des valeurs aléatoires tant qu'il roule. */
-export function Die({ value, faces, rolling, color = '#e7e5e4', size = 96 }: Props) {
-  const [face, setFace] = useState(value || rollDie(defaultRng, faces))
-
-  useEffect(() => {
-    if (!rolling) {
-      if (value) setFace(value)
-      return
-    }
-    const id = setInterval(() => setFace(rollDie(defaultRng, faces)), 70)
-    return () => clearInterval(id)
-  }, [rolling, value, faces])
-
+/** Dé stylisé : la face que lui donne useRollingFaces, qui défile tant qu'il roule. */
+export function Die({ value, face, faces, rolling, color = '#e7e5e4', size = 96 }: Props) {
   const isMax = !rolling && value === faces
   const isMin = !rolling && value === 1
 
@@ -48,7 +64,7 @@ export function Die({ value, faces, rolling, color = '#e7e5e4', size = 96 }: Pro
         }`}
         style={{ fontSize: size * 0.32, color: isMax || isMin ? undefined : color }}
       >
-        {face}
+        {face || ''}
       </span>
     </div>
   )

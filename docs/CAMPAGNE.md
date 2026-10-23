@@ -167,6 +167,8 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 
 **Gagner une compétence**, c'est **la graver** : il n'y a pas de catégorie « compétence » à côté de la forge.
 
+**Ce que dit la carte** (0.95.0, demande de l'utilisateur du 2026-10-23 : une information simple, pas d'explication, le plaisir du joueur est de comprendre seul) : Graver « Nouvelle compétence sur une face libre » (la carte montre la compétence), Dorer « +2 dégâts à la frappe », Agrandir « +2 faces au dé », Retailler « −1 face au dé », Aiguiser « +1 rang à une compétence ». Le vocabulaire est celui des reliques ([RESOLUTION.md](RESOLUTION.md) § 3 : « à la frappe », avant le critique). **Ce que change l'opération se lit sur le dé** : pendant le choix de la face, l'infobulle d'une face visée montre la face après la forge, chaque nombre qui change en « avant → après », l'après en vert (« Épines acérées 2 → 3 », « +2 dégâts à la frappe » en vert sur une face qui se dore, le nom d'une gravure en vert) ; le reste du texte ne bouge pas (`ForgeFaceTooltip`). Une face sans compétence a aussi son infobulle (« Frappe de 7 », sa dorure) à la place de l'info-bulle du navigateur. Une face dorée frappe aussi sur un coup brut de la Furie des vents (2026-10-23, [RELIQUES.md](RELIQUES.md) § 3, règle 4).
+
 ### 4.3 Les règles de conception
 
 - **Des échanges autant que des gains.** Agrandir et Retailler troquent des compétences contre des dégâts, ou l'inverse. Ces choix protègent le spectacle et gardent les personnages typés.
@@ -446,8 +448,8 @@ _Questions réglées du 2026-10-21 au 2026-10-22 : voir § 1. Lectures confirmé
 | Brique | Où | Ce qu'elle fait |
 | --- | --- | --- |
 | Faces au-delà du 3 | `events.ts` | déclencheurs `face:N` et `double:N` (`faceTrigger`, `doubleTrigger`) : une compétence peut partir sur n'importe quelle face |
-| Forge du dé | `forge.ts`, `Character.withForge` | les cinq opérations du § 4.2, en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend : le tournoi peut la donner tel quel (`ARCHITECTURE.md`, « Donner la forge du dé à un mode ») |
-| Face dorée | `combat.ts` (`Attack.gild`) | +2 avant le critique, règle d'une relique de face ([RESOLUTION.md](RESOLUTION.md) § 3, étape 2 ter) |
+| Forge du dé | `forge.ts`, `Character.withForge` | les cinq opérations du § 4.2, en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend. Le tournoi la donne depuis la 0.92.0 : construction de la saison, une forge toutes les deux victoires (en alternance avec les reliques), trois au plus ([FEATURES.md](FEATURES.md) § 8) |
+| Face dorée | `combat.ts` (`Attack.gild`) | +2 avant le critique, règle d'une relique de face, coup brut compris depuis la 0.95.0 ([RESOLUTION.md](RESOLUTION.md) § 3, étape 2 ter) |
 | Campagne | `campaign.ts` | partie, boss, réglage sur le champion de référence, bandes de danger, récompenses, héritage, sauvegarde |
 | Écrans | `CampaignScreen.tsx`, `ForgedDie.tsx` | choix du champion et de l'héritage, carte de l'acte, récompense (forge puis relique), fin de partie ; le combat passe par l'affrontement et l'écran de fin habituels |
 | Mesure | `npm run campaign` | parties en pilote automatique, par champion (§ 18.3) |

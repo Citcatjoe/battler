@@ -23,13 +23,15 @@ import { RelicRow } from './RelicSeal'
  *   du premier tour, aux extrémités, sont plus larges et plus hautes que les suivantes.
  * - `setup` (configuration) : seul le premier tour se remplit. Ses cases sont grandes, les tours
  *   suivants ne sont plus que des jonctions, et les lignes convergent vers le grand panneau central
- *   (la palette des combattants), qui prend toute la place libérée.
+ *   (la palette des combattants et les règles), qui prend toute la place libérée et monte jusque sous le titre.
  */
 type Layout = 'track' | 'setup'
 
 interface Geometry {
   top: number
   bottom: number
+  /** Haut du panneau central (il peut monter plus haut que les cases) */
+  centerTop: number
   margin: number
   /** Largeur d'une case par tour (0 : une simple jonction) ; la finale est au centre */
   widths: readonly number[]
@@ -40,13 +42,12 @@ interface Geometry {
 }
 
 const GEOMETRY: Record<Layout, Geometry> = {
-  // Tours 2 et 3 à 184 px (168 avant la 0.75.0) : la place des reliques gagnées, à côté du nom
-  track: { top: 150, bottom: 880, margin: 24, widths: [208, 184, 184, 208], rowH: [38, 32, 32, 38], gap: 28 },
-  setup: { top: 176, bottom: 884, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
+  // Tours 2 et 3 à 184 px (168 avant la 0.75.0) : la place des reliques gagnées, à côté du nom. Premier tour à 236 px
+  // (208 avant la 0.96.0) : après une saison, chacun y arrive avec ses trois reliques
+  track: { top: 150, bottom: 880, centerTop: 150, margin: 24, widths: [236, 184, 184, 208], rowH: [38, 32, 32, 38], gap: 24 },
+  // Le panneau de la configuration monte jusque sous le titre de l'écran (palette et règles)
+  setup: { top: 176, bottom: 884, centerTop: 120, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
 }
-
-/** Géométrie de la configuration : les cases de la saison (SeasonSlots) reprennent celle des cases de l'arbre. */
-export const SETUP_GEOMETRY = GEOMETRY.setup
 
 interface Box {
   x: number
@@ -81,7 +82,7 @@ function boxOf(layout: Layout, { round, index }: MatchRef): Box {
 export function centerZone(layout: Layout) {
   const g = GEOMETRY[layout]
   const edge = columnX(g, ROUNDS - 2) + g.widths[ROUNDS - 2] + (layout === 'setup' ? g.gap : 20)
-  return { left: edge, right: STAGE_WIDTH - edge, top: g.top, bottom: g.bottom }
+  return { left: edge, right: STAGE_WIDTH - edge, top: g.centerTop, bottom: g.bottom }
 }
 
 const roster = CHARACTERS
@@ -117,9 +118,14 @@ interface Props {
   onSimulate?: (ref: MatchRef) => void
   /** Contenu libre affiché au centre (palette, trophée…) */
   center?: ReactNode
+  /**
+   * Configuration avec saison : le rang de saison promis à chaque case (`BRACKET_SEEDS`). Les cases restent vides et
+   * ne se cliquent pas : les 16 premiers de la saison les rempliront.
+   */
+  seeds?: readonly number[]
 }
 
-export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint, onPlay, onSimulate, center }: Props) {
+export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint, onPlay, onSimulate, center, seeds }: Props) {
   const layout: Layout = slots ? 'setup' : 'track'
   const matches = allMatches()
   const zone = centerZone(layout)
@@ -216,11 +222,12 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
               const won = !!(result && e && result.winner === e.idx)
               const lost = !!(result && e && result.winner !== e.idx)
               const slot = 2 * ref.index + row
-              const editable = !!slots && leaf
-              // Numéro de la case ; après une saison, le rang de saison du participant (tête de série)
+              const editable = !!slots && leaf && !seeds
+              // Numéro de la case ; après une saison (ou en l'attendant), le rang de saison du participant (tête de série)
+              const rank = (tournament && leaf && tournament.entrants[slot]?.seasonRank) || (leaf && seeds?.[slot]) || slot + 1
               const seed = (
                 <span className="bracket-seed" aria-hidden>
-                  {(tournament && leaf && tournament.entrants[slot]?.seasonRank) || slot + 1}
+                  {rank}
                 </span>
               )
               const portraitSize = leaf ? (layout === 'setup' ? 'h-8 w-8' : 'h-7 w-7') : 'h-6 w-6'
@@ -233,12 +240,16 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                     {e.label}
                   </span>
                   {won && <span className="bracket-hp">{result!.hpLeft} PV</span>}
-                  <RelicRow
-                    relics={e.relics}
-                    size={18}
-                    tooltip={relicTooltipSide(b.cy - b.rowH + row * b.rowH, b.rowH, row)}
-                    align={right ? 'right' : 'left'}
-                  />
+                  {/* Le vainqueur montre ses PV à la place de ses reliques : il les porte dans la case du tour suivant.
+                      En finale, il n'y en a plus : le champion garde les siennes ici */}
+                  {(!won || isFinal) && (
+                    <RelicRow
+                      relics={e.relics}
+                      size={22}
+                      tooltip={relicTooltipSide(b.cy - b.rowH + row * b.rowH, b.rowH, row)}
+                      align={right ? 'right' : 'left'}
+                    />
+                  )}
                 </>
               ) : editable ? (
                 <>
@@ -252,6 +263,8 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                     </span>
                   )}
                 </>
+              ) : seeds && leaf ? (
+                <span className="bracket-empty">{`${rank === 1 ? '1er' : `${rank}e`} de la saison`}</span>
               ) : (
                 <span className="bracket-empty">À déterminer</span>
               )

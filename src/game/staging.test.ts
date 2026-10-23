@@ -236,7 +236,7 @@ describe('mise en scène', () => {
       for (const beat of result.beats) {
         if (beat.type !== 'pair' || beat.double === undefined) continue
         const m = momentOf(moments, beat.id)
-        const land = m.cues.find((c) => c.channel === 'dice' && c.dice.label.startsWith('DOUBLE'))!
+        const land = m.cues.find((c) => c.channel === 'dice' && !c.dice.rolling && c.dice.values.length === 2 && c.dice.values[0] > 0)!
         expect(land).toBeDefined()
         expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(true)
         expect(at(m, 'skillPulse', land.at)).toEqual([{ at: land.at, channel: 'skillPulse', side: beat.side, face: beat.double }])

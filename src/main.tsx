@@ -4,6 +4,7 @@ import './index.css'
 // UI kit des contrôles, importé tel quel depuis sa source de vérité (docs/ui-kit/README.md)
 import '../docs/ui-kit/battler-ui-kit.css'
 import App from './App'
+import { LoadingGate } from './components/LoadingScreen'
 import { validateRoster } from './game/roster'
 import { installDebugConsole } from './game/debugConsole'
 
@@ -41,7 +42,9 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('kit')) {
 } else {
   root.render(
     <StrictMode>
-      <App />
+      <LoadingGate>
+        <App />
+      </LoadingGate>
     </StrictMode>,
   )
 }

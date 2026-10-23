@@ -12,7 +12,9 @@
 
 ```
 src/
-  main.tsx, App.tsx      point d'entrée ; App = machine à écrans + état du tournoi
+  main.tsx, App.tsx      point d'entrée (App monté derrière l'écran de chargement, LoadingGate) ; App = machine à écrans + état du tournoi
+  preload.ts             préchargement avant l'accueil (0.94.0) : postures du roster, arènes, fonds de menu, icônes, sons et musiques
+                         (AUDIO_URLS, prefetchAudio de sound.ts), polices ; une image importée ailleurs que dans ces registres s'y ajoute
   index.css              thème (polices), tokens du design system, keyframes d'animation
   env.d.ts               __APP_VERSION__ (injectée par vite.config.ts depuis package.json)
   assets/                images des personnages et de l'arène
@@ -36,6 +38,8 @@ src/
     rules.ts             RULES : les règles communes, écrites une seule fois (section Règles du compendium)
     combat.ts            MOTEUR : simulateCombat, resolveAttack, effectiveStats, chronologie
     stats.ts             computeStats : bilan d'un combat lu dans la chronologie
+    report.ts            combatReport : rapport d'un combat lu dans la chronologie (déclenchements de chaque relique, faces jouées par
+                         valeur) ; addReport (cumul), relicsByProcs ; le cumul d'une saison est seasonReport (season.ts)
     narration.ts         textes du journal et badges, générés depuis le registre
     trace.ts             trace de résolution complète d'un combat (traceCombat, traceText), lue dans la chronologie
     debugConsole.ts      trace dans la console du navigateur et sur le disque ; window.battler (trace, traces, dump, replay, play, vcr) ; bascule du magnétoscope (vcrToggle)
@@ -46,16 +50,22 @@ src/
     useCombat.ts         LECTEUR : hook qui joue les moments avec une seule horloge (vitesse, pause, arrêt) ; applyCue, mode triche
     scenes.ts            événements de scène (SceneEventId, rythme SCENE_EVENTS : impacts, durée) : présentation seule, le moteur ne les lit pas
     history.ts           historique localStorage, useHistory, normalize
-    tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), fillSlots, labelEntrants
+    tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), construction de saison
+                         figée des qualifiés (Entrant.build), fighterKey, fillSlots, labelEntrants
     season.ts            phase de saison facultative avant l'arbre (0.86.0) : calendrier aller-retour (seasonSchedule, Berger), graine par match,
                          bilans compacts, simulation sans trace ni historique (simulateSeasonMatches), classement et départage
-                         (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS)
+                         (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS) ; construction (0.92.0, 0.92.1) :
+                         récompenses de chaque participant (buildRewards), la suivante à chaque victoire, construction d'un participant
+                         (buildOf, buildDone), match prêt (seasonStatus), choix de l'observateur (chooseSeasonReward) ; rapport de chaque
+                         match dans son bilan (SeasonResult.report, facultatif) et cumul par participant (seasonReport)
     epithets.ts          noms uniques des participants (0.87.0) : EPITHETS, huit épithètes par personnage, et uniqueNames (tirage par Rng)
     betting.ts           paris : quatre parieurs (deux de l'ordinateur), cotes simulées, mises fixes, règlement, coups de théâtre (docs/PARIS.md)
-    sound.ts             sfx.*, fichiers son (SOUND_NAMES, MIX), vitesse et réglage muet
+    sound.ts             sfx.*, fichiers son (SOUND_NAMES, MIX), vitesse et réglage muet ; octets de chaque fichier téléchargés une fois
+                         (prefetchAudio), décodés au premier geste
     *.test.ts            tests (moteur, modules, équilibre, non-régression)
     test-utils.ts        personnages de test aux jets prévisibles
   components/            écrans (*Screen.tsx), briques d'interface (Tabs, StatusTray, SkillBar, SignalLayer…), screens.test.tsx
+    LoadingScreen.tsx    écran de chargement (logo et jauge) et LoadingGate, qui ne monte le jeu qu'une fois preload.ts fini
     Betting.tsx          guichet du match (plateaux, tuiles, pièces), rappel sous le VS, classement, résultat des paris de l'écran de fin (aucune règle : tout vient de betting.ts)
     SceneEvent.tsx       rendu des événements de scène (SCENE_VIEWS : Backdrop sur toute l'arène, OnTarget sur la colonne de la cible), monté par FightScreen
     SkillSeal.tsx        fenêtre octogonale du sceau d'une compétence (asset A-01 à venir, repli sur l'icône peinte)
@@ -69,11 +79,20 @@ src/
     HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
     homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
-    SeasonScreen.tsx     phase de saison : classement en deux colonnes et ligne de qualification, journée et ses matchs, simulation (aucune règle : tout vient de season.ts)
+    SeasonScreen.tsx     phase de saison : classement en une liste (construction de chacun) et ligne de qualification, journée et ses matchs (récompense de la journée), simulation (aucune règle : tout vient de season.ts)
     CampaignScreen.tsx   campagne : choix du champion et de son héritage, carte de l'acte (piste, champion, adversaires et leur bande de
                          danger), récompense (forge puis relique), fin de partie (aucune règle : campaign.ts et forge.ts)
-    ForgedDie.tsx        dé forgé face par face (sceau, rune, or, rang, attente ; choix d'une face) et carte d'une opération de forge
-    SeasonSlots.tsx      configuration d'un tournoi avec saison : les cases des participants de la saison, sur deux colonnes aux places des extrémités de l'arbre (SETUP_GEOMETRY de Bracket.tsx)
+    DieBuild.tsx         dé d'un personnage face par face, sept par ligne (dieCells : faces de 1 à la taille du dé du moment, compétence
+                         de la forme, rang, gravure, dorure) avec une infobulle par face ; zone de compétence du combat (SkillBar : reflet
+                         du dé qui roule, face tombée, éclat du déclenchement) et écran d'affrontement (sans état de combat)
+    ForgedDie.tsx        dé forgé face par face (sceau, rune, or, rang, attente ; choix d'une face), carte d'une opération de forge, choix d'une
+                         forge partagé (useForgeChoice, ForgeChoice : campagne et écran de victoire), tuile d'une opération faite avec son
+                         infobulle (ForgeMark : opération, face ou taille du dé, compétence produite et son rang)
+    TipLayer.tsx         calque d'infobulles d'un écran (racine de l'écran) : dedans, RelicRow et ForgeMark ouvrent leur infobulle dans
+                         le calque, que le cadre d'une liste qui défile ne coupe pas (classement de saison)
+    CombatReport.tsx     rapport de combat (CombatReportPanel, onglet Rapport de l'écran de fin) et de saison (SeasonReport, fin de
+                         saison) ; briques partagées : RelicProcs (sceaux et « ×N »), FaceHistogram (faces jouées sur le dé forgé) ;
+                         aucune règle : tout vient de report.ts
     compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
                          (Fiche, Performances), SkillsSection, StatusesSection, RelicsSection, RulesSection,
@@ -160,11 +179,11 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 Une entrée dans `RELICS` (`relics.ts`), un seul type (`stats`, `rollBonus`, ou `trigger` + `effects`), son icône `src/assets/icons/<id>.png` ; puis `npm run check` et `npm run relics`. Marche à suivre, règles et mesures : [RELIQUES.md](RELIQUES.md) § 8. Côté moteur : `Character.relics` (stats ajoutées à plat dans `stats`, la base dans `baseStats`, `withRelics`), `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` ; contrôle dans `auditRelics` (`audit.ts`) ; trace : en-tête relu par `parseRelics` (`npm run logs`).
 
 ### Donner la forge du dé à un mode (tournoi, duel…)
-La forge est une donnée du personnage, comme ses reliques (`forge.ts`, règles : [CAMPAGNE.md](CAMPAGNE.md) § 4). Pour qu'un mode la donne (une forge par victoire de tournoi, par exemple) :
-1. Garder le journal du participant (`ForgeStep[]`), comme `relicsOf` garde ses reliques dans `tournament.ts`.
+La forge est une donnée du personnage, comme ses reliques (`forge.ts`, règles : [CAMPAGNE.md](CAMPAGNE.md) § 4). La campagne (`campaign.ts`) et la construction de la saison (`season.ts`, `drawReward`, 0.92.0) la donnent déjà. Pour qu'un autre mode la donne :
+1. Garder le journal du participant (`ForgeStep[]`), ou le déduire des résultats, comme `buildOf` dans `season.ts`.
 2. À la récompense : `drawForgeOffer(personnage.definition, journal, rng, ENGRAVABLE_SKILLS)`, le choix par défaut `autoForge(…)`, puis `withForgeStep(…)` pour l'ajouter (une opération impossible lève une erreur).
-3. Au combat : `createCharacter(id).withForge(journal).withRelics(…)`. Le moteur, la trace (en-tête `Forge (…)`, relu par `npm run logs`), l'audit, la barre des compétences et les cotes suivent sans rien de plus.
-4. À l'écran : `ForgeCard` pour l'offre, `ForgedDie` (avec `targets` et `onPick`) pour choisir la face, comme la récompense de `CampaignScreen`.
+3. Au combat : `createCharacter(id).withForge(journal).withRelics(…)`. Le moteur, la trace (en-tête `Forge (…)`, relu par `npm run logs`), l'audit, la barre des compétences et les cotes suivent sans rien de plus. Pour valider un résultat : `fighterKey` (personnage, reliques, forge).
+4. À l'écran : `useForgeChoice` et `ForgeChoice` (cartes de l'offre, puis la face sur `ForgedDie`), comme la récompense de `CampaignScreen` et le menu Récompense d'`EndScreen` ; `ForgeMark` pour une opération déjà faite.
 
 ### Ajouter une arène
 1. Préparer l'image (16:9, sol dégagé en bas au centre, voir `docs/STYLE_BIBLE.md`), la ranger dans `src/assets/arena-<lieu>.jpg`.

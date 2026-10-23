@@ -1,5 +1,5 @@
 import type { CharacterStats } from './character'
-import { describeCondition, describeEffect, ROLL_TRIGGERS, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
+import { describeCondition, rollFace, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { STATUSES, type StatusId } from './statuses'
@@ -56,16 +56,13 @@ export type RelicStats = Partial<CharacterStats>
 export interface Relic {
   id: string
   name: string
-  /** Une phrase d'ambiance ; la règle, elle, se rédige depuis les données (`describeRelic`) */
+  /** Une phrase d'ambiance, pour le compendium seulement ; la règle se rédige depuis les données (`describeRelic`) */
   flavor: string
   /** Caractéristique : stats ajoutées à plat */
   stats?: RelicStats
-  /** Coup : ajouté à la valeur de chacun de ses coups qui touchent, avant le critique */
+  /** Coup : ajouté à la valeur de chacun de ses coups qui touchent, avant le critique (« +4 dégâts à la frappe ») */
   rollBonus?: number
-  /**
-   * Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4). Relique de
-   * face : un coup brut (Furie des vents) ne l'éveille pas, comme il n'ouvre aucune fenêtre du dé (2026-10-21).
-   */
+  /** Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4), coup brut compris */
   onFace?: number
   /** Coup, tour ou seuil : le moment où elle se déclenche, et ses effets (du point de vue du porteur) */
   trigger?: RelicTrigger
@@ -85,13 +82,10 @@ export type RelicKind = 'stat' | 'strike' | 'turn' | 'threshold'
 
 /** Les quatre types, dans l'ordre de lecture : nom et ce qu'ils font, pour l'infobulle et le compendium. */
 export const RELIC_KINDS: Record<RelicKind, { label: string; summary: string }> = {
-  stat: { label: 'Caractéristique', summary: 'Ajoute des stats de base, à plat, pour tout le combat.' },
-  strike: {
-    label: 'Coup',
-    summary: "Agit sur ses coups : la valeur d'un coup, ou un moment du coup (une face de ses dés, il touche, esquive, encaisse…). Les coups bruts (Furie des vents) n'éveillent aucune relique de face.",
-  },
-  turn: { label: 'Tour', summary: 'Se déclenche au début d’un de ses tours (une fois, ou à intervalle régulier), après ses statuts de début de tour et avant son action.' },
-  threshold: { label: 'Seuil', summary: 'Se déclenche quand ses PV, ou ceux de l’adversaire, passent sous un seuil.' },
+  stat: { label: 'Caractéristique', summary: 'Des stats en plus, tout le combat.' },
+  strike: { label: 'Coup', summary: 'Sur ses coups : une face de son dé, ou un moment du coup (il touche, il esquive, il encaisse).' },
+  turn: { label: 'Tour', summary: 'Au début d’un de ses tours, avant son action.' },
+  threshold: { label: 'Seuil', summary: 'Quand des PV passent sous un seuil : les siens, ou ceux de l’adversaire.' },
 }
 
 export function relicKind(r: Relic): RelicKind {
@@ -255,6 +249,12 @@ export const RELICS: readonly Relic[] = [
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
 
+/**
+ * Les reliques quand la forge du dé est de la partie (campagne, saison forgée) : toutes, sauf le Contrepoids de plomb,
+ * devenu l'opération Agrandir (docs/CAMPAGNE.md § 4.4).
+ */
+export const FORGE_RELIC_IDS: readonly string[] = RELIC_IDS.filter((id) => id !== 'lead-pommel')
+
 export function getRelic(id: string): Relic {
   const r = RELICS.find((x) => x.id === id)
   if (!r) throw new Error(`Relique inconnue : ${id}`)
@@ -271,75 +271,101 @@ export function withRelicStats(base: CharacterStats, relics: readonly Relic[]): 
 /* ---------- Rédaction ---------- */
 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`)
+const capitalize = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`
+const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`)
 
-/** Une stat ajoutée, en clair : « +1 armure », « +5 % d'esquive ». */
+/**
+ * Une stat ajoutée, en clair : « +2 armure », « +6 % d'esquive ». Les exceptions se disent là où elles naissent :
+ * une forme qui remplace le dé (l'Incantation) le dit elle-même, une esquive négative n'esquive jamais.
+ */
 const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   maxHp: (v) => `${signed(v)} PV max`,
-  damageDie: (v) => `${signed(v)} face${Math.abs(v) > 1 ? 's' : ''} à son dé de dégâts (sauf un dé fixé par une forme, comme le d3 de l'Incantation)`,
+  damageDie: (v) => `${signed(v)} face${Math.abs(v) > 1 ? 's' : ''} au dé`,
   armor: (v) => `${signed(v)} armure`,
-  dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive${v < 0 ? ' (jamais sous 0 %)' : ''}`,
+  dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive`,
   critChance: (v) => `${signed(Math.round(v * 100))} % de critique`,
   critMultiplier: (v) => `${signed(v).replace('.', ',')} au multiplicateur de critique`,
 }
 
+/**
+ * Un effet de relique au plus court : « 3 dégâts directs », « +2 Vol de vie », « retire son dernier malus, sinon +3 PV ».
+ * `validateRelics` garantit le reste : vers l'adversaire, seulement des dégâts directs ; aucune relâche de jauges.
+ */
+function effectText(e: Effect): string {
+  switch (e.type) {
+    case 'damage':
+      return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? '' : ' à soi-même'}`
+    case 'heal':
+      return `+${e.amount} PV`
+    case 'applyStatus':
+      return `+${e.stacks} ${STATUSES[e.status].name}${e.turns ? ` (${e.turns} tours)` : ''}`
+    case 'cleanse': {
+      const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
+      const what = e.count === undefined ? `tous ses ${kind}` : e.count === 1 ? `son dernier ${kind}` : `ses ${e.count} derniers ${kind}`
+      return `retire ${what}${e.orElse ? `, sinon ${effectText(e.orElse)}` : ''}`
+    }
+    case 'release':
+      return `relâche ${STATUSES[e.status].name}`
+  }
+}
+
+/** Quand elle agit, en quelques mots (« Sur un 1 », « Tous les 3 tours », « Sous 40 % PV ») ; rien pour une relique sans déclencheur. */
+function momentOf(r: Relic): string {
+  const t = r.trigger
+  if (!t) return ''
+  const when = (r.when ?? []).map((c) => `, si ${describeCondition(c)}`).join('')
+  switch (t.type) {
+    case 'turn': {
+      if (r.charges === 1) return `Au ${ordinal(t.turn)} tour${when}`
+      const every = r.cooldown ? `tous les ${r.cooldown} tours` : 'à chaque tour'
+      return `${t.turn === (r.cooldown ?? 1) ? capitalize(every) : `Au ${ordinal(t.turn)} tour, puis ${every}`}${when}`
+    }
+    case 'hpBelow':
+      return `${t.who === 'opponent' ? 'Adversaire sous' : 'Sous'} ${Math.round(t.ratio * 100)} % PV${when}`
+    case 'strike': {
+      const face = rollFace(t.on)
+      const moment = face !== undefined ? `Sur un ${face}` : t.on === 'naturalMax' ? 'Sur un jet maximal' : TRIGGERS[t.on].label
+      return `${moment}${when}`
+    }
+  }
+}
+
 export interface RelicDescription {
-  /** Quand elle agit : « En permanence », « Au début de son 3e tour, puis tous les 3 tours »… */
-  moment: string
-  /** Ce qu'elle fait, une phrase par effet */
+  /**
+   * La règle en une ligne, moment puis effet : « Sur un 1 : 3 dégâts directs », « +4 dégâts aux frappes de 4 ». Le
+   * vocabulaire porte la résolution : « à la frappe », avant le critique ; « dégâts directs », ni coup ni armure.
+   */
   text: string
-  /** Charges, recharge, conditions */
-  tags: string[]
+  /** Ses limites : « 1 fois par combat », « recharge 3 tours » (vide sans limite) */
+  limits: string[]
   /** Statuts qu'elle pose, avec leur cible */
   posed: { status: StatusId; target: Target }[]
 }
 
-/** La seule rédaction d'une relique : infobulle, compendium, écran de récompense et rapports la lisent. */
+/** La seule rédaction d'une relique : infobulle, compendium, écran de récompense, trace et rapports la lisent. */
 export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
-  // Une face de dé : n'importe lequel de ses jets (le d6 de Coup de chance compris), pas un coup brut
-  const face = t?.type === 'strike' && ROLL_TRIGGERS.includes(t.on)
-  const moment = !t
-    ? r.onFace !== undefined
-      ? `Sur un ${r.onFace} à l'un de ses dés, si le coup touche`
-      : r.rollBonus
-        ? 'À chacun de ses coups qui touchent'
-        : 'En permanence'
-    : t.type === 'turn'
-      ? `Au début de son ${t.turn === 1 ? '1er' : `${t.turn}e`} tour${r.charges === 1 ? '' : r.cooldown ? `, puis tous les ${r.cooldown} tours` : ', puis à chacun de ses tours'}`
-      : t.type === 'hpBelow'
-        ? `Quand ${t.who === 'opponent' ? 'les PV de l’adversaire passent' : 'ses PV passent'} sous ${Math.round(t.ratio * 100)} %`
-        : face
-          ? t.on === 'naturalMax'
-            ? "Sur le jet maximal d'un de ses dés"
-            : `Sur un ${ROLL_TRIGGERS.indexOf(t.on) + 1} à l'un de ses dés`
-          : TRIGGERS[t.on].label
-  const parts = [
+  const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
-    r.rollBonus ? `${signed(r.rollBonus)} à la valeur ${r.onFace !== undefined ? 'de ce coup' : 'du coup'}, avant le critique` : '',
-    ...(r.effects ?? []).map(describeEffect),
+    r.rollBonus ? `${signed(r.rollBonus)} dégâts ${r.onFace !== undefined ? `aux frappes de ${r.onFace}` : 'à la frappe'}` : '',
+    ...(r.effects ?? []).map(effectText),
   ]
     .filter(Boolean)
-    .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
-  // Posée au passage d'un seuil, une réaction aux coups encaissés ne réagit pas au coup qui l'a fait franchir : elle
-  // répond dès le coup suivant (règle 9)
-  const reactsNext = t?.type === 'hpBelow' && (r.effects ?? []).some((e) => e.type === 'applyStatus' && STATUSES[e.status].reactions?.hurt)
-  const tags = [
-    ...(face ? ['que le coup touche ou non', 'pas sur les coups bruts (Furie des vents)'] : []),
-    ...(r.onFace !== undefined ? ['pas sur les coups bruts (Furie des vents)'] : []),
-    ...(t?.type === 'turn' ? ['après ses statuts de début de tour, avant son action'] : []),
-    ...(reactsNext ? ['répond dès le coup suivant, pas à celui qui fait passer le seuil'] : []),
-    ...(r.when ?? []).map((c) => `si ${describeCondition(c)}`),
-    ...(r.charges !== undefined ? [r.charges === 1 ? 'une fois par combat' : `${r.charges} fois par combat`] : []),
-    ...(r.cooldown && t?.type !== 'turn' ? [`recharge : ${r.cooldown} de ses tours`] : []),
+    .join(', ')
+  const moment = momentOf(r)
+  const limits = [
+    // Une relique de tour à une charge le dit déjà par son moment (« Au 4e tour »)
+    ...(r.charges !== undefined && !(t?.type === 'turn' && r.charges === 1) ? [`${r.charges} fois par combat`] : []),
+    ...(r.cooldown && t?.type !== 'turn' ? [`recharge ${r.cooldown} tours`] : []),
   ]
   const posed = (r.effects ?? []).flatMap((e) => (e.type === 'applyStatus' ? [{ status: e.status, target: e.target ?? ('self' as const) }] : []))
-  return { moment, text: parts.join(' '), tags, posed }
+  return { text: capitalize(moment ? `${moment} : ${effect}` : effect), limits, posed }
 }
 
-/** Une relique en une ligne (rapports, trace) : moment, effet, pastilles. */
+/** Une relique en une ligne (rapports, trace) : sa règle, puis ses limites. */
 export function relicLine(r: Relic) {
-  const { moment, text, tags } = describeRelic(r)
-  return [`${moment} : ${text}`, ...tags].join(' · ')
+  const { text, limits } = describeRelic(r)
+  return [text, ...limits].join(' · ')
 }
 
 /* ---------- Validation ---------- */

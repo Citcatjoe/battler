@@ -2,7 +2,7 @@ import { hashSeed } from './analysis'
 import { Character, type CharacterDef } from './character'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
+import { autoPick, drawOffer, FORGE_RELIC_IDS, getRelic } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, ROSTER } from './roster'
 
@@ -47,9 +47,6 @@ export const HERITAGE_CHOICES = 3
  */
 export const NORMAL_TARGETS: readonly number[] = [0.95, 0.9, 0.87, 0.84, 0.81]
 export const BOSS_TARGET = 0.45
-
-/** Les reliques de campagne : toutes, sauf le Contrepoids de plomb, devenu l'opération Agrandir (§ 4.4). */
-export const CAMPAIGN_RELICS: readonly string[] = RELIC_IDS.filter((id) => id !== 'lead-pommel')
 
 /* ---------- Le boss ---------- */
 
@@ -197,7 +194,7 @@ export function referenceChampions(championId: string, node: number, seed: numbe
         const step = autoForge(def, forge, drawForgeOffer(def, forge, rng, ENGRAVABLE_SKILLS), rng)
         if (step) forge = withForgeStep(def, forge, step)
       } else {
-        const relic = autoPick(drawOffer(relics, rng, CAMPAIGN_RELICS), rng)
+        const relic = autoPick(drawOffer(relics, rng, FORGE_RELIC_IDS), rng)
         if (relic) relics.push(relic)
       }
     }
@@ -298,7 +295,7 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   if (encounter.boss) return { ...next, wins, outcome: 'won' }
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
   if (REWARDS[wins - 1] === 'relic') {
-    const offer = drawOffer(run.relics, rng, CAMPAIGN_RELICS)
+    const offer = drawOffer(run.relics, rng, FORGE_RELIC_IDS)
     const choice = autoPick(offer, rng)
     return { ...next, wins, reward: { kind: 'relic', offer, ...(choice && { choice }) } }
   }

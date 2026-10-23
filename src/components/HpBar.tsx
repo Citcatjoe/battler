@@ -29,12 +29,13 @@ export function HpBar({ side, name, hp, maxHp, character, turn, relicUses, relic
       className={`hp-camp flex flex-1 flex-col gap-1.5 ${side === 1 ? 'items-end text-right' : ''}`}
       style={{ '--camp': style.hex } as CSSProperties}
     >
-      <div className={`flex w-full items-baseline justify-between gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
+      {/* Hauteur fixe, celle d'une relique : avec ou sans reliques, les deux barres restent alignées (0.96.0) */}
+      <div className={`flex h-11 w-full items-center justify-between gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
         <span className={`flex items-center gap-3 ${side === 1 ? 'flex-row-reverse' : ''}`}>
           <span className={`hp-camp-name font-display text-2xl font-extrabold tracking-wide ${style.accent}`}>{name}</span>
           {/* Ses reliques (tournoi) suivent le nom ; ses compétences sont sous l'en-tête, sur l'arène (SkillBar) */}
           {character && character.relics.length > 0 && (
-            <RelicRow relics={character.relics} size={36} tooltip="below" align={side === 1 ? 'right' : 'left'} uses={relicUses} pulse={relicPulse} />
+            <RelicRow relics={character.relics} size={44} tooltip="below" align={side === 1 ? 'right' : 'left'} uses={relicUses} pulse={relicPulse} />
           )}
         </span>
         <span className="font-data text-[15px] font-medium tabular-nums text-ink-2">

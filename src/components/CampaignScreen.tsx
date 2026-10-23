@@ -20,12 +20,12 @@ import {
   type PendingReward,
 } from '../game/campaign'
 import type { Character } from '../game/character'
-import { offerTargets, stepLabel, stepOf } from '../game/forge'
+import { stepLabel } from '../game/forge'
 import { getRelic } from '../game/relics'
 import { randomSeed, seededRng } from '../game/rng'
 import { createCharacter } from '../game/roster'
 import { Fighter } from './Fighter'
-import { ForgeCard, ForgedDie } from './ForgedDie'
+import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
 import { BackLink, Button, Glyph } from './kit'
 import { MiniPortrait } from './RecordBits'
 import { RelicCard, RelicRow } from './RelicSeal'
@@ -211,7 +211,7 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
       {champion.relics.length > 0 && (
         <div className="relative z-10 flex items-center gap-3">
           <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Reliques</span>
-          <RelicRow relics={champion.relics} size={40} tooltip="above" />
+          <RelicRow relics={champion.relics} size={48} tooltip="above" />
         </div>
       )}
       {run.heritage && (
@@ -298,7 +298,7 @@ function Reward({ run, onReward }: { run: CampaignRun; onReward: (gain: Heritage
   const champion = championOf(run)
   const kicker = `Récompense · victoire ${run.wins}`
   if (reward.kind === 'relic') return <RelicReward reward={reward} champion={champion} kicker={kicker} onReward={onReward} />
-  return <ForgeReward reward={reward} champion={champion} run={run} kicker={kicker} onReward={onReward} />
+  return <ForgeReward reward={reward} champion={champion} kicker={kicker} onReward={onReward} />
 }
 
 function RelicReward({
@@ -330,7 +330,7 @@ function RelicReward({
       {champion.relics.length > 0 && (
         <div className="relative flex items-center justify-center gap-3 pb-4 font-body text-[15px] text-ink-3">
           Déjà portées :
-          <RelicRow relics={champion.relics} size={32} tooltip="above" />
+          <RelicRow relics={champion.relics} size={40} tooltip="above" />
         </div>
       )}
       <div className="relative flex items-center justify-center pb-10">
@@ -345,52 +345,30 @@ function RelicReward({
 function ForgeReward({
   reward,
   champion,
-  run,
   kicker,
   onReward,
 }: {
   reward: Extract<PendingReward, { kind: 'forge' }>
   champion: Character
-  run: CampaignRun
   kicker: string
   onReward: (gain: HeritageItem | undefined) => void
 }) {
-  const auto = reward.choice
-  const autoIndex = auto ? reward.offer.findIndex((o) => o.op === auto.op) : -1
-  const [offerIndex, setOfferIndex] = useState(autoIndex)
-  const [face, setFace] = useState(auto && 'face' in auto ? auto.face : undefined)
-  const offer = reward.offer[offerIndex]
-  const targets = offer ? offerTargets(champion.definition, run.forge, offer) : []
-  const ready = !offer || offer.op === 'enlarge' || offer.op === 'trim' || (face !== undefined && targets.includes(face))
-  const step = offer && ready ? stepOf(offer, face) : undefined
+  const choice = useForgeChoice(champion, reward.offer, reward.choice)
   return (
     <Backdrop>
       <Header kicker={kicker} title={`${champion.name} forge son dé`} sub={`${champion.name} a fait son choix : cliquez sur une autre opération, puis sur une face, pour décider à sa place.`} />
       <div className="relative flex flex-1 flex-col items-center justify-center gap-8">
-        <div className="flex items-stretch gap-8 pt-3">
-          {reward.offer.map((o, i) => (
-            <ForgeCard
-              key={o.op}
-              offer={o}
-              character={champion}
-              selected={offerIndex === i}
-              mark={i === autoIndex ? `Choix de ${champion.name}` : offerIndex === i ? 'Votre choix' : undefined}
-              onSelect={() => {
-                setOfferIndex(i)
-                setFace(i === autoIndex && auto && 'face' in auto ? auto.face : undefined)
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">
-            {offer && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(offer, face), champion.twinDice)) : `Son dé · d${champion.stats.damageDie}`}
-          </span>
-          <ForgedDie character={champion} tooltip="above" align="center" targets={offer && targets.length ? targets : undefined} selected={face} onPick={setFace} />
-        </div>
+        <ForgeChoice character={champion} choice={choice} />
       </div>
       <div className="relative flex items-center justify-center pb-10">
-        <Button variant="primary" size="xl" icon="combattre" disabled={!ready} onClick={() => onReward(step ? { kind: 'forge', step } : undefined)} className="w-96">
+        <Button
+          variant="primary"
+          size="xl"
+          icon="combattre"
+          disabled={!choice.ready}
+          onClick={() => onReward(choice.step ? { kind: 'forge', step: choice.step } : undefined)}
+          className="w-96"
+        >
           Continuer
         </Button>
       </div>
@@ -446,7 +424,7 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
               <p className="font-body text-lg text-ink-2">Sa prochaine partie pourra commencer avec l'une de ces améliorations :</p>
               <div className="flex flex-wrap items-center gap-3">
                 {legacy.some((g) => g.kind === 'relic') && (
-                  <RelicRow relics={legacy.flatMap((g) => (g.kind === 'relic' ? [getRelic(g.relic)] : []))} size={40} tooltip="above" />
+                  <RelicRow relics={legacy.flatMap((g) => (g.kind === 'relic' ? [getRelic(g.relic)] : []))} size={48} tooltip="above" />
                 )}
                 {legacy.flatMap((g) =>
                   g.kind === 'forge' ? [<span key={JSON.stringify(g.step)} className="champion-tile px-3 py-1.5 font-body text-[15px] text-ink-1">{stepLabel(g.step, champion.twinDice)}</span>] : [],

@@ -289,13 +289,13 @@ export function createAudit() {
         else if (a.dodgeForced && find(s.statuses[def], 'evasion')) see('esquive imposée cumulée')
         if (!a.dodged && !a.forfeited) {
           // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
-          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, et jamais sur un coup brut (2026-10-21)
-          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || (!a.plain && x.onFace === a.roll)) ? x.rollBonus : 0), 0)
+          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, coup brut compris (2026-10-23)
+          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || x.onFace === a.roll) ? x.rollBonus : 0), 0)
           if (bonus !== (a.relicBonus ?? []).reduce((t, x) => t + x.amount, 0)) flag('bonus de relique incohérent', r, i, `${bonus}`)
           else if (bonus) see('bonus de relique')
-          if (a.plain && r.fighters[att].relics.some((x) => x.onFace === a.roll)) see('coup brut sans relique de face')
-          // Face dorée (forge du dé) : la dorure de la face de ce dé, jamais sur un coup brut
-          const gild = a.plain ? 0 : (r.fighters[att].gilded[a.roll] ?? 0)
+          if (a.plain && r.fighters[att].relics.some((x) => x.onFace === a.roll)) see('coup brut avec relique de face')
+          // Face dorée (forge du dé) : la dorure de la face de ce dé, coup brut compris
+          const gild = r.fighters[att].gilded[a.roll] ?? 0
           if (gild !== (a.gild ?? 0)) flag('face dorée incohérente', r, i, `${a.gild ?? 0} au lieu de ${gild}`)
           else if (gild) see('face dorée')
           const value = (a.reshaped?.value ?? a.roll) + bonus + gild
@@ -647,7 +647,8 @@ export function createAudit() {
               dodge: !mine && a.dodged,
               hurt: !mine && touched,
             }
-            const ok = moments[t.on] ?? (mine && !a.plain && rollMatches(t.on, a.roll, a.faces))
+            // Une face du dé, coup brut de Furie compris (2026-10-23) ; une pièce (jet 0) n'a pas de face
+            const ok = moments[t.on] ?? (mine && rollMatches(t.on, a.roll, a.faces))
             if (!ok) flag('relique de coup hors de son moment', r, i, `${relic.id} sur ${t.on}`)
             else see('relique de coup')
           }

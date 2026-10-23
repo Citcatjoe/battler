@@ -12,7 +12,7 @@ import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type PendingRew
 import { Character } from '../game/character'
 import { CampaignScreen } from './CampaignScreen'
 import { STATUS_IDS } from '../game/statuses'
-import { fxFloats, turnLabel, type Float, type FxSpec } from '../game/staging'
+import { fxFloats, type Float, type FxSpec } from '../game/staging'
 import { attackSpecials, isSurcharge, relicSpecial, SPECIAL_SIGNS, SPECIAL_SOURCES, statusSpecial } from '../game/specials'
 import { isAura, STATUSES, type StatusId } from '../game/statuses'
 import { EMOJI, testCharacter } from '../game/test-utils'
@@ -32,9 +32,12 @@ import { TestFightScreen } from './TestFightScreen'
 import { HpBar } from './HpBar'
 import { StatusTray, trayAfter } from './StatusTray'
 import { SkillBar } from './SkillBar'
+import { DieBuild, dieCells } from './DieBuild'
+import { offerTargets } from '../game/forge'
 import { STATES, trayStates } from '../game/states'
 import { skillIcon, STATUS_ICON } from './Icon'
 import { RelicCard } from './RelicSeal'
+import { SeasonReport } from './CombatReport'
 import { getRelic, RELICS } from '../game/relics'
 import { MatchupScreen } from './MatchupScreen'
 import { RecordsScreen } from './RecordsScreen'
@@ -131,6 +134,20 @@ describe('écrans', () => {
     const betting = { wallets, odds, onBet: () => null, onCancel: noop }
     render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />)
     render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={{ ...betting, odds: null }} />)
+    // Classement au-dessus du nom : place de saison en cours, tête de série dans l'arbre
+    const ranked = renderToString(
+      <MatchupScreen
+        fighters={fighters}
+        ranks={[{ kind: 'season', rank: 1, of: 24, points: 12, wins: 4, losses: 2 }, { kind: 'seed', rank: 3 }]}
+        arena={RANDOM_ARENA}
+        onArenaChange={noop}
+        onPlay={noop}
+        onSimulate={noop}
+        onBack={noop}
+      />,
+    )
+    expect(ranked).toContain('Saison · sur 24')
+    expect(ranked).toContain('Tête de série')
     const twists: MatchOdds[] = [
       odds,
       { ...odds, twist: { kind: 'boost', pick: { market: 'duration', over: true } } },
@@ -162,7 +179,7 @@ describe('écrans', () => {
     ])
       for (const side of [0, 1] as const)
         render(<CheatPad side={side} fighter={result.fighters[side]} cheat={cheat} onForce={noop} />)
-    for (const tab of ['summary', 'defense', 'events', 'dice'] as const)
+    for (const tab of ['report', 'summary', 'defense', 'events', 'dice'] as const)
       render(<EndScreen result={result} onReplay={noop} onMenu={noop} initialTab={tab} />)
     render(<EndScreen result={poisoned} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop }} />)
   })
@@ -194,9 +211,35 @@ describe('écrans', () => {
     const off = renderToString(<HpBar side={1} name="B" hp={10} maxHp={20} character={fighters[1]} turn="waiting" />)
     expect(off).toContain('data-turn="waiting"')
     expect(off).not.toContain('skill-bar-wave')
-    expect(turnLabel('Elaria')).toBe("Au tour d'Elaria")
-    expect(turnLabel('Ysolde')).toBe("Au tour d'Ysolde")
-    expect(turnLabel('Gorak')).toBe('Au tour de Gorak')
+  })
+
+  it('zone de compétence : toutes les faces du dé, dans l’ordre, le reflet du roulement puis la face tombée', () => {
+    const gorak = createCharacter('gorak')
+    const cells = dieCells(gorak)
+    expect(cells.map((c) => c.face)).toEqual(Array.from({ length: gorak.stats.damageDie }, (_, k) => k + 1))
+    expect(cells.slice(0, 3).every((c) => c.event)).toBe(true)
+    expect(cells.slice(3).some((c) => c.event)).toBe(false)
+    // La forme du druide change son dé : un d3 sous forme humaine (Incantation), son dé entier sous l'ours
+    const thaldrin = createCharacter('thaldrin')
+    expect(dieCells(thaldrin, 0)).toHaveLength(3)
+    expect(dieCells(thaldrin, 1)).toHaveLength(thaldrin.stats.damageDie)
+    // La forge se lit sur ses faces : la dorure, le rang de la compétence aiguisée
+    const sharp = offerTargets(gorak.definition, [], { op: 'sharpen' })[0]
+    const forged = gorak.withForge([{ op: 'gild', face: 5 }, { op: 'sharpen', face: sharp }])
+    const f = dieCells(forged)
+    expect(f[4].gild).toBeGreaterThan(0)
+    expect(f[sharp - 1].rank).toBe(1)
+    const build = renderToString(<DieBuild character={forged} />)
+    expect(build).toContain('forge-face-rank')
+    expect(build).toContain('aria-label="Face 4"')
+    expect(build.match(/data-gild=""/g)).toHaveLength(1)
+    // En combat : le dé qui roule éclaire la face qu'il montre, le dé tombé marque la sienne, sans éclat de compétence
+    const rolling = renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={{ faces: [5], tick: 3 }} />)
+    expect(rolling.match(/die-cell-flicker/g)).toHaveLength(1)
+    expect(rolling).not.toContain('data-drawn=""')
+    const landed = renderToString(<SkillBar character={gorak} side={0} statuses={[]} landed={[5]} />)
+    expect(landed.match(/data-drawn=""/g)).toHaveLength(1)
+    expect(landed).not.toContain('skill-bar-wave')
   })
 
   it("zone de surcharge : n'y entrent que les statuts qui changent ce coup-ci, sans aura ni action déclenchée (registre unique)", () => {
@@ -325,20 +368,38 @@ describe('écrans', () => {
     const betting = { enabled: true, names: ['karma', 'MiaMiaM'] as [string, string] }
     const season = { enabled: false, size: DEFAULT_SEASON_SIZE }
     const setup = renderToString(
-      <TournamentSetupScreen slots={slots} onChange={noop} seasonSlots={Array(32).fill(null)} onSeasonSlotsChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} relics onRelicsChange={noop} uniqueNames={false} onUniqueNamesChange={noop} season={season} onSeasonChange={noop} />,
+      <TournamentSetupScreen slots={slots} onChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} relics onRelicsChange={noop} forge onForgeChange={noop} uniqueNames={false} onUniqueNamesChange={noop} season={season} onSeasonChange={noop} />,
     )
     expect(setup).toContain('role="switch" aria-checked="true"')
+    // Le panneau « Règles » : tous les réglages, nombre de combattants compris
+    for (const label of ['Règles', 'Phase de saison', 'Nombre de combattants', 'Forge du dé', 'Reliques', 'Noms uniques']) expect(setup).toContain(label)
+    // Sans saison, la forge du dé ne s'actionne pas, et l'arbre se remplit à la main
+    expect(setup).toContain('Avec la saison')
+    expect(setup).toContain('Compléter')
+    expect(setup).not.toContain('de la saison</span>')
     const setupOff = renderToString(
-      <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} seasonSlots={fillSlots(Array(32).fill(null), CHARACTER_IDS, seededRng(4))} onSeasonSlotsChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} uniqueNames onUniqueNamesChange={noop} season={{ ...season, enabled: true }} onSeasonChange={noop} />,
+      <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} forge={false} onForgeChange={noop} uniqueNames onUniqueNamesChange={noop} season={{ ...season, enabled: true }} onSeasonChange={noop} />,
     )
     expect(setupOff).toContain('Désactivées')
+    // Avec la saison : l'arbre de 16 cases vides, chacune avec son rang de saison ; ni placement ni « Compléter », et le
+    // lancement est toujours permis (les participants se tirent au lancement)
+    expect(setupOff).toContain('1er de la saison')
+    expect(setupOff).toContain('16e de la saison')
+    expect(setupOff).not.toContain('Case vide')
+    expect(setupOff).not.toContain('Compléter')
+    const launchAt = setupOff.indexOf('Lancer la saison')
+    expect(setupOff.slice(setupOff.lastIndexOf('<button', launchAt), launchAt)).not.toContain('disabled')
     expect(setupOff.match(EMOJI)?.[0]).toBeUndefined()
-    // Phase de saison : classement et journée, sans emoji
-    let s = createSeasonTournament(fillSlots(Array(20).fill(null), CHARACTER_IDS, seededRng(3)), (id) => createCharacter(id).name, { seed: 1 })
-    s = simulateSeasonMatches(s, pendingOfDay(s.season!, 0))
+    // Phase de saison avec construction (reliques et forge) : classement, constructions et journée, sans emoji
+    let s = createSeasonTournament(fillSlots(Array(20).fill(null), CHARACTER_IDS, seededRng(3)), (id) => createCharacter(id).name, { seed: 1, forge: true })
+    s = simulateSeasonMatches(s, [...pendingOfDay(s.season!, 0), ...pendingOfDay(s.season!, 1)])
     const seasonHtml = renderToString(
       <SeasonScreen season={s.season!} running={null} onPlay={noop} onSimulateDay={noop} onSimulateSeason={noop} onStop={noop} onStartBracket={noop} onMenu={noop} />,
     )
+    expect(seasonHtml).toContain('Constructions : 0 / 20 achevées')
+    expect(seasonHtml).toContain('class="forge-face')
+    // Le grand bouton « Combattre » : le prochain match de la journée en cours
+    expect(seasonHtml).toContain('Combattre')
     expect(seasonHtml.match(EMOJI)?.[0]).toBeUndefined()
     let t = createTournament(slots, (id) => createCharacter(id).name)
     t = withResult(
@@ -380,10 +441,32 @@ describe('écrans', () => {
     expect(hud.match(EMOJI)?.[0]).toBeUndefined()
     render(<MatchupScreen fighters={[holder, createCharacter('gorak')]} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
     // Écran de victoire d'un match de tournoi : le bouton principal mène à la récompense
-    const reward = { offer: RELICS.slice(0, 3), chosen: RELICS[1].id, onChoose: noop }
+    const reward = { kind: 'relic' as const, offer: RELICS.slice(0, 3), chosen: RELICS[1].id, onChoose: noop }
     const end = renderToString(<EndScreen result={result} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop, reward }} />)
     expect(end).toContain('Récompense')
     render(<RelicCard relic={draught} selected mark="Choix de Brokk" onSelect={noop} />)
+  })
+
+  it('rapport de combat (écran de victoire) et rapport de saison : reliques déclenchées, faces jouées', () => {
+    const holder = createCharacter('brokk').withRelics(RELICS)
+    const fight = simulateCombat([holder, createCharacter('fanchon')], { seed: 5 })
+    const end = renderToString(<EndScreen result={fight} onReplay={noop} onMenu={noop} />)
+    expect(end).toContain('aria-label="Rapport de combat"')
+    expect(end).toContain('aria-label="Déclenchements des reliques"')
+    expect(end).toContain(`aria-label="Faces jouées par ${holder.name}"`)
+    expect(end).toContain('report-bar')
+    expect(end.match(EMOJI)?.[0]).toBeUndefined()
+    // Saison forgée, en partie jouée : le cumul de chaque participant, sa construction (reliques, dé forgé)
+    let s = createSeasonTournament(fillSlots(Array(20).fill(null), CHARACTER_IDS, seededRng(3)), (id) => createCharacter(id).name, { seed: 1, forge: true })
+    s = simulateSeasonMatches(s, [...pendingOfDay(s.season!, 0), ...pendingOfDay(s.season!, 1), ...pendingOfDay(s.season!, 2)])
+    const report = renderToString(<SeasonReport season={s.season!} />)
+    expect(report).toContain('aria-label="Rapport de saison"')
+    expect(report).toContain('class="forge-face')
+    expect(report).toContain('Reliques déclenchées')
+    expect(report.match(EMOJI)?.[0]).toBeUndefined()
+    // Une saison enregistrée avant les rapports (aucun `report`) s'affiche encore
+    const old = { ...s.season!, results: Object.fromEntries(Object.entries(s.season!.results).map(([n, { report: _r, ...r }]) => [n, r])) }
+    expect(renderToString(<SeasonReport season={old} />)).toContain('Aucun rapport')
   })
 
   it('tous les statuts et effets s’affichent', () => {

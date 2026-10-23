@@ -26,9 +26,9 @@ Bilan de la 0.36.0, jugé par l'utilisateur comme « une véritable cacophonie �
 5. **Le timbre ressemble à la chose.** Le poison est liquide et discret (bulles, grésillement, vapeur), pas un choc. Un soin est doux et clair. Un coup est un choc. Chaque son a sa description au § 3, qui sert aussi de consigne de recherche.
 6. **L'intensité suit l'importance.** Quatre niveaux (§ 3) : ce qui décide du combat (coup critique, KO) passe au-dessus de ce qui revient à chaque tour (dés, poison qui ronge). Les effets périodiques et l'interface restent discrets.
 7. **Le silence est permis.** Ce qui se voit déjà et revient souvent sans rien changer (un compteur qui baisse, un bonus qui expire) ne sonne pas.
-8. **Un son tient dans sa fenêtre.** Il se termine avant l'instant suivant à ×1 (durées du § 3). À ×2 et ×4, il est écourté au prorata, avec un fondu ; seuls le clic, le choc du face-à-face, le cri de guerre, le KO et la victoire jouent en entier.
+8. **Un son tient dans sa fenêtre.** Il se termine avant l'instant suivant à ×1 (durées du § 3). À ×2 et ×4, il est écourté au prorata, avec un fondu ; seuls le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
 
-## 3. Le vocabulaire : 23 sons
+## 3. Le vocabulaire : 22 sons
 
 Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 
@@ -57,9 +57,8 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Victoire | le combat est gagné | fanfare glorieuse, cuivres et éclat ; **surtout pas rétro** (ni chiptune, ni 8 bits) | 2 | 1,5 à 5 s |
 | **Interface** | Clic | un bouton | clic sec, bois ou métal léger | 4 | 0,05 à 0,1 s |
 | | Choc du face-à-face | la présentation du duel | choc glorieux, épique | 1 | 0,6 à 4 s |
-| | Cri de guerre | le bouton « Jouer » lance le combat animé (0.91.0, décision de l'utilisateur, § 8) ; il remplace le clic de ce bouton | un seul guerrier qui hurle en chargeant, voix rauque, sans paroles ni foule ni écho | 2 | 1,5 à 2 s, tenu dans l'ouverture du combat (`INTRO`, 1 400 ms) |
 
-Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 23 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
+Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 22 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
 
 **Retirés par rapport à la 0.36.0** (33 sons) : dé au maximum (décision de l'utilisateur), élan (décision : l'impact suffit à faire sonner un coup), les trois paliers d'impact (fondus dans Coup), annonce du critique, carillon d'événement, peur (devient Malus reçu quand elle est posée, puis Tour perdu), purification (Dissipation), épines et parade (Coup), vol de vie (Soin), attente de l'ogre (Malus reçu), Furie des vents (Bonus gagné), pile et face (Pièce retombe, la même sur les deux faces, puis Coup critique sur pile), druide vers ours et ours vers druide (Transformation), rugissement et griffes (Coup).
 
@@ -175,7 +174,6 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Victoire | `victory`, `sfx.victory` | `victory.mp3` | `victory-1` | 3,88 s |
 | Clic | `click`, `sfx.click` | `click.mp3` | `click-1` | 0,10 s |
 | Choc du face-à-face | `clash`, `sfx.clash` | `clash.mp3` | `clash-2` | 3,47 s |
-| Cri de guerre | `war-cry`, `sfx.warCry` | `war-cry.mp3` | **généré par l'agent avec ElevenLabs** (0.91.0) : proposition 1 sur 3 (`logs/sons/war-cry/`), voir `SOURCES.md` | 1,74 s |
 
 ## 8. Décisions de l'utilisateur
 
@@ -198,6 +196,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | La musique de fond (0.48.0) | Trois boucles déposées par l'utilisateur, « tapis sonore » des combats : une au hasard, quelle que soit l'arène, en boucle, « pas trop fort, bonne intégration ». Voir § 10. |
 | Le poison (2026-10-22, 0.90.0) | « Un son spécial pour le poison quand il tick », qui ne partage plus Ronge : « pas un son d'impact principal, plutôt un "pchhhhit" qui évoque un mal laissé par un coup ». Il pourra servir à des effets semblables (magie…), mais pour l'instant au poison seul : Grésillement, généré avec Artlist. |
 | Le lancement du combat (2026-10-22, 0.91.0) | « Un son de cri de guerre, pas trop long, 2 secondes peut-être, qui signe le clic » sur le bouton qui lance le combat animé : « Jouer » de l'écran d'affrontement, dans tous les modes (choix de l'utilisateur, plutôt que « Combattre » de la sélection, que suit le Choc du face-à-face). Généré avec ElevenLabs. L'ouverture du combat passe de 500 à 1 400 ms pour que le cri retombe avant les dés de l'initiative (règle 8). |
+| Le cri de guerre retiré (2026-10-23, 0.96.0) | « Retirer le hurlement ajouté en début de combat » : le cri de guerre de la 0.91.0 est retiré ; « Jouer » refait un clic, et l'ouverture du combat revient à 500 ms. |
 
 ## 9. Index : qui joue quel son
 
@@ -229,7 +228,6 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Victoire | juste après le KO |
 | Clic | les boutons de l'interface |
 | Choc du face-à-face | l'écran de présentation du duel |
-| Cri de guerre | le bouton « Jouer » de l'écran d'affrontement, qui lance le combat animé (duel, tournoi, saison, campagne) |
 
 ### 9.2 Par personnage
 
@@ -279,7 +277,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Écran | Sons |
 | --- | --- |
 | Tous les écrans | Clic sur les boutons |
-| Présentation du duel | Choc du face-à-face ; Cri de guerre sur « Jouer » |
+| Présentation du duel | Choc du face-à-face |
 | Combat | tous les sons ci-dessus, puis KO et Victoire |
 
 ## 10. Musique de fond des combats (0.48.0)

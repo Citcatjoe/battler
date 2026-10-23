@@ -1742,18 +1742,28 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(attacksOf(dodged).filter((a) => a.attacker === 0).every((a) => a.dodged && !a.relicBonus)).toBe(true)
   })
 
-  it('coup : le Fer à quatre clous ne renforce que le coup dont le dé fait 4, jamais un coup brut de Furie (2026-10-21)', () => {
-    let fours = 0
+  it('coup : une relique de face lit le dé de tout coup, coup brut de Furie compris (2026-10-23)', () => {
     let plainFours = 0
+    let plainOnes = 0
     for (let seed = 0; seed < 60; seed++) {
-      const r = simulateCombat([createCharacter('gorak').withRelics([getRelic('four-nail-shoe')]), createCharacter('brokk')], { seed })
-      for (const a of attacksOf(r).filter((x) => x.attacker === 0 && !x.dodged && !x.forfeited)) {
-        expect(!!a.relicBonus, `jet ${a.roll}${a.plain ? ' brut' : ''}`).toBe(a.roll === 4 && !a.plain)
-        if (a.roll === 4) a.plain ? plainFours++ : fours++
-      }
+      const gorak = createCharacter('gorak').withRelics([getRelic('four-nail-shoe'), getRelic('split-knucklebone')])
+      const r = simulateCombat([gorak, createCharacter('brokk')], { seed })
+      r.beats.forEach((b, i) => {
+        if (b.type !== 'attack' || b.attack.attacker !== 0) return
+        const a = b.attack
+        // Le Fer renforce le coup dont le dé fait 4, et lui seul
+        if (!a.dodged && !a.forfeited) expect(!!a.relicBonus, `jet ${a.roll}${a.plain ? ' brut' : ''}`).toBe(a.roll === 4)
+        if (a.plain && a.roll === 4 && !a.dodged) plainFours++
+        if (!a.plain || a.roll !== 1 || b.state.hp.includes(0)) return
+        // Un 1 brut éveille l'Osselet dans les fenêtres de ce coup, mais aucune compétence (pas de coup sacrifié)
+        expect(a.forfeited).toBe(false)
+        expect(r.beats.some((x) => x.type === 'relic' && x.relic === 'split-knucklebone' && x.cause === i)).toBe(true)
+        expect(r.beats.some((x) => x.type === 'event' && x.cause === i)).toBe(false)
+        plainOnes++
+      })
     }
-    expect(fours).toBeGreaterThan(0)
     expect(plainFours).toBeGreaterThan(0)
+    expect(plainOnes).toBeGreaterThan(0)
   })
 
   it('deux dés : chaque dé se lit seul (un 1 de Fanchon éveille l’Osselet, le bonus du 4 va au coup du 4)', () => {
@@ -1847,7 +1857,7 @@ describe('reliques (docs/RELIQUES.md)', () => {
     const rise = after.findIndex((b) => b.state.hp[0] >= 8)
     expect(rise).toBeGreaterThan(0)
     expect(after.slice(rise).some((b) => b.state.hp[0] > 0 && b.state.hp[0] < 8)).toBe(true)
-    expect(relicLine(getRelic('wolf-fang'))).toContain('une fois par combat')
+    expect(relicLine(getRelic('wolf-fang'))).toContain('1 fois par combat')
   })
 
   it('coup : sur un moment du coup (il esquive), avec une recharge en tours du porteur', () => {
@@ -2250,7 +2260,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(plainSevens).toBeGreaterThan(0)
   })
 
-  it('dorure : +2 au coup qui touche quand le dé fait sa face, avant le critique, jamais sur un coup brut', () => {
+  it('dorure : +2 au coup qui touche quand le dé fait sa face, avant le critique, coup brut compris (2026-10-23)', () => {
     // Dé à 1 face doré, critique assuré ×2 : (1 + 2) × 2 = 6
     const r = run([testCharacter('a', { critChance: 1 }).withForge([{ op: 'gild', face: 1 }]), testCharacter('b', { maxHp: 40 })])
     for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ roll: 1, gild: GILD_BONUS, crit: true, raw: 6 })
@@ -2259,7 +2269,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     for (let seed = 0; seed < 60; seed++) {
       const g = simulateCombat([createCharacter('gorak').withForge([{ op: 'gild', face: 8 }]), createCharacter('brokk')], { seed })
       for (const a of attacksOf(g).filter((x) => x.attacker === 0 && !x.dodged && !x.forfeited)) {
-        expect(a.gild ?? 0, `jet ${a.roll}${a.plain ? ' brut' : ''}`).toBe(a.roll === 8 && !a.plain ? GILD_BONUS : 0)
+        expect(a.gild ?? 0, `jet ${a.roll}${a.plain ? ' brut' : ''}`).toBe(a.roll === 8 ? GILD_BONUS : 0)
         if (a.roll === 8) a.plain ? plainEights++ : eights++
       }
     }

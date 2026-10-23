@@ -15,11 +15,13 @@ _Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demand
 | Recharge, charges, effet, description, image | `cooldown` (en tours du porteur), `charges` (déclenchements par combat), `effects` (les effets des compétences), description **rédigée depuis les données** (`describeRelic`), image peinte par id (`src/assets/icons/<id>.png`) |
 | Le contenu : se fier au travail d'exploration de l'autre agent, pour le nombre et la description (2026-10-20) | **Douze reliques, trois par type** (§ 7), telles que proposées et revues. La série de test de la 0.75.0 (Brassard de fer, Pierre à aiguiser, Chandelle des heures, Fiole du dernier souffle) est retirée |
 | Le concept visuel de l'autre agent est meilleur (2026-10-20) | Sa grammaire d'illustration est la règle (§ 6.2) : un objet immobile, patiné, avec son attache, la magie contenue, le chiffre de la règle lisible dans l'objet. Le sceau hexagonal natif reste le cadre (§ 6.1) |
-| Identité visuelle : sceau, ou pastille octogonale à bord biseauté | **Hexagone biseauté**. L'octogone est déjà pris par les compétences (`SkillSeal`) et la pièce prestige, le rond par les statuts : une troisième forme dit « relique » sans lire |
+| Identité visuelle : sceau, ou pastille octogonale à bord biseauté | **Hexagone biseauté** (jusqu'à la 0.91.1 ; depuis, l'objet peint seul, sans sertissage, § 6.1). L'octogone est déjà pris par les compétences (`SkillSeal`) et la pièce prestige, le rond par les statuts : une troisième forme dit « relique » sans lire |
 | Montrer les reliques sur l'arbre du tournoi ? sur l'écran d'affrontement ? | **Les deux.** Affrontement : les parieurs doivent les voir, elles comptent dans les cotes. Arbre : petits sceaux à côté du nom, sur chaque match, avec les reliques qu'il avait pour ce match. Aussi : écran du champion, compendium, journal, trace |
 | Aucune relique ne pose de malus sur l'adversaire, « visuellement en tout cas » | Une relique agit sur son porteur. Règle 7 du § 3, vérifiée par `validateRelics` |
 | Deux dés (Fanchon) : « sur un 1 » validé si un des dés fait 1 ; le jet maximal est celui d'un seul dé | Chaque dé se lit seul. Règle 8 du § 3, vérifiée par un test |
 | Une stat négative peut s'afficher sur la fiche, même traitée à 0 en combat (« c'est marrant ») | On ne borne pas : Cotte du mercenaire sur Morgrut = −8 % d'esquive affiché ; une esquive négative n'esquive jamais |
+| Avec la phase de saison, les reliques apparaissent dès la saison : trois au plus, gagnées pendant les premiers matchs, plus pendant l'arbre ; puis le personnage se fige (2026-10-22). Correction : un personnage qui perd ses premiers matchs doit quand même avoir ses améliorations ; « alterner gain de relique et forge du dé à chaque victoire, jusqu'à trois de chacun » | **Construction** (0.92.0, corrigée en 0.92.1, § 4) : chaque victoire de saison rapporte au vainqueur sa récompense suivante, une relique choisie dans une offre de trois, en alternance avec une forge du dé si elle est activée, jusqu'à trois de chaque. Puis il se fige jusqu'à la fin du tournoi : l'arbre d'un tournoi à saison n'offre plus rien |
+| Les descriptions sont trop compliquées : une information simple, qui dit quand elle agit et comment elle s'insère dans la résolution ; « +4 dégâts aux frappes de 4. Point. » ; pas de lore dans les infobulles ; si on ne sait pas dire quand elle se déclenche, c'est que la règle est ambiguë (2026-10-23) | **Une ligne par relique** (0.95.0, § 5.1), au vocabulaire fixe de [RESOLUTION.md](RESOLUTION.md) § 3 ; la phrase d'ambiance quitte l'infobulle et la carte de récompense (elle reste au compendium). Règle aplatie : **une relique de face lit le dé de tout coup**, coup brut de la Furie compris (avant : « pas sur les coups bruts ») |
 
 ## 2. Relique ou compétence : ce qui les sépare
 
@@ -44,7 +46,7 @@ Une relique est une donnée du registre `RELICS` (`src/game/relics.ts`), comme u
 | Type | Définition | Quand | Reliques |
 | --- | --- | --- | --- |
 | **Caractéristique** | `stats` : ajoutées à plat aux stats de base (`Character.stats` ; la base reste dans `baseStats`) | tout le combat | Contrepoids de plomb, Bottes de feutre, Cotte du mercenaire |
-| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous |
+| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé). Une face se lit sur tout coup, coup brut de Furie compris (2026-10-23) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous |
 | **Tour** | `trigger: { type: 'turn', turn }` : au début de son `turn`-ième tour ; puis tous les `cooldown` tours, ou à chaque tour sans recharge, ou une seule fois avec une charge | début de son tour | Cloche d'ouverture, Chapelet de l'ermite, Clepsydre du siège |
 | **Seuil** | `trigger: { type: 'hpBelow', ratio, who? }` : quand ses PV (ou ceux de l'adversaire, `who: 'opponent'`) passent sous `ratio` × PV max ; une fois par combat (`charges: 1`, les trois du registre depuis le 2026-10-21), ou, avec une recharge, réarmée quand ils remontent au-dessus | après une perte de PV | Dent de loup, Collier de ronces, Trophée du chasseur |
 
@@ -55,7 +57,7 @@ Règles communes ([RESOLUTION.md](RESOLUTION.md) § 3 et § 5) :
 1. **Elle répond, elle n'initie pas.** Dans une fenêtre, l'ordre est : réactions des statuts, compétences, puis reliques (ordre d'obtention).
 2. **Aucun hasard.** Pas de `chance` : si le moment arrive et qu'elle est prête, elle agit. Sans déclenchement, un combat avec elle est identique au combat sans elle (test `combat.test.ts`).
 3. **Charges** : déclenchements par combat (`charges`, illimité par défaut). **Recharge** : `cooldown` tours du porteur avant de repartir. **Conditions** : `when`, les mêmes que les compétences.
-4. **Le bonus de coup ne change pas le jet.** Un 1 reste un 1 pour les compétences du dé ; seule la valeur du coup grandit. Un coup esquivé ou sacrifié n'en profite pas. Un bonus de face (`onFace`) ne vaut que pour le coup dont le dé fait cette face.
+4. **Le bonus de coup ne change pas le jet.** Un 1 reste un 1 pour les compétences du dé ; seule la valeur du coup grandit. Un coup esquivé ou sacrifié n'en profite pas. Un bonus de face (`onFace`) ne vaut que pour le coup dont le dé fait cette face, coup brut compris : la Furie des vents ne déclenche aucune compétence, mais ses dés éveillent les reliques de face (2026-10-23 ; du 2026-10-21 au 2026-10-22, non).
 5. **Seuil** : il part au passage sous le seuil (un coup, un poison, un effet), jamais sur le coup qui met K.O. Le passage se lit sur les PV du changement vérifié : deux reliques passées sous leur seuil par un même coup partent toutes les deux, même si la première soigne (0.85.0 : Larme de givre puis Trophée du chasseur adverse ; avant, le soin de la Larme effaçait le passage du Trophée). Il se réarme dès qu'un soin remonte les PV au-dessus du seuil (`rearmThresholds`), même si une perte les refait passer dessous avant la vérification suivante (vol de vie puis Riposte sur le même coup). Une recharge ou une condition fausse au moment du passage consomme ce passage. **Une relique de seuil a une charge ou une recharge** (2026-10-21, retour de l'utilisateur sur la Dent de loup) : sans l'une ni l'autre, chaque soin la réarmait et elle repartait à chaque nouvelle chute. L'audit (`audit.ts`, « relique de seuil sans limite ») le vérifie.
 6. **Effets** : ceux des compétences (soin, dégâts directs, pose de statut, purge), du point de vue du porteur. Pas de relâche de jauges.
 7. **Jamais de malus sur l'adversaire.** Un statut posé par une relique est un bonus de son porteur ; vers l'adversaire, seuls les dégâts directs. Permis aussi : un bonus qui réagit plus tard contre l'adversaire (les Épines du Collier de ronces font saigner l'attaquant quand il frappe : c'est l'effet des Épines, pas de la relique). `validateRelics` refuse tout le reste.
@@ -83,27 +85,53 @@ flowchart LR
 - Les cotes des paris sont simulées avec les combattants du match, reliques comprises ([PARIS.md](PARIS.md)).
 - Le tournoi n'est pas persisté : les reliques non plus. L'historique (`battler:history:v1`) ne change pas.
 - **Tournoi sans reliques** (demande de l'utilisateur, 2026-10-21) : l'interrupteur **Reliques** de l'écran de configuration (en haut, à côté des paris) désactive le système pour tout le tournoi. `createTournament(cases, nom, { relics: false })` pose `Tournament.relics = false` ; `withResult` ne tire alors aucune offre, donc aucun `MatchResult.relic`, et `relicsOf` reste vide : personne n'en porte, l'arbre, l'affrontement, l'écran de victoire (pas de Récompense) et le sacre n'en montrent aucune. Le choix est gardé pour le tournoi suivant de la session (en mémoire, comme les paris). Activé par défaut.
+- **Après une saison** (0.92.0, règle corrigée en 0.92.1, demandes de l'utilisateur du 2026-10-22) : les reliques se gagnent pendant la **construction** de la saison (`season.ts`, [FEATURES.md](FEATURES.md) § 8), plus dans l'arbre. Chaque victoire de saison rapporte au vainqueur sa récompense suivante (`Season.rewards` : relique puis forge du dé si elle est activée, tour à tour), jusqu'à trois reliques : une offre de 3 reliques qu'il n'a pas, et son choix au hasard, tiré à la graine du match (`SeasonResult.reward`) ; l'écran de victoire d'un match regardé permet de l'imposer tant qu'il n'a pas rejoué (`chooseSeasonReward`). Sa construction (`buildOf`) le suit, figée, dans l'arbre (`Entrant.build`) : `relicsOf` commence par elle, `matchFighters` l'arme de ses reliques et de sa forge, et `withResult` ne tire aucune offre quand le tournoi a une saison. Avec la forge, le Contrepoids de plomb quitte le tirage, comme en campagne.
 
 ## 5. Interface
 
 | Écran | Ce qu'on voit |
 | --- | --- |
-| **Combat** (`HpBar`) | sceaux de 36 px entre le nom et les dés de compétence ; infobulle au survol (nom, type, moment, effet, statut posé, charges restantes, phrase d'ambiance) ; pastille des charges ; sceau éteint quand il est dépensé. Quand elle agit, **son sceau s'illumine** et, au même instant, son label (type Relique : plaque sombre au liseré d'or, icône, « Fer à quatre clous +4 ») se pose sous le dé (0.78.0, `onShow` de `showEffects`) ; l'effet arrive sur sa cible (badges, soin, dégâts directs en coups sans élan) : ni nom flottant au-dessus du porteur ni aura (§ 2). Journal en or (« Relique · … ») |
+| **Combat** (`HpBar`) | sceaux de 36 px entre le nom et les dés de compétence ; infobulle au survol (nom, type, sa ligne de règle, ses limites, statut posé, charges restantes ; plus de phrase d'ambiance depuis la 0.95.0) ; pastille des charges ; sceau éteint quand il est dépensé. Quand elle agit, **son sceau s'illumine** et, au même instant, son label (type Relique : plaque sombre au liseré d'or, icône, « Fer à quatre clous +4 ») se pose sous le dé (0.78.0, `onShow` de `showEffects`) ; l'effet arrive sur sa cible (badges, soin, dégâts directs en coups sans élan) : ni nom flottant au-dessus du porteur ni aura (§ 2). Journal en or (« Relique · … ») |
 | **Affrontement** | sceaux de 44 px sous les dés de compétence ; la fiche de stats passe en or la valeur changée par une relique (infobulle : la valeur sans elle) |
-| **Écran de victoire** (tournoi, hors finale) | le bouton principal devient **Récompense** : menu superposé, trois grandes cartes, la carte du vainqueur marquée « Choix de… », un clic sur une autre pour décider à sa place, rappel des reliques déjà portées ; **Continuer** (ou **Imposer ce choix**) mène à l'arbre ; **← Combat** revient au bilan |
+| **Écran de victoire** (tournoi, hors finale) | le bouton principal devient **Récompense** : menu superposé, trois grandes cartes (sceau, nom, type, ligne de règle, limites ; sans phrase d'ambiance depuis la 0.95.0), la carte du vainqueur marquée « Choix de… », un clic sur une autre pour décider à sa place, rappel des reliques déjà portées ; **Continuer** (ou **Imposer ce choix**) mène à l'arbre ; **← Combat** revient au bilan |
 | **Arbre** | sceaux de 18 px à côté du nom, sur chaque match : les reliques qu'il avait pour ce match. Colonnes des tours 2 et 3 élargies (168 → 184 px). Une seule infobulle à la fois, celle du sceau survolé (groupe nommé `group/relic` : un `group-hover` nu s'ouvrait au survol de la ligne et superposait toutes les infobulles du combattant, corrigé le 2026-10-21) ; au-dessus de la ligne du haut, au-dessous de celle du bas, retournée si elle sortait de la scène |
 | **Configuration du tournoi** | interrupteur **Reliques** (sceau, Activées / Désactivées, curseur) : § 4 |
 | **Champion** | ses reliques sous son nom |
-| **Compendium** | section Reliques (index par type, détail) |
+| **Compendium** | section Reliques (index par type, détail : la phrase d'ambiance sous le nom, seul endroit où elle reste ; une case « Règle » avec sa ligne, ses limites et ses statuts) |
 | **Trace** | en-tête « Reliques (gauche, Gorak) : id « nom » (règle) ; … », relu par `npm run logs` pour rejouer ; chaque déclenchement et chaque bonus de coup |
+
+### 5.1 La règle en une ligne (0.95.0)
+
+`describeRelic` rédige chaque relique depuis ses données : **moment : effet**, puis ses limites à part. Le vocabulaire porte la résolution (« à la frappe » : avant le critique ; « dégâts directs » : ni coup ni armure ; « Sur un 1 » : la face du dé, quel que soit le coup), défini une fois dans [RESOLUTION.md](RESOLUTION.md) § 3. Une exception se dit là où elle naît (l'Incantation remplace le dé ; une esquive négative n'esquive jamais), jamais sur la relique. Une relique de tour à une charge ne dit pas « une fois » : son moment (« Au 4e tour ») le dit déjà.
+
+| Relique | Ligne | Limites |
+| --- | --- | --- |
+| Contrepoids de plomb | +2 faces au dé | |
+| Bottes de feutre | +6 % d'esquive | |
+| Cotte du mercenaire | +2 armure, −8 % d'esquive | |
+| Osselet fendu | Sur un 1 : 3 dégâts directs | |
+| Dé creux | Sur un jet maximal : +1 Esquive améliorée | recharge 3 tours |
+| Fer à quatre clous | +4 dégâts aux frappes de 4 | |
+| Cloche d'ouverture | Au 1er tour : +1 Critique assuré | |
+| Chapelet de l'ermite | Tous les 3 tours : retire son dernier malus, sinon +3 PV | |
+| Clepsydre du siège | Au 6e tour, puis tous les 4 tours : +1 Aura de puissance | |
+| Dent de loup | Sous 40 % PV : +2 Vol de vie | 1 fois par combat |
+| Collier de ronces | Sous 50 % PV : +2 Épines acérées | 1 fois par combat |
+| Trophée du chasseur | Adversaire sous 30 % PV : +1 Critique assuré | 1 fois par combat |
+| Braise captive | Au 4e tour : 3 × 2 dégâts directs | |
+| Larme de givre | Sous 35 % PV : retire tous ses malus, +5 PV | 1 fois par combat |
+| Conque des vents | Quand il esquive : 3 × 2 dégâts directs | 2 fois par combat |
+| Géode fendue | Quand il encaisse un coup : +4 Armure temporaire | 2 fois par combat, recharge 3 tours |
+
+Mesure de la règle aplatie (seul Gorak a des coups bruts ; 600 combats par duel contre le roster, mêmes graines, 2026-10-23) : Gorak nu 50,9 % ; Osselet fendu 58,1 → 59,6 % ; Dé creux 61,0 → 62,6 % ; Fer à quatre clous 60,0 → 61,6 % ; face dorée (forge) sur le 8 : 55,1 → 55,9 %, sur le 4 : 55,7 → 56,7 %. Environ +1 à +1,6 point, Gorak seul, dans la cible de 5 à 15 points.
 
 ## 6. Identité visuelle
 
-### 6.1 Le sceau : l'hexagone
+### 6.1 L'objet seul, sans sertissage
 
-Trois formes, trois familles, lisibles de loin : **le rond** pour les statuts (médaillons), **l'octogone** pour les compétences et la pièce prestige, **l'hexagone** pour les reliques.
+**Depuis la 0.91.1 (décision de l'utilisateur) : aucun conteneur CSS visible.** Le graphisme de la relique porte tout son poids visuel : pas de sceau, de cadre, de plaque ni de forme découpée. `RelicSeal` (`.relic-seal` dans `index.css`) ne pose que l'icône peinte détourée (`src/assets/icons/<id>.png`), qui occupe tout son carré, avec une ombre portée qui suit sa silhouette ; son initiale gravée en or en attendant. Restent : l'éclat d'or au déclenchement, l'extinction quand ses charges sont dépensées, la pastille des charges. Tailles : 22 (arbre), 40 à 48 (combat, infobulle, campagne, listes du compendium), 56 (affrontement, champion), 128 (compendium), 140 (carte de récompense).
 
-Le sceau (`RelicSeal`, `.relic-seal` dans `index.css`) est natif, en couches découpées en hexagone pointe en haut : cadre d'or éclairé du haut à gauche, jour sombre de 2 px, plaque de cuir brun, biseau (clair en haut, sombre en bas), ombre portée qui suit la forme. Au centre : l'icône peinte de la relique (`src/assets/icons/<id>.png`), ou son initiale gravée en or en attendant. Tailles : 18 (arbre), 32-36 (combat, infobulle), 44 (affrontement, champion), 88 (compendium), 104 (carte de récompense).
+Ce qui dit « relique » sans cadre : **c'est un objet** (§ 6.2), alors que la compétence a son sceau octogonal et le statut sa pièce gravée ronde. Avant la 0.91.1, l'hexagone biseauté (cadre d'or, plaque de cuir) jouait ce rôle.
 
 Pas de couleur de type : la distinction bonus vert / malus rouge des statuts reste seule (refus de l'utilisateur, « c'est carnaval », FAMILLES.md § 3). **Le type se lit dans l'objet** (§ 6.3).
 
@@ -117,7 +145,7 @@ Pas de couleur de type : la distinction bonus vert / malus rouge des statuts res
 | **Cadrage** | serré sur l'action | l'objet **entier**, vu de trois quarts, avec son **attache** (lanière, chaîne, cordon, crochet) : on voit qu'il se porte |
 | **Âge** | neuf, au présent | **patiné** : usé, cabossé, réparé, avec la trace d'un ancien porteur. C'est ce qui raconte le tournoi et la dépouille |
 
-Une icône de compétence montre souvent un objet aussi (la montre de l'Attente). La différence tient alors à l'état : l'objet d'une compétence **agit** ; l'objet d'une relique **attend**. Le cadre est le sceau natif : l'image ne contient que l'objet, sans cadre ni fond.
+Une icône de compétence montre souvent un objet aussi (la montre de l'Attente). La différence tient alors à l'état : l'objet d'une compétence **agit** ; l'objet d'une relique **attend**. L'image ne contient que l'objet, détouré, sans cadre ni fond, et s'affiche telle quelle (§ 6.1) : sa silhouette doit se lire seule, à 22 px comme à 140.
 
 ### 6.3 Le chiffre de la règle se lit dans l'objet
 
@@ -171,7 +199,7 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 - **Règle** : +2 faces à son dé de dégâts.
 - **Pourquoi** : la seule stat qui change aussi la **fréquence des compétences**. Les faces 1 à 3 restent les compétences : un dé plus grand frappe plus fort, mais déclenche moins souvent. Ysolde passe de 3 jets sur 7 à 3 sur 9 : son Aura de sainteté tombe moins souvent (+1,3 seulement). Morgrut passe de 3 Attentes sur 14 à 3 sur 16 : gain pur. Fanchon (deux d5 → deux d7) : moins de doubles. Une relique qui récompense les combattants nus et coûte aux combattants à compétences : un vrai choix.
 - **Illustration** : un pommeau ou un contrepoids de plomb, rond et lourd, cerclé d'une bague de fer, avec le trou du rivet par où on le fixe à une arme. Marques de lime.
-- **En campagne** (0.88.0, décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4) : elle devient l'opération de forge **Agrandir** et quitte le tirage des reliques de campagne (`CAMPAIGN_RELICS`). Elle reste dans celui du tournoi.
+- **Avec la forge du dé** (0.88.0 en campagne, 0.92.0 en saison forgée ; décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4) : elle devient l'opération de forge **Agrandir** et quitte le tirage des reliques (`FORGE_RELIC_IDS`). Elle reste dans celui du tournoi sans forge.
 
 #### Bottes de feutre
 - **Règle** : +6 % d'esquive.
@@ -198,7 +226,7 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 - **Illustration** : un dé cubique d'os, évidé et léger, posé sur sa face la plus haute, qui porte une couronne gravée à la place des points. Une petite chaîne passée dans un coin percé. Un cube, pour ne pas doubler l'icône `dice` (dé à vingt faces).
 
 #### Fer à quatre clous
-- **Règle** : sur un 4 : +4 à la valeur de ce coup, avant le critique.
+- **Règle** : sur un 4 : +4 à la valeur de ce coup, avant le critique. Affichée « +4 dégâts aux frappes de 4 » depuis la 0.95.0 ; un 4 de Furie des vents compris depuis le 2026-10-23.
 - **Pourquoi** : le 4 est le plus faible des vrais coups (1 à 3 sont les compétences) ; le fer en fait un coup de 8. Tout le roster a un 4. C'est la première relique d'une face **sans compétence**. Pour Fanchon, le bonus va au coup du dé qui a fait 4. Moteur : `rollBonus: 4, onFace: 4` (0.77.0).
 - **Illustration** : un fer à cheval étroit, percé de quatre trous seulement, quatre clous encore plantés. Pendu à un clou par une ficelle. Pas de chiffre écrit : les quatre clous le disent.
 

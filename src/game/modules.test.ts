@@ -17,7 +17,6 @@ import {
   ACT_FIGHTS,
   ACT_LENGTH,
   BOSS,
-  CAMPAIGN_RELICS,
   campaignCharacter,
   championOf,
   heritableGains,
@@ -50,7 +49,7 @@ import {
   withResult,
   type Tournament,
 } from './tournament'
-import { OFFER_SIZE, RELIC_IDS } from './relics'
+import { FORGE_RELIC_IDS, OFFER_SIZE, RELIC_IDS } from './relics'
 
 const duel = (a: string, b: string, seed: number) =>
   simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) })
@@ -764,7 +763,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(run.gains.filter((g) => g.kind === 'relic').map((g) => g.kind === 'relic' && g.relic)).toEqual(run.relics)
     expect(run.forge).toHaveLength(2)
     expect(new Set(run.relics).size).toBe(3)
-    expect(run.relics.every((r) => CAMPAIGN_RELICS.includes(r))).toBe(true)
+    expect(run.relics.every((r) => FORGE_RELIC_IDS.includes(r))).toBe(true)
     expect(championOf(run).forge).toEqual(run.forge)
     const end = withFightResult(run, bossEncounter, won)
     expect(end).toMatchObject({ outcome: 'won', wins: ACT_LENGTH, fights: { length: ACT_LENGTH } })

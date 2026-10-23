@@ -1,21 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { simulateCombat } from './combat'
 import { EPITHETS, uniqueNames } from './epithets'
+import { offerTargets, stepKey, stepOf } from './forge'
 import { EMOJI } from './test-utils'
 import { getRelic, RELICS } from './relics'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, createCharacter } from './roster'
 import {
   BRACKET_SEEDS,
+  buildOf,
+  buildRewards,
+  chooseSeasonReward,
   createSeasonTournament,
   currentDay,
+  drawSeasonParticipants,
   inSeason,
+  nextSeasonMatch,
   pendingOfDay,
   SEASON_SIZES,
   seasonFighters,
   seasonFixtures,
   seasonMatchSeed,
   seasonSchedule,
+  seasonStatus,
   simulateSeasonMatches,
   standings,
   startBracket,
@@ -24,7 +31,7 @@ import {
   type Season,
   type SeasonResult,
 } from './season'
-import { createTournament, fillSlots, matchFighters, matchKey, players, readyMatches, SLOTS, withResult, type Tournament } from './tournament'
+import { championRun, createTournament, fillSlots, matchFighters, matchKey, players, readyMatches, SLOTS, withResult, type Tournament } from './tournament'
 
 const nameOf = (id: string) => createCharacter(id).name
 const participants = (n: number, seed = 5) => fillSlots(Array(n).fill(null), CHARACTER_IDS, seededRng(seed))
@@ -127,16 +134,24 @@ describe('saison', () => {
     expect(t.entrants).toEqual([])
     const table = standings(seasonOf(t))
     const bracket = startBracket(t)
-    expect(bracket.entrants).toEqual(BRACKET_SEEDS.map((rank) => ({ ...seasonOf(t).entrants[table[rank - 1].entrant], seasonRank: rank })))
+    expect(bracket.entrants).toEqual(
+      BRACKET_SEEDS.map((rank) => ({ ...seasonOf(t).entrants[table[rank - 1].entrant], seasonRank: rank, build: buildOf(seasonOf(t), table[rank - 1].entrant) })),
+    )
     // Les 8 derniers sont éliminés
     const eliminated = new Set(table.slice(SLOTS).map((s) => seasonOf(t).entrants[s.entrant].label))
     expect(bracket.entrants.some((e) => eliminated.has(e.label))).toBe(false)
   })
 
-  it('aucune relique pendant la saison ; elles reprennent dans l’arbre', () => {
-    let t = createSeasonTournament(participants(20), nameOf, { seed: 3 })
-    expect(t.relics).toBe(true)
-    // Un combattant qui porte une relique n'est pas celui du match
+  it('construction : reliques et forge alternent, six récompenses avec les deux, trois avec une seule', () => {
+    expect(buildRewards({ relics: true, forge: true })).toEqual(['relic', 'forge', 'relic', 'forge', 'relic', 'forge'])
+    expect(buildRewards({ relics: true, forge: false })).toEqual(['relic', 'relic', 'relic'])
+    expect(buildRewards({ relics: false, forge: true })).toEqual(['forge', 'forge', 'forge'])
+    expect(buildRewards({ relics: false, forge: false })).toEqual([])
+  })
+
+  it('construction : chaque victoire rapporte la récompense suivante, jusqu’à trois de chaque, puis tout se fige jusqu’à la fin du tournoi', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 3, forge: true })
+    // Un combattant qui porte une relique qu'il n'a pas gagnée n'est pas celui du match
     const [home, away] = seasonFighters(seasonOf(t), 0)
     const armed = simulateCombat([home.withRelics([getRelic(RELICS[0].id)]), away], { seed: 1 })
     expect(() => withSeasonResult(t, 0, armed)).toThrow()
@@ -145,22 +160,147 @@ describe('saison', () => {
     const season = seasonOf(t)
     expect(Object.keys(season.results)).toHaveLength(380)
     expect(t.results).toEqual({})
-    // Rejouer un match avec sa graine notée redonne le même vainqueur, sans relique
-    const replay = simulateCombat(seasonFighters(season, 7), { seed: season.results[7].seed })
-    expect(replay.fighters.every((f) => f.relics.length === 0)).toBe(true)
-    expect(replay.winner).toBe(season.results[7].winner)
-    expect(() => withSeasonResult(t, 7, replay)).toThrow() // déjà joué
+    for (const f of seasonFixtures(season)) {
+      const r = season.results[f.number]
+      // Le vainqueur reçoit sa récompense suivante tant qu'il n'a pas les six ; après, plus rien
+      const before = buildOf(season, r.winner === 0 ? f.home : f.away, f.day)
+      const count = before.relics.length + before.forge.length
+      expect(r.reward?.kind).toBe(count < 6 ? season.rewards[count] : undefined)
+      if (r.reward?.kind === 'relic') expect(r.reward.chosen).not.toBe('lead-pommel') // devenu Agrandir avec la forge
+      // Chacun combat avec ce qu'il a gagné aux journées précédentes
+      const fighters = seasonFighters(season, f.number)
+      ;[f.home, f.away].forEach((i, side) => {
+        const build = buildOf(season, i, f.day)
+        expect(fighters[side].relics.map((x) => x.id)).toEqual(build.relics)
+        expect(fighters[side].forge.map(stepKey)).toEqual(build.forge.map(stepKey))
+      })
+    }
+    // Au bout de la saison, chacun a ses trois reliques et ses trois forges, même s'il a perdu ses premiers matchs
+    season.entrants.forEach((_, i) => {
+      const { relics, forge } = buildOf(season, i)
+      expect(relics).toHaveLength(3)
+      expect(forge).toHaveLength(3)
+      expect(new Set(relics).size).toBe(3)
+    })
+    const [first] = seasonFixtures(season)
+    const firstLoser = season.results[0].winner === 0 ? first.away : first.home
+    expect(buildOf(season, firstLoser, 1)).toEqual({ relics: [], forge: [] })
+    // Rejouer un match avec sa graine notée redonne le même vainqueur, avec la même construction
+    const replay = simulateCombat(seasonFighters(season, 150), { seed: season.results[150].seed })
+    expect(replay.winner).toBe(season.results[150].winner)
+    expect(() => withSeasonResult(t, 150, replay)).toThrow() // déjà joué
 
+    // L'arbre : chacun garde sa construction, figée ; aucune victoire n'y rapporte plus rien
     t = startBracket(t)
+    t.entrants.forEach((e) => expect(e.build).toEqual(buildOf(season, season.entrants.findIndex((s) => s.label === e.label))))
+    let seed = 1
+    while (readyMatches(t).length) {
+      for (const ref of readyMatches(t)) {
+        const fighters = matchFighters(t, ref)
+        const [a, b] = players(t, ref) as [number, number]
+        expect(fighters[0].relics.map((x) => x.id)).toEqual(t.entrants[a].build!.relics)
+        expect(fighters[1].forge.map(stepKey)).toEqual(t.entrants[b].build!.forge.map(stepKey))
+        t = withResult(t, ref, simulateCombat(fighters, { seed: seed++ }), seededRng(seed))
+        expect(t.results[matchKey(ref)].relic).toBeUndefined()
+      }
+    }
+    const champ = championRun(t)!
+    expect(champ.relics).toEqual(champ.entrant.build!.relics)
+  })
+
+  it('construction : un match attend que la construction de ses deux combattants soit connue ; figés, ils jouent dans l’ordre voulu', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 8 })
+    const season = () => seasonOf(t)
+    const f3 = seasonSchedule(20)[3][0]
+    const late = seasonSchedule(20)[30][0]
+    expect(seasonStatus(season(), f3.number)).toBe('pending')
+    expect(() => simulateSeasonMatches(t, [f3.number])).toThrow()
+    t = simulateSeasonMatches(t, [...pendingOfDay(season(), 0), ...pendingOfDay(season(), 1), ...pendingOfDay(season(), 2)])
+    expect(seasonStatus(season(), f3.number)).toBe('ready')
+    // Journée par journée, jusqu'à ce que les deux combattants du match du retour aient leurs trois reliques
+    let day = 3
+    while (seasonStatus(season(), late.number) === 'pending') t = simulateSeasonMatches(t, pendingOfDay(season(), day++))
+    expect(day).toBeLessThan(30)
+    for (const i of [late.home, late.away]) expect(buildOf(season(), i).relics).toHaveLength(3)
+    // Il se joue avant les journées qui le précèdent, sans récompense
+    t = simulateSeasonMatches(t, [late.number])
+    expect(season().results[late.number].reward).toBeUndefined()
+    expect(pendingOfDay(season(), day)).not.toEqual([])
+  })
+
+  it('le prochain match à jouer (« Combattre ») : le premier non joué de la journée en cours, prêt ; aucun en fin de saison', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 8 })
+    const [first, second] = seasonSchedule(20)[0]
+    expect(nextSeasonMatch(seasonOf(t))).toBe(first.number)
+    t = simulateSeasonMatches(t, [first.number])
+    expect(nextSeasonMatch(seasonOf(t))).toBe(second.number)
+    t = simulateSeasonMatches(t, pendingOfDay(seasonOf(t), 0))
+    const next = nextSeasonMatch(seasonOf(t))!
+    expect(next).toBe(seasonSchedule(20)[1][0].number)
+    expect(seasonStatus(seasonOf(t), next)).toBe('ready')
+    t = simulateSeasonMatches(t, seasonFixtures(seasonOf(t)).map((f) => f.number).filter((n) => !seasonOf(t).results[n]))
+    expect(nextSeasonMatch(seasonOf(t))).toBeNull()
+  })
+
+  it('construction : l’observateur change la récompense tant que le vainqueur n’a pas rejoué', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 12, forge: true })
+    const fixtures = seasonFixtures(seasonOf(t))
+    const winnerOf = (n: number) => (seasonOf(t).results[n].winner === 0 ? fixtures[n].home : fixtures[n].away)
+    const nextOf = (entrant: number, day: number) => fixtures.find((g) => g.day === day && (g.home === entrant || g.away === entrant))!
+    t = simulateSeasonMatches(t, pendingOfDay(seasonOf(t), 0))
+
+    // Relique (journée 1) : une autre de l'offre ; une relique non proposée est refusée
+    const number = fixtures[0].number
+    const relic = seasonOf(t).results[number].reward
+    if (relic?.kind !== 'relic') throw new Error('La journée 1 donne une relique')
+    const other = relic.offer.find((id) => id !== relic.chosen)!
+    const winner = winnerOf(number)
+    const stale = simulateCombat(seasonFighters(seasonOf(t), nextOf(winner, 1).number), { seed: 1 })
+    t = chooseSeasonReward(t, number, other)
+    expect(buildOf(seasonOf(t), winner).relics).toEqual([other])
+    expect(() => chooseSeasonReward(t, number, 'pas-une-relique')).toThrow()
+    // Un combat préparé avant le changement n'est plus celui du match
+    expect(() => withSeasonResult(t, nextOf(winner, 1).number, stale)).toThrow()
+
+    // Le vainqueur a rejoué : sa relique ne change plus
+    t = simulateSeasonMatches(t, pendingOfDay(seasonOf(t), 1))
+    expect(() => chooseSeasonReward(t, number, relic.chosen)).toThrow()
+
+    // Forge (journée 2, deuxième victoire) : chaque opération de l'offre, sur une face qu'elle peut viser ; une autre est refusée
+    const n1 = seasonSchedule(20)[1].map((f) => f.number).find((n) => seasonOf(t).results[n].reward?.kind === 'forge')!
+    const forged = seasonOf(t).results[n1].reward
+    if (forged?.kind !== 'forge') throw new Error('Une deuxième victoire donne une forge')
+    const smith = winnerOf(n1)
+    const def = createCharacter(seasonOf(t).entrants[smith].characterId).definition
+    const held = buildOf(seasonOf(t), smith, 1).forge
+    for (const offer of forged.offer) {
+      const step = stepOf(offer, offerTargets(def, held, offer).at(-1))
+      t = chooseSeasonReward(t, n1, step)
+      expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([...held, step].map(stepKey))
+    }
+    const targeted = forged.offer.find((o) => o.op !== 'enlarge' && o.op !== 'trim')!
+    expect(() => chooseSeasonReward(t, n1, stepOf(targeted, 999))).toThrow()
+    const missing = (['enlarge', 'trim', 'gild', 'sharpen'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
+    expect(() => chooseSeasonReward(t, n1, missing === 'enlarge' || missing === 'trim' ? { op: missing } : { op: missing, face: 1 })).toThrow()
+  })
+
+  it('sans reliques ni forge : ni récompense ni construction, et l’arbre n’en donne pas', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 3, relics: false })
+    expect(seasonOf(t).rewards).toEqual([])
+    t = simulateSeasonMatches(t, seasonFixtures(seasonOf(t)).map((f) => f.number))
+    expect(Object.values(seasonOf(t).results).every((r) => !r.reward)).toBe(true)
+    t = startBracket(t)
+    expect(t.entrants.every((e) => !('build' in e))).toBe(true)
     const ref = { round: 0, index: 0 }
     t = withResult(t, ref, simulateCombat(matchFighters(t, ref), { seed: 1 }), seededRng(1))
-    expect(t.results[matchKey(ref)].relic).toBeDefined()
+    expect(t.results[matchKey(ref)].relic).toBeUndefined()
   })
 
   it('reproductible à graine égale', () => {
+    // Les dix premières journées, avec reliques et forge : construction en cours
     const make = (seed: number) => {
-      const t = createSeasonTournament(participants(32), nameOf, { seed })
-      return simulateSeasonMatches(t, [...pendingOfDay(seasonOf(t), 0), ...pendingOfDay(seasonOf(t), 40)])
+      const t = createSeasonTournament(participants(32), nameOf, { seed, forge: true })
+      return simulateSeasonMatches(t, Array.from({ length: 10 }, (_, d) => pendingOfDay(seasonOf(t), d)).flat())
     }
     expect(seasonOf(make(9)).results).toEqual(seasonOf(make(9)).results)
     expect(seasonOf(make(9)).results).not.toEqual(seasonOf(make(10)).results)
@@ -175,6 +315,18 @@ describe('saison', () => {
       byDay = simulateSeasonMatches(byDay, pendingOfDay(seasonOf(byDay), d))
     const atOnce = simulateSeasonMatches(t, Array.from({ length: 30 }, (_, i) => i))
     expect(seasonOf(byDay).results).toEqual(seasonOf(atOnce).results)
+  })
+
+  it('participants tirés au lancement : roster équilibré, reproductibles à graine égale', () => {
+    for (const size of SEASON_SIZES) {
+      const ids = drawSeasonParticipants(size, 7)
+      expect(ids).toHaveLength(size)
+      const counts = CHARACTER_IDS.map((id) => ids.filter((x) => x === id).length)
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
+      expect(drawSeasonParticipants(size, 7)).toEqual(ids)
+      expect(() => createSeasonTournament(ids, nameOf, { seed: 7 })).not.toThrow()
+    }
+    expect(drawSeasonParticipants(24, 7)).not.toEqual(drawSeasonParticipants(24, 8))
   })
 
   it('un tournoi sans saison reste l’arbre seul', () => {

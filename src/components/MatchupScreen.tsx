@@ -5,12 +5,20 @@ import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
 import { RelicRow } from './RelicSeal'
-import { SkillDice } from './SkillDice'
+import { DieBuild } from './DieBuild'
 import { StatSheet } from './StatSheet'
 import { Button, Glyph, type GlyphName } from './kit'
 import { humansOf, type Bettor, type MatchOdds, type Pick, type Wallets } from '../game/betting'
 import { BetSummary, BettingDesk } from './Betting'
 import { VsSeal } from './VsSeal'
+
+/**
+ * Classement d'un opposant, affiché au-dessus de son nom. Lu dans le jeu (App.tsx), jamais recalculé ici :
+ * place au classement de saison en cours, ou rang de saison qui fait sa tête de série dans l'arbre.
+ */
+export type MatchupRank =
+  | { kind: 'season'; rank: number; of: number; points: number; wins: number; losses: number }
+  | { kind: 'seed'; rank: number }
 
 interface Props {
   fighters: Pair<Character>
@@ -19,6 +27,8 @@ interface Props {
   onBack: () => void
   /** Bandeau au-dessus du duel, ex. « Quarts de finale · Match 2 » */
   title?: string
+  /** Classement de chaque opposant (saison, arbre après saison) ; absent en duel libre */
+  ranks?: Pair<MatchupRank | null>
   /** Bouton de retour (secondaire) : « Changer » en duel, « Arbre » en tournoi */
   back?: { label: string; icon: GlyphName }
   /** Cadre du combat : une arène précise ou « au hasard » */
@@ -48,6 +58,7 @@ export function MatchupScreen({
   arena,
   onArenaChange,
   betting,
+  ranks,
 }: Props) {
   const [desk, setDesk] = useState(false)
   const names: Pair<string> = [fighters[0].name, fighters[1].name]
@@ -84,12 +95,13 @@ export function MatchupScreen({
 
       <div className="relative grid flex-1 grid-cols-[1fr_auto_1fr] items-end px-10">
         {([0, 1] as Side[]).map((side) => (
-          <FighterCard key={side} character={fighters[side]} side={side} />
+          <FighterCard key={side} character={fighters[side]} side={side} rank={ranks?.[side] ?? null} />
         ))}
-        {/* Le sceau et le rappel des paris s'empilent dans la colonne centrale, sans se chevaucher.
+        {/* Le sceau et le rappel des paris s'empilent dans la colonne centrale, sans se chevaucher, avec une marge de
+            chaque côté : le build du druide (deux formes, leur nom à côté) va jusqu'au bord de sa colonne.
             L'animation d'entrée est sur l'enveloppe du sceau : il garde sa forme. */}
         <div
-          className={`col-start-2 row-start-1 flex flex-col items-center gap-6 self-end justify-self-center ${betting ? 'mb-[150px]' : 'mb-[300px]'}`}
+          className={`col-start-2 row-start-1 flex flex-col items-center gap-6 self-end justify-self-center px-5 ${betting ? 'mb-[150px]' : 'mb-[300px]'}`}
         >
           <span className="vs-slam flex justify-center">
             <VsSeal />
@@ -206,7 +218,7 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
   )
 }
 
-function FighterCard({ character, side }: { character: Character; side: Side }) {
+function FighterCard({ character, side, rank }: { character: Character; side: Side; rank: MatchupRank | null }) {
   const style = SIDE_STYLE[side]
   return (
     <div
@@ -216,22 +228,57 @@ function FighterCard({ character, side }: { character: Character; side: Side }) 
         <Fighter character={character} side={side} anchor="inside" />
       </div>
       <div className={`relative z-20 mb-16 flex flex-col gap-3 ${side === 1 ? 'items-end text-right' : ''}`}>
-        <div>
-          {/* Un nom de tournoi long (épithète, 0.87.0) passe en plus petit */}
-          <h2 className={`on-illus font-display ${character.name.length > 14 ? 'text-4xl' : 'text-5xl'} font-semibold ${style.accent}`}>{character.name}</h2>
-          <p className="on-illus font-body text-lg text-ink-2">
-            {character.race} · {character.archetype}
-          </p>
-
+        <div className={`flex flex-col gap-2 ${side === 1 ? 'items-end' : 'items-start'}`}>
+          {rank && <RankPlaque rank={rank} side={side} />}
+          <div>
+            {/* Un nom de tournoi long (épithète, 0.87.0) passe en plus petit */}
+            <h2 className={`on-illus font-display ${character.name.length > 14 ? 'text-4xl' : 'text-5xl'} font-semibold ${style.accent}`}>{character.name}</h2>
+            <p className="on-illus font-body text-lg text-ink-2">
+              {character.race} · {character.archetype}
+            </p>
+          </div>
         </div>
         {/* Mêmes barres que sur l'écran de sélection, à la couleur du camp */}
         <div className={`fighter-panel ${side === 1 ? 'side-b' : 'side-a'} w-72 px-3 pb-2.5 pt-3 text-left`}>
           <StatSheet character={character} barClass={style.bar} trackClass={style.track} />
         </div>
-        <SkillDice character={character} align={side === 1 ? 'right' : 'left'} />
-        {/* Reliques gagnées aux tours précédents (tournoi) : elles comptent dans les cotes, on les montre aux parieurs */}
-        <RelicRow relics={character.relics} size={44} tooltip="above" align={side === 1 ? 'right' : 'left'} />
+        {/* Le build complet : toutes les faces du dé, dans l'ordre, avec la compétence (rang, gravure, dorure) de chacune */}
+        <DieBuild character={character} size="sm" align={side === 1 ? 'right' : 'left'} tooltip="above" />
+        {/* Reliques portées (tournoi, saison, campagne) : elles comptent dans les cotes, on les montre aux parieurs.
+            Hauteur réservée même sans relique : les deux cartes restent alignées. */}
+        <div className="min-h-[56px]">
+          <RelicRow relics={character.relics} size={56} tooltip="above" align={side === 1 ? 'right' : 'left'} />
+        </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Plaque de classement au-dessus du nom : la place en grand chiffre d'or dans un cartouche, puis son contexte
+ * (saison en cours : points et bilan ; arbre : rang de saison qui fait la tête de série). Lisible de loin.
+ */
+function RankPlaque({ rank, side }: { rank: MatchupRank; side: Side }) {
+  return (
+    <div className={`matchup-rank ${side === 1 ? 'flex-row-reverse text-right' : ''}`} data-kind={rank.kind}>
+      {/* Ordinal français en exposant : 1er, 2e, 3e… */}
+      <span className="matchup-rank-place">
+        {rank.rank}
+        <sup>{rank.rank === 1 ? 'er' : 'e'}</sup>
+      </span>
+      <span className="matchup-rank-info">
+        {rank.kind === 'season' ? (
+          <>
+            <span className="matchup-rank-label">{`Saison · sur ${rank.of}`}</span>
+            <span className="matchup-rank-record">{`${rank.points} pt${rank.points > 1 ? 's' : ''} · ${rank.wins} V – ${rank.losses} D`}</span>
+          </>
+        ) : (
+          <>
+            <span className="matchup-rank-label">Tête de série</span>
+            <span className="matchup-rank-record">Classement de la saison</span>
+          </>
+        )}
+      </span>
     </div>
   )
 }

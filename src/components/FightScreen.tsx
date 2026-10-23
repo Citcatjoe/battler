@@ -11,7 +11,7 @@ import { vcrToggle } from '../game/debugConsole'
 import { CombatLog } from './CombatLog'
 import { CopyTraceButton } from './CopyTraceButton'
 import { Coin } from './Coin'
-import { Die } from './Die'
+import { Die, useRollingFaces } from './Die'
 import { Fighter, type Received } from './Fighter'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
@@ -144,6 +144,12 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   const pulseOf = (side: Side) => (pulse?.side === side ? pulse : undefined)
   const signalOf = (side: Side) => (signal?.side === side ? signal : undefined)
   const relicPulseOf = (side: Side) => (relicPulse?.side === side ? relicPulse : undefined)
+  // Les faces que montrent les dés, une seule source pour le dé de l'arène et la zone de compétence de son camp : le
+  // reflet du roulement y passe de face en face, puis la face tombée (celle des beats) y reste marquée. Tous les dés du
+  // combattant (deux dés, rafale, d6 de Coup de chance) ; ni l'initiative ni la pièce.
+  const rolled = useRollingFaces(dice.values, dice.values.map((_, i) => dice.dieFaces?.[i] ?? dice.faces), dice.rolling, paused)
+  const rollingOf = (side: Side) => (dice.owner === side && !dice.coin && dice.rolling ? rolled : undefined)
+  const landedOf = (side: Side) => (dice.owner === side && !dice.coin && !dice.rolling ? dice.values.filter((v) => v > 0) : undefined)
   // Hauteur d'ancrage du décor (le second terme de `focus`, « 50% 70% » → « 70% »)
   const focusY = arena?.focus.split(' ')[1] ?? '50%'
 
@@ -164,8 +170,9 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
       </header>
 
       {/* Ce que chacun sait faire (SkillBar) : sous l'en-tête, au bord de l'arène, au-dessus de son camp. Hors de
-          <main> pour ne pas trembler avec l'arène ; les sceaux restent cliquables au survol, le reste laisse passer */}
-      <div className="pointer-events-none absolute inset-x-0 top-[100px] z-[50] flex items-start justify-between px-8">
+          <main> pour ne pas trembler avec l'arène ; les sceaux restent cliquables au survol, le reste laisse passer.
+          À droite, la marge laisse la place au bouton de la musique, qui descend jusque sur la plaque */}
+      <div className="pointer-events-none absolute inset-x-0 top-[100px] z-[50] flex items-start justify-between pl-8 pr-16">
         {([0, 1] as Side[]).map((side) => (
           <div key={side} className="skill-bar-plate pointer-events-auto">
             <SkillBar
@@ -175,6 +182,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               statuses={statuses[side]}
               pulse={pulseOf(side)}
               signal={signalOf(side)}
+              rolling={rollingOf(side)}
+              landed={landedOf(side)}
               align={side === 1 ? 'right' : 'left'}
             />
           </div>
@@ -261,14 +270,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
           </div>
         ))}
 
-        {/* Zone des dés */}
-        <div className="absolute left-1/2 top-[12%] z-0 flex -translate-x-1/2 flex-col items-center gap-3">
-          <span
-            className="relative z-10 h-7 whitespace-nowrap text-lg font-bold uppercase tracking-widest drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
-            style={{ color: diceColor }}
-          >
-            {dice.label}
-          </span>
+        {/* Zone des dés : sans libellé (0.96.0), le camp se lit à la couleur du dé et au halo du tour */}
+        <div className="absolute left-1/2 top-[17%] z-0 flex -translate-x-1/2 flex-col items-center gap-3">
           <div className="flex gap-6">
             {/* Pile ou face : la pièce remplace le dé */}
             {dice.coin && <Coin heads={dice.coin.heads} />}
@@ -282,6 +285,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               >
                 <Die
                   value={v}
+                  face={rolled.faces[i] ?? v}
                   faces={dice.dieFaces?.[i] ?? dice.faces}
                   rolling={dice.rolling}
                   color={dice.dieColors?.[i] ?? (dice.owner === null ? SIDE_STYLE[i as Side].hex : diceColor)}

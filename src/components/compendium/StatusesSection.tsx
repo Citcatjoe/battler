@@ -210,7 +210,7 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
             <div key={l.text} className="flex items-center gap-3 border-b border-line-1 py-2">
               {l.status && <StatusMedal id={l.status} size={32} />}
               {l.skill && <SkillMedal event={l.skill.event} size={32} />}
-              {l.relic && <RelicSeal relic={l.relic} size={32} />}
+              {l.relic && <RelicSeal relic={l.relic} size={40} />}
               {l.status || l.skill || l.relic ? (
                 <button
                   type="button"
@@ -252,7 +252,7 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
 function RelicSource({ relic, target, nav }: { relic: Relic; target: Target; nav: CompendiumNav }) {
   return (
     <div className="flex items-center gap-3 border-b border-line-1 py-2.5">
-      <RelicSeal relic={relic} size={40} />
+      <RelicSeal relic={relic} size={48} />
       <div className="min-w-0 flex-1">
         <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go({ section: 'relics', id: relic.id })}>
           {relic.name}

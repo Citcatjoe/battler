@@ -4,6 +4,8 @@ import type { CharacterEvent } from '../game/events'
 
 /** Icônes peintes (`src/assets/icons/`, voir la section 7 de `docs/STYLE_BIBLE.md`). */
 const URLS = import.meta.glob<string>('../assets/icons/*.png', { eager: true, import: 'default' })
+/** Toutes les icônes peintes, à précharger (preload.ts) */
+export const ICON_URLS = Object.values(URLS)
 
 export type IconName =
   | 'swords'

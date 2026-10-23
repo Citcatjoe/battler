@@ -1,22 +1,26 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Character } from '../game/character'
+import { stepKey, type ForgeOffer, type ForgeStep } from '../game/forge'
 import type { Relic } from '../game/relics'
 import { of } from '../game/narration'
 import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
 import { computeStats, type FighterStats } from '../game/stats'
 import { Fighter } from './Fighter'
+import { ForgeChoice, useForgeChoice } from './ForgedDie'
 import { BackLink, Button, Glyph, type GlyphName } from './kit'
 import { Tabs, type TabDef } from './Tabs'
 import { CopyTraceButton } from './CopyTraceButton'
 import { BetsResult, type BetsOutcome } from './Betting'
 import { RelicCard, RelicRow } from './RelicSeal'
+import { CombatReportPanel } from './CombatReport'
 
-/** Récompense d'un match de tournoi : l'offre, le choix du vainqueur, et de quoi le changer. */
-export interface RelicReward {
-  offer: readonly Relic[]
-  chosen: string
-  onChoose: (relic: string) => void
-}
+/**
+ * Récompense du vainqueur d'un match (arbre du tournoi, construction de la saison) : une relique ou une
+ * forge du dé, l'offre, le choix du vainqueur, et de quoi le changer.
+ */
+export type MatchReward =
+  | { kind: 'relic'; offer: readonly Relic[]; chosen: string; onChoose: (relic: string) => void }
+  | { kind: 'forge'; offer: readonly ForgeOffer[]; chosen: ForgeStep; onChoose: (step: ForgeStep) => void }
 
 interface Props {
   result: CombatResult
@@ -24,14 +28,15 @@ interface Props {
   onMenu: () => void
   /**
    * En tournoi, en saison ou en campagne : remplace Revanche / Menu par la suite (l'arbre, la saison, la carte de
-   * l'acte). `reward` : la relique du vainqueur (tournoi, hors finale), à choisir parmi l'offre ; `chosen` est le choix
-   * du vainqueur, que l'observateur peut changer. `icon` : le glyphe du bouton (le tournoi par défaut) ; `action` : son
-   * texte, quand la suite est une récompense ailleurs (campagne : « Relique », « Forge du dé »).
+   * l'acte). `reward` : la récompense du vainqueur (arbre hors finale, construction de la saison), à choisir parmi
+   * l'offre ; `chosen` est le choix du vainqueur, que l'observateur peut changer. `icon` : le glyphe du bouton (le
+   * tournoi par défaut) ; `action` : son texte, quand la suite est une récompense ailleurs (campagne : « Relique »,
+   * « Forge du dé »).
    */
   tournament?: {
     label: string
     onContinue: () => void
-    reward?: RelicReward
+    reward?: MatchReward
     icon?: GlyphName
     action?: string
   }
@@ -48,9 +53,10 @@ interface Row {
   score?: (s: FighterStats) => number
 }
 
-export type EndTab = 'summary' | 'defense' | 'events' | 'dice'
+export type EndTab = 'report' | 'summary' | 'defense' | 'events' | 'dice'
 
 const TABS: TabDef<EndTab>[] = [
+  { id: 'report', label: 'Rapport' },
   { id: 'summary', label: 'Bilan' },
   { id: 'defense', label: 'Critiques et défense' },
   { id: 'events', label: 'Compétences' },
@@ -134,7 +140,7 @@ const SECTIONS: Section[] = [
   },
 ]
 
-export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = 'summary', bets }: Props) {
+export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = 'report', bets }: Props) {
   const stats = computeStats(result)
   const { fighters, winner } = result
   const attacks = attacksOf(result)
@@ -240,16 +246,17 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
             </>
           )}
           {bets && (
-            <Button variant="secondary" size="md" icon="statistiques" onClick={() => setDetails(true)}>
-              Détails
+            <Button variant="secondary" size="md" icon="statistiques" onClick={() => setDetails(true)} title="Rapport de combat (reliques, faces jouées) et statistiques détaillées">
+              Rapport
             </Button>
           )}
         </div>
         {tournament && <p className="relative mt-2 text-center text-sm text-stone-400">{tournament.label}</p>}
       </section>
 
-      {/* Moitié droite : les paris et le classement, ou les statistiques si personne ne parie */}
-      <section className="relative flex flex-col border-l border-amber-900/30 bg-gradient-to-b from-stone-950/40 to-black/60 px-12 py-10">
+      {/* Moitié droite : les paris et le classement, ou le rapport de combat et les statistiques si personne ne parie */}
+      {/* À droite, la place des boutons du son (en haut à droite de la scène) : rien dessous */}
+      <section className="relative flex flex-col border-l border-amber-900/30 bg-gradient-to-b from-stone-950/40 to-black/60 py-10 pl-12 pr-20">
         {bets ? (
           <BetsResult outcome={bets} fighterNames={[fighters[0].name, fighters[1].name]} />
         ) : (
@@ -269,49 +276,85 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
       )}
 
       {tournament && reward && rewardOpen && (
-        <RewardMenu
-          winner={fighters[winner]}
-          reward={reward}
-          onBack={() => setRewardOpen(false)}
-          onContinue={(relic) => {
-            if (relic !== reward.chosen) reward.onChoose(relic)
-            tournament.onContinue()
-          }}
-        />
+        reward.kind === 'relic' ? (
+          <RelicMenu winner={fighters[winner]} reward={reward} onBack={() => setRewardOpen(false)} onContinue={tournament.onContinue} />
+        ) : (
+          <ForgeMenu winner={fighters[winner]} reward={reward} onBack={() => setRewardOpen(false)} onContinue={tournament.onContinue} />
+        )
       )}
     </div>
   )
 }
 
 /**
- * Récompense de tournoi (docs/RELIQUES.md § Écran de récompense), menu superposé à l'écran de victoire : trois
- * grandes cartes. Le vainqueur a déjà choisi (au hasard, sa carte porte « Choix de… ») ; un clic sur une autre
- * carte décide à sa place. Ses reliques déjà portées sont rappelées en dessous.
+ * Récompense du vainqueur (docs/RELIQUES.md § 5), menu superposé à l'écran de victoire : trois grandes cartes. Le
+ * vainqueur a déjà choisi (au hasard, sa carte porte « Choix de… ») ; un clic sur une autre carte décide à sa place.
+ * `own` : le choix affiché est encore le sien ; `ready` : il est complet (une forge attend sa face).
  */
-function RewardMenu({
+function RewardFrame({
+  title,
+  sub,
+  own,
+  ready = true,
+  onBack,
+  onContinue,
+  children,
+}: {
+  title: string
+  sub: string
+  own: boolean
+  ready?: boolean
+  onBack: () => void
+  onContinue: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="desk-in absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 bg-black/95 px-20">
+      <header className="flex flex-col items-center gap-2 text-center">
+        <p className="text-sm font-bold uppercase tracking-[0.5em] text-gold-300">Récompense</p>
+        <h2 className="font-display text-5xl font-extrabold text-amber-100">{title}</h2>
+        <p className="font-body text-xl text-ink-2">{sub}</p>
+      </header>
+      {children}
+      <div className="flex items-center gap-4">
+        <BackLink onClick={onBack}>Combat</BackLink>
+        <Button variant="primary" size="xl" icon="tournoi" disabled={!ready} onClick={onContinue} className="w-96">
+          {own ? 'Continuer' : 'Imposer ce choix'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Une relique parmi l'offre ; ses reliques déjà portées sont rappelées en dessous. */
+function RelicMenu({
   winner,
   reward,
   onBack,
   onContinue,
 }: {
   winner: Character
-  reward: RelicReward
+  reward: Extract<MatchReward, { kind: 'relic' }>
   onBack: () => void
-  onContinue: (relic: string) => void
+  onContinue: () => void
 }) {
   const [picked, setPicked] = useState(reward.chosen)
   const own = picked === reward.chosen
   return (
-    <div className="desk-in absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 bg-black/95 px-20">
-      <header className="flex flex-col items-center gap-2 text-center">
-        <p className="text-sm font-bold uppercase tracking-[0.5em] text-gold-300">Récompense</p>
-        <h2 className="font-display text-5xl font-extrabold text-amber-100">{winner.name} gagne une relique</h2>
-        <p className="font-body text-xl text-ink-2">
-          {reward.offer.length > 1
-            ? `${winner.name} a fait son choix parmi ${reward.offer.length} : cliquez sur une autre carte pour décider à sa place.`
-            : `Une seule relique manque encore à ${winner.name} : elle lui revient.`}
-        </p>
-      </header>
+    <RewardFrame
+      title={`${winner.name} gagne une relique`}
+      sub={
+        reward.offer.length > 1
+          ? `${winner.name} a fait son choix parmi ${reward.offer.length} : cliquez sur une autre carte pour décider à sa place.`
+          : `Une seule relique manque encore à ${winner.name} : elle lui revient.`
+      }
+      own={own}
+      onBack={onBack}
+      onContinue={() => {
+        if (!own) reward.onChoose(picked)
+        onContinue()
+      }}
+    >
       <div className="flex items-stretch gap-8 pt-3">
         {reward.offer.map((r) => (
           <RelicCard
@@ -326,20 +369,48 @@ function RewardMenu({
       {winner.relics.length > 0 && (
         <div className="flex items-center gap-3 font-body text-[15px] text-ink-3">
           Déjà portées :
-          <RelicRow relics={winner.relics} size={32} tooltip="above" />
+          <RelicRow relics={winner.relics} size={40} tooltip="above" />
         </div>
       )}
-      <div className="flex items-center gap-4">
-        <BackLink onClick={onBack}>Combat</BackLink>
-        <Button variant="primary" size="xl" icon="tournoi" onClick={() => onContinue(picked)} className="w-96">
-          {own ? 'Continuer' : 'Imposer ce choix'}
-        </Button>
-      </div>
-    </div>
+    </RewardFrame>
   )
 }
 
-/** Statistiques comparées des deux combattants, réparties en onglets. */
+/** Une opération de forge parmi l'offre, puis la face qu'elle vise sur le dé du vainqueur (tel qu'il a combattu). */
+function ForgeMenu({
+  winner,
+  reward,
+  onBack,
+  onContinue,
+}: {
+  winner: Character
+  reward: Extract<MatchReward, { kind: 'forge' }>
+  onBack: () => void
+  onContinue: () => void
+}) {
+  const choice = useForgeChoice(winner, reward.offer, reward.chosen)
+  const own = !!choice.step && stepKey(choice.step) === stepKey(reward.chosen)
+  return (
+    <RewardFrame
+      title={`${winner.name} forge son dé`}
+      sub={`${winner.name} a fait son choix : cliquez sur une autre opération, puis sur une face, pour décider à sa place.`}
+      own={own}
+      ready={!!choice.step}
+      onBack={onBack}
+      onContinue={() => {
+        if (!own && choice.step) reward.onChoose(choice.step)
+        onContinue()
+      }}
+    >
+      <ForgeChoice character={winner} choice={choice} />
+    </RewardFrame>
+  )
+}
+
+/**
+ * Statistiques des deux combattants, réparties en onglets : d'abord le rapport de combat (reliques déclenchées, faces
+ * jouées, CombatReport.tsx), puis les statistiques comparées.
+ */
 function StatsTable({ result, stats, initialTab }: { result: CombatResult; stats: FighterStats[]; initialTab: EndTab }) {
   const { fighters } = result
   const [tab, setTab] = useState<EndTab>(initialTab)
@@ -351,12 +422,14 @@ function StatsTable({ result, stats, initialTab }: { result: CombatResult; stats
   }
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
-        <Tabs tabs={TABS} value={tab} onChange={setTab} />
-        <CopyTraceButton result={result} />
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {/* Hauteur fixe : changer d'onglet ne fait pas sauter la mise en page */}
       <div className="h-[520px]">
+        {tab === 'report' ? (
+          <div key={tab} className="fade-in">
+            <CombatReportPanel result={result} />
+          </div>
+        ) : (
         <table key={tab} className="fade-in w-full overflow-hidden rounded-xl border border-stone-800 text-sm">
           <thead className="bg-stone-900">
             <tr>
@@ -404,6 +477,10 @@ function StatsTable({ result, stats, initialTab }: { result: CombatResult; stats
             </tbody>
           )}
         </table>
+        )}
+      </div>
+      <div className="flex justify-end">
+        <CopyTraceButton result={result} />
       </div>
     </div>
   )

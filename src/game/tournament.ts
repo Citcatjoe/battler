@@ -1,5 +1,6 @@
 import type { Character } from './character'
 import { finalState, type CombatResult, type Pair } from './combat'
+import { stepKey, type ForgeStep } from './forge'
 import { computeStats, type FighterStats } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
 import { autoPick, drawOffer, getRelic } from './relics'
@@ -11,7 +12,8 @@ import { uniqueNames } from './epithets'
  * Tournoi à élimination directe, 16 participants : huitièmes, quarts, demies, finale.
  * Les participants d'un match se déduisent des vainqueurs du tour précédent :
  * le match i du tour r oppose les vainqueurs des matchs 2i et 2i+1 du tour r-1.
- * Facultative, une phase de saison (season.ts) peut précéder l'arbre : ses 16 premiers y entrent.
+ * Facultative, une phase de saison (season.ts) peut précéder l'arbre : ses 16 premiers y entrent, avec ce qu'ils y ont
+ * construit (reliques, forge du dé), figé jusqu'à la fin du tournoi.
  */
 
 export const SLOTS = 16
@@ -21,12 +23,20 @@ export const ROUND_NAMES = ['Huitièmes de finale', 'Quarts de finale', 'Demi-fi
 /** Nombre de matchs dans un tour : 8, 4, 2, 1 */
 export const matchesInRound = (round: number) => SLOTS >> (round + 1)
 
+/** Ce qu'un participant a construit pendant la saison : ses reliques et le journal de forge de son dé, dans l'ordre. */
+export interface Build {
+  relics: string[]
+  forge: ForgeStep[]
+}
+
 export interface Entrant {
   characterId: string
   /** Nom affiché, numéroté si le personnage est présent plusieurs fois (« Gorak II ») */
   label: string
   /** Rang au classement final de la saison, s'il y en a eu une (tête de série dans l'arbre) */
   seasonRank?: number
+  /** Sa construction de saison (season.ts), figée : il la porte à chaque match de l'arbre */
+  build?: Build
 }
 
 export interface MatchResult {
@@ -56,7 +66,8 @@ export interface Tournament {
   results: Record<string, MatchResult>
   /**
    * Système de reliques (docs/RELIQUES.md) : choisi sur l'écran de configuration. Désactivé, aucune victoire
-   * n'offre de relique, donc personne n'en porte pendant ce tournoi.
+   * n'offre de relique, donc personne n'en porte pendant ce tournoi. Avec une saison, les reliques se gagnent
+   * aux victoires de la saison (season.ts, construction), jamais dans l'arbre.
    */
   relics: boolean
   /** Phase de saison qui précède l'arbre (season.ts) ; absente : l'arbre seul, comme avant la 0.86.0 */
@@ -141,42 +152,50 @@ export const champion = (t: Tournament): number | null =>
   t.results[matchKey({ round: ROUNDS - 1, index: 0 })]?.winner ?? null
 
 /**
- * Reliques d'un participant, dans l'ordre d'obtention : une par match gagné avant le tour `beforeRound`
- * (toutes par défaut). Elles se déduisent des résultats : rien d'autre ne les stocke.
+ * Reliques d'un participant, dans l'ordre d'obtention : celles de sa construction de saison, puis une par match
+ * gagné avant le tour `beforeRound` (toutes par défaut). Elles se déduisent des participants et des résultats.
  */
 export function relicsOf(t: Tournament, entrant: number, beforeRound = ROUNDS): string[] {
-  return allMatches().flatMap((ref) => {
+  const won = allMatches().flatMap((ref) => {
     const r = t.results[matchKey(ref)]
     return r?.relic && r.winner === entrant && ref.round < beforeRound ? [r.relic.chosen] : []
   })
+  return [...(t.entrants[entrant]?.build?.relics ?? []), ...won]
 }
 
-/** Les deux combattants d'un match, sous leur nom de tournoi et avec les reliques gagnées aux tours précédents. */
+/** Ce qui fait un combattant de tournoi : son personnage, ses reliques, sa forge (validation d'un résultat). */
+export const fighterKey = (c: Character) => `${c.id}+${c.relics.map((r) => r.id).join(',')}+${c.forge.map(stepKey).join(';')}`
+
+/**
+ * Les deux combattants d'un match, sous leur nom de tournoi, avec leur construction de saison et les reliques gagnées
+ * aux tours précédents.
+ */
 export function matchFighters(t: Tournament, ref: MatchRef): [Character, Character] {
   const [a, b] = players(t, ref)
   if (a === null || b === null) throw new Error('Match pas encore prêt')
   const make = (i: number) =>
     createCharacter(t.entrants[i].characterId)
       .withName(t.entrants[i].label)
+      .withForge(t.entrants[i].build?.forge ?? [])
       .withRelics(relicsOf(t, i, ref.round).map(getRelic))
   return [make(a), make(b)]
 }
 
 /**
  * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi), avec la récompense du vainqueur
- * (hors finale, et si le tournoi a ses reliques) : `OFFER_SIZE` reliques qu'il n'a pas encore, et son choix,
- * tiré au hasard (`rng`).
- * Refuse un match déjà joué ou pas encore prêt, ou un combat dont les combattants (personnages, reliques)
+ * (hors finale, si le tournoi a ses reliques et pas de saison : après une saison, chacun garde sa construction
+ * figée) : `OFFER_SIZE` reliques qu'il n'a pas encore, et son choix, tiré au hasard (`rng`).
+ * Refuse un match déjà joué ou pas encore prêt, ou un combat dont les combattants (personnages, reliques, forge)
  * ne sont pas ceux du match : l'appelant ne doit alors rien enregistrer.
  */
 export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, rng: Rng = defaultRng): Tournament {
   if (status(t, ref) !== 'ready') throw new Error(`Match ${matchKey(ref)} non jouable (${status(t, ref)})`)
   const [a, b] = players(t, ref) as [number, number]
-  const expected = [a, b].map((i) => `${t.entrants[i].characterId}+${relicsOf(t, i, ref.round).join(',')}`)
-  const actual = result.fighters.map((f) => `${f.id}+${f.relics.map((r) => r.id).join(',')}`)
+  const expected = matchFighters(t, ref).map(fighterKey)
+  const actual = result.fighters.map(fighterKey)
   if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
-  const offer = t.relics && ref.round < ROUNDS - 1 ? drawOffer(relicsOf(t, winner), rng) : []
+  const offer = t.relics && !t.season && ref.round < ROUNDS - 1 ? drawOffer(relicsOf(t, winner), rng) : []
   const chosen = autoPick(offer, rng)
   return {
     ...t,

@@ -33,7 +33,7 @@ import {
  *               (`extraStrikes`, consommé au début de l'action), chacun résolu en entier à son tour :
  *               dé → coup sacrifié (`forfeitsHit`) → esquive → reliques de coup, face dorée → critique → dégâts
  *               sortants → dégâts entrants → armure → boucliers
- *               → fenêtres du coup : bloodied, la face du dé (naturalOne… face:7), naturalMax (pas pour un coup brut),
+ *               → fenêtres du coup : bloodied, la face du dé (naturalOne… face:7), naturalMax (coup brut : reliques seules),
  *                 puis esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt (défenseur).
  *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction. Seuls les statuts
  *                 présents au début du coup réagissent dans ses fenêtres (`strikeBase`, règle 9).
@@ -103,8 +103,8 @@ export interface Attack {
    */
   reshaped?: { event: string; value: number; noCrit: boolean }
   /**
-   * Coup brut (0.69.0, coups de la Furie des vents) : le dé ne donne que la valeur du coup. Ni coup
-   * sacrifié ni compétence de jet : un 1, un 2 ou un 3 frappe pour sa valeur.
+   * Coup brut (0.69.0, coups de la Furie des vents) : ni coup sacrifié ni compétence de jet, un 1, un 2 ou un 3
+   * frappe pour sa valeur. Les reliques de face et la dorure, elles, lisent son dé (2026-10-23).
    */
   plain?: true
   crit: boolean
@@ -141,7 +141,7 @@ export interface Attack {
   relicBonus?: { relic: string; name: string; amount: number }[]
   /**
    * Face dorée (forge du dé, 0.88.0) : ajouté à la valeur du coup qui touche, avant le critique, quand son dé fait
-   * cette face ; jamais pour un coup brut, comme une relique de face
+   * cette face, coup brut compris, comme une relique de face
    */
   gild?: number
 }
@@ -354,8 +354,6 @@ export function resolveAttack(
   reshape: (roll: number, faces: number) => Attack['reshaped'] = () => undefined,
   /** Valeur déjà tirée par la paire (personnage à deux dés) : aucun dé n'est lancé pour ce coup */
   preset?: number,
-  /** Coup brut (Furie des vents) : aucune relique de face (Fer à quatre clous), comme aucune compétence de jet */
-  plain = false,
 ): Omit<Attack, 'attacker' | 'dealt'> {
   const att = effectiveStats(attacker, attackerStatuses)
   const def = effectiveStats(defender, defenderStatuses)
@@ -384,13 +382,13 @@ export function resolveAttack(
     return { ...base, ...nothing, ...(reshaped && { reshaped }), dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
-  // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul), et jamais pour un
-  // coup brut (2026-10-21 : un coup brut n'éveille aucune relique de face, comme l'Osselet fendu et le Dé creux)
+  // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul), coup brut compris
+  // (2026-10-23 : une relique ou une dorure lit la face du dé, quel que soit le coup)
   const relicBonus = attacker.relics.flatMap((r) =>
-    r.rollBonus && (r.onFace === undefined || (!plain && r.onFace === roll)) ? [{ relic: r.id, name: r.name, amount: r.rollBonus }] : [],
+    r.rollBonus && (r.onFace === undefined || r.onFace === roll) ? [{ relic: r.id, name: r.name, amount: r.rollBonus }] : [],
   )
   // Face dorée (forge du dé) : même règle qu'une relique de face
-  const gild = plain ? 0 : (attacker.gilded[roll] ?? 0)
+  const gild = attacker.gilded[roll] ?? 0
   const value = (reshaped?.value ?? roll) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
 
   // Un coup transformé « sans critique » (Charge) ne tire pas le critique et ne consomme pas un critique assuré
@@ -556,7 +554,7 @@ export function simulateCombat(
    * Le coup en cours, pendant ses fenêtres (null hors d'un coup) : a-t-il touché, et combien de PV a-t-il retirés.
    * Les réactions d'un coup qui touche en ont besoin (Vol de vie, Riposte, jauges).
    */
-  let strike: { touched: boolean; dealt: number } | null = null
+  let strike: { touched: boolean; dealt: number; plain: boolean } | null = null
   /**
    * État de référence du coup en cours (null hors d'un coup) : les statuts des deux camps au début du coup, avant son
    * dé. Règle du jeu (2026-10-21, RESOLUTION règle 9) : un statut posé ou renforcé pendant un coup ne réagit pas à ce
@@ -573,9 +571,9 @@ export function simulateCombat(
       strikeBase = null
     }
   }
-  /** Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce). */
-  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number) => {
-    strike = { touched, dealt }
+  /** Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce) ; `plain` : coup brut (Furie des vents). */
+  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number, plain = false) => {
+    strike = { touched, dealt, plain }
     try {
       return fireAll(list, cause)
     } finally {
@@ -721,6 +719,8 @@ export function simulateCombat(
    * l'étape qui a franchi un seuil) ; aucune pour une fenêtre de phase (début ou fin de tour, ouverture).
    */
   function fire(side: Side, trigger: Trigger, cause?: number): Side | undefined {
+    // Coup brut (Furie des vents) : ses fenêtres du dé n'éveillent que les reliques (2026-10-23), ni statut ni compétence
+    const relicsOnly = !!strike?.plain && isRollTrigger(trigger)
     // Statuts présents à l'ouverture de la fenêtre : un statut posé dans cette fenêtre attend la suivante (pas de
     // chaîne). Jauges (Rétribution) : celles que le porteur sait relâcher ; encore vides, elles passent après ses statuts.
     const gauges =
@@ -728,7 +728,7 @@ export function simulateCombat(
         ? STATUS_IDS.filter((id) => STATUSES[id].fillsOnHurt && fighters[side].events.some((e) => e.effects.some((x) => x.type === 'release' && x.status === id)))
         : []
     const order: StatusId[] = [...states[side].statuses.map((s) => s.id), ...gauges.filter((id) => !states[side].statuses.some((s) => s.id === id))]
-    for (const id of order) {
+    for (const id of relicsOnly ? [] : order) {
       const def = STATUSES[id]
       if (gauges.includes(id)) {
         fillGauge(side, id, strike!.dealt, cause)
@@ -750,7 +750,7 @@ export function simulateCombat(
       const down = fallen() ?? checkThresholds(beat)
       if (down !== undefined) return down
     }
-    for (const event of fighters[side].events) {
+    for (const event of relicsOnly ? [] : fighters[side].events) {
       // Pourfendre : un coup doit toucher pour poser un malus physique (vérifié avant tout tirage)
       if (event.trigger !== trigger || (event.needsTouch && !strike?.touched) || !canFire(side, event)) continue
       states[side].fired[event.id] = (states[side].fired[event.id] ?? 0) + 1
@@ -948,7 +948,7 @@ export function simulateCombat(
   /**
    * Un coup complet de `attacker`, fenêtres comprises. Renvoie le perdant s'il y a K.O.
    * `preset` : valeur déjà tirée par la paire (personnage à deux dés), sans nouveau dé.
-   * `plain` : coup brut (Furie des vents), dont le jet ne déclenche ni compétence ni relique de face.
+   * `plain` : coup brut (Furie des vents), dont le jet ne déclenche aucune compétence (les reliques, si).
    * `cause` : l'étape `flurry` ou `pair` dont ce coup fait partie ; aucune pour le coup simple de l'action.
    */
   function strikeOnce(attacker: Side, die?: number, preset?: number, merged?: Attack['reshaped'], plain = false, cause?: number): Side | undefined {
@@ -968,7 +968,6 @@ export function simulateCombat(
       preset === undefined ? nextForced() : undefined,
       (roll, faces) => merged ?? (plain ? undefined : reshapes(attacker, roll, faces)),
       preset,
-      plain,
     )
     const touched = !outcome.dodged && !outcome.forfeited
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
@@ -988,22 +987,23 @@ export function simulateCombat(
     lastStrike = hit
     if (def.hp === 0) return defender
 
-    // Fenêtres du coup : seuils, faces du dé (pas pour un coup brut), puis esquivé ou touché. Vol de vie, Riposte et
-    // jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »). Seuls les
-    // statuts déjà là au début du coup y réagissent (`strikeBase`).
+    // Fenêtres du coup : seuils, faces du dé (reliques seules pour un coup brut), puis esquivé ou touché. Vol de vie,
+    // Riposte et jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »).
+    // Seuls les statuts déjà là au début du coup y réagissent (`strikeBase`).
     const fell = withinStrike(base, () => {
       const down = checkThresholds(hit)
       if (down !== undefined) return down
-      const hitTriggers: [Side, Trigger][] = plain
-        ? []
-        : [faceTrigger(outcome.roll), ...(outcome.roll === outcome.faces && outcome.faces > 1 ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
+      const hitTriggers: [Side, Trigger][] = [
+        faceTrigger(outcome.roll),
+        ...(outcome.roll === outcome.faces && outcome.faces > 1 ? ['naturalMax' as const] : []),
+      ].map((t) => [attacker, t])
       if (outcome.dodged) hitTriggers.push([attacker, 'missed'], [defender, 'dodge'])
       else if (touched) {
         hitTriggers.push([attacker, 'hit'])
         if (outcome.crit) hitTriggers.push([attacker, 'crit'])
         hitTriggers.push([defender, 'hurt'])
       }
-      return fireStrike(hitTriggers, touched, dealt, hit)
+      return fireStrike(hitTriggers, touched, dealt, hit, plain)
     })
     if (fell !== undefined) return fell
     // Pile ou face (2026-10-21) : la pièce part aussitôt, juste après le coup pendant lequel elle a été posée

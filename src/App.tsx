@@ -12,6 +12,7 @@ import {
   createTournament,
   matchFighters,
   matchKey,
+  players,
   ROUND_NAMES,
   SLOTS,
   withResult,
@@ -19,23 +20,28 @@ import {
   type Tournament,
 } from './game/tournament'
 import {
+  chooseSeasonReward,
   createSeasonTournament,
+  drawSeasonParticipants,
   currentDay,
   DEFAULT_SEASON_SIZE,
-  SEASON_SIZES,
   inSeason,
   matchCount,
   pendingOfDay,
   playedCount,
   seasonFighters,
   seasonMatchSeed,
+  seasonFixtures,
+  seasonStatus,
   simulateSeasonMatches,
+  standings,
   startBracket,
   WIN_POINTS,
   withSeasonResult,
   type SeasonSize,
 } from './game/season'
 import { getRelic } from './game/relics'
+import type { ForgeStep } from './game/forge'
 import {
   ACT_FIGHTS,
   BOSS,
@@ -72,7 +78,7 @@ import type { BetsOutcome } from './components/Betting'
 import { RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
 import { HomeScreen } from './components/HomeScreen'
-import { MatchupScreen } from './components/MatchupScreen'
+import { MatchupScreen, type MatchupRank } from './components/MatchupScreen'
 import { FightScreen } from './components/FightScreen'
 import { TestFightScreen } from './components/TestFightScreen'
 import { EndScreen } from './components/EndScreen'
@@ -137,8 +143,6 @@ export default function App() {
 
   // Tournoi : en mémoire uniquement, perdu au rechargement de la page.
   const [slots, setSlots] = useState<(string | null)[]>(() => Array(SLOTS).fill(null))
-  /** Cases des participants de la saison, à la plus grande taille ; la configuration n'en montre que la taille choisie */
-  const [seasonSlots, setSeasonSlots] = useState<(string | null)[]>(() => Array(Math.max(...SEASON_SIZES)).fill(null))
   const [tournament, setTournament] = useState<Tournament | null>(null)
   /** Match de tournoi en cours via l'écran d'affrontement ; null en affrontement simple */
   const [activeMatch, setActiveMatch] = useState<MatchRef | null>(null)
@@ -148,6 +152,8 @@ export default function App() {
   const [seasonRun, setSeasonRun] = useState<'day' | 'all' | null>(null)
   /** Réglage de l'écran de configuration : tournoi avec ou sans reliques, gardé pour le tournoi suivant */
   const [relicsEnabled, setRelicsEnabled] = useState(true)
+  /** Forge du dé pendant la construction de la saison (désactivée par défaut), gardée pour le tournoi suivant */
+  const [forgeEnabled, setForgeEnabled] = useState(false)
   /** Noms uniques (une épithète par participant au lieu des chiffres romains), gardé pour le tournoi suivant */
   const [uniqueNames, setUniqueNames] = useState(false)
   /** Phase de saison avant l'arbre (désactivée par défaut) et nombre de participants, gardés pour le tournoi suivant */
@@ -319,7 +325,8 @@ export default function App() {
   }
 
   const openSeasonMatch = (number: number) => {
-    if (!tournament || !inSeason(tournament)) return
+    // Un match dont les combattants n'ont pas fini leur construction attend (season.ts, `seasonStatus`)
+    if (!tournament || !inSeason(tournament) || seasonStatus(tournament.season, number) !== 'ready') return
     setActiveMatch(null)
     setActiveSeasonMatch(number)
     setFighters(seasonFighters(tournament.season, number))
@@ -334,6 +341,36 @@ export default function App() {
   const seasonMatchTitle = (number: number) => {
     const half = (tournament?.season?.entrants.length ?? 0) / 2
     return `Saison · Journée ${Math.floor(number / half) + 1} · Match ${(number % half) + 1}`
+  }
+
+  /**
+   * Classement des deux opposants à l'écran d'affrontement, lu tel quel : place au classement en cours en saison
+   * (dès le premier match joué), rang de saison (tête de série) dans l'arbre ; rien en duel ni en campagne.
+   */
+  const matchupRanks = (): Pair<MatchupRank | null> | undefined => {
+    if (activeEncounter || !tournament) return undefined
+    const season = tournament.season
+    if (activeSeasonMatch !== null && season) {
+      if (playedCount(season) === 0) return undefined
+      const fixture = seasonFixtures(season).find((f) => f.number === activeSeasonMatch)
+      if (!fixture) return undefined
+      const table = standings(season)
+      const rankOf = (entrant: number): MatchupRank => {
+        const place = table.findIndex((s) => s.entrant === entrant)
+        const { points, wins, losses } = table[place]
+        return { kind: 'season', rank: place + 1, of: table.length, points, wins, losses }
+      }
+      return [rankOf(fixture.home), rankOf(fixture.away)]
+    }
+    if (activeMatch) {
+      const seedOf = (i: number | null): MatchupRank | null => {
+        const rank = i === null ? undefined : tournament.entrants[i]?.seasonRank
+        return rank ? { kind: 'seed', rank } : null
+      }
+      const ranks = players(tournament, activeMatch).map(seedOf) as Pair<MatchupRank | null>
+      return ranks[0] || ranks[1] ? ranks : undefined
+    }
+    return undefined
   }
 
   const progress = (() => {
@@ -437,6 +474,7 @@ export default function App() {
       {screen.name === 'matchup' && (
         <MatchupScreen
           fighters={fighters}
+          ranks={matchupRanks()}
           title={
             activeEncounter && campaignRun
               ? `Campagne · ${activeEncounter.boss ? 'Boss' : `Combat ${campaignRun.wins + 1} sur ${ACT_FIGHTS}`}`
@@ -459,8 +497,7 @@ export default function App() {
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
           onPlay={() => {
-            // Le cri de guerre signe le lancement du combat animé, à la place du clic (SONS.md § 3)
-            sfx.warCry()
+            sfx.click()
             setScreen({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena: resolveArena(arenaChoice) })
           }}
           onSimulate={() => {
@@ -513,11 +550,32 @@ export default function App() {
                   // Une victoire mène à sa récompense : le bouton le dit
                   ...(campaignRun.reward && { action: campaignRun.reward.kind === 'relic' ? 'Relique' : 'Forge du dé' }),
                 }
-              : activeSeasonMatch !== null
-              ? {
-                  label: `${screen.result.fighters[screen.result.winner].name} prend les ${WIN_POINTS} points du match.`,
-                  onContinue: backToSeason,
-                }
+              : activeSeasonMatch !== null && tournament?.season
+              ? (() => {
+                  // Journée de construction : la récompense du vainqueur, que l'observateur peut changer
+                  const reward = tournament.season.results[activeSeasonMatch]?.reward
+                  const name = screen.result.fighters[screen.result.winner].name
+                  const gain = reward ? (reward.kind === 'relic' ? ' et une relique' : ' et une forge du dé') : ''
+                  return {
+                    label: `${name} prend les ${WIN_POINTS} points du match${gain}.`,
+                    onContinue: backToSeason,
+                    reward:
+                      reward &&
+                      (reward.kind === 'relic'
+                        ? {
+                            kind: 'relic' as const,
+                            offer: reward.offer.map(getRelic),
+                            chosen: reward.chosen,
+                            onChoose: (id: string) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, id)),
+                          }
+                        : {
+                            kind: 'forge' as const,
+                            offer: reward.offer,
+                            chosen: reward.chosen,
+                            onChoose: (step: ForgeStep) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, step)),
+                          }),
+                  }
+                })()
               : activeMatch && tournament
               ? {
                   label:
@@ -539,6 +597,7 @@ export default function App() {
                     const relic = tournament.results[matchKey(activeMatch)]?.relic
                     if (!relic) return undefined
                     return {
+                      kind: 'relic' as const,
                       offer: relic.offer.map(getRelic),
                       chosen: relic.chosen,
                       onChoose: (id: string) => setTournament((t) => t && chooseRelic(t, activeMatch, id)),
@@ -579,25 +638,27 @@ export default function App() {
         <TournamentSetupScreen
           slots={slots}
           onChange={setSlots}
-          seasonSlots={seasonSlots}
-          onSeasonSlotsChange={setSeasonSlots}
           betting={bettingSetup}
           onBettingChange={setBettingSetup}
           relics={relicsEnabled}
           onRelicsChange={setRelicsEnabled}
+          forge={forgeEnabled}
+          onForgeChange={setForgeEnabled}
           uniqueNames={uniqueNames}
           onUniqueNamesChange={setUniqueNames}
           season={seasonSetup}
           onSeasonChange={setSeasonSetup}
           onBack={() => go({ name: 'start' })}
-          onValidate={(filled) => {
+          onValidate={() => {
             const nameOf = (id: string) => createCharacter(id).name
-            // Saison : `filled` sont ses participants, dans l'ordre de tirage ; l'arbre reste vide jusqu'à la fin de la
-            // saison (startBracket). Les cases de l'arbre de la configuration ne servent pas.
+            const seed = randomSeed()
+            // Saison : ses participants sont tirés au lancement, à la graine de la saison, et se découvrent sur l'écran de
+            // saison ; l'arbre reste vide jusqu'à la fin de la saison (startBracket). Sans saison : les cases de l'arbre,
+            // toutes remplies (l'écran ne valide qu'un arbre complet).
             setTournament(
               seasonSetup.enabled
-                ? createSeasonTournament(filled, nameOf, { relics: relicsEnabled, seed: randomSeed(), uniqueNames })
-                : createTournament(filled, nameOf, { relics: relicsEnabled, epithets: uniqueNames ? seededRng(randomSeed()) : undefined }),
+                ? createSeasonTournament(drawSeasonParticipants(seasonSetup.size, seed), nameOf, { relics: relicsEnabled, forge: forgeEnabled, seed, uniqueNames })
+                : createTournament(slots as string[], nameOf, { relics: relicsEnabled, epithets: uniqueNames ? seededRng(seed) : undefined }),
             )
             setActiveMatch(null)
             setActiveSeasonMatch(null)

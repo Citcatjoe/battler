@@ -1,6 +1,6 @@
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { createCharacter } from '../game/roster'
-import { champion, currentRound, readyMatches, ROUND_NAMES, type MatchRef, type Tournament } from '../game/tournament'
+import { champion, currentRound, players, readyMatches, ROUND_NAMES, type MatchRef, type Tournament } from '../game/tournament'
 import { Bracket } from './Bracket'
 import { Fighter } from './Fighter'
 import { Icon } from './Icon'
@@ -27,6 +27,9 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
   const winner = winnerIdx === null ? null : tournament.entrants[winnerIdx]
   const ready = readyMatches(tournament).filter((m) => m.round === round)
   const doneCount = Object.keys(tournament.results).length
+  // Le prochain match de l'arbre, dans l'ordre de l'arbre : le bouton « Combattre » l'ouvre, comme un clic sur lui
+  const next = ready[0]
+  const nextNames = next && players(tournament, next).map((i) => (i === null ? '?' : tournament.entrants[i].label))
 
   return (
     <div className="fade-in relative isolate h-full">
@@ -56,6 +59,17 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
           {ready.length > 0 && (
             <Button variant="secondary" size="md" icon="simuler" onClick={() => onSimulate(ready)} title="Simule tous les matchs prêts de ce tour">
               Simuler le tour ({ready.length})
+            </Button>
+          )}
+          {next && (
+            <Button
+              variant="primary"
+              size="xl"
+              icon="combattre"
+              onClick={() => onPlay(next)}
+              title={`Prochain match : ${nextNames.join(' contre ')} (${ROUND_NAMES[next.round]})`}
+            >
+              Combattre
             </Button>
           )}
           {winner && (

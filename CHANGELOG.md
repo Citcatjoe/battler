@@ -32,11 +32,79 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.96.0] — 2026-10-23
+
+### Ajouté
+- **Zone de compétence : tout le dé, face par face** (demande de l'utilisateur). En combat, toutes les faces du dé sont montrées dans l'ordre, sept par ligne, faces simples comprises (`DieBuild`, nouveau composant) : sceau de la compétence, rang de forge, gravure et dorure, infobulle peinte par face. La vue suit le personnage (forme du druide, forge, relique de dé). Les compétences hors dé, les auras et les règles de forme restent en médaillons à côté du dé.
+- **Reflet du dé qui roule** : pendant le roulement, la face que montre le dé s'allume brièvement dans la zone de compétence, à la couleur du camp ; une fois le dé tombé, sa face garde un liseré discret, et l'éclat existant de la compétence reste le seul éclat. Une seule source pour la face montrée (`useRollingFaces`, `Die.tsx`) : le défilé reste cosmétique, la face finale vient des `beats`. Chaque dé éclaire sa face (deux dés de la barde, rafales, d6 de Coup de chance).
+- **Affrontement** : le classement de chaque opposant au-dessus de son nom (place en chiffre d'or dans un cartouche ; en saison, « Saison · sur N », points et bilan V–D ; dans l'arbre après une saison, « Tête de série ») ; le **build complet** (`DieBuild`) remplace les trois dés de compétences (toutes les faces, compétences, rangs, forges, infobulles ; le druide a une rangée par forme).
+- **Rapport de combat** sur l'écran de fin, premier onglet ouvert par défaut : déclenchements de chaque relique (« ×N », relique de caractéristique marquée « Permanente ») et faces jouées par chaque combattant, en histogramme sur son dé forgé. Avec des paris, le bouton Détails devient Rapport. Module `report.ts` (lu dans la chronologie du combat), composant `CombatReport.tsx`, tests `report.test.ts` (concordance avec la trace sur 12 graines).
+- **Rapport de saison** à la fin de la saison, à la place de la journée (bouton Journées / Rapport) : reliques les plus déclenchées, puis chaque participant dans l'ordre du classement avec ses déclenchements et ses faces jouées sur tous ses matchs. Chaque match de saison, regardé ou simulé, garde son rapport (`SeasonResult.report`, facultatif : les saisons enregistrées se chargent toujours).
+- **Écran de saison, survol croisé** : survoler un combattant du classement allume son match de la journée ; survoler un match allume ses deux combattants au classement.
+- **Grand bouton « Combattre »** sur l'écran de saison et sur l'arbre : il ouvre le prochain match à jouer (`nextSeasonMatch` en saison, le premier match prêt du tour dans l'arbre), en passant par l'écran d'affrontement.
+- **Panneau « Règles »** dans la configuration du tournoi, sous la palette : Phase de saison, Nombre de combattants (20, 24 ou 32), Forge du dé, Reliques, Noms uniques, en tuiles, depuis une liste déclarative prête pour les réglages à venir. Les interrupteurs quittent l'en-tête.
+
+### Modifié
+- **Configuration avec saison** (décision de l'utilisateur : « on garde les cases en mode tournoi mais vides. 16 cases vides ») : plus de grille de 32 cases à remplir ; l'arbre de 16 cases vides montre le rang de saison qui remplira chacune (« 1er de la saison »). Les participants sont tirés au lancement (`drawSeasonParticipants`, roster équilibré, graine de la saison) et se découvrent sur l'écran de saison. `SeasonSlots.tsx` retiré.
+- **Infobulles des améliorations** au classement de saison et dans la journée : reliques et forges à la même taille (34 px) et au même modèle peint ; la forge dit son opération, sa face ou la taille du dé avant → après, sa règle et la compétence produite avec son rang. Elles s'ouvrent dans un calque d'écran (`TipLayer`) que le défilement de la liste ne coupe plus.
+- Arbre : premier tour élargi (236 px) pour les noms de participants à trois reliques ; un vainqueur montre ses PV à la place de ses reliques, qu'il porte à la case suivante.
+- Écran de fin : « Copier la trace » passe sous le cadre des statistiques.
+
+### Corrigé
+- Les barres de vie du combat ne sont plus décalées quand un seul combattant porte une relique : la ligne du nom a une hauteur fixe. À l'affrontement, la rangée de reliques garde sa hauteur, même vide.
+- Les infobulles des reliques du classement de saison n'étaient plus coupées par la liste qui défile ; les opérations de forge n'avaient qu'une info-bulle du navigateur.
+- Mise en page vue aux captures : bouton de la musique sur la zone de compétence de droite, boutons du son sur la première ligne des paris, noms longs coupés sous les sceaux, sous-titre de la saison qui chevauchait le classement.
+
+### Retiré
+- **Cri de guerre** sur « Jouer » (demande de l'utilisateur) : le bouton refait un clic, l'ouverture du combat revient à 500 ms (`INTRO`), `war-cry.mp3` à la corbeille. Vocabulaire de `docs/SONS.md` ramené à 22 sons.
+- Libellés au-dessus des dés en combat (« Au tour de … », attaque, « DOUBLE n ! », « PILE ! », « Initiative ») : `DiceState.label` et `turnLabel` retirés de la mise en scène. Le « K.O. ! » de fin reste.
+
+## [0.95.0] — 2026-10-23
+
+### Ajouté
+- **Aperçu de la forge sur le dé** (demande de l'utilisateur) : pendant le choix de la face, l'infobulle d'une face visée montre la face après l'opération (`ForgeFaceTooltip`). Un nombre qui change s'écrit « avant → après », l'après en vert (« Un bouclier de 6 → 7 points », « Pourfendre II ») ; une dorure nouvelle, « +2 dégâts à la frappe » en vert ; une gravure, la compétence en vert. Le reste du texte ne bouge pas. Une face sans compétence, ou dorée, a désormais son infobulle peinte (« Frappe de 7 », « +2 dégâts à la frappe ») au lieu de l'info-bulle du navigateur.
+
+### Modifié
+- **Reliques en une ligne** (demande de l'utilisateur : « la description est souvent trop compliquée », une information simple qui dit quand elle agit et comment elle s'insère dans la résolution). `describeRelic` rédige **moment : effet**, puis ses limites à part : « +4 dégâts aux frappes de 4 », « Sur un 1 : 3 dégâts directs », « Tous les 3 tours : retire son dernier malus, sinon +3 PV », « Sous 40 % PV : +2 Vol de vie » · 1 fois par combat. Les précisions répétées sur chaque relique disparaissent : « pas sur les coups bruts », « que le coup touche ou non », « après ses statuts de début de tour, avant son action », « répond dès le coup suivant », « sauf un dé fixé par une forme », « jamais sous 0 % ». Le vocabulaire porte la règle, défini une fois (`docs/RESOLUTION.md` § 3 : « à la frappe », avant le critique ; « dégâts directs », ni coup ni armure ; « Sur un 4 », la face du dé, quel que soit le coup) ; une exception se dit là où elle naît (l'Incantation remplace le dé). Types de relique résumés en une phrase au compendium.
+- **Plus de phrase d'ambiance** dans l'infobulle d'une relique ni sur sa carte de récompense : elle ne reste qu'au compendium. La fiche du compendium réunit Quand et Effet en une case **Règle**.
+- **Opérations de forge en une ligne** : Graver « Nouvelle compétence sur une face libre », Dorer « +2 dégâts à la frappe », Agrandir « +2 faces au dé », Retailler « −1 face au dé », Aiguiser « +1 rang à une compétence ». Ce qu'elles changent se lit dans l'aperçu du dé.
+- **Règle aplatie : une relique de face lit le dé de tout coup** (la description ne pouvait pas dire simplement quand le Fer à quatre clous agissait). Les coups bruts de la Furie des vents ne déclenchent toujours aucune compétence, mais leurs dés éveillent l'Osselet fendu, le Dé creux et le Fer à quatre clous, et une face dorée y vaut +2 (du 2026-10-21 au 2026-10-22, aucune relique de face ni dorure n'y comptait). Moteur : les fenêtres du dé d'un coup brut ne font réagir que les reliques (`fire`) ; audit et tests suivent. Mesure (Gorak, seul à avoir des coups bruts ; 600 combats par duel contre le roster, mêmes graines) : Osselet fendu 58,1 → 59,6 %, Dé creux 61,0 → 62,6 %, Fer à quatre clous 60,0 → 61,6 %, face dorée sur le 8 55,1 → 55,9 %, sur le 4 55,7 → 56,7 % (Gorak nu : 50,9 %). Empreinte de non-régression inchangée (aucune relique ni forge dans le roster).
+
+## [0.94.0] — 2026-10-23
+
+### Ajouté
+- **Écran de chargement** (demande de l'utilisateur, en vue de la mise en ligne) : avant l'accueil, le logo et une jauge « Préparation de l'arène » en pourcentage, le temps de télécharger tout ce que le jeu affiche ou joue (`src/preload.ts`) : les postures de chaque combattant (les deux formes du druide comprises), les neuf arènes, les deux fonds de menu, les icônes peintes, les sons, les trois musiques et les polices. Le jeu n'est monté qu'ensuite (`LoadingGate`, `main.tsx`). Un fichier manquant ne bloque pas l'entrée : il est signalé dans la console et se recharge au besoin. La jauge pleine reste 300 ms à l'écran, pour qu'en local le chargement ne soit pas un éclair. L'écran n'utilise aucune image peinte : il s'affiche avant elles.
+- Les sons et la musique préchargés ne sont plus téléchargés une seconde fois : `sound.ts` garde les octets de chaque fichier jusqu'à son décodage (au premier geste de l'utilisateur), et oublie un téléchargement échoué pour le retenter.
+
+## [0.92.1] — 2026-10-22
+
+### Modifié
+- **Construction de saison : une récompense à chaque victoire** (correction demandée par l'utilisateur : « un personnage qui perd ses premiers matchs doit au final quand même avoir ses améliorations »). Chaque victoire de saison rapporte au vainqueur sa récompense suivante, tour à tour relique puis forge du dé, jusqu'à trois de chaque ; complet, il se fige jusqu'à la fin du tournoi. Il n'y a plus de journées de construction : un combattant qui perd ses premiers matchs se construit plus tard. Un match attend que la construction de ses deux combattants soit connue (matchs précédents joués, ou construction déjà complète) ; un combattant figé joue dans l'ordre voulu (`seasonStatus`, `buildDone`).
+- **Écran de saison** : « Constructions : 5 / 24 achevées » puis « Constructions figées » sous le titre, au lieu de la journée de construction ; plus de bandeau de récompense au-dessus des matchs du jour. **Configuration** : la phrase et les infobulles disent la nouvelle règle.
+- **Mesure** (20 saisons de 24 par réglage) : écart-type des points 16,1 avec les reliques, 19,4 avec la forge, 20,5 avec les deux (11,8 sans, 23,7 avec la règle de la 0.92.0) ; avec les deux, la construction finit en moyenne à la journée 13 sur 46, la dernière vers la journée 33 ; 3 participants sur 480 ne gagnent pas six matchs et restent incomplets.
+
+## [0.92.0] — 2026-10-22
+
+### Ajouté
+- **Construction en début de saison** (demande de l'utilisateur) : avec la phase de saison, les reliques et la forge du dé se gagnent pendant les premières journées, plus dans l'arbre. Chaque journée de construction donne une récompense à chaque vainqueur du jour, tour à tour relique puis forge : **trois de chaque au plus**, six journées avec les deux, trois avec une seule. Puis tout se fige : chacun garde sa construction jusqu'à la fin de la saison et dans l'arbre, où aucune victoire ne rapporte plus rien. Le combattant choisit au hasard dans l'offre, à la graine du match (une saison se rejoue à l'identique) ; sur l'écran de victoire d'un match regardé, **Récompense** permet de choisir à sa place (relique, ou opération puis face du dé) tant qu'il n'a pas rejoué. Un match n'est prêt que quand ses deux combattants ont fini leur construction (`seasonStatus`) ; après, l'ordre est libre (`season.ts` : `buildRewards`, `buildOf`, `chooseSeasonReward`).
+- **Interrupteur Forge du dé** sur l'écran de configuration, à côté des Reliques (désactivé par défaut, gardé pour le tournoi suivant de la session) ; il ne s'actionne qu'avec la phase de saison (« Avec la saison »). Avec la forge, le Contrepoids de plomb quitte le tirage des reliques, comme en campagne (`FORGE_RELIC_IDS`, ex-`CAMPAIGN_RELICS`).
+- **Écran de saison** : colonne « Construction » au classement (reliques, puis une tuile par opération de forge, son nom au survol) ; « Construction : journée 2 / 6 » puis « Constructions figées » sous le titre ; la récompense de la journée au-dessus de ses matchs, et ce que chaque vainqueur en a tiré à côté de son nom ; « Affronter » attend la fin de la construction des deux combattants.
+- **Arbre et sacre** : les qualifiés entrent avec leur construction figée (`Entrant.build`) : reliques dans l'arbre, à l'affrontement et en combat, dé forgé à l'affrontement et en combat ; l'écran du champion montre aussi son dé forgé.
+- **Mesure du déséquilibre** : saisons de 24 simulées, 20 par réglage (11 040 matchs chacun) : l'écart-type des points passe de 11,8 sans construction à 21,7 avec les reliques, 18,3 avec la forge et 23,7 avec les deux (le 1er finit à 114,8 points au lieu de 91,7, le dernier à 27,4 au lieu de 45,0). Après la construction, le mieux construit des deux gagne 67,9 % de ses matchs avec les reliques, 58,2 % avec la forge, 67,6 % avec les deux.
+
+### Modifié
+- Le choix d'une forge (cartes puis face du dé) est un composant partagé (`useForgeChoice`, `ForgeChoice`), repris par la campagne et l'écran de victoire ; la carte du choix du combattant dit « Choix d'Elaria » (élision) aussi en campagne. Un résultat de tournoi ou de saison vérifie aussi la forge des combattants (`fighterKey`).
+
 ## [0.91.2] — 2026-10-22
 
 ### Ajouté
 - **Icônes des quatre reliques élémentaires** (planche v13, `docs/STYLE_BIBLE.md` § 7) : Braise captive (`caged-ember`, une braise vivante dans une cage ronde à quatre barreaux, pendue à sa chaîne), Larme de givre (`frost-tear`, une larme de glace sertie d'argent terni, fêlée au tiers de sa hauteur), Conque des vents (`wind-conch`, un coquillage spiralé où tourne un vent enfermé, sur sa lanière), Géode fendue (`split-geode`, une géode ouverte en deux, deux gros cristaux ambrés, cerclée de cuir). La magie de l'élément se voit dans l'objet, encore enfermée : c'est elle qui sort en combat. Plus aucune relique n'affiche son initiale. Aucune ligne de code : `RelicIcon` prend le fichier qui porte l'id.
 - **Première planche générée par l'agent, avec Artlist** (GPT Image 2.5, fond transparent, les douze reliques de la v10 jointes comme référence de style) : deux planches, la meilleure version de chaque relique retenue (trois de la seconde, la géode de la première). Méthode notée dans `docs/STYLE_BIBLE.md` § 8.
+
+## [0.91.1] — 2026-10-22
+
+### Modifié
+- **Reliques sans sertissage** (demande de l'utilisateur) : la relique s'affiche en objet peint seul, sans aucun conteneur CSS (plus de sceau hexagonal, ni cadre d'or, ni plaque de cuir, ni biseau). Le dessin occupe tout son carré et pose sur son ombre portée, qui suit sa silhouette ; une relique dépensée s'éteint, l'éclat de déclenchement et la pastille des charges restent. Tailles relevées partout : combat 44 px (36), affrontement et champion 56 (44), campagne 40 à 48, arbre 22 (18), infobulle 44, compendium 48 et 128 (88), carte de récompense 140 (104). Les quatre reliques élémentaires gardent leur initiale gravée, faute d'icône : le générateur Artlist n'était pas branché dans la session.
 
 ## [0.91.0] — 2026-10-22
 

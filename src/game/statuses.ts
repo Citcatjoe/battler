@@ -141,8 +141,8 @@ export interface StatusDef {
   /**
    * Coups supplémentaires instantanés (0.50.0, Furie des vents) : une charge gagnée pendant l'action
    * frappe dans cette même action, juste après le coup en cours, au lieu d'attendre l'action suivante.
-   * Depuis la 0.69.0, ce sont des coups bruts : leur dé ne donne que la valeur du coup (un 1, un 2 ou un
-   * 3 frappe pour sa valeur), sans compétence de jet, donc sans nouvelle Furie en chaîne.
+   * Depuis la 0.69.0, ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence de jet, donc
+   * sans nouvelle Furie en chaîne. Les reliques de face et la dorure, elles, lisent leur dé (2026-10-23).
    */
   instantStrikes?: boolean
   /** Faces du dé des coups supplémentaires (défaut : le dé du porteur), ex. le d6 de Coup de chance */
@@ -432,7 +432,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence ni relique de face.',
+    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence.',
     describe: () => 'Frappe deux fois tout de suite ; un 1, un 2 ou un 3 frappe pour sa valeur',
     badge: () => '×2',
     // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
@@ -833,7 +833,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.extraStrikes && def.instantStrikes)
     say(
       effect,
-      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : le dé ne donne que la valeur du coup, sans compétence ni relique de face (un 1, un 2 ou un 3 frappe pour sa valeur).`,
+      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : aucune compétence ne part, un 1, un 2 ou un 3 frappe pour sa valeur.`,
       'dice-faces',
     )
   else if (def.extraStrikes) {

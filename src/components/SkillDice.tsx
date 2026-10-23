@@ -58,27 +58,7 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
         {forms.map((f, k) => (
           <div key={f.id} className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
             <SkillDice character={character} tooltip={tooltip} align={align} size="sm" form={k} />
-            {/* Le nom de la forme dit ses règles au survol (le d3 de l'homme, le +3 de l'ours) : la rangée de l'ours
-                n'a aucune compétence, ses dés vides ne disaient rien */}
-            <span className="group relative cursor-help text-[11px] font-bold uppercase tracking-wider text-stone-400 hover:z-[70]">
-              {f.name}
-              {(f.statuses ?? []).length > 0 && (
-                <span
-                  role="tooltip"
-                  className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
-                    tooltip === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
-                  } ${ALIGN[align]}`}
-                >
-                  <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">{f.name}</span>
-                  {(f.statuses ?? []).map((id) => (
-                    <span key={id} className="mt-1.5 block font-body text-[15px] font-normal leading-snug text-ink-1">
-                      {STATUSES[id].summary}
-                    </span>
-                  ))}
-                  <span className="mt-1.5 block font-body text-[13px] font-medium text-ink-3">Il change de forme à chacun de ses tours, sauf le premier.</span>
-                </span>
-              )}
-            </span>
+            <FormLabel character={character} form={k} tooltip={tooltip} align={align} />
           </div>
         ))}
       </div>
@@ -145,6 +125,35 @@ export function DieFace({ face, size, empty, double }: { face: number; size: key
   )
 }
 
+/**
+ * Le nom d'une forme (druide), qui dit ses règles au survol (le d3 de l'homme, le +3 de l'ours) : la rangée de l'ours
+ * n'a aucune compétence, ses dés vides ne disaient rien. Sélection, affrontement (SkillDice, DieBuild).
+ */
+export function FormLabel({ character, form, tooltip, align }: { character: Character; form: number; tooltip: 'above' | 'below'; align: 'left' | 'center' | 'right' }) {
+  const f = character.forms![form]
+  return (
+    <span className="group relative cursor-help text-[11px] font-bold uppercase tracking-wider text-stone-400 hover:z-[70]">
+      {f.name}
+      {(f.statuses ?? []).length > 0 && (
+        <span
+          role="tooltip"
+          className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
+            tooltip === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
+          } ${ALIGN[align]}`}
+        >
+          <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">{f.name}</span>
+          {(f.statuses ?? []).map((id) => (
+            <span key={id} className="mt-1.5 block font-body text-[15px] font-normal leading-snug text-ink-1">
+              {STATUSES[id].summary}
+            </span>
+          ))}
+          <span className="mt-1.5 block font-body text-[13px] font-medium text-ink-3">Il change de forme à chacun de ses tours, sauf le premier.</span>
+        </span>
+      )}
+    </span>
+  )
+}
+
 export const ALIGN = {
   left: 'left-0',
   center: 'left-1/2 -translate-x-1/2',
@@ -153,18 +162,21 @@ export const ALIGN = {
 
 /**
  * Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). `face` : la face du dé ou du double qui
- * la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »).
+ * la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce que la forge a
+ * fait de la face (gravée, dorée), en pied.
  */
 export function SkillTooltip({
   event,
   face,
   placement,
   align,
+  notes = [],
 }: {
   event: CharacterEvent
   face?: number
   placement: 'above' | 'below'
   align: 'left' | 'center' | 'right'
+  notes?: readonly string[]
 }) {
   const double = doubleFace(event.trigger)
   // Le même texte que le compendium (describeSkill) : pastilles en tête, puis l'effet et les statuts posés
@@ -204,6 +216,11 @@ export function SkillTooltip({
           ))}
         </ul>
       )}
+      {notes.map((n) => (
+        <p key={n} className="mt-1.5 font-body text-[13px] font-medium text-ink-3">
+          {n}
+        </p>
+      ))}
     </div>
   )
 }

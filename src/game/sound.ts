@@ -30,7 +30,7 @@ export const SOUND_NAMES = [
   'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
   'hit', 'crit-rumble', 'dodge',
   'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'fizz', 'heal',
-  'shift', 'ko', 'victory', 'click', 'clash', 'war-cry',
+  'shift', 'ko', 'victory', 'click', 'clash',
 ] as const
 export type SoundName = (typeof SOUND_NAMES)[number]
 
@@ -82,16 +82,36 @@ const MIX: Record<SoundName, number> = {
   victory: LEVEL[2],
   click: LEVEL[4],
   clash: LEVEL[1],
-  'war-cry': LEVEL[2],
 }
 /** Sons hors du rythme du combat : jamais écourtés par la vitesse. */
-const UNTIMED = new Set<SoundName>(['click', 'clash', 'war-cry', 'ko', 'victory'])
+const UNTIMED = new Set<SoundName>(['click', 'clash', 'ko', 'victory'])
+
+/**
+ * Octets de chaque fichier son ou de musique, téléchargés une seule fois : par l'écran de chargement
+ * (`prefetchAudio`, preload.ts) ou au premier besoin. Chaque fichier n'est décodé qu'une fois (le décodage
+ * détache ses octets) ; un téléchargement échoué est oublié, pour être retenté au besoin suivant.
+ */
+const audioBytes: Partial<Record<string, Promise<ArrayBuffer>>> = {}
+
+function fetchAudio(url: string) {
+  return (audioBytes[url] ??= fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(`${r.status} ${url}`)
+      return r.arrayBuffer()
+    })
+    .catch((e: unknown) => {
+      delete audioBytes[url]
+      throw e
+    }))
+}
+
+/** Télécharge un fichier son sans le décoder (le contexte audio attend un geste de l'utilisateur). */
+export const prefetchAudio = (url: string) => fetchAudio(url).then(() => undefined)
 
 function loadSamples(c: AudioContext) {
   for (const [name, urls] of Object.entries(SAMPLE_URLS))
     for (const url of urls)
-      fetch(url)
-        .then((r) => r.arrayBuffer())
+      fetchAudio(url)
         .then((data) => c.decodeAudioData(data))
         .then((buf) => (samples[name] ??= []).push(buf))
         .catch(() => {
@@ -197,6 +217,8 @@ const MUSIC_URLS: Record<string, string> = Object.fromEntries(
   ),
 )
 export const MUSIC_TRACKS = Object.keys(MUSIC_URLS)
+/** Tous les fichiers son et de musique, à précharger (preload.ts) */
+export const AUDIO_URLS = [...Object.values(SAMPLE_URLS).flat(), ...Object.values(MUSIC_URLS)]
 export const MUSIC_LOUDNESS: Record<string, number> = { 'battle-boss': -18.4, 'battle-orchestral': -9.7, 'battle-drums': -8.7 }
 /** Sonie visée pour la musique (LUFS) : « pas trop fort », environ 15 dB sous les effets */
 const MUSIC_TARGET = -29
@@ -213,9 +235,7 @@ let musicTicket = 0
 const musicGain = (track: string) => 10 ** ((MUSIC_TARGET - (MUSIC_LOUDNESS[track] ?? -14)) / 20)
 
 function loadMusic(c: AudioContext, track: string) {
-  return (musicBuffers[track] ??= fetch(MUSIC_URLS[track])
-    .then((r) => r.arrayBuffer())
-    .then((data) => c.decodeAudioData(data)))
+  return (musicBuffers[track] ??= fetchAudio(MUSIC_URLS[track]).then((data) => c.decodeAudioData(data)))
 }
 
 export const music = {
@@ -519,12 +539,5 @@ export const sfx = {
     if (play('clash')) return
     tone({ freq: 110, to: 30, dur: 0.9, gain: 0.85 })
     noise({ dur: 0.5, freq: 3000, to: 300, gain: 0.4 })
-  },
-
-  /** Cri de guerre : le bouton « Jouer » lance le combat animé (il remplace le clic de ce bouton). */
-  warCry() {
-    if (play('war-cry')) return
-    tone({ freq: 380, to: 200, dur: 1.4, type: 'sawtooth', gain: 0.08 })
-    noise({ dur: 1.2, filter: 'bandpass', freq: 1200, to: 600, q: 1.2, gain: 0.15 })
   },
 }

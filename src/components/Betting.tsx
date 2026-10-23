@@ -63,8 +63,9 @@ export function TwistBanner({ twist, names, line, size = 'lg' }: { twist?: Twist
     <div className={`twist-ribbon flex items-center justify-center gap-3 ${size === 'lg' ? 'px-12 py-2.5' : 'px-6 py-1'}`}>
       <Icon name="twist" className={size === 'lg' ? 'h-9 w-9' : 'h-5 w-5'} />
       <div className="text-center">
+        {/* Espace insécable devant les deux-points : il ne reste jamais seul sur sa ligne dans la colonne étroite de l'affrontement */}
         <p className={`font-display font-extrabold uppercase tracking-[0.2em] text-amber-100 ${size === 'lg' ? 'text-xl' : 'text-xs'}`}>
-          Coup de théâtre : {t.name}
+          Coup de théâtre{'\u00a0'}: {t.name}
           {target}
         </p>
         {size === 'lg' && <p className="text-sm text-amber-100/80">{t.describe}</p>}

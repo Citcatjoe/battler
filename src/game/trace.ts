@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { doubleTrigger, triggerText, type CharacterEvent, type Trigger } from './events'
-import type { ForgeStep } from './forge'
+import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
 import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
@@ -213,7 +213,7 @@ export function traceCombat(result: CombatResult): CombatTrace {
     ),
     // Forge du dé (campagne) : `npm run logs` relit son journal pour rejouer le combat
     ...([0, 1] as const).flatMap((s) =>
-      fighters[s].forge.length ? [`${FORGE_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].forge.map(forgeToken).join(' ; ')}`] : [],
+      fighters[s].forge.length ? [`${FORGE_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].forge.map(stepKey).join(' ; ')}`] : [],
     ),
   ]
 
@@ -261,9 +261,6 @@ export function parseRelics(text: string): Pair<string[]> {
 
 /** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 7 cleave ; gild 9 ; enlarge » (journal, dans l'ordre). */
 export const FORGE_PREFIX = 'Forge ('
-
-const forgeToken = (step: ForgeStep) =>
-  step.op === 'engrave' ? `engrave ${step.face} ${step.skill.id}` : step.op === 'gild' || step.op === 'sharpen' ? `${step.op} ${step.face}` : step.op
 
 /** Lecture inverse de l'en-tête de forge : le journal de chaque camp ; `skills` : où retrouver une compétence gravée. */
 export function parseForge(text: string, skills: readonly CharacterEvent[]): Pair<ForgeStep[]> {

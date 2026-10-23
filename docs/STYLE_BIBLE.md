@@ -918,7 +918,7 @@ OUTPUT: landscape 1536x1024, wider than tall.
 
 Chaque compétence, chaque statut et chaque bouton a son icône peinte : aucun emoji nulle part (règle de l'utilisateur depuis la 0.34.0, contrôlée par les tests). Les icônes sont générées par **planches** (une grille par lot), puis découpées par script. On ne remplace pas la typographie : flèches `←` `▲` `▼`, pastilles `①` `②`, symboles de lecture `▶` `❚❚`.
 
-**Reliques** (0.75.0, douze depuis la 0.77.0) : leurs icônes suivent le même gabarit de planche, avec leur propre grammaire (un objet immobile, patiné, avec son attache, la magie contenue dedans, le chiffre de la règle lisible dans l'objet : [RELIQUES.md](RELIQUES.md) § 6) et sans cadre : le sceau hexagonal est natif. Prompt complet de la planche des douze et découpe : [RELIQUES.md](RELIQUES.md) § 10. Fichier : `src/assets/icons/<id de la relique>.png`, à ajouter à l'inventaire ci-dessous une fois intégré.
+**Reliques** (0.75.0, douze depuis la 0.77.0) : leurs icônes suivent le même gabarit de planche, avec leur propre grammaire (un objet immobile, patiné, avec son attache, la magie contenue dedans, le chiffre de la règle lisible dans l'objet : [RELIQUES.md](RELIQUES.md) § 6) et sans cadre : depuis la 0.91.1, la relique s'affiche en objet seul, sans aucun sertissage CSS, et sa silhouette doit se lire seule. Prompt complet de la planche des douze et découpe : [RELIQUES.md](RELIQUES.md) § 10. Fichier : `src/assets/icons/<id de la relique>.png`, à ajouter à l'inventaire ci-dessous une fois intégré.
 
 ### Inventaire
 
@@ -1202,6 +1202,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 | Code | Ajouter le nom à `IconName` dans `src/components/Icon.tsx`, et relier chaque statut dans `STATUS_ICON` (identifiant du statut → nom de l'icône). Le test de `screens.test.tsx` exige une icône peinte pour tout statut en jeu. |
 | Affichage | `<Icon name="…" />`, à 1,3 fois la taille du texte, alignée sur la ligne de base ; `className` pour une autre taille |
 | Contrôle | Planche de contrôle (icônes sur fond pierre `#0c0a09`, à 64 et 20 px) regardée avant l'intégration |
+| Serveur de dev | Sans rechargement à chaud (`hmr` et `ws` à `false`), le serveur déjà lancé ne voit pas un **nouveau** fichier : la liste `import.meta.glob` d'`Icon.tsx` reste celle du démarrage, même après F5 (constaté en 0.91.2 : les reliques élémentaires gardaient leur initiale sur le serveur de l'utilisateur). Après l'ajout, `touch src/components/Icon.tsx`, puis F5 |
 
 **Le script `scripts/slice-icons.py`** (numpy, pillow, scipy, dans un environnement virtuel) :
 - déduit la grille du nombre de noms (carré), ignore les cases vides ;

@@ -56,7 +56,6 @@ export interface DiceState {
   faces: number
   rolling: boolean
   owner: Side | null
-  label: string
   crit: boolean
   /** Critique imposé par un statut */
   critForced: boolean
@@ -84,7 +83,6 @@ export const IDLE_DICE: DiceState = {
   faces: 0,
   rolling: false,
   owner: null,
-  label: '',
   crit: false,
   critForced: false,
   critMultiplier: 1,
@@ -250,9 +248,6 @@ export interface StageOptions {
 
 /** Face des dés de compétence (en-tête) qui correspond à un déclencheur du dé : sa face, ou son double. */
 export const skillFaceOf = (trigger: Trigger) => rollFace(trigger) ?? doubleFace(trigger)
-
-/** Annonce du passage de main, avec l'élision devant une voyelle (« Au tour d'Elaria »). */
-export const turnLabel = (name: string) => (/^[aeiouyàâäéèêëîïôöûü]/i.test(name) ? `Au tour d'${name}` : `Au tour de ${name}`)
 
 /** Les étapes provoquées par chaque étape (`cause`), dans l'ordre. */
 export function childrenOf(beats: readonly Beat[]): Beat[][] {
@@ -683,7 +678,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   function stageAttack(beat: Extract<Beat, { type: 'attack' }>, face: number | undefined, grouped: boolean) {
     const { attack } = beat
     const { attacker, faces } = attack
-    const shown = { ...IDLE_DICE, faces, owner: attacker, label: `${fighters[attacker].name} attaque`, critMultiplier: attack.critMultiplier }
+    const shown = { ...IDLE_DICE, faces, owner: attacker, critMultiplier: attack.critMultiplier }
     const specials = attackSpecials(attack)
     const flow = flowOf(beat)
     const rides = ridesOf(beat)
@@ -786,7 +781,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /**
    * Rafale : tous les dés roulent ensemble, le second jaillit, ou apparaît dans sa couleur s'il est d'une autre sorte.
    * `flat` : rafale instantanée (Furie des vents), déclenchée par le dé qui vient de tomber : les dés apparaissent d'un
-   * coup, à plat, sans label.
+   * coup, à plat.
    */
   function rollVolley(attacks: Attack[], color: string | undefined, flat: boolean) {
     const { attacker, faces } = attacks[0]
@@ -794,7 +789,6 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       ...IDLE_DICE,
       faces,
       owner: attacker,
-      label: `${fighters[attacker].name} · ${attacks.length} coups`,
       volley: true,
       dieFaces: attacks.map((a) => a.faces),
       dieColors: attacks.map((_, k) => (k > 0 ? color : undefined)),
@@ -1004,7 +998,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           .filter((b) => b.type === 'attack')
           .map((b) => b.id)
         volley = strikes.length > 0 ? { strikes, next: 0, pointed: beat.double === undefined } : null
-        const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side, label: `${fighters[beat.side].name} · deux dés`, volley: true }
+        const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side, volley: true }
         setDice({ ...shown, values: [0, 0], rolling: true })
         sound('diceRoll', T.DICE_ROLL_MANY)
         hold('DICE_ROLL_MANY')
@@ -1012,7 +1006,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // Un double, quel qu'il soit : le « ding » de la chance, en même temps que les dés (SONS.md § 4.1)
         if (beat.rolls[0] === beat.rolls[1]) sound('coinWin')
         if (name) pulse(beat.side, beat.double)
-        setDice({ ...shown, values: beat.rolls, forced: !!beat.forced, label: name ? `DOUBLE ${beat.rolls[0]} !` : shown.label })
+        setDice({ ...shown, values: beat.rolls, forced: !!beat.forced })
         settle(beat)
         showStatuses(beat.id)
         // Un double qui a sa compétence : elle tombe avec la paire (étape suivante, sans attente)
@@ -1024,15 +1018,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       case 'coin': {
         // La pièce remplace le dé, tournoie, retombe ; pile, la voleuse fond sur sa cible, un seul coup lourd
         const rides = beat.heads ? ridesOf(beat) : []
-        const shown = { ...IDLE_DICE, owner: beat.side, label: `${fighters[beat.side].name} · Pile ou face` }
+        const shown = { ...IDLE_DICE, owner: beat.side }
         const base = hp
         showStatuses(beat.id)
         setDice({ ...shown, coin: {} })
         sound('coinToss', T.COIN_SPIN)
         hold('COIN_SPIN')
         sound('coinLand')
-        setDice({ ...shown, coin: { heads: beat.heads }, label: beat.heads ? 'PILE !' : 'FACE…', forced: beat.forced })
-        // Le résultat tombe d'un bloc : la pièce, son libellé, le « ding » de la réussite et le texte flottant
+        setDice({ ...shown, coin: { heads: beat.heads }, forced: beat.forced })
+        // Le résultat tombe d'un bloc : la pièce, le « ding » de la réussite et le texte flottant
         if (beat.heads) sound('coinWin')
         showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
         hold('COIN_READ')
@@ -1131,7 +1125,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   if (!test) hold('INTRO')
   log({ kind: 'info', text: `${a.name} (${a.maxHp} PV) affronte ${b.name} (${b.maxHp} PV) !` })
   // Initiative : chacun lance un dé, le plus haut commence (relance sur égalité). Combat test : seulement notée
-  const initDice = { ...IDLE_DICE, faces: INITIATIVE_DIE, label: 'Initiative' }
+  const initDice = { ...IDLE_DICE, faces: INITIATIVE_DIE }
   for (const [ia, ib] of result.initiative) {
     if (!test) {
       setDice({ ...initDice, values: [0, 0], rolling: true })
@@ -1145,7 +1139,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (ia === ib) log({ kind: 'info', text: 'Égalité ! On relance.' })
   }
   log({ kind: 'info', text: `${fighters[first].name} frappe en premier.`, side: first })
-  if (test) setDice({ ...IDLE_DICE, owner: first, label: turnLabel(fighters[first].name) })
+  if (test) setDice({ ...IDLE_DICE, owner: first })
   else hold('FIRST_READ')
   active = first
   emit({ channel: 'turn', turn: 0, active })
@@ -1173,7 +1167,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     // Passage de main : le plateau de dés se vide et annonce le suivant, son camp s'allume, un temps de pause
     if (root.id > 0 && root.turn !== beats[root.id - 1].turn) {
       active = root.owner
-      setDice({ ...IDLE_DICE, owner: active, label: turnLabel(fighters[active].name) })
+      setDice({ ...IDLE_DICE, owner: active })
       emit({ channel: 'turn', turn: root.turn, active })
       hold('HANDOVER')
     } else emit({ channel: 'turn', turn: root.turn, active })
@@ -1201,7 +1195,6 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   })
   emit({ channel: 'winner', side: w })
   emit({ channel: 'turn', turn: lastBeat?.turn ?? 0, active: null })
-  patchDice({ label: 'K.O.' })
   sound('ko')
   hold('KO_HOLD')
   sound('victory')

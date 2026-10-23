@@ -19,7 +19,7 @@ export function RelicsSection({ nav, focus, filter }: SectionProps) {
   const count = (k: KindFilter) => RELICS.filter((r) => k === 'all' || relicKind(r) === k).length
   const shown = RELICS.filter((r) => {
     const d = describeRelic(r)
-    return (kind === 'all' || relicKind(r) === kind) && matches(filter, r.name, r.flavor, d.moment, d.text)
+    return (kind === 'all' || relicKind(r) === kind) && matches(filter, r.name, r.flavor, d.text)
   })
   const selected = RELICS.find((r) => r.id === focus) ?? shown[0] ?? RELICS[0]
 
@@ -56,7 +56,7 @@ export function RelicsSection({ nav, focus, filter }: SectionProps) {
                     onClick={() => nav.go({ section: 'relics', id: r.id })}
                     className="codex-row w-full"
                   >
-                    <RelicSeal relic={r} size={40} />
+                    <RelicSeal relic={r} size={48} />
                     <span className="min-w-0">
                       <span className="block font-display text-[17px] font-bold leading-tight text-ink-1">{r.name}</span>
                       <span className="block truncate font-body text-[14px] text-ink-3">{describeRelic(r).text}</span>
@@ -74,12 +74,12 @@ export function RelicsSection({ nav, focus, filter }: SectionProps) {
 }
 
 function RelicDetail({ relic, nav }: { relic: Relic; nav: CompendiumNav }) {
-  const { moment, text, tags, posed } = describeRelic(relic)
+  const { text, limits, posed } = describeRelic(relic)
   const kind = relicKind(relic)
   return (
     <article className="codex-panel fade-in scroll-panel flex min-h-0 flex-col gap-4 overflow-y-auto p-6">
       <header className="flex items-center gap-5">
-        <RelicSeal relic={relic} size={88} />
+        <RelicSeal relic={relic} size={128} />
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-4xl font-extrabold text-amber-100">{relic.name}</h2>
@@ -91,22 +91,13 @@ function RelicDetail({ relic, nav }: { relic: Relic; nav: CompendiumNav }) {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
-        <CodexBox title="Quand">
-          <p>{moment}</p>
-          {tags.map((t) => (
-            <p key={t} className="text-ink-3">
-              {t}
-            </p>
-          ))}
-        </CodexBox>
-        <CodexBox title="Effet">
-          <p>{text}</p>
-          {posed.map((p) => (
-            <StatusChip key={p.status} status={p.status} target={p.target} nav={nav} />
-          ))}
-        </CodexBox>
-      </div>
+      <CodexBox title="Règle">
+        <p className="text-[19px] font-bold text-ink-1">{text}</p>
+        {limits.length > 0 && <p className="text-gold-300">{limits.join(' · ')}</p>}
+        {posed.map((p) => (
+          <StatusChip key={p.status} status={p.status} target={p.target} nav={nav} />
+        ))}
+      </CodexBox>
 
       <CodexBox title={`Type · ${RELIC_KINDS[kind].label}`}>
         <p>{RELIC_KINDS[kind].summary}</p>

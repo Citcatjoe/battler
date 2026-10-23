@@ -55,7 +55,8 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     Coups instantanés (`instantStrikes`, Furie des vents, 0.50.0) : une charge gagnée pendant l'action
     frappe juste après le coup en cours, dans la même action (`extraStrikes` coups). Depuis la 0.69.0,
     ce sont des coups bruts (`Attack.plain`) : leur dé ne donne que leur valeur, un 1, un 2 ou un 3
-    frappe pour sa valeur et ne déclenche aucune compétence, donc aucune Furie en chaîne.
+    frappe pour sa valeur et ne déclenche aucune compétence, donc aucune Furie en chaîne. Les reliques
+    de face et la dorure, elles, lisent leur dé (2026-10-23).
     consommé (étape flurry) et l'action compte plusieurs coups, chacun avec son dé (`extraDie` : le d3
     de Coup de chance).
     Deux dés (`twinDice`, la barde, 0.41.0) : l'actif lance ses deux dés ensemble (étape pair, deux
@@ -72,7 +73,7 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
       coup touché : hit → crit (actif) → hurt (défenseur). Vol de vie réagit dans `hit` (actif), Riposte et
       jauges de Rétribution dans `hurt` (défenseur), à leur rang parmi ses statuts (ordre de pose ; une jauge
       encore vide passe après eux), puis les compétences, puis les reliques (2026-10-21)
-      coup brut (Furie des vents, `plain`) : ni fenêtre du dé ni relique de face, seulement esquive ou touche
+      coup brut (Furie des vents, `plain`) : ses fenêtres du dé n'éveillent que les reliques (2026-10-23), ni statut ni compétence
       coup sacrifié (`forfeitsHit`) : ni l'un ni l'autre, seules les fenêtres du dé s'ouvrent
   Phase 3 · FIN DE TOUR (actif)
     1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus
@@ -142,8 +143,8 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | 1 bis | **Coup sacrifié** | Si une compétence de l'attaquant déclenchée par ce jet porte `forfeitsHit` (toutes les compétences du 1, du 2 et du 3 depuis la 0.27.0), le coup n'inflige rien : ni esquive, ni critique, ni dégâts, et aucune fenêtre `hit`, `hurt`, `missed` ou `dodge` (remplacement). Les fenêtres du dé s'ouvrent normalement. | `forfeitsHit` (compétence) |
 | 1 bis | **Coup transformé** | Si une compétence du jet a `reshapesHit` (sous la bonne forme), le coup n'est pas sacrifié : sa valeur devient le maximum du dé (`max`) ou un nouveau jet secret plus un bonus (`reroll`). `noCrit` : pas de tirage de critique, et un critique assuré n'est pas consommé | `reshapesHit` (sans porteur depuis la 0.73.0 ; Charge et Coup de griffe avant) |
 | 2 | **Esquive** | Imposée par un statut du défenseur (`forcesDodge`, sans tirage, une charge consommée), sinon le défenseur tire contre sa chance d'esquive. Une esquive annule tout le coup (remplacement). | `forcesDodge` (Esquive améliorée), `modifyStats` (esquive) |
-| 2 bis | **Bonus de relique** (0.75.0) | Sur un coup qui touche, les reliques de coup de l'attaquant ajoutent leur bonus à la valeur du coup (le jet, ou la valeur d'un coup transformé), avant le critique ; un bonus de face (`onFace`, 0.77.0) ne vaut que si le dé de ce coup fait cette face : un 4 avec le Fer à quatre clous vaut 8, puis 16 en critique ×2. Le jet affiché et les compétences du jet restent ceux du dé naturel. Aucun tirage. | `Relic.rollBonus`, `Relic.onFace` ([RELIQUES.md](RELIQUES.md)) |
-| 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : jamais sur un coup brut (Furie des vents), chaque dé de la paire se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
+| 2 bis | **Bonus de relique** (0.75.0) | Sur un coup qui touche, les reliques de coup de l'attaquant ajoutent leur bonus à la valeur du coup (le jet, ou la valeur d'un coup transformé), avant le critique ; un bonus de face (`onFace`, 0.77.0) ne vaut que si le dé de ce coup fait cette face : un 4 avec le Fer à quatre clous vaut 8, puis 16 en critique ×2. Coup brut de Furie compris (2026-10-23). Le jet affiché et les compétences du jet restent ceux du dé naturel. Aucun tirage. | `Relic.rollBonus`, `Relic.onFace` ([RELIQUES.md](RELIQUES.md)) |
+| 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : coup brut compris (2026-10-23), chaque dé de la paire se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
 | 3 | **Critique** | Forcé par un statut (`forcesCrit`, sans tirage), sinon tirage contre sa chance de critique. Le jet est multiplié, puis arrondi. | `forcesCrit`, `modifyStats` |
 | 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli) |
 | 5 | **Dégâts entrants** | Statuts du défenseur, dans l'ordre de pose | `modifyIncoming` (Vulnérable) |
@@ -156,6 +157,21 @@ Les étapes sont toujours dans cet ordre. Les trois tirages (dé, esquive, criti
 | 10 | **Vol de vie (esquive)** | Un coup esquivé consomme une charge de Vol de vie (`drainsHit`) sans soin, au moment du coup. Sur un coup qui touche, le Vol de vie n'est pas une étape de la chaîne : c'est une réaction de la fenêtre `hit` (§ 5, règle 9), qui rend les PV retirés (plafonnés aux PV max) et use une charge. Un coup sacrifié n'est pas porté : la charge reste. | `drainsHit` (Vol de vie) |
 
 Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
+
+### Le vocabulaire des textes porte la résolution (2026-10-23)
+
+Demande de l'utilisateur : une relique ou une opération de forge se dit en une ligne, et cette ligne suffit à savoir quand elle agit et où elle s'insère dans la chaîne. Si on ne sait pas dire quand elle se déclenche, c'est la règle qui est ambiguë : on la corrige, on ne l'explique pas. Les mots ont donc un sens fixe :
+
+| Mot | Sens dans la chaîne | Exemples |
+| --- | --- | --- |
+| **frappe** | la valeur du coup donnée par le dé (étapes 1 à 2 ter) : un bonus « à la frappe » est multiplié par le critique | Dorer : « +2 dégâts à la frappe » ; Fer à quatre clous : « +4 dégâts aux frappes de 4 » |
+| **dégâts directs** | pas un coup : ni esquive, ni critique, ni armure | Osselet fendu : « Sur un 1 : 3 dégâts directs » |
+| **Sur un 4**, **Sur un jet maximal** | la face du dé, quel que soit le coup : qu'il touche ou non, sacrifié ou brut | Osselet fendu, Dé creux |
+| **Au 4e tour**, **Tous les 3 tours** | au début de son tour, après ses statuts de début de tour, avant son action | Braise captive, Chapelet de l'ermite |
+| **Sous 40 % PV** | au passage sous le seuil (règle 5 de [RELIQUES.md](RELIQUES.md) § 3) | Dent de loup |
+| **+2 Vol de vie** | pose 2 charges du statut sur le porteur ; le statut a sa propre règle | Dent de loup, Collier de ronces |
+
+Une exception se dit là où elle naît, pas sur chaque objet qu'elle touche : l'Incantation dit qu'elle remplace le dé (le Contrepoids de plomb, « +2 faces au dé », ne l'agrandit pas), la Furie des vents dit que ses coups ne déclenchent aucune compétence.
 
 ---
 
@@ -230,7 +246,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Furie des vents contre Saignement (2) | Le premier coup de la rafale fait couler 2, le deuxième 1 : la plaie est vidée dans la même action. |
 | Furie des vents contre Esquive améliorée | Le premier coup est esquivé à coup sûr et consomme une charge ; le second est résolu normalement (tirage d'esquive) s'il n'en reste plus, sinon esquivé à coup sûr lui aussi (cumulable depuis le 2026-10-21). |
 | Esquive améliorée posée deux fois (2026-10-21) | Les charges s'additionnent : deux charges, deux coups reçus esquivés à coup sûr, une charge par esquive. |
-| Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : le coup frappe pour la valeur du dé, sans compétence ni relique de face (le Fer à quatre clous ne renforce pas un 4 de Furie, 2026-10-21) ; aucune Furie ne se relance. |
+| Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : le coup frappe pour la valeur du dé, sans compétence ; aucune Furie ne se relance. Les reliques de face et la dorure lisent son dé : le Fer à quatre clous renforce un 4 de Furie, l'Osselet fendu part sur un 1 de Furie (2026-10-23 ; du 2026-10-21 au 2026-10-22, aucune relique de face ne s'y déclenchait). |
 | Vol de vie : deux 2 de suite, ou un 1 ou un 3 | Le jet suivant est encore un coup sacrifié : aucun coup n'est porté, rien n'est volé, la charge reste (non cumulable, 1 charge au plus). Elle attend le prochain vrai coup. |
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
 | Vol de vie contre Épines acérées | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (sa fenêtre `hit`), puis la fenêtre `hurt` du nain pose le Saignement sur lui. |

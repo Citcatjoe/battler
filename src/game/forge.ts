@@ -9,7 +9,7 @@ import { STATUSES } from './statuses'
  * Une forge est un JOURNAL d'opérations (`ForgeStep[]`), rejoué sur la définition d'origine du personnage
  * (`forgeState`) : c'est une donnée, comme une relique, que n'importe quel mode peut donner (`Character.withForge`).
  *   - Graver : une compétence prise à un autre combattant prend une face libre (sur une face d'Attente, elle la remplace) ;
- *   - Dorer : +2 à la valeur des coups de cette face, avant le critique (`Attack.gild`) ;
+ *   - Dorer : +2 dégâts à la frappe de cette face, avant le critique, coup brut compris (`Attack.gild`) ;
  *   - Agrandir : deux faces libres au-dessus de la plus haute ;
  *   - Retailler : la plus haute face disparaît, forgée ou non ; jamais une face qui porte une compétence d'origine ;
  *   - Aiguiser : la compétence d'une face monte d'un rang.
@@ -29,25 +29,19 @@ export const FORGE_OFFER_SIZE = 3
 
 export type ForgeOpKind = 'engrave' | 'gild' | 'enlarge' | 'trim' | 'sharpen'
 
-/** Les cinq opérations : nom, règle en une phrase, et si elles visent une face. */
+/** Ce que vaut une dorure, sans son montant : « +2 dégâts à la frappe » (le montant se colore à part dans l'aperçu). */
+export const GILD_RULE = 'dégâts à la frappe'
+
+/**
+ * Les cinq opérations : nom, règle au plus court (2026-10-23, demande de l'utilisateur : une information simple, pas
+ * d'explication ; ce qu'elle change se lit dans l'aperçu du dé), et si elles visent une face.
+ */
 export const FORGE_OPS: Record<ForgeOpKind, { name: string; summary: string; targeted: boolean }> = {
-  engrave: { name: 'Graver', summary: 'Une compétence nouvelle prend une face libre : elle part à la place du coup, ou avec lui.', targeted: true },
-  gild: { name: 'Dorer', summary: `+${GILD_BONUS} à la valeur des coups de cette face, avant le critique.`, targeted: true },
-  enlarge: {
-    name: 'Agrandir',
-    summary: `Le dé gagne ${ENLARGE_FACES} faces au-dessus de la plus haute : des coups plus forts, des compétences plus rares.`,
-    targeted: false,
-  },
-  trim: {
-    name: 'Retailler',
-    summary: 'Le dé perd sa plus haute face, forgée ou non : des compétences plus fréquentes, des coups plus faibles.',
-    targeted: false,
-  },
-  sharpen: {
-    name: 'Aiguiser',
-    summary: 'La compétence de cette face monte d’un rang : une charge de plus par statut cumulable, +2 à ses dégâts et soins, un coup de plus pour un double qui frappe.',
-    targeted: true,
-  },
+  engrave: { name: 'Graver', summary: 'Nouvelle compétence sur une face libre', targeted: true },
+  gild: { name: 'Dorer', summary: `+${GILD_BONUS} ${GILD_RULE}`, targeted: true },
+  enlarge: { name: 'Agrandir', summary: `+${ENLARGE_FACES} faces au dé`, targeted: false },
+  trim: { name: 'Retailler', summary: '−1 face au dé', targeted: false },
+  sharpen: { name: 'Aiguiser', summary: '+1 rang à une compétence', targeted: true },
 }
 
 /** Une opération proposée, avant le choix de sa face. Graver porte la compétence à graver. */
@@ -310,6 +304,10 @@ export function withForgeStep(base: ForgeBase, steps: readonly ForgeStep[], step
 export function validOnOrigin(base: ForgeBase, step: ForgeStep) {
   return stepValid(base, forgeState(base, []), step)
 }
+
+/** Une opération en une courte clé lisible (« engrave 7 cleave », « gild 9 », « enlarge ») : trace, comparaison de journaux. */
+export const stepKey = (step: ForgeStep) =>
+  step.op === 'engrave' ? `engrave ${step.face} ${step.skill.id}` : step.op === 'gild' || step.op === 'sharpen' ? `${step.op} ${step.face}` : step.op
 
 /* ---------- Rédaction ---------- */
 
