@@ -892,6 +892,14 @@ body {
   .seal[data-tone='neutral'] { --seal: var(--text-3); }
   .seal[data-tone='relic'] { --seal: var(--gold-300); }
 
+  /* Sceau d'une compétence au compendium (0.98.0) : l'octogone de la barre de compétences du combat (.skill-seal),
+     liseré de 2 px à la couleur de sa nature. Un octogone est une compétence, une pièce ronde un état. */
+  .codex-skill-seal::before { inset: 2px; background: radial-gradient(circle at 50% 35%, #2a221b 0%, #0e0b09 72%); }
+  .codex-skill-seal[data-nature='martial'] { --nature: var(--gold-500); }
+  .codex-skill-seal[data-nature='finesse'] { --nature: var(--armor); }
+  .codex-skill-seal[data-nature='arcane'] { --nature: var(--arcane); }
+  .codex-skill-seal[data-nature='neutral'] { --nature: var(--text-3); }
+
   /* Ligne d'index (56 à 64 px) : survol discret, choisie avec un filet d'or à gauche */
   .codex-row {
     position: relative;
@@ -1566,10 +1574,9 @@ body {
   background: linear-gradient(180deg, rgba(12, 10, 9, 0.72), rgba(12, 10, 9, 0.45));
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 237, 213, 0.08);
 }
-/* Nom sous le sceau : lisible de loin, sur deux lignes au plus. Un peu plus large que le jeton (92 px), centré
-   dessous : un long mot seul (Incantation) tient sans être coupé */
+/* Nom sous le sceau : lisible de loin, sur deux lignes au plus */
 .skill-bar-name {
-  max-width: 100px;
+  max-width: 92px;
   text-align: center;
   font-family: var(--font-display, inherit);
   font-size: 14px;
@@ -1585,6 +1592,8 @@ body {
 .skill-bar-name.is-active { color: #fde68a; }
 .skill-bar-face { filter: grayscale(0.9) brightness(0.42) drop-shadow(0 0 0 transparent); opacity: 0.8; transition: filter 150ms, transform 120ms, opacity 150ms; }
 .skill-bar .group:hover .skill-bar-face { filter: none; opacity: 1; transform: translateY(-2px); }
+/* Reflet du dé qui roule : le sceau de la face montrée s'allume sans transition, puis s'éteint en 150 ms */
+.skill-bar-face.is-rolled { filter: none; opacity: 1; transition: none; }
 .skill-bar-aura.is-idle { filter: grayscale(0.9) brightness(0.42) drop-shadow(0 0 0 transparent); opacity: 0.8; box-shadow: 0 0 0 2px #0c0a09, 0 0 0 3px rgba(168, 162, 158, 0.45); }
 .skill-bar .group:hover .skill-bar-aura.is-idle { filter: none; opacity: 1; }
 /* Au repos, les noms s'effacent aussi ; une aura active reste dorée, un sceau qui sonne s'éclaire un instant */
@@ -1693,65 +1702,117 @@ body {
   .skill-bar-face.is-lit, .skill-bar-aura.is-lit, .skill-bar-wave, .skill-bar-burst, .skill-bar-ring, .skill-bar-name.is-lit, .signal-orb, .signal-hit { animation-duration: 1ms; }
 }
 
-/* ---------- Dé face par face (DieBuild, 0.96.0, chantier « zone de compétence ») ----------
-   Toutes les faces du dé, sept par ligne. Une face simple : son chiffre dans la fenêtre octogonale ; une gravure, un
-   liseré violet ; une dorure, un liseré d'or (et la plaque d'or sur une face simple). En combat (.is-live), les sceaux
-   sont éteints au repos ; hors combat (affrontement), allumés. Le reflet du dé qui roule (--roll : la couleur du camp)
-   passe de face en face, fugace et inégal ; la face tombée garde un liseré discret tant que le dé la montre, sans éclat
-   (l'éclat, c'est le Ding de la compétence qui se déclenche). */
-.die-cell { --oct: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
-.die-cell .skill-bar-face, .die-cell-plain { position: relative; z-index: 1; }
-/* Le nom déborde de 4 px de chaque côté de sa face (80 px), dans l'écart : un long mot (Pourfendre) tient entier */
-.die-cell .skill-bar-name { max-width: 88px; font-size: 13px; }
-/* Un mot très long (« d'intimidation », longName) : un cran plus petit, sous la face comme sous un jeton, et une
-   troisième ligne pour son rang (Aura d'intimidation II) */
-.skill-bar-name[data-long] { font-size: 12px; -webkit-line-clamp: 3; }
-.die-cell .skill-bar-name[data-long] { font-size: 11px; letter-spacing: -0.02em; }
-.die-build:not(.is-live) .skill-bar-face { filter: none; opacity: 1; }
-.die-cell:hover .skill-bar-face { filter: none; opacity: 1; transform: translateY(-2px); }
-.die-cell-plain { opacity: 0.7; transition: transform 120ms, opacity 150ms; }
-.die-build:not(.is-live) .die-cell-plain, .die-cell[data-drawn] .die-cell-plain { opacity: 1; }
-.die-cell:hover .die-cell-plain { opacity: 1; transform: translateY(-2px); }
-.die-cell-plain .skill-seal {
-  --nature: var(--line-2);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 22px;
-  line-height: 1;
+/* ---------- Fiche d'affrontement à géométrie fixe (MatchupScreen.tsx, DieBuild.tsx, 0.99.0) ----------
+   Cotes des références (docs/ref/affrontement-*.png, 1440 × 810) × 10/9. En-têtes de section (« Dé de combat »,
+   « Reliques ») à hauteur fixe, nombre à droite ; filets entre les sections. Le dé : douze octogones de 44 px en deux
+   rangées de six, les emplacements au-delà de la taille du dé grisés. Ni halo, ni effet de survol (seule l'infobulle). */
+.matchup-name {
+  font: 600 38px/39px var(--font-display);
+  overflow-wrap: break-word;
+}
+/* Race · archétype, petit texte posé sur l'arène sans voile : ombre serrée en plus de l'ombre large de `.on-illus`,
+   lisible sur une arène claire (La Paume-du-Vieux) sans former de bloc */
+.matchup-race { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.85), 0 2px 12px rgba(0, 0, 0, 0.9); }
+.matchup-section-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  font: 700 12px/1 var(--font-display);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: var(--text-2);
 }
-.die-build[data-size='sm'] .die-cell-plain .skill-seal { font-size: 16px; }
-.die-cell[data-gild] .die-cell-plain .skill-seal { --nature: var(--gold-300); color: var(--on-gold); }
-.die-cell[data-gild] .die-cell-plain .skill-seal::before { background: linear-gradient(160deg, var(--gold-200) 0%, var(--gold-400) 55%, var(--gold-500) 100%); }
-.die-cell-rim, .die-cell-drawn, .die-cell-flicker { position: absolute; pointer-events: none; clip-path: var(--oct); }
-.die-cell-rim { inset: -3px; z-index: 0; background: var(--gold-300); }
-.die-cell[data-engraved] .die-cell-rim { background: var(--arcane); }
-.die-cell[data-engraved][data-gild] .die-cell-rim { background: linear-gradient(135deg, var(--arcane) 0%, var(--arcane) 45%, var(--gold-300) 55%, var(--gold-300) 100%); }
-.die-cell-drawn {
-  inset: -5px;
-  z-index: 0;
-  background: var(--roll, var(--text-2));
-  opacity: 0;
-  transition: opacity calc(180ms / var(--speed, 1)) ease-out;
+.matchup-section-count {
+  font: 500 14px/1 var(--font-data);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-1);
 }
-.die-cell[data-drawn] .die-cell-drawn { opacity: 0.5; }
-.die-cell-flicker {
-  --peak: 0.6;
-  inset: -6px;
-  z-index: 2;
-  background: radial-gradient(circle, color-mix(in srgb, var(--roll, #e7e5e4) 55%, white) 0%, color-mix(in srgb, var(--roll, #e7e5e4) 45%, transparent) 50%, transparent 72%);
-  mix-blend-mode: screen;
-  animation: die-cell-flicker calc(260ms / var(--speed, 1)) ease-out both;
+.matchup-section-more {
+  font: 600 13px/1 var(--font-data);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--gold-300);
 }
-.die-cell-flicker[data-k='1'] { --peak: 0.35; }
-.die-cell-flicker[data-k='2'] { --peak: 0.48; }
-@keyframes die-cell-flicker {
-  0% { opacity: var(--peak); }
-  100% { opacity: 0; }
+.matchup-rule { flex-shrink: 0; height: 1px; background: var(--line-1); }
+
+.die-grid {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(6, 44px);
+  grid-auto-rows: 44px;
+  justify-content: space-between;
+  row-gap: 7px;
+  height: 95px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .die-cell-flicker { animation-duration: 1ms; }
+.die-slot .skill-seal { --nature: var(--line-2); }
+.die-slot .skill-seal::before { background: radial-gradient(circle at 50% 35%, #231c16 0%, var(--bg-0) 75%); }
+.die-slot-plain { font: 700 17px/1 var(--font-display); color: var(--text-1); }
+/* Emplacement au-delà de la taille du dé : la jauge vide */
+.die-slot[data-empty] .skill-seal { --nature: var(--line-1); }
+.die-slot[data-empty] .skill-seal::before { background: rgba(14, 11, 9, 0.45); }
+/* Face dorée : fond d'or, sans le cadre de la face forgée */
+.die-slot[data-gild] .skill-seal::before,
+.die-slot[data-forged] .skill-seal::before { background: linear-gradient(160deg, #b9862f 0%, #6e4d1d 55%, #3e2a10 100%); }
+.die-slot[data-gild] .die-slot-plain { color: var(--gold-200); text-shadow: 0 1px 2px #000; }
+/* Face forgée (compétence gravée par la forge) : cadre d'or dégradé de 2 px */
+.die-slot[data-forged] .skill-seal { background: linear-gradient(160deg, #f6dc9a 0%, #dda94a 50%, #8a6424 100%); }
+.die-slot[data-forged] .skill-seal::before { inset: 2px; }
+/* Cartouche du chiffre (et du bonus d'une dorure), en bas à gauche */
+.die-slot-num {
+  position: absolute;
+  left: -3px;
+  bottom: -3px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 2px;
+  background: var(--bg-0);
+  box-shadow: inset 0 0 0 1px var(--line-2), 0 1px 3px rgba(0, 0, 0, 0.6);
+  color: var(--text-1);
+  font: 700 10px/14px var(--font-display);
+  text-align: center;
+  white-space: nowrap;
 }
+.die-slot[data-forged] .die-slot-num,
+.die-slot[data-gild] .die-slot-num { background: #24170a; color: #f6dc9a; box-shadow: inset 0 0 0 1px rgba(246, 220, 154, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6); }
+/* Rang d'une compétence aiguisée : pastille d'or, liseré de 2 px couleur du fond */
+.die-slot-rank {
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 2px;
+  background: #dda94a;
+  color: #24170a;
+  font: 800 10px/13px var(--font-display);
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-1);
+}
+
+.matchup-relics {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(6, 49px);
+  justify-content: space-between;
+  height: 49px;
+}
+.matchup-relics-more { font: 600 16px/1 var(--font-data); color: var(--gold-300); }
+.matchup-relics-none { flex-shrink: 0; height: 49px; font: 400 14px/49px var(--font-body); color: var(--text-3); }
+
+/* Sélecteur d'arène : « ARÈNE nom 3 / 9 » sur une ligne, entre les flèches */
+.matchup-arena-label { font: 700 11px/1 var(--font-display); letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-3); }
+.matchup-arena-name {
+  font: 700 18px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-300);
+  white-space: nowrap;
+  text-shadow: 0 2px 0 #000;
+}
+.matchup-arena-index { font: 500 12px/1 var(--font-data); letter-spacing: 0.2em; color: var(--text-3); white-space: nowrap; }
 
 /* ---------- Écran du champion ---------- */
 .champion-screen { background: radial-gradient(ellipse at 30% 60%, #2a2118 0%, #0c0a09 70%); }
@@ -2671,51 +2732,33 @@ body {
 }
 .encounter-card:hover { transform: translateY(-4px); border-color: var(--gold-500); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
 
-/* ---------- Affrontement : plaque de classement (MatchupScreen.tsx) ----------
-   Au-dessus du nom : la place en chiffre d'or dans un cartouche aux coins coupés (--cut-m), puis une
-   plaque sombre au filet bronze avec son contexte (saison : points et bilan ; arbre : tête de série). */
+/* ---------- Affrontement : écusson de rang (MatchupScreen.tsx, 0.96.2 ; à côté du nom en 0.99.0) ----------
+   Accroché au bord extérieur du nom, sur sa ligne de base : le rang (classement de saison en cours, tête de série dans
+   l'arbre) en chiffre d'or dans un écusson au filet d'or, fond sombre, haut plat et pointe en bas (49 × 57 px, la
+   référence portée à la scène). Aucun texte autour ; lisible de loin. */
 .matchup-rank {
-  display: flex;
-  align-items: stretch;
+  --shield: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+  position: relative;
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 49px;
+  height: 57px;
+  padding-bottom: 9px;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
 }
-.matchup-rank-place {
-  --c: var(--cut-m);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-width: 76px;
-  padding: 4px 14px 2px;
-  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
-  background: linear-gradient(160deg, var(--gold-200) 0%, var(--gold-400) 55%, var(--gold-500) 100%);
-  box-shadow: inset 0 -4px 0 #8a6424, inset 0 0 0 1px #fff6dc88;
-  color: var(--on-gold);
-  font: 800 48px/1 var(--font-display);
-  text-shadow: 0 1px 0 rgba(255, 246, 220, 0.5);
+.matchup-rank::before, .matchup-rank::after {
+  content: '';
+  position: absolute;
+  clip-path: var(--shield);
 }
-.matchup-rank-place sup {
-  margin-left: 2px;
-  font-size: 22px;
-  line-height: 1.4;
-}
-.matchup-rank-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  white-space: nowrap;
-  margin: 6px 0;
-  padding: 4px 16px;
-  background: var(--bg-1);
-  box-shadow: inset 0 0 0 1px var(--line-bronze), var(--hl, none);
-}
-.matchup-rank-label {
-  color: var(--gold-300);
-  font: 700 14px/1.2 var(--font-body);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-.matchup-rank-record {
-  color: var(--text-1);
-  font: 600 20px/1.2 var(--font-data);
+.matchup-rank::before { inset: 0; background: linear-gradient(160deg, var(--gold-200) 0%, var(--gold-400) 50%, #8a6424 100%); }
+.matchup-rank::after { inset: 2px 2px 3px; background: radial-gradient(ellipse at 50% 20%, #3a2f22 0%, var(--bg-1) 55%, var(--bg-0) 100%); }
+.matchup-rank-num {
+  position: relative;
+  z-index: 1;
+  color: var(--gold-200);
+  font: 700 22px/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 #0a0806;
 }

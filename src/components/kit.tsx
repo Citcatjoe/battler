@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 import { BattlerIcon, type GlyphName, type GlyphSize } from './BattlerIcon'
 
 /*
@@ -63,7 +63,7 @@ export function Button({
 
 /**
  * Bouton icône rond (48 px, ou 44 px en `sm`). Le libellé passe par `aria-label` et `title`. `pressed` : état
- * d'une bascule (son, musique) ; « coupé » = `false`, avec le glyphe barré.
+ * d'une bascule ; « coupé » = `false`, avec le glyphe barré.
  */
 export function IconButton({
   icon,
@@ -84,6 +84,35 @@ export function IconButton({
     >
       <Glyph name={icon} size={size === 'sm' ? 18 : 22} />
     </button>
+  )
+}
+
+/**
+ * Bouton carré 44 × 44 (ajout au kit validé par l'utilisateur) : une action secondaire en glyphe seul, au serti du
+ * secondaire (Parier, Simuler sous le VS ; Paris, Simuler le tour, Affronter dans l'arbre). Le libellé passe par
+ * `aria-label` et `title` ; `badge` accroche une pastille de compteur en bas à droite (« 0/2 », « ×8 »).
+ */
+export function SquareButton({
+  icon,
+  label,
+  badge,
+  className = '',
+  ...button
+}: { icon: GlyphName; label: string; badge?: string; className?: string } & ButtonAttrs) {
+  return (
+    <button type="button" aria-label={badge ? `${label} (${badge})` : label} title={label} className={`bt-square ${className}`} {...button}>
+      <Glyph name={icon} />
+      {badge && <Badge aria-hidden>{badge}</Badge>}
+    </button>
+  )
+}
+
+/** Pastille de compteur du kit (« 0/2 », « ×8 ») : seule, ou accrochée à un `SquareButton` par sa prop `badge`. */
+export function Badge({ className = '', children, ...span }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={`bt-badge ${className}`} {...span}>
+      {children}
+    </span>
   )
 }
 

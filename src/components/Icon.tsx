@@ -1,4 +1,4 @@
-import { STATES, type StateId } from '../game/states'
+import { STATES, STATUS_PLACE, type StateId } from '../game/states'
 import { STATUSES, type StatusId } from '../game/statuses'
 import type { CharacterEvent } from '../game/events'
 
@@ -93,9 +93,11 @@ export type IconName =
   | 'state-lost-turn'
 
 /**
- * Icône peinte de chaque statut. Facultative pour un statut « à venir » (repli sur une marque neutre,
- * l'initiale de son nom), obligatoire avant qu'un personnage le pose : un test le vérifie.
- * Jamais d'emoji : une icône manquante se demande à l'utilisateur (docs/STYLE_BIBLE.md § 7).
+ * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
+ * le statut l'emprunte (`skillIcon`) ; une aura, une forme ou un mécanisme s'affiche avec elle. Un statut de la
+ * zone d'état, lui, se montre partout par l'emblème de son état (`statusIcon`). Facultative pour un statut « à
+ * venir » (repli sur une marque neutre, l'initiale de son nom) ; un statut en jeu doit avoir une icône : un test le
+ * vérifie. Jamais d'emoji : une icône manquante se demande à l'utilisateur (docs/STYLE_BIBLE.md § 7).
  */
 export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   guaranteedCrit: 'crit',
@@ -215,9 +217,20 @@ export function skillIcon(event: Pick<CharacterEvent, 'id' | 'effects'>): IconNa
   return 'event'
 }
 
-/** Icône d'un statut : l'icône peinte, sinon une marque neutre (l'initiale du statut) à la même taille. */
+/**
+ * Icône d'un statut hors de la barre de compétences (compendium, infobulles) : un statut de la zone d'état prend
+ * l'emblème de l'état qu'il alimente, comme en combat (Critique assuré : la pièce gravée, pas la cible d'Œil de
+ * faucon) ; une aura, une forme ou un mécanisme garde son icône peinte (`STATUS_ICON`).
+ */
+export function statusIcon(id: StatusId): IconName | undefined {
+  const place = STATUS_PLACE[id]
+  const state = place.place === 'tray' ? place.relays[0]?.state : undefined
+  return (state && STATE_ICON[state]) ?? STATUS_ICON[id]
+}
+
+/** Icône d'un statut (`statusIcon`), sinon une marque neutre (l'initiale du statut) à la même taille. */
 export function StatusIcon({ id, className }: { id: StatusId; className: string }) {
-  const name = STATUS_ICON[id]
+  const name = statusIcon(id)
   if (name) return <Icon name={name} className={className} />
   return (
     <span

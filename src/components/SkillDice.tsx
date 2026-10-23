@@ -127,9 +127,9 @@ export function DieFace({ face, size, empty, double }: { face: number; size: key
 
 /**
  * Le nom d'une forme (druide), qui dit ses règles au survol (le d3 de l'homme, le +3 de l'ours) : la rangée de l'ours
- * n'a aucune compétence, ses dés vides ne disaient rien. Sélection, affrontement (SkillDice, DieBuild).
+ * n'a aucune compétence, ses dés vides ne disaient rien. Sélection (SkillDice).
  */
-export function FormLabel({ character, form, tooltip, align }: { character: Character; form: number; tooltip: 'above' | 'below'; align: 'left' | 'center' | 'right' }) {
+function FormLabel({ character, form, tooltip, align }: { character: Character; form: number; tooltip: 'above' | 'below'; align: 'left' | 'center' | 'right' }) {
   const f = character.forms![form]
   return (
     <span className="group relative cursor-help text-[11px] font-bold uppercase tracking-wider text-stone-400 hover:z-[70]">

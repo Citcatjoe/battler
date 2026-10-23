@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { GLYPHS } from '../components/BattlerIcon'
-import { BackLink, Button, Glyph, IconButton, ModePair, ModePairItem, SegmentedControl, Tool, type GlyphName } from '../components/kit'
+import { Badge, BackLink, Button, Glyph, IconButton, ModePair, ModePairItem, SegmentedControl, SquareButton, Tool, type GlyphName } from '../components/kit'
 import { Tabs } from '../components/Tabs'
 import './kit-reference.css'
 
@@ -22,8 +22,8 @@ const GLYPH_USES: Record<GlyphName, string> = {
   compendium: 'Compendium',
   chroniques: "Histoire d'un combattant",
   retour: 'Lien de retour',
-  son: 'Effets sonores actifs',
-  'son-coupe': 'Effets sonores coupés',
+  son: 'Réglages du son (musique ou effets actifs)',
+  'son-coupe': 'Réglages du son (tout coupé)',
   musique: 'Musique active',
   'musique-coupee': 'Musique coupée',
   lecture: 'Reprendre',
@@ -233,6 +233,35 @@ export function KitReference() {
           </div>
           <p className="note" style={{ marginTop: 12 }}>
             « Coupé » = glyphe barré et couleur atténuée. Pas de barre rouge peinte.
+          </p>
+        </section>
+
+        <section>
+          <h2>Bouton carré (44 px) et pastille de compteur</h2>
+          <div className="row">
+            <div className="cell">
+              <SquareButton icon="parier" label="Parier" badge="0/2" />
+              <span className="cap">repos · pastille</span>
+            </div>
+            <div className="cell">
+              <SquareButton icon="simuler" label="Simuler le tour" badge="×8" style={SECONDARY_HOVER} />
+              <span className="cap">survol</span>
+            </div>
+            <div className="cell">
+              <SquareButton icon="combattre" label="Affronter" />
+              <span className="cap">sans pastille</span>
+            </div>
+            <div className="cell">
+              <SquareButton icon="simuler" label="Simuler" badge="×8" disabled />
+              <span className="cap">désactivé</span>
+            </div>
+            <div className="cell">
+              <Badge>2/2</Badge>
+              <span className="cap">pastille seule</span>
+            </div>
+          </div>
+          <p className="note" style={{ marginTop: 12 }}>
+            Glyphe seul au serti du secondaire ; le libellé passe par l'infobulle. La pastille (IBM Plex Mono 10, filet or) s'accroche en bas à droite.
           </p>
         </section>
 

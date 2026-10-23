@@ -1,15 +1,20 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { statusHome } from '../../game/catalog'
 import type { Character } from '../../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type SkillNature, type Target, type Trigger } from '../../game/events'
-import { RULES } from '../../game/rules'
-import { isMechanic, POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
+import type { Relic } from '../../game/relics'
+import { RULES, type RuleId } from '../../game/rules'
+import { STATUS_PLACE } from '../../game/states'
+import { POLARITY_STYLE, STATUSES, type Polarity, type RuleLine, type StatusId } from '../../game/statuses'
 import { Icon, skillIcon, StatusIcon } from '../Icon'
+import { RelicSeal } from '../RelicSeal'
 import type { CompendiumNav } from './sections'
 
 /*
- * Petites pièces partagées par les sections du compendium : sceaux ronds, pastilles de statut et de règle, et la
- * ligne d'une compétence (fiche d'un combattant, « posé par » d'un statut). Elles ne rédigent rien : le texte
- * d'une compétence vient de `describeSkill`, celui d'un statut de son registre.
+ * Petites pièces partagées par les sections du compendium : sceaux, pastilles de statut et de règle, et la ligne
+ * d'une compétence (fiche d'un combattant, « posé par » d'un statut). Elles ne rédigent rien : le texte d'une
+ * compétence vient de `describeSkill`, celui d'un statut de son registre. Une grammaire par objet, comme en
+ * combat : un octogone peint pour une compétence, une pièce gravée pour un état, un hexagone pour une relique.
  */
 
 export const NATURE_LABEL: Record<SkillNature, string> = {
@@ -35,13 +40,6 @@ export const formName = (character: Character, event: CharacterEvent) =>
 
 export const natureOf = (e: CharacterEvent) => e.nature ?? DEFAULT_SKILL_NATURE
 
-/** « Orc » → « Orcs », « Mort-vivant » → « Morts-vivants ». */
-export const racePlural = (race: string) =>
-  race
-    .split('-')
-    .map((w) => `${w}s`)
-    .join('-')
-
 /** Ref de l'élément visé par un lien (`focus`) : il défile au centre de sa liste à chaque nouveau lien. */
 export function useFocusRef<T extends HTMLElement = HTMLDivElement>(focus?: string) {
   const ref = useRef<T>(null)
@@ -51,29 +49,20 @@ export function useFocusRef<T extends HTMLElement = HTMLDivElement>(focus?: stri
   return ref
 }
 
-/**
- * Ton d'un statut dans le compendium : sa polarité (bonus, malus), ou neutre pour un mécanisme de compétence ou de
- * forme, qui n'est ni l'un ni l'autre.
- */
-export const statusTone = (id: StatusId) => (isMechanic(id) ? 'neutral' : STATUSES[id].polarity)
-
-/** Le mot d'un statut à côté de son nom : « bonus », « malus », ou « mécanisme ». */
-export const statusKindWord = (id: StatusId) => (isMechanic(id) ? 'mécanisme' : POLARITY_STYLE[STATUSES[id].polarity].label.toLowerCase())
-
-/** Sceau rond d'un statut, liseré à sa polarité (neutre pour un mécanisme). */
+/** Sceau rond d'un statut de la zone d'état : l'emblème de son état, liseré à sa polarité. */
 export function StatusMedal({ id, size }: { id: StatusId; size: number }) {
   return (
-    <span className="seal" data-tone={statusTone(id)} style={{ width: size, height: size }}>
+    <span className="seal" data-tone={STATUSES[id].polarity} style={{ width: size, height: size }}>
       <StatusIcon id={id} className="h-full w-full" />
     </span>
   )
 }
 
-/** Sceau rond d'une compétence, liseré à sa nature. */
+/** Sceau d'une compétence : l'octogone de la barre de compétences du combat, liseré à sa nature. */
 export function SkillMedal({ event, size }: { event: CharacterEvent; size: number }) {
   return (
-    <span className="seal" data-tone={natureOf(event)} style={{ width: size, height: size }}>
-      <Icon name={skillIcon(event)} className="h-full w-full" />
+    <span className="skill-seal codex-skill-seal" data-nature={natureOf(event)} style={{ width: size, height: size }}>
+      <Icon name={skillIcon(event)} className="h-[80%] w-[80%]" />
     </span>
   )
 }
@@ -91,17 +80,37 @@ export function skillLine(event: CharacterEvent) {
 
 const TARGET_WORD: Record<Target, string> = { self: 'sur soi', opponent: 'adversaire' }
 
-/** Pastille d'un statut posé (nom, polarité ou mécanisme, cible) : un lien vers sa fiche dans Statuts. */
-export function StatusChip({ status, target, nav }: { status: StatusId; target?: Target; nav: CompendiumNav }) {
-  const def = STATUSES[status]
-  const tone = statusTone(status)
+/**
+ * Pastille d'un statut posé. Un statut de la zone d'état mène à sa fiche dans Statuts (emblème, bonus ou malus,
+ * cible). Une aura ou un mécanisme mène à la compétence à qui il appartient, sous son sceau ; rien quand c'est
+ * cette compétence même qui le pose (`from`) : sa fiche le dit déjà.
+ */
+export function StatusChip({ status, target, nav, from }: { status: StatusId; target?: Target; nav: CompendiumNav; from?: CharacterEvent }) {
+  const home = statusHome(status)
+  if (home?.kind === 'skill') {
+    if (from?.name === home.event.name) return null
+    return (
+      <button type="button" className="codex-chip" onClick={() => nav.go({ section: 'skills', id: home.event.id })}>
+        <SkillMedal event={home.event} size={26} />
+        <span className="min-w-0 leading-tight">
+          <span className="block truncate font-body text-[15px] font-bold text-ink-1">{home.event.name}</span>
+          <span className="block font-body text-[13px] text-ink-3">
+            {STATUS_PLACE[status].place === 'aura' ? 'aura' : 'mécanisme'}
+            {target && ` · ${TARGET_WORD[target]}`}
+          </span>
+        </span>
+      </button>
+    )
+  }
+  if (home?.kind !== 'sheet') return null
+  const { name, polarity } = STATUSES[status]
   return (
-    <button type="button" className="codex-chip" data-tone={tone} onClick={() => nav.go({ section: 'statuses', id: status })}>
+    <button type="button" className="codex-chip" data-tone={polarity} onClick={() => nav.go({ section: 'statuses', id: status })}>
       <StatusMedal id={status} size={26} />
       <span className="min-w-0 leading-tight">
-        <span className="block truncate font-body text-[15px] font-bold text-ink-1">{def.name}</span>
+        <span className="block truncate font-body text-[15px] font-bold text-ink-1">{name}</span>
         <span className="block font-body text-[13px] text-ink-3">
-          <span className={tone === 'neutral' ? 'text-ink-2' : POLARITY_TEXT[tone]}>{statusKindWord(status)}</span>
+          <span className={POLARITY_TEXT[polarity]}>{POLARITY_STYLE[polarity].label.toLowerCase()}</span>
           {target && ` · ${TARGET_WORD[target]}`}
         </span>
       </span>
@@ -147,20 +156,7 @@ export function CharacterLink({ character, nav, children }: { character: Charact
  * Une compétence en résumé : sceau, nom (lien vers l'index des compétences), déclencheur, texte, pastilles et
  * statuts posés. Même texte que l'index et l'infobulle des dés (`describeSkill`).
  */
-export function SkillSummary({
-  event,
-  triggers = [event.trigger],
-  form,
-  nav,
-  aside,
-}: {
-  event: CharacterEvent
-  triggers?: readonly Trigger[]
-  form?: string
-  nav: CompendiumNav
-  /** Ce qui s'affiche à droite à la place des statuts posés (porteurs, dans « posé par ») */
-  aside?: ReactNode
-}) {
+export function SkillSummary({ event, triggers = [event.trigger], form, nav }: { event: CharacterEvent; triggers?: readonly Trigger[]; form?: string; nav: CompendiumNav }) {
   const { text, posed } = describeSkill(event)
   return (
     <div className="flex items-start gap-3 border-b border-line-1 py-2.5 last:border-b-0">
@@ -176,8 +172,49 @@ export function SkillSummary({
         <SkillTags event={event} nav={nav} form={form} />
       </div>
       <div className="flex w-[210px] shrink-0 flex-col gap-1.5">
-        {aside ?? posed.map((p) => <StatusChip key={p.status} status={p.status} target={p.target} nav={nav} />)}
+        {posed.map((p) => (
+          <StatusChip key={p.status} status={p.status} target={p.target} nav={nav} from={event} />
+        ))}
       </div>
     </div>
+  )
+}
+
+/** Une relique qui pose un statut : son sceau, son nom (lien vers Reliques), sa cible. */
+export function RelicSource({ relic, target, nav }: { relic: Relic; target: Target; nav: CompendiumNav }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-line-1 py-2.5">
+      <RelicSeal relic={relic} size={48} />
+      <div className="min-w-0 flex-1">
+        <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go({ section: 'relics', id: relic.id })}>
+          {relic.name}
+        </button>
+        <p className="font-body text-[14px] text-ink-3">Relique{target === 'opponent' ? " · sur l'adversaire" : ' · sur soi'}</p>
+      </div>
+    </div>
+  )
+}
+
+/** Une phrase de la fiche, suivie du lien vers la règle commune qu'elle applique. */
+export function Line({ line, nav }: { line: RuleLine; nav: CompendiumNav }) {
+  return (
+    <p>
+      {line.text}
+      {line.rule && (
+        <>
+          {' '}
+          <RuleLink nav={nav} id={line.rule} />
+        </>
+      )}
+    </p>
+  )
+}
+
+/** Lien vers une règle commune, par son titre (« Cumulable », « Durée »). */
+export function RuleLink({ nav, id }: { nav: CompendiumNav; id: RuleId }) {
+  return (
+    <button type="button" className="codex-link self-start text-left" onClick={() => nav.go({ section: 'rules', id })}>
+      {RULES[id].title} →
+    </button>
   )
 }

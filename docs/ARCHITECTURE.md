@@ -82,9 +82,9 @@ src/
     SeasonScreen.tsx     phase de saison : classement en une liste (construction de chacun) et ligne de qualification, journée et ses matchs (récompense de la journée), simulation (aucune règle : tout vient de season.ts)
     CampaignScreen.tsx   campagne : choix du champion et de son héritage, carte de l'acte (piste, champion, adversaires et leur bande de
                          danger), récompense (forge puis relique), fin de partie (aucune règle : campaign.ts et forge.ts)
-    DieBuild.tsx         dé d'un personnage face par face, sept par ligne (dieCells : faces de 1 à la taille du dé du moment, compétence
-                         de la forme, rang, gravure, dorure) avec une infobulle par face ; zone de compétence du combat (SkillBar : reflet
-                         du dé qui roule, face tombée, éclat du déclenchement) et écran d'affrontement (sans état de combat)
+    DieBuild.tsx         section « Dé de dégâts » de la fiche d'affrontement : douze emplacements en deux rangées de six (dieCells :
+                         faces de 1 à la taille du dé du moment, compétence de la forme, rang, gravure, dorure ; vides grisés au-delà),
+                         « +N faces » au-delà de douze, sélecteur de forme du druide, une infobulle par face
     ForgedDie.tsx        dé forgé face par face (sceau, rune, or, rang, attente ; choix d'une face), carte d'une opération de forge, choix d'une
                          forge partagé (useForgeChoice, ForgeChoice : campagne et écran de victoire), tuile d'une opération faite avec son
                          infobulle (ForgeMark : opération, face ou taille du dé, compétence produite et son rang)
@@ -96,9 +96,11 @@ src/
     compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
                          (Fiche, Performances), SkillsSection, StatusesSection, RelicsSection, RulesSection,
-                         CodexBits (sceaux ronds, pastilles de statut et de règle, encadrés, résumé d'une compétence)
-  dev/                   KitReference.tsx : page de développement `?kit` (serveur de dev seulement), les contrôles du kit
-                         disposés comme docs/ui-kit/reference.html, pour comparer leur capture à reference.png
+                         CodexBits (sceaux : octogone d'une compétence, pièce d'un état ; pastilles de statut et de règle, encadrés, résumé d'une compétence)
+  dev/                   pages de développement (serveur de dev seulement) : KitReference.tsx (`?kit`), les contrôles du kit
+                         disposés comme docs/ui-kit/reference.html, pour comparer leur capture à reference.png ;
+                         MatchupReference.tsx (`?matchup=<cas>`), l'écran d'affrontement sur les cas des références
+                         docs/ref/affrontement-*.png (fiches factices construites par les vraies fonctions du jeu)
 ```
 
 ## Principe central : un moteur, une chronologie

@@ -61,18 +61,21 @@ function shownStat(character: Character, l: StatLine): ShownStat {
   return plain
 }
 
-/** Fiche de stats d'un personnage : jauges fines à la couleur du camp sur sa piste (design system). */
+/** Fiche de stats d'un personnage : jauges fines à la couleur du camp sur sa piste (design system). `className` : celle
+ *  de la liste (l'affrontement lui donne une hauteur fixe et répartit les lignes). */
 export function StatSheet({
   character,
   barClass,
   trackClass = 'bg-surface-3',
+  className = 'gap-1',
 }: {
   character: Character
   barClass: string
   trackClass?: string
+  className?: string
 }) {
   return (
-    <dl className="flex flex-col gap-1">
+    <dl className={`flex flex-col ${className}`}>
       {STAT_LINES.map((l) => {
         const shown = shownStat(character, l)
         // Une relique de caractéristique l'a changée : la valeur passe en or, avec l'apport en infobulle

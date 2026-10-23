@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { RELICS } from '../../game/relics'
 import { CHARACTERS } from '../../game/roster'
-import { statusCatalog } from '../../game/catalog'
+import { sheetStatuses } from '../../game/catalog'
 import { CharactersBackdrop, CharactersSection } from './CharactersSection'
 import { RelicsSection } from './RelicsSection'
 import { RulesSection } from './RulesSection'
@@ -63,7 +63,7 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
   {
     id: 'statuses',
     label: 'Statuts',
-    count: statusCatalog().filter((e) => e.inGame).length,
+    count: sheetStatuses().length,
     placeholder: 'Filtrer les statuts…',
     render: (props) => <StatusesSection {...props} />,
   },

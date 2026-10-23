@@ -58,6 +58,8 @@ Demande de l'utilisateur (2026-10-21) : la séparation ci-dessus existait dans l
 
 **Icônes** (0.79.2). Un état n'a pas la grammaire d'une compétence. La compétence garde son icône peinte, à la palette de son personnage, dans un sceau octogonal. L'état est un **emblème** : un symbole gravé sur une pièce, monochrome, commun à tous, posé tel quel sans cadre, le compteur dessus ([STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, planche v12).
 
+**Une grammaire, une place** (0.97.1, revu en 0.98.0, demande de l'utilisateur). Un emblème gris est une règle commune à tous ; une icône peinte appartient à une compétence ou à une forme précise. Le compendium suit la même séparation que l'écran. Sa section **Statuts** ne contient que le vocabulaire commun, les bonus et malus de la zone d'état (`tray`, `sheetStatuses`), sous leur emblème. Une aura ou un mécanisme (`aura`, `skill`) n'a pas de fiche à lui : il est décrit dans la fiche de la compétence qui le pose ou le relâche (`statusHome`), section Compétences, sous son sceau octogonal ; une règle de forme (`form`) l'est dans la fiche de son personnage. Tout lien vers une aura (pastille d'une relique ou d'une autre compétence, « aussi posé par », interactions) mène à cette compétence. Une aura reste un bonus par la règle (une purification la retire) : sa fiche le dit. Essai intermédiaire (0.97.1) : un groupe « Propres aux compétences » dans Statuts, retiré parce qu'il listait des compétences.
+
 ### Compétences en jeu (0.26.0)
 
 Chaque race a trois compétences, une sur un **1** au dé, une sur un **2**, une sur un **3**. Ses variantes en héritent.
@@ -201,6 +203,8 @@ Régénération et Poison s'opposent. Vulnérable, Étourdi et Garde sacrée ill
 - [ ] Rappel visuel sur le porteur (`look`) : liseré (`glow`) pour un effet temporaire, halo qui pulse (`aura`) pour une aura permanente, transparence (`opacity`) pour l'esquive. Au K.O., l'aura du vaincu s'éteint en fondu (halo, cercle, particules et contour de la silhouette ; `Fighter.tsx`, `.char-aura-out`) : rien à faire pour un nouveau statut.
 - [ ] Rôle en une phrase (`summary`), polarité, **icône peinte obligatoire** dans `Icon.tsx` → `STATUS_ICON` (voir STYLE_BIBLE § 7 ; jamais d'emoji : la demander à l'utilisateur), compteur affiché (`counter`).
 - [ ] Règle de cumul, plafond si c'est un malus de stat.
+- [ ] S'il fait des dégâts quand il agit : sa famille (`harm` : `poison` en vert, `arcane` en mauve ; absente, physique en rouge), la couleur de son « −N » ([MISE_EN_SCENE.md](MISE_EN_SCENE.md), M37). Aujourd'hui : Poison (poison), Brûlure et Pourriture (arcane), Saignement (physique).
+- [ ] Sa mise en scène : à quel repère il tombe, et, s'il réagit à un coup, dans quelle famille ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) § 6).
 - [ ] Crochets utilisés (voir ARCHITECTURE). S'il en faut un nouveau, le tester dans `combat.test.ts`.
 - [ ] Une ligne ajoutée au catalogue ci-dessus, avec « à venir » tant qu'aucun personnage ne le pose.
 - [ ] Une fois attribué : l'événement dans `roster.ts`, la mesure d'équilibre et `PERSONNAGES.md`.

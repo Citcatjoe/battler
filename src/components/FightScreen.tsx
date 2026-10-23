@@ -144,12 +144,9 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   const pulseOf = (side: Side) => (pulse?.side === side ? pulse : undefined)
   const signalOf = (side: Side) => (signal?.side === side ? signal : undefined)
   const relicPulseOf = (side: Side) => (relicPulse?.side === side ? relicPulse : undefined)
-  // Les faces que montrent les dés, une seule source pour le dé de l'arène et la zone de compétence de son camp : le
-  // reflet du roulement y passe de face en face, puis la face tombée (celle des beats) y reste marquée. Tous les dés du
-  // combattant (deux dés, rafale, d6 de Coup de chance) ; ni l'initiative ni la pièce.
+  // Les faces que montrent les dés, une seule source pour le dé de l'arène et le reflet dans la zone de compétence de
+  // son camp : pendant le roulement, le sceau de la face montrée s'allume brièvement (ni l'initiative ni la pièce)
   const rolled = useRollingFaces(dice.values, dice.values.map((_, i) => dice.dieFaces?.[i] ?? dice.faces), dice.rolling, paused)
-  const rollingOf = (side: Side) => (dice.owner === side && !dice.coin && dice.rolling ? rolled : undefined)
-  const landedOf = (side: Side) => (dice.owner === side && !dice.coin && !dice.rolling ? dice.values.filter((v) => v > 0) : undefined)
   // Hauteur d'ancrage du décor (le second terme de `focus`, « 50% 70% » → « 70% »)
   const focusY = arena?.focus.split(' ')[1] ?? '50%'
 
@@ -171,8 +168,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
 
       {/* Ce que chacun sait faire (SkillBar) : sous l'en-tête, au bord de l'arène, au-dessus de son camp. Hors de
           <main> pour ne pas trembler avec l'arène ; les sceaux restent cliquables au survol, le reste laisse passer.
-          À droite, la marge laisse la place au bouton de la musique, qui descend jusque sur la plaque */}
-      <div className="pointer-events-none absolute inset-x-0 top-[100px] z-[50] flex items-start justify-between pl-8 pr-16">
+          Le bouton du son (seul, 48 px) s'arrête au-dessus : marges égales des deux côtés */}
+      <div className="pointer-events-none absolute inset-x-0 top-[100px] z-[50] flex items-start justify-between px-8">
         {([0, 1] as Side[]).map((side) => (
           <div key={side} className="skill-bar-plate pointer-events-auto">
             <SkillBar
@@ -182,8 +179,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               statuses={statuses[side]}
               pulse={pulseOf(side)}
               signal={signalOf(side)}
-              rolling={rollingOf(side)}
-              landed={landedOf(side)}
+              rolling={dice.owner === side && !dice.coin && dice.rolling ? rolled.faces : undefined}
               align={side === 1 ? 'right' : 'left'}
             />
           </div>

@@ -7,7 +7,7 @@ import { createContext, useContext, useRef, useState, type ReactNode } from 'rea
  */
 
 /** Ouvre une infobulle sous (ou au-dessus de) l'élément survolé ; `null` la ferme. */
-type ShowTip = (content: ReactNode | null, anchor?: HTMLElement) => void
+export type ShowTip = (content: ReactNode | null, anchor?: HTMLElement) => void
 
 const TipContext = createContext<ShowTip | null>(null)
 

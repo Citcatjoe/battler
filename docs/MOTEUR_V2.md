@@ -120,7 +120,7 @@ type Float =                                            // chacun avec sa `key`
   | { kind: 'hit'; damage: number; crit: boolean; dodged: boolean } // ESQUIVE, CRITIQUE et le chiffre d'un coup
 ```
 
-Règles de la mise en scène :
+Règles de la mise en scène (principes de la v2 ; les règles de synchronisation en vigueur, une par repère, sont tenues dans [MISE_EN_SCENE.md](MISE_EN_SCENE.md), qui fait foi) :
 
 1. **Un moment = une étape racine et toutes les étapes qui en découlent** (par `cause`), quand elles doivent se voir ensemble. On ne regroupe jamais d'après l'étape voisine. Un coup, son poison posé, son saignement qui coule, sa Riposte et ses Épines forment un seul moment, chacun à son instant.
 2. **Les instants viennent de `timing.ts`** (constantes nommées, une par battement : `DICE_ROLL`, `WIND`, `CRIT_FREEZE`, `READ_HOLD`…). Les durées CSS en dérivent (variables posées à la racine) au lieu d'être recopiées à la main.
@@ -174,7 +174,7 @@ Précisions de l'implémentation (étape 3 livrée) :
 Relevées en écrivant la v2 (2026-10-21), par rapport au rejoueur impératif de la 0.80.2. Non vues à l'écran : à juger en jeu (revue visuelle, § 6).
 
 1. **La plaie qui coule tombe toujours à l'impact de son coup.** Avant, seulement si son étape suivait immédiatement le coup ; un Vol de vie, une Riposte ou une relique de seuil intercalés lui donnaient sa propre étape (lead, label, 700 ms de lecture). Maintenant elle a le coup pour cause, donc elle tombe sur la frappe, et le moment est plus court d'autant.
-2. **Le statut posé par un coup tombe toujours à son impact** (poison de l'Aura de décoction, Saignement de Pourfendre), même quand une Riposte s'intercale ; et tous les statuts posés par ce coup, pas seulement celui de l'étape suivante. Avant : la Riposte les séparait, le poison avait sa propre étape (lead 250 ms, 1 300 ms de lecture). Corollaire : la zone d'état montre à l'impact l'état le plus récent, si bien que la charge de Riposte consommée s'y voit déjà, au lieu de l'étape de la Riposte.
+2. **Le statut posé par un coup tombe toujours à son impact** (poison de l'Aura de décoction, Saignement de Pourfendre), même quand une Riposte s'intercale ; et tous les statuts posés par ce coup, pas seulement celui de l'étape suivante. Avant : la Riposte les séparait, le poison avait sa propre étape (lead 250 ms, 1 300 ms de lecture). Corollaire : la zone d'état montre à l'impact l'état le plus récent, si bien que la charge de Riposte consommée s'y voit déjà, au lieu de l'étape de la Riposte. *Dépassé en 0.97.0 : chaque étape montre ses changements de statuts à son instant ([MISE_EN_SCENE.md](MISE_EN_SCENE.md), M3).*
 3. **Le décompte tombe avec l'effet de son statut même si une étape s'intercale** (une relique de seuil déclenchée par les dégâts du poison, par exemple). Avant, l'anticipation s'arrêtait à la première étape étrangère, et le compteur avait son propre temps (650 ms).
 4. **Les textes flottants ne s'écrasent plus.** Avant, un nouvel effet remplaçait d'un coup les textes du précédent (une seule place) ; maintenant chacun finit son animation (1,7 s à ×1). Deux textes du même instant restent tous deux lisibles ; un texte qui s'efface peut encore se voir quand le suivant apparaît à la même hauteur.
 5. **Un seul son par nom et par instant, toutes sources confondues.** Avant, seuls les labels étaient dédoublonnés entre eux, plus le cas déclaré des Épines (`silent`). Un label et un effet qui jouent le même son au même instant n'en jouent plus qu'un.

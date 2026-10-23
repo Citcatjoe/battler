@@ -255,7 +255,7 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
       </section>
 
       {/* Moitié droite : les paris et le classement, ou le rapport de combat et les statistiques si personne ne parie */}
-      {/* À droite, la place des boutons du son (en haut à droite de la scène) : rien dessous */}
+      {/* À droite, la place du bouton rond du son (48 px en haut à droite de la scène) : le filet du titre s'arrête avant */}
       <section className="relative flex flex-col border-l border-amber-900/30 bg-gradient-to-b from-stone-950/40 to-black/60 py-10 pl-12 pr-20">
         {bets ? (
           <BetsResult outcome={bets} fighterNames={[fighters[0].name, fighters[1].name]} />

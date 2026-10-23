@@ -2406,6 +2406,10 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(sharp('ysolde', holy, 'holy-aura').effects[0]).toMatchObject({ stacks: STATUSES.holyAura.maxStacks })
     expect(offerTargets(def('ysolde'), holy, { op: 'sharpen' })).not.toContain(3)
     expect(() => forgeState(def('ysolde'), [...holy, { op: 'sharpen', face: 3 }])).toThrow()
+    // Pas de rang maximal (décision de l'utilisateur, 2026-10-23) : Pourfendre monte au rang IV et au-delà
+    const thrice: ForgeStep[] = [{ op: 'sharpen', face: 1 }, { op: 'sharpen', face: 1 }, { op: 'sharpen', face: 1 }]
+    expect(sharp('gorak', thrice, 'cleave')).toMatchObject({ name: 'Pourfendre IV', effects: [{ stacks: 5 }] })
+    expect(offerTargets(def('gorak'), thrice, { op: 'sharpen' })).toContain(1)
   })
 
   it('offre : des opérations différentes, toutes jouables ; le choix automatique est toujours valide', () => {
@@ -2413,7 +2417,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       const base = def(id)
       const rng = seededRng(id.length * 31)
       let steps: ForgeStep[] = []
-      for (let k = 0; k < 8; k++) {
+      for (let k = 0; k < 12; k++) {
         const offer = drawForgeOffer(base, steps, rng, ENGRAVABLE_SKILLS)
         expect(offer.length).toBeLessThanOrEqual(FORGE_OFFER_SIZE)
         expect(new Set(offer.map((o) => o.op)).size).toBe(offer.length)
@@ -2429,6 +2433,9 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
         if (!step) break
         steps = withForgeStep(base, steps, step)
         expect(createCharacter(id).withForge(steps).baseStats.damageDie).toBe(forgeState(base, steps).size)
+        // Une gravure n'écrase jamais une compétence d'origine (seule l'Attente de l'ogre se remplace)
+        const forged = createCharacter(id).withForge(steps)
+        for (const e of base.events.filter((x) => !x.idle)) expect(forged.events.find((x) => x.id === e.id)?.trigger, `${id} ${e.id}`).toBe(e.trigger)
       }
       expect(steps.length).toBeGreaterThan(0)
     }

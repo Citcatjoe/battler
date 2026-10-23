@@ -22,10 +22,12 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 - `docs/RESOLUTION.md` : le livre de règles de la résolution (phases, ordre, application, opposition). Toute modification du déroulé d'un combat commence par ce document ;
 - `docs/STATUTS.md` : bonus et malus (vocabulaire, conditions, catalogue, chantier). À mettre à jour dès qu'on touche un statut, une condition ou un déclencheur ;
 - `docs/SONS.md` : les règles du son. Une compétence ne choisit pas son son, il se déduit de la nature de ses effets ; tout son nouveau ou modifié commence par ce document ;
+- `docs/MISE_EN_SCENE.md` : les règles de la mise en scène (synchronisation du combat à l'écran : ce qui tombe en même temps que quoi). Un constat de l'utilisateur devient une règle générale, avec son contrôle dans `staging.test.ts` ; toute mise en scène nouvelle ou modifiée commence par ce document ;
 - `docs/PERSONNAGES.md` : philosophie et décisions de design de chaque personnage. À mettre à jour (mesures comprises) dès qu'on touche un personnage, ses stats ou son événement.
 - `docs/PARIS.md` : le jeu des parieurs (règles, maths, interface, étapes). Toute modification des paris commence par ce document.
 - `docs/RELIQUES.md` : les reliques (ce qui les sépare des compétences, règles des quatre types, récompense de tournoi, interface, identité hexagonale et grammaire d'illustration, les douze reliques mesurées par `npm run relics`, prompt de leur planche). Toute relique ou règle de relique commence par ce document.
 - `docs/CAMPAGNE.md` : la campagne et la forge du dé (décisions de l'utilisateur, prototype livré en 0.88.0, choix de l'agent, mesures par `npm run campaign`). Toute règle de campagne ou de forge commence par ce document.
+- `docs/PROGRESSION.md` : la réflexion sur la progression d'un personnage (profondeur, synergies, écoles, super coups, dés différents, feuille de personnage), avec la mesure des synergies des reliques et une estimation de chaque piste. Toute piste de synergie ou de progression commence par ce document.
 - `docs/TODO.md` : la liste des chantiers, dont la réflexion auto-battler (§ 11 à 17).
 - `docs/SORTS.md` : idées de sorts, laboratoire et audit des compétences, avec leurs résultats ; `docs/FAMILLES.md` : proposition de familles d'effets ; `docs/ETUDE_AUTOBATTLER.md` : l'étude de fond (limites, jeux de référence, pistes reliques et métas).
 

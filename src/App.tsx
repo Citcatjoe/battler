@@ -75,10 +75,10 @@ import {
   type Wallets,
 } from './game/betting'
 import type { BetsOutcome } from './components/Betting'
-import { RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from './game/arenas'
+import { RANDOM_ARENA, type Arena, type ArenaChoice } from './game/arenas'
 import { StartScreen, type GameMode } from './components/StartScreen'
 import { HomeScreen } from './components/HomeScreen'
-import { MatchupScreen, type MatchupRank } from './components/MatchupScreen'
+import { MatchupScreen } from './components/MatchupScreen'
 import { FightScreen } from './components/FightScreen'
 import { TestFightScreen } from './components/TestFightScreen'
 import { EndScreen } from './components/EndScreen'
@@ -344,10 +344,10 @@ export default function App() {
   }
 
   /**
-   * Classement des deux opposants à l'écran d'affrontement, lu tel quel : place au classement en cours en saison
-   * (dès le premier match joué), rang de saison (tête de série) dans l'arbre ; rien en duel ni en campagne.
+   * Rang des deux opposants à l'écran d'affrontement, lu tel quel : place au classement en cours en saison (dès le
+   * premier match joué), rang de saison (tête de série) dans l'arbre ; rien en duel ni en campagne.
    */
-  const matchupRanks = (): Pair<MatchupRank | null> | undefined => {
+  const matchupRanks = (): Pair<number | null> | undefined => {
     if (activeEncounter || !tournament) return undefined
     const season = tournament.season
     if (activeSeasonMatch !== null && season) {
@@ -355,19 +355,10 @@ export default function App() {
       const fixture = seasonFixtures(season).find((f) => f.number === activeSeasonMatch)
       if (!fixture) return undefined
       const table = standings(season)
-      const rankOf = (entrant: number): MatchupRank => {
-        const place = table.findIndex((s) => s.entrant === entrant)
-        const { points, wins, losses } = table[place]
-        return { kind: 'season', rank: place + 1, of: table.length, points, wins, losses }
-      }
-      return [rankOf(fixture.home), rankOf(fixture.away)]
+      return [fixture.home, fixture.away].map((entrant) => table.findIndex((s) => s.entrant === entrant) + 1) as Pair<number>
     }
     if (activeMatch) {
-      const seedOf = (i: number | null): MatchupRank | null => {
-        const rank = i === null ? undefined : tournament.entrants[i]?.seasonRank
-        return rank ? { kind: 'seed', rank } : null
-      }
-      const ranks = players(tournament, activeMatch).map(seedOf) as Pair<MatchupRank | null>
+      const ranks = players(tournament, activeMatch).map((i) => (i === null ? undefined : tournament.entrants[i]?.seasonRank) || null) as Pair<number | null>
       return ranks[0] || ranks[1] ? ranks : undefined
     }
     return undefined
@@ -496,9 +487,9 @@ export default function App() {
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
-          onPlay={() => {
+          onPlay={(arena) => {
             sfx.click()
-            setScreen({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena: resolveArena(arenaChoice) })
+            setScreen({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena })
           }}
           onSimulate={() => {
             sfx.click()

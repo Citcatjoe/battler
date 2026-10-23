@@ -153,6 +153,34 @@
 /* état « coupé » (son, musique) : on change l'icône (glyphe barré), pas la couleur en rouge */
 .bt-iconbtn[aria-pressed="false"] { color: var(--text-3); }
 
+/* ---------- BOUTON CARRÉ (44 px) : action secondaire en glyphe seul (Parier, Simuler, Affronter) ----------
+   Serti du secondaire (plaque sombre, filet or puis filet bronze), coins de 2 px ; le libellé passe par
+   aria-label et title. Ajout validé par l'utilisateur (affrontement, arbre du tournoi). */
+.bt-square {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 44px; height: 44px; padding: 0; margin: 0; border: 0; border-radius: 2px; cursor: pointer;
+  background: var(--bg-2); color: var(--gold-300);
+  box-shadow: inset 0 1px 0 rgba(255,240,210,.07), inset 0 0 0 1px var(--frame), inset 0 0 0 4px var(--bg-2), inset 0 0 0 5px rgba(110,77,29,.55), 0 2px 0 #0A0806;
+  transition: background-color .12s, color .12s, box-shadow .12s;
+}
+.bt-square:hover  { background: var(--bg-3); color: var(--gold-200);
+  box-shadow: inset 0 1px 0 rgba(255,240,210,.08), inset 0 0 0 1px var(--gold-500), inset 0 0 0 4px var(--bg-3), inset 0 0 0 5px rgba(185,134,47,.5), 0 2px 0 #0A0806; }
+.bt-square:active { background: var(--bg-1); transform: translateY(1px);
+  box-shadow: inset 0 0 0 1px var(--gold-500), inset 0 0 0 4px var(--bg-1), inset 0 0 0 5px rgba(185,134,47,.5); }
+.bt-square:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--frame), inset 0 0 0 4px var(--bg-2), inset 0 0 0 5px rgba(110,77,29,.55), var(--focus); }
+.bt-square:disabled { cursor: not-allowed; transform: none; background: var(--bg-1); color: var(--text-off); box-shadow: inset 0 0 0 1px var(--line-1); }
+
+/* ---------- PASTILLE DE COMPTEUR (« 0/2 », « ×8 ») : cartouche sombre, filet or, accroché en bas à droite ---------- */
+.bt-badge {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  min-width: 22px; height: 16px; padding: 0 4px; border-radius: 2px;
+  background: var(--bg-0); color: var(--text-1); box-shadow: inset 0 0 0 1px var(--gold-500);
+  font-family: var(--font-data); font-size: 10px; font-weight: 500; line-height: 1; letter-spacing: 0; white-space: nowrap;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.bt-square > .bt-badge { position: absolute; right: -6px; bottom: -6px; }
+.bt-square:disabled > .bt-badge { color: var(--text-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+
 /* ---------- OUTIL (barre de combat : journal, magnétoscope) ---------- */
 .bt-tool {
   position: relative; display: inline-flex; align-items: center; justify-content: center;

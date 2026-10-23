@@ -196,7 +196,7 @@ C'est le **contrat central**. Chaque type d'étape doit avoir une mise en scène
 | `statusAge` | compteurs qui défilent vers le bas ; un médaillon éteint montre son 0, puis s'efface | — | — | `statusAgeLog` | `count-loss`, `count-in-down`, `status-leave` |
 | fin | K.O. (chute) et victoire (balancement) | `K.O. !` | `ko`, `victory` | « s'effondre » | — |
 
-**Synchronisation** (`anticipate`) : l'effet d'un statut et le décompte de sa durée, s'ils tombent dans la même phase, sont montrés au même instant.
+**Synchronisation** : les règles (ce qui tombe en même temps que quoi, à quel repère) sont dans [MISE_EN_SCENE.md](MISE_EN_SCENE.md), qui fait foi.
 
 ### 4.2 Les rappels persistants sur le modèle
 
@@ -216,7 +216,9 @@ Ils sont pilotés par le `look` du registre et lus par `Fighter` (`statusLooks`)
 | Couleur | Sens | Où |
 | --- | --- | --- |
 | **Violet** | nom d'une compétence ou d'un statut qui agit, sur son lanceur | textes flottants, halo `event-aura` |
-| **Rouge** | dégâts subis | `-N`, badges `damage` |
+| **Rouge** | dégâts subis (famille physique, par défaut) | `-N`, badges `damage` |
+| **Vert acide** | dégâts d'un statut de la famille poison (Poison, 0.97.0) | badges `poison` |
+| **Mauve** | dégâts d'un statut de la famille arcane (Brûlure, Pourriture, 0.97.0) | badges `arcane` |
 | **Ambre, or** | critique ; bonus posé | `CRITIQUE !`, gros chiffre, badges `positive` |
 | **Vert émeraude** | soin | `+N PV` |
 | **Fuchsia** | malus posé, bonus dissipé | badges `negative` |
@@ -263,7 +265,7 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 
 ### 4.6 Les icônes
 
-Il y a 95 icônes peintes (`src/assets/icons/`, 0.91.2). Trois tables les relient au jeu, dans `Icon.tsx` : `STATUS_ICON` (statut → icône), `STATE_ICON` (état de la zone d'état → emblème gravé) et `SKILL_ICON` (compétence → icône) ; une relique prend le fichier qui porte son id (`RelicIcon`). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
+Il y a 95 icônes peintes (`src/assets/icons/`, 0.91.2). Trois tables les relient au jeu, dans `Icon.tsx` : `STATUS_ICON` (statut → icône peinte, empruntée par la compétence qui le pose), `STATE_ICON` (état de la zone d'état → emblème gravé) et `SKILL_ICON` (compétence → icône) ; une relique prend le fichier qui porte son id (`RelicIcon`). Hors de la barre de compétences, un statut de la zone d'état montre l'emblème de son état (`statusIcon`, 0.96.2). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
 
 Plus aucune icône en attente depuis la 0.91.2 (les quatre reliques élémentaires, planche v13) : la liste unique (STYLE_BIBLE § 7, « Icônes à générer », une planche par type) est vide. Hors jeu, donc pas encore à générer : Vulnérable, Étourdi, Garde sacrée, Pourriture subie.
 

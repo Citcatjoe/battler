@@ -7,21 +7,20 @@
  * de l'utilisateur (clic sur « Combattre ! ») pour être autorisé par le navigateur.
  */
 
+/** Effets sonores coupés (clé historique : elle coupait tout le son jusqu'à la 0.53.0) */
 const MUTE_KEY = 'battler:muted'
-/** Musique coupée à part (0.53.0) : les effets restent */
+/** Musique coupée (0.53.0) ; indépendante des effets depuis le panneau du son unique */
 const MUSIC_MUTE_KEY = 'battler:music-muted'
 // Volume général (0.36.4 : de 0.6 à 1, « on n'entend rien »), derrière un compresseur qui évite la saturation
 const VOLUME = 1
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
-/** Bus de la musique : à part du compresseur des effets (qu'elle ferait pomper), coupé avec eux */
+/** Bus de la musique : à part du compresseur des effets (qu'elle ferait pomper) et de leur interrupteur */
 let musicBus: GainNode | null = null
 let noiseBuf: AudioBuffer | null = null
 let muted = readMuted()
 let musicMuted = readMuted(MUSIC_MUTE_KEY)
-/** Niveau du bus de musique : coupé par le bouton du son, ou par celui de la musique seule */
-const musicOn = () => (muted || musicMuted ? 0 : 1)
 /** Vitesse du combat (×1, ×2, ×4) : au-delà de ×1, les sons du combat sont écourtés d'autant. */
 let speed = 1
 
@@ -120,9 +119,9 @@ function loadSamples(c: AudioContext) {
 }
 
 /**
- * Son et musique coupés par défaut (demande de l'utilisateur) : une première visite, un navigateur
+ * Effets et musique coupés par défaut (demande de l'utilisateur) : une première visite, un navigateur
  * piloté par un test ou un stockage indisponible restent muets. Seul un « 0 » enregistré, posé par
- * le bouton quand on rallume le son, le rétablit.
+ * l'interrupteur du panneau du son quand on le rallume, les rétablit (chacun sous sa clé).
  */
 function readMuted(key = MUTE_KEY) {
   try {
@@ -148,7 +147,7 @@ function audio() {
     makeup.gain.value = 1.4
     master.connect(comp).connect(makeup).connect(ctx.destination)
     musicBus = ctx.createGain()
-    musicBus.gain.value = musicOn()
+    musicBus.gain.value = musicMuted ? 0 : 1
     musicBus.connect(ctx.destination)
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
     const data = noiseBuf.getChannelData(0)
@@ -173,10 +172,12 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', unlock, true)
 }
 
+/** Effets sonores coupés (la musique a son propre interrupteur) */
 export function isMuted() {
   return muted
 }
 
+/** Coupe ou rétablit les effets sonores seuls ; la musique ne change pas. */
 export function setMuted(value: boolean) {
   muted = value
   try {
@@ -185,14 +186,13 @@ export function setMuted(value: boolean) {
     /* stockage indisponible : on garde juste l'état en mémoire */
   }
   if (ctx && master) master.gain.setTargetAtTime(value ? 0 : VOLUME, ctx.currentTime, 0.02)
-  if (ctx && musicBus) musicBus.gain.setTargetAtTime(musicOn(), ctx.currentTime, 0.05)
 }
 
 export function isMusicMuted() {
   return musicMuted
 }
 
-/** Coupe ou rétablit la musique seule (deuxième bouton, 0.53.0), en fondu court ; les effets ne changent pas. */
+/** Coupe ou rétablit la musique seule, en fondu court ; les effets ne changent pas. */
 export function setMusicMuted(value: boolean) {
   musicMuted = value
   try {
@@ -200,7 +200,7 @@ export function setMusicMuted(value: boolean) {
   } catch {
     /* stockage indisponible : on garde juste l'état en mémoire */
   }
-  if (ctx && musicBus) musicBus.gain.setTargetAtTime(musicOn(), ctx.currentTime, 0.15)
+  if (ctx && musicBus) musicBus.gain.setTargetAtTime(value ? 0 : 1, ctx.currentTime, 0.15)
 }
 
 /* ---------- Musique de fond des combats (docs/SONS.md § 10) ---------- */

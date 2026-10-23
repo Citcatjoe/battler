@@ -1,30 +1,29 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import type { Character } from '../game/character'
-import { effectiveStats, SIDE_STYLE, type Side } from '../game/combat'
-import { DEFAULT_SKILL_NATURE, doubleTrigger, faceTrigger, type CharacterEvent } from '../game/events'
+import { effectiveStats } from '../game/combat'
+import { doubleTrigger, faceTrigger, type CharacterEvent } from '../game/events'
 import { forgeState, rankLabel } from '../game/forge'
-import { auraOfSkill, STATUS_PLACE } from '../game/states'
 import type { Status } from '../game/statuses'
-import type { SkillPulse } from '../game/staging'
+import { SegmentedControl } from './kit'
 import { SkillSeal } from './SkillSeal'
-import { ALIGN, DieFace, FormLabel, SkillTooltip } from './SkillDice'
+import { ALIGN, SkillTooltip } from './SkillDice'
 
 /*
- * Le dé d'un personnage, face par face (0.96.0) : toutes les faces de 1 à la taille de son dé du moment (forge,
- * reliques, forme du druide comprises), dans l'ordre, sept par ligne. Une face qui porte une compétence montre son
- * sceau, la face en pastille, son rang (forge) ; une face simple, son chiffre. Une gravure a le liseré violet des runes,
- * une dorure le liseré d'or (et la plaque d'or sur une face simple). Tout se lit dans la donnée : aucune règle ici.
- * En combat (SkillBar), la face que montre le dé qui roule s'éclaire un instant, la face tombée reste marquée, et la
- * compétence qui se déclenche sonne (Ding) ; à l'affrontement, le même dé, sans état de combat.
+ * Le dé d'un personnage à l'affrontement (géométrie fixe, 0.99.0) : toujours douze emplacements, deux rangées de six
+ * octogones de 44 px. Les faces du dé (forge, reliques, forme du druide comprises) occupent les premiers, dans l'ordre ;
+ * les emplacements au-delà de sa taille restent visibles, grisés : la taille du dé se lit comme une jauge. Une face
+ * simple montre son chiffre ; une face à compétence, l'emblème peint et le chiffre dans un cartouche en bas à gauche ;
+ * une compétence gravée par la forge (« face forgée »), un cadre et un fond d'or ; une face dorée, un fond d'or sans le
+ * cadre, et son bonus (« +2 ») au cartouche ; une compétence aiguisée, son rang en pastille d'or en haut à droite. Au-delà
+ * de douze faces, « +N faces » en or dans l'en-tête, la liste en infobulle. Ni halo, ni effet de survol : seule
+ * l'infobulle s'ouvre. Tout se lit dans la donnée : aucune règle ici.
  */
 
 /** Une face du dé, pour l'écran. */
 export interface DieCell {
   face: number
-  /** Sa compétence dans la forme en cours (le double de cette face pour deux dés) */
+  /** Sa compétence dans cette forme (le double de cette face pour deux dés) */
   event?: CharacterEvent
-  /** Sa compétence pose une aura : elle sonne sur son médaillon d'aura (SkillBar), pas sur la face */
-  aura: boolean
   /** Compétence gravée par la forge */
   engraved: boolean
   /** Bonus de la dorure (0 : aucune) */
@@ -36,11 +35,11 @@ export interface DieCell {
 /** Les statuts d'une forme hors combat (le d3 de l'Incantation), pour lire la taille de son dé. */
 const formStatuses = (character: Character, form: number): Status[] => (character.forms?.[form].statuses ?? []).map((id) => ({ id, stacks: 1 }))
 
-/** Les faces du dé d'un personnage, de 1 à la taille de son dé sous ces statuts (en combat) ou sous cette forme. */
-export function dieCells(character: Character, form = 0, statuses?: readonly Status[]): DieCell[] {
+/** Les faces du dé d'un personnage, de 1 à la taille de son dé sous cette forme. */
+export function dieCells(character: Character, form = 0): DieCell[] {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const size = effectiveStats(character, statuses ?? formStatuses(character, form)).damageDie
+  const size = effectiveStats(character, formStatuses(character, form)).damageDie
   const forge = forgeState(character.definition, character.forge)
   return Array.from({ length: size }, (_, k) => {
     const face = k + 1
@@ -49,7 +48,6 @@ export function dieCells(character: Character, form = 0, statuses?: readonly Sta
     return {
       face,
       event,
-      aura: !!event && auraOfSkill(event) !== undefined,
       engraved: !!event && forge.engraved.get(face)?.id === event.id,
       gild: character.gilded[face] ?? 0,
       rank: event ? (forge.ranks.get(event.id) ?? 0) : 0,
@@ -57,170 +55,96 @@ export function dieCells(character: Character, form = 0, statuses?: readonly Sta
   })
 }
 
-/** Faces par ligne. */
-const PER_ROW = 7
+/** Emplacements du dé à l'affrontement : deux rangées de six. */
+export const DIE_SLOTS = 12
+const PER_ROW = 6
+/** Côté d'un octogone (px de scène) */
+const SLOT = 44
 
-const SIZES = {
-  /** En-tête du combat, affrontement : le sceau des compétences en grand, son nom dessous */
-  md: { cell: 80, seal: 56, gap: 4, names: true },
-  /** Compact : sceaux seuls */
-  sm: { cell: 48, seal: 40, gap: 4, names: false },
-} as const
-
-interface Props {
-  character: Character
-  /** Sens de la rangée (face 1 au bord gauche ou droit) et côté vers lequel s'alignent les infobulles */
-  align?: 'left' | 'right'
-  tooltip?: 'above' | 'below'
-  size?: keyof typeof SIZES
-  /** Druide : la forme montrée ; absente hors combat, une rangée par forme avec son nom */
-  form?: number
-  /* ---------- En combat seulement (SkillBar) ---------- */
-  /** Son camp : ancres des signaux d'activation (`data-signal`), couleur du reflet du dé */
-  side?: Side
-  /** Ses statuts : taille du dé du moment, jauges comptées sur un sceau */
-  statuses?: readonly Status[]
-  /** La face qui vient de sortir : sa compétence sonne */
-  pulse?: SkillPulse
-  /** Le dé roule : les faces qu'il montre en ce moment, et le pas du roulement (relance le reflet) */
-  rolling?: { faces: readonly number[]; tick: number }
-  /** Les dés sont retombés sur ces faces */
-  landed?: readonly number[]
+/** Le nom court d'une forme, pour le sélecteur : « Forme d'ours » → « Ours ». */
+const formLabel = (name: string) => {
+  const short = name.replace(/^forme\s+(d'|de\s+)?/i, '')
+  return short.charAt(0).toUpperCase() + short.slice(1)
 }
 
-export function DieBuild({ character, align = 'left', tooltip = 'above', size = 'md', form, side, statuses, pulse, rolling, landed }: Props) {
-  if (character.forms && form === undefined)
-    return (
-      <div className={`flex flex-col gap-2 ${align === 'right' ? 'items-end' : 'items-start'}`}>
-        {character.forms.map((f, k) => (
-          <div key={f.id} className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
-            <DieBuild character={character} align={align} tooltip={tooltip} size={size} form={k} />
-            <FormLabel character={character} form={k} tooltip={tooltip} align={align} />
-          </div>
-        ))}
-      </div>
-    )
-  return <DieRow character={character} align={align} tooltip={tooltip} size={size} form={form ?? 0} side={side} statuses={statuses} pulse={pulse} rolling={rolling} landed={landed} />
-}
-
-function DieRow({
-  character,
-  align,
-  tooltip,
-  size,
-  form,
-  side,
-  statuses,
-  pulse,
-  rolling,
-  landed,
-}: Required<Pick<Props, 'character' | 'align' | 'tooltip' | 'size' | 'form'>> & Omit<Props, 'character' | 'align' | 'tooltip' | 'size' | 'form'>) {
-  const cells = useMemo(() => dieCells(character, form, statuses), [character, form, statuses])
-  const dims = SIZES[size]
-  const cols = Math.min(cells.length, PER_ROW)
+/**
+ * La section « Dé de combat » de la fiche d'affrontement : en-tête (taille du dé, forme du druide, faces au-delà de
+ * douze) et grille de douze emplacements. Hauteur fixe (124 px) quel que soit le dé.
+ */
+export function DieBuild({ character }: { character: Character }) {
+  const [form, setForm] = useState(0)
+  const cells = dieCells(character, form)
+  const extra = cells.slice(DIE_SLOTS)
+  const twin = character.twinDice
   return (
-    <ul
-      className={`die-build flex shrink-0 flex-wrap items-start ${align === 'right' ? 'justify-end' : ''} ${side === undefined ? '' : 'is-live'}`}
-      data-size={size}
-      style={{ width: cols * dims.cell + (cols - 1) * dims.gap, columnGap: dims.gap, rowGap: 8, '--roll': side === undefined ? undefined : SIDE_STYLE[side].hex } as CSSProperties}
-      aria-label={`Dé de ${character.name} : ${character.twinDice ? 'deux ' : ''}d${cells.length}`}
-    >
-      {cells.map((c) => (
-        <FaceCell
-          key={c.face}
-          cell={c}
-          side={side}
-          twin={character.twinDice}
-          statuses={statuses ?? []}
-          dims={dims}
-          tooltip={tooltip}
-          align={align}
-          lit={pulse?.face === c.face ? pulse.key : undefined}
-          flicker={rolling?.faces.includes(c.face) ? rolling.tick : undefined}
-          drawn={!rolling && !!landed?.includes(c.face)}
-        />
-      ))}
-    </ul>
+    <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : ${twin ? 'deux ' : ''}d${cells.length}`}>
+      <header className="matchup-section-head">
+        <span>Dé de combat</span>
+        <span className="flex items-center gap-3">
+          {character.forms && (
+            // Le sélecteur du kit (38 px) déborde de l'en-tête vers le haut, jamais sur la grille
+            <span className="relative -top-[7px]">
+              <SegmentedControl
+                label="Forme montrée"
+                options={character.forms.map((f, k) => ({ value: k, label: formLabel(f.name), title: f.name }))}
+                value={form}
+                onChange={setForm}
+              />
+            </span>
+          )}
+          {extra.length > 0 && <ExtraFaces cells={extra} twin={twin} />}
+          <span className="matchup-section-count">
+            {twin ? '2' : ''}d{cells.length}
+          </span>
+        </span>
+      </header>
+      <ul className="die-grid mt-[5px]">
+        {Array.from({ length: DIE_SLOTS }, (_, k) => {
+          const align = k % PER_ROW < PER_ROW / 2 ? 'left' : 'right'
+          const cell = cells[k]
+          return cell ? (
+            <FaceSlot key={k} cell={cell} twin={twin} align={align} />
+          ) : (
+            <li key={k} className="die-slot" data-empty="" aria-hidden>
+              <span className="skill-seal" style={{ width: SLOT, height: SLOT }} />
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 
-function FaceCell({
-  cell,
-  side,
-  twin,
-  statuses,
-  dims,
-  tooltip,
-  align,
-  lit: litNow,
-  flicker: flickerNow,
-  drawn,
-}: {
-  cell: DieCell
-  side?: Side
-  twin: boolean
-  statuses: readonly Status[]
-  dims: (typeof SIZES)[keyof typeof SIZES]
-  tooltip: 'above' | 'below'
-  align: 'left' | 'right'
-  lit?: number
-  flicker?: number
-  drawn: boolean
-}) {
-  const lit = useLastLit(litNow)
-  const flicker = useLastLit(flickerNow)
+function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 'left' | 'right' }) {
   const { face, event, gild, rank, engraved } = cell
-  const count = event && sealCount(event, statuses)
-  const notes = [engraved ? 'Gravée par la forge du dé.' : '', gild ? `Face dorée : +${gild} au coup.` : ''].filter(Boolean)
+  // Cartouche : le chiffre d'une face à compétence, suivi du bonus d'une dorure (« 3+2 ») ; le bonus seul sur une face simple
+  const plate = `${event ? face : ''}${gild ? `+${gild}` : ''}`
   return (
-    <li
-      className="skill-bar-slot die-cell group relative flex flex-col items-center gap-3 hover:z-[70]"
-      style={{ width: dims.cell }}
-      data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}
-      data-engraved={engraved ? '' : undefined}
-      data-gild={gild ? '' : undefined}
-      data-drawn={drawn ? '' : undefined}
-    >
-      {/* Une compétence qui pose une aura part de son médaillon d'aura (SkillBar) : la face n'en est pas l'ancre */}
-      <div className="relative" data-signal={event && side !== undefined && !cell.aura ? `${side}:${event.id}` : undefined}>
-        {(engraved || gild > 0) && <span aria-hidden className="die-cell-rim" />}
-        {lit !== undefined && event && !cell.aura && <Ding lit={lit} />}
-        <div
-          key={lit !== undefined ? `flash-${lit}` : 'idle'}
-          className={event ? `skill-bar-face cursor-help ${lit !== undefined ? 'is-lit' : ''}` : 'die-cell-plain cursor-help'}
-        >
-          {event ? (
-            <SkillSeal id={event.id} size={dims.seal} />
-          ) : (
-            <span aria-label={`Face ${face}`} className="skill-seal" style={{ width: dims.seal, height: dims.seal }}>
-              {face}
-            </span>
-          )}
-        </div>
-        {/* Le reflet du dé qui roule : un éclat fugace à chaque face qu'il montre, relancé à chaque pas */}
-        {flicker !== undefined && <span key={`roll-${flicker}`} aria-hidden className="die-cell-flicker" data-k={flicker % 3} />}
-        <span aria-hidden className="die-cell-drawn" />
-        {event && (
-          <span className="absolute -bottom-2 -right-2.5 z-[1]">
-            <DieFace face={face} size="xs" empty={false} double={twin} />
+    // hover:z-[70] : l'infobulle passe au-dessus des faces voisines (aucun effet visible sur la face)
+    <li className="die-slot group relative hover:z-[70]" data-forged={engraved ? '' : undefined} data-gild={gild ? '' : undefined}>
+      <div className="relative cursor-help">
+        {event ? (
+          <SkillSeal id={event.id} size={SLOT} />
+        ) : (
+          <span aria-label={`Face ${face}`} className="skill-seal die-slot-plain" style={{ width: SLOT, height: SLOT }}>
+            {face}
           </span>
         )}
-        {rank > 0 && <span className="forge-face-rank z-[2]">{rankLabel(rank)}</span>}
-        {count !== undefined && <Count text={String(count)} />}
+        {plate && <span className="die-slot-num">{plate}</span>}
+        {rank > 0 && <span className="die-slot-rank">{rankLabel(rank)}</span>}
       </div>
-      {dims.names && event && (
-        <span key={lit !== undefined ? `name-${lit}` : 'name'} className={`skill-bar-name ${lit !== undefined ? 'is-lit' : ''}`} data-long={longName(event.name)}>
-          {event.name}
-        </span>
-      )}
       {event ? (
-        <SkillTooltip event={event} face={face} placement={tooltip} align={align} notes={notes} />
+        <SkillTooltip
+          event={event}
+          face={face}
+          placement="above"
+          align={align}
+          notes={[engraved ? 'Gravée par la forge du dé.' : '', gild ? `Face dorée : +${gild} au coup.` : ''].filter(Boolean)}
+        />
       ) : (
         <div
           role="tooltip"
-          className={`pointer-events-none invisible absolute z-[70] w-72 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
-            tooltip === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
-          } ${ALIGN[align]}`}
+          className={`pointer-events-none invisible absolute bottom-full z-[70] mb-3 w-72 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${ALIGN[align]}`}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="font-display text-lg font-extrabold leading-tight text-ink-1">Face {face}</span>
@@ -238,55 +162,35 @@ function FaceCell({
   )
 }
 
-/** Un nom au mot très long (« Aura d'intimidation ») passe un cran plus petit sous son sceau : il tient sans être coupé. */
-export const longName = (name: string) => (name.split(/\s+/).some((word) => word.length >= 12) ? '' : undefined)
-
-/**
- * Le dernier déclenchement d'un sceau, retenu (0.80.2) : la barre ne reçoit que la dernière face sortie, et un sceau
- * qui la perdait (une autre compétence se déclenche) était coupé net, au milieu de son éclat. Il garde la clé de son
- * dernier éclat : son animation va au bout, jusqu'à retomber éteint, et repart seulement à son prochain déclenchement.
- */
-export function useLastLit(lit: number | undefined) {
-  const [last, setLast] = useState(lit)
-  if (lit !== undefined && lit !== last) setLast(lit)
-  return lit ?? last
-}
-
-/**
- * Le tintement visuel d'une compétence qui se déclenche (0.79.8) : l'onde serrée autour du sceau, puis un éclat de
- * lumière bref qui part de lui et s'étend sur une grande partie de l'arène, avec un anneau fin qui file plus loin.
- * Dans la couleur de la nature de la compétence (ou de l'aura) ; la clé relance l'éclat quand la même face ressort.
- */
-export function Ding({ lit, round }: { lit: number; round?: boolean }) {
+/** Les faces au-delà des douze emplacements (forge) : « +N faces » en or, leur liste en infobulle. */
+function ExtraFaces({ cells, twin }: { cells: readonly DieCell[]; twin: boolean }) {
   return (
-    <>
-      <span key={`wave-${lit}`} aria-hidden className={`skill-bar-wave ${round ? 'rounded-full' : ''}`} />
-      <span key={`burst-${lit}`} aria-hidden className="skill-bar-burst" />
-      <span key={`ring-${lit}`} aria-hidden className="skill-bar-ring" />
-    </>
-  )
-}
-
-/** Jauges ou réserve d'une compétence, comptées sur son sceau (Rétribution : les dégâts stockés). */
-export function sealCount(event: CharacterEvent, statuses: readonly Status[]): number | undefined {
-  for (const effect of event.effects) {
-    const id = effect.type === 'release' || effect.type === 'applyStatus' ? effect.status : undefined
-    if (!id || !STATUS_PLACE[id].onSeal) continue
-    const s = statuses.find((x) => x.id === id)
-    return s?.stacks ?? 0
-  }
-  return undefined
-}
-
-/** Pastille de compte, en haut à gauche d'un sceau : jauges d'une compétence, charges d'une aura (dorée). */
-export function Count({ text, aura }: { text: string; aura?: boolean }) {
-  return (
-    <span
-      className={`absolute -left-2 -top-2 z-[1] flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${
-        aura ? 'border-amber-300/80 text-amber-100' : 'border-line-2 text-ink-1'
-      }`}
-    >
-      {text}
+    <span className="group relative cursor-help hover:z-[70]">
+      <span className="matchup-section-more">
+        +{cells.length} face{cells.length > 1 ? 's' : ''}
+      </span>
+      <div
+        role="tooltip"
+        className="pointer-events-none invisible absolute bottom-full right-0 z-[70] mb-3 w-80 rounded-(--r-sm) border border-gold-500/60 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
+      >
+        <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">Faces au-delà de {DIE_SLOTS}</span>
+        <ul className="mt-2 flex flex-col gap-1">
+          {cells.map((c) => {
+            const forge = [c.engraved ? 'gravée' : '', c.rank > 0 ? `rang ${rankLabel(c.rank)}` : '', c.gild ? `dorée +${c.gild}` : ''].filter(Boolean)
+            return (
+              <li key={c.face} className="flex items-baseline gap-2 font-body text-[15px] leading-snug text-ink-1">
+                <span className="w-14 shrink-0 font-data text-[13px] text-ink-2">
+                  {twin ? 'Double' : 'Dé'} {c.face}
+                </span>
+                <span>
+                  {c.event ? c.event.name : 'Coup'}
+                  {forge.length > 0 && <span className="text-gold-300"> · {forge.join(', ')}</span>}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </span>
   )
 }

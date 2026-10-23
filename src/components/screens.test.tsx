@@ -23,8 +23,9 @@ import { CheatPad } from './CheatPad'
 import { CharacterSheet } from './compendium/CharacterSheet'
 import { CompendiumScreen } from './compendium/CompendiumScreen'
 import { COMPENDIUM_SECTIONS } from './compendium/sections'
+import { SkillsSection } from './compendium/SkillsSection'
 import { StatusesSection } from './compendium/StatusesSection'
-import { statusCatalog } from '../game/catalog'
+import { sheetStatuses, skillCatalog, statusCatalog } from '../game/catalog'
 import { EndScreen } from './EndScreen'
 import { Fighter } from './Fighter'
 import { FightScreen } from './FightScreen'
@@ -34,8 +35,8 @@ import { StatusTray, trayAfter } from './StatusTray'
 import { SkillBar } from './SkillBar'
 import { DieBuild, dieCells } from './DieBuild'
 import { offerTargets } from '../game/forge'
-import { STATES, trayStates } from '../game/states'
-import { skillIcon, STATUS_ICON } from './Icon'
+import { STATES, STATUS_PLACE, trayStates } from '../game/states'
+import { skillIcon, STATE_ICON, statusIcon } from './Icon'
 import { RelicCard } from './RelicSeal'
 import { SeasonReport } from './CombatReport'
 import { getRelic, RELICS } from '../game/relics'
@@ -134,11 +135,11 @@ describe('écrans', () => {
     const betting = { wallets, odds, onBet: () => null, onCancel: noop }
     render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={betting} />)
     render(<MatchupScreen fighters={fighters} arena={ARENAS[0].id} onArenaChange={noop} onPlay={noop} onSimulate={noop} onBack={noop} betting={{ ...betting, odds: null }} />)
-    // Classement au-dessus du nom : place de saison en cours, tête de série dans l'arbre
+    // Rang au-dessus du nom : un badge, son chiffre seul, sans texte autour ; aucun badge pour un opposant sans rang
     const ranked = renderToString(
       <MatchupScreen
         fighters={fighters}
-        ranks={[{ kind: 'season', rank: 1, of: 24, points: 12, wins: 4, losses: 2 }, { kind: 'seed', rank: 3 }]}
+        ranks={[12, null]}
         arena={RANDOM_ARENA}
         onArenaChange={noop}
         onPlay={noop}
@@ -146,8 +147,8 @@ describe('écrans', () => {
         onBack={noop}
       />,
     )
-    expect(ranked).toContain('Saison · sur 24')
-    expect(ranked).toContain('Tête de série')
+    expect(ranked.match(/class="matchup-rank"/g)).toHaveLength(1)
+    expect(ranked).toContain('<span class="matchup-rank-num">12</span>')
     const twists: MatchOdds[] = [
       odds,
       { ...odds, twist: { kind: 'boost', pick: { market: 'duration', over: true } } },
@@ -213,7 +214,7 @@ describe('écrans', () => {
     expect(off).not.toContain('skill-bar-wave')
   })
 
-  it('zone de compétence : toutes les faces du dé, dans l’ordre, le reflet du roulement puis la face tombée', () => {
+  it('dé face par face (affrontement) : toutes les faces du dé, dans l’ordre, la forge lue sur ses faces', () => {
     const gorak = createCharacter('gorak')
     const cells = dieCells(gorak)
     expect(cells.map((c) => c.face)).toEqual(Array.from({ length: gorak.stats.damageDie }, (_, k) => k + 1))
@@ -230,16 +231,48 @@ describe('écrans', () => {
     expect(f[4].gild).toBeGreaterThan(0)
     expect(f[sharp - 1].rank).toBe(1)
     const build = renderToString(<DieBuild character={forged} />)
-    expect(build).toContain('forge-face-rank')
+    expect(build).toContain('die-slot-rank')
     expect(build).toContain('aria-label="Face 4"')
     expect(build.match(/data-gild=""/g)).toHaveLength(1)
-    // En combat : le dé qui roule éclaire la face qu'il montre, le dé tombé marque la sienne, sans éclat de compétence
-    const rolling = renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={{ faces: [5], tick: 3 }} />)
-    expect(rolling.match(/die-cell-flicker/g)).toHaveLength(1)
-    expect(rolling).not.toContain('data-drawn=""')
-    const landed = renderToString(<SkillBar character={gorak} side={0} statuses={[]} landed={[5]} />)
-    expect(landed.match(/data-drawn=""/g)).toHaveLength(1)
-    expect(landed).not.toContain('skill-bar-wave')
+    // Une face dorée porte son bonus au cartouche, lu dans la donnée
+    expect(build).toContain(`<span class="die-slot-num">+${f[4].gild}</span>`)
+    // Toujours douze emplacements : ceux au-delà de la taille du dé, grisés
+    expect(build.match(/<li class="die-slot[ "]/g)).toHaveLength(12)
+    expect(build.match(/data-empty=""/g)).toHaveLength(12 - gorak.stats.damageDie)
+    // Une face gravée par la forge est une face forgée (cadre d'or)
+    const foreign = ENGRAVABLE_SKILLS.find((e) => !gorak.events.some((own) => own.id === e.id))!
+    const engraved = gorak.withForge([{ op: 'engrave', face: 5, skill: foreign }])
+    expect(renderToString(<DieBuild character={engraved} />).match(/data-forged=""/g)).toHaveLength(1)
+    // Au-delà de douze faces : douze emplacements, et « +N faces » en tête
+    const big = createCharacter('morgrut').withForge([{ op: 'enlarge' }])
+    const bigBuild = renderToString(<DieBuild character={big} />)
+    expect(bigBuild.match(/<li class="die-slot[ "]/g)).toHaveLength(12)
+    expect(bigBuild).toContain('matchup-section-more')
+    expect(bigBuild).not.toContain('data-empty')
+    // Le druide : un sélecteur de forme du kit dans l'en-tête du dé
+    expect(renderToString(<DieBuild character={thaldrin} />)).toContain('bt-segmented')
+  })
+
+  it('fiche d’affrontement : six places de reliques, « +N » au-delà, « Aucune relique » sans', () => {
+    const many = createCharacter('ervald').withRelics(RELICS.slice(0, 10))
+    const html = renderToString(
+      <MatchupScreen fighters={[createCharacter('gorak'), many]} arena={RANDOM_ARENA} onArenaChange={() => {}} onPlay={() => {}} onSimulate={() => {}} onBack={() => {}} />,
+    )
+    expect(html).toContain('Aucune relique')
+    expect(html.match(/class="group\/relic/g)).toHaveLength(6)
+    expect(html).toContain('matchup-relics-more')
+    // Les deux fiches, et le sélecteur d'arène avec son index au lieu des points
+    expect(html.match(/class="matchup-card/g)).toHaveLength(2)
+    expect(html).toContain('matchup-arena-index')
+  })
+
+  it('zone de compétence du combat : le dé qui roule allume brièvement le sceau de la face montrée, sans éclat', () => {
+    const gorak = createCharacter('gorak')
+    // Le 2 de Gorak est une face de compétence ; le 5, une face simple sans sceau
+    const rolling = renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={[2]} />)
+    expect(rolling.match(/is-rolled/g)).toHaveLength(1)
+    expect(rolling).not.toContain('skill-bar-wave')
+    expect(renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={[5]} />)).not.toContain('is-rolled')
   })
 
   it("zone de surcharge : n'y entrent que les statuts qui changent ce coup-ci, sans aura ni action déclenchée (registre unique)", () => {
@@ -345,22 +378,53 @@ describe('écrans', () => {
       render(<CharacterSheet characterId={id} nav={nav} />)
       render(<CharacterSheet characterId={id} nav={nav} initialTab="performance" />)
     }
-    // Chaque statut en jeu a sa fiche détaillée
-    for (const e of statusCatalog()) if (e.inGame) render(<StatusesSection nav={nav} focus={e.id} filter="" />)
+    // Chaque statut de la section Statuts et chaque compétence ont leur fiche détaillée
+    for (const e of sheetStatuses()) render(<StatusesSection nav={nav} focus={e.id} filter="" />)
+    for (const s of skillCatalog().flatMap((f) => f.skills)) render(<SkillsSection nav={nav} focus={s.event.id} filter="" />)
     render(<RecordsScreen onOpenCharacter={noop} onBack={noop} />)
   })
 
-  it('tout statut en jeu a une icône peinte', () => {
-    for (const e of statusCatalog()) if (e.inGame) expect(STATUS_ICON[e.id], e.id).toBeDefined()
+  it('les sections Compétences et Statuts ne nomment aucun porteur (ni personnage, ni race)', () => {
+    const names = CHARACTER_IDS.map((id) => createCharacter(id).name)
+    const pages = [
+      ...skillCatalog().flatMap((f) => f.skills).map((s) => renderToString(<SkillsSection nav={{ go: noop }} focus={s.event.id} filter="" />)),
+      ...sheetStatuses().map((e) => renderToString(<StatusesSection nav={{ go: noop }} focus={e.id} filter="" />)),
+    ]
+    for (const html of pages) for (const name of [...names, 'Orcs', 'Humains', 'Porteur']) expect(html).not.toContain(name)
   })
 
-  it('le compendium ne liste que les statuts en jeu, bonus et malus réunis', () => {
+  it('tout statut en jeu a une icône peinte', () => {
+    for (const e of statusCatalog()) if (e.inGame) expect(statusIcon(e.id), e.id).toBeDefined()
+  })
+
+  it("un statut de la zone d'état montre partout l'emblème de son état, pas l'icône de la compétence qui le pose", () => {
+    for (const e of statusCatalog()) {
+      const place = STATUS_PLACE[e.id]
+      if (e.inGame && place.place === 'tray') expect(statusIcon(e.id), e.id).toBe(STATE_ICON[place.relays[0].state])
+    }
+    // Œil de faucon garde sa cible ; le Critique assuré qu'il pose montre la pièce gravée
+    expect(skillIcon(createCharacter('elaria').events.find((e) => e.id === 'hawk-eye')!)).toBe('crit')
+    expect(statusIcon('guaranteedCrit')).toBe('state-sure-crit')
+  })
+
+  it("la section Statuts ne liste que les statuts en jeu de la zone d'état : une aura ou un mécanisme appartient à sa compétence", () => {
     const html = renderToString(<StatusesSection nav={{ go: noop }} filter="" />)
     for (const e of statusCatalog()) {
-      const name = e.def.name.replace(/'/g, '&#x27;')
-      if (e.inGame) expect(html, e.id).toContain(name)
-      else expect(html, e.id).not.toContain(name)
+      const listed = html.includes(`>${e.def.name.replace(/'/g, '&#x27;')}<`)
+      expect(listed, e.id).toBe(e.inGame && STATUS_PLACE[e.id].place === 'tray')
     }
+  })
+
+  it('la fiche d’une compétence porte son aura ou son mécanisme', () => {
+    const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
+    // Aura de sainteté : sa vie, son plafond et ce qui la retire
+    const holy = sheet('holy-aura')
+    for (const text of ["jusqu'à la fin du combat", '3 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
+    // Aura de puissance : la relique qui la pose aussi ; Aura mélodieuse : l'autre compétence qui la pose
+    expect(sheet('power-aura')).toContain('Clepsydre du siège')
+    expect(sheet('melodious-aura')).toContain('Ouverture')
+    // Rétribution : la règle de ses jauges, que sa description ne dit pas
+    expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
   })
 
   it('tournoi', () => {

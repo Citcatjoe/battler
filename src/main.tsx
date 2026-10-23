@@ -30,12 +30,22 @@ try {
 if (floatFont && FLOAT_FONTS.includes(floatFont)) document.documentElement.dataset.floatFont = floatFont
 
 const root = createRoot(document.getElementById('root')!)
+const params = new URLSearchParams(location.search)
 // Page de développement du UI kit (?kit) : les composants disposés comme docs/ui-kit/reference.html
-if (import.meta.env.DEV && new URLSearchParams(location.search).has('kit')) {
+if (import.meta.env.DEV && params.has('kit')) {
   void import('./dev/KitReference').then(({ KitReference }) =>
     root.render(
       <StrictMode>
         <KitReference />
+      </StrictMode>,
+    ),
+  )
+} else if (import.meta.env.DEV && params.has('matchup')) {
+  // Page de développement de l'écran d'affrontement (?matchup=reel|limite|reel-inverse|limite-inverse|druide|barde)
+  void import('./dev/MatchupReference').then(({ MatchupReference }) =>
+    root.render(
+      <StrictMode>
+        <MatchupReference />
       </StrictMode>,
     ),
   )

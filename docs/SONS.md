@@ -263,7 +263,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Épines acérées | le porteur est touché | Malus reçu (Saignement posé sur l'attaquant ; Coup jusqu'à la 0.67.3, quand elles renvoyaient des dégâts) |
 | Saignement | un coup touche le porteur | Ronge |
 | Riposte | le porteur est touché | Coup (contre-coup) |
-| Vol de vie | le coup du porteur touche | Soin |
+| Vol de vie | le coup du porteur touche | Soin, un battement après le Coup de ce coup (0.97.0 : le soin tombe à l'impact, `MISE_EN_SCENE.md` M14) |
 | Aura de décoction | le coup du porteur touche | Malus reçu (poison posé), un battement après le Coup de ce coup (2026-10-21) |
 | Peur, Étourdi | tour du porteur | Tour perdu |
 | Furie des vents, Coup de chance | action du porteur | Dé lancé, Dé posé, puis le son de chaque coup |
@@ -289,9 +289,9 @@ Ce n'est pas un son au sens du § 2 : la musique ne signifie rien, elle installe
   - en boucle, avec un fondu d'entrée de 2,5 s et un fondu de sortie de 1,2 s quand on quitte l'écran ;
   - au KO, elle s'efface à 25 % de son niveau en 0,3 s, pour que le KO et la fanfare de victoire ressortent ;
   - elle ne suit pas la vitesse du combat (×2, ×4) ;
-  - elle est coupée avec tout le reste par le bouton du son ;
-  - un **second bouton**, sous celui du son et plus petit (0.53.0), coupe la musique seule. Ce choix est gardé d'une partie à l'autre (`battler:music-muted`) et retrouvé quand le son revient. Son icône est peinte depuis la 0.77.1 : un tambour et ses baguettes (`music-on`), barré de rouge quand la musique est coupée ou que tout le son l'est (`music-off`, planche v11).
-  - **son et musique sont coupés par défaut** (0.68.2, demande de l'utilisateur) : les deux boutons commencent désactivés, pour que les tests automatiques restent muets. On les rallume à la main, et le choix est gardé.
+  - **un seul bouton du son**, rond, en haut à droite de toutes les scènes, ouvre un petit panneau dessous avec **deux interrupteurs indépendants** (décision de l'utilisateur, 2026-10-23) : « Musique » et « Effets sonores ». Couper les effets laisse la musique, couper la musique laisse les effets ; le glyphe du bouton n'est barré que si les deux sont coupés. Le panneau se ferme par le bouton, un clic ailleurs ou Échap. Avant, couper le son coupait aussi la musique, et un second bouton (0.53.0) coupait la musique seule ;
+  - chaque choix est gardé d'une partie à l'autre, sous sa clé : `battler:muted` pour les effets (nom historique), `battler:music-muted` pour la musique ;
+  - **effets et musique sont coupés par défaut** (0.68.2, demande de l'utilisateur) : les deux interrupteurs commencent désactivés, pour que les tests automatiques restent muets. On les rallume à la main, et le choix est gardé. Le contexte audio se crée et se réveille au premier geste, quel que soit l'interrupteur actif : la musique seule s'entend donc aussi.
 - **Niveau** : les trois boucles n'ont pas la même sonie à la source (−18,4, −9,7 et −8,7 LUFS intégrés, mesurés avec `ffmpeg -af ebur128`). Le jeu ramène chacune à **−29 LUFS** (`MUSIC_TARGET`), soit environ 15 dB sous les effets, égalisés vers −12 dB RMS. C'est le réglage « pas trop fort ». Il se règle à l'oreille dans `sound.ts`, à un seul endroit.
 - **Mixage** : la musique a son propre bus, à part du compresseur des effets. Sinon, chaque coup ferait « pomper » le compresseur et la musique avec lui.
 - **Fichiers** : `src/assets/music/battle-boss.mp3` (77,6 s, 155 bpm), `battle-orchestral.mp3` (40,3 s), `battle-drums.mp3` (22,3 s, 172 bpm). Ils sont gardés tels que livrés, sans réencodage, pour ne pas abîmer la jonction des boucles. Provenance : `src/assets/music/SOURCES.md`. Une nouvelle boucle se dépose dans ce dossier, avec sa sonie mesurée dans `MUSIC_LOUDNESS`. Un test vérifie qu'aucune piste n'en manque.

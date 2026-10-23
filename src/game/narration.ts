@@ -25,7 +25,8 @@ export interface LogEntry {
   side?: Side
 }
 
-export type Tone = 'heal' | 'damage' | 'positive' | 'negative' | 'neutral'
+/** Couleur d'un texte flottant. `poison` et `arcane` : la famille des dégâts d'un statut (`harm`, statuses.ts) */
+export type Tone = 'heal' | 'damage' | 'positive' | 'negative' | 'neutral' | 'poison' | 'arcane'
 
 export const TONE_CLASS: Record<Tone, string> = {
   heal: 'text-emerald-300 [-webkit-text-stroke:3px_#064e3b]',
@@ -33,6 +34,9 @@ export const TONE_CLASS: Record<Tone, string> = {
   positive: 'text-amber-200 [-webkit-text-stroke:3px_#78350f]',
   negative: 'text-fuchsia-300 [-webkit-text-stroke:3px_#4a044e]',
   neutral: 'text-stone-200 [-webkit-text-stroke:3px_#1c1917]',
+  // Vert acide, loin de l'émeraude du soin ; mauve, loin du fuchsia d'un malus posé (docs/MISE_EN_SCENE.md, M37)
+  poison: 'text-lime-300 [-webkit-text-stroke:3px_#1a2e05]',
+  arcane: 'text-violet-300 [-webkit-text-stroke:3px_#2e1065]',
 }
 
 // « PV » est une abréviation : invariable

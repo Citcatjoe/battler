@@ -88,7 +88,9 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
         (f) => !state.gilded.has(f) && (base.twinDice || (originOn(base, f).length === 0 && !state.engraved.get(f)?.forfeitsHit)),
       )
     case 'sharpen':
-      // Aiguisable : un rang de plus change ses effets (un statut au plafond, ou qui ne cumule pas, ne gagne rien)
+      // Aiguisable : un rang de plus change ses effets (un statut au plafond, ou qui ne cumule pas, ne gagne rien). Pas de
+      // rang maximal : le nombre d'aiguisages se règle par le nombre d'occasions qu'un mode en donne (décision de
+      // l'utilisateur, 2026-10-23)
       return faces.filter((f) =>
         skillsOn(base, state, f).some((e) => {
           const rank = state.ranks.get(e.id) ?? 0

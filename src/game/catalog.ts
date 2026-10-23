@@ -3,6 +3,7 @@ import { deName, type CharacterEvent, type Effect, type Target, type Trigger } f
 import type { RuleId } from './rules'
 import { RELICS, type Relic } from './relics'
 import { CHARACTERS } from './roster'
+import { STATUS_PLACE } from './states'
 import { POLARITY_STYLE, STATUS_IDS, STATUSES, statusRuleSections, type Polarity, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
 
 /*
@@ -103,6 +104,37 @@ export function statusCatalog(characters: readonly Character[] = CHARACTERS): St
   return entries.sort((a, b) => rank(a) - rank(b))
 }
 
+/**
+ * Un statut a sa fiche dans la section Statuts s'il est du vocabulaire commun, celui de la zone d'état (`tray`).
+ * Une aura ou un mécanisme appartient à sa compétence, une règle de forme à son personnage (0.98.0) : le compendium
+ * les décrit là.
+ */
+export const hasStatusSheet = (id: StatusId) => STATUS_PLACE[id].place === 'tray'
+
+/** Les statuts de la section Statuts : en jeu, et du vocabulaire commun. */
+export const sheetStatuses = (characters: readonly Character[] = CHARACTERS) => statusCatalog(characters).filter((e) => e.inGame && hasStatusSheet(e.id))
+
+/** Où le compendium décrit un statut : sa fiche, la compétence à qui il appartient, ou la forme qui le déclare. */
+export type StatusHome =
+  | { kind: 'sheet' }
+  | { kind: 'skill'; event: CharacterEvent; character: Character }
+  | { kind: 'form'; character: Character; form: string }
+
+/**
+ * La demeure d'un statut (`StatusHome`). Pour une aura ou un mécanisme, la compétence qui le pose ou le relâche,
+ * celle de même nom d'abord (l'Aura mélodieuse, que l'Ouverture pose aussi). Rien pour un statut propre à une
+ * compétence qui n'est pas en jeu.
+ */
+export function statusHome(id: StatusId, characters: readonly Character[] = CHARACTERS): StatusHome | undefined {
+  if (hasStatusSheet(id)) return { kind: 'sheet' }
+  const sources = statusSources(id, characters)
+  const skills = sources.flatMap((s) => (s.kind === 'skill' || s.kind === 'release' ? [s] : []))
+  const skill = skills.find((s) => s.event.name === STATUSES[id].name) ?? skills[0]
+  if (skill) return { kind: 'skill', event: skill.event, character: skill.character }
+  const form = sources.find((s) => s.kind === 'form')
+  return form?.kind === 'form' ? { kind: 'form', character: form.character, form: form.form } : undefined
+}
+
 const polarityWord = (p: Polarity) => POLARITY_STYLE[p].label.toLowerCase()
 
 /**
@@ -132,10 +164,12 @@ export function statusLinks(id: StatusId, characters: readonly Character[] = CHA
   }
   // Statuts qu'il pose
   for (const posed of posedByStatus(id)) links.push({ text: `Pose ${STATUSES[posed].name}.`, status: posed })
-  // Purges : les compétences et reliques qui retirent les statuts de sa polarité (sauf un mécanisme, qui ne se purge pas)
+  // Purges : les compétences et reliques qui retirent les statuts de sa polarité (sauf un mécanisme, qui ne se purge pas).
+  // Une aura se lit dans la fiche de sa compétence, au féminin (« l'aura peut être retirée »)
   const purges = (effects: readonly Effect[]) => !def.mechanic && effects.some((e) => e.type === 'cleanse' && e.polarity === def.polarity)
-  for (const { character, event } of skills) if (purges(event.effects)) links.push({ text: `Peut être retiré par ${event.name}.`, skill: { event, character } })
-  for (const relic of RELICS) if (purges(relic.effects ?? [])) links.push({ text: `Peut être retiré par la relique ${relic.name}.`, relic })
+  const removed = STATUS_PLACE[id].place === 'aura' ? 'Peut être retirée' : 'Peut être retiré'
+  for (const { character, event } of skills) if (purges(event.effects)) links.push({ text: `${removed} par ${event.name}.`, skill: { event, character } })
+  for (const relic of RELICS) if (purges(relic.effects ?? [])) links.push({ text: `${removed} par la relique ${relic.name}.`, relic })
   return links
 }
 

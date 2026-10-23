@@ -11,6 +11,8 @@ import { RELICS } from './relics'
 import { CHARACTER_IDS, createCharacter } from './roster'
 import { SCENE_EVENTS } from './scenes'
 import { childrenOf, skillFaceAt, skillFaceOf, stage, type Cue, type Moment } from './staging'
+import type { Status } from './statuses'
+import { testCharacter } from './test-utils'
 import { effectBadge } from './narration'
 import { STATES } from './states'
 import { STATUSES } from './statuses'
@@ -230,7 +232,7 @@ describe('mise en scène', () => {
     expect(rolled).toBeGreaterThan(5)
   })
 
-  it('double de la barde : la paire retombe avec le ding, le dé de la face pulse, la compétence suit sans attente', () => {
+  it('double de la barde : la paire retombe avec le ding, le dé de la face pulse, la compétence suit un battement après (M12)', () => {
     let doubles = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
@@ -240,7 +242,7 @@ describe('mise en scène', () => {
         expect(land).toBeDefined()
         expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(true)
         expect(at(m, 'skillPulse', land.at)).toEqual([{ at: land.at, channel: 'skillPulse', side: beat.side, face: beat.double }])
-        expect(m.cues.some((c) => c.at === land.at && (c.channel === 'signal' || c.channel === 'aura' || c.channel === 'float'))).toBe(true)
+        expect(m.cues.some((c) => c.at === land.at + T.DICE_READ && (c.channel === 'signal' || c.channel === 'aura' || c.channel === 'float'))).toBe(true)
         doubles++
       }
     expect(doubles).toBeGreaterThan(5)
@@ -362,7 +364,7 @@ describe('mise en scène', () => {
     expect(pulses).toBeGreaterThan(50)
   })
 
-  it('une compétence sur le dé tombe avec son jet, sans attente (un battement en rafale)', () => {
+  it('une compétence sur le dé tombe un battement après son jet, comme l’élan d’un coup (M10 ; en rafale, VOLLEY_FORFEIT_SNAP)', () => {
     let grouped = 0
     for (const { result, moments } of corpus) {
       const children = childrenOf(result.beats)
@@ -372,12 +374,120 @@ describe('mise en scène', () => {
         if (face === undefined) continue
         const m = momentOf(moments, beat.id)
         const pulse = m.cues.find((c) => c.channel === 'skillPulse' && c.face === face)!
-        const when = pulse.at + (beat.cause !== undefined && result.beats[beat.cause].type === 'flurry' ? T.VOLLEY_FORFEIT_SNAP : 0)
+        const when = pulse.at + (beat.cause !== undefined && result.beats[beat.cause].type === 'flurry' ? T.VOLLEY_FORFEIT_SNAP : T.DICE_READ)
         expect(m.cues.some((c) => c.at === when && (c.channel === 'signal' || c.channel === 'aura' || c.channel === 'float'))).toBe(true)
         grouped++
       }
     }
     expect(grouped).toBeGreaterThan(50)
+  })
+
+  it('les réactions au coup partent au milieu de sa lecture ; le coup s’efface avant l’élan de la Riposte (M17)', () => {
+    let reactions = 0
+    let riposted = 0
+    for (const { result, moments } of corpus) {
+      const children = childrenOf(result.beats)
+      for (const hit of result.beats) {
+        if (hit.type !== 'attack' || hit.attack.forfeited) continue
+        const striker = hit.attack.attacker
+        const first = children[hit.id].find((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed'))
+        if (!first) continue
+        const m = momentOf(moments, hit.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        const fast = m.cues.some((c) => c.channel === 'strike' && c.at === impact && c.strike?.fast)
+        const flow = children[hit.id].some((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.side !== striker)
+        const start = impact + (flow ? T.BLEED_DELAY : 0) + (fast ? T.VOLLEY_REACTION_LEAD : T.REACTION_LEAD)
+        const starts = ['signal', 'aura', 'special', 'relicPulse']
+        expect(m.cues.some((c) => c.at === start && starts.includes(c.channel)), `réaction ${first.id}`).toBe(true)
+        if (first.type === 'statusReaction' && STATUSES[first.status].reflectsHit) {
+          const k = m.cues.findIndex((c) => c.channel === 'blow' && c.blow && !c.blow.landed && c.at >= start)
+          const before = m.cues.slice(0, k).filter((c) => c.channel === 'strike').at(-1)
+          expect(before?.channel === 'strike' && before.strike).toBeNull()
+          riposted++
+        }
+        reactions++
+      }
+    }
+    expect(reactions).toBeGreaterThan(100)
+    expect(riposted).toBeGreaterThan(20)
+  })
+
+  it('le Vol de vie rend ses PV à l’impact du coup, avec son label (M14)', () => {
+    let drains = 0
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || !STATUSES[beat.status].drainsHit || beat.cause === undefined) continue
+        const m = momentOf(moments, beat.id)
+        const impact = impacts(m, result.beats).get(beat.cause)!
+        const texts = at(m, 'float', impact).flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' ? [c.float.badge.text] : []))
+        for (const e of beat.effects) expect(texts).toContain(effectBadge(e).text)
+        expect(at(m, 'special', impact).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES[beat.status].name))).toBe(true)
+        drains++
+      }
+    expect(drains).toBeGreaterThan(20)
+  })
+
+  it('une étape montre ses changements de statuts à son instant : la charge de Riposte part avec la Riposte, même quand la jauge du coup s’affiche avant (M3)', () => {
+    let held = 0
+    for (const { result, moments } of corpus) {
+      const children = childrenOf(result.beats)
+      for (const hit of result.beats) {
+        if (hit.type !== 'attack') continue
+        const riposte = children[hit.id].find((b) => b.type === 'statusReaction' && STATUSES[b.status].reflectsHit)
+        if (riposte?.type !== 'statusReaction') continue
+        const m = momentOf(moments, hit.id)
+        const find = (statuses: Status[]) => statuses.find((s) => s.id === riposte.status)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        // À l'impact, la jauge de Rétribution (une étape après la Riposte) est déjà montrée, la charge pas encore partie
+        const atImpact = at(m, 'statuses', impact).at(-1)
+        if (atImpact?.channel === 'statuses') {
+          expect(find(atImpact.statuses[riposte.side])).toEqual(find(result.beats[riposte.id - 1].state.statuses[riposte.side]))
+          held++
+        }
+        // Au retour du coup de la Riposte, la charge est consommée
+        const back = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed && c.blow.to === hit.attack.attacker && c.at > impact)!
+        const atBack = at(m, 'statuses', back.at).at(-1)
+        expect(atBack?.channel === 'statuses' && find(atBack.statuses[riposte.side])).toEqual(find(riposte.state.statuses[riposte.side]) ?? undefined)
+      }
+    }
+    expect(held).toBeGreaterThan(20)
+  })
+
+  it('ce qu’une compétence à dégâts directs pose sur sa cible tombe avec son dernier coup, textes et zone d’état ensemble (M21)', () => {
+    const venom = { id: 'venom', name: 'Venin', trigger: 'naturalOne' as const, forfeitsHit: true, effects: [
+      { type: 'damage' as const, amount: 3, target: 'opponent' as const },
+      { type: 'applyStatus' as const, status: 'poison' as const, stacks: 2, target: 'opponent' as const },
+    ] }
+    const result = simulateCombat([testCharacter('a', { maxHp: 60 }, [venom]), testCharacter('b', { maxHp: 60 })], { seed: 1 })
+    const moments = stage(result)
+    let cast = 0
+    for (const beat of result.beats) {
+      if (beat.type !== 'event' || beat.event.eventId !== 'venom') continue
+      const m = momentOf(moments, beat.id)
+      const landed = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed).at(-1)!
+      const poison = m.cues.filter((c) => c.channel === 'float' && c.float.kind === 'badge' && c.float.badge.text === STATUSES.poison.name)
+      expect(poison.map((c) => c.at)).toEqual([landed.at])
+      const shown = at(m, 'statuses', landed.at).at(-1)
+      expect(shown?.channel === 'statuses' && shown.statuses[1].some((s) => s.id === 'poison')).toBe(true)
+      cast++
+    }
+    expect(cast).toBeGreaterThan(3)
+  })
+
+  it('les dégâts d’un statut qui agit ont la couleur de leur famille : Poison en vert, Brûlure en mauve, la plaie en rouge (M37)', () => {
+    const tones = new Map<string, Set<string>>()
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusTick' && beat.type !== 'statusReaction') continue
+        const status = beat.status
+        if (!beat.effects.some((e) => e.type === 'damage' && e.target === beat.side)) continue
+        const m = momentOf(moments, beat.id)
+        const hurt = m.cues.filter((c) => c.channel === 'float' && c.side === beat.side && c.float.kind === 'badge' && c.float.badge.text.startsWith('-'))
+        for (const c of hurt) if (c.channel === 'float' && c.float.kind === 'badge') tones.set(status, (tones.get(status) ?? new Set()).add(c.float.badge.tone))
+      }
+    expect(tones.get('poison')).toEqual(new Set(['poison']))
+    expect(tones.get('burn')).toEqual(new Set(['arcane']))
+    expect(tones.get('bleed')).toEqual(new Set(['damage']))
   })
 
   it('combat test : un point d’attente avant chaque étape qui lance des dés, sans initiative animée', () => {

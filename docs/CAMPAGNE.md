@@ -97,6 +97,16 @@ _Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Les règles du proto
 | Piste de l'acte | **Un losange par récompense**, quel que soit son type, comme avant. |
 | Difficulté | **La courbe montante recommandée** (§ 18.3), recalculée pour cinq combats : 95, 90, 87, 84, 81 %, boss 45 %. |
 
+**Huitième passe, réflexion sur la progression (2026-10-23)** ([PROGRESSION.md](PROGRESSION.md) § 1, rien de codé) :
+
+| Question | Décision |
+| --- | --- |
+| Le dé | **Un d6 pour tous, aux faces imprimées**, socle de tous les modes ; kit de référence de deux compétences. **Copier et Refondre remplacent Agrandir et Retailler** ([PROGRESSION.md](PROGRESSION.md) § 6). |
+| Compétences d'origine | **La règle « un personnage ne déplace pas ses compétences d'origine » (§ 4.3, § 4.4) est obsolète** : chaque mode a ses règles. **En campagne, le champion part de sa signature seule** ; il grave dans son répertoire ([PROGRESSION.md](PROGRESSION.md) § 7, § 11). |
+| Longueur de l'acte | **Un acte de 10 combats** : avec cinq récompenses, un build reste très incomplet. Avec six faces seulement, **les forges sont plus rares que les reliques** : on commence avec 4 forges et 6 reliques (forge, relique, relique, forge, relique, forge, relique, relique, forge, relique), et **quatre faces de compétence au plus**, signature comprise. **Le système de difficulté actuel plaît et se garde**, adapté à la nouvelle longueur ([PROGRESSION.md](PROGRESSION.md) § 11, plan au § 18). |
+| Partie perdue | « Une partie, une vie » peut être revue si elle sert le jeu, **mais pas plusieurs vies pour le moment**. |
+| Spectacle | Le combat serré perd de sa force face aux conséquences des builds : en campagne, la démonstration prend le pas ([PROGRESSION.md](PROGRESSION.md) § 2). |
+
 ---
 
 ## 2. Le point de départ
@@ -439,6 +449,8 @@ _Questions réglées du 2026-10-21 au 2026-10-22 : voir § 1. Lectures confirmé
 
 **Question réglée depuis le prototype** : la cible d'un combat normal, remplacée par une courbe montante (septième passe, § 18.3). Restent à mesurer au laboratoire : la force de chaque opération de forge par personnage (Retailler en tête : Ysolde gagnait 63 % au d6), et l'apport d'un héritage sur la réussite d'un acte.
 
+**Profondeur de la progression** (2026-10-23) : synergies entre forge, compétences et reliques, écoles et voies, super coups, dés différents, feuille de personnage. Réflexion à part, avec ses estimations et ses questions : [PROGRESSION.md](PROGRESSION.md).
+
 ---
 
 ## 18. Le prototype livré (0.88.0)
@@ -464,7 +476,7 @@ Ce que les décisions du § 1 ne fixaient pas, choisi au plus simple :
 - **Les PV ne se gardent pas** d'un combat à l'autre, puisqu'il n'y a ni repos ni soin entre les combats.
 - **Le boss** : Le Colosse (§ 18.4), réglé lui aussi par ses PV, à 45 % contre le champion de référence du personnage tiré : la cible tient ainsi pour tous les champions.
 - **Graver** puise dans les compétences du dé des autres combattants (sur leur 1, leur 2 ou leur 3) : elles ont déjà leur icône peinte, et leurs statuts sont ceux du roster (§ 14). Une compétence d'un personnage à formes est gravée sans forme.
-- **Aiguiser** : un rang ajoute une charge à chaque statut cumulable (sous son plafond), +2 aux dégâts, soins et relâches, et un coup aux doubles qui frappent ; un statut qui ne cumule pas ne gagne rien (la face n'est pas proposée). Le nom porte le rang (« Pourfendre II »).
+- **Aiguiser** : un rang ajoute une charge à chaque statut cumulable (sous son plafond), +2 aux dégâts, soins et relâches, et un coup aux doubles qui frappent ; un statut qui ne cumule pas ne gagne rien (la face n'est pas proposée). Le nom porte le rang (« Pourfendre II »). **Pas de rang maximal** (décision de l'utilisateur, 2026-10-23 : brider l'opération est un mauvais choix) : le nombre d'aiguisages se règle par le nombre d'occasions que le mode en donne.
 - **Une face dont la compétence sacrifie le coup ne se dore pas** (la dorure ne servirait jamais).
 - **Abandonner** une partie compte comme une défaite, héritage compris.
 - **Les combats de campagne n'entrent pas dans l'historique** (adversaires aux PV réglés, boss hors du roster).

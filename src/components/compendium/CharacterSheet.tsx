@@ -6,10 +6,10 @@ import { RULES, type RuleId } from '../../game/rules'
 import { CHARACTERS } from '../../game/roster'
 import { fmtNum, fmtPct, Kpi, MatchRow, MiniPortrait, WIN_TEXT, WinBar } from '../RecordBits'
 import { StatSheet } from '../StatSheet'
-import { Icon } from '../Icon'
+import { Icon, StatusIcon } from '../Icon'
 import { Tabs } from '../Tabs'
 import { STATUSES } from '../../game/statuses'
-import { CharacterLink, formName, SkillSummary, StatusMedal } from './CodexBits'
+import { CharacterLink, formName, SkillSummary } from './CodexBits'
 import type { CompendiumNav } from './sections'
 
 interface Props {
@@ -104,26 +104,24 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
               ))}
             </section>
 
-            {/* Les règles de chaque forme (druide) : ce que la forme fait de lui, au-delà de ses compétences */}
+            {/* Les règles de chaque forme (druide) : ce que la forme fait de lui, au-delà de ses compétences. Elles
+                appartiennent au personnage et ne sont décrites qu'ici (0.98.0). */}
             {character.forms && (
               <section>
                 <h3 className="codex-label border-b border-line-2 pb-1">Règles de forme</h3>
                 {character.forms.map((f) =>
                   (f.statuses ?? []).map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className="flex w-full items-start gap-3 border-b border-line-1 py-2.5 text-left last:border-b-0"
-                      onClick={() => nav.go({ section: 'statuses', id })}
-                    >
-                      <StatusMedal id={id} size={42} />
+                    <div key={id} className="flex w-full items-start gap-3 border-b border-line-1 py-2.5 last:border-b-0">
+                      <span className="seal" data-tone="neutral" style={{ width: 42, height: 42 }}>
+                        <StatusIcon id={id} className="h-full w-full" />
+                      </span>
                       <span className="min-w-0">
                         <span className="block font-display text-[17px] font-bold text-ink-1">
                           {f.name} · {STATUSES[id].name}
                         </span>
                         <span className="block font-body text-[15px] leading-snug text-ink-2">{STATUSES[id].summary}</span>
                       </span>
-                    </button>
+                    </div>
                   )),
                 )}
                 <p className="pt-1.5 font-body text-[14px] text-ink-3">{RULES.forms.text}</p>

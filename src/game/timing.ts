@@ -49,13 +49,12 @@ export const VOLLEY_FORFEIT_SNAP = 120
 
 /** Le critique s'annonce sous le dé avant l'élan */
 export const CRIT_ANNOUNCE = 450
-/**
- * Élan vers l'adversaire jusqu'à l'impact. Doit rester vers 40 % de `LUNGE` (l'animation `.lunge` touche à 42 %) :
- * changer l'un, c'est changer l'autre.
- */
-export const WIND = 300
 /** Durée de l'animation d'élan (`.lunge`, index.css), qui revient en place après l'impact */
 export const LUNGE = 750
+/** Instant de l'impact dans l'animation d'élan, en part de sa durée (`.lunge` et `.lunge-fast` touchent à 42 %) */
+const LUNGE_IMPACT = 0.4
+/** Élan vers l'adversaire jusqu'à l'impact : déduit de `LUNGE` (docs/MISE_EN_SCENE.md § 4) */
+export const WIND = Math.round(LUNGE * LUNGE_IMPACT)
 /** Arrêt sur image avant l'impact d'un critique */
 export const CRIT_FREEZE = 110
 /** Après l'impact, avant que le coup s'efface (`STRIKE_FLOW_HOLD` si une plaie coule sur ce coup) */
@@ -63,15 +62,21 @@ export const STRIKE_HOLD = 550
 export const STRIKE_FLOW_HOLD = 650
 /** Repos après un coup (ou après le dernier coup d'une rafale) */
 export const STRIKE_REST = 450
-/** Coup de rafale : élan court jusqu'à l'impact ; vers 40 % de `LUNGE_FAST` (`.lunge-fast`) */
-export const VOLLEY_WIND = 170
+/**
+ * Les réactions au coup (Riposte, Épines, relique) partent au milieu de sa lecture, entre l'impact et le repos
+ * (docs/MISE_EN_SCENE.md, M17) ; en rafale, au milieu de `VOLLEY_STRIKE_HOLD` (plus bas)
+ */
+export const REACTION_LEAD = Math.round(STRIKE_HOLD / 2)
+/** Coup de rafale : durée de l'élan court (`.lunge-fast`), et l'élan jusqu'à l'impact, qui en est déduit */
 export const LUNGE_FAST = 420
+export const VOLLEY_WIND = Math.round(LUNGE_FAST * LUNGE_IMPACT)
 /** Arrêt sur image avant l'impact d'un critique en rafale */
 export const VOLLEY_CRIT_FREEZE = 90
 /** Coup de rafale : après l'impact (`VOLLEY_FLOW_HOLD` si une plaie coule), puis l'écart avant le suivant */
 export const VOLLEY_STRIKE_HOLD = 260
 export const VOLLEY_FLOW_HOLD = 220
 export const VOLLEY_GAP = 60
+export const VOLLEY_REACTION_LEAD = Math.round(VOLLEY_STRIKE_HOLD / 2)
 /** La plaie qui coule sur un coup : ses PV tombent un battement après son label */
 export const BLEED_DELAY = 140
 /** Le son du statut posé par un coup (poison de l'Aura de décoction) suit le Coup d'un battement */

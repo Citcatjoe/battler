@@ -17,12 +17,14 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [SYSTEMES.md](SYSTEMES.md) | Le grand livre des systèmes : inventaire de toutes les briques (résolution, chronologie, animations, sons, interface), contenu vu comme assemblages, surface de chaque mécanique, sources d'effets de bord, pistes |
 | | [RESOLUTION.md](RESOLUTION.md) | Le livre de règles de la résolution : phases du tour, chaîne de calcul, types d'effets, ordre, application et opposition, interactions, inspirations |
 | | [SONS.md](SONS.md) | Les règles du son : vocabulaire de sons, ce que chacun veut dire, son de chaque moment du combat, son d'une nouvelle compétence, mixage |
+| | [MISE_EN_SCENE.md](MISE_EN_SCENE.md) | Les règles de la mise en scène : synchronisation du combat à l'écran (ce qui tombe en même temps que quoi, à quel repère), contrôle de chaque règle, questions ouvertes |
 | | [POSTURES.md](POSTURES.md) | Les postures des combattants : cinq postures communes (attaque, esquive, coup encaissé, K.O., victoire) en plus de la garde, choix de la posture, planches de génération et découpe (`scripts/slice-poses.py`) |
 | | [PARIS.md](PARIS.md) | Les paris entre deux observateurs : règles (bourses, marchés, cotes, coups de théâtre, relance), interface, architecture, livraison par étapes |
 | | [RELIQUES.md](RELIQUES.md) | Les reliques : décisions, ce qui les sépare des compétences, règles des quatre types, récompense de tournoi, interface, identité visuelle (l'hexagone, la grammaire d'illustration), les douze reliques et leurs mesures (`npm run relics`), prompt de la planche d'icônes |
 | | [CAMPAGNE.md](CAMPAGNE.md) | La campagne et la forge du dé : décisions de l'utilisateur, grammaire de la forge, réglage des rencontres sur une courbe nominale, héritage, prototype livré (0.88.0), choix de l'agent et mesures (`npm run campaign`) |
 | **Réflexion** | [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md) | Étude : Battler face aux règles des auto-battlers, limites, jeux de référence, propositions |
 | | [FAMILLES.md](FAMILLES.md) | Proposition : dix familles d'effets, signature de chaque personnage, retouches, accroches pour les reliques |
+| | [PROGRESSION.md](PROGRESSION.md) | Réflexion et décisions : la progression d'un personnage, profondeur et synergies (constat mesuré, direction, d6 aux faces imprimées, répertoires par personnage, types de dégâts DP, DM, DT, feuille de personnage, campagne plus longue, durée des combats, pistes gardées pour plus tard), chaque piste estimée |
 | | [SORTS.md](SORTS.md) | Brainstorm des sorts, laboratoire (`scripts/lab.report.ts`) et audit des compétences (`scripts/skills.report.ts`), résultats des essais |
 | | [AUDIT_COMPENDIUM.md](AUDIT_COMPENDIUM.md) | Audit des textes des compétences et des statuts (0.72.0) : incohérences entre code, textes générés et documents, propositions de reformulation et d'interactions |
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
@@ -46,6 +48,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | change une règle de la campagne ou de la forge du dé | `CAMPAGNE.md` d'abord (décisions, § 18), puis `FEATURES.md` § 11 ; `npm run campaign` pour remesurer |
 | ajoute ou change un bouton, un onglet ou une icône de commande | `ui-kit/README.md` : composants de `src/components/kit.tsx` seulement, glyphe de `BattlerIcon` ; jamais d'image peinte dans une commande |
 | ajoute ou change un son, ou une compétence qui produirait un effet sans son | `SONS.md` d'abord : le son se déduit de l'effet, le code suit la règle écrite |
+| ajoute ou change une mise en scène (ce qui tombe ensemble, ce qui attend quoi), ou signale un défaut de synchronisation | `MISE_EN_SCENE.md` d'abord : une règle générale par constat, avec son contrôle dans `staging.test.ts` |
 | change une règle des paris | `PARIS.md` d'abord, puis `FEATURES.md` § 10 |
 | essaie une idée de compétence, ou audite les compétences | `SORTS.md` (laboratoire, audit, résultats) |
 | ajoute ou modifie une relique, ou une règle des reliques | `RELIQUES.md` (catalogue, mesures, `npm run relics`) et `FEATURES.md` § 8 |

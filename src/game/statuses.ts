@@ -174,6 +174,11 @@ export interface StatusDef {
    * `docs/SONS.md` § 8). Seul le Poison a le sien, le Grésillement.
    */
   tickSound?: 'fizz'
+  /**
+   * Famille de ses dégâts quand il agit (`statusTick`) : la couleur de leur « −N » (docs/MISE_EN_SCENE.md, M37).
+   * Absente : dégâts physiques, en rouge, comme les coups et le Saignement. `poison` en vert, `arcane` (magie) en mauve.
+   */
+  harm?: 'poison' | 'arcane'
   /** Moment où la durée (`turns`) est décomptée : début (défaut) ou fin des tours du porteur */
   expiresAt?: 'turnStart' | 'turnEnd'
   /**
@@ -296,6 +301,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     decays: true,
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
     tickSound: 'fizz',
+    harm: 'poison',
     opposes: 'regeneration',
   },
   /*
@@ -368,6 +374,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     turnsFromStacks: true,
     onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks }],
     expiresAt: 'turnEnd',
+    // Les Feux follets du druide (compétence `arcane`) : une brûlure magique, en mauve (2026-10-23, utilisateur)
+    harm: 'arcane',
   },
   vulnerable: {
     name: 'Vulnérable',
@@ -672,6 +680,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     badge: (s) => String(s.stacks),
     stacking: 'add',
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
+    // La couleur de l'Aura de pourriture qui la pose
+    harm: 'arcane',
   },
 
   /*

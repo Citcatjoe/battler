@@ -12,7 +12,9 @@ import { Portrait } from './Portrait'
 import { Icon } from './Icon'
 import { BackLink, Button, Glyph, SegmentedControl } from './kit'
 import { RelicSeal } from './RelicSeal'
-import { SkillDice } from './SkillDice'
+import { TipLayer, useTipLayer, type ShowTip } from './TipLayer'
+import { Switch } from './Switch'
+import type { Character } from '../game/character'
 
 interface Props {
   /** Les 16 cases de l'arbre (tournoi sans saison) */
@@ -123,14 +125,7 @@ function RuleTile({ rule }: { rule: Rule }) {
     >
       {rule.visual}
       <RuleText label={rule.label} state={rule.unavailable ?? (rule.on ? rule.states[0] : rule.states[1])} on={rule.on} />
-      <span
-        aria-hidden
-        className={`relative ml-auto h-6 w-11 shrink-0 rounded-full border-2 transition-colors ${rule.on ? 'border-gold-400 bg-gold-500/40' : 'border-line-2 bg-surface-0'}`}
-      >
-        <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full shadow-(--shadow-2) transition-all duration-150 ${rule.on ? 'left-[22px] bg-gold-300' : 'left-0.5 bg-ink-3'}`}
-        />
-      </span>
+      <Switch on={rule.on} />
     </button>
   )
 }
@@ -262,7 +257,7 @@ export function TournamentSetupScreen({
   ]
 
   return (
-    <div className="fade-in relative isolate h-full">
+    <TipLayer className="fade-in relative isolate h-full">
       {/* La porte de l'arène, très assombrie : le décor de l'onglet Tournoi, sous l'arbre */}
       <img
         src={tournamentImg}
@@ -333,8 +328,8 @@ export function TournamentSetupScreen({
             </div>
 
             {/* La palette : dix grandes cartes, le pinceau en or ; sans saison, le nombre de cases déjà prises */}
-            <ul className="mt-3 grid grid-cols-5 justify-items-center gap-x-3 gap-y-3" aria-label="Combattants">
-              {roster.map((c) => {
+            <RosterPalette>
+              {(tip) => roster.map((c) => {
                 const n = count(c.id)
                 return (
                   <li key={c.id}>
@@ -347,7 +342,8 @@ export function TournamentSetupScreen({
                       data-brush={c.id === brushId || undefined}
                       aria-pressed={c.id === brushId}
                       aria-label={`${c.name}, ${c.race} · ${c.archetype}${season.enabled ? '' : `, ${n} case${n > 1 ? 's' : ''}`}`}
-                      title={`${c.name} — ${c.race}, ${c.archetype}`}
+                      onMouseEnter={(e) => tip?.(<CharacterTooltip character={c} />, e.currentTarget)}
+                      onMouseLeave={() => tip?.(null)}
                       className="roster-card roster-card-lg"
                     >
                       <Portrait character={c} side={0} className="roster-card-face" />
@@ -361,25 +357,7 @@ export function TournamentSetupScreen({
                   </li>
                 )
               })}
-            </ul>
-
-            {/* Le pinceau : qui sera placé au clic (avec la saison, la fiche consultée) */}
-            <div className="mt-3 flex items-center gap-4 rounded-(--r-xs) border border-line-1 bg-surface-1/80 p-3">
-              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-(--r-xs) shadow-[0_0_0_2px_var(--gold-400)]">
-                <Portrait character={brush} side={0} className="h-full w-full" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-[26px] font-semibold leading-none text-gold-200">{brush.name}</p>
-                <p className="mt-1 truncate font-body text-[15px] text-ink-2">
-                  {brush.race} · {brush.archetype}
-                </p>
-                <p className="mt-1 font-data text-[13px] text-ink-3">
-                  {brush.maxHp} PV · {brush.twinDice ? '2 × ' : ''}d{brush.stats.damageDie} · esquive {percent(brush.stats.dodgeChance)} · critique{' '}
-                  {percent(brush.stats.critChance)} {multiplier(brush.stats.critMultiplier)}
-                </p>
-              </div>
-              <SkillDice character={brush} size="sm" tooltip="above" align="right" />
-            </div>
+            </RosterPalette>
 
             {/* Les règles du tournoi : une tuile par réglage, trois par ligne */}
             <section className="mt-3" aria-label="Règles">
@@ -438,6 +416,33 @@ export function TournamentSetupScreen({
           </div>
         }
       />
+    </TipLayer>
+  )
+}
+
+/** La palette, dans le calque d'infobulles de l'écran : chaque carte y ouvre sa fiche au survol. */
+function RosterPalette({ children }: { children: (tip: ShowTip | null) => ReactNode }) {
+  const tip = useTipLayer()
+  return (
+    <ul className="mt-3 grid grid-cols-5 justify-items-center gap-x-3 gap-y-3" aria-label="Combattants">
+      {children(tip)}
+    </ul>
+  )
+}
+
+/** La fiche d'un combattant au survol de sa carte : identité et caractéristiques, sans ses compétences. */
+function CharacterTooltip({ character: c }: { character: Character }) {
+  return (
+    <div role="tooltip" className="w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2)">
+      <p className="font-display text-lg font-extrabold leading-tight text-gold-200">{c.name}</p>
+      <p className="mt-0.5 font-body text-[14px] text-ink-2">
+        {c.race} · {c.archetype}
+      </p>
+      <div className="codex-divider my-2.5" />
+      <p className="font-data text-[14px] leading-snug text-ink-1">
+        {c.maxHp} PV · {c.twinDice ? '2 × ' : ''}d{c.stats.damageDie} · esquive {percent(c.stats.dodgeChance)} · critique{' '}
+        {percent(c.stats.critChance)} {multiplier(c.stats.critMultiplier)}
+      </p>
     </div>
   )
 }

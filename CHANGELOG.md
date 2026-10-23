@@ -32,6 +32,111 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.99.5] — 2026-10-23
+
+### Modifié
+- **Affrontement : « Au hasard » a un fond d'arène** (demande de l'utilisateur). L'arène est tirée à l'ouverture de l'écran d'affrontement, montrée en fond comme une arène choisie, et c'est elle que le combat prend (`onPlay(arena)`) : le fond et le combat sont toujours la même arène. Chaque visite de l'écran en tire une nouvelle ; le sélecteur dit toujours « Au hasard ». Avant, « Au hasard » gardait un fond neutre et l'arène n'était tirée qu'au lancement du combat.
+
+## [0.99.4] — 2026-10-23
+
+### Modifié
+- **Compendium : une compétence ne nomme plus ses porteurs** (décision de l'utilisateur : non pertinent pour la direction du jeu, où la forge détache les compétences des personnages). La fiche d'une compétence perd son bloc Porteur (portrait, nom, race) ; la ligne « Posé par » d'un statut perd la race et les noms ; l'index des compétences est groupé par nature (Martiale, Adresse, Arcane, Neutre) au lieu de la race, et le filtre ne cherche plus par nom de personnage. La pastille de forme (« Forme humaine ») reste : c'est une règle de la compétence. Seule la fiche d'un combattant liste ses compétences. Un test vérifie qu'aucune fiche de compétence ou de statut ne contient de nom de personnage ni de race.
+
+## [0.99.3] — 2026-10-23
+
+### Modifié
+- **Affrontement** : la section du dé de la fiche s'intitule « Dé de combat » au lieu de « Dé de dégâts » (demande de l'utilisateur). La règle du compendium et la ligne « Dégâts » des stats gardent leur nom.
+
+## [0.99.2] — 2026-10-23
+
+### Corrigé
+- **Affrontement : plus de voile derrière le nom** (retour de l'utilisateur : le dégradé était en fait opaque, son ombre coupée net sur les bords, et il masquait le modèle). Le voile (`.matchup-name-veil`) est retiré : le masque des illustrations (0.99.1) garde déjà la zone du nom dégagée, le nom se lit sur le fond de l'arène. La ligne race · archétype prend une ombre portée plus serrée (`.matchup-race`), sans former de bloc, pour rester lisible sur une arène claire. Vu en captures 1440 × 810 (réel, limite, druide avec Morgrut, barde sur La Paume-du-Vieux) : aucune ombre rectangulaire, modèles intacts près des fiches, cadres inchangés.
+
+## [0.99.1] — 2026-10-23
+
+### Modifié
+- **Affrontement, illustrations recentrées** (retour de l'utilisateur : les personnages reculaient, leur dos sortait de l'écran). Chaque combattant est centré sur son corps (`anchor="body"`) au milieu de l'espace entre le bord de l'écran et sa fiche, décalé de 12 px vers le bord (`FIGHTER_AXIS`, `FIGHTER_BIAS`), au lieu d'être repoussé de 110 px. La règle « jamais sous le nom » devient générique : un masque (`FIGHTER_MASK`) efface l'illustration dans le seul rectangle au-delà du bord de la fiche et au-dessus de son panneau, avec un fondu de 16 px hors de la zone protégée ; le reste de la silhouette est intact (le bras levé de Morgrut ne passe plus sous son nom, sans réglage propre à l'ogre).
+- **Rang d'une compétence aiguisée** : la pastille or mord un peu plus dans son emplacement, en diagonale (4 px vers l'intérieur).
+- Vu en captures 1440 × 810 (Firefox sans interface) : `?matchup=reel`, `limite`, `druide` (avec Morgrut), `barde`, et pendant l'entrée ; cadres des fiches inchangés (340,2 × 509,4 à y = 143,1, symétrie exacte).
+
+## [0.99.0] — 2026-10-23
+
+### Modifié
+- **Écran d'affrontement à géométrie fixe** (brief de l'utilisateur, `docs/ref/prompt-ecran-affrontement.md` et ses trois références) : la composition reste symétrique quel que soit le contenu. Deux fiches de mêmes dimensions (378 px de scène, 340 dans la référence en 1440 × 810), en miroir exact autour du sceau VS, chaque bloc à hauteur fixe :
+  - **nom** sur deux lignes au plus, aligné en bas, coupé au dernier mot qui tient (« Ervald le Revenu,… », même coupe des deux côtés) avec le nom complet en infobulle ; race · archétype dessous ; voile sombre discret derrière, illustrations écartées vers le bord pour ne jamais passer sous le nom ; écusson de rang accroché au bord extérieur du nom ;
+  - **dé de dégâts** : toujours 12 emplacements en 2 × 6, octogones de 44 px, les emplacements au-delà de la taille du dé grisés (la taille se lit comme une jauge). Face simple : le chiffre ; face à compétence : l'emblème et le chiffre en cartouche ; **face forgée** (compétence gravée) : cadre et fond or, plus de violet ; rang en pastille or (II, III…) ; **face dorée** (décision de l'utilisateur) : fond or sans le cadre de la face forgée, « +2 » dans le cartouche ; **au-delà de 12 faces** (décision, situation temporaire) : « +N faces » en or dans l'en-tête, la liste en infobulle ; **druide** (décision) : sélecteur du kit Humaine / Ours dans l'en-tête du dé, sans changer la hauteur ;
+  - **reliques** : une rangée de 6 places sans cadre (ombre portée seule), au-delà 5 puis « +N » avec la liste en infobulle, « Aucune relique » à la même hauteur.
+- Centre : le sceau VS seul ; le rappel des paris est masqué (`SHOW_BET_SUMMARY`, code gardé), le compteur reste sur Parier.
+- Sélecteur d'arène : « ARÈNE nom 3 / 9 » sur une ligne, de largeur fixe (les flèches ne bougent plus) ; le fond suit l'arène en direct (illustration à 45 % sous un voile sombre), neutre pour « Au hasard ».
+
+### Ajouté
+- Page de développement `?matchup=reel|limite|reel-inverse|limite-inverse|druide|barde` (`src/dev/MatchupReference.tsx`) : l'écran avec des données factices construites par les vraies fonctions, pour comparer aux références. Mesuré en 1440 × 810 dans Firefox sans interface : dans les six cas, fiches au même cadre (340,2 × 509,4 à y = 143,1), symétriques autour du VS (x = 720), rangées du dé et des reliques à la même hauteur des deux côtés, à un pixel près des références.
+
+## [0.98.0] — 2026-10-23
+
+### Ajouté
+- **Compendium, fiche d'une compétence** (demande de l'utilisateur : le groupe « Propres aux compétences » de la 0.97.1 listait des compétences). La section Compétences prend la disposition des Statuts et des Reliques : l'index groupé par race à gauche (sceau, nom, description, dé ; filtre par nature avec leur nombre), le détail à droite. Le détail est écrit dans la grammaire de la compétence : son sceau octogonal, sa nature, son déclencheur ; **Effet**, la description, qui porte le fonctionnement, avec ses pastilles de règle et celles que son aura ou son mécanisme applique ; **Aura**, ce que la règle en dit, en pastilles (jusqu'à la fin du combat, cumulable, plafond) et en lignes courtes (ce qu'elle pose, ce qu'elle bloque, ce qui la retire, qui d'autre la pose) ; **Mécanisme**, ni bonus ni malus, avec la règle des jauges de Rétribution ; **Pose**, les états qu'elle pose sous leur emblème ; ses porteurs.
+
+### Modifié
+- **Section Statuts : le vocabulaire commun seul**, les 13 bonus et malus de la zone d'état. Les auras et les mécanismes n'y ont plus de fiche : tout lien qui les cite (pastille de la Clepsydre du siège, de l'Ouverture ; « aussi posé par » du Poison ; interactions) mène à leur compétence, sous son sceau. Les règles de forme du druide ne sont décrites que dans sa fiche.
+- **Sceau d'une compétence au compendium : l'octogone du combat**, liseré à sa nature, au lieu du cercle des états. Une forme par objet : octogone pour une compétence, pièce ronde pour un état, hexagone pour une relique.
+
+### Retiré
+- Le groupe « Propres aux compétences » de la section Statuts (0.97.1).
+
+## [0.97.1] — 2026-10-23
+
+### Modifié
+- **Compendium, section Statuts : une grammaire par groupe** (demande de l'utilisateur : des emblèmes gris et des icônes de compétence se côtoyaient dans les Bonus). Les groupes Bonus et Malus ne contiennent plus que les statuts de la zone d'état, montrés par l'emblème de leur état. Les dix auras (Aura de puissance, glaciale, de sainteté…) en sortent et rejoignent les mécanismes et les règles de forme dans un groupe « Propres aux compétences », avec leur icône peinte, comme sur la barre de compétences en combat. La fiche d'une aura dit « aura · bonus » : elle reste un bonus par la règle (une purge de bonus la retire). Rien ne change en combat ni dans les règles.
+
+## [0.97.0] — 2026-10-23
+
+### Modifié
+- **Mise en scène du combat, retours de l'utilisateur sur `docs/MISE_EN_SCENE.md`**, qui devient le reflet des règles codées et le point de départ de toute mécanique qui s'anime (§ 6 : les questions à se poser ; § 8 : journal des modifications). Rien ne change dans les règles du combat (empreinte de non-régression inchangée).
+  - **Dé posé, battement, action** (M10, M12) : une compétence déclenchée par le dé qui sacrifie le coup, ou celle d'un double de la barde, part `DICE_READ` (350 ms) après le dé posé, comme l'élan d'un coup ; avant, elle tombait avec le dé.
+  - **Réactions au coup au milieu de sa lecture** (M17) : Riposte, Épines acérées, relique ou compétence déclenchée par le coup partent 275 ms après l'impact (130 ms en rafale ; sur pile, à la place de la lecture du coup lourd), sans attente de plus, au lieu d'attendre le repos du coup puis leur propre apparition. La Riposte touche environ 1 s plus tôt (975 ms dans un moment rejoué). Le coup s'efface à son heure même si ses réactions durent plus longtemps ; une Riposte l'efface à son élan.
+  - **Vol de vie à l'impact** (M14, Q1) : son soin et son label tombent avec le coup, comme le poison posé ; avant, 1,25 s après.
+  - **Compétence à dégâts directs** (M21, Q2) : ce qu'elle pose sur la cible de ses coups (textes et zone d'état) tombe avec son dernier coup. Aucune compétence du roster n'est concernée aujourd'hui.
+  - **Chaque étape montre ses changements de statuts à son instant** (M3, Q3) : les jauges de Rétribution comptent le coup à l'impact, et la charge de Riposte, consommée avant elles dans la chronologie, reste à l'écran jusqu'au coup de la Riposte.
+  - **Couleur des dégâts d'un statut par famille** (M37, nouveau champ `harm` du registre des statuts) : Poison en vert acide, Brûlure (Feux follets) et Pourriture en mauve, le reste en rouge.
+  - **Durées déduites** (`timing.ts`, Q4) : `WIND` et `VOLLEY_WIND` valent 40 % de l'animation d'élan (`VOLLEY_WIND` passe de 170 à 168 ms) ; `REACTION_LEAD` et `VOLLEY_REACTION_LEAD`, la moitié de la lecture du coup.
+- `staging.test.ts` : contrôles des règles nouvelles ou changées (battement avant la compétence du dé et du double, réactions au milieu de la lecture et coup effacé avant l'élan de la Riposte, Vol de vie à l'impact, charge de Riposte jusqu'à la Riposte, statut d'une compétence à dégâts directs sur un combat construit, couleur des dégâts par famille).
+- `SYSTEMES.md` (grammaire des couleurs), `SONS.md` (Vol de vie), `STATUTS.md` (check-list : famille des dégâts, mise en scène), `MOTEUR_V2.md` (corollaire du § 7 dépassé), `FEATURES.md` § 1.
+
+## [0.96.5] — 2026-10-23
+
+### Corrigé
+- **Affrontement : la forge se relit sur le build** (retour de l'utilisateur : la passe sobre de la 0.96.2 avait aplati ces informations). Chaque sceau porte sa position dans un coin (une compétence gravée sur une face se lit à sa position), en pastille violette pour une gravure, avec un liseré violet de 3 px ; une face dorée, sceau ou chiffre, a un fond d'or ; un rang d'aiguisage a son étiquette d'or en chiffre romain ; un dé agrandi ou retaillé se lit au nombre de faces. Toujours ni halo, ni pastille de dé, ni effet de survol. Vu en captures Firefox (gravure, dorure sur un chiffre et sur un sceau, les deux ensemble, rang II, d12, d11 et d5 de la barde).
+
+## [0.96.4] — 2026-10-23
+
+### Retiré
+- **Plafond de l'aiguisage au rang III** (`MAX_SHARPEN`, 0.96.1), à la demande de l'utilisateur : brider l'opération elle-même est un mauvais choix. Une compétence s'aiguise de nouveau sans rang maximal (Pourfendre IV et au-delà) ; seuls un statut à son plafond, ou qui ne cumule pas, ne gagnent rien. Le nombre d'aiguisages se règle par le nombre d'occasions qu'un mode en donne (récompenses de campagne, construction de saison), pas par une limite de l'opération.
+
+## [0.96.3] — 2026-10-23
+
+### Ajouté
+- **`docs/MISE_EN_SCENE.md`, les règles de la mise en scène** (à relire par l'utilisateur) : le livre de règles de la synchronisation du combat à l'écran, sur le modèle de `SONS.md`. Il fixe le vocabulaire (moment, instant, attente, battement, et les cinq repères : dé posé, impact, apparition, arrivée du signal, impact de scène), puis 36 règles extraites de `staging.ts`, où elles vivaient en commentaires. Chaque règle donne son code et le test de `staging.test.ts` qui la vérifie, ou « aucun ». Le document relève aussi les accords tenus avec le CSS, quatre questions ouvertes (le Vol de vie soigne 1,25 s après l'impact alors que le poison tombe à l'impact ; le statut d'une compétence à dégâts directs entre dans la zone d'état après ses coups ; la charge de Riposte se voit consommée à l'impact ou à la Riposte selon qu'un statut est posé ; `WIND` réglé à la main contre `LUNGE`), la marche à suivre d'un constat jusqu'à son contrôle, et la liste des contrôles à écrire. Aucun changement dans le jeu.
+
+### Corrigé
+- `docs/SYSTEMES.md` § 4.1 citait `anticipate`, retiré par le moteur v2 : il renvoie maintenant aux règles de la mise en scène.
+
+## [0.96.2] — 2026-10-23
+
+### Modifié
+- **Zone de compétence du combat revenue à la barre de sceaux d'avant la 0.96.0** (demande de l'utilisateur : la version face par face posait problème au redimensionnement ; une autre solution viendra). Gardé de la 0.96.0 : pas de libellé au-dessus des dés, barres de vie alignées, et le reflet du dé qui roule, réduit à une classe sur le sceau existant de la face montrée (`is-rolled`), sans élément de plus.
+- **Affrontement** : le classement au-dessus du nom devient un badge seul, le rang en chiffre d'or dans un écusson, sans texte autour. Le build est plus sobre : plus de pastille de dé sur les sceaux, plus de liseré ni de halo coloré, aucun effet au survol (les infobulles restent) ; la forge se lit à un filet fin (violet pour la gravure, or pour la dorure) et à un rang discret. `DieBuild` ne sert plus qu'à l'affrontement (props et exports du combat retirés).
+- **Configuration du tournoi** : la fiche du combattant choisi sous la palette est retirée ; ses caractéristiques (race et archétype, PV, dé, esquive, critique), sans compétence, s'affichent dans une infobulle peinte au survol de chaque portrait.
+
+### Corrigé
+- **Icônes des statuts** dans le compendium (index, fiche, « Posé par », pastilles) et l'infobulle des reliques : un statut de la zone d'état (Critique assuré, Armure temporaire, Poison, Saignement, Brûlure, Épines, Vol de vie, Esquive améliorée…) montre l'emblème gravé de son état, comme en combat, et non plus l'icône de la compétence qui le pose (la cible d'Œil de faucon, le crâne du Souffle de la tombe). Auras, formes et mécanismes gardent leur icône peinte. Ce n'était pas une régression : le compendium n'était jamais passé aux emblèmes de la 0.79.2 (`statusIcon`, `Icon.tsx`).
+
+## [0.96.1] — 2026-10-23
+
+### Modifié
+- **Aiguiser : rang III au plus** (décision de l'utilisateur, « pour le moment ») : une compétence s'aiguise deux fois au plus (`MAX_SHARPEN`). Au rang III, sa face n'est plus proposée, et un troisième aiguisage est refusé.
+- **Graver** : règle confirmée par l'utilisateur, déjà appliquée par le moteur : la compétence gravée ne prend qu'une face libre et n'écrase jamais une compétence de base (seule l'Attente de l'ogre, qui ne fait rien, se remplace). Le test des journaux de forge tirés au hasard le vérifie désormais pour tout le roster, sur douze forges.
+
 ## [0.96.0] — 2026-10-23
 
 ### Ajouté

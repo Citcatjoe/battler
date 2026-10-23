@@ -583,16 +583,57 @@ describe('musique de fond (docs/SONS.md § 10, 0.48.0)', () => {
     expect([...sound.MUSIC_TRACKS].sort()).toEqual(['battle-boss', 'battle-drums', 'battle-orchestral'])
     for (const t of sound.MUSIC_TRACKS) expect(sound.MUSIC_LOUDNESS[t]).toBeLessThan(0)
   })
-  it('la musique se coupe à part (0.53.0), sans toucher au bouton du son', async () => {
-    const sound = await import('./sound')
-    const before = sound.isMuted()
-    sound.setMusicMuted(true)
-    expect(sound.isMusicMuted()).toBe(true)
-    expect(sound.isMuted()).toBe(before)
-    sound.setMusicMuted(false)
-    expect(sound.isMusicMuted()).toBe(false)
+  it('effets et musique : deux interrupteurs indépendants (panneau du son)', async () => {
+    // Faux contexte audio : on lit le niveau du bus des effets (premier gain) et de la musique (dernier)
+    type FakeGain = { gain: { value: number; setTargetAtTime: (v: number) => void }; connect: (n: unknown) => unknown }
+    const gains: FakeGain[] = []
+    const node = () => ({ connect: (n: unknown) => n, threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} })
+    class FakeAudioContext {
+      state = 'running'
+      currentTime = 0
+      sampleRate = 8
+      destination = {}
+      createGain() {
+        const g: FakeGain = { gain: { value: 1, setTargetAtTime: (v) => void (g.gain.value = v) }, connect: (n) => n }
+        gains.push(g)
+        return g
+      }
+      createDynamicsCompressor = node
+      createBuffer = () => ({ getChannelData: () => new Float32Array(8) })
+      decodeAudioData = () => Promise.reject(new Error('faux'))
+      resume = () => Promise.resolve()
+    }
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('hors ligne')))
+    try {
+      // Import dynamique voulu : le module crée son contexte audio à partir du faux, rechargé ici
+      vi.resetModules()
+      const sound = await import('./sound')
+      sound.setMuted(true)
+      sound.setMusicMuted(false)
+      sound.music.start(sound.MUSIC_TRACKS[0])
+      const [effects, musicBus] = [gains[0], gains[gains.length - 1]]
+      // Effets coupés, musique active : la musique s'entend
+      expect(effects.gain.value).toBe(0)
+      expect(musicBus.gain.value).toBe(1)
+      // Musique coupée seule : les effets reviennent sans elle
+      sound.setMuted(false)
+      sound.setMusicMuted(true)
+      expect(sound.isMuted()).toBe(false)
+      expect(effects.gain.value).toBeGreaterThan(0)
+      expect(musicBus.gain.value).toBe(0)
+      // Couper les effets ne touche plus à la musique
+      sound.setMusicMuted(false)
+      sound.setMuted(true)
+      expect(sound.isMusicMuted()).toBe(false)
+      expect(musicBus.gain.value).toBe(1)
+      sound.music.stop()
+    } finally {
+      vi.unstubAllGlobals()
+      vi.resetModules()
+    }
   })
-  it('son et musique coupés par défaut ; un choix enregistré « rallumé » les rétablit', async () => {
+  it('effets et musique coupés par défaut ; un choix enregistré « rallumé » les rétablit', async () => {
     const stored = new Map<string, string>()
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => stored.get(k) ?? null,
