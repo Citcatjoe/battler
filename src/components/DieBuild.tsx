@@ -28,6 +28,8 @@ export interface DieCell {
   engraved: boolean
   /** Bonus de la dorure (0 : aucune) */
   gild: number
+  /** Ce que frappe la face (valeur imprimée, forge comprise), dorure non comprise */
+  value: number
   /** Rang de forge de sa compétence (0 : jamais aiguisée) */
   rank: number
 }
@@ -50,6 +52,7 @@ export function dieCells(character: Character, form = 0): DieCell[] {
       event,
       engraved: !!event && forge.engraved.get(face)?.id === event.id,
       gild: character.gilded[face] ?? 0,
+      value: character.strikeValue(face),
       rank: event ? (forge.ranks.get(event.id) ?? 0) : 0,
     }
   })
@@ -116,7 +119,7 @@ export function DieBuild({ character }: { character: Character }) {
 }
 
 function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 'left' | 'right' }) {
-  const { face, event, gild, rank, engraved } = cell
+  const { face, event, gild, rank, engraved, value } = cell
   // Cartouche : le chiffre d'une face à compétence, suivi du bonus d'une dorure (« 3+2 ») ; le bonus seul sur une face simple
   const plate = `${event ? face : ''}${gild ? `+${gild}` : ''}`
   return (
@@ -127,7 +130,7 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
           <SkillSeal id={event.id} size={SLOT} />
         ) : (
           <span aria-label={`Face ${face}`} className="skill-seal die-slot-plain" style={{ width: SLOT, height: SLOT }}>
-            {face}
+            {value}
           </span>
         )}
         {plate && <span className="die-slot-num">{plate}</span>}
@@ -153,7 +156,7 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
             </span>
           </div>
           <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">
-            {twin ? `Chaque dé qui fait ${face} frappe pour ${face}` : `Frappe pour ${face}`}
+            {twin ? `Chaque dé qui fait ${face} frappe pour ${value}` : `Frappe pour ${value}`}
             {gild ? `, +${gild} (face dorée).` : '.'}
           </p>
         </div>

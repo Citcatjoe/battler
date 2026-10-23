@@ -78,7 +78,7 @@ export function ForgedDie({
               data-off={targets && !target ? '' : undefined}
               style={{ width: TILE[size], height: TILE[size] }}
             >
-              {skill ? <SkillSeal id={skill.id} size={size === 'md' ? 40 : 32} /> : f.face}
+              {skill ? <SkillSeal id={skill.id} size={size === 'md' ? 40 : 32} /> : f.value}
               {skill && <span className="forge-face-num">{f.face}</span>}
               {f.rank > 0 && <span className="forge-face-rank">{rankLabel(f.rank)}</span>}
             </button>

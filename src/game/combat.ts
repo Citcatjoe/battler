@@ -84,8 +84,13 @@ export type AppliedEffect =
 
 export interface Attack {
   attacker: Side
-  /** Valeur du dé de dégâts */
+  /** Valeur du dé de dégâts : la face tombée (« sur un 4 ») */
   roll: number
+  /**
+   * Valeur imprimée de la face (règles v2, phase 3), quand elle diffère de son numéro : ce que frappe le coup, avant
+   * reliques, dorure et critique. Absente : la face frappe pour son numéro
+   */
+  printed?: number
   /** Nombre de faces du dé utilisé */
   faces: number
   dodged: boolean
@@ -349,7 +354,10 @@ export function resolveAttack(
   defenderStatuses: readonly Status[],
   /** Une compétence sacrifie-t-elle ce coup ? Interrogé juste après le dé (voir `forfeitsHit`) */
   forfeits: (roll: number, faces: number) => boolean = () => false,
-  /** Dé imposé pour ce coup (ex. le d6 de Coup de chance) ; défaut : le dé du porteur */
+  /**
+   * Dé imposé pour ce coup (ex. le d6 de Coup de chance) : un dé étranger, qui frappe pour la valeur tirée ; défaut : le dé
+   * du porteur, dont chaque face frappe pour sa valeur imprimée (`Character.strikeValue`)
+   */
   die?: number,
   /** Valeur imposée par l'observateur (mode triche), ramenée entre 1 et le nombre de faces */
   forcedRoll?: number,
@@ -392,7 +400,9 @@ export function resolveAttack(
   )
   // Face dorée (forge du dé) : même règle qu'une relique de face
   const gild = attacker.gilded[roll] ?? 0
-  const value = (reshaped?.value ?? roll) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
+  // Le dé du porteur frappe pour la valeur imprimée de sa face ; un dé étranger, pour sa valeur tirée
+  const printed = die === undefined ? attacker.strikeValue(roll) : roll
+  const value = (reshaped?.value ?? printed) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
 
   // Un coup transformé « sans critique » (Charge) ne tire pas le critique et ne consomme pas un critique assuré
   const critBy = reshaped?.noCrit ? undefined : attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
@@ -448,6 +458,7 @@ export function resolveAttack(
   return {
     ...base,
     ...(reshaped && { reshaped }),
+    ...(printed !== roll && { printed }),
     ...(relicBonus.length > 0 && { relicBonus }),
     ...(gild > 0 && { gild }),
     shields,
@@ -1077,7 +1088,7 @@ export function simulateCombat(
     // `merged` : un seul coup qui vaut la somme (Soliste : 3 × 5 = 15), comme un coup transformé : le dé
     // affiché reste celui du double, la valeur du coup est la somme
     if (skill.merged && skill.volley)
-      return strikeOnce(attacker, undefined, rolls[0], { event: skill.id, value: skill.volley * rolls[0], noCrit: false }, false, pair)
+      return strikeOnce(attacker, undefined, rolls[0], { event: skill.id, value: skill.volley * fighters[attacker].strikeValue(rolls[0]), noCrit: false }, false, pair)
     for (let k = 0; k < (skill.volley ?? 0); k++) {
       const down = strikeOnce(attacker, undefined, rolls[0], undefined, false, pair)
       if (down !== undefined) return down
@@ -1141,9 +1152,11 @@ export function simulateCombat(
         att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
         volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: faces.length, faces })
       }
-      // Tous les coups d'une rafale, celui de l'action compris, ont la rafale pour cause
+      // Tous les coups d'une rafale, celui de l'action compris, ont la rafale pour cause. Un dé étranger (`extraDie` :
+      // le d6 de Coup de chance) frappe pour sa valeur tirée ; le dé du porteur, pour ses valeurs imprimées
+      const foreign = flurry ? STATUSES[flurry.id].extraDie : undefined
       for (const [k, die] of faces.entries()) {
-        down = strikeOnce(attacker, k === 0 ? undefined : die, undefined, undefined, false, volley)
+        down = strikeOnce(attacker, k === 0 || foreign === undefined ? undefined : die, undefined, undefined, false, volley)
         if (down !== undefined) return end(other(down), 'ko')
       }
       // Coups instantanés (Furie des vents) : une charge gagnée pendant le coup de l'action frappe tout de
@@ -1159,7 +1172,7 @@ export function simulateCombat(
           posedBy[attacker][burst.id] ?? lastStrike,
         )
         for (const die of extra) {
-          down = strikeOnce(attacker, die, undefined, undefined, true, burstBeat)
+          down = strikeOnce(attacker, def.extraDie === undefined ? undefined : die, undefined, undefined, true, burstBeat)
           if (down !== undefined) return end(other(down), 'ko')
         }
       }

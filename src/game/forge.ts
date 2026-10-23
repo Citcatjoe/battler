@@ -55,17 +55,30 @@ export type ForgeStep =
   | { op: 'enlarge' }
   | { op: 'trim' }
 
-/** Ce que la forge a fait du dé : sa taille, ses compétences gravées, ses dorures, les rangs de ses compétences. */
+/**
+ * Ce que la forge a fait du dé : sa taille, ses compétences gravées, ses dorures, les rangs de ses compétences, et les
+ * valeurs imprimées qu'elle a changées (règles v2).
+ */
 export interface ForgeState {
   size: number
   engraved: ReadonlyMap<number, CharacterEvent>
   gilded: ReadonlyMap<number, number>
   /** Rangs gagnés par compétence (id), 0 par défaut : une compétence aiguisée deux fois est au rang III */
   ranks: ReadonlyMap<string, number>
+  /** Valeurs imprimées changées par la forge, par face (les autres gardent celle de la définition) */
+  printed: ReadonlyMap<number, number>
 }
 
 /** Ce qu'il faut de la définition d'un personnage pour forger son dé. */
-export type ForgeBase = Pick<CharacterDef, 'stats' | 'events' | 'twinDice'>
+export type ForgeBase = Pick<CharacterDef, 'stats' | 'events' | 'twinDice' | 'strikes'>
+
+/**
+ * Ce que frappe une face (règles v2, phase 3) : la valeur que la forge lui a donnée, sinon sa valeur imprimée, sinon son
+ * numéro. Le jet désigne la face ; la face frappe pour sa valeur.
+ */
+export function faceValue(base: Pick<ForgeBase, 'strikes'>, state: Pick<ForgeState, 'printed'> | undefined, face: number): number {
+  return state?.printed.get(face) ?? base.strikes?.[face - 1] ?? face
+}
 
 /** La face (ou le double) d'une compétence du dé, ou undefined (compétence hors dé, jet maximal). */
 const faceOf = (base: ForgeBase, e: CharacterEvent) => (base.twinDice ? doubleFace(e.trigger) : rollFace(e.trigger))
@@ -129,8 +142,9 @@ export function forgeState(base: ForgeBase, steps: readonly ForgeStep[]): ForgeS
   const engraved = new Map<number, CharacterEvent>()
   const gilded = new Map<number, number>()
   const ranks = new Map<string, number>()
+  const printed = new Map<number, number>()
   for (const step of steps) {
-    if (!stepValid(base, { size, engraved, gilded, ranks }, step)) throw new Error(`Forge impossible : ${stepLabel(step)}`)
+    if (!stepValid(base, { size, engraved, gilded, ranks, printed }, step)) throw new Error(`Forge impossible : ${stepLabel(step)}`)
     switch (step.op) {
       case 'enlarge':
         size += ENLARGE_FACES
@@ -140,6 +154,7 @@ export function forgeState(base: ForgeBase, steps: readonly ForgeStep[]): ForgeS
         if (lost) ranks.delete(lost.id)
         engraved.delete(size)
         gilded.delete(size)
+        printed.delete(size)
         size -= 1
         break
       }
@@ -150,11 +165,11 @@ export function forgeState(base: ForgeBase, steps: readonly ForgeStep[]): ForgeS
         gilded.set(step.face, GILD_BONUS)
         break
       case 'sharpen':
-        for (const e of skillsOn(base, { size, engraved, gilded, ranks }, step.face)) ranks.set(e.id, (ranks.get(e.id) ?? 0) + 1)
+        for (const e of skillsOn(base, { size, engraved, gilded, ranks, printed }, step.face)) ranks.set(e.id, (ranks.get(e.id) ?? 0) + 1)
         break
     }
   }
-  return { size, engraved, gilded, ranks }
+  return { size, engraved, gilded, ranks, printed }
 }
 
 /* ---------- Le personnage forgé ---------- */
@@ -225,6 +240,8 @@ export interface ForgedFace {
   /** Compétence gravée (aiguisée) */
   engraved?: CharacterEvent
   gild: number
+  /** Ce que frappe la face, dorure non comprise (`faceValue`) */
+  value: number
   /** Rang le plus haut de ses compétences (0 : aucune aiguisée) */
   rank: number
 }
@@ -244,6 +261,7 @@ export function forgedFaces(base: ForgeBase, steps: readonly ForgeStep[]): Forge
       idle: originOn(base, face).some((e) => e.idle) && !engraved,
       ...(engraved && { engraved: on.find((e) => e.id === engraved.id) }),
       gild: state.gilded.get(face) ?? 0,
+      value: faceValue(base, state, face),
       rank: Math.max(0, ...skillsOn(base, state, face).map((e) => state.ranks.get(e.id) ?? 0)),
     }
   })

@@ -134,7 +134,7 @@ describe('catalogue des statuts', () => {
     expect(who('bearMight')).toEqual(['form:thaldrin'])
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
     expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk'])
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'skill:elaria'])
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)

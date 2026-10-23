@@ -21,6 +21,7 @@ import {
   type PendingReward,
 } from '../game/campaign'
 import type { Character } from '../game/character'
+import { rollFace } from '../game/events'
 import { stepLabel } from '../game/forge'
 import { getRelic } from '../game/relics'
 import { randomSeed, seededRng } from '../game/rng'
@@ -30,6 +31,7 @@ import { BackLink, Button, Glyph } from './kit'
 import { MiniPortrait } from './RecordBits'
 import { RelicCard, RelicRow } from './RelicSeal'
 import { SkillDice } from './SkillDice'
+import { SkillSeal } from './SkillSeal'
 
 /*
  * La campagne (0.88.0, docs/CAMPAGNE.md) : le choix du champion et de son héritage, la carte de l'acte (le champion, son
@@ -101,6 +103,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
                 {c.race} · {c.archetype} · {c.twinDice ? '2' : ''}d{c.stats.damageDie}
               </p>
               <SkillDice character={c} />
+              <SignatureLine character={c} />
               <p className="min-h-6 font-body text-[15px] font-bold text-gold-300">{legacy ? `Héritage : ${legacy} amélioration${legacy > 1 ? 's' : ''} de sa dernière partie` : ''}</p>
             </button>
           )
@@ -191,6 +194,25 @@ function ActTrack({ run }: { run: CampaignRun }) {
   )
 }
 
+/**
+ * La signature du champion (règles v2, 0.104.0) : la seule compétence de son kit au départ d'une campagne, avec la face
+ * qui la porte. Rien pour un champion parti de son kit entier (Morgrut, Thaldrin, Fanchon).
+ */
+function SignatureLine({ character }: { character: Character }) {
+  const skill = character.events.find((e) => e.id === character.definition.signature)
+  if (!skill) return null
+  const face = rollFace(skill.trigger)
+  return (
+    <p className="flex items-center gap-2 font-body text-[15px] text-ink-2">
+      <SkillSeal id={skill.id} size={32} />
+      <span>
+        Signature : <b className="text-ink-1">{skill.name}</b>
+        {face !== undefined && `, sur le ${face}`}
+      </span>
+    </p>
+  )
+}
+
 /** Le champion tel qu'il est : son portrait en pied, son dé forgé, ses reliques. */
 function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRun }) {
   return (
@@ -203,6 +225,7 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
         <p className="font-body text-lg text-ink-2">
           {champion.race} · {champion.archetype} · {champion.maxHp} PV
         </p>
+        <SignatureLine character={champion} />
       </div>
       <div className="relative z-10 flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Son dé · d{champion.stats.damageDie}</span>

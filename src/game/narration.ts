@@ -175,14 +175,14 @@ export function attackLog(
     return {
       kind: 'dodge',
       side: defender,
-      text: `Tour ${turn} · ${att.name} frappe (${attack.roll}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''} !`,
+      text: `Tour ${turn} · ${att.name} frappe (${attack.printed ?? attack.roll}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''} !`,
     }
   }
   if (attack.crit) {
     return {
       kind: 'crit',
       side: attack.attacker,
-      text: `Tour ${turn} · ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${attack.roll} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
+      text: `Tour ${turn} · ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${attack.printed ?? attack.roll} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
     }
   }
   const flavor = attack.roll === attack.faces ? ' Coup maximal !' : attack.roll === 1 ? ' Une égratignure.' : ''

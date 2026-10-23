@@ -7,6 +7,7 @@ import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, 
 import { computeStats } from './stats'
 import { BEAR_MIGHT, DECOCTION_POISON, STATUSES, stacksOf, type Status, type StatusId } from './statuses'
 import { EMOJI, testCharacter } from './test-utils'
+import { Character } from './character'
 import { getRelic, RELIC_IDS, relicKind, relicLine, RELICS, validateRelics, type Relic } from './relics'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
 
@@ -160,6 +161,31 @@ describe('attaque', () => {
   it('applique le multiplicateur critique, arrondi', () => {
     const r = run([testCharacter('a', { critChance: 1, critMultiplier: 2.5 }), testCharacter('b')])
     expect(attacksOf(r)[0]).toMatchObject({ crit: true, raw: 3, damage: 3 })
+  })
+
+  it('valeur imprimée (règles v2, phase 3) : la face tombée frappe pour sa valeur, la dorure s’y ajoute, un dé étranger frappe pour son jet', () => {
+    const printed = testCharacter('a', { damageDie: 3, maxHp: 500 }).adjusted({ strikes: [10, 20, 30] })
+    const r = run([printed, testCharacter('b', { maxHp: 500 })])
+    const mine = attacksOf(r).filter((a) => a.attacker === 0)
+    expect(new Set(mine.map((a) => a.roll))).toEqual(new Set([1, 2, 3]))
+    for (const a of mine) expect(a).toMatchObject({ printed: a.roll * 10, raw: a.roll * 10 })
+    // Face dorée : +2 à la valeur imprimée de la face, pas à son numéro
+    const gilded = run([printed.withForge([{ op: 'gild', face: 2 }]), testCharacter('b', { maxHp: 500 })])
+    for (const a of attacksOf(gilded).filter((x) => x.attacker === 0 && x.roll === 2)) expect(a).toMatchObject({ printed: 20, gild: 2, raw: 22 })
+    // Sans valeur imprimée, la face frappe pour son numéro (aucun champ `printed`)
+    for (const a of attacksOf(run([testCharacter('a', { damageDie: 3 }), testCharacter('b')])).filter((x) => x.attacker === 0)) expect(a.printed).toBeUndefined()
+  })
+
+  it('valeur imprimée : Coup de chance frappe pour le jet de son propre d6, pas pour une face du porteur', () => {
+    const lucky = testCharacter('a', { damageDie: 1, maxHp: 500 }, [
+      { id: 'go', name: 'Go', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }] },
+    ]).adjusted({ strikes: [50] })
+    const r = run([lucky, testCharacter('b', { maxHp: 500 })])
+    const [own, extra] = attacksOf(r).filter((a) => a.attacker === 0)
+    expect(own).toMatchObject({ roll: 1, printed: 50 })
+    expect(extra.faces).toBe(6)
+    expect(extra.printed).toBeUndefined()
+    expect(extra.raw).toBe(extra.roll)
   })
 })
 
@@ -786,8 +812,7 @@ describe('résolution : phases, contrôle, réactions, application', () => {
   })
 
   it('application : immunité du personnage, sans rien consommer', () => {
-    const immune = testCharacter('b')
-    const b = Object.assign(Object.create(Object.getPrototypeOf(immune)), immune, { immunities: ['poison'] })
+    const b = new Character({ ...testCharacter('b').definition, immunities: ['poison'] })
     const r = run([
       testCharacter('a', {}, [
         {

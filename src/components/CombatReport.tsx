@@ -68,7 +68,7 @@ export function FaceHistogram({
               aria-label={`${twin && skill ? 'Double' : 'Face'} ${face} : ${n} fois`}
               style={{ width: TILE[size], height: TILE[size] }}
             >
-              {skill ? <SkillSeal id={skill.id} size={32} /> : face}
+              {skill ? <SkillSeal id={skill.id} size={32} /> : (f?.value ?? face)}
               {skill && <span className="forge-face-num">{face}</span>}
               {!!f?.rank && <span className="forge-face-rank">{rankLabel(f.rank)}</span>}
             </span>

@@ -163,12 +163,14 @@ export const RELICS: readonly Relic[] = [
     effects: [{ type: 'cleanse', polarity: 'negative', count: 1, orElse: { type: 'heal', amount: 3 } }],
   },
   {
+    // 0.105.0 (retour de l'utilisateur) : l'Aura de puissance qu'elle posait se lisait comme une compétence dans la barre
+    // de compétences, et sa règle (cumulée tous les 4 tours) était abstraite. Un statut générique, le Critique assuré.
     id: 'siege-clepsydra',
     name: 'Clepsydre du siège',
-    flavor: 'Un bol de bronze percé au fond, trois graduations, l’eau arrêtée à la deuxième. Plus le siège dure, plus il frappe fort.',
+    flavor: 'Un bol de bronze percé au fond, trois graduations, l’eau arrêtée à la deuxième. Plus le siège dure, plus il frappe juste.',
     trigger: { type: 'turn', turn: 6 },
-    cooldown: 4,
-    effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
   },
   /* Seuil : des contenants et talismans qui gardent quelque chose jusqu'à la rupture */
   {

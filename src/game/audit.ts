@@ -315,7 +315,12 @@ export function createAudit() {
           const gild = r.fighters[att].gilded[a.roll] ?? 0
           if (gild !== (a.gild ?? 0)) flag('face dorée incohérente', r, i, `${a.gild ?? 0} au lieu de ${gild}`)
           else if (gild) see('face dorée')
-          const value = (a.reshaped?.value ?? a.roll) + bonus + gild
+          // Valeur imprimée (règles v2, phase 3) : quand le coup la porte, c'est celle de la face du porteur (un dé étranger,
+          // le d6 de Coup de chance, frappe pour son jet et n'en porte pas)
+          const printed = r.fighters[att].strikeValue(a.roll)
+          if (a.printed !== undefined && a.printed !== printed) flag('valeur imprimée incohérente', r, i, `${a.printed} au lieu de ${printed}`)
+          else if (a.printed !== undefined) see('valeur imprimée')
+          const value = (a.reshaped?.value ?? a.printed ?? a.roll) + bonus + gild
           let raw = a.crit ? Math.round(value * a.critMultiplier) : value
           for (const st of prev.statuses[att]) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
           for (const st of prev.statuses[def]) raw = STATUSES[st.id].modifyIncoming?.(raw, st) ?? raw
@@ -451,9 +456,10 @@ export function createAudit() {
           if (next?.type !== 'event' || next.event.eventId !== skill.id) flag('double : compétence absente', r, i, next?.type ?? '')
           // `merged` (Crescendo, Soliste) : un seul coup qui vaut la somme
           const count = skill.merged ? 1 : (skill.volley ?? 0)
-          const value = skill.merged ? (skill.volley ?? 0) * b.rolls[0] : b.rolls[0]
+          const printed = c.strikeValue(b.rolls[0])
+          const value = skill.merged ? (skill.volley ?? 0) * printed : printed
           if (!ended && strikes.length !== (skill.volley ? count : 0)) flag('double : nombre de coups', r, i, `${strikes.length}`)
-          if (strikes.some((x) => x.type === 'attack' && (x.attack.reshaped?.value ?? x.attack.roll) !== value)) flag('double : valeur des coups', r, i, '')
+          if (strikes.some((x) => x.type === 'attack' && (x.attack.reshaped?.value ?? x.attack.printed ?? x.attack.roll) !== value)) flag('double : valeur des coups', r, i, '')
           if (strikes.some((x) => x.type === 'attack' && x.attack.roll !== b.rolls[0])) flag('double : dé affiché', r, i, '')
         } else {
           if (!ended && strikes.length !== 2) flag('paire : nombre de coups', r, i, `${strikes.length}`)

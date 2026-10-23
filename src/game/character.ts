@@ -1,6 +1,6 @@
 import type { PoseId } from './poses'
 import type { CharacterEvent } from './events'
-import { forgedEvents, forgeState, type ForgeStep } from './forge'
+import { faceValue, forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
 import type { StatusId } from './statuses'
 
@@ -112,6 +112,12 @@ export interface CharacterDef {
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /**
+   * Valeurs imprimées (règles v2, phase 3, docs/RESOLUTION.md § 3) : ce que frappe chaque face du dé, de la face 1 à la
+   * dernière. Le jet désigne la face (« sur un 4 » : la face 4) ; la face frappe pour sa valeur. Absente, ou au-delà de
+   * sa longueur (faces ajoutées par la forge) : chaque face frappe pour son numéro.
+   */
+  strikes?: readonly number[]
+  /**
    * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
    * d'une campagne. Sans signature (le combattant nu, les exceptions de structure), il y part avec son kit entier.
    */
@@ -171,6 +177,7 @@ export class Character {
   /** Bonus des faces dorées, par face (forge du dé) : lu par le moteur à chaque coup */
   readonly gilded: Readonly<Record<number, number>>
   readonly #def: CharacterDef
+  readonly #forged: ForgeState | undefined
 
   constructor(def: CharacterDef) {
     this.#def = def
@@ -180,6 +187,7 @@ export class Character {
     this.archetype = def.archetype
     this.forge = def.forge ?? []
     const forged = this.forge.length > 0 ? forgeState(def, this.forge) : undefined
+    this.#forged = forged
     this.baseStats = Object.freeze(forged ? { ...def.stats, damageDie: forged.size } : { ...def.stats })
     this.relics = def.relics ?? []
     this.stats = Object.freeze(withRelicStats(this.baseStats, this.relics))
@@ -190,6 +198,11 @@ export class Character {
     this.immunities = def.immunities ?? []
     this.forms = def.forms
     this.twinDice = !!def.twinDice
+  }
+
+  /** Ce que frappe une face de son dé (règles v2, phase 3) : sa valeur imprimée, forge comprise, dorure non comprise. */
+  strikeValue(face: number): number {
+    return faceValue(this.#def, this.#forged, face)
   }
 
   /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */
@@ -225,12 +238,13 @@ export class Character {
     return this.#def
   }
 
-  /** Même personnage avec des stats ou des compétences modifiées : sert aux essais d'équilibrage (analysis.ts). */
-  adjusted(changes: { stats?: Partial<CharacterStats>; events?: readonly CharacterEvent[] }) {
+  /** Même personnage avec des stats, des compétences ou des valeurs imprimées modifiées : essais d'équilibrage (analysis.ts). */
+  adjusted(changes: { stats?: Partial<CharacterStats>; events?: readonly CharacterEvent[]; strikes?: readonly number[] }) {
     return new Character({
       ...this.#def,
       stats: { ...this.#def.stats, ...changes.stats },
       events: changes.events ?? this.#def.events,
+      strikes: changes.strikes ?? this.#def.strikes,
     })
   }
 }

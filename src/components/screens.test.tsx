@@ -439,8 +439,7 @@ describe('écrans', () => {
     // Aura de sainteté : sa vie, son plafond et ce qui la retire
     const holy = sheet('holy-aura')
     for (const text of ["jusqu'à la fin du combat", '3 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
-    // Aura de puissance : la relique qui la pose aussi ; Aura mélodieuse : l'autre compétence qui la pose
-    expect(sheet('power-aura')).toContain('Clepsydre du siège')
+    // Aura mélodieuse : l'autre compétence qui la pose
     expect(sheet('melodious-aura')).toContain('Ouverture')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')

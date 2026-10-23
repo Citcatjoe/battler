@@ -101,7 +101,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       const att = fighters[a.attacker]
       const defSide = other(a.attacker)
       const def = fighters[defSide]
-      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
+      const head = `${att.name} attaque ${def.name} : dé ${a.roll} sur d${a.faces}${a.roll === 1 ? ' (1 naturel)' : a.roll === a.faces ? ' (jet maximal)' : ''}${a.printed !== undefined ? ` (face imprimée : coup de ${a.printed})` : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé de la paire)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}${a.reshaped ? ` → ${eventName(att, a.reshaped.event)} : coup de ${a.reshaped.value}${a.reshaped.noCrit ? ', sans critique possible' : ''}` : ''}`
       const modifier = (m: (typeof a.modifiers)[number]) =>
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
@@ -116,7 +116,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
         // Auras et statuts qui changent la force du coup, avec leur porteur
         ...early.map(modifier),
-        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round((a.roll + bonus) * a.critMultiplier) : a.roll + bonus) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
+        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(((a.printed ?? a.roll) + bonus) * a.critMultiplier) : (a.printed ?? a.roll) + bonus) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
         ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
         // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
