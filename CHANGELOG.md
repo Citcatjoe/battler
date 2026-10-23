@@ -32,6 +32,11 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.104.1] — 2026-10-23
+
+### Corrigé
+- **`npm run logs`** rejoue un champion de campagne à sa signature seule (0.104.0) : sa ligne de trace ne nomme pas tout le kit du personnage. Avant, le rejeu échouait (« Forge impossible : Graver Œil de faucon sur le 1 »). Les 18 combats joués le 2026-10-23 depuis 22 h 04 se rejouent à l'identique, audit sans anomalie.
+
 ## [0.104.0] — 2026-10-23
 
 Règles v2, étape 6a : la campagne longue, avancée sur les dés actuels à la demande de l'utilisateur (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 11.4). Duel, tournoi et saison ne changent pas (empreinte identique) ; la phase 6, au d6, reprendra ce travail.

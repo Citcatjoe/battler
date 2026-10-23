@@ -9,7 +9,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { createAudit } from '../src/game/audit'
 import { simulateCombat, type CombatResult, type Pair } from '../src/game/combat'
-import { BOSS, campaignCharacter } from '../src/game/campaign'
+import { BOSS, CAMPAIGN_CHAMPIONS, campaignCharacter } from '../src/game/campaign'
 import { CHARACTER_IDS, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from '../src/game/trace'
 import { getRelic, RELIC_IDS } from '../src/game/relics'
@@ -65,7 +65,11 @@ it('rapport des combats joués', () => {
     }
     const hp = text.split('\n').slice(1, 3).map((line) => Number(/\) : (\d+) PV/.exec(line)?.[1]))
     const fighter = (id: string, side: 0 | 1, name?: string) => {
-      const base = campaignCharacter(id)
+      // Champion de campagne (0.104.0) : sa signature seule. Sa ligne ne nomme pas tout le kit du personnage
+      const listed = /compétences : (.+)$/.exec(text.split('\n')[side + 1])?.[1].split(', ') ?? []
+      const full = campaignCharacter(id)
+      const signatureOnly = id in CAMPAIGN_CHAMPIONS && !full.events.every((e) => listed.some((n) => n.startsWith(e.name)))
+      const base = signatureOnly ? CAMPAIGN_CHAMPIONS[id] : full
       const built = (name ? base.withName(name) : base).withForge(forge[side]).withRelics(relics[side].map(getRelic))
       const delta = hp[side] - built.maxHp
       return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp + delta } }) : built
