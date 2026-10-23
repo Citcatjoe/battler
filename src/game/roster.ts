@@ -125,6 +125,8 @@ const gorak: CharacterDef = {
     strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : son 1 frappe et fait saigner'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
+  // Signature (règles v2, décision de l'utilisateur) : la Furie des vents, seule au départ d'une campagne
+  signature: 'wind-fury',
   // Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : le Sang (Épines acérées, Vol de vie), la Furie (Œil de faucon, Aura de précision)
   repertoire: ['thorns', 'life-steal', 'hawk-eye', 'precision-aura'],
   events: [
@@ -187,6 +189,7 @@ const elaria: CharacterDef = {
     strengths: ['Meilleure esquive (26 %)', 'Critiques dévastateurs (×2,4)', 'Un jet raté prépare un critique'],
     weaknesses: ['PV modestes (50)', 'Petit dé (d8)', "Peine face aux boucliers et à l'intimidation"],
   },
+  signature: 'hawk-eye',
   // Répertoire : la Chasse (Furie des vents, Pourfendre), la Fuite (Coup de chance, Riposte)
   repertoire: ['wind-fury', 'cleave', 'lucky-strike', 'riposte'],
   events: [
@@ -247,6 +250,8 @@ const brokk: CharacterDef = {
     strengths: ['Gros dé (d10)', 'Peau de pierre cumulable', 'Critiques lourds (×2,5)'],
     weaknesses: ['Critiques peu fréquents (10 %)', 'Esquive faible', 'Lent à prendre l’avantage'],
   },
+  // Signature (décision de l'utilisateur) : Épines acérées
+  signature: 'thorns',
   // Répertoire : le Rempart (Aura d'immunité, Rétribution), les Représailles (Riposte, Pourfendre)
   repertoire: ['immunity-aura', 'retribution', 'riposte', 'cleave'],
   events: [
@@ -303,6 +308,7 @@ const ervald: CharacterDef = {
     strengths: ['Empoisonne sur un jet raté', 'Gros dé (d10)', 'Critiques fréquents (16 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
+  signature: 'frost-aura',
   // Répertoire : le Poison (Aura de décoction, Feux follets), le Drain (Pourfendre, Peur)
   repertoire: ['decoction-aura', 'firefly', 'cleave', 'fear'],
   events: [
@@ -364,6 +370,7 @@ const ysolde: CharacterDef = {
     strengths: ['Compétences sur 3 jets sur 7', 'Peur : l’adversaire perd son tour', 'Se soigne chaque tour (sainteté)'],
     weaknesses: ['Petit dé (d7)', 'Peu de dégâts par coup', 'Esquive faible'],
   },
+  signature: 'holy-aura',
   // Répertoire : la Lumière (Aura d'immunité, Rétribution), le Contrôle (Peau de pierre, Vol de vie)
   repertoire: ['immunity-aura', 'retribution', 'stoneskin', 'life-steal'],
   events: [
@@ -429,6 +436,8 @@ const naraxes: CharacterDef = {
     strengths: ['Bonne esquive (20 %)', 'Pile ou face : 10 dégâts aussitôt', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
+  // Signature (décision de l'utilisateur) : Pile ou face, l'identité plutôt que la valeur
+  signature: 'coin-flip',
   // Répertoire : la Fortune (Œil de faucon, Esquive améliorée), le Poison (Souffle de la tombe, Aura glaciale)
   repertoire: ['hawk-eye', 'evasion', 'grave-breath', 'frost-aura'],
   events: [
@@ -491,6 +500,7 @@ const aldric: CharacterDef = {
     strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Immunité aux malus et +1 d’armure (aura)'],
     weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure sans son aura'],
   },
+  signature: 'retribution',
   // Répertoire : la Lumière (Purification, Vol de vie), l'Ombre du serment brisé (Peur, Souffle de la tombe)
   repertoire: ['purification', 'life-steal', 'fear', 'grave-breath'],
   events: [
@@ -838,6 +848,7 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     const others = ENGRAVABLE_SKILLS.filter((e) => !d.events.some((own) => own.id === e.id)).map((e) => e.id)
     for (const id of d.repertoire ?? []) if (!others.includes(id)) problems.push(`${at} répertoire : ${id} n'est pas une compétence gravable d'un autre personnage`)
     if (new Set(d.repertoire).size !== (d.repertoire ?? []).length) problems.push(`${at} répertoire : doublon`)
+    if (d.signature && !d.events.some((e) => e.id === d.signature)) problems.push(`${at} signature : ${d.signature} n'est pas une de ses compétences`)
   }
   return problems
 }

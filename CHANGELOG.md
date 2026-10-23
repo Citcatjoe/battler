@@ -32,6 +32,22 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.104.0] — 2026-10-23
+
+Règles v2, étape 6a : la campagne longue, avancée sur les dés actuels à la demande de l'utilisateur (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 11.4). Duel, tournoi et saison ne changent pas (empreinte identique) ; la phase 6, au d6, reprendra ce travail.
+
+### Ajouté
+- **La signature seule en campagne** (`signature` de chaque personnage, `roster.ts` ; `CAMPAIGN_CHAMPIONS`, `campaign.ts`) : le champion part avec sa compétence emblème (Gorak : Furie des vents ; Elaria : Œil de faucon ; Brokk : Épines acérées ; Ervald : Aura glaciale ; Ysolde : Aura de sainteté ; Naraxes : Pile ou face ; Aldric : Rétribution). Les faces quittées frappent et se gravent ; les compétences quittées entrent en tête de son répertoire de campagne (`CAMPAIGN_REPERTOIRES`). Morgrut, Thaldrin et Fanchon gardent leur kit entier jusqu'au d6. `validateRoster` vérifie que la signature est une compétence du personnage.
+- **Quatre faces de compétence au plus** (`MAX_SKILL_FACES`) : la limite atteinte, Graver n'est plus proposée ; Fanchon n'y est pas soumise.
+
+### Modifié
+- **L'acte** : dix combats normaux puis le boss (cinq avant), récompenses forge, relique, relique, forge, relique, forge, relique, relique, forge, relique (quatre forges, six reliques) ; courbe nominale de 98 à 89 %, boss à 45 %.
+- **Sauvegarde** : `battler:campaign:v3`. Une partie en cours de l'acte de cinq est oubliée ; un héritage qui ne vaut plus sur le dé de campagne (une compétence d'origine aiguisée, que la signature a quittée) est écarté au chargement.
+- **`npm run campaign`** : la colonne « D'autres personnages » sépare les gravures du répertoire de celles des compétences quittées.
+
+### Mesuré
+- `npm run campaign` (12 parties par champion, 120 en tout) : boss atteint 47 %, acte gagné 24 % (51 et 23 % attendus) ; apport du build nul aux combats 1 à 3, +18 points au 6e, +50 au 10e (+18 et +22 aux combats 4 et 5 de l'acte de cinq) ; gravures par build 0,65 → 1,2 ; paires liées 1,08 → 1,12 ; 3,9 tours par combattant au premier combat, 8,1 au dixième, 20,2 contre le boss.
+
 ## [0.103.0] — 2026-10-23
 
 Règles v2, phase 2 : l'essai des répertoires, en campagne (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 7.4). Aucune règle de combat ne change (empreinte identique) ; seules les offres de récompense de la campagne changent.

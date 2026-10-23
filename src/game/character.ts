@@ -112,6 +112,11 @@ export interface CharacterDef {
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /**
+   * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
+   * d'une campagne. Sans signature (le combattant nu, les exceptions de structure), il y part avec son kit entier.
+   */
+  signature?: string
+  /**
    * Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : les compétences gravables d'autres personnages qu'il peut
    * apprendre par la forge, en campagne ; deux fils de synergie, écrits pour lui. Sans effet sur le combat.
    */

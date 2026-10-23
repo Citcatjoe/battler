@@ -7,7 +7,7 @@ import { describeEffect, describeEvent, describeSkill, TRIGGERS, type Effect } f
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
-import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER, validateRoster } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { offerTargets } from './forge'
 import { computeStats } from './stats'
 import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
@@ -18,8 +18,11 @@ import {
   ACT_FIGHTS,
   ACT_LENGTH,
   BOSS,
+  CAMPAIGN_CHAMPIONS,
+  CAMPAIGN_REPERTOIRES,
   campaignCharacter,
   drawReward,
+  MAX_SKILL_FACES,
   championOf,
   heritableGains,
   isBossNode,
@@ -823,29 +826,61 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 11: 2, 12: 2 })
   })
 
-  it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire', () => {
+  it('champion de campagne : la signature seule, les compétences quittées entrent dans son répertoire de campagne', () => {
+    for (const c of CHARACTERS) {
+      const kit = CAMPAIGN_CHAMPIONS[c.id].events.map((e) => e.id)
+      const signature = c.definition.signature
+      // Sans signature (Morgrut, Thaldrin, Fanchon) : le kit entier
+      expect(kit, c.id).toEqual(signature ? [signature] : c.events.map((e) => e.id))
+      const left = c.events.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.includes(e)).map((e) => e.id)
+      expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
+    }
+    // Gorak : la Furie des vents sur le 2 ; le 1 et le 3, quittés par Pourfendre et l'Aura de puissance, sont libres
+    const gorak = championOf(startRun('gorak', 1))
+    expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalTwo'])
+    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual(expect.arrayContaining([1, 3]))
+  })
+
+  it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {
     for (const id of CHARACTER_IDS) {
-      const own = repertoireOf(id).map((e) => e.id)
-      const def = createCharacter(id).definition
+      const own = CAMPAIGN_REPERTOIRES[id].map((e) => e.id)
+      const def = CAMPAIGN_CHAMPIONS[id].definition
       for (let k = 0; k < 20; k++) {
         const reward = drawReward({ championId: id, forge: [], relics: [] }, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')
         const engrave = reward.offer.find((o) => o.op === 'engrave')
-        const room = offerTargets(def, [], { op: 'engrave', skill: repertoireOf(id)[0] }).length > 0
+        const room = offerTargets(def, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES[id][0] }).length > 0
         expect(!!engrave, `${id} graine ${k}`).toBe(room)
         if (engrave?.op === 'engrave') expect(own).toContain(engrave.skill.id)
       }
     }
   })
 
-  it('offre orientée : le répertoire épuisé, Graver puise dans tout le roster', () => {
-    const forge = repertoireOf('gorak').map((skill, i) => ({ op: 'engrave' as const, face: 4 + i, skill }))
+  it('quatre faces de compétence au plus : la limite atteinte, plus de Graver, Dorer et Aiguiser restent', () => {
+    const [a, b, c] = CAMPAIGN_REPERTOIRES.gorak
+    const two = [a, b].map((skill, i) => ({ op: 'engrave' as const, face: 4 + i, skill }))
+    // La signature et trois gravures : `MAX_SKILL_FACES` faces de compétence, la limite
+    const three = [...two, { op: 'engrave' as const, face: 6, skill: c }]
+    expect(1 + three.length).toBe(MAX_SKILL_FACES)
     for (let k = 0; k < 20; k++) {
-      const reward = drawReward({ championId: 'gorak', forge, relics: [] }, 'forge', seededRng(k))
+      const under = drawReward({ championId: 'gorak', forge: two, relics: [] }, 'forge', seededRng(k))
+      const full = drawReward({ championId: 'gorak', forge: three, relics: [] }, 'forge', seededRng(k))
+      if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
+      expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
+      expect(full.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(false)
+      expect(full.offer.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('offre orientée : le répertoire épuisé, Graver puise dans tout le roster (la barde, hors limite de faces)', () => {
+    const enlarge = { op: 'enlarge' as const }
+    const forge = [enlarge, enlarge, enlarge, ...CAMPAIGN_REPERTOIRES.fanchon.map((skill, i) => ({ op: 'engrave' as const, face: 6 + i, skill }))]
+    for (let k = 0; k < 20; k++) {
+      const reward = drawReward({ championId: 'fanchon', forge, relics: [] }, 'forge', seededRng(k))
       const engrave = reward.kind === 'forge' ? reward.offer.find((o) => o.op === 'engrave') : undefined
-      if (engrave?.op !== 'engrave') throw new Error('Graver attendue : Gorak a encore des faces libres')
-      expect(forge.map((f) => f.skill.id)).not.toContain(engrave.skill.id)
-      expect(createCharacter('gorak').events.map((e) => e.id)).not.toContain(engrave.skill.id)
+      if (engrave?.op !== 'engrave') throw new Error('Graver attendue : Fanchon a encore des faces libres')
+      expect(CAMPAIGN_REPERTOIRES.fanchon.map((s) => s.id)).not.toContain(engrave.skill.id)
+      expect(createCharacter('fanchon').events.map((e) => e.id)).not.toContain(engrave.skill.id)
     }
   })
 
@@ -877,11 +912,11 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
     expect(rewarded).toEqual([...REWARDS])
     expect(run.wins).toBe(ACT_FIGHTS)
-    // Les gains sont les choix appliqués, dans l'ordre : deux forges et trois reliques différentes
+    // Les gains sont les choix appliqués, dans l'ordre : quatre forges et six reliques différentes
     expect(run.gains.filter((g) => g.kind === 'forge').map((g) => g.kind === 'forge' && g.step)).toEqual(run.forge)
     expect(run.gains.filter((g) => g.kind === 'relic').map((g) => g.kind === 'relic' && g.relic)).toEqual(run.relics)
-    expect(run.forge).toHaveLength(2)
-    expect(new Set(run.relics).size).toBe(3)
+    expect(run.forge).toHaveLength(4)
+    expect(new Set(run.relics).size).toBe(6)
     expect(run.relics.every((r) => FORGE_RELIC_IDS.includes(r))).toBe(true)
     expect(championOf(run).forge).toEqual(run.forge)
     const end = withFightResult(run, bossEncounter, won)
@@ -922,14 +957,14 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } })
     // Aiguiser une gravure : seule sur le dé d'origine, le 8 ne porte rien
     run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 8 } })
-    // Aiguiser une compétence d'origine : vaut seule
-    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 1 } })
+    // Aiguiser une compétence d'origine (la signature, sur le 2) : vaut seule
+    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 2 } })
     expect(heritableGains(run)).toEqual([
       { kind: 'relic', relic: 'wolf-fang' },
       { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } },
       { kind: 'relic', relic: 'mercenary-mail' },
       { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } },
-      { kind: 'forge', step: { op: 'sharpen', face: 1 } },
+      { kind: 'forge', step: { op: 'sharpen', face: 2 } },
     ])
   })
 
@@ -940,7 +975,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(heritableGains(engraved)).toEqual([])
     const relic = startRun('gorak', 7, { kind: 'relic', relic: 'wolf-fang' })
     expect(relic).toMatchObject({ forge: [], relics: ['wolf-fang'], gains: [] })
-    expect(() => startRun('gorak', 7, { kind: 'forge', step: { op: 'gild', face: 1 } })).toThrow()
+    // Dorer la face de la signature : refusé (une dorure ne vise qu'une face de coup)
+    expect(() => startRun('gorak', 7, { kind: 'forge', step: { op: 'gild', face: 2 } })).toThrow()
   })
 
   it('sauvegarde de l’héritage : les gains d’une partie remplacent ceux du personnage ; une partie sans gain n’efface rien', () => {
@@ -960,6 +996,9 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       recordHeritage(withReward(startRun('gorak', 4), { kind: 'relic', relic: 'mercenary-mail' }))
       recordHeritage(withReward(startRun('brokk', 4), { kind: 'relic', relic: 'wolf-fang' }))
       expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'mercenary-mail' }], brokk: [{ kind: 'relic', relic: 'wolf-fang' }] })
+      // Un héritage d'avant 0.104.0 : Pourfendre aiguisée sur le 1, que la signature seule a quitté, est écartée
+      stored.set('battler:campaign-heritage:v1', JSON.stringify({ gorak: [{ kind: 'forge', step: { op: 'sharpen', face: 1 } }, { kind: 'relic', relic: 'wolf-fang' }] }))
+      expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'wolf-fang' }] })
     } finally {
       vi.unstubAllGlobals()
     }

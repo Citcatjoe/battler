@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { simulateCombat } from '../src/game/combat'
 import { buildLinks } from '../src/game/hooks'
 import { pick, seededRng } from '../src/game/rng'
@@ -65,7 +65,7 @@ it('mesure de la campagne (pilote automatique)', () => {
       `| ${createCharacter(id).name} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
   }
-  // Les builds d'un acte complet (cinq récompenses), tirés comme le champion de référence : sans combat, ils ne
+  // Les builds d'un acte complet (`REWARDS`), tirés comme le champion de référence : sans combat, ils ne
   // mesurent que l'offre. Diversité (compétences gravées distinctes) et cohérence (paires de briques qui se nourrissent)
   const builds = CHARACTER_IDS.map((id) => {
     const all = Array.from({ length: 10 }, (_, s) => referenceChampions(id, ACT_FIGHTS, hashSeed(`builds:${id}:${s}`))).flat()
@@ -104,9 +104,9 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `Cinq récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences que sa signature seule a quittées). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
     '',
-    '| Champion | Builds | Gravures par build | Du répertoire | Compétences gravées distinctes | Paires liées par build | Part des paires liées |',
+    "| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées |",
     '| --- | --- | --- | --- | --- | --- | --- |',
     ...builds.map((b) => b.line),
   ].join('\n')

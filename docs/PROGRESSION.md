@@ -596,6 +596,34 @@ La difficulté actuelle plaît : on garde le réglage des adversaires par leurs 
 - **Brique connue** : la courbe nominale (`campaign.ts`) suit n'importe quel nombre de combats.
 - **Gardé pour plus tard** : les vies (§ 15.4).
 
+### 11.4 L'acte long, avancé sur les dés actuels (étape 6a, livré en 0.104.0)
+
+Demande de l'utilisateur après la phase 2 (« aucun changement en campagne ») : jouer l'acte long **avant** le d6. Ce qui est livré, sur les dés d'aujourd'hui :
+- **la signature seule** (§ 7.2) : Gorak, la Furie des vents ; Elaria, Œil de faucon ; Brokk, Épines acérées ; Ervald, Aura glaciale ; Ysolde, Aura de sainteté ; Naraxes, Pile ou face ; Aldric, Rétribution (`signature` dans `roster.ts`, `CAMPAIGN_CHAMPIONS` dans `campaign.ts`). Les faces quittées (deux sur trois) frappent à leur valeur et se gravent ; les compétences quittées entrent en tête du répertoire de campagne (§ 7.3), devant les quatre de la phase 2 ;
+- **exceptions jusqu'au d6** : Morgrut (ses Attentes sont déjà des faces libres), Thaldrin (sa forme humaine ne fait que lancer des sorts : une face sans sort n'y a pas de sens) et Fanchon (ses compétences sont ses doubles) gardent leur kit entier ;
+- **10 combats**, forge, relique, relique, forge, relique, forge, relique, relique, forge, relique (§ 11.2) ; courbe de 98 à 89 %, boss à 45 % (§ 11.3) ;
+- **quatre faces de compétence au plus** (§ 11.2), signature comprise ; Fanchon n'y est pas soumise ;
+- sauvegarde `battler:campaign:v3` : une partie en cours de l'acte de cinq est oubliée ; un héritage qui ne vaut plus sur le dé de campagne est écarté.
+
+**Mesure** (`npm run campaign`, 12 parties par champion, 120 en tout ; 0.103.0 → 0.104.0) :
+
+| Mesure | Acte de 5, kit entier (0.103.0) | Acte de 10, signature seule (0.104.0) |
+| --- | --- | --- |
+| Boss atteint | 49 % | 47 % (attendu 51 %) |
+| Acte gagné | 22 % | 24 % (attendu 23 %) |
+| Gravures par build, à la fin de l'acte | 0,65 | 1,2 (Fanchon 0,57, Thaldrin 0,77, Naraxes 1,43) |
+| Paires liées par build | 1,08 | 1,12 (Fanchon 2,73, Naraxes 2,34, Elaria 1,96, Gorak 1,88 ; les six autres autour de 0,4) |
+| Apport du build (construit contre nu, même graine) | +18 et +22 points aux nœuds 4 et 5 | environ 0 aux nœuds 1 à 3, +8 au 4, +18 au 6, +35 au 8, **+50 au 10** |
+| Tours par combattant | — | 3,9 au premier combat, 8,1 au dixième, **20,2 contre le boss** |
+
+**Lecture** :
+- **La difficulté tient** : la courbe allongée donne le même produit que l'acte de cinq (47 % au boss sur 120 parties, l'écart à 51 % est dans le bruit d'un si petit échantillon).
+- **Le build se voit enfin**, et de plus en plus : nul les trois premiers combats (la signature seule, une forge et deux reliques ne changent rien à 97 % de victoire), il vaut 50 points au dixième. C'est la direction du § 2.
+- **Les premiers combats sont des temps morts** (risque annoncé au § 11.1) : 3,9 tours par combattant, des adversaires aux PV réduits pour tenir 98 %. À juger en jeu.
+- **Le boss dure** : 20 tours par combattant, plus du double d'un combat normal. Le Colosse est réglé par ses PV sur un champion de référence déjà construit ; un levier possible : le régler par autre chose que les PV (phase 7, durée).
+- **La cohérence ne monte pas** avec les gravures (1,08 → 1,12) : le manque de consommateurs du § 3.2 reste la limite, que seuls les lots de contenu (phase 8) lèvent.
+- **À refaire au d6** (phase 6) : les faces quittées deviennent des coups imprimés, Thaldrin et Fanchon passent à la signature seule, la courbe se recale.
+
 ---
 
 ## 12. La durée des combats et les PV
@@ -855,11 +883,12 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | **0. Mesure** (faite, 0.101.0) | `npm run synergy` (P8, log-cote) ; la durée des combats dans `npm run campaign` et `npm run season` ; une première mesure « le build se voit-il ? » (champion construit contre le même nu) | non | l'état de référence, § 3.1 | les cibles de synergie et de durée sont-elles les bonnes ? |
 | **1. Étiquettes** (faite, 0.102.0) | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le relevé du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; l'audit contrôle le type de chaque dégât ; résultats au § 3.2 | ce que doivent contenir les lots de contenu : des consommateurs |
-| **2. Essai des répertoires** (livré, 0.103.0 ; à jouer) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (Graver garantie dans le répertoire, première relique à l'écho, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après (§ 7.4) : gravures 0,36 → 0,65 par acte, toutes du répertoire ; paires liées 0,86 → 1,08 | **l'utilisateur joue** : la structure tient-elle ? |
+| **2. Essai des répertoires** (livré, 0.103.0 ; à jouer) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (Graver garantie dans le répertoire, première relique à l'écho, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après (§ 7.4) : gravures 0,36 → 0,65 par acte, toutes du répertoire ; paires liées 0,86 → 1,08 | **l'utilisateur joue** : la structure tient-elle ? (jugé avec l'étape 6a : sur l'acte de cinq, l'offre orientée ne se voyait pas en jeu) |
+| **6a. Campagne longue sur les dés actuels** (livré, 0.104.0 ; à jouer ; avancée à la demande de l'utilisateur) | la signature seule (sept personnages ; Morgrut, Thaldrin et Fanchon entiers jusqu'au d6) ; 10 combats dans l'ordre retenu ; courbe 98 → 89 %, boss 45 % ; quatre faces de compétence au plus | en campagne seulement | `npm run campaign` (§ 11.4) : boss atteint 47 %, acte gagné 24 % ; apport du build nul aux nœuds 1 à 3, +50 points au 10 ; boss à 20 tours par combattant | **l'utilisateur joue** : longueur, premiers combats, rythme des forges, durée du boss |
 | **3. Dé en liste de faces** | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques | — |
 | **4. Essai du d6** | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, au laboratoire, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre | non (laboratoire) | taux et marge avant → après, valeur nette, durée | les dés de référence, retouchés ; la méthode pour les six autres |
 | **5. Conversion et forge d6** | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (sorts sur deux faces) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir, de Retailler et du Contrepoids, et son remplaçant au tournoi | **oui**, volontairement | `npm run balance` (42 à 58 %, aucun duel au-delà de 65/35) ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
-| **6. Campagne longue** | la signature seule au départ ; 10 combats, 4 forges et 6 reliques dans l'ordre retenu ; courbe de 98 à 89 %, boss à 45 % ; répertoires en d6 | en campagne | `npm run campaign` : boss atteint par environ la moitié des parties, durée mesurée | **l'utilisateur joue** : longueur, rythme des forges, difficulté |
+| **6. Campagne longue en d6** | ce que l'étape 6a a posé, refait sur le d6 : les faces quittées en coups imprimés, Thaldrin et Fanchon à la signature seule, Copier une face sous la limite de quatre ; courbe recalée ; répertoires en d6 | en campagne | `npm run campaign` : boss atteint par environ la moitié des parties, durée mesurée | **l'utilisateur joue** : longueur, rythme des forges, difficulté |
 | **7. Types à l'écran, durée, types en bonus** | la couleur des chiffres par type et par source ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison | `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 
