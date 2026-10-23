@@ -137,7 +137,7 @@ Les scènes (`scenes.ts`) portent leur propre rythme (`impacts`, `length`), que 
 
 ### 5.2 Ouvertes
 
-- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. **En partie tranchée (2026-10-23, [PROGRESSION.md](PROGRESSION.md) § 9)** : les dégâts ont un type (DD, DM, DT) et une source, déclarés sur chaque effet depuis la 0.102.0 (`damage.ts`), pas déduits de la `nature` ; leur couleur à l'écran, par type et par source, viendra avec la phase 7 des règles v2.
+- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. **En partie tranchée (2026-10-23, [PROGRESSION.md](PROGRESSION.md) § 9)** : les dégâts ont un type (DP, DM, DT) et une source, déclarés sur chaque effet depuis la 0.102.0 (`damage.ts`), pas déduits de la `nature` ; leur couleur à l'écran, par type et par source, viendra avec la phase 7 des règles v2.
 
 ## 6. Introduire une mécanique qui s'anime
 

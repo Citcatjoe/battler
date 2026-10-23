@@ -107,7 +107,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
-      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DD) »), multipliée par Crescendo ou Soliste
+      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) »), multipliée par Crescendo ou Soliste
       const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${DAMAGE_KINDS[a.kind].short})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
         return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]

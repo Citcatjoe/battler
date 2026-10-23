@@ -67,22 +67,22 @@ Les deux contres connus (Brokk–Fanchon, Naraxes–Ysolde) sont revenus sous 63
 
 ## L'attaque de base (0.106.0)
 
-**Règles v2, phase 5 bis** (décisions de l'utilisateur du 2026-10-23, [RESOLUTION.md](RESOLUTION.md) § 3 bis) : chaque personnage a une **attaque**, une petite fourchette (`attackMin` à `attackMax` : un écart de 2 au plus pour tous, `validateRoster` en tolère 3 pour une exception d'identité) et un **type** de coup (`attackKind`) : DM (magique) pour Ysolde et la forme humaine du druide, DD pour tous les autres. Le type ne compte que pour l'étiquette et les bonus par type (aucun aujourd'hui). Chaque jet porte un **coup de base**, tiré dans la fourchette, avec toute la chaîne d'un coup (esquive, critique, modificateurs, armure, boucliers, réactions). Le dé ne fait plus de dégâts : il désigne une face. Une face nue ne porte que le coup ; une face de compétence **greffe** sa compétence (par défaut : ses effets, puis le coup), la **modifie** (Pourfendre, Pile ou face) ou la **remplace** (Furie des vents, Coup de chance, Crescendo, Soliste). Les valeurs imprimées de la 0.105.0 et l'Attente de l'ogre sont retirées.
+**Règles v2, phase 5 bis** (décisions de l'utilisateur du 2026-10-23, [RESOLUTION.md](RESOLUTION.md) § 3 bis) : chaque personnage a une **attaque**, une petite fourchette (`attackMin` à `attackMax` : un écart de 2 au plus pour tous, `validateRoster` en tolère 3 pour une exception d'identité) et un **type** de coup (`attackKind`) : DM (magique) pour Ysolde et la forme humaine du druide, DP (physique) pour tous les autres. Le type ne compte que pour l'étiquette et les bonus par type (aucun aujourd'hui). Chaque jet porte un **coup de base**, tiré dans la fourchette, avec toute la chaîne d'un coup (esquive, critique, modificateurs, armure, boucliers, réactions). Le dé ne fait plus de dégâts : il désigne une face. Une face nue ne porte que le coup ; une face de compétence **greffe** sa compétence (par défaut : ses effets, puis le coup), la **modifie** (Pourfendre, Pile ou face) ou la **remplace** (Furie des vents, Coup de chance, Crescendo, Soliste). Les valeurs imprimées de la 0.105.0 et l'Attente de l'ogre sont retirées.
 
 Mesuré à 800 combats par duel (`BALANCE_N=800 npm run balance`), 0.105.0 → 0.106.0 :
 
 | Personnage | Attaque | Type | PV | Changements | Taux | Tours par combat | Pire et meilleur duel |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Gorak | 5 à 6 | DD | 57 | Pourfendre modifie, Furie des vents remplace | 48,7 → 50,5 % | 15,8 → 14,9 | Elaria 44 %, Ysolde 56 % |
-| Elaria | 4 à 5 | DD | 53 | esquive 26 → 22 %, critique 17 → 15 % | 49,2 → 48,9 % | 20,4 → 18,0 | Ysolde et Aldric 42 %, Morgrut 62 % |
-| Brokk | 5 à 6 | DD | 57 | critique ×2,5 → ×2,2 | 49,9 → 51,5 % | 18,1 → 17,0 | Naraxes 46 %, Fanchon 57 % |
-| Ervald | 4 à 6 | DD | 56 | aucun | 49,3 → 49,8 % | 18,7 → 17,9 | Naraxes 41 %, Morgrut 57 % |
+| Gorak | 5 à 6 | DP | 57 | Pourfendre modifie, Furie des vents remplace | 48,7 → 50,5 % | 15,8 → 14,9 | Elaria 44 %, Ysolde 56 % |
+| Elaria | 4 à 5 | DP | 53 | esquive 26 → 22 %, critique 17 → 15 % | 49,2 → 48,9 % | 20,4 → 18,0 | Ysolde et Aldric 42 %, Morgrut 62 % |
+| Brokk | 5 à 6 | DP | 57 | critique ×2,5 → ×2,2 | 49,9 → 51,5 % | 18,1 → 17,0 | Naraxes 46 %, Fanchon 57 % |
+| Ervald | 4 à 6 | DP | 56 | aucun | 49,3 → 49,8 % | 18,7 → 17,9 | Naraxes 41 %, Morgrut 57 % |
 | Ysolde | 4 à 6 | DM | 52 | aucun | 50,9 → 49,1 % | 20,7 → 18,5 | Gorak et Morgrut 44 %, Elaria 58 % |
-| Naraxes | 4 à 5 | DD | 50 | Pile ou face modifie (pile : ce coup ×2), Coup de chance remplace | 50,7 → 52,2 % | 16,1 → 15,1 | Thaldrin 49 %, Ervald 59 % |
-| Aldric | 3 à 5 | DD | 54 | aucun | 50,2 → 50,3 % | 15,4 → 14,6 | Thaldrin 43 %, Elaria 58 % |
-| Morgrut | 7 à 9 | DD | 63 → 59 | plus d'Attente, six faces nues | 51,4 → 48,8 % | 16,4 → 15,1 | Elaria 38 %, Thaldrin 59 % |
-| Thaldrin | 3 à 4 (homme DM ; ours DD, +3 de la Force de l'ours) | DM / DD | 56 | Foudre 3×2 → 3×1 | 51,6 → 49,4 % | 16,1 → 15,4 | Morgrut 41 %, Aldric 57 % |
-| Fanchon | 2 à 4, deux coups (deux dés) | DD | 46 | critique 5 → 10 %, Crescendo ×4 et Soliste ×5 (un coup de base à la place des deux) | 48,2 → 49,5 % | 14,0 → 13,1 | Brokk 43 %, Ervald et Ysolde 55 % |
+| Naraxes | 4 à 5 | DP | 50 | Pile ou face modifie (pile : ce coup ×2), Coup de chance remplace | 50,7 → 52,2 % | 16,1 → 15,1 | Thaldrin 49 %, Ervald 59 % |
+| Aldric | 3 à 5 | DP | 54 | aucun | 50,2 → 50,3 % | 15,4 → 14,6 | Thaldrin 43 %, Elaria 58 % |
+| Morgrut | 7 à 9 | DP | 63 → 59 | plus d'Attente, six faces nues | 51,4 → 48,8 % | 16,4 → 15,1 | Elaria 38 %, Thaldrin 59 % |
+| Thaldrin | 3 à 4 (homme DM ; ours DP, +3 de la Force de l'ours) | DM / DP | 56 | Foudre 3×2 → 3×1 | 51,6 → 49,4 % | 16,1 → 15,4 | Morgrut 41 %, Aldric 57 % |
+| Fanchon | 2 à 4, deux coups (deux dés) | DP | 46 | critique 5 → 10 %, Crescendo ×4 et Soliste ×5 (un coup de base à la place des deux) | 48,2 → 49,5 % | 14,0 → 13,1 | Brokk 43 %, Ervald et Ysolde 55 % |
 
 **Ordre des leviers** ([EQUILIBRAGE.md](EQUILIBRAGE.md) § 5). Les compétences deviennent gratuites : un jet de compétence ne sacrifie plus son coup. D'abord les valeurs des compétences (la Foudre, qui gagnait un coup de base en plus de ses trois éclairs, passe à 3×1 ; Crescendo et Soliste réglés sur un coup de base), puis l'attaque et les stats secondaires (Elaria, Brokk, Fanchon), les PV en dernier : Morgrut seul, sans compétence ni critique, n'avait pas d'autre levier que son attaque, déjà la plus forte (7 à 9).
 
@@ -153,7 +153,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Pourfendre (frappe pour 4) et Furie des vents, coups de 5, 5, 6, 7 ; Aura de puissance hors kit. 51,0 → 48,7 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DD), 57 PV ; Pourfendre modifie son coup de base (Saignement 2 s'il touche), la Furie des vents remplace le coup du 2 par deux coups de base, chacun avec son dé. 48,7 → 50,5 %, 15,8 → 14,9 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DP), 57 PV ; Pourfendre modifie son coup de base (Saignement 2 s'il touche), la Furie des vents remplace le coup du 2 par deux coups de base, chacun avec son dé. 48,7 → 50,5 %, 15,8 → 14,9 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le champion des fosses.**
 - **Qui il est** : un vétéran des combats d'arène, fier, qui joue pour le public. Il paraît calme et sûr de lui, mais la colère monte à chaque coup reçu (choix de 2026-10-20 entre le « calme » de son image et le « coup manqué l'énerve » de sa fiche : l'un mène à l'autre).
@@ -220,7 +220,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Œil de faucon et Esquive améliorée, coups de 5, 6, 6, 7 ; Aura de précision hors kit ; 53 PV (50), dernier levier. 47,3 → 49,2 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DD), 53 PV ; esquive 26 → 22 %, critique 17 → 15 % (×2,4). Œil de faucon greffé rend critique le coup de base de son propre jet. 49,2 → 48,9 %, 20,4 → 18,0 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DP), 53 PV ; esquive 26 → 22 %, critique 17 → 15 % (×2,4). Œil de faucon greffé rend critique le coup de base de son propre jet. 49,2 → 48,9 %, 20,4 → 18,0 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : la chasseresse solitaire.**
 - **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.
@@ -278,7 +278,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Peau de pierre et Épines acérées, coups de 7, 7, 8, 10 ; Aura d'intimidation hors kit. 47,4 → 49,9 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DD), 57 PV ; critique ×2,5 → ×2,2 (10 %). 49,9 → 51,5 %, 18,1 → 17,0 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DP), 57 PV ; critique ×2,5 → ×2,2 (10 %). 49,9 → 51,5 %, 18,1 → 17,0 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le roc.**
 - **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
@@ -332,7 +332,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Vol de vie et Aura glaciale, coups de 6, 6, 7, 9 ; Souffle de la tombe hors kit. 53,9 → 49,3 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6 (DD), 56 PV, aucun autre changement ; Vol de vie greffé draine le coup de base de son propre jet. 49,3 → 49,8 %, 18,7 → 17,9 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6 (DP), 56 PV, aucun autre changement ; Vol de vie greffé draine le coup de base de son propre jet. 49,3 → 49,8 %, 18,7 → 17,9 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le devoir qui ne meurt pas.**
 - **Qui il est** : un soldat mort à son poste et revenu par devoir. Il est froid, sans haine ni colère ; il n'a plus rien à perdre, et il a donc tout son temps.
@@ -447,7 +447,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Pile ou face et Aura de décoction, coups de 6, 7, 7, 8 ; Coup de chance hors kit. 53,7 → 50,7 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DD), 50 PV ; Pile ou face modifie son coup (s'il touche, la pièce : pile, ce coup ×2, au lieu de 10 dégâts fixes) ; Coup de chance remplace le coup de son jet (l'action suivante a un jet complet de plus par charge). 50,7 → 52,2 %, 16,1 → 15,1 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DP), 50 PV ; Pile ou face modifie son coup (s'il touche, la pièce : pile, ce coup ×2, au lieu de 10 dégâts fixes) ; Coup de chance remplace le coup de son jet (l'action suivante a un jet complet de plus par charge). 50,7 → 52,2 %, 16,1 → 15,1 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : la joueuse.**
 - **Qui elle est** : insolente et opportuniste, elle ne se bat jamais à la loyale. Elle aime le risque plus que la victoire elle-même.
@@ -494,7 +494,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : Rétribution et Riposte, coups de 4, 5, 6, 7 ; Aura d'immunité hors kit. 53,9 → 50,2 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 3 à 5 (DD), 54 PV, aucun autre changement. 50,2 → 50,3 %, 15,4 → 14,6 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 3 à 5 (DP), 54 PV, aucun autre changement. 50,2 → 50,3 %, 15,4 → 14,6 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le créancier.**
 - **Qui il est** : un paladin rigide et discipliné. Sa ferveur est réelle mais contenue : il encaisse en silence, et il compte (choix de 2026-10-20 entre le « fanatique » de son image et le « tient le compte » de sa fiche : le fanatique n'apparaît qu'au moment où il rend les coups, dans sa posture d'attaque par exemple).
@@ -535,14 +535,14 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, le d6 imprimé (0.105.0)** : une seule Attente (sur le 1), coups de 7, 8, 9, 10, 11 ; plus de d14 ni de trois Attentes. 47,4 → 51,4 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : plus d'Attente (décision de l'utilisateur), six faces nues ; attaque 7 à 9 (DD), la plus forte du roster ; **59 PV (63)**, son seul autre levier. 51,4 → 48,8 %, 16,4 → 15,1 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : plus d'Attente (décision de l'utilisateur), six faces nues ; attaque 7 à 9 (DP), la plus forte du roster ; **59 PV (63)**, son seul autre levier. 51,4 → 48,8 %, 16,4 → 15,1 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : le gros distrait.**
 - **Qui il est** : simple, lent d'esprit, et pas méchant du tout : il s'émerveille d'un papillon. Il ne se bat pas par haine, on lui a juste dit de taper.
 - **Comment il se bat** : il tape, à chaque jet, plus fort que tout le monde (depuis la 0.106.0 ; avant, il attendait sur un jet qu'il ne comprenait pas, l'Attente). Il ne vise pas (aucun critique) et n'esquive pas : il n'y pense même pas.
 - **Pistes** : se laisser distraire, profiter d'un hasard heureux sans le chercher, s'énerver d'un coup si on l'agace trop.
 
-- **Stats** (0.106.0) : PV 59, attaque 7 à 9 (DD), six faces nues, armure 0, esquive 0 %, critique 0 % (×2). En 0.35.0 : PV 63, d14.
+- **Stats** (0.106.0) : PV 59, attaque 7 à 9 (DP), six faces nues, armure 0, esquive 0 %, critique 0 % (×2). En 0.35.0 : PV 63, d14.
 - **Comment il gagne** : chaque jet frappe, en moyenne pour 8 dégâts.
 - **Comment il perd** : contre l'esquive d'Elaria (38 %) et contre Ervald (43 %).
 - **Mesures** : 48,8 % de victoires (0.106.0, 800 combats par duel), 15,1 tours par combat ; il bat Thaldrin à 59 %. En 0.35.0 : 51,7 %, environ 19 tours.
@@ -593,7 +593,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **2026-10-23, le d6 imprimé (0.105.0)** : homme, Foudre sur 1, 2, 3 et Feux follets sur 4, 5, 6 (plus de d3) ; ours, coups de 3 à 8 (+3 Force de l'ours) ; Aura sauvage hors kit. 49,4 → 51,6 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : une seule attaque, 3 à 4, dont le type suit la forme (`CharacterForm.attackKind`) : l'homme frappe en magique (DM) et chaque sort se greffe sur ce coup ; l'ours frappe en direct (DD), avec sa Force de l'ours (+3), gardée. Foudre 3×2 → 3×1 (elle gagne un coup de base). 51,6 → 49,4 %, 16,1 → 15,4 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : une seule attaque, 3 à 4, dont le type suit la forme (`CharacterForm.attackKind`) : l'homme frappe en magique (DM) et chaque sort se greffe sur ce coup ; l'ours frappe en physique (DP), avec sa Force de l'ours (+3), gardée. Foudre 3×2 → 3×1 (elle gagne un coup de base). 51,6 → 49,4 %, 16,1 → 15,4 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
@@ -655,7 +655,7 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 **2026-10-23, le d6 imprimé (0.105.0)** : deux d6 (deux d5 avant), chaque dé 1, 2, 3, 4, 5, 4 ; doubles 1 à 5 inchangés, double 6 sans compétence (deux coups de 4). 52,1 → 48,2 %. Voir « Le d6 imprimé ».
 
-**2026-10-23, l'attaque de base (0.106.0)** : attaque 2 à 4 (DD), deux coups de base par action (un par dé) ; un double à compétence se greffe sur les deux coups, sauf Crescendo (×4) et Soliste (×5), qui les remplacent par un seul coup de base multiplié ; critique 5 → 10 %. 48,2 → 49,5 %, 14,0 → 13,1 tours par combat. Voir « L'attaque de base ».
+**2026-10-23, l'attaque de base (0.106.0)** : attaque 2 à 4 (DP), deux coups de base par action (un par dé) ; un double à compétence se greffe sur les deux coups, sauf Crescendo (×4) et Soliste (×5), qui les remplacent par un seul coup de base multiplié ; critique 5 → 10 %. 48,2 → 49,5 %, 14,0 → 13,1 tours par combat. Voir « L'attaque de base ».
 
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.

@@ -88,7 +88,7 @@ export type Effect =
    * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. Ce ne sont pas
    * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
    * d'affichage, `hits` fois `amount` appliqués en une seule perte ; l'écran en fait autant d'impacts.
-   * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur type, DD, DM ou DT ; sans effet sur la règle.
+   * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur type, DP, DM ou DT ; sans effet sur la règle.
    */
   | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource }
   | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target }

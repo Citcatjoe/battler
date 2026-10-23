@@ -561,7 +561,7 @@ Un personnage précis, écrit à la main (§ 6.3), commun à tous les champions 
 
 | | |
 | --- | --- |
-| Stats d'origine | 70 PV (réglés pour chaque champion), attaque **6 à 8 DD** depuis la 0.106.0 (d6 aux faces imprimées en 0.105.0, d12 avant), armure 0, esquive 4 %, critique 8 % ×2 |
+| Stats d'origine | 70 PV (réglés pour chaque champion), attaque **6 à 8 DP** depuis la 0.106.0 (d6 aux faces imprimées en 0.105.0, d12 avant), armure 0, esquive 4 %, critique 8 % ×2 |
 | Faces | 1 : Peau de pierre (Brokk) et 3 : Aura d'intimidation (Brokk), greffées sur son coup ; 2 : Pourfendre (Gorak), qui modifie son coup (Saignement s'il touche) ; 4 à 6 : nues (0.106.0 ; coups de 10, 11 et 12 en 0.105.0, et Pourfendre frappait pour 6) |
 | Reliques | Cotte du mercenaire, Dent de loup |
 | Forge | le 5 et le 6 dorés : +2 à son coup de base sur ces faces (le 11 et le 12 jusqu'à la 0.104.x) |

@@ -108,7 +108,7 @@ flowchart LR
 | --- | --- | --- |
 | Contrepoids de plomb | +1 au multiplicateur de critique, −4 % de critique (0.105.0 ; +2 faces au dé avant) | |
 | Bottes de feutre | +6 % d'esquive | |
-| Cotte du mercenaire | +2 armure, −8 % d'esquive | |
+| Cotte du mercenaire | +1 armure, −5 % d'esquive (0.106.1 ; +2 armure, −8 % avant) | |
 | Osselet fendu | Sur un 1 : 3 dégâts directs | |
 | Dé creux | Sur un jet maximal : +1 Esquive améliorée | recharge 3 tours |
 | Fer à quatre clous | Sur un 4 : +4 dégâts à ce coup (0.105.0 : un événement, plus une face enrichie ; 0.106.0 : +4 au coup de base d'un jet de 4) | |
@@ -221,7 +221,9 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 | Conque des vents | +7,3 → +8,7 |
 | Géode fendue | +16,1 → +16,2 |
 
-**Lecture (0.106.0).** Deux reliques bougent nettement : la **Cotte du mercenaire** monte de +22,1 à **+28,2**, hors de la cible de 20 au plus (à régler) ; le **Collier de ronces** monte de +10,8 à +16,9. Les autres restent à moins de 4 points de leur valeur d'avant. La Dent de loup repasse sous 20 (+18,6). Le Fer à quatre clous garde sa valeur (+12,9) en ajoutant ses +4 au coup de base d'un 4.
+**Lecture (0.106.0).** Deux reliques bougent nettement : la **Cotte du mercenaire** monte de +22,1 à **+28,2**, hors de la cible de 20 au plus ; le **Collier de ronces** monte de +10,8 à +16,9. Les autres restent à moins de 4 points de leur valeur d'avant. La Dent de loup repasse sous 20 (+18,6). Le Fer à quatre clous garde sa valeur (+12,9) en ajoutant ses +4 au coup de base d'un 4.
+
+**Cotte du mercenaire baissée (0.106.1, décision de l'utilisateur)** : +1 armure, −5 % d'esquive, le repli prévu dès la 0.77.0. Mesurée (`npm run relics`, 400 combats par duel) : **+28,2 → +13,7**, dans la cible ; d'Aldric +7,1 à Morgrut +20,9, qui n'a pas d'esquive à perdre.
 
 **Lecture.**
 - Neuf sur douze dans la cible ; trois au-dessus de 15 : Cotte +18,1, Chapelet +16,3, Dent de loup **+21,4** (au-delà de 20).
@@ -254,8 +256,8 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 - **Illustration** : une paire de bottes souples, semelles de feutre usées au talon, lacets dénoués qui pendent. Posées, vides.
 
 #### Cotte du mercenaire
-- **Règle** : +2 armure, −8 % d'esquive.
-- **Pourquoi** : la première relique à **troc**. Elle ne vaut pas la même chose pour tout le monde : gain pur pour Morgrut (pas d'esquive à perdre, sa fiche affiche −8 %), moins bon pour Elaria (26 → 18 %, +12,6 tout de même). Le choix automatique devra le savoir (goût, synergie : TODO § 16). Repli prévu : +1 armure, −5 %.
+- **Règle** : +1 armure, −5 % d'esquive (0.106.1 ; +2 armure, −8 % d'esquive de la 0.77.0 à la 0.106.0).
+- **Pourquoi** : la première relique à **troc**. Elle ne vaut pas la même chose pour tout le monde : gain pur pour Morgrut (pas d'esquive à perdre, sa fiche affiche −5 %, +20,9), moins bon pour Aldric (+7,1). Le choix automatique devra le savoir (goût, synergie : TODO § 16). Le repli prévu (+1 armure, −5 %) est appliqué en 0.106.1 : avec un coup à chaque jet, chaque point d'armure retire un dégât à chaque action adverse (+28,2 en 0.106.0).
 - **Illustration** : une cotte de mailles roulée en boule, sanglée par une ceinture de cuir, quelques anneaux arrachés et remplacés par d'autres, plus clairs.
 
 ### 7.2 Coup : une valeur de dé précise

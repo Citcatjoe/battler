@@ -86,7 +86,7 @@ const THUNDERBOLT_HITS = 3
  * - Homme-lézard (voleuse) : chance et poison, esquive et critiques.
  * Un seul personnage par famille depuis la 0.43.0 (les jumeaux de coloris sont retirés, chacun garde
  * les statistiques les plus pertinentes des deux, voir docs/PERSONNAGES.md).
- * Règles v2, phase 5 bis (0.106.0, docs/RESOLUTION.md § 3 bis) : chacun a une attaque (une petite fourchette, DD ou
+ * Règles v2, phase 5 bis (0.106.0, docs/RESOLUTION.md § 3 bis) : chacun a une attaque (une petite fourchette, DP ou
  * DM), son coup de base à chaque jet ; le d6 ne fait plus de dégâts, ses faces 1 et 2 déclenchent ses deux
  * compétences, qui se greffent sur le coup (défaut), le modifient (`relation: 'modify'`) ou le remplacent
  * (`relation: 'replace'`) ; les faces 3 à 6 sont nues.
@@ -103,7 +103,7 @@ const gorak: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Pourfendre sur le 1, Furie des vents sur le 2. Mesuré : 50,0 %.
   // Attaque (phase 5 bis, 0.106.0) : voir docs/PERSONNAGES.md pour la mesure avant → après.
   stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.05, critChance: 0.19, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -170,7 +170,7 @@ const elaria: CharacterDef = {
   // Phase 5 bis : 22 % d'esquive (26 avant) et 15 % de critique (17) : ses compétences, désormais gratuites, la portaient
   // trop haut (Esquive améliorée et Œil de faucon greffés sur un coup).
   stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.22, critChance: 0.15, critMultiplier: 2.4 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
@@ -235,7 +235,7 @@ const brokk: CharacterDef = {
   // quitte le kit. Mesuré : 51,0 % (47,4 % avant).
   // Phase 5 bis : critique ×2,2 (×2,5 avant), la compensation d'Épines acérées et de Peau de pierre, greffées sur un coup
   stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2.2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Nouveau modèle et postures (atelier des postures, 2026-10-20), création originale qui remplace le
   // placeholder. La hache dépasse de la tête : la taille se règle sur le corps (tête-pieds, 71,6 % de la
   // toile), le reste compte dans `headroom` (comme Aldric). La hache du K.O. descend sous les pieds
@@ -297,7 +297,7 @@ const ervald: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Vol de vie sur le 1, Aura glaciale sur le 2 ; le Souffle de la tombe
   // quitte le kit. Mesuré : 50,2 % (53,9 % avant).
   stats: { maxHp: 56, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.16, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Postures (atelier des postures, 2026-10-20) : la garde occupe 83,4 % de la toile ; la même hauteur
   // à l'écran qu'avant (0,98 × 0,99 de l'ancienne image) donne scale 0,97 / 0,834 = 1,16
   look: {
@@ -425,7 +425,7 @@ const naraxes: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Pile ou face sur le 1, Aura de décoction sur le 2 ; Coup de chance quitte
   // le kit. Mesuré : 51,5 % (53,7 % avant).
   stats: { maxHp: 50, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.2, critChance: 0.14, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Postures (0.40.0, docs/POSTURES.md) : la garde occupe 81 % de la toile commune, avec 14 % de vide
   // au-dessus de la tête (dague levée de l'attaque) : scale 1,10 pour sa taille 0,97.
   look: {
@@ -496,7 +496,7 @@ const aldric: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Rétribution sur le 1, Riposte sur le 2 ; l'Aura d'immunité quitte le
   // kit. Mesuré : 50,2 % (53,9 % avant).
   stats: { maxHp: 54, attackMin: 3, attackMax: 5, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Nouveau modèle et postures (atelier des postures, 2026-10-20) : épée basse, plus rien au-dessus de la
   // tête que la hampe de la bannière. La taille se règle sur le corps (tête-pieds, 77 % de la toile) et non
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
@@ -561,7 +561,7 @@ const morgrut: CharacterDef = {
   // 59 PV (63 avant) : la plus forte attaque (7 à 9) frappe à chaque jet ; sans compétence ni critique, les PV sont
   // son seul autre levier.
   stats: { maxHp: 59, attackMin: 7, attackMax: 9, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
   // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
   // massue du coup encaissé et du K.O. descend sous les pieds
@@ -596,7 +596,7 @@ const thaldrin: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : sous forme humaine, la Foudre sur le 1, le 2 et le 3, les Feux follets
   // sur le 4, le 5 et le 6 (les probabilités du d3 d'avant). L'Aura sauvage quitte le kit. Mesuré : 47,4 %.
   // Phase 5 bis (décision de l'utilisateur) : deux attaques selon sa forme. L'homme frappe d'un petit coup magique (DM),
-  // sur lequel son sort se greffe ; l'ours, de la même attaque en coup direct (DD), plus la Force de l'ours (+3, gardée :
+  // sur lequel son sort se greffe ; l'ours, de la même attaque en coup physique (DP), plus la Force de l'ours (+3, gardée :
   // la règle de forme la plus lisible).
   stats: { maxHp: 56, attackMin: 3, attackMax: 4, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
   attackKind: 'magical',
@@ -625,7 +625,7 @@ const thaldrin: CharacterDef = {
       id: 'bear',
       name: "Forme d'ours",
       statuses: ['bearMight'],
-      attackKind: 'direct',
+      attackKind: 'physical',
       look: {
         image: bearIdleImg,
         poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg },
@@ -696,7 +696,7 @@ const fanchon: CharacterDef = {
   // Phase 5 bis : deux coups de base par action, d'une petite attaque ; Crescendo et Soliste, un coup de base ×N.
   // Phase 5 bis : 10 % de critique (5 avant), la compensation de sa petite attaque
   stats: { maxHp: 46, attackMin: 2, attackMax: 4, armor: 0, dodgeChance: 0.06, critChance: 0.1, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,

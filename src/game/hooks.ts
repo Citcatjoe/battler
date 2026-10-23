@@ -28,7 +28,7 @@ export type Hook =
   /** Un statut et ses charges (Poison sur l'adversaire, Esquive améliorée sur soi) */
   | `status:${StatusId}`
   | `moment:${Moment}`
-  /** Des dégâts infligés de ce type (DD, DM, DT) */
+  /** Des dégâts infligés de ce type (DP, DM, DT) */
   | `damage:${DamageKind}`
   /** Une face du dé qui tombe (« face:4 »), la face maximale, un double (deux dés) */
   | `face:${number}`
@@ -59,36 +59,36 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   weakened: { side: 'opponent' },
   exposed: { side: 'opponent' },
   burn: { side: 'opponent', produces: ['damage:temporal'] },
-  vulnerable: { side: 'opponent', produces: ['damage:direct'] },
+  vulnerable: { side: 'opponent', produces: ['damage:physical'] },
   stunned: { side: 'opponent' },
   thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bleed', 'damage:temporal'] },
   ward: { side: 'self' },
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
-  windFury: { side: 'self', produces: ['moment:hit', 'damage:direct'] },
+  windFury: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
   evasion: { side: 'self', produces: ['moment:dodge'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
-  powerAura: { side: 'self', produces: ['damage:direct'] },
+  powerAura: { side: 'self', produces: ['damage:physical'] },
   intimidationAura: { side: 'self' },
   precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['stat:critMultiplier'] },
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:direct'] },
+  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
-  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:direct'] },
+  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:physical'] },
   retribution: { side: 'self', consumes: ['moment:hurt'] },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
-  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:direct'] },
+  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:physical'] },
   rotAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:rot', 'damage:temporal'] },
   rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
-  melodiousAura: { side: 'self', produces: ['damage:direct'] },
+  melodiousAura: { side: 'self', produces: ['damage:physical'] },
   casting: { side: 'self' },
-  bearMight: { side: 'self', produces: ['damage:direct'] },
-  wildAura: { side: 'self', produces: ['damage:direct'] },
+  bearMight: { side: 'self', produces: ['damage:physical'] },
+  wildAura: { side: 'self', produces: ['damage:physical'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -130,7 +130,7 @@ export function eventHooks(e: CharacterEvent): Hooks {
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
   // Crescendo, Soliste : un coup de base multiplié, à la place des deux coups du double
-  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:direct')
+  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:physical')
   for (const effect of e.effects) addEffect(h, effect)
   return unique(h)
 }
@@ -151,7 +151,7 @@ export function relicHooks(r: Relic): Hooks {
   const h: Hooks = { produces: [], consumes: [], hinders: [] }
   for (const [k, v] of Object.entries(r.stats ?? {}) as [keyof CharacterStats, number][]) (v > 0 ? h.produces : h.hinders).push(STAT_HOOK[k])
   if (r.rollBonus) {
-    h.produces.push('damage:direct')
+    h.produces.push('damage:physical')
     if (r.onFace !== undefined) h.consumes.push(`face:${r.onFace}`)
   }
   if (r.trigger?.type === 'strike') {

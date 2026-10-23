@@ -9,18 +9,18 @@
  */
 
 /**
- * Les trois types : direct (DD, un coup, une lame, un os ; « DP » jusqu'au 2026-10-23, renommé par l'utilisateur),
- * magique (DM), temporaire (DT, un statut qui ronge tour après tour).
+ * Les trois types : physique (DP, un coup, une lame, un os), magique (DM), temporaire (DT, un statut qui ronge tour
+ * après tour).
  */
-export type DamageKind = 'direct' | 'magical' | 'temporal'
+export type DamageKind = 'physical' | 'magical' | 'temporal'
 
-export const DAMAGE_KINDS: Record<DamageKind, { short: 'DD' | 'DM' | 'DT'; label: string }> = {
-  direct: { short: 'DD', label: 'Dégâts directs' },
+export const DAMAGE_KINDS: Record<DamageKind, { short: 'DP' | 'DM' | 'DT'; label: string }> = {
+  physical: { short: 'DP', label: 'Dégâts physiques' },
   magical: { short: 'DM', label: 'Dégâts magiques' },
   temporal: { short: 'DT', label: 'Dégâts temporaires' },
 }
 
-/** Le type d'une attaque (le coup de base, docs/RESOLUTION.md § 3 bis) : DD ou DM, jamais temporaire. */
+/** Le type d'une attaque (le coup de base, docs/RESOLUTION.md § 3 bis) : DP ou DM, jamais temporaire. */
 export type AttackKind = Exclude<DamageKind, 'temporal'>
 
 export type DamageSource = 'strike' | 'holy' | 'lightning' | 'fire' | 'wind' | 'poison' | 'bleed' | 'burn' | 'rot'
@@ -31,7 +31,7 @@ export type DamageSource = 'strike' | 'holy' | 'lightning' | 'fire' | 'wind' | '
  */
 export const DAMAGE_SOURCES: Record<DamageSource, { kind: DamageKind; name: string; tone?: 'poison' | 'arcane' }> = {
   // Un coup, une lame, un os : Pile ou face, la Riposte et la relâche de la Rétribution aussi (décisions de l'utilisateur)
-  strike: { kind: 'direct', name: 'Coup' },
+  strike: { kind: 'physical', name: 'Coup' },
   holy: { kind: 'magical', name: 'Lumière' },
   lightning: { kind: 'magical', name: 'Foudre' },
   fire: { kind: 'magical', name: 'Feu' },

@@ -104,7 +104,7 @@ export interface CharacterForm {
    * règles de la forme (le sort de l'homme, le +3 de l'ours) ; ils doivent être `mechanic: 'form'` (validateRoster).
    */
   statuses?: readonly StatusId[]
-  /** Type du coup de base sous cette forme (règles v2, phase 5 bis : l'homme DM, l'ours DD) ; sinon celui du personnage */
+  /** Type du coup de base sous cette forme (règles v2, phase 5 bis : l'homme DM, l'ours DP) ; sinon celui du personnage */
   attackKind?: AttackKind
 }
 
@@ -120,7 +120,7 @@ export interface CharacterDef {
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /**
-   * Type de son coup de base (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : DD (une arme) ou DM (la magie :
+   * Type de son coup de base (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : DP (une arme) ou DM (la magie :
    * Ysolde, le druide sous forme humaine). Une étiquette : aucune règle ne la lit encore.
    */
   attackKind: AttackKind

@@ -79,7 +79,7 @@ export const BOSS: CharacterDef = {
   // Règles v2, phase 5 bis (0.106.0) : une attaque lourde, ses trois techniques sur le 1, le 2 et le 3 (Peau de pierre
   // et l'Aura d'intimidation se greffent sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées
   stats: { maxHp: 70, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
-  attackKind: 'direct',
+  attackKind: 'physical',
   look: { ...rosterDef('morgrut').look, tint: 'brightness(0.72) sepia(0.35) hue-rotate(-20deg) saturate(1.4)' },
   lore: {
     tagline: 'Personne ne l’a jamais vu tomber. Personne ne l’a jamais vu de près, non plus.',

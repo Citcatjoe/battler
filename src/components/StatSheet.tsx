@@ -20,7 +20,7 @@ export const STAT_LINES: StatLine[] = [
 ]
 
 /**
- * Le type du coup de base (DD, DM) ; celui de chaque forme quand elles diffèrent (le druide : « DM · ours DD »).
+ * Le type du coup de base (DP, DM) ; celui de chaque forme quand elles diffèrent (le druide : « DM · ours DP »).
  */
 function attackKindLabel(c: Character): string {
   const own = DAMAGE_KINDS[c.attackKindIn(0)].short

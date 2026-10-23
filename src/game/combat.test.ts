@@ -1716,16 +1716,16 @@ describe('reliques (docs/RELIQUES.md)', () => {
 
   it('caractéristique : les stats s’ajoutent à plat, la base reste connue, une stat peut passer sous 0', () => {
     const c = createCharacter('morgrut').withRelics([getRelic('mercenary-mail'), getRelic('lead-pommel')])
-    expect(c.stats).toMatchObject({ armor: c.baseStats.armor + 2, critMultiplier: c.baseStats.critMultiplier + 1 })
+    expect(c.stats).toMatchObject({ armor: c.baseStats.armor + 1, critMultiplier: c.baseStats.critMultiplier + 1 })
     // Morgrut ne vise pas (0 % de critique) : le Contrepoids l'affiche sous 0, il ne critique simplement jamais
     expect(c.stats.critChance).toBeCloseTo(-0.04)
     expect(effectiveStats(c, []).critChance).toBe(0)
-    // Morgrut n'a pas d'esquive : la cotte l'affiche à −8 % (« c'est marrant »), il n'esquive simplement jamais
-    expect(c.stats.dodgeChance).toBeCloseTo(-0.08)
+    // Morgrut n'a pas d'esquive : la cotte l'affiche à −5 % (« c'est marrant »), il n'esquive simplement jamais
+    expect(c.stats.dodgeChance).toBeCloseTo(-0.05)
     expect(effectiveStats(c, []).dodgeChance).toBe(0)
-    // La cotte retient 2 de chaque coup : un coup de 1 tombe au plancher
+    // La cotte retient 1 de chaque coup : un coup de 1 tombe au plancher
     const r = run([testCharacter('a', { maxHp: 10 }), testCharacter('b', { maxHp: 10 }).withRelics([getRelic('mercenary-mail')])])
-    for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ armor: 2, damage: 1, floored: true })
+    for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ armor: 1, damage: 1, floored: true })
   })
 
   it('coup : un bonus ajouté à chaque coup qui touche, avant le critique, sans changer le jet', () => {
@@ -2557,25 +2557,25 @@ describe('attaque de base (phase 5 bis)', () => {
     expect([...values].every((v) => v >= 5 && v <= 7)).toBe(true)
   })
 
-  it('druide : le coup de base de l’homme est magique (DM), celui de l’ours direct (DD)', () => {
+  it('druide : le coup de base de l’homme est magique (DM), celui de l’ours physique (DP)', () => {
     const druid = createCharacter('thaldrin')
-    expect([druid.attackKindIn(0), druid.attackKindIn(1)]).toEqual(['magical', 'direct'])
-    const kinds = { magical: 0, direct: 0 }
+    expect([druid.attackKindIn(0), druid.attackKindIn(1)]).toEqual(['magical', 'physical'])
+    const kinds = { magical: 0, physical: 0 }
     for (let seed = 1; seed < 20; seed++) {
       const r = simulateCombat([druid, createCharacter('gorak')], { seed })
       let form = 0
       for (const b of r.beats) {
         if (b.type === 'shift' && b.side === 0) form = b.form
         if (b.type !== 'attack') continue
-        if (b.attack.attacker === 1) expect(b.attack.kind).toBe('direct')
+        if (b.attack.attacker === 1) expect(b.attack.kind).toBe('physical')
         else {
-          expect(b.attack.kind).toBe(form === 0 ? 'magical' : 'direct')
+          expect(b.attack.kind).toBe(form === 0 ? 'magical' : 'physical')
           kinds[b.attack.kind]++
         }
       }
     }
     expect(kinds.magical).toBeGreaterThan(20)
-    expect(kinds.direct).toBeGreaterThan(20)
+    expect(kinds.physical).toBeGreaterThan(20)
   })
 
   it('Copier une face : la compétence d’une face, rang compris, sur la face nue de plus petit numéro qui n’est pas dorée ; une face nue ne se copie pas', () => {

@@ -37,7 +37,7 @@ export function createAudit() {
       if (b.type === 'event') see(`compétence ${b.event.name}`)
     }
     // Types de dégâts (règles v2, phase 1, damage.ts) : chaque dégât porte une source connue ; un statut qui agit fait
-    // des DT ; une pièce et une Riposte, des DD (décisions de l'utilisateur)
+    // des DT ; une pièce et une Riposte, des DP (décisions de l'utilisateur)
     r.beats.forEach((b, i) => {
       for (const e of beatEffects(b)) {
         if (e.type !== 'damage') continue
@@ -48,7 +48,7 @@ export function createAudit() {
         }
         see(`type de dégâts ${DAMAGE_KINDS[def.kind].short}`)
         const expected: DamageKind | undefined =
-          b.type === 'statusTick' ? 'temporal' : b.type === 'coin' || (b.type === 'statusReaction' && STATUSES[b.status].reflectsHit) ? 'direct' : undefined
+          b.type === 'statusTick' ? 'temporal' : b.type === 'coin' || (b.type === 'statusReaction' && STATUSES[b.status].reflectsHit) ? 'physical' : undefined
         if (expected && def.kind !== expected) flag('type de dégâts incohérent', r, i, `${b.type} : ${def.kind} au lieu de ${expected}`)
       }
     })
@@ -267,7 +267,7 @@ export function createAudit() {
         if (a.critMultiplier !== eff.critMultiplier) flag('multiplicateur incohérent', r, i, `${a.critMultiplier} vs ${eff.critMultiplier}`)
         if (a.armor !== effDef.armor) flag('armure incohérente', r, i, `${a.armor} vs ${effDef.armor}`)
         // Le coup de base (phase 5 bis) : sa valeur dans l'attaque de l'attaquant (reliques et forge comprises), son type
-        // celui de sa forme du moment (le druide : l'homme DM, l'ours DD)
+        // celui de sa forme du moment (le druide : l'homme DM, l'ours DP)
         const kind = r.fighters[att].attackKindIn(form[att])
         if (a.kind !== kind) flag('type du coup de base incohérent', r, i, `${a.kind} au lieu de ${kind}`)
         if (!a.replaced) {

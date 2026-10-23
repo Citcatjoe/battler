@@ -146,7 +146,7 @@ export interface StatusDef {
   instantStrikes?: boolean
   /**
    * Pile ou face (relation « modifie », règles v2) : le porteur lance aussitôt une pièce, juste après le coup qui a posé
-   * le statut. Pile, ce coup compte double : l'adversaire perd à nouveau les PV que le coup lui a retirés (DD) ; face,
+   * le statut. Pile, ce coup compte double : l'adversaire perd à nouveau les PV que le coup lui a retirés (DP) ; face,
    * rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche (fenêtres `hit` du porteur et
    * `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol
    * de vie, Riposte, jauges de Rétribution).
@@ -654,7 +654,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
    * Druide (0.73.0, SORTS.md § 18) : un tour sur deux, l'homme lance un sort ; l'autre tour, la bête frappe.
    * Les deux règles de forme sont des mécanismes de forme (`mechanic: 'form'`), visibles dans l'en-tête. Règles v2,
    * phase 5 bis : l'homme frappe aussi, d'un coup de base magique (DM), sur lequel son sort se greffe ; l'ours, d'un coup
-   * de base direct (DD).
+   * de base physique (DP).
    */
   casting: {
     name: 'Incantation',
@@ -675,7 +675,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
-    summary: `Sous forme d'ours, le druide ne lance aucun sort : son coup de base est direct (DD) et fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
+    summary: `Sous forme d'ours, le druide ne lance aucun sort : son coup de base est physique (DP) et fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
     describe: () => `Chaque coup fait +${BEAR_MIGHT}, après le critique et avant l'armure`,
     badge: () => `+${BEAR_MIGHT}`,
     counter: 'turns',

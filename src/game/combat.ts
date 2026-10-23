@@ -95,7 +95,7 @@ export interface Attack {
    * reliques, la dorure et le critique ; 0 pour un jet remplacé
    */
   value: number
-  /** Type du coup de base : celui de l'attaque de l'attaquant, sous sa forme du moment (DD ou DM) */
+  /** Type du coup de base : celui de l'attaque de l'attaquant, sous sa forme du moment (DP ou DM) */
   kind: AttackKind
   /** Crescendo, Soliste : le coup de base multiplié (`CharacterEvent.hitMultiplier`) */
   multiplier?: number
@@ -241,7 +241,7 @@ export type BeatBody =
   | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup compte double (les PV qu'il a
-   * retirés, à nouveau, en DD), face, rien. Le statut est consommé
+   * retirés, à nouveau, en DP), face, rien. Le statut est consommé
    */
   | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
   /**
@@ -1067,7 +1067,7 @@ export function simulateCombat(
 
   /**
    * Pile ou face (relation « modifie », règles v2) : si `side` détient une pièce, il la lance tout de suite (pile = 1 sur
-   * un d2, un rang de dé). Pile, ce coup compte double : les PV qu'il a retirés (`dealt`), à nouveau, en DD ; s'ils
+   * un d2, un rang de dé). Pile, ce coup compte double : les PV qu'il a retirés (`dealt`), à nouveau, en DP ; s'ils
    * « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui touche de ce montant : tout ce qui
    * réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de vie, Riposte, jauges). Le statut est
    * consommé. Renvoie le perdant s'il y a K.O. La pièce a pour cause l'étape qui l'a posée, à défaut le coup `after`.

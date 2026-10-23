@@ -32,6 +32,15 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.106.1] — 2026-10-24
+
+Retours de l'utilisateur sur la 0.106.0.
+
+### Modifié
+- **Vocabulaire** (décision de l'utilisateur) : la stat s'appelle **Attaque**, chaque jet inflige **un coup** de cette valeur, **physique (DP) ou magique (DM)**. Le DD de la 0.106.0 redevient DP, dans le code (`DamageKind` `physical`) et les documents : la fiche affiche « Attaque 5 à 6 DP ». « Dégâts directs » garde son seul sens : les dégâts qui ignorent l'esquive, l'armure et le critique.
+- **Cotte du mercenaire** : +2 armure, −8 % d'esquive → **+1 armure, −5 % d'esquive** (le repli prévu en 0.77.0). Mesuré (`npm run relics`, 400 combats par duel) : +28,2 → +13,7, d'Aldric +7,1 à Morgrut +20,9.
+- Plan : la prochaine phase est la **revue des compétences** pour le d6 et l'attaque (phase 5 ter, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 1.8 et § 18).
+
 ## [0.106.0] — 2026-10-23
 
 Règles v2, phase 5 bis : **l'attaque de base** (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 6 bis, [docs/RESOLUTION.md](docs/RESOLUTION.md) § 3 bis), demande de l'utilisateur : « les personnages auront désormais une valeur d'attaque… servant de coup de base infligé à chaque jet ; les valeurs de dé ne servent qu'à déclencher des compétences ». Les combats changent volontairement : l'empreinte de non-régression est mise à jour.

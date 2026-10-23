@@ -54,7 +54,7 @@ Déjà en place : le duel, la simulation, les statistiques globales, le tournoi 
 
 Pistes envisagées, sans engagement ni ordre :
 
-- **Progression et synergies** (règles v2, en cours, [PROGRESSION.md](PROGRESSION.md)) : des builds dont les combinaisons ne relèvent pas du hasard, et qui se voient dans le combat. Le socle : un d6 pour tous, et une **attaque de base** propre à chaque personnage (une valeur, DD ou DM, infligée à chaque jet), que les compétences et les reliques peuvent lire ; le dé ne sert plus qu'à déclencher ce qui se greffe sur ce coup, le modifie ou le remplace (§ 6 bis, demande de l'utilisateur du 2026-10-23).
+- **Progression et synergies** (règles v2, en cours, [PROGRESSION.md](PROGRESSION.md)) : des builds dont les combinaisons ne relèvent pas du hasard, et qui se voient dans le combat. Le socle : un d6 pour tous, et une **attaque de base** propre à chaque personnage (une valeur, DP ou DM, infligée à chaque jet), que les compétences et les reliques peuvent lire ; le dé ne sert plus qu'à déclencher ce qui se greffe sur ce coup, le modifie ou le remplace (§ 6 bis, demande de l'utilisateur du 2026-10-23).
 - **Plus de contenu** : nouvelles races ou classes, d'autres variantes, plusieurs arènes tirées au sort.
 - **Plus d'événements** : nouveaux déclencheurs (critique reçu, esquive, PV sous un seuil, début de combat) et nouveaux effets (poison, étourdissement, vol de vie).
 - **Tournoi** : tailles d'arbre variables (8 ou 32), tête de série, sauvegarde facultative.

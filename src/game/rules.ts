@@ -76,7 +76,7 @@ export const RULES: Record<RuleId, Rule> = {
   'base-hit': {
     group: 'dice',
     title: 'Coup de base',
-    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DD (dégâts directs, une arme) ou DM (dégâts magiques). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Le type n'est qu'une étiquette pour l'instant.",
+    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DP (dégâts physiques, une arme) ou DM (dégâts magiques). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Le type n'est qu'une étiquette pour l'instant.",
   },
   'twin-dice': {
     group: 'dice',
@@ -141,7 +141,7 @@ export const RULES: Record<RuleId, Rule> = {
   forms: {
     group: 'skills',
     title: 'Formes',
-    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; un coup de base direct à +3 en ours) : ce sont des mécanismes, ni bonus ni malus.",
+    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; un coup de base physique à +3 en ours) : ce sont des mécanismes, ni bonus ni malus.",
   },
   polarity: {
     group: 'statuses',

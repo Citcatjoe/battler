@@ -122,7 +122,7 @@ export const RELICS: readonly Relic[] = [
     id: 'mercenary-mail',
     name: 'Cotte du mercenaire',
     flavor: 'Une cotte de mailles roulée en boule, rapiécée d’anneaux plus clairs. Elle arrête les coups, et les pas.',
-    stats: { armor: 2, dodgeChance: -0.08 },
+    stats: { armor: 1, dodgeChance: -0.05 },
   },
   /* Coup : des objets de hasard, qui portent la face qui les éveille */
   {
