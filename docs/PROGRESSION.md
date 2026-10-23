@@ -720,6 +720,13 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 
 ## 18. Le plan
 
+**La branche `regles-v2`** (ouverte le 2026-10-23, depuis `design-system-v1` en 0.100.0) porte tout ce chantier, comme `moteur-v2` a porté le moteur v2. Règles de la branche :
+- **une phase, un ou plusieurs commits**, chacun avec la version montée et son entrée au CHANGELOG ; la case de la phase se coche dans [TODO.md](TODO.md) § 20 ;
+- **`design-system-v1` continue de vivre** (interface, autres chantiers) : on la fusionne dans `regles-v2` régulièrement, pour que la fusion finale reste petite ;
+- **les phases 0 à 3 ne changent aucun combat** : elles peuvent revenir sur `design-system-v1` sans attendre la fin, si l'utilisateur le souhaite ;
+- **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
+- **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
+
 _Un plan seulement (décision de l'utilisateur) : rien n'est codé. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay._
 
 ```mermaid

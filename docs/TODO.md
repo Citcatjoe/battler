@@ -184,3 +184,18 @@ L'utilisateur a constaté plusieurs anomalies dès l'ouverture du combat test (0
 
 - [ ] Lister les anomalies constatées (description de l'utilisateur, trace `_triche` dans `logs/combats/` quand il y en a une).
 - [ ] Pour chacune, trancher : défaut de l'écran du combat test, ou défaut du moteur (rejeu de la trace par `npm run logs`).
+
+## 20. Règles v2 : progression et synergies (branche `regles-v2`, ouverte le 2026-10-23)
+
+Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (décisions au § 1, plan au § 18, ce qui manque au § 17). Le but : que la progression (dé, compétences, reliques) fasse naître des builds dont les combinaisons ne relèvent pas du hasard, et que ces builds se voient dans le combat. Le socle : un d6 pour tous aux faces imprimées, deux compétences au kit de référence, la signature seule en campagne, un acte de 10 combats.
+
+- [ ] **0. Mesure** : `npm run synergy` (log-cote), la durée dans `npm run campaign` et le rapport de saison, « le build se voit-il ? » ; état de référence noté dans PROGRESSION.md. Aucun combat changé.
+- [ ] **1. Étiquettes** : accroches de chaque brique (produit, consomme), type DP, DM ou DT et source de chaque dégât, contrôle du kit ouvert. Empreinte identique.
+- [ ] **2. Essai des répertoires** sur les dés actuels, avec les compétences existantes, et offre orientée (carte garantie, écho, libre), en campagne. Puis l'utilisateur joue.
+- [ ] **3. Dé en liste de faces**, à résultats identiques (RESOLUTION.md d'abord). Empreinte et audit identiques.
+- [ ] **4. Essai du d6** au laboratoire : Gorak, Ysolde, Aldric, Morgrut, depuis les dés de référence (PROGRESSION.md § 6.7) ; valeur imprimée de Pourfendre.
+- [ ] **5. Conversion et forge d6** : les dix personnages (Fanchon et le druide compris), Copier une face, Refondre, quatre faces de compétence au plus ; retrait d'Agrandir, de Retailler et du Contrepoids (remplaçant au tournoi). `npm run balance`, empreinte mise à jour volontairement.
+- [ ] **6. Campagne longue** : signature seule, 10 combats (4 forges, 6 reliques dans l'ordre retenu), courbe de 98 à 89 %, boss à 45 %. Puis l'utilisateur joue ; décision sur la fusion.
+- [ ] **7. Types à l'écran**, reliques qui font durer (« +15 PV »), bonus par type, par impact.
+- [ ] **8. Lots de contenu** : environ 35 compétences et leurs icônes, reliques qui lisent la forge, pièces maîtresses, paliers, recettes, plateau ; chaque lot mesuré par `npm run synergy`.
+- Plus tard : super coups, sertissage, défenses par type, vies.
