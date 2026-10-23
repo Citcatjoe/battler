@@ -313,7 +313,9 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 | `audit.test.ts` | audit de résolution (`audit.ts`, `createAudit`) : milliers de combats revérifiés étape par étape |
 | `scripts/logs.report.ts` | rapport des combats joués (`npm run logs`) : rejoue `logs/combats/` depuis les graines, compare, audite, résume ; écrit dans `logs/reports/` |
 | `scripts/balance.report.ts` | rapport d'équilibre détaillé (`npm run balance`, config `vitest.balance.config.ts`), écrit dans `logs/balance/` |
-| `scripts/campaign.report.ts` | mesure de la campagne (`npm run campaign`, `CAMPAIGN_RUNS` parties par champion en pilote automatique) : profondeur, boss atteint, acte gagné ; écrit dans `logs/campaign/` |
+| `scripts/campaign.report.ts` | mesure de la campagne (`npm run campaign`, `CAMPAIGN_RUNS` parties par champion en pilote automatique) : profondeur, boss atteint, acte gagné, tours par combattant, apport du build par nœud ; écrit dans `logs/campaign/` |
+| `scripts/synergy.report.ts` | synergies des reliques deux à deux, en log-cote (`npm run synergy`, `SYNERGY_N`) ; écrit dans `logs/synergy/` |
+| `scripts/season.report.ts` | saison construite jouée en entier (`npm run season`, `SEASON_RUNS`, `SEASON_N`) : durée par tiers, apport des constructions ; écrit dans `logs/season/` |
 | `components/screens.test.tsx` | rendu de chaque écran avec de vraies données |
 
 **Empreinte de non-régression** : si elle casse alors qu'aucune règle ne devait changer, c'est un effet de bord. Si le changement est voulu, on met à jour l'instantané avec `npx vitest run -u` et on le note dans le CHANGELOG.

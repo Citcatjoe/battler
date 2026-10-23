@@ -27,15 +27,15 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 
 ### 1.1 Première passe (2026-10-23)
 
-| Question | Décision |
-| --- | --- |
-| Le d6 aux faces imprimées | **Oui.** La mécanique de base, sur laquelle tout vient s'ajouter, doit être revue ; le d6 est aujourd'hui le meilleur levier pour cadrer (§ 6). |
-| Des écoles de compétences | **Non, trop rigide.** Plutôt des possibilités **au cas par cas, par personnage**, selon le thème de ses attaques (§ 7). En revanche : **classer les attaques par type de dégâts** : DP (dégâts physiques, en rouge), DM (dégâts magiques, couleur selon la source), DT (dégâts temporaires, couleur selon la source : magie, poison, autre) (§ 9). |
-| Compétences d'origine en campagne | **La règle « les trois compétences d'origine restent les siennes » est obsolète** : les modes de jeu ont des règles différentes, la campagne peut avoir les siennes. **La campagne doit proposer plus de combats** : avec le nombre actuel, un build reste très incomplet (§ 11). |
-| Sertir une relique dans une face | **Pas pour le moment**, gardé pour plus tard (§ 15.2). |
-| Les super coups | **Gardés pour plus tard** : on revoit d'abord la progression par les compétences, les reliques et le dé. **Ne pas perdre de vue la réflexion sur les synergies** (§ 13). |
-| « Sur un 4 » | **La face 4**, quoi qu'elle porte. |
-| La nature des compétences comme règle | **Non** : la nature (martiale, adresse, arcane) reste de la présentation. |
+| Question                              | Décision                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Le d6 aux faces imprimées             | **Oui.** La mécanique de base, sur laquelle tout vient s'ajouter, doit être revue ; le d6 est aujourd'hui le meilleur levier pour cadrer (§ 6).                                                                                                                                                                                                    |
+| Des écoles de compétences             | **Non, trop rigide.** Plutôt des possibilités **au cas par cas, par personnage**, selon le thème de ses attaques (§ 7). En revanche : **classer les attaques par type de dégâts** : DP (dégâts physiques, en rouge), DM (dégâts magiques, couleur selon la source), DT (dégâts temporaires, couleur selon la source : magie, poison, autre) (§ 9). |
+| Compétences d'origine en campagne     | **La règle « les trois compétences d'origine restent les siennes » est obsolète** : les modes de jeu ont des règles différentes, la campagne peut avoir les siennes. **La campagne doit proposer plus de combats** : avec le nombre actuel, un build reste très incomplet (§ 11).                                                                  |
+| Sertir une relique dans une face      | **Pas pour le moment**, gardé pour plus tard (§ 15.2).                                                                                                                                                                                                                                                                                             |
+| Les super coups                       | **Gardés pour plus tard** : on revoit d'abord la progression par les compétences, les reliques et le dé. **Ne pas perdre de vue la réflexion sur les synergies** (§ 13).                                                                                                                                                                           |
+| « Sur un 4 »                          | **La face 4**, quoi qu'elle porte.                                                                                                                                                                                                                                                                                                                 |
+| La nature des compétences comme règle | **Non** : la nature (martiale, adresse, arcane) reste de la présentation.                                                                                                                                                                                                                                                                          |
 
 ### 1.2 Deuxième passe (2026-10-23)
 
@@ -116,6 +116,50 @@ Mesure jetable (script supprimé depuis ; P8 propose d'en faire un outil) : les 
 - **La taille du dé fausse la valeur des objets** : le Fer vaut de +3,6 (Thaldrin) à +19,2 points (Fanchon) ; une gravure occupe 1/7 du dé d'Ysolde et 1/14 de celui de Morgrut.
 
 **Estimation : pourquoi les builds ne se forment pas.** Une forge propose 3 des 5 opérations (Graver dans 60 % des offres), et Graver ne montre qu'une compétence sur 27. Si 5 de ces 27 compétences vont bien à un personnage, la chance d'en voir une à une forge est de 0,6 × 5/27 ≈ **11 %** ; sur les deux forges d'un acte, ≈ **21 %**.
+
+### 3.1 L'état de référence (phase 0, version 0.101.0)
+
+_Mesuré le 2026-10-23 sur la branche `regles-v2`, avant tout changement de règle. C'est le « avant » de chaque phase suivante. Outils : `npm run synergy`, `npm run campaign`, `npm run season` ([EQUILIBRAGE.md](EQUILIBRAGE.md), tableau des outils). Rapports complets dans `logs/synergy/`, `logs/campaign/`, `logs/season/`._
+
+**Synergies des reliques** (`npm run synergy`, 200 combats par duel) : les chiffres du § 3 se retrouvent à l'identique, mêmes graines. En plus :
+
+| Mesure | Valeur |
+| --- | --- |
+| Triplets au-delà de +0,25 | 7 sur 1 200 (dont 5 de Dé creux + Conque des vents) |
+| Triplets sous −0,15 | 34 |
+| Reliques avec un partenaire au-delà de +0,25, sur au moins un personnage | 6 sur 16 (Contrepoids, Dé creux, Cloche, Clepsydre, Dent de loup, Conque) |
+
+**Bruit** (estimation, non mesurée) : à 200 combats par duel, un taux de victoire varie de ±1,2 point ; un triplet, qui combine quatre taux, de l'ordre de ±0,1 en log-cote. Un partenaire à +0,25 sur un seul personnage est donc un indice, pas une preuve (le meilleur des 15 partenaires d'une relique profite du bruit) ; la moyenne sur le roster est fiable. À confirmer avec `SYNERGY_N=400`.
+
+**Campagne** (`npm run campaign`, 30 parties par champion, 300 en tout ; boss atteint 51 % et acte gagné 28 %, comme en 0.89.0, [CAMPAGNE.md](CAMPAGNE.md) § 18.3 ; par champion, quelques écarts de 3 points depuis, les règles ayant bougé entre-temps) :
+
+| Nœud | Récompenses reçues | Combats | Construit | Nu (même graine) | Apport du build | Tours par combattant (construit / nu) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0 | 300 | 92 % | 92 % | 0 | 5,5 / 5,5 |
+| 2 | 1 | 276 | 90 % | 83 % | +7 points | 6,7 / 7,0 |
+| 3 | 2 | 248 | 88 % | 80 % | +8 points | 7,4 / 7,2 |
+| 4 | 3 | 219 | 84 % | 61 % | +23 points | 7,8 / 8,2 |
+| 5 | 4 | 185 | 83 % | 57 % | +25 points | 9,3 / 9,6 |
+| Boss | 5 | 153 | | | | 12,7 |
+
+Tours par combattant, par champion, sur tout l'acte : de 6,0 (Fanchon) et 6,5 (Gorak, Morgrut) à 8,9 (Brokk) et **13,8 (Ysolde)**.
+
+**Saison construite** (`npm run season`, 4 saisons de 24, reliques et forge, choix par défaut ; 60 combats par duel pour la valeur des constructions) :
+
+| Tiers de saison | Journées | Tours par combattant |
+| --- | --- | --- |
+| 1 | 1 à 16 | 9,3 |
+| 2 | 17 à 31 | 8,8 |
+| 3 | 32 à 46 | 9,1 |
+
+En fin de saison, les 96 constructions sont complètes (trois reliques, trois forges). Contre le roster nu, une construction vaut **+35 points** en moyenne (de +31 pour Brokk à +39 pour Fanchon et +40 pour Ysolde) : un participant nu à 50 % passe à environ 85 %.
+
+**Lecture** :
+- **Le build se voit déjà, mais tard** : en campagne, son apport reste faible après une ou deux récompenses (+7, +8 points), puis monte à +23 et +25 après trois et quatre. Avec cinq récompenses par acte, le champion ne joue que deux combats normaux avec un build qui compte : c'est le constat de l'utilisateur (« un build est très incomplet »), chiffré.
+- **Les combats ne raccourcissent pas avec la puissance, aujourd'hui** : en saison, les deux camps se construisent, et la durée reste à 9 tours par combattant d'un bout à l'autre ; en campagne, les PV réglés des adversaires montent avec le champion de référence, et la durée monte avec eux (de 5,5 à 9,3). Le construit et le nu durent autant. Le risque « un build agressif finit en 4 tours » est réel sur le papier (§ 12.1), mais il n'apparaît pas dans les modes actuels ; il apparaîtra quand un champion dépassera nettement la référence.
+- **Le combat le plus court est le premier de la campagne** : 5,5 tours par combattant, parce que l'adversaire y est réglé à 95 % (PV très bas). C'est la démonstration voulue, mais c'est aussi le combat où le champion n'a encore rien à montrer.
+- **Ysolde dure deux fois plus que les autres** en campagne (13,8 tours) : l'Aura de sainteté. À garder en tête pour son kit de deux compétences (§ 6.7).
+- **Les synergies restent à construire** : 6 reliques sur 16 ont un partenaire, toutes par un cas isolé ; aucune paire ne dépasse +0,25 en moyenne.
 
 ---
 
@@ -744,7 +788,7 @@ flowchart LR
 
 | Phase | Contenu | Combats changés ? | Preuve | Ce qu'on décide à la fin |
 | --- | --- | --- | --- | --- |
-| **0. Mesure** | `npm run synergy` (P8, log-cote) ; la durée des combats dans `npm run campaign` et le rapport de saison ; une première mesure « le build se voit-il ? » (champion construit contre le même nu) | non | l'état de référence, noté ici (§ 3 complété) | les cibles de synergie et de durée sont-elles les bonnes ? |
+| **0. Mesure** (faite, 0.101.0) | `npm run synergy` (P8, log-cote) ; la durée des combats dans `npm run campaign` et `npm run season` ; une première mesure « le build se voit-il ? » (champion construit contre le même nu) | non | l'état de référence, § 3.1 | les cibles de synergie et de durée sont-elles les bonnes ? |
 | **1. Étiquettes** | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le contrôle du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; un contrôle d'audit : chaque dégât porte un type | — |
 | **2. Essai des répertoires** (dés actuels) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (carte garantie, écho, libre, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après : diversité et cohérence des builds | **l'utilisateur joue** : la structure tient-elle ? |
 | **3. Dé en liste de faces** | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques | — |

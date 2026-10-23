@@ -189,7 +189,7 @@ L'utilisateur a constaté plusieurs anomalies dès l'ouverture du combat test (0
 
 Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (décisions au § 1, plan au § 18, ce qui manque au § 17). Le but : que la progression (dé, compétences, reliques) fasse naître des builds dont les combinaisons ne relèvent pas du hasard, et que ces builds se voient dans le combat. Le socle : un d6 pour tous aux faces imprimées, deux compétences au kit de référence, la signature seule en campagne, un acte de 10 combats.
 
-- [ ] **0. Mesure** : `npm run synergy` (log-cote), la durée dans `npm run campaign` et le rapport de saison, « le build se voit-il ? » ; état de référence noté dans PROGRESSION.md. Aucun combat changé.
+- [x] **0. Mesure** (0.101.0) : `npm run synergy` (log-cote), la durée dans `npm run campaign` et `npm run season`, « le build se voit-il ? » ; état de référence dans PROGRESSION.md § 3.1. Aucun combat changé.
 - [ ] **1. Étiquettes** : accroches de chaque brique (produit, consomme), type DP, DM ou DT et source de chaque dégât, contrôle du kit ouvert. Empreinte identique.
 - [ ] **2. Essai des répertoires** sur les dés actuels, avec les compétences existantes, et offre orientée (carte garantie, écho, libre), en campagne. Puis l'utilisateur joue.
 - [ ] **3. Dé en liste de faces**, à résultats identiques (RESOLUTION.md d'abord). Empreinte et audit identiques.

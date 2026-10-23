@@ -1,7 +1,7 @@
 {
   "name": "battler",
   "private": true,
-  "version": "0.100.0",
+  "version": "0.101.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,8 @@
     "logs": "vitest run --config vitest.balance.config.ts scripts/logs.report.ts --silent=false",
     "relics": "vitest run --config vitest.balance.config.ts scripts/relics.report.ts --silent=false",
     "campaign": "vitest run --config vitest.balance.config.ts scripts/campaign.report.ts --silent=false",
+    "synergy": "vitest run --config vitest.balance.config.ts scripts/synergy.report.ts --silent=false",
+    "season": "vitest run --config vitest.balance.config.ts scripts/season.report.ts --silent=false",
     "sfx": "node --env-file=.env.local scripts/gen-sfx.mjs"
   },
   "dependencies": {

@@ -32,6 +32,16 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.101.0] — 2026-10-23
+
+Règles v2, phase 0 : la mesure (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 18). Aucune règle de combat ne change.
+
+### Ajouté
+- **`npm run synergy`** (`scripts/synergy.report.ts`, `SYNERGY_N`) : les reliques deux à deux, sur chaque personnage, contre le roster nu ; synergie en log-cote (écart à l'additivité), partenaire de chaque relique, cibles d'un lot (+0,25, −0,15). Environ 5 minutes. Rapport dans `logs/synergy/`.
+- **`npm run season`** (`scripts/season.report.ts`, `SEASON_RUNS`, `SEASON_N`) : saisons de 24 jouées en entier, reliques et forge ; tours par combattant par tiers de saison, apport de chaque construction de fin de saison contre le roster nu. Rapport dans `logs/season/`.
+- **`npm run campaign`** : tours par combattant par champion ; par nœud, « le build se voit-il ? » (chaque combat normal rejoué sur la même graine par le champion nu) et la durée du construit et du nu.
+- **État de référence** des règles v2 ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 3.1) : 6 reliques sur 16 ont un partenaire au-delà de +0,25, aucune paire en moyenne ; en campagne, le build apporte +7 et +8 points après une et deux récompenses, +23 et +25 après trois et quatre ; la durée ne baisse pas avec la puissance (saison : 9,3, 8,8, 9,1 tours par combattant ; campagne : de 5,5 au premier combat à 9,3 au cinquième) ; une construction de saison complète vaut +35 points contre le roster nu.
+
 ## [0.100.0] — 2026-10-23
 
 Brief de l'utilisateur `docs/ref/prompt-affrontement-et-tournoi.md` et ses sept références ; décisions du 2026-10-23 (pas de paris en duel, retours et titres actuels, son vraiment indépendant, ajouts au kit, comparaison des dés provisoire, pas de tête de série dans un arbre sans saison).

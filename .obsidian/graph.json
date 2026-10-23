@@ -5,8 +5,72 @@
   "showAttachments": false,
   "hideUnresolved": false,
   "showOrphans": true,
-  "collapse-color-groups": true,
-  "colorGroups": [],
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "file:TODO OR file:ETAT OR file:FEATURES OR file:CHANGELOG",
+      "color": {
+        "a": 1,
+        "rgb": 15026253
+      }
+    },
+    {
+      "query": "file:CLAUDE OR file:prompt OR path:docs/ref OR path:docs/ui-kit",
+      "color": {
+        "a": 1,
+        "rgb": 9326278
+      }
+    },
+    {
+      "query": "file:SYSTEMES OR file:MOTEUR OR file:RESOLUTION OR file:STATUTS OR file:SORTS OR file:POSTURES OR file:RELIQUES OR file:FAMILLES OR file:PARIS OR file:PROGRESSION OR file:EQUILIBRAGE",
+      "color": {
+        "a": 1,
+        "rgb": 4099821
+      }
+    },
+    {
+      "query": "file:CAMPAGNE OR file:PERSONNAGES OR file:MISE_EN_SCENE OR file:STYLE_BIBLE OR file:INTENTION OR file:SONS OR file:design-system",
+      "color": {
+        "a": 1,
+        "rgb": 3187820
+      }
+    },
+    {
+      "query": "path:docs",
+      "color": {
+        "a": 1,
+        "rgb": 1222036
+      }
+    },
+    {
+      "query": "path:logs/balance",
+      "color": {
+        "a": 1,
+        "rgb": 16098596
+      }
+    },
+    {
+      "query": "path:logs/lab",
+      "color": {
+        "a": 1,
+        "rgb": 16214805
+      }
+    },
+    {
+      "query": "path:logs",
+      "color": {
+        "a": 1,
+        "rgb": 9145752
+      }
+    },
+    {
+      "query": "path:src OR path:sfx_choix_good",
+      "color": {
+        "a": 1,
+        "rgb": 11370328
+      }
+    }
+  ],
   "collapse-display": true,
   "showArrow": false,
   "textFadeMultiplier": 0,
@@ -17,6 +81,6 @@
   "repelStrength": 10,
   "linkStrength": 1,
   "linkDistance": 250,
-  "scale": 0.4444444444444444,
+  "scale": 0.36288736930121146,
   "close": false
 }

@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "bf12c3f5f9656860",
+        "id": "55375499b364a8e2",
         "type": "tabs",
         "children": [
           {
-            "id": "9efb25744e45e1b6",
+            "id": "83859142b74745cb",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/MISE_EN_SCENE.md",
+                "file": "docs/PROGRESSION.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "MISE_EN_SCENE"
+              "title": "PROGRESSION"
             }
           }
         ]
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/MISE_EN_SCENE.md",
+                "file": "docs/PROGRESSION.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/MISE_EN_SCENE.md",
+                "file": "docs/PROGRESSION.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/MISE_EN_SCENE.md",
+                "file": "docs/PROGRESSION.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -188,19 +188,22 @@
       "bases:Créer une nouvelle base": false
     }
   },
-  "active": "9efb25744e45e1b6",
+  "active": "83859142b74745cb",
   "lastOpenFiles": [
+    "logs/synergy/2026-10-23-15-52-49_v0.101.0.md",
+    "logs/synergy",
+    "logs/campaign/2026-10-23-15-52_campagne.md",
+    "logs/campaign",
+    "logs/season/2026-10-23-15-47_saison.md",
+    "logs/season",
+    "scripts/season.report.ts",
+    "scripts/synergy.report.ts",
+    "docs/MISE_EN_SCENE.md",
     "logs/combats/2026-10-23_17-19-40_elaria-vs-elaria_graine-1649762243.txt",
     "logs/combats/2026-10-23_17-19-15_fanchon-vs-brokk_graine-1766110076.txt",
     "logs/combats/2026-10-23_17-19-15_naraxes-vs-naraxes_graine-2748424583.txt",
     "logs/combats/2026-10-23_17-19-15_brokk-vs-aldric_graine-3353570015.txt",
     "logs/combats/2026-10-23_17-19-15_fanchon-vs-morgrut_graine-2744107264.txt",
-    "logs/combats/2026-10-23_17-19-14_aldric-vs-gorak_graine-1333109474.txt",
-    "logs/combats/2026-10-23_17-19-14_fanchon-vs-ervald_graine-3015265327.txt",
-    "logs/combats/2026-10-23_17-19-14_elaria-vs-elaria_graine-3327301311.txt",
-    "logs/combats/2026-10-23_17-19-14_elaria-vs-thaldrin_graine-1635452001.txt",
-    "logs/combats/2026-10-23_17-17-38_ysolde-vs-morgrut_graine-2751531851.txt",
-    "src/components/TournamentIntroScreen.tsx",
     "docs/ref/affrontement-geometrie-regles.png",
     "docs/ref/prompt-affrontement-et-tournoi.md",
     "docs/ref/tournoi-paris-ouverts.png",
