@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { simulateCombat, type Side } from './combat'
-import { createCharacter, ROSTER } from './roster'
+import { createCharacter, ENGRAVABLE_SKILLS, ROSTER } from './roster'
 import { auraIdsOf, auraOfSkill, originsOf, signalTargets, STATES, STATUS_PLACE, stateValueText, trayStates } from './states'
 import { isAura, STATUS_IDS, STATUSES } from './statuses'
+
+/** Une compétence gravable par son id (les compétences hors kit, depuis le d6, se gravent pour être jouées). */
+const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
 
 describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
   it('chaque statut a sa place, et une aura est dans l’en-tête', () => {
@@ -57,21 +60,24 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
   })
 
   it('une compétence qui pose une aura se fond dans son anneau', () => {
-    const gorak = createCharacter('gorak')
+    // Hors kit depuis le d6 (0.105.0) : l'Aura de puissance gravée sur le 3 de Gorak
+    const gorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: skill('power-aura') }])
     expect(auraIdsOf(gorak)).toEqual(['powerAura'])
     expect(gorak.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['power-aura'])
     // L'Ouverture de la barde pose aussi son aura : l'anneau rassemble les deux
     const fanchon = createCharacter('fanchon')
     expect(fanchon.events.filter((e) => auraOfSkill(e) === 'melodiousAura').map((e) => e.id).sort()).toEqual(['melodious-aura', 'overture'])
     // L'Aura d'immunité purge aussi ses malus : elle se fond quand même dans son anneau, sans second sceau
-    expect(createCharacter('aldric').events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['immunity-aura'])
+    const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
+    expect(aldric.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['immunity-aura'])
     // Chaque personnage en jeu a au plus deux auras à montrer
     for (const def of ROSTER) expect(auraIdsOf(createCharacter(def.id)).length, def.id).toBeLessThanOrEqual(2)
   })
 
   it('l’infobulle dit d’où vient un état', () => {
     const elaria = createCharacter('elaria')
-    const ervald = createCharacter('ervald')
+    // Le Souffle de la tombe, hors kit depuis le d6, regravé sur le 3 d'Ervald
+    const ervald = createCharacter('ervald').withForge([{ op: 'engrave', face: 3, skill: skill('grave-breath') }])
     expect(originsOf('guaranteedCrit', elaria, ervald)).toEqual(['Œil de faucon (Elaria)'])
     // Le poison d'Elaria peut venir du Souffle de la tombe ou de l'Aura glaciale d'Ervald
     expect(originsOf('poison', elaria, ervald)).toEqual(['Souffle de la tombe (Ervald)', 'Aura glaciale (Ervald)'])

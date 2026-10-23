@@ -106,15 +106,15 @@ flowchart LR
 
 | Relique | Ligne | Limites |
 | --- | --- | --- |
-| Contrepoids de plomb | +2 faces au dé | |
+| Contrepoids de plomb | +1 au multiplicateur de critique, −4 % de critique (0.105.0 ; +2 faces au dé avant) | |
 | Bottes de feutre | +6 % d'esquive | |
 | Cotte du mercenaire | +2 armure, −8 % d'esquive | |
 | Osselet fendu | Sur un 1 : 3 dégâts directs | |
 | Dé creux | Sur un jet maximal : +1 Esquive améliorée | recharge 3 tours |
-| Fer à quatre clous | +4 dégâts aux frappes de 4 | |
+| Fer à quatre clous | Sur un 4 : +4 dégâts à ce coup (0.105.0 : un événement, plus une face enrichie ; mécanique inchangée) | |
 | Cloche d'ouverture | Au 1er tour : +1 Critique assuré | |
 | Chapelet de l'ermite | Tous les 3 tours : retire son dernier malus, sinon +3 PV | |
-| Clepsydre du siège | Au 6e tour, puis tous les 4 tours : +1 Aura de puissance | |
+| Clepsydre du siège | Au 6e tour, puis tous les 4 tours : +1 Critique assuré (0.105.0 ; une Aura de puissance cumulée avant) | |
 | Dent de loup | Sous 40 % PV : +2 Vol de vie | 1 fois par combat |
 | Collier de ronces | Sous 50 % PV : +2 Épines acérées | 1 fois par combat |
 | Trophée du chasseur | Adversaire sous 30 % PV : +1 Critique assuré | 1 fois par combat |
@@ -177,6 +177,29 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 | Collier de ronces (`bramble-collar`) | Seuil | sous 50 %, une fois : Épines acérées 2 | +13,8 | Naraxes +10,2 à Gorak +17,2 | 0,9 |
 | Trophée du chasseur (`hunter-trophy`) | Seuil | adversaire sous 30 %, une fois : Critique assuré | +8,4 | Thaldrin +4,8 à Morgrut +11,9 | 0,8 |
 
+**Sur le d6 imprimé (0.105.0)**, même mesure (`npm run relics`, 400 combats par duel, roster de la 0.105.0) :
+
+| Relique | Apport moyen | Écart entre personnages |
+| --- | --- | --- |
+| Contrepoids de plomb (+1 au multiplicateur, −4 % de critique) | +3,5 | Fanchon −3,2 à Elaria +17,2 |
+| Bottes de feutre | +7,2 | Morgrut +5,7 à Ysolde +8,6 |
+| Cotte du mercenaire | **+22,1** | Aldric +13,4 à Thaldrin +26,0 |
+| Osselet fendu | +11,0 | Naraxes +7,4 à Fanchon +18,3 |
+| Dé creux | +17,0 | Morgrut +12,4 à Fanchon +28,8 |
+| Fer à quatre clous | +12,7 | Thaldrin +6,3 à Fanchon +18,9 |
+| Cloche d'ouverture | +13,9 | Fanchon +9,3 à Brokk +20,7 |
+| Chapelet de l'ermite | +17,3 | Morgrut +14,4 à Elaria +19,6 |
+| Clepsydre du siège (Critique assuré, tous les 4 tours) | +15,6 | Fanchon +8,1 à Brokk +25,4 |
+| Dent de loup | **+20,3** | Ervald +12,0 à Ysolde +23,0 |
+| Collier de ronces | +10,8 | Naraxes +6,9 à Gorak +15,4 |
+| Trophée du chasseur | +10,3 | Naraxes +6,5 à Morgrut +15,2 |
+| Braise captive | +13,9 | Naraxes +10,2 à Thaldrin +17,2 |
+| Larme de givre | +13,1 | Morgrut +10,4 à Fanchon +17,3 |
+| Conque des vents | +7,3 | Morgrut +0,0 à Elaria +23,1 |
+| Géode fendue | +16,1 | Aldric +9,1 à Fanchon +20,3 |
+
+**Lecture (0.105.0).** Le d6 rend les reliques de face plus fortes pour tous (une face sur six au lieu d'une sur sept à quatorze). La Clepsydre, devenue un Critique assuré, vaut le plus à ceux qui frappent fort (Brokk ×2,5) et à Morgrut, qui n'a aucun critique à lui. Le Contrepoids, devenu une relique de critique, est typé : il ne sert qu'à ceux qui critiquent souvent (Elaria +17,2), il gêne la barde. La Cotte et la Dent de loup restent au-delà de 20, comme en 0.77.0.
+
 **Lecture.**
 - Neuf sur douze dans la cible ; trois au-dessus de 15 : Cotte +18,1, Chapelet +16,3, Dent de loup **+21,4** (au-delà de 20).
 - **Fanchon est la grande gagnante des reliques de coup** (Dé creux +25,9, Contrepoids +20,9, Fer +19,2, Osselet +18,0) : ses deux petits dés lancent deux fois plus de faces par tour, donc éveillent deux fois plus souvent une relique de face. C'est la règle 8 qui le veut ; c'est aussi une méta lisible (« la barde aux talismans »).
@@ -196,10 +219,11 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 ### 7.1 Caractéristique : une stat de base, en permanence
 
 #### Contrepoids de plomb
-- **Règle** : +2 faces à son dé de dégâts.
-- **Pourquoi** : la seule stat qui change aussi la **fréquence des compétences**. Les faces 1 à 3 restent les compétences : un dé plus grand frappe plus fort, mais déclenche moins souvent. Ysolde passe de 3 jets sur 7 à 3 sur 9 : son Aura de sainteté tombe moins souvent (+1,3 seulement). Morgrut passe de 3 Attentes sur 14 à 3 sur 16 : gain pur. Fanchon (deux d5 → deux d7) : moins de doubles. Une relique qui récompense les combattants nus et coûte aux combattants à compétences : un vrai choix.
+- **Règle** : +1 au multiplicateur de critique, −4 % de critique (0.105.0). Jusqu'à la 0.104.x : +2 faces à son dé de dégâts.
+- **Pourquoi (0.105.0)** : le d6 imprimé ne change plus de taille ; l'ancienne règle n'a plus d'objet (`validateRelics` refuse `stats.damageDie`). La relique garde son idée de poids : des coups plus rares à porter, plus lourds quand ils portent. Un **troc**, comme la Cotte : un vrai gain pour qui critique souvent (Elaria +17,2), une perte pour qui critique peu (Fanchon −3,2). Moyenne +3,5 : sous la cible, à surveiller.
+- **Pourquoi (0.77.0, ancienne règle)** : la seule stat qui changeait aussi la fréquence des compétences ; un dé plus grand frappait plus fort, mais déclenchait moins souvent.
 - **Illustration** : un pommeau ou un contrepoids de plomb, rond et lourd, cerclé d'une bague de fer, avec le trou du rivet par où on le fixe à une arme. Marques de lime.
-- **Avec la forge du dé** (0.88.0 en campagne, 0.92.0 en saison forgée ; décision de l'utilisateur, [CAMPAGNE.md](CAMPAGNE.md) § 4.4) : elle devient l'opération de forge **Agrandir** et quitte le tirage des reliques (`FORGE_RELIC_IDS`). Elle reste dans celui du tournoi sans forge.
+- **Avec la forge du dé** : de la 0.88.0 à la 0.104.x, elle devenait l'opération **Agrandir** et quittait le tirage des reliques (`FORGE_RELIC_IDS`, supprimé). Depuis la 0.105.0, elle est dans toutes les offres.
 
 #### Bottes de feutre
 - **Règle** : +6 % d'esquive.
@@ -226,8 +250,8 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 - **Illustration** : un dé cubique d'os, évidé et léger, posé sur sa face la plus haute, qui porte une couronne gravée à la place des points. Une petite chaîne passée dans un coin percé. Un cube, pour ne pas doubler l'icône `dice` (dé à vingt faces).
 
 #### Fer à quatre clous
-- **Règle** : sur un 4 : +4 à la valeur de ce coup, avant le critique. Affichée « +4 dégâts aux frappes de 4 » depuis la 0.95.0 ; un 4 de Furie des vents compris depuis le 2026-10-23.
-- **Pourquoi** : le 4 est le plus faible des vrais coups (1 à 3 sont les compétences) ; le fer en fait un coup de 8. Tout le roster a un 4. C'est la première relique d'une face **sans compétence**. Pour Fanchon, le bonus va au coup du dé qui a fait 4. Moteur : `rollBonus: 4, onFace: 4` (0.77.0).
+- **Règle** : sur un 4 : +4 à la valeur de ce coup, avant le critique. Affichée « Sur un 4 : +4 dégâts à ce coup » depuis la 0.105.0 (« +4 dégâts aux frappes de 4 » de la 0.95.0 à la 0.104.x) ; un 4 de Furie des vents compris depuis le 2026-10-23.
+- **Pourquoi** : un **événement** (retour de l'utilisateur, 2026-10-23) : quand le dé tombe sur 4, le coup prend +4 ; rien n'est marqué sur le dé, comme l'Osselet sur le 1. Sur le d6 imprimé, la face 4 frappe pour tous (le druide en ours compris) ; Pourfendre sur le 1 et les compétences restent sur les faces 1 et 2. Pour Fanchon, le bonus va au coup du dé qui a fait 4. Moteur : `rollBonus: 4, onFace: 4` (0.77.0).
 - **Illustration** : un fer à cheval étroit, percé de quatre trous seulement, quatre clous encore plantés. Pendu à un clou par une ficelle. Pas de chiffre écrit : les quatre clous le disent.
 
 ### 7.3 Tour : au bout d'un certain nombre de ses tours
@@ -243,8 +267,8 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 - **Illustration** : un chapelet de grains de bois, trois grains plus gros que les autres, un fermoir d'os. Enroulé sur lui-même.
 
 #### Clepsydre du siège
-- **Règle** : au début de son 6e tour, puis tous les 4 tours : Aura de puissance (+2 à ses coups, avant l'armure, pour le reste du combat). Elle se cumule : +2 au 6e tour, +4 au 10e, +6 au 14e.
-- **Pourquoi** : une montée de tension qui borne les combats longs (TODO § 14), portée par le porteur au lieu d'un malus sur l'adversaire. Presque rien dans un combat court, beaucoup dans un combat long : le contre lisible de l'Aura de sainteté. Sur Gorak, elle s'ajoute à sa propre Aura de puissance (+13,4).
+- **Règle** : au début de son 6e tour, puis tous les 4 tours : Critique assuré (son prochain coup qui touche est critique) (0.105.0).
+- **Pourquoi** : une montée de tension qui borne les combats longs (TODO § 14), portée par le porteur au lieu d'un malus sur l'adversaire. Jusqu'à la 0.104.x, elle posait une Aura de puissance cumulée (+2, +4, +6 aux coups) ; l'utilisateur l'a trouvée trop abstraite, et l'aura s'affichait comme une compétence dans la barre de compétences. Le Critique assuré se lit tout seul (un statut de la zone d'état, déjà posé par la Cloche et le Trophée). Mesuré +15,6 (Brokk +25,4, Morgrut +21,4, qui n'a aucun critique à lui ; Fanchon +8,1).
 - **Illustration** : une petite clepsydre de bronze, un bol percé au fond, trois graduations gravées à l'intérieur, l'eau arrêtée à la deuxième. Une anse de cuir. Pas un sablier : le sablier est déjà l'icône `turns`.
 
 ### 7.4 Seuil : à un niveau de PV

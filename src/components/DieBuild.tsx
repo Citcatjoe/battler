@@ -58,11 +58,8 @@ export function dieCells(character: Character, form = 0): DieCell[] {
   })
 }
 
-/** Emplacements du dé à l'affrontement : deux rangées de six. */
-export const DIE_SLOTS = 12
-const PER_ROW = 6
-/** Côté d'un octogone (px de scène) */
-const SLOT = 44
+/** Côté d'un octogone (px de scène) : six faces sur une rangée depuis le d6 (0.105.0) */
+const SLOT = 56
 
 /** Le nom court d'une forme, pour le sélecteur : « Forme d'ours » → « Ours ». */
 const formLabel = (name: string) => {
@@ -71,13 +68,12 @@ const formLabel = (name: string) => {
 }
 
 /**
- * La section « Dé de combat » de la fiche d'affrontement : en-tête (taille du dé, forme du druide, faces au-delà de
- * douze) et grille de douze emplacements. Hauteur fixe (124 px) quel que soit le dé.
+ * La section « Dé de combat » de la fiche d'affrontement : en-tête (le dé, la forme du druide) et les six faces sur une
+ * rangée. Hauteur fixe (124 px). Jusqu'à la 0.104.0, douze emplacements montraient la taille du dé comme une jauge.
  */
 export function DieBuild({ character }: { character: Character }) {
   const [form, setForm] = useState(0)
   const cells = dieCells(character, form)
-  const extra = cells.slice(DIE_SLOTS)
   const twin = character.twinDice
   return (
     <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : ${twin ? 'deux ' : ''}d${cells.length}`}>
@@ -95,24 +91,15 @@ export function DieBuild({ character }: { character: Character }) {
               />
             </span>
           )}
-          {extra.length > 0 && <ExtraFaces cells={extra} twin={twin} />}
           <span className="matchup-section-count">
             {twin ? '2' : ''}d{cells.length}
           </span>
         </span>
       </header>
       <ul className="die-grid mt-[5px]">
-        {Array.from({ length: DIE_SLOTS }, (_, k) => {
-          const align = k % PER_ROW < PER_ROW / 2 ? 'left' : 'right'
-          const cell = cells[k]
-          return cell ? (
-            <FaceSlot key={k} cell={cell} twin={twin} align={align} />
-          ) : (
-            <li key={k} className="die-slot" data-empty="" aria-hidden>
-              <span className="skill-seal" style={{ width: SLOT, height: SLOT }} />
-            </li>
-          )
-        })}
+        {cells.map((cell, k) => (
+          <FaceSlot key={cell.face} cell={cell} twin={twin} align={k < cells.length / 2 ? 'left' : 'right'} />
+        ))}
       </ul>
     </section>
   )
@@ -165,35 +152,3 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
   )
 }
 
-/** Les faces au-delà des douze emplacements (forge) : « +N faces » en or, leur liste en infobulle. */
-function ExtraFaces({ cells, twin }: { cells: readonly DieCell[]; twin: boolean }) {
-  return (
-    <span className="group relative cursor-help hover:z-[70]">
-      <span className="matchup-section-more">
-        +{cells.length} face{cells.length > 1 ? 's' : ''}
-      </span>
-      <div
-        role="tooltip"
-        className="pointer-events-none invisible absolute bottom-full right-0 z-[70] mb-3 w-80 rounded-(--r-sm) border border-gold-500/60 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100"
-      >
-        <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">Faces au-delà de {DIE_SLOTS}</span>
-        <ul className="mt-2 flex flex-col gap-1">
-          {cells.map((c) => {
-            const forge = [c.engraved ? 'gravée' : '', c.rank > 0 ? `rang ${rankLabel(c.rank)}` : '', c.gild ? `dorée +${c.gild}` : ''].filter(Boolean)
-            return (
-              <li key={c.face} className="flex items-baseline gap-2 font-body text-[15px] leading-snug text-ink-1">
-                <span className="w-14 shrink-0 font-data text-[13px] text-ink-2">
-                  {twin ? 'Double' : 'Dé'} {c.face}
-                </span>
-                <span>
-                  {c.event ? c.event.name : 'Coup'}
-                  {forge.length > 0 && <span className="text-gold-300"> · {forge.join(', ')}</span>}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </span>
-  )
-}

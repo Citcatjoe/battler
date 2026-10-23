@@ -73,7 +73,7 @@ export const RULES: Record<RuleId, Rule> = {
   'damage-die': {
     group: 'dice',
     title: 'Dé de dégâts',
-    text: "L'attaquant lance son dé de dégâts, propre à chaque personnage (deux dés pour la barde). Ses statuts peuvent le changer (Incantation : un d3). Le jet compte même si le coup est esquivé : les compétences de sa face se déclenchent.",
+    text: "L'attaquant lance son dé : un d6 aux faces imprimées (deux pour la barde). Le jet désigne une face (« sur un 4 » : la face 4) ; une face de coup frappe pour la valeur imprimée dessus, propre à chaque personnage. Le jet compte même si le coup est esquivé : les compétences de sa face se déclenchent.",
   },
   'twin-dice': {
     group: 'dice',
@@ -88,7 +88,7 @@ export const RULES: Record<RuleId, Rule> = {
   crit: {
     group: 'crit',
     title: 'Critique',
-    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le dé, plus un bonus de relique, ou la somme d'un coup fondu) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
+    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (la valeur imprimée de sa face, plus un bonus de relique, ou la somme d'un coup fondu) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
   },
   modifiers: {
     group: 'damage',
@@ -123,7 +123,7 @@ export const RULES: Record<RuleId, Rule> = {
   'dice-faces': {
     group: 'skills',
     title: 'Faces de compétence',
-    text: "La plupart des personnages ont une compétence sur le 1, le 2 et le 3 de leur dé de dégâts, le plus souvent une aura sur le 3. Exceptions : l'ogre n'en a aucune (il attend), le druide n'en a que sous forme humaine, la barde les a sur ses doubles.",
+    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces frappent. Exceptions : l'ogre n'en a aucune (il attend sur le 1), le druide a un sort sur chaque face sous forme humaine et aucun en ours, la barde a les siennes sur ses doubles. D'autres compétences se gravent par la forge.",
   },
   forfeit: {
     group: 'skills',
@@ -143,7 +143,7 @@ export const RULES: Record<RuleId, Rule> = {
   volley: {
     group: 'skills',
     title: 'Double qui frappe',
-    text: "Une compétence d'un double qui attaque : l'action devient plusieurs coups dont le dé vaut la face du double (Siffloter : deux coups de 1). Fondus en un seul, ils valent leur somme (Crescendo : un coup de 3 × 4 = 12 ; Soliste : 15) ; ce coup peut être critique.",
+    text: "Une compétence d'un double qui attaque : l'action devient plusieurs coups qui frappent chacun pour la valeur imprimée du double (Siffloter : deux coups de 1). Fondus en un seul, ils valent leur somme (Crescendo : un coup de 3 × 4 = 12 ; Soliste : 15) ; ce coup peut être critique.",
   },
   conditions: {
     group: 'skills',
@@ -153,7 +153,7 @@ export const RULES: Record<RuleId, Rule> = {
   forms: {
     group: 'skills',
     title: 'Formes',
-    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un d3 et un sort par jet en homme, +3 à chaque coup en ours) : ce sont des mécanismes, ni bonus ni malus.",
+    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet en homme, +3 à chaque coup en ours) : ce sont des mécanismes, ni bonus ni malus.",
   },
   polarity: {
     group: 'statuses',
@@ -168,7 +168,7 @@ export const RULES: Record<RuleId, Rule> = {
   auras: {
     group: 'statuses',
     title: 'Auras',
-    text: "Les auras (posées le plus souvent sur un 3) restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet.",
+    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet.",
   },
   'stacking-add': {
     group: 'statuses',

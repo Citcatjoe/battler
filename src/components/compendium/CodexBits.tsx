@@ -67,8 +67,9 @@ export function SkillMedal({ event, size }: { event: CharacterEvent; size: numbe
   )
 }
 
-/** Déclencheurs d'une ligne : « dé 1 », ou « dés 1, 2, 3 » quand des faces identiques sont réunies. */
+/** Déclencheurs d'une ligne : « dé 1 », « dés 1, 2, 3 » quand des faces identiques sont réunies, « hors kit » sans face. */
 export function triggerShort(triggers: readonly Trigger[]) {
+  if (triggers.length === 0) return 'hors kit'
   if (triggers.length === 1) return triggerText(triggers[0]).short
   return `dés ${triggers.map((t) => triggerText(t).short.replace('dé ', '')).join(', ')}`
 }

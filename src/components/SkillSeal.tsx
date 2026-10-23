@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ROSTER } from '../game/roster'
+import { ALL_SKILLS } from '../game/roster'
 import { Icon, skillIcon } from './Icon'
 
 /**
@@ -13,8 +13,8 @@ const SKILL_SEAL: Partial<Record<string, string>> = {}
 export function SkillSeal({ id, size = 56 }: { id: string; size?: 32 | 40 | 44 | 56 }) {
   const [failed, setFailed] = useState(false)
   const seal = SKILL_SEAL[id]
-  // L'icône de la compétence elle-même (et non l'étoile générique), cherchée par son id dans le roster
-  const event = ROSTER.flatMap((c) => c.events).find((e) => e.id === id)
+  // L'icône de la compétence elle-même (et non l'étoile générique), cherchée par son id dans le roster, hors kit compris
+  const event = ALL_SKILLS.find((e) => e.id === id)
   const icon = event ? skillIcon(event) : 'event'
   return (
     <span className="skill-seal" style={{ width: size, height: size }}>

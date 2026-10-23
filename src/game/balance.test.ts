@@ -17,13 +17,15 @@ describe('équilibre du roster', () => {
   /**
    * Contres connus, en attente d'une décision de l'utilisateur (docs/EQUILIBRAGE.md, questions
    * ouvertes) : tolérés jusqu'à 75/25 au lieu de 65/35. Ne rien ajouter ici sans l'écrire là-bas.
+   * Depuis le d6 imprimé (0.105.0), aucun : Brokk–Fanchon et Naraxes–Ysolde sont revenus sous 63 %.
    */
-  // Un personnage par famille (0.43.0) : les contres des jumeaux et de l'ancien Brokk (68 PV) disparaissent
-  const KNOWN_COUNTERS = new Set(['brokk-fanchon', 'naraxes-ysolde'])
+  const KNOWN_COUNTERS = new Set<string>()
   const counter = (a: string, b: string) => KNOWN_COUNTERS.has([a, b].sort().join('-'))
 
   it('chaque personnage gagne entre 42 et 58 % de ses combats, aucun duel au-delà de 65/35', () => {
-    const report = analyzeBalance(CHARACTERS, 300, false)
+    // 800 combats par duel depuis le d6 (0.105.0) : deux duels typés tiennent vers 64/36 (Aldric–Elaria, Thaldrin–
+    // Aldric) ; à 300 combats, le bruit d'un duel (±5 points) les faisait sortir au hasard des graines
+    const report = analyzeBalance(CHARACTERS, 800, false)
     for (const c of report.characters) {
       expect(c.winRate, `${c.id} : ${c.winRate.toFixed(3)}`).toBeGreaterThan(0.42)
       expect(c.winRate, `${c.id} : ${c.winRate.toFixed(3)}`).toBeLessThan(0.58)

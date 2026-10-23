@@ -59,8 +59,16 @@ function hookEffects(id: StatusId): Effect[] {
 const posedByStatus = (id: StatusId) =>
   [...new Set(hookEffects(id).flatMap((e) => (e.type === 'applyStatus' ? [e.status] : [])))]
 
-/** Toutes les compétences du roster, avec leur porteur. */
-const skillsOf = (characters: readonly Character[]) => characters.flatMap((character) => character.events.map((event) => ({ character, event })))
+/**
+ * Toutes les compétences du roster, avec leur porteur : celles de son kit, puis celles hors kit (règles v2, `reserve`),
+ * une fois chacune (la Foudre du druide est sur trois faces).
+ */
+const skillsOf = (characters: readonly Character[]) =>
+  characters.flatMap((character) =>
+    [...character.events, ...(character.definition.reserve ?? [])]
+      .filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
+      .map((event) => ({ character, event })),
+  )
 
 export function statusSources(id: StatusId, characters: readonly Character[] = CHARACTERS, relics: readonly Relic[] = RELICS): StatusSource[] {
   const skills = skillsOf(characters)
@@ -192,6 +200,8 @@ export interface SkillEntry {
   triggers: Trigger[]
   /** Les compétences réunies sur cette ligne (une seule, sauf faces identiques) */
   events: CharacterEvent[]
+  /** Hors kit (règles v2, `reserve`) : elle n'est sur aucune face d'origine, elle se grave par la forge */
+  outside?: true
 }
 
 /** Les compétences d'une race, dans l'ordre du roster. */
@@ -215,8 +225,14 @@ export function skillCatalog(characters: readonly Character[] = CHARACTERS): Ski
     if (!family) families.push((family = { race: character.race, skills: [] }))
     for (const event of character.events) {
       const shared = family.skills.find((s) => s.event.id === event.id)
+      // La même compétence sur une autre face du même porteur (la Foudre du druide) : une ligne, tous ses déclencheurs
+      if (shared?.owners.includes(character)) {
+        shared.triggers.push(event.trigger)
+        shared.events.push(event)
+        continue
+      }
       if (shared) {
-        if (!shared.owners.includes(character)) shared.owners.push(character)
+        shared.owners.push(character)
         continue
       }
       const twin = family.skills.find((s) => s.owners.includes(character) && sameSkill(s.event, event))
@@ -225,6 +241,8 @@ export function skillCatalog(characters: readonly Character[] = CHARACTERS): Ski
         twin.events.push(event)
       } else family.skills.push({ event, owners: [character], triggers: [event.trigger], events: [event] })
     }
+    for (const event of character.definition.reserve ?? [])
+      if (!family.skills.some((s) => s.event.id === event.id)) family.skills.push({ event, owners: [character], triggers: [], events: [event], outside: true })
   }
   return families
 }

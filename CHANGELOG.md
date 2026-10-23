@@ -32,6 +32,40 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.105.0] — 2026-10-23
+
+Règles v2, phases 3 à 5 et la campagne sur le d6 (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 6 et § 11.5), à la demande de l'utilisateur après son essai de la campagne longue : « le d6 est le plus game changing, avance tant que tu peux ». Les combats changent volontairement : l'empreinte de non-régression est mise à jour.
+
+### Ajouté
+- **Le dé lu en faces imprimées** (phase 3, `CharacterDef.strikes`, `Character.strikeValue`, `faceValue`) : le jet désigne la face (« sur un 4 » : la face 4) ; la face frappe pour sa valeur imprimée. Un dé étranger (le d6 de Coup de chance) frappe pour son jet. `Attack.printed`, la trace (« face imprimée : coup de 7 ») et l'audit (contrôle « valeur imprimée ») la portent. Introduit à résultats identiques, puis utilisé par la conversion.
+- **Compétences hors kit** (`CharacterDef.reserve`, `ALL_SKILLS`) : celles qui quittent le kit restent au personnage, au compendium (« hors kit ») et à la forge, en tête de son répertoire de campagne.
+- **Forge du d6** : **Copier une face** (la face choisie, telle qu'elle est, sur la face de coup la plus faible ; une compétence sur deux faces au plus) et **Refondre** (les faces de coup frappent pour leur moyenne, arrondie au-dessus).
+- **Adversaires construits en campagne** (décision de l'utilisateur) : au nœud k, un adversaire part de sa signature et reçoit les k récompenses que l'acte lui aurait données (`drawBuild`), puis ses PV le règlent sur la courbe.
+- **Signature affichée** en campagne, au choix du champion et sur la carte (« Signature : Pile ou face, sur le 1 »).
+- `npm run campaign` : les PV de l'adversaire réglé, en part de ses PV de base.
+
+### Modifié
+- **Le roster en d6 imprimé** (phase 5) : deux compétences par personnage sur les faces 1 et 2, quatre faces de coup aux valeurs imprimées ; Morgrut une seule Attente ; le druide un sort sur chaque face sous forme humaine (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; la barde deux d6, un double 6 sans compétence. Quittent les kits : Aura de puissance, Aura de précision, Aura d'intimidation, Souffle de la tombe, Peur, Coup de chance, Aura d'immunité, Aura sauvage. Elaria passe à 53 PV (le dernier levier, pour son duel contre Aldric). Détail par personnage : [docs/PERSONNAGES.md](docs/PERSONNAGES.md).
+- **Incantation** : le dé du druide ne devient plus un d3 ; chaque face porte son sort.
+- **Contrepoids de plomb** : +1 au multiplicateur de critique, −4 % de critique (au lieu de +2 faces au dé) ; il revient dans toutes les offres. Une relique ne peut plus changer la taille du dé.
+- **Clepsydre du siège** (retour de l'utilisateur) : Critique assuré au 6e tour, puis tous les 4 tours, au lieu d'une Aura de puissance qui se lisait comme une compétence dans la barre de compétences.
+- **Fer à quatre clous** (retour de l'utilisateur) : « Sur un 4 : +4 dégâts à ce coup », un événement plutôt qu'une face enrichie ; mécanique inchangée.
+- **Fiche d'affrontement** : le dé en six faces sur une rangée ; la ligne « Dégâts 1d9 » devient « Coups 5 à 7 ». Les dés de compétence ne montrent plus que les faces qui portent une compétence.
+- **Campagne** sur le d6 : la face que la signature seule libère frappe pour sa valeur imprimée ; sauvegarde `battler:campaign:v4` (une partie v3 est oubliée).
+- Garde-fou d'équilibre (`balance.test.ts`) à 800 combats par duel (300) ; les deux contres connus (Brokk–Fanchon, Naraxes–Ysolde) sont retirés, revenus sous 63 %.
+- Textes des règles (compendium) : le dé, les faces de compétence, les doubles, les formes, la Furie des vents.
+
+### Retiré
+- Agrandir et Retailler (le d6 ne change pas de taille), `ENLARGE_FACES`, `FORGE_RELIC_IDS`, les douze emplacements du dé à l'affrontement.
+
+### Corrigé
+- `npm run campaign` comparait le champion construit au personnage à son kit entier, et non à sa signature seule : l'apport du build mesuré en 0.104.0 ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 11.4) est à lire ainsi.
+
+### Mesuré
+- `BALANCE_N=800 npm run balance` : tous entre 48,2 % (Fanchon) et 51,6 % (Thaldrin) ; duels extrêmes Thaldrin–Aldric 64,1/35,9 et Aldric–Elaria 63,4/36,6, aucun au-delà de 65/35 (avant : 43,9 à 53,9 %).
+- `npm run campaign` (120 parties) : boss atteint 48 %, acte gagné 24 % ; adversaires réglés à 46 à 50 % de leurs PV de base ; apport du build 0 → +54 points au dixième combat ; 4,2 à 4,9 tours par combattant, 13,3 contre le boss (20,2 avant).
+- `npm run relics` : Contrepoids +3,5, Clepsydre +15,6 (Brokk +25,4, Morgrut +21,4) ; Cotte du mercenaire +22,1 et Dent de loup +20,3 au-delà de 20.
+
 ## [0.104.1] — 2026-10-23
 
 ### Corrigé

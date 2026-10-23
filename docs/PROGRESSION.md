@@ -10,12 +10,12 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 
 - **Constat mesuré** : les reliques s'additionnent sans interagir (§ 3). Chaque ajout vit dans son coin ; les rares interactions sont des accidents.
 - **La direction** (§ 2) : le plaisir se déplace du combat serré, à l'issue de pile ou face, vers **la conséquence visible d'un build**. Le duel équilibré reste le point de départ ; la progression en est le cœur.
-- **Le socle** (§ 6, décidé) : un **d6 pour tous, aux faces imprimées**. Kit de référence de **deux compétences** ; en campagne, **la signature seule** au départ. « Sur un 4 » veut dire la face 4. Copier une face et Refondre remplacent Agrandir et Retailler. Premiers dés de référence proposés pour l'essai (§ 6.7).
+- **Le socle** (§ 6, décidé, **livré en 0.105.0**) : un **d6 pour tous, aux faces imprimées**. Kit de référence de **deux compétences** ; en campagne, **la signature seule** au départ. « Sur un 4 » veut dire la face 4. Copier une face et Refondre remplacent Agrandir et Retailler. Dés livrés et mesures au § 6.8.
 - **Ce que chaque personnage peut apprendre** (§ 7) : un **répertoire** écrit pour lui, en deux fils de synergie, plus un petit fonds commun. Proposition complète pour les dix personnages, et un essai possible avec les seules compétences existantes.
 - **Pas de familles comme règle** (§ 8) : les synergies s'accrochent à des **choses concrètes du combat** (un statut, un moment, un type de dégâts, un compteur du dé), pas à une catégorie.
 - **Trois types de dégâts** (§ 9) : DP, DM, DT, **déclarés** sur chaque source (pas déduits de l'armure), avec des valeurs par défaut qui limitent la saisie à une dizaine de cas. Les récompenses qui font boule de neige sur un type (« +2 à tous les DM ») sont indispensables.
 - **La feuille de personnage** (§ 10) : toutes les briques ne la lisent pas. Une brique **écrit** la feuille, **réagit** à un moment, ou **lit** un compteur ; seules les dernières la consultent, et elles doivent rester minoritaires.
-- **Campagne** (§ 11) : la signature seule au départ, **un acte de 10 combats**, 4 forges et 6 reliques, **quatre faces de compétence au plus**, le système de difficulté actuel adapté ; une seule vie pour le moment.
+- **Campagne** (§ 11) : la signature seule au départ, **un acte de 10 combats**, 4 forges et 6 reliques, **quatre faces de compétence au plus**, le système de difficulté actuel adapté, des **adversaires construits comme un champion** (0.105.0, § 11.5) ; une seule vie pour le moment.
 - **Durée des combats** (§ 12) : un build agressif ramène un combat de 8 à 4 tours ; la durée doit **venir du contenu** (reliques, compétences, stats qui font durer), pas d'un calcul qui force une cible.
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
@@ -75,6 +75,18 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 | Une récompense sur trois qui fait durer | **Oui**, comme repère d'écriture ; l'endurcissement en repli seulement (§ 12.3). |
 | Signatures | **Gorak : la Furie des vents. Naraxes : Pile ou face. Brokk : Épines acérées** (§ 7.2). |
 | Nature du document | **Un plan seulement** : rien n'est codé (§ 18). |
+
+### 1.5 Cinquième passe (2026-10-23, après avoir joué la 0.104.x)
+
+| Question | Décision |
+| --- | --- |
+| Adversaires de campagne | **Ils doivent être plus sérieux et grandir avec l'acte**, « si on arrive à équilibrer » (§ 11.5). |
+| Le d6 | **« Avance tant que tu peux, intègre le d6 »** : phases 3 à 5, puis la campagne sur d6 (§ 6.8, § 11.5). Les auras de signature viennent ensuite, si le moment s'y prête. |
+| Osselet fendu, Fer à quatre clous | Aucune mise en évidence spéciale sur les dés : ce sont des **événements** (« en cas de 4 »). |
+| Clepsydre du siège | **Trop abstraite**, et son aura se montrait comme une compétence dans la barre de compétences : à refaire. |
+| Signature | **La montrer à l'écran.** |
+
+Retours de jeu qui les accompagnent : un dé trop grand ; peu de reliques et de choix ; des premiers combats sans intérêt (Brokk battu au premier combat par une Fanchon à 13 PV, à 0,3 % de probabilité : « mauvaise expérience ») ; le Critique assuré d'Elaria plus agréable qu'une aura qui demande une face précise parmi dix ; un acte gagné par Ervald avec un build direct (Cloche, Retailler, Feux follets).
 
 ---
 
@@ -263,7 +275,7 @@ Deux faces de compétence, quatre faces de coup : un jet sur trois déclenche un
 | Taille du dé | levier d'identité et d'équilibre | fixe ; le levier devient les valeurs imprimées |
 | Valeur d'une gravure | de 1/14 (Morgrut) à 1/7 (Ysolde) | 1/6 pour tous |
 | Reliques de face | de +3,6 à +19,2 points selon le dé (Fer) | même fréquence pour tous ; la valeur dépend de ce que porte la face |
-| Contrepoids de plomb (+2 faces) | relique du tournoi sans forge | sans objet : à remplacer |
+| Contrepoids de plomb (+2 faces) | relique du tournoi sans forge | relique de critique depuis la 0.105.0 : +1 au multiplicateur, −4 % de critique |
 | La barde (deux d5) | double 1 fois sur 5 | deux d6 : double 1 fois sur 6 ; un double 6 à écrire |
 | Le druide, forme humaine (d3) | trois sorts | un d6 où chaque sort occupe deux faces : mêmes probabilités |
 | Critique, esquive, armure | stats | inchangées |
@@ -324,6 +336,31 @@ Faces 1 et 2 : les deux compétences du kit (§ 7.3) ; faces 3 à 6 : les coups,
 **L'écart estimé**, en points de victoire, est un ordre de grandeur. Méthode : les valeurs nettes de la 0.84.0 (`npm run balance` du 2026-10-21) ; une compétence gardée tombe 1 fois sur 6 au lieu de 1 sur N, sa valeur nette est multipliée par N/6 ; la compétence retirée perd la sienne. Écart ≈ (valeurs des deux gardées) × N/6 − (valeurs des trois d'aujourd'hui). La méthode est grossière : les valeurs nettes ne s'additionnent pas, et une part du coût du coup sacrifié est déjà rendue par les valeurs imprimées.
 
 **Lecture** : Ysolde perd le plus (43,9 % aujourd'hui, la plus basse : elle sortirait de la tolérance par le bas), Aldric gagne le plus (53,9 % : il en sortirait par le haut). D'où les quatre personnages de l'essai. Pourfendre frappe aujourd'hui pour la valeur de sa face (1) : sa valeur imprimée est à fixer.
+
+### 6.8 Livré en 0.105.0 (phases 3 à 5)
+
+- **Phase 3, le dé en faces imprimées** : `CharacterDef.strikes` (une valeur par face), `Character.strikeValue`, `faceValue` (forge comprise). Le jet désigne la face, la face frappe pour sa valeur imprimée ; un dé étranger (Coup de chance) frappe pour son jet ; le gros coup d'un double vaut le nombre de coups × la valeur imprimée du double. `Attack.printed` dans la trace (« face imprimée : coup de N ») et l'audit. Empreinte identique tant qu'aucun dé n'avait de valeurs imprimées (commit intermédiaire).
+- **Phases 4 et 5, le roster** : les dés du § 6.7 retouchés à la mesure (800 combats par duel, avant → après) :
+
+| Personnage | Face 1 | Face 2 | Faces 3 à 6 | Hors kit | Taux 0.104.1 → 0.105.0 |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Pourfendre (frappe pour 4) | Furie des vents | 5, 5, 6, 7 | Aura de puissance | 51,0 → 48,7 % |
+| Elaria (53 PV) | Œil de faucon | Esquive améliorée | 5, 6, 6, 7 | Aura de précision | 47,3 → 49,2 % |
+| Brokk | Peau de pierre | Épines acérées | 7, 7, 8, 10 | Aura d'intimidation | 47,4 → 49,9 % |
+| Ervald | Vol de vie | Aura glaciale | 6, 6, 7, 9 | Souffle de la tombe | 53,9 → 49,3 % |
+| Ysolde | Purification | Aura de sainteté | 6, 7, 7, 8 | Peur | 43,9 → 50,9 % |
+| Naraxes | Pile ou face | Aura de décoction | 6, 7, 7, 8 | Coup de chance | 53,7 → 50,7 % |
+| Aldric | Rétribution | Riposte | 4, 5, 6, 7 | Aura d'immunité | 53,9 → 50,2 % |
+| Morgrut | Attente | coup de 7 | 8, 9, 10, 11 | — | 47,4 → 51,4 % |
+| Thaldrin | homme : Foudre sur 1 à 3, Feux follets sur 4 à 6 ; ours : 3 à 8, +3 | | | Aura sauvage | 49,4 → 51,6 % |
+| Fanchon | deux d6 : 1, 2, 3, 4, 5, 4 ; doubles 1 à 5 inchangés, double 6 sans compétence | | | — | 52,1 → 48,2 % |
+
+- **Écarts au § 6.7** : Morgrut n'a qu'une Attente (deux le laissaient trop prévisible contre l'esquive d'Elaria) ; Elaria +3 PV, dernier levier, pour son duel contre Aldric (la Rétribution relâche ses critiques) ; les faces de compétence qui sacrifient le coup ont une petite valeur imprimée (3, ou 2 pour Ysolde), qui ne sert qu'aux coups bruts et à la signature seule en campagne. Écartés à l'essai : la Rétribution à deux jauges (Aldric contre Fanchon 31,6 %), le critique d'Elaria à 12 % (sans effet).
+- **Pires duels** : Aldric contre Thaldrin 35,9 % (la Foudre et les brûlures ne remplissent pas les jauges de Rétribution), Aldric contre Elaria 63,4 %. Le garde-fou passe à 800 combats par duel : à 300, le bruit (±5 points) faisait sortir au hasard ces duels typés.
+- **Forge** (§ 6.5) : Copier une face (sur la face de coup la plus faible ; deux faces au plus par compétence ; un coup ne se copie que sur plus faible que lui) et Refondre (les faces de coup frappent pour leur moyenne, arrondie au-dessus). Agrandir et Retailler retirés.
+- **Contrepoids** (§ 19, point 3) : il devient une relique de critique (+1 au multiplicateur, −4 % de critique), mesurée +3,5 (Elaria +17,2, Fanchon −3,2). Une relique ne change plus la taille du dé (`validateRelics`).
+- **Hors kit** : les compétences quittées restent au personnage (`reserve`), gravables, citées « hors kit » au compendium, en tête de son répertoire de campagne.
+- **Restent à faire** : le druide et la barde à la signature seule (le druide ne peut qu'Aiguiser en forge) ; le dé qui roule en combat montre le numéro de la face, pas la valeur imprimée (question posée à l'utilisateur).
 
 ---
 
@@ -624,6 +661,34 @@ Demande de l'utilisateur après la phase 2 (« aucun changement en campagne ») 
 - **La cohérence ne monte pas** avec les gravures (1,08 → 1,12) : le manque de consommateurs du § 3.2 reste la limite, que seuls les lots de contenu (phase 8) lèvent.
 - **À refaire au d6** (phase 6) : les faces quittées deviennent des coups imprimés, Thaldrin et Fanchon passent à la signature seule, la courbe se recale.
 
+**Correction (0.105.0)** : en 0.104.0, `npm run campaign` mesurait l'apport du build contre le personnage à son **kit entier**, et non à sa signature seule. La ligne « Apport du build » ci-dessus compare donc le champion construit au personnage de duel : « nul aux nœuds 1 à 3 » veut dire que la signature, une forge et deux reliques rendaient à peu près ce que la signature seule avait perdu. Le rapport compare désormais à la signature seule (`CAMPAIGN_CHAMPIONS`).
+
+### 11.5 La campagne sur le d6, adversaires construits (phase 6 en partie, livré en 0.105.0)
+
+Demande de l'utilisateur après la 0.104.x (§ 1.5) : des adversaires **plus sérieux, qui grandissent avec l'acte**. Ce qui est livré :
+- **la signature seule sur le d6** : la face de l'autre compétence du kit frappe pour sa valeur imprimée (3 le plus souvent) et se grave ; cette compétence et celles hors kit entrent en tête du répertoire de campagne. Morgrut, Thaldrin et Fanchon gardent leur kit entier ;
+- **des adversaires construits** : au nœud k, un adversaire part de sa signature (son kit pour les trois exceptions) et reçoit les k récompenses que l'acte lui aurait données (`drawBuild`, le même tirage que pour le champion de référence) ; ses PV le règlent ensuite sur la courbe, inchangée (98 → 89 %, boss 45 %). `Encounter` porte sa forge et ses reliques ; l'écran d'affrontement les montre ;
+- **la signature affichée** au choix du champion et sur la carte (« Signature : Pile ou face, sur le 1 ») ;
+- **le boss en d6** : Peau de pierre, Pourfendre (frappe pour 6), Aura d'intimidation, un couperet qui frappe pour 10, 11 et 12, doré sur le 5 et le 6 ;
+- sauvegarde `battler:campaign:v4`.
+
+**Mesure** (`npm run campaign`, 12 parties par champion, 120 en tout ; 0.104.0 → 0.105.0) :
+
+| Mesure | 0.104.0 (anciens dés, adversaires nus) | 0.105.0 (d6, adversaires construits) |
+| --- | --- | --- |
+| Boss atteint | 47 % | 48 % |
+| Acte gagné | 24 % | 24 % |
+| PV de l'adversaire réglé, en part de sa base | non mesuré | 46 % au premier combat, 50 % au dixième |
+| Apport du build (contre la signature seule, même graine) | non mesuré (voir la correction du § 11.4) | 0 au premier combat, **+54 points au dixième** |
+| Tours par combattant | 3,9 au premier combat, 8,1 au dixième, 20,2 contre le boss | 4,2 à 4,9 en combat normal, **13,3 contre le boss** |
+
+**Lecture** :
+- **La difficulté tient** sur le d6 : 48 % au boss, 24 % d'actes gagnés, comme avant.
+- **Les adversaires grandissent** : ils portent les reliques et la forge de leur nœud, au lieu d'être des personnages de duel aux PV réduits. Mais **la courbe de 98 % leur retire encore la moitié de leurs PV** : tant que le premier combat doit être gagné 98 fois sur 100, un adversaire construit ne peut pas être entier. Une courbe plus basse au début (par exemple 90 %) donnerait des combats plus disputés, et moins de parties qui atteignent le boss : à trancher avec l'utilisateur (§ 19, point 5).
+- **Les combats sont courts** : environ 5 tours par combattant, du premier au dixième ; le d6 imprimé frappe plus souvent qu'un grand dé à trois faces de compétence. Le boss dure moins (13,3 au lieu de 20,2). La durée reste l'affaire de la phase 7.
+- **Le build se voit** : +54 points au dixième combat contre le même personnage à sa signature seule.
+- **Reste de la phase 6** : Thaldrin et Fanchon à la signature seule (le druide ne peut qu'Aiguiser en forge), les répertoires relus pour le d6, les auras de signature si l'utilisateur les veut.
+
 ---
 
 ## 12. La durée des combats et les PV
@@ -864,7 +929,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Un plan seulement (décision de l'utilisateur) : rien n'est codé. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay._
 
 ```mermaid
 flowchart LR
@@ -885,10 +950,10 @@ flowchart LR
 | **1. Étiquettes** (faite, 0.102.0) | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le relevé du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; l'audit contrôle le type de chaque dégât ; résultats au § 3.2 | ce que doivent contenir les lots de contenu : des consommateurs |
 | **2. Essai des répertoires** (livré, 0.103.0 ; à jouer) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (Graver garantie dans le répertoire, première relique à l'écho, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après (§ 7.4) : gravures 0,36 → 0,65 par acte, toutes du répertoire ; paires liées 0,86 → 1,08 | **l'utilisateur joue** : la structure tient-elle ? (jugé avec l'étape 6a : sur l'acte de cinq, l'offre orientée ne se voyait pas en jeu) |
 | **6a. Campagne longue sur les dés actuels** (livré, 0.104.0 ; à jouer ; avancée à la demande de l'utilisateur) | la signature seule (sept personnages ; Morgrut, Thaldrin et Fanchon entiers jusqu'au d6) ; 10 combats dans l'ordre retenu ; courbe 98 → 89 %, boss 45 % ; quatre faces de compétence au plus | en campagne seulement | `npm run campaign` (§ 11.4) : boss atteint 47 %, acte gagné 24 % ; apport du build nul aux nœuds 1 à 3, +50 points au 10 ; boss à 20 tours par combattant | **l'utilisateur joue** : longueur, premiers combats, rythme des forges, durée du boss |
-| **3. Dé en liste de faces** | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques | — |
-| **4. Essai du d6** | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, au laboratoire, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre | non (laboratoire) | taux et marge avant → après, valeur nette, durée | les dés de référence, retouchés ; la méthode pour les six autres |
-| **5. Conversion et forge d6** | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (sorts sur deux faces) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir, de Retailler et du Contrepoids, et son remplaçant au tournoi | **oui**, volontairement | `npm run balance` (42 à 58 %, aucun duel au-delà de 65/35) ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
-| **6. Campagne longue en d6** | ce que l'étape 6a a posé, refait sur le d6 : les faces quittées en coups imprimés, Thaldrin et Fanchon à la signature seule, Copier une face sous la limite de quatre ; courbe recalée ; répertoires en d6 | en campagne | `npm run campaign` : boss atteint par environ la moitié des parties, durée mesurée | **l'utilisateur joue** : longueur, rythme des forges, difficulté |
+| **3. Dé en liste de faces** (faite, 0.105.0) | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques (commit intermédiaire) | — |
+| **4. Essai du d6** (fait, 0.105.0, essais jetables pendant la conversion) | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre (4) | non (essais) | taux avant → après (§ 6.8) | les dés retouchés (§ 6.8) |
+| **5. Conversion et forge d6** (faite, 0.105.0 ; à jouer) | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir et de Retailler ; Contrepoids en relique de critique | **oui**, volontairement | `npm run balance` à 800 combats par duel : 48,2 à 51,6 %, aucun duel au-delà de 65/35 ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
+| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5). Reste : Thaldrin et Fanchon à la signature seule ; répertoires relus pour le d6 ; auras de signature | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
 | **7. Types à l'écran, durée, types en bonus** | la couleur des chiffres par type et par source ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison | `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 
@@ -901,8 +966,8 @@ flowchart LR
 ## 19. À trancher en cours de route
 
 Toutes les questions posées ont une réponse (§ 1). Restent des choix que les phases éclaireront :
-1. **La valeur imprimée de Pourfendre** (aujourd'hui un coup de 1) : phase 4.
-2. **Les dés de Fanchon et du druide** en d6 : phase 5.
-3. **Le remplaçant du Contrepoids de plomb** dans le tournoi sans forge : phase 5.
+1. ~~**La valeur imprimée de Pourfendre**~~ : 4 (0.105.0).
+2. ~~**Les dés de Fanchon et du druide** en d6~~ : § 6.8 (0.105.0).
+3. ~~**Le remplaçant du Contrepoids de plomb**~~ : il devient une relique de critique (0.105.0).
 4. **Le montant des bonus par impact** (« +1 » ou « +2 » aux DM sur un sort à trois impacts) : phase 7.
 5. **La courbe de l'acte long** et la place des forges, après les parties de l'utilisateur : phase 6.

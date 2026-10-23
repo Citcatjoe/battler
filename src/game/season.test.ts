@@ -166,7 +166,6 @@ describe('saison', () => {
       const before = buildOf(season, r.winner === 0 ? f.home : f.away, f.day)
       const count = before.relics.length + before.forge.length
       expect(r.reward?.kind).toBe(count < 6 ? season.rewards[count] : undefined)
-      if (r.reward?.kind === 'relic') expect(r.reward.chosen).not.toBe('lead-pommel') // devenu Agrandir avec la forge
       // Chacun combat avec ce qu'il a gagné aux journées précédentes
       const fighters = seasonFighters(season, f.number)
       ;[f.home, f.away].forEach((i, side) => {
@@ -278,10 +277,10 @@ describe('saison', () => {
       t = chooseSeasonReward(t, n1, step)
       expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([...held, step].map(stepKey))
     }
-    const targeted = forged.offer.find((o) => o.op !== 'enlarge' && o.op !== 'trim')!
+    const targeted = forged.offer.find((o) => o.op !== 'reforge')!
     expect(() => chooseSeasonReward(t, n1, stepOf(targeted, 999))).toThrow()
-    const missing = (['enlarge', 'trim', 'gild', 'sharpen'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
-    expect(() => chooseSeasonReward(t, n1, missing === 'enlarge' || missing === 'trim' ? { op: missing } : { op: missing, face: 1 })).toThrow()
+    const missing = (['reforge', 'gild', 'sharpen', 'copy'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
+    expect(() => chooseSeasonReward(t, n1, missing === 'reforge' ? { op: missing } : { op: missing, face: 1 })).toThrow()
   })
 
   it('sans reliques ni forge : ni récompense ni construction, et l’arbre n’en donne pas', () => {

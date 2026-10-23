@@ -1705,29 +1705,21 @@ body {
   text-transform: none;
   color: var(--text-1);
 }
-.matchup-section-more {
-  font: 600 13px/1 var(--font-data);
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--gold-300);
-}
 .matchup-rule { flex-shrink: 0; height: 1px; background: var(--line-1); }
 
+/* Les six faces du d6 (0.105.0), sur une rangée, centrées dans la hauteur de la section */
 .die-grid {
   display: grid;
   flex-shrink: 0;
-  grid-template-columns: repeat(6, 44px);
-  grid-auto-rows: 44px;
+  grid-template-columns: repeat(6, 56px);
+  grid-auto-rows: 56px;
   justify-content: space-between;
-  row-gap: 7px;
+  align-content: center;
   height: 95px;
 }
 .die-slot .skill-seal { --nature: var(--line-2); }
 .die-slot .skill-seal::before { background: radial-gradient(circle at 50% 35%, #231c16 0%, var(--bg-0) 75%); }
-.die-slot-plain { font: 700 17px/1 var(--font-display); color: var(--text-1); }
-/* Emplacement au-delà de la taille du dé : la jauge vide */
-.die-slot[data-empty] .skill-seal { --nature: var(--line-1); }
-.die-slot[data-empty] .skill-seal::before { background: rgba(14, 11, 9, 0.45); }
+.die-slot-plain { font: 700 20px/1 var(--font-display); color: var(--text-1); }
 /* Face dorée : fond d'or, sans le cadre de la face forgée */
 .die-slot[data-gild] .skill-seal::before,
 .die-slot[data-forged] .skill-seal::before { background: linear-gradient(160deg, #b9862f 0%, #6e4d1d 55%, #3e2a10 100%); }

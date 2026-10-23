@@ -7,14 +7,14 @@ import { SkillSeal } from './SkillSeal'
 import type { SkillPulse } from '../game/staging'
 
 /**
- * Les faces de compétence d'un personnage, dans l'ordre : 1, 2 et 3 (les doubles 1 à 5 pour deux dés), puis celles que
- * la forge du dé a gravées au-delà (docs/CAMPAGNE.md § 4). En-tête du combat, sélection, affrontement.
+ * Les faces de compétence d'un personnage, dans l'ordre : celles qui portent une compétence (les doubles pour deux dés),
+ * d'origine ou gravées par la forge. Depuis le d6 imprimé (0.105.0), plus de faces 1 à 3 vides : une face de coup n'a
+ * pas de dé de compétence. En-tête du combat, sélection, affrontement.
  */
 export function skillFaces(character: Character, events: readonly CharacterEvent[]): { face: number; trigger: Trigger }[] {
   const twin = character.twinDice
-  const base = twin ? [1, 2, 3, 4, 5] : [1, 2, 3]
-  const engraved = events.map((e) => (twin ? doubleFace(e.trigger) : rollFace(e.trigger))).filter((f): f is number => f !== undefined && !base.includes(f))
-  return [...base, ...new Set(engraved.sort((a, b) => a - b))].map((face) => ({ face, trigger: twin ? doubleTrigger(face) : faceTrigger(face) }))
+  const faces = events.map((e) => (twin ? doubleFace(e.trigger) : rollFace(e.trigger))).filter((f): f is number => f !== undefined)
+  return [...new Set(faces)].sort((a, b) => a - b).map((face) => ({ face, trigger: twin ? doubleTrigger(face) : faceTrigger(face) }))
 }
 
 /** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). Au-delà de 6, son chiffre. */

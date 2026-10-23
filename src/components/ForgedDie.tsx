@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { Character } from '../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill } from '../game/events'
 import {
-  ENLARGE_FACES,
   FORGE_OPS,
   forgedFaces,
   forgeState,
@@ -95,11 +94,10 @@ export function ForgedDie({
   )
 }
 
-/** L'image d'une opération de forge, en grand sur sa carte : le sceau gravé, l'or, le chiffre romain, la taille du dé. */
-function OpPlate({ offer, character }: { offer: ForgeOffer | ForgeStep; character: Character }) {
-  const faces = character.stats.damageDie
+/** L'image d'une opération de forge, en grand sur sa carte : le sceau gravé, l'or, le chiffre romain, la copie, la refonte. */
+function OpPlate({ offer }: { offer: ForgeOffer | ForgeStep }) {
   const engraved = offer.op === 'engrave'
-  const text = engraved ? undefined : { gild: `+${GILD_BONUS}`, sharpen: 'II', enlarge: `d${faces + ENLARGE_FACES}`, trim: `d${faces - 1}` }[offer.op]
+  const text = engraved ? undefined : OP_TEXT[offer.op]
   return (
     <span
       className="forge-face"
@@ -136,7 +134,7 @@ export function ForgeCard({
   return (
     <button type="button" className="relic-card" aria-pressed={selected} onClick={onSelect}>
       {mark && <span className="relic-card-mark">{mark}</span>}
-      <OpPlate offer={offer} character={character} />
+      <OpPlate offer={offer} />
       <span className="font-display text-[26px] font-extrabold leading-tight text-ink-1">{offer.op === 'engrave' ? offer.skill.name : op.name}</span>
       <span className="rounded-(--r-xs) border border-gold-500/60 bg-gold-500/15 px-2 py-px font-body text-[13px] font-bold uppercase tracking-[0.2em] text-gold-300">
         {offer.op === 'engrave' ? op.name : 'Forge du dé'}
@@ -173,7 +171,7 @@ export function useForgeChoice(character: Character, offer: readonly ForgeOffer[
   const [face, setFace] = useState(autoFace)
   const picked = offer[index]
   const targets = picked ? offerTargets(character.definition, character.forge, picked) : []
-  const ready = !picked || picked.op === 'enlarge' || picked.op === 'trim' || (face !== undefined && targets.includes(face))
+  const ready = !picked || picked.op === 'reforge' || (face !== undefined && targets.includes(face))
   return {
     offer,
     autoIndex,
@@ -226,9 +224,12 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
   )
 }
 
-/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la taille du dé. */
+/** Le signe d'une opération sans sceau, sur sa tuile : l'or de la dorure, le rang, la copie, la refonte. */
+const OP_TEXT: Record<Exclude<ForgeStep['op'], 'engrave'>, string> = { gild: `+${GILD_BONUS}`, sharpen: 'II', copy: '×2', reforge: '=' }
+
+/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la copie, la refonte. */
 function StepTile({ step, size }: { step: ForgeStep; size: number }) {
-  const text = step.op === 'engrave' ? undefined : { gild: `+${GILD_BONUS}`, sharpen: 'II', enlarge: `d+${ENLARGE_FACES}`, trim: 'd−1' }[step.op]
+  const text = step.op === 'engrave' ? undefined : OP_TEXT[step.op]
   return (
     <span
       className="forge-face shrink-0"

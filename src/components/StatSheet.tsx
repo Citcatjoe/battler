@@ -1,7 +1,7 @@
 import type { Character, CharacterStats } from '../game/character'
-import { effectiveStats, multiplier, percent, SIDE_STYLE, type Side } from '../game/combat'
-import { ROSTER } from '../game/roster'
-import type { Status } from '../game/statuses'
+import { multiplier, percent, SIDE_STYLE, type Side } from '../game/combat'
+import { forgedFaces } from '../game/forge'
+import { CHARACTERS } from '../game/roster'
 
 export interface StatLine {
   label: string
@@ -11,16 +11,29 @@ export interface StatLine {
 
 export const STAT_LINES: StatLine[] = [
   { label: 'PV', key: 'maxHp', format: String },
-  { label: 'Dégâts', key: 'damageDie', format: (v) => `1d${v}` },
+  // Le d6 imprimé (0.105.0) : la ligne du dé montre ce que frappent ses faces de coup (`strikeValues`), pas sa taille
+  { label: 'Coups', key: 'damageDie', format: (v) => `d${v}` },
   { label: 'Armure', key: 'armor', format: String },
   { label: 'Esquive', key: 'dodgeChance', format: percent },
   { label: 'Critique', key: 'critChance', format: percent },
   { label: 'Mult. critique', key: 'critMultiplier', format: multiplier },
 ]
 
-// Les barres sont relatives au meilleur personnage du roster sur chaque stat.
+/**
+ * Ce que frappent les faces de coup d'un personnage (valeur imprimée et dorure, forge comprise) : celles sans compétence ;
+ * toutes pour la barde (chaque dé frappe hors double) et pour le druide (son ours frappe sur chaque face).
+ */
+function strikeValues(c: Character): number[] {
+  const faces = forgedFaces(c.definition, c.forge)
+  const strikes = c.twinDice || c.forms ? faces : faces.filter((f) => f.origin.length === 0 && !f.engraved && !f.idle)
+  return strikes.map((f) => f.value + f.gild)
+}
+
+const mean = (values: readonly number[]) => values.reduce((t, v) => t + v, 0) / values.length
+
+// Les barres sont relatives au meilleur personnage du roster sur chaque stat (les coups : sa moyenne).
 const MAX = Object.fromEntries(
-  STAT_LINES.map((l) => [l.key, Math.max(...ROSTER.map((c) => c.stats[l.key]))]),
+  STAT_LINES.map((l) => [l.key, Math.max(...CHARACTERS.map((c) => (l.key === 'damageDie' ? mean(strikeValues(c)) : c.stats[l.key])))]),
 ) as Record<keyof CharacterStats, number>
 
 /**
@@ -37,11 +50,11 @@ interface ShownStat {
 const signedPct = (p: number) => (p < 0 ? `−${Math.round(-p * 100)} %` : percent(p))
 
 /**
- * Ce que la stat vaut vraiment en combat, quand la valeur brute tromperait : deux dés (la barde), un dé par forme
- * (le druide : d3 en homme, son dé en ours), une esquive que les reliques font passer sous 0 (bornée à 0 par le
- * moteur), un multiplicateur sans critique. Lu dans les règles du moteur (`effectiveStats`), rien n'est recalculé.
- * Comparaison (affrontement) : le dé compte son nombre de faces (la barde, celles d'un dé ; le druide, sa plus grande
- * forme), l'esquive négative compte 0, un multiplicateur sans critique ne gagne jamais.
+ * Ce que la stat vaut vraiment en combat, quand la valeur brute tromperait : les coups du d6 (ce que frappent ses faces
+ * de coup, deux dés pour la barde, l'ours pour le druide), une esquive que les reliques font passer sous 0 (bornée à 0
+ * par le moteur), un multiplicateur sans critique. Lu dans la forge et les règles du moteur, rien n'est recalculé.
+ * Comparaison (affrontement) : les coups comptent leur moyenne, l'esquive négative compte 0, un multiplicateur sans
+ * critique ne gagne jamais.
  */
 function shownStat(character: Character, l: StatLine): ShownStat {
   const v = character.stats[l.key]
@@ -49,17 +62,14 @@ function shownStat(character: Character, l: StatLine): ShownStat {
   const relicHint = v !== base ? `${l.format(base)} sans ses reliques` : undefined
   const plain: ShownStat = { text: l.format(v), bar: v, hint: relicHint, score: v }
   if (l.key === 'damageDie') {
-    if (character.twinDice) return { ...plain, text: `2d${v}`, hint: [`Deux d${v} à chaque action`, relicHint].filter(Boolean).join(' ; ') }
-    const forms = character.forms
-    if (forms) {
-      const dice = forms.map((f) => effectiveStats(character, (f.statuses ?? []).map((id): Status => ({ id, stacks: 1 }))).damageDie)
-      if (dice.some((d) => d !== dice[0]))
-        return {
-          ...plain,
-          text: dice.map((d) => `d${d}`).join(' / '),
-          hint: [forms.map((f, i) => `${f.name} : 1d${dice[i]}`).join(' · '), relicHint].filter(Boolean).join(' ; '),
-          score: Math.max(...dice),
-        }
+    const values = strikeValues(character)
+    const [low, high, avg] = [Math.min(...values), Math.max(...values), mean(values)]
+    const where = character.twinDice ? ', sur chacun de ses deux dés' : character.forms ? ", sous forme d'ours" : ''
+    return {
+      text: low === high ? String(low) : `${low} à ${high}`,
+      bar: avg,
+      hint: `Faces de coup${where} : ${values.join(', ')} (moyenne ${avg.toFixed(1).replace('.', ',')})`,
+      score: avg,
     }
   }
   if (l.key === 'dodgeChance' && v < 0)

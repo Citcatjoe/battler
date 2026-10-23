@@ -21,7 +21,10 @@ import {
   CAMPAIGN_CHAMPIONS,
   CAMPAIGN_REPERTOIRES,
   campaignCharacter,
+  drawBuild,
   drawReward,
+  encountersFor,
+  opponentOf,
   MAX_SKILL_FACES,
   championOf,
   heritableGains,
@@ -54,7 +57,7 @@ import {
   withResult,
   type Tournament,
 } from './tournament'
-import { FORGE_RELIC_IDS, OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
+import { OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
 import { eventHooks, linkBetween, relicHooks, validateHooks } from './hooks'
 
 const duel = (a: string, b: string, seed: number) =>
@@ -89,9 +92,11 @@ describe('catalogue des compétences', () => {
     // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
     for (const c of CHARACTERS)
       for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
-    // Faces identiques d'un même porteur : une seule ligne, qui liste ses déclencheurs (l'Attente de l'ogre)
-    const waiting = skills.filter((s) => s.event.name === 'Attente')
-    expect(waiting.map((s) => s.triggers)).toEqual([['naturalOne', 'naturalTwo', 'naturalThree']])
+    // Faces identiques d'un même porteur : une seule ligne, qui liste ses déclencheurs (la Foudre du druide, sur 1 à 3)
+    expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalOne', 'naturalTwo', 'naturalThree'])
+    expect(skills.filter((s) => s.event.name === 'Attente').map((s) => s.triggers)).toEqual([['naturalOne']])
+    // Hors kit (règles v2, d6) : listée chez son personnage, sans face
+    expect(skills.find((s) => s.event.id === 'power-aura')).toMatchObject({ outside: true, triggers: [], owners: [createCharacter('gorak')] })
     // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
     for (const s of skills) expect(s.owners).toHaveLength(1)
     expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak'])
@@ -107,10 +112,10 @@ describe('catalogue des compétences', () => {
   it('un effet subi par l’adversaire le nomme dans le texte de la compétence (retour du 2026-10-21)', () => {
     // « Perd 3 PV au début de son prochain tour » (Souffle de la tombe) se lisait comme une perte du lanceur
     for (const c of CHARACTERS)
-      for (const e of c.events)
+      for (const e of [...c.events, ...(c.definition.reserve ?? [])])
         for (const effect of e.effects.filter((x) => x.target === 'opponent'))
           expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
-    expect(describeSkill(createCharacter('ervald').events.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3 PV/)
+    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3 PV/)
   })
 })
 
@@ -271,11 +276,9 @@ describe('accroches (règles v2, phase 1)', () => {
     expect(validateHooks([empty, wrong], [])).toEqual(['vide : la compétence ne produit aucune accroche', 'poison : posé sur soi, déclaré sur l’adversaire'])
   })
 
-  it('les liens mesurés (PROGRESSION.md § 3) se lisent dans les accroches : Dé creux nourrit la Conque, la Cotte et le Contrepoids la gênent', () => {
+  it('les liens mesurés (PROGRESSION.md § 3) se lisent dans les accroches : Dé creux nourrit la Conque, la Cotte la gêne', () => {
     expect(linkBetween(relic('hollow-die'), relic('wind-conch')).feeds).toContain('moment:dodge')
     expect(linkBetween(relic('mercenary-mail'), relic('wind-conch')).conflicts).toContain('moment:dodge')
-    expect(linkBetween(relic('lead-pommel'), relic('four-nail-shoe')).conflicts).toContain('face:4')
-    expect(linkBetween(relic('lead-pommel'), relic('hollow-die')).conflicts).toContain('face:max')
   })
 
   it('une compétence hérite des accroches du statut qu’elle pose : Pourfendre fait saigner quand il touche', () => {
@@ -721,14 +724,18 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture'])
     family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'whistle'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'waiting-2', 'waiting-3', 'false-note', 'cleave'])
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'waiting-1', 'false-note', 'cleave'])
     // Crescendo et Soliste (barde) : leurs trois coups sonnent, la compétence est muette
     family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist'])
+    // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak, ou Ervald pour l'Aura de puissance
+    const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
+      createCharacter(skill.id === 'power-aura' ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }]),
+    )
     const seen: Record<string, Set<string | null>> = {}
-    for (const a of CHARACTER_IDS)
-      for (const b of CHARACTER_IDS)
+    for (const a of [...CHARACTERS, ...carriers])
+      for (const b of CHARACTERS)
         for (let seed = 1; seed <= 4; seed++)
-          for (const beat of simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) }).beats) {
+          for (const beat of simulateCombat([a, b], { rng: seededRng(seed) }).beats) {
             if (beat.type !== 'event') continue
             const blocked = beat.event.effects.some((e) => e.type === 'applyStatus' && e.result.kind !== 'applied')
             if (!blocked) (seen[beat.event.eventId] ??= new Set()).add(cueOf(beat.event.side, beat.event.effects))
@@ -814,16 +821,33 @@ describe('postures (docs/POSTURES.md)', () => {
 })
 
 describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
-  const encounter: Encounter = { characterId: 'brokk', maxHp: 57, chance: 0.5 }
-  const bossEncounter: Encounter = { characterId: BOSS.id, maxHp: BOSS.stats.maxHp, boss: true, chance: 0.4 }
+  const encounter: Encounter = { characterId: 'brokk', maxHp: 57, forge: [], relics: [], chance: 0.5 }
+  const bossEncounter: Encounter = { characterId: BOSS.id, maxHp: BOSS.stats.maxHp, forge: [], relics: [], boss: true, chance: 0.4 }
   // Le champion est toujours à gauche (camp 0) : un combat gagné, un combat perdu
   const won = simulateCombat([testCharacter('a', { maxHp: 100 }), testCharacter('b', { maxHp: 1 })], { seed: 1 })
   const lost = simulateCombat([testCharacter('a', { maxHp: 1 }), testCharacter('b', { maxHp: 100 })], { seed: 1 })
   const fear = ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')!
 
+  it('les adversaires grandissent avec l’acte (0.105.0) : au nœud k, leur signature et les k récompenses de l’acte, puis leurs PV réglés', () => {
+    for (const node of [0, 4, ACT_FIGHTS - 1]) {
+      const build = drawBuild('brokk', node, seededRng(node))
+      expect(build.forge).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'forge').length)
+      expect(build.relics).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'relic').length)
+      const opponent = opponentOf({ characterId: 'brokk', maxHp: 33, ...build, chance: 0 })
+      // Sa signature (Épines acérées, copiée peut-être) et rien d'autre de son kit hors gravures ; sa forge, ses reliques, ses PV
+      expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual(['thorns'])
+      expect(opponent.forge).toEqual(build.forge)
+      expect(opponent.relics.map((r) => r.id)).toEqual(build.relics)
+      expect(opponent.maxHp).toBe(33)
+    }
+    // Les rencontres d'un nœud portent leur construction ; le boss, la sienne propre
+    const run = { ...startRun('gorak', 8), wins: 3 }
+    for (const e of encountersFor(run)) expect(e.forge.length + e.relics.length).toBe(3)
+  })
+
   it('le boss est un personnage valide, à son dé forgé', () => {
     expect(validateRoster([BOSS])).toEqual([])
-    expect(campaignCharacter(BOSS.id).gilded).toEqual({ 11: 2, 12: 2 })
+    expect(campaignCharacter(BOSS.id).gilded).toEqual({ 5: 2, 6: 2 })
   })
 
   it('champion de campagne : la signature seule, les compétences quittées entrent dans son répertoire de campagne', () => {
@@ -832,13 +856,15 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       const signature = c.definition.signature
       // Sans signature (Morgrut, Thaldrin, Fanchon) : le kit entier
       expect(kit, c.id).toEqual(signature ? [signature] : c.events.map((e) => e.id))
-      const left = c.events.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.includes(e)).map((e) => e.id)
+      const own = [...c.events, ...(c.definition.reserve ?? [])].filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
+      const left = own.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
       expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
     }
-    // Gorak : la Furie des vents sur le 2 ; le 1 et le 3, quittés par Pourfendre et l'Aura de puissance, sont libres
+    // Gorak : la Furie des vents sur le 2 ; le 1, quitté par Pourfendre, frappe pour sa valeur imprimée et se grave
     const gorak = championOf(startRun('gorak', 1))
     expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalTwo'])
-    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual(expect.arrayContaining([1, 3]))
+    expect(gorak.strikeValue(1)).toBe(4)
+    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([1, 3, 4, 5, 6])
   })
 
   it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {
@@ -868,19 +894,9 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
       expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
       expect(full.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(false)
+      // Copier une face reste possible, sur une face de coup seulement
+      for (const o of full.offer.filter((x) => x.op === 'copy')) expect(o).toEqual({ op: 'copy', strikesOnly: true })
       expect(full.offer.length).toBeGreaterThan(0)
-    }
-  })
-
-  it('offre orientée : le répertoire épuisé, Graver puise dans tout le roster (la barde, hors limite de faces)', () => {
-    const enlarge = { op: 'enlarge' as const }
-    const forge = [enlarge, enlarge, enlarge, ...CAMPAIGN_REPERTOIRES.fanchon.map((skill, i) => ({ op: 'engrave' as const, face: 6 + i, skill }))]
-    for (let k = 0; k < 20; k++) {
-      const reward = drawReward({ championId: 'fanchon', forge, relics: [] }, 'forge', seededRng(k))
-      const engrave = reward.kind === 'forge' ? reward.offer.find((o) => o.op === 'engrave') : undefined
-      if (engrave?.op !== 'engrave') throw new Error('Graver attendue : Fanchon a encore des faces libres')
-      expect(CAMPAIGN_REPERTOIRES.fanchon.map((s) => s.id)).not.toContain(engrave.skill.id)
-      expect(createCharacter('fanchon').events.map((e) => e.id)).not.toContain(engrave.skill.id)
     }
   })
 
@@ -917,7 +933,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(run.gains.filter((g) => g.kind === 'relic').map((g) => g.kind === 'relic' && g.relic)).toEqual(run.relics)
     expect(run.forge).toHaveLength(4)
     expect(new Set(run.relics).size).toBe(6)
-    expect(run.relics.every((r) => FORGE_RELIC_IDS.includes(r))).toBe(true)
+    expect(run.relics.every((r) => RELIC_IDS.includes(r))).toBe(true)
     expect(championOf(run).forge).toEqual(run.forge)
     const end = withFightResult(run, bossEncounter, won)
     expect(end).toMatchObject({ outcome: 'won', wins: ACT_LENGTH, fights: { length: ACT_LENGTH } })
@@ -945,32 +961,36 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(withFightResult({ ...first, wins: ACT_FIGHTS }, bossEncounter, lost)).toMatchObject({ outcome: 'lost', wins: ACT_FIGHTS })
   })
 
-  it('héritage : les reliques et les opérations valides seules sur le dé d’origine ; ni Agrandir, ni Retailler', () => {
+  it('héritage : les reliques et les opérations valides seules sur le dé d’origine', () => {
+    const graveBreath = ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')!
     let run = startRun('gorak', 5)
-    run = withReward(run, { kind: 'forge', step: { op: 'enlarge' } })
+    run = withReward(run, { kind: 'forge', step: { op: 'gild', face: 5 } })
     run = withReward(run, { kind: 'relic', relic: 'wolf-fang' })
-    // Le 10 n'existe que sur le dé agrandi : sa dorure ne s'hérite pas
-    run = withReward(run, { kind: 'forge', step: { op: 'gild', face: 10 } })
-    run = withReward(run, { kind: 'forge', step: { op: 'trim' } })
-    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } })
+    // Le coup de 7 copié sur le plus faible, le 1 que Pourfendre a quitté
+    run = withReward(run, { kind: 'forge', step: { op: 'copy', face: 6 } })
+    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } })
     run = withReward(run, { kind: 'relic', relic: 'mercenary-mail' })
-    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } })
-    // Aiguiser une gravure : seule sur le dé d'origine, le 8 ne porte rien
-    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 8 } })
-    // Aiguiser une compétence d'origine (la signature, sur le 2) : vaut seule
+    run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 3, skill: graveBreath } })
+    // Aiguiser une gravure : seule sur le dé d'origine, le 3 ne porte rien
+    run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 3 } })
+    // Aiguiser une compétence d'origine (la signature, sur le 2) : vaut seule ; refondre aussi
     run = withReward(run, { kind: 'forge', step: { op: 'sharpen', face: 2 } })
+    run = withReward(run, { kind: 'forge', step: { op: 'reforge' } })
     expect(heritableGains(run)).toEqual([
+      { kind: 'forge', step: { op: 'gild', face: 5 } },
       { kind: 'relic', relic: 'wolf-fang' },
-      { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } },
+      { kind: 'forge', step: { op: 'copy', face: 6 } },
+      { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } },
       { kind: 'relic', relic: 'mercenary-mail' },
-      { kind: 'forge', step: { op: 'engrave', face: 8, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'grave-breath')! } },
+      { kind: 'forge', step: { op: 'engrave', face: 3, skill: graveBreath } },
       { kind: 'forge', step: { op: 'sharpen', face: 2 } },
+      { kind: 'forge', step: { op: 'reforge' } },
     ])
   })
 
   it('héritage choisi au départ : il équipe le champion, sans entrer dans les gains ; une forge impossible est refusée', () => {
-    const engraved = startRun('gorak', 7, { kind: 'forge', step: { op: 'engrave', face: 7, skill: fear } })
-    expect(engraved).toMatchObject({ forge: [{ op: 'engrave', face: 7 }], relics: [], gains: [] })
+    const engraved = startRun('gorak', 7, { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } })
+    expect(engraved).toMatchObject({ forge: [{ op: 'engrave', face: 4 }], relics: [], gains: [] })
     expect(championOf(engraved).events.some((e) => e.id === 'fear')).toBe(true)
     expect(heritableGains(engraved)).toEqual([])
     const relic = startRun('gorak', 7, { kind: 'relic', relic: 'wolf-fang' })
@@ -986,11 +1006,10 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       setItem: (k: string, v: string) => void stored.set(k, v),
     })
     try {
-      const first = withReward(withReward(startRun('gorak', 1), { kind: 'forge', step: { op: 'enlarge' } }), { kind: 'relic', relic: 'wolf-fang' })
+      const first = withReward(startRun('gorak', 1), { kind: 'relic', relic: 'wolf-fang' })
       recordHeritage(first)
       expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'wolf-fang' }] })
-      // Que des gains non héritables (Agrandir) : rien n'est effacé
-      recordHeritage(withReward(startRun('gorak', 2), { kind: 'forge', step: { op: 'enlarge' } }))
+      // Une partie sans gain : rien n'est effacé
       recordHeritage(startRun('gorak', 3))
       expect(loadHeritage().gorak).toEqual([{ kind: 'relic', relic: 'wolf-fang' }])
       recordHeritage(withReward(startRun('gorak', 4), { kind: 'relic', relic: 'mercenary-mail' }))

@@ -359,7 +359,8 @@ export function createAudit() {
             if (!isRollTrigger(e.trigger) || !inForm(att, e)) continue
             // Pourfendre (0.70.0) : une compétence `needsTouch` attend que son coup touche
             const should = !a.plain && rollMatches(e.trigger, a.roll, a.faces) && !(e.needsTouch && a.dodged)
-            const did = after.some((x) => x.type === 'event' && x.event.eventId === e.id)
+            // Une compétence imprimée sur plusieurs faces (la Foudre du druide) se reconnaît à son déclencheur
+            const did = after.some((x) => x.type === 'event' && x.event.eventId === e.id && x.event.trigger === e.trigger)
             const someoneDied = after.some((x) => x.state.hp.some((h) => h === 0))
             if (should !== did && !(should && someoneDied)) flag(`compétence ${e.name} mal déclenchée`, r, i, `roll ${a.roll}`)
           }

@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_TARGET, CAMPAIGN_CHAMPIONS, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { simulateCombat } from '../src/game/combat'
 import { buildLinks } from '../src/game/hooks'
 import { pick, seededRng } from '../src/game/rng'
@@ -25,8 +25,9 @@ const perFighter = (turns: number, fights: number) => (fights ? (turns / fights 
 it('mesure de la campagne (pilote automatique)', () => {
   const rows: string[] = []
   let all = { runs: 0, boss: 0, won: 0 }
-  // Par nœud normal, tous champions : victoires du champion construit, du même nu, tours de chacun
-  const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0 }))
+  // Par nœud normal, tous champions : victoires du champion construit, du même nu, tours de chacun, PV des adversaires
+  // réglés (part de leurs PV de base)
+  const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0, hp: 0 }))
   const boss = { fights: 0, turns: 0 }
   for (const id of CHARACTER_IDS) {
     const tally = { depth: 0, boss: 0, won: 0, chance: 0, fights: 0, turns: 0 }
@@ -46,13 +47,15 @@ it('mesure de la campagne (pilote automatique)', () => {
           boss.fights++
           boss.turns += result.turns
         } else {
-          const naked = simulateCombat([createCharacter(id), opponent], { seed })
+          // Le même champion nu : sa base de campagne (sa signature seule), sans forge ni relique
+          const naked = simulateCombat([CAMPAIGN_CHAMPIONS[id], opponent], { seed })
           const node = nodes[run.wins]
           node.fights++
           node.built += result.winner === 0 ? 1 : 0
           node.naked += naked.winner === 0 ? 1 : 0
           node.turns += result.turns
           node.nakedTurns += naked.turns
+          node.hp += encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
         }
         run = withFightResult(run, encounter, result)
         if (run.reward) run = withReward(run, rewardChoice(run.reward))
@@ -92,15 +95,15 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Le build se voit-il ? (par nœud, tous champions)',
     '',
-    'Chaque combat normal est rejoué sur la même graine par le champion nu (sans forge ni relique), contre le même adversaire aux PV réglés. Au premier nœud, le champion est encore nu : l’écart y est nul par construction.',
+    'Chaque combat normal est rejoué sur la même graine par le champion nu (sa signature seule, sans forge ni relique), contre le même adversaire. Au premier nœud, le champion est encore nu : l’écart y est nul par construction. PV de l’adversaire : ses PV réglés, en part de ses PV de base.',
     '',
-    '| Nœud | Récompenses reçues | Combats | Victoires construit | Victoires nu | Apport du build | Tours par combattant (construit) | Tours par combattant (nu) |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Nœud | Récompenses reçues | Combats | Victoires construit | Victoires nu | Apport du build | Tours par combattant (construit) | Tours par combattant (nu) | PV de l’adversaire |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...nodes.map(
       (n, i) =>
-        `| ${i + 1} | ${i} | ${n.fights} | ${pct(n.built / n.fights)} | ${pct(n.naked / n.fights)} | ${Math.round(((n.built - n.naked) / n.fights) * 100)} points | ${perFighter(n.turns, n.fights)} | ${perFighter(n.nakedTurns, n.fights)} |`,
+        `| ${i + 1} | ${i} | ${n.fights} | ${pct(n.built / n.fights)} | ${pct(n.naked / n.fights)} | ${Math.round(((n.built - n.naked) / n.fights) * 100)} points | ${perFighter(n.turns, n.fights)} | ${perFighter(n.nakedTurns, n.fights)} | ${pct(n.hp / n.fights)} |`,
     ),
-    `| Boss | ${ACT_FIGHTS} | ${boss.fights} | | | | ${perFighter(boss.turns, boss.fights)} | |`,
+    `| Boss | ${ACT_FIGHTS} | ${boss.fights} | | | | ${perFighter(boss.turns, boss.fights)} | | |`,
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',

@@ -322,7 +322,7 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   })
   const parts = [
     e.volley ? (e.merged ? `un seul coup de ${e.volley * (face ?? 0)}` : `${e.volley} coups de ${face}`) : '',
-    e.needsTouch ? 'frappe pour la valeur du dé' : '',
+    e.needsTouch ? 'frappe pour la valeur de sa face' : '',
     r ? (r.value === 'max' ? 'frappe pour la valeur maximale de son dé' : `relance son dé et frappe pour ${r.bonus ?? 0} de plus`) : '',
     ...effects,
   ]

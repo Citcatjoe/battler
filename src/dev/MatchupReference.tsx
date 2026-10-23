@@ -15,12 +15,13 @@ import { Stage } from '../components/Stage'
  * construites par les vraies fonctions du jeu (personnage, forge du dé, reliques), pour comparer ses captures en
  * 1440 × 810 aux références (docs/ref/affrontement-*.png). Cas des références de l'écran unique (0.100.0) : `duel`
  * (sélecteur au camp gauche), `duel-droit` (au camp droit), `tournoi` (tête de série, forge, reliques, Parier),
- * `saison-son` (saison, panneau du son ouvert). Cas de la géométrie fixe (0.99.0) : `reel`, `limite`, `reel-inverse`,
- * `limite-inverse`, `druide` (druide contre un d16 forgé et doré), `barde` (barde contre un dé doré).
+ * `saison-son` (saison, panneau du son ouvert). Cas de la géométrie fixe (0.99.0, forges du d6 depuis la 0.105.0) :
+ * `reel`, `limite`, `reel-inverse`, `limite-inverse`, `druide` (druide contre l'ogre gravé, doré et copié), `barde`
+ * (barde contre un dé doré).
  */
 
 /** Une opération de forge voulue ; la compétence d'une gravure est la première du roster qui convient. */
-type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'enlarge' } | { op: 'trim' }
+type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'copy'; face: number } | { op: 'reforge' }
 
 /** Compétences à graver, celles qui gardent le coup d'abord */
 const POOL = [...ENGRAVABLE_SKILLS].sort((a, b) => Number(!!a.forfeitsHit) - Number(!!b.forfeitsHit))
@@ -53,9 +54,7 @@ function forged(character: Character, plan: readonly Plan[]): Character {
   return character.withForge(steps)
 }
 
-/** Reliques qui ne changent pas la taille du dé (le cas fixe sa taille par la forge) */
-const RELIC_POOL = RELICS.filter((r) => !r.stats?.damageDie)
-const relics = (n: number, from = 0) => RELIC_POOL.slice(from, from + n)
+const relics = (n: number, from = 0) => RELICS.slice(from, from + n)
 
 const gorak = createCharacter('gorak')
 const ervald = createCharacter('ervald')
@@ -77,8 +76,8 @@ function buildCases(): Record<string, Case> {
   const real: Case = {
     mode: 'tournament',
     fighters: [
-      forged(gorak, [{ op: 'engrave', face: 5 }, { op: 'sharpen', face: 3 }]).withRelics(relics(3)),
-      forged(ervald, [{ op: 'enlarge' }, { op: 'trim' }, { op: 'engrave', face: 9 }])
+      forged(gorak, [{ op: 'engrave', face: 5 }, { op: 'sharpen', face: 2 }]).withRelics(relics(3)),
+      forged(ervald, [{ op: 'copy', face: 6 }, { op: 'engrave', face: 4 }])
         .withName('Ervald le Revenu')
         .withRelics(relics(3, 3)),
     ],
@@ -89,14 +88,13 @@ function buildCases(): Record<string, Case> {
   const limit: Case = {
     mode: 'tournament',
     fighters: [
-      forged(gorak, [{ op: 'trim' }, { op: 'trim' }, { op: 'trim' }, { op: 'trim' }, { op: 'trim' }]),
+      forged(gorak, [{ op: 'reforge' }, { op: 'gild', face: 6 }]),
       forged(ervald, [
-        { op: 'enlarge' },
-        { op: 'engrave', face: 9 },
-        { op: 'engrave', face: 12 },
-        { op: 'sharpen', face: 2 },
-        { op: 'sharpen', face: 9 },
-        { op: 'sharpen', face: 9 },
+        { op: 'engrave', face: 3 },
+        { op: 'engrave', face: 4 },
+        { op: 'sharpen', face: 1 },
+        { op: 'sharpen', face: 3 },
+        { op: 'sharpen', face: 3 },
       ])
         .withName('Ervald le Revenu, Chevalier des Cendres')
         .withRelics(relics(10)),
@@ -115,8 +113,8 @@ function buildCases(): Record<string, Case> {
     druide: {
       mode: 'season',
       fighters: [
-        forged(createCharacter('thaldrin'), [{ op: 'gild', face: 5 }]).withRelics(relics(2, 4)),
-        forged(createCharacter('morgrut'), [{ op: 'enlarge' }, { op: 'engrave', face: 6 }, { op: 'gild', face: 4 }, { op: 'engrave', face: 15 }]).withRelics(
+        forged(createCharacter('thaldrin'), [{ op: 'sharpen', face: 1 }]).withRelics(relics(2, 4)),
+        forged(createCharacter('morgrut'), [{ op: 'engrave', face: 1 }, { op: 'gild', face: 4 }, { op: 'copy', face: 6 }]).withRelics(
           relics(6),
         ),
       ],
@@ -126,8 +124,8 @@ function buildCases(): Record<string, Case> {
     barde: {
       mode: 'tournament',
       fighters: [
-        forged(createCharacter('fanchon'), [{ op: 'enlarge' }, { op: 'engrave', face: 6 }, { op: 'gild', face: 6 }, { op: 'gild', face: 2 }]).withRelics(relics(1, 7)),
-        forged(gorak, [{ op: 'gild', face: 4 }, { op: 'gild', face: 8 }, { op: 'engrave', face: 7 }]).withRelics(relics(7)),
+        forged(createCharacter('fanchon'), [{ op: 'engrave', face: 6 }, { op: 'gild', face: 6 }, { op: 'gild', face: 2 }]).withRelics(relics(1, 7)),
+        forged(gorak, [{ op: 'gild', face: 4 }, { op: 'gild', face: 6 }, { op: 'engrave', face: 3 }]).withRelics(relics(7)),
       ],
       ranks: [null, 3],
       arena: ARENAS[5].id,

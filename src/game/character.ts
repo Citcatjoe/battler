@@ -127,6 +127,12 @@ export interface CharacterDef {
    * apprendre par la forge, en campagne ; deux fils de synergie, écrits pour lui. Sans effet sur le combat.
    */
   repertoire?: readonly string[]
+  /**
+   * Compétences hors kit (règles v2, phase 5, docs/PROGRESSION.md § 7.3) : celles qui ont quitté son kit au passage au
+   * d6. Elles restent à lui (compendium), se gravent par la forge et entrent en tête de son répertoire de campagne. Hors
+   * du dé : le déclencheur qu'elles gardent ne sert qu'à leur texte ; une gravure le remplace par sa face.
+   */
+  reserve?: readonly CharacterEvent[]
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
   /**

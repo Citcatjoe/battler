@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { RELICS } from './relics'
-import { CHARACTER_IDS, createCharacter } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter } from './roster'
 import { SCENE_EVENTS } from './scenes'
 import { childrenOf, skillFaceAt, skillFaceOf, stage, type Cue, type Moment } from './staging'
 import type { Status } from './statuses'
@@ -32,6 +32,15 @@ for (const x of CHARACTER_IDS)
       const relics = (k: number) => (seed % 2 === 0 ? [RELICS[(seed * 3 + k) % RELICS.length]] : [])
       const fighters: Pair<Character> = [createCharacter(x).withRelics(relics(0)), createCharacter(y).withRelics(relics(5))]
       const result = simulateCombat(fighters, { seed })
+      corpus.push({ result, moments: stage(result) })
+    }
+// Les compétences hors kit (d6, 0.105.0 : la Peur, Coup de chance…) se jouent gravées sur le 3 d'un porteur : Gorak, ou
+// Ervald pour l'Aura de puissance et Coup de chance (la rafale de Gorak tomberait dans le même moment que sa Furie)
+for (const skill of CHARACTERS.flatMap((c) => c.definition.reserve ?? []))
+  for (const y of CHARACTER_IDS)
+    for (const seed of [1, 2]) {
+      const carrier = createCharacter(['power-aura', 'lucky-strike'].includes(skill.id) ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }])
+      const result = simulateCombat([carrier, createCharacter(y)], { seed })
       corpus.push({ result, moments: stage(result) })
     }
 

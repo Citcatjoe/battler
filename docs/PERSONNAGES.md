@@ -29,6 +29,42 @@ _Chiffres mesurés en 0.17.0 (8 personnages), sur 6 000 combats par paire, côt�
 
 ---
 
+## Le d6 imprimé (0.105.0)
+
+**Règles v2** (2026-10-23) : tout le roster lance un d6. Le kit tient en deux compétences, sur les faces 1 et 2 ; les faces 3 à 6 sont des coups, qui frappent pour leur **valeur imprimée** (`strikes`) et non pour leur numéro. La troisième compétence quitte le kit : elle reste au personnage, « hors kit » (`reserve`), au compendium, à la gravure et en tête de son répertoire de campagne. Les valeurs imprimées des faces de compétence qui sacrifient le coup (3, ou 2 pour Ysolde) ne servent qu'aux coups bruts de la Furie et en campagne, quand la signature seule libère la face.
+
+Mesuré à 800 combats par duel (`BALANCE_N=800 npm run balance`), avant (0.104.1) → après :
+
+| Personnage | Face 1 | Face 2 | Faces 3 à 6 (valeurs imprimées) | Hors kit | Autre changement | Taux avant → après |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gorak | Pourfendre (frappe pour 4) | Furie des vents | 5, 5, 6, 7 | Aura de puissance | d9 → d6 | 51,0 → 48,7 % |
+| Elaria | Œil de faucon | Esquive améliorée | 5, 6, 6, 7 | Aura de précision | d8 → d6 ; **53 PV (50)** | 47,3 → 49,2 % |
+| Brokk | Peau de pierre | Épines acérées | 7, 7, 8, 10 | Aura d'intimidation | d10 → d6 | 47,4 → 49,9 % |
+| Ervald | Vol de vie | Aura glaciale | 6, 6, 7, 9 | Souffle de la tombe | d10 → d6 | 53,9 → 49,3 % |
+| Ysolde | Purification | Aura de sainteté | 6, 7, 7, 8 | Peur | d7 → d6 | 43,9 → 50,9 % |
+| Naraxes | Pile ou face | Aura de décoction | 6, 7, 7, 8 | Coup de chance | d10 → d6 | 53,7 → 50,7 % |
+| Aldric | Rétribution | Riposte | 4, 5, 6, 7 | Aura d'immunité | d8 → d6 | 53,9 → 50,2 % |
+| Morgrut | Attente (une seule face, sur le 1) | coup 7 | 8, 9, 10, 11 | — | d14 et trois Attentes → d6, une Attente | 47,4 → 51,4 % |
+| Thaldrin | homme : Foudre sur 1, 2, 3 ; Feux follets sur 4, 5, 6 | — | ours : 3, 4, 5, 6, 7, 8 (+3 Force de l'ours) | Aura sauvage | d10 (d3 en homme) → d6 | 49,4 → 51,6 % |
+| Fanchon | deux d6, doubles 1 à 5 inchangés | double 6 : aucune compétence (deux coups de 4) | chaque dé : 1, 2, 3, 4, 5, 4 | — | deux d5 → deux d6 | 52,1 → 48,2 % |
+
+**Les 3 PV d'Elaria, dernier levier.** Son duel contre Aldric penche parce que la Rétribution relâche ses critiques. Les leviers de compétence ont été essayés d'abord. Morgrut garde une seule Attente : deux (PROGRESSION § 6.7) le laissaient trop prévisible contre l'esquive d'Elaria.
+
+**Duels les plus déséquilibrés** (800 combats) : aucun au-delà de 65/35.
+- Aldric contre Thaldrin, 35,9 % : la Foudre et les brûlures ne remplissent pas les jauges de Rétribution, qui ne stockent que les coups ; sans Rétribution, Aldric tomberait à 15 %.
+- Aldric contre Elaria, 63,4 % : la Rétribution relâche ses critiques.
+- Elaria contre Ysolde, 36,8 %.
+- Brokk contre Fanchon, 62,9 %.
+- Elaria contre Morgrut, 62,0 %.
+
+Les deux contres connus (Brokk–Fanchon, Naraxes–Ysolde) sont revenus sous 63 % et quittent `balance.test.ts`.
+
+**Leviers essayés et écartés** (essai jetable) :
+- Rétribution à deux jauges : Aldric contre Elaria de 64,8 à 58,0 %, mais Aldric contre Fanchon tombe à 31,6 % (les petits coups de la barde remplissent mal deux jauges).
+- Critique d'Elaria à 12 % : sans effet sur le duel.
+
+---
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.
@@ -80,6 +116,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 ### Gorak · Brute
 
 > « Le roc des fosses de Kar-Dush. »
+
+**2026-10-23, le d6 imprimé (0.105.0)** : Pourfendre (frappe pour 4) et Furie des vents, coups de 5, 5, 6, 7 ; Aura de puissance hors kit. 51,0 → 48,7 %. Voir « Le d6 imprimé ».
 
 **Personnalité : le champion des fosses.**
 - **Qui il est** : un vétéran des combats d'arène, fier, qui joue pour le public. Il paraît calme et sûr de lui, mais la colère monte à chaque coup reçu (choix de 2026-10-20 entre le « calme » de son image et le « coup manqué l'énerve » de sa fiche : l'un mène à l'autre).
@@ -144,6 +182,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 > « Un souffle, une flèche. »
 
+**2026-10-23, le d6 imprimé (0.105.0)** : Œil de faucon et Esquive améliorée, coups de 5, 6, 6, 7 ; Aura de précision hors kit ; 53 PV (50), dernier levier. 47,3 → 49,2 %. Voir « Le d6 imprimé ».
+
 **Personnalité : la chasseresse solitaire.**
 - **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.
 - **Comment elle se bat** : elle observe, se dérobe, et attend l'ouverture. Un tir manqué lui sert à régler le suivant (Œil de faucon). Elle frappe peu, mais au bon endroit.
@@ -198,6 +238,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 > « Ce qui passe la porte passe par moi. »
 
+**2026-10-23, le d6 imprimé (0.105.0)** : Peau de pierre et Épines acérées, coups de 7, 7, 8, 10 ; Aura d'intimidation hors kit. 47,4 → 49,9 %. Voir « Le d6 imprimé ».
+
 **Personnalité : le roc.**
 - **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
 - **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Épines acérées), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
@@ -247,6 +289,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 ### Ervald · Chevalier liche
 
 > « La mort l'a rendu, pas pardonné. »
+
+**2026-10-23, le d6 imprimé (0.105.0)** : Vol de vie et Aura glaciale, coups de 6, 6, 7, 9 ; Souffle de la tombe hors kit. 53,9 → 49,3 %. Voir « Le d6 imprimé ».
 
 **Personnalité : le devoir qui ne meurt pas.**
 - **Qui il est** : un soldat mort à son poste et revenu par devoir. Il est froid, sans haine ni colère ; il n'a plus rien à perdre, et il a donc tout son temps.
@@ -306,6 +350,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 > « Le soleil ne frappe pas. Il juge. »
 
+**2026-10-23, le d6 imprimé (0.105.0)** : Purification et Aura de sainteté, coups de 6, 7, 7, 8 ; Peur hors kit. 43,9 → 50,9 %. Voir « Le d6 imprimé ».
+
 **Personnalité : la juge.**
 - **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
 - **Comment elle se bat** : elle laisse l'adversaire se condamner lui-même. Elle le paralyse de crainte (Peur), efface ce qui le salit (Purification) et tient bon dans sa lumière (sainteté). Ses coups sont faibles, et ce n'est pas eux qui comptent.
@@ -355,6 +401,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 > « Pile, je gagne. Face, tu perds quand même. »
 
+**2026-10-23, le d6 imprimé (0.105.0)** : Pile ou face et Aura de décoction, coups de 6, 7, 7, 8 ; Coup de chance hors kit. 53,7 → 50,7 %. Voir « Le d6 imprimé ».
+
 **Personnalité : la joueuse.**
 - **Qui elle est** : insolente et opportuniste, elle ne se bat jamais à la loyale. Elle aime le risque plus que la victoire elle-même.
 - **Comment elle se bat** : elle esquive, empoisonne ses lames et mise tout sur un coup de chance (Coup de chance, Pile ou face). Quand le hasard ne paie pas, le poison finit le travail.
@@ -398,6 +446,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 > « Chaque coup reçu est une dette. »
 
+**2026-10-23, le d6 imprimé (0.105.0)** : Rétribution et Riposte, coups de 4, 5, 6, 7 ; Aura d'immunité hors kit. 53,9 → 50,2 %. Voir « Le d6 imprimé ».
+
 **Personnalité : le créancier.**
 - **Qui il est** : un paladin rigide et discipliné. Sa ferveur est réelle mais contenue : il encaisse en silence, et il compte (choix de 2026-10-20 entre le « fanatique » de son image et le « tient le compte » de sa fiche : le fanatique n'apparaît qu'au moment où il rend les coups, dans sa posture d'attaque par exemple).
 - **Comment il se bat** : il laisse venir les coups, les note comme des dettes, puis paie d'un seul revers (Rétribution, Riposte). Rien ne le détourne de sa voie (Aura d'immunité).
@@ -434,6 +484,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 ### Morgrut · Cogneur
 
 > « Taper. Attendre. Taper plus fort. »
+
+**2026-10-23, le d6 imprimé (0.105.0)** : une seule Attente (sur le 1), coups de 7, 8, 9, 10, 11 ; plus de d14 ni de trois Attentes. 47,4 → 51,4 %. Voir « Le d6 imprimé ».
 
 **Personnalité : le gros distrait.**
 - **Qui il est** : simple, lent d'esprit, et pas méchant du tout : il s'émerveille d'un papillon. Il ne se bat pas par haine, on lui a juste dit de taper.
@@ -488,6 +540,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 ### Thaldrin · Druide
 
 > « La forêt a deux visages. »
+
+**2026-10-23, le d6 imprimé (0.105.0)** : homme, Foudre sur 1, 2, 3 et Feux follets sur 4, 5, 6 (plus de d3) ; ours, coups de 3 à 8 (+3 Force de l'ours) ; Aura sauvage hors kit. 49,4 → 51,6 %. Voir « Le d6 imprimé ».
 
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
@@ -546,6 +600,8 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 ### Fanchon · Saltimbanque
 
 > « Deux dés, une chanson, aucune fausse note. Sauf chez vous. »
+
+**2026-10-23, le d6 imprimé (0.105.0)** : deux d6 (deux d5 avant), chaque dé 1, 2, 3, 4, 5, 4 ; doubles 1 à 5 inchangés, double 6 sans compétence (deux coups de 4). 52,1 → 48,2 %. Voir « Le d6 imprimé ».
 
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.

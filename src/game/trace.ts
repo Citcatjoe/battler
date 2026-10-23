@@ -259,7 +259,7 @@ export function parseRelics(text: string): Pair<string[]> {
   return relics
 }
 
-/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 7 cleave ; gild 9 ; enlarge » (journal, dans l'ordre). */
+/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 ; reforge » (journal, dans l'ordre). */
 export const FORGE_PREFIX = 'Forge ('
 
 /** Lecture inverse de l'en-tête de forge : le journal de chaque camp ; `skills` : où retrouver une compétence gravée. */
@@ -272,8 +272,8 @@ export function parseForge(text: string, skills: readonly CharacterEvent[]): Pai
       .split(' ; ')
       .map((token): ForgeStep => {
         const [op, face, id] = token.split(' ')
-        if (op === 'enlarge' || op === 'trim') return { op }
-        if (op === 'gild' || op === 'sharpen') return { op, face: Number(face) }
+        if (op === 'reforge') return { op }
+        if (op === 'gild' || op === 'sharpen' || op === 'copy') return { op, face: Number(face) }
         const skill = skills.find((e) => e.id === id)
         if (op !== 'engrave' || !skill) throw new Error(`Forge illisible : ${token}`)
         return { op, face: Number(face), skill }

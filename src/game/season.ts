@@ -2,7 +2,7 @@ import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
 import type { RewardKind } from './campaign'
 import { autoForge, drawForgeOffer, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { autoPick, drawOffer, FORGE_RELIC_IDS, getRelic, RELIC_IDS } from './relics'
+import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
@@ -254,8 +254,7 @@ function drawReward(season: Season, number: number, entrant: number): SeasonRewa
   const kind = season.rewards[build.relics.length + build.forge.length]
   const rng = seededRng((seasonMatchSeed(season, number) ^ 0x72657764) | 0)
   if (kind === 'relic') {
-    // Sans le Contrepoids de plomb quand la forge (et son Agrandir) est de la saison
-    const offer = drawOffer(build.relics, rng, season.rewards.includes('forge') ? FORGE_RELIC_IDS : RELIC_IDS)
+    const offer = drawOffer(build.relics, rng, RELIC_IDS)
     const chosen = autoPick(offer, rng)
     return chosen ? { kind, offer, chosen } : undefined
   }

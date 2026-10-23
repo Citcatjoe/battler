@@ -105,10 +105,12 @@ export function relicKind(r: Relic): RelicKind {
 export const RELICS: readonly Relic[] = [
   /* Caractéristique : de l'équipement qu'on porte */
   {
+    // 0.105.0 (règles v2, d6 imprimé) : +2 faces au dé jusqu'à la 0.104.0 ; un d6 ne grandit plus. Même idée, en stats :
+    // le bras frappe plus lourd (critique), et moins souvent juste
     id: 'lead-pommel',
     name: 'Contrepoids de plomb',
     flavor: 'Un pommeau de plomb cerclé de fer, limé à la main. Le bras frappe plus lourd, et moins souvent juste.',
-    stats: { damageDie: 2 },
+    stats: { critMultiplier: 1, critChance: -0.04 },
   },
   {
     id: 'felt-boots',
@@ -169,7 +171,7 @@ export const RELICS: readonly Relic[] = [
     name: 'Clepsydre du siège',
     flavor: 'Un bol de bronze percé au fond, trois graduations, l’eau arrêtée à la deuxième. Plus le siège dure, plus il frappe juste.',
     trigger: { type: 'turn', turn: 6 },
-    cooldown: 3,
+    cooldown: 4,
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
   },
   /* Seuil : des contenants et talismans qui gardent quelque chose jusqu'à la rupture */
@@ -250,12 +252,6 @@ export const RELICS: readonly Relic[] = [
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
-
-/**
- * Les reliques quand la forge du dé est de la partie (campagne, saison forgée) : toutes, sauf le Contrepoids de plomb,
- * devenu l'opération Agrandir (docs/CAMPAGNE.md § 4.4).
- */
-export const FORGE_RELIC_IDS: readonly string[] = RELIC_IDS.filter((id) => id !== 'lead-pommel')
 
 export function getRelic(id: string): Relic {
   const r = RELICS.find((x) => x.id === id)
@@ -347,14 +343,17 @@ export interface RelicDescription {
 /** La seule rédaction d'une relique : infobulle, compendium, écran de récompense, trace et rapports la lisent. */
 export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
+  // Un bonus de face (Fer à quatre clous) se dit comme un événement, « Sur un 4 : +4 dégâts à ce coup », et non comme
+  // une face enrichie (2026-10-23, retour de l'utilisateur) ; la mécanique ne change pas
+  const onFace = r.rollBonus !== undefined && r.onFace !== undefined
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
-    r.rollBonus ? `${signed(r.rollBonus)} dégâts ${r.onFace !== undefined ? `aux frappes de ${r.onFace}` : 'à la frappe'}` : '',
+    r.rollBonus ? `${signed(r.rollBonus)} dégâts ${onFace ? 'à ce coup' : 'à la frappe'}` : '',
     ...(r.effects ?? []).map(effectText),
   ]
     .filter(Boolean)
     .join(', ')
-  const moment = momentOf(r)
+  const moment = onFace ? `Sur un ${r.onFace}` : momentOf(r)
   const limits = [
     // Une relique de tour à une charge le dit déjà par son moment (« Au 4e tour »)
     ...(r.charges !== undefined && !(t?.type === 'turn' && r.charges === 1) ? [`${r.charges} fois par combat`] : []),
@@ -386,6 +385,8 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     const families = [r.stats !== undefined, r.rollBonus !== undefined, r.trigger !== undefined].filter(Boolean).length
     if (families !== 1) at('une relique a un seul type : stats, bonus de coup ou déclencheur')
     if (r.stats && Object.keys(r.stats).length === 0) at('stats vides')
+    // Le d6 imprimé (règles v2, 0.105.0) ne change pas de taille : une face au-delà de la 6e n'aurait pas de valeur imprimée
+    if (r.stats?.damageDie !== undefined) at('le dé a six faces : une relique ne le change pas')
     if (r.rollBonus !== undefined && (!Number.isInteger(r.rollBonus) || r.rollBonus === 0)) at('bonus de coup entier et non nul')
     if (r.onFace !== undefined && (r.rollBonus === undefined || !Number.isInteger(r.onFace) || r.onFace < 1)) at('face : un entier ≥ 1, avec un bonus de coup')
     if (r.trigger && !r.effects?.length) at('un déclencheur sans effet')

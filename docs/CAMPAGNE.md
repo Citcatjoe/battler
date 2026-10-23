@@ -107,6 +107,14 @@ _Réflexion ouverte le 2026-10-21, sur la version 0.84.1. **Les règles du proto
 | Partie perdue | « Une partie, une vie » peut être revue si elle sert le jeu, **mais pas plusieurs vies pour le moment**. |
 | Spectacle | Le combat serré perd de sa force face aux conséquences des builds : en campagne, la démonstration prend le pas ([PROGRESSION.md](PROGRESSION.md) § 2). |
 
+**Neuvième passe, après avoir joué la 0.104.x (2026-10-23)** ([PROGRESSION.md](PROGRESSION.md) § 1.5, livrée en 0.105.0) :
+
+| Question | Décision |
+| --- | --- |
+| Adversaires | **Plus sérieux, et ils grandissent avec l'acte**, « si on arrive à équilibrer » : chaque adversaire est construit comme un champion (§ 6.3). |
+| Le d6 | **Intégré** : la campagne passe au d6 imprimé, avec Copier une face et Refondre (§ 4.2). |
+| Signature | **Montrée à l'écran** : au choix du champion et sur la carte. |
+
 ---
 
 ## 2. Le point de départ
@@ -175,6 +183,15 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 | **Retailler** | le dé perd une face | le dé rapetisse | compétences : 33 → 37,5 % des tours ; coup moyen hors compétences : 6,5 → 6 |
 | **Aiguiser** | une compétence monte d'un rang (Épines 6 → 8) | un chiffre romain sur la face | — |
 
+**Sur le d6 imprimé (0.105.0)** : Agrandir et Retailler sont retirés, le dé garde six faces. Ils sont remplacés par deux opérations ([PROGRESSION.md](PROGRESSION.md) § 6.5) :
+
+| Opération | Effet | Ce que dit sa carte |
+| --- | --- | --- |
+| **Copier une face** | la face choisie, telle qu'elle est (compétence et rang, ou coup et dorure), est copiée sur la face de coup la plus faible ; une compétence sur deux faces au plus ; un coup ne se copie que sur plus faible que lui | « Copie cette face sur ta face de coup la plus faible » |
+| **Refondre** | les faces de coup frappent toutes pour leur moyenne, arrondie au-dessus | « Tes faces de coup frappent pour leur moyenne » |
+
+Une gravure, une dorure, une copie ou une refonte vaut sur le dé d'origine : toutes s'héritent (§ 8). Le druide, dont la forme humaine porte un sort sur chaque face, ne peut qu'Aiguiser (limite connue).
+
 **Gagner une compétence**, c'est **la graver** : il n'y a pas de catégorie « compétence » à côté de la forge.
 
 **Ce que dit la carte** (0.95.0, demande de l'utilisateur du 2026-10-23 : une information simple, pas d'explication, le plaisir du joueur est de comprendre seul) : Graver « Nouvelle compétence sur une face libre » (la carte montre la compétence), Dorer « +2 dégâts à la frappe », Agrandir « +2 faces au dé », Retailler « −1 face au dé », Aiguiser « +1 rang à une compétence ». Le vocabulaire est celui des reliques ([RESOLUTION.md](RESOLUTION.md) § 3 : « à la frappe », avant le critique). **Ce que change l'opération se lit sur le dé** : pendant le choix de la face, l'infobulle d'une face visée montre la face après la forge, chaque nombre qui change en « avant → après », l'après en vert (« Épines acérées 2 → 3 », « +2 dégâts à la frappe » en vert sur une face qui se dore, le nom d'une gravure en vert) ; le reste du texte ne bouge pas (`ForgeFaceTooltip`). Une face sans compétence a aussi son infobulle (« Frappe de 7 », sa dorure) à la place de l'info-bulle du navigateur. Une face dorée frappe aussi sur un coup brut de la Furie des vents (2026-10-23, [RELIQUES.md](RELIQUES.md) § 3, règle 4).
@@ -198,6 +215,7 @@ Sur le modèle des quatre types de relique : un petit nombre d'**opérations**, 
 - **Décidé : les faces d'origine sont irréductibles.** Une réduction ne retire jamais une compétence d'origine : Retailler n'est plus proposé quand la plus haute face porte une compétence d'origine. Toutes sont sur 1, 2 et 3 (`roster.ts`, aucun `naturalMax`) : avec trois forges au plus, seul le d5 de la barde peut atteindre cette limite.
 - **Repère mesuré** : au d6, Ysolde gagnait 63 % de ses combats (`roster.ts`), d'où son d7 ; Retailler peut donc être une opération très forte.
 - **Rythme du prototype** : une forge tous les deux combats normaux (§ 6.3).
+- **Depuis la 0.105.0 (d6 imprimé)** : le Contrepoids de plomb n'est plus Agrandir, il devient une relique de critique (+1 au multiplicateur, −4 % de critique) et revient dans toutes les offres. Les décisions sur Agrandir et Retailler ci-dessus sont historiques ; « seules les faces libres se forgent » et « une compétence d'origine ne se déplace jamais » restent.
 
 ---
 
@@ -256,6 +274,7 @@ Slay the Spire fonctionne ainsi : des rencontres fixées par acte, pas ajustées
 - **le champion de référence** suit exactement ce rythme : le personnage tiré, nu au départ, qui reçoit aux mêmes moments les mêmes récompenses, **choisies au hasard dans l'offre**, comme le choix automatique du tournoi. On en simule un grand nombre, pour lisser le hasard des choix ;
 - **cibles** (0.89.0, courbe montante, § 18.3) : le champion de référence gagne **95, 90, 87, 84 puis 81 %** de ses combats normaux, de la démonstration à la tension ; le boss, écrit à la main, se règle à **45 %** contre lui, le drame. Un champion mieux forgé que la moyenne fait mieux : c'est la démonstration.
 - **Décidé : un boss commun** à tous les champions. Il se vérifie contre le champion de référence de **chaque** personnage tirable : la cible de 40 à 50 % doit tenir pour tous.
+- **Adversaires construits (0.105.0, demande de l'utilisateur)** : au nœud k, l'adversaire part de sa signature (son kit entier pour Morgrut, Thaldrin et Fanchon) et reçoit les k récompenses que l'acte lui aurait données, tirées comme celles du champion de référence (`drawBuild`) ; ses PV le règlent ensuite sur la courbe. Mesuré : il garde de 46 % (premier combat) à 50 % (dixième) de ses PV de base ; boss atteint 48 %, acte gagné 24 % ([PROGRESSION.md](PROGRESSION.md) § 11.5).
 
 ### 6.4 Montrer le danger sans dévoiler les cotes
 
@@ -460,7 +479,7 @@ _Questions réglées du 2026-10-21 au 2026-10-22 : voir § 1. Lectures confirmé
 | Brique | Où | Ce qu'elle fait |
 | --- | --- | --- |
 | Faces au-delà du 3 | `events.ts` | déclencheurs `face:N` et `double:N` (`faceTrigger`, `doubleTrigger`) : une compétence peut partir sur n'importe quelle face |
-| Forge du dé | `forge.ts`, `Character.withForge` | les cinq opérations du § 4.2, en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend. Le tournoi la donne depuis la 0.92.0 : construction de la saison, une forge toutes les deux victoires (en alternance avec les reliques), trois au plus ([FEATURES.md](FEATURES.md) § 8) |
+| Forge du dé | `forge.ts`, `Character.withForge` | les opérations du § 4.2 (depuis la 0.105.0 : Graver, Dorer, Aiguiser, Copier une face, Refondre), en journal rejoué sur le personnage d'origine ; offre de trois, choix automatique, validité ; aucun mode n'en dépend. Le tournoi la donne depuis la 0.92.0 : construction de la saison, une forge toutes les deux victoires (en alternance avec les reliques), trois au plus ([FEATURES.md](FEATURES.md) § 8) |
 | Face dorée | `combat.ts` (`Attack.gild`) | +2 avant le critique, règle d'une relique de face, coup brut compris depuis la 0.95.0 ([RESOLUTION.md](RESOLUTION.md) § 3, étape 2 ter) |
 | Campagne | `campaign.ts` | partie, boss, réglage sur le champion de référence, bandes de danger, récompenses, héritage, sauvegarde |
 | Écrans | `CampaignScreen.tsx`, `ForgedDie.tsx` | choix du champion et de l'héritage, carte de l'acte, récompense (forge puis relique), fin de partie ; le combat passe par l'affrontement et l'écran de fin habituels |
@@ -541,8 +560,8 @@ Un personnage précis, écrit à la main (§ 6.3), commun à tous les champions 
 
 | | |
 | --- | --- |
-| Stats d'origine | 70 PV (réglés pour chaque champion), d12, armure 0, esquive 4 %, critique 8 % ×2 |
-| Faces | 1 : Peau de pierre (Brokk) ; 2 : Pourfendre (Gorak) ; 3 : Aura d'intimidation (Brokk) |
+| Stats d'origine | 70 PV (réglés pour chaque champion), d6 depuis la 0.105.0 (d12 avant), armure 0, esquive 4 %, critique 8 % ×2 |
+| Faces | 1 : Peau de pierre (Brokk) ; 2 : Pourfendre (Gorak), qui frappe pour 6 ; 3 : Aura d'intimidation (Brokk) ; 4 à 6 : coups de 10, 11 et 12 |
 | Reliques | Cotte du mercenaire, Dent de loup |
-| Forge | le 11 et le 12 dorés |
+| Forge | le 5 et le 6 dorés (le 11 et le 12 jusqu'à la 0.104.x) |
 | Image | celle de Morgrut, assombrie et rougie : **provisoire**, une image propre est à générer |

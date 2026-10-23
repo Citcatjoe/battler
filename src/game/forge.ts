@@ -4,15 +4,18 @@ import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
 
 /*
- * La forge du dé (0.88.0, docs/CAMPAGNE.md § 4) : le dé, c'est l'arme. Cinq opérations changent ce que portent ses
- * faces, sans jamais toucher la règle de base (un jet, une face, et cette face porte une compétence ou un coup).
- * Une forge est un JOURNAL d'opérations (`ForgeStep[]`), rejoué sur la définition d'origine du personnage
- * (`forgeState`) : c'est une donnée, comme une relique, que n'importe quel mode peut donner (`Character.withForge`).
+ * La forge du dé (0.88.0, docs/CAMPAGNE.md § 4 ; d6 imprimé depuis la 0.105.0, docs/PROGRESSION.md § 6.5) : le dé,
+ * c'est l'arme. Cinq opérations changent ce que portent ses faces, sans jamais toucher la règle de base (un jet, une
+ * face, et cette face porte une compétence ou un coup). Une forge est un JOURNAL d'opérations (`ForgeStep[]`), rejoué sur
+ * la définition d'origine du personnage (`forgeState`) : c'est une donnée, comme une relique, que n'importe quel mode
+ * peut donner (`Character.withForge`).
  *   - Graver : une compétence prise à un autre combattant prend une face libre (sur une face d'Attente, elle la remplace) ;
  *   - Dorer : +2 dégâts à la frappe de cette face, avant le critique, coup brut compris (`Attack.gild`) ;
- *   - Agrandir : deux faces libres au-dessus de la plus haute ;
- *   - Retailler : la plus haute face disparaît, forgée ou non ; jamais une face qui porte une compétence d'origine ;
- *   - Aiguiser : la compétence d'une face monte d'un rang.
+ *   - Aiguiser : la compétence d'une face monte d'un rang ;
+ *   - Copier une face : la face choisie, telle qu'elle est (sa compétence et son rang, ou son coup et sa dorure), est
+ *     copiée sur la face de coup la plus faible ; une compétence sur deux faces au plus ;
+ *   - Refondre : les faces de coup frappent toutes pour leur moyenne, arrondie au-dessus.
+ * Agrandir et Retailler (0.88.0 à 0.104.0) changeaient le nombre de faces : le d6 est fixe.
  * Règles de l'utilisateur : une compétence d'origine ne se déplace pas, ses faces sont irréductibles, et seules les
  * faces libres se gravent ou se dorent. Personnage à deux dés (barde) : ses faces sont des doubles pour Graver et
  * Aiguiser, et la dorure vaut pour chaque dé qui fait cette face.
@@ -21,13 +24,13 @@ import { STATUSES } from './statuses'
 /** Bonus d'une dorure, ajouté à la valeur du coup avant le critique. */
 export const GILD_BONUS = 2
 
-/** Faces ajoutées par Agrandir (le Contrepoids de plomb du tournoi, devenu une opération). */
-export const ENLARGE_FACES = 2
+/** Une même compétence sur deux faces au plus (Copier une face, décision de l'utilisateur, PROGRESSION.md § 6.5). */
+export const MAX_COPIES = 2
 
 /** Opérations proposées à chaque forge, comme les reliques d'une récompense. */
 export const FORGE_OFFER_SIZE = 3
 
-export type ForgeOpKind = 'engrave' | 'gild' | 'enlarge' | 'trim' | 'sharpen'
+export type ForgeOpKind = 'engrave' | 'gild' | 'sharpen' | 'copy' | 'reforge'
 
 /** Ce que vaut une dorure, sans son montant : « +2 dégâts à la frappe » (le montant se colore à part dans l'aperçu). */
 export const GILD_RULE = 'dégâts à la frappe'
@@ -39,21 +42,27 @@ export const GILD_RULE = 'dégâts à la frappe'
 export const FORGE_OPS: Record<ForgeOpKind, { name: string; summary: string; targeted: boolean }> = {
   engrave: { name: 'Graver', summary: 'Nouvelle compétence sur une face libre', targeted: true },
   gild: { name: 'Dorer', summary: `+${GILD_BONUS} ${GILD_RULE}`, targeted: true },
-  enlarge: { name: 'Agrandir', summary: `+${ENLARGE_FACES} faces au dé`, targeted: false },
-  trim: { name: 'Retailler', summary: '−1 face au dé', targeted: false },
   sharpen: { name: 'Aiguiser', summary: '+1 rang à une compétence', targeted: true },
+  copy: { name: 'Copier une face', summary: 'Copie cette face sur ta face de coup la plus faible', targeted: true },
+  reforge: { name: 'Refondre', summary: 'Tes faces de coup frappent pour leur moyenne', targeted: false },
 }
 
-/** Une opération proposée, avant le choix de sa face. Graver porte la compétence à graver. */
-export type ForgeOffer = { op: 'engrave'; skill: CharacterEvent } | { op: Exclude<ForgeOpKind, 'engrave'> }
+/**
+ * Une opération proposée, avant le choix de sa face. Graver porte la compétence à graver ; Copier une face peut être
+ * limitée aux faces de coup (`strikesOnly` : la campagne, quand le dé porte déjà ses quatre faces de compétence).
+ */
+export type ForgeOffer =
+  | { op: 'engrave'; skill: CharacterEvent }
+  | { op: 'copy'; strikesOnly?: true }
+  | { op: Exclude<ForgeOpKind, 'engrave' | 'copy'> }
 
 /** Une opération appliquée : celles qui visent une face portent sa face. */
 export type ForgeStep =
   | { op: 'engrave'; face: number; skill: CharacterEvent }
   | { op: 'gild'; face: number }
   | { op: 'sharpen'; face: number }
-  | { op: 'enlarge' }
-  | { op: 'trim' }
+  | { op: 'copy'; face: number }
+  | { op: 'reforge' }
 
 /**
  * Ce que la forge a fait du dé : sa taille, ses compétences gravées, ses dorures, les rangs de ses compétences, et les
@@ -89,7 +98,7 @@ const originOn = (base: ForgeBase, face: number) => base.events.filter((e) => fa
 /* ---------- Rejouer le journal ---------- */
 
 /** Les faces qu'une opération peut viser, dans l'état donné (vide pour une opération sans face). */
-function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[] {
+function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind, strikesOnly = false): number[] {
   const faces = Array.from({ length: state.size }, (_, k) => k + 1)
   switch (op) {
     case 'engrave':
@@ -111,15 +120,51 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
           return JSON.stringify([next.effects, next.volley]) !== JSON.stringify([now.effects, now.volley])
         }),
       )
-    case 'enlarge':
-    case 'trim':
+    case 'copy':
+      // Les faces qu'on peut copier : une compétence encore sur moins de deux faces, ou une face de coup plus forte que la
+      // face de coup la plus faible ; dans les deux cas, il faut une face libre où la poser (`copyTarget`)
+      return faces.filter((f) => (!strikesOnly || !skillOf(base, state, f)) && copyTarget(base, state, f) !== undefined)
+    case 'reforge':
       return []
   }
 }
 
-/** Une opération sans face est-elle possible ? Retailler : jamais une compétence d'origine, jamais sous une face. */
-function untargetedValid(base: ForgeBase, state: ForgeState, op: 'enlarge' | 'trim') {
-  return op === 'enlarge' || (state.size > 1 && originOn(base, state.size).length === 0)
+/** Les faces qui frappent sur un jet simple : sans compétence d'origine ni gravure (deux dés : toutes, chaque dé frappe). */
+function strikeFaces(base: ForgeBase, state: ForgeState): number[] {
+  const faces = Array.from({ length: state.size }, (_, k) => k + 1)
+  return base.twinDice ? faces : faces.filter((f) => originOn(base, f).length === 0 && !state.engraved.has(f))
+}
+
+/** La compétence que porte une face (sa gravure, sinon sa compétence d'origine, l'Attente exclue), avant aiguisage. */
+function skillOf(base: ForgeBase, state: ForgeState, face: number): CharacterEvent | undefined {
+  return state.engraved.get(face) ?? originOn(base, face).find((e) => !e.idle)
+}
+
+/** Faces qui portent cette compétence (d'origine ou gravée) : une compétence sur `MAX_COPIES` faces au plus. */
+const facesWith = (base: ForgeBase, state: ForgeState, id: string) =>
+  Array.from({ length: state.size }, (_, k) => k + 1).filter((f) => skillOf(base, state, f)?.id === id).length
+
+/**
+ * Où Copier une face pose sa copie : la face de coup la plus faible (valeur imprimée et dorure ; à égalité, la plus
+ * basse), autre que la face copiée. Une compétence peut aussi remplacer une Attente. Une face de coup ne se copie que
+ * sur plus faible qu'elle. Undefined : rien à copier là.
+ */
+function copyTarget(base: ForgeBase, state: ForgeState, source: number): number | undefined {
+  const skill = skillOf(base, state, source)
+  const idle = originOn(base, source).some((e) => e.idle) && !state.engraved.has(source)
+  if (idle || (skill && facesWith(base, state, skill.id) >= MAX_COPIES)) return undefined
+  const strength = (f: number) => faceValue(base, state, f) + (state.gilded.get(f) ?? 0)
+  // Libre : ni gravure ni compétence d'origine ; une Attente, seulement pour une compétence copiée
+  const free = Array.from({ length: state.size }, (_, k) => k + 1).filter(
+    (f) => f !== source && !state.engraved.has(f) && originOn(base, f).every((e) => e.idle && !!skill),
+  )
+  const candidates = skill ? free : free.filter((f) => strength(f) < strength(source))
+  return candidates.sort((a, b) => strength(a) - strength(b) || a - b)[0]
+}
+
+/** Refondre est-il possible ? Au moins deux faces de coup, de valeurs différentes. */
+function reforgeValid(base: ForgeBase, state: ForgeState) {
+  return new Set(strikeFaces(base, state).map((f) => faceValue(base, state, f))).size > 1
 }
 
 /** Les compétences d'une face, aiguisables : celles d'origine (sauf l'Attente), et sa gravure. */
@@ -130,7 +175,7 @@ function skillsOn(base: ForgeBase, state: ForgeState, face: number): CharacterEv
 
 /** Une opération est-elle valide dans cet état ? */
 function stepValid(base: ForgeBase, state: ForgeState, step: ForgeStep) {
-  if (step.op === 'enlarge' || step.op === 'trim') return untargetedValid(base, state, step.op)
+  if (step.op === 'reforge') return reforgeValid(base, state)
   if (!targetsIn(base, state, step.op).includes(step.face)) return false
   // Une compétence ne se grave qu'une fois, et jamais par-dessus une des siennes
   return step.op !== 'engrave' || ![...base.events, ...state.engraved.values()].some((e) => e.id === step.skill.id)
@@ -138,26 +183,15 @@ function stepValid(base: ForgeBase, state: ForgeState, step: ForgeStep) {
 
 /** Rejoue un journal de forge sur une définition d'origine. Une opération impossible est une erreur. */
 export function forgeState(base: ForgeBase, steps: readonly ForgeStep[]): ForgeState {
-  let size = base.stats.damageDie
+  const size = base.stats.damageDie
   const engraved = new Map<number, CharacterEvent>()
   const gilded = new Map<number, number>()
   const ranks = new Map<string, number>()
   const printed = new Map<number, number>()
+  const state = { size, engraved, gilded, ranks, printed }
   for (const step of steps) {
-    if (!stepValid(base, { size, engraved, gilded, ranks, printed }, step)) throw new Error(`Forge impossible : ${stepLabel(step)}`)
+    if (!stepValid(base, state, step)) throw new Error(`Forge impossible : ${stepLabel(step)}`)
     switch (step.op) {
-      case 'enlarge':
-        size += ENLARGE_FACES
-        break
-      case 'trim': {
-        const lost = engraved.get(size)
-        if (lost) ranks.delete(lost.id)
-        engraved.delete(size)
-        gilded.delete(size)
-        printed.delete(size)
-        size -= 1
-        break
-      }
       case 'engrave':
         engraved.set(step.face, step.skill)
         break
@@ -165,11 +199,32 @@ export function forgeState(base: ForgeBase, steps: readonly ForgeStep[]): ForgeS
         gilded.set(step.face, GILD_BONUS)
         break
       case 'sharpen':
-        for (const e of skillsOn(base, { size, engraved, gilded, ranks, printed }, step.face)) ranks.set(e.id, (ranks.get(e.id) ?? 0) + 1)
+        for (const e of skillsOn(base, state, step.face)) ranks.set(e.id, (ranks.get(e.id) ?? 0) + 1)
         break
+      case 'copy': {
+        const target = copyTarget(base, state, step.face)!
+        const skill = skillOf(base, state, step.face)
+        if (skill) {
+          // Sans forme : la copie vaut sous toutes les formes (comme une gravure)
+          engraved.set(target, skill)
+          gilded.delete(target)
+        } else {
+          printed.set(target, faceValue(base, state, step.face))
+          const gild = gilded.get(step.face)
+          if (gild) gilded.set(target, gild)
+          else gilded.delete(target)
+        }
+        break
+      }
+      case 'reforge': {
+        const faces = strikeFaces(base, state)
+        const mean = Math.ceil(faces.reduce((t, f) => t + faceValue(base, state, f), 0) / faces.length)
+        for (const f of faces) printed.set(f, mean)
+        break
+      }
     }
   }
-  return { size, engraved, gilded, ranks, printed }
+  return state
 }
 
 /* ---------- Le personnage forgé ---------- */
@@ -276,22 +331,23 @@ export function forgedFaces(base: ForgeBase, steps: readonly ForgeStep[]): Forge
 const engravable = (base: ForgeBase, state: ForgeState, pool: readonly CharacterEvent[]) =>
   pool.filter((s) => ![...base.events, ...state.engraved.values()].some((e) => e.id === s.id))
 
-/** Les faces qu'une offre peut viser maintenant (vide pour Agrandir et Retailler). */
+/** Les faces qu'une offre peut viser maintenant (vide pour Refondre). */
 export function offerTargets(base: ForgeBase, steps: readonly ForgeStep[], offer: ForgeOffer): number[] {
-  return targetsIn(base, forgeState(base, steps), offer.op)
+  return targetsIn(base, forgeState(base, steps), offer.op, offer.op === 'copy' && !!offer.strikesOnly)
 }
 
 /** Une offre est-elle jouable (au moins une face visée, ou une opération sans face possible) ? */
-function offerValid(base: ForgeBase, state: ForgeState, op: ForgeOpKind, pool: readonly CharacterEvent[]) {
-  if (op === 'enlarge' || op === 'trim') return untargetedValid(base, state, op)
-  if (op === 'engrave' && engravable(base, state, pool).length === 0) return false
-  return targetsIn(base, state, op).length > 0
+function offerValid(base: ForgeBase, state: ForgeState, op: ForgeOpKind, pool: readonly CharacterEvent[], noNewSkill: boolean) {
+  if (op === 'reforge') return reforgeValid(base, state)
+  if (op === 'engrave' && (noNewSkill || engravable(base, state, pool).length === 0)) return false
+  return targetsIn(base, state, op, op === 'copy' && noNewSkill).length > 0
 }
 
 /**
  * L'offre d'une forge : `FORGE_OFFER_SIZE` opérations jouables, différentes, tirées au hasard.
  * `focus` (offre orientée, règles v2, docs/PROGRESSION.md § 13.2) : Graver est toujours proposée quand elle le peut, et
  * sa compétence se tire au poids que `focus` lui donne (l'écho avec le build) au lieu de parts égales.
+ * `noNewSkill` (la campagne, quand le dé porte déjà toutes ses faces de compétence) : ni Graver, ni copie d'une compétence.
  */
 export function drawForgeOffer(
   base: ForgeBase,
@@ -299,19 +355,22 @@ export function drawForgeOffer(
   rng: Rng,
   pool: readonly CharacterEvent[],
   focus?: (skill: CharacterEvent) => number,
+  noNewSkill = false,
 ): ForgeOffer[] {
   const state = forgeState(base, steps)
-  const kinds = shuffle(rng, Object.keys(FORGE_OPS) as ForgeOpKind[]).filter((op) => offerValid(base, state, op, pool))
+  const kinds = shuffle(rng, Object.keys(FORGE_OPS) as ForgeOpKind[]).filter((op) => offerValid(base, state, op, pool, noNewSkill))
   const chosen = focus ? [...kinds.filter((op) => op === 'engrave'), ...kinds.filter((op) => op !== 'engrave')] : kinds
   const skills = engravable(base, state, pool)
-  return chosen
-    .slice(0, FORGE_OFFER_SIZE)
-    .map((op) => (op === 'engrave' ? { op, skill: focus ? pickWeighted(rng, skills, focus) : pick(rng, skills) } : { op }))
+  return chosen.slice(0, FORGE_OFFER_SIZE).map((op): ForgeOffer => {
+    if (op === 'engrave') return { op, skill: focus ? pickWeighted(rng, skills, focus) : pick(rng, skills) }
+    if (op === 'copy') return noNewSkill ? { op, strikesOnly: true } : { op }
+    return { op }
+  })
 }
 
 /** L'opération d'une offre sur une face (ignorée sans face). */
 export function stepOf(offer: ForgeOffer, face?: number): ForgeStep {
-  if (offer.op === 'enlarge' || offer.op === 'trim') return { op: offer.op }
+  if (offer.op === 'reforge') return { op: 'reforge' }
   if (face === undefined) throw new Error(`${FORGE_OPS[offer.op].name} : une face est requise`)
   return offer.op === 'engrave' ? { op: 'engrave', face, skill: offer.skill } : { op: offer.op, face }
 }
@@ -339,20 +398,20 @@ export function validOnOrigin(base: ForgeBase, step: ForgeStep) {
   return stepValid(base, forgeState(base, []), step)
 }
 
-/** Une opération en une courte clé lisible (« engrave 7 cleave », « gild 9 », « enlarge ») : trace, comparaison de journaux. */
-export const stepKey = (step: ForgeStep) =>
-  step.op === 'engrave' ? `engrave ${step.face} ${step.skill.id}` : step.op === 'gild' || step.op === 'sharpen' ? `${step.op} ${step.face}` : step.op
+/** Une opération en une courte clé lisible (« engrave 5 cleave », « gild 4 », « copy 2 », « reforge ») : trace, comparaison de journaux. */
+export const stepKey = (step: ForgeStep) => (step.op === 'engrave' ? `engrave ${step.face} ${step.skill.id}` : step.op === 'reforge' ? step.op : `${step.op} ${step.face}`)
 
 /* ---------- Rédaction ---------- */
 
 /**
- * « Graver Pourfendre sur le 7 », « Dorer le 9 », « Agrandir » : l'opération en clair (écran, trace). `twin` : deux dés,
- * où Graver et Aiguiser visent un double (la dorure, elle, vaut pour chaque dé qui fait sa face).
+ * « Graver Pourfendre sur le 5 », « Dorer le 4 », « Copier le 2 », « Refondre » : l'opération en clair (écran, trace).
+ * `twin` : deux dés, où Graver, Aiguiser et Copier visent un double (la dorure, elle, vaut pour chaque dé qui fait sa face).
  */
 export function stepLabel(step: ForgeStep | ForgeOffer, twin = false): string {
   const name = FORGE_OPS[step.op].name
   const where = 'face' in step ? ` ${twin && step.op !== 'gild' ? 'le double' : 'le'} ${step.face}` : ''
   if (step.op === 'engrave') return `${name} ${step.skill.name}${'face' in step ? ` sur${where}` : ''}`
+  if (step.op === 'copy' && 'face' in step) return `Copier${where}`
   return `${name}${where}`
 }
 

@@ -432,8 +432,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : un 1, un 2 ou un 3 frappe pour sa valeur, sans compétence.',
-    describe: () => 'Frappe deux fois tout de suite ; un 1, un 2 ou un 3 frappe pour sa valeur',
+    summary: 'Tout de suite, dans la même action : le porteur frappe deux fois, chaque coup résolu à part. Ce sont des coups bruts : une face de compétence frappe pour sa valeur imprimée, sans compétence.',
+    describe: () => 'Frappe deux fois tout de suite ; une face de compétence frappe pour sa valeur',
     badge: () => '×2',
     // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
     // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas.
@@ -682,21 +682,22 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
-    summary: 'Sous forme humaine, le druide ne frappe pas : son dé devient un d3, quoi qu’il porte (une relique de dé ne sert que l’ours), et chaque jet lance un sort.',
-    describe: () => "Son dé est un d3, quoi qu'il porte : chaque jet lance un sort",
-    badge: () => 'd3',
+    summary: 'Sous forme humaine, le druide ne frappe pas : chaque face de son dé lance un sort (une relique de dé ne sert que l’ours).',
+    describe: () => 'Chaque jet lance un sort',
+    badge: () => 'Sort',
     // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
     counter: 'turns',
     stacking: 'refresh',
     maxStacks: 1,
     mechanic: 'form',
-    modifyStats: (stats) => ({ ...stats, damageDie: 3 }),
+    // Jusqu'à la 0.104.0, son dé devenait un d3 (trois sorts sur le 1, le 2 et le 3) ; depuis le d6 imprimé, chaque
+    // face porte son sort (Foudre sur 1 à 3, Feux follets sur 4 à 6)
   },
   bearMight: {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
-    summary: `Sous forme d'ours, le druide ne lance aucun sort : chaque coup fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure, un 1, un 2 ou un 3 compris.`,
+    summary: `Sous forme d'ours, le druide ne lance aucun sort : chaque coup fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
     describe: () => `Chaque coup fait +${BEAR_MIGHT}, après le critique et avant l'armure`,
     badge: () => `+${BEAR_MIGHT}`,
     counter: 'turns',
@@ -828,12 +829,12 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.drainsHit)
     say(
       effect,
-      'Le prochain coup du porteur qui touche (pile comprise) lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet sacrifié (1, 2, 3) la laisse en place.',
+      'Le prochain coup du porteur qui touche (pile comprise) lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet sacrifié (une face de compétence) la laisse en place.',
     )
   if (def.extraStrikes && def.instantStrikes)
     say(
       effect,
-      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : aucune compétence ne part, un 1, un 2 ou un 3 frappe pour sa valeur.`,
+      `Tout de suite, dans la même action, le porteur frappe ${def.extraStrikes} fois : esquive et critique de chaque coup sont résolus à part. Coups bruts : aucune compétence ne part, une face de compétence frappe pour sa valeur imprimée.`,
       'dice-faces',
     )
   else if (def.extraStrikes) {

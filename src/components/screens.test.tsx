@@ -192,16 +192,16 @@ describe('écrans', () => {
     expect(off).not.toContain('skill-bar-wave')
   })
 
-  it('dé face par face (affrontement) : toutes les faces du dé, dans l’ordre, la forge lue sur ses faces', () => {
+  it('dé face par face (affrontement) : les six faces du dé, dans l’ordre, la forge lue sur ses faces', () => {
     const gorak = createCharacter('gorak')
     const cells = dieCells(gorak)
-    expect(cells.map((c) => c.face)).toEqual(Array.from({ length: gorak.stats.damageDie }, (_, k) => k + 1))
-    expect(cells.slice(0, 3).every((c) => c.event)).toBe(true)
-    expect(cells.slice(3).some((c) => c.event)).toBe(false)
-    // La forme du druide change son dé : un d3 sous forme humaine (Incantation), son dé entier sous l'ours
+    expect(cells.map((c) => c.face)).toEqual([1, 2, 3, 4, 5, 6])
+    // Pourfendre et la Furie sur le 1 et le 2 ; les faces de coup montrent leur valeur imprimée
+    expect(cells.map((c) => c.event?.id ?? c.value)).toEqual(['cleave', 'wind-fury', 5, 5, 6, 7])
+    // Le druide : un d6 sous ses deux formes, des sorts sous forme humaine, des coups sous l'ours
     const thaldrin = createCharacter('thaldrin')
-    expect(dieCells(thaldrin, 0)).toHaveLength(3)
-    expect(dieCells(thaldrin, 1)).toHaveLength(thaldrin.stats.damageDie)
+    expect(dieCells(thaldrin, 0).every((c) => c.event)).toBe(true)
+    expect(dieCells(thaldrin, 1).some((c) => c.event)).toBe(false)
     // La forge se lit sur ses faces : la dorure, le rang de la compétence aiguisée
     const sharp = offerTargets(gorak.definition, [], { op: 'sharpen' })[0]
     const forged = gorak.withForge([{ op: 'gild', face: 5 }, { op: 'sharpen', face: sharp }])
@@ -214,19 +214,12 @@ describe('écrans', () => {
     expect(build.match(/data-gild=""/g)).toHaveLength(1)
     // Une face dorée porte son bonus au cartouche, lu dans la donnée
     expect(build).toContain(`<span class="die-slot-num">+${f[4].gild}</span>`)
-    // Toujours douze emplacements : ceux au-delà de la taille du dé, grisés
-    expect(build.match(/<li class="die-slot[ "]/g)).toHaveLength(12)
-    expect(build.match(/data-empty=""/g)).toHaveLength(12 - gorak.stats.damageDie)
+    // Six emplacements, un par face
+    expect(build.match(/<li class="die-slot[ "]/g)).toHaveLength(6)
     // Une face gravée par la forge est une face forgée (cadre d'or)
     const foreign = ENGRAVABLE_SKILLS.find((e) => !gorak.events.some((own) => own.id === e.id))!
     const engraved = gorak.withForge([{ op: 'engrave', face: 5, skill: foreign }])
     expect(renderToString(<DieBuild character={engraved} />).match(/data-forged=""/g)).toHaveLength(1)
-    // Au-delà de douze faces : douze emplacements, et « +N faces » en tête
-    const big = createCharacter('morgrut').withForge([{ op: 'enlarge' }])
-    const bigBuild = renderToString(<DieBuild character={big} />)
-    expect(bigBuild.match(/<li class="die-slot[ "]/g)).toHaveLength(12)
-    expect(bigBuild).toContain('matchup-section-more')
-    expect(bigBuild).not.toContain('data-empty')
     // Le druide : un sélecteur de forme du kit dans l'en-tête du dé
     expect(renderToString(<DieBuild character={thaldrin} />)).toContain('bt-segmented')
   })
@@ -580,14 +573,17 @@ describe('écrans', () => {
     expect(weak).toContain('Affaibli −2')
     expect(weak).toContain('Coup gâché −5')
     expect(weak).toContain('Aura d&#x27;intimidation (Brokk)')
-    // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille
-    const bar = renderToString(<SkillBar character={createCharacter('gorak')} side={0} statuses={[{ id: 'powerAura', stacks: 2 }]} />)
+    // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille. L'Aura de
+    // puissance, hors kit depuis le d6, est gravée sur le 3 de Gorak
+    const powerAura = ENGRAVABLE_SKILLS.find((e) => e.id === 'power-aura')!
+    const auraGorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: powerAura }])
+    const bar = renderToString(<SkillBar character={auraGorak} side={0} statuses={[{ id: 'powerAura', stacks: 2 }]} />)
     expect(bar).toContain('data-signal="0:cleave"')
     expect(bar).toContain('data-signal="0:powerAura 0:power-aura"')
     expect(bar).toContain('aura-token')
     // L'anneau porte la valeur de l'aura : deux charges, +4 aux coups
     expect(bar).toContain('+4')
-    expect(renderToString(<SkillBar character={createCharacter('gorak')} side={0} statuses={[]} />)).not.toContain('aura-token')
+    expect(renderToString(<SkillBar character={auraGorak} side={0} statuses={[]} />)).not.toContain('aura-token')
     expect(bar.match(EMOJI)?.[0]).toBeUndefined()
     const effects = [
       { type: 'heal' as const, target: 0 as const, amount: 3 },
@@ -649,28 +645,28 @@ describe('écrans', () => {
     expect(items.map((i) => i.state.id)).toEqual(['poison', 'lostTurn'])
   })
 
-  it('campagne : chaque étape se rend, avec un dé forgé au-delà de ses faces d’origine', () => {
+  it('campagne : chaque étape se rend, avec un dé forgé', () => {
     const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
-    // Un champion qui a déjà forgé : une gravure sur le 9, une dorure, et le boss en face
+    // Un champion qui a déjà forgé : une gravure sur le 6, une copie, une dorure, et le boss en face
     let run = startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' })
-    run = { ...run, forge: [{ op: 'enlarge' }, { op: 'engrave', face: 10, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'gild', face: 8 }] }
+    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 5 }, { op: 'gild', face: 4 }] }
     const encounters: Encounter[] = [
-      { characterId: 'brokk', maxHp: 44, chance: 0.8 },
-      { characterId: 'ysolde', maxHp: 61, chance: 0.4 },
+      { characterId: 'brokk', maxHp: 44, forge: [{ op: 'gild', face: 6 }], relics: ['wolf-fang'], chance: 0.8 },
+      { characterId: 'ysolde', maxHp: 61, forge: [], relics: [], chance: 0.4 },
     ]
     render(<CampaignScreen {...props} run={null} />)
     render(<CampaignScreen {...props} run={null} heritage={Object.fromEntries(CHARACTER_IDS.map((id) => [id, [{ kind: 'relic' as const, relic: 'wolf-fang' }]]))} />)
     render(<CampaignScreen {...props} run={run} />)
     render(<CampaignScreen {...props} run={{ ...run, encounters }} />)
-    render(<CampaignScreen {...props} run={{ ...run, wins: ACT_FIGHTS, encounters: [{ characterId: BOSS.id, maxHp: 90, boss: true, chance: 0.45 }] }} />)
-    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'trim' }, { op: 'sharpen' }], choice: { op: 'gild', face: 5 } }
+    render(<CampaignScreen {...props} run={{ ...run, wins: ACT_FIGHTS, encounters: [{ characterId: BOSS.id, maxHp: 90, forge: [], relics: [], boss: true, chance: 0.45 }] }} />)
+    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'reforge' }, { op: 'copy' }], choice: { op: 'gild', face: 5 } }
     const relic: PendingReward = { kind: 'relic', offer: ['felt-boots', 'wolf-fang'], choice: 'felt-boots' }
     for (const reward of [forge, relic]) render(<CampaignScreen {...props} run={{ ...run, wins: 2, reward }} />)
     for (const outcome of ['won', 'lost'] as const) render(<CampaignScreen {...props} run={{ ...run, outcome, gains: [{ kind: 'relic', relic: 'felt-boots' }] }} />)
-    // Le combat d'un champion forgé contre le boss : l'en-tête montre la compétence gravée sur le 10
+    // Le combat d'un champion forgé contre le boss : l'en-tête montre la compétence gravée sur le 6
     const pair: [Character, Character] = [championOf(run), new Character(BOSS)]
     const fight = renderToString(<FightScreen script={simulateCombat(pair, { seed: 3 })} arena={null} onEnd={noop} />)
-    expect(fight).toContain('aria-label="Dé 10"')
+    expect(fight).toContain('aria-label="Dé 6"')
     render(<MatchupScreen mode="campaign" fighters={pair} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
   })
 })

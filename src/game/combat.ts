@@ -386,11 +386,15 @@ export function resolveAttack(
   const nothing = { crit: false, critForced: false, raw: 0, damage: 0, armorAbsorbed: 0, shieldAbsorbed: 0 }
   if (forfeits(roll, faces)) return { ...base, ...nothing, dodged: false, forfeited: true }
   const reshaped = reshape(roll, faces)
+  // Le dé du porteur frappe pour la valeur imprimée de sa face ; un dé étranger, pour sa valeur tirée. Un coup porté la
+  // garde, qu'il touche ou soit esquivé (un coup sacrifié ne frappe pas : il n'en a pas)
+  const printed = die === undefined ? attacker.strikeValue(roll) : roll
+  const struck = printed !== roll ? { printed } : {}
   // Esquive imposée : pas de tirage (les combats sans ce statut gardent la même suite de hasard).
   const dodgeBy = defenderStatuses.find((s) => STATUSES[s.id].forcesDodge)?.id
   const dodgeForced = dodgeBy !== undefined
   if (dodgeForced || chance(rng, def.dodgeChance)) {
-    return { ...base, ...nothing, ...(reshaped && { reshaped }), dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
+    return { ...base, ...nothing, ...struck, ...(reshaped && { reshaped }), dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
   // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul), coup brut compris
@@ -400,8 +404,6 @@ export function resolveAttack(
   )
   // Face dorée (forge du dé) : même règle qu'une relique de face
   const gild = attacker.gilded[roll] ?? 0
-  // Le dé du porteur frappe pour la valeur imprimée de sa face ; un dé étranger, pour sa valeur tirée
-  const printed = die === undefined ? attacker.strikeValue(roll) : roll
   const value = (reshaped?.value ?? printed) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
 
   // Un coup transformé « sans critique » (Charge) ne tire pas le critique et ne consomme pas un critique assuré
@@ -458,7 +460,7 @@ export function resolveAttack(
   return {
     ...base,
     ...(reshaped && { reshaped }),
-    ...(printed !== roll && { printed }),
+    ...struck,
     ...(relicBonus.length > 0 && { relicBonus }),
     ...(gild > 0 && { gild }),
     shields,

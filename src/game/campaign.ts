@@ -4,9 +4,9 @@ import type { CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, forgedFaces, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { buildHooks, echoOf, eventHooks, relicHooks } from './hooks'
-import { autoPick, drawOffer, FORGE_RELIC_IDS, getRelic } from './relics'
+import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
-import { CHARACTERS, CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER } from './roster'
+import { ALL_SKILLS, CHARACTERS, CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER } from './roster'
 
 /*
  * Campagne (0.88.0, prototype de docs/CAMPAGNE.md ; acte resserré en 0.89.0, allongé en 0.104.0) : un champion tiré
@@ -38,7 +38,8 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 
 /**
  * Faces de compétence au plus sur le dé d'un champion de campagne, signature comprise (§ 11.2, décidé) : au moins deux
- * faces de coup. La limite atteinte, Graver n'est plus proposée. Les deux dés de la barde n'y sont pas soumis.
+ * faces de coup. La limite atteinte, Graver n'est plus proposée, et Copier une face ne copie plus qu'une face de coup.
+ * Les deux dés de la barde n'y sont pas soumis.
  */
 export const MAX_SKILL_FACES = 4
 
@@ -62,7 +63,7 @@ export const BOSS_TARGET = 0.45
 /* ---------- Le boss ---------- */
 
 const rosterDef = (id: string) => ROSTER.find((c) => c.id === id)!
-const rosterSkill = (id: string) => ROSTER.flatMap((c) => c.events).find((e) => e.id === id)!
+const rosterSkill = (id: string) => ALL_SKILLS.find((e) => e.id === id)!
 
 /**
  * Le boss commun (§ 6.3, décision du 2026-10-22), écrit à la main : Le Colosse, l'ogre qui règne sur l'arène. Il garde
@@ -75,7 +76,10 @@ export const BOSS: CharacterDef = {
   name: 'Le Colosse',
   race: 'Ogre',
   archetype: 'Champion de l’arène',
-  stats: { maxHp: 70, damageDie: 12, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
+  // d6 imprimé (règles v2, phase 5, 0.105.0) : trois compétences sur le 1, le 2 et le 3, trois gros coups ; Pourfendre
+  // frappe pour 6. Le d12 d'avant frappait en moyenne 8 sur ses neuf faces de coup
+  stats: { maxHp: 70, damageDie: 6, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
+  strikes: [3, 6, 3, 10, 11, 12],
   look: { ...rosterDef('morgrut').look, tint: 'brightness(0.72) sepia(0.35) hue-rotate(-20deg) saturate(1.4)' },
   lore: {
     tagline: 'Personne ne l’a jamais vu tomber. Personne ne l’a jamais vu de près, non plus.',
@@ -91,8 +95,8 @@ export const BOSS: CharacterDef = {
   ],
   relics: [getRelic('mercenary-mail'), getRelic('wolf-fang')],
   forge: [
-    { op: 'gild', face: 12 },
-    { op: 'gild', face: 11 },
+    { op: 'gild', face: 6 },
+    { op: 'gild', face: 5 },
   ],
 }
 
@@ -102,11 +106,10 @@ export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character
 /* ---------- Le champion : la signature seule ---------- */
 
 /**
- * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé sur les
- * dés actuels en 0.104.0) : sa **signature seule** ; les faces des compétences qu'il quitte deviennent des faces de coup,
- * libres pour la forge. Sans signature, son kit entier : Morgrut (le combattant nu, ses Attentes sont déjà des faces
- * libres), Thaldrin (sa forme humaine ne fait que lancer des sorts) et Fanchon (ses compétences sont ses doubles), des
- * exceptions de structure jusqu'au d6.
+ * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé en
+ * 0.104.0) : sa **signature seule** ; la face de l'autre compétence de son kit frappe pour sa valeur imprimée, libre
+ * pour la forge. Sans signature, son kit entier : Morgrut (le combattant nu), Thaldrin (sa forme humaine ne fait que
+ * lancer des sorts) et Fanchon (ses compétences sont ses doubles), des exceptions de structure.
  */
 export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => {
@@ -116,13 +119,14 @@ export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
 )
 
 /**
- * Ce que chaque champion peut graver en campagne : les compétences que son kit a quittées (elles ne sont pas perdues,
- * § 7.3), puis son répertoire (`repertoireOf`).
+ * Ce que chaque champion peut graver en campagne : les compétences que son kit a quittées, celle que la signature seule
+ * laisse et celles hors kit (`reserve`) ; elles ne sont pas perdues, § 7.3. Puis son répertoire (`repertoireOf`).
  */
 export const CAMPAIGN_REPERTOIRES: Record<string, readonly CharacterEvent[]> = Object.fromEntries(
   CHARACTERS.map((c) => {
     const kit = CAMPAIGN_CHAMPIONS[c.id].definition.events
-    const left = ENGRAVABLE_SKILLS.filter((e) => c.events.some((own) => own.id === e.id) && !kit.some((k) => k.id === e.id))
+    const own = [...c.events, ...(c.definition.reserve ?? [])]
+    const left = ENGRAVABLE_SKILLS.filter((e) => own.some((x) => x.id === e.id) && !kit.some((k) => k.id === e.id))
     return [c.id, [...left, ...repertoireOf(c.id)]]
   }),
 )
@@ -132,11 +136,17 @@ export const CAMPAIGN_REPERTOIRES: Record<string, readonly CharacterEvent[]> = O
 /** Un héritage : une relique, ou une opération de forge sur une face du dé d'origine. */
 export type HeritageItem = { kind: 'relic'; relic: string } | { kind: 'forge'; step: ForgeStep }
 
-/** Une rencontre proposée : un adversaire réglé (ses PV), et la chance cachée du champion réel. */
+/**
+ * Une rencontre proposée : un adversaire construit comme un champion (sa signature, puis les récompenses que le nœud
+ * lui donne), réglé par ses PV, et la chance cachée du champion réel.
+ */
 export interface Encounter {
   characterId: string
   /** PV de base réglés par simulation sur la courbe nominale */
   maxHp: number
+  /** Sa forge et ses reliques (règles v2, 0.105.0 : l'adversaire grandit avec l'acte ; vides pour le boss) */
+  forge: ForgeStep[]
+  relics: string[]
   boss?: true
   /** Victoire du champion réel, estimée par simulation : seule sa bande (`dangerOf`) s'affiche */
   chance: number
@@ -157,7 +167,7 @@ export interface FightRecord {
 }
 
 export interface CampaignRun {
-  version: 3
+  version: 4
   /** Graine de la partie : rencontres, réglages, offres et choix par défaut en dérivent */
   seed: number
   championId: string
@@ -182,9 +192,15 @@ export function championOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'reli
   return CAMPAIGN_CHAMPIONS[run.championId].withForge(run.forge).withRelics(run.relics.map(getRelic))
 }
 
+/** Un adversaire avant le réglage de ses PV : le boss, ou sa signature et sa construction. */
+function opponentBase(e: Pick<Encounter, 'characterId' | 'forge' | 'relics'>): Character {
+  if (e.characterId === BOSS.id) return new Character(BOSS)
+  return CAMPAIGN_CHAMPIONS[e.characterId].withForge(e.forge).withRelics(e.relics.map(getRelic))
+}
+
 /** L'adversaire d'une rencontre, à ses PV réglés. */
 export function opponentOf(encounter: Encounter): Character {
-  return campaignCharacter(encounter.characterId).adjusted({ stats: { maxHp: encounter.maxHp } })
+  return opponentBase(encounter).adjusted({ stats: { maxHp: encounter.maxHp } })
 }
 
 /** Le nœud en cours (0 à `ACT_FIGHTS`) ; le dernier est le boss. */
@@ -197,7 +213,7 @@ export const drawChampions = (rng: Rng) => shuffle(rng, CHARACTER_IDS).slice(0, 
 export function startRun(championId: string, seed: number, heritage?: HeritageItem): CampaignRun {
   const def = CAMPAIGN_CHAMPIONS[championId].definition
   return {
-    version: 3,
+    version: 4,
     seed,
     championId,
     ...(heritage && { heritage }),
@@ -218,23 +234,31 @@ const REFERENCE_FIGHTS = 8
 const DANGER_FIGHTS = 160
 
 /**
- * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu (sa signature seule), qui reçoivent aux mêmes
- * moments que le joueur ses récompenses (`REWARDS`), choisies au hasard dans l'offre (le choix automatique du tournoi).
- * Sans héritage : la courbe nominale ne connaît pas la puissance permanente (§ 8).
+ * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
+ * par défaut dans l'offre (le choix automatique du tournoi). Le champion de référence et les adversaires sont construits
+ * ainsi.
+ */
+export function drawBuild(championId: string, node: number, rng: Rng): Pick<CampaignRun, 'forge' | 'relics'> {
+  const def = CAMPAIGN_CHAMPIONS[championId].definition
+  let forge: ForgeStep[] = []
+  const relics: string[] = []
+  for (const kind of REWARDS.slice(0, node)) {
+    const reward = drawReward({ championId, forge, relics }, kind, rng)
+    if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
+    if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
+  }
+  return { forge, relics }
+}
+
+/**
+ * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu (sa signature seule), qui
+ * reçoivent aux mêmes moments que le joueur ses récompenses (`drawBuild`). Sans héritage : la courbe nominale ne connaît
+ * pas la puissance permanente (§ 8).
  */
 export function referenceChampions(championId: string, node: number, seed: number): Character[] {
-  const def = CAMPAIGN_CHAMPIONS[championId].definition
-  return Array.from({ length: REFERENCE_VARIANTS }, (_, v) => {
-    const rng = seededRng(hashSeed(`campagne:${seed}:reference:${v}`))
-    let forge: ForgeStep[] = []
-    const relics: string[] = []
-    for (const kind of REWARDS.slice(0, node)) {
-      const reward = drawReward({ championId, forge, relics }, kind, rng)
-      if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
-      if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
-    }
-    return championOf({ championId, forge, relics })
-  })
+  return Array.from({ length: REFERENCE_VARIANTS }, (_, v) =>
+    championOf({ championId, ...drawBuild(championId, node, seededRng(hashSeed(`campagne:${seed}:reference:${v}`))) }),
+  )
 }
 
 /** Poids d'une brique dans l'offre orientée : 1, plus `ECHO_WEIGHT` par accroche qui la relie au build (docs/PROGRESSION.md § 13.2). */
@@ -243,23 +267,23 @@ export const ECHO_WEIGHT = 2
 /**
  * La récompense d'un nœud, la même pour le joueur et le champion de référence (règles v2, phase 2, offre orientée) :
  * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire de campagne** du champion
- *   (`CAMPAIGN_REPERTOIRES` ; tout le roster gravable une fois ce répertoire épuisé), au poids de son écho avec le build ;
- *   plus de Graver quand le dé porte `MAX_SKILL_FACES` faces de compétence ;
+ *   (`CAMPAIGN_REPERTOIRES`), au poids de son écho avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de
+ *   compétence, ni Graver ni copie d'une compétence. Le répertoire (six compétences, ou les quatre de Morgrut) ne s'épuise
+ *   pas avant la limite ; la barde, hors limite, n'a qu'un double libre ;
  * - relique : la première carte au poids de son écho, les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
  */
 export function drawReward(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>, kind: RewardKind, rng: Rng): PendingReward {
   const build = buildHooks(championOf(run))
   if (kind === 'relic') {
-    const offer = drawOffer(run.relics, rng, FORGE_RELIC_IDS, (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
+    const offer = drawOffer(run.relics, rng, RELIC_IDS, (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
     const choice = autoPick(offer, rng)
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
   const def = CAMPAIGN_CHAMPIONS[run.championId].definition
   const full = !def.twinDice && forgedFaces(def, run.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
   const left = CAMPAIGN_REPERTOIRES[run.championId].filter((s) => !run.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id))
-  const pool = full ? [] : left.length ? left : ENGRAVABLE_SKILLS
-  const offer = drawForgeOffer(def, run.forge, rng, pool, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build))
+  const offer = drawForgeOffer(def, run.forge, rng, left, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build), full)
   const choice = autoForge(def, run.forge, offer, rng)
   return { kind: 'forge', offer, ...(choice && { choice }) }
 }
@@ -312,7 +336,9 @@ export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) =>
 
 /**
  * Les rencontres du nœud en cours : deux adversaires du roster (jamais le champion, jamais le dernier adversaire),
- * ou le boss au dernier nœud ; chacun réglé sur la courbe, puis estimé contre le champion réel.
+ * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) : sa
+ * signature, puis les récompenses que ce nœud lui donne (`drawBuild`) ; ses PV le règlent ensuite sur la courbe, puis il
+ * est estimé contre le champion réel.
  */
 export function encountersFor(run: CampaignRun): Encounter[] {
   const node = run.wins
@@ -324,8 +350,9 @@ export function encountersFor(run: CampaignRun): Encounter[] {
   const ids = boss ? [BOSS.id] : shuffle(rng, CHARACTER_IDS.filter((id) => id !== run.championId && id !== last)).slice(0, ENCOUNTER_CHOICES)
   return ids.map((id) => {
     const key = `campagne:${run.seed}:${node}:${id}`
-    const maxHp = tuneHp(references, campaignCharacter(id), boss ? BOSS_TARGET : NORMAL_TARGETS[node], key)
-    const encounter: Encounter = { characterId: id, maxHp, ...(boss && { boss: true as const }), chance: 0 }
+    const build = boss ? { forge: [], relics: [] } : drawBuild(id, node, seededRng(hashSeed(`${key}:construction`)))
+    const maxHp = tuneHp(references, opponentBase({ characterId: id, ...build }), boss ? BOSS_TARGET : NORMAL_TARGETS[node], key)
+    const encounter: Encounter = { characterId: id, maxHp, ...build, ...(boss && { boss: true as const }), chance: 0 }
     return { ...encounter, chance: winShare([champion], opponentOf(encounter), DANGER_FIGHTS, `${key}:danger`) }
   })
 }
@@ -381,12 +408,12 @@ export function withReward(run: CampaignRun, gain: HeritageItem | undefined): Ca
 /* ---------- Héritage (§ 8) ---------- */
 
 /**
- * Ce qu'une partie laisse en héritage : ses reliques gagnées, et ses opérations sur une face du dé d'origine qui valent
- * seules (une gravure, une dorure, une compétence d'origine aiguisée). Agrandir et Retailler ne s'héritent pas.
+ * Ce qu'une partie laisse en héritage : ses reliques gagnées, et ses opérations de forge qui valent seules sur le dé
+ * d'origine (une gravure, une dorure, une copie, une refonte, une compétence d'origine aiguisée).
  */
 export function heritableGains(run: CampaignRun): HeritageItem[] {
   const def = CAMPAIGN_CHAMPIONS[run.championId].definition
-  return run.gains.filter((g) => g.kind === 'relic' || (g.step.op !== 'enlarge' && g.step.op !== 'trim' && validOnOrigin(def, g.step)))
+  return run.gains.filter((g) => g.kind === 'relic' || validOnOrigin(def, g.step))
 }
 
 /** Les héritages proposés au départ d'une partie : trois au plus, tirés parmi ceux du personnage. */
@@ -398,10 +425,10 @@ export const autoHeritage = (offer: readonly HeritageItem[], rng: Rng) => (offer
 /* ---------- Sauvegarde ---------- */
 
 /**
- * Partie en cours ; v3 (0.104.0) : la signature seule, un acte de dix combats (une partie v2, de cinq combats au kit
- * entier, est oubliée ; v2 depuis 0.89.0).
+ * Partie en cours ; v4 (0.105.0) : le d6 imprimé et les adversaires construits (une partie v3 est oubliée ; v3 en
+ * 0.104.0 : la signature seule et dix combats ; v2 depuis 0.89.0).
  */
-const RUN_KEY = 'battler:campaign:v3'
+const RUN_KEY = 'battler:campaign:v4'
 const HERITAGE_KEY = 'battler:campaign-heritage:v1'
 
 /** La partie en cours enregistrée, ou null (aucune, ou illisible : règles changées depuis). */
@@ -410,7 +437,7 @@ export function loadRun(): CampaignRun | null {
     const raw = localStorage.getItem(RUN_KEY)
     if (!raw) return null
     const run = JSON.parse(raw) as CampaignRun
-    if (run.version !== 3) return null
+    if (run.version !== 4) return null
     championOf(run)
     return run
   } catch {
