@@ -376,7 +376,7 @@ const ysolde: CharacterDef = {
       // 0.69.0 (choix de l'utilisateur, SORTS.md § 14 et 15) : elle retire aussi son propre dernier malus (un
       // poison, une plaie, une brûlure). L'Aura glaciale cumulable la mettait à 41,3 % ; ainsi, 43,4 %.
       effects: [
-        { type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent' } },
+        { type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' } },
         { type: 'cleanse', polarity: 'negative', count: 1 },
       ],
     },
@@ -486,7 +486,7 @@ const aldric: CharacterDef = {
       nature: 'arcane',
       trigger: 'naturalOne',
       forfeitsHit: true,
-      effects: [{ type: 'release', status: 'retribution', min: 1, target: 'opponent' }],
+      effects: [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }],
     },
     {
       id: 'riposte',
@@ -615,7 +615,7 @@ const thaldrin: CharacterDef = {
       form: 'human',
       forfeitsHit: true,
       scene: 'lightning',
-      effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent' }],
+      effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent', source: 'lightning' }],
     },
     { id: 'firefly', name: 'Feux follets', nature: 'arcane', trigger: 'naturalTwo', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }] },
     { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', forfeitsHit: true, effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }] },

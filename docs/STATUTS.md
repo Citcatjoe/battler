@@ -203,7 +203,8 @@ Régénération et Poison s'opposent. Vulnérable, Étourdi et Garde sacrée ill
 - [ ] Rappel visuel sur le porteur (`look`) : liseré (`glow`) pour un effet temporaire, halo qui pulse (`aura`) pour une aura permanente, transparence (`opacity`) pour l'esquive. Au K.O., l'aura du vaincu s'éteint en fondu (halo, cercle, particules et contour de la silhouette ; `Fighter.tsx`, `.char-aura-out`) : rien à faire pour un nouveau statut.
 - [ ] Rôle en une phrase (`summary`), polarité, **icône peinte obligatoire** dans `Icon.tsx` → `STATUS_ICON` (voir STYLE_BIBLE § 7 ; jamais d'emoji : la demander à l'utilisateur), compteur affiché (`counter`).
 - [ ] Règle de cumul, plafond si c'est un malus de stat.
-- [ ] S'il fait des dégâts quand il agit : sa famille (`harm` : `poison` en vert, `arcane` en mauve ; absente, physique en rouge), la couleur de son « −N » ([MISE_EN_SCENE.md](MISE_EN_SCENE.md), M37). Aujourd'hui : Poison (poison), Brûlure et Pourriture (arcane), Saignement (physique).
+- [ ] S'il fait des dégâts quand il agit : leur **source** (`source` de son effet `damage`, registre `DAMAGE_SOURCES` de `damage.ts`, règles v2) : elle donne leur type (DT) et la couleur de son « −N » ([MISE_EN_SCENE.md](MISE_EN_SCENE.md), M37). Aujourd'hui : Poison (vert), Brûlure et Pourriture (mauve), Saignement (rouge).
+- [ ] Ses **accroches** (règles v2, [PROGRESSION.md](PROGRESSION.md) § 8) : une ligne dans `STATUS_HOOKS` (`hooks.ts`) : le côté où on le pose, ce qu'il produit et consomme au-delà de lui-même.
 - [ ] Sa mise en scène : à quel repère il tombe, et, s'il réagit à un coup, dans quelle famille ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) § 6).
 - [ ] Crochets utilisés (voir ARCHITECTURE). S'il en faut un nouveau, le tester dans `combat.test.ts`.
 - [ ] Une ligne ajoutée au catalogue ci-dessus, avec « à venir » tant qu'aucun personnage ne le pose.

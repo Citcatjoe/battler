@@ -99,7 +99,7 @@ Colonne « Contrôle » : le test qui vérifie la règle sur tout le corpus (`st
 | M31 | Aucun texte n'en écrase un autre : chacun vit `FLOAT_LIFE` (un titre, `TITLE_LIFE`), à l'horloge du combat. | `Float`, lecteur | aucun |
 | M32 | Le nom d'une compétence ne flotte pas au-dessus de son lanceur : son sceau dans la barre de compétences s'allume déjà. Un statut qui agit sur l'adversaire s'annonce au-dessus de son porteur, sauf une aura (son anneau envoie le signal). Une réaction ne montre son nom que si aucun label ne le dit déjà sous le dé. | `event`, `statusTick`, `statusReaction` | aucun |
 | M33 | Les textes qui tombent avec l'impact d'un coup sur le même combattant se rangent autour du chiffre des dégâts : ce qui monte part au-dessus, ce qui tombe en dessous. | `fxFloats` (`struck`) | aucun |
-| M37 | **Les dégâts d'un statut qui agit ont la couleur de leur famille** (`harm`, registre `statuses.ts`) : **physique** en rouge, par défaut (coups, Saignement, Riposte) ; **poison** en vert acide (Poison) ; **arcane** en mauve (Brûlure des Feux follets, compétence `arcane` ; Pourriture, de la couleur de son aura). Le vert reste loin de l'émeraude du soin, le mauve loin du fuchsia d'un malus posé ou du « Tour perdu ». | `harm`, `fxFloats`, `TONE_CLASS` | « les dégâts d'un statut qui agit ont la couleur de leur famille… » |
+| M37 | **Les dégâts d'un statut qui agit ont la couleur de leur famille** (la source de ses dégâts, `DAMAGE_SOURCES` de `damage.ts` depuis la 0.102.0 ; avant, `harm` dans `statuses.ts`) : **physique** en rouge, par défaut (coups, Saignement, Riposte) ; **poison** en vert acide (Poison) ; **arcane** en mauve (Brûlure des Feux follets, compétence `arcane` ; Pourriture, de la couleur de son aura). Le vert reste loin de l'émeraude du soin, le mauve loin du fuchsia d'un malus posé ou du « Tour perdu ». | `DAMAGE_SOURCES`, `fxFloats`, `TONE_CLASS` | « les dégâts d'un statut qui agit ont la couleur de leur famille… » |
 
 ### 3.7 Tour, ouverture et fin
 
@@ -137,7 +137,7 @@ Les scènes (`scenes.ts`) portent leur propre rythme (`impacts`, `length`), que 
 
 ### 5.2 Ouvertes
 
-- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. Piste : la famille d'un coup de compétence se déduirait de la `nature` de sa compétence (arcane → mauve), sans rien déclarer de plus. À décider par l'utilisateur.
+- **Q5. Classer tous les dégâts en familles ?** M37 ne colore que les dégâts d'un statut qui agit (un texte « −N »). Les dégâts directs d'une compétence (la Foudre, compétence `arcane`) et les coups s'affichent en gros chiffre (`hit`), toujours en rouge ou en or pour un critique. **En partie tranchée (2026-10-23, [PROGRESSION.md](PROGRESSION.md) § 9)** : les dégâts ont un type (DP, DM, DT) et une source, déclarés sur chaque effet depuis la 0.102.0 (`damage.ts`), pas déduits de la `nature` ; leur couleur à l'écran, par type et par source, viendra avec la phase 7 des règles v2.
 
 ## 6. Introduire une mécanique qui s'anime
 

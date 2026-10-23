@@ -174,11 +174,6 @@ export interface StatusDef {
    * `docs/SONS.md` § 8). Seul le Poison a le sien, le Grésillement.
    */
   tickSound?: 'fizz'
-  /**
-   * Famille de ses dégâts quand il agit (`statusTick`) : la couleur de leur « −N » (docs/MISE_EN_SCENE.md, M37).
-   * Absente : dégâts physiques, en rouge, comme les coups et le Saignement. `poison` en vert, `arcane` (magie) en mauve.
-   */
-  harm?: 'poison' | 'arcane'
   /** Moment où la durée (`turns`) est décomptée : début (défaut) ou fin des tours du porteur */
   expiresAt?: 'turnStart' | 'turnEnd'
   /**
@@ -299,9 +294,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     counter: 'stacks',
     stacking: 'add',
     decays: true,
-    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
+    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks, source: 'poison' }],
     tickSound: 'fizz',
-    harm: 'poison',
     opposes: 'regeneration',
   },
   /*
@@ -325,7 +319,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     counter: 'stacks',
     stacking: 'add',
     decays: true,
-    reactions: { hurt: (s) => [{ type: 'damage', amount: s.stacks }] },
+    reactions: { hurt: (s) => [{ type: 'damage', amount: s.stacks, source: 'bleed' }] },
   },
   /* Statuts disponibles pour de futures compétences, pas encore attribués à un personnage. */
   regeneration: {
@@ -372,10 +366,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     counter: 'turns',
     stacking: 'refresh',
     turnsFromStacks: true,
-    onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks }],
+    onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks, source: 'burn' }],
     expiresAt: 'turnEnd',
-    // Les Feux follets du druide (compétence `arcane`) : une brûlure magique, en mauve (2026-10-23, utilisateur)
-    harm: 'arcane',
   },
   vulnerable: {
     name: 'Vulnérable',
@@ -679,9 +671,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     describe: (s) => `Perd ${plural(s.stacks, 'PV')} au début de chacun de ses tours, jusqu'à ce qu'on le purifie`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
-    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks }],
-    // La couleur de l'Aura de pourriture qui la pose
-    harm: 'arcane',
+    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks, source: 'rot' }],
   },
 
   /*

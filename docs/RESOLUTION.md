@@ -166,6 +166,7 @@ Demande de l'utilisateur : une relique ou une opération de forge se dit en une 
 | --- | --- | --- |
 | **frappe** | la valeur du coup donnée par le dé (étapes 1 à 2 ter) : un bonus « à la frappe » est multiplié par le critique | Dorer : « +2 dégâts à la frappe » ; Fer à quatre clous : « +4 dégâts aux frappes de 4 » |
 | **dégâts directs** | pas un coup : ni esquive, ni critique, ni armure | Osselet fendu : « Sur un 1 : 3 dégâts directs » |
+| **dégâts physiques, magiques, temporaires** (DP, DM, DT) | ce que sont les dégâts dans l'histoire, pas leur mécanique : une étiquette sans effet sur la chaîne (l'armure s'applique comme avant). Un coup du dé est physique ; un statut qui ronge, temporaire ; un effet de dégâts déclare sa source (`damage.ts`, règles v2, phase 1) | Pile ou face, Riposte, Rétribution : DP ; Foudre, Braise captive, lumière de la Purification : DM ; Poison, Saignement, Brûlure : DT |
 | **Sur un 4**, **Sur un jet maximal** | la face du dé, quel que soit le coup : qu'il touche ou non, sacrifié ou brut | Osselet fendu, Dé creux |
 | **Au 4e tour**, **Tous les 3 tours** | au début de son tour, après ses statuts de début de tour, avant son action | Braise captive, Chapelet de l'ermite |
 | **Sous 40 % PV** | au passage sous le seuil (règle 5 de [RELIQUES.md](RELIQUES.md) § 3) | Dent de loup |

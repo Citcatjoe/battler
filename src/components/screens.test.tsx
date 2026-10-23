@@ -592,7 +592,7 @@ describe('écrans', () => {
     expect(bar.match(EMOJI)?.[0]).toBeUndefined()
     const effects = [
       { type: 'heal' as const, target: 0 as const, amount: 3 },
-      { type: 'damage' as const, target: 0 as const, amount: 2 },
+      { type: 'damage' as const, target: 0 as const, amount: 2, source: 'strike' as const },
       ...STATUS_IDS.map((status) => ({
         type: 'applyStatus' as const,
         target: 0 as const,

@@ -19,7 +19,7 @@ import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 const { audit, problems, seen } = createAudit()
 
 /** Relique de coup sur un moment (aucune du registre n'en a encore) : quand il encaisse, recharge de 2 tours. */
-const RETORT: Relic = { id: 'retort', name: 'Riposte de test', flavor: 'Test.', trigger: { type: 'strike', on: 'hurt' }, cooldown: 2, effects: [{ type: 'damage', amount: 2, target: 'opponent' }] }
+const RETORT: Relic = { id: 'retort', name: 'Riposte de test', flavor: 'Test.', trigger: { type: 'strike', on: 'hurt' }, cooldown: 2, effects: [{ type: 'damage', amount: 2, target: 'opponent', source: 'strike' }] }
 /** Des jeux de reliques variés, tirés du registre (une, deux, toutes) ; le combat k en reçoit un par camp. */
 const KITS: Relic[][] = [[], ...RELICS.map((r) => [r]), RELICS.slice(0, 2), RELICS.slice(2), [...RELICS, RETORT], [RETORT]]
 
@@ -42,7 +42,7 @@ describe('audit de résolution', () => {
     expect(report).toEqual([])
     // L'audit a bien rencontré chaque mécanique que le roster peut produire. Pile + Vol de vie n'arrive pas
     // (Naraxes n'a pas de Vol de vie) : combat.test.ts le prouve par un combat construit.
-    for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face'])
+    for (const k of ['coup sacrifié', 'esquive imposée', 'esquive imposée cumulée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : compétence de double', 'cause : coup de rafale', 'cause : coup de paire', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', 'type de dégâts DP', 'type de dégâts DM', 'type de dégâts DT'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

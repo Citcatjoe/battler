@@ -128,7 +128,7 @@ export const RELICS: readonly Relic[] = [
     name: 'Osselet fendu',
     flavor: 'Un osselet de mouton fendu en long, un seul point gravé sur sa face creuse. Même le pire jet mord.',
     trigger: { type: 'strike', on: 'naturalOne' },
-    effects: [{ type: 'damage', amount: 3, target: 'opponent' }],
+    effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike' }],
   },
   {
     id: 'hollow-die',
@@ -209,7 +209,7 @@ export const RELICS: readonly Relic[] = [
     scene: 'emberRain',
     trigger: { type: 'turn', turn: 4 },
     charges: 1,
-    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }],
+    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent', source: 'fire' }],
   },
   {
     id: 'frost-tear',
@@ -232,7 +232,7 @@ export const RELICS: readonly Relic[] = [
     scene: 'gale',
     trigger: { type: 'strike', on: 'dodge' },
     charges: 2,
-    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }],
+    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent', source: 'wind' }],
   },
   {
     id: 'split-geode',

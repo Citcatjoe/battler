@@ -461,7 +461,7 @@ describe('événements', () => {
           name: 'boom',
           trigger: 'combatStart',
           effects: [
-            { type: 'damage', amount: 99, target: 'opponent' },
+            { type: 'damage', amount: 99, target: 'opponent', source: 'strike' },
             { type: 'heal', amount: 1 },
           ],
         },
@@ -470,7 +470,7 @@ describe('événements', () => {
     ])
     expect(r.winner).toBe(0)
     expect(r.turns).toBe(0)
-    expect(ofType(r, 'event')[0].event.effects).toEqual([{ type: 'damage', target: 1, amount: 99 }])
+    expect(ofType(r, 'event')[0].event.effects).toEqual([{ type: 'damage', target: 1, amount: 99, source: 'strike' }])
   })
 })
 
@@ -706,7 +706,7 @@ describe('résolution : phases, contrôle, réactions, application', () => {
     const r = run([testCharacter('a', { maxHp: 60, armor: 5, dodgeChance: 0 }, [bleed]), testCharacter('b', { maxHp: 200, damageDie: 1, critChance: 0 })])
     const flows = ofType(r, 'statusReaction').filter((b) => b.status === 'bleed')
     // 3, 2 puis 1 PV, sur les trois premiers coups de b ; l'armure de 5 n'y change rien
-    expect(flows.map((b) => b.effects[0])).toEqual([3, 2, 1].map((amount) => ({ type: 'damage', target: 0, amount })))
+    expect(flows.map((b) => b.effects[0])).toEqual([3, 2, 1].map((amount) => ({ type: 'damage', target: 0, amount, source: 'bleed' })))
     expect(flows.map((b) => b.state.statuses[0].find((s) => s.id === 'bleed')?.stacks ?? 0)).toEqual([2, 1, 0])
     // Chaque écoulement suit un coup de b qui touche
     for (const flow of flows) expect(r.beats[r.beats.indexOf(flow) - 1]).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: false } })
@@ -728,11 +728,11 @@ describe('résolution : phases, contrôle, réactions, application', () => {
     expect(bleedAfter(hits[0])).toBe(2)
     // Le deuxième la grossit (2 + 2 = 4) et la fait couler de ses charges du début du coup : 2 PV, puis 3 charges
     const second = flowOf(hits[1])
-    expect(second?.type === 'statusReaction' && second.effects).toEqual([{ type: 'damage', target: 0, amount: 2 }])
+    expect(second?.type === 'statusReaction' && second.effects).toEqual([{ type: 'damage', target: 0, amount: 2, source: 'bleed' }])
     expect(second!.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 3 })
     // Le troisième : 3 au début, 5 après la pose, 3 PV, puis 4
     const third = flowOf(hits[2])
-    expect(third?.type === 'statusReaction' && third.effects).toEqual([{ type: 'damage', target: 0, amount: 3 }])
+    expect(third?.type === 'statusReaction' && third.effects).toEqual([{ type: 'damage', target: 0, amount: 3, source: 'bleed' }])
     expect(third!.state.statuses[0]).toContainEqual({ id: 'bleed', stacks: 4 })
   })
 
@@ -1238,7 +1238,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
         expect(strike.type === 'attack' && strike.attack.attacker === 0 && strike.attack.roll === 1 && strike.turn === c.turn).toBe(true)
         if (c.heads) {
           heads++
-          expect(c.effects).toEqual([{ type: 'damage', target: 1, amount: damage }])
+          expect(c.effects).toEqual([{ type: 'damage', target: 1, amount: damage, source: 'strike' }])
         } else {
           tails++
           expect(c.effects).toEqual([])
@@ -1334,7 +1334,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
         const opener = r.beats.slice(0, i).reverse().find((b) => b.type === 'attack' || b.type === 'coin')!
         const atStart = opener.id ? stacksOf(r.beats[opener.id - 1].state.statuses[beat.side], 'bleed') : 0
         expect(atStart).toBeGreaterThan(0)
-        expect(beat.effects).toEqual([{ type: 'damage', target: beat.side, amount: Math.min(was.stacks, atStart) }])
+        expect(beat.effects).toEqual([{ type: 'damage', target: beat.side, amount: Math.min(was.stacks, atStart), source: 'bleed' }])
         expect(beat.state.statuses[beat.side].find((s) => s.id === 'bleed')?.stacks ?? 0).toBe(was.stacks - 1)
         flows++
       })
@@ -1410,7 +1410,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
 
 describe('paladin (0.31.0)', () => {
   const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
-  const release = ev('naturalMax', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent' }], 'rel')
+  const release = ev('naturalMax', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }], 'rel')
 
   it("Aura d'immunité : purge les malus et bloque toute nouvelle pose, sans s'user", () => {
     const r = run([
@@ -1649,7 +1649,7 @@ describe('ogre et druide (0.35.0)', () => {
     let bolts = 0
     for (let seed = 1; seed < 40; seed++)
       for (const b of ofType(duelOf('thaldrin', 'brokk', seed), 'event').filter((x) => x.event.eventId === 'thunderbolt')) {
-        expect(b.event.effects).toEqual([{ type: 'damage', target: 1, amount: 6, parts: [2, 2, 2] }])
+        expect(b.event.effects).toEqual([{ type: 'damage', target: 1, amount: 6, source: 'lightning', parts: [2, 2, 2] }])
         bolts++
       }
     expect(bolts).toBeGreaterThan(10)
@@ -1714,7 +1714,7 @@ describe('reliques (docs/RELIQUES.md)', () => {
     // Règle 7 (décision de l'utilisateur) : vers l'adversaire, seulement des dégâts directs ; jamais de malus
     const stun = relic({ trigger: { type: 'strike', on: 'naturalMax' }, effects: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }] })
     expect(validateRelics([stun])).toHaveLength(2)
-    expect(validateRelics([relic({ trigger: { type: 'strike', on: 'hit' }, effects: [{ type: 'damage', amount: 2, target: 'opponent' }] })])).toEqual([])
+    expect(validateRelics([relic({ trigger: { type: 'strike', on: 'hit' }, effects: [{ type: 'damage', amount: 2, target: 'opponent', source: 'strike' }] })])).toEqual([])
   })
 
   it('caractéristique : les stats s’ajoutent à plat, la base reste connue, une stat peut passer sous 0', () => {
@@ -1807,9 +1807,9 @@ describe('reliques (docs/RELIQUES.md)', () => {
     // Validation : élément sans scène, scène inconnue, scène sans déclencheur, impacts qui ne comptent pas les coups
     expect(validateRelics([relic({ element: 'fire', trigger: { type: 'turn', turn: 1 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ element: 'fire', scene: 'emberRain', stats: { armor: 1 } })])).toHaveLength(1)
-    const rain = relic({ element: 'fire', scene: 'emberRain', trigger: { type: 'turn', turn: 1 }, effects: [{ type: 'damage', amount: 2, hits: 2, target: 'opponent' }] })
+    const rain = relic({ element: 'fire', scene: 'emberRain', trigger: { type: 'turn', turn: 1 }, effects: [{ type: 'damage', amount: 2, hits: 2, target: 'opponent', source: 'fire' }] })
     expect(validateRelics([rain])).toEqual(['test-relic : scène à 3 impacts pour 2 coups'])
-    expect(validateRelics([{ ...rain, effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent' }] }])).toEqual([])
+    expect(validateRelics([{ ...rain, effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent', source: 'fire' }] }])).toEqual([])
     // Présentation seulement : la même relique sans sa scène donne exactement le même combat
     for (const r of elemental)
       for (const seed of [1, 2, 3]) {
@@ -1861,7 +1861,7 @@ describe('reliques (docs/RELIQUES.md)', () => {
   })
 
   it('coup : sur un moment du coup (il esquive), avec une recharge en tours du porteur', () => {
-    const mirror = relic({ trigger: { type: 'strike', on: 'dodge' }, cooldown: 2, effects: [{ type: 'damage', amount: 1, target: 'opponent' }] })
+    const mirror = relic({ trigger: { type: 'strike', on: 'dodge' }, cooldown: 2, effects: [{ type: 'damage', amount: 1, target: 'opponent', source: 'wind' }] })
     const r = run([testCharacter('a', { dodgeChance: 1, maxHp: 30 }).withRelics([mirror]), testCharacter('b', { maxHp: 12 })])
     const fires = ofType(r, 'relic')
     expect(fires.length).toBeGreaterThan(2)
@@ -2040,7 +2040,7 @@ describe('causes des étapes (moteur v2, docs/MOTEUR_V2.md § 3)', () => {
 
 describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touche », mécanismes, coups bruts', () => {
   const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
-  const release = ev('naturalMax', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent' }], 'rel')
+  const release = ev('naturalMax', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }], 'rel')
   const reactionTo = (r: CombatResult, cause: number, status: StatusId) =>
     r.beats.find((b): b is Extract<Beat, { type: 'statusReaction' }> => b.cause === cause && b.type === 'statusReaction' && b.status === status)
 
@@ -2067,7 +2067,7 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
         if (stacksOf(coin.state.statuses[1], 'riposte') > 0) {
           const back = reactionTo(r, coin.id, 'riposte')
           expect(back?.trigger).toBe('hurt')
-          expect(back!.effects).toEqual([{ type: 'damage', target: 0, amount: 5 }])
+          expect(back!.effects).toEqual([{ type: 'damage', target: 0, amount: 5, source: 'strike' }])
           riposted++
         }
         const gauge = reactionTo(r, coin.id, 'retribution')

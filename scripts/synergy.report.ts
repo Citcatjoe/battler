@@ -9,8 +9,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { winRate } from '../src/game/analysis'
+import { eventHooks, kitSeeds, linkBetween, relicHooks, type Hook } from '../src/game/hooks'
 import { RELICS } from '../src/game/relics'
-import { CHARACTERS } from '../src/game/roster'
+import { CHARACTERS, ENGRAVABLE_SKILLS, ROSTER } from '../src/game/roster'
 import pkg from '../package.json' with { type: 'json' }
 
 /** Cibles d'un lot (docs/PROGRESSION.md, P8) */
@@ -47,9 +48,32 @@ it('rapport des synergies', () => {
 
   const pairs = new Map<string, Row[]>()
   for (const r of rows) pairs.set(`${r.a} + ${r.b}`, [...(pairs.get(`${r.a} + ${r.b}`) ?? []), r])
-  const byPair = [...pairs].map(([name, rs]) => ({ name, logit: mean(rs.map((r) => r.logit)), pts: mean(rs.map((r) => r.pts)) })).sort((x, y) => y.logit - x.logit)
+  // Le lien que les accroches prévoient entre deux reliques (hooks.ts) : l'une nourrit l'autre, ou la gêne
+  const hooksOf = new Map(RELICS.map((r) => [r.name, relicHooks(r)]))
+  const linkOf = (a: string, b: string) => {
+    const { feeds, conflicts } = linkBetween(hooksOf.get(a)!, hooksOf.get(b)!)
+    return conflicts.length ? `gêne (${conflicts.join(', ')})` : feeds.length ? `nourrit (${feeds.join(', ')})` : '—'
+  }
+  const byPair = [...pairs]
+    .map(([name, rs]) => ({ name, link: linkOf(rs[0].a, rs[0].b), logit: mean(rs.map((r) => r.logit)), pts: mean(rs.map((r) => r.pts)) }))
+    .sort((x, y) => y.logit - x.logit)
   const strongest = [...rows].sort((x, y) => y.logit - x.logit)
-  const line = (name: string, l: number, pts: number) => `| ${name} | ${num(l)} | ${num(pts, 1)} |`
+  const line = (name: string, l: number, pts: number, link: string) => `| ${name} | ${num(l)} | ${num(pts, 1)} | ${link} |`
+  const group = (label: string, keep: (link: string) => boolean) => {
+    const g = byPair.filter((p) => keep(p.link))
+    return `| ${label} | ${g.length} | ${g.length ? num(mean(g.map((p) => p.logit)), 3) : '—'} |`
+  }
+
+  // Le vocabulaire en usage : combien de briques (reliques, compétences gravables) produisent et consomment chaque accroche
+  const bricks = [...RELICS.map(relicHooks), ...ENGRAVABLE_SKILLS.map(eventHooks)]
+  const vocabulary = [...new Set(bricks.flatMap((h) => [...h.produces, ...h.consumes]))]
+    .map((hook: Hook) => ({ hook, made: bricks.filter((h) => h.produces.includes(hook)).length, used: bricks.filter((h) => h.consumes.includes(hook)).length }))
+    .sort((x, y) => y.made + y.used - (x.made + x.used))
+  // Le kit ouvert (PROGRESSION.md § 6.2) : chaque compétence du kit, et les briques hors du kit qui la prolongent
+  const seeds = ROSTER.map((d) => {
+    const kit = kitSeeds(d.events, ENGRAVABLE_SKILLS, RELICS)
+    return `| ${d.name} | ${kit.map((s) => `${s.skill.name} ${s.consumers.length}`).join(' · ')} | ${kit.filter((s) => s.consumers.length >= 2).length} sur ${kit.length} |`
+  })
 
   // Meilleur partenaire de chaque relique, sur un personnage précis : une relique sans partenaire vit seule
   const partners = RELICS.map((r) => {
@@ -76,19 +100,41 @@ it('rapport des synergies', () => {
     '',
     '## Paires, en moyenne sur le roster',
     '',
-    '| Paire | Log-cote | Points |',
+    '| Paire | Log-cote | Points | Lien prévu |',
+    '| --- | --- | --- | --- |',
+    ...byPair.slice(0, 10).map((p) => line(p.name, p.logit, p.pts, p.link)),
+    '| … | | | |',
+    ...byPair.slice(-10).map((p) => line(p.name, p.logit, p.pts, p.link)),
+    '',
+    '## Ce que les accroches prévoient (hooks.ts)',
+    '',
+    'Chaque paire classée selon le lien que prévoient les accroches de ses deux reliques, sans regarder la mesure. Si le vocabulaire est juste, les paires qui se nourrissent ont une synergie plus haute, celles qui se gênent plus basse.',
+    '',
+    '| Lien prévu | Paires | Synergie moyenne |',
     '| --- | --- | --- |',
-    ...byPair.slice(0, 10).map((p) => line(p.name, p.logit, p.pts)),
-    '| … | | |',
-    ...byPair.slice(-10).map((p) => line(p.name, p.logit, p.pts)),
+    group('L’une nourrit l’autre', (l) => l.startsWith('nourrit')),
+    group('L’une gêne l’autre', (l) => l.startsWith('gêne')),
+    group('Aucun lien', (l) => l === '—'),
+    '',
+    '### Vocabulaire en usage (reliques et compétences gravables)',
+    '',
+    '| Accroche | Briques qui la produisent | Briques qui la consomment |',
+    '| --- | --- | --- |',
+    ...vocabulary.map((v) => `| ${v.hook} | ${v.made} | ${v.used} |`),
+    '',
+    '### Kit ouvert (relevé, pas une règle) : pour chaque compétence du kit, les briques hors du kit qui la prolongent',
+    '',
+    '| Personnage | Compétences du kit, et briques qui les prolongent | Graines (deux briques au moins) |',
+    '| --- | --- | --- |',
+    ...seeds,
     '',
     '## Triplets les plus marqués (un personnage précis)',
     '',
-    '| Personnage : paire | Log-cote | Points |',
-    '| --- | --- | --- |',
-    ...strongest.slice(0, 12).map((r) => line(`${r.who} : ${r.a} + ${r.b}`, r.logit, r.pts)),
-    '| … | | |',
-    ...strongest.slice(-8).map((r) => line(`${r.who} : ${r.a} + ${r.b}`, r.logit, r.pts)),
+    '| Personnage : paire | Log-cote | Points | Lien prévu |',
+    '| --- | --- | --- | --- |',
+    ...strongest.slice(0, 12).map((r) => line(`${r.who} : ${r.a} + ${r.b}`, r.logit, r.pts, linkOf(r.a, r.b))),
+    '| … | | | |',
+    ...strongest.slice(-8).map((r) => line(`${r.who} : ${r.a} + ${r.b}`, r.logit, r.pts, linkOf(r.a, r.b))),
     '',
     '## Partenaire de chaque relique',
     '',

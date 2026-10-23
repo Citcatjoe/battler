@@ -7,6 +7,7 @@
  * Toute nouvelle mécanique ajoute ici son contrôle.
  */
 import { STAT_KEYS } from './character'
+import { DAMAGE_KINDS, DAMAGE_SOURCES, type DamageKind } from './damage'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { doubleTrigger, isDoubleTrigger, isRollTrigger, rollMatches, type Trigger } from './events'
 import { forgeState } from './forge'
@@ -34,6 +35,22 @@ export function createAudit() {
       if (b.type === 'statusTick') see(`tick ${b.status}`)
       if (b.type === 'event') see(`compétence ${b.event.name}`)
     }
+    // Types de dégâts (règles v2, phase 1, damage.ts) : chaque dégât porte une source connue ; un statut qui agit fait
+    // des DT ; une pièce et une Riposte, des DP (décisions de l'utilisateur)
+    r.beats.forEach((b, i) => {
+      for (const e of beatEffects(b)) {
+        if (e.type !== 'damage') continue
+        const def = DAMAGE_SOURCES[e.source]
+        if (!def) {
+          flag('dégât sans type', r, i, `source ${e.source}`)
+          continue
+        }
+        see(`type de dégâts ${DAMAGE_KINDS[def.kind].short}`)
+        const expected: DamageKind | undefined =
+          b.type === 'statusTick' ? 'temporal' : b.type === 'coin' || (b.type === 'statusReaction' && STATUSES[b.status].reflectsHit) ? 'physical' : undefined
+        if (expected && def.kind !== expected) flag('type de dégâts incohérent', r, i, `${b.type} : ${def.kind} au lieu de ${expected}`)
+      }
+    })
     // Mode triche : seuls les dés de `forcedRolls` sont marqués imposés, avec leur valeur (ramenée au dé)
     let rank = 0
     r.beats.forEach((b, i) => {

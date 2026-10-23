@@ -39,19 +39,19 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 
 ### 1.2 Deuxième passe (2026-10-23)
 
-| Question | Décision |
-| --- | --- |
-| Kit de référence en d6 (duel, tournoi) | **Deux compétences** pour le moment : on commence petit, l'équilibrage est plus simple (§ 6.2). |
-| Forge sur le d6 | **Copier et Refondre remplacent Agrandir et Retailler** (§ 6.5). |
-| Pile ou face, Riposte | **Des coups physiques : DP.** Le Saignement peut rester rouge (§ 9). |
-| Campagne : longueur | **Un acte plus long** (§ 11). |
-| Campagne : vies | La règle « une partie, une vie » peut être revue si elle sert le jeu, **mais pas plusieurs vies pour le moment** (§ 11). |
-| Kit de départ en campagne | **La signature seule** (§ 11). |
-| Récompenses qui montent une stat | **Oui**, à plat, comme les Bottes et leur esquive. **Des récompenses qui font boule de neige sur les DM** (« +2 à tous les DM ») sont logiques et **indispensables**, même s'il y a peu de sorts magiques aujourd'hui (§ 9.4). |
-| Défenses par type de dégâts | **Trop compliqué pour le moment** (§ 15.3). |
-| Répertoires | L'utilisateur ne se rend pas bien compte : **une proposition est demandée**, pour vérifier qu'on est sur la même longueur d'onde (§ 7). |
-| Le spectacle | **Le combat serré perd de sa force face à l'évolution au cours d'une partie** (campagne ou tournoi) et à l'émergence des builds : la tendance aux combats « pile ou face » doit s'effacer au profit des conséquences d'une relique ou d'une compétence obtenue (§ 2). |
-| PV et durée | **À réfléchir** : une évolution des PV (événement, valeur à plat, relique) ; un combat équilibré entre personnages nus peut durer 4 tours face à un build agressif ; pour profiter d'un build, il faut une montée des PV ou de la durée (§ 12). |
+| Question                               | Décision                                                                                                                                                                                                                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kit de référence en d6 (duel, tournoi) | **Deux compétences** pour le moment : on commence petit, l'équilibrage est plus simple (§ 6.2).                                                                                                                                                                       |
+| Forge sur le d6                        | **Copier et Refondre remplacent Agrandir et Retailler** (§ 6.5).                                                                                                                                                                                                      |
+| Pile ou face, Riposte                  | **Des coups physiques : DP.** Le Saignement peut rester rouge (§ 9).                                                                                                                                                                                                  |
+| Campagne : longueur                    | **Un acte plus long** (§ 11).                                                                                                                                                                                                                                         |
+| Campagne : vies                        | La règle « une partie, une vie » peut être revue si elle sert le jeu, **mais pas plusieurs vies pour le moment** (§ 11).                                                                                                                                              |
+| Kit de départ en campagne              | **La signature seule** (§ 11).                                                                                                                                                                                                                                        |
+| Récompenses qui montent une stat       | **Oui**, à plat, comme les Bottes et leur esquive. **Des récompenses qui font boule de neige sur les DM** (« +2 à tous les DM ») sont logiques et **indispensables**, même s'il y a peu de sorts magiques aujourd'hui (§ 9.4).                                        |
+| Défenses par type de dégâts            | **Trop compliqué pour le moment** (§ 15.3).                                                                                                                                                                                                                           |
+| Répertoires                            | L'utilisateur ne se rend pas bien compte : **une proposition est demandée**, pour vérifier qu'on est sur la même longueur d'onde (§ 7).                                                                                                                               |
+| Le spectacle                           | **Le combat serré perd de sa force face à l'évolution au cours d'une partie** (campagne ou tournoi) et à l'émergence des builds : la tendance aux combats « pile ou face » doit s'effacer au profit des conséquences d'une relique ou d'une compétence obtenue (§ 2). |
+| PV et durée                            | **À réfléchir** : une évolution des PV (événement, valeur à plat, relique) ; un combat équilibré entre personnages nus peut durer 4 tours face à un build agressif ; pour profiter d'un build, il faut une montée des PV ou de la durée (§ 12).                       |
 
 ### 1.3 Troisième passe (2026-10-23)
 
@@ -160,6 +160,41 @@ En fin de saison, les 96 constructions sont complètes (trois reliques, trois fo
 - **Le combat le plus court est le premier de la campagne** : 5,5 tours par combattant, parce que l'adversaire y est réglé à 95 % (PV très bas). C'est la démonstration voulue, mais c'est aussi le combat où le champion n'a encore rien à montrer.
 - **Ysolde dure deux fois plus que les autres** en campagne (13,8 tours) : l'Aura de sainteté. À garder en tête pour son kit de deux compétences (§ 6.7).
 - **Les synergies restent à construire** : 6 reliques sur 16 ont un partenaire, toutes par un cas isolé ; aucune paire ne dépasse +0,25 en moyenne.
+
+### 3.2 Ce que disent les accroches (phase 1, version 0.102.0)
+
+_Les accroches (`hooks.ts`, § 8) sont déduites des données, sans regarder la mesure. Elles sont confrontées ici à la mesure du § 3.1 (`npm run synergy`, mêmes graines, 200 combats par duel)._
+
+**Le vocabulaire prévoit la mesure** : chaque paire de reliques est classée selon le lien que prévoient ses accroches.
+
+| Lien prévu | Paires | Synergie moyenne mesurée (log-cote) |
+| --- | --- | --- |
+| L'une nourrit l'autre (Dé creux + Conque, Bottes + Conque : l'esquive) | 2 | +0,18 |
+| L'une gêne l'autre (Cotte + Conque : l'esquive ; Contrepoids + Dé creux, Fer, Osselet : les faces) | 4 | −0,13 |
+| Aucun lien | 114 | −0,01 |
+
+Six paires seulement : un indice, pas une preuve ; mais le sens est le bon, et aucune paire sans lien ne sort du bruit en moyenne.
+
+**Le vocabulaire est tout en production** (reliques et compétences gravables) :
+
+| Accroche | Briques qui la produisent | Briques qui la consomment |
+| --- | --- | --- |
+| DP infligés | 9 | 0 |
+| DT infligés | 7 | 0 |
+| DM infligés | 4 | 0 |
+| Soin | 5 | 0 |
+| Un statut posé (Poison, Saignement, Critique assuré…) | 1 à 3 chacun | 0 |
+| Il touche | 3 | 4 |
+| Il esquive, il critique | 3 chacun | 1 chacun |
+| Il encaisse | 0 | 4 |
+| Faces 1, 2, 3 | 1 (Coup de chance) | 8 à 9 (les compétences du dé) |
+
+**Le kit ouvert** (§ 6.2, un relevé, pas encore une règle) : sur les dix kits d'aujourd'hui, une compétence est une « graine » si deux briques au moins (compétences d'autres personnages, reliques) consomment ce qu'elle produit. Seuls trois personnages en ont : Naraxes (Coup de chance, Pile ou face), Fanchon (ses doubles qui frappent), Gorak (la Furie des vents). **Les sept autres n'en ont aucune.**
+
+**Lecture** :
+- **Ce qui manque, ce sont les consommateurs.** Les briques d'aujourd'hui produisent des dégâts, des soins et des statuts, mais presque rien ne les lit : c'est pourquoi les reliques s'additionnent sans interagir (§ 3). La synergie viendra de **payoffs** : « +1 aux DT », « quand il se soigne, +1 Puissance », « par charge de Poison sur l'adversaire… », des briques qui **lisent** (§ 10.2). Ce sera la priorité des lots de contenu (phase 8), et la contrainte d'écriture des répertoires (phase 2) : dans chaque fil, au moins un consommateur (§ 7.1).
+- **Les moments du coup sont la seule vraie monnaie d'échange** (il touche, il encaisse, il esquive, il critique) : c'est là que se trouve la seule synergie mesurée. Ils resteront le cœur du vocabulaire.
+- **Le relevé du kit ouvert devient un contrôle** quand les répertoires existent (phase 2 et 5) : un kit dont aucune compétence n'est une graine ne passera plus `validateHooks`.
 
 ---
 
@@ -296,12 +331,12 @@ Faces 1 et 2 : les deux compétences du kit (§ 7.3) ; faces 3 à 6 : les coups,
 
 ### 7.1 La structure
 
-| Partie | Nombre | Rôle |
-| --- | --- | --- |
-| **Signature** | 1 | sa compétence emblème ; la seule au départ d'une campagne |
-| **Kit de référence** | 2 | la signature et un complément ; duel et tournoi |
-| **Répertoire** | 6 à 8 | ce qu'il peut graver ; deux **fils** de synergie (deux thèmes, comme Aldric lumière et ombre), chacun avec ses producteurs et ses consommateurs ; environ la moitié **propre**, l'autre **partagée** avec un ou deux personnages voisins par le thème |
-| **Fonds commun** | environ 8 | ouvert à tous, par la carte libre de l'offre (§ 13.2) : de petites compétences simples, une par ressource, pour lancer un fil inattendu |
+| Partie               | Nombre    | Rôle                                                                                                                                                                                                                                                  |
+| -------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Signature**        | 1         | sa compétence emblème ; la seule au départ d'une campagne                                                                                                                                                                                             |
+| **Kit de référence** | 2         | la signature et un complément ; duel et tournoi                                                                                                                                                                                                       |
+| **Répertoire**       | 6 à 8     | ce qu'il peut graver ; deux **fils** de synergie (deux thèmes, comme Aldric lumière et ombre), chacun avec ses producteurs et ses consommateurs ; environ la moitié **propre**, l'autre **partagée** avec un ou deux personnages voisins par le thème |
+| **Fonds commun**     | environ 8 | ouvert à tous, par la carte libre de l'offre (§ 13.2) : de petites compétences simples, une par ressource, pour lancer un fil inattendu                                                                                                               |
 
 **Pourquoi deux fils** : un fil seul donne toujours le même build ; trois dispersent les récompenses d'un acte. Avec deux fils et 6 à 8 compétences, le joueur en grave 3 ou 4 par partie : de l'ordre de 20 à 70 combinaisons, et deux directions nettes.
 
@@ -412,7 +447,7 @@ Le type se **déclare** donc sur chaque source, et il ne change, pour commencer,
 | Source | Type par défaut | À déclarer |
 | --- | --- | --- |
 | Un coup du dé (coup imprimé, Furie, Crescendo, Soliste) | **DP** | rien |
-| Un statut qui ronge (Poison, Brûlure, Saignement) | **DT** | rien : sa source et sa couleur viennent déjà de `harm` (`statuses.ts`), à étendre |
+| Un statut qui ronge (Poison, Brûlure, Saignement) | **DT** | rien : la source se déclare une fois dans le statut, et donne aussi la couleur de son « −N » (fait en 0.102.0) |
 | Un effet de dégâts d'une compétence ou d'une relique | **à déclarer** | une dizaine de sources aujourd'hui |
 
 Les cas à déclarer, avec une proposition (à valider) :
@@ -433,7 +468,7 @@ Les cas à déclarer, avec une proposition (à valider) :
 - **Le chiffre flottant** prend la couleur de son type et de sa source : DP rouge (l'or reste au critique), DT selon la source (déjà fait pour le poison et l'arcane, règle M37 de [MISE_EN_SCENE.md](MISE_EN_SCENE.md)), DM selon la source. Cela répond aussi à la question Q5 de MISE_EN_SCENE (« classer tous les dégâts en familles ? »).
 - **Le texte** de la compétence ou de la relique nomme le type (« 3 × 2 dégâts magiques ») ; le compendium a une règle « Types de dégâts ».
 - **Aucun nouvel écran, aucune nouvelle pastille.** La palette reste courte : la couleur par famille a été refusée pour les médaillons (0.51.0, « carnaval ») ; ici, une teinte par source, six au plus, sur le chiffre seulement.
-- **Brique connue** : `TONE_CLASS` (`narration.ts`), `harm` (`statuses.ts`), l'effet `damage` et ses `hits`.
+- **Brique connue** : `TONE_CLASS` (`narration.ts`), `DAMAGE_SOURCES` (`damage.ts`, 0.102.0, qui remplace `harm`), l'effet `damage` et ses `hits`.
 - **Coût** : faible ; l'étiquette ne change pas l'empreinte de non-régression.
 
 ### 9.4 Des récompenses qui font boule de neige sur un type (décidé)
@@ -450,14 +485,14 @@ Les cas à déclarer, avec une proposition (à valider) :
 
 La fiche d'un personnage, ce sont aujourd'hui **six stats** (`CharacterStats`, `character.ts`), écrites une fois dans `roster.ts`, plus son kit (compétences, `twinDice`, `forms`) :
 
-| Stat | Rôle | Valeurs du roster | Ce qui la modifie aujourd'hui |
-| --- | --- | --- | --- |
-| PV (`maxHp`) | durée de vie | 46 (Fanchon) à 63 (Morgrut) | rien ; les PV des adversaires de campagne servent de réglage de rencontre |
-| Dé (`damageDie`) | dégâts **et** fréquence des compétences | d5 × 2 à d14 | la forge (Agrandir, Retailler), le Contrepoids |
-| Armure | retirée de chaque coup reçu | **0 pour les dix** | la Cotte (+2), l'Armure temporaire |
-| Esquive | chance d'éviter un coup | 0 % (Morgrut) à 26 % (Elaria) | les Bottes (+6 %), la Cotte (−8 %) |
-| Critique | chance de critique | 0 % (Morgrut) à 19 % (Gorak) | rien |
-| Multiplicateur | force du critique | × 2 à × 2,5 | rien |
+| Stat             | Rôle                                    | Valeurs du roster             | Ce qui la modifie aujourd'hui                                             |
+| ---------------- | --------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
+| PV (`maxHp`)     | durée de vie                            | 46 (Fanchon) à 63 (Morgrut)   | rien ; les PV des adversaires de campagne servent de réglage de rencontre |
+| Dé (`damageDie`) | dégâts **et** fréquence des compétences | d5 × 2 à d14                  | la forge (Agrandir, Retailler), le Contrepoids                            |
+| Armure           | retirée de chaque coup reçu             | **0 pour les dix**            | la Cotte (+2), l'Armure temporaire                                        |
+| Esquive          | chance d'éviter un coup                 | 0 % (Morgrut) à 26 % (Elaria) | les Bottes (+6 %), la Cotte (−8 %)                                        |
+| Critique         | chance de critique                      | 0 % (Morgrut) à 19 % (Gorak)  | rien                                                                      |
+| Multiplicateur   | force du critique                       | × 2 à × 2,5                   | rien                                                                      |
 
 **Constat** : la feuille définit la base, puis ne bouge presque plus. Trois reliques de caractéristique et la taille du dé sont les seules progressions de stats ; l'armure est une stat inutilisée à la base.
 
@@ -603,7 +638,7 @@ Garder le hasard, mais le pencher vers le build.
 
 | Piste | État au 2026-10-23 |
 | --- | --- |
-| P1 Accroches déclarées | active, revue : des accroches concrètes, pas des familles (§ 8) |
+| P1 Accroches déclarées | **faite (0.102.0)** : `hooks.ts`, accroches concrètes déduites des données, déclarées par statut (§ 3.2) ; le contrôle du kit ouvert reste un relevé jusqu'aux répertoires |
 | P2 Offre orientée | active (§ 13.2) |
 | P3 Dé comme plateau | active, renforcée par le d6 et « face 4 = la face 4 » |
 | P4 Reliques qui lisent la forge | active ; ce sont des briques qui **lisent** (§ 10.2) ; Sertir gardé pour plus tard |
@@ -746,10 +781,10 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 | --- | --- | --- | --- |
 | Moteur : le dé | une liste de faces imprimées au lieu de `damageDie` ; les deux dés de la barde et les formes du druide dans ce format | `character.ts`, `combat.ts`, [RESOLUTION.md](RESOLUTION.md) | moyen (refactor à résultats identiques) |
 | Moteur : la forge | Copier une face, Refondre ; la limite de faces de compétence ; le retrait d'Agrandir, de Retailler et du Contrepoids | `forge.ts`, `relics.ts` | moyen |
-| Moteur : les types de dégâts | l'étiquette DP, DM, DT et sa source sur chaque dégât ; les bonus par type, par impact | `combat.ts`, `events.ts`, `statuses.ts` (`harm`) | faible |
+| Moteur : les types de dégâts | ~~l'étiquette DP, DM, DT et sa source sur chaque dégât~~ (faite, 0.102.0 : `damage.ts`) ; les bonus par type, par impact | `combat.ts`, `events.ts`, `damage.ts` | faible |
 | Moteur : des moments | soin reçu, bouclier vidé, jet modifié, Attente (action perdue) ; plus tard, suite et répétition (P3) | `events.ts` (`TRIGGERS`) | faible chacun |
 | Données : les répertoires | une liste par personnage, le fonds commun ; l'offre qui tire dedans (carte garantie, écho, libre) | `roster.ts`, `forge.ts`, `campaign.ts`, `season.ts` | faible |
-| Données : les accroches | ce que chaque brique produit et consomme ; le contrôle du kit ouvert | `validateRoster`, `validateRelics` | faible |
+| Données : les accroches | ~~ce que chaque brique produit et consomme~~ (fait, 0.102.0 : `hooks.ts`) ; le contrôle du kit ouvert, relevé aujourd'hui, à rendre bloquant avec les répertoires | `hooks.ts`, `validateHooks` | faible |
 | Données : la feuille | les compteurs (faces dorées, copiées, gravées, rangs, dégâts par type) | un module calculé, comme `forgeState` | faible |
 | Campagne | la signature seule au départ, l'acte de 10 combats, l'ordre des récompenses | `campaign.ts`, [CAMPAGNE.md](CAMPAGNE.md) | moyen |
 | Statuts | aucun statut nouveau prévu ; des statuts existants sans porteur à réemployer : Garde sacrée, Étourdi, Régénération, Affaibli, Vulnérable | `statuses.ts`, [STATUTS.md](STATUTS.md) | — |
@@ -789,7 +824,7 @@ flowchart LR
 | Phase | Contenu | Combats changés ? | Preuve | Ce qu'on décide à la fin |
 | --- | --- | --- | --- | --- |
 | **0. Mesure** (faite, 0.101.0) | `npm run synergy` (P8, log-cote) ; la durée des combats dans `npm run campaign` et `npm run season` ; une première mesure « le build se voit-il ? » (champion construit contre le même nu) | non | l'état de référence, § 3.1 | les cibles de synergie et de durée sont-elles les bonnes ? |
-| **1. Étiquettes** | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le contrôle du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; un contrôle d'audit : chaque dégât porte un type | — |
+| **1. Étiquettes** (faite, 0.102.0) | les accroches de chaque brique (P1) ; le type DP, DM ou DT et la source de chaque dégât (§ 9.2, valeurs par défaut et une dizaine de déclarations) ; le relevé du kit ouvert | **non** : l'empreinte de non-régression reste identique | `balance.test.ts` identique ; l'audit contrôle le type de chaque dégât ; résultats au § 3.2 | ce que doivent contenir les lots de contenu : des consommateurs |
 | **2. Essai des répertoires** (dés actuels) | les répertoires des compétences existantes (§ 7.4) ; l'offre orientée (carte garantie, écho, libre, § 13.2) ; campagne seulement | en campagne seulement | `npm run campaign` avant et après : diversité et cohérence des builds | **l'utilisateur joue** : la structure tient-elle ? |
 | **3. Dé en liste de faces** | le moteur lit des faces imprimées au lieu de `damageDie` ; [RESOLUTION.md](RESOLUTION.md) d'abord | **non** | empreinte et audit identiques | — |
 | **4. Essai du d6** | Gorak, Ysolde, Aldric et Morgrut en d6 à deux compétences, au laboratoire, depuis les dés du § 6.7 ; valeur imprimée de Pourfendre | non (laboratoire) | taux et marge avant → après, valeur nette, durée | les dés de référence, retouchés ; la méthode pour les six autres |

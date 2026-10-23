@@ -1,4 +1,5 @@
 import type { Character } from './character'
+import type { DamageSource } from './damage'
 import { doubleTrigger, faceTrigger, isRollTrigger, rollMatches, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
@@ -72,6 +73,8 @@ export type AppliedEffect =
       type: 'damage'
       target: Side
       amount: number
+      /** Ce que sont ces dégâts (damage.ts), d'où leur type ; recopié de l'effet, sans effet sur la règle */
+      source: DamageSource
       /** Le détail par coup, dont la somme vaut `amount` (jauges d'une relâche, coups de `hits`) ; l'écran en fait autant de coups */
       parts?: number[]
     }
@@ -630,7 +633,7 @@ export function simulateCombat(
         const hits = effect.hits ?? 1
         const amount = each * hits
         state.hp = Math.max(0, state.hp - amount)
-        return { type: 'damage', target, amount, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
+        return { type: 'damage', target, amount, source: effect.source, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
       }
       case 'applyStatus': {
         const status: Status = { id: effect.status, stacks: effect.stacks }
@@ -660,7 +663,7 @@ export function simulateCombat(
         const amount = clamp(Math.max(effect.min, stored), 0)
         state.hp = Math.max(0, state.hp - amount)
         const parts = held?.slots?.filter((n) => n > 0)
-        return { type: 'damage', target, amount, ...(stored >= effect.min && parts && parts.length > 1 && { parts }) }
+        return { type: 'damage', target, amount, source: effect.source, ...(stored >= effect.min && parts && parts.length > 1 && { parts }) }
       }
       case 'cleanse': {
         // Les mécanismes (statuts de forme, mécanismes de compétence : `mechanic`) ne se purgent pas
@@ -696,7 +699,7 @@ export function simulateCombat(
     if (declared) return declared(status)
     if (!strike?.touched) return undefined
     if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt }]
-    if (trigger === 'hurt' && def.reflectsHit) return [{ type: 'damage', amount: Math.round(strike.dealt * def.reflectsHit), target: 'opponent' }]
+    if (trigger === 'hurt' && def.reflectsHit) return [{ type: 'damage', amount: Math.round(strike.dealt * def.reflectsHit), target: 'opponent', source: 'strike' }]
     return undefined
   }
 
@@ -1026,7 +1029,7 @@ export function simulateCombat(
     const forced = nextForced()
     const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
     const toss = STATUSES[coin.id].coinToss!
-    const effects = heads ? applyEffects(side, [{ type: 'damage', amount: toss.damage, target: 'opponent' }]) : []
+    const effects = heads ? applyEffects(side, [{ type: 'damage', amount: toss.damage, target: 'opponent', source: 'strike' }]) : []
     const id = push(
       { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
       posedBy[side][coin.id] ?? after,

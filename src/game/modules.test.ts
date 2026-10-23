@@ -49,7 +49,8 @@ import {
   withResult,
   type Tournament,
 } from './tournament'
-import { FORGE_RELIC_IDS, OFFER_SIZE, RELIC_IDS } from './relics'
+import { FORGE_RELIC_IDS, OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
+import { eventHooks, linkBetween, relicHooks, validateHooks } from './hooks'
 
 const duel = (a: string, b: string, seed: number) =>
   simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) })
@@ -243,6 +244,34 @@ describe('roster', () => {
   })
 })
 
+describe('accroches (règles v2, phase 1)', () => {
+  const events = ROSTER.flatMap((d) => d.events)
+  const relic = (id: string) => relicHooks(RELICS.find((r) => r.id === id)!)
+
+  it('chaque compétence et chaque relique produit une accroche, chaque statut est posé du côté déclaré', () => {
+    expect(validateHooks(events, RELICS)).toEqual([])
+  })
+
+  it('refuse une compétence qui ne produit rien, et un statut posé du mauvais côté', () => {
+    const empty = { id: 'vide', name: 'Vide', trigger: 'naturalOne' as const, effects: [] }
+    const wrong = { id: 'travers', name: 'Travers', trigger: 'naturalTwo' as const, effects: [{ type: 'applyStatus' as const, status: 'poison' as const, stacks: 1 }] }
+    expect(validateHooks([empty, wrong], [])).toEqual(['vide : la compétence ne produit aucune accroche', 'poison : posé sur soi, déclaré sur l’adversaire'])
+  })
+
+  it('les liens mesurés (PROGRESSION.md § 3) se lisent dans les accroches : Dé creux nourrit la Conque, la Cotte et le Contrepoids la gênent', () => {
+    expect(linkBetween(relic('hollow-die'), relic('wind-conch')).feeds).toContain('moment:dodge')
+    expect(linkBetween(relic('mercenary-mail'), relic('wind-conch')).conflicts).toContain('moment:dodge')
+    expect(linkBetween(relic('lead-pommel'), relic('four-nail-shoe')).conflicts).toContain('face:4')
+    expect(linkBetween(relic('lead-pommel'), relic('hollow-die')).conflicts).toContain('face:max')
+  })
+
+  it('une compétence hérite des accroches du statut qu’elle pose : Pourfendre fait saigner quand il touche', () => {
+    const cleave = eventHooks(events.find((e) => e.id === 'cleave')!)
+    expect(cleave.produces).toEqual(expect.arrayContaining(['status:bleed', 'damage:temporal']))
+    expect(cleave.consumes).toEqual(expect.arrayContaining(['face:1', 'moment:hit']))
+  })
+})
+
 describe('stats', () => {
   it('les dégâts comptabilisés expliquent exactement les PV perdus', () => {
     let seed = 1
@@ -273,7 +302,7 @@ describe('narration', () => {
   it('chaque type d’effet et chaque statut produisent un texte et un badge', () => {
     const effects: AppliedEffect[] = [
       { type: 'heal', target: 0, amount: 3 },
-      { type: 'damage', target: 1, amount: 2 },
+      { type: 'damage', target: 1, amount: 2, source: 'strike' },
       ...STATUS_IDS.map((status): AppliedEffect => ({
         type: 'applyStatus',
         target: 0,
@@ -311,14 +340,14 @@ describe('narration', () => {
     expect(effectBadge({ type: 'cleanse', target: 0, removed: ['powerAura'] })).toMatchObject({ tone: 'negative', rises: false })
     expect(effectBadge({ type: 'cleanse', target: 0, removed: ['poison'] }).rises).toBe(false)
     // Des PV perdus tombent, des PV regagnés montent
-    expect(effectBadge({ type: 'damage', target: 0, amount: 7 })).toMatchObject({ text: '-7', rises: false })
+    expect(effectBadge({ type: 'damage', target: 0, amount: 7, source: 'strike' })).toMatchObject({ text: '-7', rises: false })
     expect(effectBadge({ type: 'heal', target: 0, amount: 3 }).rises).toBe(true)
   })
   it('chaque déclencheur a un libellé, chaque événement une description', () => {
     for (const t of Object.values(TRIGGERS)) expect(t.label).not.toBe('')
     const effects: Effect[] = [
       { type: 'heal', amount: 2 },
-      { type: 'damage', amount: 2, target: 'opponent' },
+      { type: 'damage', amount: 2, target: 'opponent', source: 'strike' },
       { type: 'applyStatus', status: 'poison', stacks: 1, turns: 2, target: 'opponent' },
       { type: 'cleanse', polarity: 'negative' },
     ]

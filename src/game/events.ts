@@ -1,3 +1,4 @@
+import type { DamageSource } from './damage'
 import type { SceneEventId } from './scenes'
 import type { RuleId } from './rules'
 import { lowerFirst, STATUSES, type Polarity, type StatusId } from './statuses'
@@ -87,8 +88,9 @@ export type Effect =
    * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. Ce ne sont pas
    * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
    * d'affichage, `hits` fois `amount` appliqués en une seule perte ; l'écran en fait autant d'impacts.
+   * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur type, DP, DM ou DT ; sans effet sur la règle.
    */
-  | { type: 'damage'; amount: number; hits?: number; target?: Target }
+  | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource }
   | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target }
   /**
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count` derniers
@@ -99,9 +101,9 @@ export type Effect =
   | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number; orElse?: Exclude<Effect, { type: 'cleanse' }> }
   /**
    * Relâche un statut à jauges (Rétribution) : la somme de ses jauges en dégâts directs à l'adversaire,
-   * au moins `min`, puis le statut est vidé. Le porteur ne remplit ses jauges que s'il a cet effet.
+   * au moins `min`, puis le statut est vidé. Le porteur ne remplit ses jauges que s'il a cet effet. `source` : comme `damage`.
    */
-  | { type: 'release'; status: StatusId; min: number; target?: Target }
+  | { type: 'release'; status: StatusId; min: number; target?: Target; source: DamageSource }
 
 /**
  * Condition à remplir pour qu'un événement se déclenche, évaluée au moment du déclencheur.

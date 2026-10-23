@@ -32,6 +32,22 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.102.0] — 2026-10-23
+
+Règles v2, phase 1 : les étiquettes (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 18). Aucune règle de combat ne change : empreinte de non-régression identique.
+
+### Ajouté
+- **Types de dégâts** (`src/game/damage.ts`) : physiques (DP), magiques (DM), temporaires (DT). Chaque effet de dégâts déclare sa source (`source` de `damage` et `release`, exigée par le typage) ; le type s'en déduit. Coups du dé, Pile ou face, Riposte, relâche de la Rétribution et Osselet fendu : DP (décisions de l'utilisateur) ; Foudre, lumière de la Purification, Braise captive, Conque des vents : DM ; Poison, Saignement, Brûlure, Pourriture : DT. Une étiquette, lue par aucune règle : elle servira aux bonus par type et à la couleur des dégâts (phase 7).
+- **Accroches** (`src/game/hooks.ts`) : ce que chaque brique produit, consomme et gêne, dans un vocabulaire fermé (un statut, un moment du coup, un type de dégâts, une face, une stat). Déduites des données pour les compétences et les reliques (`eventHooks`, `relicHooks`), déclarées par statut (`STATUS_HOOKS`, avec le côté où il se pose). `validateHooks` refuse une compétence ou une relique qui ne produit rien, et un statut posé du mauvais côté ; `kitSeeds` relève le kit ouvert.
+- **Audit** : le type de chaque dégât est contrôlé (un statut qui agit fait des DT, une pièce et une Riposte des DP), et l'audit doit rencontrer les trois types.
+- **`npm run synergy`** : le lien que prévoient les accroches pour chaque paire de reliques, la synergie moyenne par lien, le vocabulaire en usage et le relevé du kit ouvert. Mesuré (200 combats par duel) : les paires qui se nourrissent valent +0,18 en moyenne, celles qui se gênent −0,13, les autres −0,01 ; les briques produisent des dégâts, des soins et des statuts que rien ne consomme ; 7 kits sur 10 n'ont aucune compétence « graine » ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 3.2).
+
+### Modifié
+- La couleur du « −N » d'un statut qui agit (règle M37) vient de la source de ses dégâts (`DAMAGE_SOURCES`) : même rendu qu'avant.
+
+### Retiré
+- `harm` du registre des statuts, remplacé par la source des dégâts.
+
 ## [0.101.0] — 2026-10-23
 
 Règles v2, phase 0 : la mesure (branche `regles-v2`, [docs/PROGRESSION.md](docs/PROGRESSION.md) § 18). Aucune règle de combat ne change.

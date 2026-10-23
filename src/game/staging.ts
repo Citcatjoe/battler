@@ -23,6 +23,7 @@ import {
 } from './combat'
 import type { Character } from './character'
 import { cueOf } from './cues'
+import { DAMAGE_SOURCES } from './damage'
 import { doubleFace, rollFace, type Trigger } from './events'
 import {
   atCap,
@@ -991,7 +992,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // signal). Le poison subi n'a que son texte. Un statut posé déjà à son maximum n'annonce rien.
         const outward = beat.effects.some((e) => e.target !== beat.side) && !capped(beat.effects)
         const fromRing = STATUS_PLACE[beat.status].place === 'aura'
-        const harms = beat.effects.some((e) => e.type === 'damage')
+        const harm = beat.effects.find((e) => e.type === 'damage')
         const base = hp
         showEffects(
           outward ? beat.side : null,
@@ -1003,7 +1004,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             log(statusTickLog(beat.side, beat.status, beat.effects, fighters))
           },
           {
-            ...(harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const), harm: STATUSES[beat.status].harm }),
+            ...(harm && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const), harm: DAMAGE_SOURCES[harm.source].tone }),
             ...(fromRing && { signal: beat.status }),
           },
         )

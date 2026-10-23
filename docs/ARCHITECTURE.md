@@ -28,6 +28,10 @@ src/
     relics.ts            REGISTRE des reliques (RELICS) : types, rédaction (describeRelic), validation, offre de tournoi (drawOffer, autoPick) ; docs/RELIQUES.md
     events.ts            déclencheurs (TRIGGERS nommés, faces au-delà du 3 : `face:7`, `double:6` ; faceTrigger, doubleTrigger, rollFace,
                          triggerText), effets (Effect), CharacterEvent
+    damage.ts            types de dégâts (règles v2, phase 1) : DP, DM, DT (DAMAGE_KINDS), sources (DAMAGE_SOURCES, leur type et la
+                         couleur du « −N » d'un statut qui agit) ; chaque effet de dégâts déclare sa source, aucune règle ne la lit
+    hooks.ts             accroches (règles v2, phase 1, PROGRESSION.md § 8) : ce que chaque brique produit, consomme et gêne ;
+                         STATUS_HOOKS (déclarées par statut), eventHooks et relicHooks (déduites), linkBetween, validateHooks, kitSeeds
     forge.ts             forge du dé (0.88.0, CAMPAGNE.md § 4) : journal d'opérations (ForgeStep), rejoué sur la définition d'origine
                          (forgeState, forgedEvents, forgedFaces), offre et choix automatique (drawForgeOffer, autoForge), validité
     campaign.ts          campagne (0.88.0) : partie (CampaignRun), boss, réglage des rencontres sur le champion de référence
@@ -221,6 +225,8 @@ Ajouter un type de condition : étendre `Condition` (`events.ts`), `conditionMet
 Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. Chaque entrée porte :
 - sa **présentation** : `name`, son icône peinte dans `STATUS_ICON` (`Icon.tsx` ; **jamais d'emoji**, une icône manquante se demande à l'utilisateur), `polarity` (bonus ou malus), `summary` (une phrase pour le compendium), `describe`, `badge` ;
 - son **cumul** : `add` (les charges s'additionnent) ou `refresh` (l'application remplace l'existant), et un plafond facultatif `maxStacks` ;
+- ses **accroches** (règles v2) : une ligne dans `STATUS_HOOKS` (`hooks.ts`, le typage l'exige) : de quel côté on le pose (`side`), ce qu'il produit et consomme au-delà de lui-même, du point de vue de qui le pose ; `validateHooks` vérifie qu'il est toujours posé de ce côté ;
+- s'il fait des dégâts, leur **source** (`source` de l'effet `damage`, registre `DAMAGE_SOURCES` de `damage.ts`) : elle donne leur type (DT pour un statut qui ronge) et la couleur de leur « −N » ;
 - ses **règles**, toutes facultatives :
 
 | Crochet | Effet |
@@ -268,7 +274,7 @@ Présentation seule (0.73.0) : un sort ou un coup spécial à grand spectacle, j
 3. `scene: '<id>'` sur la compétence (`CharacterEvent.scene`, `roster.ts`). La mise en scène émet la cue `scene` quand la compétence part ; `useCombat` expose l'événement en cours (état `scene`), au rythme de la vitesse et de la pause ; `FightScreen` le monte. Exemple : `lightning` (Foudre du druide : trois éclairs, `impacts: [440, 800, 1160]`, `length: 1750`).
 
 ### Ajouter un type d'effet
-Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test.
+Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test. Un effet qui fait des dégâts déclare sa `source` (`damage.ts`), et ses accroches se déduisent dans `addEffect` (`hooks.ts`).
 
 ### Ajouter un label de la zone de surcharge
 Présentation seule (2026-10-21) ; ce qui entre dans la zone, l'ordre et le point de vue : [RESOLUTION.md](RESOLUTION.md) § 11. Le registre unique `specials.ts` construit chaque label (`attackSpecials` pour ce qui se lit dans un `Attack`, `reactionSpecial` pour une étape de réaction, `relicSpecial` pour une relique qui se déclenche, `statusSpecial` dessous) : sa source donne sa couleur (`SPECIAL_SOURCES`, [design-system.md](design-system.md) § 3.1), son signe, vu de l'attaquant, donne son son (`SPECIAL_SIGNS`, [SONS.md](SONS.md) § 4.4). `staging.ts` ne fait que poser le label avec `addSpecial(spec)` à l'instant où il s'applique (une cue `special`, et la cue `sound` de son signe) : jamais de libellé, de couleur, de signe ni de son au point d'appel. Un statut est une surcharge par sa mécanique (`isSurcharge`) : rien à déclarer pour un nouveau statut de ces familles. Une nouvelle surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du livre de règles ; une nouvelle source s'ajoute à `SPECIAL_SOURCES`, avec sa ligne dans design-system.md.

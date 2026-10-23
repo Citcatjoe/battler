@@ -455,7 +455,7 @@ describe('mise en scène', () => {
 
   it('ce qu’une compétence à dégâts directs pose sur sa cible tombe avec son dernier coup, textes et zone d’état ensemble (M21)', () => {
     const venom = { id: 'venom', name: 'Venin', trigger: 'naturalOne' as const, forfeitsHit: true, effects: [
-      { type: 'damage' as const, amount: 3, target: 'opponent' as const },
+      { type: 'damage' as const, amount: 3, target: 'opponent' as const, source: 'strike' as const },
       { type: 'applyStatus' as const, status: 'poison' as const, stacks: 2, target: 'opponent' as const },
     ] }
     const result = simulateCombat([testCharacter('a', { maxHp: 60 }, [venom]), testCharacter('b', { maxHp: 60 })], { seed: 1 })
