@@ -32,6 +32,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.109.1] — 2026-10-24
+
+Les icônes du lot des consommateurs, et la revue des compétences, des statuts et des reliques demandée par l'utilisateur. Aucune règle, aucun code de jeu changés.
+
+### Ajouté
+- **Icônes peintes des cinq reliques consommatrices** (planche v14, [docs/STYLE_BIBLE.md](docs/STYLE_BIBLE.md) § 7, [docs/RELIQUES.md](docs/RELIQUES.md) § 13) : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather` dans `src/assets/icons/` (128 × 128). Générées avec Artlist (GPT Image 2.5 en image à image, fond transparent ; référence : les seize reliques existantes en une planche 4 × 4) : une planche 3 × 3 de cinq icônes, deux versions (160 crédits), la meilleure de chaque gardée (Fiole et Écu de la première, Croc, Encens et Plume de la seconde) ; l'Écu redessiné une fois par une retouche (80 crédits) pour montrer exactement six creux, le seuil de 6. Découpées par `scripts/slice-icons.py`, optimisées avec `optipng`. L'Encens est un pain de résine ambrée enveloppé de lin avec une braise, pas un encensoir, déjà l'icône de l'Aura de décoction. Plus aucune relique n'affiche son initiale. L'Élan garde l'emblème de la Puissance (un statut montre l'emblème de son état, 0.96.2).
+- **[docs/REVUE_CONTENU.md](docs/REVUE_CONTENU.md)** : la revue, une par une, de 30 compétences, 38 statuts et 21 reliques, avec une synthèse par gravité (moteur M1 à M5, équilibre E1 à E5, textes T1 à T15, écran et son A1 à A8, documents). Rien n'est encore corrigé.
+
 ## [0.109.0] — 2026-10-24
 
 Règles v2 : le lot de cinq reliques consommatrices et la signature de Thaldrin, validés par l'utilisateur le 2026-10-24 ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 1.10 et § 13.3), et l'état des lieux avant la seconde partie de la phase 7 (§ 0 bis).

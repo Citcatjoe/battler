@@ -27,6 +27,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [PROGRESSION.md](PROGRESSION.md) | Réflexion et décisions : la progression d'un personnage, profondeur et synergies (constat mesuré, direction, d6 aux faces imprimées, répertoires par personnage, types de dégâts DP, DM, DT, feuille de personnage, campagne plus longue, durée des combats, pistes gardées pour plus tard), chaque piste estimée |
 | | [SORTS.md](SORTS.md) | Brainstorm des sorts, laboratoire (`scripts/lab.report.ts`) et audit des compétences (`scripts/skills.report.ts`), résultats des essais |
 | | [AUDIT_COMPENDIUM.md](AUDIT_COMPENDIUM.md) | Audit des textes des compétences et des statuts (0.72.0) : incohérences entre code, textes générés et documents, propositions de reformulation et d'interactions |
+| | [REVUE_CONTENU.md](REVUE_CONTENU.md) | Revue des compétences, des statuts et des reliques (0.109.1) : chaque brique relue une par une, synthèse par gravité (moteur, équilibre, textes, écran et son, documents), corrections à décider |
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
 | **Direction artistique** | [STYLE_BIBLE.md](STYLE_BIBLE.md) | Style visuel, contraintes des images, prompts de génération |
 | | [design-system.md](design-system.md) | Tokens (couleurs, formes, polices) et composants de l'interface |
@@ -51,6 +52,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | ajoute ou change une mise en scène (ce qui tombe ensemble, ce qui attend quoi), ou signale un défaut de synchronisation | `MISE_EN_SCENE.md` d'abord : une règle générale par constat, avec son contrôle dans `staging.test.ts` |
 | change une règle des paris | `PARIS.md` d'abord, puis `FEATURES.md` § 10 |
 | essaie une idée de compétence, ou audite les compétences | `SORTS.md` (laboratoire, audit, résultats) |
+| relit le contenu en entier (compétences, statuts, reliques) ou corrige un point de la revue | `REVUE_CONTENU.md` (constat et suite donnée), puis le document thématique de la brique |
 | ajoute ou modifie une relique, ou une règle des reliques | `RELIQUES.md` (catalogue, mesures, `npm run relics`) et `FEATURES.md` § 8 |
 | ajoute une brique (crochet, déclencheur, effet, type d'étape, son, animation, rappel visuel) | `SYSTEMES.md` (inventaire et surface) |
 | ouvre ou fait avancer un chantier | `ETAT.md` (chantiers) et le document thématique |

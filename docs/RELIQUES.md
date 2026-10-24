@@ -444,7 +444,7 @@ Le script déduit la grille du nombre de noms (12 : 4 × 4) et ignore les cases 
 ## 11. Limites et suite
 
 - **Rendu vu** (0.75.0) : captures Firefox sans interface de l'en-tête du combat (sceaux, infobulle), de l'écran de récompense, de l'arbre et de l'affrontement. **Pas vu** : l'annonce sur le sceau sans nom flottant (0.77.0), l'éclat en mouvement, les infobulles au survol réel, le son (non vérifiable).
-- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), et celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12). L'initiale gravée reste le repli d'une relique sans icône : c'est le cas des cinq reliques du lot des consommateurs (§ 13), dont la planche reste à peindre.
+- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12), et celles des cinq reliques du lot des consommateurs en 0.109.1 (planche v14, § 13). L'initiale gravée reste le repli d'une relique sans icône : aucune relique n'est plus dans ce cas.
 - Réglages proposés au § 7, non appliqués.
 - Pas de relique en duel : seulement en tournoi.
 - Le choix automatique est un tirage simple ; le choix pondéré par goût, synergie et contexte reste à faire ([TODO.md](TODO.md) § 16).
@@ -530,11 +530,11 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-1
 
 **À surveiller.** L'Écu cabossé n'a aucun partenaire et un conflit que les accroches ne prévoient pas (Cotte du mercenaire, −0,19 : l'armure rogne les coups sous 6, il part moins souvent ; aussi la Géode, deux boucliers sur le même coup). Avec la Plume, le Contrepoids de plomb gêne comme prévu (`moment:crit`). Tout le lot, en moyenne : 11 reliques sur 21 ont un partenaire au-delà de +0,25 ; les paires qui se nourrissent selon les accroches font +0,254 en moyenne, celles qui se gênent −0,183.
 
-**Illustration** (à peindre ; § 6 : objet immobile, patiné, avec son attache, la magie contenue). Ces reliques de coup ne lisent pas une face : leur chiffre dessiné est leur palier ou leur valeur.
+**Illustration** (planche v14, intégrée en 0.109.1 ; § 6 : objet immobile, patiné, avec son attache, la magie contenue). Ces reliques de coup ne lisent pas une face : leur chiffre dessiné est leur palier ou leur valeur.
 - Fiole de venin : une petite fiole de verre vert bouchée de cire, **une** goutte de venin figée le long du col (le palier : 1 Poison), pendue à un cordon de cuir ; une lueur verte au fond.
 - Croc de boucher : un croc à viande de fer au manche de corne, la pointe noircie d'une seule goutte de sang séché, pendu à une ficelle.
-- Encens de l'abbaye : un petit encensoir de cuivre cabossé, la chaîne nouée, **une** braise tiède visible par les jours du couvercle (+1).
+- Encens de l'abbaye : un pain de résine ambrée enveloppé de lin, **une** braise (+1). Pas l'encensoir d'abord proposé : l'encensoir est déjà l'icône de l'Aura de décoction.
 - Écu cabossé : la **bosse de fer** d'un vieil écu (l'umbo), arrachée à son bois, **six** creux profonds sur le dôme (le seuil de 6), une lanière passée dans un rivet. Pas l'écu entier : l'écu est déjà l'icône de l'Armure temporaire.
 - Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours).
 
-**Icônes** : aucune des cinq n'a son image ; l'initiale gravée s'affiche en attendant (§ 6.1). L'Élan n'a pas d'icône peinte propre : la zone d'état et le compendium montrent l'emblème de la Puissance, qu'il alimente.
+**Icônes** : peintes en 0.109.1 (planche v14, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather`) ; l'Écu redessiné une fois pour montrer exactement six creux. L'Élan n'a pas besoin d'icône propre : un statut montre l'emblème de son état (règle de la 0.96.2), et la zone d'état comme le compendium montrent celui de la Puissance, qu'il alimente.

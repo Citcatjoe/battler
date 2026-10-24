@@ -1005,6 +1005,11 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 93 | `frost-tear` | Larme de givre (relique élémentaire, Givre, v13) | Larme de glace bleu pâle dans une griffe d'argent terni, fougères de givre, fêlure au tiers, lanière |
 | 94 | `wind-conch` | Conque des vents (relique élémentaire, Vent, v13) | Coquillage spiralé ivoire, tourbillon turquoise dans l'ouverture, lanière nouée |
 | 95 | `split-geode` | Géode fendue (relique élémentaire, Terre, v13) | Géode ouverte en deux moitiés, un cristal ambré dans chacune, sanglée de cuir, boucle de bronze |
+| 96 | `venom-vial` | Fiole de venin (relique de coup, v14) | Petite fiole de verre vert bouchée de cire, une goutte de venin figée le long du col, cordon de cuir |
+| 97 | `butcher-hook` | Croc de boucher (relique de coup, v14) | Croc à viande de fer au manche de corne, pointe noircie d'une goutte de sang séché, ficelle |
+| 98 | `abbey-incense` | Encens de l'abbaye (relique de coup, v14) | Pain de résine ambrée enveloppé de lin, une seule braise ; pas d'encensoir (déjà l'icône de l'Aura de décoction) |
+| 99 | `dented-shield` | Écu cabossé (relique de coup, v14) | Bosse de fer d'un vieil écu (umbo), exactement six creux (le seuil de 6), lanière passée dans un rivet |
+| 100 | `eagle-feather` | Plume d'aigle (relique de coup, v14) | Rémige d'aigle liée d'un fil rouge à un anneau de cuivre, deux barbes arrachées |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1193,6 +1198,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v13, reliques élémentaires (4 icônes, 2×2, intégrée le 2026-10-22, générée par l'agent avec Artlist : GPT Image 2.5, fond transparent ; référence jointe : les douze reliques de la v10 composées en une planche 4 × 3) :** gabarit de la planche des douze (RELIQUES.md § 10), matériaux « aged iron, tarnished silver, worn dark leather, old bone, warm bronze », et ce paragraphe ajouté après RELICS : _« These four are ELEMENTAL relics: each one holds a fragment of an old spell (fire, frost, wind, earth), SEALED inside it. The element is clearly visible INSIDE the object, bright and alive but still locked in: nothing bursts out, no flames, frost, wind or rocks leave the object, no background glow behind any icon. »_ 1. a small cage of black forged iron with exactly FOUR thick vertical bars, round like a lantern, a living ember trapped inside glowing orange and red, its light only between the bars, hanging from a short iron chain; NOT a wire cage, NOT a tooth · 2. a teardrop of pale blue ice that never melts, set in a claw of tarnished silver, frost feathers frozen inside it, one sharp crack across it at about one third of its height from the bottom, hanging from a thin leather cord · 3. a spiral sea shell, ivory and sand with a pale teal inner sheen, exactly TWO turns of spiral, a faint swirl of trapped wind visible deep in its opening, pierced near the tip and hung from a knotted leather strap · 4. a rough grey stone geode split open in half, showing a hollow lined with small crystals and exactly TWO large glowing amber crystals at its heart, bound by a worn leather strap with a bronze buckle. Le « NOT a wire cage, NOT a tooth » tient la Braise loin de la Dent de loup (croc dans une cage de fil de fer).
 
+**v14, reliques consommatrices (5 icônes, 3×3, intégrée le 2026-10-24, générée par l'agent avec Artlist : GPT Image 2.5 en image à image, fond transparent ; référence jointe : les seize reliques existantes composées en une planche 4 × 4) :** motifs de [RELIQUES.md](RELIQUES.md) § 13, dans la grammaire des reliques (§ 6) : 1. Fiole de venin, une goutte figée le long du col · 2. Croc de boucher, une goutte de sang séché · 3. Encens de l'abbaye, un pain de résine ambrée enveloppé de lin avec une seule braise (pas un encensoir : c'est l'icône de l'Aura de décoction) · 4. Écu cabossé, la bosse de fer d'un écu à six creux · 5. Plume d'aigle, deux barbes arrachées.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1220,6 +1227,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v14 | 2026-10-24 | 96 à 100 | Les cinq reliques consommatrices. Artlist, GPT Image 2.5 en image à image, référence : les seize reliques en planche 4 × 4 ; deux versions générées (160 crédits). Retenues : Fiole et Écu de la première, Croc, Encens et Plume de la seconde. L'Écu redessiné une fois par une retouche (80 crédits) pour montrer exactement six creux. Découpe par `scripts/slice-icons.py`, `optipng`, 128 × 128. |
 | v13 | 2026-10-22 | 92 à 95 | Les quatre reliques élémentaires. Première planche générée par l'agent (Artlist, GPT Image 2.5, deux planches d'un coup) : vrai canal alpha, découpe sans retouche. Retenues : Braise, Larme et Conque de la seconde planche (cage ronde à quatre barreaux, fêlure au tiers, spirale lisible), Géode de la première (les deux moitiés se lisent mieux qu'une géode entière ceinturée). |
 | v12 | 2026-10-21 | 76 à 91 | Emblèmes d'état, nouvelle grammaire : pièces gravées monochromes. Deux versions générées : la première (or, bronze et couleurs, vrai canal alpha) était trop proche des compétences ; la seconde, retenue, ajoute « monochrome » et « carved on a coin ». Fond noir uni, pas de canal alpha : découpe en disque par `scripts/slice-coins.py`, sans retouche (rayons de 136 à 139 px). |
 | v11 | 2026-10-20 | 70 à 75 | Interface : musique, bourse, jeton, coup de théâtre, ticket. Vrai canal alpha ; une poussière de 89 px près du tambour, effacée avant la découpe. La corde de l'embrasse (`twist`) est coupée net au bord de sa case, visible en grand. |
