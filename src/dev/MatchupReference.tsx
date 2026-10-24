@@ -125,7 +125,7 @@ function buildCases(): Record<string, Case> {
     barde: {
       mode: 'tournament',
       fighters: [
-        forged(createCharacter('fanchon'), [{ op: 'engrave', face: 6 }, { op: 'gild', face: 6 }, { op: 'gild', face: 2 }]).withRelics(relics(1, 7)),
+        forged(createCharacter('fanchon'), [{ op: 'engrave', face: 6 }, { op: 'gild', face: 5 }, { op: 'gild', face: 4 }]).withRelics(relics(1, 7)),
         forged(gorak, [{ op: 'gild', face: 4 }, { op: 'gild', face: 6 }, { op: 'engrave', face: 3 }]).withRelics(relics(7)),
       ],
       ranks: [null, 3],

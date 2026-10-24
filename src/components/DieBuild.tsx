@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { DIE_FACES, doubleTrigger, faceTrigger, type CharacterEvent } from '../game/events'
+import { DIE_FACES, faceTrigger, type CharacterEvent } from '../game/events'
 import { forgeState, rankLabel } from '../game/forge'
 import { SegmentedControl } from './kit'
 import { SkillSeal } from './SkillSeal'
@@ -20,7 +20,7 @@ import { ALIGN, SkillTooltip } from './SkillDice'
 /** Une face du dé, pour l'écran. */
 export interface DieCell {
   face: number
-  /** Sa compétence dans cette forme (le double de cette face pour deux dés) */
+  /** Sa compétence dans cette forme */
   event?: CharacterEvent
   /** Compétence gravée par la forge */
   engraved: boolean
@@ -37,8 +37,7 @@ export function dieCells(character: Character, form = 0): DieCell[] {
   const forge = forgeState(character.definition, character.forge)
   return Array.from({ length: DIE_FACES }, (_, k) => {
     const face = k + 1
-    const trigger = character.twinDice ? doubleTrigger(face) : faceTrigger(face)
-    const event = events.find((e) => e.trigger === trigger)
+    const event = events.find((e) => e.trigger === faceTrigger(face))
     return {
       face,
       event,
@@ -65,9 +64,9 @@ const formLabel = (name: string) => {
 export function DieBuild({ character }: { character: Character }) {
   const [form, setForm] = useState(0)
   const cells = dieCells(character, form)
-  const twin = character.twinDice
+  const dice = character.dice > 1 ? String(character.dice) : ''
   return (
-    <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : ${twin ? 'deux ' : ''}d${cells.length}`}>
+    <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : ${dice ? 'deux ' : ''}d${cells.length}`}>
       <header className="matchup-section-head">
         <span>Dé de combat</span>
         <span className="flex items-center gap-3">
@@ -83,20 +82,20 @@ export function DieBuild({ character }: { character: Character }) {
             </span>
           )}
           <span className="matchup-section-count">
-            {twin ? '2' : ''}d{cells.length}
+            {dice}d{cells.length}
           </span>
         </span>
       </header>
       <ul className="die-grid mt-[5px]">
         {cells.map((cell, k) => (
-          <FaceSlot key={cell.face} cell={cell} twin={twin} align={k < cells.length / 2 ? 'left' : 'right'} />
+          <FaceSlot key={cell.face} cell={cell} align={k < cells.length / 2 ? 'left' : 'right'} />
         ))}
       </ul>
     </section>
   )
 }
 
-function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 'left' | 'right' }) {
+function FaceSlot({ cell, align }: { cell: DieCell; align: 'left' | 'right' }) {
   const { face, event, gild, rank, engraved } = cell
   // Cartouche : le chiffre d'une face à compétence, suivi du bonus d'une dorure (« 3+2 ») ; le bonus seul sur une face simple
   const plate = `${event ? face : ''}${gild ? `+${gild}` : ''}`
@@ -134,7 +133,7 @@ function FaceSlot({ cell, twin, align }: { cell: DieCell; twin: boolean; align: 
             </span>
           </div>
           <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">
-            {twin ? `Chaque dé qui fait ${face} porte le coup de base` : 'Le coup de base, sans compétence'}
+            Le coup de base, sans compétence
             {gild ? `, +${gild} (face dorée).` : '.'}
           </p>
         </div>

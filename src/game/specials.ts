@@ -5,7 +5,7 @@
  * pure : rien n'est recalculé, le rejoueur lit la chronologie (champs d'`Attack`, étapes de réaction).
  *
  * N'y entrent pas (définition de l'utilisateur, 2026-10-21) : ce qui se déclenche (compétence, Pile ou face,
- * Furie des vents, Rétribution, doubles : leur sceau le dit, barre de compétences) et ce qui agit à chaque coup
+ * Furie des vents, Rétribution, Crescendo et Soliste : leur sceau le dit, barre de compétences) et ce qui agit à chaque coup
  * (auras et états durables : barre de compétences et zone d'état). Exception déclarée : la relique qui se
  * déclenche garde son label (`relicSpecial`), faute de sceau dans la barre de compétences.
  *

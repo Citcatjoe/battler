@@ -67,9 +67,7 @@ function momentTitle(moment: Moment, index: number, beats: readonly Beat[], figh
     case 'shift':
       return `Changement de forme ${of(fighters[beat.side].name)}`
     case 'flurry':
-      return `Rafale (${STATUSES[beat.status].name})`
-    case 'pair':
-      return `Paire de dés ${of(fighters[beat.side].name)}`
+      return beat.status ? `Rafale (${STATUSES[beat.status].name})` : `Deux dés ${of(fighters[beat.side].name)}`
     case 'roll':
       return `Jet de dé ${of(fighters[beat.side].name)}`
     case 'coin':

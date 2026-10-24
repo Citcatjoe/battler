@@ -183,7 +183,8 @@ export const RELICS: readonly Relic[] = [
     // 2026-10-21 (retour de l'utilisateur) : une seule fois par combat. Sans charge, elle se réarmait quand un
     // soin remontait le porteur au-dessus de 40 %, et repartait à la chute suivante.
     charges: 1,
-    effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 2 }],
+    // Phase 5 ter : +1 Vol de vie au lieu de +2 ; à +2, elle valait +22,0 points (`npm run relics`), au-delà du plafond de 20
+    effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
   },
   {
     id: 'bramble-collar',

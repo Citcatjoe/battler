@@ -2,12 +2,12 @@ import type { Character } from './character'
 import type { CharacterEvent, Effect } from './events'
 import {
   FALSE_NOTE,
+  INTIMIDATION,
   isAura,
   STATUS_IDS,
   STATUSES,
   statusCounter,
   WHISTLE_HEAL,
-  WILD_AURA_BONUS,
   type Polarity,
   type Status,
   type StatusId,
@@ -152,8 +152,8 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   intimidationAura: aura({
     state: 'weakened',
     on: 'opponent',
-    amount: (s) => 2 * s.stacks,
-    describe: (s) => `Ses coups lui font ${2 * s.stacks} de moins, avant l'armure, pour le reste du combat`,
+    amount: (s) => INTIMIDATION * s.stacks,
+    describe: (s) => `Ses coups lui font ${INTIMIDATION * s.stacks} de moins, avant l'armure, pour le reste du combat`,
   }),
   // Ces trois-là posent de vrais statuts (Poison, Pourriture) : ils s'affichent d'eux-mêmes chez la cible
   frostAura: aura(),

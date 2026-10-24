@@ -38,7 +38,7 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Dé posé | le dé s'arrête, le résultat est là | petit choc net de dé qui s'immobilise | 3 | 0,2 à 0,3 s |
 | | Pièce lancée | Pile ou face : la pièce tournoie en l'air | pièce qui tournoie, léger et en retrait : le résultat doit se détacher | 4 | 1 à 1,5 s, coupé quand elle retombe |
 | | Pièce retombe | le résultat de la pièce est là, pile comme face | pièce qui claque net sur une table, plus fort que le lancer | 2 | 0,2 à 0,6 s |
-| | Pile réussie (Ding) | une bonne nouvelle : la pièce est tombée sur pile, la barde a fait un double (0.46.0), ou un label + (qui amplifie l'action de l'attaquant) tombe sous le dé (2026-10-21, § 4.4) | « ding » clair et net : juste après la pièce qui retombe, en même temps que les deux dés, ou avec le label | 2 | 0,5 à 0,8 s |
+| | Pile réussie (Ding) | une bonne nouvelle : la pièce est tombée sur pile, ou un label + (qui amplifie l'action de l'attaquant) tombe sous le dé (2026-10-21, § 4.4) | « ding » clair et net : juste après la pièce qui retombe, ou avec le label | 2 | 0,5 à 0,8 s |
 | **Coups** | Coup | des dégâts portés par un coup, quelle qu'en soit la source | frappe d'épée, bruit métallique net | 2 | 0,3 à 0,4 s |
 | | Coup critique (composé) | un coup critique, le coup de Pile, ou le dernier coup d'une relâche (Rétribution) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
 | | *Grondement* | couche du Coup critique, jamais jouée seule | gros choc grave qui résonne | 1 | 0,6 à 0,9 s |
@@ -70,14 +70,14 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | --- | --- |
 | Initiative | Dé lancé, puis Dé posé (une fois, même avec deux dés) |
 | `attack` | Dé lancé, Dé posé, puis Coup, Coup critique ou Esquive. L'élan vers l'adversaire est muet : seul l'impact sonne. Un jet de compétence (1, 2 ou 3) s'arrête au Dé posé : le son de la compétence suit. Un coup transformé (Charge, Coup de griffe) sonne comme un coup. |
-| `flurry` (Furie des vents) | Un seul Dé lancé pour tous les dés, un seul Dé posé ; puis le son de chaque coup, qui se suivent sans se chevaucher |
+| `flurry` (Furie des vents, Coup de chance, les deux dés de la barde) | Un seul Dé lancé pour tous les dés, un seul Dé posé ; puis le son de chaque coup, qui se suivent sans se chevaucher. Les deux dés de la barde (phase 5 ter) : aucun son de plus, même sur deux faces égales ; chaque jet sonne comme un jet (le son de sa compétence, puis son coup) |
 | `event` (compétence) | Le son déduit de ses effets (§ 4.2) |
 | `statusTick` | Ronge si le statut inflige des dégâts, ou le son propre que son registre déclare (`tickSound` : Grésillement pour le Poison, 0.90.0) ; Soin s'il soigne |
 | `statusReaction` | Coup si le statut renvoie des dégâts (Riposte), même pour un gros renvoi ; Soin s'il soigne (Vol de vie) ; Ronge s'il fait perdre des PV à son propre porteur (Saignement, 0.68.0 ; depuis la 0.68.1, joué un battement après l'impact du coup qui fait couler la plaie, sur la même frappe) ; sinon le son déduit de ses effets (§ 4.2), par exemple Malus reçu quand l'Aura de décoction empoisonne ou quand les Épines acérées font saigner. Un statut posé par le coup qui vient de toucher (l'Aura de décoction, 2026-10-21) tombe avec l'impact de ce coup : son Malus reçu suit le Coup d'un battement (0,12 s), sur la même frappe, comme le Ronge du Saignement |
 | `skip` | Tour perdu |
 | `shift` | Transformation |
 | `coin` | Pièce lancée, Pièce retombe ; sur pile, Pile réussie **en même temps** (0.55.0, demande de l'utilisateur : le résultat, son son, son badge et son texte tombent d'un bloc ; avant, 0,14 s après), puis, après un temps de lecture, Coup critique au coup ; sur face, rien de plus. La pièce seule ne disait pas assez si le pari était gagné (retour de l'utilisateur, 0.36.4). |
-| `pair` | Dés lancés, Dé posé ; sur un double, quel qu'il soit, Pile réussie en même temps que les dés (0.46.0, demande de l'utilisateur : le double doit s'entendre tout de suite). Les coups qui suivent sonnent comme des coups. |
+| ~~`pair`~~ | Retirée en phase 5 ter avec les doubles de la barde, et avec elle le « ding » de tout double (Pile réussie en même temps que les dés, 0.46.0) : ses deux dés sont une rafale (`flurry`). |
 | `statusAge` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
 | Fin du combat | KO, puis Victoire |
 
@@ -121,7 +121,7 @@ Un label (badge sous le dé : « Critique ×2 », « Armure temporaire −6 », 
 4. **Jamais deux fois le même son au même instant** : plusieurs labels qui tombent ensemble (Critique assuré et Critique ; Armure temporaire et Fausse note) jouent un seul son par signe.
 5. **Pas de doublon de signification** : un label dont l'effet joue déjà le son de son signe dans la même frappe se tait (déduit : le son des effets, `cueOf`, est celui du signe). Aujourd'hui, les Épines acérées (−) et le Malus reçu du Saignement qu'elles posent.
 
-Hors de la colonne, donc sans son de label : Pile ou face, la Furie des vents, Coup de chance, Rétribution, les doubles (Crescendo, Soliste), les auras. La pièce sur pile et le double gardent leur propre ding (§ 4.1).
+Hors de la colonne, donc sans son de label : Pile ou face, la Furie des vents, Coup de chance, Rétribution, Crescendo et Soliste (ce coup ×N : leur coup sonne, la compétence est muette), les auras. La pièce sur pile garde son propre ding (§ 4.1).
 
 Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe ; `sound` n'émet qu'un son par nom et par instant, ce qui règle à la fois la règle 4 (deux labels du même signe) et la règle 5 (un effet qui joue déjà ce son dans la même frappe).
 
@@ -188,7 +188,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | La pièce | Le lancer sonnait plus fort que le résultat : le résultat doit être un tintement caractéristique, au-dessus du lancer. |
 | Les fichiers (0.36.3) | Un par son, choisis par l'utilisateur ; aucun pour Ronge. |
 | La pièce (0.36.4) | On ne savait pas si le pari était gagné : un « ding » clair après le résultat, sur pile (généré par l'agent). |
-| Le double de la barde (0.46.0) | « Quand il fait un double dé, peu importe lequel, ça doit faire ding instantanément, utilise un son existant » : le « ding » de Pile réussie, joué en même temps que les dés qui se posent. |
+| Le double de la barde (0.46.0) | « Quand il fait un double dé, peu importe lequel, ça doit faire ding instantanément, utilise un son existant » : le « ding » de Pile réussie, joué en même temps que les dés qui se posent. **Retiré en phase 5 ter** (2026-10-24) avec les doubles (décision de l'utilisateur : les compétences de la barde passent sur les faces) : plus de double, plus de ding. |
 | Les labels (2026-10-21) | « Chaque label positif doit faire un ding positif au moment de son affichage ; les labels négatifs un son négatif ; pioche dans ce qui existe (ding de la pièce ?) » : Pile réussie et Malus reçu. Puis (zone de surcharge) : le son suit le signe du label, vu de l'attaquant, et non plus son type (§ 4.4). |
 | Les dés (0.36.4) | Remettre ceux de la 0.36.0, avec leurs variantes tirées au hasard : exception à la règle 2, comme le critique en est une à la règle 3. |
 | Coup et Grondement (0.36.4) | Remplacés par `hit.wav` et `crit.wav`, déposés par l'utilisateur. |
@@ -210,7 +210,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Dé posé | la fin de tout jet, quelle que soit la face |
 | Pièce lancée | Pile ou face, quand la pièce part |
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
-| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; la barde, quand ses deux dés font un double (0.46.0) ; tout label + sous le dé : critique, bonus de relique, relique de l'attaquant qui se déclenche, Luciole, Vol de vie, Saignement (2026-10-21, § 4.4) |
+| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique de l'attaquant qui se déclenche, Luciole, Vol de vie, Saignement (2026-10-21, § 4.4). La barde sur un double jusqu'à la phase 5 ter |
 | Coup | un coup d'attaque qui touche (y compris ceux de l'ours et le coup de Pourfendre) ; la Riposte (renvoi) ; chaque jauge de la Rétribution sauf la dernière |
 | Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup de la Rétribution, ou un coup de compétence unique de 10 dégâts et plus ; la Foudre, un tonnerre par éclair, à son impact (trois en 0.76.0) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |

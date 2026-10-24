@@ -1,16 +1,17 @@
 /*
  * La mise en scène (docs/MOTEUR_V2.md § 4), sans navigateur : des combats à graine de tout le roster, mis en scène par
  * `stage`, puis rejoués par le réducteur du lecteur (`applyCue`). Les invariants valent pour tous ; les cas précis
- * (poison et Riposte, plaie qui coule, Peur, rafales, double de la barde, pièce, relique, druide, Foudre) sont
+ * (poison et Riposte, plaie qui coule, Peur, rafales, deux dés de la barde, pièce, relique, druide, Foudre) sont
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
 import { simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
+import { rollFace } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, CHARACTERS, createCharacter } from './roster'
 import { SCENE_EVENTS } from './scenes'
-import { childrenOf, skillFaceAt, skillFaceOf, stage, type Cue, type Moment } from './staging'
+import { childrenOf, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import type { Status } from './statuses'
 import { testCharacter } from './test-utils'
 import { effectBadge } from './narration'
@@ -234,7 +235,7 @@ describe('mise en scène', () => {
         expect(volley, `rafale ${beat.id}`).toBeDefined()
         const fast = m.cues.filter((c) => c.channel === 'strike' && c.strike?.fast && !c.strike.landed).length
         expect(fast).toBe(strikes.filter((b) => b.type === 'attack' && !b.attack.replaced).length)
-        if (STATUSES[beat.status].instantStrikes) {
+        if (beat.status && STATUSES[beat.status].instantStrikes) {
           expect(m.cues.some((c) => c.channel === 'dice' && c.dice.volley && c.dice.rolling)).toBe(false)
           instant++
         } else rolled++
@@ -243,20 +244,27 @@ describe('mise en scène', () => {
     expect(rolled).toBeGreaterThan(5)
   })
 
-  it('double de la barde : la paire retombe avec le ding, le dé de la face pulse, la compétence suit un battement après (M12)', () => {
+  it('deux dés de la barde : ils roulent ensemble, une fois ; chaque jet ressort son dé ; plus de « ding » de double (phase 5 ter)', () => {
+    let actions = 0
     let doubles = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
-        if (beat.type !== 'pair' || beat.double === undefined) continue
+        // Une action coupée par un K.O. n'a tiré que les dés de ses jets joués
+        if (beat.type !== 'flurry' || beat.status || beat.turn === result.turns) continue
         const m = momentOf(moments, beat.id)
+        expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling && c.dice.values.length === 2)).toHaveLength(1)
         const land = m.cues.find((c) => c.channel === 'dice' && !c.dice.rolling && c.dice.values.length === 2 && c.dice.values[0] > 0)!
         expect(land).toBeDefined()
-        expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(true)
-        expect(at(m, 'skillPulse', land.at)).toEqual([{ at: land.at, channel: 'skillPulse', side: beat.side, face: beat.double }])
-        expect(m.cues.some((c) => c.at === land.at + T.DICE_READ && (c.channel === 'signal' || c.channel === 'aura' || c.channel === 'float'))).toBe(true)
-        doubles++
+        expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(false)
+        if (land.channel === 'dice' && land.dice.values[0] === land.dice.values[1]) doubles++
+        // Chaque jet joué désigne son dé : le premier, puis le second
+        const children = childrenOf(result.beats)
+        const strikes = children[beat.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
+        for (let k = 0; k < strikes.length; k++) expect(m.cues.some((c) => c.channel === 'dice' && c.dice.active === k)).toBe(true)
+        actions++
       }
-    expect(doubles).toBeGreaterThan(5)
+    expect(actions).toBeGreaterThan(100)
+    expect(doubles).toBeGreaterThan(10)
   })
 
   it('pile ou face : pile tombe d’un bloc avec son ding, puis un seul coup lourd', () => {
@@ -371,7 +379,7 @@ describe('mise en scène', () => {
         if (beat.type === 'event' && ['naturalOne', 'naturalTwo', 'naturalThree'].includes(beat.event.trigger)) {
           const cause = beats[beat.cause!]
           expect(cause?.type, `${beat.event.name} sans jet`).toMatch(/^(attack|roll)$/)
-          const face = skillFaceOf(beat.event.trigger)
+          const face = rollFace(beat.event.trigger)
           if (cause.type === 'roll') {
             expect(cause.roll).toBe(face)
             const strike = children[cause.id].find((b) => b.type === 'attack')
@@ -515,9 +523,9 @@ describe('mise en scène', () => {
     const moments = stage(result, { test: true })
     expect(moments[0].duration).toBe(0)
     const marks = moments.flatMap((m) => m.rolls)
-    // Chaque dé lancé a son point : les deux de la paire, la pièce, le jet greffé (étape `roll`), le coup qui lance son
-    // dé. Une rafale annonce tous ses dés d'un coup, même si le K.O. arrête ses coups avant la fin
-    const dice = result.beats.reduce((n, b) => n + (b.type === 'pair' ? 2 : b.type === 'coin' || b.type === 'roll' || (b.type === 'attack' && !b.attack.preset) ? 1 : 0), 0)
+    // Chaque dé lancé a son point : la pièce, le jet greffé (étape `roll`), le coup qui lance son dé. Une rafale (les deux
+    // dés de la barde comprise) annonce tous ses dés d'un coup, même si le K.O. arrête ses coups avant la fin
+    const dice = result.beats.reduce((n, b) => n + (b.type === 'coin' || b.type === 'roll' || (b.type === 'attack' && !b.attack.preset) ? 1 : 0), 0)
     const flurries = result.beats.reduce((n, b) => n + (b.type === 'flurry' ? b.strikes : 0), 0)
     expect(Math.max(...marks.map((r) => r.upTo))).toBeGreaterThanOrEqual(dice)
     expect(Math.max(...marks.map((r) => r.upTo))).toBeLessThanOrEqual(dice + flurries)

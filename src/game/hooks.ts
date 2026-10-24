@@ -1,6 +1,6 @@
 import type { Character, CharacterStats } from './character'
 import { damageKind, type DamageKind } from './damage'
-import { doubleFace, rollFace, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
+import { rollFace, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
 import type { Relic } from './relics'
 import type { StatusId } from './statuses'
 
@@ -30,10 +30,9 @@ export type Hook =
   | `moment:${Moment}`
   /** Des dégâts infligés de ce type (DP, DM, DT) */
   | `damage:${DamageKind}`
-  /** Une face du dé qui tombe (« face:4 »), la face maximale, un double (deux dés) */
+  /** Une face du dé qui tombe (« face:4 »), la face maximale */
   | `face:${number}`
   | 'face:max'
-  | 'double'
   /** Une stat de base */
   | `stat:${keyof CharacterStats}`
 
@@ -69,7 +68,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
   powerAura: { side: 'self', produces: ['damage:physical'] },
   intimidationAura: { side: 'self' },
-  precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['stat:critMultiplier'] },
+  // 0.107.0 : +5 % de critique par charge en plus du multiplicateur : elle fait aussi critiquer
+  precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'stat:critMultiplier'] },
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
@@ -88,7 +88,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   melodiousAura: { side: 'self', produces: ['damage:physical'] },
   casting: { side: 'self' },
   bearMight: { side: 'self', produces: ['damage:physical'] },
-  wildAura: { side: 'self', produces: ['damage:physical'] },
+  // 0.107.0 : elle écrit l'attaque (minimum et maximum), au lieu d'un bonus après le critique
+  wildAura: { side: 'self', produces: ['stat:attackMin', 'stat:attackMax', 'damage:physical'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -96,7 +97,6 @@ function triggerHook(t: Trigger): Hook | undefined {
   if (t === 'naturalMax') return 'face:max'
   const face = rollFace(t)
   if (face !== undefined) return `face:${face}`
-  if (doubleFace(t) !== undefined) return 'double'
   return t === 'hit' || t === 'hurt' || t === 'crit' || t === 'dodge' || t === 'missed' ? `moment:${t}` : undefined
 }
 
@@ -129,7 +129,7 @@ export function eventHooks(e: CharacterEvent): Hooks {
   const on = triggerHook(e.trigger)
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
-  // Crescendo, Soliste : un coup de base multiplié, à la place des deux coups du double
+  // Crescendo, Soliste : ce coup ×N, un gros coup qui touche
   if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:physical')
   for (const effect of e.effects) addEffect(h, effect)
   return unique(h)

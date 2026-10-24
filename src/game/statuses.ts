@@ -146,12 +146,12 @@ export interface StatusDef {
   instantStrikes?: boolean
   /**
    * Pile ou face (relation « modifie », règles v2) : le porteur lance aussitôt une pièce, juste après le coup qui a posé
-   * le statut. Pile, ce coup compte double : l'adversaire perd à nouveau les PV que le coup lui a retirés (DP) ; face,
-   * rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche (fenêtres `hit` du porteur et
-   * `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol
-   * de vie, Riposte, jauges de Rétribution).
+   * le statut. Pile, ce coup ×`multiplier` : l'adversaire perd encore `multiplier` − 1 fois les PV que le coup lui a
+   * retirés (DP, en une perte) ; face, rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche
+   * de ce montant (fenêtres `hit` du porteur et `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit
+   * (Aura de décoction, Épines, Saignement, Vol de vie, Riposte, jauges de Rétribution).
    */
-  coinToss?: { headsTouches?: boolean }
+  coinToss?: { multiplier: number; headsTouches?: boolean }
   /**
    * S'estompe : chaque fois qu'il agit (`onTurnStart`, `onTurnEnd` ou une réaction), le statut perd une
    * charge, et disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3,
@@ -233,18 +233,37 @@ const forTurns = (s: Status) => (s.turns === undefined ? '' : `, encore ${plural
 export const WHISTLE_HEAL = 2
 export const FALSE_NOTE = 5
 
-/** Charges de poison posées par coup qui touche, par charge d'Aura de décoction. */
-export const DECOCTION_POISON = 2
+/**
+ * Charges de poison posées par coup qui touche, par charge d'Aura de décoction. 2 jusqu'à la 0.106.1 ; 1 depuis la
+ * 0.107.0 (revue des compétences, SORTS.md § 19) : un coup à chaque jet l'avait doublée (+28 points gravée).
+ */
+export const DECOCTION_POISON = 1
 
 /**
- * Druide : ce que l'ours ajoute à chacun de ses coups (Force de l'ours), et par charge d'Aura sauvage.
+ * Druide : ce que l'ours ajoute à chacun de ses coups (Force de l'ours).
  * +4 en 0.73.0, +3 en 0.76.0 : la compensation des trois éclairs de la Foudre (6 dégâts au lieu de 5).
  */
 export const BEAR_MIGHT = 3
-export const WILD_AURA_BONUS = 2
 
-/** Plafond de charges de l'Aura de sainteté (0.42.0). */
-const HOLY_CAP = 3
+/** Aura sauvage (0.107.0) : l'attaque du porteur, minimum et maximum, gagne autant par charge (avant le critique). */
+export const WILD_AURA_ATTACK = 1
+
+/** Aura d'intimidation : dégâts retirés à chaque coup de l'adversaire, par charge (2 jusqu'à la 0.106.1). */
+export const INTIMIDATION = 1
+
+/** Aura de précision (0.107.0) : par charge, +1 au multiplicateur de critique et ce gain de chance de critique. */
+export const PRECISION_CRIT = 0.05
+
+/** Pile ou face : pile, ce coup ×3 (×2 jusqu'à la 0.106.1). */
+export const COIN_HEADS = 3
+
+/**
+ * Aura de sainteté : plafond de charges (0.42.0) et PV rendus par charge à chaque fin de tour. 3 charges de 2 PV jusqu'à
+ * la 0.106.1 ; 2 charges (décision de l'utilisateur) de 1 PV depuis la 0.107.0 : le plafond seul la laissait à +23 points
+ * gravée (on atteint rarement la troisième charge), 2 PV par charge en une seule charge la rendait non cumulable.
+ */
+const HOLY_CAP = 2
+const HOLY_HEAL = 1
 
 export const STATUSES: Record<StatusId, StatusDef> = {
   guaranteedCrit: {
@@ -466,9 +485,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
-    summary: 'Le porteur lance aussitôt une pièce, juste après le coup qui l’a posée : pile, ce coup compte double, l’adversaire perd à nouveau les PV qu’il lui a retirés, en dégâts directs qui comptent comme un coup qui touche (tout ce qui réagit à un coup part : Aura de décoction, Épines, Saignement, Riposte, Vol de vie, jauges de Rétribution) ; face, rien.',
-    describe: () => "Une pièce lancée aussitôt : pile, ce coup compte double (ses PV, à nouveau, comme un coup qui touche) ; face, rien",
-    badge: () => '×2',
+    summary: `Le porteur lance aussitôt une pièce, juste après le coup qui l’a posée : pile, ce coup ×${COIN_HEADS}, l’adversaire perd encore ${COIN_HEADS - 1} fois les PV qu’il lui a retirés, en dégâts directs qui comptent comme un coup qui touche (tout ce qui réagit à un coup part : Aura de décoction, Épines, Saignement, Riposte, Vol de vie, jauges de Rétribution) ; face, rien.`,
+    describe: () => `Une pièce : pile, ce coup ×${COIN_HEADS} ; face, rien`,
+    badge: () => `×${COIN_HEADS}`,
     stacking: 'refresh',
     mechanic: 'skill',
     maxStacks: 1,
@@ -477,8 +496,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // Avant : valeur nette de −4 à −5 points, parce que la pièce prend la place d'un jet de dé.
     // 2026-10-21 (demande de l'utilisateur) : la pièce part aussitôt, juste après le jet de 2 qui l'a posée,
     // au lieu de remplacer le dé de l'action suivante.
-    // Règles v2, phase 5 bis (décision de l'utilisateur, 2026-10-23) : pile, ce coup ×2, au lieu de 10 dégâts fixes
-    coinToss: { headsTouches: true },
+    // Règles v2, phase 5 bis (décision de l'utilisateur, 2026-10-23) : pile, ce coup ×2, au lieu de 10 dégâts fixes.
+    // 0.107.0 (décision de l'utilisateur, SORTS.md § 19) : ×3, un gros coup sur deux (+8 points gravée à ×2).
+    coinToss: { multiplier: COIN_HEADS, headsTouches: true },
   },
   luckyStrike: {
     name: 'Coup de chance',
@@ -496,7 +516,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     extraStrikes: 1,
     strikeCharges: 'all',
-    // Règles v2, phase 5 bis : le jet qui le pose ne frappe pas (relation « remplace ») ; chaque jet donné est complet
+    // 0.107.0 (SORTS.md § 19) : le jet qui le pose se greffe (son coup part) ; remplacer le coup en faisait perdre un
+    // pour en gagner un plus tard (+3 points gravé). Chaque jet donné est complet
   },
 
   /* Paladin (0.31.0). */
@@ -548,31 +569,36 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de puissance',
     look: { aura: 'rgba(251,146,60,0.55)' },
     polarity: 'positive',
-    summary: "Chaque coup du porteur inflige 2 dégâts de plus par charge, après le critique et avant l'armure. Permanente.",
-    describe: (s) => `Ses coups infligent ${2 * s.stacks} de plus, après le critique et avant l'armure, pour le reste du combat`,
-    badge: (s) => `+${2 * s.stacks}`,
-    stacking: 'add',
+    summary: "Chaque coup du porteur inflige 2 dégâts de plus, après le critique et avant l'armure. Permanente, non cumulable.",
+    describe: () => "Ses coups infligent 2 de plus, après le critique et avant l'armure, pour le reste du combat",
+    badge: () => '+2',
+    // 0.107.0 (SORTS.md § 19) : non cumulable, comme l'Aura d'immunité ; +2 par charge cumulable valait +21 points gravée.
+    // L'Aura sauvage, elle, cumule +1 à l'attaque (avant le critique)
+    stacking: 'refresh',
+    maxStacks: 1,
     modifyOutgoing: (damage, s) => damage + 2 * s.stacks,
   },
   intimidationAura: {
     name: "Aura d'intimidation",
     look: { aura: 'rgba(185,28,28,0.6)' },
     polarity: 'positive',
-    summary: "Les coups de l'adversaire du porteur infligent 2 dégâts de moins par charge, après le critique et avant l'armure. Permanente.",
-    describe: (s) => `Les coups de l'adversaire lui infligent ${2 * s.stacks} de moins, après le critique et avant l'armure, pour le reste du combat`,
-    badge: (s) => `−${2 * s.stacks}`,
+    summary: `Les coups de l'adversaire du porteur infligent ${INTIMIDATION} dégât de moins par charge, après le critique et avant l'armure. Permanente.`,
+    describe: (s) => `Les coups de l'adversaire lui infligent ${INTIMIDATION * s.stacks} de moins, après le critique et avant l'armure, pour le reste du combat`,
+    badge: (s) => `−${INTIMIDATION * s.stacks}`,
     stacking: 'add',
-    modifyIncoming: (damage, s) => damage - 2 * s.stacks,
+    // 0.107.0 (SORTS.md § 19) : −1 par charge au lieu de −2 ; sur une attaque de 5, −2 retirait 40 % de chaque coup
+    modifyIncoming: (damage, s) => damage - INTIMIDATION * s.stacks,
   },
   precisionAura: {
     name: 'Aura de précision',
     look: { aura: 'rgba(250,204,21,0.5)' },
     polarity: 'positive',
-    summary: 'Le multiplicateur de critique du porteur gagne +1 par charge. Permanente.',
-    describe: (s) => `Son multiplicateur de critique gagne +${s.stacks}, pour le reste du combat`,
+    summary: `Par charge, le porteur gagne ${Math.round(PRECISION_CRIT * 100)} % de chance de critique et +1 à son multiplicateur de critique. Permanente.`,
+    describe: (s) => `+${Math.round(PRECISION_CRIT * 100 * s.stacks)} % de critique et +${s.stacks} au multiplicateur de critique, pour le reste du combat`,
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
-    modifyStats: (stats, s) => ({ ...stats, critMultiplier: stats.critMultiplier + s.stacks }),
+    // 0.107.0 (SORTS.md § 19) : la chance de critique en plus ; sans elle, un porteur sans critique (Morgrut) n'en tirait rien
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + PRECISION_CRIT * s.stacks, critMultiplier: stats.critMultiplier + s.stacks }),
   },
   immunityAura: {
     name: "Aura d'immunité",
@@ -593,20 +619,21 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de sainteté',
     look: { aura: 'rgba(254,243,199,0.6)' },
     polarity: 'positive',
-    summary: `Le porteur regagne 2 PV par charge à la fin de chacun de ses tours (${HOLY_CAP} charges au plus). Permanente.`,
-    describe: (s) => `Regagne ${plural(2 * s.stacks, 'PV')} à la fin de chacun de ses tours, pour le reste du combat`,
-    badge: (s) => `+${2 * s.stacks}`,
+    summary: `Le porteur regagne ${plural(HOLY_HEAL, 'PV')} par charge à la fin de chacun de ses tours (${HOLY_CAP} charges au plus). Permanente.`,
+    describe: (s) => `Regagne ${plural(HOLY_HEAL * s.stacks, 'PV')} à la fin de chacun de ses tours, pour le reste du combat`,
+    badge: (s) => `+${HOLY_HEAL * s.stacks}`,
     stacking: 'add',
     // 0.42.0 : plafond de charges (`HOLY_CAP`). Sans plafond, les soins s'empilaient et les combats
     // des prêtresses devenaient longs et joués d'avance (+42 points de valeur nette, 16 % de fins serrées).
+    // 0.107.0 (SORTS.md § 19) : 2 charges de 1 PV, au lieu de 3 de 2 (+23 points gravée, +32 dans le kit d'Ysolde)
     maxStacks: HOLY_CAP,
-    onTurnEnd: (s) => [{ type: 'heal', amount: 2 * s.stacks }],
+    onTurnEnd: (s) => [{ type: 'heal', amount: HOLY_HEAL * s.stacks }],
   },
   decoctionAura: {
     name: 'Aura de décoction',
     look: { aura: 'rgba(163,230,53,0.5)' },
     polarity: 'positive',
-    summary: `Chaque coup qui touche (pile comprise) empoisonne la cible : ${DECOCTION_POISON} charges de Poison par charge d’aura. Permanente.`,
+    summary: `Chaque coup qui touche (pile comprise) empoisonne la cible : ${plural(DECOCTION_POISON, 'charge')} de Poison par charge d’aura. Permanente.`,
     describe: (s) => `Chaque coup qui touche pose ${plural(DECOCTION_POISON * s.stacks, 'charge')} de Poison, pour le reste du combat`,
     badge: (s) => `+${DECOCTION_POISON * s.stacks}`,
     stacking: 'add',
@@ -688,14 +715,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura sauvage',
     look: { aura: 'rgba(180,83,9,0.55)' },
     polarity: 'positive',
-    summary: `Chaque coup du porteur fait ${WILD_AURA_BONUS} de plus par charge, après le critique et avant l'armure : posée par l'homme, elle sert l'ours, le seul qui frappe. Permanente.`,
-    describe: (s) => `Ses coups font +${WILD_AURA_BONUS * s.stacks}, après le critique et avant l'armure, pour le reste du combat`,
-    badge: (s) => `+${WILD_AURA_BONUS * s.stacks}`,
+    summary: `L'attaque du porteur gagne ${WILD_AURA_ATTACK} par charge, minimum et maximum : chaque coup vaut plus, avant le critique. Permanente.`,
+    describe: (s) => `Son attaque gagne +${WILD_AURA_ATTACK * s.stacks} (minimum et maximum), pour le reste du combat`,
+    badge: (s) => `+${WILD_AURA_ATTACK * s.stacks}`,
     stacking: 'add',
-    modifyOutgoing: (damage, s) => damage + WILD_AURA_BONUS * s.stacks,
+    // 0.107.0 (décision de l'utilisateur, SORTS.md § 19) : elle écrit la feuille (la ligne « Attaque » monte) et compte
+    // avant le critique ; elle était un doublon de l'Aura de puissance (+2 par charge après le critique)
+    modifyStats: (stats, s) => ({ ...stats, attackMin: stats.attackMin + WILD_AURA_ATTACK * s.stacks, attackMax: stats.attackMax + WILD_AURA_ATTACK * s.stacks }),
   },
 
-  /* Barde (0.41.0) : deux dés, des compétences sur les doubles. */
+  /* Barde (0.41.0) : deux dés ; ses compétences sur les faces depuis la phase 5 ter (doubles avant). */
   whistling: {
     name: 'Sifflotement',
     polarity: 'positive',
@@ -833,7 +862,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.coinToss)
     say(
       effect,
-      `Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, ce coup compte double, l'adversaire perd à nouveau les PV qu'il lui a retirés, en dégâts directs${def.coinToss.headsTouches ? ' qui comptent comme un coup qui touche (tout ce qui réagit quand il touche ou quand l’adversaire encaisse un coup part)' : ''} ; face, rien. Le statut est consommé.`,
+      `Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, ce coup ×${def.coinToss.multiplier}, l'adversaire perd encore ${def.coinToss.multiplier - 1} fois les PV qu'il lui a retirés, en dégâts directs${def.coinToss.headsTouches ? ' qui comptent comme un coup qui touche (tout ce qui réagit quand il touche ou quand l’adversaire encaisse un coup part)' : ''} ; face, rien. Le statut est consommé.`,
       'direct-damage',
     )
   if (def.forcesCrit) say(effect, 'Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.', 'crit')

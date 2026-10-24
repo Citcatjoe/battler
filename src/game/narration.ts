@@ -9,7 +9,7 @@ import {
   type TriggeredEvent,
   type Beat,
 } from './combat'
-import { lowerFirst, STATUSES, type StatusId } from './statuses'
+import { COIN_HEADS, lowerFirst, STATUSES, type StatusId } from './statuses'
 
 /*
  * Textes du journal et badges à l'écran, générés à partir de la chronologie et du registre
@@ -240,26 +240,12 @@ export function shiftLog(turn: number, side: Side, form: number, fighters: Pair<
   return { kind: 'event', side, text: `Tour ${turn} · ${c.name} prend sa ${c.forms?.[form].name.toLowerCase() ?? 'autre forme'}.` }
 }
 
-/** Coups multiples (ex. Furie des vents) */
-export function flurryLog(turn: number, side: Side, status: StatusId, strikes: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
-  return {
-    kind: 'status',
-    side,
-    text: `Tour ${turn} · ${statusLabel(status)} · ${fighters[side].name} frappe ${strikes} fois !`,
-  }
-}
-
-/** Deux dés (barde) : la paire lancée, et ce qu'elle donne */
-export function pairLog(turn: number, side: Side, rolls: [number, number], skill: string | undefined, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+/** Coups multiples (ex. Furie des vents), ou les deux dés de la barde (sans statut) */
+export function flurryLog(turn: number, side: Side, status: StatusId | undefined, strikes: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   const name = fighters[side].name
-  const [x, y] = rolls
-  return {
-    kind: skill ? 'event' : 'attack',
-    side,
-    text: skill
-      ? `Tour ${turn} · ${name} fait un double ${x} : ${skill} !`
-      : `Tour ${turn} · ${name} lance ses deux dés : ${x} et ${y}${x === y ? ', un double' : ''}, deux coups.`,
-  }
+  return status
+    ? { kind: 'status', side, text: `Tour ${turn} · ${statusLabel(status)} · ${name} frappe ${strikes} fois !` }
+    : { kind: 'attack', side, text: `Tour ${turn} · ${name} lance ses deux dés.` }
 }
 
 /** Un jet dont la face porte une compétence qui se greffe : le dé, avant la compétence et le coup de base */
@@ -274,7 +260,7 @@ export function coinLog(turn: number, side: Side, heads: boolean, effects: Appli
     kind: 'status',
     side,
     text: heads
-      ? `Tour ${turn} · Pile ! Le coup compte double : ${effects.map((e) => effectText(e, fighters)).join(', ')}.`
+      ? `Tour ${turn} · Pile ! Ce coup ×${COIN_HEADS} : ${effects.map((e) => effectText(e, fighters)).join(', ')}.`
       : `Tour ${turn} · Face… ${name} ne gagne rien cette fois.`,
   }
 }

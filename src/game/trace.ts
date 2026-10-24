@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { DAMAGE_KINDS } from './damage'
-import { DIE_FACES, doubleTrigger, relationOf, triggerText, type CharacterEvent, type Trigger } from './events'
+import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
 import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
@@ -107,7 +107,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
-      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) »), multipliée par Crescendo ou Soliste
+      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) »), ×N par Crescendo ou Soliste
       const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${DAMAGE_KINDS[a.kind].short})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
         return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
@@ -133,7 +133,10 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     }
     case 'event': {
       const e = beat.event
-      return [`Compétence « ${e.name} » ${of(fighters[e.side].name)} (${triggerText(e.trigger).label.toLowerCase()})`, ...effects(e.effects)]
+      const head = `Compétence « ${e.name} » ${of(fighters[e.side].name)} (${triggerText(e.trigger).label.toLowerCase()})`
+      // Crescendo, Soliste : leur effet est le multiplicateur du coup qu'ils modifient, déjà compté dans ce coup
+      const boost = fighters[e.side].events.find((x) => x.id === e.eventId)?.hitMultiplier
+      return boost && e.effects.length === 0 ? [`${head} → ce coup ×${boost}, compté dans le coup ci-dessus`] : [head, ...effects(e.effects)]
     }
     case 'statusTick':
       return [
@@ -160,17 +163,13 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [`${label(beat.status)} : ${fighters[beat.side].name} perd son action (une charge consommée)`]
     case 'shift':
       return [`${fighters[beat.side].name} change de forme : ${fighters[beat.side].forms?.[beat.form].name ?? beat.form}`]
-    case 'flurry':
-      return [
-        `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque jet résolu à part (statut consommé)`,
-      ]
-    case 'pair': {
+    case 'flurry': {
       const c = fighters[beat.side]
-      const forced = beat.forced ? beat.rolls.map((r, k) => `${r}${beat.forced![k] ? ' [imposé]' : ''}`) : beat.rolls
-      const double = beat.double === undefined ? undefined : c.events.find((e) => e.trigger === doubleTrigger(beat.double!))
-      const skill = double?.name
+      const dice = beat.faces.map((f) => `d${f}`).join(' + ')
       return [
-        `${c.name} lance ses deux dés (d${beat.faces}) : ${forced.join(' et ')} → ${skill ? `double ${beat.double} : « ${skill} », ${double && relationOf(double) === 'replace' ? 'à la place des deux coups' : 'puis les deux coups'}` : 'deux coups de base, un par dé'}`,
+        beat.status
+          ? `${label(beat.status)} : ${c.name} frappe ${beat.strikes} fois cette action (${dice}${c.dice > 1 && !STATUSES[beat.status].instantStrikes ? `, dont ses ${c.dice} dés` : ''}), chaque jet résolu à part (statut consommé)`
+          : `${c.name} lance ses deux dés (${dice}) : deux jets complets, chacun sa face, sa compétence et son coup de base`,
       ]
     }
     case 'roll':

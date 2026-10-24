@@ -61,7 +61,7 @@ Règles communes ([RESOLUTION.md](RESOLUTION.md) § 3 et § 5) :
 5. **Seuil** : il part au passage sous le seuil (un coup, un poison, un effet), jamais sur le coup qui met K.O. Le passage se lit sur les PV du changement vérifié : deux reliques passées sous leur seuil par un même coup partent toutes les deux, même si la première soigne (0.85.0 : Larme de givre puis Trophée du chasseur adverse ; avant, le soin de la Larme effaçait le passage du Trophée). Il se réarme dès qu'un soin remonte les PV au-dessus du seuil (`rearmThresholds`), même si une perte les refait passer dessous avant la vérification suivante (vol de vie puis Riposte sur le même coup). Une recharge ou une condition fausse au moment du passage consomme ce passage. **Une relique de seuil a une charge ou une recharge** (2026-10-21, retour de l'utilisateur sur la Dent de loup) : sans l'une ni l'autre, chaque soin la réarmait et elle repartait à chaque nouvelle chute. L'audit (`audit.ts`, « relique de seuil sans limite ») le vérifie.
 6. **Effets** : ceux des compétences (soin, dégâts directs, pose de statut, purge), du point de vue du porteur. Pas de relâche de jauges.
 7. **Jamais de malus sur l'adversaire.** Un statut posé par une relique est un bonus de son porteur ; vers l'adversaire, seuls les dégâts directs. Permis aussi : un bonus qui réagit plus tard contre l'adversaire (les Épines du Collier de ronces font saigner l'attaquant quand il frappe : c'est l'effet des Épines, pas de la relique). `validateRelics` refuse tout le reste.
-8. **Deux dés : chaque dé se lit seul.** « Sur un 1 » part dès qu'un des deux dés fait 1 (un double 1 qui frappe deux coups de 1 l'éveille deux fois) ; le jet maximal est celui d'un seul dé ; un bonus de face va au coup du dé qui l'a déclenché (sur 4 et 5 avec ses d5, le Fer renforce le coup du 4). Un double sans coup (le double 3 de Fanchon, une aura) n'ouvre pas les moments du jet.
+8. **Deux dés : chaque dé se lit seul.** « Sur un 1 » part dès qu'un des deux dés fait 1 (deux 1 l'éveillent deux fois) ; le jet maximal est celui d'un seul dé ; un bonus de face va au coup du dé qui l'a déclenché (le Fer renforce le coup du dé qui fait 4). Depuis la 0.107.0, chaque dé de la barde est un jet complet (face, compétence, coup) : plus de doubles, chaque jet ouvre ses moments.
 
 La chronologie a une étape `relic` (porteur, relique, effets, rang du déclenchement) ; le bonus de coup est noté sur le coup (`Attack.relicBonus`). Le son se déduit des effets, comme pour une compétence ([SONS.md](SONS.md) § 4.2) : aucun son propre. Piste ouverte : un même déclic d'objet avant le son de l'effet, pour qu'on entende « relique » ; à décider dans SONS.md.
 
@@ -115,7 +115,7 @@ flowchart LR
 | Cloche d'ouverture | Au 1er tour : +1 Critique assuré | |
 | Chapelet de l'ermite | Tous les 3 tours : retire son dernier malus, sinon +3 PV | |
 | Clepsydre du siège | Au 6e tour, puis tous les 4 tours : +1 Critique assuré (0.105.0 ; une Aura de puissance cumulée avant) | |
-| Dent de loup | Sous 40 % PV : +2 Vol de vie | 1 fois par combat |
+| Dent de loup | Sous 40 % PV : +1 Vol de vie (0.107.0 ; +2 avant) | 1 fois par combat |
 | Collier de ronces | Sous 50 % PV : +2 Épines acérées | 1 fois par combat |
 | Trophée du chasseur | Adversaire sous 30 % PV : +1 Critique assuré | 1 fois par combat |
 | Braise captive | Au 4e tour : 3 × 2 dégâts directs | |
@@ -225,6 +225,29 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 
 **Cotte du mercenaire baissée (0.106.1, décision de l'utilisateur)** : +1 armure, −5 % d'esquive, le repli prévu dès la 0.77.0. Mesurée (`npm run relics`, 400 combats par duel) : **+28,2 → +13,7**, dans la cible ; d'Aldric +7,1 à Morgrut +20,9, qui n'a pas d'esquive à perdre.
 
+**Revue des compétences (0.107.0)**, même mesure (`npm run relics`, 400 combats par duel, roster de la 0.107.0) ; avant → après (avant : le log de la 0.106.0, la Cotte à sa valeur de la 0.106.1) :
+
+| Relique | 0.106.x → 0.107.0 |
+| --- | --- |
+| Contrepoids de plomb | +3,9 → +4,0 |
+| Bottes de feutre | +7,1 → +7,9 |
+| Cotte du mercenaire | +13,7 → +14,6 |
+| Osselet fendu | +9,7 → +9,9 |
+| Dé creux | +14,0 → +15,8 |
+| Fer à quatre clous | +12,9 → +13,6 |
+| Cloche d'ouverture | +10,5 → +12,8 |
+| Chapelet de l'ermite | +16,7 → +17,6 |
+| Clepsydre du siège | +12,1 → +13,2 |
+| Dent de loup | +18,6 → **+22,0** ; +1 Vol de vie : **+12,4** |
+| Collier de ronces | +16,9 → +17,3 |
+| Trophée du chasseur | +10,1 → +11,4 |
+| Braise captive | +13,6 → +15,1 |
+| Larme de givre | +13,4 → +14,5 |
+| Conque des vents | +8,7 → +9,4 |
+| Géode fendue | +16,2 → +18,8 |
+
+**Lecture (0.107.0).** Tout monte d'environ 1 point, le roster s'étant resserré. Seule la **Dent de loup** passe au-delà de 20 (+22,0) : la compétence Vol de vie ne pose plus qu'1 charge, la relique en posait encore 2. Corrigée à **+1 Vol de vie** : **+12,4**, d'Elaria +10,7 à Morgrut +16,1. Les quinze autres restent entre +4,0 (Contrepoids) et +18,8 (Géode fendue).
+
 **Lecture.**
 - Neuf sur douze dans la cible ; trois au-dessus de 15 : Cotte +18,1, Chapelet +16,3, Dent de loup **+21,4** (au-delà de 20).
 - **Fanchon est la grande gagnante des reliques de coup** (Dé creux +25,9, Contrepoids +20,9, Fer +19,2, Osselet +18,0) : ses deux petits dés lancent deux fois plus de faces par tour, donc éveillent deux fois plus souvent une relique de face. C'est la règle 8 qui le veut ; c'est aussi une méta lisible (« la barde aux talismans »).
@@ -301,8 +324,8 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 Une relique de seuil se réarmait quand les PV remontaient au-dessus : sans charge, les soigneurs la déclenchaient plusieurs fois (Dent de loup sur Ysolde +23,7). Depuis le 2026-10-21, les trois reliques de seuil ne partent qu'une fois par combat.
 
 #### Dent de loup
-- **Règle** : quand ses PV passent sous 40 % : Vol de vie, 2 charges (ses deux prochains coups qui touchent lui rendent les PV qu'ils retirent). Une fois par combat.
-- **Pourquoi** : le retour qui se mérite. À l'inverse d'un soin net, il faut toucher pour se soigner. Ervald, qui pose déjà le Vol de vie sur un 2, plafonne à 2 charges : il en gagne le moins (+15,6). La plus forte des douze (+21,4), mesurée quand elle se réarmait.
+- **Règle** : quand ses PV passent sous 40 % : Vol de vie, 1 charge (son prochain coup qui touche lui rend les PV qu'il retire). Une fois par combat. De la 0.77.0 à la 0.106.1 : 2 charges.
+- **Pourquoi** : le retour qui se mérite. À l'inverse d'un soin net, il faut toucher pour se soigner. Ervald, qui pose déjà le Vol de vie sur un 2, plafonne à 2 charges. **0.107.0** : le Vol de vie d'Ervald passe à 1 charge, la relique monte à +22,0 avec ses 2 charges, au-delà de 20 ; à 1 charge, **+12,4** (d'Elaria +10,7 à Morgrut +16,1). En 0.77.0, la plus forte des douze (+21,4), mesurée quand elle se réarmait.
 - **2026-10-21, une seule fois** (retour de l'utilisateur : « elle ne se déclenche qu'une fois ») : elle se réarmait dès qu'un soin, son propre Vol de vie compris, remontait le porteur au-dessus de 40 %, et repartait à la chute suivante. Sur les traces de l'utilisateur, Aldric l'a déclenchée deux fois dans un combat (`2026-10-20_22-55-49_aldric-vs-morgrut`, tours 9 et 15). Dans un duel de test où chaque coup rend 1 PV et en retire 1, elle partait 187 fois ; maintenant une seule (`combat.test.ts`).
 - **Illustration** : une canine de loup enfermée dans une petite cage de fil de fer, la dent fêlée aux quatre dixièmes de sa hauteur. Sur un cordon.
 

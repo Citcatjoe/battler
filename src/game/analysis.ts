@@ -79,7 +79,8 @@ function statusValues(r: CombatResult, side: Side, into: Map<StatusId, { total: 
     into.set(id, cur)
   }
   const benefits = (bearer: Side, id: StatusId) => (STATUSES[id].polarity === 'positive' ? bearer === side : bearer !== side)
-  // Rafale en cours : le premier coup est le coup normal, les suivants sont l'apport de la Furie
+  // Rafale en cours : ses premiers coups valent ceux d'une action sans le statut (un : la Furie remplace son jet ; un par
+  // dé pour Coup de chance, deux pour la barde), les suivants sont l'apport du statut. Les deux dés seuls n'apportent rien.
   let flurry: { status: StatusId; skip: number; extra: number } | null = null
   for (const b of r.beats) {
     if (b.type === 'statusTick' || b.type === 'statusReaction') {
@@ -88,7 +89,10 @@ function statusValues(r: CombatResult, side: Side, into: Map<StatusId, { total: 
     }
     if (b.type === 'coin' && b.side === side)
       for (const e of b.effects) if (e.type === 'damage') add(b.status, e.amount, 'PV')
-    if (b.type === 'flurry') flurry = b.side === side ? { status: b.status, skip: 1, extra: b.strikes - 1 } : null
+    if (b.type === 'flurry') {
+      const own = b.status && !STATUSES[b.status].instantStrikes ? r.fighters[b.side].dice : 1
+      flurry = b.side === side && b.status ? { status: b.status, skip: own, extra: b.strikes - own } : null
+    }
     if (b.type !== 'attack') continue
     const a = b.attack
     for (const m of a.modifiers) {

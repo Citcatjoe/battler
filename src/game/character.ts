@@ -148,8 +148,8 @@ export interface CharacterDef {
    */
   forms?: readonly [CharacterForm, CharacterForm]
   /**
-   * Deux dés par action (la barde) : deux coups de base, un par dé ; un double déclenche la compétence de sa
-   * face (`doubleOne` à `doubleFive`), qui se greffe sur les deux coups ou les remplace. Voir docs/RESOLUTION.md § 2.
+   * Deux dés par action (la barde) : une action à deux jets complets, un par dé ; chaque dé désigne une face, qui
+   * déclenche sa compétence, puis le coup de base de ce dé (docs/RESOLUTION.md § 2).
    */
   twinDice?: true
   /**
@@ -183,7 +183,8 @@ export class Character {
   readonly events: readonly CharacterEvent[]
   readonly immunities: readonly StatusId[]
   readonly forms?: readonly [CharacterForm, CharacterForm]
-  readonly twinDice: boolean
+  /** Dés lancés à chaque action, donc jets de l'action hors Coup de chance : 2 pour un personnage à deux dés (`twinDice`), sinon 1 */
+  readonly dice: number
   readonly relics: readonly Relic[]
   /** Journal de forge de son dé (vide : dé d'origine) */
   readonly forge: readonly ForgeStep[]
@@ -209,7 +210,7 @@ export class Character {
     this.gilded = Object.freeze(forged ? Object.fromEntries(forged.gilded) : {})
     this.immunities = def.immunities ?? []
     this.forms = def.forms
-    this.twinDice = !!def.twinDice
+    this.dice = def.twinDice ? 2 : 1
   }
 
   /** Type du coup de base sous une forme donnée (index dans `forms`) : celui de la forme, sinon le sien. */

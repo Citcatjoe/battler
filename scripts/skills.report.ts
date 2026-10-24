@@ -6,8 +6,11 @@
  *   combats renversés, fréquence, déclenchements gâchés ;
  * - drapeaux de LECTURE, lus dans la définition : texte long, effet différé, jet caché,
  *   dépendance à l'adversaire, crochet propre à un seul statut.
+ * Puis une seconde table, la valeur d'une GRAVURE (phase 5 ter) : chaque compétence gravable gravée sur la face 3 nue
+ * de chaque hôte qui peut la recevoir, contre le roster, avant → après ; repère de 8 à 20 points (comme les reliques).
  *   npx vitest run --config vitest.balance.config.ts scripts/skills.report.ts --silent=false
- *   SKILLS_N=400 (combats par duel, défaut 200) · SKILLS_ONLY=naraxes,thaldrin (personnages)
+ *   SKILLS_N=400 (combats par duel, défaut 200) · SKILLS_ONLY=naraxes,thaldrin (personnages ; pour les gravures, leurs
+ *   compétences) · SKILLS_PART=kit ou engrave (une seule table) · SKILLS_ENGRAVE=cleave,coin-flip (gravures mesurées)
  * Écrit dans logs/skills/. Méthode et lecture : docs/SORTS.md § 8.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -15,7 +18,8 @@ import { it } from 'vitest'
 import type { Character } from '../src/game/character'
 import type { CombatResult, Side } from '../src/game/combat'
 import { describeEvent, type CharacterEvent } from '../src/game/events'
-import { CHARACTERS } from '../src/game/roster'
+import { offerTargets } from '../src/game/forge'
+import { CHARACTERS, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { STATUSES, type StatusDef } from '../src/game/statuses'
 import pkg from '../package.json' with { type: 'json' }
 import { duelFight } from './lab/duel'
@@ -34,7 +38,13 @@ const T = {
   swing: 0.03,
   /** Longueur de la description en jeu */
   text: 140,
+  /** Bande d'une gravure (points de victoire gagnés par l'hôte), comme les reliques : hors bande en dessous ou au-delà */
+  engraveMin: 0.08,
+  engraveMax: 0.2,
 }
+
+/** La face où se mesure une gravure : nue sur tous les hôtes sauf le druide (sa Foudre). */
+const ENGRAVE_FACE = 3
 
 /** Compétences hors grille, par décision de design (aucune depuis le retrait de l'Attente, 0.106.0). */
 const EXEMPT: Record<string, string> = {}
@@ -106,10 +116,29 @@ const faceOf = (e: CharacterEvent) => `${FACE[e.trigger] ?? e.trigger}${e.form ?
 const pct = (x: number) => `${(x * 100).toFixed(0)} %`
 const pts = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(1).replace('.', ',')}`
 
-it('audit des compétences', () => {
-  const perPair = Number(process.env.SKILLS_N ?? 200)
-  const only = process.env.SKILLS_ONLY?.split(',').map((s) => s.trim()).filter(Boolean)
-  const roster = only?.length ? CHARACTERS.filter((c) => only.includes(c.id)) : CHARACTERS
+/** Victoires de `me` contre chaque adversaire, combat par combat, sur les graines de `npm run balance`. */
+function winsOf(me: Character, opponents: readonly Character[], perPair: number, read?: (r: CombatResult, side: Side) => void) {
+  const wins: number[] = []
+  for (const opp of opponents)
+    for (let k = 0; k < perPair; k++) {
+      const { result, side } = duelFight(me, opp, k)
+      wins.push(Number(result.winner === side))
+      read?.(result, side)
+    }
+  return wins
+}
+
+/** Écart apparié (mêmes graines) : moyenne, marge à 95 %, part des combats renversés. */
+function paired(after: readonly number[], before: readonly number[]) {
+  const diffs = after.map((w, i) => w - before[i])
+  const n = diffs.length
+  const value = diffs.reduce((a, b) => a + b, 0) / n
+  const sd = Math.sqrt(diffs.reduce((a, d) => a + (d - value) ** 2, 0) / Math.max(n - 1, 1))
+  return { value, margin: (1.96 * sd) / Math.sqrt(n), swing: diffs.filter((d) => d !== 0).length / n }
+}
+
+/** Table 1 : chaque compétence dans son kit, retirée (sa face devient nue). */
+function kitTable(roster: readonly Character[], perPair: number): string[] {
   const rows: {
     who: Character
     e: CharacterEvent
@@ -126,28 +155,16 @@ it('audit des compétences', () => {
 
   for (const me of roster) {
     const opponents = CHARACTERS.filter((c) => c.id !== me.id)
-    const base: boolean[] = []
-    const measures = new Map<string, Measure>(me.events.map((e) => [e.id, { fired: 0, wasted: 0, lost: 0, seenIn: 0 }]))
-    for (const opp of opponents)
-      for (let k = 0; k < perPair; k++) {
-        const { result, side } = duelFight(me, opp, k)
-        base.push(result.winner === side)
-        for (const e of me.events) readSkill(result, side, e, measures.get(e.id)!)
-      }
+    // Une compétence imprimée sur plusieurs faces (la Foudre du druide) se mesure une fois, toutes ses faces retirées
+    const skills = me.events.filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
+    const measures = new Map<string, Measure>(skills.map((e) => [e.id, { fired: 0, wasted: 0, lost: 0, seenIn: 0 }]))
+    const base = winsOf(me, opponents, perPair, (result, side) => {
+      for (const e of skills) readSkill(result, side, e, measures.get(e.id)!)
+    })
     const n = base.length
-    for (const e of me.events) {
+    for (const e of skills) {
       const without = me.adjusted({ events: me.events.filter((x) => x.id !== e.id) })
-      const diffs: number[] = []
-      let i = 0
-      for (const opp of opponents)
-        for (let k = 0; k < perPair; k++) {
-          const { result, side } = duelFight(without, opp, k)
-          diffs.push(Number(base[i++]) - Number(result.winner === side))
-        }
-      const value = diffs.reduce((a, b) => a + b, 0) / n
-      const sd = Math.sqrt(diffs.reduce((a, d) => a + (d - value) ** 2, 0) / Math.max(n - 1, 1))
-      const margin = (1.96 * sd) / Math.sqrt(n)
-      const swing = diffs.filter((d) => d !== 0).length / n
+      const { value, margin, swing } = paired(base, winsOf(without, opponents, perPair))
       const m = measures.get(e.id)!
       const waste = m.fired ? (m.wasted + m.lost) / m.fired : 0
       const seen = m.seenIn / n
@@ -168,12 +185,12 @@ it('audit des compétences', () => {
   const line = (r: (typeof rows)[number]) =>
     `| ${r.who.name} | ${r.e.name} | ${faceOf(r.e)} | ${r.perCombat.toFixed(2).replace('.', ',')} | ${pct(r.seen)} | ${pts(r.value)} ± ${(r.margin * 100).toFixed(1).replace('.', ',')} | ${pct(r.swing)} | ${pct(r.waste)} | ${r.exempt ? `_${r.exempt}_` : r.game.join(', ') || '—'} | ${r.reading.join(', ') || '—'} |`
 
-  const text = [
-    `# Audit des compétences · règles ${pkg.version}`,
+  return [
+    `## 1. Chaque compétence dans son kit`,
     ``,
-    `${perPair} combats par duel contre les 17 autres personnages, mêmes graines que \`npm run balance\`.`,
+    `${perPair} combats par duel contre les ${CHARACTERS.length - 1} autres personnages, mêmes graines que \`npm run balance\`.`,
     ``,
-    `- **Valeur** : points de victoire gagnés grâce à la compétence (on rejoue les mêmes combats sans elle : son jet redevient un coup normal), ± marge à 95 %.`,
+    `- **Valeur** : points de victoire gagnés grâce à la compétence (on rejoue les mêmes combats sans elle : sa face devient nue, le coup de base part quand même), ± marge à 95 %.`,
     `- **Renversés** : part des combats dont elle change le vainqueur, dans un sens ou dans l'autre. Une compétence à valeur nulle mais très « renversante » est un pile ou face ; à valeur nulle et peu renversante, elle ne pèse rien.`,
     `- **Gâchis** : part des déclenchements sans effet (soin à PV pleins, statut bloqué ou annulé, purification à vide, rétribution relâchée à vide) ou dont la charge s'est perdue sans servir.`,
     `- **Drapeaux de jeu** (mesurés) : coûte des victoires, presque inutile (moins de ${T.useless * 100} point), écrasante (plus de ${T.dominant * 100} points), rare à l'écran (vue dans moins de ${pct(T.seen)} des combats, ${pct(T.seen / 2)} pour une compétence de forme), gâchée (plus de ${pct(T.wasted)}), sans enjeu (renverse moins de ${pct(T.swing)} des combats).`,
@@ -185,16 +202,73 @@ it('audit des compétences', () => {
     `| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |`,
     ...ranked.map(line),
     ``,
-    `## À retoucher en priorité`,
+    `### À retoucher en priorité`,
     ``,
     ...ranked
       .filter((r) => !r.exempt && r.game.length > 0)
       .map((r) => `- **${r.e.name}** (${r.who.name}) : ${[...r.game, ...r.reading].join(', ')}.`),
+  ]
+}
+
+/**
+ * Table 2 : chaque compétence gravable gravée sur la face 3 nue de chaque hôte qui peut la recevoir (la forge refuse une
+ * compétence de son kit et une face qui en porte une), contre le roster, avant → après : ce que vaut ce choix de forge.
+ */
+function engraveTable(skills: readonly CharacterEvent[], perPair: number): string[] {
+  const base = new Map(CHARACTERS.map((host) => [host.id, winsOf(host, CHARACTERS.filter((c) => c.id !== host.id), perPair)]))
+  const rows = skills.map((skill) => {
+    const hosts = CHARACTERS.filter((host) => !host.events.some((x) => x.id === skill.id) && offerTargets(host.definition, [], { op: 'engrave', skill }).includes(ENGRAVE_FACE)).map((host) => {
+      const engraved = host.withForge([{ op: 'engrave', face: ENGRAVE_FACE, skill }])
+      return { host, ...paired(winsOf(engraved, CHARACTERS.filter((c) => c.id !== host.id), perPair), base.get(host.id)!) }
+    })
+    const mean = hosts.reduce((t, h) => t + h.value, 0) / hosts.length
+    const [low, high] = [...hosts].sort((a, b) => a.value - b.value).filter((_, k, all) => k === 0 || k === all.length - 1)
+    const flag = mean < T.engraveMin ? 'hors bande (faible)' : mean > T.engraveMax ? 'hors bande (forte)' : ''
+    const owners = CHARACTERS.filter((c) => [...c.events, ...(c.definition.reserve ?? [])].some((x) => x.id === skill.id))
+      .map((c) => `${c.name}${c.events.some((x) => x.id === skill.id) ? '' : ' (hors kit)'}`)
+      .join(', ')
+    const extremes = [low, high ?? low].map((h) => `${h.host.name} ${pts(h.value)}`).join(' | ')
+    return { skill, hosts, mean, owners, extremes, flag }
+  })
+  const ranked = [...rows].sort((a, b) => b.mean - a.mean)
+  return [
+    `## 2. Chaque compétence gravée`,
+    ``,
+    `Gravée sur la face ${ENGRAVE_FACE} nue de chaque hôte qui peut la recevoir, contre les ${CHARACTERS.length - 1} autres personnages, ${perPair} combats par duel, mêmes graines que \`npm run balance\` : points de victoire gagnés par l'hôte (moyenne des hôtes, puis le plus mauvais et le meilleur). Repère : de ${T.engraveMin * 100} à ${T.engraveMax * 100} points, comme une relique ; hors bande au-dessous ou au-delà. La barde porte sa gravure sur ses deux dés.`,
+    ``,
+    `| Compétence | Porteur | Moyenne (pts) | De … | … à | Hôtes | Drapeau |`,
+    `| --- | --- | --- | --- | --- | --- | --- |`,
+    ...ranked.map((r) => `| ${r.skill.name} | ${r.owners} | ${pts(r.mean)} | ${r.extremes} | ${r.hosts.length} | ${r.flag || '—'} |`),
+    ``,
+    `### Hôte par hôte`,
+    ``,
+    `| Compétence | ${CHARACTERS.map((c) => c.name).join(' | ')} |`,
+    `| --- | ${CHARACTERS.map(() => '---').join(' | ')} |`,
+    ...ranked.map((r) => `| ${r.skill.name} | ${CHARACTERS.map((c) => r.hosts.find((h) => h.host.id === c.id)).map((h) => (h ? pts(h.value) : '—')).join(' | ')} |`),
+  ]
+}
+
+it('audit des compétences', () => {
+  const perPair = Number(process.env.SKILLS_N ?? 200)
+  const list = (key: string) => process.env[key]?.split(',').map((s) => s.trim()).filter(Boolean)
+  const only = list('SKILLS_ONLY')
+  const part = process.env.SKILLS_PART
+  const roster = only?.length ? CHARACTERS.filter((c) => only.includes(c.id)) : CHARACTERS
+  const picked = list('SKILLS_ENGRAVE')
+  const engravable = ENGRAVABLE_SKILLS.filter((e) =>
+    picked?.length ? picked.includes(e.id) : roster.some((c) => [...c.events, ...(c.definition.reserve ?? [])].some((x) => x.id === e.id)),
+  )
+
+  const text = [
+    `# Audit des compétences · règles ${pkg.version}`,
+    ``,
+    ...(part === 'engrave' ? [] : [...kitTable(roster, perPair), ``]),
+    ...(part === 'kit' ? [] : engraveTable(engravable, perPair)),
   ].join('\n')
 
   mkdirSync('logs/skills', { recursive: true })
   const file = `logs/skills/${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}_v${pkg.version}.md`
   writeFileSync(file, `${text}\n`)
   console.log(`${text}\n\n→ ${file}`)
-}, 1_800_000)
+}, 3_600_000)
 

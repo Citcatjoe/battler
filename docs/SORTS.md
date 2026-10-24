@@ -222,9 +222,10 @@ Inspiré de la grille de Magic: The Gathering (New World Order) : une carte qui 
 ```
 npx vitest run --config vitest.balance.config.ts scripts/skills.report.ts --silent=false
 SKILLS_N=400 SKILLS_ONLY=naraxes,thaldrin npx vitest run --config vitest.balance.config.ts scripts/skills.report.ts --silent=false
+SKILLS_PART=engrave SKILLS_ENGRAVE=cleave,coin-flip npx vitest run --config vitest.balance.config.ts scripts/skills.report.ts --silent=false
 ```
 
-Une vingtaine de secondes à 200 combats par duel. Le rapport s'écrit dans `logs/skills/`.
+Une minute à 200 combats par duel, les deux tables (`SKILLS_PART=kit` ou `engrave` : une seule ; `SKILLS_ONLY` : ces personnages, et pour la seconde table leurs compétences ; `SKILLS_ENGRAVE` : ces gravures seulement). Le rapport s'écrit dans `logs/skills/`.
 
 ### La grille
 
@@ -252,6 +253,17 @@ La colonne **Renversés** distingue deux cas de valeur nulle : une compétence q
 | crochet unique | une règle du moteur écrite pour ce seul statut : candidate à l'aplatissement (FAMILLES.md) |
 
 Un drapeau de jeu compte double dans le classement. Les trois Attente de l'ogre sont exemptées : c'est un choix de design.
+
+### La seconde table : la valeur d'une gravure (phase 5 ter, 0.107.0)
+
+Ce que vaut un choix de forge : chaque compétence gravable est gravée sur la **face 3 nue de chaque hôte qui peut la recevoir** (la forge refuse une compétence de son kit et une face qui en porte une : le druide, dont le 3 porte la Foudre, n'en reçoit aucune ; la barde la porte sur ses deux dés). L'hôte gravé affronte les 9 autres personnages, sur les mêmes graines que `npm run balance`, avant → après : la valeur est l'écart apparié de son taux de victoire. La table donne la moyenne des hôtes, le plus mauvais et le meilleur, puis le détail hôte par hôte.
+
+| Drapeau | Seuil | Ce qu'il signale |
+| --- | --- | --- |
+| hors bande (faible) | moyenne sous +8 points | une gravure qui ne pèse rien : on ne la choisit pas |
+| hors bande (forte) | moyenne au-delà de +20 points | une gravure qui décide de la campagne : on ne choisit plus qu'elle |
+
+Le repère de 8 à 20 points est celui des reliques (décision de l'utilisateur du 2026-10-24) : toute compétence gravable doit y entrer. La mesure jetable du § 19 (mesure 2) est devenue cette table.
 
 ### Premier audit (200 combats par duel, règles 0.36.4)
 
@@ -1055,3 +1067,34 @@ Ce que vaut une gravure en campagne : la compétence gravée sur la face 3 (nue)
 2. **Les signatures** : Pile ou face doit-elle porter Naraxes (pile ×3, et la Décoction baissée), ou la signature de Naraxes devient-elle l'Aura de décoction ?
 3. **L'Aura sauvage** : +1 à l'attaque par charge (une aura qui écrit la feuille), ou on la retire comme doublon ?
 4. **La barde** : ses doubles restent un spectacle rare (chacun 1 fois sur 36) et l'Ouverture porte son kit ; ou on rend les doubles plus fréquents (un double sur deux dés de trois faces, par exemple) ; ou ses compétences passent sur les faces, comme les autres, et ses deux dés ne servent plus qu'à frapper deux fois ?
+
+### Décisions de l'utilisateur (2026-10-24)
+
+1. Repère d'une gravure : **8 à 20 points**, toute compétence gravable doit y entrer.
+2. La signature de Naraxes devient l'**Aura de décoction** ; Pile ou face reste dans son kit, renforcée (pile ×3).
+3. **Aura sauvage : +1 à l'attaque par charge** (elle écrit la feuille, avant le critique).
+4. **La barde** : ses compétences passent sur les faces, ses deux dés frappent deux fois (partie A, voir PERSONNAGES.md).
+
+### Livraison (0.107.0)
+
+Mesures : `scripts/skills.report.ts` (table 2, 200 combats par duel, `logs/skills/2026-10-24-00-45-58_v0.106.1.md` avant, `logs/skills/2026-10-24-01-15-40_v0.106.1.md` après) ; Rétribution choisie au laboratoire (série 16, 400 combats par duel) ; équilibre au laboratoire (série 17) puis `BALANCE_N=800 npm run balance` (`logs/balance/2026-10-24-00-45-02` avant, `2026-10-24-01-14-36` après).
+
+| Compétence | Changement | Kit (avant → après) | Gravure (avant → après) |
+| --- | --- | --- | --- |
+| Rétribution | la moitié des jauges, **arrondie au-dessous** (au-dessus : +20,8 gravée) ; « deux jauges » mesurée : Aldric 40,9 %, gravure +25,3 | +38,3 → +21,6 | +28,5 → +19,6 |
+| Aura de décoction | 1 Poison par charge (2) ; signature de Naraxes | +41,0 → +16,0 | +28,1 → +17,5 |
+| Pile ou face | pile : ce coup ×3 (×2) ; texte de 147 à ~75 caractères | +4,8 → +16,2 | +8,3 → +14,6 |
+| Aura de sainteté | 2 charges au plus (3) **et 1 PV par charge** (2) : le plafond seul la laissait à +23,1 | +32,1 → +13,9 | +23,5 → +13,8 |
+| Aura d'intimidation | −1 par charge (−2) | hors kit | +21,9 → +14,7 |
+| Aura sauvage | +1 à l'attaque par charge (+2 après le critique) | hors kit | +20,7 → +15,2 |
+| Coup de chance | se greffe (remplaçait) | hors kit | +3,2 → +19,6 |
+| Pourfendre | Saignement = moitié des PV retirés, arrondie au-dessus (2) ; texte de 173 à ~115 caractères | +8,2 → +16,6 | +7,8 → +14,0 |
+| Aura de précision | +1 au multiplicateur et +5 % de critique par charge | hors kit | +7,3 → +13,5 |
+| Purification | texte de 265 à ~110 caractères, règle inchangée | +19,2 → +21,7 | +18,7 → +18,6 |
+| Soliste | **une fois par combat** (`limit: 1`) : à chaque 2, +23,0 gravé | +18,2 → +7,9 | +22,9 → +19,5 |
+| Crescendo | **monte** : ×2, puis ×1 de plus à chaque fois qu'il touche (`buildsUp`) : il n'est plus un Soliste plus faible | hors kit | +13,8 → +18,6 |
+| Peur | **une fois par combat** (+20,4 à deux fois) | hors kit | +21,7 → +14,0 |
+| Vol de vie | 1 charge par 1 (2), plafond 2 | +23,1 → +14,6 | +20,6 → +14,4 |
+| Aura de puissance | **non cumulable** (+2 par charge cumulable ; plafond 2 : +21,8) | hors kit | +20,7 → +17,9 |
+
+Les 29 compétences gravables sont dans la bande : de +10,4 (Foudre) à +19,7 (Esquive améliorée), au lieu de +3,2 à +28,5. Personnages compensés (stats, après les compétences, jamais les PV) : Aldric attaque 4 à 6 (3 à 5), Ysolde 5 à 7 (4 à 6), Naraxes 5 à 6 (4 à 5), Ervald 24 % de critique (16), Gorak 14 % (19), Fanchon 10 % d'esquive (6). Roster de 46,8 % (Ervald) à 54,3 % (Naraxes), pire duel 61,9 % (Elaria contre Morgrut) ; tours par combat, moyenne des personnages, 15,8 → 15,2.

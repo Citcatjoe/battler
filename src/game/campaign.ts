@@ -39,7 +39,6 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 /**
  * Faces de compétence au plus sur le dé d'un champion de campagne, signature comprise (§ 11.2, décidé) : au moins deux
  * faces de coup. La limite atteinte, Graver n'est plus proposée, et Copier une face ne copie plus qu'une face de coup.
- * Les deux dés de la barde n'y sont pas soumis.
  */
 export const MAX_SKILL_FACES = 4
 
@@ -107,9 +106,10 @@ export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character
 
 /**
  * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé en
- * 0.104.0) : sa **signature seule** ; la face de l'autre compétence de son kit frappe pour sa valeur imprimée, libre
- * pour la forge. Sans signature, son kit entier : Morgrut (le combattant nu), Thaldrin (sa forme humaine ne fait que
- * lancer des sorts) et Fanchon (ses compétences sont ses doubles), des exceptions de structure.
+ * 0.104.0) : sa **signature seule** ; la face de l'autre compétence de son kit est nue, libre pour la forge. Fanchon
+ * aussi depuis la phase 5 ter (ses compétences sont sur ses faces) : sans son Ouverture, qui n'est pas une face. Sans
+ * signature, son kit entier : Morgrut (le combattant nu) et Thaldrin (sa forme humaine ne fait que lancer des sorts),
+ * des exceptions de structure.
  */
 export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => {
@@ -269,7 +269,7 @@ export const ECHO_WEIGHT = 2
  * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire de campagne** du champion
  *   (`CAMPAIGN_REPERTOIRES`), au poids de son écho avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de
  *   compétence, ni Graver ni copie d'une compétence. Le répertoire (six compétences, ou les quatre de Morgrut) ne s'épuise
- *   pas avant la limite ; la barde, hors limite, n'a qu'un double libre ;
+ *   pas avant la limite ;
  * - relique : la première carte au poids de son écho, les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
  */
@@ -281,7 +281,7 @@ export function drawReward(run: Pick<CampaignRun, 'championId' | 'forge' | 'reli
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
   const def = CAMPAIGN_CHAMPIONS[run.championId].definition
-  const full = !def.twinDice && forgedFaces(def, run.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
+  const full = forgedFaces(def, run.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
   const left = CAMPAIGN_REPERTOIRES[run.championId].filter((s) => !run.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id))
   const offer = drawForgeOffer(def, run.forge, rng, left, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build), full)
   const choice = autoForge(def, run.forge, offer, rng)

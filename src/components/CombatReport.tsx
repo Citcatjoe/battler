@@ -43,7 +43,6 @@ export function FaceHistogram({
   const die = forgedFaces(character.definition, character.forge)
   const count = Math.max(die.length, DIE_FACES, report.faces.length)
   const top = Math.max(1, ...report.faces)
-  const twin = character.twinDice
   return (
     <ul className={`flex flex-wrap items-end ${size === 'sm' ? 'gap-1' : 'gap-x-0.5 gap-y-3'}`} aria-label={`Faces jouées par ${character.name}`}>
       {Array.from({ length: count }, (_, k) => {
@@ -64,7 +63,7 @@ export function FaceHistogram({
               data-nature={skill ? (skill.nature ?? DEFAULT_SKILL_NATURE) : undefined}
               data-engraved={f?.engraved ? '' : undefined}
               data-gild={f?.gild ? '' : undefined}
-              aria-label={`${twin && skill ? 'Double' : 'Face'} ${face} : ${n} fois`}
+              aria-label={`Face ${face} : ${n} fois`}
               style={{ width: TILE[size], height: TILE[size] }}
             >
               {skill ? <SkillSeal id={skill.id} size={32} /> : face}
@@ -72,7 +71,7 @@ export function FaceHistogram({
               {!!f?.rank && <span className="forge-face-rank">{rankLabel(f.rank)}</span>}
             </span>
             {/* Même infobulle que le dé forgé : sa compétence, ou la face (sans compétence, dorée) ; rien hors du dé forgé */}
-            {f && (skill && !f.gild ? <SkillTooltip event={skill} face={face} placement={tooltip} align={align} /> : <ForgeFaceTooltip face={f} twin={twin} placement={tooltip} align={align} />)}
+            {f && (skill && !f.gild ? <SkillTooltip event={skill} face={face} placement={tooltip} align={align} /> : <ForgeFaceTooltip face={f} placement={tooltip} align={align} />)}
           </li>
         )
       })}

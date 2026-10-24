@@ -429,7 +429,7 @@ describe('écrans', () => {
     const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
     // Aura de sainteté : sa vie, son plafond et ce qui la retire
     const holy = sheet('holy-aura')
-    for (const text of ["jusqu'à la fin du combat", '3 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
+    for (const text of ["jusqu'à la fin du combat", '2 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
     // Aura mélodieuse : l'autre compétence qui la pose
     expect(sheet('melodious-aura')).toContain('Ouverture')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
@@ -568,19 +568,19 @@ describe('écrans', () => {
       />,
     )
     expect(weak.match(/data-state="/g)).toHaveLength(2)
-    expect(weak).toContain('Affaibli −2')
+    expect(weak).toContain('Affaibli −1')
     expect(weak).toContain('Coup gâché −5')
     expect(weak).toContain('Aura d&#x27;intimidation (Brokk)')
     // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille. L'Aura de
     // puissance, hors kit depuis le d6, est gravée sur le 3 de Gorak
     const powerAura = ENGRAVABLE_SKILLS.find((e) => e.id === 'power-aura')!
     const auraGorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: powerAura }])
-    const bar = renderToString(<SkillBar character={auraGorak} side={0} statuses={[{ id: 'powerAura', stacks: 2 }]} />)
+    const bar = renderToString(<SkillBar character={auraGorak} side={0} statuses={[{ id: 'powerAura', stacks: 1 }]} />)
     expect(bar).toContain('data-signal="0:cleave"')
     expect(bar).toContain('data-signal="0:powerAura 0:power-aura"')
     expect(bar).toContain('aura-token')
-    // L'anneau porte la valeur de l'aura : deux charges, +4 aux coups
-    expect(bar).toContain('+4')
+    // L'anneau porte la valeur de l'aura : +2 aux coups (non cumulable depuis la 0.107.0)
+    expect(bar).toContain('+2')
     expect(renderToString(<SkillBar character={auraGorak} side={0} statuses={[]} />)).not.toContain('aura-token')
     expect(bar.match(EMOJI)?.[0]).toBeUndefined()
     const effects = [

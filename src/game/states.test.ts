@@ -42,8 +42,8 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     const brokk = [{ id: 'intimidationAura' as const, stacks: 2 }]
     expect(trayStates(brokk, [])).toEqual([])
     const [weak] = trayStates([], brokk)
-    expect(weak).toMatchObject({ id: 'weakened', value: 4, sources: [{ from: 'opponent' }] })
-    expect(weak.sources[0].text).toContain('4 de moins')
+    expect(weak).toMatchObject({ id: 'weakened', value: 2, sources: [{ from: 'opponent' }] })
+    expect(weak.sources[0].text).toContain('2 de moins')
   })
 
   it('une aura sur son porteur se lit sur son anneau, pas dans la zone d’état (0.79.7)', () => {

@@ -1,5 +1,5 @@
 import type { CharacterDef } from './character'
-import { DIE_FACES, doubleFace, doubleTrigger, faceTrigger, rollFace, type CharacterEvent, type Effect } from './events'
+import { DIE_FACES, faceTrigger, relationOf, rollFace, type CharacterEvent, type Effect } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
 
@@ -16,8 +16,8 @@ import { STATUSES } from './statuses'
  *     petite qui n'est pas dorée, sinon la plus petite) ; une compétence sur deux faces au plus ;
  *   - Tremper l'arme (phase 5 bis, remplace Refondre) : +1 à l'attaque (minimum et maximum), cumulable, sans face visée.
  * Règles de l'utilisateur : une compétence d'origine ne se déplace pas, ses faces sont irréductibles, et seules les
- * faces nues se gravent ou se dorent. Personnage à deux dés (barde) : ses faces sont des doubles pour Graver, Aiguiser et
- * Copier, et la dorure vaut pour chaque dé qui fait cette face.
+ * faces nues se gravent ou se dorent. Personnage à deux dés (barde) : chacun de ses dés lit le même dé forgé, une face
+ * gravée, dorée ou copiée vaut donc pour chacun des deux.
  */
 
 /** Bonus d'une dorure, ajouté au coup de base avant le critique. */
@@ -71,20 +71,17 @@ export interface ForgeState {
 }
 
 /** Ce qu'il faut de la définition d'un personnage pour forger son dé. */
-export type ForgeBase = Pick<CharacterDef, 'events' | 'twinDice'>
+export type ForgeBase = Pick<CharacterDef, 'events'>
 
 /** Les six faces du dé, de 1 à 6. */
 const FACES = Array.from({ length: DIE_FACES }, (_, k) => k + 1)
 
-/** La face (ou le double) d'une compétence du dé, ou undefined (compétence hors dé, jet maximal). */
-const faceOf = (base: ForgeBase, e: CharacterEvent) => (base.twinDice ? doubleFace(e.trigger) : rollFace(e.trigger))
-
 /** Les compétences d'origine d'une face (toutes formes confondues). */
-const originOn = (base: ForgeBase, face: number) => base.events.filter((e) => faceOf(base, e) === face)
+const originOn = (base: ForgeBase, face: number) => base.events.filter((e) => rollFace(e.trigger) === face)
 
 /* ---------- Rejouer le journal ---------- */
 
-/** Une face nue : ni compétence d'origine ni gravure (deux dés : un double sans compétence). */
+/** Une face nue : ni compétence d'origine ni gravure. */
 const isBare = (base: ForgeBase, state: ForgeState, face: number) => originOn(base, face).length === 0 && !state.engraved.has(face)
 
 /** Les faces qu'une opération peut viser, dans l'état donné (vide pour une opération sans face). */
@@ -93,8 +90,7 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
     case 'engrave':
       return FACES.filter((f) => isBare(base, state, f))
     case 'gild':
-      // Une face nue (deux dés : toute face, chaque dé porte son coup de base hors double)
-      return FACES.filter((f) => !state.gilded.has(f) && (base.twinDice || isBare(base, state, f)))
+      return FACES.filter((f) => !state.gilded.has(f) && isBare(base, state, f))
     case 'sharpen':
       // Aiguisable : un rang de plus change ses effets (un statut au plafond, ou qui ne cumule pas, ne gagne rien). Pas de
       // rang maximal : le nombre d'aiguisages se règle par le nombre d'occasions qu'un mode en donne (décision de
@@ -107,7 +103,7 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
         }),
       )
     case 'copy':
-      // Une face de compétence encore sur moins de deux faces, et une face nue où poser la copie
+      // Une face de compétence encore sur moins de deux faces, qu'une seconde face renforce, et une face nue où poser la copie
       return FACES.filter((f) => copyTarget(base, state, f) !== undefined)
     case 'temper':
       return []
@@ -123,12 +119,26 @@ function skillOf(base: ForgeBase, state: ForgeState, face: number): CharacterEve
 const facesWith = (base: ForgeBase, state: ForgeState, id: string) => FACES.filter((f) => skillOf(base, state, f)?.id === id).length
 
 /**
+ * Une seconde face ne rapporte rien à une compétence qui ne fait que poser sur son porteur une aura permanente (sans
+ * durée) plafonnée à une charge, sans toucher au coup (ex. l'Aura de puissance depuis la 0.107.0) : l'aura est déjà là.
+ */
+const gainsNothingTwice = (skill: CharacterEvent) =>
+  relationOf(skill) === 'graft' &&
+  skill.hitMultiplier === undefined &&
+  skill.effects.every((e) => {
+    if (e.type !== 'applyStatus' || (e.target ?? 'self') !== 'self' || e.turns !== undefined) return false
+    const def = STATUSES[e.status]
+    return def.maxStacks === 1 && def.look?.aura !== undefined
+  })
+
+/**
  * Où Copier une face pose sa copie : la face nue de plus petit numéro qui n'est pas dorée, sinon la face nue de plus
- * petit numéro. Undefined : rien à copier là (face nue, compétence déjà sur deux faces, ou plus de face nue).
+ * petit numéro. Undefined : rien à copier là (face nue, compétence déjà sur deux faces, copie qui ne rapporte rien, ou
+ * plus de face nue).
  */
 function copyTarget(base: ForgeBase, state: ForgeState, source: number): number | undefined {
   const skill = skillOf(base, state, source)
-  if (!skill || facesWith(base, state, skill.id) >= MAX_COPIES) return undefined
+  if (!skill || facesWith(base, state, skill.id) >= MAX_COPIES || gainsNothingTwice(skill)) return undefined
   const bare = FACES.filter((f) => isBare(base, state, f))
   return bare.find((f) => !state.gilded.has(f)) ?? bare[0]
 }
@@ -215,19 +225,11 @@ function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
 }
 
 /**
- * Une compétence gravée sur une face : son déclencheur devient cette face (ou ce double), sans forme. Sur un double,
- * une compétence qui modifie son coup se greffe (un double a deux coups), et sans probabilité.
+ * Les compétences d'un personnage forgé, dans l'ordre de définition : celles d'origine, puis ses gravures, aiguisées. Une
+ * gravure prend pour déclencheur sa face, sans forme.
  */
-function engraveOn(skill: CharacterEvent, face: number, twin: boolean): CharacterEvent {
-  const { form: _form, ...rest } = skill
-  if (!twin) return { ...rest, trigger: faceTrigger(face) }
-  const { chance: _chance, relation, ...double } = rest
-  return { ...double, ...(relation === 'replace' && { relation }), trigger: doubleTrigger(face) }
-}
-
-/** Les compétences d'un personnage forgé, dans l'ordre de définition : celles d'origine, puis ses gravures, aiguisées. */
 export function forgedEvents(base: ForgeBase, state: ForgeState): CharacterEvent[] {
-  const engraved = [...state.engraved].sort(([a], [b]) => a - b).map(([face, skill]) => engraveOn(skill, face, !!base.twinDice))
+  const engraved = [...state.engraved].sort(([a], [b]) => a - b).map(([face, { form: _form, ...skill }]) => ({ ...skill, trigger: faceTrigger(face) }))
   return [...base.events, ...engraved].map((e) => sharpen(e, state.ranks.get(e.id) ?? 0))
 }
 
@@ -248,7 +250,7 @@ export function forgedFaces(base: ForgeBase, steps: readonly ForgeStep[]): Forge
   const state = forgeState(base, steps)
   const events = forgedEvents(base, state)
   return FACES.map((face) => {
-    const on = events.filter((e) => faceOf(base, e) === face)
+    const on = events.filter((e) => rollFace(e.trigger) === face)
     const engraved = state.engraved.get(face)
     return {
       face,
@@ -342,14 +344,10 @@ export const stepKey = (step: ForgeStep) => (step.op === 'engrave' ? `engrave ${
 
 /* ---------- Rédaction ---------- */
 
-/**
- * « Graver Pourfendre sur le 5 », « Dorer le 4 », « Copier le 2 », « Tremper l'arme » : l'opération en clair (écran,
- * trace). `twin` : deux dés, où Graver, Aiguiser et Copier visent un double (la dorure, elle, vaut pour chaque dé qui fait
- * sa face).
- */
-export function stepLabel(step: ForgeStep | ForgeOffer, twin = false): string {
+/** « Graver Pourfendre sur le 5 », « Dorer le 4 », « Copier le 2 », « Tremper l'arme » : l'opération en clair (écran, trace). */
+export function stepLabel(step: ForgeStep | ForgeOffer): string {
   const name = FORGE_OPS[step.op].name
-  const where = 'face' in step ? ` ${twin && step.op !== 'gild' ? 'le double' : 'le'} ${step.face}` : ''
+  const where = 'face' in step ? ` le ${step.face}` : ''
   if (step.op === 'engrave') return `${name} ${step.skill.name}${'face' in step ? ` sur${where}` : ''}`
   if (step.op === 'copy' && 'face' in step) return `Copier${where}`
   return `${name}${where}`

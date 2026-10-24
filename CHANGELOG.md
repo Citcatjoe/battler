@@ -32,6 +32,51 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.107.0] — 2026-10-24
+
+Phase 5 ter des règles v2 : la revue des compétences sur le d6 et l'attaque, et la barde sur les faces. Décisions de l'utilisateur du 2026-10-24 : une gravure vaut **de 8 à 20 points** ; la signature de Naraxes devient l'**Aura de décoction** ; l'**Aura sauvage** donne +1 à l'attaque par charge ; les compétences de la barde passent **sur les faces**, ses deux dés frappent deux fois. Détail : [docs/SORTS.md](docs/SORTS.md) § 19, [docs/PERSONNAGES.md](docs/PERSONNAGES.md).
+
+### Ajouté
+- **La barde à deux jets complets** : chacun de ses deux dés est un jet entier (coup, face, compétence), et les deux partent dans la même rafale ; avec Coup de chance, elle a 2 + charges jets. Un K.O. au premier jet arrête l'action. Kit de Fanchon : **face 1 Aura mélodieuse** (1 charge, sa **signature**), **face 2 Soliste** (ce coup ×3, une fois par combat), **Ouverture gardée** (1 charge d'aura au début) ; hors kit, gravables : Siffloter (Sifflotement 2), Fausse note (1 charge), Crescendo.
+- **« Ce coup ×N »** : une compétence qui modifie peut multiplier la valeur du coup au jet (avant le critique) ; elle part s'il touche (Soliste, Crescendo, la pile de Pile ou face).
+- **Crescendo monte** : ce coup ×2, puis ×1 de plus à chaque fois qu'il a touché (il n'est plus un Soliste plus faible).
+- **Table des gravures** dans le rapport des compétences (`scripts/skills.report.ts`, table 2) : chaque compétence gravable sur la face 3 nue de chaque hôte possible, contre le roster, avec le drapeau « hors bande » (sous +8 ou au-delà de +20). Variables `SKILLS_PART`, `SKILLS_ENGRAVE`, `SKILLS_ONLY`, `SKILLS_N`. Laboratoire : séries 15 (kits de la barde), 16 (Rétribution) et 17 (stats).
+- Audit : deux dés, jet de la barde, coup multiplié, charges tirées du coup, relâche en part, coup qui monte, pièce ×N, compétence épuisée.
+
+### Modifié
+- **Rétribution** : relâche la moitié des jauges, arrondie au-dessous (toutes). Kit +38,3 → +21,6, gravure +28,5 → +19,6.
+- **Aura de décoction** : 1 Poison par charge et par coup (2) ; devient la signature de Naraxes. Kit +41,0 → +16,0, gravure +28,1 → +17,5.
+- **Pile ou face** : pile, ce coup ×3 (×2) ; texte raccourci. Kit +4,8 → +16,2, gravure +8,3 → +14,6.
+- **Aura de sainteté** : 2 charges au plus (3) et 1 PV par charge (2). Kit +32,1 → +13,9, gravure +23,5 → +13,8.
+- **Aura d'intimidation** : −1 par charge (−2). Gravure +21,9 → +14,7.
+- **Aura sauvage** : +1 à l'attaque par charge, sur la feuille, avant le critique (+2 après le critique, doublon de l'Aura de puissance). Gravure +20,7 → +15,2.
+- **Coup de chance** : se greffe (remplaçait le coup) ; l'action suivante a un jet de plus. Gravure +3,2 → +19,6.
+- **Pourfendre** : s'il touche, Saignement égal à la moitié des PV retirés, arrondie au-dessus (2) ; texte raccourci. Kit +8,2 → +16,6, gravure +7,8 → +14,0.
+- **Aura de précision** : +1 au multiplicateur et +5 % de critique par charge (multiplicateur seul). Gravure +7,3 → +13,5.
+- **Purification** : texte raccourci (« son dernier bonus »), règle inchangée. Kit +19,2 → +21,7, gravure +18,7 → +18,6.
+- **Soliste** : une fois par combat. Kit +18,2 → +7,9, gravure +22,9 → +19,5.
+- **Crescendo** : modifie, ×2 qui monte (remplaçait les deux coups par ×4). Gravure +13,8 → +18,6.
+- **Peur** : une fois par combat. Gravure +21,7 → +14,0.
+- **Vol de vie** : 1 charge (2), plafond 2. Kit +23,1 → +14,6, gravure +20,6 → +14,4.
+- **Aura de puissance** : non cumulable. Gravure +20,7 → +17,9.
+- Barde hors kit : Siffloter pose Sifflotement 2 (3), Fausse note 1 charge (2).
+- Les 29 compétences gravables sont dans la bande : de +10,4 (Foudre) à +19,7 (Esquive améliorée), au lieu de +3,2 à +28,5.
+- **Une greffe épuisée** (limite atteinte) ou sans sa condition laisse sa face nue.
+- **Stats compensées** (jamais les PV) : Aldric attaque 4 à 6 (3 à 5), Ysolde 5 à 7 (4 à 6), Naraxes 5 à 6 (4 à 5), Ervald critique 24 % (16), Gorak 14 % (19), Fanchon attaque 1 à 3 (2 à 4) et esquive 10 % (6).
+- **Forge** : la barde forge ses faces nues comme tous (une gravure garde sa relation ; chaque dé lit le même dé forgé) ; seuls Morgrut et Thaldrin gardent tout leur kit en campagne. **Copier une face** n'est plus proposé quand la copie ne gagne rien (aura plafonnée à une charge sur son porteur, sans toucher au coup : aujourd'hui l'Aura de puissance).
+- **Dent de loup** : +1 Vol de vie (+2), le statut posant désormais 1 charge. Apport +22,0 → +12,4.
+- Empreinte de non-régression (`balance.test.ts`) mise à jour volontairement : la barde, puis la revue des compétences.
+
+### Retiré
+- **Les doubles** : la paire de la barde, ses cinq doubles à compétence, la pastille « remplace les deux coups », le « ding » d'un double, le « Double N » des écrans de forge et l'exception de la barde au nombre de faces à compétence en campagne.
+
+### Mesuré
+- Barde seule (`BALANCE_N=800`) : Fanchon 49,5 % (0.106.1) → 55,2 % avec son nouveau kit (duels de 47 à 60 %) → 47,5 % après la revue.
+- Revue (`BALANCE_N=800 npm run balance`, avant → après) : Gorak 50,1 → 52,3 · Elaria 47,9 → 50,5 · Brokk 50,9 → 52,0 · Ervald 49,2 → 46,8 · Ysolde 48,8 → 48,4 · Naraxes 51,4 → 54,3 · Aldric 49,9 → 51,1 · Morgrut 48,5 → 49,1 · Thaldrin 48,2 → 48,1 · Fanchon 55,2 → 47,5. Pires duels : Elaria–Morgrut 61,9 ; Naraxes–Ysolde 60,9 ; Fanchon–Ysolde 39,6 ; Brokk–Fanchon 59,6. Aucun au-delà de 65/35. Tours par combat : 15,8 → 15,2.
+- Reliques (`npm run relics`, 400 par duel, 0.106.0 → 0.107.0) : tout monte d'environ 1 point (de Contrepoids 4,0 à Géode 18,8) ; Dent de loup 18,6 → 22,0, ramenée à 12,4 par le correctif.
+- Campagne (`npm run campaign`, 12 parties par champion) : boss atteint 28 % (attendu 31), acte gagné 13 % (attendu 14) ; boss de 8 % (Thaldrin) à 42 % (Brokk).
+- `npm run check` vert (317 tests), `npx vite build` passe. Rien vu à l'écran.
+
 ## [0.106.1] — 2026-10-24
 
 Retours de l'utilisateur sur la 0.106.0.

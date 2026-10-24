@@ -81,7 +81,7 @@ export const RULES: Record<RuleId, Rule> = {
   'twin-dice': {
     group: 'dice',
     title: 'Deux dés',
-    text: "Un personnage à deux dés lance deux dés à chaque action : deux coups de base, un par dé (esquive et critique chacun). Sur un double qui a sa compétence, celle-ci se résout d'abord, puis les deux coups partent ; Crescendo et Soliste les remplacent par un seul coup de base multiplié.",
+    text: "Un personnage à deux dés lance deux dés à chaque action : deux jets complets, un par dé. Chaque dé désigne une face, qui déclenche sa compétence (greffée, modifiée ou remplacée, comme pour tous), puis le coup de base de ce dé (esquive et critique chacun). Une face gravée, dorée ou copiée vaut pour chacun des deux dés.",
   },
   dodge: {
     group: 'dodge',
@@ -91,12 +91,12 @@ export const RULES: Record<RuleId, Rule> = {
   crit: {
     group: 'crit',
     title: 'Critique',
-    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le coup de base, multiplié par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
+    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le coup de base, ×N par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
   },
   modifiers: {
     group: 'damage',
     title: 'Modificateurs de dégâts',
-    text: "Après le critique, les bonus et malus de dégâts s'appliquent : ceux de l'attaquant (Aura de puissance, Aura sauvage, Force de l'ours), puis ceux du défenseur (Aura d'intimidation). Ils ne sont jamais multipliés par le critique. Le total garde au moins 1.",
+    text: "Après le critique, les bonus et malus de dégâts s'appliquent : ceux de l'attaquant (Aura de puissance, Force de l'ours), puis ceux du défenseur (Aura d'intimidation). Ils ne sont jamais multipliés par le critique. Le total garde au moins 1. L'Aura sauvage, elle, monte l'attaque : elle compte avant le critique.",
   },
   armor: {
     group: 'damage',
@@ -116,7 +116,7 @@ export const RULES: Record<RuleId, Rule> = {
   'direct-damage': {
     group: 'damage',
     title: 'Dégâts directs',
-    text: "Les dégâts directs (poison, saignement, brûlure, foudre, riposte, rétribution, purification…) ignorent l'armure, l'esquive, les boucliers et les bonus de dégâts, et ne sont jamais critiques. Ce ne sont pas des coups, même quand l'écran en montre plusieurs impacts (les trois éclairs de la Foudre, les jauges de la Rétribution) : rien de ce qui réagit à un coup ne part. Seule exception : pile, à Pile ou face, compte comme un coup qui touche.",
+    text: "Les dégâts directs (poison, saignement, brûlure, foudre, riposte, rétribution, purification…) ignorent l'armure, l'esquive, les boucliers et les bonus de dégâts, et ne sont jamais critiques. Ce ne sont pas des coups, même quand l'écran en montre plusieurs impacts (les trois éclairs de la Foudre) : rien de ce qui réagit à un coup ne part. Seule exception : pile, à Pile ou face, compte comme un coup qui touche.",
   },
   skill: {
     group: 'skills',
@@ -126,12 +126,12 @@ export const RULES: Record<RuleId, Rule> = {
   'dice-faces': {
     group: 'skills',
     title: 'Faces de compétence',
-    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine et aucun en ours, la barde a les siennes sur ses doubles. D'autres compétences se gravent par la forge.",
+    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine et aucun en ours. La barde lit les mêmes faces avec ses deux dés. D'autres compétences se gravent par la forge.",
   },
   'hit-relations': {
     group: 'skills',
     title: 'Greffe, modifie, remplace',
-    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : Saignement, dès le coup suivant ; Pile ou face : pile, ce coup compte double). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base tout de suite ; Coup de chance : un jet de plus à l'action suivante ; Crescendo et Soliste : un seul coup de base multiplié).",
+    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un jet de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change sa valeur (Soliste : ce coup ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base tout de suite).",
   },
   conditions: {
     group: 'skills',
@@ -146,7 +146,7 @@ export const RULES: Record<RuleId, Rule> = {
   polarity: {
     group: 'statuses',
     title: 'Bonus et malus',
-    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
+    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus » est le dernier apparu (un statut renforcé garde son rang). Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
   },
   duration: {
     group: 'statuses',

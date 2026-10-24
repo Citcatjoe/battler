@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import type { AttackKind, DamageSource } from './damage'
-import { DIE_FACES, doubleTrigger, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type Trigger } from './events'
+import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
@@ -97,7 +97,7 @@ export interface Attack {
   value: number
   /** Type du coup de base : celui de l'attaque de l'attaquant, sous sa forme du moment (DP ou DM) */
   kind: AttackKind
-  /** Crescendo, Soliste : le coup de base multiplié (`CharacterEvent.hitMultiplier`) */
+  /** Crescendo, Soliste (relation « modifie ») : ce coup ×N (`CharacterEvent.hitMultiplier`) */
   multiplier?: number
   dodged: boolean
   /** Esquive imposée par un statut du défenseur (ex. « Esquive améliorée »), sans tirage */
@@ -111,7 +111,7 @@ export interface Attack {
   replaced: boolean
   /** Dé imposé par l'observateur (mode triche, `forcedRolls`) ; absent d'un combat normal */
   forced?: true
-  /** Dé déjà tiré par l'étape qui précède (paire, jet greffé) : ce coup ne lance aucun dé */
+  /** Dé déjà tiré par l'étape qui précède (jet greffé) : ce coup ne lance aucun dé */
   preset?: true
   /**
    * Coup brut (0.69.0, coups de la Furie des vents) : sa face ne déclenche aucune compétence. Les reliques de face et la
@@ -225,14 +225,12 @@ export type BeatBody =
   | { type: 'skip'; side: Side; status: StatusId }
   /** Changement de forme (druide), au tout début de son tour : `form` est l'index de la nouvelle forme */
   | { type: 'shift'; side: Side; form: number }
-  /** Un statut donne plusieurs coups à l'action (Furie des vents : deux coups bruts ; Coup de chance : des jets de plus) ; il est consommé */
-  | { type: 'flurry'; side: Side; status: StatusId; strikes: number; faces: number[] }
   /**
-   * Deux dés (personnage `twinDice`) : la paire lancée pour l'action. `double` : la face du double qui
-   * déclenche une compétence (elle suit, étape event), absent si l'action est faite des deux coups.
-   * `forced` : pour chaque dé, imposé ou non (mode triche).
+   * Une action à plusieurs jets : deux dés (personnage `twinDice`, `status` absent), ou un statut qui donne plusieurs
+   * coups (Furie des vents : deux coups bruts ; Coup de chance : des jets de plus), qui est consommé. Les jets d'une
+   * barde qui porte Coup de chance : ses deux dés, puis ceux du statut, dans la même rafale.
    */
-  | { type: 'pair'; side: Side; rolls: [number, number]; faces: number; double?: number; forced?: [boolean, boolean] }
+  | { type: 'flurry'; side: Side; status?: StatusId; strikes: number; faces: number[] }
   /**
    * Un jet dont la face porte une compétence qui se greffe (règles v2, phase 5 bis) : le dé tombe, la compétence suit
    * (étape event), puis le coup de base, au dé déjà tiré (`Attack.preset`). Un jet sans greffe n'a pas cette étape : son
@@ -240,8 +238,8 @@ export type BeatBody =
    */
   | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true }
   /**
-   * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup compte double (les PV qu'il a
-   * retirés, à nouveau, en DP), face, rien. Le statut est consommé
+   * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
+   * deux fois, en DP), face, rien. Le statut est consommé
    */
   | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
   /**
@@ -280,14 +278,13 @@ export interface RolledDie {
 }
 
 /**
- * Les dés que lance une étape, dans l'ordre (mode triche, `forcedRolls`) : un pour un coup (sauf un coup dont la paire ou
- * le jet greffé a déjà tiré le dé), un pour un jet greffé, un pour une pièce, deux pour une paire.
+ * Les dés que lance une étape, dans l'ordre (mode triche, `forcedRolls`) : un pour un coup (sauf un coup dont le jet
+ * greffé a déjà tiré le dé), un pour un jet greffé, un pour une pièce.
  */
 export function diceOf(beat: Beat): RolledDie[] {
   if (beat.type === 'attack') return beat.attack.preset ? [] : [{ side: beat.attack.attacker, faces: beat.attack.faces, coin: false }]
   if (beat.type === 'roll') return [{ side: beat.side, faces: beat.faces, coin: false }]
   if (beat.type === 'coin') return [{ side: beat.side, faces: 2, coin: true }]
-  if (beat.type === 'pair') return [0, 1].map(() => ({ side: beat.side, faces: beat.faces, coin: false }))
   return []
 }
 
@@ -359,13 +356,13 @@ export interface StrikeRoll {
   roll: number
   /** Type du coup de base (l'attaque de l'attaquant, sous sa forme du moment) */
   kind: AttackKind
-  /** Le dé a été lancé par l'étape d'avant (paire, jet greffé) : ce coup n'en lance pas */
+  /** Le dé a été lancé par l'étape d'avant (jet greffé) : ce coup n'en lance pas */
   preset?: boolean
   /** Dé imposé par l'observateur (mode triche) */
   forced?: boolean
   /** Jet remplacé par sa compétence (relation `replace`) : pas de coup de base */
   replaced?: boolean
-  /** Coup de base multiplié (Crescendo, Soliste) */
+  /** Ce coup ×N (Crescendo, Soliste : une compétence de sa face qui le modifie) */
   multiplier?: number
 }
 
@@ -665,9 +662,11 @@ export function simulateCombat(
         return { type: 'damage', target, amount, source: effect.source, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
       }
       case 'applyStatus': {
-        const status: Status = { id: effect.status, stacks: effect.stacks }
+        // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus
+        const stacks = effect.stacks + (effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0)
+        const status: Status = { id: effect.status, stacks }
         // Une seule valeur (Brûlure, `turnsFromStacks`) : sans durée donnée, il dure autant de tours que de charges
-        const turns = effect.turns ?? (STATUSES[effect.status].turnsFromStacks ? effect.stacks : undefined)
+        const turns = effect.turns ?? (STATUSES[effect.status].turnsFromStacks ? stacks : undefined)
         if (turns !== undefined) status.turns = turns
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
         state.statuses = list
@@ -677,7 +676,7 @@ export function simulateCombat(
           type: 'applyStatus',
           target,
           status: effect.status,
-          stacks: effect.stacks,
+          stacks,
           turns,
           result: outcome,
         }
@@ -688,11 +687,12 @@ export function simulateCombat(
         const held = holder.statuses.find((s) => s.id === effect.status)
         const stored = held?.stacks ?? 0
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
-        // Compté en entier (overkill compris) ; les PV s'arrêtent à 0
-        const amount = clamp(Math.max(effect.min, stored), 0)
+        // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
+        const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
         state.hp = Math.max(0, state.hp - amount)
+        // Les jauges, une par impact, quand elles partent en entier (pas en part ni sous le minimum)
         const parts = held?.slots?.filter((n) => n > 0)
-        return { type: 'damage', target, amount, source: effect.source, ...(stored >= effect.min && parts && parts.length > 1 && { parts }) }
+        return { type: 'damage', target, amount, source: effect.source, ...(amount === stored && parts && parts.length > 1 && { parts }) }
       }
       case 'cleanse': {
         // Les mécanismes (statuts de forme, mécanismes de compétence : `mechanic`) ne se purgent pas
@@ -747,7 +747,7 @@ export function simulateCombat(
   /**
    * Fenêtre de déclenchement pour un camp : réactions de ses statuts (ordre de pose), puis
    * événements de son personnage (ordre de définition), puis ses reliques (ordre d'obtention).
-   * Renvoie le perdant s'il y a K.O. `cause` : l'étape qui a ouvert la fenêtre (le coup, la pièce, la paire,
+   * Renvoie le perdant s'il y a K.O. `cause` : l'étape qui a ouvert la fenêtre (le coup, la pièce, le jet greffé,
    * l'étape qui a franchi un seuil) ; aucune pour une fenêtre de phase (début ou fin de tour, ouverture).
    */
   function fire(side: Side, trigger: Trigger, cause?: number): Side | undefined {
@@ -972,13 +972,14 @@ export function simulateCombat(
   }
 
   /**
-   * Une compétence du porteur remplace-t-elle le coup de ce jet (relation `replace`) ? Même règle que son déclenchement
-   * (forme, limite, conditions), sans tirage : `validateRoster` refuse `chance` à une compétence qui remplace.
+   * Les compétences de cette face qui ont cette relation au coup et peuvent partir : même règle que leur déclenchement
+   * (forme, limite, conditions), sans tirage. `validateRoster` refuse `chance` à une compétence qui remplace le coup ou
+   * qui le multiplie : le moteur doit savoir dès le jet si le coup part, et ce qu'il vaut.
    */
-  function replaces(side: Side, roll: number) {
-    return fighters[side].events.some(
+  function ready(side: Side, roll: number, relation: HitRelation) {
+    return fighters[side].events.filter(
       (e) =>
-        relationOf(e) === 'replace' &&
+        relationOf(e) === relation &&
         inForm(side, e) &&
         isRollTrigger(e.trigger) &&
         rollMatches(e.trigger, roll, DIE_FACES) &&
@@ -987,9 +988,25 @@ export function simulateCombat(
     )
   }
 
-  /** Le porteur a-t-il, sous sa forme du moment, une compétence de cette face qui se greffe sur le coup ? */
+  /**
+   * Le coup de base de ce jet, avec son multiplicateur : une compétence de sa face qui le modifie avec `hitMultiplier`
+   * (Crescendo, Soliste) en fait « ce coup ×N » ; Crescendo (`buildsUp`) gagne ×1 de plus chaque fois qu'il est parti.
+   * Elle part ensuite, comme toute compétence qui modifie, dans la fenêtre de sa face si le coup touche.
+   */
+  function baseHit(side: Side, jetRoll: StrikeRoll): StrikeRoll {
+    const multiplier = ready(side, jetRoll.roll, 'modify').reduce(
+      (m, e) => m * (e.hitMultiplier === undefined ? 1 : e.hitMultiplier + (e.buildsUp ? (states[side].fired[e.id] ?? 0) : 0)),
+      1,
+    )
+    return multiplier > 1 ? { ...jetRoll, multiplier } : jetRoll
+  }
+
+  /**
+   * Le porteur a-t-il, sous sa forme du moment, une compétence de cette face qui se greffe sur le coup et peut partir
+   * (limite, conditions : une compétence épuisée laisse sa face nue, 0.107.0) ? Sa chance se tire au déclenchement.
+   */
   function grafts(side: Side, roll: number) {
-    return fighters[side].events.some((e) => relationOf(e) === 'graft' && inForm(side, e) && isRollTrigger(e.trigger) && rollMatches(e.trigger, roll, DIE_FACES))
+    return ready(side, roll, 'graft').length > 0
   }
 
   /** Lance le d6 (un rang de dé en mode triche). */
@@ -999,26 +1016,26 @@ export function simulateCombat(
   }
 
   /**
-   * Un jet complet d'un dé simple (règles v2, phase 5 bis, docs/RESOLUTION.md § 2) : le dé désigne une face. Sa compétence
+   * Un jet complet (règles v2, phase 5 bis, docs/RESOLUTION.md § 2) : un dé, qui désigne une face. Sa compétence
    * remplace le coup (jet remplacé), ou se greffe (étape roll, la compétence, puis le coup de base au dé tiré), ou modifie
-   * le coup (elle part dans ses fenêtres s'il touche) ; une face nue ne porte que le coup de base. `cause` : la rafale
-   * dont le jet fait partie.
+   * le coup (elle part dans ses fenêtres s'il touche, ou le multiplie) ; une face nue ne porte que le coup de base.
+   * `cause` : la rafale dont le jet fait partie (deux dés, Coup de chance).
    */
   function jet(attacker: Side, cause?: number): Side | undefined {
     const { roll, forced } = drawDie()
     const kind = fighters[attacker].attackKindIn(states[attacker].form)
-    if (replaces(attacker, roll)) return strikeOnce(attacker, { roll, kind, forced, replaced: true }, false, cause)
-    if (!grafts(attacker, roll)) return strikeOnce(attacker, { roll, kind, forced }, false, cause)
+    if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, kind, forced, replaced: true }, false, cause)
+    if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, kind, forced }), false, cause)
     const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, ...(forced && { forced: true as const }) }, cause)
     const down = fireGrafts(attacker, roll, rolled)
     if (down !== undefined) return down
-    return strikeOnce(attacker, { roll, kind, preset: true }, false, rolled)
+    return strikeOnce(attacker, baseHit(attacker, { roll, kind, preset: true }), false, rolled)
   }
 
   /**
    * Un coup de base de `attacker` (ou un jet remplacé), fenêtres comprises, au jet déjà tiré. Renvoie le perdant s'il y a
    * K.O. `plain` : coup brut (Furie des vents), dont la face ne déclenche aucune compétence (les reliques, si).
-   * `cause` : l'étape `roll`, `flurry` ou `pair` dont ce coup fait partie ; aucune pour le coup simple de l'action.
+   * `cause` : l'étape `roll` ou `flurry` dont ce coup fait partie ; aucune pour le coup simple de l'action.
    */
   function strikeOnce(attacker: Side, jetRoll: StrikeRoll, plain = false, cause?: number): Side | undefined {
     const defender = other(attacker)
@@ -1061,16 +1078,17 @@ export function simulateCombat(
       return fireStrike(hitTriggers, touched, dealt, hit, plain, outcome.replaced)
     })
     if (fell !== undefined) return fell
-    // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup compte double
+    // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
     return tossCoin(attacker, hit, dealt)
   }
 
   /**
    * Pile ou face (relation « modifie », règles v2) : si `side` détient une pièce, il la lance tout de suite (pile = 1 sur
-   * un d2, un rang de dé). Pile, ce coup compte double : les PV qu'il a retirés (`dealt`), à nouveau, en DP ; s'ils
-   * « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui touche de ce montant : tout ce qui
-   * réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de vie, Riposte, jauges). Le statut est
-   * consommé. Renvoie le perdant s'il y a K.O. La pièce a pour cause l'étape qui l'a posée, à défaut le coup `after`.
+   * un d2, un rang de dé). Pile, ce coup ×N (`coinToss.multiplier`) : les PV qu'il a retirés (`dealt`), encore N − 1 fois,
+   * en DP et en une perte ; s'ils « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui
+   * touche de ce montant : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de
+   * vie, Riposte, jauges). Le statut est consommé. Renvoie le perdant s'il y a K.O. La pièce a pour cause l'étape qui l'a
+   * posée, à défaut le coup `after`.
    */
   function tossCoin(side: Side, after: number, dealt: number): Side | undefined {
     const coin = states[side].statuses.find((s) => STATUSES[s.id].coinToss)
@@ -1081,7 +1099,8 @@ export function simulateCombat(
     const forced = nextForced()
     const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
     const toss = STATUSES[coin.id].coinToss!
-    const effects = heads ? applyEffects(side, [{ type: 'damage', amount: dealt, target: 'opponent', source: 'strike' }]) : []
+    const extra = dealt * (toss.multiplier - 1)
+    const effects = heads ? applyEffects(side, [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }]) : []
     const id = push(
       { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
       posedBy[side][coin.id] ?? after,
@@ -1089,41 +1108,8 @@ export function simulateCombat(
     return withinStrike(base, () => {
       const down = fallen() ?? checkThresholds(id)
       if (down !== undefined || !heads || !toss.headsTouches) return down
-      return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, dealt, id)
+      return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, extra, id)
     })
-  }
-
-  /**
-   * Action d'un personnage à deux dés (la barde) : la paire est lancée (deux rangs de dé) ; deux coups de base, un par
-   * dé. Un double qui a sa compétence la déclenche d'abord : elle se greffe sur les deux coups, ou les remplace
-   * (Crescendo, Soliste : un seul coup de base ×N au dé du double). Renvoie le perdant s'il y a K.O.
-   */
-  function twinAction(attacker: Side): Side | undefined {
-    const draws = [drawDie(), drawDie()]
-    const rolls: [number, number] = [draws[0].roll, draws[1].roll]
-    const kind = fighters[attacker].attackKindIn(states[attacker].form)
-    const trigger = rolls[0] === rolls[1] ? doubleTrigger(rolls[0]) : undefined
-    // Même règle que le déclenchement (forme, limite, conditions), sans tirage : `validateRoster` refuse `chance` ici
-    const skill = trigger && fighters[attacker].events.find((e) => e.trigger === trigger && canFire(attacker, e))
-    const pair = push({
-      type: 'pair',
-      side: attacker,
-      rolls,
-      faces: DIE_FACES,
-      ...(skill && { double: rolls[0] }),
-      ...(draws.some((d) => d.forced) && { forced: [draws[0].forced, draws[1].forced] as [boolean, boolean] }),
-    })
-    if (skill) {
-      const down = fire(attacker, trigger!, pair)
-      if (down !== undefined) return down
-    }
-    if (skill && relationOf(skill) === 'replace')
-      return skill.hitMultiplier ? strikeOnce(attacker, { roll: rolls[0], kind, preset: true, multiplier: skill.hitMultiplier }, false, pair) : undefined
-    for (const roll of rolls) {
-      const down = strikeOnce(attacker, { roll, kind, preset: true }, false, pair)
-      if (down !== undefined) return down
-    }
-    return undefined
   }
 
   /**
@@ -1150,19 +1136,22 @@ export function simulateCombat(
   }
 
   /**
-   * L'action d'un dé simple : un jet, ou plusieurs avec un statut de coups supplémentaires non instantané (Coup de chance,
-   * consommé au début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action).
+   * L'action : un jet par dé (deux pour un personnage à deux dés), plus ceux d'un statut de coups supplémentaires non
+   * instantané (Coup de chance, consommé au début de l'action : un nouveau déclenchement pendant ces jets vaut pour la
+   * prochaine action). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base. Plusieurs jets font une
+   * rafale (étape flurry), cause de chacun ; sans statut, celle des deux dés de la barde.
    */
-  function singleAction(attacker: Side): Side | undefined {
+  function action(attacker: Side): Side | undefined {
     const att = states[attacker]
     const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes && !STATUSES[s.id].instantStrikes)
-    if (!flurry) return jet(attacker)
-    const def = STATUSES[flurry.id]
-    const jets = 1 + def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1)
+    const def = flurry && STATUSES[flurry.id]
+    const extra = flurry && def ? def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1) : 0
+    const jets = fighters[attacker].dice + extra
+    if (jets === 1) return jet(attacker)
     // Charges en réserve (`strikeCharges: 'one'`) : une seule est dépensée, les autres attendent
-    att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
+    if (flurry && def) att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
     // Tous les jets d'une rafale, celui de l'action compris, ont la rafale pour cause
-    const volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
+    const volley = push({ type: 'flurry', side: attacker, ...(flurry && { status: flurry.id }), strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
     for (let k = 0; k < jets; k++) {
       const down = jet(attacker, volley)
       if (down !== undefined) return down
@@ -1208,7 +1197,7 @@ export function simulateCombat(
       att.statuses = consumeStatus(att.statuses, control.id, 1)
       push({ type: 'skip', side: attacker, status: control.id })
     } else {
-      down = (fighters[attacker].twinDice ? twinAction(attacker) : singleAction(attacker)) ?? burst(attacker)
+      down = action(attacker) ?? burst(attacker)
       if (down !== undefined) return end(other(down), 'ko')
     }
 

@@ -101,7 +101,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
               </div>
               <h2 className="font-display text-4xl font-extrabold text-ink-1">{c.name}</h2>
               <p className="font-body text-lg text-ink-2">
-                {c.race} · {c.archetype} · {c.twinDice ? '2' : ''}d{DIE_FACES}
+                {c.race} · {c.archetype} · {c.dice > 1 ? c.dice : ''}d{DIE_FACES}
               </p>
               <SkillDice character={c} />
               <SignatureLine character={c} />
@@ -240,7 +240,7 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
       )}
       {run.heritage && (
         <p className="relative z-10 font-body text-[14px] text-ink-3">
-          Héritage : {run.heritage.kind === 'relic' ? getRelic(run.heritage.relic).name : stepLabel(run.heritage.step, champion.twinDice)}
+          Héritage : {run.heritage.kind === 'relic' ? getRelic(run.heritage.relic).name : stepLabel(run.heritage.step)}
         </p>
       )}
     </section>
@@ -451,7 +451,7 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
                   <RelicRow relics={legacy.flatMap((g) => (g.kind === 'relic' ? [getRelic(g.relic)] : []))} size={48} tooltip="above" />
                 )}
                 {legacy.flatMap((g) =>
-                  g.kind === 'forge' ? [<span key={JSON.stringify(g.step)} className="champion-tile px-3 py-1.5 font-body text-[15px] text-ink-1">{stepLabel(g.step, champion.twinDice)}</span>] : [],
+                  g.kind === 'forge' ? [<span key={JSON.stringify(g.step)} className="champion-tile px-3 py-1.5 font-body text-[15px] text-ink-1">{stepLabel(g.step)}</span>] : [],
                 )}
               </div>
             </>

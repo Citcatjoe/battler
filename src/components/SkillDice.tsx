@@ -1,5 +1,5 @@
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, doubleTrigger, faceTrigger, isRollTrigger, rollFace, triggerText, type CharacterEvent, type Trigger } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, faceTrigger, isRollTrigger, rollFace, triggerText, type CharacterEvent, type Trigger } from '../game/events'
 import { STATES, statesPosedBy } from '../game/states'
 import { POLARITY_STYLE, STATUSES } from '../game/statuses'
 import { StateIcon } from './Icon'
@@ -7,14 +7,13 @@ import { SkillSeal } from './SkillSeal'
 import type { SkillPulse } from '../game/staging'
 
 /**
- * Les faces de compétence d'un personnage, dans l'ordre : celles qui portent une compétence (les doubles pour deux dés),
- * d'origine ou gravées par la forge. Depuis le d6 imprimé (0.105.0), plus de faces 1 à 3 vides : une face de coup n'a
- * pas de dé de compétence. En-tête du combat, sélection, affrontement.
+ * Les faces de compétence d'un personnage, dans l'ordre : celles qui portent une compétence, d'origine ou gravées par la
+ * forge. Depuis le d6 imprimé (0.105.0), plus de faces 1 à 3 vides : une face de coup n'a pas de dé de compétence.
+ * En-tête du combat, sélection, affrontement.
  */
-export function skillFaces(character: Character, events: readonly CharacterEvent[]): { face: number; trigger: Trigger }[] {
-  const twin = character.twinDice
-  const faces = events.map((e) => (twin ? doubleFace(e.trigger) : rollFace(e.trigger))).filter((f): f is number => f !== undefined)
-  return [...new Set(faces)].sort((a, b) => a - b).map((face) => ({ face, trigger: twin ? doubleTrigger(face) : faceTrigger(face) }))
+export function skillFaces(events: readonly CharacterEvent[]): { face: number; trigger: Trigger }[] {
+  const faces = events.map((e) => rollFace(e.trigger)).filter((f): f is number => f !== undefined)
+  return [...new Set(faces)].sort((a, b) => a - b).map((face) => ({ face, trigger: faceTrigger(face) }))
 }
 
 /** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). Au-delà de 6, son chiffre. */
@@ -65,7 +64,7 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
     )
   const formId = forms?.[form ?? 0].id
   const own = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = skillFaces(character, own)
+  const faces = skillFaces(own)
   // Les compétences hors dé (l'Ouverture de la barde, au début du combat) : un sceau à la suite des dés
   const offDice = own.filter((e) => !faces.some((f) => f.trigger === e.trigger) && !isRollTrigger(e.trigger))
   return (
@@ -78,7 +77,7 @@ export function SkillDice({ character, tooltip = 'above', align = 'center', size
                 compétence ; la clé relance l'éclat quand la même face sort deux fois de suite */}
             {event && pulse?.face === face && <span key={`wave-${pulse.key}`} aria-hidden className="skill-die-pulse" />}
             <div key={event && pulse?.face === face ? `flash-${pulse.key}` : 'idle'} className={event && pulse?.face === face ? 'skill-die-flash' : ''}>
-              <DieFace face={face} size={size} empty={!event} double={character.twinDice} />
+              <DieFace face={face} size={size} empty={!event} />
             </div>
             {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
           </li>
@@ -99,28 +98,17 @@ const SEAL_SIZE = { sm: 32, header: 40, md: 40 } as const
 
 const BOX = { xs: 'skill-die-xs h-[28px] w-[28px] p-[4px] rounded-[7px]', sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
 
-/** Une face de dé de compétence (ses points), ou un double (deux dés décalés). Aussi en pastille des sceaux (SkillBar). */
-export function DieFace({ face, size, empty, double }: { face: number; size: keyof typeof BOX; empty: boolean; double?: boolean }) {
-  const box = BOX[size]
+/** Une face de dé de compétence (ses points). Aussi en pastille des sceaux (SkillBar). */
+export function DieFace({ face, size, empty }: { face: number; size: keyof typeof BOX; empty: boolean }) {
   const pips = PIPS[face]
-  const die = (
+  return (
     <div
-      aria-label={double ? undefined : `Dé ${face}`}
-      className={`skill-die ${pips ? 'grid grid-cols-3 grid-rows-3' : 'skill-die-number'} ${size === 'xs' ? '' : 'rounded-lg'} ${box} ${empty ? 'opacity-30' : 'cursor-help'}`}
+      aria-label={`Dé ${face}`}
+      className={`skill-die ${pips ? 'grid grid-cols-3 grid-rows-3' : 'skill-die-number'} ${size === 'xs' ? '' : 'rounded-lg'} ${BOX[size]} ${empty ? 'opacity-30' : 'cursor-help'}`}
     >
       {pips
         ? pips.map(([x, y]) => <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />)
         : face}
-    </div>
-  )
-  if (!double) return die
-  // Un double : le même dé deux fois, le second décalé derrière le premier
-  return (
-    <div aria-label={`Double ${face}`} className="relative">
-      <div className={`absolute opacity-60 ${size === 'xs' ? 'left-[3px] top-[3px]' : 'left-1.5 top-1.5'}`} aria-hidden>
-        {die}
-      </div>
-      <div className="relative">{die}</div>
     </div>
   )
 }
@@ -161,9 +149,9 @@ export const ALIGN = {
 }
 
 /**
- * Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). `face` : la face du dé ou du double qui
- * la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce que la forge a
- * fait de la face (gravée, dorée), en pied.
+ * Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). `face` : la face du dé qui la déclenche ;
+ * absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce que la forge a fait de la face
+ * (gravée, dorée), en pied.
  */
 export function SkillTooltip({
   event,
@@ -178,7 +166,6 @@ export function SkillTooltip({
   align: 'left' | 'center' | 'right'
   notes?: readonly string[]
 }) {
-  const double = doubleFace(event.trigger)
   // Le même texte que le compendium (describeSkill) : pastilles en tête, puis l'effet et les statuts posés
   const { text, tags } = describeSkill(event)
   const states = statesPosedBy(event.effects)
@@ -195,7 +182,7 @@ export function SkillTooltip({
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          {face === undefined ? triggerText(event.trigger).short : `${double !== undefined ? 'Double' : 'Dé'} ${face}`}
+          {face === undefined ? triggerText(event.trigger).short : `Dé ${face}`}
         </span>
       </div>
       {tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{tags.map((t) => t.label).join(' · ')}</p>}

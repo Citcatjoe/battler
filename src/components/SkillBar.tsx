@@ -1,9 +1,9 @@
 import { useState, type CSSProperties } from 'react'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, doubleFace, triggerText, type CharacterEvent } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, rollFace, triggerText, type CharacterEvent } from '../game/events'
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
 import { STATUSES, type Status, type StatusId } from '../game/statuses'
-import { skillFaceOf, type SkillPulse, type SkillSignal } from '../game/staging'
+import type { SkillPulse, SkillSignal } from '../game/staging'
 import { Icon, skillIcon, STATUS_ICON, StatusIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
 import { ALIGN, DieFace, SkillTooltip, skillFaces } from './SkillDice'
@@ -37,10 +37,10 @@ interface Props {
 export function SkillBar({ character, side, form = 0, statuses, pulse, signal, rolling, align = 'left' }: Props) {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = skillFaces(character, events)
+  const faces = skillFaces(events)
   const faceEvent = (trigger: CharacterEvent['trigger']) => events.find((e) => e.trigger === trigger)
   // Les compétences hors dé (Ouverture : au début du combat) qui ne posent pas d'aura ont aussi leur sceau
-  const offDice = events.filter((e) => skillFaceOf(e.trigger) === undefined && !auraOfSkill(e))
+  const offDice = events.filter((e) => rollFace(e.trigger) === undefined && !auraOfSkill(e))
   // Ses auras : celles qu'il peut poser, et toute aura qu'il porte (posée par une relique, ou par l'autre forme)
   const auras = [...new Set([...auraIdsOf(character), ...statuses.filter((s) => STATUS_PLACE[s.id].place === 'aura').map((s) => s.id)])]
   const formRules = statuses.filter((s) => STATUS_PLACE[s.id].place === 'form')
@@ -51,23 +51,14 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
         const event = faceEvent(trigger)
         if (event && auraOfSkill(event)) return null
         return (
-          <Seal key={face} side={side} event={event} face={face} double={character.twinDice} statuses={statuses} lit={pulse?.face === face ? pulse.key : undefined} rolled={rolling?.includes(face)} align={tip} />
+          <Seal key={face} side={side} event={event} face={face} statuses={statuses} lit={pulse?.face === face ? pulse.key : undefined} rolled={rolling?.includes(face)} align={tip} />
         )
       })}
       {offDice.map((e) => (
         <Seal key={e.id} side={side} event={e} statuses={statuses} align={tip} />
       ))}
       {auras.map((id) => (
-        <AuraToken
-          key={id}
-          side={side}
-          id={id}
-          character={character}
-          status={statuses.find((s) => s.id === id)}
-          double={character.twinDice}
-          lit={auraLit(id, events, pulse, signal)}
-          align={tip}
-        />
+        <AuraToken key={id} side={side} id={id} character={character} status={statuses.find((s) => s.id === id)} lit={auraLit(id, events, pulse, signal)} align={tip} />
       ))}
       {formRules.map((s) => (
         <FormToken key={s.id} status={s} align={tip} />
@@ -82,7 +73,7 @@ function auraLit(id: StatusId, events: readonly CharacterEvent[], pulse?: SkillP
   if (!pulse) return undefined
   // Les compétences de la forme en cours seulement : l'ours qui sort un 3 ne pose pas l'Aura sauvage
   const posing = events.filter((e) => auraOfSkill(e) === id)
-  return posing.some((e) => skillFaceOf(e.trigger) === pulse.face) ? pulse.key : undefined
+  return posing.some((e) => rollFace(e.trigger) === pulse.face) ? pulse.key : undefined
 }
 
 /** Jauges ou réserve d'une compétence, comptées sur son sceau (Rétribution : les dégâts stockés). */
@@ -100,7 +91,6 @@ function Seal({
   side,
   event,
   face,
-  double,
   statuses,
   lit: litNow,
   rolled,
@@ -109,7 +99,6 @@ function Seal({
   side: number
   event?: CharacterEvent
   face?: number
-  double?: boolean
   statuses: readonly Status[]
   lit?: number
   rolled?: boolean
@@ -129,13 +118,13 @@ function Seal({
         </div>
         {face !== undefined && (
           <span className="absolute -bottom-2 -right-2.5 z-[1]">
-            <DieFace face={face} size="xs" empty={!event} double={double} />
+            <DieFace face={face} size="xs" empty={!event} />
           </span>
         )}
         {count !== undefined && <Count text={String(count)} />}
       </div>
       {event && <span key={lit !== undefined ? `name-${lit}` : 'name'} className={`skill-bar-name ${lit !== undefined ? 'is-lit' : ''}`}>{event.name}</span>}
-      {event && <SkillTooltip event={event} face={face ?? doubleFace(event.trigger)} placement="below" align={align} />}
+      {event && <SkillTooltip event={event} face={face} placement="below" align={align} />}
     </li>
   )
 }
@@ -145,7 +134,6 @@ function AuraToken({
   id,
   character,
   status,
-  double,
   lit: litNow,
   align,
 }: {
@@ -153,15 +141,14 @@ function AuraToken({
   id: StatusId
   character: Character
   status?: Status
-  double?: boolean
   lit?: number
   align: 'left' | 'right'
 }) {
   const lit = useLastLit(litNow)
   const def = STATUSES[id]
   const posing = character.events.filter((e) => auraOfSkill(e) === id)
-  const onFace = posing.map((e) => skillFaceOf(e.trigger)).find((f) => f !== undefined)
-  const icon = posing.length > 0 ? skillIcon(posing.find((e) => skillFaceOf(e.trigger) !== undefined) ?? posing[0]) : STATUS_ICON[id]
+  const onFace = posing.map((e) => rollFace(e.trigger)).find((f) => f !== undefined)
+  const icon = posing.length > 0 ? skillIcon(posing.find((e) => rollFace(e.trigger) !== undefined) ?? posing[0]) : STATUS_ICON[id]
   const active = status !== undefined
   // Le signal part de l'aura elle-même, et de chacune des compétences qui la posent
   const anchors = [id, ...posing.map((e) => e.id)].map((x) => `${side}:${x}`).join(' ')
@@ -178,7 +165,7 @@ function AuraToken({
         </div>
         {onFace !== undefined && (
           <span className="absolute -bottom-2 -right-2.5 z-[1]">
-            <DieFace face={onFace} size="xs" empty={false} double={double} />
+            <DieFace face={onFace} size="xs" empty={false} />
           </span>
         )}
         {/* Son effet du moment (« +4 ») : l'aura se lit ici, elle ne se relaie pas dans la zone d'état (0.79.7) */}
@@ -196,15 +183,15 @@ function AuraToken({
           </span>
         </div>
         <p className="mt-1.5 font-body text-[15px] leading-snug text-ink-1">{active ? def.describe(status) : def.summary}</p>
-        {/* Les compétences qui la posent : leur face, les charges posées, leurs pastilles (relation au coup, double qui
-            remplace les deux coups), et ce qu'elles font d'autre au passage (l'Aura d'immunité purge ses malus) */}
+        {/* Les compétences qui la posent : leur face, les charges posées, leurs pastilles (relation au coup), et ce
+            qu'elles font d'autre au passage (l'Aura d'immunité purge ses malus) */}
         {posing.map((e) => {
-          const f = skillFaceOf(e.trigger)
+          const f = rollFace(e.trigger)
           const extra = e.effects.filter((x) => x.type !== 'applyStatus' || x.status !== id)
           const posed = e.effects.find((x) => x.type === 'applyStatus' && x.status === id)
           const stacks = posed?.type === 'applyStatus' ? posed.stacks : 0
           const notes = [
-            f !== undefined ? `${doubleFace(e.trigger) !== undefined ? 'double' : 'dé'} ${f}` : triggerText(e.trigger).short,
+            f !== undefined ? `dé ${f}` : triggerText(e.trigger).short,
             stacks > 0 ? `+${stacks} charge${stacks > 1 ? 's' : ''}` : '',
             ...describeSkill(e).tags.filter((t) => t.rule !== 'auras' && t.rule !== 'max-stacks').map((t) => t.label),
           ].filter(Boolean)

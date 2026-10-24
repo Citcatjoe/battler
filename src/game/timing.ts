@@ -31,11 +31,11 @@ export const HANDOVER = 400
 
 /** Un dé roule (coup ordinaire) */
 export const DICE_ROLL = 800
-/** Plusieurs dés roulent ensemble (initiative, rafale, paire de la barde) */
+/** Plusieurs dés roulent ensemble (initiative, rafale, les deux dés de la barde) */
 export const DICE_ROLL_MANY = 900
 /** Lecture du résultat d'un coup avant l'élan (ou avant le critique) */
 export const DICE_READ = 350
-/** Lecture des dés d'une rafale ou d'une paire, une fois posés */
+/** Lecture des dés d'une rafale, une fois posés */
 export const DICE_LAND_HOLD = 400
 /** Rafale instantanée (Furie des vents) : ses dés apparaissent à plat, un temps pour les voir */
 export const VOLLEY_FLAT = 250

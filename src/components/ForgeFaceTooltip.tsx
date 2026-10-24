@@ -64,14 +64,12 @@ function Gild({ from, to }: { from: number; to: number }) {
 export function ForgeFaceTooltip({
   face,
   next,
-  twin,
   placement,
   align,
 }: {
   face: ForgedFace
   /** La face après l'opération choisie (aperçu d'une forge) */
   next?: ForgedFace
-  twin: boolean
   placement: 'above' | 'below'
   align: keyof typeof ALIGN
 }) {
@@ -94,7 +92,7 @@ export function ForgeFaceTooltip({
           {shown ? engraved ? <New>{shown.name}</New> : <Diff before={skill!.name} after={shown.name} /> : `Face ${face.face}`}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          {`${twin && shown ? 'Double' : 'Dé'} ${face.face}`}
+          {`Dé ${face.face}`}
         </span>
       </div>
       {then && then.tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{then.tags.map((t) => t.label).join(' · ')}</p>}
@@ -103,7 +101,7 @@ export function ForgeFaceTooltip({
         <p className="font-body text-[15px] leading-snug text-ink-1">{engraved || !now ? <New>{then.text}</New> : <Diff before={now.text} after={then.text} />}</p>
       ) : (
         <p className="font-body text-[15px] leading-snug text-ink-1">
-          {twin ? `Chaque dé qui fait ${face.face} porte le coup de base` : 'Le coup de base, sans compétence'}
+          Le coup de base, sans compétence
         </p>
       )}
       {(face.gild > 0 || after.gild > 0) && <Gild from={face.gild} to={after.gild} />}

@@ -43,26 +43,36 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
     (une charge consommée) → aller en phase 3.
-    Chaque action porte un COUP DE BASE (règles v2, phase 5 bis, décision de l'utilisateur du 2026-10-23) :
+    Chaque jet porte un COUP DE BASE (règles v2, phase 5 bis, décision de l'utilisateur du 2026-10-23) :
     sa valeur est tirée dans l'attaque du personnage (§ 3 bis). Le dé ne fait plus de dégâts : il désigne
-    une face, qui déclenche sa compétence, ou rien (face nue). Un JET, pour un dé simple :
+    une face, qui déclenche sa compétence, ou rien (face nue). Un JET, pour chaque dé (un pour tous, deux
+    pour la barde, plus ceux de Coup de chance) :
       a. le dé est lancé (un rang de dé en mode triche) ; il désigne une face ;
       b. la compétence de cette face déclare sa relation au coup de base (§ 3 bis) :
          - greffe (défaut) : étape roll (le dé), puis la compétence (fenêtre de sa face, compétences
            seules, étape event), puis le coup de base, au dé déjà tiré. Ce que la compétence pose est
-           présent au début du coup : il y réagit (Œil de faucon rend ce coup critique, Vol de vie le draine) ;
+           présent au début du coup : il y réagit (Œil de faucon rend ce coup critique, Vol de vie le draine ;
+           Coup de chance, greffé depuis la 0.107.0, donne un jet de plus à l'action suivante) ;
          - modifie : le coup de base part ; s'il touche, la compétence se déclenche dans la fenêtre de sa
-           face (Pourfendre : Saignement ; Pile ou face : la pièce, voir plus bas) ;
+           face (Pourfendre : Saignement de la moitié des PV que ce coup a retirés, arrondie au-dessus ;
+           Pile ou face : la pièce, voir plus bas). Une compétence qui modifie avec `hitMultiplier`
+           (Crescendo, Soliste, phase 5 ter) fait « ce coup ×N » : la valeur du coup de base est multipliée
+           dès le jet (§ 3, étape 1 bis), puis la compétence part dans la fenêtre de sa face s'il touche,
+           sans autre effet. Crescendo (`buildsUp`, 0.107.0) monte : ×2, puis ×1 de plus à chaque fois
+           qu'il est parti dans ce combat ;
          - remplace : pas de coup de base. L'étape attack du jet n'a ni valeur, ni esquive, ni critique
            (`Attack.replaced`) ; seules les fenêtres du dé s'ouvrent, et la compétence y donne ses propres
-           coups (Furie des vents, Coup de chance). Une face qui porte une compétence qui remplace remplace
-           le jet : ses autres compétences partent dans cette même fenêtre ;
-      c. face nue : le coup de base seul.
+           coups (Furie des vents). Une face qui porte une compétence qui remplace remplace le jet : ses
+           autres compétences partent dans cette même fenêtre ;
+      c. face nue : le coup de base seul. Une compétence épuisée (`limit` : Soliste et Peur, une fois par
+         combat, 0.107.0) ou dont une condition manque laisse sa face nue : ni étape roll, ni
+         multiplicateur, ni compétence.
     Pièce (Pile ou face, relation « modifie ») : la compétence pose sa pièce quand le coup touche ; elle
     part aussitôt, juste après les fenêtres de ce coup (étape coin, un rang de dé en mode triche). Pile :
-    ce coup compte double, la pièce inflige à nouveau les PV qu'il a retirés, en DP qui comptent comme un
-    coup qui touche (`headsTouches` : fenêtres « hit » du porteur et « hurt » de l'adversaire, sans
-    esquive, armure ni critique) ; face : ce coup reste normal. Le statut est consommé.
+    ce coup ×3 (0.107.0 ; ×2 avant), la pièce inflige encore deux fois les PV qu'il a retirés, en une
+    perte, en DP qui comptent comme un coup qui touche de ce montant (`headsTouches` : fenêtres « hit »
+    du porteur et « hurt » de l'adversaire, sans esquive, armure ni critique) ; face : ce coup reste
+    normal. Le statut est consommé.
     Coups multiples : si l'actif porte un statut `extraStrikes` non instantané (Coup de chance), il est
     consommé (étape flurry) et l'action compte plusieurs jets complets, chacun avec son dé, sa compétence
     et son coup de base (0.50.0 : toutes ses charges, un jet par charge, `strikeCharges: 'all'`).
@@ -70,12 +80,14 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     frappe juste après le jet en cours, dans la même action (`extraStrikes` coups de base). Ce sont des
     coups bruts (`Attack.plain`, 0.69.0) : chacun lance son dé, dont la face ne déclenche aucune
     compétence, donc aucune Furie en chaîne. Les reliques de face et la dorure, elles, lisent son dé.
-    Deux dés (`twinDice`, la barde, 0.41.0) : l'actif lance ses deux dés ensemble (étape pair, deux
-    rangs de dé en mode triche) : deux coups de base, un par dé, avec la face déjà tirée. Un double qui a
-    sa compétence (fenêtres doubleOne à doubleFive) la déclenche d'abord (étape event) : elle se greffe
-    (ses effets, puis les deux coups de base), ou elle remplace les deux coups (Crescendo, Soliste : un
-    seul coup de base ×N, `hitMultiplier`, au dé du double). Ces coups ne relancent rien : esquive,
-    critique, modificateurs et fenêtres du coup comme un coup normal.
+    Deux dés (`twinDice`, la barde ; phase 5 ter, décision de l'utilisateur du 2026-10-24) : l'action
+    est une action à deux jets, la même que celle de Coup de chance (étape flurry, sans statut). Chaque
+    dé est un JET complet, résolu à part dans l'ordre : son dé désigne une face, qui déclenche sa
+    compétence (greffe, modifie ou remplace, comme pour tous), puis le coup de base de ce dé. Les deux
+    dés roulent ensemble à l'écran, mais le second n'est tiré (un rang de dé en mode triche) qu'au
+    second jet : un K.O. au premier arrête l'action. Avec Coup de chance, ses jets s'ajoutent aux deux
+    dés, dans la même rafale. Une face donnée sort environ deux fois sur six par tour. Il n'y a plus de
+    doubles : ni déclencheur de double, ni compétence qui remplace les deux coups (retirés en phase 5 ter).
     Pour CHAQUE COUP, entièrement résolu avant le suivant :
       ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
       bloodied (seuil) → la face du dé (naturalOne, naturalTwo, naturalThree, puis face:4…) → naturalMax (actif) :
@@ -110,7 +122,7 @@ FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà 
 - **Une réaction au coup tombe avec son impact** (0.68.1) : la plaie qui coule (Saignement) est jouée sur la frappe qui la fait couler. Son label de surcharge (« Saignement +2 », § 11) tombe sous le dé au moment de l'impact, comme « Critique ×2 », puis ses PV perdus et son compteur qui baisse suivent d'un battement (`flowOf`, `bleedOut`, `staging.ts`). De même, le statut que le coup pose sur sa cible (poison de l'Aura de décoction, Saignement de Pourfendre) tombe à son impact (`ridesOf`, `landRide`). Les étapes du moteur restent distinctes ; elles ont le coup pour cause, si bien qu'une autre étape intercalée (Riposte) ne les sépare plus de lui (moteur v2).
 - Ces règles valent pour toute résolution à venir : un nouveau type d'étape doit dire, dans `stage` (`staging.ts`), avec quoi il est montré.
 
-**Ce que le moteur dit de chaque étape** (moteur v2, [MOTEUR_V2.md](MOTEUR_V2.md) § 3) : chaque étape (`Beat`) porte son rang (`id`), la phase du tour où elle a lieu (`phase` : `shift`, `turnStart`, `action`, `turnEnd` ; l'ouverture compte comme `turnStart`), le maître du tour (`owner`) et, sauf pour une étape racine (jet de l'action, effet de phase, rafale, paire), sa **cause** (`cause`, le rang de l'étape qui l'a provoquée). Une réaction au coup, une compétence de son dé qui modifie ou remplace le coup, une relique sur un moment du coup ont le coup pour cause, même si une autre étape (Riposte) s'intercale ; un jet dont la face porte une compétence qui se greffe commence par une étape `roll` (le dé), cause de la compétence et du coup de base ; les fenêtres ouvertes par une pièce qui touche ont la pièce pour cause ; la compétence d'un double et les coups d'une paire ou d'une rafale ont la paire ou la rafale ; une pièce et des coups instantanés ont l'étape qui a posé leur statut ; un seuil franchi a l'étape qui l'a fait franchir ; un décompte ou une expiration, l'effet de tour de son statut quand il en a un. L'écran regroupe par cause, jamais par voisinage. `audit.ts` vérifie ces liens.
+**Ce que le moteur dit de chaque étape** (moteur v2, [MOTEUR_V2.md](MOTEUR_V2.md) § 3) : chaque étape (`Beat`) porte son rang (`id`), la phase du tour où elle a lieu (`phase` : `shift`, `turnStart`, `action`, `turnEnd` ; l'ouverture compte comme `turnStart`), le maître du tour (`owner`) et, sauf pour une étape racine (jet de l'action, effet de phase, rafale), sa **cause** (`cause`, le rang de l'étape qui l'a provoquée). Une réaction au coup, une compétence de son dé qui modifie ou remplace le coup, une relique sur un moment du coup ont le coup pour cause, même si une autre étape (Riposte) s'intercale ; un jet dont la face porte une compétence qui se greffe commence par une étape `roll` (le dé), cause de la compétence et du coup de base ; les fenêtres ouvertes par une pièce qui touche ont la pièce pour cause ; les jets d'une rafale (les deux dés de la barde, Coup de chance) ont la rafale pour cause, par leur coup ou leur étape `roll` ; une pièce et des coups instantanés ont l'étape qui a posé leur statut ; un seuil franchi a l'étape qui l'a fait franchir ; un décompte ou une expiration, l'effet de tour de son statut quand il en a un. L'écran regroupe par cause, jamais par voisinage. `audit.ts` vérifie ces liens.
 
 ### Qui fixe le moment d'une résolution
 
@@ -152,10 +164,10 @@ Les étapes sont toujours dans cet ordre. Les tirages (dé, valeur du coup de ba
 | # | Étape | Règle | Peut être modifiée par |
 | --- | --- | --- | --- |
 | 1 | **Dé** | Jet du d6 de l'attaquant (`DIE_FACES`). **Le jet désigne une face** (« sur un 4 » : la face 4) : c'est elle que lisent les compétences, les reliques de face, la dorure et le jet maximal. Le dé ne fait aucun dégât. Une face dont la compétence **remplace** le coup arrête la chaîne ici : jet remplacé (`Attack.replaced`), ni valeur, ni esquive, ni critique, ni dégâts, aucune fenêtre `hit`, `hurt`, `missed` ou `dodge` ; les fenêtres du dé s'ouvrent normalement | compétence qui remplace (§ 3 bis) |
-| 1 bis | **Coup de base** (règles v2, phase 5 bis) | Sa valeur est tirée dans l'**attaque** de l'attaquant, de `attackMin` à `attackMax` (stats effectives : reliques de caractéristique et Tremper l'arme comprises) ; aucun tirage si la fourchette n'a qu'une valeur. Crescendo et Soliste la multiplient (`hitMultiplier`, `Attack.multiplier`). Son type, DP ou DM (`CharacterDef.attackKind`, par forme pour le druide), n'est qu'une étiquette (`Attack.kind`) | `hitMultiplier`, reliques de caractéristique, forge |
+| 1 bis | **Coup de base** (règles v2, phase 5 bis) | Sa valeur est tirée dans l'**attaque** de l'attaquant, de `attackMin` à `attackMax` (stats effectives : reliques de caractéristique et Tremper l'arme comprises) ; aucun tirage si la fourchette n'a qu'une valeur. Une compétence de sa face qui le modifie avec `hitMultiplier` (Crescendo, Soliste : « ce coup ×N », phase 5 ter) la multiplie (`Attack.multiplier`). Son type, DP ou DM (`CharacterDef.attackKind`, par forme pour le druide), n'est qu'une étiquette (`Attack.kind`) | `hitMultiplier`, reliques de caractéristique, forge |
 | 2 | **Esquive** | Imposée par un statut du défenseur (`forcesDodge`, sans tirage, une charge consommée), sinon le défenseur tire contre sa chance d'esquive. Une esquive annule tout le coup (remplacement). | `forcesDodge` (Esquive améliorée), `modifyStats` (esquive) |
 | 2 bis | **Bonus de relique** (0.75.0) | Sur un coup qui touche, les reliques de coup de l'attaquant ajoutent leur bonus à la valeur du coup de base, avant le critique ; un bonus de face (`onFace`, 0.77.0) ne vaut que si le dé de ce coup fait cette face : un coup de base de 6 sur la face 4, avec le Fer à quatre clous, vaut 10, puis 20 en critique ×2. Coup brut de Furie compris (2026-10-23). Aucun tirage. | `Relic.rollBonus`, `Relic.onFace` ([RELIQUES.md](RELIQUES.md)) |
-| 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : coup brut compris (2026-10-23), chaque dé de la paire se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
+| 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : coup brut compris (2026-10-23), chacun des deux dés de la barde se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
 | 3 | **Critique** | Forcé par un statut (`forcesCrit`, sans tirage), sinon tirage contre sa chance de critique. La valeur du coup (coup de base, ×N, reliques de coup et dorure comprises) est multipliée, puis arrondie. | `forcesCrit`, `modifyStats` |
 | 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli) |
 | 5 | **Dégâts entrants** | Statuts du défenseur, dans l'ordre de pose | `modifyIncoming` (Vulnérable) |
@@ -177,13 +189,15 @@ Les charges consommées par le coup (critique assuré, bouclier) sont retirées 
 
 | Relation | Ce qui se passe | Compétences |
 | --- | --- | --- |
-| **Greffe** (défaut) | Au jet : la compétence se résout, puis le coup de base part. Ce qu'elle pose est présent au début du coup et y réagit (règle 9) | toutes, sauf les suivantes |
-| **Modifie** | Le coup de base part ; s'il touche, la compétence se déclenche dans la fenêtre de sa face, ou change la valeur de ce coup | Pourfendre (Saignement 2, dès le coup suivant) ; Pile ou face (pile : ce coup compte double) |
-| **Remplace** | Pas de coup de base : la compétence fournit ses propres coups | Furie des vents (deux coups de base bruts, chacun son dé) ; Crescendo et Soliste (un coup de base ×N) ; Coup de chance |
+| **Greffe** (défaut) | Au jet : la compétence se résout, puis le coup de base part. Ce qu'elle pose est présent au début du coup et y réagit (règle 9) | toutes, sauf les suivantes ; Coup de chance depuis la 0.107.0 |
+| **Modifie** | Le coup de base part ; s'il touche, la compétence se déclenche dans la fenêtre de sa face, ou change la valeur de ce coup | Pourfendre (Saignement de la moitié des PV que ce coup a retirés, arrondie au-dessus, dès le coup suivant ; 2 avant la 0.107.0) ; Pile ou face (pile : ce coup ×3) ; Soliste (ce coup ×3, une fois par combat) et Crescendo (×2, puis ×1 de plus à chaque fois), dès le jet |
+| **Remplace** | Pas de coup de base : la compétence fournit ses propres coups | Furie des vents (deux coups de base bruts, chacun son dé) |
 
-**Coup de chance garde son identité** (un dé de plus), au plus simple : le jet qui le déclenche ne frappe pas ; à sa prochaine action, le porteur lance un jet complet de plus par charge (sa face déclenche sa compétence, puis son coup de base). Aucune règle nouvelle : c'est le jet remplacé, puis l'action à plusieurs jets.
+**Coup de chance garde son identité** (un dé de plus), au plus simple : depuis la 0.107.0, il se greffe, le coup du jet qui le déclenche part ; à sa prochaine action, le porteur lance un jet complet de plus par charge (sa face déclenche sa compétence, puis son coup de base). Aucune règle nouvelle : c'est la greffe, puis l'action à plusieurs jets. De la 0.106.0 à la 0.106.1, il remplaçait le coup : il en faisait perdre un pour en gagner un plus tard (+3 points gravé, Morgrut y perdait).
 
-**Sur un double** (deux dés), une compétence se greffe sur les deux coups de base, ou les remplace (Crescendo, Soliste). Graver une compétence qui modifie sur un double en fait une greffe : un double a deux coups.
+**Une compétence épuisée laisse sa face nue** (0.107.0, Soliste et Peur, `limit: 1`) : ni étape roll, ni multiplicateur, ni compétence, le coup de base seul. Une compétence qui modifie son coup ne compte un déclenchement que s'il touche : un solo esquivé reste à jouer.
+
+**Deux dés** (la barde, phase 5 ter) : chacun de ses dés est un jet complet, la compétence de sa face y a la même relation au coup que sur tout dé (une compétence qui modifie reste une compétence qui modifie). Avant la phase 5 ter, ses compétences étaient sur ses doubles (`doubleOne` à `doubleFive`, `double:6` pour un dé forgé) : un double se greffait sur les deux coups de base, ou les remplaçait par un seul coup ×N (Crescendo, Soliste, `relation: 'replace'`) ; graver une compétence qui modifie sur un double en faisait une greffe. Ces déclencheurs, la règle « remplace les deux coups » et l'étape `pair` sont retirés.
 
 Avant la 0.106.0, une compétence du dé sacrifiait son coup (`forfeitsHit`), sauf Pourfendre (`needsTouch`) ; le coup transformé (`reshapesHit`) n'avait plus de porteur ; chaque face frappait pour une valeur imprimée (0.105.0). Ces trois règles et les valeurs imprimées sont retirées.
 
@@ -216,12 +230,12 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusAge` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines acérées et Saignement quand le porteur encaisse ; Pourfendre, sur un 1, seulement si son coup touche (relation « modifie », § 3 bis) | `CharacterEvent` ; `reactions` d'un statut |
-| **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, jet remplacé par sa compétence (Furie des vents, Coup de chance), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1, 2, 3 et 8 ; `relation: 'replace'`, `forcesDodge`, `wards`, `immunities` |
+| **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, jet remplacé par sa compétence (Furie des vents), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1, 2, 3 et 8 ; `relation: 'replace'`, `forcesDodge`, `wards`, `immunities` |
 | **Sur le coup** | Dans les fenêtres d'un coup qui touche (ou d'une pile qui touche) : `hit` de l'attaquant, `hurt` du défenseur | Vol de vie (`hit`), Riposte et jauges de Rétribution (`hurt`) | `drainsHit`, `reflectsHit`, `fillsOnHurt` |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
 | **Action multiple** | Pendant l'action du porteur | Furie des vents (deux coups de base bruts), Coup de chance (un jet de plus par charge) | `extraStrikes` |
-| **Deux dés** | À l'action, pour un personnage qui lance deux dés | la barde : deux coups de base, une compétence sur un double qui s'y greffe ou les remplace | `twinDice`, déclencheurs `doubleOne`… `doubleFive`, `hitMultiplier` |
-| **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant), d'intimidation (entrant), de précision (stats), glaciale (périodique : pose du Poison sur l'adversaire, 0.69.0) | crochets existants, statut sans `turns` |
+| **Deux dés** | À l'action, pour un personnage qui lance deux dés | la barde : une action à deux jets complets, chacun sa face, sa compétence et son coup de base (phase 5 ter) | `twinDice`, `Character.dice`, étape `flurry` sans statut |
+| **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant, non cumulable), d'intimidation (entrant), de précision et sauvage (stats : critique ; attaque), glaciale (périodique : pose du Poison sur l'adversaire, 0.69.0) | crochets existants, statut sans `turns` |
 | **Mécanisme de compétence** (2026-10-21) | Statut qui porte la règle d'une compétence ou d'une forme (`StatusDef.mechanic` : `skill` pour les jauges de Rétribution, Pile ou face, Furie des vents ; `form` pour Incantation et Force de l'ours, posés tant que le personnage garde la forme). Jamais purgé, jamais bloqué (immunité, garde, opposition), jamais compté comme bonus ou malus dans les statistiques ; le compendium le présente comme une mécanique de sa compétence | Rétribution, Furie des vents, Incantation | `StatusDef.mechanic`, `isMechanic`, `CharacterForm.statuses` |
 
 ---
@@ -272,39 +286,41 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Saignement (2) : le porteur encaisse un coup | Fenêtre `hurt` du porteur, après les réactions posées avant la plaie : 2 dégâts directs (ignorent armure et bouclier), puis la plaie passe à 1, dans la même étape. Le coup suivant fait couler 1, et la plaie disparaît. |
 | Saignement posé par le coup qui touche | Une plaie ouverte pendant un coup (`naturalOne`, `hit`, `crit`) ne coule pas sur ce coup : elle coule dès le coup suivant qui touche le porteur (règle 9). Une plaie de 2 grossie de 2 par le coup coule de 2 (ses charges du début du coup), puis passe à 3. |
 | Saignement contre esquive, Peur ou jet remplacé | Aucun coup ne touche : la plaie ne coule pas et ne perd rien. Elle attend le prochain coup qui touche, sans limite de durée. |
-| Pourfendre (Gorak) : le 1 touche, ou est esquivé | Relation « modifie » : le 1 porte son coup de base (critique, Aura de puissance, intimidation, épines, riposte). S'il touche, la fenêtre du 1 (`naturalOne`, avant `hit` et `hurt`) pose Saignement 2, qui ne coule pas sur ce coup : la plaie coule dès le coup suivant qui touche l'adversaire (2 PV, puis 1 au coup d'après ; règle 9). S'il est esquivé, rien n'est posé : un coup doit toucher pour poser un malus physique (vérifié avant tout tirage). |
+| Pourfendre (Gorak) : le 1 touche, ou est esquivé | Relation « modifie » : le 1 porte son coup de base (critique, Aura de puissance, intimidation, épines, riposte). S'il touche, la fenêtre du 1 (`naturalOne`, avant `hit` et `hurt`) pose un Saignement de la moitié des PV que ce coup a retirés, arrondie au-dessus (0.107.0, `fromHit` ; 2 avant) : un coup de 7 pose Saignement 4, qui ne coule pas sur ce coup ; la plaie coule dès le coup suivant qui touche l'adversaire (4 PV, puis 3, 2, 1 ; règle 9). S'il est esquivé, rien n'est posé : un coup doit toucher pour poser un malus physique (vérifié avant tout tirage). |
 | Œil de faucon (Elaria) : le 1 | Greffe : Critique assuré est posé au jet, avant le coup de base du 1 ; présent au début du coup, il le rend critique (et s'use). |
 | Furie des vents contre Saignement (2) | Le premier coup de la rafale fait couler 2, le deuxième 1 : la plaie est vidée dans la même action. |
 | Furie des vents contre Esquive améliorée | Le premier coup est esquivé à coup sûr et consomme une charge ; le second est résolu normalement (tirage d'esquive) s'il n'en reste plus, sinon esquivé à coup sûr lui aussi (cumulable depuis le 2026-10-21). |
 | Esquive améliorée posée deux fois (2026-10-21) | Les charges s'additionnent : deux charges, deux coups reçus esquivés à coup sûr, une charge par esquive. |
 | Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : deux coups de base, sans compétence ; aucune Furie ne se relance. Les reliques de face et la dorure lisent leur dé : le Fer à quatre clous renforce un 4 de Furie, l'Osselet fendu part sur un 1 de Furie. |
-| Vol de vie (Ervald) : le 1 | Greffe : 2 charges posées au jet ; le coup de base du 1 en use déjà une s'il est porté (il touche : soin ; esquivé : la charge est perdue). La suivante attend le prochain coup. |
+| Vol de vie (Ervald) : le 1 | Greffe : 1 charge posée au jet (2 au plus ; 2 par jet avant la 0.107.0) ; le coup de base du 1 l'use déjà s'il est porté (il touche : soin ; esquivé : la charge est perdue). |
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
 | Vol de vie contre Épines acérées | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (sa fenêtre `hit`), puis la fenêtre `hurt` du nain pose le Saignement sur lui. |
 | Jet remplacé (Furie des vents) contre Esquive améliorée, Épines acérées ou Saignement | Le jet lui-même ne porte pas de coup : il ne consomme ni l'esquive imposée, ni les épines, ni la plaie ; les deux coups de la Furie, eux, sont des coups. |
 | Aura glaciale (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 charges de Poison posées sur l'adversaire, avant le coup (0.69.0). Ce Poison agit au début du tour suivant de la victime et perd une charge à chaque fois : il grossit d'1 par tour. Immunisée, la victime ne reçoit rien. |
-| Aura de puissance (2 charges) sur un critique de 5 ×2 | Critique d'abord (10), puis sortant : 10 + 4 = 14, puis l'armure. Chaque coup d'une Furie des vents reçoit le bonus. |
-| Aura de puissance (1) contre Aura d'intimidation | Sortant puis entrant : un 6 devient 6 + 2 − 2 = 6. Un 1 contre l'intimidation seule : 1 − 2 = −1, plancher à 1. |
+| Aura sauvage (2 charges) sur une attaque de 3 à 4 | Elle écrit la feuille (0.107.0) : l'attaque devient 5 à 6, avant le critique ; un critique ×2 d'un 6 fait 12. L'Aura de puissance, elle, ajoute +2 après le critique (12 + 2), et ne se cumule pas. |
+| Aura de puissance contre Aura d'intimidation (2 charges) | Sortant puis entrant : un 6 devient 6 + 2 − 2 = 6 (−1 par charge depuis la 0.107.0). Un 1 contre l'intimidation seule : 1 − 2 = −1, plancher à 1. |
 | Riposte et Vol de vie, Épines acérées | Le coup touche le paladin : l'attaquant vole d'abord sa vie (fenêtre `hit`), puis, dans le `hurt` du paladin, ses statuts réagissent dans l'ordre de pose (Riposte, jauges, épines, saignement). Les dégâts de riposte ne remplissent pas les jauges de rétribution : ce ne sont pas des coups. |
-| Rétribution : jauges | Chaque coup qui touche le paladin, et chaque pile qui touche, range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, saignement, riposte) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la somme, au moins 1. Les jauges sont un mécanisme : aucune purge ne les retire. |
+| Rétribution : jauges | Chaque coup qui touche le paladin, et chaque pile qui touche, range ses PV retirés dans une jauge (3 au plus, la plus ancienne cède sa place). Ni les dégâts directs (poison, saignement, riposte) ni les coups esquivés ne comptent. Sur un 1 : dégâts directs égaux à la moitié de la somme, arrondie au-dessous, au moins 1 (0.107.0, `release.share` ; la somme avant). Les jauges sont un mécanisme : aucune purge ne les retire. |
 | Aura d'immunité | Posée sur un 3 : les malus du paladin sont d'abord purgés, puis toute pose de malus est bloquée (« protégé par Aura d'immunité »), sans usure. Une Purification adverse peut retirer l'aura. |
 | Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière. La Furie, instantanée depuis la 0.50.0, ne peut pas se faire voler son action : elle frappe dans celle où elle est posée. La pièce non plus depuis le 2026-10-21 : elle part juste après le coup qui la pose. |
-| Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de puissance à 6 charges disparaît d'un coup. Un Vol de vie en attente peut aussi être purifié ; une Furie ou les jauges de Rétribution, mécanismes de compétence, jamais. |
-| Coup de chance : le jet qui le pose, puis l'action suivante | Relation « remplace » : le jet du 1 ne frappe pas. À sa prochaine action, la voleuse lance un jet complet de plus par charge : chaque face déclenche sa compétence (un nouveau Coup de chance se garde pour la suivante), puis son coup de base. |
-| Pile ou face et Aura de décoction | Le coup du 1 touche : la pièce part. Pile : à nouveau les PV retirés par ce coup, en DP qui comptent comme un coup qui touche : la décoction empoisonne aussi juste après la pièce. Face, ou coup esquivé : rien de plus. |
+| Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura glaciale à 3 charges disparaît d'un coup. Un Vol de vie en attente peut aussi être purifié ; une Furie ou les jauges de Rétribution, mécanismes de compétence, jamais. |
+| Coup de chance : le jet qui le pose, puis l'action suivante | Greffe (0.107.0 ; il remplaçait le coup avant) : le coup du 1 part. À sa prochaine action, la voleuse lance un jet complet de plus par charge : chaque face déclenche sa compétence (un nouveau Coup de chance se garde pour la suivante), puis son coup de base. |
+| Pile ou face et Aura de décoction | Le coup du 1 touche : la pièce part. Pile : ce coup ×3, encore deux fois les PV retirés par ce coup, en DP qui comptent comme un coup qui touche : la décoction empoisonne aussi juste après la pièce. Face, ou coup esquivé : rien de plus. |
 | Aura de sainteté et poison | Le poison agit au début du tour du porteur, la sainteté à sa fin : la prêtresse empoisonnée perd puis regagne dans le même tour. |
-| Aura de précision et Œil de faucon | Le critique assuré utilise le multiplicateur effectif : ×3 pour Elaria, ×3,4 pour Sylwen. |
+| Aura de précision et Œil de faucon | Le critique assuré utilise le multiplicateur effectif : ×3,4 pour Elaria. Chaque charge ajoute aussi 5 % de critique (0.107.0). |
+| Soliste (la barde) : deux 2 dans la même action | Le premier coup ×3 touche : le solo est joué. Le second 2 est une face nue (une fois par combat, 0.107.0). Si le premier est esquivé, le second est encore un solo. |
+| Crescendo gravé : son troisième déclenchement | ×2, puis ×3, puis ×4 : chaque Crescendo qui a touché fait monter le suivant ; un Crescendo esquivé ne monte pas. |
 | Saignement qui achève son porteur | K.O. pendant la fenêtre du coup : l'adversaire du porteur gagne, même si le coup seul ne suffisait pas. |
 | Vulnérable (2) contre une armure de 1, coup de 3 | 3 + 2 = 5, puis l'armure : 4 dégâts. |
 | Affaibli (3) et Vulnérable (2) sur le même coup de 2 | Sortant : 2 − 3 = −1 ; entrant : −1 + 2 = 1 ; plancher : 1 ; puis armure. |
 | Étourdi (1) | Début de tour normal (le poison agit), action perdue, fin de tour normale (la brûlure agit). |
 | Régénération et Brûlure | La Régénération agit au début du tour, la Brûlure à la fin. |
-| Barde : deux dés différents (2 et 5) | Deux coups de base, chacun avec sa valeur tirée, son esquive et son critique ; la face de chaque dé ne compte que pour les reliques de face et la dorure. Un 2 seul ne déclenche rien : seules les paires comptent. |
-| Barde : double 4, Aura mélodieuse (2 charges) | Crescendo remplace les deux coups : un seul coup de base ×4 (un coup de 4 vaut 16, critique : 32), puis l'armure et les boucliers, puis +2 en dégâts finaux. |
-| Barde : double 1, Siffloter | Greffe : Sifflotement posé, puis les deux coups de base. |
+| Barde : deux dés différents (2 et 5) | Deux jets complets, dans l'ordre : le 2 déclenche Soliste (ce coup ×3) sur le coup de ce dé ; le 5, une face nue, ne porte que son coup de base. Chaque coup a sa valeur tirée, son esquive et son critique ; les reliques de face et la dorure lisent chaque dé seul. |
+| Barde : deux 2, Aura mélodieuse (2 charges) | Deux jets, deux Soliste : chaque coup de base ×3 (un coup de 3 vaut 9, critique : 18), puis l'armure et les boucliers, puis +2 en dégâts finaux, sur chacun. Plus de double : deux faces égales ne font rien de plus. |
+| Barde : un 1, puis un 4 | Le 1 : Aura mélodieuse greffée (une charge de plus), puis le coup de ce dé, qui en profite déjà (présente au début du coup, règle 9) ; le 4 : son coup de base, avec l'aura renforcée. |
 | Aura mélodieuse contre Aura d'intimidation (1) et armure 1 | Dégâts finaux (`modifyFinal`) : appliqués après tout le reste. Un 3 devient 3 − 2 = 1, l'armure laisse 1 (plancher), puis +1 : 2. C'est la réponse de la barde aux réductions fixes par coup. |
-| Fausse note (2 charges) contre une Furie des vents | Le premier coup qui touche perd 10 dégâts finaux, après l'armure (plancher à 1), et consomme toute la Fausse note ; le second est normal. Un coup esquivé ne la consomme pas. |
-| Sifflotement (3 charges), relancé avant la fin | Cumul : les charges s'ajoutent (3 + 3 = 6), chaque fin de tour rend 2 PV et retire une charge. |
+| Fausse note (1 charge) contre une Furie des vents | Le premier coup qui touche perd 5 dégâts finaux, après l'armure (plancher à 1), et consomme toute la Fausse note ; le second est normal. Un coup esquivé ne la consomme pas. |
+| Sifflotement (2 charges), relancé avant la fin | Cumul : les charges s'ajoutent (2 + 2 = 4), chaque fin de tour rend 2 PV et retire une charge. |
 
 ---
 
@@ -373,7 +389,7 @@ La colonne de labels sous le dé. **Définition validée par l'utilisateur (2026
 3. **Ordre** : de haut en bas, l'ordre d'application de ce livre (§ 3, puis les réactions dans l'ordre du moteur) ; chaque label tombe à l'instant où il s'applique ; la colonne se vide à l'étape suivante (le jet suivant, chaque coup d'une rafale, le passage de main).
 4. **Couleur selon la source**, pas selon le signe : Coup (le dé et le critique), Compétence ou statut, Relique. Le signe se lit au « + / − » du label, aux hachures de la plaque du − et à son son.
 5. **N'entre que ce qui change ce coup et n'arrive pas à chaque coup.** Hors de la colonne :
-   - ce qui se **déclenche** (une compétence et l'action qu'elle donne : Pile ou face, Furie des vents, Coup de chance, Rétribution, Crescendo et Soliste sur un double) : leur sceau le dit, au niveau identité (décision de l'utilisateur pour Pile ou face et la Furie, étendue à toute action déclenchée) ;
+   - ce qui se **déclenche** (une compétence et l'action qu'elle donne : Pile ou face, Furie des vents, Coup de chance, Rétribution, Crescendo et Soliste) : leur sceau le dit, au niveau identité (décision de l'utilisateur pour Pile ou face et la Furie, étendue à toute action déclenchée) ;
    - ce qui agit **à chaque coup** (auras : Aura de puissance, Aura mélodieuse, Aura de décoction ; états durables : Affaibli, Vulnérable, Force de l'ours) : barre de compétences et zone d'état.
    - **Exception déclarée : la relique qui se déclenche** (étape `relic`) garde son label, à la demande de l'utilisateur (« quand une relique se déclenche, il faudrait un label au centre ») : une relique n'a pas de sceau dans la barre de compétences.
 

@@ -53,9 +53,8 @@ export function ForgedDie({
   preview?: ForgeOffer
 }) {
   const faces = forgedFaces(character.definition, character.forge)
-  const twin = character.twinDice
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label={`Dé de ${character.name} : d${faces.length}${twin ? ', deux dés' : ''}`}>
+    <ul className="flex flex-wrap gap-1.5" aria-label={`Dé de ${character.name} : d${faces.length}${character.dice > 1 ? ', deux dés' : ''}`}>
       {faces.map((f) => {
         const skill = f.engraved ?? f.origin[0]
         const target = targets?.includes(f.face)
@@ -66,7 +65,7 @@ export function ForgedDie({
               type="button"
               disabled={!target}
               aria-pressed={target ? selected === f.face : undefined}
-              aria-label={`${twin && skill ? 'Double' : 'Face'} ${f.face}`}
+              aria-label={`Face ${f.face}`}
               onClick={() => target && onPick?.(f.face)}
               className="forge-face"
               data-size={size}
@@ -85,7 +84,7 @@ export function ForgedDie({
             {skill && !f.gild && !next ? (
               <SkillTooltip event={skill} face={f.face} placement={tooltip} align={align} />
             ) : (
-              <ForgeFaceTooltip face={f} next={next} twin={twin} placement={tooltip} align={align} />
+              <ForgeFaceTooltip face={f} next={next} placement={tooltip} align={align} />
             )}
           </li>
         )
@@ -130,7 +129,7 @@ export function ForgeCard({
 }) {
   const op = FORGE_OPS[offer.op]
   const face = 'face' in offer ? offer.face : undefined
-  const where = face === undefined ? '' : `${character.twinDice && offer.op !== 'gild' ? 'Double' : 'Face'} ${face}`
+  const where = face === undefined ? '' : `Face ${face}`
   return (
     <button type="button" className="relic-card" aria-pressed={selected} onClick={onSelect}>
       {mark && <span className="relic-card-mark">{mark}</span>}
@@ -208,7 +207,7 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
       </div>
       <div className="flex flex-col items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">
-          {picked && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(picked, face), character.twinDice)) : `Son dé · d${DIE_FACES}`}
+          {picked && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(picked, face))) : `Son dé · d${DIE_FACES}`}
         </span>
         <ForgedDie
           character={character}
@@ -250,13 +249,12 @@ function StepTile({ step, size }: { step: ForgeStep; size: number }) {
  */
 function ForgeTooltip({ base, steps, index, placement }: { base: ForgeBase; steps: readonly ForgeStep[]; index: number; placement: 'below' | 'floating' }) {
   const step = steps[index]
-  const twin = !!base.twinDice
   const after = steps.slice(0, index + 1)
   const face = 'face' in step ? forgedFaces(base, after).find((f) => f.face === step.face) : undefined
   const skills = !face ? [] : step.op === 'engrave' ? (face.engraved ? [face.engraved] : []) : [...(face.engraved ? [face.engraved] : []), ...face.origin]
   const badge =
     'face' in step
-      ? `${twin && step.op !== 'gild' ? 'Double' : 'Dé'} ${step.face}`
+      ? `Dé ${step.face}`
       : `Attaque +${forgeState(base, after).temper - forgeState(base, steps.slice(0, index)).temper}`
   const position = placement === 'floating' ? '' : 'pointer-events-none invisible absolute left-0 top-full z-[70] mt-3 opacity-0 transition-opacity duration-150 group-hover/forge:visible group-hover/forge:opacity-100'
   return (
@@ -270,7 +268,7 @@ function ForgeTooltip({ base, steps, index, placement }: { base: ForgeBase; step
           {badge}
         </span>
       </div>
-      <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">Forge du dé · {stepLabel(step, twin)}</p>
+      <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">Forge du dé · {stepLabel(step)}</p>
       <div className="codex-divider my-2.5" />
       <p className="font-body text-[15px] leading-snug text-ink-1">{FORGE_OPS[step.op].summary}</p>
       {skills.map((skill) => {
@@ -300,7 +298,7 @@ export function ForgeMark({ base, steps, index, size = 34 }: { base: ForgeBase; 
   return (
     <span
       className="group/forge relative shrink-0 cursor-help hover:z-[70]"
-      aria-label={stepLabel(steps[index], !!base.twinDice)}
+      aria-label={stepLabel(steps[index])}
       onMouseEnter={tip ? (e) => tip(<ForgeTooltip base={base} steps={steps} index={index} placement="floating" />, e.currentTarget) : undefined}
       onMouseLeave={tip ? () => tip(null) : undefined}
     >

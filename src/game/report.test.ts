@@ -29,8 +29,6 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
     }
     const rolled = line.match(new RegExp(`${name} lance son dé : (\\d+)`))
     if (rolled) face(Number(rolled[1]))
-    const pair = line.match(new RegExp(`${name} lance ses deux dés \\(d\\d+\\) : (\\d+) et (\\d+)`))
-    if (pair) [pair[1], pair[2]].forEach((r) => face(Number(r)))
     const fired = line.match(new RegExp(`^.*?Relique « (.+?) » ${of(name)} \\(`))
     if (fired) relic(fired[1])
   }
@@ -38,16 +36,16 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
 }
 
 describe('rapport de combat (report.ts)', () => {
-  it('compte exact sur une chronologie connue : dés lancés, jet greffé, paire, coup de la paire, reliques', () => {
+  it('compte exact sur une chronologie connue : dés lancés, jet greffé, rafale des deux dés, reliques', () => {
     const attack = (attacker: 0 | 1, roll: number, extra: object = {}) => ({ type: 'attack', attack: { attacker, roll, faces: 6, ...extra } })
     const beats = [
       attack(0, 4, { relicBonus: [{ relic: 'four-nail-shoe', name: 'Fer à quatre clous', amount: 4 }] }),
       attack(1, 6),
       { type: 'relic', side: 1, relic: 'wolf-fang', name: 'Dent de loup', effects: [], uses: 1 },
-      { type: 'pair', side: 0, rolls: [2, 2], faces: 6 },
-      // Les deux coups de la paire reprennent ses dés : ils ne comptent pas une seconde fois
-      attack(0, 2, { preset: true }),
-      attack(0, 2, { preset: true }),
+      // Les deux dés de la barde : une rafale sans dé à elle, puis ses deux jets, chacun avec son dé
+      { type: 'flurry', side: 0, strikes: 2, faces: [6, 6] },
+      attack(0, 2),
+      attack(0, 2),
       { type: 'coin', side: 1, status: 'heads', heads: true, effects: [] },
       attack(1, 1, { replaced: true }),
       // Un jet greffé : le dé tombe à l'étape `roll`, le coup qui suit le reprend
@@ -67,7 +65,7 @@ describe('rapport de combat (report.ts)', () => {
       createCharacter('fanchon').withRelics([getRelic('four-nail-shoe'), getRelic('split-knucklebone'), getRelic('wolf-fang')]),
     ] as const
     let procs = 0
-    let pairs = 0
+    let flurries = 0
     for (let seed = 1; seed <= 12; seed++) {
       const result = simulateCombat([...fighters], { seed })
       const report = combatReport(result)
@@ -81,16 +79,16 @@ describe('rapport de combat (report.ts)', () => {
       const bonuses = result.beats.reduce((t, b) => t + (b.type === 'attack' ? (b.attack.relicBonus?.length ?? 0) : 0), 0)
       expect(Object.values(report[0].relics).concat(Object.values(report[1].relics)).reduce((t, n) => t + n, 0)).toBe(relicBeats + bonuses)
       procs += relicBeats + bonuses
-      pairs += result.beats.filter((b) => b.type === 'pair').length
-      // La barde lance deux dés par paire, et aucun autre dé que ceux de ses paires et de ses coups lancés
+      flurries += result.beats.filter((b) => b.type === 'flurry' && b.side === 1 && !b.status).length
+      // La barde lance un dé par jet : ceux de ses coups lancés et de ses jets greffés, aucun autre
       const fanchonDice = result.beats.reduce(
-        (t, b) => t + (b.type === 'pair' && b.side === 1 ? 2 : b.type === 'attack' && b.attack.attacker === 1 && !b.attack.preset ? 1 : 0),
+        (t, b) => t + ((b.type === 'roll' && b.side === 1) || (b.type === 'attack' && b.attack.attacker === 1 && !b.attack.preset) ? 1 : 0),
         0,
       )
       expect(report[1].faces.reduce((t, n) => t + n, 0)).toBe(fanchonDice)
     }
     expect(procs).toBeGreaterThan(0)
-    expect(pairs).toBeGreaterThan(0)
+    expect(flurries).toBeGreaterThan(0)
   })
 
   it('cumul : addReport additionne reliques et faces, relicsByProcs les classe', () => {

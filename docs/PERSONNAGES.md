@@ -621,7 +621,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : la Foudre fait 3 fois 2 dégâts directs (6 au lieu de 5), jamais critiques, sans armure ni esquive. À l'écran, trois éclairs tombent l'un après l'autre à gauche, à droite puis au centre de la cible, chacun avec son « 2 ». **Compensation, choix de l'agent** : Force de l'ours +4 → **+3**. Sans elle, Thaldrin montait à 58,0 % et Brokk tombait à 31,5 % contre lui, au-delà de 65/35. Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup (toujours le plus haut) ; ses duels de 38 à 62 % (Brokk 38,5 % contre lui). Valeurs nettes : Foudre +15,6, Feux follets +11,6, Aura sauvage +5,5 points (400 combats par duel).
 
-## Barde : deux dés, et la musique sur les doubles
+## Barde : deux dés, et la musique sur ses faces (doubles jusqu'à la phase 5 ter)
 
 **Images** : `bard-idle.png` et cinq postures (0.41.0, session images). Saltimbanque de foire, en tenue bigarrée à losanges et chapeau à plume, avec un luth et une rapière. Taille 1,00, celle d'un humain.
 
@@ -657,13 +657,21 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 2 à 4 (DP), deux coups de base par action (un par dé) ; un double à compétence se greffe sur les deux coups, sauf Crescendo (×4) et Soliste (×5), qui les remplacent par un seul coup de base multiplié ; critique 5 → 10 %. 48,2 → 49,5 %, 14,0 → 13,1 tours par combat. Voir « L'attaque de base ».
 
+**2026-10-24, ses compétences sur les faces (phase 5 ter, décision de l'utilisateur : « avec le nouveau système de coup de base, il faut tout revoir »)**. Plus de doubles : ses deux dés sont une action à deux jets complets ([RESOLUTION.md](RESOLUTION.md) § 2), chaque dé déclenche la compétence de sa face puis porte son coup de base ; une face donnée sort environ deux fois sur six par tour. Crescendo et Soliste **modifient** le coup (« ce coup ×N »). La forge vise ses faces comme pour tous ; une face gravée, dorée ou copiée vaut pour chacun des deux dés.
+
+- **Kit** : Ouverture (gardée, 1 charge d'Aura mélodieuse au début du combat) ; **Aura mélodieuse** sur le 1 (1 charge ; **signature**) ; **Soliste** sur le 2 (ce coup ×3). Hors kit, gravables : Siffloter (Sifflotement 2, au lieu de 3 sur le double 1), Fausse note (1 charge, au lieu de 2 sur le double 2), Crescendo (ce coup ×2, au lieu d'un coup ×4 à la place des deux).
+- **Compensation** : attaque 2 à 4 → **1 à 3** (seul levier de stats ; PV, critique et esquive inchangés). « Sa chanson fait ses dégâts » : l'aura s'ajoute après l'armure.
+- **Pourquoi ce kit** (laboratoire, série 15, 400 puis 800 combats par duel, mêmes graines que `npm run balance`) : l'esprit, la barde soutient en musique (l'aura) et a ses gros coups de spectacle (Soliste). Le kit transposé tel quel (aura 1 et Soliste ×3, attaque 2 à 4) gagnait **82,3 %** ; la barde nue, 7,6 %. Chaque compétence sur une face pèse lourd : Ouverture et aura font chacune plus de 20 points. Les kits essayés : sans Ouverture, aura 1 / Soliste ×2 : 54,8 % (Ysolde 65,5 %, à la limite) ; avec critique 5 % : 50,8 % ; Siffloter 1 / Soliste ×2 : 61,5 % ; Fausse note 1 / Soliste ×2 : 72,6 % ; Siffloter / Fausse note (tout en soutien) : 75,5 % ; avec l'Ouverture et l'attaque 1 à 3 : aura / Soliste ×2 46,6 %, **aura / Soliste ×3 55,2 %** (retenu : l'Ouverture gardée, un seul levier, le plus gros coup de spectacle), le même à 5 % de critique 52,1 %.
+- **Pourquoi l'Aura mélodieuse en signature** : en campagne, la signature est seule et l'Ouverture (pas une face) n'y est pas. Mesurées seules, attaque 1 à 3, contre le roster : aura **16,9 %**, Soliste 6,0 %. L'aura est aussi ce qui fait passer ses petits coups contre l'armure, l'intimidation et les épines (la raison de l'Ouverture en 0.41.0), et le statut que l'Ouverture pose : son identité depuis la 0.41.0.
+- **Mesures** (`BALANCE_N=800 npm run balance`) : 49,5 → **55,2 %** (± 1,1), 13,1 → 12,4 tours par combat ; duels de 47 % (Morgrut) à 60 % (Elaria, Ervald) ; valeurs nettes : Ouverture +26,1 → +22,5, Aura mélodieuse +5,3 → **+31,9**, Soliste +3,5 → **+18,2** ; apport de l'Aura mélodieuse 12,4 → 21,3 PV par combat. Les autres personnages ne changent qu'à travers leur duel contre elle (de 47,9 à 51,4 %).
+
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
 - **Comment elle se bat** : deux dés, deux mains, un rythme. Elle frappe vite et léger, et quand les dés s'accordent, c'est la musique qui frappe (les doubles). Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée.
 - **Pistes** : réagir au public ou aux paris, enchaîner (un double qui en prépare un autre), un rappel en fin de combat.
 
-- **Stats** : PV 46, 2 × d5, armure 0, esquive 12 %, critique 5 % ×2.
-- **Mesures** : 52,3 % (0.41.0). Duels de 45 à 62 %, sauf contre Brokk (29 %, contre connu).
+- **Stats** : PV 46, 2 × d6, attaque 1 à 3 (DP), armure 0, esquive 6 %, critique 10 % ×2 (phase 5 ter).
+- **Mesures** : 55,2 % (phase 5 ter, 800 combats par duel). Duels de 47 à 60 %.
 
 ### Mélisande · Ménestrelle · retiré en 0.43.0
 
@@ -678,6 +686,25 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 **0.45.0, aura et Fausse note à 2 charges** (note de l'utilisateur : description de l'aura peu claire). Le double 3 pose 2 charges d'Aura mélodieuse, le double 2 deux charges de Fausse note (le prochain coup adverse qui touche perd 10). À une charge, ces deux doubles coûtaient des victoires (−1,0 à −1,3) : ils remplacent deux coups. Après : Aura mélodieuse **+2,0 et +2,5**, Fausse note **+0,8 et +0,5** (encore « presque inutile »). Fanchon et Mélisande à **54,5 %**. Les textes n'emploient plus « dégâts finaux » : « ajouté après l'armure : rien ne le réduit ». Une Fausse note qui frappe aussi ses deux coups montait à +3,9, mais, avec l'aura, les bardes passaient à 57-58 %.
 
 **0.46.0, Siffloter et Fausse note frappent aussi** (audit) : le double 1 et le double 2 gardent leurs deux coups en plus de leur effet. Siffloter +0,7 → **+3,3**, Fausse note +0,4 → **+4,3**. Compensation : esquive de 12 à **6 %** (sans elle, 60,5 %) ; Fanchon 54,3 → 54,6 %. L'**Ouverture** (+27, « écrasante ») est gardée : c'est son identité (sans elle, 28 % ; avec tous les doubles qui frappent, 38 %). Sur tout double, un « ding » (Pile réussie) joue en même temps que les dés.
+
+## Revue des compétences (0.107.0, 2026-10-24)
+
+Décision et mesures : [SORTS.md](SORTS.md) § 19, « Livraison (0.107.0) ». Par personnage (800 combats par duel, avant → après) :
+
+| Personnage | Compétences touchées | Stats (la compensation) | Victoires |
+| --- | --- | --- | --- |
+| Gorak | Pourfendre : Saignement de la moitié des PV retirés | critique 19 → 14 % | 50,1 → 52,3 % |
+| Elaria | (Aura de précision hors kit : +5 % de critique) | — | 47,9 → 50,5 % |
+| Brokk | (Aura d'intimidation hors kit : −1) | — | 50,9 → 52,0 % |
+| Ervald | Vol de vie : 1 charge | critique 16 → 24 % | 49,2 → 46,8 % |
+| Ysolde | Aura de sainteté : 1 PV par charge, 2 au plus ; (Peur hors kit : une fois par combat) | attaque 4–6 → 5–7 | 48,8 → 48,4 % |
+| Naraxes | signature : Aura de décoction (1 Poison) ; Pile ou face ×3 ; (Coup de chance greffé) | attaque 4–5 → 5–6 | 51,4 → 54,3 % |
+| Aldric | Rétribution : la moitié des jauges | attaque 3–5 → 4–6 (compensation proposée par le § 19) | 49,9 → 51,1 % |
+| Morgrut | — | — | 48,5 → 49,1 % |
+| Thaldrin | (Aura sauvage hors kit : +1 à l'attaque) | — | 48,2 → 48,1 % |
+| Fanchon | Soliste : une fois par combat ; (Crescendo hors kit : monte) | esquive 6 → 10 % | 55,2 → 47,5 % |
+
+Pire duel : Elaria contre Morgrut, 61,9 %. La matrice ci-dessous date encore de la 0.106.0 ; celle de la 0.107.0 est dans `logs/balance/2026-10-24-01-14-36_v0.106.1.md`.
 
 ## Matrice des duels
 
