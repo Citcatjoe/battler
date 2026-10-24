@@ -101,6 +101,33 @@ Mesuré à 800 combats par duel (`BALANCE_N=800 npm run balance`), 0.105.0 → 0
 
 ---
 
+## Le départ en campagne (0.112.0)
+
+**Décision de l'utilisateur** (2026-10-24, proposée par l'agent) : un champion de campagne commence avec **deux compétences**, sa signature sur le 1 et la seconde compétence de son kit de tournoi sur le 2 ; ses quatre autres faces sont nues. Règles et mesures complètes : [CAMPAGNE.md](CAMPAGNE.md) § 18.2 et § 18.3.
+
+Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, règles 0.111.0) : **dans son kit**, ce qu'elle rapporte à son porteur (retirée, sa face devient nue) ; **gravée**, la moyenne des hôtes qui la reçoivent sur une face nue (bande des gravures : 8 à 20 points). Départ : le champion de campagne nu contre le roster de tournoi (400 combats par duel). Boss atteint : `npm run campaign`, 30 parties par champion (± 8 points), 0.111.0 → 0.112.0.
+
+| Champion | Signature (le 1) : kit, gravée | Seconde (le 2) : kit, gravée | Départ contre le roster | Boss atteint |
+| --- | --- | --- | --- | --- |
+| Gorak | Furie des vents : +17,3, +17,0 | Pourfendre : +16,1, +14,0 | 52,4 % | 27 → 23 % |
+| Elaria | Œil de faucon : +21,7, +15,4 | Esquive améliorée : +18,9, +19,7 | 49,7 % | 30 → 37 % |
+| Brokk | Épines acérées : +22,0, +14,0 | Peau de pierre : +21,7, +18,5 | 49,7 % | 23 → 37 % |
+| Ervald | Aura glaciale : +18,7, +13,5 | Vol de vie : +15,1, +14,4 | 45,9 % | 40 → 20 % |
+| Ysolde | Aura de sainteté : +13,8, +13,8 | Purification : +20,7, +18,6 | 49,0 % | 33 → 27 % |
+| Naraxes | Aura de décoction : +15,8, +17,5 | Pile ou face : +14,4, +14,6 | 54,7 % | 37 → 23 % |
+| Aldric | Rétribution : +22,3, +19,6 | Riposte : +19,1, +16,2 | 51,7 % | 23 → 23 % |
+| Morgrut | aucune (six faces nues, voulu) | aucune | 49,5 % | 23 → 33 % |
+| Thaldrin | Feux follets : +34,7 (trois faces), +17,5 | Foudre : +17,4 (trois faces), +10,4 | 15,1 %, **55,8 %** à l'attaque de campagne 5 à 6 | 27 → 13 % |
+| Fanchon | Aura mélodieuse : +36,3 (deux dés), +12,5 | Soliste : +8,2, +19,5 | 24,7 %, **49,5 %** avec l'Ouverture | 33 → 23 % |
+
+**Lecture** :
+- **Aucune signature n'est sous la bande des gravures** : gravées, de +12,5 (Aura mélodieuse) à +19,6 (Rétribution) ; dans leur kit, de +13,8 (Aura de sainteté) à +36,3. Aucune proposition de valeur, donc. Les plus faibles gravées : Aura mélodieuse +12,5, Aura glaciale +13,5, Aura de sainteté +13,8, Épines acérées +14,0. Le reproche de l'utilisateur (« un peu nulles », « héritées des règles précédentes ») porte sur la mécanique plus que sur la valeur : Épines, Aura glaciale, Aura de sainteté et Rétribution posent une ressource que peu de choses consomment ([PROGRESSION.md](PROGRESSION.md) § 13.3, verdict 2).
+- **La seconde compétence vaut plus que la signature, gravée**, chez Brokk (Peau de pierre +18,5 contre Épines +14,0), Ysolde (Purification +18,6 contre Sainteté +13,8), Elaria (Esquive +19,7 contre Œil de faucon +15,4) et Fanchon (Soliste +19,5 contre Aura mélodieuse +12,5). Les deux sont désormais au départ : l'écart ne pèse plus sur la force du champion, seulement sur ce que la signature promet. Si l'utilisateur veut une signature qui porte le personnage, l'échange se ferait chez Brokk (Peau de pierre) et Ysolde (Purification) : à sa décision.
+- **Boss atteint par champion** : à 30 parties, l'écart de 0.111.0 à 0.112.0 reste dans le bruit pour tous, sauf Thaldrin (13 %), dont le départ reste le plus fragile malgré son attaque de campagne.
+- **Thaldrin** : son attaque (3 à 4) est réglée pour un sort sur chaque face humaine ; avec une face par compétence (consigne de l'utilisateur) et quatre faces nues, son départ gagnait 15,1 %. Attaque de campagne essayée : 4 à 5, 34,3 % (hors de la bande de 42 à 58 %) ; **5 à 6, 55,8 %, livrée** (`CAMPAIGN_STATS` dans `campaign.ts`, le tournoi ne change pas), décision de l'agent sur consigne, à juger en jeu. Chance moyenne avant combat : 66 → 87 % ; boss atteint 7 → 13 % (30 parties).
+- **Fanchon** : elle garde son **Ouverture** en campagne (ce n'est pas une face ; elle l'avait perdue avec la signature seule en 0.107.0) : son départ passe de 24,7 à 49,5 %, sa chance avant combat de 74 à 85 %.
+- **Morgrut** reste le combattant nu : son départ (49,5 %) est déjà au niveau des autres, aucune proposition.
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.
@@ -609,6 +636,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **2026-10-24, un seul Feu follet, sur le 1 (0.111.0, retour de partie de l'utilisateur)** : ses Feux follets sur le 4, le 5 et le 6 « ont l'air buggés », un reliquat de l'ancien système. Comme tout champion, il commence la campagne avec sa signature **sur la face 1 seulement** ; ses cinq autres faces sont nues. La limite de quatre faces de compétence lui laisse donc trois gravures (une seule avant). Son kit hors campagne (tournoi, saison) ne change pas : Foudre sur 1 à 3, Feux follets sur 4 à 6. Mesuré (`npm run campaign`, 12 parties par champion, avant → après, mesure commune à toute la livraison) : 0,82 → 1,33 gravure par build, 4,5 → 4,5 victoires en moyenne, boss atteint 17 → 17 %, acte gagné 8 → 0 % (un seul acte gagné sur douze avant : dans le bruit).
 
+**2026-10-25, deux compétences au départ (0.112.0)** : son champion part d'un Feu follet sur le 1 et d'une Foudre sur le 2 (une face par compétence), en forme humaine ; la Foudre quitte son répertoire de campagne. Ce départ ne gagnait que 15,1 % contre le roster (son attaque est faite pour un sort sur chaque face humaine) : en campagne seulement, son **attaque passe de 3 à 4 à 5 à 6** (55,8 % ; 4 à 5 : 34,3 %), décision de l'agent sur consigne, à juger en jeu. Voir « Le départ en campagne ».
+
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
 - **Comment il se bat** : la forme lui est imposée à chaque tour. L'homme lance un sort à chaque tour (Foudre, Feux follets, Aura sauvage) sans jamais frapper ; l'ours frappe toujours, et fort (+3, plus l'Aura sauvage que l'homme a accumulée).
@@ -677,6 +706,7 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 - **Compensation** : attaque 2 à 4 → **1 à 3** (seul levier de stats ; PV, critique et esquive inchangés). « Sa chanson fait ses dégâts » : l'aura s'ajoute après l'armure.
 - **Pourquoi ce kit** (laboratoire, série 15, 400 puis 800 combats par duel, mêmes graines que `npm run balance`) : l'esprit, la barde soutient en musique (l'aura) et a ses gros coups de spectacle (Soliste). Le kit transposé tel quel (aura 1 et Soliste ×3, attaque 2 à 4) gagnait **82,3 %** ; la barde nue, 7,6 %. Chaque compétence sur une face pèse lourd : Ouverture et aura font chacune plus de 20 points. Les kits essayés : sans Ouverture, aura 1 / Soliste ×2 : 54,8 % (Ysolde 65,5 %, à la limite) ; avec critique 5 % : 50,8 % ; Siffloter 1 / Soliste ×2 : 61,5 % ; Fausse note 1 / Soliste ×2 : 72,6 % ; Siffloter / Fausse note (tout en soutien) : 75,5 % ; avec l'Ouverture et l'attaque 1 à 3 : aura / Soliste ×2 46,6 %, **aura / Soliste ×3 55,2 %** (retenu : l'Ouverture gardée, un seul levier, le plus gros coup de spectacle), le même à 5 % de critique 52,1 %.
 - **Pourquoi l'Aura mélodieuse en signature** : en campagne, la signature est seule et l'Ouverture (pas une face) n'y est pas. Mesurées seules, attaque 1 à 3, contre le roster : aura **16,9 %**, Soliste 6,0 %. L'aura est aussi ce qui fait passer ses petits coups contre l'armure, l'intimidation et les épines (la raison de l'Ouverture en 0.41.0), et le statut que l'Ouverture pose : son identité depuis la 0.41.0.
+- **Départ en campagne (0.112.0)** : l'Aura mélodieuse sur le 1, le Soliste sur le 2, et **son Ouverture** (pas une face, gardée depuis qu'elle part de deux compétences) : 24,7 → 49,5 % contre le roster. Voir « Le départ en campagne ».
 - **Mesures** (`BALANCE_N=800 npm run balance`) : 49,5 → **55,2 %** (± 1,1), 13,1 → 12,4 tours par combat ; duels de 47 % (Morgrut) à 60 % (Elaria, Ervald) ; valeurs nettes : Ouverture +26,1 → +22,5, Aura mélodieuse +5,3 → **+31,9**, Soliste +3,5 → **+18,2** ; apport de l'Aura mélodieuse 12,4 → 21,3 PV par combat. Les autres personnages ne changent qu'à travers leur duel contre elle (de 47,9 à 51,4 %).
 
 **Personnalité : l'artiste de foire.**

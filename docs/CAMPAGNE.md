@@ -515,6 +515,9 @@ Ce que les décisions du § 1 ne fixaient pas, choisi au plus simple :
 - **Icônes** : aucune icône peinte pour les opérations de forge ; leur carte montre une face de dé (or, « II », « d11 ») ou le sceau de la compétence gravée. Le glyphe de la plaque Campagne est celui des chroniques (le parchemin), faute de glyphe propre dans le kit.
 - **L'ordre des récompenses** (0.89.0) : relique, forge, relique, forge, relique. La première est une relique, plus lisible tout de suite qu'une face forgée ; les deux forges tombent au milieu de l'acte. **Remplacé en 0.104.0** (règles v2, décision de l'utilisateur, [PROGRESSION.md](PROGRESSION.md) § 11.2) : un acte de dix combats, forge, relique, relique, forge, relique, forge, relique, relique, forge, relique ; une forge tôt, quand la signature est seule.
 - **La signature seule** (0.104.0, avancée sur les dés actuels à la demande de l'utilisateur, avant le d6) : les faces quittées frappent à leur valeur (le 1 et le 3 de Gorak) et se gravent ; les compétences quittées entrent en tête du répertoire de campagne. Morgrut, Thaldrin et Fanchon gardent leur kit entier jusqu'au d6 : leur dé n'a pas de faces de coup à rendre (Attentes, forme qui ne fait que lancer des sorts, doubles). Depuis la 0.107.0, seuls Morgrut et Thaldrin restent des exceptions ; depuis le 2026-10-24, Morgrut seul (Thaldrin part de ses Feux follets, § 6.3). Courbe nominale de 98 à 89 % sur les dix combats, qui garde le produit de l'acte de cinq (51 % au boss, 23 % de l'acte).
+- **Deux compétences au départ** (0.112.0, décision de l'utilisateur, proposée par l'agent) : chaque champion part de sa **signature sur le 1** et de **sa seconde compétence sur le 2**, l'autre compétence de face de son kit de tournoi (`secondSkillOf`) ; les quatre autres faces sont nues. Le départ vaut ainsi le kit de tournoi, faces 1 et 2 parfois échangées (Gorak, Brokk, Ervald, Ysolde, Naraxes : la signature passe sur le 1). La seconde compétence quitte le répertoire de campagne (pas de gravure en double). Cas particuliers : **Morgrut** reste sans compétence (six faces nues, voulu ; son départ gagne 49,5 % contre le roster, comme les autres) ; **Thaldrin** part d'un Feu follet sur le 1 et d'une Foudre sur le 2 (une face par compétence, consigne de l'utilisateur), en forme humaine, l'ours inchangé, avec une **attaque de campagne de 5 à 6** (3 à 4 en tournoi ; `CAMPAIGN_STATS`, décision de l'agent sur consigne, à juger) : son attaque est réglée pour un sort sur chaque face humaine, et son départ ne gagnait que 15,1 % contre le roster (4 à 5 : 34,3 % ; 5 à 6 : 55,8 %) ; **Fanchon**, qui lance deux d6, part de l'Aura mélodieuse sur le 1 et du Soliste sur le 2, **et garde son Ouverture** (ce n'est pas une face : sans elle, son départ gagnait 24,7 % contre le roster, 49,5 % avec) ; **Naraxes** part de l'Aura de décoction et de Pile ou face (son kit de tournoi, faces échangées) ; Coup de chance reste dans son répertoire. Le choix du champion et l'écran du champion montrent la seconde compétence comme la signature (« Seconde compétence : Pourfendre, sur le 2 »).
+- **Cinq faces de compétence au plus** (0.112.0 ; quatre de la 0.104.0 à la 0.111.0, décidé au § 11.2 de [PROGRESSION.md](PROGRESSION.md) pour garder deux faces de coup) : le départ prend deux faces, et à quatre il ne restait que deux gravures ; chaque face porte le coup de base depuis la 0.106.0, la raison des « faces de coup » est tombée. Mesuré à quatre et à cinq (§ 18.3) : gravures par build d'un acte 1,07 → 1,27, paires liées 3,07 → 3,31, boss atteint et acte gagné identiques (28 % et 13 % les deux), apport du build identique. **Gardé : cinq.**
+- **Le levier des PV, moins fort** (0.112.0, retour de l'utilisateur : « croiser des persos à 13 PV, c'est bizarre ») : un adversaire normal n'a jamais moins des **trois quarts** de ses PV de base (`HP_FLOOR`, le quart jusqu'ici ; le boss garde le quart), et il est construit avec **trois récompenses de retard** sur le champion (`OPPONENT_LAG`) : au nœud k, il a reçu les k − 3 premières récompenses de l'acte. Trois options mesurées au § 18.3 ; celle-ci tient le critère (aucun adversaire normal sous 75 %, 88 % en moyenne) au prix des deux premiers combats, où le plancher empêche d'atteindre la courbe : un adversaire nu contre un champion nu doit descendre à 68 % de ses PV pour que le champion gagne 90 fois sur 100.
 
 ### 18.3 Mesures (`npm run campaign`, pilote automatique)
 
@@ -566,6 +569,47 @@ Recommandée : une courbe qui monte le long de l'acte (démonstration au début,
 | **Tous** | | **51 %** | **28 %** | |
 
 **Lecture** : le boss est atteint exactement comme prévu (51 %). L'acte est gagné un peu plus souvent que prévu (28 % au lieu de 23 %) : le boss tombe 55 % du temps au lieu de 45. Explication probable, non vérifiée : un effet de sélection, les champions qui arrivent au boss étant en moyenne mieux forgés et mieux équipés que le champion de référence sur lequel le boss est réglé (ou simplement le bruit de 153 combats contre le boss). Par champion, 30 parties ne suffisent pas (environ ± 9 points) : Morgrut à 50 % et Elaria à 13 % sont à revérifier avec plus de parties avant d'en conclure quoi que ce soit.
+
+**Règles 0.112.0 : deux compétences au départ, le levier des PV moins fort.** Toutes les mesures sur les reliques de la 0.111.0 (les trois reliques de durée de la 0.112.0 à part), pour isoler l'effet.
+
+Le départ contre le roster (400 combats par duel, côtés alternés) : Gorak 52,4 %, Elaria 49,7 %, Brokk 49,7 %, Ervald 45,9 %, Ysolde 49,0 %, Naraxes 54,7 %, Aldric 51,7 %, Morgrut 49,5 % (chacun à son kit de tournoi à ± 2 points) ; Thaldrin 15,1 % (kit 48,9 %), puis 55,8 % à l'attaque de campagne ; Fanchon 24,7 % sans Ouverture (kit 46,1 %), 49,5 % avec. Sans plancher, le réglage cachait ces deux départs faibles en baissant les PV de leurs adversaires ; avec le plancher, leur chance avant combat tombait à 66 % (Thaldrin) et 74 % (Fanchon), contre 84 % pour les autres.
+
+Le levier des PV, options mesurées (12 parties par champion, 120 en tout ; limite de quatre faces sauf mention ; PV des adversaires normaux proposés, en part de leurs PV de base) :
+
+| Option | Boss atteint | Acte gagné | PV au plus bas | PV en moyenne | Rencontres sous 75 % | Apport du build au nœud 10 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.111.0 (une compétence, PV libres) | 27 % | 10 % | 25 % | 63 % | 1 110 sur 1 394 | +72 points |
+| Deux compétences, PV libres | 28 % | 13 % | 25 % | 61 % | 1 132 sur 1 382 | +81 |
+| Plancher 80 % | 3 % | 0 % | 79 % | 82 % | 0 | (7 combats) |
+| Retard de 2 récompenses | 32 % | 14 % | 25 % | 76 % | 758 sur 1 490 | +70 |
+| Retard de 4 | 26 % | 10 % | 38 % | 87 % | 481 sur 1 436 | +74 |
+| Plancher 80 %, retard 2 | 18 % | 8 % | 79 % | 86 % | 0 | +77 |
+| Plancher 75 %, retard 2 | 22 % | 10 % | 75 % | 84 % | 0 | +77 |
+| **Plancher 75 %, retard 3** | **23 %** | **11 %** | **75 %** | **88 %** | **0** | **+76** |
+| Plancher 80 %, retard 3 | 19 % | 9 % | 80 % | 90 % | 0 | +76 |
+| Plancher 75 %, retard 4 | 20 % | 8 % | 75 % | 91 % | 0 | +74 |
+| Plancher 80 %, retard 4 | 18 % | 7 % | 80 % | 93 % | 0 | +72 |
+| Plancher 80 %, retard 3, adversaire sans seconde compétence aux nœuds 1 et 2 | 22 % | 11 % | 79 % | 91 % | 0 | +76 |
+| Plancher 75 %, retard 3, limite de cinq faces | 22 % | 12 % | 75 % | 88 % | 0 | +72 |
+
+**Lecture** : le plancher seul tue la courbe (un adversaire qui a reçu les mêmes récompenses que le champion doit descendre à 55 à 60 % de ses PV) ; le retard seul tient la courbe (32 % et 14 %, l'attendu) mais laisse des adversaires au quart de leurs PV dans les deux premiers combats, où personne n'a encore rien reçu. Les deux ensemble tiennent le critère ; le plancher coûte les deux premiers combats (gagnés 78 et 86 % au lieu de 90 %, la cible est hors d'atteinte), le reste de l'acte suit la courbe (84 à 91 %). Retenu : plancher 75 %, retard 3, limite de cinq faces.
+
+Retenu, avec l'Ouverture de Fanchon et l'attaque de campagne de Thaldrin (30 parties par champion, 300 en tout ; 0.111.0 sur les mêmes graines) :
+
+| Mesure | 0.111.0 | 0.112.0 |
+| --- | --- | --- |
+| Boss atteint | 30 % | 26 % (attendu 31 %) |
+| Acte gagné | 13 % | 12 % (attendu 14 %) |
+| PV des adversaires normaux proposés | au plus bas 25 %, en moyenne 62 % | au plus bas 75 %, en moyenne 83 % |
+| Victoire par nœud, du 1 au 10 | 88, 88, 91, 86, 91, 89, 88, 88, 88, 89 % | 78, 86, 87, 84, 89, 90, 89, 90, 91, 91 % |
+| Apport du build, nœuds 2, 5, 10 | +6, +36, +69 points | +6, +46, +81 points |
+| Tours par combattant (construit) | 6,5 au premier combat, 4,0 au dixième | 6,5 au premier, 5,4 au dixième |
+| Gravures par build d'un acte | 1,18 à 1,44 | 1,19 à 1,44 |
+| Paires liées par build | 2,46 | 3,54 |
+
+Boss atteint par champion (30 parties, ± 8 points) : Gorak 23 %, Elaria 37 %, Brokk 37 %, Ervald 20 %, Ysolde 27 %, Naraxes 23 %, Aldric 23 %, Morgrut 33 %, Thaldrin 13 %, Fanchon 23 % ; chance moyenne avant combat de 83 à 87 % pour tous.
+
+**Proposition de courbe (décision de l'utilisateur)** : le plancher rend les deux premières cibles (90 %) hors d'atteinte. Pour revenir à l'attendu, monter les nœuds 3 à 10 : 90, 90, 92, 92, 92, 92, 92, 91, 91, 91 % donne **28 % au boss et 15 % d'actes gagnés** (12 parties par champion, avant l'Ouverture et l'attaque de Thaldrin, PV en moyenne 85 %) ; 93 et 92 % : 29 % et 16 % (84 %). Ou écrire les deux premières cibles à 78 et 86 %, ce que le plancher donne (aucun changement de jeu ; l'attendu affiché devient 26 % et 12 %).
 
 ### 18.4 Le boss : Le Colosse
 

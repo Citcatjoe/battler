@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-24** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.108.0, ce qui a été vu, mesuré, et ce qui reste ouvert, avant la seconde partie de la phase 7.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.112.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-24, version 0.108.0)
+## 0 bis. État des lieux (2026-10-25, version 0.112.0)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7. Depuis sa dernière partie (0.104.x), quatre versions ont changé la base du combat ; il n'a joué aucune d'elles._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.112.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0 ni la 0.112.0._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -37,6 +37,9 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7. Depuis sa der
 | 0.107.0 | Revue des compétences (toutes les gravures de 8 à 20 points) ; la barde sur ses faces (deux jets, plus de doubles) ; Naraxes signée par l'Aura de décoction ; Aura sauvage à l'attaque ; Dent de loup baissée |
 | 0.108.0 | Chaque chiffre de dégâts à la couleur de sa source (Lumière, Foudre, Poison…) ; évaluation des signatures (§ 13.3) |
 | 0.109.0 | Cinq reliques consommatrices (Fiole de venin, Croc de boucher, Encens de l'abbaye, Écu cabossé, Plume d'aigle), le statut Élan ; Thaldrin signé par les Feux follets en campagne (§ 13.3) |
+| 0.110.0, 0.110.1 | Corrections de la revue (moteur, écran, son, textes) ; chaque compétence s'aiguise sur un axe à elle ; l'Élan s'appelle Ferveur ; cinq emblèmes d'état peints |
+| 0.111.0 | Plus de demi-rang ; la signature seule sur la face 1 ; dorure et gravure sur une face libre ; copie vers une face choisie ; six faces en combat ; reliques en texte court, offre pertinente ; **une attaque d'un type unique** (plus de DP ni de DM pour le joueur) (§ 1.11) |
+| 0.112.0 | **Deux compétences au départ** de la campagne (la signature sur le 1, la seconde du kit sur le 2), cinq faces de compétence au plus ; adversaires à 75 % de leurs PV de base au moins, construits trois récompenses en retard ; Thaldrin à l'attaque 5 à 6 en campagne ; **trois reliques de durée** (Gambison matelassé, Onguent du rebouteux, Chandelle de veille) (§ 1.12, § 11.8) |
 
 ### Le combat, en une page
 
@@ -54,9 +57,9 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7. Depuis sa der
 | Pire duel | Elaria contre Morgrut, 61,9 % | 65/35 au plus |
 | Durée d'un combat | 15,2 tours (environ 7,6 par combattant) | 17,2 en 0.105.0 |
 | Gravures (29 compétences) | de +10,4 (Foudre) à +19,7 (Esquive améliorée) | 8 à 20 points |
-| Reliques (16) | toutes sous 20 depuis la Cotte (0.106.1) et la Dent de loup (0.107.0) | 5 à 15, 20 au plus |
-| Campagne (pilote automatique, 120 parties) | boss atteint 28 %, acte gagné 13 % | courbe 90 → 88 %, boss 45 % |
-| Signature seule contre le roster | de 18,1 % (Fanchon) à 38,9 % (Naraxes) ; Morgrut 49,6 % (sans signature) | réglée par la courbe en campagne |
+| Reliques (24) | toutes sous 20 depuis la Cotte (0.106.1) et la Dent de loup (0.107.0) ; les trois de durée (0.112.0) : +8,7, +12,0, +11,5 | 5 à 15, 20 au plus |
+| Campagne (pilote automatique, 30 parties par champion, 0.112.0) | boss atteint 26 %, acte gagné 12 % ; PV des adversaires normaux au plus bas 75 %, en moyenne 83 % de leur base | courbe 90 → 88 %, boss 45 % ; attendu 31 % et 14 % |
+| Départ de campagne contre le roster (deux compétences, 0.112.0) | de 45,9 % (Ervald) à 55,8 % (Thaldrin, attaque 5 à 6) ; Morgrut 49,5 % (sans compétence) ; Fanchon 49,5 % avec l'Ouverture | 18,1 à 38,9 % à la signature seule (0.108.0) |
 
 ### Ce qui n'a été ni vu ni joué
 
@@ -64,20 +67,21 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 
 ### Ce qui reste ouvert
 
-- **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1.
+- **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1 ; l'Onguent du rebouteux (0.112.0) consomme aussi les coups encaissés, et ses soins nourrissent l'Encens.
 - **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle). **Restes fermés en 0.110.1** : T12 (l'Élan s'appelle Ferveur), E4 (une Peur bloquée par une immunité use sa fois), les cinq emblèmes d'état (A8, planche v15), le son de la Foudre (l'ancien gardé, l'Éclair retiré). Reste le résumé de l'état Puissance (second volet de T12). Les demi-rangs sont retirés en 0.111.0 (§ 1.11) ; les nouveaux textes et les emblèmes sont à juger en jeu.
-- **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Décisions ouvertes** : onze rangs II au-dessus de +8 points (Aura glaciale +10,2 … Aura de précision +8,0 ; [SORTS.md](SORTS.md) § 20) ; les PV des adversaires réglés à la baisse (de 56 à 70 % de leurs PV de base en moyenne selon le nœud, jusqu'à Naraxes à 20 PV sur 50), que l'utilisateur a senti ; commencer avec deux compétences, et les signatures héritées des anciennes règles ; la Purification (dissiper ou faire des dégâts).
+- **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Réponses de l'utilisateur** (§ 1.12) : rangs II au-dessus de +8 gardés ; le levier des PV moins fort et deux compétences au départ, livrés en 0.112.0 ; Purification et Elaria inchangées.
+- **Décisions ouvertes après la 0.112.0** : la courbe (les combats 1 et 2 ne tiennent plus 90 % avec le plancher, § 11.8) ; Thaldrin à l'attaque 5 à 6 en campagne ; le troc du Gambison et un Onguent plus fort ([RELIQUES.md](RELIQUES.md) § 14) ; les noms des trois reliques ; Brokk et Ysolde, dont la seconde compétence vaut autant ou plus que la signature.
 - **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
 - **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
-- **Les répertoires** : à relire sur le d6 et l'attaque (phase 6), puis à remplir de consommateurs (phase 8).
-- **Les textes** ne nomment pas encore le type de leurs dégâts (§ 9.3).
-- **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.111.0 (signature sur le 1), boss atteint 27 % (31 % attendus), acte gagné 10 % (14 %).
+- **Les répertoires** : une relecture légère sur le d6 et l'attaque (reste de la phase 6), puis à remplir de consommateurs (phase 8).
+- **Les types** : l'attaque est d'un type unique depuis la 0.111.0 ; les textes ne nomment pas de type, et les bonus de relique par type sont abandonnés (0.112.0).
+- **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.112.0 (deux compétences, plancher et retard), boss atteint 26 % (31 % attendus), acte gagné 12 % (14 %), sur 30 parties par champion.
 - **Points à surveiller** : une gravure sur la barde vaut près du double (deux dés) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
 
-Faites : 0 (mesure), 1 (étiquettes), 3 et 4 (le d6), 5 (conversion), 5 bis (l'attaque), 5 ter (revue des compétences), 7 en partie (types à l'écran). Livrées, à jouer : 2 (répertoires), 6a et 6 en partie (campagne longue ; la signature de Thaldrin en 0.109.0), un premier lot de consommateurs (0.109.0, § 13.3). À faire : la fin de la phase 6 (répertoires relus), la seconde partie de la phase 7 (reliques qui font durer, bonus par type), la phase 8 (lots de contenu : consommateurs, familles).
+Faites : 0 (mesure), 1 (étiquettes), 3 et 4 (le d6), 5 (conversion), 5 bis (l'attaque), 5 ter (revue des compétences), 6 (campagne longue, sauf une relecture légère des répertoires ; 0.112.0), 7 (types à l'écran en 0.108.0, retirés en 0.111.0 ; reliques de durée en 0.112.0 ; bonus par type abandonnés). Livrées, à jouer : 2 (répertoires), 6a et 6 (campagne longue), un premier lot de consommateurs (0.109.0, § 13.3). À faire : la phase 8 (lots de contenu : consommateurs, familles) et la revue des auras et des compétences du § 1.10.
 
 
 ---
@@ -212,6 +216,16 @@ Réponses de l'utilisateur aux questions de l'audit ([SORTS.md](SORTS.md) § 19)
 | « La Fiole de venin m'est proposée à chaque fois » | **Une offre de reliques pertinente** : pas de relique dont la condition ne peut pas arriver avec le champion. |
 | « La distinction DM/DP ajoute une couche de confusion » | **Une attaque d'un type unique**, le coup de base en blanc (le « coup blanc »). |
 | La Conque des vents, l'Aura de précision : « timing parfait » | **Principe de mise en scène : dé rendu → intervalle → impact** : ce qui dépend du dé part avec le dé posé, une relique qui donne un statut envoie sa particule, la charge d'un statut baisse à l'impact. |
+
+### 1.12 Réponses du 2026-10-24 après la 0.111.0 (livrées en 0.112.0)
+
+| Question | Réponse de l'utilisateur | Suite |
+| --- | --- | --- |
+| Onze rangs II au-dessus de +8 points | **Gardés tels quels pour le moment** | aucune |
+| Les PV des adversaires réglés à la baisse (jusqu'à 20 PV sur 50) | « Mesure oui, ou réduis l'intensité du levier des PV ; croiser des persos à 13 PV, c'est bizarre » | plancher de 75 % des PV de base et adversaires trois récompenses en retard (§ 11.8) |
+| Commencer avec deux compétences | « ok » | la signature sur le 1, la seconde compétence du kit sur le 2 ; aucune signature sous la bande de 8 à 20 points (§ 11.8) |
+| La Purification : dissiper le dernier bonus de la cible, sinon lui infliger les dégâts, et dissiper aussi sur soi | proposition de l'utilisateur | c'est déjà la règle (0.42.0, 0.69.0) ; ses dégâts ne se typent pas (attaque d'un type unique) : ce sont des dégâts directs |
+| Elaria « critique beaucoup » | rien à faire | aucune |
 
 ---
 
@@ -969,6 +983,33 @@ Mesuré (`npm run campaign`, 12 parties par champion ; rapport `logs/campaign/20
 
 Mesuré (`npm run campaign`, 12 parties par champion) : boss atteint **28 %** (31 % attendus), acte gagné **13 %** (14 %) ; par champion, boss de 8 % (Thaldrin) à 42 % (Brokk), acte de 8 % à 33 % (Elaria). Naraxes tire 35 % de ses gravures d'autres personnages. Thaldrin ne peut toujours rien graver.
 
+### 11.8 Deux compétences au départ et un levier des PV moins fort (0.112.0)
+
+Réponses de l'utilisateur (§ 1.12). Ce qui est livré ([CAMPAGNE.md](CAMPAGNE.md) § 18) :
+- **le départ** : la signature sur le 1 et la seconde compétence du kit de tournoi sur le 2 (§ 6.2), quatre faces nues ; Thaldrin, la Foudre sur le 2 ; Fanchon, Soliste et l'Ouverture ; Morgrut inchangé ;
+- **cinq faces de compétence au plus** (quatre avant) : mesuré à 4 et à 5 avec le départ à deux compétences (12 parties par champion) : gravures par build 1,07 → 1,27, paires liées 3,07 → 3,31, boss atteint 28 → 28 %, acte gagné 13 → 13 % ;
+- **le levier des PV moins fort** : un adversaire normal garde au moins **75 %** de ses PV de base (`HP_FLOOR`) et il est construit avec les récompenses de trois nœuds plus tôt (`OPPONENT_LAG`), pour que ses PV restent proches de sa base ; le boss garde le plancher du quart. Treize options mesurées (plancher, retard, les deux) : [CAMPAGNE.md](CAMPAGNE.md) § 18.3 ;
+- **Thaldrin à l'attaque 5 à 6 en campagne** (3 à 4 en tournoi ; choix de l'agent) : son départ gagne 15,1 % contre le roster à 3-4, 34,3 % à 4-5, 55,8 % à 5-6.
+
+Mesuré (`npm run campaign`, 30 parties par champion, sur les reliques de la 0.111.0) :
+
+| Mesure | 0.111.0 | 0.112.0 |
+| --- | --- | --- |
+| Boss atteint | 30 % | 26 % (31 % attendus) |
+| Acte gagné | 13 % | 12 % (14 % attendus) |
+| PV des adversaires normaux, en part de leur base | au plus bas 25 %, en moyenne 62 % | au plus bas 75 %, en moyenne 83 %, aucun sous 75 % |
+| Victoire du joueur, nœuds 1 à 10 | 88, 88, 91, 86, 91, 89, 88, 88, 88, 89 % | 78, 86, 87, 84, 89, 90, 89, 90, 91, 91 % |
+| Apport du build au nœud 10 | +69 points | +81 points |
+| Paires liées par build | 2,46 | 3,54 |
+
+Avec les trois reliques de durée (dépôt réel, 12 parties par champion) : boss atteint 24 %, acte gagné 15 %, PV au plus bas 75 %, en moyenne 84 %.
+
+**Lecture** :
+- **Le levier des PV s'affaiblit comme demandé** : plus aucun adversaire sous 75 % de sa base (25 % au plus bas avant).
+- **La courbe ne tient plus aux deux premiers combats** : un adversaire à 75 % de ses PV, construit sans retard possible au début, bat plus souvent un champion qui n'a encore rien reçu (78 et 86 % au lieu de 90 %). Le reste de l'acte reste proche de la courbe.
+- **Le build pèse plus** : +81 points au nœud 10 (+69 avant), des paires liées plus nombreuses (3,54 contre 2,46).
+- **À l'utilisateur** : relever la courbe (proposition non appliquée : 90, 90, 92 ×5, 91 ×3 % → boss 28 %, acte 15 % sur 12 parties par champion ; 93 et 92 → 29 % et 16 %).
+
 ---
 
 ## 12. La durée des combats et les PV
@@ -995,7 +1036,7 @@ La durée devient une **conséquence** des choix. On la **mesure** (un indicateu
 - **En campagne** : le réglage actuel compense déjà en partie (les PV des adversaires montent avec le champion de référence) ; seul un champion bien meilleur que la référence abrège ses combats (la démonstration, [CAMPAGNE.md](CAMPAGNE.md) § 6.1).
 - **En tournoi et en saison** : les deux camps reçoivent leurs récompenses ; celles qui font durer y montent les PV, sans règle à part.
 - **Repli, si le contenu ne suffit pas** : chaque récompense obtenue donne aussi quelques PV (un « endurcissement »). C'est lié au nombre de récompenses, sans cible ; à n'essayer que si la mesure montre des combats trop courts.
-- **Estimation d'une relique « +15 PV »** : sur environ 55 PV, +27 % de survie. Repère : la Cotte du mercenaire (+2 armure, soit environ −27 % de dégâts reçus pour des coups de 7 à 8, donc +37 % de PV effectifs) vaut +18,1 points ; « +15 PV » vaudrait de l'ordre de +13 points, dans la cible des reliques (5 à 15).
+- **Estimation d'une relique « +15 PV »** (écrite avant la mesure) : sur environ 55 PV, +27 % de survie ; « +15 PV » vaudrait de l'ordre de +13 points. **Corrigée par la mesure (0.112.0, [RELIQUES.md](RELIQUES.md) § 14)** : chaque PV max vaut environ 2,3 points (200 combats par duel) ; « +15 PV » seuls valent +30,0, « +12 PV » +25,7, au-delà du plafond de 20 : l'estimation était fausse d'un facteur deux. Livré : le Gambison matelassé, « +15 PV max et −1 à l'attaque » (+8,7), le seul levier mesuré qui allonge vraiment le combat (durée 7,9 → 9,6 tours par combattant, contre +0,2 à +0,4 pour un soin, un bouclier ou des PV seuls à valeur égale).
 - **Brique connue** : les reliques de type Caractéristique (`stats`), les soins et boucliers des compétences, `combatReport`.
 
 **Effet de bord à connaître** : quand les PV montent, un bonus à plat (« +2 aux DM ») pèse relativement moins ; un bonus en pourcentage garderait sa force. C'est plutôt sain : les bonus à plat s'usent, ceux qui font boule de neige doivent être choisis.
@@ -1258,7 +1299,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 | Moteur : le dé | une liste de faces imprimées au lieu de `damageDie` ; les deux dés de la barde et les formes du druide dans ce format | `character.ts`, `combat.ts`, [RESOLUTION.md](RESOLUTION.md) | moyen (refactor à résultats identiques) |
 | Moteur : la forge | Copier une face, Refondre ; la limite de faces de compétence ; le retrait d'Agrandir, de Retailler et du Contrepoids | `forge.ts`, `relics.ts` | moyen |
 | Moteur : l'attaque | ~~la stat d'attaque (fourchette, type), le coup de base à chaque action, les relations greffe, modifie, remplace ; le retrait des valeurs imprimées et de Refondre~~ (fait, 0.106.0 : `attackMin`, `attackMax`, `attackKind`, `CharacterEvent.relation`, Tremper l'arme) | `character.ts`, `combat.ts`, `events.ts`, `forge.ts`, [RESOLUTION.md](RESOLUTION.md) | lourd |
-| Moteur : les types de dégâts | ~~l'étiquette DP, DM, DT et sa source sur chaque dégât~~ (faite, 0.102.0 : `damage.ts`) ; les bonus par type, par impact | `combat.ts`, `events.ts`, `damage.ts` | faible |
+| Moteur : les types de dégâts | ~~l'étiquette DP, DM, DT et sa source sur chaque dégât~~ (faite, 0.102.0 : `damage.ts`) ; ~~les bonus par type, par impact~~ (abandonnés en 0.112.0 : attaque d'un type unique depuis la 0.111.0) | `combat.ts`, `events.ts`, `damage.ts` | — |
 | Moteur : des moments | soin reçu, bouclier vidé, jet modifié, Attente (action perdue) ; plus tard, suite et répétition (P3) | `events.ts` (`TRIGGERS`) | faible chacun |
 | Données : les répertoires | une liste par personnage, le fonds commun ; l'offre qui tire dedans (carte garantie, écho, libre) | `roster.ts`, `forge.ts`, `campaign.ts`, `season.ts` | faible |
 | Données : les accroches | ~~ce que chaque brique produit et consomme~~ (fait, 0.102.0 : `hooks.ts`) ; le contrôle du kit ouvert, relevé aujourd'hui, à rendre bloquant avec les répertoires | `hooks.ts`, `validateHooks` | faible |
@@ -1266,7 +1307,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 | Campagne | la signature seule au départ, l'acte de 10 combats, l'ordre des récompenses | `campaign.ts`, [CAMPAGNE.md](CAMPAGNE.md) | moyen |
 | Statuts | aucun statut nouveau prévu ; des statuts existants sans porteur à réemployer : Garde sacrée, Étourdi, Régénération, Affaibli, Vulnérable | `statuses.ts`, [STATUTS.md](STATUTS.md) | — |
 | Contenu : compétences | environ 35 (§ 7.5) | `roster.ts`, [SORTS.md](SORTS.md) | lourd, en lots |
-| Contenu : reliques | qui font durer (« +15 PV ») ; de type (« +N aux DM », aux DP, aux DT) ; qui lisent la forge (P4) ; un remplaçant du Contrepoids au tournoi | `relics.ts`, [RELIQUES.md](RELIQUES.md) | moyen |
+| Contenu : reliques | ~~qui font durer (« +15 PV »)~~ (trois livrées en 0.112.0, [RELIQUES.md](RELIQUES.md) § 14) ; ~~de type (« +N aux DM », aux DP, aux DT)~~ (abandonnées) ; qui lisent la forge (P4) ; un remplaçant du Contrepoids au tournoi | `relics.ts`, [RELIQUES.md](RELIQUES.md) | moyen |
 | Icônes | environ 35 compétences, les reliques nouvelles (une planche par type, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7) | `src/assets/icons/` | lourd |
 | Écrans | le dé imprimé (la valeur sur chaque face), la couleur des chiffres par type et par source, la tuile de feuille | `Die.tsx`, `DieBuild.tsx`, `narration.ts` | moyen |
 | Documents | RESOLUTION (face et valeur, types), PERSONNAGES, FEATURES, SONS (le son des DM), MISE_EN_SCENE (Q5) | `docs/` | — |
@@ -1283,7 +1324,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.110.0, corrections de la revue livrées : moteur, écran et son, axe de rang, textes) : la lecture des corrections par l'utilisateur, en jeu, et ses choix sur E4 et T12 ; puis la seconde partie de la phase 7 (les reliques de durée et de type), ou la revue des auras et des compétences demandée au § 1.10._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.112.0, phases 6 et 7 faites : deux compétences au départ, levier des PV moins fort, reliques de durée) : les décisions de l'utilisateur (courbe, Thaldrin, Gambison, Onguent, noms), puis la phase 8 (lots de contenu : consommateurs, familles) et la revue des auras et des compétences demandée au § 1.10._
 
 ```mermaid
 flowchart LR
@@ -1311,8 +1352,8 @@ flowchart LR
 | **5. Conversion et forge d6** (faite, 0.105.0 ; à jouer) | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir et de Retailler ; Contrepoids en relique de critique | **oui**, volontairement | `npm run balance` à 800 combats par duel : 48,2 à 51,6 %, aucun duel au-delà de 65/35 ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
 | **5 bis. L'attaque de base** (faite, 0.106.0 ; à jouer) | RESOLUTION.md d'abord ; l'attaque et le coup de base ; les relations greffe, modifie, remplace ; conversion des dix personnages et de leurs compétences ; forge sans valeurs imprimées (Tremper l'arme, Copier sur la face nue) ; reliques réécrites (le Fer sur le coup de base) ; recalage de la campagne avec la courbe abaissée (§ 1.6, § 11.6) | **oui**, volontairement | `npm run check` (312 tests) et `vite build` ; `BALANCE_N=800 npm run balance` : 48,8 à 52,2 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 17,2 → 16,0 tours ; `npm run relics` : Cotte +28,2, ramenée à +13,7 en 0.106.1 ; `npm run campaign` : boss atteint 27 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG (§ 6 bis.7) | tranché à la huitième passe (§ 1.8) : le vocabulaire, la Cotte, la revue des compétences |
 | **5 ter. Revue des compétences** (faite, 0.107.0 ; à jouer) | les compétences relues pour le d6 et l'attaque (bande de 8 à 20 points par gravure, § 1.9) ; la barde sur ses faces (deux jets complets, plus de doubles) ; « ce coup ×N », Crescendo qui monte, greffe épuisée qui laisse sa face nue ; signature de Naraxes, l'Aura de décoction ; table des gravures dans `scripts/skills.report.ts` ; Dent de loup +1 Vol de vie ; Copier sans gain retiré de l'offre | **oui**, volontairement | `npm run check` (317 tests) et `vite build` ; gravures avant → après : +3,2 à +28,5 → +10,4 à +19,7, les 29 dans la bande ([SORTS.md](SORTS.md) § 19) ; `BALANCE_N=800 npm run balance` : 46,8 à 54,3 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 15,8 → 15,2 tours ; `npm run relics` : tout +1 point environ, Dent de loup 22,0 → 12,4 ; `npm run campaign` : boss atteint 28 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG | **l'utilisateur joue** ; ensuite : les auras de signature, la durée, la campagne |
-| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5) ; Fanchon à la signature seule (0.107.0, § 11.7). Thaldrin à sa signature, les Feux follets (0.109.0, § 13.3). Reste : répertoires relus pour le d6 ; auras de signature ; la courbe abaissée vient avec la phase 5 bis | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
-| **7. Types à l'écran, durée, types en bonus** (en partie, 0.108.0 : types à l'écran) | fait : la couleur des chiffres par source (§ 9.3, `DAMAGE_SOURCES`, six teintes), la source du coup de base magique (`attackSource`), la règle « Types de dégâts » au compendium. Reste : les textes des compétences et des reliques qui nomment leur type ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison (les types à l'écran : non, empreinte inchangée) | 0.108.0 : `npm run check` (319 tests) et `vite build` ; empreinte de non-régression inchangée ; capture Firefox (Ysolde contre Thaldrin, graine 22 : « −5 » ivoire cerclé d'or, « −1 » de la Foudre en cyan). Reste : `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
+| **6. Campagne longue en d6** (faite, 0.105.0 à 0.112.0 ; à jouer) | les faces quittées en coups imprimés, Copier une face sous la limite, adversaires construits comme un champion, signature affichée (§ 11.5) ; Fanchon à la signature seule (0.107.0, § 11.7). Thaldrin à sa signature, les Feux follets (0.109.0, § 13.3). 0.112.0 : deux compétences au départ, cinq faces de compétence au plus, plancher de 75 % des PV et adversaires trois récompenses en retard, Thaldrin à l'attaque 5 à 6 (§ 11.8). Reste : une relecture légère des répertoires pour le d6 | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss ; 0.112.0 (§ 11.8, 30 parties par champion) : boss atteint 26 %, acte gagné 12 %, adversaires à 75 % de leurs PV au moins, 83 % en moyenne | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires ; la courbe (§ 11.8) |
+| **7. Types à l'écran, durée** (faite, 0.108.0 et 0.112.0) | 0.108.0 : la couleur des chiffres par source (§ 9.3, `DAMAGE_SOURCES`, six teintes), la source du coup de base magique (`attackSource`), la règle « Types de dégâts » au compendium ; retirés en 0.111.0 (attaque d'un type unique, choix de l'utilisateur). 0.112.0 : trois reliques de durée (Gambison matelassé, Onguent du rebouteux, Chandelle de veille ; [RELIQUES.md](RELIQUES.md) § 14). Les **bonus par type** (« +N aux DM, par impact ») sont **abandonnés** | en campagne et en saison (les types à l'écran : non, empreinte inchangée) | 0.108.0 : `npm run check` (319 tests) et `vite build` ; empreinte inchangée ; capture Firefox. 0.112.0 : `npm run check` (355 tests), `vite build`, empreinte inchangée ; `npm run relics` (400 combats par duel) : +8,7, +12,0, +11,5 points, durée 7,9 → 9,6, 8,2, 8,1 tours par combattant | le troc du Gambison, un Onguent plus fort, les noms |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 
 **Plus tard** : super coups, Sertir, défenses par type, vies (§ 15).
@@ -1327,7 +1368,7 @@ Toutes les questions posées ont une réponse (§ 1). Restent des choix que les 
 1. ~~**La valeur imprimée de Pourfendre**~~ : 4 (0.105.0).
 2. ~~**Les dés de Fanchon et du druide** en d6~~ : § 6.8 (0.105.0).
 3. ~~**Le remplaçant du Contrepoids de plomb**~~ : il devient une relique de critique (0.105.0).
-4. **Le montant des bonus par impact** (« +1 » ou « +2 » aux DM sur un sort à trois impacts) : phase 7.
+4. ~~**Le montant des bonus par impact**~~ : abandonné avec les bonus par type (0.112.0 ; attaque d'un type unique depuis la 0.111.0).
 5. **La courbe de l'acte long** : plus basse au début (décidé, § 1.6) ; appliquée en 0.106.0 (§ 11.6) : 90, 90, 90, 89, 89, 89, 89, 88, 88, 88 %, boss 45 % ; mesuré : boss atteint 27 %, acte gagné 13 %. La place des forges, après les parties de l'utilisateur.
 
 **L'attaque de base (§ 6 bis), points de friction posés à l'utilisateur le 2026-10-23, tranchés** (§ 1.7) :

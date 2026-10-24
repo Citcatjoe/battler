@@ -1010,6 +1010,9 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 98 | `abbey-incense` | Encens de l'abbaye (relique de coup, v14) | Pain de résine ambrée enveloppé de lin, une seule braise ; pas d'encensoir (déjà l'icône de l'Aura de décoction) |
 | 99 | `dented-shield` | Écu cabossé (relique de coup, v14) | Bosse de fer d'un vieil écu (umbo), exactement six creux (le seuil de 6), lanière passée dans un rivet |
 | 100 | `eagle-feather` | Plume d'aigle (relique de coup, v14) | Rémige d'aigle liée d'un fil rouge à un anneau de cuivre, deux barbes arrachées |
+| 101 | `quilted-gambison` | Gambison matelassé (relique de caractéristique, v16) | Gambison plié, matelassure piquée, col lacé, une pièce recousue ; pas de mailles (c'est la Cotte) |
+| 102 | `bonesetter-salve` | Onguent du rebouteux (relique de coup, v16) | Pot de terre cuite, cinq creux de doigts dans l'onguent (les cinq charges), ficelle nouée au col |
+| 103 | `vigil-candle` | Chandelle de veille (relique de tour, v16) | Chandelle de suif aux trois anneaux gravés (l'intervalle de 3 tours), dans un bougeoir de fer à anneau ; ni sablier ni clepsydre |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1207,6 +1210,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v15, emblèmes d'état (5 emblèmes, 3×3, intégrée le 2026-10-24, générée par l'agent avec Artlist : GPT Image 2.5 en image à image ; référence jointe : les seize emblèmes de la v12 composés sur fond noir) :** prompt de la v12 (§ Icônes à générer), liste ICONS remplacée : 1. a wilting leaf with two holes (`state-rot`, Pourriture) · 2. a cracked breastplate (`state-breach`, Brèche) · 3. a firefly with a glowing tail (`state-firefly`, Luciole) · 4. a sword blade bent wavy (`state-spoiled`, Coup gâché) · 5. a target with an arrow plunging in (`state-vulnerable`, Vulnérable). Découpe : `python scripts/slice-coins.py <planche.png> src/assets/icons state-rot,state-breach,state-firefly,state-spoiled,state-vulnerable` (rayon 136 à 137 px). Intégration : `STATE_ICON` (`Icon.tsx`).
 
+**v16, reliques de durée (3 icônes, 3×3, intégrée le 2026-10-25, générée par l'agent avec Artlist : GPT Image 2.5 en image à image ; référence jointe : la planche des reliques) :** motifs de [RELIQUES.md](RELIQUES.md) § 14, dans la grammaire des reliques (§ 6) : 1. Gambison matelassé, un gambison plié au col lacé, avec une pièce recousue · 2. Onguent du rebouteux, un pot de terre cuite aux cinq creux de doigts et à la ficelle nouée · 3. Chandelle de veille, une chandelle de suif aux trois anneaux gravés, dans un bougeoir de fer à anneau.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1234,6 +1239,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v16 | 2026-10-25 | 101 à 103 | Les trois reliques de durée (Gambison matelassé, Onguent du rebouteux, Chandelle de veille). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche de trois, deux versions générées (160 crédits), la version A retenue pour les trois. Découpe par `scripts/slice-icons.py` (noms de la grille 3×3), optimisées. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v15 | 2026-10-24 | 5 emblèmes d'état | Pourriture, Brèche, Luciole, Coup gâché, Vulnérable (A8 de la revue). Artlist, GPT Image 2.5 en image à image, référence : les seize emblèmes de la v12 sur fond noir ; deux versions générées (160 crédits), les cinq retenus de la première. Découpe par `scripts/slice-coins.py` (rayon 136 à 137 px), optimisés. Planche de contrôle regardée (64 et 24 px, avec compteur) ; pas encore vus dans un écran de jeu. |
 | v14 | 2026-10-24 | 96 à 100 | Les cinq reliques consommatrices. Artlist, GPT Image 2.5 en image à image, référence : les seize reliques en planche 4 × 4 ; deux versions générées (160 crédits). Retenues : Fiole et Écu de la première, Croc, Encens et Plume de la seconde. L'Écu redessiné une fois par une retouche (80 crédits) pour montrer exactement six creux. Découpe par `scripts/slice-icons.py`, `optipng`, 128 × 128. |
 | v13 | 2026-10-22 | 92 à 95 | Les quatre reliques élémentaires. Première planche générée par l'agent (Artlist, GPT Image 2.5, deux planches d'un coup) : vrai canal alpha, découpe sans retouche. Retenues : Braise, Larme et Conque de la seconde planche (cage ronde à quatre barreaux, fêlure au tiers, spirale lisible), Géode de la première (les deux moitiés se lisent mieux qu'une géode entière ceinturée). |

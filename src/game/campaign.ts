@@ -1,6 +1,6 @@
 import { hashSeed } from './analysis'
-import { Character, type CharacterDef } from './character'
-import { faceTrigger, type CharacterEvent } from './events'
+import { Character, type CharacterDef, type CharacterStats } from './character'
+import { faceTrigger, rollFace, type CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, forgedFaces, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, STATUS_HOOKS, type Hook } from './hooks'
@@ -10,16 +10,18 @@ import { ALL_SKILLS, CHARACTERS, CHARACTER_IDS, createCharacter, ENGRAVABLE_SKIL
 
 /*
  * Campagne (0.88.0, prototype de docs/CAMPAGNE.md ; acte resserré en 0.89.0, allongé en 0.104.0) : un champion tiré
- * parmi trois, parti de sa signature seule, mène un acte de onze nœuds, dix combats normaux puis le boss. Les combats
- * restent automatiques ; le joueur choisit son adversaire à chaque nœud (deux propositions, avec leur bande de danger),
- * et chaque combat normal gagné rapporte une récompense, une relique ou une forge du dé (`REWARDS`) : six reliques et
- * quatre forges dans l'acte. Une défaite met fin à la partie ; la victoire contre le boss aussi. Toute partie qui a
- * rapporté quelque chose laisse un héritage au même personnage (docs/CAMPAGNE.md § 8).
+ * parmi trois, parti de sa signature et d'une seconde compétence (0.112.0), mène un acte de onze nœuds, dix combats
+ * normaux puis le boss. Les combats restent automatiques ; le joueur choisit son adversaire à chaque nœud (deux
+ * propositions, avec leur bande de danger), et chaque combat normal gagné rapporte une récompense, une relique ou une
+ * forge du dé (`REWARDS`) : six reliques et quatre forges dans l'acte. Une défaite met fin à la partie ; la victoire
+ * contre le boss aussi. Toute partie qui a rapporté quelque chose laisse un héritage au même personnage
+ * (docs/CAMPAGNE.md § 8).
  *
  * Réglage (§ 6.3) : chaque adversaire est réglé par simulation sur une courbe nominale montante, contre un « champion
  * de référence » (le même personnage, forgé et équipé au hasard au même rythme), pas contre le champion réel : un
- * champion bien construit dépasse la courbe et écrase, un champion mal construit souffre. Le levier est le seul nombre
- * de PV de l'adversaire. Les bandes de danger, elles, se calculent contre le champion réel ; les chiffres restent cachés.
+ * champion bien construit dépasse la courbe et écrase, un champion mal construit souffre. Le levier est le nombre de PV
+ * de l'adversaire, borné par un plancher (`HP_FLOOR`), et sa construction en retard (`OPPONENT_LAG`). Les bandes de
+ * danger, elles, se calculent contre le champion réel ; les chiffres restent cachés.
  */
 
 /**
@@ -33,15 +35,17 @@ export const ACT_LENGTH = ACT_FIGHTS + 1
 
 export type RewardKind = 'relic' | 'forge'
 
-/** La récompense de chaque combat normal gagné, dans l'ordre retenu (§ 11.2) : une forge tôt, quand la signature est seule. */
+/** La récompense de chaque combat normal gagné, dans l'ordre retenu (§ 11.2) : une forge tôt, sur le dé de départ. */
 export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge', 'relic', 'forge', 'relic', 'relic', 'forge', 'relic']
 
 /**
- * Faces de compétence au plus sur le dé d'un champion de campagne, signature comprise (§ 11.2, décidé) : au moins deux
- * faces de coup. La limite atteinte, Graver n'est plus proposée, et Copier une face ne copie plus qu'une face de coup.
- * Elle compte des faces, pas des compétences : la signature en prend une (le 1), une gravure ou une copie une de plus.
+ * Faces de compétence au plus sur le dé d'un champion de campagne, signature et seconde compétence comprises (§ 11.2 ;
+ * quatre de la 0.104.0 à la 0.111.0, pour garder deux faces de coup). Cinq depuis la 0.112.0 : le départ prend deux faces,
+ * et chaque face porte le coup de base depuis la 0.106.0 ; à quatre, il restait deux gravures (1,07 par build d'un acte,
+ * contre 1,27 à cinq, difficulté et apport du build inchangés, docs/CAMPAGNE.md § 18.3). La limite atteinte, ni Graver ni
+ * Copier une face ne sont proposées. Elle compte des faces, pas des compétences : une gravure ou une copie en prend une.
  */
-export const MAX_SKILL_FACES = 4
+export const MAX_SKILL_FACES = 5
 
 /** Champions proposés au départ d'une campagne. */
 export const CHAMPION_CHOICES = 3
@@ -102,25 +106,53 @@ export const BOSS: CharacterDef = {
 /** Un adversaire de campagne par son id : un personnage du roster, à son kit entier, ou le boss. */
 export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character(BOSS) : createCharacter(id))
 
-/* ---------- Le champion : la signature seule ---------- */
+/* ---------- Le champion : la signature et la seconde compétence ---------- */
+
+/**
+ * La seconde compétence d'un champion de campagne (0.112.0, décision de l'utilisateur) : l'autre compétence de face de
+ * son kit de tournoi (le d6 de référence en a deux, docs/PROGRESSION.md § 6.2). La Foudre pour Thaldrin, le Soliste pour
+ * Fanchon ; aucune pour Morgrut.
+ */
+export const secondSkillOf = (def: CharacterDef) => def.events.find((e) => e.id !== def.signature && rollFace(e.trigger) !== undefined)
+
+/**
+ * Stats propres à la campagne (0.112.0, décision de l'agent sur consigne, à juger par l'utilisateur ; le tournoi ne
+ * change pas). Thaldrin : attaque 3 à 4 → 5 à 6. Son attaque est réglée pour un sort sur chaque face humaine (kit de
+ * tournoi : 48,9 % contre le roster) ; un Feu follet sur le 1, une Foudre sur le 2 et quatre faces nues ne gagnaient que
+ * 15,1 % (4 à 5 : 34,3 % ; 5 à 6 : 55,8 %, dans la bande de 42 à 58 %), et le plancher des PV le laissait sans
+ * adversaire à sa portée (docs/CAMPAGNE.md § 18.3).
+ */
+const CAMPAIGN_STATS: Record<string, Partial<CharacterStats>> = { thaldrin: { attackMin: 5, attackMax: 6 } }
 
 /**
  * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé en
- * 0.104.0) : sa **signature seule, sur la face 1** (retour de l'utilisateur du 2026-10-24, 0.111.0 : une fois, quelle
- * que soit la face qui la porte dans son kit ; les Feux follets de Thaldrin, imprimés sur le 4, le 5 et le 6, n'en
- * gardent qu'une) ; ses cinq autres faces sont nues, libres pour la forge. Fanchon sans son Ouverture, qui n'est pas une
- * face. Sans signature, son kit entier : Morgrut, le combattant nu, seule exception de structure.
+ * 0.104.0) : sa **signature sur la face 1** (retour de l'utilisateur du 2026-10-24, 0.111.0 : une fois, quelle que soit
+ * la face qui la porte dans son kit ; les Feux follets de Thaldrin, imprimés sur le 4, le 5 et le 6, n'en gardent
+ * qu'une), et depuis la 0.112.0 **sa seconde compétence sur la face 2** (`secondSkillOf`, une fois aussi : la Foudre de
+ * Thaldrin, sur le 1, le 2 et le 3 de son kit) ; ses quatre autres faces sont nues, libres pour la forge. Ce qui n'est
+ * pas une face reste (0.112.0) : l'Ouverture de Fanchon, sans laquelle son départ gagnait 25 % contre le roster (49 %
+ * avec, comme son kit de tournoi ; docs/CAMPAGNE.md § 18.3). Ses stats de campagne (`CAMPAIGN_STATS`). Sans signature,
+ * son kit entier : Morgrut, le combattant nu, seule exception de structure (six faces nues).
  */
 export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => {
-    const signature = c.definition.events.find((e) => e.id === c.definition.signature)
-    return [c.id, signature ? new Character({ ...c.definition, events: [{ ...signature, trigger: faceTrigger(1) }] }) : c]
+    const def = c.definition
+    const signature = def.events.find((e) => e.id === def.signature)
+    if (!signature) return [c.id, c]
+    const second = secondSkillOf(def)
+    const events = [
+      ...def.events.filter((e) => rollFace(e.trigger) === undefined),
+      { ...signature, trigger: faceTrigger(1) },
+      ...(second ? [{ ...second, trigger: faceTrigger(2) }] : []),
+    ]
+    return [c.id, new Character({ ...def, stats: { ...def.stats, ...CAMPAIGN_STATS[c.id] }, events })]
   }),
 )
 
 /**
- * Ce que chaque champion peut graver en campagne : les compétences que son kit a quittées, celle que la signature seule
- * laisse et celles hors kit (`reserve`) ; elles ne sont pas perdues, § 7.3. Puis son répertoire (`repertoireOf`).
+ * Ce que chaque champion peut graver en campagne : les compétences que son kit a quittées (ni sa signature ni sa seconde
+ * compétence : pas de gravure en double) et celles hors kit (`reserve`) ; elles ne sont pas perdues, § 7.3. Puis son
+ * répertoire (`repertoireOf`).
  */
 export const CAMPAIGN_REPERTOIRES: Record<string, readonly CharacterEvent[]> = Object.fromEntries(
   CHARACTERS.map((c) => {
@@ -187,12 +219,12 @@ export interface CampaignRun {
   outcome?: 'won' | 'lost'
 }
 
-/** Le champion tel qu'il est maintenant : sa signature (`CAMPAIGN_CHAMPIONS`), son dé forgé, ses reliques. */
+/** Le champion tel qu'il est maintenant : son départ (`CAMPAIGN_CHAMPIONS`), son dé forgé, ses reliques. */
 export function championOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): Character {
   return CAMPAIGN_CHAMPIONS[run.championId].withForge(run.forge).withRelics(run.relics.map(getRelic))
 }
 
-/** Un adversaire avant le réglage de ses PV : le boss, ou sa signature et sa construction. */
+/** Un adversaire avant le réglage de ses PV : le boss, ou son départ et sa construction. */
 function opponentBase(e: Pick<Encounter, 'characterId' | 'forge' | 'relics'>): Character {
   if (e.characterId === BOSS.id) return new Character(BOSS)
   return CAMPAIGN_CHAMPIONS[e.characterId].withForge(e.forge).withRelics(e.relics.map(getRelic))
@@ -234,6 +266,15 @@ const REFERENCE_FIGHTS = 8
 const DANGER_FIGHTS = 160
 
 /**
+ * Le levier des PV, moins fort (0.112.0, retour de l'utilisateur : « croiser des persos à 13 PV, c'est bizarre ») : un
+ * adversaire normal n'a jamais moins des trois quarts de ses PV de base (25 % à 0.111.0, 63 % en moyenne), quitte à
+ * passer sous la courbe ; et il est construit avec `OPPONENT_LAG` récompenses de retard sur le champion, pour que ses PV
+ * restent proches de sa base (88 % en moyenne). Mesures : docs/CAMPAGNE.md § 18.3. Le boss garde son plancher du quart.
+ */
+export const HP_FLOOR = 0.75
+export const OPPONENT_LAG = 3
+
+/**
  * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
  * par défaut dans l'offre (le choix automatique du tournoi). Le champion de référence et les adversaires sont construits
  * ainsi.
@@ -251,7 +292,7 @@ export function drawBuild(championId: string, node: number, rng: Rng): Pick<Camp
 }
 
 /**
- * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu (sa signature seule), qui
+ * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu (son départ), qui
  * reçoivent aux mêmes moments que le joueur ses récompenses (`drawBuild`). Sans héritage : la courbe nominale ne connaît
  * pas la puissance permanente (§ 8).
  */
@@ -288,8 +329,8 @@ export function offerableRelics(run: Pick<CampaignRun, 'championId' | 'forge' | 
  * La récompense d'un nœud, la même pour le joueur et le champion de référence (règles v2, phase 2, offre orientée) :
  * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire de campagne** du champion
  *   (`CAMPAIGN_REPERTOIRES`), au poids de son écho avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de
- *   compétence, ni Graver ni copie d'une compétence. Le répertoire (six compétences, ou les quatre de Morgrut) ne s'épuise
- *   pas avant la limite ;
+ *   compétence, ni Graver ni copie d'une compétence. Le répertoire (cinq compétences au moins, ou les quatre de Morgrut)
+ *   ne s'épuise pas dans un acte (quatre forges) ;
  * - relique : parmi celles dont la condition peut arriver (`offerableRelics`), la première carte au poids de son écho,
  *   les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
@@ -324,12 +365,13 @@ function winShare(champions: readonly Character[], opponent: Character, fights: 
 
 /**
  * Les PV qui mettent les champions de référence au plus près de `target` contre cet adversaire (dichotomie : plus il a
- * de PV, moins ils gagnent ; mêmes graines à chaque essai). Entre le quart et le triple de ses PV d'origine.
+ * de PV, moins ils gagnent ; mêmes graines à chaque essai). Entre `floor` de ses PV d'origine (le quart par défaut, le
+ * boss ; `HP_FLOOR` pour un adversaire normal) et le triple.
  */
-export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string): number {
+export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string, floor = 1 / 4): number {
   const base = opponent.baseStats.maxHp
   const share = (hp: number) => winShare(references, opponent.adjusted({ stats: { maxHp: hp } }), REFERENCE_FIGHTS, key)
-  let lo = Math.max(1, Math.round(base / 4))
+  let lo = Math.max(1, Math.ceil(base * floor))
   let hi = base * 3
   let atLo = share(lo)
   let atHi = share(hi)
@@ -357,9 +399,9 @@ export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) =>
 
 /**
  * Les rencontres du nœud en cours : deux adversaires du roster (jamais le champion, jamais le dernier adversaire),
- * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) : sa
- * signature, puis les récompenses que ce nœud lui donne (`drawBuild`) ; ses PV le règlent ensuite sur la courbe, puis il
- * est estimé contre le champion réel.
+ * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) : son
+ * départ, puis les récompenses du nœud, `OPPONENT_LAG` de moins que le champion (`drawBuild`, 0.112.0) ; ses PV le
+ * règlent ensuite sur la courbe, jamais sous `HP_FLOOR` de sa base, puis il est estimé contre le champion réel.
  */
 export function encountersFor(run: CampaignRun): Encounter[] {
   const node = run.wins
@@ -371,8 +413,9 @@ export function encountersFor(run: CampaignRun): Encounter[] {
   const ids = boss ? [BOSS.id] : shuffle(rng, CHARACTER_IDS.filter((id) => id !== run.championId && id !== last)).slice(0, ENCOUNTER_CHOICES)
   return ids.map((id) => {
     const key = `campagne:${run.seed}:${node}:${id}`
-    const build = boss ? { forge: [], relics: [] } : drawBuild(id, node, seededRng(hashSeed(`${key}:construction`)))
-    const maxHp = tuneHp(references, opponentBase({ characterId: id, ...build }), boss ? BOSS_TARGET : NORMAL_TARGETS[node], key)
+    const build = boss ? { forge: [], relics: [] } : drawBuild(id, Math.max(0, node - OPPONENT_LAG), seededRng(hashSeed(`${key}:construction`)))
+    const opponent = opponentBase({ characterId: id, ...build })
+    const maxHp = boss ? tuneHp(references, opponent, BOSS_TARGET, key) : tuneHp(references, opponent, NORMAL_TARGETS[node], key, HP_FLOOR)
     const encounter: Encounter = { characterId: id, maxHp, ...build, ...(boss && { boss: true as const }), chance: 0 }
     return { ...encounter, chance: winShare([champion], opponentOf(encounter), DANGER_FIGHTS, `${key}:danger`) }
   })
@@ -447,7 +490,9 @@ export const autoHeritage = (offer: readonly HeritageItem[], rng: Rng) => (offer
 
 /**
  * Partie en cours ; v4 (0.105.0) : le d6 imprimé et les adversaires construits (une partie v3 est oubliée ; v3 en
- * 0.104.0 : la signature seule et dix combats ; v2 depuis 0.89.0).
+ * 0.104.0 : la signature seule et dix combats ; v2 depuis 0.89.0). Une partie v4 d'avant la 0.112.0 se charge avec le
+ * nouveau départ, sauf si sa forge a gravé, doré ou copié sur la face 2 (la seconde compétence y est), ou gravé la
+ * seconde compétence ailleurs : `loadRun` l'oublie.
  */
 const RUN_KEY = 'battler:campaign:v4'
 const HERITAGE_KEY = 'battler:campaign-heritage:v1'

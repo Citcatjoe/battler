@@ -16,6 +16,7 @@ import {
   isBossNode,
   opponentOf,
   REWARDS,
+  secondSkillOf,
   type CampaignRun,
   type Encounter,
   type HeritageItem,
@@ -102,7 +103,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
               <p className="font-body text-lg text-ink-2">
                 {c.race} · {c.archetype} · {c.dice > 1 ? c.dice : ''}d{DIE_FACES}
               </p>
-              <SignatureLine character={c} />
+              <StartSkills character={c} />
               <p className="min-h-6 font-body text-[15px] font-bold text-gold-300">{legacy ? `Héritage : ${legacy} amélioration${legacy > 1 ? 's' : ''} de sa dernière partie` : ''}</p>
             </button>
           )
@@ -194,18 +195,28 @@ function ActTrack({ run }: { run: CampaignRun }) {
 }
 
 /**
- * La signature du champion (règles v2, 0.104.0) : la seule compétence de son kit au départ d'une campagne, avec les faces
- * qui la portent (le 1 au départ depuis la 0.111.0, une copie en ajoute une). Rien pour Morgrut, parti de son kit entier.
+ * Les compétences de départ du champion (règles v2) : la signature (0.104.0) et la seconde compétence (0.112.0), chacune
+ * avec les faces qui la portent (le 1 et le 2 au départ, une copie en ajoute une). Rien pour Morgrut, parti de six
+ * faces nues.
  */
-function SignatureLine({ character }: { character: Character }) {
-  const printed = character.events.filter((e) => e.id === character.definition.signature)
+function StartSkills({ character }: { character: Character }) {
+  return (
+    <>
+      <StartSkillLine character={character} id={character.definition.signature} label="Signature" />
+      <StartSkillLine character={character} id={secondSkillOf(character.definition)?.id} label="Seconde compétence" />
+    </>
+  )
+}
+
+function StartSkillLine({ character, id, label }: { character: Character; id: string | undefined; label: string }) {
+  const printed = character.events.filter((e) => e.id === id)
   if (printed.length === 0) return null
   const faces = printed.flatMap((e) => rollFace(e.trigger) ?? []).map((f) => `le ${f}`)
   return (
     <p className="flex items-center gap-2 font-body text-[15px] text-ink-2">
       <SkillSeal id={printed[0].id} size={32} />
       <span>
-        Signature : <b className="text-ink-1">{printed[0].name}</b>
+        {label} : <b className="text-ink-1">{printed[0].name}</b>
         {faces.length > 0 && `, sur ${faces.length > 1 ? `${faces.slice(0, -1).join(', ')} et ${faces.at(-1)}` : faces[0]}`}
       </span>
     </p>
@@ -224,7 +235,7 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
         <p className="font-body text-lg text-ink-2">
           {champion.race} · {champion.archetype} · {champion.maxHp} PV
         </p>
-        <SignatureLine character={champion} />
+        <StartSkills character={champion} />
       </div>
       <div className="relative z-10 flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Son dé · d{DIE_FACES}</span>

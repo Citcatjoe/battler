@@ -1717,12 +1717,15 @@ describe('reliques (docs/RELIQUES.md)', () => {
   it('le registre est valide, chaque type a ses trois reliques, et aucune ne pose de malus sur l’adversaire', () => {
     expect(validateRelics()).toEqual([])
     // Les douze de la 0.77.0, trois par type, puis les quatre à scène de la 0.85.0, puis le lot des consommateurs
-    // (PROGRESSION.md § 13.3), cinq reliques de coup. Les types restent internes : le joueur ne les voit pas (2026-10-24)
+    // (PROGRESSION.md § 13.3), cinq reliques de coup, puis les trois reliques de durée (phase 7). Les types restent
+    // internes : le joueur ne les voit pas (2026-10-24)
     const consumers = ['venom-vial', 'butcher-hook', 'abbey-incense', 'dented-shield', 'eagle-feather']
-    const plain = RELICS.filter((r) => !r.scene && !consumers.includes(r.id))
+    const durability = ['quilted-gambison', 'bonesetter-salve', 'vigil-candle']
+    const plain = RELICS.filter((r) => !r.scene && !consumers.includes(r.id) && !durability.includes(r.id))
     expect(plain).toHaveLength(12)
     for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
     expect(consumers.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike', 'strike'])
+    expect(durability.map((id) => relicKind(getRelic(id)))).toEqual(['stat', 'strike', 'turn'])
     expect(validateRelics([relic({ stats: { armor: 1 }, rollBonus: 1 })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'turn', turn: 0 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'hpBelow', ratio: 1.2 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
@@ -1947,6 +1950,35 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(text).not.toMatch(EMOJI)
     expect(parseRelics(traceText(simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 5 })))).toEqual([[], []])
   })
+
+  it('durée (phase 7) : +15 PV max dès le départ, un soin par coup encaissé, un bouclier tous les 3 tours', () => {
+    // Gambison matelassé : les PV max montent, l'attaque baisse de 1 au minimum comme au maximum ; le combat part des PV max
+    const gorak = createCharacter('gorak')
+    const padded = gorak.withRelics([getRelic('quilted-gambison')])
+    expect(padded.stats).toMatchObject({ maxHp: gorak.baseStats.maxHp + 15, attackMin: gorak.baseStats.attackMin - 1, attackMax: gorak.baseStats.attackMax - 1 })
+    const worn = simulateCombat([padded, createCharacter('brokk')], { seed: 1 })
+    expect(Math.max(...worn.beats.map((b) => b.state.hp[0]))).toBeGreaterThan(gorak.baseStats.maxHp)
+    // Onguent du rebouteux : +1 PV juste après un coup encaissé qui touche, cinq fois au plus
+    let full = 0
+    for (let seed = 0; seed < 20; seed++) {
+      const r = simulateCombat([createCharacter('aldric').withRelics([getRelic('bonesetter-salve')]), createCharacter('gorak')], { seed })
+      const fires = ofType(r, 'relic')
+      expect(fires.length).toBeLessThanOrEqual(5)
+      if (fires.length === 5) full++
+      for (const b of fires) {
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'heal', amount: 1 })])
+        const hit = r.beats[b.cause!]
+        expect(hit.type === 'attack' || hit.type === 'coin').toBe(true)
+        if (hit.type === 'attack') expect(hit.attack).toMatchObject({ attacker: 1, dodged: false })
+      }
+    }
+    expect(full).toBeGreaterThan(0)
+    // Chandelle de veille : +2 Armure temporaire au début de ses 3e, 6e, 9e tours
+    const lit = run([testCharacter('a', { maxHp: 60 }).withRelics([getRelic('vigil-candle')]), testCharacter('b', { maxHp: 60 })])
+    const fires = ofType(lit, 'relic')
+    expect(fires.slice(0, 3).map((b) => ownTurn(lit, 0, b.turn))).toEqual([3, 6, 9])
+    for (const b of fires) expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', status: 'bonusArmor', stacks: 2 })])
+  })
 })
 
 describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
@@ -1978,6 +2010,10 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       '+1 ferveur à chaque soin reçu',
       "+2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus",
       "+1 esquive améliorée lors d'un coup critique, recharge 2 tours",
+      // Les reliques de durée (phase 7)
+      "+15 PV max et −1 à l'attaque",
+      "+1 PV lors d'un coup reçu, 5x",
+      '+2 armure temporaire tous les 3 tours',
     ])
     for (const line of lines) {
       expect(line).not.toMatch(EMOJI)

@@ -32,6 +32,27 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.112.0] — 2026-10-25
+
+Les réponses de l'utilisateur du 2026-10-24 après la 0.111.0 (règles v2, fin de la phase 6 et seconde partie de la phase 7) : deux compétences au départ de la campagne, un levier des PV moins fort, et trois reliques qui font durer les combats.
+
+### Ajouté
+- **Trois reliques de durée** (phase 7, seconde partie, [docs/RELIQUES.md](docs/RELIQUES.md) § 14), offertes à tous, 24 reliques en tout : **Gambison matelassé** « +15 PV max et −1 à l'attaque » (Caractéristique), **Onguent du rebouteux** « +1 PV lors d'un coup reçu, 5x » (Coup : il consomme les coups encaissés, ses soins nourrissent l'Encens de l'abbaye), **Chandelle de veille** « +2 armure temporaire tous les 3 tours » (Tour). Aucune mécanique de moteur nouvelle. Mesuré (`npm run relics`, 400 combats par duel) : +8,7 (Elaria −5,9 à Ysolde +13,9), +12,0 (Elaria +9,8 à Fanchon +14,5), +11,5 points (Aldric +9,2 à Thaldrin +13,2) ; durée 7,9 → 9,6, 8,2 et 8,1 tours par combattant ; les 21 autres reliques identiques au dixième près. Noms provisoires. Tests dans `combat.test.ts` (« durée (phase 7) ») et contrôle dans `audit.test.ts`.
+- **Icônes des trois reliques de durée** (planche v16, [docs/STYLE_BIBLE.md](docs/STYLE_BIBLE.md) § 7) : générées avec Artlist (GPT Image 2.5 en image à image, la planche des reliques en référence, une planche de trois, deux versions, la version A gardée pour les trois), découpées par `scripts/slice-icons.py`, optimisées : un gambison plié au col lacé et à la pièce recousue, un pot d'onguent en terre cuite aux cinq creux de doigts, une chandelle de suif aux trois anneaux gravés dans un bougeoir de fer.
+- `npm run relics` : colonne **Durée** (tours par combattant, sans relique → avec) et filtre `RELICS_ONLY=id,id`.
+- `npm run campaign` : colonne « Départ (1, 2) », règles de la partie (limite, plancher, retard), plage des PV des adversaires normaux (plus bas, moyenne, nombre sous 75 %), colonne « Au plus bas » par nœud.
+
+### Modifié
+- **Deux compétences au départ de la campagne** (réponse de l'utilisateur : « ok ») : la signature sur le 1 et la seconde compétence du kit de tournoi sur le 2 (`secondSkillOf`), quatre faces nues ; Thaldrin, la Foudre sur le 2 ; Fanchon, Soliste sur le 2 et l'Ouverture rendue ; Morgrut inchangé (aucune compétence). Le choix du champion et son panneau disent « Signature : X, sur le 1 » et « Seconde compétence : Y, sur le 2 ». Aucune signature sous la bande de 8 à 20 points (`scripts/skills.report.ts`, [docs/CAMPAGNE.md](docs/CAMPAGNE.md) § 18.3).
+- **Cinq faces de compétence au plus** en campagne (quatre avant) : gravures par build 1,07 → 1,27, boss atteint 28 → 28 % (12 parties par champion).
+- **Le levier des PV, moins fort** (l'utilisateur : « croiser des persos à 13 PV, c'est bizarre ») : un adversaire normal garde au moins 75 % de ses PV de base (`HP_FLOOR`), et il est construit trois récompenses en retard sur le joueur (`OPPONENT_LAG`). Mesuré (`npm run campaign`, 30 parties par champion) : PV des adversaires au plus bas 25 → 75 %, en moyenne 62 → 83 % ; boss atteint 30 → 26 % (31 attendus), acte gagné 13 → 12 % (14) ; victoire aux deux premiers combats 78 et 86 % (la courbe en demande 90) ; apport du build au nœud 10 +69 → +81 points. Une courbe relevée est proposée à l'utilisateur, non appliquée.
+- **Thaldrin attaque 5 à 6 en campagne** (3 à 4 en tournoi, `CAMPAIGN_STATS`, choix de l'agent) : son départ gagne 55,8 % contre le roster (15,1 % à 3-4).
+- Partie sauvegardée : clé inchangée ; une partie de la 0.111.0 se charge, sauf si sa forge a touché la face 2 ou gravé la seconde compétence (oubliée par `loadRun`) ; un héritage gravé sur le 2 est écarté.
+- `npm run logs` reconnaît un champion de campagne sans forge à une liste de compétences différente de son kit de tournoi.
+
+### Retiré
+- **Les bonus de relique par type** (« +N aux DM ») prévus pour la phase 7 : abandonnés, l'attaque étant d'un type unique depuis la 0.111.0.
+
 ## [0.111.0] — 2026-10-24
 
 Les retours de partie de l'utilisateur du 2026-10-24 (trois campagnes : Elaria, Gorak, Ysolde) : plus de chiffre à virgule, la signature sur la face 1, la forge (dorure, copie), les six faces en combat, les reliques (textes, offre), une attaque d'un seul type, et le rythme dé rendu → intervalle → impact.

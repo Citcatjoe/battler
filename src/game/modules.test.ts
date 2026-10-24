@@ -3,7 +3,7 @@ import { skillCatalog, statusCatalog, statusLinks } from './catalog'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
 import { cueOf } from './cues'
-import { describeEffect, describeEvent, describeSkill, faceTrigger, TRIGGERS, type Effect } from './events'
+import { describeEffect, describeEvent, describeSkill, faceTrigger, rollFace, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
@@ -26,7 +26,11 @@ import {
   offerableRelics,
   encountersFor,
   opponentOf,
+  HP_FLOOR,
   MAX_SKILL_FACES,
+  OPPONENT_LAG,
+  secondSkillOf,
+  tuneHp,
   championOf,
   heritableGains,
   isBossNode,
@@ -831,21 +835,33 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   const lost = simulateCombat([testCharacter('a', { maxHp: 1 }), testCharacter('b', { maxHp: 100 })], { seed: 1 })
   const fear = ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')!
 
-  it('les adversaires grandissent avec l’acte (0.105.0) : au nœud k, leur signature et les k récompenses de l’acte, puis leurs PV réglés', () => {
+  it('les adversaires grandissent avec l’acte (0.105.0) : au nœud k, leur départ et les k récompenses de l’acte, puis leurs PV réglés', () => {
     for (const node of [0, 4, ACT_FIGHTS - 1]) {
       const build = drawBuild('brokk', node, seededRng(node))
       expect(build.forge).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'forge').length)
       expect(build.relics).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'relic').length)
       const opponent = opponentOf({ characterId: 'brokk', maxHp: 33, ...build, chance: 0 })
-      // Sa signature (Épines acérées, copiée peut-être) et rien d'autre de son kit hors gravures ; sa forge, ses reliques, ses PV
-      expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual(['thorns'])
+      // Son départ (Épines acérées et Peau de pierre, copiées peut-être) et rien d'autre hors gravures ; sa forge, ses reliques, ses PV
+      expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual(['thorns', 'stoneskin'])
       expect(opponent.forge).toEqual(build.forge)
       expect(opponent.relics.map((r) => r.id)).toEqual(build.relics)
       expect(opponent.maxHp).toBe(33)
     }
-    // Les rencontres d'un nœud portent leur construction ; le boss, la sienne propre
-    const run = { ...startRun('gorak', 8), wins: 3 }
-    for (const e of encountersFor(run)) expect(e.forge.length + e.relics.length).toBe(3)
+  })
+
+  it('le levier des PV, moins fort (0.112.0) : un adversaire normal a `OPPONENT_LAG` récompenses de retard, et jamais moins de `HP_FLOOR` de ses PV de base', () => {
+    for (const wins of [0, 1, 5]) {
+      const run = { ...startRun('gorak', 8), wins }
+      for (const e of encountersFor(run)) {
+        expect(e.forge.length + e.relics.length, `nœud ${wins}`).toBe(Math.max(0, wins - OPPONENT_LAG))
+        expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThanOrEqual(Math.ceil(createCharacter(e.characterId).baseStats.maxHp * HP_FLOOR))
+      }
+    }
+    // Le plancher : contre un adversaire qui les bat toujours, le réglage s'arrête au plancher demandé (le quart, sinon)
+    const weak = [testCharacter('a', { maxHp: 20, attackMin: 1, attackMax: 1 })]
+    const strong = testCharacter('b', { maxHp: 40, attackMin: 9, attackMax: 9 })
+    expect(tuneHp(weak, strong, 0.9, 'plancher', HP_FLOOR)).toBe(Math.ceil(40 * HP_FLOOR))
+    expect(tuneHp(weak, strong, 0.9, 'plancher')).toBe(10)
   })
 
   it('le boss est un personnage valide, à son dé forgé', () => {
@@ -853,41 +869,55 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 5: 2, 6: 2 })
   })
 
-  it('champion de campagne : la signature seule, sur la face 1 (0.111.0) ; les compétences quittées entrent dans son répertoire de campagne', () => {
+  it('champion de campagne (0.112.0) : la signature sur le 1, la seconde compétence de son kit sur le 2, quatre faces nues ; le reste de ses compétences entre dans son répertoire de campagne', () => {
     for (const c of CHARACTERS) {
-      const kit = [...new Set(CAMPAIGN_CHAMPIONS[c.id].events.map((e) => e.id))]
+      const champion = CAMPAIGN_CHAMPIONS[c.id]
       const signature = c.definition.signature
-      // Sans signature (Morgrut, le combattant nu) : le kit entier
-      expect(kit, c.id).toEqual(signature ? [signature] : [...new Set(c.events.map((e) => e.id))])
-      // La signature une fois, sur le 1 ; ses cinq autres faces nues
-      if (signature) expect(CAMPAIGN_CHAMPIONS[c.id].events.map((e) => e.trigger), c.id).toEqual([faceTrigger(1)])
+      const second = secondSkillOf(c.definition)
+      // Sans signature (Morgrut, le combattant nu) : son kit entier, six faces nues
+      if (!signature) expect(champion.events, c.id).toEqual(c.events)
+      else {
+        // La seconde : l'autre compétence de face de son kit de tournoi (jamais l'Ouverture de Fanchon, qui n'est pas une face)
+        expect(second, c.id).toBeDefined()
+        expect(c.events.some((e) => e.id === second?.id && e.id !== signature)).toBe(true)
+        // Ce qui n'est pas une face reste (l'Ouverture de Fanchon), puis la signature sur le 1 et la seconde sur le 2
+        const passive = c.events.filter((e) => rollFace(e.trigger) === undefined).map((e) => `${e.id}@${e.trigger}`)
+        expect(champion.events.map((e) => `${e.id}@${e.trigger}`), c.id).toEqual([...passive, `${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
+      }
+    }
+    expect(CAMPAIGN_CHAMPIONS.fanchon.events.map((e) => e.id)).toEqual(['overture', 'melodious-aura', 'soloist'])
+    for (const c of CHARACTERS) {
+      const champion = CAMPAIGN_CHAMPIONS[c.id]
+      const kit = champion.events.map((e) => e.id)
       const own = [...c.events, ...(c.definition.reserve ?? [])].filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
       const left = own.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
+      // Pas de gravure en double : ni la signature ni la seconde dans le répertoire de campagne
       expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
+      expect(CAMPAIGN_REPERTOIRES[c.id].some((e) => kit.includes(e.id)), c.id).toBe(false)
     }
     // Seul Morgrut part sans signature
     expect(CHARACTERS.filter((c) => !c.definition.signature).map((c) => c.id)).toEqual(['morgrut'])
-    // Gorak : la Furie des vents quitte le 2 pour le 1 ; le 2 à 6 sont des faces nues qui se gravent
+    // Gorak : la Furie des vents sur le 1, Pourfendre sur le 2 (l'inverse de son kit de tournoi) ; le 3 à 6 sont des faces nues qui se gravent
     const gorak = championOf(startRun('gorak', 1))
-    expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalOne'])
-    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([2, 3, 4, 5, 6])
+    expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalOne', 'cleave@naturalTwo'])
+    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([3, 4, 5, 6])
   })
 
-  it('Thaldrin (0.111.0) : un seul Feu follet, sur le 1 ; la Foudre ouvre son répertoire ; trois gravures, puis la limite', () => {
+  it('Thaldrin (0.112.0) : un Feu follet sur le 1, une Foudre sur le 2, en forme humaine ; des gravures jusqu’à la limite', () => {
     const thaldrin = championOf(startRun('thaldrin', 1))
-    expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@naturalOne@human'])
+    expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@naturalOne@human', 'thunderbolt@naturalTwo@human'])
     // L'ours est inchangé : sa forme, sa Force de l'ours
     expect(thaldrin.forms?.map((f) => f.statuses)).toEqual(createCharacter('thaldrin').forms?.map((f) => f.statuses))
-    const [thunderbolt] = CAMPAIGN_REPERTOIRES.thaldrin
-    expect(thunderbolt.id).toBe('thunderbolt')
-    // Les cinq faces nues se gravent
-    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: thunderbolt })).toEqual([2, 3, 4, 5, 6])
-    // La limite compte des faces : le Feu follet et trois gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
-    const [, a, b] = CAMPAIGN_REPERTOIRES.thaldrin
-    const engraved = [thunderbolt, a, b].map((skill, i) => ({ op: 'engrave' as const, face: 2 + i, skill }))
-    expect(1 + engraved.length).toBe(MAX_SKILL_FACES)
+    expect(CAMPAIGN_REPERTOIRES.thaldrin.map((e) => e.id)).not.toContain('thunderbolt')
+    // Attaque de campagne 5 à 6 (0.112.0) ; le Thaldrin de tournoi garde 3 à 4
+    expect([thaldrin.baseStats.attackMin, thaldrin.baseStats.attackMax]).toEqual([5, 6])
+    expect([createCharacter('thaldrin').baseStats.attackMin, createCharacter('thaldrin').baseStats.attackMax]).toEqual([3, 4])
+    // Les quatre faces nues se gravent
+    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.thaldrin[0] })).toEqual([3, 4, 5, 6])
+    // La limite compte des faces : le Feu follet, la Foudre et les gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
+    const engraved = CAMPAIGN_REPERTOIRES.thaldrin.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
-      const under = drawReward({ championId: 'thaldrin', forge: [], relics: [] }, 'forge', seededRng(k))
+      const under = drawReward({ championId: 'thaldrin', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
       const full = drawReward({ championId: 'thaldrin', forge: engraved, relics: [] }, 'forge', seededRng(k))
       if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
       expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
@@ -910,15 +940,12 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('quatre faces de compétence au plus : la limite atteinte, plus de Graver ni de Copier ; Dorer, Aiguiser et Tremper restent', () => {
-    const [a, b, c] = CAMPAIGN_REPERTOIRES.gorak
-    const two = [a, b].map((skill, i) => ({ op: 'engrave' as const, face: 4 + i, skill }))
-    // La signature et trois gravures : `MAX_SKILL_FACES` faces de compétence, la limite
-    const three = [...two, { op: 'engrave' as const, face: 6, skill: c }]
-    expect(1 + three.length).toBe(MAX_SKILL_FACES)
+  it('`MAX_SKILL_FACES` faces de compétence au plus : la limite atteinte, plus de Graver ni de Copier ; Dorer, Aiguiser et Tremper restent', () => {
+    // La signature, la seconde compétence et les gravures : `MAX_SKILL_FACES` faces de compétence, la limite
+    const engraved = CAMPAIGN_REPERTOIRES.gorak.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
-      const under = drawReward({ championId: 'gorak', forge: two, relics: [] }, 'forge', seededRng(k))
-      const full = drawReward({ championId: 'gorak', forge: three, relics: [] }, 'forge', seededRng(k))
+      const under = drawReward({ championId: 'gorak', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
+      const full = drawReward({ championId: 'gorak', forge: engraved, relics: [] }, 'forge', seededRng(k))
       if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
       expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
       expect(full.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(false)
@@ -929,10 +956,11 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   })
 
   it('offre orientée : la première relique se tire à l’écho du build (le Dé creux appelle la Conque des vents)', () => {
+    // Morgrut, six faces nues : rien d'autre dans son build ne fait écho (Gorak, depuis Pourfendre sur le 2, appelle aussi le Croc de boucher)
     let first = 0
     let others = 0
     for (let k = 0; k < 400; k++) {
-      const reward = drawReward({ championId: 'gorak', forge: [], relics: ['hollow-die'] }, 'relic', seededRng(k))
+      const reward = drawReward({ championId: 'morgrut', forge: [], relics: ['hollow-die'] }, 'relic', seededRng(k))
       if (reward.kind !== 'relic') throw new Error('relique attendue')
       if (reward.offer[0] === 'wind-conch') first++
       if (reward.offer.slice(1).includes('wind-conch')) others++
@@ -1014,7 +1042,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     let run = startRun('gorak', 5)
     run = withReward(run, { kind: 'forge', step: { op: 'gild', face: 5 } })
     run = withReward(run, { kind: 'relic', relic: 'wolf-fang' })
-    // La Furie des vents (le 1, seule au départ d'une campagne) copiée sur la face nue de plus petit numéro qui n'est pas dorée : le 2
+    // La Furie des vents (le 1) copiée sur la face libre de plus petit numéro (Pourfendre est sur le 2, le 5 est doré) : le 3
     run = withReward(run, { kind: 'forge', step: { op: 'copy', face: 1 } })
     run = withReward(run, { kind: 'forge', step: { op: 'engrave', face: 4, skill: fear } })
     run = withReward(run, { kind: 'relic', relic: 'mercenary-mail' })
@@ -1063,15 +1091,15 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       recordHeritage(withReward(startRun('gorak', 4), { kind: 'relic', relic: 'mercenary-mail' }))
       recordHeritage(withReward(startRun('brokk', 4), { kind: 'relic', relic: 'wolf-fang' }))
       expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'mercenary-mail' }], brokk: [{ kind: 'relic', relic: 'wolf-fang' }] })
-      // Un héritage d'avant 0.111.0 : la Furie des vents aiguisée sur le 2, qu'elle a quitté pour le 1, est écartée
-      stored.set('battler:campaign-heritage:v1', JSON.stringify({ gorak: [{ kind: 'forge', step: { op: 'sharpen', face: 2 } }, { kind: 'relic', relic: 'wolf-fang' }] }))
+      // Un héritage de la 0.111.0 : une gravure sur le 2, où est maintenant Pourfendre (0.112.0), est écartée
+      stored.set('battler:campaign-heritage:v1', JSON.stringify({ gorak: [{ kind: 'forge', step: { op: 'engrave', face: 2, skill: fear } }, { kind: 'relic', relic: 'wolf-fang' }] }))
       expect(loadHeritage()).toEqual({ gorak: [{ kind: 'relic', relic: 'wolf-fang' }] })
     } finally {
       vi.unstubAllGlobals()
     }
   })
 
-  it('partie enregistrée (0.111.0) : une forge qui ne vaut plus sur le dé de campagne, au champion ou chez un adversaire proposé, fait oublier la partie', () => {
+  it('partie enregistrée (0.111.0, 0.112.0) : une forge qui ne vaut plus sur le dé de campagne, au champion ou chez un adversaire proposé, fait oublier la partie', () => {
     const stored = new Map<string, string>()
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => stored.get(k) ?? null,
@@ -1083,8 +1111,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       const save = (r: unknown) => stored.set('battler:campaign:v4', JSON.stringify(r))
       save({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'gild', face: 6 }], relics: [], chance: 0.5 }] })
       expect(loadRun()).not.toBeNull()
-      // Aiguiser le 2 de Gorak (sa Furie avant la 0.111.0) : le 2 est nu maintenant
-      save({ ...run, forge: [{ op: 'sharpen', face: 2 }] })
+      // Une gravure sur le 2 de Gorak (nu en 0.111.0) : Pourfendre y est depuis la 0.112.0
+      save({ ...run, forge: [{ op: 'engrave', face: 2, skill: fear }] })
       expect(loadRun()).toBeNull()
       // Graver le 1 de Brokk, où sont maintenant ses Épines
       save({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'engrave', face: 1, skill: fear }], relics: [], chance: 0.5 }] })

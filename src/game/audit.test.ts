@@ -75,6 +75,18 @@ describe('audit de résolution : le lot des consommateurs (PROGRESSION.md § 13.
   })
 })
 
+describe('audit de résolution : les reliques de durée (phase 7)', () => {
+  it('aucune anomalie pour les PV max à plat, le soin sur un coup encaissé et le bouclier qui revient, chez tout le roster', () => {
+    const { audit, problems, seen } = createAudit()
+    let n = 0
+    for (const relic of ['quilted-gambison', 'bonesetter-salve', 'vigil-candle'])
+      for (const a of CHARACTER_IDS)
+        for (const b of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics([getRelic(relic)]), createCharacter(b)], { seed: 12000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['relique de caractéristique', 'relique de coup', 'relique de tour', 'bouclier']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
   it('aucune anomalie pour des personnages forgés au hasard, ni pour le boss', () => {
     const { audit, problems, seen } = createAudit()

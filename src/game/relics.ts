@@ -283,6 +283,34 @@ export const RELICS: readonly Relic[] = [
     cooldown: 2,
     effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
   },
+  /*
+   * Les reliques de durée (phase 7, seconde partie, docs/RELIQUES.md § 14) : la durée vient du contenu (PROGRESSION.md
+   * § 12.2), environ une récompense sur trois fait durer. Des PV à plat (avec un troc qui ralentit aussi le porteur), un
+   * soin qui consomme les coups encaissés, un bouclier qui revient. Chaque PV vaut environ 2,3 points : « +12 PV » seul
+   * vaudrait +25,7, au-delà du plafond de 20 (mesures dans docs/RELIQUES.md § 14).
+   */
+  {
+    id: 'quilted-gambison',
+    name: 'Gambison matelassé',
+    flavor: 'Un gambison de lin épais, piqué de losanges, raide de vieille sueur. Il encaisse tout, et pèse au bras.',
+    stats: { maxHp: 15, attackMin: -1, attackMax: -1 },
+  },
+  {
+    id: 'bonesetter-salve',
+    name: 'Onguent du rebouteux',
+    flavor: 'Un pot de terre bouché de cire, cinq creux de doigts dans la graisse jaune. Chaque coup reçu en appelle une noix.',
+    trigger: { type: 'strike', on: 'hurt' },
+    charges: 5,
+    effects: [{ type: 'heal', amount: 1 }],
+  },
+  {
+    id: 'vigil-candle',
+    name: 'Chandelle de veille',
+    flavor: 'Une chandelle de suif dans un bougeoir de fer, trois anneaux gravés dans la cire. À chaque anneau fondu, la garde se relève.',
+    trigger: { type: 'turn', turn: 3 },
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
+  },
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)

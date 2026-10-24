@@ -66,13 +66,14 @@ it('rapport des combats joués', () => {
     }
     const hp = text.split('\n').slice(1, 3).map((line) => Number(/\) : (\d+) PV/.exec(line)?.[1]))
     const fighter = (id: string, side: 0 | 1, name?: string) => {
-      // Champion de campagne (0.104.0) : sa signature seule, et la forge du dé ne s'écrit que pour lui (une gravure
-      // peut lui rendre tout le kit nommé, Naraxes gravée de Pile ou face). Sinon, sa ligne ne nomme pas tout le kit
+      // Champion de campagne (0.104.0) : la forge du dé ne s'écrit que pour lui. Sans forge, sa ligne nomme ses compétences
+      // dans un autre ordre que le kit de tournoi (0.112.0 : la signature sur le 1, la seconde compétence sur le 2), ou
+      // pas toutes (l'Ouverture de Fanchon) ; même liste dans le même ordre : les mêmes faces, le kit de tournoi
       const listed = /compétences : (.+)$/.exec(text.split('\n')[side + 1])?.[1].split(', ') ?? []
       const full = campaignCharacter(id)
-      const signatureOnly =
-        id in CAMPAIGN_CHAMPIONS && (forge[side].length > 0 || !full.events.every((e) => listed.some((n) => n.startsWith(e.name))))
-      const base = signatureOnly ? CAMPAIGN_CHAMPIONS[id] : full
+      const sameKit = listed.length === full.events.length && full.events.every((e, k) => listed[k].startsWith(e.name))
+      const campaignStart = id in CAMPAIGN_CHAMPIONS && (forge[side].length > 0 || !sameKit)
+      const base = campaignStart ? CAMPAIGN_CHAMPIONS[id] : full
       const built = (name ? base.withName(name) : base).withForge(forge[side]).withRelics(relics[side].map(getRelic))
       const delta = hp[side] - built.maxHp
       return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp + delta } }) : built

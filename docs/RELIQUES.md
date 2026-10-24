@@ -1,6 +1,6 @@
 # Reliques
 
-_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20), quatre reliques élémentaires en 0.85.0 (§ 12), le lot des consommateurs le 2026-10-24 (§ 13). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
+_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20), quatre reliques élémentaires en 0.85.0 (§ 12), le lot des consommateurs le 2026-10-24 (§ 13), les trois reliques de durée en 0.112.0 (§ 14). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
 
 **Une relique est un objet gagné en tournoi qui change le profil d'un combattant** : une stat, la valeur de ses coups, ou un effet à un moment précis. Après chaque victoire, le vainqueur en choisit une parmi trois ; après trois victoires, il en porte trois, et ce n'est plus tout à fait le même combattant. C'est la première « variable qui pèse sur l'issue » de la fiche produit ([INTENTION.md](INTENTION.md), principe 11).
 
@@ -24,6 +24,7 @@ _Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demand
 | Les descriptions sont trop compliquées : une information simple, qui dit quand elle agit et comment elle s'insère dans la résolution ; « +4 dégâts aux frappes de 4. Point. » ; pas de lore dans les infobulles ; si on ne sait pas dire quand elle se déclenche, c'est que la règle est ambiguë (2026-10-23) | **Une ligne par relique** (0.95.0, § 5.1), au vocabulaire fixe de [RESOLUTION.md](RESOLUTION.md) § 3 ; la phrase d'ambiance quitte l'infobulle et la carte de récompense (elle reste au compendium). Règle aplatie : **une relique de face lit le dé de tout coup**, coup brut de la Furie compris (avant : « pas sur les coups bruts ») |
 | « Les trois descriptions sont trop compliquées (Fiole de venin, Géode fendue, Écu cabossé) » ; pas de mention du type de relique sur l'écran de choix, la condition de déclenchement dite en clair ; pas d'élément (« élémentaire · terre ») ; ne pas distinguer de types de dégâts au niveau des reliques ; « +2 dégâts aux adversaires empoisonnés », « +4 armure temporaire lors d'un coup reçu, 2x » sans recharge, « +2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus » (2026-10-24) | **Le style de l'utilisateur** (0.111.0, § 5.1) : l'effet d'abord, la condition en clair, la limite en « 2x », une ligne sans case de limites à part. Ni type ni élément nulle part pour le joueur (infobulle, carte de récompense, affrontement, compendium : une seule liste) ; `element` quitte le registre, la scène reste. **Une seule limite par relique** (`validateRelics`) : la Géode garde ses deux charges et perd sa recharge de 3 tours |
 | « La Fiole de venin m'est proposée à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison » (Elaria, Gorak, Ysolde, 2026-10-24) | **Offre pertinente** (0.111.0, [CAMPAGNE.md](CAMPAGNE.md)) : une relique dont la condition ne peut pas arriver avec le champion n'est pas offerte (`offerableRelics`, § 3 règle 10) |
+| La durée vient du contenu : environ une récompense sur trois fait durer (PV à plat, soin, bouclier, armure), « une relique +15 PV » ([PROGRESSION.md](PROGRESSION.md) § 12.2 et § 12.3) ; l'attaque est d'un type unique, pas de type de dégâts au niveau des reliques (0.111.0) | **Trois reliques de durée** (0.112.0, § 14) : Gambison matelassé, Onguent du rebouteux, Chandelle de veille. **Les reliques de type (« +N aux DM », aux DP, aux DT) sont abandonnées** : elles demandaient un type de dégâts que l'attaque n'a plus, et que l'utilisateur ne veut pas voir au niveau des reliques |
 
 ## 2. Relique ou compétence : ce qui les sépare
 
@@ -47,9 +48,9 @@ Une relique est une donnée du registre `RELICS` (`src/game/relics.ts`), comme u
 
 | Type | Définition | Quand | Reliques |
 | --- | --- | --- | --- |
-| **Caractéristique** | `stats` : ajoutées à plat aux stats de base (`Character.stats` ; la base reste dans `baseStats`) | tout le combat | Contrepoids de plomb, Bottes de feutre, Cotte du mercenaire |
-| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`) ou sous conditions (`when`, 2026-10-24 : lues au coup qui touche, sur l'état du début du coup ; Fiole de venin, Croc de boucher). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé), ou le soin reçu (`healed`, 2026-10-24 : après l'étape qui lui rend des PV). Une face se lit sur tout coup, coup brut de Furie compris (2026-10-23) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous ; le lot des consommateurs (§ 13) |
-| **Tour** | `trigger: { type: 'turn', turn }` : au début de son `turn`-ième tour ; puis tous les `cooldown` tours, ou à chaque tour sans recharge, ou une seule fois avec une charge | début de son tour | Cloche d'ouverture, Chapelet de l'ermite, Clepsydre du siège |
+| **Caractéristique** | `stats` : ajoutées à plat aux stats de base (`Character.stats` ; la base reste dans `baseStats`) | tout le combat | Contrepoids de plomb, Bottes de feutre, Cotte du mercenaire, Gambison matelassé |
+| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`) ou sous conditions (`when`, 2026-10-24 : lues au coup qui touche, sur l'état du début du coup ; Fiole de venin, Croc de boucher). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé), ou le soin reçu (`healed`, 2026-10-24 : après l'étape qui lui rend des PV). Une face se lit sur tout coup, coup brut de Furie compris (2026-10-23) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous ; le lot des consommateurs (§ 13) ; Onguent du rebouteux (§ 14) |
+| **Tour** | `trigger: { type: 'turn', turn }` : au début de son `turn`-ième tour ; puis tous les `cooldown` tours, ou à chaque tour sans recharge, ou une seule fois avec une charge | début de son tour | Cloche d'ouverture, Chapelet de l'ermite, Clepsydre du siège, Chandelle de veille |
 | **Seuil** | `trigger: { type: 'hpBelow', ratio, who? }` : quand ses PV (ou ceux de l'adversaire, `who: 'opponent'`) passent sous `ratio` × PV max ; une fois par combat (`charges: 1`, les trois du registre depuis le 2026-10-21), ou, avec une recharge, réarmée quand ils remontent au-dessus | après une perte de PV | Dent de loup, Collier de ronces, Trophée du chasseur |
 
 « Son tour » = un tour du porteur (`turnsTaken`), pas un tour du combat. Un combat dure environ 15 à 30 tours du combat, soit 8 à 15 tours pour chaque combattant.
@@ -353,11 +354,12 @@ Une relique de seuil se réarmait quand les PV remontaient au-dessus : sans char
 ## 8. Mesurer une relique
 
 ```sh
-npm run relics                 # 400 combats par duel (≈ 50 s pour douze reliques)
-RELICS_N=800 npm run relics    # plus précis
+npm run relics                          # 400 combats par duel (≈ 100 s pour vingt-quatre reliques)
+RELICS_N=800 npm run relics             # plus précis
+RELICS_ONLY=vigil-candle npm run relics # quelques reliques seulement (identifiants séparés par des virgules)
 ```
 
-`scripts/relics.report.ts` : pour chaque relique et chaque personnage, `winRate` (analysis.ts) avec la relique, puis sans, sur les mêmes graines ; l'écart est son apport. Rapport dans `logs/relics/`. Une relique se mesure avant d'être livrée, et sa valeur se règle d'abord par ses nombres (bonus, seuil, charges, recharge), jamais par les PV des personnages ([EQUILIBRAGE.md](EQUILIBRAGE.md)).
+`scripts/relics.report.ts` : pour chaque relique et chaque personnage, `winRate` (analysis.ts) avec la relique, puis sans, sur les mêmes graines ; l'écart est son apport. La colonne **Durée** (0.112.0) donne les tours par combattant sans relique → avec, sur les 20 combats par duel de la colonne des déclenchements (mêmes graines) : une relique qui fait durer la monte, une relique qui frappe la baisse. Rapport dans `logs/relics/`. Une relique se mesure avant d'être livrée, et sa valeur se règle d'abord par ses nombres (bonus, seuil, charges, recharge), jamais par les PV des personnages ([EQUILIBRAGE.md](EQUILIBRAGE.md)).
 
 ## 9. Ajouter une relique
 
@@ -450,7 +452,7 @@ Le script déduit la grille du nombre de noms (12 : 4 × 4) et ignore les cases 
 ## 11. Limites et suite
 
 - **Rendu vu** (0.75.0) : captures Firefox sans interface de l'en-tête du combat (sceaux, infobulle), de l'écran de récompense, de l'arbre et de l'affrontement. **Pas vu** : l'annonce sur le sceau sans nom flottant (0.77.0), l'éclat en mouvement, les infobulles au survol réel, le son (non vérifiable).
-- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12), et celles des cinq reliques du lot des consommateurs en 0.109.1 (planche v14, § 13). L'initiale gravée reste le repli d'une relique sans icône : aucune relique n'est plus dans ce cas.
+- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12), celles des cinq reliques du lot des consommateurs en 0.109.1 (planche v14, § 13), et celles des trois reliques de durée en 0.112.0 (planche v16, § 14) : plus aucune relique n'affiche son initiale. L'initiale gravée reste le repli d'une relique sans icône.
 - Réglages proposés au § 7, non appliqués.
 - Pas de relique en duel : seulement en tournoi.
 - Le choix automatique est un tirage simple ; le choix pondéré par goût, synergie et contexte reste à faire ([TODO.md](TODO.md) § 16).
@@ -546,3 +548,61 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-1
 - Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours).
 
 **Icônes** : peintes en 0.109.1 (planche v14, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather`) ; l'Écu redessiné une fois pour montrer exactement six creux. La Ferveur n'a pas besoin d'icône propre : un statut montre l'emblème de son état (règle de la 0.96.2), et la zone d'état comme le compendium montrent celui de la Puissance, qu'elle alimente.
+
+## 14. Les reliques de durée (0.112.0)
+
+_Phase 7, seconde partie ([PROGRESSION.md](PROGRESSION.md) § 12.2 et § 12.3) : « la durée vient du contenu ». Environ une récompense sur trois fait durer (PV à plat, soin, bouclier, armure) ; au moins une consomme une ressource sans consommateur (les soins, les coups encaissés). Noms et valeurs choisis par l'agent, à juger en jeu._
+
+**Les reliques de type sont abandonnées** (« +N aux DM », aux DP, aux DT, PROGRESSION § 17) : l'attaque est d'un type unique depuis la 0.111.0, et l'utilisateur ne veut pas de type de dégâts au niveau des reliques. Il n'y aura pas de relique qui lise une source de dégâts.
+
+| Relique | Règle (`describeRelic`) | Type | Consomme | Apport moyen | Plus faible | Plus fort | Déclenchements par combat | Durée (tours par combattant) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Gambison matelassé (`quilted-gambison`) | +15 PV max et −1 à l'attaque | Caractéristique | — | +8,7 | Elaria **−5,9** | Ysolde +13,9 | — | 7,9 → **9,6** |
+| Onguent du rebouteux (`bonesetter-salve`) | +1 PV lors d'un coup reçu, 5x | Coup | `moment:hurt` (les coups encaissés) | +12,0 | Elaria +9,8 | Fanchon +14,5 | 4,9 | 7,9 → 8,2 |
+| Chandelle de veille (`vigil-candle`) | +2 armure temporaire tous les 3 tours | Tour | — | +11,5 | Aldric +9,2 | Thaldrin +13,2 | 2,3 | 7,9 → 8,1 |
+
+Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-10-24-21-35-17_v0.111.0.md`) ; les vingt et une reliques d'avant sont identiques au dixième près (`logs/relics/2026-10-24-21-30-08_v0.111.0.md`). La durée est la nouvelle colonne du rapport (§ 8) : sans relique, 7,9 tours par combattant ; les autres reliques qui font durer la montent de 0,2 à 0,4 (Chapelet, Géode 8,3), celles qui frappent la baissent (Fer, Cloche, Braise 7,4).
+
+**Pourquoi ces trois.**
+- **Gambison matelassé** : le « +15 PV » de l'utilisateur, avec un troc qui le fait durer des deux côtés. Les PV à plat valent cher : **chaque PV vaut environ 2,3 points** sur des combattants de 46 à 59 PV, et « +15 PV » seul vaudrait +30,0 (+12 PV : +25,7), bien au-delà du plafond de 20. L'estimation de PROGRESSION § 12.3 (« +15 PV vaudrait de l'ordre de +13 points ») était fausse d'un facteur deux. Avec −1 à l'attaque (minimum et maximum), la relique retombe dans la cible et **allonge le combat de 1,7 tour par combattant**, cinq fois plus que les PV seuls (+6 PV : 8,2). C'est un **troc**, comme la Cotte et le Contrepoids : +11 à +14 pour sept personnages (Ysolde +13,9), +5,0 pour Ervald, presque rien pour Gorak (+2,6, la Furie multiplie le −1), une perte pour Elaria (−5,9 : 4 à 5 d'attaque, −1 retire un cinquième de ses coups).
+- **Onguent du rebouteux** : le consommateur des coups encaissés qui soigne (l'Écu et la Géode posent un bouclier). Chaque coup qui le touche lui rend 1 PV, cinq fois par combat : une pastille qui décompte, régulière (4,9 déclenchements par combat, il en épuise presque toujours les cinq). Il **produit** aussi des soins : il nourrit l'Encens de l'abbaye (un PV, puis une Ferveur), et l'offre pertinente ouvre l'Encens à qui le porte (`moment:heal`, § 3 règle 10).
+- **Chandelle de veille** : un bouclier qui revient, sur le rythme du porteur (au début de ses 3e, 6e, 9e tours). Régulière sur tout le roster (+9,2 à +13,2) ; elle se cumule avec la Peau de pierre de Brokk et la Géode.
+
+**Variantes mesurées** (200 combats par duel, mêmes graines, 2026-10-24 ; apport moyen, durée sans relique 7,86) :
+
+| Variante | Apport moyen | Plus faible → plus fort | Durée |
+| --- | --- | --- | --- |
+| +5 PV max | +12,4 | Elaria +10,1 → Fanchon +14,7 | 8,17 |
+| +6 PV max | +14,3 | Elaria +11,6 → Fanchon +16,7 | 8,21 |
+| +8 / +10 / +12 / +15 PV max | +18,4 / +22,2 / +25,7 / +30,0 | — | 8,30 / 8,39 / 8,47 / 8,57 |
+| +10 PV max, −1 à l'attaque | −1,3 | Elaria −14,3 → Ysolde +2,8 | 9,24 |
+| +12 PV max, −1 à l'attaque | +2,6 | Elaria −11,2 → Ysolde +7,1 | 9,38 |
+| **+15 PV max, −1 à l'attaque** (retenue) | +8,4 | Elaria −5,8 → Ysolde +13,4 | 9,56 |
+| +1 PV lors d'un coup reçu, sans limite | +18,1 | Elaria +13,8 → Thaldrin +21,1 | 8,29 |
+| **+1 PV lors d'un coup reçu, 5x** (retenue) | +12,3 | Elaria +9,9 → Thaldrin +14,6 | 8,16 |
+| +2 PV lors d'un coup reçu, 2x / 3x / 4x | +10,0 / +14,3 / +18,3 | — | 8,11 / 8,21 / 8,30 |
+| +3 PV lors d'un coup reçu, 3x | +20,2 | — | 8,34 |
+| +3 PV lors d'un coup reçu, recharge 3 tours | +19,6 | — | 8,33 |
+| **+2 armure temporaire tous les 3 tours** (retenue) | +11,7 | Aldric +10,1 → Thaldrin +14,1 | 8,14 |
+| +3 armure temporaire tous les 4 tours | +11,6 | Aldric +9,3 → Thaldrin +13,4 | 8,15 |
+| +3 armure temporaire au 2e tour, puis tous les 4 / tous les 3 | +15,3 / +18,7 | — | 8,24 / 8,33 |
+| +3 armure temporaire tous les 3 tours | +16,6 | — | 8,27 |
+| +1 armure temporaire à chaque tour | +19,8 | — | 8,34 |
+
+**Lecture.**
+- **Ce qui fait durer, à valeur égale, c'est le troc.** À +12 points, un soin ou un bouclier ajoute 0,2 à 0,3 tour par combattant ; le Gambison en ajoute 1,7, parce qu'il ralentit aussi les coups du porteur. Une relique qui ne fait que protéger rend le porteur plus fort sans allonger beaucoup le combat : il gagne plus vite.
+- **Un seul porteur** : la mesure met la relique d'un seul côté. En campagne et en saison, les deux camps se construisent ; la durée se lira dans `npm run campaign` et le rapport de saison.
+- **Écho** : aucune ne demande de ressource (`relicNeeds` vide) : les trois sont offertes à tout champion. L'Onguent produit `moment:heal` (il appelle l'Encens dans l'offre orientée) ; le Gambison produit `stat:maxHp` et gêne `stat:attackMin` et `stat:attackMax` ; la Chandelle produit `status:bonusArmor`.
+
+**À décider par l'utilisateur.**
+- Le **troc du Gambison** et la perte d'Elaria (−5,9). Repli sans troc mesuré : **+6 PV max** (+14,3, Elaria +11,6 → Fanchon +16,7), qui ne fait presque pas durer (8,2 au lieu de 9,6) ; ou +5 PV max (+12,4).
+- Le nombre affiché : les PV valent environ 2,3 points chacun ; une relique « +12 PV » ou « +15 PV » sans contrepartie sort du plafond de 20.
+
+**Contrôles.** `combat.test.ts` (« durée (phase 7) ») : PV max et attaque du Gambison, combat parti des nouveaux PV max ; l'Onguent soigne 1 juste après un coup encaissé qui touche, cinq fois au plus ; la Chandelle part aux 3e, 6e et 9e tours du porteur. `audit.test.ts` (« les reliques de durée ») : chaque relique chez tout le roster, contre tout le roster, sans anomalie (stats, PV expliqués et bornés par les PV max, moment du coup, tours, charges et recharge).
+
+**Illustration** (planche v16, STYLE_BIBLE § 7 ; § 6 : objet immobile, patiné, avec son attache, la magie contenue, le chiffre de la règle dans l'objet). Motifs demandés :
+- Gambison matelassé : un gambison de lin écru plié en deux, épaisse matelassure piquée en losanges, une pièce plus claire recousue à l'épaule, deux lacets de cuir qui pendent du col. Équipement porté : rien à compter. Pas une cotte de mailles : c'est la Cotte du mercenaire.
+- Onguent du rebouteux : un petit pot de terre cuite ventru, son couvercle de cire entrouvert, **cinq** creux de doigts dans la graisse jaune (les cinq charges), une ficelle nouée autour du col ; une lueur tiède dans l'onguent.
+- Chandelle de veille : une chandelle de suif courte dans un bougeoir de fer à anneau, **trois** anneaux gravés dans la cire (l'intervalle de 3 tours), la mèche éteinte, une coulure figée sur le côté ; une faible lueur dans la cire. Pas un sablier (`turns`) ni une clepsydre (Clepsydre du siège).
+
+**Icônes** : peintes en 0.112.0 (planche v16, générée avec Artlist : GPT Image 2.5 en image à image, la planche des reliques en référence, une planche de trois, deux versions, la version A gardée pour les trois ; découpées par `scripts/slice-icons.py`, optimisées) : `src/assets/icons/quilted-gambison.png`, `bonesetter-salve.png`, `vigil-candle.png`. Un gambison plié au col lacé et à la pièce recousue ; un pot d'onguent en terre cuite aux cinq creux de doigts et à la ficelle nouée ; une chandelle de suif aux trois anneaux gravés dans un bougeoir de fer à anneau. Vues sur une planche de contrôle à 128 et 24 px ; pas encore dans un écran du jeu.

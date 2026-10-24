@@ -4,13 +4,14 @@
  * choix par défaut. Donne, par champion, la profondeur moyenne, la part de parties qui atteignent le boss et
  * qui gagnent l'acte, la chance moyenne estimée avant chaque combat (bandes de danger) et la durée des combats (tours par
  * combattant). Par nœud : « le build se voit-il ? » (chaque combat normal rejoué sur la même graine par le champion nu,
- * sans forge ni relique : l'écart de victoire est l'apport du build) et la durée. Écrit dans logs/campaign/.
+ * sans forge ni relique : l'écart de victoire est l'apport du build), la durée et les PV des adversaires réglés (moyenne
+ * et plus bas, en part de leurs PV de base). Écrit dans logs/campaign/.
  * Méthode et lecture : docs/CAMPAGNE.md § 18, docs/PROGRESSION.md § 3.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, CAMPAIGN_CHAMPIONS, championOf, encountersFor, NORMAL_TARGETS, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_TARGET, CAMPAIGN_CHAMPIONS, championOf, encountersFor, HP_FLOOR, MAX_SKILL_FACES, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { simulateCombat } from '../src/game/combat'
 import { buildLinks } from '../src/game/hooks'
 import { pick, seededRng } from '../src/game/rng'
@@ -26,8 +27,9 @@ it('mesure de la campagne (pilote automatique)', () => {
   const rows: string[] = []
   let all = { runs: 0, boss: 0, won: 0 }
   // Par nœud normal, tous champions : victoires du champion construit, du même nu, tours de chacun, PV des adversaires
-  // réglés (part de leurs PV de base)
-  const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0, hp: 0 }))
+  // réglés (part de leurs PV de base : somme, plus bas, rencontres proposées sous 75 %)
+  const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0, hp: 0, hpMin: Infinity }))
+  const offered = { count: 0, hp: 0, hpMin: Infinity, under: 0 }
   const boss = { fights: 0, turns: 0 }
   for (const id of CHARACTER_IDS) {
     const tally = { depth: 0, boss: 0, won: 0, chance: 0, fights: 0, turns: 0 }
@@ -35,7 +37,15 @@ it('mesure de la campagne (pilote automatique)', () => {
       const rng = seededRng(hashSeed(`mesure:${id}:${k}`))
       let run: CampaignRun = startRun(id, hashSeed(`partie:${id}:${k}`))
       while (!run.outcome) {
-        const encounter = pick(rng, encountersFor(run))
+        const encounters = encountersFor(run)
+        for (const e of encounters.filter((x) => !x.boss)) {
+          const share = e.maxHp / createCharacter(e.characterId).baseStats.maxHp
+          offered.count++
+          offered.hp += share
+          offered.hpMin = Math.min(offered.hpMin, share)
+          if (share < 0.75) offered.under++
+        }
+        const encounter = pick(rng, encounters)
         tally.chance += encounter.chance
         tally.fights++
         if (encounter.boss) tally.boss++
@@ -47,15 +57,17 @@ it('mesure de la campagne (pilote automatique)', () => {
           boss.fights++
           boss.turns += result.turns
         } else {
-          // Le même champion nu : sa base de campagne (sa signature seule), sans forge ni relique
+          // Le même champion nu : sa base de campagne (sa signature et sa seconde compétence), sans forge ni relique
           const naked = simulateCombat([CAMPAIGN_CHAMPIONS[id], opponent], { seed })
           const node = nodes[run.wins]
+          const hp = encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
           node.fights++
           node.built += result.winner === 0 ? 1 : 0
           node.naked += naked.winner === 0 ? 1 : 0
           node.turns += result.turns
           node.nakedTurns += naked.turns
-          node.hp += encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
+          node.hp += hp
+          node.hpMin = Math.min(node.hpMin, hp)
         }
         run = withFightResult(run, encounter, result)
         if (run.reward) run = withReward(run, rewardChoice(run.reward))
@@ -64,8 +76,9 @@ it('mesure de la campagne (pilote automatique)', () => {
       if (run.outcome === 'won') tally.won++
     }
     all = { runs: all.runs + RUNS, boss: all.boss + tally.boss, won: all.won + tally.won }
+    const start = CAMPAIGN_CHAMPIONS[id].events.map((e) => e.name).join(', ') || 'six faces nues'
     rows.push(
-      `| ${createCharacter(id).name} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
+      `| ${createCharacter(id).name} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
   }
   // Les builds d'un acte complet (`REWARDS`), tirés comme le champion de référence : sans combat, ils ne
@@ -87,27 +100,29 @@ it('mesure de la campagne (pilote automatique)', () => {
     `# Campagne · règles ${pkg.version} · ${RUNS} parties par champion, pilote automatique`,
     '',
     `Courbe nominale : ${NORMAL_TARGETS.map(pct).join(', ')} aux combats normaux, ${pct(BOSS_TARGET)} contre le boss. Attendu pour le champion de référence : boss atteint ${pct(expected)}, acte gagné ${pct(expected * BOSS_TARGET)}.`,
+    `Départ : la signature sur le 1 et la seconde compétence sur le 2 ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(HP_FLOOR)} de ses PV de base ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion.`,
     `Mesuré, tous champions : boss atteint ${pct(all.boss / all.runs)}, acte gagné ${pct(all.won / all.runs)} (${all.runs} parties).`,
+    `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %.`,
     '',
-    '| Champion | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Tours par combattant |',
-    '| --- | --- | --- | --- | --- | --- |',
+    '| Champion | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Tours par combattant |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
     '',
     '## Le build se voit-il ? (par nœud, tous champions)',
     '',
-    'Chaque combat normal est rejoué sur la même graine par le champion nu (sa signature seule, sans forge ni relique), contre le même adversaire. Au premier nœud, le champion est encore nu : l’écart y est nul par construction. PV de l’adversaire : ses PV réglés, en part de ses PV de base.',
+    'Chaque combat normal est rejoué sur la même graine par le champion nu (sa signature et sa seconde compétence, sans forge ni relique), contre le même adversaire. Au premier nœud, le champion est encore nu : l’écart y est nul par construction. PV de l’adversaire : ses PV réglés, en part de ses PV de base (moyenne et plus bas).',
     '',
-    '| Nœud | Récompenses reçues | Combats | Victoires construit | Victoires nu | Apport du build | Tours par combattant (construit) | Tours par combattant (nu) | PV de l’adversaire |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Nœud | Récompenses reçues | Combats | Victoires construit | Victoires nu | Apport du build | Tours par combattant (construit) | Tours par combattant (nu) | PV de l’adversaire | Au plus bas |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...nodes.map(
       (n, i) =>
-        `| ${i + 1} | ${i} | ${n.fights} | ${pct(n.built / n.fights)} | ${pct(n.naked / n.fights)} | ${Math.round(((n.built - n.naked) / n.fights) * 100)} points | ${perFighter(n.turns, n.fights)} | ${perFighter(n.nakedTurns, n.fights)} | ${pct(n.hp / n.fights)} |`,
+        `| ${i + 1} | ${i} | ${n.fights} | ${pct(n.built / n.fights)} | ${pct(n.naked / n.fights)} | ${Math.round(((n.built - n.naked) / n.fights) * 100)} points | ${perFighter(n.turns, n.fights)} | ${perFighter(n.nakedTurns, n.fights)} | ${pct(n.hp / n.fights)} | ${pct(n.hpMin)} |`,
     ),
-    `| Boss | ${ACT_FIGHTS} | ${boss.fights} | | | | ${perFighter(boss.turns, boss.fights)} | | |`,
+    `| Boss | ${ACT_FIGHTS} | ${boss.fights} | | | | ${perFighter(boss.turns, boss.fights)} | | | |`,
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences que sa signature seule a quittées). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences que son départ a quittées). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
     '',
     "| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées |",
     '| --- | --- | --- | --- | --- | --- | --- |',
