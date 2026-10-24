@@ -1,6 +1,6 @@
 # Reliques
 
-_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20), quatre reliques élémentaires en 0.85.0 (§ 12). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
+_Système livré en 0.75.0, première série de douze reliques en 0.77.0 (demandes de l'utilisateur du 2026-10-20), quatre reliques élémentaires en 0.85.0 (§ 12), le lot des consommateurs le 2026-10-24 (§ 13). Ce document est la maison des reliques : décisions, ce qui les sépare des compétences, règles, tournoi, interface, identité visuelle et grammaire d'illustration, catalogue mesuré, prompts d'images. Il réunit le travail d'exploration de l'autre agent (douze reliques, concepts d'illustration, revus par l'utilisateur) et le système livré : l'utilisateur a retenu ses reliques et son concept visuel._
 
 **Une relique est un objet gagné en tournoi qui change le profil d'un combattant** : une stat, la valeur de ses coups, ou un effet à un moment précis. Après chaque victoire, le vainqueur en choisit une parmi trois ; après trois victoires, il en porte trois, et ce n'est plus tout à fait le même combattant. C'est la première « variable qui pèse sur l'issue » de la fiche produit ([INTENTION.md](INTENTION.md), principe 11).
 
@@ -46,7 +46,7 @@ Une relique est une donnée du registre `RELICS` (`src/game/relics.ts`), comme u
 | Type | Définition | Quand | Reliques |
 | --- | --- | --- | --- |
 | **Caractéristique** | `stats` : ajoutées à plat aux stats de base (`Character.stats` ; la base reste dans `baseStats`) | tout le combat | Contrepoids de plomb, Bottes de feutre, Cotte du mercenaire |
-| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé). Une face se lit sur tout coup, coup brut de Furie compris (2026-10-23) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous |
+| **Coup** | `rollBonus` : ajouté à la valeur de chaque coup qui touche, avant le critique, éventuellement sur une seule face (`onFace`) ou sous conditions (`when`, 2026-10-24 : lues au coup qui touche, sur l'état du début du coup ; Fiole de venin, Croc de boucher). Ou `trigger: { type: 'strike', on }` : un moment du coup (1, 2, 3, jet maximal, touche, critique, esquivé, esquive, coup encaissé), ou le soin reçu (`healed`, 2026-10-24 : après l'étape qui lui rend des PV). Une face se lit sur tout coup, coup brut de Furie compris (2026-10-23) | sur ses coups | Osselet fendu, Dé creux, Fer à quatre clous ; le lot des consommateurs (§ 13) |
 | **Tour** | `trigger: { type: 'turn', turn }` : au début de son `turn`-ième tour ; puis tous les `cooldown` tours, ou à chaque tour sans recharge, ou une seule fois avec une charge | début de son tour | Cloche d'ouverture, Chapelet de l'ermite, Clepsydre du siège |
 | **Seuil** | `trigger: { type: 'hpBelow', ratio, who? }` : quand ses PV (ou ceux de l'adversaire, `who: 'opponent'`) passent sous `ratio` × PV max ; une fois par combat (`charges: 1`, les trois du registre depuis le 2026-10-21), ou, avec une recharge, réarmée quand ils remontent au-dessus | après une perte de PV | Dent de loup, Collier de ronces, Trophée du chasseur |
 
@@ -122,6 +122,11 @@ flowchart LR
 | Larme de givre | Sous 35 % PV : retire tous ses malus, +5 PV | 1 fois par combat |
 | Conque des vents | Quand il esquive : 3 × 2 dégâts directs | 2 fois par combat |
 | Géode fendue | Quand il encaisse un coup : +4 Armure temporaire | 2 fois par combat, recharge 3 tours |
+| Fiole de venin | Si l'adversaire porte Poison : +2 dégâts à la frappe (2026-10-24, § 13) | |
+| Croc de boucher | Si l'adversaire porte Saignement : +2 dégâts à la frappe | |
+| Encens de l'abbaye | Quand il regagne des PV : +1 Élan | |
+| Écu cabossé | Quand il encaisse un coup, si ce coup retire 6 PV ou plus : +2 Armure temporaire | |
+| Plume d'aigle | Quand il porte un critique : +1 Esquive améliorée | recharge 2 tours |
 
 Mesure de la règle aplatie (seul Gorak a des coups bruts ; 600 combats par duel contre le roster, mêmes graines, 2026-10-23) : Gorak nu 50,9 % ; Osselet fendu 58,1 → 59,6 % ; Dé creux 61,0 → 62,6 % ; Fer à quatre clous 60,0 → 61,6 % ; face dorée (forge) sur le 8 : 55,1 → 55,9 %, sur le 4 : 55,7 → 56,7 %. Environ +1 à +1,6 point, Gorak seul, dans la cible de 5 à 15 points.
 
@@ -439,7 +444,7 @@ Le script déduit la grille du nombre de noms (12 : 4 × 4) et ignore les cases 
 ## 11. Limites et suite
 
 - **Rendu vu** (0.75.0) : captures Firefox sans interface de l'en-tête du combat (sceaux, infobulle), de l'écran de récompense, de l'arbre et de l'affrontement. **Pas vu** : l'annonce sur le sceau sans nom flottant (0.77.0), l'éclat en mouvement, les infobulles au survol réel, le son (non vérifiable).
-- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), et celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12). L'initiale gravée reste le repli d'une future relique sans icône.
+- Icônes peintes intégrées en 0.77.1 (planche v10, STYLE_BIBLE § 7), et celles des quatre reliques élémentaires en 0.91.2 (planche v13, § 12). L'initiale gravée reste le repli d'une relique sans icône : c'est le cas des cinq reliques du lot des consommateurs (§ 13), dont la planche reste à peindre.
 - Réglages proposés au § 7, non appliqués.
 - Pas de relique en duel : seulement en tournoi.
 - Le choix automatique est un tirage simple ; le choix pondéré par goût, synergie et contexte reste à faire ([TODO.md](TODO.md) § 16).
@@ -478,3 +483,58 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-21. Variantes écartée
 - Géode fendue : une géode ouverte en deux, **deux** gros cristaux ambrés au fond, cerclée d'une lanière de cuir (deux charges). Retenue : les deux moitiés côte à côte, un cristal ambré dans chacune, ceinturées de cuir et d'une boucle de bronze.
 
 Prompt de la planche (2 × 2), au gabarit du § 10, avec un paragraphe propre aux reliques élémentaires : [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, « Planches passées », v13.
+
+## 13. Le lot des consommateurs (2026-10-24)
+
+_Proposition de [PROGRESSION.md](PROGRESSION.md) § 13.3, validée par l'utilisateur le 2026-10-24 ; noms provisoires gardés._
+
+**Pourquoi.** La revue des signatures a montré quatre ressources du jeu que **personne ne consomme** : le Poison (Aura glaciale, Aura de décoction, Souffle de la tombe), le Saignement (Épines acérées, Pourfendre), les soins (Aura de sainteté, Vol de vie, Siffloter, Chapelet) et les coups encaissés (Rétribution, Riposte, Épines). Une signature qui les pose fait de la valeur, mais rien ne grandit avec elle. Le lot donne à chacune un consommateur, et un second aux critiques (Elaria). Les reliques d'abord : elles n'existent pas en duel vanilla, l'équilibre de base ne bouge pas (empreinte de non-régression intacte).
+
+**Ce que le moteur a gagné** (une fois, pour toutes les briques à venir) :
+- un **bonus de coup à conditions** (`when` sur un `rollBonus`) : lu au coup qui touche, sur l'état du début du coup, avant le critique ; `validateRelics` refuse une condition sans déclencheur ni bonus de coup ;
+- le moment **soin reçu** (`healed`, accroche `moment:heal`) : une fois par étape qui rend des PV, jamais sur un soin nul ([RESOLUTION.md](RESOLUTION.md) § 5, règle 6) ;
+- la condition **« ce coup retire N PV ou plus »** (`hitAtLeast`), réservée aux fenêtres d'un coup qui touche (`validateRelics`) ;
+- le statut **Élan** (`momentum`) : +1 par charge au prochain coup qui touche, avant l'armure, cumulable, dépensé par ce coup ; il alimente l'état Puissance de la zone d'état ([STATUTS.md](STATUTS.md)).
+
+Les accroches se déduisent des données (`relicHooks`) : la condition `hasStatus` consomme le statut, le moment consomme son accroche. Contrôles de l'audit (`audit.ts`) : bonus à conditions recompté sur l'état d'avant le coup ; relique de soin reçu causée par une étape qui soigne, et jamais manquée ; relique « coup de 6 ou plus » jamais sous son seuil, et jamais manquée.
+
+**Type** : les cinq sont des reliques **Coup** (elles agissent sur ses coups, ou sur un moment du coup). L'Écu cabossé n'est pas un Seuil : un Seuil lit une part de PV qui passe sous une barre, l'Écu lit un coup.
+
+| Relique | Règle (`describeRelic`) | Consomme | Fait pour | Apport moyen | Chez ses producteurs | Déclenchements par combat |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fiole de venin (`venom-vial`) | Si l'adversaire porte Poison : +2 dégâts à la frappe | `status:poison` | Ervald (Aura glaciale), Naraxes (Aura de décoction) | +1,6 | Ervald **+13,7**, Naraxes +2,0 ; les autres 0 | 0,3 |
+| Croc de boucher (`butcher-hook`) | Si l'adversaire porte Saignement : +2 dégâts à la frappe | `status:bleed` | Brokk (Épines), Gorak (Pourfendre) | +2,0 | Brokk **+10,7**, Gorak **+9,7** ; les autres 0 | 0,4 |
+| Encens de l'abbaye (`abbey-incense`) | Quand il regagne des PV : +1 Élan | `moment:heal` | Ysolde (Aura de sainteté), Ervald (Vol de vie) | +1,1 | Ysolde **+8,4**, Ervald +2,5 ; les autres 0 | 0,5 |
+| Écu cabossé (`dented-shield`) | Quand il encaisse un coup, si ce coup retire 6 PV ou plus : +2 Armure temporaire | `moment:hurt` | Aldric, Brokk (les coups encaissés) | **+15,5** | Aldric +12,1, Brokk +15,5 ; d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
+| Plume d'aigle (`eagle-feather`) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours | `moment:crit` | Elaria (Œil de faucon) | +10,2 | Elaria **+16,9** ; Ervald +17,1, Fanchon +15,1, Morgrut 0 (aucun critique) | 0,7 |
+
+Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-10-24-10-58-56_v0.108.0.md`).
+
+**Lecture.**
+- **Trois reliques typées par construction** (Fiole, Croc, Encens) : sans leur ressource, elles ne font rien (0 chez huit personnages sur dix), d'où une moyenne sous la cible de 5. C'est voulu, comme la Conque des vents pour Morgrut : **leur mesure est chez leurs producteurs**, où elles tombent dans la cible (+8,4 à +13,7). Exceptions nommées à la règle des 5 à 15 points de moyenne. En campagne, la forge et le répertoire leur apportent leur ressource (Souffle de la tombe et Aura de décoction chez Thaldrin, Épines chez Gorak).
+- **Naraxes ne nourrit pas la Fiole** (+2,0) : son Aura de décoction pose 1 Poison par coup qui touche, qui agit et s'estompe au début du tour suivant de l'adversaire ; à son coup suivant, il n'en reste rien. Seul un second jet dans la même action (Coup de chance) frappe un adversaire empoisonné. Ervald, lui, pose son Poison au début de son tour, avant son coup.
+- **L'Écu cabossé est fort partout** (+15,5, au-dessus de 15, sous 20) : tout le monde encaisse des coups de 6. Il ne grandit pas avec une ressource (Aldric +12,1, sous la moyenne). Valeur de la proposition gardée (dans la tolérance de 20) ; repli mesuré, à décider : **6 PV ou plus, +1 Armure temporaire : +8,9** (de +7,1 à +10,9) ; **7 PV ou plus, +2 : +9,4** (de +6,6 à +12,3).
+- **La Plume d'aigle** est le second consommateur des critiques : Elaria +16,9, Ervald +17,1, Morgrut 0 (un porteur sans critique n'en tire rien).
+
+**Réglage fait (choix de l'agent).** La **Fiole de venin** était proposée « contre un adversaire qui porte **3 Poison ou plus** ». Mesurée ainsi : **+0,2** (Ervald +1,5, Naraxes +0,2, les autres 0, 0,1 déclenchement par combat) : le Poison s'estompe d'une charge par tour, aucun personnage n'en tient trois. Variantes (même mesure) : 2 Poison ou plus, +2 : Ervald +2,8 ; 2 ou plus, +3 : Ervald +3,4 ; **1 ou plus, +2 : Ervald +13,7** (retenu) ; 1 ou plus, +3 : Ervald +16,8. L'idée reste (elle consomme le Poison, le palier passe de 3 à 1) ; le palier à charges reste possible (`hasStatus` avec `stacks`, testé), pour un Poison qui tiendrait (Souffle de la tombe gravé, deux Auras glaciales).
+
+**Synergie** (`npm run synergy`, 200 combats par duel, 2026-10-24, `logs/synergy/2026-10-24-11-05-20_v0.108.0.md`). La mesure croise des **paires de reliques** ; les producteurs du lot sont surtout des compétences, lues dans la colonne « Chez ses producteurs » (en log-cote, le gain chez le producteur contre 0 ailleurs : Fiole × Ervald **+0,55**, Croc × Brokk **+0,44**, Croc × Gorak **+0,40**, Encens × Ysolde **+0,34**, tous au-delà de +0,25).
+
+| Relique | Meilleur partenaire (relique) | Paires en moyenne sur le roster | A un partenaire au-delà de +0,25 |
+| --- | --- | --- | --- |
+| Fiole de venin | Dent de loup sur Ervald (+0,01) | aucune relique ne pose de Poison | non (par paires de reliques) ; oui chez Ervald |
+| Croc de boucher | Collier de ronces sur Fanchon (+0,58) | Collier de ronces + Croc **+0,39** (nourrit, `status:bleed`) | **oui** |
+| Encens de l'abbaye | Chapelet de l'ermite sur Thaldrin (+0,24) | Chapelet + Encens +0,20 (nourrit, `moment:heal`) | non, de peu ; oui chez Ysolde |
+| Écu cabossé | Chapelet de l'ermite sur Ysolde (+0,17) | Cotte du mercenaire + Écu **−0,19**, Géode fendue + Écu −0,10 | **non** |
+| Plume d'aigle | Cloche d'ouverture sur Thaldrin (+0,69) | Clepsydre + Plume **+0,43**, Cloche + Plume **+0,41**, Trophée + Plume +0,23 (nourrissent, `moment:crit`) ; Contrepoids + Plume −0,18 (gêne prévue : −4 % de critique) | **oui** |
+
+**À surveiller.** L'Écu cabossé n'a aucun partenaire et un conflit que les accroches ne prévoient pas (Cotte du mercenaire, −0,19 : l'armure rogne les coups sous 6, il part moins souvent ; aussi la Géode, deux boucliers sur le même coup). Avec la Plume, le Contrepoids de plomb gêne comme prévu (`moment:crit`). Tout le lot, en moyenne : 11 reliques sur 21 ont un partenaire au-delà de +0,25 ; les paires qui se nourrissent selon les accroches font +0,254 en moyenne, celles qui se gênent −0,183.
+
+**Illustration** (à peindre ; § 6 : objet immobile, patiné, avec son attache, la magie contenue). Ces reliques de coup ne lisent pas une face : leur chiffre dessiné est leur palier ou leur valeur.
+- Fiole de venin : une petite fiole de verre vert bouchée de cire, **une** goutte de venin figée le long du col (le palier : 1 Poison), pendue à un cordon de cuir ; une lueur verte au fond.
+- Croc de boucher : un croc à viande de fer au manche de corne, la pointe noircie d'une seule goutte de sang séché, pendu à une ficelle.
+- Encens de l'abbaye : un petit encensoir de cuivre cabossé, la chaîne nouée, **une** braise tiède visible par les jours du couvercle (+1).
+- Écu cabossé : la **bosse de fer** d'un vieil écu (l'umbo), arrachée à son bois, **six** creux profonds sur le dôme (le seuil de 6), une lanière passée dans un rivet. Pas l'écu entier : l'écu est déjà l'icône de l'Armure temporaire.
+- Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours).
+
+**Icônes** : aucune des cinq n'a son image ; l'initiale gravée s'affiche en attendant (§ 6.1). L'Élan n'a pas d'icône peinte propre : la zone d'état et le compendium montrent l'emblème de la Puissance, qu'il alimente.

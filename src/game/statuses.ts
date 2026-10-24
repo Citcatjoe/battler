@@ -32,6 +32,7 @@ export type StatusId =
   | 'lifesteal'
   | 'windFury'
   | 'evasion'
+  | 'momentum'
   | 'frostAura'
   | 'powerAura'
   | 'intimidationAura'
@@ -466,6 +467,19 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     counter: 'stacks',
     stacking: 'add',
     forcesDodge: true,
+  },
+  // Lot des consommateurs (docs/PROGRESSION.md § 13.3) : posé par l'Encens de l'abbaye, chaque fois que son porteur
+  // regagne des PV. Aucun statut ne disait « +N au prochain coup » : la Puissance dure, la Fausse note est un malus.
+  momentum: {
+    name: 'Élan',
+    polarity: 'positive',
+    summary: "Son prochain coup qui touche fait autant de dégâts de plus que de charges, avant l'armure. Se cumule ; disparaît, toutes charges comprises, dès que ce coup touche.",
+    describe: (s) => `Son prochain coup qui touche fait +${s.stacks}, avant l'armure`,
+    badge: (s) => `+${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyOutgoing: (damage, s) => damage + s.stacks,
+    spentOnHit: true,
   },
 
   /* Humains et hommes-lézards (0.30.0). */

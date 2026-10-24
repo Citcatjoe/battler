@@ -9,12 +9,32 @@
 import { STAT_KEYS } from './character'
 import { DAMAGE_KINDS, DAMAGE_SOURCES, damageKind, type DamageKind } from './damage'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
-import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Trigger } from './events'
+import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
 import { isMechanic, STATUSES, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
+
+/**
+ * Une condition de relique de coup (Fiole de venin, Croc de boucher), relue sur l'état d'avant le coup, vue depuis
+ * `side` : recomptée sans le moteur. `hitAtLeast` n'existe pas encore avant le coup (`validateRelics` la refuse là).
+ */
+function holdsBefore(c: Condition, side: Side, before: Snapshot, r: CombatResult, turn: number): boolean {
+  if (c.type === 'fromTurn') return turn >= c.turn
+  if (c.type === 'hitAtLeast') return false
+  const who = c.who === 'opponent' ? 1 - side : side
+  switch (c.type) {
+    case 'hpBelow':
+      return before.hp[who] < r.fighters[who].maxHp * c.ratio
+    case 'hpAtLeast':
+      return before.hp[who] >= r.fighters[who].maxHp * c.ratio
+    case 'hasStatus':
+      return (find(before.statuses[who], c.status)?.stacks ?? 0) >= (c.stacks ?? 1)
+    case 'lacksStatus':
+      return !find(before.statuses[who], c.status)
+  }
+}
 
 /** Un audit qui accumule les anomalies (par type, avec un exemple) et les mécaniques rencontrées. */
 export function createAudit() {
@@ -341,10 +361,15 @@ export function createAudit() {
         else if (a.dodgeForced && find(s.statuses[def], 'evasion')) see('esquive imposée cumulée')
         if (!a.dodged && !a.replaced) {
           // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
-          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, coup brut compris (2026-10-23)
-          const bonus = r.fighters[att].relics.reduce((t, x) => t + (x.rollBonus && (x.onFace === undefined || x.onFace === a.roll) ? x.rollBonus : 0), 0)
+          // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, coup brut compris (2026-10-23) ; un bonus
+          // à conditions (Fiole de venin, Croc de boucher), que si elles tiennent sur l'état d'avant le coup
+          const armed = r.fighters[att].relics.filter(
+            (x) => x.rollBonus && (x.onFace === undefined || x.onFace === a.roll) && (x.when ?? []).every((c) => holdsBefore(c, att, prev, r, b.turn)),
+          )
+          const bonus = armed.reduce((t, x) => t + (x.rollBonus ?? 0), 0)
           if (bonus !== (a.relicBonus ?? []).reduce((t, x) => t + x.amount, 0)) flag('bonus de relique incohérent', r, i, `${bonus}`)
           else if (bonus) see('bonus de relique')
+          if (armed.some((x) => x.when)) see('bonus de relique à conditions')
           if (a.plain && r.fighters[att].relics.some((x) => x.onFace === a.roll)) see('coup brut avec relique de face')
           // Face dorée (forge du dé) : la dorure de la face de ce dé, coup brut compris
           const gild = r.fighters[att].gilded[a.roll] ?? 0
@@ -680,6 +705,20 @@ export function createAudit() {
             }
           })
         }
+        // Soin reçu (Encens de l'abbaye) : chaque étape qui lui rend des PV ouvre sa fenêtre, une fois, et rien d'autre
+        if (t.type === 'strike' && t.on === 'healed') {
+          const heals = (b: Beat) => beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0)
+          for (const i of fires) {
+            const cause = r.beats[i].cause
+            if (cause === undefined || !heals(r.beats[cause])) flag('relique de soin sans soin', r, i, relic.id)
+            else see('relique de soin reçu')
+          }
+          if (!relic.charges && !relic.cooldown && !relic.when)
+            r.beats.forEach((b, i) => {
+              if (heals(b) && !b.state.hp.includes(0) && !fires.some((f) => r.beats[f].cause === i)) flag('relique de soin manquée', r, i, relic.id)
+            })
+          continue
+        }
         if (t.type === 'strike') {
           for (const i of fires) {
             // Le coup du moment : le dernier coup du tour, ou une pièce tombée sur pile qui touche (Pile ou face)
@@ -708,7 +747,22 @@ export function createAudit() {
             const ok = moments[t.on] ?? (mine && rollMatches(t.on, a.roll, a.faces))
             if (!ok) flag('relique de coup hors de son moment', r, i, `${relic.id} sur ${t.on}`)
             else see('relique de coup')
+            // Un coup de N ou plus (Écu cabossé) : les PV que ce coup a retirés
+            for (const c of relic.when ?? [])
+              if (c.type === 'hitAtLeast' && hit.type === 'attack') {
+                if (hit.attack.dealt < c.amount) flag('relique de coup sous son seuil de dégâts', r, i, `${relic.id} : ${hit.attack.dealt} PV`)
+                else see('relique sur un gros coup')
+              }
           }
+          // Sans charge ni recharge, et sa seule condition un seuil de dégâts : chaque coup encaissé assez gros la réveille,
+          // sauf si le combat finit dans les fenêtres de ce coup
+          const least = relic.when?.length === 1 ? relic.when[0] : undefined
+          if (t.on === 'hurt' && least?.type === 'hitAtLeast' && !relic.charges && !relic.cooldown)
+            r.beats.forEach((b, j) => {
+              if (b.type !== 'attack' || b.attack.attacker === side || b.attack.dodged || b.attack.replaced || b.attack.dealt < least.amount) return
+              if (r.beats.some((x) => (x.id === j || x.cause === j) && x.state.hp.includes(0))) return
+              if (!fires.some((f) => r.beats[f].cause === j)) flag('relique sur un gros coup manquée', r, j, relic.id)
+            })
         }
       }
     }

@@ -1652,7 +1652,7 @@ describe('ogre et druide (0.35.0)', () => {
   it('Brûlure à une seule valeur (0.69.0) : une durée en plus est refusée par la validation', () => {
     const druid = ROSTER.find((d) => d.id === 'thaldrin')!
     const burn: CharacterEvent = { id: 'wisps', name: 'wisps', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, turns: 3, target: 'opponent' }] }
-    expect(validateRoster([{ ...druid, events: [burn] }])).toEqual(['thaldrin : wisps : burn dure autant de tours que de charges, sans durée en plus'])
+    expect(validateRoster([{ ...druid, signature: undefined, events: [burn] }])).toEqual(['thaldrin : wisps : burn dure autant de tours que de charges, sans durée en plus'])
   })
 
   it('0.76.0 : la Foudre tombe en trois coups avec son événement de scène, et les statuts de forme ne se purgent pas', () => {
@@ -1717,10 +1717,13 @@ describe('reliques (docs/RELIQUES.md)', () => {
 
   it('le registre est valide, chaque type a ses trois reliques, et aucune ne pose de malus sur l’adversaire', () => {
     expect(validateRelics()).toEqual([])
-    // Les douze de la 0.77.0, trois par type, puis les quatre élémentaires de la 0.85.0 (une par élément)
-    const plain = RELICS.filter((r) => !r.element)
+    // Les douze de la 0.77.0, trois par type, puis les quatre élémentaires de la 0.85.0 (une par élément), puis le lot
+    // des consommateurs (PROGRESSION.md § 13.3), cinq reliques de coup
+    const consumers = ['venom-vial', 'butcher-hook', 'abbey-incense', 'dented-shield', 'eagle-feather']
+    const plain = RELICS.filter((r) => !r.element && !consumers.includes(r.id))
     expect(plain).toHaveLength(12)
     for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
+    expect(consumers.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike', 'strike'])
     expect(validateRelics([relic({ stats: { armor: 1 }, rollBonus: 1 })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'turn', turn: 0 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'hpBelow', ratio: 1.2 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
@@ -1911,6 +1914,105 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(parseRelics(text)).toEqual([RELIC_IDS, ['wolf-fang']])
     expect(text).not.toMatch(EMOJI)
     expect(parseRelics(traceText(simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 5 })))).toEqual([[], []])
+  })
+})
+
+describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
+  const relic = (r: Partial<Relic>): Relic => ({ id: 'test-relic', name: 'Relique de test', flavor: 'Test.', ...r })
+  const start = (effects: CharacterEvent['effects']): CharacterEvent => ({ id: 'start', name: 'Départ', trigger: 'combatStart', effects })
+
+  it('une ligne chacune, au vocabulaire de la résolution ; les conditions se valident', () => {
+    const lines = ['venom-vial', 'butcher-hook', 'abbey-incense', 'dented-shield', 'eagle-feather'].map((id) => relicLine(getRelic(id)))
+    expect(lines).toEqual([
+      "Si l'adversaire porte Poison : +2 dégâts à la frappe",
+      "Si l'adversaire porte Saignement : +2 dégâts à la frappe",
+      'Quand il regagne des PV : +1 Élan',
+      'Quand il encaisse un coup, si ce coup retire 6 PV ou plus : +2 Armure temporaire',
+      'Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours',
+    ])
+    for (const line of lines) expect(line).not.toMatch(EMOJI)
+    // Des conditions sur un bonus de coup, oui ; sur des stats, non ; « ce coup retire N PV », seulement sur un coup qui touche
+    const big = { type: 'hitAtLeast' as const, amount: 6 }
+    expect(validateRelics([relic({ stats: { armor: 1 }, when: [{ type: 'fromTurn', turn: 2 }] })])).toHaveLength(1)
+    expect(validateRelics([relic({ rollBonus: 2, when: [big] })])).toHaveLength(1)
+    expect(validateRelics([relic({ trigger: { type: 'strike', on: 'dodge' }, when: [big], effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
+    expect(validateRelics([relic({ trigger: { type: 'strike', on: 'hit' }, when: [big], effects: [{ type: 'heal', amount: 1 }] })])).toEqual([])
+  })
+
+  /** Le bonus d'une relique à conditions tient-il exactement quand l'adversaire porte assez de `status` avant le coup ? */
+  const readsStatus = (held: Relic, status: StatusId, posed: number, least: number) => {
+    const r = run([testCharacter('a', { maxHp: 60 }, [start([{ type: 'applyStatus', status, stacks: posed, target: 'opponent' }])]).withRelics([held]), testCharacter('b', { maxHp: 60 })])
+    let armed = 0
+    let bare = 0
+    r.beats.forEach((b, i) => {
+      if (b.type !== 'attack' || b.attack.attacker !== 0 || b.attack.dodged) return
+      const before = stacksOf(r.beats[i - 1].state.statuses[1], status)
+      // Coup de base de 1, +2 à la frappe quand la condition tient (aucun critique)
+      expect(b.attack.relicBonus ?? [], `${status} ${before}`).toEqual(before >= least ? [{ relic: held.id, name: held.name, amount: 2 }] : [])
+      expect(b.attack.raw).toBe(before >= least ? 3 : 1)
+      if (before >= least) armed++
+      else bare++
+    })
+    expect(armed).toBeGreaterThan(0)
+    expect(bare).toBeGreaterThan(0)
+  }
+
+  it('Fiole de venin : +2 à la frappe tant que l’adversaire est empoisonné', () => readsStatus(getRelic('venom-vial'), 'poison', 3, 1))
+
+  it('Croc de boucher : +2 à la frappe tant que l’adversaire saigne', () => readsStatus(getRelic('butcher-hook'), 'bleed', 3, 1))
+
+  it('un bonus à palier : seulement à partir de N charges chez l’adversaire', () =>
+    readsStatus(relic({ rollBonus: 2, when: [{ type: 'hasStatus', who: 'opponent', status: 'poison', stacks: 3 }] }), 'poison', 5, 3))
+
+  it('Encens de l’abbaye : chaque étape qui lui rend des PV lui donne +1 Élan, cumulé, dépensé par son prochain coup qui touche', () => {
+    const heal = (trigger: 'hit' | 'hurt'): CharacterEvent => ({ id: trigger, name: trigger, trigger, effects: [{ type: 'heal', amount: 1 }] })
+    const r = run([testCharacter('a', { maxHp: 40 }, [heal('hit'), heal('hurt')]).withRelics([getRelic('abbey-incense')]), testCharacter('b', { maxHp: 40, attackMin: 2, attackMax: 2 })])
+    const fires = ofType(r, 'relic')
+    expect(fires.length).toBeGreaterThan(2)
+    // Sa cause : l'étape qui l'a soigné ; chaque soin non nul l'éveille, un soin nul (PV pleins) jamais
+    for (const f of fires) {
+      const cause = r.beats[f.cause!]
+      expect(cause.type === 'event' && cause.event.side === 0 && cause.event.effects.some((e) => e.type === 'heal' && e.amount > 0)).toBe(true)
+      expect(f.effects).toEqual([expect.objectContaining({ type: 'applyStatus', status: 'momentum', stacks: 1, target: 0 })])
+    }
+    ofType(r, 'event').forEach((b) => {
+      const healed = b.event.side === 0 && b.event.effects.some((e) => e.type === 'heal' && e.amount > 0)
+      if (!b.state.hp.includes(0)) expect(fires.some((f) => f.cause === b.id), `étape ${b.id}`).toBe(healed)
+    })
+    // Cumulé : soigné en touchant, puis en encaissant, son coup suivant fait +2 ; l'Élan part avec ce coup
+    const mine = ofType(r, 'attack').filter((b) => b.attack.attacker === 0 && !b.attack.dodged)
+    expect(mine.some((b) => b.attack.modifiers.some((m) => m.status === 'momentum' && m.delta === 2))).toBe(true)
+    for (const b of mine) expect(stacksOf(b.state.statuses[0], 'momentum')).toBe(0)
+  })
+
+  it('Écu cabossé : +2 Armure temporaire quand il encaisse un coup de 6 ou plus, jamais en dessous', () => {
+    const fight = (hit: number) => run([testCharacter('a', { maxHp: 60 }).withRelics([getRelic('dented-shield')]), testCharacter('b', { maxHp: 60, attackMin: hit, attackMax: hit })])
+    expect(ofType(fight(5), 'relic')).toHaveLength(0)
+    const r = fight(6)
+    const fires = ofType(r, 'relic')
+    expect(fires.length).toBeGreaterThan(1)
+    for (const f of fires) {
+      expect(r.beats[f.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 1, dealt: 6 } })
+      expect(f.effects).toEqual([expect.objectContaining({ type: 'applyStatus', status: 'bonusArmor', stacks: 2, target: 0 })])
+    }
+    // L'armure retient 2 du coup suivant (4 PV) : celui-là ne la réveille pas
+    const hits = ofType(r, 'attack').filter((b) => b.attack.attacker === 1 && !b.state.hp.includes(0))
+    for (const b of hits) expect(fires.some((f) => f.cause === b.id), `coup de ${b.attack.dealt}`).toBe(b.attack.dealt >= 6)
+    expect(hits.some((b) => b.attack.dealt === 4)).toBe(true)
+  })
+
+  it('Plume d’aigle : après un critique, +1 Esquive améliorée, puis 2 de ses tours de recharge', () => {
+    const r = run([testCharacter('a', { maxHp: 40, critChance: 1 }).withRelics([getRelic('eagle-feather')]), testCharacter('b', { maxHp: 40 })])
+    const fires = ofType(r, 'relic')
+    expect(fires.length).toBeGreaterThan(2)
+    for (const f of fires) expect(r.beats[f.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, crit: true } })
+    // Il critique à chaque coup : elle part un de ses tours sur deux (4 tours du combat)
+    for (let k = 1; k < fires.length; k++) expect(fires[k].turn - fires[k - 1].turn).toBe(4)
+    // Le coup suivant de l'adversaire est esquivé à coup sûr
+    for (const f of fires) {
+      const next = r.beats.slice(f.id).find((b) => b.type === 'attack' && b.attack.attacker === 1)
+      if (next?.type === 'attack') expect(next.attack.dodgeForced).toBe(true)
+    }
   })
 })
 

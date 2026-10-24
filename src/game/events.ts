@@ -27,6 +27,7 @@ export type NamedTrigger =
   | 'missed'
   | 'dodge'
   | 'hurt'
+  | 'healed'
   | 'bloodied'
 
 /**
@@ -54,6 +55,9 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   missed: { label: 'Quand son coup est esquivé', short: 'esquivé' },
   dodge: { label: 'Quand il esquive', short: 'esquive' },
   hurt: { label: 'Quand il encaisse un coup', short: 'coup encaissé' },
+  // Lot des consommateurs (docs/PROGRESSION.md § 13.3) : après l'étape qui lui a rendu des PV (soin, vol de vie, repli
+  // d'une purge), jamais sur un soin nul (PV déjà pleins)
+  healed: { label: 'Quand il regagne des PV', short: 'soin reçu' },
   bloodied: { label: 'La première fois qu’il passe sous la moitié de ses PV', short: 'mi-PV' },
 }
 
@@ -111,6 +115,11 @@ export type Condition =
   | { type: 'lacksStatus'; who: Target; status: StatusId }
   /** À partir du tour n (inclus) */
   | { type: 'fromTurn'; turn: number }
+  /**
+   * Le coup en cours a retiré au moins `amount` PV (Écu cabossé : un coup de 6 ou plus). Vraie seulement dans les
+   * fenêtres d'un coup qui touche (`hit`, `crit`, `hurt`), où ce nombre existe.
+   */
+  | { type: 'hitAtLeast'; amount: number }
 
 /**
  * Nature d'une compétence, pour sa présentation seulement (couleur de sa carte, design system) :
@@ -245,13 +254,14 @@ export function describeCondition(c: Condition): string {
       return `${whom(c.who)} a au moins ${pct(c.ratio)} de ses PV`
     case 'hasStatus': {
       const def = STATUSES[c.status]
-      const n = c.stacks && c.stacks > 1 ? ` (${c.stacks} charges ou plus)` : ''
-      return `${whom(c.who)} porte ${def.name}${n}`
+      return `${whom(c.who)} porte ${c.stacks && c.stacks > 1 ? `${c.stacks} ${def.name} ou plus` : def.name}`
     }
     case 'lacksStatus':
       return `${whom(c.who)} ne porte pas ${STATUSES[c.status].name}`
     case 'fromTurn':
       return `à partir du tour ${c.turn}`
+    case 'hitAtLeast':
+      return `ce coup retire ${c.amount} PV ou plus`
   }
 }
 

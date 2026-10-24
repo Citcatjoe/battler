@@ -852,18 +852,41 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
 
   it('champion de campagne : la signature seule, les compétences quittées entrent dans son répertoire de campagne', () => {
     for (const c of CHARACTERS) {
-      const kit = CAMPAIGN_CHAMPIONS[c.id].events.map((e) => e.id)
+      const kit = [...new Set(CAMPAIGN_CHAMPIONS[c.id].events.map((e) => e.id))]
       const signature = c.definition.signature
-      // Sans signature (Morgrut, Thaldrin, Fanchon) : le kit entier
-      expect(kit, c.id).toEqual(signature ? [signature] : c.events.map((e) => e.id))
+      // Sans signature (Morgrut, le combattant nu) : le kit entier
+      expect(kit, c.id).toEqual(signature ? [signature] : [...new Set(c.events.map((e) => e.id))])
       const own = [...c.events, ...(c.definition.reserve ?? [])].filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
       const left = own.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
       expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
     }
+    // Seul Morgrut part sans signature
+    expect(CHARACTERS.filter((c) => !c.definition.signature).map((c) => c.id)).toEqual(['morgrut'])
     // Gorak : la Furie des vents sur le 2 ; le 1, quitté par Pourfendre, est une face nue qui se grave
     const gorak = championOf(startRun('gorak', 1))
     expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalTwo'])
     expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([1, 3, 4, 5, 6])
+  })
+
+  it('Thaldrin (2026-10-24) : ses Feux follets sur le 4, le 5 et le 6 ; la Foudre quitte le 1 à 3 et ouvre son répertoire ; une gravure, puis la limite', () => {
+    const thaldrin = championOf(startRun('thaldrin', 1))
+    expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@face:4@human', 'firefly@face:5@human', 'firefly@face:6@human'])
+    // L'ours est inchangé : sa forme, sa Force de l'ours
+    expect(thaldrin.forms?.map((f) => f.statuses)).toEqual(createCharacter('thaldrin').forms?.map((f) => f.statuses))
+    const [thunderbolt] = CAMPAIGN_REPERTOIRES.thaldrin
+    expect(thunderbolt.id).toBe('thunderbolt')
+    // Les trois faces de la Foudre, nues, se gravent
+    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: thunderbolt })).toEqual([1, 2, 3])
+    // La limite compte des faces : trois Feux follets et une gravure font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
+    const engraved = [{ op: 'engrave' as const, face: 1, skill: thunderbolt }]
+    expect(3 + engraved.length).toBe(MAX_SKILL_FACES)
+    for (let k = 0; k < 20; k++) {
+      const under = drawReward({ championId: 'thaldrin', forge: [], relics: [] }, 'forge', seededRng(k))
+      const full = drawReward({ championId: 'thaldrin', forge: engraved, relics: [] }, 'forge', seededRng(k))
+      if (under.kind !== 'forge' || full.kind !== 'forge') throw new Error('forge attendue')
+      expect(under.offer.some((o) => o.op === 'engrave'), `graine ${k}`).toBe(true)
+      expect(full.offer.some((o) => o.op === 'engrave' || o.op === 'copy'), `graine ${k}`).toBe(false)
+    }
   })
 
   it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {

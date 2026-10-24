@@ -15,12 +15,18 @@ import { STATUSES, type StatusId } from './statuses'
  * Une relique qui se déclenche peut avoir des charges (déclenchements par combat) et un temps de recharge.
  */
 
-/** Moments d'un coup sur lesquels une relique de coup peut se déclencher (ceux du porteur). */
-export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt'] as const satisfies readonly Trigger[]
+/**
+ * Moments sur lesquels une relique de coup peut se déclencher (ceux du porteur) : les moments d'un coup, et le soin
+ * reçu (`healed`, lot des consommateurs, docs/PROGRESSION.md § 13.3), qui nourrit ses coups suivants.
+ */
+export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt', 'healed'] as const satisfies readonly Trigger[]
 export type StrikeTrigger = (typeof STRIKE_TRIGGERS)[number]
 
+/** Les moments d'un coup qui touche : seuls à connaître les PV que ce coup a retirés (condition `hitAtLeast`). */
+const TOUCH_MOMENTS: readonly StrikeTrigger[] = ['hit', 'crit', 'hurt']
+
 export type RelicTrigger =
-  /** Un moment d'un coup, du point de vue du porteur (il touche, il esquive, il encaisse…) */
+  /** Un moment d'un coup, du point de vue du porteur (il touche, il esquive, il encaisse…), ou le soin qu'il reçoit */
   | { type: 'strike'; on: StrikeTrigger }
   /** Au début de son `turn`-ième tour (le premier vaut 1) ; puis tous les `cooldown` tours s'il en a un */
   | { type: 'turn'; turn: number }
@@ -67,7 +73,10 @@ export interface Relic {
   /** Coup, tour ou seuil : le moment où elle se déclenche, et ses effets (du point de vue du porteur) */
   trigger?: RelicTrigger
   effects?: readonly Effect[]
-  /** Conditions supplémentaires, toutes requises au moment du déclenchement */
+  /**
+   * Conditions supplémentaires, toutes requises au moment du déclenchement ; sur un bonus de coup (Fiole de venin), au
+   * moment du coup qui touche, avant le critique
+   */
   when?: readonly Condition[]
   /** Déclenchements par combat (défaut : illimité) */
   charges?: number
@@ -83,7 +92,7 @@ export type RelicKind = 'stat' | 'strike' | 'turn' | 'threshold'
 /** Les quatre types, dans l'ordre de lecture : nom et ce qu'ils font, pour l'infobulle et le compendium. */
 export const RELIC_KINDS: Record<RelicKind, { label: string; summary: string }> = {
   stat: { label: 'Caractéristique', summary: 'Des stats en plus, tout le combat.' },
-  strike: { label: 'Coup', summary: 'Sur ses coups : une face de son dé, ou un moment du coup (il touche, il esquive, il encaisse).' },
+  strike: { label: 'Coup', summary: 'Sur ses coups : une face de son dé, un moment du coup (il touche, il esquive, il encaisse), ou un soin reçu.' },
   turn: { label: 'Tour', summary: 'Au début d’un de ses tours, avant son action.' },
   threshold: { label: 'Seuil', summary: 'Quand des PV passent sous un seuil : les siens, ou ceux de l’adversaire.' },
 }
@@ -250,6 +259,50 @@ export const RELICS: readonly Relic[] = [
     cooldown: 3,
     effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 4 }],
   },
+  /*
+   * Le lot des consommateurs (docs/PROGRESSION.md § 13.3, validé par l'utilisateur le 2026-10-24) : une relique par
+   * ressource que personne ne consommait (Poison, Saignement, soins, coups encaissés), et un second consommateur des
+   * critiques. Chacune lit une ressource que d'autres posent ; mesures dans docs/RELIQUES.md § 13.
+   */
+  {
+    // 2026-10-24 : « 3 Poison ou plus » dans la proposition (PROGRESSION.md § 13.3) ; mesurée +0,2 (Ervald +1,5) : le
+    // Poison s'estompe d'une charge par tour, aucun personnage n'en tient 3. Dès 1 Poison : Ervald +13,7 (docs/RELIQUES.md § 13)
+    id: 'venom-vial',
+    name: 'Fiole de venin',
+    flavor: 'Une fiole de verre vert bouchée de cire, une goutte figée le long du col. Là où le venin court déjà, la lame mord.',
+    rollBonus: 2,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
+  },
+  {
+    id: 'butcher-hook',
+    name: 'Croc de boucher',
+    flavor: 'Un croc à viande au manche de corne, la pointe noircie. Là où le sang coule déjà, il entre mieux.',
+    rollBonus: 2,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
+  },
+  {
+    id: 'abbey-incense',
+    name: 'Encens de l’abbaye',
+    flavor: 'Un encensoir de cuivre cabossé, la chaîne nouée, une braise tiède au fond. Chaque soin la ranime.',
+    trigger: { type: 'strike', on: 'healed' },
+    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 1 }],
+  },
+  {
+    id: 'dented-shield',
+    name: 'Écu cabossé',
+    flavor: 'La bosse de fer d’un vieil écu, arrachée à son bois, six creux profonds sur le dôme. Elle se souvient des gros coups.',
+    trigger: { type: 'strike', on: 'hurt' },
+    when: [{ type: 'hitAtLeast', amount: 6 }],
+    effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
+  },
+  {
+    id: 'eagle-feather',
+    name: 'Plume d’aigle',
+    flavor: 'Une rémige d’aigle liée d’un fil rouge à un anneau de cuivre, deux barbes arrachées. Après le coup juste, il est déjà ailleurs.',
+    trigger: { type: 'strike', on: 'crit' },
+    cooldown: 2,
+    effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
+  },
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
@@ -309,11 +362,18 @@ function effectText(e: Effect): string {
   }
 }
 
-/** Quand elle agit, en quelques mots (« Sur un 1 », « Tous les 3 tours », « Sous 40 % PV ») ; rien pour une relique sans déclencheur. */
+/**
+ * Quand elle agit, en quelques mots (« Sur un 1 », « Tous les 3 tours », « Sous 40 % PV ») ; pour un bonus de coup, sa
+ * face (« Sur un 4 ») ou ses conditions (« Si l'adversaire porte Saignement ») ; rien pour une relique toujours active.
+ */
 function momentOf(r: Relic): string {
   const t = r.trigger
-  if (!t) return ''
-  const when = (r.when ?? []).map((c) => `, si ${describeCondition(c)}`).join('')
+  const conditions = (r.when ?? []).map(describeCondition)
+  const when = conditions.map((c) => `, si ${c}`).join('')
+  if (!t) {
+    if (r.rollBonus !== undefined && r.onFace !== undefined) return `Sur un ${r.onFace}${when}`
+    return conditions.length ? `Si ${conditions.join(' et ')}` : ''
+  }
   switch (t.type) {
     case 'turn': {
       if (r.charges === 1) return `Au ${ordinal(t.turn)} tour${when}`
@@ -355,7 +415,7 @@ export function describeRelic(r: Relic): RelicDescription {
   ]
     .filter(Boolean)
     .join(', ')
-  const moment = onFace ? `Sur un ${r.onFace}` : momentOf(r)
+  const moment = momentOf(r)
   const limits = [
     // Une relique de tour à une charge le dit déjà par son moment (« Au 4e tour »)
     ...(r.charges !== undefined && !(t?.type === 'turn' && r.charges === 1) ? [`${r.charges} fois par combat`] : []),
@@ -392,7 +452,16 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     if (r.rollBonus !== undefined && (!Number.isInteger(r.rollBonus) || r.rollBonus === 0)) at('bonus de coup entier et non nul')
     if (r.onFace !== undefined && (r.rollBonus === undefined || !Number.isInteger(r.onFace) || r.onFace < 1)) at('face : un entier ≥ 1, avec un bonus de coup')
     if (r.trigger && !r.effects?.length) at('un déclencheur sans effet')
-    if (!r.trigger && (r.effects || r.when || r.charges !== undefined || r.cooldown !== undefined)) at('effets, conditions, charges et recharge demandent un déclencheur')
+    if (!r.trigger && (r.effects || r.charges !== undefined || r.cooldown !== undefined)) at('effets, charges et recharge demandent un déclencheur')
+    // Des conditions : sur un déclencheur, ou sur un bonus de coup (lues au coup qui touche, avant le critique)
+    if (r.when && !r.trigger && r.rollBonus === undefined) at('des conditions demandent un déclencheur ou un bonus de coup')
+    for (const c of r.when ?? []) {
+      if (c.type === 'hasStatus' && c.stacks !== undefined && (!Number.isInteger(c.stacks) || c.stacks < 1)) at('condition hasStatus : charges entières ≥ 1')
+      // « Ce coup retire N PV » : le nombre n'existe que dans les fenêtres d'un coup qui touche, pas encore au bonus de coup
+      if (c.type === 'hitAtLeast' && (!Number.isInteger(c.amount) || c.amount < 1)) at('condition hitAtLeast : un entier ≥ 1')
+      if (c.type === 'hitAtLeast' && !(r.trigger?.type === 'strike' && TOUCH_MOMENTS.includes(r.trigger.on)))
+        at('condition hitAtLeast : sur un moment d’un coup qui touche (touche, critique, encaisse)')
+    }
     if (r.charges !== undefined && (!Number.isInteger(r.charges) || r.charges < 1)) at('charges : entier ≥ 1')
     if (r.cooldown !== undefined && (!Number.isInteger(r.cooldown) || r.cooldown < 1)) at('recharge : entier ≥ 1')
     const t = r.trigger

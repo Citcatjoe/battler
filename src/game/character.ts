@@ -134,7 +134,8 @@ export interface CharacterDef {
   attackSource?: DamageSource
   /**
    * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
-   * d'une campagne. Sans signature (le combattant nu, les exceptions de structure), il y part avec son kit entier.
+   * d'une campagne, sur toutes les faces qui la portent (les Feux follets de Thaldrin, 4 à 6). Sans signature (Morgrut, le
+   * combattant nu), il y part avec son kit entier.
    */
   signature?: string
   /**

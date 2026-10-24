@@ -196,19 +196,19 @@ function ActTrack({ run }: { run: CampaignRun }) {
 }
 
 /**
- * La signature du champion (règles v2, 0.104.0) : la seule compétence de son kit au départ d'une campagne, avec la face
- * qui la porte. Rien pour un champion parti de son kit entier (Morgrut, Thaldrin, Fanchon).
+ * La signature du champion (règles v2, 0.104.0) : la seule compétence de son kit au départ d'une campagne, avec les faces
+ * qui la portent (une seule, ou trois pour les Feux follets de Thaldrin). Rien pour Morgrut, parti de son kit entier.
  */
 function SignatureLine({ character }: { character: Character }) {
-  const skill = character.events.find((e) => e.id === character.definition.signature)
-  if (!skill) return null
-  const face = rollFace(skill.trigger)
+  const printed = character.events.filter((e) => e.id === character.definition.signature)
+  if (printed.length === 0) return null
+  const faces = printed.flatMap((e) => rollFace(e.trigger) ?? []).map((f) => `le ${f}`)
   return (
     <p className="flex items-center gap-2 font-body text-[15px] text-ink-2">
-      <SkillSeal id={skill.id} size={32} />
+      <SkillSeal id={printed[0].id} size={32} />
       <span>
-        Signature : <b className="text-ink-1">{skill.name}</b>
-        {face !== undefined && `, sur le ${face}`}
+        Signature : <b className="text-ink-1">{printed[0].name}</b>
+        {faces.length > 0 && `, sur ${faces.length > 1 ? `${faces.slice(0, -1).join(', ')} et ${faces.at(-1)}` : faces[0]}`}
       </span>
     </p>
   )

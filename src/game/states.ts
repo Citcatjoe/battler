@@ -62,7 +62,7 @@ export interface StateDef {
 
 export const STATES: Record<StateId, StateDef> = {
   // Puissance et Critique renforcé : sans source depuis la 0.79.7 (les auras qui les donnaient se lisent sur leur
-  // anneau) ; gardés dans le vocabulaire, avec leur emblème, pour une compétence ou une relique à venir
+  // anneau), gardés dans le vocabulaire avec leur emblème ; la Puissance revient avec l'Élan (Encens de l'abbaye)
   power: { name: 'Puissance', polarity: 'positive', summary: 'Ses coups font plus de dégâts.', counter: 'amount' },
   weakened: { name: 'Affaibli', polarity: 'negative', summary: "Ses coups font moins de dégâts, avant l'armure.", counter: 'amount' },
   shield: { name: 'Bouclier', polarity: 'positive', summary: "Absorbe des dégâts après l'armure, puis s'épuise.", counter: 'status' },
@@ -131,6 +131,8 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   ward: tray('immunity'),
   lifesteal: tray('drain'),
   evasion: tray('sureDodge'),
+  // Élan (Encens de l'abbaye) : la Puissance du vocabulaire, son emblème compris, pour un seul coup
+  momentum: tray('power', (s) => s.stacks),
   fear: tray('lostTurn'),
   luckyStrike: tray('extraDie'),
   riposte: tray('reflect'),

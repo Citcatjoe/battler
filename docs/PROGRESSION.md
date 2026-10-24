@@ -21,6 +21,62 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
+- **État des lieux au 2026-10-24** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.108.0, ce qui a été vu, mesuré, et ce qui reste ouvert, avant la seconde partie de la phase 7.
+
+## 0 bis. État des lieux (2026-10-24, version 0.108.0)
+
+_Demandé par l'utilisateur avant la seconde partie de la phase 7. Depuis sa dernière partie (0.104.x), quatre versions ont changé la base du combat ; il n'a joué aucune d'elles._
+
+### Ce qui a changé depuis la 0.104.x
+
+| Version | Ce qui change pour le joueur |
+| --- | --- |
+| 0.105.0 | Un d6 pour tous ; deux compétences par personnage, sur les faces 1 et 2 ; les autres « hors kit », toujours gravables ; forge Copier et Refondre ; adversaires de campagne construits comme un champion ; signature affichée |
+| 0.106.0 | **L'attaque** : chaque jet porte un coup tiré dans une petite fourchette ; le dé ne fait plus de dégâts, il déclenche ; une compétence se greffe, modifie ou remplace le coup ; Tremper l'arme (+1 à l'attaque) ; courbe de campagne abaissée (90 → 88 %) |
+| 0.106.1 | Vocabulaire : Attaque, un coup, physique (DP) ou magique (DM) ; Cotte du mercenaire baissée |
+| 0.107.0 | Revue des compétences (toutes les gravures de 8 à 20 points) ; la barde sur ses faces (deux jets, plus de doubles) ; Naraxes signée par l'Aura de décoction ; Aura sauvage à l'attaque ; Dent de loup baissée |
+| 0.108.0 | Chaque chiffre de dégâts à la couleur de sa source (Lumière, Foudre, Poison…) ; évaluation des signatures (§ 13.3) |
+| 0.109.0 | Cinq reliques consommatrices (Fiole de venin, Croc de boucher, Encens de l'abbaye, Écu cabossé, Plume d'aigle), le statut Élan ; Thaldrin signé par les Feux follets en campagne (§ 13.3) |
+
+### Le combat, en une page
+
+- **Le dé** : un d6 (deux pour la barde) ; le jet désigne une face ; une face porte une compétence ou rien. Le dé ne fait aucun dégât.
+- **Le coup** : chaque jet porte un coup, tiré dans l'**Attaque** du personnage (de 1 à 3 pour la barde à 7 à 9 pour l'ogre), physique ou magique ; esquive, critique, armure, boucliers et réactions comme avant.
+- **La compétence de la face** se greffe sur le coup (le cas général), le modifie (Pourfendre, Pile ou face, Soliste, Crescendo) ou le remplace (Furie des vents, Coup de chance).
+- **Les statuts** : bonus, malus, auras et mécanismes, inchangés dans leur principe ([STATUTS.md](STATUTS.md)).
+- **À l'écran** : la fiche dit « Attaque 5 à 6 DP » ; une face nue montre son numéro ; chaque chiffre de dégâts a la couleur de sa source.
+
+### Les mesures
+
+| Mesure | Valeur | Repère |
+| --- | --- | --- |
+| Équilibre du roster (800 combats par duel) | de 46,8 % (Ervald) à 54,3 % (Naraxes) | 42 à 58 % |
+| Pire duel | Elaria contre Morgrut, 61,9 % | 65/35 au plus |
+| Durée d'un combat | 15,2 tours (environ 7,6 par combattant) | 17,2 en 0.105.0 |
+| Gravures (29 compétences) | de +10,4 (Foudre) à +19,7 (Esquive améliorée) | 8 à 20 points |
+| Reliques (16) | toutes sous 20 depuis la Cotte (0.106.1) et la Dent de loup (0.107.0) | 5 à 15, 20 au plus |
+| Campagne (pilote automatique, 120 parties) | boss atteint 28 %, acte gagné 13 % | courbe 90 → 88 %, boss 45 % |
+| Signature seule contre le roster | de 18,1 % (Fanchon) à 38,9 % (Naraxes) ; Morgrut 49,6 % (sans signature) | réglée par la courbe en campagne |
+
+### Ce qui n'a été ni vu ni joué
+
+Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran, seules des captures ont été prises : l'affrontement (attaque, faces nues, deux dés de la barde) et deux chiffres colorés (Lumière, Foudre). **Jamais vus en mouvement** : un combat entier sur les nouvelles règles, la rafale des deux dés de la barde, Crescendo qui monte, Soliste épuisé, Pile ×3, l'Aura sauvage sur la ligne d'attaque, les écrans de forge (Copier, Tremper l'arme), la carte de campagne. Le son ne se vérifie jamais.
+
+### Ce qui reste ouvert
+
+- **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes à faire.
+- **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
+- **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
+- **Les répertoires** : à relire sur le d6 et l'attaque (phase 6), puis à remplir de consommateurs (phase 8).
+- **Les textes** ne nomment pas encore le type de leurs dégâts (§ 9.3).
+- **Campagne** : la difficulté (28 % au boss) est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; Thaldrin reçoit sa signature (Feux follets, livrée en 0.109.0).
+- **Points à surveiller** : une gravure sur la barde vaut près du double (deux dés) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
+- **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
+
+### Où en est le plan (§ 18)
+
+Faites : 0 (mesure), 1 (étiquettes), 3 et 4 (le d6), 5 (conversion), 5 bis (l'attaque), 5 ter (revue des compétences), 7 en partie (types à l'écran). Livrées, à jouer : 2 (répertoires), 6a et 6 en partie (campagne longue ; la signature de Thaldrin en 0.109.0), un premier lot de consommateurs (0.109.0, § 13.3). À faire : la fin de la phase 6 (répertoires relus), la seconde partie de la phase 7 (reliques qui font durer, bonus par type), la phase 8 (lots de contenu : consommateurs, familles).
+
 
 ---
 
@@ -129,6 +185,17 @@ Réponses de l'utilisateur aux questions de l'audit ([SORTS.md](SORTS.md) § 19)
 | La signature de Naraxes | L'**Aura de décoction** ; Pile ou face reste dans son kit, renforcée (pile ×3). |
 | L'Aura sauvage | **+1 à l'attaque par charge** : elle écrit la feuille, avant le critique (elle n'est plus un doublon de l'Aura de puissance). |
 | La barde | Ses compétences passent **sur les faces**, comme pour tous ; ses deux dés frappent deux fois (deux jets complets). Plus de doubles. |
+
+### 1.10 Dixième passe (2026-10-24, après l'évaluation des signatures)
+
+| Question (§ 13.3) | Décision |
+| --- | --- |
+| Les auras | **À évaluer dans le nouveau jeu** : s'insèrent-elles naturellement ? Les retoucher si besoin pour les rendre plus naturelles, utiles et synergiques. |
+| Les reliques consommatrices | **Validées** (le lot de cinq) : « un bon exemple de ce qu'on peut ajouter pour profiter du nouveau système émergent ». |
+| Les compétences | **Valider, tester, auditer** les compétences existantes, **en ajouter** d'autres en considérant la mécanique de **famille** ([FAMILLES.md](FAMILLES.md)). Règle d'écriture : **une description courte, simple, qui porte le fonctionnement**, au niveau du code comme de la mécanique. |
+| Les répertoires | L'utilisateur s'en réjouit : à poursuivre. |
+| Thaldrin | **Signature : les Feux follets** (« super idée »). |
+| La suite | **Un état des lieux** avant la seconde partie de la phase 7 (§ 0 bis). |
 
 ---
 
@@ -996,6 +1063,28 @@ Demande de l'utilisateur : « évalue les auras de signature : faut-il les garde
 
 **Thaldrin, toujours sans signature** : sa forme humaine porte un sort sur chaque face. Proposition : sa signature devient les **Feux follets** (faces 4 à 6, la Brûlure comme ressource) ; en campagne, les faces 1 à 3 de la Foudre deviennent nues et se gravent, et la Foudre entre en tête de son répertoire.
 
+#### Livré en 0.109.0
+
+Validé par l'utilisateur le 2026-10-24 (§ 1.10) : le lot de cinq et la signature de Thaldrin. Règles et mesures complètes : [RELIQUES.md](RELIQUES.md) § 13.
+
+**Le lot**, cinq reliques Coup, avec ce que le moteur a reçu pour elles : le moment « Quand il regagne des PV » (`healed`), la condition « ce coup retire N PV ou plus » (`hitAtLeast`), le bonus de coup sous condition (`when` sur un `rollBonus`) et le statut **Élan** (+1 par charge au prochain coup qui touche, cumulable).
+
+| Relique | Règle livrée | Apport moyen | Chez ses producteurs | Déclenchements par combat |
+| --- | --- | --- | --- | --- |
+| Fiole de venin | si l'adversaire porte Poison : +2 dégâts à la frappe | +1,6 | Ervald +13,7, Naraxes +2,0, les autres 0 | 0,3 |
+| Croc de boucher | si l'adversaire porte Saignement : +2 dégâts à la frappe | +2,0 | Brokk +10,7, Gorak +9,7, les autres 0 | 0,4 |
+| Encens de l'abbaye | quand il regagne des PV : +1 Élan | +1,1 | Ysolde +8,4, Ervald +2,5, les autres 0 | 0,5 |
+| Écu cabossé | quand il encaisse un coup qui retire 6 PV ou plus : +2 Armure temporaire | +15,5 | d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
+| Plume d'aigle | quand il porte un critique : +1 Esquive améliorée (recharge 2 tours) | +10,2 | Ervald +17,1, Elaria +16,9, Morgrut 0 | 0,7 |
+
+`npm run relics`, 400 combats par duel ; les seize anciennes reliques identiques à la 0.107.0. **Écart à la proposition** : la Fiole lit 1 Poison, pas 3 (à 3 : +0,2, Ervald +1,5 ; le Poison s'estompe d'une charge par tour et personne n'en tient trois). Fiole, Croc et Encens valent 0 sans leur ressource : des consommateurs typés, voulus. L'Écu, au-dessus de 15 et sous 20, est gardé aux valeurs validées (replis : 7 PV ou plus, +2 : +9,4 ; 6 ou plus, +1 : +8,9).
+
+**Synergie** (`npm run synergy`, 200 combats par duel) : le Croc (Collier de ronces sur Fanchon +0,58) et la Plume (Cloche d'ouverture sur Thaldrin +0,69 ; Clepsydre + Plume +0,43) ont un partenaire au-delà de +0,25 ; l'Encens de peu en dessous (+0,24) ; la Fiole et l'Écu aucun. Contre les compétences pour lesquelles elles sont faites : Fiole × Ervald +0,55, Croc × Brokk +0,44, Croc × Gorak +0,40, Encens × Ysolde +0,34. Anti-synergies : Cotte + Écu −0,19 (non prévue par les accroches), Contrepoids + Plume −0,18 (prévue). En tout, **11 reliques sur 21** ont un partenaire (6 sur 16 au § 3.1) ; les paires qui se nourrissent selon les accroches font +0,254.
+
+**Thaldrin** : signature les Feux follets ; en campagne, sa forme humaine les porte sur le 4, le 5 et le 6, les faces 1 à 3 sont nues et se gravent, la Foudre ouvre son répertoire ; l'ours et le kit de duel ne changent pas (empreinte inchangée). La limite de quatre faces de compétence compte les faces : il reçoit une gravure et garde deux faces nues (§ 11.2). Mesuré : signature seule contre le roster 28,4 % (kit entier 45,8 %) ; en campagne (12 parties), 5,2 victoires en moyenne (4,2 avant), boss atteint 25 % (8 %), acte gagné 8 % (8 %), 0,83 gravure par build (0), à 73 % prises à d'autres personnages ; tous les champions : boss 26 %, acte 13 %. Échantillon trop petit pour conclure. Morgrut est désormais le seul sans signature.
+
+**Reste** : cinq icônes de relique à peindre (idées au § 13 de RELIQUES.md) et une pour l'Élan (il montre l'emblème de la Puissance) ; rien n'a été vu dans un navigateur.
+
 ---
 
 ## 14. Pistes de l'agent (P1 à P8)
@@ -1172,7 +1261,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.108.0) : les réponses de l'utilisateur à la proposition du § 13.3 (le lot de cinq reliques consommatrices et leurs icônes, la signature de Thaldrin), puis la seconde partie de la phase 7, les reliques de durée et de type._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.109.0, lot des consommateurs et signature de Thaldrin livrés, § 13.3) : la lecture de l'état des lieux (§ 0 bis) par l'utilisateur, puis la seconde partie de la phase 7 (les reliques de durée et de type), ou la revue des auras et des compétences demandée au § 1.10._
 
 ```mermaid
 flowchart LR
@@ -1200,7 +1289,7 @@ flowchart LR
 | **5. Conversion et forge d6** (faite, 0.105.0 ; à jouer) | les dix personnages en d6 ; Fanchon (deux d6, un double 6) et le druide (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; Copier une face, Refondre, la limite de quatre ; retrait d'Agrandir et de Retailler ; Contrepoids en relique de critique | **oui**, volontairement | `npm run balance` à 800 combats par duel : 48,2 à 51,6 %, aucun duel au-delà de 65/35 ; empreinte mise à jour et notée au CHANGELOG ; PERSONNAGES, FEATURES | — |
 | **5 bis. L'attaque de base** (faite, 0.106.0 ; à jouer) | RESOLUTION.md d'abord ; l'attaque et le coup de base ; les relations greffe, modifie, remplace ; conversion des dix personnages et de leurs compétences ; forge sans valeurs imprimées (Tremper l'arme, Copier sur la face nue) ; reliques réécrites (le Fer sur le coup de base) ; recalage de la campagne avec la courbe abaissée (§ 1.6, § 11.6) | **oui**, volontairement | `npm run check` (312 tests) et `vite build` ; `BALANCE_N=800 npm run balance` : 48,8 à 52,2 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 17,2 → 16,0 tours ; `npm run relics` : Cotte +28,2, ramenée à +13,7 en 0.106.1 ; `npm run campaign` : boss atteint 27 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG (§ 6 bis.7) | tranché à la huitième passe (§ 1.8) : le vocabulaire, la Cotte, la revue des compétences |
 | **5 ter. Revue des compétences** (faite, 0.107.0 ; à jouer) | les compétences relues pour le d6 et l'attaque (bande de 8 à 20 points par gravure, § 1.9) ; la barde sur ses faces (deux jets complets, plus de doubles) ; « ce coup ×N », Crescendo qui monte, greffe épuisée qui laisse sa face nue ; signature de Naraxes, l'Aura de décoction ; table des gravures dans `scripts/skills.report.ts` ; Dent de loup +1 Vol de vie ; Copier sans gain retiré de l'offre | **oui**, volontairement | `npm run check` (317 tests) et `vite build` ; gravures avant → après : +3,2 à +28,5 → +10,4 à +19,7, les 29 dans la bande ([SORTS.md](SORTS.md) § 19) ; `BALANCE_N=800 npm run balance` : 46,8 à 54,3 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 15,8 → 15,2 tours ; `npm run relics` : tout +1 point environ, Dent de loup 22,0 → 12,4 ; `npm run campaign` : boss atteint 28 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG | **l'utilisateur joue** ; ensuite : les auras de signature, la durée, la campagne |
-| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5) ; Fanchon à la signature seule (0.107.0, § 11.7). Reste : Thaldrin à la signature seule ; répertoires relus pour le d6 ; auras de signature ; la courbe abaissée vient avec la phase 5 bis | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
+| **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5) ; Fanchon à la signature seule (0.107.0, § 11.7). Thaldrin à sa signature, les Feux follets (0.109.0, § 13.3). Reste : répertoires relus pour le d6 ; auras de signature ; la courbe abaissée vient avec la phase 5 bis | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
 | **7. Types à l'écran, durée, types en bonus** (en partie, 0.108.0 : types à l'écran) | fait : la couleur des chiffres par source (§ 9.3, `DAMAGE_SOURCES`, six teintes), la source du coup de base magique (`attackSource`), la règle « Types de dégâts » au compendium. Reste : les textes des compétences et des reliques qui nomment leur type ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison (les types à l'écran : non, empreinte inchangée) | 0.108.0 : `npm run check` (319 tests) et `vite build` ; empreinte de non-régression inchangée ; capture Firefox (Ysolde contre Thaldrin, graine 22 : « −5 » ivoire cerclé d'or, « −1 » de la Foudre en cyan). Reste : `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 

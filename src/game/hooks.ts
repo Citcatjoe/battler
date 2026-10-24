@@ -65,6 +65,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
   windFury: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
   evasion: { side: 'self', produces: ['moment:dodge'] },
+  // Élan (Encens de l'abbaye) : le prochain coup qui touche fait plus
+  momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
   // Une aura de coup (puissance, sauvage, mélodieuse, force de l'ours) vaut autant de fois qu'il y a de coups : elle
   // consomme les coups de plus (Furie, Coup de chance, deux dés), revue des signatures du 2026-10-24
@@ -97,6 +99,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
 function triggerHook(t: Trigger): Hook | undefined {
   if (t === 'naturalMax') return 'face:max'
+  if (t === 'healed') return 'moment:heal'
   const face = rollFace(t)
   if (face !== undefined) return `face:${face}`
   return t === 'hit' || t === 'hurt' || t === 'crit' || t === 'dodge' || t === 'missed' ? `moment:${t}` : undefined

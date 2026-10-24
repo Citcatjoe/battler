@@ -661,6 +661,9 @@ const thaldrin: CharacterDef = {
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
   // aussi, d'un petit coup magique. Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe et ses deux auras.
+  // Signature (2026-10-24, décision de l'utilisateur, PROGRESSION.md § 13.3) : les Feux follets, ses trois faces (4 à 6)
+  // comprises ; en campagne, la Foudre quitte le 1, le 2 et le 3, faces nues qui se gravent, et ouvre son répertoire
+  signature: 'firefly',
   // Répertoire : l'Orage et le Feu en dégâts qui durent (Souffle de la tombe, Aura de décoction), la Bête (Aura de puissance, Épines acérées)
   repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns'],
   reserve: [

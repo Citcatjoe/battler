@@ -12,7 +12,7 @@ import { BOSS } from './campaign'
 import { Character } from './character'
 import { simulateCombat } from './combat'
 import { autoForge, drawForgeOffer, withForgeStep, type ForgeStep } from './forge'
-import { RELICS, type Relic } from './relics'
+import { getRelic, RELICS, type Relic } from './relics'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 
@@ -20,8 +20,12 @@ const { audit, problems, seen } = createAudit()
 
 /** Relique de coup sur un moment (aucune du registre n'en a encore) : quand il encaisse, recharge de 2 tours. */
 const RETORT: Relic = { id: 'retort', name: 'Riposte de test', flavor: 'Test.', trigger: { type: 'strike', on: 'hurt' }, cooldown: 2, effects: [{ type: 'damage', amount: 2, target: 'opponent', source: 'strike' }] }
-/** Des jeux de reliques variés, tirés du registre (une, deux, toutes) ; le combat k en reçoit un par camp. */
-const KITS: Relic[][] = [[], ...RELICS.map((r) => [r]), RELICS.slice(0, 2), RELICS.slice(2), [...RELICS, RETORT], [RETORT]]
+/**
+ * Des jeux de reliques variés, tirés du registre (aucune, une partie, toutes, une seule) ; le combat k en reçoit un par
+ * camp, par rang (n modulo leur nombre). Les jeux larges d'abord (2026-10-24, lot des consommateurs) : dans l'ordre
+ * d'avant, les vingt et une reliques ne mettaient plus de Fer à quatre clous sous un coup brut de Gorak.
+ */
+const KITS: Relic[][] = [[], RELICS.slice(0, 2), RELICS.slice(2), [...RELICS, RETORT], [RETORT], ...RELICS.map((r) => [r])]
 
 describe('audit de résolution', () => {
   it('aucune anomalie sur tous les duels du roster', () => {
@@ -45,6 +49,27 @@ describe('audit de résolution', () => {
     // charge) : combat.test.ts les prouve par des combats construits.
     for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base DP', 'coup de base DM', 'coup de base multiplié', 'deux dés', 'jet de la barde', 'cause : jet greffé', 'esquive imposée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', 'type de dégâts DP', 'type de dégâts DM', 'type de dégâts DT', 'charges tirées du coup', 'relâche en part', 'compétence épuisée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
+  it('aucune anomalie quand chaque relique porte sur ce qu’elle consomme : Poison, Saignement, soins, gros coups, critiques', () => {
+    const { audit, problems, seen } = createAudit()
+    // Chaque relique chez les personnages qui produisent sa ressource (et contre tout le roster)
+    const hosts: Record<string, readonly string[]> = {
+      'venom-vial': ['ervald', 'naraxes'],
+      'butcher-hook': ['brokk', 'gorak'],
+      'abbey-incense': ['ysolde', 'gorak', 'fanchon'],
+      'dented-shield': ['aldric', 'morgrut'],
+      'eagle-feather': ['elaria', 'fanchon'],
+    }
+    let n = 0
+    for (const [relic, ids] of Object.entries(hosts))
+      for (const id of ids)
+        for (const b of CHARACTER_IDS)
+          for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(id).withRelics([getRelic(relic)]), createCharacter(b)], { seed: 11000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['bonus de relique à conditions', 'relique de soin reçu', 'relique sur un gros coup', 'relique de coup']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 

@@ -375,7 +375,7 @@ export interface StrikeRoll {
  * l'attaquant s'appliquent, puis l'armure (le coup garde au moins 1), puis les boucliers du défenseur absorbent ce
  * qu'ils peuvent, sans descendre sous 1, enfin les modificateurs de dégâts finaux de l'attaquant (`modifyFinal`),
  * toujours au moins 1. L'ordre des tirages (valeur, esquive, critique) est fixe : il garantit la reproductibilité ; le
- * dé, lui, est tiré avant (`StrikeRoll`).
+ * dé, lui, est tiré avant (`StrikeRoll`). `holds` : une condition de relique, vue depuis l'attaquant, en ce moment.
  */
 export function resolveAttack(
   rng: Rng,
@@ -384,6 +384,7 @@ export function resolveAttack(
   attackerStatuses: readonly Status[],
   defenderStatuses: readonly Status[],
   strike: StrikeRoll,
+  holds: (c: Condition) => boolean,
 ): Omit<Attack, 'attacker' | 'dealt' | 'plain'> {
   const att = effectiveStats(attacker, attackerStatuses)
   const def = effectiveStats(defender, defenderStatuses)
@@ -415,9 +416,12 @@ export function resolveAttack(
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
   // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul), coup brut compris
-  // (2026-10-23 : une relique ou une dorure lit la face du dé, quel que soit le coup)
+  // (2026-10-23 : une relique ou une dorure lit la face du dé, quel que soit le coup) ; un bonus à conditions (Fiole de
+  // venin) ne vaut que si elles sont vraies à ce coup
   const relicBonus = attacker.relics.flatMap((r) =>
-    r.rollBonus && (r.onFace === undefined || r.onFace === roll) ? [{ relic: r.id, name: r.name, amount: r.rollBonus }] : [],
+    r.rollBonus && (r.onFace === undefined || r.onFace === roll) && (!r.when || r.when.every(holds))
+      ? [{ relic: r.id, name: r.name, amount: r.rollBonus }]
+      : [],
   )
   // Face dorée (forge du dé) : même règle qu'une relique de face
   const gild = attacker.gilded[roll] ?? 0
@@ -588,6 +592,13 @@ export function simulateCombat(
    */
   let strike: { touched: boolean; dealt: number; plain: boolean; replaced: boolean } | null = null
   /**
+   * Camps qui ont regagné des PV depuis la dernière vérification d'état (`checkThresholds`) : elle leur ouvre la fenêtre
+   * `healed` (Encens de l'abbaye), une fois, avec pour cause l'étape qui les a soignés.
+   */
+  const healed: Pair<boolean> = [false, false]
+  /** Les conditions d'une relique de coup, vues depuis chaque camp (`resolveAttack`) */
+  const holds: Pair<(c: Condition) => boolean> = [(c) => conditionMet(0, c), (c) => conditionMet(1, c)]
+  /**
    * État de référence du coup en cours (null hors d'un coup) : les statuts des deux camps au début du coup, avant son
    * dé. Règle du jeu (2026-10-21, RESOLUTION règle 9) : un statut posé ou renforcé pendant un coup ne réagit pas à ce
    * coup, il agit dès le coup suivant (le coup suivant d'une même volée compris). Vaut pour toutes les fenêtres du
@@ -654,6 +665,7 @@ export function simulateCombat(
         const amount = clamp(Math.min(effect.amount, fighters[target].maxHp - state.hp), 0)
         state.hp += amount
         rearmThresholds(target)
+        if (amount > 0) healed[target] = true
         return { type: 'heal', target, amount }
       }
       case 'damage': {
@@ -809,6 +821,11 @@ export function simulateCombat(
   /** Une condition d'événement, vue depuis le porteur `side`. */
   function conditionMet(side: Side, c: Condition): boolean {
     if (c.type === 'fromTurn') return turn >= c.turn
+    // Les PV que le coup en cours a retirés (Écu cabossé) : seulement dans les fenêtres d'un coup qui touche
+    if (c.type === 'hitAtLeast') {
+      const now = strike
+      return !!now?.touched && now.dealt >= c.amount
+    }
     const target = c.who === 'opponent' ? other(side) : side
     const state = states[target]
     switch (c.type) {
@@ -876,8 +893,9 @@ export function simulateCombat(
   }
 
   /**
-   * Seuils de PV, après chaque changement de PV : « bloodied » (la première fois sous la moitié), puis les
-   * reliques de seuil, qui partent quand les PV passent sous le leur et se réarment s'ils remontent au-dessus.
+   * Après chaque changement de PV : la fenêtre `healed` de qui a regagné des PV (Encens de l'abbaye), puis les seuils,
+   * « bloodied » (la première fois sous la moitié) et les reliques de seuil, qui partent quand les PV passent sous le
+   * leur et se réarment s'ils remontent au-dessus.
    * `cause` : l'étape dont le changement de PV est vérifié ; elle devient la cause de ce qui se déclenche.
    */
   function checkThresholds(cause: number): Side | undefined {
@@ -892,6 +910,14 @@ export function simulateCombat(
         const hp = states[watched].hp
         if (hp > 0 && hp < fighters[watched].maxHp * t.ratio && !states[side].relicBelow.has(relic.id)) crossed.add(`${side}:${relic.id}`)
       }
+    // Soin reçu : la fenêtre s'ouvre une fois par étape soignante, avant les seuils ; ce qu'elle déclenche vérifie
+    // l'état à son tour (une relique qui soignerait rouvrirait la fenêtre, avec sa propre étape pour cause)
+    for (const side of SIDES) {
+      if (!healed[side]) continue
+      healed[side] = false
+      const down = fire(side, 'healed', cause)
+      if (down !== undefined) return down
+    }
     for (const side of SIDES) {
       const s = states[side]
       if (!s.bloodied && s.hp > 0 && s.hp < fighters[side].maxHp / 2) {
@@ -1046,7 +1072,7 @@ export function simulateCombat(
     const def = states[defender]
     // État de référence du coup : les statuts de ce moment, après une compétence greffée (règle 9)
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
-    const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], att.statuses, def.statuses, jetRoll)
+    const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], att.statuses, def.statuses, jetRoll, holds[attacker])
     const touched = !outcome.dodged && !outcome.replaced
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
     if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)

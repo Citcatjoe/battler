@@ -39,6 +39,8 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 /**
  * Faces de compétence au plus sur le dé d'un champion de campagne, signature comprise (§ 11.2, décidé) : au moins deux
  * faces de coup. La limite atteinte, Graver n'est plus proposée, et Copier une face ne copie plus qu'une face de coup.
+ * Elle compte des faces, pas des compétences : la signature de Thaldrin, imprimée sur trois faces (Feux follets, 4 à 6),
+ * en prend trois ; il lui reste une gravure, et ses deux faces de coup.
  */
 export const MAX_SKILL_FACES = 4
 
@@ -106,10 +108,10 @@ export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character
 
 /**
  * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé en
- * 0.104.0) : sa **signature seule** ; la face de l'autre compétence de son kit est nue, libre pour la forge. Fanchon
- * aussi depuis la phase 5 ter (ses compétences sont sur ses faces) : sans son Ouverture, qui n'est pas une face. Sans
- * signature, son kit entier : Morgrut (le combattant nu) et Thaldrin (sa forme humaine ne fait que lancer des sorts),
- * des exceptions de structure.
+ * 0.104.0) : sa **signature seule**, sur toutes les faces qui la portent ; les faces des autres compétences de son kit
+ * sont nues, libres pour la forge. Fanchon aussi depuis la phase 5 ter (ses compétences sont sur ses faces) : sans son
+ * Ouverture, qui n'est pas une face ; Thaldrin depuis le 2026-10-24 (PROGRESSION.md § 13.3) : ses Feux follets, la Foudre
+ * quitte le 1, le 2 et le 3. Sans signature, son kit entier : Morgrut, le combattant nu, seule exception de structure.
  */
 export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => {

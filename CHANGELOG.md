@@ -32,6 +32,36 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.109.0] — 2026-10-24
+
+Règles v2 : le lot de cinq reliques consommatrices et la signature de Thaldrin, validés par l'utilisateur le 2026-10-24 ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 1.10 et § 13.3), et l'état des lieux avant la seconde partie de la phase 7 (§ 0 bis).
+
+### Ajouté
+- **Cinq reliques consommatrices** (toutes de type Coup, [docs/RELIQUES.md](docs/RELIQUES.md) § 13), une par ressource qui n'avait pas de consommateur :
+  - **Fiole de venin** : si l'adversaire porte Poison, +2 dégâts à la frappe ;
+  - **Croc de boucher** : si l'adversaire porte Saignement, +2 dégâts à la frappe ;
+  - **Encens de l'abbaye** : quand il regagne des PV, +1 Élan ;
+  - **Écu cabossé** : quand il encaisse un coup qui retire 6 PV ou plus, +2 Armure temporaire ;
+  - **Plume d'aigle** : quand il porte un critique, +1 Esquive améliorée (recharge 2 tours).
+- **Nouveau statut Élan** (`momentum`) : +1 par charge au prochain coup qui touche, avant l'armure, dépensé au coup, cumulable. Il alimente l'état Puissance de la zone d'état.
+- **Moteur** : nouveau moment « Quand il regagne des PV » (`healed`), ouvert une fois après chaque étape qui rend des PV, l'étape de soin pour cause ; nouvelle condition « ce coup retire N PV ou plus » (`hitAtLeast`), qui n'existe que dans les fenêtres d'un coup qui touche ; un bonus de coup de relique (`rollBonus`) peut porter des conditions (`when`), lues quand le coup touche, sur l'état du début du coup. `validateRelics` contrôle ces conditions (entiers, `hitAtLeast` seulement au coup qui touche, au critique ou au coup encaissé).
+- **Signature de Thaldrin : les Feux follets.** En campagne, sa forme humaine part avec les Feux follets sur les faces 4, 5 et 6 ; les faces 1 à 3 sont nues et se gravent, et la Foudre entre en tête de son répertoire. Forme d'ours et kit de duel inchangés. Morgrut est désormais le seul personnage sans signature (un test le contrôle).
+- **Audit** : les bonus conditionnels recomptés sur l'état d'avant le coup ; chaque déclenchement « quand il regagne des PV » causé par un soin, aucun manqué ; chaque déclenchement « 6 ou plus » au-dessus de son seuil, aucun manqué. Un bloc de `audit.test` fait jouer chaque relique sur ses producteurs, contre tout le roster.
+
+### Modifié
+- **Fiole de venin : palier abaissé de 3 Poison à 1** (choix de l'agent). Proposée à 3, elle valait +0,2 (Ervald +1,5) : le Poison s'estompe d'une charge par tour, et personne n'en tient trois. À 1 : Ervald +13,7.
+- **La limite de quatre faces de compétence compte les faces** : les trois Feux follets en prennent trois, Thaldrin reçoit une gravure et garde deux faces nues (la règle « au moins deux faces de coup », § 11.2). Aucun code changé.
+- **Campagne** : la ligne de signature (`SignatureLine`) nomme chaque face qui la porte (« sur le 4, le 5 et le 6 »).
+- Texte de la condition `hasStatus` : « porte 3 Poison ou plus ». Le résumé du type Coup cite « un soin reçu ».
+- **État des lieux** ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 0 bis) : ce qui a changé depuis la 0.104.x, le combat en une page, les mesures, ce qui n'a été ni vu ni joué, ce qui reste ouvert, où en est le plan.
+
+### Mesuré
+- **Reliques** (`npm run relics`, 400 combats par duel) : Fiole de venin +1,6 (Ervald +13,7, Naraxes +2,0, les autres 0) ; Croc de boucher +2,0 (Brokk +10,7, Gorak +9,7) ; Encens de l'abbaye +1,1 (Ysolde +8,4, Ervald +2,5) ; Écu cabossé +15,5 (d'Elaria +11,8 à Thaldrin +19,5, au-dessus de 15, sous 20 ; replis mesurés : 7 PV ou plus, +2 : +9,4 ; 6 ou plus, +1 : +8,9) ; Plume d'aigle +10,2 (Ervald +17,1, Elaria +16,9, Morgrut 0). Les seize anciennes reliques sont identiques à la 0.107.0. Fiole, Croc et Encens valent 0 sans leur ressource, voulu.
+- **Synergie** (`npm run synergy`, 200 combats par duel) : partenaire au-delà de +0,25 pour le Croc (Collier de ronces sur Fanchon +0,58) et la Plume (Cloche d'ouverture sur Thaldrin +0,69 ; Clepsydre + Plume +0,43, Cloche + Plume +0,41) ; Encens de peu en dessous (+0,24) ; Fiole sans partenaire (aucune relique ne pose de Poison) ; Écu sans partenaire (+0,17). Chez leurs producteurs : Fiole × Ervald +0,55, Croc × Brokk +0,44, Croc × Gorak +0,40, Encens × Ysolde +0,34. Anti-synergies : Cotte + Écu −0,19 (non prévue par les accroches), Contrepoids + Plume −0,18 (prévue). 11 reliques sur 21 ont un partenaire ; les paires qui se nourrissent selon les accroches font +0,254.
+- **Campagne** (`npm run campaign`, 12 parties par champion) : Thaldrin 5,2 victoires en moyenne (4,2 avant), boss atteint 25 % (8 %), acte gagné 8 % (8 %), 0,83 gravure par build (0 avant) ; tous : boss atteint 26 %, acte gagné 13 %. Échantillon trop petit pour conclure. Thaldrin à sa signature seule contre le roster : 28,4 % (kit entier 45,8 %).
+- Pas de `npm run balance` : le kit de duel ne change pas, l'empreinte de non-régression passe. `npm run check` : 328 tests ; `npx vite build` passe.
+- **Icônes manquantes** : les cinq reliques n'ont pas d'image peinte et montrent leur initiale gravée (idées d'illustration dans RELIQUES.md § 13) ; l'Élan n'a pas d'icône propre et montre l'emblème de la Puissance. Rien n'a été vu dans un navigateur (ligne de signature, Élan dans la zone d'état, label « Élan +N », initiales).
+
 ## [0.108.0] — 2026-10-24
 
 Règles v2 : évaluation des signatures et des auras ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 13.3), puis la phase 7, première partie : **les types à l'écran** (§ 9.3).
