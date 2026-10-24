@@ -91,6 +91,11 @@ export type IconName =
   | 'state-bleed'
   | 'state-burn'
   | 'state-lost-turn'
+  | 'state-rot'
+  | 'state-breach'
+  | 'state-firefly'
+  | 'state-spoiled'
+  | 'state-vulnerable'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -142,7 +147,7 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
  * Emblème de chaque état de la zone d'état (`states.ts`, planche v12, 0.79.2). Un état n'a pas la grammaire d'une
  * compétence : la compétence est l'identité du personnage (objet peint à sa palette, dans un sceau octogonal) ;
  * l'état est un mot du vocabulaire commun, une pièce ronde et monochrome au symbole gravé, posée telle quelle,
- * sans cadre (docs/STYLE_BIBLE.md § 7). Les états sans porteur gardent l'icône de leur statut, ou l'initiale.
+ * sans cadre (docs/STYLE_BIBLE.md § 7). Les cinq derniers (planche v15, 0.110.1) complètent la zone d'état.
  */
 export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   power: 'state-power',
@@ -161,11 +166,11 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   bleed: 'state-bleed',
   burn: 'state-burn',
   lostTurn: 'state-lost-turn',
-  rot: 'rot-aura',
-  breach: 'breach',
-  firefly: 'fireflies',
-  // La note fausse de la barde, peinte pour la compétence : c'est elle qui gâche le coup
-  spoiled: 'false-note',
+  rot: 'state-rot',
+  breach: 'state-breach',
+  firefly: 'state-firefly',
+  spoiled: 'state-spoiled',
+  vulnerable: 'state-vulnerable',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

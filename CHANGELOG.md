@@ -32,6 +32,27 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.110.1] — 2026-10-24
+
+Les restes de la revue (`docs/REVUE_CONTENU.md`), selon les décisions de l'utilisateur du 2026-10-24 : T12, E4, le son de la Foudre et A8.
+
+### Modifié
+- **T12 : l'Élan s'appelle Ferveur** (identifiant `momentum` gardé) : nom, résumé, labels, texte de l'Encens de l'abbaye (« +1 Ferveur »), compendium ; le mot « élan » reste au mouvement d'attaque ([docs/RESOLUTION.md](docs/RESOLUTION.md), [docs/STATUTS.md](docs/STATUTS.md), [docs/RELIQUES.md](docs/RELIQUES.md)).
+- **E4 : une Peur bloquée par une immunité use quand même sa fois par combat** (« c'est le principe de ce genre de jeu ») ; règle écrite ([docs/RESOLUTION.md](docs/RESOLUTION.md) § 3 bis, STATUTS) et figée par un test.
+- **Son de la Foudre** : l'utilisateur garde l'ancien. Chaque éclair rejoue le Coup critique, comme depuis la 0.76.0, désormais déclaré par la scène (`lightning.sound: 'crit'`). [docs/SONS.md](docs/SONS.md) revient à 22 sens ; MISE_EN_SCENE M24 corrigé.
+
+### Ajouté
+- **A8 : cinq emblèmes d'état** (planche v15, [docs/STYLE_BIBLE.md](docs/STYLE_BIBLE.md) § 7), générés avec Artlist (GPT Image 2.5 en image à image, les seize emblèmes de la v12 en référence sur fond noir, deux versions, 160 crédits ; les cinq de la première retenus), découpés par `scripts/slice-coins.py` (rayon 136 à 137 px) et optimisés : `state-rot` (Pourriture, une feuille flétrie trouée deux fois), `state-breach` (Brèche, un plastron fendu), `state-firefly` (Luciole, une luciole à la queue lumineuse), `state-spoiled` (Coup gâché, une lame tordue en vagues), `state-vulnerable` (Vulnérable, une cible où plonge une flèche). Reliés dans `STATE_ICON` (`Icon.tsx`).
+
+### Retiré
+- Le son synthétisé **Éclair** (`thunder`) de la 0.110.0.
+
+### Vérifié
+- `npm run check` : 344 tests ; `npx vite build` passe. Aucune règle d'équilibre touchée, pas de `npm run balance`. Planche de contrôle des emblèmes regardée (64 et 24 px, avec compteur) ; pas encore vus dans un écran de jeu. Le son n'est pas vérifiable.
+
+### Reste
+- Le résumé de l'état Puissance, que la Ferveur alimente pour un seul coup (second volet de T12).
+
 ## [0.110.0] — 2026-10-24
 
 Les corrections de la revue (`docs/REVUE_CONTENU.md`), selon les décisions de l'utilisateur du 2026-10-24 : le moteur (M1 à M4), l'écran et le son (A1 à A7), l'axe de rang de chaque compétence (E1 : « un rang ajoute moins », chaque compétence s'aiguise sur un axe à elle), les textes (T1 à T15 sauf T12) et les documents en retard.

@@ -6,9 +6,11 @@ Méthode : trois revues menées en parallèle, en lecture seule (code, tests, do
 
 ## Synthèse : ce qu'il faut corriger, par gravité
 
-**État des corrections (0.110.0, décisions de l'utilisateur du 2026-10-24).**
+**État des corrections (0.110.0 et 0.110.1, décisions de l'utilisateur du 2026-10-24).**
 - **Corrigé** : M1 à M4 (moteur) ; A1 à A7 (écran et son) ; E1 à E3 (un axe de rang par compétence, demi-rangs) ; T1 à T11 et T13 à T15 (textes : les lignes du tableau ci-dessous, réécrites dans `describeSkill`, les `describe` et résumés des statuts, `describeRelic`, les règles du compendium et les fiches de Gorak et d'Ervald ; le cumul de chaque statut posé est maintenant une pastille, « se cumule » ou « non cumulable ») ; les documents en retard (SONS, STATUTS, RESOLUTION, RELIQUES § 3, § 5.1 et § 13, la Fiole remesurée chez Naraxes : +2,0, inchangée) ; la faiblesse du Colosse (« N'esquive jamais ») ; `validateRoster` contrôle aussi les compétences hors kit.
-- **Reste** : E4 (Peur bloquée par une immunité) et T12 (le nom de l'Élan), non tranchés ; A8, les cinq emblèmes d'état à générer (Coup gâché, Brèche, Pourriture, Luciole, Vulnérable) ; le fichier du son Éclair, à choisir à l'oreille (synthétisé en attendant). Hors de la demande : la phrase d'ambiance de la Larme de givre, les icônes de l'Encens et de l'Écu, le type « Coup » de l'Encens.
+- **Tranché ensuite (2026-10-24)** : T12, l'Élan s'appelle **Ferveur** (nom, résumé, labels, texte de l'Encens « +1 Ferveur », compendium ; identifiant `momentum` gardé) ; E4, une Peur bloquée par une immunité (relique ou compétence) use quand même sa fois par combat, règle écrite (RESOLUTION § 3 bis, STATUTS) et figée par un test ; le son de la Foudre : l'Éclair synthétisé de la 0.110.0 est retiré, chaque éclair rejoue le Coup critique comme depuis la 0.76.0 (« le son de l'éclair jusqu'ici était plutôt bien, gardons celui-là »).
+- **Fait en 0.110.1** : A8, les cinq emblèmes d'état gravés (Coup gâché `state-spoiled`, Brèche `state-breach`, Pourriture `state-rot`, Luciole `state-firefly`, Vulnérable `state-vulnerable` ; planche v15 générée avec Artlist dans la grammaire v12, STYLE_BIBLE § 7 ; pas encore vus dans un écran de jeu) ; T12, E4 et le son de la Foudre ci-dessus.
+- **Reste** : le résumé de l'état Puissance, que la Ferveur alimente pour un seul coup (second volet de T12). Hors de la demande : la phrase d'ambiance de la Larme de givre, les icônes de l'Encens et de l'Écu, le type « Coup » de l'Encens.
 
 ### Moteur (des règles écrites que le code ne suit pas)
 
@@ -27,7 +29,7 @@ Méthode : trois revues menées en parallèle, en lecture seule (code, tests, do
 | E1 | Aiguiser la Furie des vents | Furie II : Gorak 51,5 → 71,6 % (+20,1 points) ; Furie III : 77,7 % (Pourfendre II : +6,0) | plafonner la Furie à 1 charge (elle ne s'aiguise plus), ou un rang n'ajoute qu'un coup tous les deux rangs |
 | E2 | Aiguiser la Foudre | +2 à chacun des trois éclairs : 3 dégâts deviennent 9 (gravée puis aiguisée chez Gorak : +15,2 points, contre +6,3 pour le Souffle) | +1 par éclair et par rang, ou +2 au total |
 | E3 | Feux follets | Signature de Thaldrin, ni aiguisable ni copiable | à rendre aiguisable (+1 Brûlure par rang) |
-| E4 | Peur contre une Aura d'immunité | Bloquée, elle use quand même sa seule fois par combat | décider : la limite ne compte qu'un effet posé |
+| E4 | Peur contre une Aura d'immunité | Bloquée, elle use quand même sa seule fois par combat | **tranché le 2026-10-24** : on garde (« c'est le principe de ce genre de jeu ») ; la limite compte un déclenchement, même bloqué |
 | E5 | Statuts sans porteur (pour plus tard) | Régénération ↔ Poison s'annulent charge pour charge (unités différentes) ; la Garde sacrée s'use avant l'opposition ; la Pourriture se cumule sans plafond ni usure | à revoir avant de leur donner un porteur |
 
 ### Textes (la description doit dire vrai, court et simple)
@@ -45,7 +47,7 @@ Méthode : trois revues menées en parallèle, en lecture seule (code, tests, do
 | T9 | Fiole de venin, Croc de boucher | « à la frappe » quand le Fer dit « à ce coup » pour la même mécanique | « +2 dégâts à ce coup » |
 | T10 | Dé creux | « jet maximal » : le dé est un d6 | « Sur un 6 » |
 | T11 | Écu cabossé | trop long | « Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire » |
-| T12 | Élan | rangé dans l'état Puissance (« Ses coups font plus de dégâts ») alors qu'il ne vaut qu'un coup ; le mot « élan » nomme déjà le mouvement d'attaque (MISE_EN_SCENE, RESOLUTION) | un nom propre (ex. « Ferveur ») et l'état Coup gâché/Puissance à revoir |
+| T12 | Élan | rangé dans l'état Puissance (« Ses coups font plus de dégâts ») alors qu'il ne vaut qu'un coup ; le mot « élan » nomme déjà le mouvement d'attaque (MISE_EN_SCENE, RESOLUTION) | **nom tranché le 2026-10-24 : Ferveur** ; l'état Puissance reste à revoir |
 | T13 | Druide | « ne lance aucun sort » en ours, alors qu'une compétence gravée part aussi en ours | « ne lance que ses gravures » |
 | T14 | Fiches de Gorak et d'Ervald | critique 19 % et 16 % au lieu de 14 % et 24 % | corriger le texte de leurs forces |
 | T15 | Résumés longs et accords | Épines, Décoction, Coup de chance, « 1 dégâts » (Foudre), Feux follets, Souffle, Ouverture, Sifflotement (+2 par charge contre +2 par tour) | textes courts proposés dans les entrées |
@@ -59,9 +61,9 @@ Méthode : trois revues menées en parallèle, en lecture seule (code, tests, do
 | A3 | Reliques du défenseur (Dent, Collier, Larme, Géode, Écu) | leur label est « − » et joue « Malus reçu » en même temps que « Bonus gagné » ou le soin | **à trancher** : « + » pour un bonus gardé pour plus tard |
 | A4 | Aura de puissance ou d'immunité reposée | rejoue « Aura gagnée » et le signal sans rien changer | rien quand rien ne change |
 | A5 | Pile ou face, Furie des vents | leur statut de mécanisme joue « Bonus gagné » et fait flotter le nom ; 2,3 s entre le coup et la pièce | taire le statut de mécanisme ; resserrer la pièce |
-| A6 | Foudre | le son lourd du critique, trois fois, pour 1 dégât chacun | le son d'un éclair (SONS) |
+| A6 | Foudre | le son lourd du critique, trois fois, pour 1 dégât chacun | le son d'un éclair (SONS) ; essayé en 0.110.0 (Éclair synthétisé), **retiré en 0.110.1** : l'utilisateur garde le son du critique |
 | A7 | Épines bloquées par une immunité | label « Épines acérées − » et son quand même (SONS : un effet refusé ne sonne pas) | taire |
-| A8 | Emblèmes d'état | Coup gâché, Brèche, Pourriture et Luciole montrent une icône peinte au lieu d'un emblème gravé ; Vulnérable n'en a pas | une planche d'emblèmes (grammaire v12) |
+| A8 | Emblèmes d'état | Coup gâché, Brèche, Pourriture et Luciole montrent une icône peinte au lieu d'un emblème gravé ; Vulnérable n'en a pas | une planche d'emblèmes (grammaire v12) ; **fait en 0.110.1** (planche v15) |
 
 ### Documents en retard
 

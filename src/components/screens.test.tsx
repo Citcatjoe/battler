@@ -287,7 +287,7 @@ describe('écrans', () => {
 
   it("zone de surcharge : n'y entrent que les statuts qui changent ce coup-ci, sans aura ni action déclenchée (registre unique)", () => {
     const surcharges = STATUS_IDS.filter(isSurcharge).sort()
-    // Critique et esquive imposés, bouclier, modificateurs qui s'usent sur le coup (Fausse note, Élan), réactions au coup.
+    // Critique et esquive imposés, bouclier, modificateurs qui s'usent sur le coup (Fausse note, Ferveur), réactions au coup.
     // Pas d'aura (agit à chaque coup), pas de modificateur durable (Affaibli, Force de l'ours), pas de Pile ou face ni de Furie
     expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'guaranteedCrit', 'lifesteal', 'momentum', 'riposte', 'thorns'].sort())
     for (const id of STATUS_IDS) {

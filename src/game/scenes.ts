@@ -30,16 +30,16 @@ export interface SceneTiming {
   /** L'arène tremble à chaque impact (météores, roche qui jaillit) : la secousse des gros coups (FightScreen) */
   quake?: true
   /**
-   * Son de chaque coup vers l'adversaire, à son impact (0.110.0, docs/SONS.md § 3 et § 4.1) : les coups d'une scène
-   * sont égaux, aucun n'est lourd. Défaut : Coup.
+   * Son de chaque coup vers l'adversaire, à son impact (0.110.0, docs/SONS.md § 3 et § 4.1). Défaut : Coup.
    */
-  sound?: 'hit' | 'crit' | 'thunder'
+  sound?: 'hit' | 'crit'
 }
 
 export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   // Foudre (druide, 0.76.0) : l'arène s'assombrit, trois éclairs tombent l'un après l'autre autour de la
-  // cible (un coup de 1 chacun), puis la lumière revient ; chacun sonne l'Éclair (0.110.0 ; le Coup critique avant)
-  lightning: { impacts: [440, 800, 1160], length: 1750, sound: 'thunder' },
+  // cible (un coup de 1 chacun), puis la lumière revient ; chacun sonne le Coup critique, le son de l'éclair
+  // (0.76.0 ; gardé par l'utilisateur le 2026-10-24, après le son de synthèse « Éclair » de la 0.110.0)
+  lightning: { impacts: [440, 800, 1160], length: 1750, sound: 'crit' },
   // Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : le sceau de l'objet se brise, sa magie envahit l'arène.
   // Braise captive : le ciel rougit, trois météores tombent en diagonale sur l'adversaire (un coup de 2 chacun)
   emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true, sound: 'crit' },

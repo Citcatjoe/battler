@@ -172,14 +172,14 @@ Les étapes sont toujours dans cet ordre. Les tirages (dé, valeur du coup de ba
 | 2 bis | **Bonus de relique** (0.75.0) | Sur un coup qui touche, les reliques de coup de l'attaquant ajoutent leur bonus à la valeur du coup de base, avant le critique ; un bonus de face (`onFace`, 0.77.0) ne vaut que si le dé de ce coup fait cette face : un coup de base de 6 sur la face 4, avec le Fer à quatre clous, vaut 10, puis 20 en critique ×2. Coup brut de Furie compris (2026-10-23). Un bonus à conditions (`when`, 2026-10-24 : Fiole de venin, Croc de boucher) ne vaut que si elles tiennent à ce coup, sur l'état du début du coup (« si l'adversaire porte Poison » : au moins 1). Aucun tirage. | `Relic.rollBonus`, `Relic.onFace`, `Relic.when` ([RELIQUES.md](RELIQUES.md)) |
 | 2 ter | **Face dorée** (0.88.0, forge du dé) | Sur un coup qui touche, si le dé de ce coup fait une face dorée de l'attaquant, +2 à la valeur du coup, après les reliques et avant le critique. Même règle qu'une relique de face : coup brut compris (2026-10-23), chacun des deux dés de la barde se lit seul. Aucun tirage. | `Character.gilded`, `Attack.gild` ([CAMPAGNE.md](CAMPAGNE.md) § 4) |
 | 3 | **Critique** | Forcé par un statut (`forcesCrit`, sans tirage), sinon tirage contre sa chance de critique. La valeur du coup (coup de base, ×N, reliques de coup et dorure comprises) est multipliée, puis arrondie. | `forcesCrit`, `modifyStats` |
-| 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli ; Élan, +1 par charge au prochain coup qui touche, 2026-10-24) |
+| 4 | **Dégâts sortants** | Statuts de l'attaquant, dans l'ordre de pose | `modifyOutgoing` (Affaibli ; Ferveur, +1 par charge au prochain coup qui touche, 2026-10-24) |
 | 5 | **Dégâts entrants** | Statuts du défenseur, dans l'ordre de pose | `modifyIncoming` (Vulnérable) |
 | 6 | **Plancher** | Le coup vaut au moins 1 | — |
 | 7 | **Armure** | Armure effective retirée, au moins 1 dégât | `modifyStats` (armure, ex. Brèche) |
 | 8 | **Boucliers** | Chaque bouclier absorbe ce qu'il peut sans descendre sous 1, et s'use d'autant (prévention) | `shield` |
 | 8 bis | **Dégâts finaux** | Statuts de l'attaquant, après tout le reste : leurs écarts s'additionnent, puis un seul plancher de 1 (0.110.0 ; avant, un plancher après chacun faisait dépendre le résultat de l'ordre de pose : un coup de 3 avec Fausse note et Aura mélodieuse faisait 1 ou 2, il fait 1). Ni l'armure ni l'intimidation ne les rognent | `modifyFinal` (Aura mélodieuse, Fausse note) |
 | 9 | **Application** | PV retirés, sans descendre sous 0. Les dégâts du coup sont comptés en entier, excès du coup fatal compris (overkill, depuis la 0.34.0) | — |
-| 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application ; un statut `spentOnHit` de l'attaquant qui touche disparaît (Fausse note, Élan) | `spentOnHurt`, `spentOnHit` |
+| 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole), juste après l'application ; un statut `spentOnHit` de l'attaquant qui touche disparaît (Fausse note, Ferveur) | `spentOnHurt`, `spentOnHit` |
 | 10 | **Vol de vie (esquive)** | Un coup esquivé consomme une charge de Vol de vie (`drainsHit`) sans soin, au moment du coup. Sur un coup qui touche, le Vol de vie n'est pas une étape de la chaîne : c'est une réaction de la fenêtre `hit` (§ 5, règle 9), qui rend les PV retirés (plafonnés aux PV max) et use une charge. Un jet remplacé ne porte pas de coup : la charge reste. | `drainsHit` (Vol de vie) |
 
 Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
@@ -198,7 +198,7 @@ Les charges consommées par le coup (critique assuré, bouclier) sont retirées 
 
 **Coup de chance garde son identité** (un dé de plus), au plus simple : depuis la 0.107.0, il se greffe, le coup du jet qui le déclenche part ; à sa prochaine action, le porteur lance un jet complet de plus par charge (sa face déclenche sa compétence, puis son coup de base). Aucune règle nouvelle : c'est la greffe, puis l'action à plusieurs jets. De la 0.106.0 à la 0.106.1, il remplaçait le coup : il en faisait perdre un pour en gagner un plus tard (+3 points gravé, Morgrut y perdait).
 
-**Une compétence épuisée laisse sa face nue** (0.107.0, Soliste et Peur, `limit: 1`) : ni étape roll, ni multiplicateur, ni compétence, le coup de base seul. Une compétence qui modifie son coup ne compte un déclenchement que s'il touche : un solo esquivé reste à jouer.
+**Une compétence épuisée laisse sa face nue** (0.107.0, Soliste et Peur, `limit: 1`) : ni étape roll, ni multiplicateur, ni compétence, le coup de base seul. Une compétence qui modifie son coup ne compte un déclenchement que s'il touche : un solo esquivé reste à jouer. **Une compétence qui pose compte son déclenchement même quand la pose est refusée** (décision de l'utilisateur du 2026-10-24, E4 : « c'est le principe de ce genre de jeu ») : une Peur bloquée par une immunité, d'une relique ou d'une compétence, a usé sa fois par combat ; le 1 suivant est une face nue.
 
 **Deux dés** (la barde, phase 5 ter) : chacun de ses dés est un jet complet, la compétence de sa face y a la même relation au coup que sur tout dé (une compétence qui modifie reste une compétence qui modifie). Avant la phase 5 ter, ses compétences étaient sur ses doubles (`doubleOne` à `doubleFive`, `double:6` pour un dé forgé) : un double se greffait sur les deux coups de base, ou les remplaçait par un seul coup ×N (Crescendo, Soliste, `relation: 'replace'`) ; graver une compétence qui modifie sur un double en faisait une greffe. Ces déclencheurs, la règle « remplace les deux coups » et l'étape `pair` sont retirés.
 
@@ -415,7 +415,7 @@ La colonne de labels sous le dé. **Définition validée par l'utilisateur (2026
 | impact | « Luciole +2 » | `Attack.modifiers` d'un statut `spentOnHurt` du défenseur | Compétence ou statut | + |
 | impact | « Armure temporaire −6 » | `Attack.shields` (bouclier du défenseur, posé par Peau de pierre) | Compétence ou statut | − |
 | impact | « Fausse note −10 » | `Attack.modifiers` (`final`) d'un statut `spentOnHit` de l'attaquant | Compétence ou statut | − |
-| impact | « Élan +2 » (2026-10-24) | `Attack.modifiers` d'un statut `spentOnHit` de l'attaquant, avant l'armure | Compétence ou statut | + |
+| impact | « Ferveur +2 » (2026-10-24) | `Attack.modifiers` d'un statut `spentOnHit` de l'attaquant, avant l'armure | Compétence ou statut | + |
 | réaction | « Vol de vie +5 » | étape `statusReaction` (`drainsHit` de l'attaquant) | Compétence ou statut | + |
 | réaction | « Riposte −3 » | étape `statusReaction` (`reflectsHit` du défenseur) | Compétence ou statut | − |
 | réaction | « Saignement +2 » | étape `statusReaction` (réaction `hurt` d'un malus du défenseur) | Compétence ou statut | + |

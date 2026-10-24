@@ -125,7 +125,7 @@ flowchart LR
 | Géode fendue | Quand il encaisse un coup : +4 Armure temporaire | 2 fois par combat, recharge 3 tours |
 | Fiole de venin | Si l'adversaire porte Poison : +2 dégâts à ce coup (2026-10-24, § 13 ; « à la frappe » jusqu'à la 0.109.1) | |
 | Croc de boucher | Si l'adversaire porte Saignement : +2 dégâts à ce coup | |
-| Encens de l'abbaye | Quand il regagne des PV : +1 Élan | |
+| Encens de l'abbaye | Quand il regagne des PV : +1 Ferveur | |
 | Écu cabossé | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire (0.110.0 ; « Quand il encaisse un coup, si ce coup retire 6 PV ou plus » avant) | |
 | Plume d'aigle | Quand il porte un critique : +1 Esquive améliorée | recharge 2 tours |
 
@@ -495,7 +495,7 @@ _Proposition de [PROGRESSION.md](PROGRESSION.md) § 13.3, validée par l'utilisa
 - un **bonus de coup à conditions** (`when` sur un `rollBonus`) : lu au coup qui touche, sur l'état du début du coup, avant le critique ; `validateRelics` refuse une condition sans déclencheur ni bonus de coup ;
 - le moment **soin reçu** (`healed`, accroche `moment:heal`) : une fois par étape qui rend des PV, jamais sur un soin nul ([RESOLUTION.md](RESOLUTION.md) § 5, règle 6) ;
 - la condition **« ce coup retire N PV ou plus »** (`hitAtLeast`), réservée aux fenêtres d'un coup qui touche (`validateRelics`) ;
-- le statut **Élan** (`momentum`) : +1 par charge au prochain coup qui touche, avant l'armure, cumulable, dépensé par ce coup ; il alimente l'état Puissance de la zone d'état ([STATUTS.md](STATUTS.md)).
+- le statut **Ferveur** (`momentum` ; « Élan » jusqu'au 2026-10-24, renommé par l'utilisateur, T12) : +1 par charge au prochain coup qui touche, avant l'armure, cumulable, dépensé par ce coup ; il alimente l'état Puissance de la zone d'état ([STATUTS.md](STATUTS.md)).
 
 Les accroches se déduisent des données (`relicHooks`) : la condition `hasStatus` consomme le statut, le moment consomme son accroche. Contrôles de l'audit (`audit.ts`) : bonus à conditions recompté sur l'état d'avant le coup ; relique de soin reçu causée par une étape qui soigne, et jamais manquée ; relique « coup de 6 ou plus » jamais sous son seuil, et jamais manquée.
 
@@ -505,7 +505,7 @@ Les accroches se déduisent des données (`relicHooks`) : la condition `hasStatu
 | --- | --- | --- | --- | --- | --- | --- |
 | Fiole de venin (`venom-vial`) | Si l'adversaire porte Poison : +2 dégâts à ce coup | `status:poison` | Ervald (Aura glaciale), Naraxes (Aura de décoction) | +1,6 | Ervald **+13,7**, Naraxes +2,0 ; les autres 0 | 0,3 |
 | Croc de boucher (`butcher-hook`) | Si l'adversaire porte Saignement : +2 dégâts à ce coup | `status:bleed` | Brokk (Épines), Gorak (Pourfendre) | +2,0 | Brokk **+10,7**, Gorak **+9,7** ; les autres 0 | 0,4 |
-| Encens de l'abbaye (`abbey-incense`) | Quand il regagne des PV : +1 Élan | `moment:heal` | Ysolde (Aura de sainteté), Ervald (Vol de vie) | +1,1 | Ysolde **+8,4**, Ervald +2,5 ; les autres 0 | 0,5 |
+| Encens de l'abbaye (`abbey-incense`) | Quand il regagne des PV : +1 Ferveur | `moment:heal` | Ysolde (Aura de sainteté), Ervald (Vol de vie) | +1,1 | Ysolde **+8,4**, Ervald +2,5 ; les autres 0 | 0,5 |
 | Écu cabossé (`dented-shield`) | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire | `moment:hurt` | Aldric, Brokk (les coups encaissés) | **+15,5** | Aldric +12,1, Brokk +15,5 ; d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
 | Plume d'aigle (`eagle-feather`) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours | `moment:crit` | Elaria (Œil de faucon) | +10,2 | Elaria **+16,9** ; Ervald +17,1, Fanchon +15,1, Morgrut 0 (aucun critique) | 0,7 |
 
@@ -538,4 +538,4 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-1
 - Écu cabossé : la **bosse de fer** d'un vieil écu (l'umbo), arrachée à son bois, **six** creux profonds sur le dôme (le seuil de 6), une lanière passée dans un rivet. Pas l'écu entier : l'écu est déjà l'icône de l'Armure temporaire.
 - Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours).
 
-**Icônes** : peintes en 0.109.1 (planche v14, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather`) ; l'Écu redessiné une fois pour montrer exactement six creux. L'Élan n'a pas besoin d'icône propre : un statut montre l'emblème de son état (règle de la 0.96.2), et la zone d'état comme le compendium montrent celui de la Puissance, qu'il alimente.
+**Icônes** : peintes en 0.109.1 (planche v14, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather`) ; l'Écu redessiné une fois pour montrer exactement six creux. La Ferveur n'a pas besoin d'icône propre : un statut montre l'emblème de son état (règle de la 0.96.2), et la zone d'état comme le compendium montrent celui de la Puissance, qu'elle alimente.

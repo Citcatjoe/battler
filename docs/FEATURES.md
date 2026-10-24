@@ -137,10 +137,12 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 **Textes** (0.110.0, T1 à T15 sauf T12) : chaque statut posé (hors mécanisme) porte une pastille « se cumule » ou « non cumulable ». Rétribution : « Relâche la moitié de ses jauges (arrondie au-dessous, au moins 1) en dégâts directs à l'adversaire, puis les vide » ; l'infobulle compte les PV gardés (« 12 PV gardés »). Furie : « Deux coups de base bruts tout de suite, chacun son dé (aucune compétence) », badge « ×(2 + intensité) × charges ».
 
+**Restes de la revue** (0.110.1, décisions de l'utilisateur du 2026-10-24) : l'Élan s'appelle **Ferveur** (T12, identifiant `momentum` gardé ; « élan » reste le mouvement d'attaque) ; une **Peur bloquée par une immunité** (relique ou compétence) use quand même sa fois par combat (E4, « c'est le principe de ce genre de jeu », [RESOLUTION.md](RESOLUTION.md) § 3 bis) ; cinq états ont leur **emblème gravé** (A8, planche v15) : Pourriture (`state-rot`), Brèche (`state-breach`), Luciole (`state-firefly`), Coup gâché (`state-spoiled`), Vulnérable (`state-vulnerable`).
+
 **Lot des consommateurs** (0.109.0, [RESOLUTION.md](RESOLUTION.md), [STATUTS.md](STATUTS.md)) :
 - **Moment « Quand il regagne des PV »** (`healed`) : ouvert une fois après chaque étape qui rend plus de 0 PV, au début de `checkThresholds`, l'étape de soin pour cause. Une relique de coup peut s'y accrocher (Encens de l'abbaye).
 - **Condition « ce coup retire N PV ou plus »** (`hitAtLeast`) : les PV que le coup en cours a retirés ; elle n'existe que dans les fenêtres d'un coup qui touche (au coup qui touche, au critique, au coup encaissé). La condition `hasStatus` s'écrit « porte 3 Poison ou plus ».
-- **Élan** (`momentum`) : bonus, +1 par charge au prochain coup qui touche, avant l'armure, dépensé au coup, cumulable. Il alimente l'état Puissance de la zone d'état et compte comme une surcharge du coup (« Élan +N »). Pas d'icône peinte propre : il montre l'emblème de la Puissance.
+- **Ferveur** (`momentum`, « Élan » jusqu'à la 0.110.0) : bonus, +1 par charge au prochain coup qui touche, avant l'armure, dépensé au coup, cumulable. Elle alimente l'état Puissance de la zone d'état et compte comme une surcharge du coup (« Ferveur +N »). Pas d'icône peinte propre : elle montre l'emblème de la Puissance.
 
 | Race | Dé | Compétence | Effet |
 | --- | --- | --- | --- |
@@ -155,7 +157,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | Orc | 3 | Aura de puissance | 💪 permanente, **non cumulable** (0.107.0) : +2 dégâts sur chaque coup, après le critique et avant l'armure |
 | Elfe | 3 | Aura de précision | 🦅 permanente, cumulable : +1 au multiplicateur de critique et +5 % de critique par charge (0.107.0 ; le multiplicateur seul avant) |
 | Nain | 3 | Aura d'intimidation | 😠 permanente, cumulable : les coups de l'adversaire font 1 de moins par charge (0.107.0 ; 2 avant), avant l'armure |
-| Humain | 1 | Peur | 😱 une fois par combat (0.107.0) : l'adversaire perd sa prochaine action (il tremble tant qu'il a peur) |
+| Humain | 1 | Peur | 😱 une fois par combat (0.107.0) : l'adversaire perd sa prochaine action (il tremble tant qu'il a peur). Bloquée par une immunité, elle use quand même sa fois (0.110.1, E4) |
 | Humain | 2 | Purification | retire à l'adversaire son bonus le plus récent (un bonus renforcé garde son rang), avec toutes ses charges (aura comprise) ; s'il n'en a aucun, 5 dégâts directs (0.42.0). Depuis la 0.69.0 (Purification double), elle retire aussi son propre malus le plus récent (poison, plaie, brûlure). Un mécanisme (jauges de Rétribution, règles de forme) ne se retire jamais (2026-10-21) |
 | Humain | 3 | Aura de sainteté | 🕊️ permanente, cumulable jusqu'à 2 charges (0.107.0 ; 3 depuis la 0.42.0) : +1 PV par charge (2 avant) à la fin de chacun de ses tours |
 | Homme-lézard | 1 | Coup de chance | 🍀 se greffe (0.107.0 ; remplaçait le coup en 0.106.0) : le coup part, et à sa prochaine action, un jet complet de plus par charge (sa face déclenche sa compétence, puis son coup de base) ; cumulable (0.50.0). Hors kit depuis la 0.105.0 |
@@ -203,7 +205,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 | 💪 Aura de puissance | bonus | permanente, non cumulable (0.107.0) : +2 dégâts, après le critique | oui (orc) |
 | 😠 Aura d'intimidation | bonus | permanente : l'adversaire frappe 1 de moins par charge (0.107.0) | oui (nain) |
 | 🦅 Aura de précision | bonus | permanente : multiplicateur de critique +1 et critique +5 % par charge (0.107.0) | oui (elfe) |
-| 😱 Peur | malus | perd sa prochaine action ; tremble tant qu'il a peur ; non cumulable (2026-10-21) ; la compétence part une fois par combat (0.107.0) | oui (humain, sur l'adversaire) |
+| 😱 Peur | malus | perd sa prochaine action ; tremble tant qu'il a peur ; non cumulable (2026-10-21) ; la compétence part une fois par combat (0.107.0), même bloquée par une immunité (0.110.1) | oui (humain, sur l'adversaire) |
 | 🕊️ Aura de sainteté | bonus | permanente : +1 PV par charge à la fin de ses tours, 2 charges au plus (0.107.0) | oui (humain) |
 | 🧪 Aura de décoction | bonus | permanente : chaque coup qui touche empoisonne (1 charge par charge d'aura, 0.107.0) | oui (homme-lézard) |
 | 🪙 Pile ou face | mécanisme | après le coup de la face 1, s'il touche : une pièce, pile ce coup ×3 (0.107.0), qui compte comme un coup qui touche, face rien | oui (homme-lézard) |
@@ -270,6 +272,7 @@ Un **événement** est une capacité propre à un personnage : *quand* (déclenc
 
 | Version | Changement |
 | --- | --- |
+| 0.110.1 | Élan renommé Ferveur (T12) ; une Peur bloquée par une immunité use sa fois par combat (E4, testé) ; emblèmes gravés de Pourriture, Brèche, Luciole, Coup gâché et Vulnérable (A8, planche v15, `STATE_ICON`) |
 | 0.110.0 | Axe de rang par compétence (E1) : charges, charges à demi, montant, intensité (`Status.power`, non cumulable), coup ×N, limite, part ; demi-rangs ; rangs II de +3,6 à +8,0 points ; `validateRoster` sur les compétences de réserve. Textes T1 à T15 sauf T12 (pastille « se cumule / non cumulable », Rétribution, Furie) |
 | 0.109.0 | Moment « Quand il regagne des PV » (`healed`) ; condition « ce coup retire N PV ou plus » (`hitAtLeast`) ; nouveau statut Élan (+1 par charge au prochain coup qui touche, avant l'armure, cumulable) ; texte de `hasStatus` « porte 3 Poison ou plus » |
 | 0.107.0 | Revue des compétences (phase 5 ter, bande de 8 à 20 points par gravure) : Rétribution la moitié des jauges (arrondie au-dessous) ; Aura de décoction 1 Poison par charge ; Pile ou face pile ×3 ; Aura de sainteté 2 charges au plus, 1 PV par charge ; Aura d'intimidation −1 par charge ; Aura sauvage +1 à l'attaque par charge, avant le critique ; Coup de chance se greffe ; Pourfendre Saignement égal à la moitié des PV retirés ; Aura de précision +5 % de critique par charge en plus ; Vol de vie 1 charge ; Peur et Soliste une fois par combat ; Aura de puissance non cumulable ; Crescendo qui monte ; doubles et accroche `doubleOne` … `doubleFive` retirés |
@@ -466,7 +469,7 @@ Chaque arène a son cadrage du sol (`focus`), pour que les pieds tombent sur la 
 
 ## 6. Son
 
-Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 23 sons, ce que chacun veut dire, son de chaque étape du combat, son d'une nouvelle compétence.
+Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 22 sons, ce que chacun veut dire, son de chaque étape du combat, son d'une nouvelle compétence.
 
 - **Bouton du son** (2026-10-23) : un seul bouton rond du UI kit en haut à droite de toutes les scènes (glyphe haut-parleur, barré seulement si tout est coupé). Il ouvre un petit panneau dessous, avec **deux interrupteurs indépendants**, « Musique » et « Effets sonores » (l'interrupteur des règles du tournoi, composant `Switch`). Couper les effets laisse la musique, et l'inverse. Le panneau se ferme par le bouton, un clic ailleurs ou Échap. Chaque choix est gardé (`battler:muted` pour les effets, `battler:music-muted` pour la musique). **Effets et musique sont coupés par défaut** (0.68.2) : on les rallume dans le panneau, et ce choix est gardé.
 - **Un son = une signification = un fichier** (`src/assets/sounds/<son>.mp3`), joué avec la Web Audio API. Un son sans fichier joue sa version synthétisée.
@@ -474,7 +477,7 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 23 
 - **Le son d'une compétence se déduit de ses effets** (`cueOf`) : aura posée, aura retirée, malus posé, bonus posé, statut retiré, soin ; les dégâts sonnent avec leurs coups. Une nouvelle compétence n'a donc rien à déclarer.
 - **Le poison grésille** (0.90.0, décision de l'utilisateur) : quand il agit, au début du tour de son porteur, il joue Grésillement (`fizz.mp3`, un « pchhhit » bref de vapeur toxique, discret) au lieu de Ronge, que gardent Pourriture, Brûlure et Saignement. Le son propre d'un statut se déclare dans son registre (`tickSound`, `statuses.ts`).
 - **Silences** : l'élan, le jet maximal, les faces de compétence (1, 2 et 3), les durées qui baissent et les statuts qui expirent ne sonnent pas. Depuis la 0.110.0, un **mécanisme** posé (Pile ou face, Furie des vents) ne sonne pas et ne flotte pas, une étape dont aucun effet n'a de résultat (aura reposée telle quelle, plafond, purge à vide) n'active ni aura, ni label, ni son, et des **Épines bloquées** par une immunité n'ont plus ni label ni son.
-- **Éclair** (0.110.0, `thunder`, 23e son) : chaque éclair de la Foudre le joue, au lieu du Coup critique ; chaque scène déclare le son de ses coups (`SceneTiming.sound`). Pas encore de fichier : un son synthétisé (claquement filtré, roulement de 0,3 s) tient la place.
+- **Foudre** : chaque éclair rejoue le Coup critique (depuis la 0.76.0) ; chaque scène déclare le son de ses coups (`SceneTiming.sound`, `lightning.sound: 'crit'`). L'Éclair synthétisé de la 0.110.0 (`thunder`) est retiré en 0.110.1 : l'utilisateur garde l'ancien son.
 - **Vitesse** : à ×2 et ×4, les sons du combat sont écourtés au prorata, avec un fondu. Le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
 - **Ajouter ou remplacer un fichier** : traiter la source avec `scripts/process-sounds.py`, copier le fichier retenu sous le nom du son (`SOUND_NAMES`), régler son volume dans `MIX`. **Générer un bruitage** (0.91.0) : `npm run sfx` (ElevenLabs, `scripts/gen-sfx.mjs`, clé dans `.env.local`) écrit des propositions dans `logs/sons/<son>/`.
 - **Musique de fond** (0.48.0, [SONS.md](SONS.md) § 10) : pendant chaque combat joué, une boucle tirée au hasard parmi trois (`src/assets/music/`), quelle que soit l'arène, en boucle sous les effets. Elle entre en fondu, s'efface au KO pour laisser ressortir le KO et la victoire, puis s'arrête en fondu à l'écran de fin. Chaque piste est égalisée à −29 LUFS, environ 15 dB sous les effets. Elle a son propre bus, hors du compresseur des effets, et seul son interrupteur la coupe.
@@ -499,6 +502,7 @@ Les règles du son sont dans [SONS.md](SONS.md) et font foi : vocabulaire de 23 
 | 0.36.1 | Règles du son proposées (`SONS.md`) |
 | 0.36.0 | Sons enregistrés (CC0) à la place des sons synthétisés, gardés en repli ; impact à trois paliers ; sons écourtés selon la vitesse |
 | 0.110.0 | Éclair (`thunder`) pour la Foudre, synthétisé en attendant son fichier ; mécanismes posés muets ; étapes sans résultat et Épines bloquées sans son ; reliques du défenseur : le ding pour un bonus de son porteur |
+| 0.110.1 | Éclair (`thunder`) retiré : chaque éclair de la Foudre rejoue le Coup critique, déclaré par la scène ; retour à 22 sons |
 
 ## 7. Statistiques et historique
 

@@ -43,7 +43,6 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Coup critique (composé) | un coup critique, le coup de Pile, le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts ou plus (la Rétribution, qui relâche la moitié de ses jauges en un coup) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
 | | *Grondement* | couche du Coup critique, jamais jouée seule | gros choc grave qui résonne | 1 | 0,6 à 0,9 s |
 | | Esquive | un coup qui manque sa cible | arme qui fend l'air dans le vide | 3 | 0,2 à 0,3 s |
-| | Éclair | un éclair de la Foudre tombe sur sa cible, à chaque impact de sa scène (0.110.0) : des dégâts égaux, aucun n'est lourd | claquement sec de la foudre, puis un roulement très bref ; ni choc d'arme, ni Grondement | 2 | 0,2 à 0,35 s (les éclairs tombent toutes les 0,36 s) |
 | **États** | Aura gagnée | un personnage pose son aura | souffle magique qui enfle, accord lumineux | 2 | 0,8 à 1,2 s |
 | | Aura perdue | une aura est retirée | le même souffle qui retombe et s'éteint | 3 | 0,6 à 1 s |
 | | Bonus gagné | un bonus posé sur soi (hors aura) | synthé magique en majeur, ascendant, lumineux | 3 | 0,4 à 0,7 s |
@@ -59,7 +58,7 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | **Interface** | Clic | un bouton | clic sec, bois ou métal léger | 4 | 0,05 à 0,1 s |
 | | Choc du face-à-face | la présentation du duel | choc glorieux, épique | 1 | 0,6 à 4 s |
 
-Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 23 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2) ; l'Éclair n'a pas encore le sien (§ 7).
+Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 22 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
 
 **Retirés par rapport à la 0.36.0** (33 sons) : dé au maximum (décision de l'utilisateur), élan (décision : l'impact suffit à faire sonner un coup), les trois paliers d'impact (fondus dans Coup), annonce du critique, carillon d'événement, peur (devient Malus reçu quand elle est posée, puis Tour perdu), purification (Dissipation), épines et parade (Coup), vol de vie (Soin), attente de l'ogre (Malus reçu), Furie des vents (Bonus gagné), pile et face (Pièce retombe, la même sur les deux faces, puis Coup critique sur pile), druide vers ours et ours vers druide (Transformation), rugissement et griffes (Coup).
 
@@ -112,7 +111,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 | Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0, Brûlure posée), Fausse note, Pourfendre (0.70.0 : son coup sonne d'abord comme un coup, puis la plaie posée joue Malus reçu ; avant, la Saignée, et la Rage du sang, qui jouait Soin) |
 | Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura ; sans bonus à retirer, ses dégâts directs sonnent comme un coup reçu) |
 | Coup | Rétribution (la moitié de ses jauges en un coup ; Coup critique à 10 dégâts ou plus) |
-| Éclair | Foudre (0.110.0 : un par éclair, à l'impact de chacun ; le son du critique jusqu'à la 0.109.1, trois fois pour 1 dégât chacun) |
+| Coup critique | Foudre (0.76.0 : un par éclair, à l'impact de chacun, trois coups de 1 dégât ; l'Éclair synthétisé de la 0.110.0 retiré le 2026-10-24 : l'utilisateur garde ce son) |
 
 ### 4.4 Les labels de la zone de surcharge (2026-10-21)
 
@@ -164,7 +163,6 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Coup critique | `sfx.crit` | Coup + Grondement | | |
 | Grondement | `crit-rumble` | `crit-rumble.mp3` | `crit.wav`, déposé par l'utilisateur (0.36.4) | 1,20 s |
 | Esquive | `dodge`, `sfx.dodge` | `dodge.mp3` | `dodge-2` | 0,27 s |
-| Éclair | `thunder`, `sfx.thunder` | **aucun** : son synthétisé (claquement filtré, roulement bref) | à choisir à l'oreille par l'utilisateur (0.110.0) ; propositions possibles par `npm run sfx` | |
 | Aura gagnée | `aura-gain`, `sfx.auraGain` | `aura-gain.mp3` | `aura-gain-2` | 0,88 s |
 | Aura perdue | `aura-loss`, `sfx.auraLoss` | `aura-loss.mp3` | `aura-loss-1` | 0,80 s |
 | Bonus gagné | `buff`, `sfx.buff` | `buff.mp3` | `buff-1` | 0,55 s |
@@ -203,7 +201,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Le lancement du combat (2026-10-22, 0.91.0) | « Un son de cri de guerre, pas trop long, 2 secondes peut-être, qui signe le clic » sur le bouton qui lance le combat animé : « Jouer » de l'écran d'affrontement, dans tous les modes (choix de l'utilisateur, plutôt que « Combattre » de la sélection, que suit le Choc du face-à-face). Généré avec ElevenLabs. L'ouverture du combat passe de 500 à 1 400 ms pour que le cri retombe avant les dés de l'initiative (règle 8). |
 | Le cri de guerre retiré (2026-10-23, 0.96.0) | « Retirer le hurlement ajouté en début de combat » : le cri de guerre de la 0.91.0 est retiré ; « Jouer » refait un clic, et l'ouverture du combat revient à 500 ms. |
 | Les reliques du défenseur (2026-10-24, 0.110.0) | « Un bonus gardé pour plus tard est un bonus pour son porteur » : leur label passe de − à + (le ding), avec le son qui va avec, et leur description dit le bonus du porteur. Une relique qui contre le coup (la Conque des vents) garde son −. |
-| La Foudre (2026-10-24, 0.110.0) | Le son d'un éclair, pas le son lourd du critique (trois fois pour 1 dégât chacun) : un son nouveau, l'Éclair (§ 3), synthétisé tant que l'utilisateur n'a pas choisi son fichier. |
+| La Foudre (2026-10-24, 0.110.0, puis le même jour) | La 0.110.0 lui avait donné un son nouveau, l'Éclair, synthétisé (claquement filtré, roulement bref). L'utilisateur l'a écarté : « le son de l'éclair jusqu'ici était plutôt bien, gardons celui-là ». Chaque éclair rejoue le Coup critique (Coup + Grondement), comme depuis la 0.76.0. |
 
 ## 9. Index : qui joue quel son
 
@@ -219,8 +217,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
 | Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique qui se déclenche pour un bonus de son porteur (chez l'attaquant comme chez le défenseur, 0.110.0), Luciole, Vol de vie, Saignement (2026-10-21, § 4.4). La barde sur un double jusqu'à la phase 5 ter |
 | Coup | un coup d'attaque qui touche (y compris ceux de l'ours et le coup de Pourfendre) ; la Riposte (renvoi) ; la relâche de la Rétribution (un coup, la moitié de ses jauges, sous 10 dégâts) ; chaque jauge d'une relâche en entier sauf la dernière ; les lames d'air de la Conque des vents |
-| Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive. La Foudre jusqu'à la 0.109.1 |
-| Éclair | la Foudre, un par éclair, à l'impact de chacun (0.110.0) |
+| Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive ; la Foudre, un par éclair, à l'impact de chacun (0.76.0, gardé le 2026-10-24) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |
 | Aura gagnée | les 10 compétences d'aura (§ 4.3, Aura mélodieuse et Ouverture comprises) |
 | Aura perdue | une purification qui retire une aura |
@@ -251,7 +248,7 @@ Les deux personnages d'une même race partagent leurs compétences.
 | Homme-lézard (Naraxes, Ssythra) | Coup de chance : Bonus gagné | Pile ou face : aucun son propre, sa pièce sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de décoction : Aura gagnée |
 | Paladin (Aldric, Gauvain) | Rétribution : Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0 ; Coup par jauge et Coup critique sur la dernière avant) | Riposte : Bonus gagné | Aura d'immunité : Aura gagnée |
 | Ogre (Morgrut, Gnashka) | Attente : Malus reçu | Attente : Malus reçu | Attente : Malus reçu |
-| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Éclair à l'impact de chacun des trois éclairs (0.110.0 ; Coup critique de la 0.76.0 à la 0.109.1 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
+| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des trois éclairs (0.76.0 ; Éclair synthétisé en 0.110.0, retiré le 2026-10-24 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
 | Druide, forme d'ours | coup : Coup | coup : Coup | coup : Coup (0.73.0 ; Charge, Coup de griffe et Aura de rancune avant, et le relais Rancune et Sève, Bonus gagné, jusqu'à la 0.72.0) |
 
 Une compétence sans effet réel ne sonne pas (règle 8) : un soin à PV pleins, un malus bloqué par une immunité.

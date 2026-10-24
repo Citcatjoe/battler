@@ -718,7 +718,7 @@ describe('mise en scène', () => {
     expect(posed).toBeGreaterThan(20)
   })
 
-  it('Foudre : chaque éclair sonne l’Éclair, jamais le son du critique (M24, SONS § 3)', () => {
+  it('Foudre : chaque éclair sonne le Coup critique, le son de l’éclair gardé par l’utilisateur (M24, SONS § 3)', () => {
     let bolts = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
@@ -727,8 +727,7 @@ describe('mise en scène', () => {
         const scene = m.cues.find((c) => c.channel === 'scene')!
         for (const blow of m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.at < scene.at + SCENE_EVENTS.lightning.length)) {
           const sounds = at(m, 'sound', blow.at).flatMap((c) => (c.channel === 'sound' ? [c.cue] : []))
-          expect(sounds).toContain('thunder')
-          expect(sounds).not.toContain('crit')
+          expect(sounds).toContain('crit')
           bolts++
         }
       }

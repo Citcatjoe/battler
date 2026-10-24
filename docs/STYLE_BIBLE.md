@@ -1049,9 +1049,14 @@ Deux mots du prompt font cette grammaire (ajoutés par l'utilisateur à la premi
 | `state-bleed.png` | Saignement | a drop under a slash mark |
 | `state-burn.png` | Brûlure | a flame |
 | `state-lost-turn.png` | Tour perdu | iron shackles |
+| `state-rot.png` | Pourriture | a wilting leaf with two holes (v15) |
+| `state-breach.png` | Brèche | a cracked breastplate (v15) |
+| `state-firefly.png` | Luciole | a firefly with a glowing tail (v15) |
+| `state-spoiled.png` | Coup gâché | a sword blade bent wavy (v15) |
+| `state-vulnerable.png` | Vulnérable | a target with an arrow plunging in (v15) |
 
 **Pas encore à générer**, mais connus (pour ne pas les redécouvrir) :
-- **Statuts sans porteur** : Vulnérable, Étourdi, Garde sacrée, Pourriture (le malus subi). Ils n'entrent dans la liste que lorsqu'un personnage les pose. Les reliques ne les poseront pas : une relique ne pose jamais de malus sur l'adversaire (RELIQUES.md § 3, règle 7).
+- **Statuts sans porteur** : Étourdi, Garde sacrée. Ils n'entrent dans la liste que lorsqu'un personnage les pose. Les reliques ne les poseront pas : une relique ne pose jamais de malus sur l'adversaire (RELIQUES.md § 3, règle 7). Vulnérable et Pourriture ont leur emblème depuis la planche v15 (0.110.1).
 - **Sceaux de compétence peints** (asset A-01, [design-system.md](design-system.md) : retenu, prioritaire) : un autre format qu'une icône, une illustration qui remplit la fenêtre octogonale de la carte (`object-fit: cover`), une par compétence ; aucun n'est commandé, la compétence montre son icône en attendant (`SKILL_SEAL`, `SkillSeal.tsx`).
 - **Icônes de commande** (N-01, design-system : à tester, 3 d'abord) : boutons icône et boutons d'action.
 
@@ -1200,6 +1205,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v14, reliques consommatrices (5 icônes, 3×3, intégrée le 2026-10-24, générée par l'agent avec Artlist : GPT Image 2.5 en image à image, fond transparent ; référence jointe : les seize reliques existantes composées en une planche 4 × 4) :** motifs de [RELIQUES.md](RELIQUES.md) § 13, dans la grammaire des reliques (§ 6) : 1. Fiole de venin, une goutte figée le long du col · 2. Croc de boucher, une goutte de sang séché · 3. Encens de l'abbaye, un pain de résine ambrée enveloppé de lin avec une seule braise (pas un encensoir : c'est l'icône de l'Aura de décoction) · 4. Écu cabossé, la bosse de fer d'un écu à six creux · 5. Plume d'aigle, deux barbes arrachées.
 
+**v15, emblèmes d'état (5 emblèmes, 3×3, intégrée le 2026-10-24, générée par l'agent avec Artlist : GPT Image 2.5 en image à image ; référence jointe : les seize emblèmes de la v12 composés sur fond noir) :** prompt de la v12 (§ Icônes à générer), liste ICONS remplacée : 1. a wilting leaf with two holes (`state-rot`, Pourriture) · 2. a cracked breastplate (`state-breach`, Brèche) · 3. a firefly with a glowing tail (`state-firefly`, Luciole) · 4. a sword blade bent wavy (`state-spoiled`, Coup gâché) · 5. a target with an arrow plunging in (`state-vulnerable`, Vulnérable). Découpe : `python scripts/slice-coins.py <planche.png> src/assets/icons state-rot,state-breach,state-firefly,state-spoiled,state-vulnerable` (rayon 136 à 137 px). Intégration : `STATE_ICON` (`Icon.tsx`).
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1227,6 +1234,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v15 | 2026-10-24 | 5 emblèmes d'état | Pourriture, Brèche, Luciole, Coup gâché, Vulnérable (A8 de la revue). Artlist, GPT Image 2.5 en image à image, référence : les seize emblèmes de la v12 sur fond noir ; deux versions générées (160 crédits), les cinq retenus de la première. Découpe par `scripts/slice-coins.py` (rayon 136 à 137 px), optimisés. Planche de contrôle regardée (64 et 24 px, avec compteur) ; pas encore vus dans un écran de jeu. |
 | v14 | 2026-10-24 | 96 à 100 | Les cinq reliques consommatrices. Artlist, GPT Image 2.5 en image à image, référence : les seize reliques en planche 4 × 4 ; deux versions générées (160 crédits). Retenues : Fiole et Écu de la première, Croc, Encens et Plume de la seconde. L'Écu redessiné une fois par une retouche (80 crédits) pour montrer exactement six creux. Découpe par `scripts/slice-icons.py`, `optipng`, 128 × 128. |
 | v13 | 2026-10-22 | 92 à 95 | Les quatre reliques élémentaires. Première planche générée par l'agent (Artlist, GPT Image 2.5, deux planches d'un coup) : vrai canal alpha, découpe sans retouche. Retenues : Braise, Larme et Conque de la seconde planche (cage ronde à quatre barreaux, fêlure au tiers, spirale lisible), Géode de la première (les deux moitiés se lisent mieux qu'une géode entière ceinturée). |
 | v12 | 2026-10-21 | 76 à 91 | Emblèmes d'état, nouvelle grammaire : pièces gravées monochromes. Deux versions générées : la première (or, bronze et couleurs, vrai canal alpha) était trop proche des compétences ; la seconde, retenue, ajoute « monochrome » et « carved on a coin ». Fond noir uni, pas de canal alpha : découpe en disque par `scripts/slice-coins.py`, sans retouche (rayons de 136 à 139 px). |

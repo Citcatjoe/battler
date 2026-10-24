@@ -65,7 +65,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
   windFury: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
   evasion: { side: 'self', produces: ['moment:dodge'] },
-  // Élan (Encens de l'abbaye) : le prochain coup qui touche fait plus
+  // Ferveur (Encens de l'abbaye) : le prochain coup qui touche fait plus
   momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
   // Une aura de coup (puissance, sauvage, mélodieuse, force de l'ours) vaut autant de fois qu'il y a de coups : elle

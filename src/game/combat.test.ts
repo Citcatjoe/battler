@@ -1956,7 +1956,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
     expect(lines).toEqual([
       "Si l'adversaire porte Poison : +2 dégâts à ce coup",
       "Si l'adversaire porte Saignement : +2 dégâts à ce coup",
-      'Quand il regagne des PV : +1 Élan',
+      'Quand il regagne des PV : +1 Ferveur',
       'Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire',
       'Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours',
     ])
@@ -1994,7 +1994,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
   it('un bonus à palier : seulement à partir de N charges chez l’adversaire', () =>
     readsStatus(relic({ rollBonus: 2, when: [{ type: 'hasStatus', who: 'opponent', status: 'poison', stacks: 3 }] }), 'poison', 5, 3))
 
-  it('Encens de l’abbaye : chaque étape qui lui rend des PV lui donne +1 Élan, cumulé, dépensé par son prochain coup qui touche', () => {
+  it('Encens de l’abbaye : chaque étape qui lui rend des PV lui donne +1 Ferveur, cumulée, dépensée par son prochain coup qui touche', () => {
     const heal = (trigger: 'hit' | 'hurt'): CharacterEvent => ({ id: trigger, name: trigger, trigger, effects: [{ type: 'heal', amount: 1 }] })
     const r = run([testCharacter('a', { maxHp: 40 }, [heal('hit'), heal('hurt')]).withRelics([getRelic('abbey-incense')]), testCharacter('b', { maxHp: 40, attackMin: 2, attackMax: 2 })])
     const fires = ofType(r, 'relic')
@@ -2009,7 +2009,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       const healed = b.event.side === 0 && b.event.effects.some((e) => e.type === 'heal' && e.amount > 0)
       if (!b.state.hp.includes(0)) expect(fires.some((f) => f.cause === b.id), `étape ${b.id}`).toBe(healed)
     })
-    // Cumulé : soigné en touchant, puis en encaissant, son coup suivant fait +2 ; l'Élan part avec ce coup
+    // Cumulée : soigné en touchant, puis en encaissant, son coup suivant fait +2 ; la Ferveur part avec ce coup
     const mine = ofType(r, 'attack').filter((b) => b.attack.attacker === 0 && !b.attack.dodged)
     expect(mine.some((b) => b.attack.modifiers.some((m) => m.status === 'momentum' && m.delta === 2))).toBe(true)
     for (const b of mine) expect(stacksOf(b.state.statuses[0], 'momentum')).toBe(0)
@@ -2955,6 +2955,17 @@ describe('attaque de base (phase 5 bis)', () => {
     expect(mine[0].attack.preset).toBe(true)
     for (const b of mine.slice(1)) expect(b.attack.preset).toBeUndefined()
     expect(ofType(r, 'roll').filter((x) => x.side === 0)).toHaveLength(1)
+  })
+
+  it('Peur bloquée par une immunité : elle use quand même sa seule fois (E4, décision du 2026-10-24)', () => {
+    const fear: CharacterEvent = { id: 'scare', name: 'scare', trigger: 'naturalOne', limit: 1, effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }] }
+    const shield: CharacterEvent = { id: 'shield', name: 'shield', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'immunityAura', stacks: 1 }] }
+    const r = runOn(1, [testCharacter('a', { maxHp: 200 }, [fear]), testCharacter('b', { maxHp: 200 }, [shield])])
+    const scares = ofType(r, 'event').filter((x) => x.event.eventId === 'scare')
+    expect(scares).toHaveLength(1)
+    expect(scares[0].event.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked', by: 'immunityAura' } })
+    expect(ofType(r, 'skip')).toHaveLength(0)
+    expect(ofType(r, 'attack').filter((x) => x.attack.attacker === 0).length).toBeGreaterThan(3)
   })
 
   it('barde (phase 5 ter) : ses deux dés sont deux jets complets ; chacun déclenche la compétence de sa face, puis son coup de base', () => {
