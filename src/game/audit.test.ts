@@ -88,6 +88,32 @@ describe('audit de résolution : les reliques de durée (phase 7)', () => {
   })
 })
 
+describe('audit de résolution : phase 8, premier lot (0.114.0)', () => {
+  it('aucune anomalie pour la Curée, la Récolte, la Virulence, la Sentence et la Rancune, gravées chez leurs producteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    const hosts: Record<string, readonly string[]> = {
+      quarry: ['brokk', 'gorak'],
+      harvest: ['ervald'],
+      virulence: ['ervald', 'naraxes'],
+      sentence: ['ysolde', 'ervald'],
+      grudge: ['morgrut', 'aldric', 'elaria'],
+    }
+    let n = 0
+    for (const [id, ids] of Object.entries(hosts)) {
+      const skill = ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+      for (const host of ids)
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [{ op: 'engrave', face: 3, skill }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 2; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 13000 + n++ }))
+        }
+    }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['rafale après le coup de base de son jet', 'compétence à condition fausse : face nue', 'charges tirées d’un statut', 'sentence', 'rancune', 'compétence greffée'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
   it('aucune anomalie pour des personnages forgés au hasard, ni pour le boss', () => {
     const { audit, problems, seen } = createAudit()

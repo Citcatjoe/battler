@@ -159,6 +159,23 @@ Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, 
 - **Ervald**, le plus bas (45,8 %), perd surtout contre le nouveau Thaldrin (47 → 40 %). Leviers mesurés, non appliqués : critique 26 %, 47,8 % (+2,0 ± 0,3) ; 58 PV, 50,4 % (+4,6 ± 0,5).
 - **Brokk** (52,0 → 49,8 %) et **Morgrut** (49,1 → 47,2 %) reculent face au nouveau Thaldrin (Brokk 55 → 44 %, Morgrut 59 → 42 % contre lui).
 
+## Les consommatrices de la phase 8 (0.114.0)
+
+Premier lot de compétences qui consomment une ressource du jeu ([SORTS.md](SORTS.md) § 22). Aucune n'est sur un dé vanilla : chacune est **hors kit** chez un personnage (gravable par lui en campagne, au compendium sous son nom) et entre dans le **répertoire** des autres qui produisent sa ressource. Le tournoi ne change pas (empreinte de `balance.test.ts` inchangée) ; en tournoi et en saison, la forge peut les graver comme toute compétence gravable.
+
+| Personnage | Hors kit | Répertoire (ajouts) | Ce qu'elle consomme chez lui | Gravée sur son 3 (rang I) |
+| --- | --- | --- | --- | --- |
+| Gorak | Curée | — | Pourfendre (face 2) | +7,0 |
+| Elaria | — | Curée (fil Chasse) | Pourfendre, de son répertoire | 0 seule ; +5,4 avec Pourfendre gravé (laboratoire) |
+| Brokk | — | Rancune (Rempart), Curée (Représailles) | ses coups encaissés ; Épines acérées (face 1) | Rancune +16,2, Curée +10,4 |
+| Ervald | Récolte, Virulence | — | Aura glaciale (face 1) | Récolte +8,7, Virulence +8,4 |
+| Ysolde | Sentence | — | Aura de sainteté (face 1) | +8,1 |
+| Naraxes | — | Virulence (fil Poison) | le Souffle de la tombe ou l'Aura glaciale de son répertoire ; pas sa décoction, dont le Poison s'estompe avant son jet | +0,7 avec la seule décoction |
+| Aldric | — | Rancune (Ombre du serment brisé : « chaque coup reçu est une dette ») | ses coups encaissés, son critique ×2,5 | +15,9 |
+| Morgrut | Rancune (Masse) | Curée (Colère) | ses coups encaissés, son coup de 7 à 9 qui critique ×2 ; Pourfendre de son répertoire | Rancune +19,8 (au bord de la bande) ; Curée +4,0 avec Pourfendre gravé (laboratoire) |
+
+Thaldrin et Fanchon ne reçoivent rien. Le Rempart hérissé (Brokk, Thaldrin) est écarté. Morgrut n'est plus sans aucune compétence : son dé reste nu, mais la Rancune est sa compétence hors kit ; avec elle, il critique, et la Plume d'aigle (son partenaire, +0,30 en log-cote) lui est offerte en campagne.
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.

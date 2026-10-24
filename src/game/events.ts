@@ -83,9 +83,21 @@ export type Effect =
   /**
    * Pose un statut. `fromHit` (Pourfendre, 0.107.0) : des charges en plus, la part `fromHit` des PV que le coup de ce jet
    * a retirés, arrondie au-dessus (une compétence qui modifie son coup part s'il touche) ; `stacks` s'y ajoute (0 permis).
+   * `fromStatus` (Virulence, 0.114.0) : des charges en plus, `factor` fois les charges de `status` que porte `who`
+   * (relatif au porteur), lues au déclenchement ; `stacks` s'y ajoute (0 permis). Le Poison de l'adversaire, `factor` 2,
+   * sur l'adversaire : son Poison triplé.
    * `power` (0.110.0) : l'intensité que les rangs d'aiguisage donnent au statut (`Status.power`, axe `power`).
    */
-  | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target; fromHit?: number; power?: number }
+  | {
+      type: 'applyStatus'
+      status: StatusId
+      stacks: number
+      turns?: number
+      target?: Target
+      fromHit?: number
+      fromStatus?: { status: StatusId; who: Target; factor: number }
+      power?: number
+    }
   /**
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count` derniers
    * apparus (un statut renforcé garde son rang). Les mécanismes de compétence et de forme ne se retirent pas.
@@ -232,6 +244,9 @@ const who = (target: Target | undefined) => (target === 'opponent' ? "à l'adver
 
 const pct = (ratio: number) => `${Math.round(ratio * 100)} %`
 
+/** Un statut multiplié (Virulence) : « double », « triple »… ; au-delà, « multiplie par N ». */
+const MULTIPLY: Record<number, string> = { 2: 'double', 3: 'triple', 4: 'quadruple' }
+
 export function describeEffect(effect: Effect): string {
   const on = who(effect.target)
   switch (effect.type) {
@@ -246,6 +261,15 @@ export function describeEffect(effect: Effect): string {
       // Pourfendre : des charges tirées du coup, que la définition ne connaît pas
       if (effect.fromHit !== undefined)
         return `${def.name}${effect.target === 'opponent' ? " sur l'adversaire" : ''} : ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des PV retirés (arrondie au-dessus)${effect.stacks ? `, plus ${effect.stacks}` : ''}${def.reactions?.hurt ? ' ; il coule dès le coup suivant' : ''}`
+      // Virulence : des charges tirées d'un statut ; le même statut, au même porteur, se multiplie (« Triple le Poison »)
+      if (effect.fromStatus !== undefined) {
+        const from = effect.fromStatus
+        const whose = from.who === 'opponent' ? "de l'adversaire" : 'du porteur'
+        const plus = effect.stacks ? `, +${effect.stacks}` : ''
+        if (from.status === effect.status && from.who === (effect.target ?? 'self'))
+          return `${MULTIPLY[from.factor + 1] ?? `multiplie par ${from.factor + 1}`} le ${def.name} ${whose}${plus}`
+        return `${def.name}${on ? ` ${on}` : ''} : ${from.factor} par charge ${deName(STATUSES[from.status].name)} ${whose}${plus}`
+      }
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
       const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }
       return `${def.name}${on ? ` ${on}` : ''} : ${lowerFirst(def.describe(status))}`
@@ -318,8 +342,8 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   const effects = e.effects.map((effect, k) => {
     // Une compétence qui modifie son coup (Pourfendre) : ses effets n'arrivent que s'il touche
     const touch = modifies && k === 0 ? "s'il touche, " : ''
-    // Pourfendre (`fromHit`) : ses charges viennent du coup, la phrase de l'effet le dit
-    if (effect.type !== 'applyStatus' || effect.fromHit !== undefined) return `${touch}${describeEffect(effect)}`
+    // Pourfendre (`fromHit`), Virulence (`fromStatus`) : leurs charges viennent du coup ou d'un statut, la phrase de l'effet le dit
+    if (effect.type !== 'applyStatus' || effect.fromHit !== undefined || effect.fromStatus !== undefined) return `${touch}${describeEffect(effect)}`
     const def = STATUSES[effect.status]
     const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
     const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }

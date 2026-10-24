@@ -145,6 +145,18 @@ export function createAudit() {
         if (slots[slots.length - 1] !== dealt || slots.length > STATUSES[id].fillsOnHurt!.slots) flag('jauges : coup mal rangé', r, i, `${slots.join(' · ')} vs ${dealt}`)
         else see(coin ? 'pile : jauges' : 'jauges')
       }
+      // Rancune (0.114.0) : chaque coup qui touche son porteur lui donne un Critique assuré, puis une charge part ; seule
+      // une Rancune déjà là au début du coup y réagit (règle 9)
+      const grudged = reaction('grudge')
+      if (find(stateBefore(i).statuses[target], 'grudge') && !grudged && !died) flag('rancune non déclenchée', r, i, '')
+      if (grudged) {
+        const was = before(grudged)
+        const crit = grudged.effects[0]
+        if (grudged.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== target || crit.stacks !== 1)
+          flag('rancune : effet faux', r, i, JSON.stringify(grudged.effects))
+        if ((find(grudged.state.statuses[target], 'grudge')?.stacks ?? 0) !== (find(was.statuses[target], 'grudge')?.stacks ?? 0) - 1) flag('rancune non estompée', r, i, '')
+        see(coin ? 'pile : rancune' : 'rancune')
+      }
       // Épines
       if (find(s.statuses[target], 'thorns') && !reaction('thorns') && !died) flag('épines non déclenchées', r, i, '')
       // Saignement : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une
@@ -234,6 +246,20 @@ export function createAudit() {
             flag('charges tirées du coup fausses', r, i, `${b.event.name} ${applied.stacks}`)
           else see('charges tirées du coup')
         })
+        // Charges tirées d'un statut (0.114.0, Virulence) : `factor` fois ses charges chez son porteur juste avant l'étape,
+        // plus celles de la définition ; le même statut sur la même cible, sans plafond ni opposition, se multiplie
+        asked?.forEach((effect, k) => {
+          const applied = b.event.effects[k]
+          if (effect.type !== 'applyStatus' || effect.fromStatus === undefined || applied?.type !== 'applyStatus') return
+          const from = effect.fromStatus
+          const holder = from.who === 'opponent' ? 1 - b.event.side : b.event.side
+          const read = find(prev.statuses[holder], from.status)?.stacks ?? 0
+          const now = find(s.statuses[holder], from.status)?.stacks ?? 0
+          const multiplies = from.status === applied.status && holder === applied.target && applied.result.kind === 'applied' && !applied.result.cancelled && STATUSES[from.status].maxStacks === undefined
+          if (applied.stacks !== effect.stacks + from.factor * read) flag('charges tirées d’un statut fausses', r, i, `${b.event.name} ${applied.stacks} pour ${read}`)
+          else if (multiplies && now !== read * (from.factor + 1) + effect.stacks) flag('statut multiplié faux', r, i, `${b.event.name} ${read} → ${now}`)
+          else see('charges tirées d’un statut')
+        })
         // Relâche en part (0.107.0, Rétribution) : la part des jauges, arrondie au-dessus, au moins le minimum
         asked?.forEach((effect, k) => {
           const applied = b.event.effects[k]
@@ -254,6 +280,25 @@ export function createAudit() {
           if (prev.statuses[target].some((x) => isMechanic(x.id) && STATUSES[x.id].polarity === effect.polarity)) see('purge face à un mécanisme')
         })
       }
+      // Sentence (0.114.0) : chaque soin de son porteur (une étape qui lui rend des PV) la fait réagir une fois, avec
+      // l'étape soignante pour cause, de ses charges du moment (le registre le dit) ; sa perte ne soigne rien : sans chaîne
+      if (b.type === 'statusReaction' && b.status === 'sentence') {
+        const held = find(prev.statuses[b.side], 'sentence')
+        const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const healedBy = !!cause && beatEffects(cause).some((e) => e.type === 'heal' && e.target === b.side && e.amount > 0)
+        const asked = held ? STATUSES.sentence.reactions?.healed?.(held) : undefined
+        const loss = b.effects[0]
+        if (b.trigger !== 'healed' || !held || !healedBy) flag('sentence hors d’un soin', r, i, `${b.trigger} ${cause?.type}`)
+        else if (b.effects.length !== 1 || loss?.type !== 'damage' || loss.target !== 1 - b.side || asked?.[0]?.type !== 'damage' || loss.amount !== asked[0].amount)
+          flag('sentence : perte fausse', r, i, JSON.stringify(b.effects))
+        else see('sentence')
+      } else
+        for (const side of [0, 1] as const) {
+          if (!find(prev.statuses[side], 'sentence') || !beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0)) continue
+          const caused = r.beats.filter((x) => x.cause === i)
+          const reacted = caused.some((x) => x.type === 'statusReaction' && x.status === 'sentence' && x.side === side)
+          if (!reacted && !caused.some((x) => x.state.hp.some((h) => h === 0)) && s.hp.every((h) => h > 0)) flag('sentence non déclenchée', r, i, `${b.type} côté ${side}`)
+        }
       // Règle 9 (2026-10-21) : pendant un coup (attaque ou pièce, jusqu'au coup, au jet ou à la rafale suivante),
       // seul un statut déjà là au début du coup réagit. Les jauges ne réagissent pas : elles se remplissent.
       if (b.type === 'statusReaction' && !STATUSES[b.status].fillsOnHurt) {
@@ -321,10 +366,19 @@ export function createAudit() {
         // Déclenchements de chaque compétence avant ce jet (avant son étape roll s'il en a une) : une compétence à `limit`
         // épuisée laisse sa face nue (0.107.0, Soliste, Peur), Crescendo (`buildsUp`) y lit son multiplicateur
         const firedBefore = (id: string) => r.beats.slice(0, rolled ? b.cause! : i).filter((x) => x.type === 'event' && x.event.side === att && x.event.eventId === id).length
+        // Une compétence greffée ou qui remplace le coup se décide au jet, sur l'état de ce moment (son étape roll, sinon
+        // l'étape d'avant) : une condition fausse laisse sa face nue (0.114.0, la Curée sans Saignement), comme une
+        // compétence épuisée. Celle qui modifie le coup lit la sienne dans les fenêtres du coup
+        const decided = rolled ? r.beats[b.cause!].state : prev
         const faceSkills = a.plain
           ? []
           : r.fighters[att].events.filter(
-              (e) => isRollTrigger(e.trigger) && inForm(att, e) && rollMatches(e.trigger, a.roll, DIE_FACES) && (e.limit === undefined || firedBefore(e.id) < e.limit),
+              (e) =>
+                isRollTrigger(e.trigger) &&
+                inForm(att, e) &&
+                rollMatches(e.trigger, a.roll, DIE_FACES) &&
+                (e.limit === undefined || firedBefore(e.id) < e.limit) &&
+                (relationOf(e) === 'modify' || !e.when || e.when.every((c) => holdsBefore(c, att, decided, r, b.turn))),
             )
         const replaces = faceSkills.some((e) => relationOf(e) === 'replace')
         const grafts = !replaces && faceSkills.some((e) => relationOf(e) === 'graft')
@@ -419,7 +473,7 @@ export function createAudit() {
             // Une compétence imprimée sur plusieurs faces (la Foudre du druide) se reconnaît à son déclencheur
             const did = after.some((x) => x.type === 'event' && x.event.eventId === e.id && x.event.trigger === e.trigger)
             const someoneDied = after.some((x) => x.state.hp.some((h) => h === 0))
-            if (spent) see('compétence épuisée')
+            if (spent) see(e.limit !== undefined && firedBefore(e.id) >= e.limit ? 'compétence épuisée' : 'compétence à condition fausse : face nue')
             if (relation !== 'graft' || a.replaced) {
               if (should !== did && !(should && someoneDied)) flag(`compétence ${e.name} mal déclenchée`, r, i, `roll ${a.roll}`)
               else if (did && relation === 'modify') see('compétence qui modifie son coup')
@@ -493,9 +547,13 @@ export function createAudit() {
           const posedCause = posed?.cause !== undefined ? r.beats[posed.cause] : undefined
           if (posedCause?.type === 'attack' && posedCause.attack.plain) flag('Furie en chaîne', r, i, '')
           // 0.110.0 (RESOLUTION § 2) : la rafale a sa cause dans le même tour et suit le jet qui l'a posée, avant tout
-          // autre coup ; toutes ses charges partent à la fois
+          // autre coup ; toutes ses charges partent à la fois. Posée par une greffe (la Curée, 0.114.0), elle suit le coup
+          // de base de son jet : le seul coup permis entre les deux est celui de l'étape roll qui a fait partir la greffe
+          const graftRoll = posed?.cause !== undefined && r.beats[posed.cause].type === 'roll' ? posed.cause : undefined
+          const between = r.beats.slice((b.cause ?? i) + 1, i).filter((x) => x.type === 'attack')
           if (!posed || posed.turn !== b.turn) flag('Furie : rafale reportée', r, i, `cause tour ${posed?.turn}`)
-          else if (r.beats.slice((b.cause ?? i) + 1, i).some((x) => x.type === 'attack')) flag('Furie : un coup passe avant la rafale', r, i, '')
+          else if (between.some((x) => graftRoll === undefined || x.cause !== graftRoll)) flag('Furie : un coup passe avant la rafale', r, i, '')
+          else if (between.length) see('rafale après le coup de base de son jet')
           else see('furie juste après son jet')
           const held = b.status ? find(prev.statuses[b.side], b.status) : undefined
           const charges = held?.stacks ?? 0

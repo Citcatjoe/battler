@@ -96,6 +96,11 @@ export type IconName =
   | 'state-firefly'
   | 'state-spoiled'
   | 'state-vulnerable'
+  // Planche v17 (2026-10-25) : phase 8, premier lot ; la Rancune reprend `grudge` (planche v8)
+  | 'quarry'
+  | 'harvest'
+  | 'virulence'
+  | 'sentence'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -141,6 +146,10 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   casting: 'casting',
   bearMight: 'bear-might',
   wildAura: 'grudge-aura',
+  // Phase 8, premier lot (0.114.0) : la compétence et son statut partagent l'icône
+  quarry: 'quarry',
+  sentence: 'sentence',
+  grudge: 'grudge',
 }
 
 /**

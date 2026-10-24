@@ -727,8 +727,12 @@ export function simulateCombat(
         return { type: 'damage', target, amount, source: effect.source, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
       }
       case 'applyStatus': {
-        // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus
-        const status = statusOfEffect(effect, effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0)
+        // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus ;
+        // Virulence (`fromStatus`) : `factor` fois les charges d'un statut, lues maintenant chez son porteur
+        const fromHit = effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0
+        const from = effect.fromStatus
+        const fromStatus = from ? from.factor * stacksOf(states[from.who === 'opponent' ? other(owner) : owner].statuses, from.status) : 0
+        const status = statusOfEffect(effect, fromHit + fromStatus)
         const { stacks, turns } = status
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
         state.statuses = list

@@ -72,7 +72,7 @@ export const STATES: Record<StateId, StateDef> = {
   extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Il lance des dés de plus à sa prochaine action, chacun résolu comme un jet.', counter: 'status' },
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
   drain: { name: 'Drain', polarity: 'positive', summary: "Ses prochains coups qui touchent lui rendent les PV qu'ils retirent.", counter: 'status' },
-  reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup qui le touche renvoie une part des dégâts.', counter: 'status' },
+  reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup qui le touche lui revient : une part des dégâts renvoyée, ou son prochain coup critique.', counter: 'status' },
   thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup encaissé fait saigner l'attaquant.", counter: 'status' },
   immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut plus lui être posé.', counter: 'none' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
@@ -141,6 +141,8 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   bleed: tray('bleed'),
   whistling: tray('healing', () => WHISTLE_HEAL),
   falseNote: tray('spoiled', (s) => FALSE_NOTE * s.stacks),
+  // Rancune (0.114.0) : comme la Riposte, elle attend le coup qui le touche ; elle se range sous le Renvoi
+  grudge: tray('reflect'),
 
   // Une aura sur son porteur est une modification permanente, de l'identité : elle se lit sur son anneau (sa
   // valeur, `badge`), dans la barre de compétences, et ne se relaie pas dans la zone d'état (0.79.7)
@@ -161,6 +163,8 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   frostAura: aura(),
   decoctionAura: aura(),
   rotAura: aura(),
+  // Sentence (0.114.0) : elle agit sur l'adversaire à chaque soin du porteur, en dégâts directs ; rien de durable à relayer
+  sentence: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

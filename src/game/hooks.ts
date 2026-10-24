@@ -94,6 +94,11 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   bearMight: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   // 0.107.0 : elle écrit l'attaque (minimum et maximum), au lieu d'un bonus après le critique
   wildAura: { side: 'self', consumes: ['moment:hit'], produces: ['stat:attackMin', 'stat:attackMax', 'damage:instant'] },
+  // Phase 8, premier lot (0.114.0) : la Curée, une rafale comme la Furie ; la Sentence vit des soins du porteur, la
+  // Rancune des coups qu'il encaisse
+  quarry: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  sentence: { side: 'self', consumes: ['moment:heal'], produces: ['damage:instant'] },
+  grudge: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:crit'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -134,6 +139,8 @@ export function eventHooks(e: CharacterEvent): Hooks {
   const on = triggerHook(e.trigger)
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
+  // Virulence : elle lit les charges d'un statut
+  for (const x of e.effects) if (x.type === 'applyStatus' && x.fromStatus) h.consumes.push(`status:${x.fromStatus.status}`)
   // Crescendo, Soliste : ce coup ×N, un gros coup qui touche
   if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:instant')
   for (const effect of e.effects) addEffect(h, effect)
@@ -180,6 +187,26 @@ export function relicNeeds(r: Relic): Hook[] {
   const on = r.trigger?.type === 'strike' ? r.trigger.on : undefined
   if (on === 'healed' || on === 'dodge' || on === 'crit') needs.push(on === 'healed' ? 'moment:heal' : `moment:${on}`)
   return needs
+}
+
+/** Les moments qu'un combat ne donne pas à coup sûr : un soin, une esquive, un critique. */
+const RARE_MOMENTS: readonly Hook[] = ['moment:heal', 'moment:dodge', 'moment:crit']
+
+/**
+ * Ce qu'une compétence attend pour servir (0.114.0, la règle de l'offre pertinente des reliques étendue aux compétences) :
+ * les statuts que ses conditions ou ses charges lisent chez l'adversaire (la Curée, le Saignement ; la Virulence, le
+ * Poison), et les moments rares que consomment les statuts qu'elle pose (la Sentence, un soin du porteur). Une compétence
+ * dont un besoin n'est pas à la portée du champion est une gravure qui vaut 0 : la campagne ne l'offre pas.
+ */
+export function skillNeeds(e: CharacterEvent): Hook[] {
+  const needs: Hook[] = []
+  for (const c of e.when ?? []) if (c.type === 'hasStatus' && c.who === 'opponent') needs.push(`status:${c.status}`)
+  for (const x of e.effects) {
+    if (x.type !== 'applyStatus') continue
+    if (x.fromStatus?.who === 'opponent') needs.push(`status:${x.fromStatus.status}`)
+    for (const h of STATUS_HOOKS[x.status].consumes ?? []) if (RARE_MOMENTS.includes(h)) needs.push(h)
+  }
+  return [...new Set(needs)]
 }
 
 /** Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits. */

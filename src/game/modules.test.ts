@@ -23,6 +23,7 @@ import {
   drawBuild,
   drawReward,
   offerableRelics,
+  offerableSkills,
   encountersFor,
   opponentOf,
   HP_FLOOR,
@@ -63,7 +64,7 @@ import {
   type Tournament,
 } from './tournament'
 import { OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
-import { eventHooks, linkBetween, relicHooks, validateHooks } from './hooks'
+import { eventHooks, linkBetween, relicHooks, skillNeeds, validateHooks } from './hooks'
 
 const duel = (a: string, b: string, seed: number) =>
   simulateCombat([createCharacter(a), createCharacter(b)], { rng: seededRng(seed) })
@@ -99,8 +100,8 @@ describe('catalogue des compétences', () => {
       for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
     // Une ligne par compétence, avec ses déclencheurs (la Foudre du druide, sur le 2 de son dé vanilla depuis la 0.113.0)
     expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalTwo'])
-    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune
-    expect(skills.some((s) => s.owners.some((c) => c.id === 'morgrut'))).toBe(false)
+    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune sur son dé ; sa Rancune est hors kit (0.114.0)
+    expect(skills.filter((s) => s.owners.some((c) => c.id === 'morgrut')).map((s) => [s.event.id, s.outside])).toEqual([['grudge', true]])
     // Hors kit (règles v2, d6) : listée chez son personnage, sans face
     expect(skills.find((s) => s.event.id === 'power-aura')).toMatchObject({ outside: true, triggers: [], owners: [createCharacter('gorak')] })
     // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
@@ -133,8 +134,8 @@ describe('catalogue des statuts', () => {
         .find((e) => e.id === id)!
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
-    // Poison : posé par Ervald, et aussi par deux auras (effet de tour, réaction)
-    expect(who('poison')).toEqual(['skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
+    // Poison : posé par Ervald (Souffle de la tombe, Virulence), et aussi par deux auras (effet de tour, réaction)
+    expect(who('poison')).toEqual(['skill:ervald', 'skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
     // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
@@ -144,7 +145,8 @@ describe('catalogue des statuts', () => {
     expect(who('bearMight')).toEqual(['form:thaldrin'])
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
     expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk'])
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria'])
+    // La Rancune (0.114.0) en pose un à chaque coup encaissé
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -727,15 +729,17 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture'])
-    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave'])
-    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents et Pile ou face
-    // posent un mécanisme, muet (0.110.0) : leur rafale et leur pièce sonnent
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip'])
-    // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak, ou Ervald pour l'Aura de puissance
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture', 'sentence'])
+    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
+    family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
+    family('heal', ['harvest'])
+    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée et Pile ou
+    // face posent un mécanisme, muet (0.110.0) : leur rafale et leur pièce sonnent
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry'])
+    // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak (il fait saigner), ou Ervald pour
+    // l'Aura de puissance et les consommatrices du Poison (il empoisonne)
     const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
-      createCharacter(skill.id === 'power-aura' ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }]),
+      createCharacter(['power-aura', 'harvest', 'virulence'].includes(skill.id) ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }]),
     )
     const seen: Record<string, Set<string | null>> = {}
     for (const a of [...CHARACTERS, ...carriers])
@@ -983,10 +987,34 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     // Le soin reçu : Elaria n'en a pas, la Dent de loup (Vol de vie) lui en donne
     expect(offerableRelics({ championId: 'elaria', forge: [], relics: [] })).not.toContain('abbey-incense')
     expect(offerableRelics({ championId: 'elaria', forge: [], relics: ['wolf-fang'] })).toContain('abbey-incense')
-    // Morgrut n'esquive ni ne critique : ni Conque des vents ni Plume d'aigle, jusqu'au Dé creux (Esquive améliorée)
+    // Morgrut n'esquive pas : pas de Conque des vents, jusqu'au Dé creux (Esquive améliorée). Il ne critique pas, mais sa
+    // Rancune (hors kit, 0.114.0) donne des critiques : la Plume d'aigle, son partenaire (+0,30), lui est offerte
     expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).not.toContain('wind-conch')
-    expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).not.toContain('eagle-feather')
+    expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).toContain('eagle-feather')
     expect(offerableRelics({ championId: 'morgrut', forge: [], relics: ['hollow-die'] })).toContain('wind-conch')
+  })
+
+  it('offre pertinente des compétences (0.114.0) : Graver ne propose pas une consommatrice dont la ressource ne peut pas arriver', () => {
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const lot = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge'].map(skill)
+    // Ce qu'elles attendent : le Saignement, le Poison, un soin ; la Rancune vit des coups encaissés, que tout le monde reçoit
+    expect(lot.map((s) => skillNeeds(s))).toEqual([['status:bleed'], ['status:poison'], ['status:poison'], ['moment:heal'], []])
+    // Ysolde ne fait ni saigner ni empoisonner : de tout le lot, seules la Sentence (ses soins) et la Rancune lui restent
+    expect(offerableSkills({ championId: 'ysolde', forge: [], relics: [] }, lot).map((s) => s.id)).toEqual(['sentence', 'grudge'])
+    // Elaria : le Saignement de Pourfendre (son répertoire) ; un soin, seulement avec la Dent de loup (Vol de vie)
+    expect(offerableSkills({ championId: 'elaria', forge: [], relics: [] }, lot).map((s) => s.id)).toEqual(['quarry', 'grudge'])
+    expect(offerableSkills({ championId: 'elaria', forge: [], relics: ['wolf-fang'] }, lot).map((s) => s.id)).toEqual(['quarry', 'sentence', 'grudge'])
+    // Chaque répertoire de campagne ne porte que des compétences à la portée de son champion, et l'offre n'en sort pas
+    for (const id of CHARACTER_IDS) {
+      const run = { championId: id, forge: [], relics: [] }
+      expect(offerableSkills(run, CAMPAIGN_REPERTOIRES[id]).map((s) => s.id), id).toEqual(CAMPAIGN_REPERTOIRES[id].map((s) => s.id))
+      const reach = offerableSkills(run, CAMPAIGN_REPERTOIRES[id]).map((s) => s.id)
+      for (let k = 0; k < 20; k++) {
+        const reward = drawReward(run, 'forge', seededRng(k))
+        if (reward.kind !== 'forge') throw new Error('forge attendue')
+        for (const o of reward.offer) if (o.op === 'engrave') expect(reach, `${id}, graine ${k}`).toContain(o.skill.id)
+      }
+    }
   })
 
   it('un acte : une récompense par combat normal gagné, dans l’ordre de REWARDS, le boss au dernier nœud, sa défaite gagne la partie', () => {

@@ -32,6 +32,27 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.114.0] — 2026-10-25
+
+Règles v2, phase 8, premier lot de contenu : cinq compétences consommatrices, une par ressource orpheline (Saignement, Poison, soins, coups encaissés). L'utilisateur a dit « enchaîne » après la 0.113.0 : les choix ouverts de la proposition ont été tranchés par l'agent, **à confirmer en jeu** (cinq compétences sans le Rempart hérissé, la Virulence « Triple », la Rancune critique, Naraxes inchangée hormis la Virulence dans son répertoire).
+
+### Ajouté
+- **Cinq compétences** ([SORTS.md](docs/SORTS.md) § 22), hors kit de leur porteur : **Curée** (`quarry`, Gorak) : si l'adversaire saigne, deux coups de base bruts de plus, tout de suite, après le coup de base du jet ; **Récolte** (`harvest`, Ervald) : si l'adversaire est empoisonné, +7 PV ; **Virulence** (`virulence`, Ervald) : si l'adversaire est empoisonné, triple son Poison ; **Sentence** (`sentence`, Ysolde) : aura, l'adversaire perd 1 PV chaque fois qu'il regagne des PV (2 charges au plus) ; **Rancune** (`grudge`, Morgrut) : son prochain coup est critique quand il encaisse un coup, 1x. Mesurées gravées chez leur producteur (`scripts/skills.report.ts`, 400 combats par duel) : Curée +10,4 (Brokk), Récolte +8,7 et Virulence +8,4 (Ervald), Sentence +8,1 (Ysolde), Rancune +14,2 en moyenne ; rangs II de +3,0 à +5,9 chez leurs producteurs.
+- **Trois statuts** au registre : `quarry` (rafale de deux coups bruts), `sentence` (aura qui réagit au soin), `grudge` (Critique assuré à chaque coup encaissé, s'estompe ; rangé sous l'état Renvoi, dont le résumé est élargi).
+- **`applyStatus.fromStatus`** (`{ status, who, factor }`) : des charges tirées d'un statut, lues quand l'effet part (la Virulence) ; texte « Triple le Poison de l'adversaire » ; `validateRoster` vérifie le facteur.
+- **Répertoires** : Elaria + Curée ; Brokk + Rancune, + Curée ; Naraxes + Virulence ; Aldric + Rancune ; Morgrut + Curée (et une `reserve` : la Rancune).
+- **Offre de compétences pertinente** en campagne (`skillNeeds`, `offerableSkills`) : Graver ne tire que les compétences dont le besoin est à la portée du champion, comme les reliques depuis la 0.111.0. Morgrut reçoit maintenant la Plume d'aigle.
+- **Icônes** (planche v17, [STYLE_BIBLE.md](docs/STYLE_BIBLE.md) § 7) : Curée, Récolte, Virulence et Sentence, générées avec Artlist (GPT Image 2.5 en image à image, référence : seize icônes de compétences ; deux versions, 160 crédits), découpées par `scripts/slice-icons.py`, optimisées ; la Rancune reprend `grudge.png`.
+- Tests : bloc « phase 8, premier lot » dans `combat.test.ts` et `audit.test.ts` ; offre pertinente, catalogue et sons dans `modules.test.ts`. 364 tests.
+
+### Modifié
+- **Une compétence greffée ou qui remplace dont la condition est fausse au jet laisse sa face nue** ([RESOLUTION.md](docs/RESOLUTION.md) § 2) ; l'audit (`audit.ts`) la lit comme le moteur, et admet qu'une rafale posée par une greffe suive le coup de base de son jet. Contrôles neufs : charges tirées d'un statut, Rancune, Sentence.
+- Épines acérées rangée en Affliction ([FAMILLES.md](docs/FAMILLES.md)).
+- Campagne (`CAMPAIGN_RUNS=30 npm run campaign`, mêmes graines) : paires liées par build 3,27 → 3,70 ; boss atteint 24 → 21 %, acte gagné 14 → 10 % (bruit ±2,5). Empreinte de non-régression inchangée (aucune compétence de kit touchée), pas de `npm run balance`.
+
+### Retiré
+- Laboratoire : séries 18 à 23 de `scripts/lab/ideas.ts` (statuts d'essai aux ids du registre) ; leurs rapports restent dans `logs/lab/`.
+
 ## [0.113.0] — 2026-10-25
 
 Les décisions de l'utilisateur du 2026-10-25 : un seul modèle de personnage pour tous les modes, la Purification sans effet sur soi, la courbe de campagne option B.

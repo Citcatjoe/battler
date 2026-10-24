@@ -1201,3 +1201,43 @@ Mesuré en même temps que le passage au personnage vanilla (Ysolde : Aura de sa
 | Lumière 7 | 45,9 → 50,6 % | +4,8 ± 0,5 |
 
 Le personnage vanilla laisse la Foudre du druide sur une seule face : +6,0 points dans son kit (+18,4 sur trois faces), la plus faible compétence du dé du roster ([PERSONNAGES.md](PERSONNAGES.md), « Un seul modèle de personnage »).
+
+## 22. Phase 8, premier lot : cinq consommatrices (0.114.0)
+
+**Le constat** ([PROGRESSION.md](PROGRESSION.md) § 0 bis, § 13.3) : quatre ressources du jeu n'avaient pas de consommateur (le Poison, le Saignement, les soins, les coups encaissés). La proposition de l'agent Lot8Design (2026-10-25, six compétences, séries 18 à 23 du laboratoire, 400 combats par duel, 3 600 par hôte) a été livrée à cinq : **Curée, Récolte, Virulence, Sentence, Rancune**. Le Rempart hérissé (« +8 armure temporaire si l'adversaire saigne ») est écarté : son rang II restait hors bande (+1,3 à +2,0 quel que soit le pas d'armure essayé). Décisions prises par l'agent principal, à confirmer en jeu par l'utilisateur.
+
+| Compétence | Famille | Texte en jeu | Rang (axe) | Porteur (hors kit) | Répertoires |
+| --- | --- | --- | --- | --- | --- |
+| **Curée** (`quarry`) | Tempo (Saignement → coups) | « Deux coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence). » · si l'adversaire porte Saignement | une charge, deux coups (`stacks` +1) | Gorak | Elaria, Brokk, Morgrut |
+| **Récolte** (`harvest`) | Soin (Poison → soin) | « +7 PV. » · si l'adversaire porte Poison | +4 PV (`amount`) | Ervald | — |
+| **Virulence** (`virulence`) | Affliction (l'amplificateur du Poison) | « Triple le Poison de l'adversaire. » · si l'adversaire porte Poison | +3 Poison à plat (`stacks`) | Ervald | Naraxes |
+| **Sentence** (`sentence`) | Affliction (soins → dégâts directs), une aura | « L'adversaire perd 1 PV chaque fois qu'il regagne des PV. » · aura permanente, 2 charges au plus | +1 PV par soin (`power`) | Ysolde | — |
+| **Rancune** (`grudge`) | Précision (coups encaissés → critiques) | « Son prochain coup est critique quand il encaisse un coup, 1x. » | une fois de plus (`stacks` +1) | Morgrut | Brokk, Aldric |
+
+**Ce que le moteur a reçu** : un seul champ, `applyStatus.fromStatus` (`{ status, who, factor }` : `factor` fois les charges du statut que porte `who`, lues quand l'effet part, plus `stacks`) pour la Virulence ×3, qu'une émulation par seuils remplaçait au laboratoire ; trois statuts au registre (`quarry`, `sentence`, `grudge`) avec les crochets existants (`instantStrikes`, `reactions.healed`, `reactions.hurt`, `decays`). L'audit (`audit.ts`) lit désormais les conditions d'une compétence greffée ou qui remplace (une condition fausse laisse la face nue, comme le moteur), et admet qu'une rafale posée par une greffe suive le coup de base de son jet : les deux faux positifs signalés par le laboratoire (2 800 à 3 800 fois par idée).
+
+**L'offre pertinente, étendue aux compétences** (règle des reliques de la 0.111.0) : en campagne, Graver ne tire que les compétences du répertoire dont le besoin est à la portée du champion (`skillNeeds`, `offerableSkills`) : un statut lu chez l'adversaire (Saignement, Poison), un soin, une esquive ou un critique consommés par le statut posé. Chaque répertoire livré ne porte que des compétences à la portée de son champion ; la règle garde les suivants honnêtes.
+
+**Pas de fonds commun** : la proposition mettait aussi la Rancune dans le « fonds commun » de PROGRESSION § 7 ; il n'existe pas dans le code (la campagne tire dans `reserve` + `repertoire`, le tournoi et la saison dans toutes les compétences gravables). Rien n'a été inventé : la Rancune est chez Morgrut (hors kit), Brokk et Aldric.
+
+### Mesures une fois au registre (`scripts/skills.report.ts`, 400 combats par duel, mêmes graines)
+
+Tables 2 et 3 (`SKILLS_ENGRAVE=quarry,harvest,virulence,sentence,grudge`, `SKILLS_PART=engrave` puis `rank`) : `logs/skills/2026-10-24-23-12-34_v0.113.0.md` et `logs/skills/2026-10-24-23-13-14_v0.113.0.md`. Elles retrouvent le laboratoire au dixième près (rapports `logs/lab/2026-10-24-22-52-18`, `22-53-41`, `22-46-55`, `22-49-46`) : la Virulence, émulée par des seuils, et les trois statuts d'essai étaient fidèles.
+
+| Compétence | Gravée, rang I : registre (laboratoire) | Rang II : registre (laboratoire) |
+| --- | --- | --- |
+| Curée | Brokk **+10,4** (+10,4), Gorak +7,0 (+7,0) ; les huit autres +0,0 | Brokk +3,3 (+3,2) ; Gorak non isolé (moyenne des dix hôtes +0,6) |
+| Récolte | Ervald **+8,7** (+8,7), Naraxes +1,1 (+1,1) | Ervald +3,0 (+3,0) |
+| Virulence | Ervald **+8,4** (+8,4), Naraxes +0,7 (+0,7) | Ervald +3,3 (+3,2) |
+| Sentence | Ysolde **+8,1** (+8,1), Ervald +2,4 (+2,4), autres +0,4 à +1,3 | Ysolde +4,6 (+4,6) |
+| Rancune | moyenne **+14,2** (+14,2) : Fanchon +8,6 → Morgrut +19,8 | moyenne +5,9 (+5,9) : Naraxes +4,4 → Ervald +7,4 |
+
+Le drapeau « hors bande (faible) » des moyennes sur dix hôtes est attendu : une consommatrice ne vaut que chez ses producteurs (comme la Fiole, le Croc et l'Encens, [RELIQUES.md](RELIQUES.md) § 13). Chez eux, les cinq sont dans la bande d'une gravure (8 à 20 points). Les rangs II de la Curée, de la Récolte et de la Virulence (+3,0 à +3,3 chez leur producteur) sont au bas de la bande d'un rang (3 à 8) ; Gorak (+2,4 au laboratoire) est en dessous.
+
+**Synergies** (laboratoire, série 21 et 22, log-cote ; non remesurées) : Curée × Épines acérées +0,42, × Collier de ronces +0,41 ; Récolte × Aura glaciale +0,35 ; Virulence × Aura glaciale +0,34, **× Fiole de venin −0,17** (anti-synergie non prévue par les accroches, sous le seuil de −0,15 ; hypothèse : la Fiole abrège le combat, et un Poison triplé tard a moins de tours pour couler) ; Sentence × Aura de sainteté +0,32 ; Rancune × Contrepoids de plomb +0,39, × Plume d'aigle +0,30, × Œil de faucon −0,14.
+
+**En campagne** (`CAMPAIGN_RUNS=30 npm run campaign`, [CAMPAGNE.md](CAMPAGNE.md) § 18.3) : paires liées par build d'un acte 3,27 → **3,70** (Brokk 1,38 → 2,30, Ervald 2,02 → 3,40, Ysolde 1,67 → 2,67, Morgrut 0,78 → 1,63) ; boss atteint 24 → 21 %, acte gagné 14 → 10 %, dans le bruit de 300 parties.
+
+**Naraxes** : la Virulence entre dans son répertoire, mais sa décoction pose son Poison au coup, et il s'estompe avant son jet suivant (Virulence +0,7 chez elle) : elle ne sert qu'avec le Souffle de la tombe ou l'Aura glaciale de son répertoire. À trancher plus tard (audit du lot, point 2) : une décoction plus forte, ou des consommatrices qui lisent le Poison au coup.
+
+**Le laboratoire** : les séries 18 à 23 sont retirées de `scripts/lab/ideas.ts` (elles portaient des statuts d'essai aux ids du registre, dont une Rancune en Ferveur qui aurait remplacé la livrée) ; leurs rapports restent dans `logs/lab/`.

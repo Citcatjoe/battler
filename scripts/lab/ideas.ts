@@ -8,6 +8,11 @@
  * Séries 1 à 13 (avant les règles v2) : retirées en 0.106.0. Elles visaient des personnages et des mécanismes qui
  * n'existent plus (variantes de race, Attente, coup sacrifié, valeurs imprimées, Rage du sang, Écorce…) ; leurs
  * résultats restent dans docs/SORTS.md, leur code dans l'historique git (commit 7c75781).
+ *
+ * Séries 18 à 23 (phase 8, premier lot de consommatrices) : retirées en 0.114.0, quand le lot est entré au registre.
+ * Leurs statuts d'essai portaient les ids du registre (`quarry`, `sentence`, `grudge`, ce dernier en version Ferveur) et
+ * auraient remplacé les statuts livrés ; la Virulence y était émulée par des seuils, que `fromStatus` remplace. Leurs
+ * résultats restent dans docs/SORTS.md § 22 et dans les rapports `logs/lab/2026-10-24-22-*`.
  */
 import type { Character, CharacterStats } from '../../src/game/character'
 import { faceTrigger, type CharacterEvent } from '../../src/game/events'

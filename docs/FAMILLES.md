@@ -47,13 +47,13 @@ Un spectateur qui connaît les dix familles et les six fenêtres comprend n'impo
 | --- | --- | --- | --- | --- | --- |
 | 1 | **Puissance** | ses coups font-ils plus mal ? | Aura de puissance, Force de l'ours et Aura sauvage (druide, 0.73.0) | Affaibli _(inutilisé)_ | bonus de dégâts actuel |
 | 2 | **Garde** | encaisse-t-il moins ? | Armure temporaire, Aura d'intimidation (Écorce épaisse retirée en 0.73.0) | Vulnérable, Brèche _(inutilisés)_, Luciole (+2 reçus) | points de bouclier |
-| 3 | **Précision** | va-t-il critiquer ? | Critique assuré, Aura de précision | _(aucun ; piste : Aveuglé)_ | critiques forcés en attente |
+| 3 | **Précision** | va-t-il critiquer ? | Critique assuré, Aura de précision, Rancune (0.114.0 : coups encaissés → critiques) | _(aucun ; piste : Aveuglé)_ | critiques forcés en attente |
 | 4 | **Esquive** | va-t-il éviter le coup ? | Esquive améliorée | Luciole (ne peut plus esquiver) | esquives forcées en attente |
-| 5 | **Tempo** | combien d'actions ? | Furie des vents | Peur, Étourdi _(inutilisé)_, Attente | actions gagnées ou perdues |
+| 5 | **Tempo** | combien d'actions ? | Furie des vents, Curée (0.114.0 : Saignement → coups de plus) | Peur, Étourdi _(inutilisé)_, Attente | actions gagnées ou perdues |
 | 6 | **Fortune** | que va donner le dé ? | Coup de chance, Pile ou face, Incantation (d3 du druide, 0.73.0) ; Charge et Coup de griffe retirés en 0.73.0 | _(aucun ; piste : Malchance)_ | jets modifiés |
-| 7 | **Affliction** | perd-il des PV à chaque tour ? | _(sur l'adversaire)_ Aura glaciale (pose du Poison, 0.69.0), Aura de décoction, Pourfendre, Épines acérées, Feux follets (de retour en 0.73.0), Foudre (dégâts directs, 0.73.0) ; Aura de pourriture sans porteur depuis la 0.71.0 | Poison, Saignement (0.68.0 : à chaque coup reçu), Brûlure (de retour en 0.73.0) ; Pourriture sans porteur depuis la 0.71.0 | charges d'affliction portées |
-| 8 | **Soin** | regagne-t-il des PV ? | Aura de sainteté, Vol de vie ; Régénération sans porteur depuis la 0.73.0 (Fleur de vie retirée ; Rage du sang jusqu'à la 0.67.3) | _(piste : Hémorragie, soins réduits)_ | PV rendus |
-| 9 | **Représailles** | le frapper se paie-t-il ? | Épines acérées (en plaie, 0.68.0), Riposte, Rétribution | _(aucun)_ | dégâts renvoyés ou stockés |
+| 7 | **Affliction** | perd-il des PV à chaque tour ? | _(sur l'adversaire)_ Aura glaciale (pose du Poison, 0.69.0), Aura de décoction, Pourfendre, Épines acérées (convertisseur : elles produisent du Saignement ; en Représailles jusqu'à la 0.113.0), Feux follets (de retour en 0.73.0), Foudre (dégâts directs, 0.73.0), Virulence (0.114.0 : l'amplificateur du Poison, « Triple le Poison de l'adversaire »), Sentence (0.114.0 : soins → dégâts directs, une aura) ; Aura de pourriture sans porteur depuis la 0.71.0 | Poison, Saignement (0.68.0 : à chaque coup reçu), Brûlure (de retour en 0.73.0) ; Pourriture sans porteur depuis la 0.71.0 | charges d'affliction portées |
+| 8 | **Soin** | regagne-t-il des PV ? | Aura de sainteté, Vol de vie, Récolte (0.114.0 : Poison → soin) ; Régénération sans porteur depuis la 0.73.0 (Fleur de vie retirée ; Rage du sang jusqu'à la 0.67.3) | _(piste : Hémorragie, soins réduits)_ | PV rendus |
+| 9 | **Représailles** | le frapper se paie-t-il ? | Riposte, Rétribution ; Épines acérées jusqu'à la 0.113.0 (rangées en Affliction depuis la 0.114.0, règle 3 : elles produisent du Saignement) | _(aucun)_ | dégâts renvoyés ou stockés |
 | 10 | **Sceaux** | ses statuts tiennent-ils ? | Aura d'immunité, Garde sacrée _(inutilisée)_, Purification | _(piste : Sceau brisé, ne peut plus recevoir de bonus)_ | statuts bloqués ou retirés |
 
 Les 31 statuts actuels trouvent tous une place, sans créer de famille pour un seul statut.
@@ -114,7 +114,7 @@ La règle de travail : pour chaque personnage, sa **signature**, ce dont on se s
 | --- | --- | --- | --- |
 | Orcs | frapper fort, et deux fois | Puissance, Tempo, Affliction | Pourfendre (Affliction, 0.70.0 ; Saignée en 0.68.0, Rage du sang, Soin, avant) / Furie des vents (Tempo) / Aura de puissance (Puissance) |
 | Elfes | ne pas être touchée, punir par le critique | Précision, Esquive | Œil de faucon (Précision) / Esquive améliorée (Esquive) / Aura de précision (Précision) |
-| Nains | tenir la ligne, faire payer chaque coup | Garde, Représailles | Peau de pierre (Garde) / Épines acérées (Représailles, en Saignement depuis la 0.68.0) / Aura d'intimidation (Garde) |
+| Nains | tenir la ligne, faire payer chaque coup | Garde, Affliction | Peau de pierre (Garde) / Épines acérées (Affliction depuis la 0.114.0, en Saignement depuis la 0.68.0 ; Représailles avant) / Aura d'intimidation (Garde) |
 | Morts-vivants | ronger et drainer | Affliction, Soin | Souffle de la tombe (Affliction) / Vol de vie (Soin) / Aura glaciale (Affliction) |
 | Prêtresses | contrôler et durer | Tempo (malus), Sceaux, Soin | Peur (Tempo) / Purification (Sceaux) / Aura de sainteté (Soin) |
 | Voleuses | le hasard et le poison | Fortune, Affliction | Coup de chance (Fortune) / Pile ou face (Fortune) / Aura de décoction (Affliction) |
@@ -147,7 +147,7 @@ Légende du verdict :
 | Elfe | 2 | Esquive améliorée | Esquive | — | **mécanique** : `forcesDodge` passe sur la fenêtre `nextStrikeTaken` |
 | Elfe | 3 | Aura de précision | Précision | — | identique |
 | Nain | 1 | Peau de pierre | Garde | — | identique (fenêtre `points`) |
-| Nain | 2 | Épines | Représailles | +9,5 (Brokk), +3,6 (Grimbald) | identique (réaction `hurt`) |
+| Nain | 2 | Épines | Affliction (0.114.0 ; Représailles avant) | +9,5 (Brokk), +3,6 (Grimbald) | identique (réaction `hurt`) |
 | Nain | 3 | Aura d'intimidation | Garde | environ +20 (Brokk) | identique |
 | Mort-vivant | 1 | Souffle de la tombe | Affliction | — | identique |
 | Mort-vivant | 2 | Vol de vie | Soin | environ +5 | **mécanique** : `drainsHit` devient « fenêtre `nextStrikeDealt` et réaction `hit` → soin du montant retiré » |
@@ -232,6 +232,8 @@ Pour que les reliques créent des synergies plutôt que des chiffres isolés, ch
 | Soin | +1 à chaque soin | quand un soin dépasse les PV max, le surplus devient un bouclier | prêtresses, orcs, morts-vivants |
 | Représailles | +1 à chaque renvoi | quand un renvoi tue, il rend 5 PV | nains, paladins |
 | Sceaux | une Garde sacrée en début de combat | quand un malus est bloqué, +1 charge de Puissance | paladins ; prêtresses par la Purification |
+
+**Vocabulaire des Représailles** (0.114.0, audit du premier lot de la phase 8) : ce que consomment les Représailles, ce sont les **coups encaissés**, et ils ne sont pas une ressource orpheline : Rétribution, Riposte, Épines acérées, l'Écu cabossé et l'Onguent du rebouteux les consomment déjà, et tout le monde les produit à parts égales (la Rancune en Ferveur n'a trouvé aucun partenaire, de −0,03 à +0,11 en log-cote). Ce qui n'a pas de consommateur, c'est **ce que les Représailles produisent** : des dégâts renvoyés. Le convertisseur à écrire est « quand il renvoie des dégâts » (lot suivant), pas « quand il encaisse ».
 
 Remarques :
 - **La plupart s'écrivent avec des déclencheurs qui existent déjà** (`crit`, `dodge`, `hurt`, `hit`, `turnStart`, `combatStart`) et avec les champs `chance`, `limit` et `when`, aujourd'hui inutilisés (`events.ts`).

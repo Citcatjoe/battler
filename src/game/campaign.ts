@@ -3,7 +3,7 @@ import { Character, type CharacterDef } from './character'
 import { rollFace, type CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, forgedFaces, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, STATUS_HOOKS, type Hook } from './hooks'
+import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, skillNeeds, STATUS_HOOKS, type Hook } from './hooks'
 import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTERS, CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER } from './roster'
@@ -273,12 +273,10 @@ export function referenceChampions(championId: string, node: number, seed: numbe
 export const ECHO_WEIGHT = 2
 
 /**
- * Les reliques qu'on peut offrir au champion (2026-10-24, retour de l'utilisateur : « la Fiole de venin m'est proposée
- * à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : celles dont la condition peut
- * arriver (`relicNeeds`). Est à sa portée ce que produisent sa signature, son répertoire de campagne (tout ce qu'il peut
- * graver), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance.
+ * Ce qui est à la portée du champion (2026-10-24, l'offre pertinente) : ce que produisent sa signature, son répertoire de
+ * campagne (tout ce qu'il peut graver), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance.
  */
-export function offerableRelics(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): string[] {
+function reachOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): Set<Hook> {
   const champion = championOf(run)
   const reach = new Set<Hook>()
   for (const e of [...champion.events, ...CAMPAIGN_REPERTOIRES[run.championId]]) for (const h of eventHooks(e).produces) reach.add(h)
@@ -289,15 +287,35 @@ export function offerableRelics(run: Pick<CampaignRun, 'championId' | 'forge' | 
   }
   if (champion.stats.dodgeChance > 0) reach.add('moment:dodge')
   if (champion.stats.critChance > 0) reach.add('moment:crit')
+  return reach
+}
+
+/**
+ * Les reliques qu'on peut offrir au champion (2026-10-24, retour de l'utilisateur : « la Fiole de venin m'est proposée
+ * à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : celles dont la condition peut
+ * arriver (`relicNeeds`, `reachOf`).
+ */
+export function offerableRelics(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): string[] {
+  const reach = reachOf(run)
   return RELIC_IDS.filter((id) => relicNeeds(getRelic(id)).every((h) => reach.has(h)))
+}
+
+/**
+ * Les compétences de `skills` qu'on peut lui offrir à graver (0.114.0, la même règle que les reliques) : celles dont le
+ * besoin est à sa portée (`skillNeeds`). Une consommatrice sans sa ressource (la Curée sans Saignement, la Sentence sans
+ * soin) vaudrait 0 gravée.
+ */
+export function offerableSkills(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>, skills: readonly CharacterEvent[]): CharacterEvent[] {
+  const reach = reachOf(run)
+  return skills.filter((s) => skillNeeds(s).every((h) => reach.has(h)))
 }
 
 /**
  * La récompense d'un nœud, la même pour le joueur et le champion de référence (règles v2, phase 2, offre orientée) :
  * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire de campagne** du champion
- *   (`CAMPAIGN_REPERTOIRES`), au poids de son écho avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de
- *   compétence, ni Graver ni copie d'une compétence. Le répertoire (cinq compétences au moins, ou les quatre de Morgrut)
- *   ne s'épuise pas dans un acte (quatre forges) ;
+ *   (`CAMPAIGN_REPERTOIRES`), parmi celles dont le besoin est à sa portée (`offerableSkills`), au poids de son écho avec
+ *   le build ; quand le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une compétence. Le répertoire
+ *   (cinq compétences au moins) ne s'épuise pas dans un acte (quatre forges) ;
  * - relique : parmi celles dont la condition peut arriver (`offerableRelics`), la première carte au poids de son écho,
  *   les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
@@ -311,7 +329,10 @@ export function drawReward(run: Pick<CampaignRun, 'championId' | 'forge' | 'reli
   }
   const def = createCharacter(run.championId).definition
   const full = forgedFaces(def, run.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
-  const left = CAMPAIGN_REPERTOIRES[run.championId].filter((s) => !run.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id))
+  const left = offerableSkills(
+    run,
+    CAMPAIGN_REPERTOIRES[run.championId].filter((s) => !run.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),
+  )
   const offer = drawForgeOffer(def, run.forge, rng, left, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build), full)
   const choice = autoForge(def, run.forge, offer, rng)
   return { kind: 'forge', offer, ...(choice && { choice }) }

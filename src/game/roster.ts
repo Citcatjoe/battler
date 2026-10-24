@@ -136,6 +136,18 @@ const gorak: CharacterDef = {
       // cran de plus (son intensité) ; une aura cumulable, une charge de plus, ou une intensité
       rankAxis: { kind: 'power', per: 1 },
     },
+    {
+      // Phase 8, premier lot (0.114.0, SORTS.md) : le pont du Sang vers la Furie. Greffée, elle part si l'adversaire saigne :
+      // deux coups de base bruts juste après le coup de base de son jet. Gravée : Brokk +10,4, Gorak +7,0 ; un coup de
+      // plus valait +6,3 et +3,8. Rang : une charge de plus, deux coups (« un coup » par rang ne valait que +1,5 à +1,9)
+      id: 'quarry',
+      name: 'Curée',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
+      effects: [{ type: 'applyStatus', status: 'quarry', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
   ],
   events: [
     {
@@ -199,8 +211,8 @@ const elaria: CharacterDef = {
     weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
   signature: 'hawk-eye',
-  // Répertoire : la Chasse (Furie des vents, Pourfendre), la Fuite (Coup de chance, Riposte)
-  repertoire: ['wind-fury', 'cleave', 'lucky-strike', 'riposte'],
+  // Répertoire : la Chasse (Furie des vents, Pourfendre, Curée), la Fuite (Coup de chance, Riposte)
+  repertoire: ['wind-fury', 'cleave', 'quarry', 'lucky-strike', 'riposte'],
   reserve: [
     {
       id: 'precision-aura',
@@ -269,8 +281,8 @@ const brokk: CharacterDef = {
   },
   // Signature (décision de l'utilisateur) : Épines acérées, sur la face 1
   signature: 'thorns',
-  // Répertoire : le Rempart (Aura d'immunité, Rétribution), les Représailles (Riposte, Pourfendre)
-  repertoire: ['immunity-aura', 'retribution', 'riposte', 'cleave'],
+  // Répertoire : le Rempart (Aura d'immunité, Rétribution, Rancune), les Représailles (Riposte, Pourfendre, Curée)
+  repertoire: ['immunity-aura', 'retribution', 'grudge', 'riposte', 'cleave', 'quarry'],
   reserve: [
     {
       id: 'intimidation-aura',
@@ -344,6 +356,28 @@ const ervald: CharacterDef = {
       effects: [{ type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
+    // Phase 8, premier lot (0.114.0, SORTS.md) : les consommateurs de son Poison. Le pont vers le Drain (Récolte, +8,7
+    // gravée) et l'amplificateur du fil Poison (Virulence, +8,4) ; sans Poison, ni l'une ni l'autre ne part
+    {
+      id: 'harvest',
+      name: 'Récolte',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
+      effects: [{ type: 'heal', amount: 7 }],
+      rankAxis: { kind: 'amount', per: 4 },
+    },
+    {
+      // Le Poison de l'adversaire triplé : deux fois ses charges en plus (`fromStatus`), lues quand elle part. Elle grandit
+      // avec le Poison (Aura glaciale aiguisée, Souffle gravé) ; son rang ajoute 3 Poison à plat
+      id: 'virulence',
+      name: 'Virulence',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
+      effects: [{ type: 'applyStatus', status: 'poison', stacks: 0, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 2 } }],
+      rankAxis: { kind: 'stacks', per: 3 },
+    },
   ],
   events: [
     {
@@ -415,6 +449,16 @@ const ysolde: CharacterDef = {
       effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
       rankAxis: { kind: 'limit', per: 1 },
     },
+    {
+      // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). 2 PV par charge
+      // valaient +13,5 et la mettaient à 58,8 % contre le roster
+      id: 'sentence',
+      name: 'Sentence',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'sentence', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
   events: [
     {
@@ -473,8 +517,9 @@ const naraxes: CharacterDef = {
   // Signature : Pile ou face jusqu'à la 0.106.1 (l'identité plutôt que la valeur) ; l'Aura de décoction depuis la 0.107.0
   // (décision de l'utilisateur, SORTS.md § 19) : en campagne, elle partait sans ce qui la fait gagner
   signature: 'decoction-aura',
-  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée), le Poison (Souffle de la tombe, Aura glaciale)
-  repertoire: ['hawk-eye', 'evasion', 'grave-breath', 'frost-aura'],
+  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée), le Poison (Souffle de la tombe, Aura glaciale, Virulence ;
+  // la Virulence ne lit que le Poison qui tient jusqu'à son jet : celui du Souffle ou de l'Aura glaciale, pas sa décoction)
+  repertoire: ['hawk-eye', 'evasion', 'grave-breath', 'frost-aura', 'virulence'],
   reserve: [
     {
       id: 'lucky-strike',
@@ -546,8 +591,8 @@ const aldric: CharacterDef = {
     weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure'],
   },
   signature: 'retribution',
-  // Répertoire : la Lumière (Purification, Vol de vie), l'Ombre du serment brisé (Peur, Souffle de la tombe)
-  repertoire: ['purification', 'life-steal', 'fear', 'grave-breath'],
+  // Répertoire : la Lumière (Purification, Vol de vie), l'Ombre du serment brisé (Peur, Souffle de la tombe, Rancune)
+  repertoire: ['purification', 'life-steal', 'fear', 'grave-breath', 'grudge'],
   reserve: [
     {
       id: 'immunity-aura',
@@ -617,8 +662,20 @@ const morgrut: CharacterDef = {
     strengths: ['La plus forte attaque (7 à 9)', 'Beaucoup de PV', 'Frappe fort à chaque jet'],
     weaknesses: ['Aucune compétence', 'Six faces nues', 'Ni esquive ni critique'],
   },
-  // Répertoire : la Colère (Aura de puissance, Pourfendre), la Masse (Peau de pierre, Aura d'intimidation)
-  repertoire: ['power-aura', 'cleave', 'stoneskin', 'intimidation-aura'],
+  // Répertoire : la Colère (Aura de puissance, Pourfendre, Curée), la Masse (Peau de pierre, Aura d'intimidation)
+  repertoire: ['power-aura', 'cleave', 'quarry', 'stoneskin', 'intimidation-aura'],
+  // Hors kit (phase 8, premier lot, 0.114.0, SORTS.md) : la Rancune, sa Masse (il encaisse, et son critique sur 7 à 9 est
+  // le plus lourd : +19,8 gravée, au bord de la bande ; +14,2 en moyenne sur le roster)
+  reserve: [
+    {
+      id: 'grudge',
+      name: 'Rancune',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'grudge', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
+  ],
   events: [],
 }
 
@@ -907,13 +964,15 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
           problems.push(`${at} ${e.id} : condition hasStatus, charges entières ≥ 1 attendues`)
       }
       for (const f of e.effects) {
-        // Pourfendre (`fromHit`) : ses charges viennent du coup, celles de la définition s'y ajoutent (0 permis), sur une
-        // compétence qui modifie son coup (elle part s'il touche)
-        const amount = f.type === 'applyStatus' ? f.stacks + (f.fromHit === undefined ? 0 : 1) : f.type === 'cleanse' ? 1 : f.type === 'release' ? f.min : f.amount
+        // Pourfendre (`fromHit`), Virulence (`fromStatus`) : leurs charges viennent du coup ou d'un statut, celles de la
+        // définition s'y ajoutent (0 permis) ; Pourfendre, sur une compétence qui modifie son coup (elle part s'il touche)
+        const amount = f.type === 'applyStatus' ? f.stacks + (f.fromHit === undefined && f.fromStatus === undefined ? 0 : 1) : f.type === 'cleanse' ? 1 : f.type === 'release' ? f.min : f.amount
         if (!Number.isInteger(amount) || amount < 1)
           problems.push(`${at} ${e.id} : effet ${f.type} sans valeur entière ≥ 1`)
         if (f.type === 'applyStatus' && f.fromHit !== undefined && (!(f.fromHit > 0 && f.fromHit <= 1) || e.relation !== 'modify' || !onDie))
           problems.push(`${at} ${e.id} : fromHit dans ]0, 1], sur une compétence du dé qui modifie son coup`)
+        if (f.type === 'applyStatus' && f.fromStatus !== undefined && (!Number.isInteger(f.fromStatus.factor) || f.fromStatus.factor < 1))
+          problems.push(`${at} ${e.id} : fromStatus, un facteur entier ≥ 1`)
         if (f.type === 'release' && f.share !== undefined && !(f.share > 0 && f.share <= 1)) problems.push(`${at} ${e.id} : share dans ]0, 1]`)
         if (f.type === 'applyStatus' && f.turns !== undefined && (!Number.isInteger(f.turns) || f.turns < 1))
           problems.push(`${at} ${e.id} : durée invalide`)

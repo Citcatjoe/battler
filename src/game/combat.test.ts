@@ -3106,3 +3106,127 @@ describe('attaque de base (phase 5 bis)', () => {
     }
   })
 })
+
+describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
+  /** La compétence gravée sur le 3, aiguisée `rank` fois (rang I : 0) */
+  const engraved = (c: Character, id: string, rank = 0) =>
+    c.withForge([{ op: 'engrave', face: 3, skill: skill(id) }, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face: 3 }))])
+  const fired = (r: CombatResult, id: string) => ofType(r, 'event').filter((b) => b.event.eventId === id && b.event.side === 0)
+
+  it('les cinq au roster : des compétences du dé, gravables, leurs textes courts', () => {
+    expect(validateRoster()).toEqual([])
+    const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('aldric'), id, rank).events.find((e) => e.id === id)!).text
+    expect(text('quarry')).toBe('Deux coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence).')
+    expect(text('quarry', 1)).toBe('Quatre coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence).')
+    expect(text('harvest')).toBe('+7 PV.')
+    expect(text('harvest', 1)).toBe('+11 PV.')
+    expect(text('virulence')).toBe("Triple le Poison de l'adversaire.")
+    expect(text('virulence', 1)).toBe("Triple le Poison de l'adversaire, +3.")
+    expect(text('sentence')).toBe("L'adversaire perd 1 PV chaque fois qu'il regagne des PV.")
+    expect(text('sentence', 1)).toBe("L'adversaire perd 2 PV chaque fois qu'il regagne des PV.")
+    expect(text('grudge')).toBe('Son prochain coup est critique quand il encaisse un coup, 1x.')
+    expect(text('grudge', 1)).toBe('Son prochain coup est critique quand il encaisse un coup, 2x.')
+    // Leur condition, en pastille : la Curée lit le Saignement, la Récolte et la Virulence le Poison
+    expect(describeSkill(skill('quarry')).tags.map((t) => t.label)).toContain("si l'adversaire porte Saignement")
+    for (const id of ['harvest', 'virulence']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain("si l'adversaire porte Poison")
+    expect(describeSkill(skill('sentence')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['aura permanente', 'Sentence : 2 charges au plus']))
+  })
+
+  it('Curée : si l’adversaire saigne, deux coups de base bruts par charge juste après le coup de base de son jet ; sinon, sa face est nue', () => {
+    const bleeding = ev('turnStart', [{ type: 'applyStatus', status: 'bleed', stacks: 1, target: 'opponent' }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [bleeding]), 'quarry', rank), testCharacter('b', { maxHp: 400 })])
+      const quarries = fired(r, 'quarry')
+      expect(quarries.length).toBeGreaterThan(3)
+      for (const e of quarries) {
+        const roll = r.beats[e.cause!]
+        expect(roll.type).toBe('roll')
+        const base = ofType(r, 'attack').find((x) => x.cause === roll.id)!
+        const burst = ofType(r, 'flurry').find((f) => f.cause === e.id)!
+        expect(burst).toMatchObject({ side: 0, status: 'quarry', strikes: 2 * (rank + 1) })
+        // Le coup de base de son jet d'abord, puis la rafale, avant tout autre coup ; ses coups sont bruts
+        expect(base.attack.plain).toBeUndefined()
+        expect(burst.id).toBeGreaterThan(base.id)
+        expect(ofType(r, 'attack').filter((x) => x.id > base.id && x.id < burst.id)).toEqual([])
+        const strikes = ofType(r, 'attack').filter((x) => x.cause === burst.id)
+        if (burst.turn !== r.turns) expect(strikes).toHaveLength(2 * (rank + 1))
+        for (const s of strikes) expect(s.attack.plain).toBe(true)
+        expect(stacksOf(burst.state.statuses[0], 'quarry')).toBe(0)
+      }
+    }
+    // Sans Saignement : sa face 3 est nue, ni étape roll, ni Curée, ni rafale
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'quarry'), testCharacter('b', { maxHp: 400 })])
+    expect(fired(dry, 'quarry')).toEqual([])
+    expect(ofType(dry, 'roll')).toEqual([])
+    expect(ofType(dry, 'flurry')).toEqual([])
+  })
+
+  it('Récolte : +7 PV si l’adversaire est empoisonné, seulement alors', () => {
+    const poisoner = ev('turnStart', [{ type: 'applyStatus', status: 'poison', stacks: 1, target: 'opponent' }])
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [poisoner]), 'harvest'), testCharacter('b', { maxHp: 400, attackMin: 9, attackMax: 9 })])
+    const harvests = fired(r, 'harvest')
+    expect(harvests.length).toBeGreaterThan(3)
+    for (const e of harvests) {
+      const before = r.beats[e.id - 1].state
+      expect(stacksOf(before.statuses[1], 'poison')).toBeGreaterThan(0)
+      expect(e.event.effects).toEqual([{ type: 'heal', target: 0, amount: Math.min(7, 400 - before.hp[0]) }])
+    }
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'harvest'), testCharacter('b', { maxHp: 400, attackMin: 9, attackMax: 9 })])
+    expect(fired(dry, 'harvest')).toEqual([])
+  })
+
+  it('Virulence (`fromStatus`) : triple le Poison de l’adversaire, lu quand elle part ; son rang ajoute 3 Poison', () => {
+    const poisoner = ev('turnStart', [{ type: 'applyStatus', status: 'poison', stacks: 1, target: 'opponent' }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 2000 }, [poisoner]), 'virulence', rank), testCharacter('b', { maxHp: 2000 })])
+      const virulences = fired(r, 'virulence')
+      expect(virulences.length).toBeGreaterThan(3)
+      for (const e of virulences) {
+        const before = stacksOf(r.beats[e.id - 1].state.statuses[1], 'poison')
+        expect(before).toBeGreaterThan(0)
+        expect(e.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', target: 1, stacks: 2 * before + 3 * rank })
+        expect(stacksOf(e.state.statuses[1], 'poison')).toBe(3 * before + 3 * rank)
+      }
+    }
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'virulence'), testCharacter('b', { maxHp: 400 })])
+    expect(fired(dry, 'virulence')).toEqual([])
+    // Un facteur entier ≥ 1
+    const half: CharacterEvent = { ...skill('virulence'), id: 'half', effects: [{ type: 'applyStatus', status: 'poison', stacks: 0, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 0.5 } }] }
+    expect(validateRoster([{ ...createCharacter('morgrut').definition, reserve: [half] }]).some((p) => p.includes('fromStatus'))).toBe(true)
+  })
+
+  it('Sentence : chaque soin de son porteur coûte 1 PV par charge à l’adversaire (dégâts directs), sans chaîne ; 2 charges au plus', () => {
+    const holy = ev('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [holy]), 'sentence', rank), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+      const reactions = ofType(r, 'statusReaction').filter((b) => b.status === 'sentence')
+      expect(reactions.length).toBeGreaterThan(5)
+      for (const b of reactions) {
+        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'sentence')!
+        expect(held.stacks).toBeLessThanOrEqual(2)
+        expect(b.trigger).toBe('healed')
+        expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: held.stacks + rank, source: 'holy' }])
+        // Sa cause : l'étape qui a soigné son porteur
+        const cause = r.beats[b.cause!]
+        expect(cause.type === 'statusTick' && cause.effects.some((e) => e.type === 'heal' && e.target === 0 && e.amount > 0)).toBe(true)
+      }
+      expect(reactions.some((b) => r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'sentence')!.stacks === 2)).toBe(true)
+    }
+  })
+
+  it('Rancune : chaque coup qui touche son porteur lui donne un Critique assuré, une charge par coup encaissé', () => {
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'grudge'), testCharacter('b', { maxHp: 400 })])
+    const reactions = ofType(r, 'statusReaction').filter((b) => b.status === 'grudge')
+    expect(reactions.length).toBeGreaterThan(3)
+    for (const b of reactions) {
+      expect(b).toMatchObject({ side: 0, trigger: 'hurt' })
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
+      expect(stacksOf(b.state.statuses[0], 'grudge')).toBe(stacksOf(r.beats[b.id - 1].state.statuses[0], 'grudge') - 1)
+      // Son prochain coup qui touche est critique
+      const next = ofType(r, 'attack').find((x) => x.id > b.id && x.attack.attacker === 0 && !x.attack.dodged)
+      if (next) expect(next.attack).toMatchObject({ crit: true, critForced: true })
+    }
+  })
+})

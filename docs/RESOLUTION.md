@@ -66,7 +66,9 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
            autres compétences partent dans cette même fenêtre ;
       c. face nue : le coup de base seul. Une compétence épuisée (`limit` : Soliste et Peur, une fois par
          combat, 0.107.0) ou dont une condition manque laisse sa face nue : ni étape roll, ni
-         multiplicateur, ni compétence.
+         multiplicateur, ni compétence. Une compétence greffée ou qui remplace lit ses conditions au jet,
+         sur l'état de ce moment (0.114.0 : la Curée sans Saignement chez l'adversaire, la Récolte et la
+         Virulence sans Poison : le coup part seul) ; l'audit les relit au même moment.
     Pièce (Pile ou face, relation « modifie ») : la compétence pose sa pièce quand le coup touche ; elle
     part aussitôt, juste après les fenêtres de ce coup (étape coin, un rang de dé en mode triche). Pile :
     ce coup ×3 (0.107.0 ; ×2 avant), la pièce inflige encore deux fois les PV qu'il a retirés, en une
@@ -83,6 +85,10 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     (Furie aiguisée, 0.110.0, § 6 : un coup de plus une rafale sur deux au rang II). Ce sont des
     coups bruts (`Attack.plain`, 0.69.0) : chacun lance son dé, dont la face ne déclenche aucune
     compétence, donc aucune Furie en chaîne. Les reliques de face et la dorure, elles, lisent son dé.
+    « Juste après ce jet » : après le jet tout entier. La Furie remplace son coup : sa rafale suit le
+    jet remplacé. La Curée (0.114.0) se greffe : sa charge est posée avant le coup de base, et sa rafale
+    part après lui (étape roll, Curée, coup de base et ses fenêtres, puis la rafale), avant tout autre
+    coup.
     Deux dés (`twinDice`, la barde ; phase 5 ter, décision de l'utilisateur du 2026-10-24) : l'action
     est une action à deux jets, la même que celle de Coup de chance (étape flurry, sans statut). Chaque
     dé est un JET complet, résolu à part dans l'ordre : son dé désigne une face, qui déclenche sa
@@ -232,15 +238,15 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 
 | Famille | Quand | Exemples | Mise en œuvre |
 | --- | --- | --- | --- |
-| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
+| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) ; une pose peut tirer ses charges du coup de ce jet (`fromHit`, Pourfendre) ou d'un statut, lu à cet instant (`fromStatus`, 0.114.0 : la Virulence ajoute deux fois le Poison que porte l'adversaire, son Poison triplé) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
 | **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable, Aura d'immunité (armure +1) | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusAge` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
-| **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines acérées et Saignement quand le porteur encaisse ; Pourfendre, sur un 1, seulement si son coup touche (relation « modifie », § 3 bis) | `CharacterEvent` ; `reactions` d'un statut |
+| **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines acérées et Saignement quand le porteur encaisse ; Pourfendre, sur un 1, seulement si son coup touche (relation « modifie », § 3 bis) ; Rancune quand son porteur encaisse (un Critique assuré, 0.114.0) ; Sentence quand son porteur regagne des PV (une perte pour l'adversaire, 0.114.0) | `CharacterEvent` ; `reactions` d'un statut |
 | **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, jet remplacé par sa compétence (Furie des vents), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1, 2, 3 et 8 ; `relation: 'replace'`, `forcesDodge`, `wards`, `immunities` |
 | **Sur le coup** | Dans les fenêtres d'un coup qui touche (ou d'une pile qui touche) : `hit` de l'attaquant, `hurt` du défenseur | Vol de vie (`hit`), Riposte et jauges de Rétribution (`hurt`) | `drainsHit`, `reflectsHit`, `fillsOnHurt` |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
-| **Action multiple** | Pendant l'action du porteur | Furie des vents (deux coups de base bruts), Coup de chance (un jet de plus par charge) | `extraStrikes` |
+| **Action multiple** | Pendant l'action du porteur | Furie des vents (deux coups de base bruts, après son jet remplacé), Curée (deux coups de base bruts, après le coup de base de son jet, 0.114.0), Coup de chance (un jet de plus par charge) | `extraStrikes`, `instantStrikes` |
 | **Deux dés** | À l'action, pour un personnage qui lance deux dés | la barde : une action à deux jets complets, chacun sa face, sa compétence et son coup de base (phase 5 ter) | `twinDice`, `Character.dice`, étape `flurry` sans statut |
 | **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant, non cumulable), d'intimidation (entrant), de précision et sauvage (stats : critique ; attaque), glaciale (périodique : pose du Poison sur l'adversaire, 0.69.0) | crochets existants, statut sans `turns` |
 | **Mécanisme de compétence** (2026-10-21) | Statut qui porte la règle d'une compétence ou d'une forme (`StatusDef.mechanic` : `skill` pour les jauges de Rétribution, Pile ou face, Furie des vents ; `form` pour Incantation et Force de l'ours, posés tant que le personnage garde la forme). Jamais purgé, jamais bloqué (immunité, garde, opposition), jamais compté comme bonus ou malus dans les statistiques ; le compendium le présente comme une mécanique de sa compétence | Rétribution, Furie des vents, Incantation | `StatusDef.mechanic`, `isMechanic`, `CharacterForm.statuses` |

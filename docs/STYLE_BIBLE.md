@@ -1013,6 +1013,10 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 101 | `quilted-gambison` | Gambison matelassé (relique de caractéristique, v16) | Gambison plié, matelassure piquée, col lacé, une pièce recousue ; pas de mailles (c'est la Cotte) |
 | 102 | `bonesetter-salve` | Onguent du rebouteux (relique de coup, v16) | Pot de terre cuite, cinq creux de doigts dans l'onguent (les cinq charges), ficelle nouée au col |
 | 103 | `vigil-candle` | Chandelle de veille (relique de tour, v16) | Chandelle de suif aux trois anneaux gravés (l'intervalle de 3 tours), dans un bougeoir de fer à anneau ; ni sablier ni clepsydre |
+| 104 | `quarry` | Curée (compétence, v17) | Corne tachée de sang, deux entailles rouges |
+| 105 | `harvest` | Récolte (compétence, v17) | Faucille d'os givrée qui tranche de la ciguë, une goutte violette |
+| 106 | `virulence` | Virulence (compétence, v17) | Croc de serpent, trois gouttes de venin qui grossissent |
+| 107 | `sentence` | Sentence (compétence, v17) | Balance dorée, une flamme dans le plateau baissé, halo d'ivoire |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1212,6 +1216,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v16, reliques de durée (3 icônes, 3×3, intégrée le 2026-10-25, générée par l'agent avec Artlist : GPT Image 2.5 en image à image ; référence jointe : la planche des reliques) :** motifs de [RELIQUES.md](RELIQUES.md) § 14, dans la grammaire des reliques (§ 6) : 1. Gambison matelassé, un gambison plié au col lacé, avec une pièce recousue · 2. Onguent du rebouteux, un pot de terre cuite aux cinq creux de doigts et à la ficelle nouée · 3. Chandelle de veille, une chandelle de suif aux trois anneaux gravés, dans un bougeoir de fer à anneau.
 
+**v17, compétences consommatrices (4 icônes, 2×2, intégrée le 2026-10-25, générée par l'agent avec Artlist : GPT Image 2.5 en image à image ; référence jointe : une planche de seize icônes de compétences existantes) :** motifs de [SORTS.md](SORTS.md) § 22 : 1. Curée, une corne tachée de sang aux deux entailles rouges · 2. Récolte, une faucille d'os givrée qui tranche de la ciguë, une goutte violette · 3. Virulence, un croc de serpent et trois gouttes de venin qui grossissent · 4. Sentence, une balance dorée, une flamme dans le plateau baissé, un halo d'ivoire. La Rancune reprend `grudge.png` (icône existante, sans usage jusque-là).
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1239,6 +1245,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v17 | 2026-10-25 | 104 à 107 | Les quatre compétences consommatrices peintes de la phase 8 (Curée, Récolte, Virulence, Sentence ; la Rancune reprend `grudge.png`). Artlist, GPT Image 2.5 en image à image, référence : seize icônes de compétences ; une planche 2×2, deux versions générées (160 crédits) : Curée et Virulence de la version B, Récolte et Sentence de la version A. Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v16 | 2026-10-25 | 101 à 103 | Les trois reliques de durée (Gambison matelassé, Onguent du rebouteux, Chandelle de veille). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche de trois, deux versions générées (160 crédits), la version A retenue pour les trois. Découpe par `scripts/slice-icons.py` (noms de la grille 3×3), optimisées. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v15 | 2026-10-24 | 5 emblèmes d'état | Pourriture, Brèche, Luciole, Coup gâché, Vulnérable (A8 de la revue). Artlist, GPT Image 2.5 en image à image, référence : les seize emblèmes de la v12 sur fond noir ; deux versions générées (160 crédits), les cinq retenus de la première. Découpe par `scripts/slice-coins.py` (rayon 136 à 137 px), optimisés. Planche de contrôle regardée (64 et 24 px, avec compteur) ; pas encore vus dans un écran de jeu. |
 | v14 | 2026-10-24 | 96 à 100 | Les cinq reliques consommatrices. Artlist, GPT Image 2.5 en image à image, référence : les seize reliques en planche 4 × 4 ; deux versions générées (160 crédits). Retenues : Fiole et Écu de la première, Croc, Encens et Plume de la seconde. L'Écu redessiné une fois par une retouche (80 crédits) pour montrer exactement six creux. Découpe par `scripts/slice-icons.py`, `optipng`, 128 × 128. |

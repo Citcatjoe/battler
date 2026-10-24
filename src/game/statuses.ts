@@ -55,6 +55,9 @@ export type StatusId =
   | 'casting'
   | 'bearMight'
   | 'wildAura'
+  | 'quarry'
+  | 'sentence'
+  | 'grudge'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -248,6 +251,14 @@ export const charges = (s: Status) => s.stacks + (s.power ?? 0)
 const WIND_FURY_STRIKES = 2
 /** Coups de la rafale : chaque charge en donne autant, toutes partent ensemble (M1, 0.110.0 ; `burst`, combat.ts). */
 const furyStrikes = (s: Status) => (WIND_FURY_STRIKES + (s.power ?? 0)) * s.stacks
+
+/** Curée (phase 8, 0.114.0) : coups de base bruts par charge, sa rafale. Son rang ajoute une charge, deux coups. */
+const QUARRY_STRIKES = 2
+const quarryStrikes = (s: Status) => QUARRY_STRIKES * s.stacks
+
+/** Sentence (phase 8, 0.114.0) : PV perdus par l'adversaire à chaque soin du porteur, par charge, et son plafond. */
+const SENTENCE_LOSS = 1
+const SENTENCE_CAP = 2
 
 /** Un nombre en toutes lettres, en tête de phrase (au-delà, en chiffres). */
 const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
@@ -525,6 +536,37 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     modifyOutgoing: (damage, s) => damage + s.stacks,
     spentOnHit: true,
   },
+  /*
+   * Phase 8, premier lot (0.114.0, docs/PROGRESSION.md § 13.3, SORTS.md) : trois consommateurs. La Curée (Saignement →
+   * coups) reprend la rafale de la Furie, posée par une greffe : elle part juste après le coup de base de son jet. La
+   * Rancune (coups encaissés → critiques) s'estompe d'une charge par coup encaissé.
+   */
+  quarry: {
+    name: 'Curée',
+    look: { glow: 'rgba(220,38,38,0.85)' },
+    polarity: 'positive',
+    summary:
+      'Juste après le coup de base du jet qui la pose : deux coups de base bruts par charge, chacun avec son dé (leur face ne déclenche aucune compétence). Toutes les charges partent ensemble.',
+    describe: (s) => `${COUNT_WORDS[quarryStrikes(s)] ?? quarryStrikes(s)} coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence)`,
+    badge: (s) => `×${quarryStrikes(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    mechanic: 'skill',
+    extraStrikes: QUARRY_STRIKES,
+    instantStrikes: true,
+  },
+  grudge: {
+    name: 'Rancune',
+    look: { glow: 'rgba(245,158,11,0.85)' },
+    polarity: 'positive',
+    summary: 'Chaque coup qui touche le porteur lui donne un Critique assuré (son prochain coup qui touche est critique) ; une charge par coup encaissé. Se cumule.',
+    describe: (s) => `Son prochain coup est critique quand il encaisse un coup, ${s.stacks}x`,
+    badge: (s) => `×${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    reactions: { hurt: () => [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] },
+  },
 
   /* Humains et hommes-lézards (0.30.0). */
   fear: {
@@ -696,6 +738,21 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     onTurnEnd: (s) => [{ type: 'heal', amount: HOLY_HEAL * charges(s) }],
     // Aiguisée (0.110.0) : l'intensité passe le plafond de charges, qui ne bouge pas
     power: (n) => `+${plural(HOLY_HEAL * n, 'PV')} par tour`,
+  },
+  // Sentence (phase 8, 0.114.0) : une aura qui consomme les soins du porteur ; dégâts directs de Lumière, sans chaîne
+  sentence: {
+    name: 'Sentence',
+    look: { aura: 'rgba(254,240,138,0.5)' },
+    polarity: 'positive',
+    summary: `Chaque fois que le porteur regagne des PV, l'adversaire perd ${plural(SENTENCE_LOSS, 'PV')} par charge (dégâts directs). Permanente ; ${SENTENCE_CAP} charges au plus.`,
+    describe: (s) => `L'adversaire perd ${plural(SENTENCE_LOSS * charges(s), 'PV')} chaque fois qu'il regagne des PV`,
+    badge: (s) => `−${SENTENCE_LOSS * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    maxStacks: SENTENCE_CAP,
+    reactions: { healed: (s) => [{ type: 'damage', amount: SENTENCE_LOSS * charges(s), target: 'opponent', source: 'holy' }] },
+    // Aiguisée : l'intensité passe le plafond de charges, qui ne bouge pas
+    power: (n) => `+${plural(SENTENCE_LOSS * n, 'PV')} par soin`,
   },
   decoctionAura: {
     name: 'Aura de décoction',
