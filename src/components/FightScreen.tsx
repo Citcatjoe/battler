@@ -180,6 +180,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               pulse={pulseOf(side)}
               signal={signalOf(side)}
               rolling={dice.owner === side && !dice.coin && dice.rolling ? rolled.faces : undefined}
+              landed={dice.owner === side && !dice.coin && !dice.rolling ? dice.values : undefined}
               align={side === 1 ? 'right' : 'left'}
             />
           </div>

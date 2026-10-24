@@ -53,11 +53,11 @@ export interface Rule {
   group: RuleGroup
   title: string
   text: string
-  /** Les règles voisines, en liens sous le texte (« Types de dégâts → » sous le coup de base) */
+  /** Les règles voisines, en liens sous le texte (« Couleurs des dégâts → » sous le coup de base) */
   see?: readonly RuleId[]
 }
 
-/** Les sources d'un type, ou d'une teinte, par leur nom (damage.ts) : « Lumière, Foudre, Feu, Vent » */
+/** Les sources d'une famille, ou d'une teinte, par leur nom (damage.ts) : « Poison, Saignement, Brûlure, Pourriture » */
 const sourceNames = (keep: (s: (typeof DAMAGE_SOURCES)[DamageSource]) => boolean) =>
   DAMAGE_SOURCE_IDS.filter((id) => keep(DAMAGE_SOURCES[id]))
     .map((id) => DAMAGE_SOURCES[id].name)
@@ -88,7 +88,7 @@ export const RULES: Record<RuleId, Rule> = {
   'base-hit': {
     group: 'dice',
     title: 'Coup de base',
-    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DP (dégâts physiques, une arme) ou DM (dégâts magiques, une magie : la Lumière d'Ysolde, la Foudre du druide). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche.",
+    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), la même sorte de coup pour tous. C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche.",
     see: ['damage-types'],
   },
   'twin-dice': {
@@ -133,8 +133,8 @@ export const RULES: Record<RuleId, Rule> = {
   },
   'damage-types': {
     group: 'damage',
-    title: 'Types de dégâts',
-    text: `Chaque dégât a un type, qui dit ce qu'il est : DP, dégâts physiques (un coup, une arme ; Pile ou face, la Riposte et la Rétribution aussi) ; DM, dégâts magiques (${sourceNames((s) => s.kind === 'magical')}) ; DT, dégâts temporaires, ceux d'un statut qui ronge tour après tour (${sourceNames((s) => s.kind === 'temporal')}). À l'écran, le chiffre des dégâts prend la couleur de sa source : ${tints}. L'or reste au critique et au coup lourd (pile, dernier coup d'une relâche). Le type n'est qu'une étiquette pour l'instant : aucune règle ne le lit.`,
+    title: 'Couleurs des dégâts',
+    text: `Le chiffre d'un coup est blanc : le coup de base, Pile ou face, la Riposte, la Rétribution. Les dégâts temporaires, ceux d'un statut qui ronge tour après tour (${sourceNames((s) => s.kind === 'temporal')}), prennent la couleur de leur statut ; les dégâts directs de quelques compétences et reliques, celle de leur magie. À l'écran : ${tints}. L'or reste au critique et au coup lourd (pile, dernier coup d'une relâche). La couleur ne change aucune règle.`,
   },
   skill: {
     group: 'skills',
@@ -159,7 +159,7 @@ export const RULES: Record<RuleId, Rule> = {
   forms: {
     group: 'skills',
     title: 'Formes',
-    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; en ours, seules ses gravures partent, et un coup de base physique à +3) : ce sont des mécanismes, ni bonus ni malus.",
+    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet, greffé sur son coup de base, en homme ; en ours, seules ses gravures partent, et un coup de base à +3) : ce sont des mécanismes, ni bonus ni malus.",
   },
   polarity: {
     group: 'statuses',

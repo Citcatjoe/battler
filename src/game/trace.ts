@@ -1,10 +1,9 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
-import { DAMAGE_KINDS, DAMAGE_SOURCES } from './damage'
 import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
-import { elementLabel, RELIC_KINDS, relicKind, relicLine } from './relics'
+import { describeRelic, RELIC_KINDS, relicKind } from './relics'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
 
 /*
@@ -109,11 +108,9 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
-      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) », « (5 à 7, DM Lumière) » pour un
-      // coup magique, qui nomme sa source), ×N par Crescendo ou Soliste
-      const source = DAMAGE_SOURCES[a.source]
-      const type = `${DAMAGE_KINDS[source.kind].short}${source.kind === 'magical' ? ` ${source.name}` : ''}`
-      const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${type})${a.multiplier ? ` ×${a.multiplier}` : ''}`
+      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7) »), ×N par Crescendo ou Soliste ; un
+      // type d'attaque unique depuis le 2026-10-24 (« DP », « DM Lumière » avant)
+      const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
         return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
       const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
@@ -186,7 +183,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       ]
     case 'relic': {
       const relic = fighters[beat.side].relics.find((r) => r.id === beat.relic)
-      const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}${relic.element ? `, ${elementLabel(relic).toLowerCase()}, scène ${relic.scene}` : ''}` : 'relique inconnue'
+      const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}${relic.scene ? `, scène ${relic.scene}` : ''}` : 'relique inconnue'
       const left = relic?.charges !== undefined ? `, ${relic.charges - beat.uses} charge${relic.charges - beat.uses > 1 ? 's' : ''} restante${relic.charges - beat.uses > 1 ? 's' : ''}` : ''
       return [`Relique « ${beat.name} » ${of(fighters[beat.side].name)} (${kind}, déclenchement n° ${beat.uses}${left})`, ...effects(beat.effects)]
     }
@@ -201,7 +198,7 @@ function statusesLine(state: Snapshot, fighters: Pair<Character>) {
 function fighterLine(c: Character, side: Side) {
   const s = c.stats
   const skills = c.events.map((e) => e.name).join(', ') || 'aucune'
-  return `${c.name} (${SIDE_LABEL[side]}, ${c.race}) : ${c.maxHp} PV, attaque ${s.attackMin} à ${s.attackMax} ${DAMAGE_KINDS[c.attackKindIn(0)].short}, armure ${s.armor}, esquive ${percent(s.dodgeChance)}, critique ${percent(s.critChance)} ${multiplier(s.critMultiplier)} · compétences : ${skills}`
+  return `${c.name} (${SIDE_LABEL[side]}, ${c.race}) : ${c.maxHp} PV, attaque ${s.attackMin} à ${s.attackMax}, armure ${s.armor}, esquive ${percent(s.dodgeChance)}, critique ${percent(s.critChance)} ${multiplier(s.critMultiplier)} · compétences : ${skills}`
 }
 
 /** Trace structurée d'un combat (un bloc par tour). */
@@ -220,7 +217,7 @@ export function traceCombat(result: CombatResult): CombatTrace {
     // Reliques (tournoi) : `npm run logs` relit leurs identifiants pour rejouer le combat
     ...([0, 1] as const).flatMap((s) =>
       fighters[s].relics.length
-        ? [`${RELICS_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].relics.map((r) => `${r.id} « ${r.name} » (${relicLine(r)})`).join(' ; ')}`]
+        ? [`${RELICS_PREFIX}${SIDE_LABEL[s]}, ${fighters[s].name}) : ${fighters[s].relics.map((r) => `${r.id} « ${r.name} » (${describeRelic(r).text})`).join(' ; ')}`]
         : [],
     ),
     // Forge du dé (campagne) : `npm run logs` relit son journal pour rejouer le combat
@@ -271,7 +268,10 @@ export function parseRelics(text: string): Pair<string[]> {
   return relics
 }
 
-/** En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 ; temper » (journal, dans l'ordre). */
+/**
+ * En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 3 ; temper » (journal, dans
+ * l'ordre). Une copie d'avant la 0.111.0 s'écrivait sans sa destination (« copy 2 ») : elle se relit telle quelle.
+ */
 export const FORGE_PREFIX = 'Forge ('
 
 /** Lecture inverse de l'en-tête de forge : le journal de chaque camp ; `skills` : où retrouver une compétence gravée. */
@@ -283,10 +283,11 @@ export function parseForge(text: string, skills: readonly CharacterEvent[]): Pai
       .slice(line.indexOf(') : ') + 4)
       .split(' ; ')
       .map((token): ForgeStep => {
-        const [op, face, id] = token.split(' ')
+        const [op, face, arg] = token.split(' ')
         if (op === 'temper') return { op }
-        if (op === 'gild' || op === 'sharpen' || op === 'copy') return { op, face: Number(face) }
-        const skill = skills.find((e) => e.id === id)
+        if (op === 'copy') return arg === undefined ? { op, face: Number(face) } : { op, face: Number(face), to: Number(arg) }
+        if (op === 'gild' || op === 'sharpen') return { op, face: Number(face) }
+        const skill = skills.find((e) => e.id === arg)
         if (op !== 'engrave' || !skill) throw new Error(`Forge illisible : ${token}`)
         return { op, face: Number(face), skill }
       })

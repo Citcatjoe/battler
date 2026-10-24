@@ -28,7 +28,7 @@ export type Hook =
   /** Un statut et ses charges (Poison sur l'adversaire, Esquive améliorée sur soi) */
   | `status:${StatusId}`
   | `moment:${Moment}`
-  /** Des dégâts infligés de ce type (DP, DM, DT) */
+  /** Des dégâts infligés de cette famille (de l'instant : coup, dégâts directs ; temporaires : DT) */
   | `damage:${DamageKind}`
   /** Une face du dé qui tombe (« face:4 »), la face maximale */
   | `face:${number}`
@@ -58,42 +58,42 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   weakened: { side: 'opponent' },
   exposed: { side: 'opponent' },
   burn: { side: 'opponent', produces: ['damage:temporal'] },
-  vulnerable: { side: 'opponent', produces: ['damage:physical'] },
+  vulnerable: { side: 'opponent', produces: ['damage:instant'] },
   stunned: { side: 'opponent' },
   thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bleed', 'damage:temporal'] },
   ward: { side: 'self' },
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
-  windFury: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
+  windFury: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   evasion: { side: 'self', produces: ['moment:dodge'] },
   // Ferveur (Encens de l'abbaye) : le prochain coup qui touche fait plus
-  momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
+  momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
   // Une aura de coup (puissance, sauvage, mélodieuse, force de l'ours) vaut autant de fois qu'il y a de coups : elle
   // consomme les coups de plus (Furie, Coup de chance, deux dés), revue des signatures du 2026-10-24
-  powerAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
+  powerAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   intimidationAura: { side: 'self' },
   // 0.107.0 : +5 % de critique par charge en plus du multiplicateur : elle fait aussi critiquer
   precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'stat:critMultiplier'] },
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:physical'] },
+  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
-  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:physical'] },
+  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant'] },
   retribution: { side: 'self', consumes: ['moment:hurt'] },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
-  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:physical'] },
+  firefly: { side: 'opponent', produces: ['moment:hit', 'damage:instant'] },
   rotAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:rot', 'damage:temporal'] },
   rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
-  melodiousAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
+  melodiousAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   casting: { side: 'self' },
-  bearMight: { side: 'self', consumes: ['moment:hit'], produces: ['damage:physical'] },
+  bearMight: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   // 0.107.0 : elle écrit l'attaque (minimum et maximum), au lieu d'un bonus après le critique
-  wildAura: { side: 'self', consumes: ['moment:hit'], produces: ['stat:attackMin', 'stat:attackMax', 'damage:physical'] },
+  wildAura: { side: 'self', consumes: ['moment:hit'], produces: ['stat:attackMin', 'stat:attackMax', 'damage:instant'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -135,7 +135,7 @@ export function eventHooks(e: CharacterEvent): Hooks {
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
   // Crescendo, Soliste : ce coup ×N, un gros coup qui touche
-  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:physical')
+  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:instant')
   for (const effect of e.effects) addEffect(h, effect)
   return unique(h)
 }
@@ -156,7 +156,7 @@ export function relicHooks(r: Relic): Hooks {
   const h: Hooks = { produces: [], consumes: [], hinders: [] }
   for (const [k, v] of Object.entries(r.stats ?? {}) as [keyof CharacterStats, number][]) (v > 0 ? h.produces : h.hinders).push(STAT_HOOK[k])
   if (r.rollBonus) {
-    h.produces.push('damage:physical')
+    h.produces.push('damage:instant')
     if (r.onFace !== undefined) h.consumes.push(`face:${r.onFace}`)
   }
   if (r.trigger?.type === 'strike') {
@@ -166,6 +166,20 @@ export function relicHooks(r: Relic): Hooks {
   for (const c of r.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
   for (const effect of r.effects ?? []) addEffect(h, effect)
   return unique(h)
+}
+
+/**
+ * Ce qu'une relique attend pour pouvoir partir, et que le combat seul ne donne pas (2026-10-24, offre de campagne) : les
+ * statuts que ses conditions lisent chez l'adversaire (la Fiole de venin, le Poison), un soin reçu, une esquive ou un
+ * critique (un personnage sans chance d'esquive ni de critique n'en fait jamais sans une brique qui les donne). Une
+ * face, un coup qui touche ou un coup reçu arrivent toujours.
+ */
+export function relicNeeds(r: Relic): Hook[] {
+  const needs: Hook[] = []
+  for (const c of r.when ?? []) if (c.type === 'hasStatus' && c.who === 'opponent') needs.push(`status:${c.status}`)
+  const on = r.trigger?.type === 'strike' ? r.trigger.on : undefined
+  if (on === 'healed' || on === 'dodge' || on === 'crit') needs.push(on === 'healed' ? 'moment:heal' : `moment:${on}`)
+  return needs
 }
 
 /** Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits. */

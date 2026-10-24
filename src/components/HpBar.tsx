@@ -35,7 +35,7 @@ export function HpBar({ side, name, hp, maxHp, character, turn, relicUses, relic
           <span className={`hp-camp-name font-display text-2xl font-extrabold tracking-wide ${style.accent}`}>{name}</span>
           {/* Ses reliques (tournoi) suivent le nom ; ses compétences sont sous l'en-tête, sur l'arène (SkillBar) */}
           {character && character.relics.length > 0 && (
-            <RelicRow relics={character.relics} size={44} tooltip="below" align={side === 1 ? 'right' : 'left'} uses={relicUses} pulse={relicPulse} />
+            <RelicRow relics={character.relics} size={44} tooltip="below" align={side === 1 ? 'right' : 'left'} uses={relicUses} pulse={relicPulse} side={side} />
           )}
         </span>
         <span className="font-data text-[15px] font-medium tabular-nums text-ink-2">

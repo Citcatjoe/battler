@@ -1,18 +1,19 @@
 import type { CharacterStats } from './character'
-import { describeCondition, DIE_FACES, rollFace, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
+import { describeCondition, DIE_FACES, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
-import { STATUSES, type StatusId } from './statuses'
+import { lowerFirst, STATUSES, type StatusId } from './statuses'
 
 /*
  * Reliques (docs/RELIQUES.md) : des objets gagnés en tournoi, un par victoire, qui changent le profil d'un
  * combattant. Une relique est une donnée, comme une compétence : ce registre dit ce qu'elle fait, le moteur
- * (`combat.ts`) l'applique, l'écran la montre. Quatre types, déduits de sa définition (`relicKind`) :
+ * (`combat.ts`) l'applique, l'écran la montre. Quatre types, déduits de sa définition (`relicKind`), pour le code, les
+ * rapports et la trace seulement : le joueur ne les voit pas (2026-10-24), sa description dit quand elle agit.
  *   - caractéristique : des stats de base en plus, à plat (armure, esquive, critique, PV…) ;
  *   - coup : un bonus à la valeur de ses coups, ou un effet sur un moment du coup (touche, esquive…) ;
  *   - tour : un effet au début de son n-ième tour (puis tous les `cooldown` tours) ;
  *   - seuil : un effet quand ses PV passent sous une part de ses PV max.
- * Une relique qui se déclenche peut avoir des charges (déclenchements par combat) et un temps de recharge.
+ * Une relique qui se déclenche peut avoir une limite : des charges (déclenchements par combat) ou une recharge.
  */
 
 /**
@@ -35,26 +36,6 @@ export type RelicTrigger =
    * réarme s'ils remontent au-dessus. L'effet, lui, reste sur le porteur (règle 7 de docs/RELIQUES.md).
    */
   | { type: 'hpBelow'; ratio: number; who?: Target }
-
-/**
- * Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : quatre fragments d'un même vieux sort, scellés chacun dans un
- * objet. Une relique ordinaire garde sa magie contenue ; une relique élémentaire brise son sceau quand elle agit, et
- * sa magie envahit l'arène (un événement de scène, `scene`). Ce n'est pas un type : chacune est d'un des quatre types.
- */
-export type RelicElement = 'fire' | 'frost' | 'wind' | 'earth'
-
-export const RELIC_ELEMENTS: Record<RelicElement, { label: string }> = {
-  fire: { label: 'Feu' },
-  frost: { label: 'Givre' },
-  wind: { label: 'Vent' },
-  earth: { label: 'Terre' },
-}
-
-/** Ce qui sépare une relique élémentaire des autres, pour l'infobulle et le compendium. */
-export const ELEMENTAL_SUMMARY = 'Relique élémentaire : quand elle agit, son sceau se brise et sa magie envahit l’arène.'
-
-/** « Élémentaire · Feu » (vide pour une relique ordinaire) : infobulle, carte de récompense, compendium, trace. */
-export const elementLabel = (r: Pick<Relic, 'element'>) => (r.element ? `Élémentaire · ${RELIC_ELEMENTS[r.element].label}` : '')
 
 /** Stats de base ajoutées à plat par une relique (0,05 d'esquive = 5 points de pourcentage). */
 export type RelicStats = Partial<CharacterStats>
@@ -82,19 +63,21 @@ export interface Relic {
   charges?: number
   /** Tours du porteur avant de pouvoir se déclencher de nouveau (défaut : aucun) */
   cooldown?: number
-  /** Relique élémentaire : son élément, et l'événement de scène joué quand elle agit (présentation seulement) */
-  element?: RelicElement
+  /**
+   * L'événement de scène joué quand elle agit (présentation seulement, docs/RELIQUES.md § 12) : son sceau se brise et sa
+   * magie envahit l'arène. Le joueur n'y lit aucun élément (2026-10-24).
+   */
   scene?: SceneEventId
 }
 
 export type RelicKind = 'stat' | 'strike' | 'turn' | 'threshold'
 
-/** Les quatre types, dans l'ordre de lecture : nom et ce qu'ils font, pour l'infobulle et le compendium. */
-export const RELIC_KINDS: Record<RelicKind, { label: string; summary: string }> = {
-  stat: { label: 'Caractéristique', summary: 'Des stats en plus, tout le combat.' },
-  strike: { label: 'Coup', summary: 'Sur ses coups : une face de son dé, un moment du coup (il touche, il esquive, il encaisse), ou un soin reçu.' },
-  turn: { label: 'Tour', summary: 'Au début d’un de ses tours, avant son action.' },
-  threshold: { label: 'Seuil', summary: 'Quand des PV passent sous un seuil : les siens, ou ceux de l’adversaire.' },
+/** Les quatre types, pour les rapports et la trace (jamais montrés au joueur). */
+export const RELIC_KINDS: Record<RelicKind, { label: string }> = {
+  stat: { label: 'Caractéristique' },
+  strike: { label: 'Coup' },
+  turn: { label: 'Tour' },
+  threshold: { label: 'Seuil' },
 }
 
 export function relicKind(r: Relic): RelicKind {
@@ -212,14 +195,14 @@ export const RELICS: readonly Relic[] = [
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
   },
   /*
-   * Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : une par élément, réparties sur les types. Leur sceau se
-   * brise quand elles agissent (événement de scène) ; le spectacle reste rare, une ou deux fois par combat.
+   * Reliques à scène (0.85.0, docs/RELIQUES.md § 12, « élémentaires » jusqu'au 2026-10-24) : leur sceau se brise quand
+   * elles agissent (événement de scène) ; le spectacle reste rare, une ou deux fois par combat. Aucun élément pour le
+   * joueur : la scène est de la mise en scène.
    */
   {
     id: 'caged-ember',
     name: 'Braise captive',
     flavor: 'Une braise vivante dans une cage de quatre barreaux. Au quatrième tour, la cage cède, et le ciel brûle.',
-    element: 'fire',
     scene: 'emberRain',
     trigger: { type: 'turn', turn: 4 },
     charges: 1,
@@ -229,7 +212,6 @@ export const RELICS: readonly Relic[] = [
     id: 'frost-tear',
     name: 'Larme de givre',
     flavor: 'Une larme de glace qui ne fond pas, fêlée près de la pointe. Quand tout saigne, elle gèle la plaie.',
-    element: 'frost',
     scene: 'hoarfrost',
     trigger: { type: 'hpBelow', ratio: 0.35 },
     charges: 1,
@@ -242,7 +224,6 @@ export const RELICS: readonly Relic[] = [
     id: 'wind-conch',
     name: 'Conque des vents',
     flavor: 'Un coquillage à deux tours de spire où souffle encore une tempête. Qui l’esquive l’entend répondre.',
-    element: 'wind',
     scene: 'gale',
     trigger: { type: 'strike', on: 'dodge' },
     charges: 2,
@@ -252,11 +233,10 @@ export const RELICS: readonly Relic[] = [
     id: 'split-geode',
     name: 'Géode fendue',
     flavor: 'Une géode ouverte en deux, deux gros cristaux ambrés au fond. Frappée, la terre se lève autour du porteur.',
-    element: 'earth',
     scene: 'stoneWall',
     trigger: { type: 'strike', on: 'hurt' },
+    // 2026-10-24 (retour de l'utilisateur) : une seule limite, deux fois par combat ; la recharge de 3 tours part
     charges: 2,
-    cooldown: 3,
     effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 4 }],
   },
   /*
@@ -341,10 +321,11 @@ const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
 }
 
 /**
- * Un effet de relique au plus court : « 3 dégâts directs », « +2 Vol de vie », « retire son dernier malus, sinon +3 PV ».
- * Un statut posé est toujours un bonus de son porteur (« +2 Armure temporaire », A3) ; `attacker` : la relique part sur un
- * coup reçu ou esquivé, ses dégâts directs vont à l'attaquant, et le texte le dit (Conque des vents).
- * `validateRelics` garantit le reste : vers l'adversaire, seulement des dégâts directs ; aucune relâche de jauges.
+ * Un effet de relique au plus court : « 3 dégâts directs », « +2 vol de vie », « retire son dernier malus (sinon +3 PV) ».
+ * Un statut posé est toujours un bonus de son porteur (« +2 armure temporaire », A3), écrit comme un mot de la phrase ;
+ * `attacker` : la relique part sur un coup reçu ou esquivé, ses dégâts directs vont à l'attaquant, et le texte le dit
+ * (Conque des vents). `validateRelics` garantit le reste : vers l'adversaire, seulement des dégâts directs ; aucune
+ * relâche de jauges.
  */
 function effectText(e: Effect, attacker = false): string {
   switch (e.type) {
@@ -353,56 +334,87 @@ function effectText(e: Effect, attacker = false): string {
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus':
-      return `+${e.stacks} ${STATUSES[e.status].name}${e.turns ? ` (${e.turns} tours)` : ''}`
+      return `+${e.stacks} ${lowerFirst(STATUSES[e.status].name)}${e.turns ? ` (${e.turns} tours)` : ''}`
     case 'cleanse': {
       const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
       const what = e.count === undefined ? `tous ses ${kind}` : e.count === 1 ? `son dernier ${kind}` : `ses ${e.count} derniers ${kind}`
-      return `retire ${what}${e.orElse ? `, sinon ${effectText(e.orElse)}` : ''}`
+      return `retire ${what}${e.orElse ? ` (sinon ${effectText(e.orElse)})` : ''}`
     }
     case 'release':
-      return `relâche ${STATUSES[e.status].name}`
+      return `relâche ${lowerFirst(STATUSES[e.status].name)}`
   }
 }
 
+/** Le moment d'une relique de coup, en clair, après son effet : « sur un 1 », « lors d'un coup reçu ». */
+const STRIKE_MOMENT: Record<StrikeTrigger, string> = {
+  naturalOne: 'sur un 1',
+  naturalTwo: 'sur un 2',
+  naturalThree: 'sur un 3',
+  naturalMax: `sur un ${DIE_FACES}`,
+  hit: "lors d'un coup qui touche",
+  crit: "lors d'un coup critique",
+  missed: "lors d'un coup manqué",
+  dodge: "lors d'une esquive",
+  hurt: "lors d'un coup reçu",
+  healed: 'à chaque soin reçu',
+}
+
+/** Les adversaires qui portent ce statut, en un mot quand il existe (« +2 dégâts aux adversaires empoisonnés »). */
+const BEARERS: Partial<Record<StatusId, string>> = { poison: 'empoisonnés', bleed: 'qui saignent' }
+
 /**
- * Quand elle agit, en quelques mots (« Sur un 1 », « Tous les 3 tours », « Sous 40 % PV ») ; pour un bonus de coup, sa
- * face (« Sur un 4 ») ou ses conditions (« Si l'adversaire porte Saignement ») ; rien pour une relique toujours active.
+ * Une condition, en clair, après l'effet : sur un bonus de coup, le statut que porte l'adversaire (« aux adversaires
+ * empoisonnés ») ; sur un coup qui touche, sa taille (« de 6 dégâts ou plus ») ; sinon la condition des compétences.
+ */
+function conditionText(c: Condition, r: Relic): string {
+  if (c.type === 'hasStatus' && c.who === 'opponent' && r.rollBonus !== undefined) {
+    const name = lowerFirst(STATUSES[c.status].name)
+    return `aux adversaires ${c.stacks ? `qui portent ${c.stacks} ${name} ou plus` : (BEARERS[c.status] ?? `qui portent ${name}`)}`
+  }
+  if (c.type === 'hitAtLeast') return `de ${c.amount} dégâts ou plus`
+  return `si ${describeCondition(c)}`
+}
+
+/**
+ * Quand elle agit, après l'effet : sa face (« sur un 4 »), son moment (« lors d'un coup reçu », « tous les 3 tours »,
+ * « quand ses PV passent sous 40 % »), puis ses conditions ; rien pour une relique toujours active.
  */
 function momentOf(r: Relic): string {
   const t = r.trigger
-  const conditions = (r.when ?? []).map(describeCondition)
-  const when = conditions.map((c) => `, si ${c}`).join('')
-  if (!t) {
-    if (r.rollBonus !== undefined && r.onFace !== undefined) return `Sur un ${r.onFace}${when}`
-    return conditions.length ? `Si ${conditions.join(' et ')}` : ''
-  }
-  switch (t.type) {
-    case 'turn': {
-      if (r.charges === 1) return `Au ${ordinal(t.turn)} tour${when}`
-      const every = r.cooldown ? `tous les ${r.cooldown} tours` : 'à chaque tour'
-      return `${t.turn === (r.cooldown ?? 1) ? capitalize(every) : `Au ${ordinal(t.turn)} tour, puis ${every}`}${when}`
+  const head = (() => {
+    if (!t) return r.onFace !== undefined ? `sur un ${r.onFace}` : ''
+    switch (t.type) {
+      case 'turn': {
+        if (r.charges === 1) return `au ${ordinal(t.turn)} tour`
+        const every = r.cooldown ? `tous les ${r.cooldown} tours` : 'à chaque tour'
+        return t.turn === (r.cooldown ?? 1) ? every : `au ${ordinal(t.turn)} tour, puis ${every}`
+      }
+      case 'hpBelow':
+        return `quand ${t.who === 'opponent' ? "les PV de l'adversaire passent" : 'ses PV passent'} sous ${Math.round(t.ratio * 100)} %`
+      case 'strike':
+        return STRIKE_MOMENT[t.on]
     }
-    case 'hpBelow':
-      return `${t.who === 'opponent' ? 'Adversaire sous' : 'Sous'} ${Math.round(t.ratio * 100)} % PV${when}`
-    case 'strike': {
-      const face = rollFace(t.on)
-      // Un coup encaissé d'au moins N PV, seule condition (Écu cabossé) : « Quand il encaisse un coup de 6 PV ou plus »
-      const least = r.when?.length === 1 && r.when[0].type === 'hitAtLeast' && t.on === 'hurt' ? r.when[0].amount : undefined
-      if (least !== undefined) return `Quand il encaisse un coup de ${least} PV ou plus`
-      const moment = face !== undefined ? `Sur un ${face}` : t.on === 'naturalMax' ? `Sur un ${DIE_FACES}` : TRIGGERS[t.on].label
-      return `${moment}${when}`
-    }
-  }
+  })()
+  return [head, ...(r.when ?? []).map((c) => conditionText(c, r))].filter(Boolean).join(' ')
+}
+
+/**
+ * Sa limite, une seule (`validateRelics`) : « 2x » par combat, ou « recharge 3 tours ». Une relique de tour dit sa
+ * recharge, ou sa charge unique, par son moment (« tous les 3 tours », « au 4e tour »).
+ */
+function limitOf(r: Relic): string {
+  const turn = r.trigger?.type === 'turn'
+  if (r.charges !== undefined) return turn && r.charges === 1 ? '' : `${r.charges}x`
+  return r.cooldown && !turn ? `recharge ${r.cooldown} tours` : ''
 }
 
 export interface RelicDescription {
   /**
-   * La règle en une ligne, moment puis effet : « Sur un 1 : 3 dégâts directs », « Sur un 4 : +4 dégâts à ce coup ». Le
-   * vocabulaire porte la résolution : « à ce coup », avant le critique ; « dégâts directs », ni coup ni armure.
+   * La règle en une ligne, au style de l'utilisateur (2026-10-24) : l'effet d'abord, la condition en clair, la limite en
+   * « 2x » (« +4 armure temporaire lors d'un coup reçu, 2x », « +2 dégâts aux adversaires empoisonnés »). Ni type de
+   * relique, ni élément, ni type de dégâts.
    */
   text: string
-  /** Ses limites : « 1 fois par combat », « recharge 3 tours » (vide sans limite) */
-  limits: string[]
   /** Statuts qu'elle pose, avec leur cible */
   posed: { status: StatusId; target: Target }[]
 }
@@ -412,25 +424,15 @@ export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
-    r.rollBonus ? `${signed(r.rollBonus)} dégâts à ce coup` : '',
+    r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
     ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge'))),
   ]
     .filter(Boolean)
-    .join(', ')
-  const moment = momentOf(r)
-  const limits = [
-    // Une relique de tour à une charge le dit déjà par son moment (« Au 4e tour »)
-    ...(r.charges !== undefined && !(t?.type === 'turn' && r.charges === 1) ? [`${r.charges} fois par combat`] : []),
-    ...(r.cooldown && t?.type !== 'turn' ? [`recharge ${r.cooldown} tours`] : []),
-  ]
+    .join(' et ')
+  const rule = [effect, momentOf(r)].filter(Boolean).join(' ')
+  const limit = limitOf(r)
   const posed = (r.effects ?? []).flatMap((e) => (e.type === 'applyStatus' ? [{ status: e.status, target: e.target ?? ('self' as const) }] : []))
-  return { text: capitalize(moment ? `${moment} : ${effect}` : effect), limits, posed }
-}
-
-/** Une relique en une ligne (rapports, trace) : sa règle, puis ses limites. */
-export function relicLine(r: Relic) {
-  const { text, limits } = describeRelic(r)
-  return [text, ...limits].join(' · ')
+  return { text: capitalize(limit ? `${rule}, ${limit}` : rule), posed }
 }
 
 /* ---------- Validation ---------- */
@@ -466,13 +468,14 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     }
     if (r.charges !== undefined && (!Number.isInteger(r.charges) || r.charges < 1)) at('charges : entier ≥ 1')
     if (r.cooldown !== undefined && (!Number.isInteger(r.cooldown) || r.cooldown < 1)) at('recharge : entier ≥ 1')
+    // Une seule limite (2026-10-24, retour de l'utilisateur) : des charges, ou une recharge
+    if (r.charges !== undefined && r.cooldown !== undefined) at('une seule limite : des charges ou une recharge')
     const t = r.trigger
     if (t?.type === 'turn' && (!Number.isInteger(t.turn) || t.turn < 1)) at('tour : entier ≥ 1')
     if (t?.type === 'hpBelow' && !(t.ratio > 0 && t.ratio < 1)) at('seuil : part des PV entre 0 et 1')
     if (t?.type === 'strike' && !(STRIKE_TRIGGERS as readonly string[]).includes(t.on)) at(`moment de coup inconnu : ${t.on}`)
-    // Relique élémentaire : un élément et sa scène, toujours ensemble, sur une relique qui se déclenche. Une scène qui
-    // vise l'adversaire fait tomber un coup par impact : autant d'impacts que de coups de ses dégâts directs
-    if ((r.element === undefined) !== (r.scene === undefined)) at('une relique élémentaire a un élément et une scène')
+    // Relique à scène : sur une relique qui se déclenche. Une scène qui vise l'adversaire fait tomber un coup par impact :
+    // autant d'impacts que de coups de ses dégâts directs
     if (r.scene) {
       const timing = SCENE_EVENTS[r.scene]
       if (!timing) at(`scène inconnue : ${r.scene}`)

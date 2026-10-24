@@ -1,5 +1,4 @@
 import type { PoseId } from './poses'
-import type { AttackKind, DamageSource } from './damage'
 import type { CharacterEvent } from './events'
 import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
@@ -104,10 +103,6 @@ export interface CharacterForm {
    * règles de la forme (le sort de l'homme, le +3 de l'ours) ; ils doivent être `mechanic: 'form'` (validateRoster).
    */
   statuses?: readonly StatusId[]
-  /** Type du coup de base sous cette forme (règles v2, phase 5 bis : l'homme DM, l'ours DP) ; sinon celui du personnage */
-  attackKind?: AttackKind
-  /** Source du coup de base sous cette forme, avec son `attackKind` (voir `CharacterDef.attackSource`) */
-  attackSource?: DamageSource
 }
 
 export interface CharacterDef {
@@ -122,20 +117,9 @@ export interface CharacterDef {
   /** Capacités déclenchées en combat */
   events: readonly CharacterEvent[]
   /**
-   * Type de son coup de base (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : DP (une arme) ou DM (la magie :
-   * Ysolde, le druide sous forme humaine). Une étiquette : aucune règle ne la lit encore.
-   */
-  attackKind: AttackKind
-  /**
-   * Source de son coup de base (`damage.ts`) : la couleur de son chiffre à l'écran (docs/MISE_EN_SCENE.md, M37).
-   * Obligatoire pour un coup magique, qui nomme sa magie (Ysolde : `holy`) ; un coup physique est un `strike`, sans la
-   * déclarer. Son type doit être `attackKind` (validateRoster).
-   */
-  attackSource?: DamageSource
-  /**
    * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
-   * d'une campagne, sur toutes les faces qui la portent (les Feux follets de Thaldrin, 4 à 6). Sans signature (Morgrut, le
-   * combattant nu), il y part avec son kit entier.
+   * d'une campagne, une fois, sur la face 1 (0.111.0). Sans signature (Morgrut, le combattant nu), il y part avec son kit
+   * entier.
    */
   signature?: string
   /**
@@ -220,20 +204,6 @@ export class Character {
     this.immunities = def.immunities ?? []
     this.forms = def.forms
     this.dice = def.twinDice ? 2 : 1
-  }
-
-  /** Type du coup de base sous une forme donnée (index dans `forms`) : celui de la forme, sinon le sien. */
-  attackKindIn(form = 0): AttackKind {
-    return this.forms?.[form].attackKind ?? this.#def.attackKind
-  }
-
-  /**
-   * Source du coup de base sous une forme donnée : celle de la forme qui a son propre type, sinon la sienne ; un coup
-   * sans source déclarée est un coup physique (`strike`), validateRoster exige la source d'un coup magique.
-   */
-  attackSourceIn(form = 0): DamageSource {
-    const own = this.forms?.[form]
-    return (own?.attackKind !== undefined ? own.attackSource : this.#def.attackSource) ?? 'strike'
   }
 
   /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */

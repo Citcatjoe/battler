@@ -77,7 +77,7 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | `skip` | Tour perdu |
 | `shift` | Transformation |
 | `coin` | Pièce lancée, Pièce retombe ; sur pile, Pile réussie **en même temps** (0.55.0, demande de l'utilisateur : le résultat, son son, son badge et son texte tombent d'un bloc ; avant, 0,14 s après), puis, après un temps de lecture, Coup critique au coup ; sur face, rien de plus. La pièce seule ne disait pas assez si le pari était gagné (retour de l'utilisateur, 0.36.4). |
-| `relic` | Le son déduit de ses effets (§ 4.2), et le son du signe de son label (§ 4.4), au même instant ; vers l'adversaire, ses coups de scène sonnent le son que leur scène déclare (Coup pour la Conque des vents, Coup critique pour la Braise captive). Rien si aucun effet n'a de résultat (`MISE_EN_SCENE.md` M25) |
+| `relic` | Le son du signe de son label (§ 4.4) avec son sceau ; le son déduit de ses effets (§ 4.2) quand ils tombent : au même instant, sauf si elle pose un statut, qui part de son sceau en signal (0.111.0, `MISE_EN_SCENE.md` M19 et M23) : le label sonne au départ, l'effet à l'arrivée. Une relique du dé (Osselet fendu, Dé creux) sonne avec le Dé posé, avant le coup (M40). Vers l'adversaire, ses coups de scène sonnent le son que leur scène déclare (Coup pour la Conque des vents, Coup critique pour la Braise captive). Rien si aucun effet n'a de résultat (`MISE_EN_SCENE.md` M25) |
 | ~~`pair`~~ | Retirée en phase 5 ter avec les doubles de la barde, et avec elle le « ding » de tout double (Pile réussie en même temps que les dés, 0.46.0) : ses deux dés sont une rafale (`flurry`). |
 | `statusAge` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
 | Fin du combat | KO, puis Victoire |

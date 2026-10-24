@@ -32,6 +32,38 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.111.0] — 2026-10-24
+
+Les retours de partie de l'utilisateur du 2026-10-24 (trois campagnes : Elaria, Gorak, Ysolde) : plus de chiffre à virgule, la signature sur la face 1, la forge (dorure, copie), les six faces en combat, les reliques (textes, offre), une attaque d'un seul type, et le rythme dé rendu → intervalle → impact.
+
+### Ajouté
+- **Copier vers une face choisie** : l'étape devient `copy <origine> <destination>` ; à la forge, le joueur choisit la face à copier, puis une face libre (« Choisissez où la copier », aperçu avant → après). L'adversaire et l'auto-forge prennent la plus petite face libre (la règle d'avant). `parseForge` relit l'ancien `copy 2` et le nouveau `copy 2 5`.
+- **Les six faces dans la zone de compétences du combat** (`SkillBar.tsx`), dans l'ordre : une face nue est une case vide, éteinte, qui s'allume quand le dé tombe dessus ; une face dorée est la même case sur fond d'or. Morgrut n'a plus une zone vide.
+- **Offre de reliques pertinente** (campagne) : une relique dont la condition ne peut pas arriver avec le champion (statut lu chez l'adversaire, soin reçu, esquive, critique) n'est pas offerte (`relicNeeds`, `offerableRelics`) ; la Fiole de venin ne revient plus à Elaria, Gorak ni Ysolde. Le tournoi n'est pas filtré.
+- **Mise en scène dé rendu → intervalle → impact** ([docs/MISE_EN_SCENE.md](docs/MISE_EN_SCENE.md)) : les reliques du dé (Osselet fendu, Dé creux) partent avec le dé posé, avant le coup (M40) ; une relique qui pose un statut envoie un signal de son sceau vers le statut (M19, M23) ; la rafale garde son rythme contre les réactions (M17 bis : Furie contre Épines, 1 490 → 320 ms entre deux coups).
+
+### Modifié
+- **Plus de demi-rang** : chaque axe de rang est un entier (`validateRoster` refuse un `per` non entier ou < 1). Les treize axes à 0,5 passent à 1 ; la Rétribution s'aiguise de 25 points de pourcentage (même effet). Onze rangs II dépassent la bande de +3 à +8 points (Aura glaciale +10,2 … Aura de précision +8,0), signalés et laissés tels quels ([docs/SORTS.md](docs/SORTS.md) § 20).
+- **La signature sur la face 1** : un champion de campagne commence avec sa signature une fois, sur le 1, et cinq faces nues (Gorak, Brokk, Ervald, Ysolde, Naraxes passent du 2 au 1 ; Thaldrin, Feux follets 4, 5, 6 → le 1). Campagne : boss atteint 23 → 27 %, acte gagné 10 → 10 % (12 parties par champion).
+- **Dorer seulement une face libre** : une face dorée ne porte plus de compétence (gravure, copie, offre, auto-forge, adversaire, héritage) ; le chiffre « +2 » d'une face dorée est retiré partout.
+- **Reliques, un texte court** : l'effet d'abord, la condition en clair, la limite en « 2x » (« +2 dégâts aux adversaires empoisonnés », « +4 armure temporaire lors d'un coup reçu, 2x », « +2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus ») ; ni type ni élément montrés au joueur ; compendium à une liste. Une relique a une limite ou une recharge, pas les deux : la Géode fendue perd sa recharge (+18,8 → +18,9 points).
+- **Attaque d'un type unique** : plus de DP/DM pour le joueur (fiche « 5 à 7 », compendium « Couleurs des dégâts », trace) ; le coup de base est blanc (teinte `hit`). Les DT des statuts et les teintes de la Foudre, de la Purification, de la Braise et de la Conque restent.
+- **Critique assuré** : sa charge baisse à l'impact du coup critique, puis le Trophée du chasseur la rend après un intervalle (275 → 615 ms après l'impact), au lieu de les montrer au même instant.
+- Une compétence qui modifie son coup (Pourfendre, Pile ou face, Crescendo, Soliste) s'allume avec le dé posé (M11) ; les labels d'un jet greffé tombent avec son jet (M8).
+
+### Corrigé
+- Thaldrin : ses Feux follets sur 4, 5 et 6, reliquat de l'ancien système, « avaient l'air buggés ».
+- Le compteur de Critique assuré « resté à 2 » contre Ervald : juste au moteur (2 → 1 puis +1 du Trophée dans le même instant), la mise en scène montre maintenant la baisse et la hausse.
+
+### Retiré
+- Le code des demi-rangs (« 1,5 », « une fois sur deux, dès la première », compteur `acted`, contrôles d'audit associés).
+- Les types d'attaque DP/DM (`AttackKind`, `attackKind`, `attackSource`, `DAMAGE_KINDS`) et les éléments de relique (`element`, `RELIC_ELEMENTS`).
+- L'icône de dé du choix du champion (`SkillDice` et son CSS).
+
+### Vérifié
+- `npm run check` : 352 tests ; `npx vite build` passe. Empreinte `balance.test.ts` inchangée (rang I et duels sans forge inchangés). `npm run logs` sur les 26 combats de l'utilisateur : rejoués à l'identique avant les changements, aucune anomalie de résolution. `npm run relics` avant → après. Captures de la zone de compétences (Morgrut contre Gorak) ; non vus : la forge en deux temps, le choix du champion, les textes de reliques à l'écran, le signal des reliques, le coup blanc. Le son n'est pas vérifiable.
+- Les traces de campagne d'avant 0.111.0 ne se rejouent plus à l'identique (signature déplacée sur le 1) ; une partie en cours dont une forge ne vaut plus est oubliée.
+
 ## [0.110.1] — 2026-10-24
 
 Les restes de la revue (`docs/REVUE_CONTENU.md`), selon les décisions de l'utilisateur du 2026-10-24 : T12, E4, le son de la Foudre et A8.

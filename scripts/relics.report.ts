@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { winRate } from '../src/game/analysis'
 import { simulateCombat } from '../src/game/combat'
-import { RELIC_KINDS, relicKind, relicLine, RELICS } from '../src/game/relics'
+import { describeRelic, RELIC_KINDS, relicKind, RELICS } from '../src/game/relics'
 import { CHARACTERS } from '../src/game/roster'
 import pkg from '../package.json' with { type: 'json' }
 
@@ -46,7 +46,7 @@ it('rapport des reliques', () => {
       `| ${relic.name} | ${RELIC_KINDS[relicKind(relic)].label} | ${pts(mean)} | ${low.c.name} ${pts(low.with - low.without)} | ${high.c.name} ${pts(high.with - high.without)} | ${(fires / fights).toFixed(1).replace('.', ',')} |`,
     )
     detail.push(
-      `**${relic.name}** (${relicLine(relic)}) : ${gains.map((g) => `${g.c.name} ${(g.without * 100).toFixed(1)} → ${(g.with * 100).toFixed(1)}`).join(', ')}`,
+      `**${relic.name}** (${describeRelic(relic).text}) : ${gains.map((g) => `${g.c.name} ${(g.without * 100).toFixed(1)} → ${(g.with * 100).toFixed(1)}`).join(', ')}`,
       '',
     )
   }

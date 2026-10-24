@@ -14,6 +14,7 @@ import { CHARACTER_IDS, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from '../src/game/trace'
 import { getRelic, RELIC_IDS } from '../src/game/relics'
 import type { ForgeStep } from '../src/game/forge'
+import type { Character } from '../src/game/character'
 import pkg from '../package.json' with { type: 'json' }
 
 const DIR = 'logs/combats'
@@ -65,16 +66,26 @@ it('rapport des combats joués', () => {
     }
     const hp = text.split('\n').slice(1, 3).map((line) => Number(/\) : (\d+) PV/.exec(line)?.[1]))
     const fighter = (id: string, side: 0 | 1, name?: string) => {
-      // Champion de campagne (0.104.0) : sa signature seule. Sa ligne ne nomme pas tout le kit du personnage
+      // Champion de campagne (0.104.0) : sa signature seule, et la forge du dé ne s'écrit que pour lui (une gravure
+      // peut lui rendre tout le kit nommé, Naraxes gravée de Pile ou face). Sinon, sa ligne ne nomme pas tout le kit
       const listed = /compétences : (.+)$/.exec(text.split('\n')[side + 1])?.[1].split(', ') ?? []
       const full = campaignCharacter(id)
-      const signatureOnly = id in CAMPAIGN_CHAMPIONS && !full.events.every((e) => listed.some((n) => n.startsWith(e.name)))
+      const signatureOnly =
+        id in CAMPAIGN_CHAMPIONS && (forge[side].length > 0 || !full.events.every((e) => listed.some((n) => n.startsWith(e.name))))
       const base = signatureOnly ? CAMPAIGN_CHAMPIONS[id] : full
       const built = (name ? base.withName(name) : base).withForge(forge[side]).withRelics(relics[side].map(getRelic))
       const delta = hp[side] - built.maxHp
       return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp + delta } }) : built
     }
-    const r = simulateCombat([fighter(a, 0, names?.[1]), fighter(b, 1, names?.[2])], { seed: Number(seed), forcedRolls: parseForcedRolls(text) })
+    let fighters: Pair<Character>
+    try {
+      fighters = [fighter(a, 0, names?.[1]), fighter(b, 1, names?.[2])]
+    } catch (error) {
+      // Forge écrite par une autre version des règles (une gravure devenue interdite) : le combat ne se reconstruit pas
+      skipped.push(`${file} (forge refusée : ${error instanceof Error ? error.message : error})`)
+      continue
+    }
+    const r = simulateCombat(fighters, { seed: Number(seed), forcedRolls: parseForcedRolls(text) })
     // La trace écrite et la trace rejouée doivent être identiques ; sinon, les règles ont changé depuis
     const same = traceText(r) === text
     results.push({ file, r, same })

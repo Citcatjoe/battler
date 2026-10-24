@@ -80,6 +80,11 @@ export const VOLLEY_STRIKE_HOLD = 260
 export const VOLLEY_FLOW_HOLD = 220
 export const VOLLEY_GAP = 60
 export const VOLLEY_REACTION_LEAD = Math.round(VOLLEY_STRIKE_HOLD / 2)
+/**
+ * Rafale : après ses réactions, le reste de la lecture du coup, qui en est déduit. Les réactions à un coup de rafale
+ * ne s'attardent pas : la rafale garde son rythme (docs/MISE_EN_SCENE.md, M17 bis)
+ */
+export const VOLLEY_REACTION_REST = VOLLEY_STRIKE_HOLD - VOLLEY_REACTION_LEAD
 /** La plaie qui coule sur un coup : ses PV tombent un battement après son label */
 export const BLEED_DELAY = 140
 /** Le son du statut posé par un coup (poison de l'Aura de décoction) suit le Coup d'un battement */

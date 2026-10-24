@@ -1,4 +1,4 @@
-import { describeRelic, elementLabel, RELIC_KINDS, relicKind, type Relic } from '../game/relics'
+import { describeRelic, type Relic } from '../game/relics'
 import { POLARITY_STYLE, STATUSES } from '../game/statuses'
 import { RelicIcon, StatusIcon } from './Icon'
 import { useTipLayer } from './TipLayer'
@@ -37,7 +37,8 @@ export function RelicSeal({ relic, size, spent, charges, pulse }: SealProps) {
 const ALIGN = { left: 'left-0', center: 'left-1/2 -translate-x-1/2', right: 'right-0' }
 
 /**
- * Infobulle d'une relique : nom, type, sa règle en une ligne, ses limites, ses statuts posés, et ses charges en combat.
+ * Infobulle d'une relique : nom, sa règle en une ligne (limite comprise), ses statuts posés, et ses charges en combat.
+ * Ni type de relique ni élément (2026-10-24, retour de l'utilisateur) : la règle dit quand elle agit.
  * Pas de phrase d'ambiance : elle reste au compendium (2026-10-23, demande de l'utilisateur).
  * Elle s'ouvre au survol de SON sceau seulement (groupe nommé `group/relic`) : un `group-hover` nu réagirait au
  * survol de n'importe quel ancêtre `group` (la ligne de l'arbre du tournoi, par exemple) et ouvrirait d'un coup
@@ -56,7 +57,7 @@ export function RelicTooltip({
   /** En combat : charges restantes */
   left?: number
 }) {
-  const { text, limits, posed } = describeRelic(relic)
+  const { text, posed } = describeRelic(relic)
   const position =
     placement === 'floating'
       ? ''
@@ -65,19 +66,12 @@ export function RelicTooltip({
         } ${ALIGN[align]}`
   return (
     <div role="tooltip" className={`w-80 rounded-(--r-sm) border border-gold-500/60 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2) ${position}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-ink-1">
-          <RelicSeal relic={relic} size={44} />
-          {relic.name}
-        </span>
-        <span className="shrink-0 rounded-(--r-xs) border border-gold-500/60 bg-gold-500/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-gold-300">
-          {RELIC_KINDS[relicKind(relic)].label}
-        </span>
-      </div>
-      {relic.element && <p className="mt-1 font-body text-[13px] font-bold uppercase tracking-wider text-gold-300">{elementLabel(relic)}</p>}
+      <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-ink-1">
+        <RelicSeal relic={relic} size={44} />
+        {relic.name}
+      </span>
       <div className="codex-divider my-2.5" />
       <p className="font-body text-[16px] font-bold leading-snug text-ink-1">{text}</p>
-      {limits.length > 0 && <p className="mt-1 font-body text-[13px] font-medium text-gold-300">{limits.join(' · ')}</p>}
       {posed.map((p) => (
         <p key={p.status} className="mt-2 flex items-center gap-1.5 font-body text-[14px] font-bold text-ink-1">
           <StatusIcon id={p.status} className="h-6 w-6" />
@@ -109,6 +103,7 @@ export function RelicRow({
   align = 'left',
   uses,
   pulse,
+  side,
 }: {
   relics: readonly Relic[]
   size?: number
@@ -118,6 +113,11 @@ export function RelicRow({
   uses?: Readonly<Record<string, number>>
   /** En combat : reliques qui viennent d'agir, et la clé de leur éclat */
   pulse?: { relics: readonly string[]; key: number }
+  /**
+   * En combat : le camp du porteur. Chaque sceau devient le point de départ du signal de sa relique vers la zone d'état
+   * (`data-signal` « camp:relic:id », celui que pose la mise en scène, staging.ts ; SignalLayer)
+   */
+  side?: 0 | 1
 }) {
   const tip = useTipLayer()
   if (relics.length === 0) return null
@@ -130,6 +130,7 @@ export function RelicRow({
             key={r.id}
             className="group/relic relative cursor-help hover:z-[70]"
             aria-label={r.name}
+            data-signal={side !== undefined ? `${side}:relic:${r.id}` : undefined}
             onMouseEnter={tip ? (e) => tip(<RelicTooltip relic={r} placement="floating" left={left} />, e.currentTarget) : undefined}
             onMouseLeave={tip ? () => tip(null) : undefined}
           >
@@ -143,22 +144,17 @@ export function RelicRow({
 }
 
 /**
- * Carte d'une relique à choisir (récompense de tournoi) : le grand sceau, le nom, le type, sa règle en une ligne et ses
- * limites. `mark` : bandeau au-dessus de la carte (« Choix de Gorak »).
+ * Carte d'une relique à choisir (récompense de tournoi) : le grand sceau, le nom et sa règle en une ligne, limite
+ * comprise. `mark` : bandeau au-dessus de la carte (« Choix de Gorak »).
  */
 export function RelicCard({ relic, selected, mark, onSelect }: { relic: Relic; selected: boolean; mark?: string; onSelect: () => void }) {
-  const { text, limits } = describeRelic(relic)
+  const { text } = describeRelic(relic)
   return (
     <button type="button" className="relic-card" aria-pressed={selected} onClick={onSelect}>
       {mark && <span className="relic-card-mark">{mark}</span>}
       <RelicSeal relic={relic} size={140} />
       <span className="font-display text-[26px] font-extrabold leading-tight text-ink-1">{relic.name}</span>
-      <span className="rounded-(--r-xs) border border-gold-500/60 bg-gold-500/15 px-2 py-px font-body text-[13px] font-bold uppercase tracking-[0.2em] text-gold-300">
-        {RELIC_KINDS[relicKind(relic)].label}
-      </span>
-      {relic.element && <span className="font-body text-[14px] font-bold uppercase tracking-[0.15em] text-gold-300">{elementLabel(relic)}</span>}
       <span className="font-body text-[20px] font-bold leading-snug text-ink-1">{text}</span>
-      {limits.length > 0 && <span className="font-body text-[15px] font-bold text-gold-300">{limits.join(' · ')}</span>}
     </button>
   )
 }

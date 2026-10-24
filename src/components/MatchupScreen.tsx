@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from '../game/arenas'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
-import { RELIC_KINDS, relicKind, type Relic } from '../game/relics'
+import type { Relic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
@@ -523,7 +523,6 @@ function RelicShelf({ relics }: { relics: readonly Relic[] }) {
                 <li key={r.id} className="flex items-center gap-2 font-body text-[15px] font-bold leading-tight text-ink-1">
                   <RelicSeal relic={r} size={32} />
                   {r.name}
-                  <span className="ml-auto font-body text-[12px] font-bold uppercase tracking-wider text-gold-300">{RELIC_KINDS[relicKind(r)].label}</span>
                 </li>
               ))}
             </ul>

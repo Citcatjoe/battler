@@ -4,6 +4,7 @@ import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES } from '../game/events'
 import {
   FORGE_OPS,
   TEMPER_BONUS,
+  copyDestinations,
   forgedFaces,
   forgeState,
   GILD_BONUS,
@@ -15,6 +16,7 @@ import {
   type ForgeOffer,
   type ForgeStep,
   withForgeStep,
+  writtenFace,
 } from '../game/forge'
 import { of } from '../game/narration'
 import { ForgeFaceTooltip } from './ForgeFaceTooltip'
@@ -47,10 +49,11 @@ export function ForgedDie({
   align?: 'left' | 'center' | 'right'
   /** Choix d'une face (forge) : les faces visables s'allument, les autres s'éteignent */
   targets?: readonly number[]
-  selected?: number
+  /** Les faces retenues (la face choisie ; pour une copie, son origine et sa destination) */
+  selected?: readonly number[]
   onPick?: (face: number) => void
-  /** L'opération en cours de choix : l'infobulle d'une face visée montre ce qu'elle deviendrait (avant → après) */
-  preview?: ForgeOffer
+  /** L'opération en cours de choix, sur une face visée : son infobulle montre ce que la face deviendrait (avant → après) */
+  preview?: (face: number) => ForgeStep | undefined
 }) {
   const faces = forgedFaces(character.definition, character.forge)
   return (
@@ -58,13 +61,14 @@ export function ForgedDie({
       {faces.map((f) => {
         const skill = f.engraved ?? f.origin[0]
         const target = targets?.includes(f.face)
-        const next = preview && target ? forgedFaces(character.definition, withForgeStep(character.definition, character.forge, stepOf(preview, f.face)))[f.face - 1] : undefined
+        const step = target ? preview?.(f.face) : undefined
+        const next = step ? forgedFaces(character.definition, withForgeStep(character.definition, character.forge, step))[f.face - 1] : undefined
         return (
           <li key={f.face} className="group relative hover:z-[70]">
             <button
               type="button"
               disabled={!target}
-              aria-pressed={target ? selected === f.face : undefined}
+              aria-pressed={target ? !!selected?.includes(f.face) : undefined}
               aria-label={`Face ${f.face}`}
               onClick={() => target && onPick?.(f.face)}
               className="forge-face"
@@ -128,8 +132,8 @@ export function ForgeCard({
   onSelect: () => void
 }) {
   const op = FORGE_OPS[offer.op]
-  const face = 'face' in offer ? offer.face : undefined
-  const where = face === undefined ? '' : `Face ${face}`
+  // Une copie : sa face d'origine, puis sa destination (une copie d'avant la 0.111.0 n'a que son origine)
+  const where = !('face' in offer) ? '' : offer.op === 'copy' && offer.to !== undefined ? `Face ${offer.face} → ${offer.to}` : `Face ${offer.face}`
   return (
     <button type="button" className="relic-card" aria-pressed={selected} onClick={onSelect}>
       {mark && <span className="relic-card-mark">{mark}</span>}
@@ -151,46 +155,84 @@ export interface ForgeChoiceState {
   /** Index de l'opération choisie par le combattant (−1 sans offre) */
   autoIndex: number
   index: number
-  face: number | undefined
-  setFace: (face: number) => void
   select: (index: number) => void
   picked: ForgeOffer | undefined
-  /** Faces que l'opération retenue peut viser (vide pour Agrandir et Retailler) */
+  /** Faces cliquables sur le dé : celles que l'opération retenue peut viser ; pour une copie, ses origines et, une fois
+   * l'origine choisie, ses destinations (vide pour Tremper l'arme) */
   targets: number[]
+  /** Faces retenues : la face visée ; pour une copie, son origine et sa destination */
+  selected: number[]
+  pick: (face: number) => void
+  /** Ce que deviendrait une face visée (aperçu), quand l'opération y est complète */
+  preview: (face: number) => ForgeStep | undefined
+  /** Ce que le dé demande : la face, l'origine ou la destination d'une copie, puis l'opération en clair */
+  prompt: string
   ready: boolean
   /** L'opération prête, ou undefined tant qu'il manque sa face (ou sans offre) */
   step: ForgeStep | undefined
 }
 
-/** Le choix d'une forge en cours (récompense) : l'opération retenue parmi l'offre, puis sa face. Le combattant a déjà choisi (`auto`). */
+/**
+ * Le choix d'une forge en cours (récompense) : l'opération retenue parmi l'offre, puis sa face ; pour Copier une face,
+ * la face à copier, puis la face libre où la poser (0.111.0). Le combattant a déjà choisi (`auto`).
+ */
 export function useForgeChoice(character: Character, offer: readonly ForgeOffer[], auto?: ForgeStep): ForgeChoiceState {
+  const { definition: base, forge } = character
   const autoIndex = auto ? offer.findIndex((o) => o.op === auto.op) : -1
   const autoFace = auto && 'face' in auto ? auto.face : undefined
+  // Une copie enregistrée avant la 0.111.0 (sans destination) : la destination que la règle d'alors prenait
+  const autoTo = auto?.op === 'copy' ? writtenFace(base, forge, auto) : undefined
   const [index, setIndex] = useState(autoIndex)
   const [face, setFace] = useState(autoFace)
+  const [to, setTo] = useState(autoTo)
   const picked = offer[index]
-  const targets = picked ? offerTargets(character.definition, character.forge, picked) : []
-  const ready = !picked || !FORGE_OPS[picked.op].targeted || (face !== undefined && targets.includes(face))
+  const aimed = picked ? offerTargets(base, forge, picked) : []
+  const copying = picked?.op === 'copy'
+  const destinations = copying && face !== undefined && aimed.includes(face) ? copyDestinations(base, forge, face) : []
+  const ready = !picked || !FORGE_OPS[picked.op].targeted || (face !== undefined && aimed.includes(face) && (!copying || (to !== undefined && destinations.includes(to))))
+  const step = picked && ready ? stepOf(picked, face, to) : undefined
+  const prompt =
+    !picked || aimed.length === 0
+      ? `Son dé · d${DIE_FACES}`
+      : step
+        ? stepLabel(step)
+        : !copying
+          ? 'Choisissez la face'
+          : face === undefined
+            ? 'Choisissez la face à copier'
+            : 'Choisissez où la copier'
   return {
     offer,
     autoIndex,
     index,
-    face,
-    setFace,
     select: (i: number) => {
       setIndex(i)
       setFace(i === autoIndex ? autoFace : undefined)
+      setTo(i === autoIndex ? autoTo : undefined)
     },
     picked,
-    targets,
+    targets: [...aimed, ...destinations],
+    selected: [face, copying ? to : undefined].filter((f): f is number => f !== undefined),
+    pick: (f: number) => {
+      // Les origines d'une copie portent une compétence, ses destinations n'en portent pas : les deux ne se confondent pas
+      if (destinations.includes(f)) return setTo(f)
+      setFace(f)
+      setTo(undefined)
+    },
+    preview: (f: number) => {
+      if (!picked) return undefined
+      if (!copying) return stepOf(picked, f)
+      return destinations.includes(f) ? stepOf(picked, face, f) : undefined
+    },
+    prompt,
     ready,
-    step: picked && ready ? stepOf(picked, face) : undefined,
+    step,
   }
 }
 
 /** Le corps d'une récompense de forge : les opérations proposées en cartes, puis la face visée sur le dé. */
 export function ForgeChoice({ character, choice }: { character: Character; choice: ForgeChoiceState }) {
-  const { picked, targets, face } = choice
+  const { targets } = choice
   return (
     <>
       <div className="flex items-stretch gap-8 pt-3">
@@ -206,17 +248,15 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
         ))}
       </div>
       <div className="flex flex-col items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">
-          {picked && targets.length ? (face === undefined ? 'Choisissez la face' : stepLabel(stepOf(picked, face))) : `Son dé · d${DIE_FACES}`}
-        </span>
+        <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">{choice.prompt}</span>
         <ForgedDie
           character={character}
           tooltip="above"
           align="center"
-          targets={picked && targets.length ? targets : undefined}
-          preview={picked && targets.length ? picked : undefined}
-          selected={face}
-          onPick={choice.setFace}
+          targets={targets.length ? targets : undefined}
+          preview={choice.preview}
+          selected={choice.selected}
+          onPick={choice.pick}
         />
       </div>
     </>
@@ -250,12 +290,11 @@ function StepTile({ step, size }: { step: ForgeStep; size: number }) {
 function ForgeTooltip({ base, steps, index, placement }: { base: ForgeBase; steps: readonly ForgeStep[]; index: number; placement: 'below' | 'floating' }) {
   const step = steps[index]
   const after = steps.slice(0, index + 1)
-  const face = 'face' in step ? forgedFaces(base, after).find((f) => f.face === step.face) : undefined
+  // La face que l'opération a changée : pour une copie, sa destination
+  const written = writtenFace(base, steps.slice(0, index), step)
+  const face = written === undefined ? undefined : forgedFaces(base, after).find((f) => f.face === written)
   const skills = !face ? [] : step.op === 'engrave' ? (face.engraved ? [face.engraved] : []) : [...(face.engraved ? [face.engraved] : []), ...face.origin]
-  const badge =
-    'face' in step
-      ? `Dé ${step.face}`
-      : `Attaque +${forgeState(base, after).temper - forgeState(base, steps.slice(0, index)).temper}`
+  const badge = written !== undefined ? `Dé ${written}` : `Attaque +${forgeState(base, after).temper - forgeState(base, steps.slice(0, index)).temper}`
   const position = placement === 'floating' ? '' : 'pointer-events-none invisible absolute left-0 top-full z-[70] mt-3 opacity-0 transition-opacity duration-150 group-hover/forge:visible group-hover/forge:opacity-100'
   return (
     <div role="tooltip" className={`w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2) ${position}`}>

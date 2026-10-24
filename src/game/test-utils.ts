@@ -17,7 +17,6 @@ export function testCharacter(
     race: 'Test',
     archetype: 'Test',
     stats: { maxHp: 20, attackMin: 1, attackMax: 1, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2, ...stats },
-    attackKind: 'physical',
     look: { image: '', facing: 'right', scale: 1, portrait: { x: 50, y: 50, zoom: 1 } },
     lore: { tagline: 'Test.', background: 'Personnage de test.', strengths: ['—'], weaknesses: ['—'] },
     events,

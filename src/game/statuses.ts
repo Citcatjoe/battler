@@ -153,7 +153,7 @@ export interface StatusDef {
   /**
    * Pile ou face (relation « modifie », règles v2) : le porteur lance aussitôt une pièce, juste après le coup qui a posé
    * le statut. Pile, ce coup ×`multiplier` : l'adversaire perd encore `multiplier` − 1 fois les PV que le coup lui a
-   * retirés (DP, en une perte) ; face, rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche
+   * retirés (un coup, en une perte) ; face, rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche
    * de ce montant (fenêtres `hit` du porteur et `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit
    * (Aura de décoction, Épines, Saignement, Vol de vie, Riposte, jauges de Rétribution).
    */
@@ -235,12 +235,6 @@ export interface StatusDef {
    */
   power?: (n: number) => string
   /**
-   * Une intensité à demi (axe de rang à `per: 0.5`) se paie à chaque action du statut, une fois sur deux (une aura :
-   * un tour, ou un coup, sur deux), et non à la pose de la compétence (0.110.0). Une aura vaut presque tout dès sa
-   * première pose : un demi-rang payé à la pose ne serait pas un demi.
-   */
-  powerPaidOnAction?: true
-  /**
    * Sa phrase dans le texte d'une compétence greffée qui le pose sur son lanceur (revue 0.110.0) : posé avant le coup
    * du même jet, il agit sur ce coup-ci (Œil de faucon, Vol de vie), là où `describe` dit « le prochain ».
    */
@@ -249,12 +243,6 @@ export interface StatusDef {
 
 /** Les charges qui agissent : les charges, plus l'intensité (une aura aiguisée compte autant de charges de plus, 0.110.0). */
 export const charges = (s: Status) => s.stacks + (s.power ?? 0)
-
-/** Une quantité à demi (0.110.0), payée une fois sur deux, dès la première : « 2 puis 1 ». */
-const halves = (q: number) => (Number.isInteger(q) ? String(q) : `${Math.ceil(q)} puis ${Math.floor(q)}`)
-
-/** Une quantité à demi sur un badge : « 1,5 ». */
-const badgeNumber = (q: number) => String(q).replace('.', ',')
 
 /** Coups de base d'une rafale de Furie des vents, par charge (son intensité en ajoute, 0.110.0). */
 const WIND_FURY_STRIKES = 2
@@ -446,18 +434,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(132,204,22,0.85)' },
     polarity: 'positive',
     summary: "Chaque coup encaissé fait saigner l'attaquant : 1 charge de Saignement par charge d'épines. Permanentes, elles se cumulent.",
-    describe: (s) => `Chaque coup qui le touche pose ${halves(charges(s))} Saignement sur l'attaquant, pour le reste du combat`,
-    badge: (s) => badgeNumber(charges(s)),
+    describe: (s) => `Chaque coup qui le touche pose ${charges(s)} Saignement sur l'attaquant, pour le reste du combat`,
+    badge: (s) => String(charges(s)),
     // 0.68.0 : les épines font saigner au lieu de renvoyer 1 dégât direct par charge (0.45.0). Le saignement
     // ne coule que quand le nain touche l'attaquant : la punition attend la riposte du porteur.
     counter: 'stacks',
     stacking: 'add',
     // Pas de `spentOnReaction` : contre une Furie des vents, chaque coup ouvre la plaie (voulu, 0.29.0).
     reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: charges(s), target: 'opponent' }] },
-    // Aiguisées (0.110.0) : chaque coup encaissé fait saigner d'une charge de plus (une fois, pas par pose) ; à demi, un
-    // coup encaissé sur deux
+    // Aiguisées (0.110.0) : chaque coup encaissé fait saigner d'une charge de plus (une fois, pas par pose)
     power: (n) => `+${n} Saignement par coup encaissé`,
-    powerPaidOnAction: true,
   },
   ward: {
     name: 'Garde sacrée',
@@ -634,16 +620,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     summary:
       "Au début de chacun de ses tours, le froid de la tombe pose 1 charge de Poison par charge d'aura sur l'adversaire. Le Poison perd une charge à chaque tour : une charge d'aura le fige à sa valeur. Permanente.",
-    describe: (s) => `Au début de chacun de ses tours, ${halves(charges(s))} Poison sur l'adversaire`,
-    badge: (s) => `+${badgeNumber(charges(s))}`,
+    describe: (s) => `Au début de chacun de ses tours, ${charges(s)} Poison sur l'adversaire`,
+    badge: (s) => `+${charges(s)}`,
     stacking: 'add',
     // 0.69.0 (choix de l'utilisateur, SORTS.md § 15) : elle pose du vrai Poison au lieu de dégâts directs
     // au début du tour adverse (0.45.0). Un seul statut, une seule règle : l'immunité le bloque, la
     // Régénération l'annule, une purge l'enlève, sans crochet propre. Cumulable, sans compensation.
     onTurnStart: (s) => [{ type: 'applyStatus', status: 'poison', stacks: charges(s), target: 'opponent' }],
-    // Aiguisée (0.110.0) : une charge de plus, une fois ; à demi, un tour sur deux
+    // Aiguisée (0.110.0) : une charge de plus, une fois
     power: (n) => `+${n} Poison par tour`,
-    powerPaidOnAction: true,
   },
   powerAura: {
     name: 'Aura de puissance',
@@ -701,31 +686,29 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(254,243,199,0.6)' },
     polarity: 'positive',
     summary: `Le porteur regagne ${plural(HOLY_HEAL, 'PV')} par charge à la fin de chacun de ses tours (${HOLY_CAP} charges au plus). Permanente.`,
-    describe: (s) => `Regagne ${halves(HOLY_HEAL * charges(s))} PV à la fin de chacun de ses tours`,
-    badge: (s) => `+${badgeNumber(HOLY_HEAL * charges(s))}`,
+    describe: (s) => `Regagne ${plural(HOLY_HEAL * charges(s), 'PV')} à la fin de chacun de ses tours`,
+    badge: (s) => `+${HOLY_HEAL * charges(s)}`,
     stacking: 'add',
     // 0.42.0 : plafond de charges (`HOLY_CAP`). Sans plafond, les soins s'empilaient et les combats
     // des prêtresses devenaient longs et joués d'avance (+42 points de valeur nette, 16 % de fins serrées).
     // 0.107.0 (SORTS.md § 19) : 2 charges de 1 PV, au lieu de 3 de 2 (+23 points gravée, +32 dans le kit d'Ysolde)
     maxStacks: HOLY_CAP,
     onTurnEnd: (s) => [{ type: 'heal', amount: HOLY_HEAL * charges(s) }],
-    // Aiguisée (0.110.0) : l'intensité passe le plafond de charges, qui ne bouge pas ; à demi, un tour sur deux
+    // Aiguisée (0.110.0) : l'intensité passe le plafond de charges, qui ne bouge pas
     power: (n) => `+${plural(HOLY_HEAL * n, 'PV')} par tour`,
-    powerPaidOnAction: true,
   },
   decoctionAura: {
     name: 'Aura de décoction',
     look: { aura: 'rgba(163,230,53,0.5)' },
     polarity: 'positive',
     summary: `Chaque coup qui touche (pile comprise) empoisonne la cible : ${plural(DECOCTION_POISON, 'charge')} de Poison par charge d’aura. Permanente.`,
-    describe: (s) => `Chacun de ses coups qui touche (pile comprise) pose ${halves(DECOCTION_POISON * charges(s))} Poison sur l'adversaire`,
-    badge: (s) => `+${badgeNumber(DECOCTION_POISON * charges(s))}`,
+    describe: (s) => `Chacun de ses coups qui touche (pile comprise) pose ${DECOCTION_POISON * charges(s)} Poison sur l'adversaire`,
+    badge: (s) => `+${DECOCTION_POISON * charges(s)}`,
     stacking: 'add',
     // Poison qui s'estompe (0.36.4) : voir EQUILIBRAGE.md pour la valeur
     reactions: { hit: (s) => [{ type: 'applyStatus', status: 'poison', stacks: DECOCTION_POISON * charges(s), target: 'opponent' }] },
-    // Aiguisée (0.110.0) : une charge de plus, une fois ; à demi, un coup qui touche sur deux
+    // Aiguisée (0.110.0) : une charge de plus, une fois
     power: (n) => `+${DECOCTION_POISON * n} Poison par coup qui touche`,
-    powerPaidOnAction: true,
   },
 
   /* Druide (0.35.0). */
@@ -767,15 +750,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   /*
    * Druide (0.73.0, SORTS.md § 18) : un tour sur deux, l'homme lance un sort ; l'autre tour, la bête frappe.
    * Les deux règles de forme sont des mécanismes de forme (`mechanic: 'form'`), visibles dans l'en-tête. Règles v2,
-   * phase 5 bis : l'homme frappe aussi, d'un coup de base magique (DM), sur lequel son sort se greffe ; l'ours, d'un coup
-   * de base physique (DP).
+   * phase 5 bis : l'homme frappe aussi, d'un coup de base sur lequel son sort se greffe ; l'ours, du même coup de base,
+   * plus fort (un type d'attaque unique depuis le 2026-10-24).
    */
   casting: {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
-    summary: 'Sous forme humaine, chaque face du dé du druide lance un sort, qui se greffe sur son coup de base magique (DM).',
-    describe: () => 'Chaque jet lance un sort, puis un coup magique',
+    summary: 'Sous forme humaine, chaque face du dé du druide lance un sort, qui se greffe sur son coup de base.',
+    describe: () => 'Chaque jet lance un sort, puis un coup',
     badge: () => 'Sort',
     // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
     counter: 'turns',
@@ -789,7 +772,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
-    summary: `Sous forme d'ours, le druide ne lance que ses gravures : son coup de base est physique (DP) et fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
+    summary: `Sous forme d'ours, le druide ne lance que ses gravures : son coup de base fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
     describe: () => `Chaque coup fait +${BEAR_MIGHT}, après le critique et avant l'armure`,
     badge: () => `+${BEAR_MIGHT}`,
     counter: 'turns',

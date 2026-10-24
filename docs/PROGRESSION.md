@@ -65,12 +65,13 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 ### Ce qui reste ouvert
 
 - **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1.
-- **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle, un rang II de +3,6 à +8,0 points). **Restes fermés en 0.110.1** : T12 (l'Élan s'appelle Ferveur), E4 (une Peur bloquée par une immunité use sa fois), les cinq emblèmes d'état (A8, planche v15), le son de la Foudre (l'ancien gardé, l'Éclair retiré). Reste le résumé de l'état Puissance (second volet de T12). Les demi-rangs, les nouveaux textes et les emblèmes sont à juger en jeu.
+- **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle). **Restes fermés en 0.110.1** : T12 (l'Élan s'appelle Ferveur), E4 (une Peur bloquée par une immunité use sa fois), les cinq emblèmes d'état (A8, planche v15), le son de la Foudre (l'ancien gardé, l'Éclair retiré). Reste le résumé de l'état Puissance (second volet de T12). Les demi-rangs sont retirés en 0.111.0 (§ 1.11) ; les nouveaux textes et les emblèmes sont à juger en jeu.
+- **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Décisions ouvertes** : onze rangs II au-dessus de +8 points (Aura glaciale +10,2 … Aura de précision +8,0 ; [SORTS.md](SORTS.md) § 20) ; les PV des adversaires réglés à la baisse (de 56 à 70 % de leurs PV de base en moyenne selon le nœud, jusqu'à Naraxes à 20 PV sur 50), que l'utilisateur a senti ; commencer avec deux compétences, et les signatures héritées des anciennes règles ; la Purification (dissiper ou faire des dégâts).
 - **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
 - **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
 - **Les répertoires** : à relire sur le d6 et l'attaque (phase 6), puis à remplir de consommateurs (phase 8).
 - **Les textes** ne nomment pas encore le type de leurs dégâts (§ 9.3).
-- **Campagne** : la difficulté (28 % au boss) est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; Thaldrin reçoit sa signature (Feux follets, livrée en 0.109.0).
+- **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.111.0 (signature sur le 1), boss atteint 27 % (31 % attendus), acte gagné 10 % (14 %).
 - **Points à surveiller** : une gravure sur la barde vaut près du double (deux dés) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
@@ -197,6 +198,20 @@ Réponses de l'utilisateur aux questions de l'audit ([SORTS.md](SORTS.md) § 19)
 | Les répertoires | L'utilisateur s'en réjouit : à poursuivre. |
 | Thaldrin | **Signature : les Feux follets** (« super idée »). |
 | La suite | **Un état des lieux** avant la seconde partie de la phase 7 (§ 0 bis). |
+
+### 1.11 Retours de partie du 2026-10-24 (trois campagnes : Elaria, Gorak, Ysolde ; livrés en 0.111.0)
+
+| Retour | Décision |
+| --- | --- |
+| « L'Aura de sainteté rend un chiffre à virgule » | **Pas de décimale** : chaque axe de rang est un entier ≥ 1 (`validateRoster`) ; les demi-rangs de la 0.110.0 sont retirés. |
+| Les Feux follets de Thaldrin sur 4, 5 et 6 « ont l'air buggés » | **La signature sur la face 1**, une fois ; les cinq autres faces sont nues (reliquat de l'ancien système). |
+| Face dorée | **Dorer seulement une face libre**, et une compétence ne se grave pas sur une face dorée ; plus de « 2 » sur une face dorée (le fond doré suffit). |
+| « Copier une face devrait donner la possibilité de choisir la face de destination » | **Copier vers une face choisie** : l'origine, puis une face libre. |
+| La zone de compétences en combat | **Les six faces** y apparaissent, nues et dorées comprises ; une face nue s'allume quand le dé tombe dessus. Plus d'icône de dé au choix du champion. |
+| « Les descriptions de reliques sont trop compliquées » | **L'effet d'abord, la condition en clair, la limite en « 2x »** ; ni type ni élément montrés ; une limite ou une recharge, pas les deux. |
+| « La Fiole de venin m'est proposée à chaque fois » | **Une offre de reliques pertinente** : pas de relique dont la condition ne peut pas arriver avec le champion. |
+| « La distinction DM/DP ajoute une couche de confusion » | **Une attaque d'un type unique**, le coup de base en blanc (le « coup blanc »). |
+| La Conque des vents, l'Aura de précision : « timing parfait » | **Principe de mise en scène : dé rendu → intervalle → impact** : ce qui dépend du dé part avec le dé posé, une relique qui donne un statut envoie sa particule, la charge d'un statut baisse à l'impact. |
 
 ---
 
@@ -1085,6 +1100,12 @@ Validé par l'utilisateur le 2026-10-24 (§ 1.10) : le lot de cinq et la signatu
 **Thaldrin** : signature les Feux follets ; en campagne, sa forme humaine les porte sur le 4, le 5 et le 6, les faces 1 à 3 sont nues et se gravent, la Foudre ouvre son répertoire ; l'ours et le kit de duel ne changent pas (empreinte inchangée). La limite de quatre faces de compétence compte les faces : il reçoit une gravure et garde deux faces nues (§ 11.2). Mesuré : signature seule contre le roster 28,4 % (kit entier 45,8 %) ; en campagne (12 parties), 5,2 victoires en moyenne (4,2 avant), boss atteint 25 % (8 %), acte gagné 8 % (8 %), 0,83 gravure par build (0), à 73 % prises à d'autres personnages ; tous les champions : boss 26 %, acte 13 %. Échantillon trop petit pour conclure. Morgrut est désormais le seul sans signature.
 
 **Reste** : cinq icônes de relique à peindre (idées au § 13 de RELIQUES.md) et une pour l'Élan (il montre l'emblème de la Puissance) ; rien n'a été vu dans un navigateur.
+
+#### La signature sur la face 1 (0.111.0)
+
+Décision du § 1.11 : un champion de campagne commence avec sa signature **sur le 1 seulement**, une fois ; ses cinq autres faces sont nues. Passent du 2 au 1 : Gorak (Furie des vents), Brokk (Épines acérées), Ervald (Aura glaciale), Ysolde (Aura de sainteté), Naraxes (Aura de décoction) ; Thaldrin : les Feux follets du 4, 5 et 6 au 1 seul ; déjà sur le 1 : Elaria, Aldric, Fanchon ; Morgrut inchangé (sans signature).
+
+Mesuré (`npm run campaign`, toute la livraison 0.111.0, 12 parties par champion, 120 parties) : **boss atteint 23 → 27 %** (31 % attendus), **acte gagné 10 → 10 %** (14 %). Boss atteint par champion : Gorak 17 %, Elaria 50 %, Brokk 25 %, Ervald 33 %, Ysolde 25 %, Naraxes 25 %, Aldric 17 %, Morgrut 17 %, Thaldrin 17 %, Fanchon 42 % ; à 12 parties, l'écart par champion est dans le bruit. Gravures par build d'un acte : de 1,18 (Gorak) à 1,44 (Morgrut) ; Thaldrin 0,82 → 1,33. L'apport du build monte de 0 (nœud 1) à 72 à 74 points (nœuds 9 et 10). PV des adversaires, en part de leurs PV de base, par nœud : 70, 66, 65, 64, 62, 56, 57, 63, 56, 60 %.
 
 ---
 

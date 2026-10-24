@@ -7,9 +7,9 @@
  * Toute nouvelle mécanique ajoute ici son contrôle.
  */
 import { STAT_KEYS } from './character'
-import { DAMAGE_KINDS, DAMAGE_SOURCES, damageKind, type DamageKind } from './damage'
+import { DAMAGE_SOURCES, type DamageKind } from './damage'
 import { beatEffects, diceOf, effectiveStats, relicIsInert, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
-import { DIE_FACES, effectsOnFire, isRollTrigger, paidOnFire, relationOf, rollMatches, type Condition, type Trigger } from './events'
+import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
 import { charges, isMechanic, STATUSES, type Status } from './statuses'
@@ -56,8 +56,8 @@ export function createAudit() {
       if (b.type === 'statusTick') see(`tick ${b.status}`)
       if (b.type === 'event') see(`compétence ${b.event.name}`)
     }
-    // Types de dégâts (règles v2, phase 1, damage.ts) : chaque dégât porte une source connue ; un statut qui agit fait
-    // des DT ; une pièce et une Riposte, des DP (décisions de l'utilisateur)
+    // Familles de dégâts (règles v2, phase 1, damage.ts) : chaque dégât porte une source connue ; un statut qui agit fait
+    // des DT ; une pièce et une Riposte, des coups (décisions de l'utilisateur)
     r.beats.forEach((b, i) => {
       for (const e of beatEffects(b)) {
         if (e.type !== 'damage') continue
@@ -66,9 +66,9 @@ export function createAudit() {
           flag('dégât sans type', r, i, `source ${e.source}`)
           continue
         }
-        see(`type de dégâts ${DAMAGE_KINDS[def.kind].short}`)
+        see(`dégâts ${def.kind === 'temporal' ? 'temporaires' : "de l'instant"}`)
         const expected: DamageKind | undefined =
-          b.type === 'statusTick' ? 'temporal' : b.type === 'coin' || (b.type === 'statusReaction' && STATUSES[b.status].reflectsHit) ? 'physical' : undefined
+          b.type === 'statusTick' ? 'temporal' : b.type === 'coin' || (b.type === 'statusReaction' && STATUSES[b.status].reflectsHit) ? 'instant' : undefined
         if (expected && def.kind !== expected) flag('type de dégâts incohérent', r, i, `${b.type} : ${def.kind} au lieu de ${expected}`)
       }
     })
@@ -206,11 +206,7 @@ export function createAudit() {
       if (i > 0 && prev.hp.some((h) => h === 0)) flag('étape après K.O.', r, i, b.type)
       // Purge avec repli (0.42.0, Purification) : le repli ne joue que s'il n'y avait rien à retirer
       if (b.type === 'event') {
-        const event = r.fighters[b.event.side].events.find((e) => e.id === b.event.eventId)
-        // Ses effets tels qu'ils sont partis cette fois-ci : un demi-rang se paie une fois sur deux (0.110.0)
-        const fires = r.beats.slice(0, i + 1).filter((x) => x.type === 'event' && x.event.side === b.event.side && x.event.eventId === b.event.eventId).length
-        const asked = event && effectsOnFire(event.effects, fires, true)
-        if (event?.effects.some((x, k) => x !== asked![k])) see('demi-rang payé')
+        const asked = r.fighters[b.event.side].events.find((e) => e.id === b.event.eventId)?.effects
         asked?.forEach((effect, k) => {
           const applied = b.event.effects[k]
           if (effect.type !== 'cleanse' || !effect.orElse || !applied) return
@@ -311,15 +307,11 @@ export function createAudit() {
         if (a.faces !== DIE_FACES) flag('dé incohérent', r, i, `${a.faces} vs ${DIE_FACES}`)
         if (a.critMultiplier !== eff.critMultiplier) flag('multiplicateur incohérent', r, i, `${a.critMultiplier} vs ${eff.critMultiplier}`)
         if (a.armor !== effDef.armor) flag('armure incohérente', r, i, `${a.armor} vs ${effDef.armor}`)
-        // Le coup de base (phase 5 bis) : sa valeur dans l'attaque de l'attaquant (reliques et forge comprises), sa source et
-        // son type ceux de sa forme du moment (le druide : l'homme DM, la Foudre ; l'ours DP)
-        const source = r.fighters[att].attackSourceIn(form[att])
-        const kind = r.fighters[att].attackKindIn(form[att])
-        if (a.source !== source) flag('source du coup de base incohérente', r, i, `${a.source} au lieu de ${source}`)
-        if (damageKind(a.source) !== kind) flag('type du coup de base incohérent', r, i, `${damageKind(a.source)} au lieu de ${kind}`)
+        // Le coup de base (phase 5 bis) : sa valeur dans l'attaque de l'attaquant (reliques et forge comprises) ; un type
+        // d'attaque unique depuis le 2026-10-24
         if (!a.replaced) {
           if (a.value < eff.attackMin || a.value > eff.attackMax) flag("coup de base hors de l'attaque", r, i, `${a.value} hors de ${eff.attackMin} à ${eff.attackMax}`)
-          else see(`coup de base ${DAMAGE_KINDS[kind].short}`)
+          else see('coup de base')
           if (a.multiplier) see('coup de base multiplié')
         } else if (a.value !== 0) flag('jet remplacé avec une valeur', r, i, `${a.value}`)
         // Relations au coup (phase 5 bis) : une compétence de la face qui remplace le coup fait un jet remplacé ; une qui se
@@ -573,17 +565,14 @@ export function createAudit() {
         }
       }
       // Aura glaciale (0.69.0) : au début du tour de son porteur, avant son coup, 1 charge de Poison par
-      // charge d'aura sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler) ; aiguisée à demi (0.110.0),
-      // son intensité se paie un tour sur deux, dès le premier
+      // charge d'aura sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler), intensité comprise
       if (b.type === 'statusTick' && b.status === 'frostAura') {
         if (b.phase !== 'turnStart') flag('aura glaciale hors début de tour', r, i, '')
         if (r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')) flag('aura glaciale après le coup', r, i, '')
         const st = find(prev.statuses[b.side], 'frostAura')!
-        const acts = r.beats.slice(0, i + 1).filter((x) => (x.type === 'statusTick' || x.type === 'statusReaction') && x.side === b.side && x.status === 'frostAura').length
         const e = b.effects[0]
-        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== paidOnFire(charges(st), acts))
+        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== charges(st))
           flag('aura glaciale : poison, montant ou cible', r, i, JSON.stringify(b.effects))
-        else if (!Number.isInteger(charges(st))) see('aura glaciale à demi')
         else if (e.result.kind === 'applied') see('aura glaciale')
       }
     })

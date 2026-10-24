@@ -1,6 +1,5 @@
 import type { Character, CharacterStats } from '../game/character'
 import { multiplier, percent, SIDE_STYLE, type Side } from '../game/combat'
-import { DAMAGE_KINDS } from '../game/damage'
 import { CHARACTERS } from '../game/roster'
 
 export interface StatLine {
@@ -11,25 +10,13 @@ export interface StatLine {
 
 export const STAT_LINES: StatLine[] = [
   { label: 'PV', key: 'maxHp', format: String },
-  // L'attaque (phase 5 bis) : la fourchette du coup de base et son type ; la ligne se lit dans `shownStat`
+  // L'attaque (phase 5 bis) : la fourchette du coup de base, d'un type unique (2026-10-24) ; la ligne se lit dans `shownStat`
   { label: 'Attaque', key: 'attackMin', format: String },
   { label: 'Armure', key: 'armor', format: String },
   { label: 'Esquive', key: 'dodgeChance', format: percent },
   { label: 'Critique', key: 'critChance', format: percent },
   { label: 'Mult. critique', key: 'critMultiplier', format: multiplier },
 ]
-
-/**
- * Le type du coup de base (DP, DM) ; celui de chaque forme quand elles diffèrent (le druide : « DM · ours DP »).
- */
-function attackKindLabel(c: Character): string {
-  const own = DAMAGE_KINDS[c.attackKindIn(0)].short
-  const others = (c.forms ?? []).flatMap((f, k) => {
-    const kind = c.attackKindIn(k)
-    return k === 0 || kind === c.attackKindIn(0) ? [] : [`${f.name.replace(/^forme\s+(d'|de\s+)?/i, '').toLowerCase()} ${DAMAGE_KINDS[kind].short}`]
-  })
-  return [own, ...others].join(' · ')
-}
 
 // Les barres sont relatives au meilleur personnage du roster sur chaque stat (l'attaque : sa moyenne).
 const MAX = Object.fromEntries(
@@ -50,7 +37,7 @@ interface ShownStat {
 const signedPct = (p: number) => (p < 0 ? `−${Math.round(-p * 100)} %` : percent(p))
 
 /**
- * Ce que la stat vaut vraiment en combat, quand la valeur brute tromperait : l'attaque (sa fourchette et son type), une
+ * Ce que la stat vaut vraiment en combat, quand la valeur brute tromperait : l'attaque (sa fourchette), une
  * esquive que les reliques font passer sous 0 (bornée à 0 par le moteur), un multiplicateur sans critique. Lu dans les
  * stats et les règles du moteur, rien n'est recalculé. Comparaison (affrontement) : l'attaque compte sa moyenne,
  * l'esquive négative compte 0, un multiplicateur sans critique ne gagne jamais.
@@ -63,11 +50,10 @@ function shownStat(character: Character, l: StatLine): ShownStat {
   if (l.key === 'attackMin') {
     const { attackMin: low, attackMax: high } = character.stats
     const avg = (low + high) / 2
-    const kind = attackKindLabel(character)
     return {
-      text: `${low === high ? low : `${low} à ${high}`} ${kind}`,
+      text: low === high ? `${low}` : `${low} à ${high}`,
       bar: avg,
-      hint: `Coup de base de chaque action : ${low} à ${high}, ${kind} (moyenne ${avg.toFixed(1).replace('.', ',')})`,
+      hint: `Coup de base de chaque action : ${low} à ${high} (moyenne ${avg.toFixed(1).replace('.', ',')})`,
       score: avg,
     }
   }

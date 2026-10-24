@@ -31,7 +31,6 @@ import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
 import { BackLink, Button, Glyph } from './kit'
 import { MiniPortrait } from './RecordBits'
 import { RelicCard, RelicRow } from './RelicSeal'
-import { SkillDice } from './SkillDice'
 import { SkillSeal } from './SkillSeal'
 
 /*
@@ -103,7 +102,6 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
               <p className="font-body text-lg text-ink-2">
                 {c.race} · {c.archetype} · {c.dice > 1 ? c.dice : ''}d{DIE_FACES}
               </p>
-              <SkillDice character={c} />
               <SignatureLine character={c} />
               <p className="min-h-6 font-body text-[15px] font-bold text-gold-300">{legacy ? `Héritage : ${legacy} amélioration${legacy > 1 ? 's' : ''} de sa dernière partie` : ''}</p>
             </button>
@@ -197,7 +195,7 @@ function ActTrack({ run }: { run: CampaignRun }) {
 
 /**
  * La signature du champion (règles v2, 0.104.0) : la seule compétence de son kit au départ d'une campagne, avec les faces
- * qui la portent (une seule, ou trois pour les Feux follets de Thaldrin). Rien pour Morgrut, parti de son kit entier.
+ * qui la portent (le 1 au départ depuis la 0.111.0, une copie en ajoute une). Rien pour Morgrut, parti de son kit entier.
  */
 function SignatureLine({ character }: { character: Character }) {
   const printed = character.events.filter((e) => e.id === character.definition.signature)

@@ -1156,3 +1156,35 @@ Mesure : table 3 de `scripts/skills.report.ts`, 200 combats par duel, face 3 de 
 **Les 29 rangs II sont dans la bande**, de +3,6 (Siffloter) à +8,0 (Aura d'intimidation et d'immunité, au bord). Le rang III ajoute moins (de +1,1 à +5,1) : un demi-rang paie dès la première fois au rang II, et seulement une fois sur deux de plus au rang III. **Feux follets** : ils s'aiguisent ; ils ne se copient pas, par la règle « une compétence sur deux faces au plus » (`MAX_COPIES`) : ils en occupent déjà trois. **Équilibre** : aucun kit de base ne change (le rang I est identique, l'empreinte de `balance.test.ts` n'a pas bougé) ; `npm run balance` n'a pas été relancé.
 
 **Contrôle des bords** (800 combats par duel, `logs/skills/2026-10-24-17-01-22_v0.109.1.md`) : Furie des vents +8,0, Coup de chance +7,8, Aura d'intimidation +7,8, Aura d'immunité +7,7, Œil de faucon +7,6 ; aucun drapeau.
+
+### Plus de demi-rang (0.111.0)
+
+**Retour de l'utilisateur** (partie du 2026-10-24) : « l'Aura de sainteté rend un chiffre à virgule ». Il ne veut pas de décimale. **Règle** : chaque `rankAxis.per` est un entier ≥ 1, et `validateRoster` refuse un axe à virgule ; la part de la Rétribution se compte en points de pourcentage (`per: 25`, la relâche passe de 50 à 75 % puis 100 %, comme avant). Le code du demi-rang est retiré : `paidOnFire`, `effectsOnFire`, la note « une fois sur deux, dès la première » du texte et de `rankText`, `powerPaidOnAction`, les textes « 2 puis 1 » et les badges « 1,5 » des auras, le compte d'actions par statut du moteur, le contrôle « demi-rang payé » de l'audit.
+
+**Choix de l'axe** : pour les treize compétences à `per: 0.5`, l'axe reste le même, à 1 (un autre axe entier ne fait pas mieux, voir plus bas) ; la Rétribution garde sa part, +25 points de pourcentage. Mesure : table 3, 200 combats par duel, face 3 de chaque hôte ; avant : `logs/skills/2026-10-24-20-52-35_v0.110.1.md` (identique à la table ci-dessus) ; après : `logs/skills/2026-10-24-20-59-58_v0.110.1.md` ; contrôle des bords à 800 combats par duel : `logs/skills/2026-10-24-21-03-10_v0.110.1.md`.
+
+| Compétence | Axe (rang II) | I → II demi-rang (0.110.1) | I → II entier (0.111.0) | à 800 combats | II → III | Dans le kit (après) | Bande |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Aura glaciale | +1 Poison par tour | +7,5 | **+10,2** | | +3,8 | Ervald +14,7 | au-dessus |
+| Aura de décoction | +1 Poison par coup qui touche | +7,4 | **+9,9** | | +3,8 | Naraxes +13,7 | au-dessus |
+| Furie des vents | +1 coup par rafale | +7,9 | **+9,8** | | +5,3 | Gorak +15,6 | au-dessus |
+| Esquive améliorée | +1 charge | +7,3 | **+9,6** | | +3,8 | Elaria +11,8 | au-dessus |
+| Aura d'intimidation | +1 charge | +8,0 | **+9,3** | | +4,0 | hors kit | au-dessus |
+| Coup de chance | +1 charge | +7,7 | **+9,1** | | +3,8 | hors kit | au-dessus |
+| Épines acérées | +1 Saignement par coup encaissé | +6,1 | **+8,8** | +9,1 | +4,2 | Brokk +12,3 | au-dessus |
+| Foudre | +1 à chacun de ses 3 éclairs | +6,5 | **+8,7** | +8,9 | +6,3 | Thaldrin +18,7 | au-dessus |
+| Fausse note | +1 coup qui touche | +6,4 | **+8,6** | +8,5 | +4,4 | hors kit | au-dessus |
+| Aura de sainteté | +1 PV par tour | +4,7 | **+8,1** | +8,1 | +5,4 | Ysolde +9,8 | au bord, au-dessus |
+| Aura de précision | +1 charge | +6,6 | +8,0 | +8,2 | +5,0 | hors kit | au bord, au-dessus à 800 |
+| Aura sauvage | +1 charge | +6,5 | +7,6 | | +4,2 | hors kit | dans la bande |
+| Aura mélodieuse | +1 charge | +6,3 | +7,5 | | +4,5 | Fanchon +19,4 | dans la bande |
+| Rétribution | +25 % des jauges relâchées | +6,4 | +6,4 | | +4,5 | Aldric +9,9 | dans la bande (inchangée) |
+
+Les quinze autres compétences ne changent pas (de +3,6, Siffloter, à +8,0, Aura d'immunité ; +7,7 à 800 combats). **Onze rangs II sortent de la bande par le haut, de +8,1 à +10,2** ; le rang III ajoute toujours moins que le rang II (de +3,8 à +6,3 pour elles).
+
+**Pourquoi pas un autre axe entier** : Esquive, Coup de chance, Aura d'intimidation et de précision n'ont qu'un axe (des charges ; leur statut n'a pas d'intensité). Aura glaciale, de décoction et Épines : une charge de plus à la pose vaut au moins l'intensité (même valeur à la première pose, davantage à chaque pose de plus). Furie : une charge de plus double la rafale (+15,0). Aura de sainteté : plafonnée à 2 charges, une charge de plus ne vaut plus rien au plafond. Fausse note : une charge de plus vaut +2,6 (au-dessous de la bande, mesure de la 0.110.0). Foudre : seul le montant a prise.
+
+**Propositions, à trancher par l'utilisateur** (rien n'est fait au-delà des rangs entiers) :
+1. **Garder les rangs entiers tels quels** (choix livré) : le rang I ne change pas, donc l'équilibre du roster non plus (empreinte de `balance.test.ts` inchangée) ; seule la force d'un aiguisage en campagne monte, de +1,3 (Aura d'intimidation) à +3,4 points (Aura de sainteté) pour ces onze compétences par rapport au demi-rang. La bande d'un rang deviendrait « de +3 à +10 points » pour les compétences dont l'unité est déjà la plus petite.
+2. **Foudre : un éclair de plus** au lieu de +1 à chacun (4 × 1 au lieu de 3 × 2 au rang II) : un tiers du gain actuel, estimé vers +3 points, non mesuré ; il faut un axe « coups » et que la scène de l'éclair sache tomber quatre fois (mise en scène).
+3. **Les plus fortes (Aura glaciale +10,2, de décoction +9,9, Furie +9,8, Esquive +9,6)** : ne les aiguiser qu'au prix de deux forges, ou leur donner un axe nouveau (une durée, un seuil) ; chacun demande une règle de forge ou de statut, à mesurer avant.

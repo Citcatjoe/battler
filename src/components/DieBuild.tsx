@@ -11,9 +11,10 @@ import { ALIGN, SkillTooltip } from './SkillDice'
  * octogones de 44 px. Les faces du dé (forge, reliques, forme du druide comprises) occupent les premiers, dans l'ordre ;
  * les emplacements au-delà de sa taille restent visibles, grisés : la taille du dé se lit comme une jauge. Une face
  * simple montre son chiffre ; une face à compétence, l'emblème peint et le chiffre dans un cartouche en bas à gauche ;
- * une compétence gravée par la forge (« face forgée »), un cadre et un fond d'or ; une face dorée, un fond d'or sans le
- * cadre, et son bonus (« +2 ») au cartouche ; une compétence aiguisée, son rang en pastille d'or en haut à droite. Au-delà
- * de douze faces, « +N faces » en or dans l'en-tête, la liste en infobulle. Ni halo, ni effet de survol : seule
+ * une compétence gravée par la forge (« face forgée »), un cadre et un fond d'or ; une face dorée (toujours sans
+ * compétence, 0.111.0), un fond d'or et son chiffre, sans cartouche : le fond doré suffit ; une compétence aiguisée,
+ * son rang en pastille d'or en haut à droite. Au-delà de douze faces, « +N faces » en or dans l'en-tête, la liste en
+ * infobulle. Ni halo, ni effet de survol : seule
  * l'infobulle s'ouvre. Tout se lit dans la donnée : aucune règle ici.
  */
 
@@ -97,8 +98,8 @@ export function DieBuild({ character }: { character: Character }) {
 
 function FaceSlot({ cell, align }: { cell: DieCell; align: 'left' | 'right' }) {
   const { face, event, gild, rank, engraved } = cell
-  // Cartouche : le chiffre d'une face à compétence, suivi du bonus d'une dorure (« 3+2 ») ; le bonus seul sur une face simple
-  const plate = `${event ? face : ''}${gild ? `+${gild}` : ''}`
+  // Cartouche : le chiffre d'une face à compétence ; une face simple, dorée ou non, montre son chiffre en grand
+  const plate = event ? String(face) : ''
   return (
     // hover:z-[70] : l'infobulle passe au-dessus des faces voisines (aucun effet visible sur la face)
     <li className="die-slot group relative hover:z-[70]" data-forged={engraved ? '' : undefined} data-gild={gild ? '' : undefined}>
@@ -119,7 +120,7 @@ function FaceSlot({ cell, align }: { cell: DieCell; align: 'left' | 'right' }) {
           face={face}
           placement="above"
           align={align}
-          notes={[engraved ? 'Gravée par la forge du dé.' : '', gild ? `Face dorée : +${gild} au coup.` : ''].filter(Boolean)}
+          notes={engraved ? ['Gravée par la forge du dé.'] : []}
         />
       ) : (
         <div

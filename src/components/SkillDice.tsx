@@ -1,20 +1,14 @@
-import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, faceTrigger, isRollTrigger, rollFace, triggerText, type CharacterEvent, type Trigger } from '../game/events'
+import { describeSkill, triggerText, type CharacterEvent } from '../game/events'
 import { STATES, statesPosedBy } from '../game/states'
-import { POLARITY_STYLE, STATUSES } from '../game/statuses'
+import { POLARITY_STYLE } from '../game/statuses'
 import { StateIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
-import type { SkillPulse } from '../game/staging'
 
-/**
- * Les faces de compétence d'un personnage, dans l'ordre : celles qui portent une compétence, d'origine ou gravées par la
- * forge. Depuis le d6 imprimé (0.105.0), plus de faces 1 à 3 vides : une face de coup n'a pas de dé de compétence.
- * En-tête du combat, sélection, affrontement.
+/*
+ * Le dé de compétence en pastille (DieFace, sur les sceaux de la zone de compétences du combat) et l'infobulle d'une
+ * compétence (SkillTooltip), communes aux écrans qui montrent un dé. La rangée de dés du choix du champion (SkillDice)
+ * est retirée en 0.111.0 (demande de l'utilisateur : doublon de la mention de la signature).
  */
-export function skillFaces(events: readonly CharacterEvent[]): { face: number; trigger: Trigger }[] {
-  const faces = events.map((e) => rollFace(e.trigger)).filter((f): f is number => f !== undefined)
-  return [...new Set(faces)].sort((a, b) => a - b).map((face) => ({ face, trigger: faceTrigger(face) }))
-}
 
 /** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). Au-delà de 6, son chiffre. */
 const PIPS: Record<number, [number, number][]> = {
@@ -26,119 +20,18 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[0, 0], [0, 1], [0, 2], [2, 0], [2, 1], [2, 2]],
 }
 
-interface Props {
-  character: Character
-  /** Où s'ouvre l'infobulle : au-dessus (sélection) ou en dessous (en-tête du combat) */
-  tooltip?: 'above' | 'below'
-  /** Côté vers lequel l'infobulle s'aligne, pour ne pas sortir de la scène */
-  align?: 'left' | 'center' | 'right'
-  size?: 'sm' | 'header' | 'md'
-  /**
-   * Personnage à formes (druide) : en combat, la forme en cours (ses trois dés à elle) ; absent,
-   * une rangée de dés par forme, avec son nom (sélection)
-   */
-  form?: number
-  /** En combat : le dé de la face qui vient de sortir s'allume un instant (une fois par `key`) */
-  pulse?: SkillPulse
-  /** En combat : les dés sont éteints au repos, et ne s'allument qu'au déclenchement */
-  dim?: boolean
-}
-
-/**
- * Les compétences d'un personnage en trois dés (faces 1, 2 et 3) : au survol d'un dé, une
- * infobulle donne la compétence qu'il déclenche (version allégée de la carte du compendium, au
- * style de l'infobulle de la zone d'état). En tête du combat et sur les fiches qui montrent un dé.
- */
-export function SkillDice({ character, tooltip = 'above', align = 'center', size = 'md', form, pulse, dim = false }: Props) {
-  const forms = character.forms
-  if (forms && form === undefined)
-    return (
-      <div className="flex flex-col gap-1.5">
-        {forms.map((f, k) => (
-          <div key={f.id} className={`flex items-center gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
-            <SkillDice character={character} tooltip={tooltip} align={align} size="sm" form={k} />
-            <FormLabel character={character} form={k} tooltip={tooltip} align={align} />
-          </div>
-        ))}
-      </div>
-    )
-  const formId = forms?.[form ?? 0].id
-  const own = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = skillFaces(own)
-  // Les compétences hors dé (l'Ouverture de la barde, au début du combat) : un sceau à la suite des dés
-  const offDice = own.filter((e) => !faces.some((f) => f.trigger === e.trigger) && !isRollTrigger(e.trigger))
-  return (
-    <ul className={`flex gap-2 ${dim ? 'skill-dice-dim' : ''}`} aria-label={`Compétences de ${character.name}`}>
-      {faces.map(({ face, trigger }) => {
-        const event = own.find((e) => e.trigger === trigger)
-        return (
-          <li key={face} className="skill-die-slot group relative hover:z-[70]" data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}>
-            {/* Le dé qui sort : il s'allume un instant, comme un tintement, dans la couleur de la nature de la
-                compétence ; la clé relance l'éclat quand la même face sort deux fois de suite */}
-            {event && pulse?.face === face && <span key={`wave-${pulse.key}`} aria-hidden className="skill-die-pulse" />}
-            <div key={event && pulse?.face === face ? `flash-${pulse.key}` : 'idle'} className={event && pulse?.face === face ? 'skill-die-flash' : ''}>
-              <DieFace face={face} size={size} empty={!event} />
-            </div>
-            {event && <SkillTooltip event={event} face={face} placement={tooltip} align={align} />}
-          </li>
-        )
-      })}
-      {offDice.map((e) => (
-        <li key={e.id} className="skill-die-slot group relative cursor-help hover:z-[70]" data-nature={e.nature ?? DEFAULT_SKILL_NATURE}>
-          <SkillSeal id={e.id} size={SEAL_SIZE[size]} />
-          <SkillTooltip event={e} placement={tooltip} align={align} />
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/** Taille du sceau d'une compétence hors dé, au plus près de la hauteur des dés de la rangée (tailles de SkillSeal). */
-const SEAL_SIZE = { sm: 32, header: 40, md: 40 } as const
-
-const BOX = { xs: 'skill-die-xs h-[28px] w-[28px] p-[4px] rounded-[7px]', sm: 'h-8 w-8 p-[5px]', header: 'h-9 w-9 p-[6px]', md: 'h-11 w-11 p-[7px]' }
-
-/** Une face de dé de compétence (ses points). Aussi en pastille des sceaux (SkillBar). */
-export function DieFace({ face, size, empty }: { face: number; size: keyof typeof BOX; empty: boolean }) {
+/** Une face de dé de compétence (ses points), en pastille des sceaux (SkillBar). Au-delà de 6, son chiffre. */
+export function DieFace({ face, empty }: { face: number; empty: boolean }) {
   const pips = PIPS[face]
   return (
     <div
       aria-label={`Dé ${face}`}
-      className={`skill-die ${pips ? 'grid grid-cols-3 grid-rows-3' : 'skill-die-number'} ${size === 'xs' ? '' : 'rounded-lg'} ${BOX[size]} ${empty ? 'opacity-30' : 'cursor-help'}`}
+      className={`skill-die skill-die-xs h-[28px] w-[28px] rounded-[7px] p-[4px] ${pips ? 'grid grid-cols-3 grid-rows-3' : 'skill-die-number'} ${empty ? 'opacity-30' : 'cursor-help'}`}
     >
       {pips
         ? pips.map(([x, y]) => <span key={`${x}${y}`} className="skill-pip rounded-full" style={{ gridColumn: x + 1, gridRow: y + 1 }} />)
         : face}
     </div>
-  )
-}
-
-/**
- * Le nom d'une forme (druide), qui dit ses règles au survol (le d3 de l'homme, le +3 de l'ours) : la rangée de l'ours
- * n'a aucune compétence, ses dés vides ne disaient rien. Sélection (SkillDice).
- */
-function FormLabel({ character, form, tooltip, align }: { character: Character; form: number; tooltip: 'above' | 'below'; align: 'left' | 'center' | 'right' }) {
-  const f = character.forms![form]
-  return (
-    <span className="group relative cursor-help text-[11px] font-bold uppercase tracking-wider text-stone-400 hover:z-[70]">
-      {f.name}
-      {(f.statuses ?? []).length > 0 && (
-        <span
-          role="tooltip"
-          className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left normal-case tracking-normal opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
-            tooltip === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
-          } ${ALIGN[align]}`}
-        >
-          <span className="block font-display text-lg font-extrabold leading-tight text-ink-1">{f.name}</span>
-          {(f.statuses ?? []).map((id) => (
-            <span key={id} className="mt-1.5 block font-body text-[15px] font-normal leading-snug text-ink-1">
-              {STATUSES[id].summary}
-            </span>
-          ))}
-          <span className="mt-1.5 block font-body text-[13px] font-medium text-ink-3">Il change de forme à chacun de ses tours, sauf le premier.</span>
-        </span>
-      )}
-    </span>
   )
 }
 
@@ -149,9 +42,9 @@ export const ALIGN = {
 }
 
 /**
- * Infobulle d'une compétence (dé de sélection, sceau de l'en-tête du combat). `face` : la face du dé qui la déclenche ;
- * absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce que la forge a fait de la face
- * (gravée, dorée), en pied.
+ * Infobulle d'une compétence (sceau de la zone de compétences du combat, dé forgé, fiche d'affrontement). `face` : la
+ * face du dé qui la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce
+ * que la forge a fait de la face (gravée), en pied.
  */
 export function SkillTooltip({
   event,

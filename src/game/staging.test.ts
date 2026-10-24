@@ -8,15 +8,15 @@ import { describe, expect, it } from 'vitest'
 import { simulateCombat, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
-import { rollFace } from './events'
+import { isRollTrigger, rollFace } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, CHARACTERS, createCharacter } from './roster'
 import { SCENE_EVENTS } from './scenes'
-import { childrenOf, skillFaceAt, stage, type Cue, type Moment } from './staging'
+import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import type { Status } from './statuses'
 import { testCharacter } from './test-utils'
 import { effectBadge } from './narration'
-import { STATES } from './states'
+import { signalTargets, STATES } from './states'
 import { STATUSES } from './statuses'
 import * as T from './timing'
 import { applyCue, initialView } from './useCombat'
@@ -84,6 +84,19 @@ function impacts(moment: Moment, beats: Beat[]): Map<number, number> {
   return new Map(strikes.map((id, k) => [id, landed[k]]))
 }
 const at = (moment: Moment, channel: Cue['channel'], when: number) => moment.cues.filter((c) => c.channel === channel && c.at === when)
+
+/**
+ * Une relique du dé (M40) : déclenchée par une face ou par le jet maximal, elle part avec le dé posé, avant son coup ;
+ * sauf si elle met fin au combat (elle reste alors une réaction, après le coup).
+ */
+function playedWithDie(beat: Beat): boolean {
+  if (beat.type !== 'relic' || beat.state.hp.some((x) => x === 0)) return false
+  const trigger = RELICS.find((r) => r.id === beat.relic)?.trigger
+  return trigger?.type === 'strike' && isRollTrigger(trigger.on)
+}
+
+/** Mode triche : chaque dé du combat tombe sur `face`. */
+const everyDie = (face: number): Record<number, number> => Object.fromEntries(Array.from({ length: 120 }, (_, k) => [k, face]))
 
 describe('mise en scène', () => {
   it('chaque étape est couverte par exactement un moment, dans l’ordre ; les cues sont triées', () => {
@@ -374,8 +387,9 @@ describe('mise en scène', () => {
             const scene = m.cues.filter((c) => c.channel === 'scene' && c.scene.id === relic.scene)[own.indexOf(beat.id)]!
             expect(scene, relic.id).toMatchObject({ scene: { id: relic.scene, source: 0, target: timing.aim === 'self' ? 0 : 1 } })
             if (timing.aim === 'self') {
-              // Sur le porteur : l'effet tombe au premier impact, et le moment laisse la scène aller au bout
-              const use = m.cues.find((c) => c.channel === 'relicUse')!
+              // Sur le porteur : l'effet tombe au premier impact, et le moment laisse la scène aller au bout. Chaque
+              // déclenchement a sa marque d'usage, dans l'ordre (deux coups encaissés dans un moment : la Géode, 2x)
+              const use = m.cues.filter((c) => c.channel === 'relicUse' && c.relic === beat.relic)[own.indexOf(beat.id)]!
               expect(use.at - scene.at).toBe(timing.impacts[0])
               expect(m.duration - scene.at).toBeGreaterThanOrEqual(timing.length)
             } else {
@@ -428,7 +442,8 @@ describe('mise en scène', () => {
       for (const beat of result.beats) {
         if (beat.type !== 'attack' || !beat.attack.replaced || beat.attack.preset) continue
         const face = skillFaceAt(result.beats, beat.id, children)
-        if (face === undefined) continue
+        // Avec une relique du dé, la compétence suit la lecture de la relique, sans battement de plus (M40)
+        if (face === undefined || children[beat.id].some(playedWithDie)) continue
         const m = momentOf(moments, beat.id)
         const pulse = m.cues.find((c) => c.channel === 'skillPulse' && c.face === face)!
         const when = pulse.at + (beat.cause !== undefined && result.beats[beat.cause].type === 'flurry' ? T.VOLLEY_FORFEIT_SNAP : T.DICE_READ)
@@ -447,7 +462,8 @@ describe('mise en scène', () => {
       for (const hit of result.beats) {
         if (hit.type !== 'attack' || hit.attack.replaced) continue
         const striker = hit.attack.attacker
-        const first = children[hit.id].find((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed'))
+        // Une relique du dé est déjà partie avec le dé posé (M40)
+        const first = children[hit.id].find((b) => (b.type === 'relic' && !playedWithDie(b)) || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed'))
         if (!first) continue
         const m = momentOf(moments, hit.id)
         const impact = impacts(m, result.beats).get(hit.id)!
@@ -548,8 +564,8 @@ describe('mise en scène', () => {
     expect(tones.get('bleed')).toEqual(new Set(['damage']))
   })
 
-  it('le chiffre de chaque coup a la teinte de sa source : coup de base DP en rouge, celui d’Ysolde (DM) en Lumière, la Foudre en cyan (M37)', () => {
-    const tones = new Map<DamageSource, Set<string>>()
+  it('le coup de base de tous est un coup blanc ; un coup de compétence ou de relique a la teinte de sa source, la Foudre en cyan (M37, 2026-10-24)', () => {
+    const tones = new Map<DamageSource | 'base', Set<string>>()
     for (const { moments } of corpus)
       for (const m of moments)
         m.cues.forEach((c, i) => {
@@ -558,12 +574,11 @@ describe('mise en scène', () => {
           // Le chiffre part avec l'impact, juste après lui
           const float = m.cues[i + 1]
           expect(float.channel === 'float' && float.float.kind === 'hit').toBe(true)
-          if (float.channel === 'float' && float.float.kind === 'hit' && !float.float.dodged)
-            tones.set(hit.source, (tones.get(hit.source) ?? new Set()).add(float.float.tone))
+          const key = 'source' in hit ? hit.source : 'base'
+          if (float.channel === 'float' && float.float.kind === 'hit' && !float.float.dodged) tones.set(key, (tones.get(key) ?? new Set()).add(float.float.tone))
         })
-    for (const [source, seen] of tones) expect(seen, source).toEqual(new Set([DAMAGE_SOURCES[source].tone]))
-    expect(tones.get('strike')).toEqual(new Set(['damage']))
-    expect(tones.get('holy')).toEqual(new Set(['light']))
+    for (const [source, seen] of tones) expect(seen, source).toEqual(new Set([source === 'base' ? 'hit' : DAMAGE_SOURCES[source].tone]))
+    expect(tones.get('base')).toEqual(new Set(['hit']))
     expect(tones.get('lightning')).toEqual(new Set(['storm']))
   })
 
@@ -759,5 +774,148 @@ describe('mise en scène', () => {
         }
       }
     expect(nested).toBeGreaterThan(3)
+  })
+
+  it('une relique du dé part avec le dé posé : sceau et label avec lui, ses effets avant l’élan du coup (M40, retour du 2026-10-24)', () => {
+    const fired = new Map<string, number>()
+    for (const { result, moments } of [...corpus, ...relicCorpus]) {
+      const children = childrenOf(result.beats)
+      for (const relic of result.beats) {
+        if (relic.type !== 'relic' || !playedWithDie(relic)) continue
+        const hit = result.beats[relic.cause!]
+        if (hit.type !== 'attack' || children[hit.id].find(playedWithDie) !== relic) continue
+        const m = momentOf(moments, relic.id)
+        // Le sceau et le label tombent à l'instant où le dé montre sa valeur : posé, ou ressorti dans une rafale
+        const pulse = m.cues.find((c) => c.channel === 'relicPulse' && c.relics.includes(relic.relic))!
+        expect(m.cues.some((c) => c.channel === 'dice' && c.at === pulse.at && !c.dice.rolling && c.dice.values.includes(hit.attack.roll))).toBe(true)
+        const still = changesNothing(result.beats, relic, relic.effects)
+        if (!still) expect(at(m, 'special', pulse.at).some((c) => c.channel === 'special' && c.special.source === 'relic')).toBe(true)
+        // Ses effets (ses dégâts, le statut qu'elle pose) tombent avant l'élan : à l'impact, ils sont déjà là
+        const use = m.cues.find((c) => c.channel === 'relicUse' && c.relic === relic.relic && c.uses === relic.uses)!
+        if (!hit.attack.replaced) {
+          const impact = impacts(m, result.beats).get(hit.id)!
+          const wind = m.cues.filter((c) => c.channel === 'strike' && c.strike && !c.strike.landed && c.at < impact).at(-1)!
+          expect(use.at, relic.relic).toBeLessThanOrEqual(wind.at)
+          const shown = m.cues.filter((c) => c.channel === 'statuses' && c.at < impact).at(-1)
+          for (const e of still ? [] : relic.effects)
+            if (e.type === 'applyStatus' && e.result.kind === 'applied') expect(shown?.channel === 'statuses' && shown.statuses[e.target].some((s) => s.id === e.status)).toBe(true)
+        }
+        fired.set(relic.relic, (fired.get(relic.relic) ?? 0) + 1)
+      }
+    }
+    expect(fired.get('split-knucklebone')).toBeGreaterThan(5)
+    expect(fired.get('hollow-die')).toBeGreaterThan(5)
+  })
+
+  it('une relique qui pose un statut envoie son signal de son sceau : sceau et label au départ, le statut à l’arrivée (M19, M23)', () => {
+    let signals = 0
+    for (const { result, moments } of relicCorpus)
+      for (const relic of result.beats) {
+        if (relic.type !== 'relic' || RELICS.find((r) => r.id === relic.relic)?.scene) continue
+        if (changesNothing(result.beats, relic, relic.effects) || !signalTargets(relic.effects)) continue
+        const m = momentOf(moments, relic.id)
+        const use = m.cues.find((c) => c.channel === 'relicUse' && c.relic === relic.relic && c.uses === relic.uses)!
+        const depart = use.at - T.SIGNAL
+        expect(at(m, 'signal', depart).some((c) => c.channel === 'signal' && c.signal.side === relic.side && c.signal.from === relicSignal(relic.relic))).toBe(true)
+        expect(at(m, 'relicPulse', depart).some((c) => c.channel === 'relicPulse' && c.relics.includes(relic.relic))).toBe(true)
+        expect(at(m, 'special', depart).some((c) => c.channel === 'special' && c.special.source === 'relic')).toBe(true)
+        // Le statut n'apparaît qu'à l'arrivée du signal
+        const shown = at(m, 'statuses', use.at).at(-1)
+        for (const e of relic.effects)
+          if (e.type === 'applyStatus' && e.result.kind === 'applied') expect(shown?.channel === 'statuses' && shown.statuses[e.target].some((s) => s.id === e.status)).toBe(true)
+        signals++
+      }
+    expect(signals).toBeGreaterThan(50)
+  })
+
+  it('Critique assuré, puis le coup critique, puis le Trophée du chasseur : 2 → 1 à l’impact, +1 → 2 à l’arrivée de son signal (retour du 2026-10-24, Elaria contre Ervald)', () => {
+    const eye = { id: 'eye', name: 'Œil', nature: 'finesse' as const, trigger: 'naturalThree' as const, effects: [{ type: 'applyStatus' as const, status: 'guaranteedCrit' as const, stacks: 2 }] }
+    const trophy = RELICS.find((r) => r.id === 'hunter-trophy')!
+    const crit = (c: Cue) => (c.channel === 'statuses' ? (c.statuses[0].find((s) => s.id === 'guaranteedCrit')?.stacks ?? 0) : undefined)
+    let seen = 0
+    for (const seed of [1, 2, 3, 4]) {
+      const fighters: Pair<Character> = [testCharacter('a', { attackMin: 4, attackMax: 4 }, [eye]).withRelics([trophy]), testCharacter('b', { maxHp: 10 })]
+      const result = simulateCombat(fighters, { seed, forcedRolls: everyDie(3) })
+      const moments = stage(result)
+      for (const relic of result.beats) {
+        if (relic.type !== 'relic' || relic.relic !== trophy.id) continue
+        const hit = result.beats[relic.cause!]
+        if (hit.type !== 'attack' || !hit.attack.crit) continue
+        const m = momentOf(moments, hit.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        const shown = m.cues.filter((c) => c.channel === 'statuses')
+        // Le statut gagné arrive (son signal), puis le coup qui en profite
+        const wind = m.cues.find((c) => c.channel === 'strike' && c.strike && !c.strike.landed)!
+        const gained = shown.find((c) => crit(c) === 2)!
+        expect(m.cues.some((c) => c.channel === 'signal' && c.signal.from === 'eye' && c.at === gained.at - T.SIGNAL)).toBe(true)
+        expect(gained.at).toBeLessThan(wind.at)
+        // Sa charge baisse à l'impact du coup critique
+        expect(crit(at(m, 'statuses', impact).at(-1)!)).toBe(1)
+        // Le Trophée part au milieu de la lecture du coup, son signal rend la charge à son arrivée
+        const depart = impact + T.REACTION_LEAD
+        expect(at(m, 'signal', depart).some((c) => c.channel === 'signal' && c.signal.from === relicSignal(trophy.id))).toBe(true)
+        expect(at(m, 'relicPulse', depart)).toHaveLength(1)
+        const arrival = depart + T.SIGNAL
+        expect(crit(at(m, 'statuses', arrival).at(-1)!)).toBe(2)
+        // Entre les deux, le compteur reste à 1 : la baisse se voit avant la hausse
+        expect(shown.filter((c) => c.at > impact && c.at < arrival).map(crit)).toEqual([])
+        seen++
+      }
+    }
+    expect(seen).toBeGreaterThan(0)
+  })
+
+  it('Furie des vents contre Épines : les Épines tombent à chaque impact, la rafale garde son rythme (M17 bis, retour du 2026-10-24)', () => {
+    const fury = { id: 'fury', name: 'Furie', nature: 'martial' as const, trigger: 'naturalTwo' as const, relation: 'replace' as const, effects: [{ type: 'applyStatus' as const, status: 'windFury' as const, stacks: 1 }] }
+    const spikes = { id: 'spikes', name: 'Épines', nature: 'martial' as const, trigger: 'combatStart' as const, effects: [{ type: 'applyStatus' as const, status: 'thorns' as const, stacks: 1 }] }
+    let volleys = 0
+    for (const seed of [1, 2]) {
+      const result = simulateCombat([testCharacter('a', { maxHp: 60 }, [fury]), testCharacter('b', { maxHp: 60 }, [spikes])], { seed, forcedRolls: everyDie(2) })
+      const moments = stage(result)
+      const children = childrenOf(result.beats)
+      for (const flurry of result.beats) {
+        if (flurry.type !== 'flurry') continue
+        const strikes = children[flurry.id].filter((b) => b.type === 'attack')
+        if (strikes.length < 2) continue
+        const m = momentOf(moments, flurry.id)
+        const hits = impacts(m, result.beats)
+        strikes.forEach((strike, k) => {
+          const impact = hits.get(strike.id)!
+          const thorns = children[strike.id].find((b) => b.type === 'statusReaction' && b.status === 'thorns')
+          expect(thorns, `Épines au coup ${k + 1}`).toBeDefined()
+          // Son label et le Saignement posé tombent au milieu de la lecture du coup, sans s'attarder
+          const react = impact + T.VOLLEY_REACTION_LEAD
+          expect(at(m, 'special', react).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES.thorns.name))).toBe(true)
+          const shown = at(m, 'statuses', react).at(-1)
+          expect(shown?.channel === 'statuses' && shown.statuses[0].some((s) => s.id === 'bleed')).toBe(true)
+          // Le coup suivant part au rythme de la rafale, comme sans Épines
+          const next = strikes[k + 1]
+          if (!next) return
+          const wind = m.cues.find((c) => c.channel === 'strike' && c.strike && !c.strike.landed && c.at > impact)!
+          expect(wind.at - impact).toBe(T.VOLLEY_STRIKE_HOLD + T.VOLLEY_GAP)
+        })
+        volleys++
+      }
+    }
+    expect(volleys).toBeGreaterThan(3)
+  })
+
+  it('une compétence qui modifie son coup s’allume avec le dé posé, pas à l’impact (M11, retour du 2026-10-24)', () => {
+    let lit = 0
+    for (const { result, moments } of corpus) {
+      const children = childrenOf(result.beats)
+      for (const beat of result.beats) {
+        if (beat.type !== 'attack' || beat.attack.replaced || beat.attack.preset) continue
+        const face = skillFaceAt(result.beats, beat.id, children)
+        if (face === undefined) continue
+        const m = momentOf(moments, beat.id)
+        const impact = impacts(m, result.beats).get(beat.id)!
+        const pulse = m.cues.filter((c) => c.channel === 'skillPulse' && c.face === face && c.at <= impact).at(-1)!
+        expect(pulse.at).toBeLessThan(impact)
+        expect(m.cues.some((c) => c.channel === 'dice' && c.at === pulse.at && !c.dice.rolling && c.dice.values.includes(beat.attack.roll))).toBe(true)
+        lit++
+      }
+    }
+    expect(lit).toBeGreaterThan(50)
   })
 })

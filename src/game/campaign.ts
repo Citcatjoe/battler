@@ -1,9 +1,9 @@
 import { hashSeed } from './analysis'
 import { Character, type CharacterDef } from './character'
-import type { CharacterEvent } from './events'
+import { faceTrigger, type CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { autoForge, drawForgeOffer, forgedFaces, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { buildHooks, echoOf, eventHooks, relicHooks } from './hooks'
+import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, STATUS_HOOKS, type Hook } from './hooks'
 import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTERS, CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf, ROSTER } from './roster'
@@ -39,8 +39,7 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 /**
  * Faces de compétence au plus sur le dé d'un champion de campagne, signature comprise (§ 11.2, décidé) : au moins deux
  * faces de coup. La limite atteinte, Graver n'est plus proposée, et Copier une face ne copie plus qu'une face de coup.
- * Elle compte des faces, pas des compétences : la signature de Thaldrin, imprimée sur trois faces (Feux follets, 4 à 6),
- * en prend trois ; il lui reste une gravure, et ses deux faces de coup.
+ * Elle compte des faces, pas des compétences : la signature en prend une (le 1), une gravure ou une copie une de plus.
  */
 export const MAX_SKILL_FACES = 4
 
@@ -80,7 +79,6 @@ export const BOSS: CharacterDef = {
   // Règles v2, phase 5 bis (0.106.0) : une attaque lourde, ses trois techniques sur le 1, le 2 et le 3 (Peau de pierre
   // et l'Aura d'intimidation se greffent sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées
   stats: { maxHp: 70, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
-  attackKind: 'physical',
   look: { ...rosterDef('morgrut').look, tint: 'brightness(0.72) sepia(0.35) hue-rotate(-20deg) saturate(1.4)' },
   lore: {
     tagline: 'Personne ne l’a jamais vu tomber. Personne ne l’a jamais vu de près, non plus.',
@@ -108,15 +106,15 @@ export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character
 
 /**
  * Chaque personnage tel que la campagne le donne comme champion (règles v2, docs/PROGRESSION.md § 11.1, avancé en
- * 0.104.0) : sa **signature seule**, sur toutes les faces qui la portent ; les faces des autres compétences de son kit
- * sont nues, libres pour la forge. Fanchon aussi depuis la phase 5 ter (ses compétences sont sur ses faces) : sans son
- * Ouverture, qui n'est pas une face ; Thaldrin depuis le 2026-10-24 (PROGRESSION.md § 13.3) : ses Feux follets, la Foudre
- * quitte le 1, le 2 et le 3. Sans signature, son kit entier : Morgrut, le combattant nu, seule exception de structure.
+ * 0.104.0) : sa **signature seule, sur la face 1** (retour de l'utilisateur du 2026-10-24, 0.111.0 : une fois, quelle
+ * que soit la face qui la porte dans son kit ; les Feux follets de Thaldrin, imprimés sur le 4, le 5 et le 6, n'en
+ * gardent qu'une) ; ses cinq autres faces sont nues, libres pour la forge. Fanchon sans son Ouverture, qui n'est pas une
+ * face. Sans signature, son kit entier : Morgrut, le combattant nu, seule exception de structure.
  */
 export const CAMPAIGN_CHAMPIONS: Record<string, Character> = Object.fromEntries(
   CHARACTERS.map((c) => {
-    const { signature, events } = c.definition
-    return [c.id, signature ? new Character({ ...c.definition, events: events.filter((e) => e.id === signature) }) : c]
+    const signature = c.definition.events.find((e) => e.id === c.definition.signature)
+    return [c.id, signature ? new Character({ ...c.definition, events: [{ ...signature, trigger: faceTrigger(1) }] }) : c]
   }),
 )
 
@@ -267,18 +265,39 @@ export function referenceChampions(championId: string, node: number, seed: numbe
 export const ECHO_WEIGHT = 2
 
 /**
+ * Les reliques qu'on peut offrir au champion (2026-10-24, retour de l'utilisateur : « la Fiole de venin m'est proposée
+ * à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : celles dont la condition peut
+ * arriver (`relicNeeds`). Est à sa portée ce que produisent sa signature, son répertoire de campagne (tout ce qu'il peut
+ * graver), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance.
+ */
+export function offerableRelics(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): string[] {
+  const champion = championOf(run)
+  const reach = new Set<Hook>()
+  for (const e of [...champion.events, ...CAMPAIGN_REPERTOIRES[run.championId]]) for (const h of eventHooks(e).produces) reach.add(h)
+  for (const r of champion.relics) for (const h of relicHooks(r).produces) reach.add(h)
+  for (const s of (champion.forms ?? []).flatMap((f) => f.statuses ?? [])) {
+    reach.add(`status:${s}`)
+    for (const h of STATUS_HOOKS[s].produces ?? []) reach.add(h)
+  }
+  if (champion.stats.dodgeChance > 0) reach.add('moment:dodge')
+  if (champion.stats.critChance > 0) reach.add('moment:crit')
+  return RELIC_IDS.filter((id) => relicNeeds(getRelic(id)).every((h) => reach.has(h)))
+}
+
+/**
  * La récompense d'un nœud, la même pour le joueur et le champion de référence (règles v2, phase 2, offre orientée) :
  * - forge : Graver est toujours proposée, sa compétence tirée dans le **répertoire de campagne** du champion
  *   (`CAMPAIGN_REPERTOIRES`), au poids de son écho avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de
  *   compétence, ni Graver ni copie d'une compétence. Le répertoire (six compétences, ou les quatre de Morgrut) ne s'épuise
  *   pas avant la limite ;
- * - relique : la première carte au poids de son écho, les deux autres libres.
+ * - relique : parmi celles dont la condition peut arriver (`offerableRelics`), la première carte au poids de son écho,
+ *   les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
  */
 export function drawReward(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>, kind: RewardKind, rng: Rng): PendingReward {
   const build = buildHooks(championOf(run))
   if (kind === 'relic') {
-    const offer = drawOffer(run.relics, rng, RELIC_IDS, (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
+    const offer = drawOffer(run.relics, rng, offerableRelics(run), (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
     const choice = autoPick(offer, rng)
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
@@ -433,7 +452,11 @@ export const autoHeritage = (offer: readonly HeritageItem[], rng: Rng) => (offer
 const RUN_KEY = 'battler:campaign:v4'
 const HERITAGE_KEY = 'battler:campaign-heritage:v1'
 
-/** La partie en cours enregistrée, ou null (aucune, ou illisible : règles changées depuis). */
+/**
+ * La partie en cours enregistrée, ou null (aucune, ou illisible : règles changées depuis). Le champion, les adversaires
+ * proposés et la forge choisie en attente se reconstruisent : une forge qui ne vaut plus sur le dé de campagne (0.111.0 :
+ * la signature passée sur la face 1) fait oublier la partie, au lieu de faire planter l'écran.
+ */
 export function loadRun(): CampaignRun | null {
   try {
     const raw = localStorage.getItem(RUN_KEY)
@@ -441,6 +464,8 @@ export function loadRun(): CampaignRun | null {
     const run = JSON.parse(raw) as CampaignRun
     if (run.version !== 4) return null
     championOf(run)
+    run.encounters?.forEach(opponentBase)
+    if (run.reward?.kind === 'forge' && run.reward.choice) withForgeStep(CAMPAIGN_CHAMPIONS[run.championId].definition, run.forge, run.reward.choice)
     return run
   } catch {
     return null

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { simulateCombat } from './combat'
 import { EPITHETS, uniqueNames } from './epithets'
-import { offerTargets, stepKey, stepOf } from './forge'
+import { copyDestinations, offerTargets, stepKey, stepOf } from './forge'
 import { EMOJI } from './test-utils'
 import { getRelic, RELICS } from './relics'
 import { seededRng } from './rng'
@@ -277,12 +277,13 @@ describe('saison', () => {
     const def = createCharacter(seasonOf(t).entrants[smith].characterId).definition
     const held = buildOf(seasonOf(t), smith, 1).forge
     for (const offer of forged.offer) {
-      const step = stepOf(offer, offerTargets(def, held, offer).at(-1))
+      const face = offerTargets(def, held, offer).at(-1)
+      const step = stepOf(offer, face, offer.op === 'copy' && face !== undefined ? copyDestinations(def, held, face).at(-1) : undefined)
       t = chooseSeasonReward(t, n1, step)
       expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([...held, step].map(stepKey))
     }
     const targeted = forged.offer.find((o) => o.op !== 'temper')!
-    expect(() => chooseSeasonReward(t, n1, stepOf(targeted, 999))).toThrow()
+    expect(() => chooseSeasonReward(t, n1, stepOf(targeted, 999, 999))).toThrow()
     const missing = (['temper', 'gild', 'sharpen', 'copy'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
     expect(() => chooseSeasonReward(t, n1, missing === 'temper' ? { op: missing } : { op: missing, face: 1 })).toThrow()
   })

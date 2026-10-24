@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import type { DamageSource } from './damage'
-import { DIE_FACES, effectsOnFire, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
+import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
@@ -75,7 +75,7 @@ export type AppliedEffect =
       type: 'damage'
       target: Side
       amount: number
-      /** Ce que sont ces dégâts (damage.ts), d'où leur type ; recopié de l'effet, sans effet sur la règle */
+      /** Ce que sont ces dégâts (damage.ts), d'où leur teinte ; recopié de l'effet, sans effet sur la règle */
       source: DamageSource
       /** Le détail par coup, dont la somme vaut `amount` (jauges d'une relâche, coups de `hits`) ; l'écran en fait autant de coups */
       parts?: number[]
@@ -95,11 +95,6 @@ export interface Attack {
    * reliques, la dorure et le critique ; 0 pour un jet remplacé
    */
   value: number
-  /**
-   * Source du coup de base : celle de l'attaque de l'attaquant, sous sa forme du moment (`Character.attackSourceIn`) ;
-   * son type (DP ou DM) s'en déduit (`damageKind`). Sans effet sur la règle : l'étiquette et la couleur du chiffre
-   */
-  source: DamageSource
   /** Crescendo, Soliste (relation « modifie ») : ce coup ×N (`CharacterEvent.hitMultiplier`) */
   multiplier?: number
   dodged: boolean
@@ -242,7 +237,7 @@ export type BeatBody =
   | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
-   * deux fois, en DP), face, rien. Le statut est consommé
+   * deux fois, en coup), face, rien. Le statut est consommé
    */
   | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
   /**
@@ -357,8 +352,6 @@ function forceRoll(drawn: number, faces: number, forced: number | undefined) {
 export interface StrikeRoll {
   /** La face du dé */
   roll: number
-  /** Source du coup de base (l'attaque de l'attaquant, sous sa forme du moment), d'où son type */
-  source: DamageSource
   /** Le dé a été lancé par l'étape d'avant (jet greffé) : ce coup n'en lance pas */
   preset?: boolean
   /** Dé imposé par l'observateur (mode triche) */
@@ -392,7 +385,6 @@ export function resolveAttack(
   const base = {
     roll,
     faces: DIE_FACES,
-    source: strike.source,
     ...(strike.multiplier !== undefined && { multiplier: strike.multiplier }),
     ...(strike.forced && { forced: true as const }),
     ...(strike.preset && { preset: true as const }),
@@ -561,8 +553,6 @@ interface FighterState {
   statuses: Status[]
   /** Déclenchements par id d'événement, pour `limit` */
   fired: Record<string, number>
-  /** Actions par statut (effets de tour et réactions), pour payer ses demi-rangs une fois sur deux (0.110.0) */
-  acted: Map<StatusId, number>
   bloodied: boolean
   /** Statuts posés ou renouvelés pendant le tour en cours : pas de décompte à la fin de ce tour */
   fresh: Set<StatusId>
@@ -616,7 +606,6 @@ export function simulateCombat(
       hp: f.maxHp,
       statuses: formStatuses(f, 0),
       fired: {},
-      acted: new Map(),
       bloodied: false,
       fresh: new Set(),
       form: 0,
@@ -854,7 +843,7 @@ export function simulateCombat(
       const status = now && was && was.stacks < now.stacks ? { ...now, stacks: was.stacks } : now
       const react = status && reactionTo(status, trigger)
       if (!react) continue
-      const effects = applyEffects(side, actedEffects(side, id, react))
+      const effects = applyEffects(side, react)
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie, Riposte : le statut agit avec ses charges, puis en perd une dans la même étape
       else if (def.decays || def.drainsHit || def.reflectsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
@@ -912,11 +901,8 @@ export function simulateCombat(
 
   /** Une compétence part : ses effets s'appliquent, son étape est émise. Renvoie le perdant s'il y a K.O. */
   function fireEvent(side: Side, event: CharacterEvent, trigger: Trigger, cause?: number): Side | undefined {
-    const fired = (states[side].fired[event.id] ?? 0) + 1
-    states[side].fired[event.id] = fired
-    // Demi-rang (0.110.0) : ses quantités fractionnaires se paient en entier, une fois sur deux ; l'intensité d'une aura
-    // attend les actions de son statut (`actedEffects`)
-    const effects = applyEffects(side, effectsOnFire(event.effects, fired, true))
+    states[side].fired[event.id] = (states[side].fired[event.id] ?? 0) + 1
+    const effects = applyEffects(side, event.effects)
     const id = push({ type: 'event', event: { side, eventId: event.id, name: event.name, trigger, effects } }, cause)
     return fallen() ?? checkThresholds(id)
   }
@@ -1025,16 +1011,6 @@ export function simulateCombat(
   }
 
   /**
-   * Les effets d'une action de statut (effet de tour ou réaction) : son intensité à demi (aura aiguisée d'un demi-rang,
-   * 0.110.0) se paie en entier une fois sur deux, dès la première, comme les quantités d'une compétence.
-   */
-  function actedEffects(side: Side, id: StatusId, effects: Effect[]): Effect[] {
-    const k = (states[side].acted.get(id) ?? 0) + 1
-    states[side].acted.set(id, k)
-    return effectsOnFire(effects, k)
-  }
-
-  /**
    * Effets de tour des statuts du porteur (`onTurnStart` ou `onTurnEnd`) : bonus d'abord, puis
    * malus, chacun dans l'ordre de pose. Puis décompte des durées qui s'usent à ce moment-là.
    */
@@ -1049,7 +1025,7 @@ export function simulateCombat(
       const tick = phase === 'turnStart' ? def.onTurnStart?.(status) : def.onTurnEnd?.(status)
       // Un statut retiré entre-temps (ex. annulé par son opposé) n'agit plus.
       if (!tick || !states[side].statuses.some((s) => s.id === status.id)) continue
-      const effects = applyEffects(side, actedEffects(side, status.id, tick))
+      const effects = applyEffects(side, tick)
       // S'estomper est la règle même du statut : il perd une charge chaque fois qu'il agit, dans l'étape de son effet
       if (def.decays) {
         states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
@@ -1139,13 +1115,12 @@ export function simulateCombat(
 
   function throwDie(attacker: Side, cause?: number): Side | undefined {
     const { roll, forced } = drawDie()
-    const source = fighters[attacker].attackSourceIn(states[attacker].form)
-    if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, source, forced, replaced: true }, false, cause)
-    if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, source, forced }), false, cause)
+    if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, forced, replaced: true }, false, cause)
+    if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, forced }), false, cause)
     const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, ...(forced && { forced: true as const }) }, cause)
     const down = fireGrafts(attacker, roll, rolled)
     if (down !== undefined) return down
-    return strikeOnce(attacker, baseHit(attacker, { roll, source, preset: true }), false, rolled)
+    return strikeOnce(attacker, baseHit(attacker, { roll, preset: true }), false, rolled)
   }
 
   /**
@@ -1208,7 +1183,7 @@ export function simulateCombat(
   /**
    * Pile ou face (relation « modifie », règles v2) : si `side` détient une pièce, il la lance tout de suite (pile = 1 sur
    * un d2, un rang de dé). Pile, ce coup ×N (`coinToss.multiplier`) : les PV qu'il a retirés (`dealt`), encore N − 1 fois,
-   * en DP et en une perte ; s'ils « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui
+   * en coup et en une perte ; s'ils « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui
    * touche de ce montant : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de
    * vie, Riposte, jauges). Le statut est consommé. Renvoie le perdant s'il y a K.O. La pièce a pour cause l'étape qui l'a
    * posée, à défaut le coup `after`.
@@ -1254,7 +1229,7 @@ export function simulateCombat(
     )
     for (let k = 0; k < strikes; k++) {
       const { roll, forced } = drawDie()
-      const down = strikeOnce(attacker, { roll, source: fighters[attacker].attackSourceIn(att.form), forced }, true, burstBeat)
+      const down = strikeOnce(attacker, { roll, forced }, true, burstBeat)
       if (down !== undefined) return down
     }
     return undefined

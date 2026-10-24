@@ -210,8 +210,9 @@ describe('écrans', () => {
     expect(build).toContain('die-slot-rank')
     expect(build).toContain('aria-label="Face 4"')
     expect(build.match(/data-gild=""/g)).toHaveLength(1)
-    // Une face dorée porte son bonus au cartouche, lu dans la donnée
-    expect(build).toContain(`<span class="die-slot-num">+${f[4].gild}</span>`)
+    // Une face dorée : le fond d'or suffit, ni bonus ni chiffre en cartouche (0.111.0)
+    expect(build).not.toContain(`+${f[4].gild}</span>`)
+    expect(build.match(/class="die-slot-num"/g)).toHaveLength(dieCells(forged).filter((c) => c.event).length)
     // Six emplacements, un par face
     expect(build.match(/<li class="die-slot[ "]/g)).toHaveLength(6)
     // Une face gravée par la forge est une face forgée (cadre d'or)
@@ -278,11 +279,29 @@ describe('écrans', () => {
 
   it('zone de compétence du combat : le dé qui roule allume brièvement le sceau de la face montrée, sans éclat', () => {
     const gorak = createCharacter('gorak')
-    // Le 2 de Gorak est une face de compétence ; le 5, une face simple sans sceau
+    // Le 2 de Gorak est une face de compétence ; le 5, une face nue : elle s'allume aussi (0.111.0)
     const rolling = renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={[2]} />)
     expect(rolling.match(/is-rolled/g)).toHaveLength(1)
     expect(rolling).not.toContain('skill-bar-wave')
-    expect(renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={[5]} />)).not.toContain('is-rolled')
+    expect(renderToString(<SkillBar character={gorak} side={0} statuses={[]} rolling={[5]} />).match(/is-rolled/g)).toHaveLength(1)
+  })
+
+  it('zone de compétence du combat (0.111.0) : les six faces, une face nue en case vide éteinte qui s’allume où le dé tombe, une face dorée en or', () => {
+    // Morgrut : six faces nues, et pourtant six cases
+    const morgrut = renderToString(<SkillBar character={createCharacter('morgrut')} side={0} statuses={[]} />)
+    expect(morgrut.match(/class="skill-seal skill-bar-bare"/g)).toHaveLength(6)
+    expect(morgrut).not.toContain('is-rolled')
+    for (const face of [1, 2, 3, 4, 5, 6]) expect(morgrut).toContain(`aria-label="Dé ${face}"`)
+    // Le dé tombé sur le 4 l'allume, seul
+    const landed = renderToString(<SkillBar character={createCharacter('morgrut')} side={0} statuses={[]} landed={[4]} />)
+    expect(landed.match(/is-rolled/g)).toHaveLength(1)
+    expect(landed.slice(landed.indexOf('is-rolled')).match(/aria-label="Face (\d)"/)?.[1]).toBe('4')
+    // Une face dorée : la même case, sur fond d'or, sans chiffre de bonus ; une face de compétence ne s'allume qu'à son déclenchement
+    const gilded = createCharacter('gorak').withForge([{ op: 'gild', face: 5 }])
+    const bar = renderToString(<SkillBar character={gilded} side={0} statuses={[]} landed={[1]} />)
+    expect(bar.match(/data-gild=""/g)).toHaveLength(1)
+    expect(bar.match(/class="skill-seal skill-bar-bare"/g)).toHaveLength(4)
+    expect(bar).not.toContain('is-rolled')
   })
 
   it("zone de surcharge : n'y entrent que les statuts qui changent ce coup-ci, sans aura ni action déclenchée (registre unique)", () => {
@@ -651,7 +670,7 @@ describe('écrans', () => {
     const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
     // Un champion qui a déjà forgé : une gravure sur le 6, une copie, une dorure, et le boss en face
     let run = startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' })
-    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 2 }, { op: 'gild', face: 4 }] }
+    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 1 }, { op: 'gild', face: 4 }] }
     const encounters: Encounter[] = [
       { characterId: 'brokk', maxHp: 44, forge: [{ op: 'gild', face: 6 }], relics: ['wolf-fang'], chance: 0.8 },
       { characterId: 'ysolde', maxHp: 61, forge: [], relics: [], chance: 0.4 },

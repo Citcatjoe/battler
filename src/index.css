@@ -1466,33 +1466,7 @@ body {
   font-size: 15px;
 }
 .skill-die-xs.skill-die-number { font-size: 12px; }
-/* Dés de compétence en combat (en-tête) : éteints au repos, ils ne s'allument qu'un instant quand leur
-   face sort, comme le tintement d'une clochette : un éclat bref et ample dans la couleur de la nature de
-   la compétence (data-nature, comme les cartes en lame), puis retour à l'état éteint. Variable --pulse et
-   non --nature : le sceau de l'infobulle lit --nature, et prenait un liseré coloré hors de propos. */
-.skill-die-slot { --pulse: var(--arcane); }
-.skill-die-slot[data-nature='martial'] { --pulse: var(--gold-400); }
-.skill-die-slot[data-nature='finesse'] { --pulse: var(--armor); }
-.skill-die-slot[data-nature='neutral'] { --pulse: var(--text-3); }
-.skill-dice-dim .skill-die { filter: grayscale(0.85) brightness(0.5); transition: filter 150ms, transform 120ms, box-shadow 120ms; }
-.skill-dice-dim .group:hover .skill-die { filter: none; }
-.skill-die-flash .skill-die { animation: skill-die-flash calc(520ms / var(--speed)) ease-out; }
-@keyframes skill-die-flash {
-  0% { filter: none; transform: scale(1); }
-  12% { filter: brightness(1.6) saturate(1.4); transform: scale(1.45); box-shadow: 0 0 0 2px var(--pulse), 0 0 24px 6px var(--pulse); }
-  35% { filter: brightness(1.25); transform: scale(1.18); box-shadow: 0 0 0 1px var(--pulse), 0 0 14px 2px var(--pulse); }
-  100% { filter: grayscale(0.85) brightness(0.5); transform: scale(1); }
-}
-/* L'onde du tintement : un anneau qui s'élargit et s'efface vite */
-.skill-die-pulse {
-  position: absolute;
-  inset: -2px;
-  z-index: 10;
-  pointer-events: none;
-  border-radius: 10px;
-  border: 2px solid var(--pulse);
-  animation: skill-die-pulse calc(480ms / var(--speed)) ease-out both;
-}
+/* L'onde du tintement d'une compétence qui sort (SkillBar, .skill-bar-wave) : un anneau qui s'élargit et s'efface vite */
 @keyframes skill-die-pulse {
   0% { opacity: 1; transform: scale(1); box-shadow: 0 0 16px 4px var(--pulse); }
   100% { opacity: 0; transform: scale(2.1); box-shadow: 0 0 4px 0 var(--pulse); }
@@ -1517,9 +1491,6 @@ body {
   background: radial-gradient(ellipse 75% 100% at 58% 100%, color-mix(in srgb, var(--camp) 30%, transparent) 0%, color-mix(in srgb, var(--camp) 12%, transparent) 45%, transparent 75%);
 }
 .turn-halo[data-active='true'] { opacity: 1; }
-@media (prefers-reduced-motion: reduce) {
-  .skill-die-pulse, .skill-die-flash .skill-die { animation-duration: 1ms; }
-}
 
 /* ---------- Barre de compétences de l'en-tête du combat (SkillBar, 0.79.0) ----------
    Ce que le personnage sait faire : sceaux octogonaux éteints au repos, qui s'allument quand leur face sort
@@ -1569,6 +1540,14 @@ body {
 .skill-bar .group:hover .skill-bar-face { filter: none; opacity: 1; transform: translateY(-2px); }
 /* Reflet du dé qui roule : le sceau de la face montrée s'allume sans transition, puis s'éteint en 150 ms */
 .skill-bar-face.is-rolled { filter: none; opacity: 1; transition: none; }
+/* Face nue (0.111.0) : une case vide, au liseré neutre ; dorée, sur le fond d'or de la forge. Au repos, la case dorée
+   s'éteint moins (le gris éteindrait son or) ; elle s'allume comme les autres, tant que le dé est posé dessus */
+.skill-bar-bare { --nature: var(--line-2); }
+.skill-bar-bare::before { background: radial-gradient(circle at 50% 35%, #231c16 0%, var(--bg-0) 75%); }
+.skill-bar-slot[data-gild] .skill-bar-bare::before { background: linear-gradient(160deg, #f6dc9a 0%, #dda94a 45%, #8a6424 100%); }
+.skill-bar-slot[data-gild]:not(:hover) .skill-bar-face:not(.is-rolled) { filter: grayscale(0.2) brightness(0.62) drop-shadow(0 0 0 transparent); }
+.skill-bar-face.is-rolled .skill-bar-bare::before { background: radial-gradient(circle at 50% 35%, #5b4a36 0%, #2a211a 75%); }
+.skill-bar-slot[data-gild] .skill-bar-face.is-rolled .skill-bar-bare::before { background: linear-gradient(160deg, #fff1c4 0%, #edc46a 45%, #a37a2e 100%); }
 .skill-bar-aura.is-idle { filter: grayscale(0.9) brightness(0.42) drop-shadow(0 0 0 transparent); opacity: 0.8; box-shadow: 0 0 0 2px #0c0a09, 0 0 0 3px rgba(168, 162, 158, 0.45); }
 .skill-bar .group:hover .skill-bar-aura.is-idle { filter: none; opacity: 1; }
 /* Au repos, les noms s'effacent aussi ; une aura active reste dorée, un sceau qui sonne s'éclaire un instant */
@@ -1727,7 +1706,7 @@ body {
 /* Face forgée (compétence gravée par la forge) : cadre d'or dégradé de 2 px */
 .die-slot[data-forged] .skill-seal { background: linear-gradient(160deg, #f6dc9a 0%, #dda94a 50%, #8a6424 100%); }
 .die-slot[data-forged] .skill-seal::before { inset: 2px; }
-/* Cartouche du chiffre (et du bonus d'une dorure), en bas à gauche */
+/* Cartouche du chiffre d'une face à compétence, en bas à gauche (une face dorée n'en a pas : le fond d'or suffit) */
 .die-slot-num {
   position: absolute;
   left: -3px;
@@ -1742,8 +1721,7 @@ body {
   text-align: center;
   white-space: nowrap;
 }
-.die-slot[data-forged] .die-slot-num,
-.die-slot[data-gild] .die-slot-num { background: #24170a; color: #f6dc9a; box-shadow: inset 0 0 0 1px rgba(246, 220, 154, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6); }
+.die-slot[data-forged] .die-slot-num { background: #24170a; color: #f6dc9a; box-shadow: inset 0 0 0 1px rgba(246, 220, 154, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6); }
 /* Rang d'une compétence aiguisée : pastille d'or, liseré de 2 px couleur du fond */
 .die-slot-rank {
   position: absolute;

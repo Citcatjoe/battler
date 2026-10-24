@@ -24,7 +24,7 @@ import {
 import type { Character } from './character'
 import { cueOf } from './cues'
 import { DAMAGE_SOURCES, type DamageSource, type DamageTone } from './damage'
-import { relationOf, rollFace } from './events'
+import { isRollTrigger, relationOf, rollFace } from './events'
 import {
   atCap,
   attackLog,
@@ -376,6 +376,18 @@ export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOm
 /** Un coup de compétence unique de cette force est un coup lourd (chiffre doré, secousse, son du critique). */
 const HEAVY_BLOW = 10
 
+/**
+ * Relique déclenchée par la valeur du dé (une face, le jet maximal : l'Osselet fendu, le Dé creux) : elle part avec le
+ * dé posé, avant l'action qu'il décide (docs/MISE_EN_SCENE.md, M40).
+ */
+function isDieRelic(id: string): boolean {
+  const trigger = RELICS.find((r) => r.id === id)?.trigger
+  return trigger?.type === 'strike' && isRollTrigger(trigger.on)
+}
+
+/** Le point de départ du signal d'une relique : son sceau dans l'en-tête (`data-signal` de RelicRow, RelicSeal.tsx). */
+export const relicSignal = (relic: string) => `relic:${relic}`
+
 /* ---------- La mise en scène ---------- */
 
 interface Preview {
@@ -422,7 +434,13 @@ interface ShowOpts {
   onShow?: () => void
   /** Temps de lecture après l'effet (sinon `READ_HOLD`) */
   hold?: TimingName
-  /** Effet d'une relique : ni aura ni titre sur la source */
+  /**
+   * Réaction à un coup de rafale, ou relique du dé d'un coup de rafale : elle ne s'attarde pas, la rafale garde son
+   * rythme (M17 bis). Ni lecture après l'effet, ni attente avant ou après ses coups (le dernier se lit comme un coup de
+   * rafale) ; son aura s'éteint avec la lecture du coup.
+   */
+  brisk?: true
+  /** Effet d'une relique : ni aura ni titre sur la source ; avec un signal, son sceau et son label partent avec lui */
   relic?: true
   /** Instants des impacts depuis l'apparition (événement de scène) */
   schedule?: readonly number[]
@@ -513,8 +531,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   const setStrike = (next: Strike | null) => {
     strike = next
     emit({ channel: 'strike', strike: next })
+    // Le coup de base, d'un type unique : le « coup blanc » (2026-10-24), la teinte d'un coup
     if (next?.landed)
-      emit({ channel: 'float', side: other(next.attacker), float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged, tone: DAMAGE_SOURCES[next.source].tone } })
+      emit({ channel: 'float', side: other(next.attacker), float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged, tone: DAMAGE_SOURCES.strike.tone } })
   }
   const setBlow = (next: Blow | null) => {
     blow = next
@@ -666,6 +685,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    * dé (M10), et les réactions au coup, au milieu de sa lecture (M17)
    */
   const snapped = new Set<number>()
+  /** Étapes jouées au rythme d'une rafale : réactions à un coup de rafale, reliques du dé d'un coup de rafale (M17 bis) */
+  const brisk = new Set<number>()
 
   /* ----- Mise en scène de chaque sorte d'étape ----- */
 
@@ -679,17 +700,24 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const landing = hits.length > 0 ? effects.filter((e) => !hits.includes(e) && e.target === hits[0].target) : []
     if (o.lead !== 0) hold('LEAD')
     const aim = o.signal !== undefined && source !== null ? signalTargets(effects) : undefined
+    // Une relique s'annonce (sceau et label) au départ de son signal, ses effets tombent à son arrivée (M23)
+    const early = !!aim && !!o.relic
+    const announce = () => {
+      o.onShow?.()
+      if (o.special) addSpecial(o.special)
+    }
     if (aim) {
       emit({ channel: 'signal', signal: { side: source!, from: o.signal!, ...aim } })
+      if (early) announce()
       hold('SIGNAL')
     }
-    o.onShow?.()
+    if (!early) o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)
     if (cue) sound(cue)
     showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes }, o.relic)
-    if (o.special) addSpecial(o.special)
+    if (!early && o.special) addSpecial(o.special)
     if (hits.length > 0 && source !== null) {
-      hold('BLOWS_LEAD')
+      if (!o.brisk) hold('BLOWS_LEAD')
       blows(source, hits, o.blows === 'lunge', o.impact ?? ((_, heavy) => (heavy ? 'crit' : 'hit')), {
         schedule: o.schedule?.map((x) => x - T.BLOWS_LEAD),
         onLand: (last) => {
@@ -697,13 +725,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           if (landing.length > 0) emitFloats({ source: null, title: '', effects: landing })
           apply()
         },
+        ...(o.brisk && { lastHold: 'VOLLEY_STRIKE_HOLD' as const }),
       })
-      hold('BLOWS_HOLD')
+      if (!o.brisk) hold('BLOWS_HOLD')
     } else {
       apply()
-      hold(o.hold ?? 'READ_HOLD')
+      if (!o.brisk) hold(o.hold ?? 'READ_HOLD')
     }
-    setAura(null)
+    if (!o.brisk) setAura(null)
   }
 
   /**
@@ -801,7 +830,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const quiet: Beat[] = []
     const reactions: Beat[] = []
     for (const next of children[hit.id]) {
-      if (rides.includes(next) || next === flow) continue
+      // Déjà jouée avant le coup : une relique du dé (M40)
+      if (rides.includes(next) || next === flow || absorbed.has(next.id)) continue
       if (next.type === 'statusReaction' && next.effects.length === 0) quiet.push(next)
       else if (next.type === 'statusReaction' || next.type === 'relic' || (next.type === 'event' && rollFace(next.event.trigger) === undefined))
         reactions.push(next)
@@ -834,15 +864,46 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     }
   }
 
-  /** Au milieu de la lecture du coup (`lead`, déjà attendu si absent) : ses réactions, chacune sans `LEAD`. */
-  function react(reactions: readonly Beat[], lead?: TimingName) {
+  /**
+   * Au milieu de la lecture du coup (`lead`, déjà attendu si absent) : ses réactions, chacune sans `LEAD`. `quick` :
+   * coup de rafale, ses réactions ne s'attardent pas (M17 bis).
+   */
+  function react(reactions: readonly Beat[], lead?: TimingName, quick = false) {
     if (reactions.length === 0) return
     if (lead) hold(lead)
     for (const reaction of reactions) {
       absorbed.add(reaction.id)
       snapped.add(reaction.id)
+      if (quick) brisk.add(reaction.id)
       stageBeat(reaction)
     }
+  }
+
+  /**
+   * Les reliques que la valeur du dé de ce coup déclenche (M40), et celles qu'elles déclenchent à leur tour (le Trophée
+   * du chasseur après les dégâts de l'Osselet fendu), dans l'ordre du moteur. Une relique du dé qui met fin au combat
+   * reste après le coup (une réaction), pour que le coup ne frappe pas un adversaire déjà à terre.
+   */
+  function dieRelicsOf(hit: Beat): Beat[] {
+    const found = children[hit.id].filter((b) => b.type === 'relic' && isDieRelic(b.relic) && b.state.hp.every((x) => x > 0))
+    for (const from of found) for (const next of children[from.id]) if (next.type === 'relic' && !found.includes(next)) found.push(next)
+    return found.sort((x, y) => x.id - y.id)
+  }
+
+  /**
+   * Les reliques du dé partent avec le dé posé, avant l'action qu'il décide (M40) : son sceau et son label, puis ses
+   * effets (signal, ou coups de relique). `quick` : un dé de rafale, elles suivent son rythme (M17 bis). Rend vrai si
+   * une relique est partie : l'action suit alors leur lecture, sans second battement.
+   */
+  function playDieRelics(hit: Beat, quick: boolean): boolean {
+    const relics = dieRelicsOf(hit).filter((b) => !absorbed.has(b.id))
+    for (const relic of relics) {
+      absorbed.add(relic.id)
+      snapped.add(relic.id)
+      if (quick) brisk.add(relic.id)
+      stageBeat(relic)
+    }
+    return relics.length > 0
   }
 
   /**
@@ -862,30 +923,31 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
   /**
    * Le coup d'une action : le dé roule, retombe, l'élan part, l'impact tombe. `rolled` : le dé est déjà tombé (étape
-   * `roll`, et la compétence greffée qui a suivi) : le coup part de là, sans nouveau jet.
+   * `roll`, et la compétence greffée qui a suivi, ses reliques du dé aussi) : le coup part de là, sans nouveau jet.
    */
   function stageAttack(beat: Extract<Beat, { type: 'attack' }>, face: number | undefined, grouped: boolean, rolled: boolean) {
     const { attack } = beat
     const { attacker, faces } = attack
     const shown = { ...IDLE_DICE, faces, owner: attacker, critMultiplier: attack.critMultiplier }
     const specials = attackSpecials(attack)
-    const after = consequencesOf(beat)
-    const base = hp
 
-    if (rolled) {
-      patchDice({ critMultiplier: attack.critMultiplier })
-      if (labels.length > 0) clearSpecials()
-    } else {
+    // Jet greffé : son dé, ses labels et ses reliques du dé sont déjà tombés avec l'étape `roll` ; ils restent
+    if (rolled) patchDice({ critMultiplier: attack.critMultiplier })
+    else {
       setDice({ ...shown, values: [0], rolling: true })
       sound('diceRoll', T.DICE_ROLL)
       hold('DICE_ROLL')
       sound('diceLand')
-      // Une compétence qui remplace le coup s'allume avec le dé ; une compétence qui modifie le coup (Pourfendre) ne part
-      // que s'il touche : son dé s'allume à l'impact
-      if (attack.replaced) pulse(attacker, face)
+      // Ce que la valeur du dé décide s'allume avec lui : la compétence qui remplace le coup (M10) comme celle qui le
+      // modifie (Pourfendre, Crescendo : M11 ; elle n'existe que si le coup touche, son effet tombe à l'impact)
+      pulse(attacker, face)
       setDice({ ...shown, values: [attack.roll], forced: attack.forced })
+      rollSpecials(attack)
     }
-    rollSpecials(attack)
+    // Les reliques du dé partent avec lui (M40) ; l'action suit leur lecture, sans second battement
+    const relicked = !rolled && playDieRelics(beat, false)
+    const after = consequencesOf(beat)
+    const base = hp
 
     // Jet remplacé par sa compétence : pas d'élan ; la compétence qui suit prend le relais un battement après le dé
     // posé, comme l'élan d'un coup (docs/MISE_EN_SCENE.md, M10)
@@ -893,11 +955,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       settle(beat, base)
       showStatuses(beat.id)
       log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
-      hold(grouped ? 'DICE_READ' : 'FORFEIT_HOLD')
+      if (!relicked) hold(grouped ? 'DICE_READ' : 'FORFEIT_HOLD')
       return
     }
 
-    if (!rolled) hold('DICE_READ')
+    if (!rolled && !relicked) hold('DICE_READ')
     if (attack.crit) {
       patchDice({ crit: true, critForced: attack.critForced })
       for (const s of specials.crit) addSpecial(s)
@@ -914,27 +976,30 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showStatuses(beat.id)
     setStrike({ ...attack, key: id, landed: true })
     for (const s of specials.impact) addSpecial(s)
-    if (!rolled) pulse(attacker, face)
     log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
     afterImpact(after, after.flow ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD', 'REACTION_LEAD')
   }
 
   /**
-   * Un coup de la rafale : pas de nouveau jet, élan court, impact presque immédiat. `rolled` : son jet greffé a déjà
-   * allumé le dé de sa compétence ; sinon, une compétence qui modifie le coup l'allume à l'impact (M11).
+   * Un coup de la rafale : pas de nouveau jet, élan court, impact presque immédiat. Son dé ressort : ce que sa valeur
+   * décide s'allume avec lui (la compétence qui remplace ou modifie le coup, M10 et M11 ; ses reliques du dé, M40), sauf
+   * pour un jet greffé, dont l'étape `roll` l'a déjà fait (`rolled`).
    */
   function stageVolleyStrike(beat: Extract<Beat, { type: 'attack' }>, index: number | undefined, face: number | undefined, grouped: boolean, rolled: boolean) {
     const { attack } = beat
     const specials = attackSpecials(attack)
+    patchDice({ active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier })
+    if (!rolled) {
+      if (labels.length > 0) clearSpecials()
+      pulse(attack.attacker, face)
+      rollSpecials(attack)
+      playDieRelics(beat, true)
+    }
+    for (const s of specials.crit) addSpecial(s)
     const after = consequencesOf(beat)
     const base = hp
-    patchDice({ active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier })
-    if (labels.length > 0) clearSpecials()
-    rollSpecials(attack)
-    for (const s of specials.crit) addSpecial(s)
     if (attack.replaced) {
       // Le dé de la rafale ressort, son dé de l'en-tête s'allume, et sa compétence suit sans attente
-      pulse(attack.attacker, face)
       settle(beat, base)
       showStatuses(beat.id)
       log(attackLog(beat.turn, attack, fighters, hp[other(attack.attacker)]))
@@ -950,26 +1015,29 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showStatuses(beat.id)
     setStrike({ ...attack, key: id, landed: true, fast: true })
     for (const s of specials.impact) addSpecial(s)
-    if (!rolled) pulse(attack.attacker, face)
     log(attackLog(beat.turn, attack, fighters, hp[other(attack.attacker)]))
-    afterImpact(after, after.flow ? 'VOLLEY_FLOW_HOLD' : 'VOLLEY_STRIKE_HOLD', 'VOLLEY_REACTION_LEAD')
+    afterImpact(after, after.flow ? 'VOLLEY_FLOW_HOLD' : 'VOLLEY_STRIKE_HOLD', 'VOLLEY_REACTION_LEAD', true)
   }
 
   /**
    * Après l'impact d'un coup : ce qu'il entraîne (M14 à M17), ses réactions au milieu de sa lecture (`lead`), puis il
    * s'efface au terme de sa lecture (`read`), même quand ses réactions durent plus longtemps : la posture d'attaque et
-   * l'étoile d'impact gardent leur durée. Une Riposte l'efface plus tôt, à son élan (`blows`).
+   * l'étoile d'impact gardent leur durée. Une Riposte l'efface plus tôt, à son élan (`blows`). `volley` : un coup de
+   * rafale, dont les réactions ne s'attardent pas ; il finit sa lecture et la rafale garde son rythme (M17 bis).
    */
-  function afterImpact(after: Consequences, read: TimingName, lead: TimingName) {
+  function afterImpact(after: Consequences, read: TimingName, lead: TimingName, volley = false) {
     land(after)
     const end = t + T[read]
-    if (after.reactions.length > 0) react(after.reactions, lead)
-    else hold(read)
+    if (after.reactions.length > 0) {
+      react(after.reactions, lead, volley)
+      if (volley && t < end) hold('VOLLEY_REACTION_REST')
+    } else hold(read)
     if (strike) {
       strike = null
       emit({ channel: 'strike', strike: null }, Math.min(t, end))
     }
-    if (after.flow || after.rides.length > 0) setAura(null)
+    // L'aura de ce qu'il a produit, de sa plaie, ou de ses réactions de rafale, s'éteint avec sa lecture
+    setAura(null)
   }
 
   /**
@@ -1038,11 +1106,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // nouveau, il ressort
         const grafts = children[beat.id].filter((b) => b.type === 'event')
         for (const g of grafts) snapped.add(g.id)
+        // Le coup de base de ce dé : ses labels du jet et ses reliques du dé tombent ici, avec le dé (M8, M40)
+        const strikeOf = children[beat.id].find((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack')
         const volley = volleys.at(-1)
         const index = volley ? volley.strikes.findIndex((id) => children[beat.id].some((b) => b.id === id)) : -1
         if (volley && index >= 0) {
           uncover(volley)
           patchDice({ active: index })
+          if (labels.length > 0) clearSpecials()
         } else {
           const shown = { ...IDLE_DICE, faces: beat.faces, owner: beat.side }
           setDice({ ...shown, values: [0], rolling: true })
@@ -1052,10 +1123,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           setDice({ ...shown, values: [beat.roll], forced: beat.forced })
         }
         if (grafts.length > 0) pulse(beat.side, beat.roll)
+        if (strikeOf) rollSpecials(strikeOf.attack)
         settle(beat)
         showStatuses(beat.id)
         log(rollLog(beat.turn, beat.side, beat.roll, fighters))
-        hold('DICE_READ')
+        // Les reliques du dé partent avec lui, avant la compétence greffée, qui suit alors leur lecture sans second
+        // battement (M40)
+        const relicked = strikeOf !== undefined && playDieRelics(strikeOf, index >= 0)
+        if (!relicked) hold('DICE_READ')
         break
       }
       case 'event': {
@@ -1084,6 +1159,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             // Furie instantanée : ses frappes suivent vite (son nom est déjà tombé avec le dé)
             hold: children[beat.id].some((b) => b.type === 'flurry') ? 'FLURRY_CHAIN_HOLD' : undefined,
             signal: beat.event.eventId,
+            // Compétence déclenchée par un coup de rafale : la rafale garde son rythme (M17 bis)
+            ...(brisk.has(beat.id) && !timing && { brisk: true as const }),
           },
         )
         break
@@ -1153,6 +1230,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             ...(STATUS_PLACE[beat.status].place === 'aura' && { signal: beat.status }),
             // Réaction au coup : elle part au milieu de sa lecture, sans attente de plus (M17)
             ...(snapped.has(beat.id) && { lead: 0 }),
+            // Réaction à un coup de rafale : elle ne s'attarde pas, la rafale garde son rythme (M17 bis)
+            ...(brisk.has(beat.id) && { brisk: true }),
           } as ShowOpts,
         )
         break
@@ -1267,9 +1346,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         break
       }
       case 'relic': {
-        // La relique s'annonce sur son sceau ; ses effets arrivent sur leur cible, son label tombe sous le dé au même
-        // instant (+ pour un bonus de son porteur, − pour un contre : `relicSpecial`). Une relique dont aucun effet ne
-        // change rien n'a pas de label (M25) ; « Rien à purifier » se tait à côté d'un autre effet (M38)
+        // La relique s'annonce sur son sceau, avec son label sous le dé (+ pour un bonus de son porteur, − pour un contre :
+        // `relicSpecial`) ; un statut qu'elle pose part de son sceau en signal et n'apparaît qu'à son arrivée (M19, M23),
+        // comme pour une compétence. Une relique dont aucun effet ne change rien n'a ni signal ni label (M25) ; « Rien à
+        // purifier » se tait à côté d'un autre effet (M38)
         const effects = quietPurges(beat.effects)
         const still = idle(effects)
         const base = hp
@@ -1303,6 +1383,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             special: still ? undefined : relicSpecial(beat.relic, beat.name, beat.side === beat.owner ? 'attacker' : 'defender', effects),
             ...((timing || snapped.has(beat.id)) && { lead: 0 as const }),
             ...(timing && !onSelf && { schedule: timing.impacts, impact: () => timing.sound ?? 'hit' }),
+            // Une relique à scène garde le rythme de sa scène (M24) : ni signal, ni rythme de rafale
+            ...(!timing && !still && { signal: relicSignal(beat.relic) }),
+            ...(!timing && brisk.has(beat.id) && { brisk: true as const }),
           },
         )
         // La scène sur le porteur va jusqu'au bout (la gangue qui éclate, la poussière qui retombe)

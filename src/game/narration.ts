@@ -28,13 +28,15 @@ export interface LogEntry {
 
 /**
  * Couleur d'un texte flottant. Celle d'un chiffre de dégâts vient de sa source (`DamageTone`, `DAMAGE_SOURCES` de
- * damage.ts ; docs/MISE_EN_SCENE.md, M37) : rouge des coups et du Saignement, ivoire de la Lumière, cyan de la Foudre,
- * gris acier du Vent, mauve du Feu, de la Brûlure et de la Pourriture, vert acide du Poison.
+ * damage.ts ; docs/MISE_EN_SCENE.md, M37) : blanc du coup (le « coup blanc », 2026-10-24), rouge du Saignement, ivoire
+ * de la Lumière, cyan de la Foudre, gris acier du Vent, mauve du Feu, de la Brûlure et de la Pourriture, vert acide du
+ * Poison.
  */
 export type Tone = 'heal' | 'positive' | 'negative' | 'neutral' | DamageTone
 
 export const TONE_CLASS: Record<Tone, string> = {
   heal: 'text-emerald-300 [-webkit-text-stroke:3px_#064e3b]',
+  hit: 'text-white [-webkit-text-stroke:3px_#0c0a09]',
   damage: 'text-red-400 [-webkit-text-stroke:3px_#450a0a]',
   positive: 'text-amber-200 [-webkit-text-stroke:3px_#78350f]',
   negative: 'text-fuchsia-300 [-webkit-text-stroke:3px_#4a044e]',
@@ -53,6 +55,7 @@ export const TONE_CLASS: Record<Tone, string> = {
  * un coup lourd garde son or (`Fighter.tsx`).
  */
 export const HIT_TONE_CLASS: Record<DamageTone, string> = {
+  hit: 'text-white [-webkit-text-stroke:4px_#0c0a09]',
   damage: 'text-red-500 [-webkit-text-stroke:4px_#450a0a]',
   poison: 'text-lime-300 [-webkit-text-stroke:4px_#1a2e05]',
   arcane: 'text-violet-300 [-webkit-text-stroke:4px_#2e1065]',

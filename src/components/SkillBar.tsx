@@ -1,12 +1,13 @@
 import { useState, type CSSProperties } from 'react'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, rollFace, triggerText, type CharacterEvent } from '../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, faceTrigger, rollFace, triggerText, type CharacterEvent } from '../game/events'
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
 import { STATUSES, type Status, type StatusId } from '../game/statuses'
 import type { SkillPulse, SkillSignal } from '../game/staging'
+import { ForgeFaceTooltip } from './ForgeFaceTooltip'
 import { Icon, skillIcon, STATUS_ICON, StatusIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
-import { ALIGN, DieFace, SkillTooltip, skillFaces } from './SkillDice'
+import { ALIGN, DieFace, SkillTooltip } from './SkillDice'
 
 interface Props {
   character: Character
@@ -21,45 +22,67 @@ interface Props {
   signal?: SkillSignal
   /** Les faces que montre le dé de ce camp pendant qu'il roule : le sceau de la face montrée s'allume brièvement */
   rolling?: readonly number[]
+  /** Les faces où le dé de ce camp est tombé, tant qu'il reste posé : une face nue s'y allume */
+  landed?: readonly number[]
   align?: 'left' | 'right'
 }
 
 /**
  * Ce que le personnage SAIT FAIRE, dans l'en-tête du combat (0.79.0, docs/STATUTS.md « Deux niveaux de lecture ») :
- * - un sceau octogonal par compétence, avec la face du dé qui la déclenche en pastille ; éteint au repos, il
- *   s'allume quand sa face sort, et c'est de lui que part le signal vers la zone d'état de la cible ;
- * - à la suite, ses auras : le même médaillon rond qu'avant, dont l'anneau tourne tant qu'elle est active
- *   (avec ses charges), éteint tant qu'elle ne l'est pas ; la compétence qui ne fait que la poser s'y fond ;
+ * - les six faces de son dé, dans l'ordre (0.111.0, demande de l'utilisateur : tous ont un d6, toutes les faces sont
+ *   là) : un sceau octogonal par compétence, avec la face du dé qui la déclenche en pastille ; éteint au repos, il
+ *   s'allume quand sa face sort, et c'est de lui que part le signal vers la zone d'état de la cible. Une face nue est
+ *   une case vide, éteinte, qui s'allume quand le dé tombe dessus ; une face dorée (forge), la même case sur fond d'or ;
+ * - une face dont la compétence ne fait que poser une aura : le même médaillon rond qu'avant, à sa place, dont l'anneau
+ *   tourne tant qu'elle est active (avec ses charges), éteint tant qu'elle ne l'est pas ; puis les compétences hors dé
+ *   et les auras portées sans face (une relique, l'autre forme) ;
  * - ses règles de forme (druide), en médaillon fixe.
  * Ce qu'il SUBIT ou PORTE en ce moment est dans la zone d'état, au-dessus de lui (StatusTray).
  * `data-signal` : les points de départ des signaux d'activation (SignalLayer).
  */
-export function SkillBar({ character, side, form = 0, statuses, pulse, signal, rolling, align = 'left' }: Props) {
+export function SkillBar({ character, side, form = 0, statuses, pulse, signal, rolling, landed, align = 'left' }: Props) {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = skillFaces(events)
-  const faceEvent = (trigger: CharacterEvent['trigger']) => events.find((e) => e.trigger === trigger)
+  const faces = Array.from({ length: DIE_FACES }, (_, k) => ({ face: k + 1, event: events.find((e) => e.trigger === faceTrigger(k + 1)) }))
   // Les compétences hors dé (Ouverture : au début du combat) qui ne posent pas d'aura ont aussi leur sceau
   const offDice = events.filter((e) => rollFace(e.trigger) === undefined && !auraOfSkill(e))
-  // Ses auras : celles qu'il peut poser, et toute aura qu'il porte (posée par une relique, ou par l'autre forme)
+  // Ses auras : celles qu'il peut poser, et toute aura qu'il porte (posée par une relique, ou par l'autre forme) ; celle
+  // que pose une face prend la place de sa première face, les autres suivent
   const auras = [...new Set([...auraIdsOf(character), ...statuses.filter((s) => STATUS_PLACE[s.id].place === 'aura').map((s) => s.id)])]
+  const onFace = new Map<StatusId, number>()
+  for (const { face, event } of faces) {
+    const id = event && auraOfSkill(event)
+    if (id && !onFace.has(id)) onFace.set(id, face)
+  }
   const formRules = statuses.filter((s) => STATUS_PLACE[s.id].place === 'form')
   const tip = align === 'right' ? 'right' : 'left'
+  const aura = (id: StatusId) => (
+    <AuraToken key={id} side={side} id={id} character={character} status={statuses.find((s) => s.id === id)} lit={auraLit(id, events, pulse, signal)} align={tip} />
+  )
   return (
     <ul className={`skill-bar flex items-start gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`} aria-label={`Compétences de ${character.name}`}>
-      {faces.map(({ face, trigger }) => {
-        const event = faceEvent(trigger)
-        if (event && auraOfSkill(event)) return null
+      {faces.map(({ face, event }) => {
+        const id = event && auraOfSkill(event)
+        if (id && onFace.get(id) === face) return aura(id)
         return (
-          <Seal key={face} side={side} event={event} face={face} statuses={statuses} lit={pulse?.face === face ? pulse.key : undefined} rolled={rolling?.includes(face)} align={tip} />
+          <Seal
+            key={face}
+            side={side}
+            event={event}
+            face={face}
+            gild={character.gilded[face] ?? 0}
+            statuses={statuses}
+            lit={pulse?.face === face ? pulse.key : undefined}
+            rolled={rolling?.includes(face)}
+            landed={!event && landed?.includes(face)}
+            align={tip}
+          />
         )
       })}
       {offDice.map((e) => (
         <Seal key={e.id} side={side} event={e} statuses={statuses} align={tip} />
       ))}
-      {auras.map((id) => (
-        <AuraToken key={id} side={side} id={id} character={character} status={statuses.find((s) => s.id === id)} lit={auraLit(id, events, pulse, signal)} align={tip} />
-      ))}
+      {auras.filter((id) => !onFace.has(id)).map(aura)}
       {formRules.map((s) => (
         <FormToken key={s.id} status={s} align={tip} />
       ))}
@@ -87,44 +110,58 @@ function sealCount(event: CharacterEvent, statuses: readonly Status[]): number |
   return undefined
 }
 
+/**
+ * Un sceau de la barre : une compétence (d'une face, ou hors dé), ou une face nue (`event` absent) : une case vide,
+ * plus étroite, sans nom, éteinte, qui s'allume tant que le dé est posé dessus (`landed`) ; dorée, sur fond d'or.
+ */
 function Seal({
   side,
   event,
   face,
+  gild = 0,
   statuses,
   lit: litNow,
   rolled,
+  landed,
   align,
 }: {
   side: number
   event?: CharacterEvent
   face?: number
+  gild?: number
   statuses: readonly Status[]
   lit?: number
   rolled?: boolean
+  landed?: boolean
   align: 'left' | 'right'
 }) {
   const lit = useLastLit(litNow)
   const count = event && sealCount(event, statuses)
+  const shown = rolled || landed ? 'is-rolled' : ''
   return (
     <li
-      className="skill-bar-slot group relative flex w-[92px] flex-col items-center gap-3 hover:z-[70]"
+      className={`skill-bar-slot group relative flex ${event ? 'w-[92px]' : 'w-[64px]'} flex-col items-center gap-3 hover:z-[70]`}
       data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}
+      data-gild={gild ? '' : undefined}
     >
       <div className="relative" data-signal={event ? `${side}:${event.id}` : undefined}>
         {lit !== undefined && <Ding lit={lit} />}
-        <div key={lit !== undefined ? `flash-${lit}` : 'idle'} className={`skill-bar-face ${lit !== undefined ? 'is-lit' : ''} ${rolled && event ? 'is-rolled' : ''} ${event ? 'cursor-help' : 'opacity-30'}`}>
-          {event ? <SkillSeal id={event.id} size={56} /> : <span className="skill-seal" style={{ width: 56, height: 56 }} />}
+        <div key={lit !== undefined ? `flash-${lit}` : 'idle'} className={`skill-bar-face cursor-help ${lit !== undefined ? 'is-lit' : ''} ${shown}`}>
+          {event ? <SkillSeal id={event.id} size={56} /> : <span aria-label={`Face ${face}`} className="skill-seal skill-bar-bare" style={{ width: 56, height: 56 }} />}
         </div>
         {face !== undefined && (
           <span className="absolute -bottom-2 -right-2.5 z-[1]">
-            <DieFace face={face} size="xs" empty={!event} />
+            <DieFace face={face} empty={!event && !shown} />
           </span>
         )}
         {count !== undefined && <Count text={String(count)} />}
       </div>
       {event && <span key={lit !== undefined ? `name-${lit}` : 'name'} className={`skill-bar-name ${lit !== undefined ? 'is-lit' : ''}`}>{event.name}</span>}
-      {event && <SkillTooltip event={event} face={face} placement="below" align={align} />}
+      {event ? (
+        <SkillTooltip event={event} face={face} placement="below" align={align} />
+      ) : (
+        face !== undefined && <ForgeFaceTooltip face={{ face, origin: [], gild, rank: 0 }} placement="below" align={align} />
+      )}
     </li>
   )
 }
@@ -165,7 +202,7 @@ function AuraToken({
         </div>
         {onFace !== undefined && (
           <span className="absolute -bottom-2 -right-2.5 z-[1]">
-            <DieFace face={onFace} size="xs" empty={false} />
+            <DieFace face={onFace} empty={false} />
           </span>
         )}
         {/* Son effet du moment (« +4 ») : l'aura se lit ici, elle ne se relaie pas dans la zone d'état (0.79.7) */}
