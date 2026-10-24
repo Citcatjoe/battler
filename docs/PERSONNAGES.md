@@ -103,7 +103,7 @@ Mesuré à 800 combats par duel (`BALANCE_N=800 npm run balance`), 0.105.0 → 0
 
 ## Le départ en campagne (0.112.0)
 
-**Décision de l'utilisateur** (2026-10-24, proposée par l'agent) : un champion de campagne commence avec **deux compétences**, sa signature sur le 1 et la seconde compétence de son kit de tournoi sur le 2 ; ses quatre autres faces sont nues. Règles et mesures complètes : [CAMPAGNE.md](CAMPAGNE.md) § 18.2 et § 18.3.
+**Décision de l'utilisateur** (2026-10-24, proposée par l'agent) : un champion de campagne commence avec **deux compétences**, sa signature sur le 1 et la seconde compétence de son kit de tournoi sur le 2 ; ses quatre autres faces sont nues. Règles et mesures complètes : [CAMPAGNE.md](CAMPAGNE.md) § 18.2 et § 18.3. Depuis la 0.113.0, ce départ est le personnage lui-même, dans tous les modes (section suivante).
 
 Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, règles 0.111.0) : **dans son kit**, ce qu'elle rapporte à son porteur (retirée, sa face devient nue) ; **gravée**, la moyenne des hôtes qui la reçoivent sur une face nue (bande des gravures : 8 à 20 points). Départ : le champion de campagne nu contre le roster de tournoi (400 combats par duel). Boss atteint : `npm run campaign`, 30 parties par champion (± 8 points), 0.111.0 → 0.112.0.
 
@@ -124,9 +124,40 @@ Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, 
 - **Aucune signature n'est sous la bande des gravures** : gravées, de +12,5 (Aura mélodieuse) à +19,6 (Rétribution) ; dans leur kit, de +13,8 (Aura de sainteté) à +36,3. Aucune proposition de valeur, donc. Les plus faibles gravées : Aura mélodieuse +12,5, Aura glaciale +13,5, Aura de sainteté +13,8, Épines acérées +14,0. Le reproche de l'utilisateur (« un peu nulles », « héritées des règles précédentes ») porte sur la mécanique plus que sur la valeur : Épines, Aura glaciale, Aura de sainteté et Rétribution posent une ressource que peu de choses consomment ([PROGRESSION.md](PROGRESSION.md) § 13.3, verdict 2).
 - **La seconde compétence vaut plus que la signature, gravée**, chez Brokk (Peau de pierre +18,5 contre Épines +14,0), Ysolde (Purification +18,6 contre Sainteté +13,8), Elaria (Esquive +19,7 contre Œil de faucon +15,4) et Fanchon (Soliste +19,5 contre Aura mélodieuse +12,5). Les deux sont désormais au départ : l'écart ne pèse plus sur la force du champion, seulement sur ce que la signature promet. Si l'utilisateur veut une signature qui porte le personnage, l'échange se ferait chez Brokk (Peau de pierre) et Ysolde (Purification) : à sa décision.
 - **Boss atteint par champion** : à 30 parties, l'écart de 0.111.0 à 0.112.0 reste dans le bruit pour tous, sauf Thaldrin (13 %), dont le départ reste le plus fragile malgré son attaque de campagne.
-- **Thaldrin** : son attaque (3 à 4) est réglée pour un sort sur chaque face humaine ; avec une face par compétence (consigne de l'utilisateur) et quatre faces nues, son départ gagnait 15,1 %. Attaque de campagne essayée : 4 à 5, 34,3 % (hors de la bande de 42 à 58 %) ; **5 à 6, 55,8 %, livrée** (`CAMPAIGN_STATS` dans `campaign.ts`, le tournoi ne change pas), décision de l'agent sur consigne, à juger en jeu. Chance moyenne avant combat : 66 → 87 % ; boss atteint 7 → 13 % (30 parties).
+- **Thaldrin** : son attaque (3 à 4) est réglée pour un sort sur chaque face humaine ; avec une face par compétence (consigne de l'utilisateur) et quatre faces nues, son départ gagnait 15,1 %. Attaque de campagne essayée : 4 à 5, 34,3 % (hors de la bande de 42 à 58 %) ; **5 à 6, 55,8 %, livrée** (`CAMPAIGN_STATS` dans `campaign.ts` jusqu'à la 0.113.0, où elle devient son attaque tout court), décision de l'agent sur consigne, à juger en jeu. Chance moyenne avant combat : 66 → 87 % ; boss atteint 7 → 13 % (30 parties).
 - **Fanchon** : elle garde son **Ouverture** en campagne (ce n'est pas une face ; elle l'avait perdue avec la signature seule en 0.107.0) : son départ passe de 24,7 à 49,5 %, sa chance avant combat de 74 à 85 %.
 - **Morgrut** reste le combattant nu : son départ (49,5 %) est déjà au niveau des autres, aucune proposition.
+
+## Un seul modèle de personnage (0.113.0)
+
+**Règle de l'utilisateur** (2026-10-25) : « Les personnages de tournoi et de campagne doivent partir du même modèle. Un perso, en campagne ou en tournoi, commence exactement au même point ; ce sont les règles de chaque mode qui définissent ses possibilités d'évolution. » Le tournoi est un laboratoire : il montre ce que les règles actuelles produisent comme builds et combats.
+
+- **Le personnage vanilla** est le départ de campagne de la 0.112.0 : sa **signature sur le 1**, sa **seconde compétence sur le 2**, quatre faces nues. Morgrut : six faces nues. Fanchon : ses deux dés, son Ouverture (pas une face), l'Aura mélodieuse sur le 1, le Soliste sur le 2. Thaldrin : les Feux follets sur le 1, la Foudre sur le 2, **attaque 5 à 6** (3 à 4 avant, avec un sort sur chaque face).
+- **Le registre du roster** (`roster.ts`) écrit directement ce vanilla ; `CAMPAIGN_CHAMPIONS` et `CAMPAIGN_STATS` sont retirés. Campagne, tournoi, saison, duel, combat test et rapports lisent `createCharacter`. Les règles de mode restent au mode (répertoire de campagne, offres, nombre de récompenses, `MAX_SKILL_FACES`) ; le boss, Le Colosse, n'est pas un personnage du roster. Un test fige que le champion de campagne, l'adversaire de campagne et le participant de tournoi partent du même dé, des mêmes stats et des mêmes compétences.
+- **Ce qui change en tournoi** : Gorak, Brokk, Ervald, Ysolde et Naraxes échangent leurs faces 1 et 2 (la signature passe sur le 1) ; Thaldrin perd quatre sorts (deux faces sur six au lieu de six) et gagne 2 d'attaque. Elaria, Aldric, Morgrut et Fanchon ne changent pas.
+- **La Purification** perd en même temps son effet sur soi (décision de l'utilisateur, 2026-10-25 : « soit retirer un bonus en face, soit lui infliger 5 dégâts s'il n'a pas de bonus ; l'effet sur soi doit être retiré ») : Ysolde perd 2,5 points.
+
+**Équilibre du tournoi** (`BALANCE_N=800 npm run balance`, 800 combats par duel, ± 1,2 point par personnage ; avant : 0.112.0, kit de tournoi ; après : personnage vanilla et Purification sans effet sur soi) :
+
+| Personnage | Victoires | Pire duel | Meilleur duel | Tours |
+| --- | --- | --- | --- | --- |
+| Gorak | 52,3 → 53,5 % | Naraxes 46 % → Thaldrin 47 % | Morgrut 57 → 59 % | 14,4 → 14,3 |
+| Elaria | 50,5 → 50,4 % | Thaldrin 45 % → Brokk 45 % | Morgrut 62 → 62 % | 17,5 → 17,5 |
+| Brokk | 52,0 → 49,8 % | Naraxes 45 % → Thaldrin 44 % | Fanchon 60 → 57 % | 16,5 → 16,5 |
+| Ervald | 46,8 → 45,8 % | Naraxes 42 % → Thaldrin 40 % | Ysolde 51 → 51 % | 16,4 → 16,3 |
+| Ysolde | 48,4 → 45,9 % | Naraxes 39 → 38 % | Fanchon 60 → 61 % | 15,8 → 15,6 |
+| Naraxes | 54,3 → 53,8 % | Elaria 48 → 47 % | Ysolde 61 → 62 % | 14,5 → 14,4 |
+| Aldric | 51,1 → 51,3 % | Gorak 44 → 45 % | Ysolde 59 → 58 % | 14,2 → 14,1 |
+| Morgrut | 49,1 → 47,2 % | Elaria 38 → 38 % | Thaldrin 59 % → Fanchon 57 % | 14,7 → 14,7 |
+| Thaldrin | 48,1 → 55,6 % | Morgrut 41 % → Aldric 50 % | Elaria 55 % → Ervald 60 % | 15,0 → 14,4 |
+| Fanchon | 47,5 → 46,8 % | Brokk 40 % → Ysolde 39 % | Elaria 54 % → Ervald 56 % | 12,8 → 12,8 |
+
+**Lecture** :
+- **Dans la tolérance sans autre levier** : de 45,8 % (Ervald) à 55,6 % (Thaldrin) ; pire duel Naraxes contre Ysolde, 62,3 % (60,9 % avant). Aucune valeur n'a été retouchée après le passage au modèle unique.
+- **Thaldrin** passe de 48,1 à 55,6 % : le haut du roster, dans la bande, et le plus régulier (aucun duel sous 50 %). Ses deux sorts pèsent moins (Feux follets +36,3 → +13,4, Foudre +18,4 → +6,0 : une face au lieu de trois) et son coup de base porte le personnage (Force de l'ours, 8,9 PV par combat ; dégâts par coup 5,1 → 7,2). Leviers mesurés au laboratoire (800 combats par duel) : attaque 4 à 6, 44,5 % (−11,1 ± 0,7) ; 53 PV, 47,6 % (−8,1 ± 0,6) ; 4 à 5, 34,0 %. Gardé à 5 à 6 : le point de départ fixé par la consigne, dans la bande. La Foudre à +6,0 dans son dé est la plus faible compétence du roster : à suivre si le druide doit redevenir un lanceur de sorts.
+- **Ysolde** perd 2,5 points avec la Purification (48,4 → 45,9 %), qui reste sa compétence la plus forte (+21,7 → +19,3). Compensation mesurée, non appliquée (les 5 dégâts sont fixés par l'utilisateur) : **lumière 6, 48,3 %** (+2,5 ± 0,4), lumière 7, 50,6 % (+4,8 ± 0,5).
+- **Ervald**, le plus bas (45,8 %), perd surtout contre le nouveau Thaldrin (47 → 40 %). Leviers mesurés, non appliqués : critique 26 %, 47,8 % (+2,0 ± 0,3) ; 58 PV, 50,4 % (+4,6 ± 0,5).
+- **Brokk** (52,0 → 49,8 %) et **Morgrut** (49,1 → 47,2 %) reculent face au nouveau Thaldrin (Brokk 55 → 44 %, Morgrut 59 → 42 % contre lui).
 
 ## Personnalité (2026-10-20)
 
@@ -431,6 +462,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-24, le coup blanc** : son coup de base n'a plus de type ni de source ; son chiffre est blanc comme celui de tous. La Lumière reste à sa Purification (ivoire cerclé d'or).
 
+**2026-10-25, un seul modèle et la Purification sans effet sur soi (0.113.0)** : en tournoi comme en campagne, l'Aura de sainteté sur le 1 et la Purification sur le 2 ; la Purification ne retire plus son propre dernier malus (décision de l'utilisateur) : un bonus en face, sinon 5 dégâts. 48,4 → 45,9 % (800 combats par duel) ; Purification +21,7 → +19,3. Lumière 6 la ramènerait à 48,3 % : proposée, non appliquée. Voir « Un seul modèle de personnage ».
+
 **Personnalité : la juge.**
 - **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
 - **Comment elle se bat** : elle laisse l'adversaire se condamner lui-même. Elle le paralyse de crainte (Peur), efface ce qui le salit (Purification) et tient bon dans sa lumière (sainteté). Ses coups sont faibles, et ce n'est pas eux qui comptent.
@@ -638,6 +671,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **2026-10-25, deux compétences au départ (0.112.0)** : son champion part d'un Feu follet sur le 1 et d'une Foudre sur le 2 (une face par compétence), en forme humaine ; la Foudre quitte son répertoire de campagne. Ce départ ne gagnait que 15,1 % contre le roster (son attaque est faite pour un sort sur chaque face humaine) : en campagne seulement, son **attaque passe de 3 à 4 à 5 à 6** (55,8 % ; 4 à 5 : 34,3 %), décision de l'agent sur consigne, à juger en jeu. Voir « Le départ en campagne ».
 
+**2026-10-25, un seul modèle (0.113.0, règle de l'utilisateur)** : ce départ devient Thaldrin lui-même, en tournoi aussi : Feux follets sur le 1, Foudre sur le 2, quatre faces nues, **attaque 5 à 6** (`CAMPAIGN_STATS` retiré). En tournoi, 48,1 → **55,6 %** (800 combats par duel), duels de 50 à 60 % ; Feux follets +36,3 → +13,4, Foudre +18,4 → +6,0, Force de l'ours 9,2 → 8,9 PV par combat. Laboratoire : 4 à 6, 44,5 % ; 53 PV, 47,6 %. Gardé à 5 à 6. Voir « Un seul modèle de personnage ».
+
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
 - **Comment il se bat** : la forme lui est imposée à chaque tour. L'homme lance un sort à chaque tour (Foudre, Feux follets, Aura sauvage) sans jamais frapper ; l'ours frappe toujours, et fort (+3, plus l'Aura sauvage que l'homme a accumulée).
@@ -752,20 +787,20 @@ Pire duel : Elaria contre Morgrut, 61,9 %. La matrice ci-dessous date encore de 
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne. Règles 0.106.0 (l'attaque de base), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/`).
+Taux de victoire de la ligne contre la colonne. Règles 0.113.0 (un seul modèle de personnage, Purification sans effet sur soi), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/`).
 
 | | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 44 % | 49 % | 50 % | 56 % | 50 % | 48 % | 54 % | 51 % | 53 % | **50,5 %** |
-| **Elaria** | 56 % | — | 47 % | 47 % | 42 % | 50 % | 42 % | 62 % | 45 % | 49 % | **48,9 %** |
-| **Brokk** | 51 % | 53 % | — | 51 % | 52 % | 46 % | 51 % | 48 % | 55 % | 57 % | **51,5 %** |
-| **Ervald** | 50 % | 53 % | 49 % | — | 49 % | 41 % | 55 % | 57 % | 50 % | 45 % | **49,8 %** |
-| **Ysolde** | 44 % | 58 % | 48 % | 52 % | — | 50 % | 46 % | 44 % | 56 % | 45 % | **49,1 %** |
-| **Naraxes** | 51 % | 50 % | 54 % | 59 % | 51 % | — | 52 % | 54 % | 49 % | 52 % | **52,2 %** |
-| **Aldric** | 52 % | 58 % | 49 % | 45 % | 54 % | 48 % | — | 56 % | 43 % | 47 % | **50,3 %** |
-| **Morgrut** | 46 % | 38 % | 52 % | 43 % | 56 % | 46 % | 44 % | — | 59 % | 55 % | **48,8 %** |
-| **Thaldrin** | 49 % | 55 % | 45 % | 50 % | 44 % | 51 % | 57 % | 41 % | — | 51 % | **49,4 %** |
-| **Fanchon** | 47 % | 51 % | 43 % | 55 % | 55 % | 48 % | 53 % | 45 % | 49 % | — | **49,5 %** |
+| **Gorak** | — | 49 % | 55 % | 58 % | 56 % | 48 % | 55 % | 59 % | 47 % | 55 % | **53,5 %** |
+| **Elaria** | 51 % | — | 45 % | 50 % | 51 % | 53 % | 48 % | 62 % | 48 % | 46 % | **50,4 %** |
+| **Brokk** | 46 % | 56 % | — | 53 % | 53 % | 46 % | 49 % | 46 % | 44 % | 57 % | **49,8 %** |
+| **Ervald** | 42 % | 50 % | 47 % | — | 51 % | 41 % | 49 % | 49 % | 40 % | 44 % | **45,8 %** |
+| **Ysolde** | 44 % | 49 % | 47 % | 49 % | — | 38 % | 42 % | 44 % | 40 % | 61 % | **45,9 %** |
+| **Naraxes** | 52 % | 47 % | 55 % | 59 % | 62 % | — | 49 % | 60 % | 48 % | 53 % | **53,8 %** |
+| **Aldric** | 45 % | 52 % | 51 % | 51 % | 58 % | 52 % | — | 56 % | 50 % | 48 % | **51,3 %** |
+| **Morgrut** | 42 % | 38 % | 54 % | 51 % | 56 % | 40 % | 44 % | — | 42 % | 57 % | **47,2 %** |
+| **Thaldrin** | 53 % | 52 % | 56 % | 60 % | 60 % | 52 % | 50 % | 59 % | — | 59 % | **55,6 %** |
+| **Fanchon** | 45 % | 54 % | 43 % | 56 % | 39 % | 47 % | 52 % | 43 % | 42 % | — | **46,8 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 

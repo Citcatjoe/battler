@@ -7,7 +7,6 @@ import {
   autoHeritage,
   BOSS,
   campaignCharacter,
-  CAMPAIGN_CHAMPIONS,
   championOf,
   dangerOf,
   drawChampions,
@@ -26,6 +25,7 @@ import type { Character } from '../game/character'
 import { rollFace } from '../game/events'
 import { stepLabel } from '../game/forge'
 import { getRelic } from '../game/relics'
+import { createCharacter } from '../game/roster'
 import { randomSeed, seededRng } from '../game/rng'
 import { Fighter } from './Fighter'
 import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
@@ -78,7 +78,7 @@ function Header({ kicker, title, sub }: { kicker: string; title: string; sub?: s
 
 function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart' | 'onMenu'>) {
   const [seed] = useState(randomSeed)
-  const champions = useMemo(() => drawChampions(seededRng(seed)).map((id) => CAMPAIGN_CHAMPIONS[id]), [seed])
+  const champions = useMemo(() => drawChampions(seededRng(seed)).map(createCharacter), [seed])
   const [picked, setPicked] = useState<Character | null>(null)
   if (picked && heritage[picked.id]?.length)
     return <HeritagePick champion={picked} items={heritage[picked.id]} seed={seed} onBack={() => setPicked(null)} onStart={(item) => onStart(picked.id, seed, item)} />

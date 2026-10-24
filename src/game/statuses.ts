@@ -757,16 +757,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
-    summary: 'Sous forme humaine, chaque face du dé du druide lance un sort, qui se greffe sur son coup de base.',
-    describe: () => 'Chaque jet lance un sort, puis un coup',
+    summary: 'Sous forme humaine, le druide lance ses sorts sur leurs faces, greffés sur son coup de base ; sous forme d’ours, ils se taisent.',
+    describe: () => 'Ses sorts partent, puis un coup',
     badge: () => 'Sort',
     // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
     counter: 'turns',
     stacking: 'refresh',
     maxStacks: 1,
     mechanic: 'form',
-    // Jusqu'à la 0.104.0, son dé devenait un d3 (trois sorts sur le 1, le 2 et le 3) ; depuis le d6 imprimé, chaque
-    // face porte son sort (Foudre sur 1 à 3, Feux follets sur 4 à 6)
+    // Jusqu'à la 0.104.0, son dé devenait un d3 (trois sorts sur le 1, le 2 et le 3) ; du d6 imprimé à la 0.112.0, chaque
+    // face portait son sort (Foudre sur 1 à 3, Feux follets sur 4 à 6) ; depuis la 0.113.0, son dé vanilla : Feux follets
+    // sur le 1, Foudre sur le 2, quatre faces nues
   },
   bearMight: {
     name: "Force de l'ours",

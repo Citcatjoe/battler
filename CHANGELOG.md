@@ -32,6 +32,21 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.113.0] — 2026-10-25
+
+Les décisions de l'utilisateur du 2026-10-25 : un seul modèle de personnage pour tous les modes, la Purification sans effet sur soi, la courbe de campagne option B.
+
+### Modifié
+- **Un seul modèle de personnage** (règle de l'utilisateur : « un perso, en campagne ou en tournoi, commence exactement au même point ; ce sont les règles de chaque mode qui définissent ses possibilités d'évolution ») : le registre du roster (`createCharacter`) devient le **personnage vanilla**, celui du départ de campagne de la 0.112.0, et tous les modes le lisent (tournoi, saison, duel, campagne, combat test, rapports). Signature sur le 1 : Gorak (Furie des vents 1, Pourfendre 2), Brokk (Épines acérées 1, Peau de pierre 2), Ervald (Aura glaciale 1, Vol de vie 2), Ysolde (Aura de sainteté 1, Purification 2), Naraxes (Aura de décoction 1, Pile ou face 2) ; Elaria, Aldric, Morgrut et Fanchon inchangés. **Thaldrin** : Feux follets sur le 1, Foudre sur le 2, faces 3 à 6 nues, attaque 3 à 4 → 5 à 6 ; fiche réécrite. Mesuré (`BALANCE_N=800 npm run balance`, ± 1,2 pt) : plage 46,8–54,3 → 45,8–55,6 % (Ervald le plus bas, Thaldrin 48,1 → 55,6 le plus haut), pire duel 61,9 → 62,3 % (Naraxes contre Ysolde) ; aucun levier appliqué, tout dans la tolérance. Valeurs nettes : Feux follets +36,3 → +13,4, Foudre +18,4 → +6,0.
+- **Purification sans effet sur soi** (l'utilisateur : « l'effet sur soi doit être retiré ») : elle retire le bonus adverse le plus récent, sinon 5 dégâts ; elle ne retire plus son propre malus (Purification double, 0.69.0). Valeur nette +21,7 → +19,3 ; Ysolde 48,4 → 45,9 %. Lumière 5 → 6 (48,3 % au laboratoire) proposée à l'utilisateur, non appliquée.
+- **Courbe de campagne, option B** : 78 et 86 % aux deux premiers combats (90 avant), le reste inchangé (`NORMAL_TARGETS`). Mesuré (`npm run campaign`, 30 parties par champion, mêmes graines) : attendu 31/14 → 26/12 %, boss atteint 25 → 24 %, acte gagné 15 → 14 % ; victoire aux combats 1 et 2 : 78/86 → 75/84 %. Reliques (`npm run relics`) : apports moyens inchangés à ± 0,8 point.
+- Incantation : textes réécrits (« ses sorts sur leurs faces… »).
+- `npm run logs` : une trace sans forge dont les compétences diffèrent du dé vanilla est écartée avec sa raison (« kit d'avant la 0.113.0 »).
+- **Empreinte de non-régression** (`balance.test.ts`) régénérée : changement voulu (modèle unique, Thaldrin, Purification).
+
+### Retiré
+- `CAMPAIGN_CHAMPIONS` et `CAMPAIGN_STATS` (`campaign.ts`) : plus de définition de personnage propre à un mode.
+
 ## [0.112.0] — 2026-10-25
 
 Les réponses de l'utilisateur du 2026-10-24 après la 0.111.0 (règles v2, fin de la phase 6 et seconde partie de la phase 7) : deux compétences au départ de la campagne, un levier des PV moins fort, et trois reliques qui font durer les combats.

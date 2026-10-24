@@ -1188,3 +1188,16 @@ Les quinze autres compétences ne changent pas (de +3,6, Siffloter, à +8,0, Aur
 1. **Garder les rangs entiers tels quels** (choix livré) : le rang I ne change pas, donc l'équilibre du roster non plus (empreinte de `balance.test.ts` inchangée) ; seule la force d'un aiguisage en campagne monte, de +1,3 (Aura d'intimidation) à +3,4 points (Aura de sainteté) pour ces onze compétences par rapport au demi-rang. La bande d'un rang deviendrait « de +3 à +10 points » pour les compétences dont l'unité est déjà la plus petite.
 2. **Foudre : un éclair de plus** au lieu de +1 à chacun (4 × 1 au lieu de 3 × 2 au rang II) : un tiers du gain actuel, estimé vers +3 points, non mesuré ; il faut un axe « coups » et que la scène de l'éclair sache tomber quatre fois (mise en scène).
 3. **Les plus fortes (Aura glaciale +10,2, de décoction +9,9, Furie +9,8, Esquive +9,6)** : ne les aiguiser qu'au prix de deux forges, ou leur donner un axe nouveau (une durée, un seuil) ; chacun demande une règle de forge ou de statut, à mesurer avant.
+
+## 21. La Purification sans effet sur soi, et le personnage vanilla (0.113.0)
+
+**Décision de l'utilisateur** (2026-10-25) : « soit retirer un bonus en face, soit lui infliger 5 dégâts s'il n'a pas de bonus. L'effet sur soi doit être retiré. » La purge de son propre dernier malus (la *Purification double* de la 0.69.0, § 14 et § 15) est retirée : un seul effet, `cleanse` positif sur l'adversaire avec son repli de 5 dégâts (`orElse`). Son axe de rang ne change pas (`amount`, +3 par rang sur le repli) : il avait déjà prise sur les dégâts seuls, l'effet sur soi n'avait pas de rang.
+
+Mesuré en même temps que le passage au personnage vanilla (Ysolde : Aura de sainteté sur le 1, Purification sur le 2 ; `BALANCE_N=800 npm run balance`) : Ysolde 48,4 → **45,9 %**, Purification +21,7 → +19,3 dans son kit (la plus forte de ses deux compétences). Repli plus fort, mesuré au laboratoire (800 combats par duel), non appliqué : la valeur de 5 est celle de l'utilisateur.
+
+| Idée | Ysolde | Δ |
+| --- | --- | --- |
+| Lumière 6 | 45,9 → **48,3 %** | +2,5 ± 0,4 |
+| Lumière 7 | 45,9 → 50,6 % | +4,8 ± 0,5 |
+
+Le personnage vanilla laisse la Foudre du druide sur une seule face : +6,0 points dans son kit (+18,4 sur trois faces), la plus faible compétence du dé du roster ([PERSONNAGES.md](PERSONNAGES.md), « Un seul modèle de personnage »).

@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, CAMPAIGN_CHAMPIONS, championOf, encountersFor, HP_FLOOR, MAX_SKILL_FACES, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, HP_FLOOR, MAX_SKILL_FACES, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, referenceChampions, REWARDS, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { simulateCombat } from '../src/game/combat'
 import { buildLinks } from '../src/game/hooks'
 import { pick, seededRng } from '../src/game/rng'
@@ -57,8 +57,8 @@ it('mesure de la campagne (pilote automatique)', () => {
           boss.fights++
           boss.turns += result.turns
         } else {
-          // Le même champion nu : sa base de campagne (sa signature et sa seconde compétence), sans forge ni relique
-          const naked = simulateCombat([CAMPAIGN_CHAMPIONS[id], opponent], { seed })
+          // Le même champion nu : le personnage vanilla, sans forge ni relique
+          const naked = simulateCombat([createCharacter(id), opponent], { seed })
           const node = nodes[run.wins]
           const hp = encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
           node.fights++
@@ -76,7 +76,7 @@ it('mesure de la campagne (pilote automatique)', () => {
       if (run.outcome === 'won') tally.won++
     }
     all = { runs: all.runs + RUNS, boss: all.boss + tally.boss, won: all.won + tally.won }
-    const start = CAMPAIGN_CHAMPIONS[id].events.map((e) => e.name).join(', ') || 'six faces nues'
+    const start = createCharacter(id).events.map((e) => e.name).join(', ') || 'six faces nues'
     rows.push(
       `| ${createCharacter(id).name} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
@@ -100,7 +100,7 @@ it('mesure de la campagne (pilote automatique)', () => {
     `# Campagne · règles ${pkg.version} · ${RUNS} parties par champion, pilote automatique`,
     '',
     `Courbe nominale : ${NORMAL_TARGETS.map(pct).join(', ')} aux combats normaux, ${pct(BOSS_TARGET)} contre le boss. Attendu pour le champion de référence : boss atteint ${pct(expected)}, acte gagné ${pct(expected * BOSS_TARGET)}.`,
-    `Départ : la signature sur le 1 et la seconde compétence sur le 2 ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(HP_FLOOR)} de ses PV de base ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion.`,
+    `Départ : le personnage vanilla, celui du tournoi (la signature sur le 1, la seconde compétence sur le 2) ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(HP_FLOOR)} de ses PV de base ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion.`,
     `Mesuré, tous champions : boss atteint ${pct(all.boss / all.runs)}, acte gagné ${pct(all.won / all.runs)} (${all.runs} parties).`,
     `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %.`,
     '',
@@ -110,7 +110,7 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Le build se voit-il ? (par nœud, tous champions)',
     '',
-    'Chaque combat normal est rejoué sur la même graine par le champion nu (sa signature et sa seconde compétence, sans forge ni relique), contre le même adversaire. Au premier nœud, le champion est encore nu : l’écart y est nul par construction. PV de l’adversaire : ses PV réglés, en part de ses PV de base (moyenne et plus bas).',
+    'Chaque combat normal est rejoué sur la même graine par le champion nu (le personnage vanilla, sans forge ni relique), contre le même adversaire. Au premier nœud, le champion est encore nu : l’écart y est nul par construction. PV de l’adversaire : ses PV réglés, en part de ses PV de base (moyenne et plus bas).',
     '',
     '| Nœud | Récompenses reçues | Combats | Victoires construit | Victoires nu | Apport du build | Tours par combattant (construit) | Tours par combattant (nu) | PV de l’adversaire | Au plus bas |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -122,7 +122,7 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences que son départ a quittées). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
     '',
     "| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées |",
     '| --- | --- | --- | --- | --- | --- | --- |',

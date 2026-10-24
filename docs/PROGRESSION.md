@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.112.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.113.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-25, version 0.112.0)
+## 0 bis. État des lieux (2026-10-25, version 0.113.0)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.112.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0 ni la 0.112.0._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.113.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0 ni la 0.113.0._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -40,6 +40,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.110.0, 0.110.1 | Corrections de la revue (moteur, écran, son, textes) ; chaque compétence s'aiguise sur un axe à elle ; l'Élan s'appelle Ferveur ; cinq emblèmes d'état peints |
 | 0.111.0 | Plus de demi-rang ; la signature seule sur la face 1 ; dorure et gravure sur une face libre ; copie vers une face choisie ; six faces en combat ; reliques en texte court, offre pertinente ; **une attaque d'un type unique** (plus de DP ni de DM pour le joueur) (§ 1.11) |
 | 0.112.0 | **Deux compétences au départ** de la campagne (la signature sur le 1, la seconde du kit sur le 2), cinq faces de compétence au plus ; adversaires à 75 % de leurs PV de base au moins, construits trois récompenses en retard ; Thaldrin à l'attaque 5 à 6 en campagne ; **trois reliques de durée** (Gambison matelassé, Onguent du rebouteux, Chandelle de veille) (§ 1.12, § 11.8) |
+| 0.113.0 | **Un seul modèle de personnage** : le personnage du tournoi est celui du départ de campagne (signature sur le 1, seconde compétence sur le 2) ; Thaldrin, Feux follets sur le 1, Foudre sur le 2, attaque 5 à 6 partout ; Purification sans effet sur soi ; courbe de campagne option B (78, 86 %) (§ 1.13, § 11.9) |
 
 ### Le combat, en une page
 
@@ -53,13 +54,13 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 
 | Mesure | Valeur | Repère |
 | --- | --- | --- |
-| Équilibre du roster (800 combats par duel) | de 46,8 % (Ervald) à 54,3 % (Naraxes) | 42 à 58 % |
-| Pire duel | Elaria contre Morgrut, 61,9 % | 65/35 au plus |
+| Équilibre du roster (800 combats par duel, 0.113.0) | de 45,8 % (Ervald) à 55,6 % (Thaldrin) ; 46,8 à 54,3 % en 0.112.0 | 42 à 58 % |
+| Pire duel | Naraxes contre Ysolde, 62,3 % (Elaria contre Morgrut, 61,9 %, en 0.112.0) | 65/35 au plus |
 | Durée d'un combat | 15,2 tours (environ 7,6 par combattant) | 17,2 en 0.105.0 |
 | Gravures (29 compétences) | de +10,4 (Foudre) à +19,7 (Esquive améliorée) | 8 à 20 points |
 | Reliques (24) | toutes sous 20 depuis la Cotte (0.106.1) et la Dent de loup (0.107.0) ; les trois de durée (0.112.0) : +8,7, +12,0, +11,5 | 5 à 15, 20 au plus |
-| Campagne (pilote automatique, 30 parties par champion, 0.112.0) | boss atteint 26 %, acte gagné 12 % ; PV des adversaires normaux au plus bas 75 %, en moyenne 83 % de leur base | courbe 90 → 88 %, boss 45 % ; attendu 31 % et 14 % |
-| Départ de campagne contre le roster (deux compétences, 0.112.0) | de 45,9 % (Ervald) à 55,8 % (Thaldrin, attaque 5 à 6) ; Morgrut 49,5 % (sans compétence) ; Fanchon 49,5 % avec l'Ouverture | 18,1 à 38,9 % à la signature seule (0.108.0) |
+| Campagne (pilote automatique, 30 parties par champion, 0.113.0) | boss atteint 24 %, acte gagné 14 % ; PV des adversaires normaux au plus bas 75 %, en moyenne 85 % de leur base | courbe 78, 86, puis 90 → 88 %, boss 45 % ; attendu 26 % et 12 % |
+| Départ de campagne contre le roster (deux compétences, 0.112.0) | de 45,9 % (Ervald) à 55,8 % (Thaldrin, attaque 5 à 6) ; Morgrut 49,5 % (sans compétence) ; Fanchon 49,5 % avec l'Ouverture ; depuis la 0.113.0, ce départ est le personnage du tournoi (ligne du roster ci-dessus) | 18,1 à 38,9 % à la signature seule (0.108.0) |
 
 ### Ce qui n'a été ni vu ni joué
 
@@ -69,19 +70,19 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 
 - **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1 ; l'Onguent du rebouteux (0.112.0) consomme aussi les coups encaissés, et ses soins nourrissent l'Encens.
 - **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle). **Restes fermés en 0.110.1** : T12 (l'Élan s'appelle Ferveur), E4 (une Peur bloquée par une immunité use sa fois), les cinq emblèmes d'état (A8, planche v15), le son de la Foudre (l'ancien gardé, l'Éclair retiré). Reste le résumé de l'état Puissance (second volet de T12). Les demi-rangs sont retirés en 0.111.0 (§ 1.11) ; les nouveaux textes et les emblèmes sont à juger en jeu.
-- **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Réponses de l'utilisateur** (§ 1.12) : rangs II au-dessus de +8 gardés ; le levier des PV moins fort et deux compétences au départ, livrés en 0.112.0 ; Purification et Elaria inchangées.
-- **Décisions ouvertes après la 0.112.0** : la courbe (les combats 1 et 2 ne tiennent plus 90 % avec le plancher, § 11.8) ; Thaldrin à l'attaque 5 à 6 en campagne ; le troc du Gambison et un Onguent plus fort ([RELIQUES.md](RELIQUES.md) § 14) ; les noms des trois reliques ; Brokk et Ysolde, dont la seconde compétence vaut autant ou plus que la signature.
+- **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Réponses de l'utilisateur** (§ 1.12) : rangs II au-dessus de +8 gardés ; le levier des PV moins fort et deux compétences au départ, livrés en 0.112.0. **Décisions du 2026-10-25** (§ 1.13, livrées en 0.113.0) : Purification sans effet sur soi, courbe option B, un seul modèle de personnage, Gambison et noms des reliques de durée gardés.
+- **Décisions ouvertes après la 0.113.0** : Purification 5 → 6 dégâts pour compenser (Ysolde 45,9 → 48,3 % au laboratoire) ; Thaldrin à 55,6 % (garder, ou 53 PV : 47,6 %) ; Ervald à 45,8 % (critique 26 % : 47,8 %) ; un Onguent plus fort ([RELIQUES.md](RELIQUES.md) § 14) ; Brokk et Ysolde, dont la seconde compétence vaut autant ou plus que la signature.
 - **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
 - **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
 - **Les répertoires** : une relecture légère sur le d6 et l'attaque (reste de la phase 6), puis à remplir de consommateurs (phase 8).
 - **Les types** : l'attaque est d'un type unique depuis la 0.111.0 ; les textes ne nomment pas de type, et les bonus de relique par type sont abandonnés (0.112.0).
-- **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.112.0 (deux compétences, plancher et retard), boss atteint 26 % (31 % attendus), acte gagné 12 % (14 %), sur 30 parties par champion.
+- **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.113.0 (modèle unique, courbe option B), boss atteint 24 % (26 % attendus), acte gagné 14 % (12 %), sur 30 parties par champion.
 - **Points à surveiller** : une gravure sur la barde vaut près du double (deux dés) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
 
-Faites : 0 (mesure), 1 (étiquettes), 3 et 4 (le d6), 5 (conversion), 5 bis (l'attaque), 5 ter (revue des compétences), 6 (campagne longue, sauf une relecture légère des répertoires ; 0.112.0), 7 (types à l'écran en 0.108.0, retirés en 0.111.0 ; reliques de durée en 0.112.0 ; bonus par type abandonnés). Livrées, à jouer : 2 (répertoires), 6a et 6 (campagne longue), un premier lot de consommateurs (0.109.0, § 13.3). À faire : la phase 8 (lots de contenu : consommateurs, familles) et la revue des auras et des compétences du § 1.10.
+Faites : 0 (mesure), 1 (étiquettes), 3 et 4 (le d6), 5 (conversion), 5 bis (l'attaque), 5 ter (revue des compétences), 6 (campagne longue, sauf une relecture légère des répertoires ; 0.112.0), 7 (types à l'écran en 0.108.0, retirés en 0.111.0 ; reliques de durée en 0.112.0 ; bonus par type abandonnés) ; le modèle unique de personnage (0.113.0, § 1.13). Livrées, à jouer : 2 (répertoires), 6a et 6 (campagne longue), un premier lot de consommateurs (0.109.0, § 13.3). À faire : la phase 8 (lots de contenu ; premier lot : six compétences consommatrices par famille, en préparation au laboratoire) et la revue des auras et des compétences du § 1.10.
 
 
 ---
@@ -226,6 +227,16 @@ Réponses de l'utilisateur aux questions de l'audit ([SORTS.md](SORTS.md) § 19)
 | Commencer avec deux compétences | « ok » | la signature sur le 1, la seconde compétence du kit sur le 2 ; aucune signature sous la bande de 8 à 20 points (§ 11.8) |
 | La Purification : dissiper le dernier bonus de la cible, sinon lui infliger les dégâts, et dissiper aussi sur soi | proposition de l'utilisateur | c'est déjà la règle (0.42.0, 0.69.0) ; ses dégâts ne se typent pas (attaque d'un type unique) : ce sont des dégâts directs |
 | Elaria « critique beaucoup » | rien à faire | aucune |
+
+### 1.13 Décisions du 2026-10-25 (livrées en 0.113.0)
+
+| Question | Réponse de l'utilisateur | Suite |
+| --- | --- | --- |
+| La Purification | « Soit retirer un bonus en face, soit lui infliger 5 dégâts s'il n'a pas de bonus. L'effet sur soi doit être retiré. » | l'effet sur soi (Purification double, 0.69.0) est retiré ; valeur nette +21,7 → +19,3, Ysolde 48,4 → 45,9 % ; compensation proposée, non appliquée : 6 dégâts (48,3 % au laboratoire) |
+| La courbe de campagne (les combats 1 et 2 ne tenaient plus 90 % avec le plancher) | option B | les deux premières cibles écrites à ce qu'elles valent avec le plancher : 78 et 86 %, le reste inchangé (§ 11.9) |
+| Des personnages différents selon le mode (`CAMPAIGN_CHAMPIONS`, attaque de Thaldrin en campagne) | « Les personnages de tournoi et de campagne doivent partir du même modèle. Un perso, en campagne ou en tournoi, commence exactement au même point ; ce sont les règles de chaque mode qui définissent ses possibilités d'évolution. Ne commence pas à avoir des versions de perso différentes à la base. Le tournoi est un laboratoire, pour nous, pour voir ce que les règles actuelles peuvent produire comme builds et combats. Le perso qui commence en tournoi doit être le même que celui de campagne : la version vanilla du perso, avant son évolution, dictée par la campagne ou le tournoi, qui utilisent les axes d'obtention de relique et de forge de dé. » | le registre du roster devient le personnage vanilla (le départ de campagne de la 0.112.0 : signature sur le 1, seconde compétence sur le 2 ; Thaldrin attaque 5 à 6) pour tous les modes ; `CAMPAIGN_CHAMPIONS` et `CAMPAIGN_STATS` retirés ; chaque mode garde ses règles (répertoire, offres, nombre de récompenses, plafond de faces) ; le Colosse reste à part. Roster 45,8 à 55,6 %, pire duel 62,3 %, aucun levier appliqué ([PERSONNAGES.md](PERSONNAGES.md)) |
+| Le troc du Gambison matelassé (−1 à l'attaque) | gardé | aucune |
+| Les noms des trois reliques de durée | gardés pour l'instant | aucune |
 
 ---
 
@@ -1008,7 +1019,24 @@ Avec les trois reliques de durée (dépôt réel, 12 parties par champion) : bos
 - **Le levier des PV s'affaiblit comme demandé** : plus aucun adversaire sous 75 % de sa base (25 % au plus bas avant).
 - **La courbe ne tient plus aux deux premiers combats** : un adversaire à 75 % de ses PV, construit sans retard possible au début, bat plus souvent un champion qui n'a encore rien reçu (78 et 86 % au lieu de 90 %). Le reste de l'acte reste proche de la courbe.
 - **Le build pèse plus** : +81 points au nœud 10 (+69 avant), des paires liées plus nombreuses (3,54 contre 2,46).
-- **À l'utilisateur** : relever la courbe (proposition non appliquée : 90, 90, 92 ×5, 91 ×3 % → boss 28 %, acte 15 % sur 12 parties par champion ; 93 et 92 → 29 % et 16 %).
+- **À l'utilisateur** : relever la courbe (proposition : 90, 90, 92 ×5, 91 ×3 % → boss 28 %, acte 15 % sur 12 parties par champion ; 93 et 92 → 29 % et 16 %). Non retenue : l'utilisateur a choisi l'option B le 2026-10-25 (§ 11.9).
+
+### 11.9 La courbe, option B, et un seul modèle de personnage (0.113.0)
+
+Décisions de l'utilisateur (§ 1.13). Les cibles des deux premiers combats sont écrites à ce qu'elles valent avec le plancher : **78, 86, 90, 89, 89, 89, 89, 88, 88, 88 %** (`NORMAL_TARGETS`), boss 45 %. Le champion et ses adversaires partent du personnage vanilla du roster, le même qu'en tournoi : c'est le départ de campagne de la 0.112.0 (même dé, Thaldrin à l'attaque 5 à 6), si bien qu'en campagne aucun départ ne change ; seul le tournoi change de personnages. Une partie de la 0.112.0 se charge telle quelle.
+
+Mesuré (`npm run campaign`, 30 parties par champion, mêmes graines) :
+
+| Mesure | 0.112.0 | 0.113.0 |
+| --- | --- | --- |
+| Boss atteint | 25 % (31 % attendus) | 24 % (26 % attendus) |
+| Acte gagné | 15 % (14 % attendus) | 14 % (12 % attendus) |
+| PV des adversaires normaux, en part de leur base | au plus bas 75 %, en moyenne 84 % | au plus bas 75 %, en moyenne 85 % |
+| Victoire du joueur, nœuds 1 et 2 | 78, 86 % | 75, 84 % |
+| PV des adversaires, nœuds 1 et 2 | 76, 77 % | 80, 80 % |
+| Apport du build aux nœuds 2, 5, 10 | +6, +44, +73 points | +5, +46, +75 points |
+
+**Lecture** : l'option B n'est pas tout à fait neutre (75 et 84 % aux deux premiers combats au lieu de 78 et 86) : la cible plus basse laisse plus de PV aux adversaires (80 % de leur base). Les builds sont identiques. Par champion, boss atteint (± 8 points) : Gorak 20 → 17, Brokk 43 → 40, Ysolde 13 → 17, Aldric 27 → 20, Morgrut 47 → 40, les autres inchangés.
 
 ---
 
@@ -1324,7 +1352,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.112.0, phases 6 et 7 faites : deux compétences au départ, levier des PV moins fort, reliques de durée) : les décisions de l'utilisateur (courbe, Thaldrin, Gambison, Onguent, noms), puis la phase 8 (lots de contenu : consommateurs, familles) et la revue des auras et des compétences demandée au § 1.10._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.113.0 : un seul modèle de personnage, Purification sans effet sur soi, courbe option B, § 1.13) : la phase 8, premier lot de contenu (six compétences consommatrices, par famille, en préparation au laboratoire), puis la revue des auras et des compétences demandée au § 1.10 ; décisions ouvertes : Purification 5 → 6 dégâts, Thaldrin, Ervald, Onguent._
 
 ```mermaid
 flowchart LR

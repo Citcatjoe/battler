@@ -196,9 +196,9 @@ describe('écrans', () => {
     const gorak = createCharacter('gorak')
     const cells = dieCells(gorak)
     expect(cells.map((c) => c.face)).toEqual([1, 2, 3, 4, 5, 6])
-    // Le druide : un d6 sous ses deux formes, des sorts sous forme humaine, des coups sous l'ours
+    // Le druide : un d6 sous ses deux formes, ses deux sorts sous forme humaine (le 1 et le 2), des coups sous l'ours
     const thaldrin = createCharacter('thaldrin')
-    expect(dieCells(thaldrin, 0).every((c) => c.event)).toBe(true)
+    expect(dieCells(thaldrin, 0).map((c) => !!c.event)).toEqual([true, true, false, false, false, false])
     expect(dieCells(thaldrin, 1).some((c) => c.event)).toBe(false)
     // La forge se lit sur ses faces : la dorure, le rang de la compétence aiguisée
     const sharp = offerTargets(gorak.definition, [], { op: 'sharpen' })[0]

@@ -18,7 +18,6 @@ import {
   ACT_FIGHTS,
   ACT_LENGTH,
   BOSS,
-  CAMPAIGN_CHAMPIONS,
   CAMPAIGN_REPERTOIRES,
   campaignCharacter,
   drawBuild,
@@ -98,8 +97,8 @@ describe('catalogue des compétences', () => {
     // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
     for (const c of CHARACTERS)
       for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
-    // Faces identiques d'un même porteur : une seule ligne, qui liste ses déclencheurs (la Foudre du druide, sur 1 à 3)
-    expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalOne', 'naturalTwo', 'naturalThree'])
+    // Une ligne par compétence, avec ses déclencheurs (la Foudre du druide, sur le 2 de son dé vanilla depuis la 0.113.0)
+    expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalTwo'])
     // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune
     expect(skills.some((s) => s.owners.some((c) => c.id === 'morgrut'))).toBe(false)
     // Hors kit (règles v2, d6) : listée chez son personnage, sans face
@@ -290,7 +289,7 @@ describe('accroches (règles v2, phase 1)', () => {
   it('une compétence hérite des accroches du statut qu’elle pose : Pourfendre fait saigner quand il touche', () => {
     const cleave = eventHooks(events.find((e) => e.id === 'cleave')!)
     expect(cleave.produces).toEqual(expect.arrayContaining(['status:bleed', 'damage:temporal']))
-    expect(cleave.consumes).toEqual(expect.arrayContaining(['face:1', 'moment:hit']))
+    expect(cleave.consumes).toEqual(expect.arrayContaining(['face:2', 'moment:hit']))
   })
 })
 
@@ -869,49 +868,50 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 5: 2, 6: 2 })
   })
 
-  it('champion de campagne (0.112.0) : la signature sur le 1, la seconde compétence de son kit sur le 2, quatre faces nues ; le reste de ses compétences entre dans son répertoire de campagne', () => {
+  it('un seul modèle (0.113.0, règle de l’utilisateur) : un personnage part du même point en campagne et en tournoi, le personnage vanilla du roster', () => {
+    const start = (c: Character) => ({ stats: c.baseStats, events: c.events, forms: c.forms, twinDice: c.definition.twinDice, forge: c.forge, relics: c.relics })
+    for (const id of CHARACTER_IDS) {
+      const vanilla = start(createCharacter(id))
+      // Le champion de campagne, un adversaire de campagne avant sa construction, un participant de tournoi au premier tour
+      expect(start(championOf(startRun(id, 1))), id).toEqual(vanilla)
+      expect(start(campaignCharacter(id)), id).toEqual(vanilla)
+      const t = createTournament(Array.from({ length: SLOTS }, () => id), (x) => createCharacter(x).name)
+      for (const fighter of matchFighters(t, { round: 0, index: 0 })) expect(start(fighter), id).toEqual(vanilla)
+    }
+  })
+
+  it('le dé vanilla (0.113.0) : la signature sur le 1, la seconde compétence sur le 2, quatre faces nues ; le reste de ses compétences entre dans son répertoire de campagne', () => {
     for (const c of CHARACTERS) {
-      const champion = CAMPAIGN_CHAMPIONS[c.id]
       const signature = c.definition.signature
       const second = secondSkillOf(c.definition)
-      // Sans signature (Morgrut, le combattant nu) : son kit entier, six faces nues
-      if (!signature) expect(champion.events, c.id).toEqual(c.events)
-      else {
-        // La seconde : l'autre compétence de face de son kit de tournoi (jamais l'Ouverture de Fanchon, qui n'est pas une face)
-        expect(second, c.id).toBeDefined()
-        expect(c.events.some((e) => e.id === second?.id && e.id !== signature)).toBe(true)
-        // Ce qui n'est pas une face reste (l'Ouverture de Fanchon), puis la signature sur le 1 et la seconde sur le 2
-        const passive = c.events.filter((e) => rollFace(e.trigger) === undefined).map((e) => `${e.id}@${e.trigger}`)
-        expect(champion.events.map((e) => `${e.id}@${e.trigger}`), c.id).toEqual([...passive, `${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
-      }
+      const onFaces = c.events.filter((e) => rollFace(e.trigger) !== undefined).map((e) => `${e.id}@${e.trigger}`)
+      // Sans signature (Morgrut, le combattant nu) : six faces nues
+      if (!signature) expect(onFaces, c.id).toEqual([])
+      else expect(onFaces, c.id).toEqual([`${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
     }
-    expect(CAMPAIGN_CHAMPIONS.fanchon.events.map((e) => e.id)).toEqual(['overture', 'melodious-aura', 'soloist'])
+    // Ce qui n'est pas une face reste : l'Ouverture de Fanchon
+    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['overture', 'melodious-aura', 'soloist'])
     for (const c of CHARACTERS) {
-      const champion = CAMPAIGN_CHAMPIONS[c.id]
-      const kit = champion.events.map((e) => e.id)
-      const own = [...c.events, ...(c.definition.reserve ?? [])].filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
-      const left = own.filter((e) => !kit.includes(e.id) && ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
+      const kit = c.events.map((e) => e.id)
+      const reserve = (c.definition.reserve ?? []).filter((e) => ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
       // Pas de gravure en double : ni la signature ni la seconde dans le répertoire de campagne
-      expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...left, ...(c.definition.repertoire ?? [])])
+      expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...reserve, ...(c.definition.repertoire ?? [])])
       expect(CAMPAIGN_REPERTOIRES[c.id].some((e) => kit.includes(e.id)), c.id).toBe(false)
     }
     // Seul Morgrut part sans signature
     expect(CHARACTERS.filter((c) => !c.definition.signature).map((c) => c.id)).toEqual(['morgrut'])
-    // Gorak : la Furie des vents sur le 1, Pourfendre sur le 2 (l'inverse de son kit de tournoi) ; le 3 à 6 sont des faces nues qui se gravent
+    // Gorak : la Furie des vents sur le 1, Pourfendre sur le 2 ; le 3 à 6 sont des faces nues qui se gravent
     const gorak = championOf(startRun('gorak', 1))
     expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalOne', 'cleave@naturalTwo'])
     expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([3, 4, 5, 6])
   })
 
-  it('Thaldrin (0.112.0) : un Feu follet sur le 1, une Foudre sur le 2, en forme humaine ; des gravures jusqu’à la limite', () => {
-    const thaldrin = championOf(startRun('thaldrin', 1))
+  it('Thaldrin (0.113.0) : un Feu follet sur le 1, une Foudre sur le 2, en forme humaine, attaque 5 à 6 ; des gravures jusqu’à la limite', () => {
+    const thaldrin = createCharacter('thaldrin')
     expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@naturalOne@human', 'thunderbolt@naturalTwo@human'])
-    // L'ours est inchangé : sa forme, sa Force de l'ours
-    expect(thaldrin.forms?.map((f) => f.statuses)).toEqual(createCharacter('thaldrin').forms?.map((f) => f.statuses))
+    expect(thaldrin.forms?.map((f) => f.statuses)).toEqual([['casting'], ['bearMight']])
     expect(CAMPAIGN_REPERTOIRES.thaldrin.map((e) => e.id)).not.toContain('thunderbolt')
-    // Attaque de campagne 5 à 6 (0.112.0) ; le Thaldrin de tournoi garde 3 à 4
     expect([thaldrin.baseStats.attackMin, thaldrin.baseStats.attackMax]).toEqual([5, 6])
-    expect([createCharacter('thaldrin').baseStats.attackMin, createCharacter('thaldrin').baseStats.attackMax]).toEqual([3, 4])
     // Les quatre faces nues se gravent
     expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.thaldrin[0] })).toEqual([3, 4, 5, 6])
     // La limite compte des faces : le Feu follet, la Foudre et les gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
@@ -928,7 +928,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {
     for (const id of CHARACTER_IDS) {
       const own = CAMPAIGN_REPERTOIRES[id].map((e) => e.id)
-      const def = CAMPAIGN_CHAMPIONS[id].definition
+      const def = createCharacter(id).definition
       for (let k = 0; k < 20; k++) {
         const reward = drawReward({ championId: id, forge: [], relics: [] }, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')
