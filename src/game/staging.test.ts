@@ -5,7 +5,7 @@
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
-import { simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
+import { simulateCombat, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { rollFace } from './events'
@@ -45,6 +45,35 @@ for (const skill of CHARACTERS.flatMap((c) => c.definition.reserve ?? []))
       const result = simulateCombat([carrier, createCharacter(y)], { seed })
       corpus.push({ result, moments: stage(result) })
     }
+
+// Chaque relique portée par chaque personnage, contre chacun (l'Encens et le Vol de vie d'Ervald, les reliques du
+// défenseur, la Larme de givre à vide partent assez souvent)
+const relicCorpus: Case[] = []
+for (const relic of RELICS)
+  for (const x of CHARACTER_IDS)
+    for (const y of CHARACTER_IDS)
+      for (const seed of [1, 2]) {
+        const result = simulateCombat([createCharacter(x).withRelics([relic]), createCharacter(y)], { seed })
+        relicCorpus.push({ result, moments: stage(result) })
+      }
+
+/**
+ * Une étape dont aucun effet ne change rien (M25), lue dans la chronologie : pose refusée ou au plafond, statut reposé
+ * tel quel (le même avant et après l'étape), purge à vide.
+ */
+function changesNothing(beats: readonly Beat[], beat: Beat, effects: readonly AppliedEffect[]): boolean {
+  const before = beats[beat.id - 1]?.state.statuses
+  return (
+    effects.length > 0 &&
+    effects.every((e) => {
+      if (e.type === 'cleanse') return e.removed.length === 0
+      if (e.type !== 'applyStatus') return false
+      if (e.result.kind !== 'applied' || e.result.stacks === 0) return true
+      const was = before?.[e.target].find((s) => s.id === e.status)
+      return !e.result.cancelled && was !== undefined && JSON.stringify(was) === JSON.stringify(beat.state.statuses[e.target].find((s) => s.id === e.status))
+    })
+  )
+}
 
 /** Le moment qui couvre l'étape `id`. */
 const momentOf = (moments: Moment[], id: number) => moments.find((m) => m.beats.includes(id))!
@@ -293,8 +322,7 @@ describe('mise en scène', () => {
         const pulse = m.cues.find((c) => c.channel === 'relicPulse' && c.relics.includes(beat.relic))!
         expect(pulse).toBeDefined()
         const label = at(m, 'special', pulse.at).find((c) => c.channel === 'special' && c.special.source === 'relic')
-        const capped = beat.effects.length > 0 && beat.effects.every((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks === 0)
-        if (!capped) expect(label).toBeDefined()
+        if (!changesNothing(result.beats, beat, beat.effects)) expect(label).toBeDefined()
         relics++
       }
     expect(relics).toBeGreaterThan(20)
@@ -426,7 +454,8 @@ describe('mise en scène', () => {
         const fast = m.cues.some((c) => c.channel === 'strike' && c.at === impact && c.strike?.fast)
         const flow = children[hit.id].some((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.side !== striker)
         const start = impact + (flow ? T.BLEED_DELAY : 0) + (fast ? T.VOLLEY_REACTION_LEAD : T.REACTION_LEAD)
-        const starts = ['signal', 'aura', 'special', 'relicPulse']
+        // Une réaction refusée (Épines contre une immunité) n'a que son texte neutre (M25)
+        const starts = ['signal', 'aura', 'special', 'relicPulse', 'float']
         expect(m.cues.some((c) => c.at === start && starts.includes(c.channel)), `réaction ${first.id}`).toBe(true)
         if (first.type === 'statusReaction' && STATUSES[first.status].reflectsHit) {
           const k = m.cues.findIndex((c) => c.channel === 'blow' && c.blow && !c.blow.landed && c.at >= start)
@@ -550,5 +579,186 @@ describe('mise en scène', () => {
     expect(Math.max(...marks.map((r) => r.upTo))).toBeGreaterThanOrEqual(dice)
     expect(Math.max(...marks.map((r) => r.upTo))).toBeLessThanOrEqual(dice + flurries)
     for (const m of moments) expect(m.rolls.map((r) => r.at)).toEqual(m.rolls.map((r) => r.at).sort((p, q) => p - q))
+  })
+
+  it('une relique causée par ce que le coup produit est une réaction au coup : l’Encens tombe au milieu de sa lecture (M17)', () => {
+    let carried = 0
+    for (const { result, moments } of relicCorpus) {
+      const children = childrenOf(result.beats)
+      for (const beat of result.beats) {
+        if (beat.type !== 'relic' || beat.cause === undefined) continue
+        const ride = result.beats[beat.cause]
+        const hit = ride.cause === undefined ? undefined : result.beats[ride.cause]
+        if (ride.type !== 'statusReaction' || hit?.type !== 'attack' || hit.attack.replaced) continue
+        const striker = hit.attack.attacker
+        // Première réaction du coup dans l'ordre du moteur (aucune réaction directe avant elle)
+        const earlier = children[hit.id].some(
+          (b) => b.id < beat.id && (b.type === 'relic' || (b.type === 'statusReaction' && b.side !== striker && b.effects.length > 0) || (b.type === 'event' && rollFace(b.event.trigger) === undefined)),
+        )
+        if (earlier) continue
+        const m = momentOf(moments, beat.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        const fast = m.cues.some((c) => c.channel === 'strike' && c.at === impact && c.strike?.fast)
+        const flow = children[hit.id].some((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.side !== striker && b.effects.some((e) => e.type === 'damage'))
+        const start = impact + (flow ? T.BLEED_DELAY : 0) + (fast ? T.VOLLEY_REACTION_LEAD : T.REACTION_LEAD)
+        const pulse = m.cues.find((c) => c.channel === 'relicPulse' && c.relics.includes(beat.relic) && c.at >= impact)
+        expect(pulse?.at, `${beat.relic} ${beat.id}`).toBe(start)
+        carried++
+      }
+    }
+    expect(carried).toBeGreaterThan(5)
+  })
+
+  it('« Rien à purifier » ne s’affiche que si la purge est le seul effet de son étape (M38)', () => {
+    let quieted = 0
+    for (const { result, moments } of [...corpus, ...relicCorpus])
+      for (const m of moments) {
+        const effects = m.beats.map((id) => result.beats[id]).map((b) => (b.type === 'event' ? b.event.effects : b.type === 'relic' ? b.effects : []))
+        const empty = (e: AppliedEffect) => e.type === 'cleanse' && e.removed.length === 0
+        const alone = effects.filter((list) => list.length > 0 && list.every(empty)).length
+        quieted += effects.filter((list) => list.some(empty) && !list.every(empty)).length
+        const shown = m.cues.filter((c) => c.channel === 'float' && c.float.kind === 'badge' && c.float.badge.text === 'Rien à purifier').length
+        expect(shown).toBeLessThanOrEqual(alone)
+      }
+    expect(quieted).toBeGreaterThan(10)
+  })
+
+  it('une étape qui ne change rien n’active rien : ni aura, ni signal, ni label, ni son, seulement son texte neutre (M25)', () => {
+    const seen = { reposed: 0, refused: 0 }
+    for (const { result, moments } of [...corpus, ...relicCorpus])
+      for (const beat of result.beats) {
+        const effects = beat.type === 'event' ? beat.event.effects : beat.type === 'statusReaction' || beat.type === 'relic' ? beat.effects : []
+        if (!changesNothing(result.beats, beat, effects)) continue
+        // Un statut reposé tel quel se lit comme une pose au plafond : « … au maximum »
+        const shown = effects
+          .filter((e) => e.type !== 'cleanse')
+          .map((e) => effectBadge(e.type === 'applyStatus' && e.result.kind === 'applied' ? { ...e, result: { kind: 'applied', stacks: 0 } } : e).text)
+        if (shown.length === 0) continue
+        const m = momentOf(moments, beat.id)
+        const instants = new Set(m.cues.flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' && shown.includes(c.float.badge.text) ? [c.at] : [])))
+        expect(instants.size, `${beat.type} ${beat.id}`).toBeGreaterThan(0)
+        for (const when of instants) {
+          // Une étape portée par le coup (poison résisté) tombe à son impact, avec le son et les labels du coup : seul
+          // son propre label y est interdit
+          const atImpact = m.cues.some((c) => c.at === when && (c.channel === 'strike' || c.channel === 'blow'))
+          const name = beat.type === 'statusReaction' ? STATUSES[beat.status].name : beat.type === 'relic' ? beat.name : undefined
+          const busy = m.cues.filter((c) =>
+            c.at !== when
+              ? false
+              : atImpact
+                ? c.channel === 'special' && name !== undefined && c.special.label.startsWith(name)
+                : c.channel === 'sound' || c.channel === 'special' || c.channel === 'signal' || (c.channel === 'aura' && !!c.fx),
+          )
+          expect(busy, `${beat.type} ${beat.id}`).toEqual([])
+        }
+        if (effects.some((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks > 0)) seen.reposed++
+        if (beat.type === 'statusReaction' && effects.some((e) => e.type === 'applyStatus' && e.result.kind === 'blocked')) seen.refused++
+      }
+    // L'Aura de puissance reposée (Ervald, gravée) ; les Épines contre l'Aura d'immunité gravée sur Gorak
+    expect(seen.reposed).toBeGreaterThan(5)
+    expect(seen.refused).toBeGreaterThan(0)
+  })
+
+  it('relique du défenseur : + et le ding pour un bonus de son porteur, − et Malus reçu pour un contre (M23, SONS § 4.4)', () => {
+    const signs = { plus: 0, minus: 0 }
+    for (const { result, moments } of relicCorpus)
+      for (const beat of result.beats) {
+        if (beat.type !== 'relic' || beat.side === beat.owner) continue
+        const m = momentOf(moments, beat.id)
+        const label = m.cues.find((c) => c.channel === 'special' && c.special.source === 'relic' && c.special.label === beat.name)
+        if (label?.channel !== 'special') continue
+        const counters = beat.effects.some((e) => e.type === 'damage' && e.amount > 0)
+        expect(label.special.sign, beat.relic).toBe(counters ? 'minus' : 'plus')
+        const cue = counters ? 'debuff' : 'coinWin'
+        expect(at(m, 'sound', label.at).some((c) => c.channel === 'sound' && c.cue === cue), beat.relic).toBe(true)
+        signs[label.special.sign]++
+      }
+    expect(signs.plus).toBeGreaterThan(20)
+    expect(signs.minus).toBeGreaterThan(3)
+  })
+
+  it('pile ou face : la compétence tombe muette avec l’impact, la pièce part au repos du coup (M26)', () => {
+    let tossed = 0
+    for (const { result, moments } of corpus) {
+      const children = childrenOf(result.beats)
+      for (const coin of result.beats) {
+        if (coin.type !== 'coin' || coin.cause === undefined) continue
+        const skill = result.beats[coin.cause]
+        const hit = skill.cause === undefined ? undefined : result.beats[skill.cause]
+        if (skill.type !== 'event' || hit?.type !== 'attack') continue
+        const m = momentOf(moments, coin.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        // Son journal tombe à l'impact ; ni son nom ni Bonus gagné (M39)
+        expect(at(m, 'log', impact).some((c) => c.channel === 'log' && c.entry.text.startsWith(`Compétence · ${skill.event.name}`))).toBe(true)
+        expect(m.cues.some((c) => c.channel === 'float' && ((c.float.kind === 'badge' && c.float.badge.text === skill.event.name) || (c.float.kind === 'title' && c.float.text === skill.event.name)))).toBe(false)
+        // Un coup sans réaction : la pièce part au terme de sa lecture et de son repos
+        const reacted = children[hit.id].some((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.side !== hit.attack.attacker && b.effects.length > 0))
+        if (reacted) continue
+        const toss = m.cues.find((c) => c.channel === 'dice' && c.dice.coin && c.dice.coin.heads === undefined)!
+        expect(toss.at - impact).toBe(T.STRIKE_HOLD + T.STRIKE_REST)
+        tossed++
+      }
+    }
+    expect(tossed).toBeGreaterThan(10)
+  })
+
+  it('un mécanisme de compétence posé ne sonne pas et ne flotte pas (M39)', () => {
+    let posed = 0
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats) {
+        if (beat.type !== 'event' || beat.event.effects.length === 0) continue
+        if (!beat.event.effects.every((e) => e.type === 'applyStatus' && STATUSES[e.status].mechanic)) continue
+        const m = momentOf(moments, beat.id)
+        const names = beat.event.effects.flatMap((e) => (e.type === 'applyStatus' ? [STATUSES[e.status].name] : []))
+        expect(m.cues.some((c) => c.channel === 'float' && c.float.kind !== 'hit' && names.includes(c.float.kind === 'badge' ? c.float.badge.text : c.float.text))).toBe(false)
+        const logged = m.cues.find((c) => c.channel === 'log' && c.entry.text.startsWith(`Compétence · ${beat.event.name}`))!
+        expect(at(m, 'sound', logged.at).some((c) => c.channel === 'sound' && c.cue === 'buff')).toBe(false)
+        posed++
+      }
+    expect(posed).toBeGreaterThan(20)
+  })
+
+  it('Foudre : chaque éclair sonne l’Éclair, jamais le son du critique (M24, SONS § 3)', () => {
+    let bolts = 0
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats) {
+        if (beat.type !== 'event' || beat.event.eventId !== 'thunderbolt') continue
+        const m = momentOf(moments, beat.id)
+        const scene = m.cues.find((c) => c.channel === 'scene')!
+        for (const blow of m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.at < scene.at + SCENE_EVENTS.lightning.length)) {
+          const sounds = at(m, 'sound', blow.at).flatMap((c) => (c.channel === 'sound' ? [c.cue] : []))
+          expect(sounds).toContain('thunder')
+          expect(sounds).not.toContain('crit')
+          bolts++
+        }
+      }
+    expect(bolts).toBeGreaterThan(15)
+  })
+
+  it('Furie sur le premier dé de la barde : ses coups, puis le second dé, sans nouveau roulement (M27)', () => {
+    const fury = CHARACTERS.find((c) => c.id === 'gorak')!.definition.events.find((e) => e.id === 'wind-fury')!
+    let nested = 0
+    for (const y of CHARACTER_IDS)
+      for (const seed of [1, 2, 3, 4]) {
+        const result = simulateCombat([createCharacter('fanchon').withForge([{ op: 'engrave', face: 3, skill: fury }]), createCharacter(y)], { seed })
+        const moments = stage(result)
+        const children = childrenOf(result.beats)
+        for (const outer of result.beats) {
+          if (outer.type !== 'flurry' || outer.status) continue
+          const strikes = children[outer.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
+          const inner = result.beats.find((b) => b.type === 'flurry' && b.status === 'windFury' && b.cause !== undefined && result.beats[b.cause].cause === strikes[0]?.id)
+          if (!inner || strikes.length < 2) continue
+          const m = momentOf(moments, outer.id)
+          // Un seul roulement pour toute l'action
+          expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling)).toHaveLength(1)
+          // Après le dernier coup de la Furie, les dés de la barde reviennent tels quels
+          const furyStrikes = children[inner.id].filter((b) => b.type === 'attack')
+          const lastFury = impacts(m, result.beats).get(furyStrikes[furyStrikes.length - 1].id)!
+          const values = strikes.map((b) => (b.type === 'attack' ? b.attack.roll : 0))
+          expect(m.cues.some((c) => c.channel === 'dice' && c.at > lastFury && !c.dice.rolling && c.dice.values.join() === values.join())).toBe(true)
+          nested++
+        }
+      }
+    expect(nested).toBeGreaterThan(3)
   })
 })

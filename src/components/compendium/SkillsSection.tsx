@@ -140,7 +140,7 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
       )}
 
       <button type="button" className="codex-link mt-auto self-start font-body text-[14px] text-ink-3" onClick={() => nav.go({ section: 'rules', id: 'skill' })}>
-        Déclencheurs, faces et coups sacrifiés : règles communes à toutes les compétences →
+        Déclencheurs, faces et relations au coup : règles communes à toutes les compétences →
       </button>
     </article>
   )

@@ -87,7 +87,7 @@ export const BOSS: CharacterDef = {
     background:
       "Le Colosse règne sur l'arène depuis plus longtemps que ses gradins. De chaque champion qu'il a brisé, il a gardé une technique et un trophée ; son couperet porte l'or de ceux qui l'ont payé pour perdre.",
     strengths: ['Trois techniques volées', 'Deux trophées', 'Un couperet doré'],
-    weaknesses: ['Lent à s’échauffer', 'Peu d’esquive'],
+    weaknesses: ['Lent à s’échauffer', 'N’esquive jamais'],
   },
   events: [
     { ...rosterSkill('stoneskin'), trigger: 'naturalOne' },

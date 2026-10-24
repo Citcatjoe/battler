@@ -62,6 +62,7 @@ Règles communes ([RESOLUTION.md](RESOLUTION.md) § 3 et § 5) :
 6. **Effets** : ceux des compétences (soin, dégâts directs, pose de statut, purge), du point de vue du porteur. Pas de relâche de jauges.
 7. **Jamais de malus sur l'adversaire.** Un statut posé par une relique est un bonus de son porteur ; vers l'adversaire, seuls les dégâts directs. Permis aussi : un bonus qui réagit plus tard contre l'adversaire (les Épines du Collier de ronces font saigner l'attaquant quand il frappe : c'est l'effet des Épines, pas de la relique). `validateRelics` refuse tout le reste.
 8. **Deux dés : chaque dé se lit seul.** « Sur un 1 » part dès qu'un des deux dés fait 1 (deux 1 l'éveillent deux fois) ; le jet maximal est celui d'un seul dé ; un bonus de face va au coup du dé qui l'a déclenché (le Fer renforce le coup du dé qui fait 4). Depuis la 0.107.0, chaque dé de la barde est un jet complet (face, compétence, coup) : plus de doubles, chaque jet ouvre ses moments.
+9. **Une relique qui n'ajouterait rien ne part pas** (0.110.0, M4). Si tous ses effets seraient nuls (soin à PV pleins, statut déjà au plafond, malus bloqué par une immunité, purge sans rien à retirer et sans repli utile), elle ne se déclenche pas, ne dépense ni charge ni recharge. Une relique de seuil attend alors la vérification suivante, tant que son porteur reste sous le seuil. Une garde qui bloque s'use : ce n'est pas nul ; des dégâts ne le sont jamais.
 
 La chronologie a une étape `relic` (porteur, relique, effets, rang du déclenchement) ; le bonus de coup est noté sur le coup (`Attack.relicBonus`). Le son se déduit des effets, comme pour une compétence ([SONS.md](SONS.md) § 4.2) : aucun son propre. Piste ouverte : un même déclic d'objet avant le son de l'effet, pour qu'on entende « relique » ; à décider dans SONS.md.
 
@@ -102,7 +103,7 @@ flowchart LR
 
 ### 5.1 La règle en une ligne (0.95.0)
 
-`describeRelic` rédige chaque relique depuis ses données : **moment : effet**, puis ses limites à part. Le vocabulaire porte la résolution (« à la frappe » : avant le critique ; « dégâts directs » : ni coup ni armure ; « Sur un 1 » : la face du dé, quel que soit le coup), défini une fois dans [RESOLUTION.md](RESOLUTION.md) § 3. Une exception se dit là où elle naît (l'Incantation remplace le dé ; une esquive négative n'esquive jamais), jamais sur la relique. Une relique de tour à une charge ne dit pas « une fois » : son moment (« Au 4e tour ») le dit déjà.
+`describeRelic` rédige chaque relique depuis ses données : **moment : effet**, puis ses limites à part. Le vocabulaire porte la résolution (« à ce coup » : avant le critique, le même mot pour tout bonus de coup depuis la 0.110.0, « à la frappe » avant ; « dégâts directs » : ni coup ni armure ; « Sur un 1 » : la face du dé, quel que soit le coup), défini une fois dans [RESOLUTION.md](RESOLUTION.md) § 3. Un statut posé est le bonus de son porteur (« +2 Armure temporaire ») ; des dégâts directs sur un coup reçu ou esquivé vont « à l'attaquant » (0.110.0, A3). Une exception se dit là où elle naît (l'Incantation remplace le dé ; une esquive négative n'esquive jamais), jamais sur la relique. Une relique de tour à une charge ne dit pas « une fois » : son moment (« Au 4e tour ») le dit déjà.
 
 | Relique | Ligne | Limites |
 | --- | --- | --- |
@@ -110,7 +111,7 @@ flowchart LR
 | Bottes de feutre | +6 % d'esquive | |
 | Cotte du mercenaire | +1 armure, −5 % d'esquive (0.106.1 ; +2 armure, −8 % avant) | |
 | Osselet fendu | Sur un 1 : 3 dégâts directs | |
-| Dé creux | Sur un jet maximal : +1 Esquive améliorée | recharge 3 tours |
+| Dé creux | Sur un 6 : +1 Esquive améliorée (0.110.0 ; « Sur un jet maximal » avant, un mot des dés variables) | recharge 3 tours |
 | Fer à quatre clous | Sur un 4 : +4 dégâts à ce coup (0.105.0 : un événement, plus une face enrichie ; 0.106.0 : +4 au coup de base d'un jet de 4) | |
 | Cloche d'ouverture | Au 1er tour : +1 Critique assuré | |
 | Chapelet de l'ermite | Tous les 3 tours : retire son dernier malus, sinon +3 PV | |
@@ -120,12 +121,12 @@ flowchart LR
 | Trophée du chasseur | Adversaire sous 30 % PV : +1 Critique assuré | 1 fois par combat |
 | Braise captive | Au 4e tour : 3 × 2 dégâts directs | |
 | Larme de givre | Sous 35 % PV : retire tous ses malus, +5 PV | 1 fois par combat |
-| Conque des vents | Quand il esquive : 3 × 2 dégâts directs | 2 fois par combat |
+| Conque des vents | Quand il esquive : 3 × 2 dégâts directs à l'attaquant (0.110.0 : « à l'attaquant » ajouté) | 2 fois par combat |
 | Géode fendue | Quand il encaisse un coup : +4 Armure temporaire | 2 fois par combat, recharge 3 tours |
-| Fiole de venin | Si l'adversaire porte Poison : +2 dégâts à la frappe (2026-10-24, § 13) | |
-| Croc de boucher | Si l'adversaire porte Saignement : +2 dégâts à la frappe | |
+| Fiole de venin | Si l'adversaire porte Poison : +2 dégâts à ce coup (2026-10-24, § 13 ; « à la frappe » jusqu'à la 0.109.1) | |
+| Croc de boucher | Si l'adversaire porte Saignement : +2 dégâts à ce coup | |
 | Encens de l'abbaye | Quand il regagne des PV : +1 Élan | |
-| Écu cabossé | Quand il encaisse un coup, si ce coup retire 6 PV ou plus : +2 Armure temporaire | |
+| Écu cabossé | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire (0.110.0 ; « Quand il encaisse un coup, si ce coup retire 6 PV ou plus » avant) | |
 | Plume d'aigle | Quand il porte un critique : +1 Esquive améliorée | recharge 2 tours |
 
 Mesure de la règle aplatie (seul Gorak a des coups bruts ; 600 combats par duel contre le roster, mêmes graines, 2026-10-23) : Gorak nu 50,9 % ; Osselet fendu 58,1 → 59,6 % ; Dé creux 61,0 → 62,6 % ; Fer à quatre clous 60,0 → 61,6 % ; face dorée (forge) sur le 8 : 55,1 → 55,9 %, sur le 4 : 55,7 → 56,7 %. Environ +1 à +1,6 point, Gorak seul, dans la cible de 5 à 15 points.
@@ -298,7 +299,7 @@ Toutes trois respectent la règle du § 2 : la compétence de la face part norma
 - **Illustration** : un osselet de mouton, fendu en long, la face creuse gravée d'un seul point. Percé, sur un cordon de cuir noué.
 
 #### Dé creux
-- **Règle** : sur un jet maximal : Esquive améliorée (le prochain coup reçu est esquivé à coup sûr). Recharge : 3 tours.
+- **Règle** : sur un 6 (le jet maximal du d6) : Esquive améliorée (le prochain coup reçu est esquivé à coup sûr). Recharge : 3 tours.
 - **Pourquoi** : le jet parfait laisse le porteur en garde, sans rien poser sur l'adversaire. Presque un tour sur deux pour Fanchon (deux d5 : 9 lancers sur 25 ont au moins un 5), d'où la recharge, encore trop courte pour elle (+25,9). Pour Elaria, qui a déjà l'Esquive améliorée sur un 2, elle se cumule depuis le 2026-10-21 (une esquive imposée par charge) ; avant, elle ne faisait que la renouveler.
 - **Illustration** : un dé cubique d'os, évidé et léger, posé sur sa face la plus haute, qui porte une couronne gravée à la place des points. Une petite chaîne passée dans un coin percé. Un cube, pour ne pas doubler l'icône `dice` (dé à vingt faces).
 
@@ -502,17 +503,17 @@ Les accroches se déduisent des données (`relicHooks`) : la condition `hasStatu
 
 | Relique | Règle (`describeRelic`) | Consomme | Fait pour | Apport moyen | Chez ses producteurs | Déclenchements par combat |
 | --- | --- | --- | --- | --- | --- | --- |
-| Fiole de venin (`venom-vial`) | Si l'adversaire porte Poison : +2 dégâts à la frappe | `status:poison` | Ervald (Aura glaciale), Naraxes (Aura de décoction) | +1,6 | Ervald **+13,7**, Naraxes +2,0 ; les autres 0 | 0,3 |
-| Croc de boucher (`butcher-hook`) | Si l'adversaire porte Saignement : +2 dégâts à la frappe | `status:bleed` | Brokk (Épines), Gorak (Pourfendre) | +2,0 | Brokk **+10,7**, Gorak **+9,7** ; les autres 0 | 0,4 |
+| Fiole de venin (`venom-vial`) | Si l'adversaire porte Poison : +2 dégâts à ce coup | `status:poison` | Ervald (Aura glaciale), Naraxes (Aura de décoction) | +1,6 | Ervald **+13,7**, Naraxes +2,0 ; les autres 0 | 0,3 |
+| Croc de boucher (`butcher-hook`) | Si l'adversaire porte Saignement : +2 dégâts à ce coup | `status:bleed` | Brokk (Épines), Gorak (Pourfendre) | +2,0 | Brokk **+10,7**, Gorak **+9,7** ; les autres 0 | 0,4 |
 | Encens de l'abbaye (`abbey-incense`) | Quand il regagne des PV : +1 Élan | `moment:heal` | Ysolde (Aura de sainteté), Ervald (Vol de vie) | +1,1 | Ysolde **+8,4**, Ervald +2,5 ; les autres 0 | 0,5 |
-| Écu cabossé (`dented-shield`) | Quand il encaisse un coup, si ce coup retire 6 PV ou plus : +2 Armure temporaire | `moment:hurt` | Aldric, Brokk (les coups encaissés) | **+15,5** | Aldric +12,1, Brokk +15,5 ; d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
+| Écu cabossé (`dented-shield`) | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire | `moment:hurt` | Aldric, Brokk (les coups encaissés) | **+15,5** | Aldric +12,1, Brokk +15,5 ; d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
 | Plume d'aigle (`eagle-feather`) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours | `moment:crit` | Elaria (Œil de faucon) | +10,2 | Elaria **+16,9** ; Ervald +17,1, Fanchon +15,1, Morgrut 0 (aucun critique) | 0,7 |
 
-Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-10-24-10-58-56_v0.108.0.md`).
+Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-10-24-10-58-56_v0.108.0.md`). Remesurée après les corrections du moteur de la 0.110.0 (`logs/relics/2026-10-24-17-03-44_v0.109.1.md`, même roster, mêmes graines) : les cinq lignes sont identiques au dixième près (Fiole chez Naraxes : 53,8 → 55,8 %, +2,0).
 
 **Lecture.**
 - **Trois reliques typées par construction** (Fiole, Croc, Encens) : sans leur ressource, elles ne font rien (0 chez huit personnages sur dix), d'où une moyenne sous la cible de 5. C'est voulu, comme la Conque des vents pour Morgrut : **leur mesure est chez leurs producteurs**, où elles tombent dans la cible (+8,4 à +13,7). Exceptions nommées à la règle des 5 à 15 points de moyenne. En campagne, la forge et le répertoire leur apportent leur ressource (Souffle de la tombe et Aura de décoction chez Thaldrin, Épines chez Gorak).
-- **Naraxes ne nourrit pas la Fiole** (+2,0) : son Aura de décoction pose 1 Poison par coup qui touche, qui agit et s'estompe au début du tour suivant de l'adversaire ; à son coup suivant, il n'en reste rien. Seul un second jet dans la même action (Coup de chance) frappe un adversaire empoisonné. Ervald, lui, pose son Poison au début de son tour, avant son coup.
+- **Naraxes nourrit peu la Fiole** (+2,0, remesuré en 0.110.0) : son Aura de décoction pose 1 Poison par coup qui touche (et un de plus sur pile, qui compte comme un coup qui touche), qui agit et s'estompe au début du tour suivant de l'adversaire. Il en reste parfois au coup suivant (la revue de la 0.109.0 compte 292 bonus sur 400 combats, 0,73 par combat, aucun en rafale), mais le gain reste faible : il n'a plus Coup de chance, et la lecture d'avant (« seul un second jet dans la même action le nourrit ») est périmée. Ervald, lui, pose son Poison au début de son tour, avant son coup.
 - **L'Écu cabossé est fort partout** (+15,5, au-dessus de 15, sous 20) : tout le monde encaisse des coups de 6. Il ne grandit pas avec une ressource (Aldric +12,1, sous la moyenne). Valeur de la proposition gardée (dans la tolérance de 20) ; repli mesuré, à décider : **6 PV ou plus, +1 Armure temporaire : +8,9** (de +7,1 à +10,9) ; **7 PV ou plus, +2 : +9,4** (de +6,6 à +12,3).
 - **La Plume d'aigle** est le second consommateur des critiques : Elaria +16,9, Ervald +17,1, Morgrut 0 (un porteur sans critique n'en tire rien).
 

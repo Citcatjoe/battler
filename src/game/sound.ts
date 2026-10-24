@@ -27,7 +27,7 @@ let speed = 1
 /** Les sons du jeu, un fichier chacun (`docs/SONS.md` § 3). `crit-rumble` est la couche du Coup critique. */
 export const SOUND_NAMES = [
   'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
-  'hit', 'crit-rumble', 'dodge',
+  'hit', 'crit-rumble', 'dodge', 'thunder',
   'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'fizz', 'heal',
   'shift', 'ko', 'victory', 'click', 'clash',
 ] as const
@@ -67,6 +67,7 @@ const MIX: Record<SoundName, number> = {
   hit: LEVEL[2],
   'crit-rumble': LEVEL[1],
   dodge: LEVEL[3],
+  thunder: LEVEL[2],
   'aura-gain': LEVEL[2],
   'aura-loss': LEVEL[3],
   buff: LEVEL[3],
@@ -441,6 +442,17 @@ export const sfx = {
   dodge() {
     if (play('dodge')) return
     noise({ dur: 0.18, filter: 'bandpass', freq: 3500, to: 1200, q: 3, gain: 0.3 })
+  },
+
+  /**
+   * Éclair (0.110.0) : un éclair de la Foudre tombe, à chaque impact de sa scène. Claquement sec, puis un roulement
+   * bref ; ni choc d'arme ni Grondement. Pas encore de fichier : l'utilisateur le choisira à l'oreille (SONS.md § 7).
+   */
+  thunder() {
+    if (play('thunder')) return
+    noise({ dur: 0.06, filter: 'highpass', freq: 3200, gain: 0.55 })
+    noise({ at: 0.02, dur: 0.28, filter: 'lowpass', freq: 1400, to: 140, gain: 0.4 })
+    tone({ freq: 85, to: 40, dur: 0.25, gain: 0.3 })
   },
 
   /** Aura gagnée : souffle qui enfle et accord lumineux. */

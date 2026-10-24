@@ -10,15 +10,17 @@
  * de chaque hôte qui peut la recevoir, contre le roster, avant → après ; repère de 8 à 20 points (comme les reliques).
  *   npx vitest run --config vitest.balance.config.ts scripts/skills.report.ts --silent=false
  *   SKILLS_N=400 (combats par duel, défaut 200) · SKILLS_ONLY=naraxes,thaldrin (personnages ; pour les gravures, leurs
- *   compétences) · SKILLS_PART=kit ou engrave (une seule table) · SKILLS_ENGRAVE=cleave,coin-flip (gravures mesurées)
+ *   compétences) · SKILLS_PART=kit, engrave ou rank (une seule table) · SKILLS_ENGRAVE=cleave,coin-flip (gravures mesurées)
+ * Troisième table (0.110.0) : un rang de plus, rang I contre rang II puis II contre III, sur la même face 3 ; repère de
+ * +3 à +8 points par rang (docs/SORTS.md § 8 et § 20).
  * Écrit dans logs/skills/. Méthode et lecture : docs/SORTS.md § 8.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import type { Character } from '../src/game/character'
 import type { CombatResult, Side } from '../src/game/combat'
-import { describeEvent, type CharacterEvent } from '../src/game/events'
-import { offerTargets } from '../src/game/forge'
+import { describeEvent, rollFace, type CharacterEvent } from '../src/game/events'
+import { offerTargets, rankText, type ForgeStep } from '../src/game/forge'
 import { CHARACTERS, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { STATUSES, type StatusDef } from '../src/game/statuses'
 import pkg from '../package.json' with { type: 'json' }
@@ -41,6 +43,9 @@ const T = {
   /** Bande d'une gravure (points de victoire gagnés par l'hôte), comme les reliques : hors bande en dessous ou au-delà */
   engraveMin: 0.08,
   engraveMax: 0.2,
+  /** Bande d'un rang de plus (E1, 0.110.0) : « un rang ajoute moins » qu'une gravure */
+  rankMin: 0.03,
+  rankMax: 0.08,
 }
 
 /** La face où se mesure une gravure : nue sur tous les hôtes sauf le druide (sa Foudre). */
@@ -248,6 +253,60 @@ function engraveTable(skills: readonly CharacterEvent[], perPair: number): strin
   ]
 }
 
+/**
+ * Table 3 : un rang de plus (E1, 0.110.0). Chaque compétence gravée sur la face 3 nue de chaque hôte qui peut la recevoir,
+ * rang I contre rang II (la même gravure, aiguisée une fois), puis rang II contre rang III, mêmes graines : ce que vaut un
+ * aiguisage. Et, pour une compétence de kit, un rang de plus dans le kit de son porteur (toutes ses faces). Repère : de +3
+ * à +8 points par rang (« un rang ajoute moins », décision de l'utilisateur du 2026-10-24).
+ */
+function rankTable(skills: readonly CharacterEvent[], perPair: number): string[] {
+  /** L'hôte forgé : la gravure (sauf dans le kit), puis `rank` aiguisages de sa face ; undefined si la forge refuse */
+  const forged = (host: Character, skill: CharacterEvent, rank: number, face: number, engrave: boolean) => {
+    let journal: ForgeStep[] = engrave ? [{ op: 'engrave', face, skill }] : []
+    for (let k = 0; k < rank; k++) {
+      if (!offerTargets(host.definition, journal, { op: 'sharpen' }).includes(face)) return undefined
+      journal = [...journal, { op: 'sharpen', face }]
+    }
+    return host.withForge(journal)
+  }
+  /** Les gains d'un rang à l'autre (I → II, II → III), sur les mêmes graines ; undefined : rang refusé */
+  const gainsOf = (host: Character, skill: CharacterEvent, face: number, engrave: boolean) => {
+    const opponents = CHARACTERS.filter((o) => o.id !== host.id)
+    const wins = [0, 1, 2].map((r) => forged(host, skill, r, face, engrave)).map((c) => c && winsOf(c, opponents, perPair))
+    return [1, 2].map((r) => (wins[r] && wins[r - 1] ? paired(wins[r]!, wins[r - 1]!).value : undefined))
+  }
+  /** Moyenne des hôtes ; undefined si un hôte refuse le rang */
+  const mean = (xs: (number | undefined)[]) => (xs.length && xs.every((x) => x !== undefined) ? xs.reduce((t, x) => t! + x!, 0)! / xs.length : undefined)
+  const rows = skills.map((skill) => {
+    const hosts = CHARACTERS.filter((host) => !host.events.some((x) => x.id === skill.id) && offerTargets(host.definition, [], { op: 'engrave', skill }).includes(ENGRAVE_FACE)).map(
+      (host) => ({ host, gains: gainsOf(host, skill, ENGRAVE_FACE, true) }),
+    )
+    const two = mean(hosts.map((h) => h.gains[0]))
+    const three = mean(hosts.map((h) => h.gains[1]))
+    const owner = CHARACTERS.find((c) => c.events.some((x) => x.id === skill.id))
+    const kit = owner && gainsOf(owner, skill, rollFace(owner.events.find((x) => x.id === skill.id)!.trigger)!, false)[0]
+    const flag = two === undefined ? 'ne s’aiguise pas' : two < T.rankMin ? 'hors bande (faible)' : two > T.rankMax ? 'hors bande (forte)' : ''
+    return { skill, hosts, two, three, owner, kit, flag }
+  })
+  const cell = (x: number | undefined) => (x === undefined ? '—' : pts(x))
+  const ranked = [...rows].sort((a, b) => (b.two ?? -1) - (a.two ?? -1))
+  return [
+    `## 3. Un rang de plus`,
+    ``,
+    `Chaque compétence gravée sur la face ${ENGRAVE_FACE} nue de chaque hôte qui peut la recevoir, contre les ${CHARACTERS.length - 1} autres personnages, ${perPair} combats par duel, mêmes graines que \`npm run balance\` : points de victoire gagnés par un aiguisage (moyenne des hôtes), du rang I au rang II, puis du rang II au rang III. Repère : de ${T.rankMin * 100} à ${T.rankMax * 100} points par rang ; hors bande au-dessous ou au-delà (rang II). Dernière colonne : un rang de plus dans le kit de son porteur (toutes ses faces).`,
+    ``,
+    `| Compétence | Axe (rang II) | I → II (pts) | II → III (pts) | De … | … à | Dans le kit | Drapeau |`,
+    `| --- | --- | --- | --- | --- | --- | --- | --- |`,
+    ...ranked.map((r) => {
+      const sorted = r.hosts.filter((h) => h.gains[0] !== undefined).sort((a, b) => a.gains[0]! - b.gains[0]!)
+      const [low, high] = [sorted[0], sorted[sorted.length - 1]].map((h) => (h ? `${h.host.name} ${pts(h.gains[0]!)}` : '—'))
+      const sharpened = r.hosts.length ? forged(r.hosts[0].host, r.skill, 1, ENGRAVE_FACE, true) : undefined
+      const axis = sharpened ? rankText(sharpened.events.find((x) => x.id === r.skill.id)!) : '—'
+      return `| ${r.skill.name} | ${axis} | ${cell(r.two)} | ${cell(r.three)} | ${low} | ${high} | ${r.owner ? `${r.owner.name} ${cell(r.kit)}` : 'hors kit'} | ${r.flag || '—'} |`
+    }),
+  ]
+}
+
 it('audit des compétences', () => {
   const perPair = Number(process.env.SKILLS_N ?? 200)
   const list = (key: string) => process.env[key]?.split(',').map((s) => s.trim()).filter(Boolean)
@@ -259,11 +318,13 @@ it('audit des compétences', () => {
     picked?.length ? picked.includes(e.id) : roster.some((c) => [...c.events, ...(c.definition.reserve ?? [])].some((x) => x.id === e.id)),
   )
 
+  const parts = part ? [part] : ['kit', 'engrave', 'rank']
   const text = [
     `# Audit des compétences · règles ${pkg.version}`,
     ``,
-    ...(part === 'engrave' ? [] : [...kitTable(roster, perPair), ``]),
-    ...(part === 'kit' ? [] : engraveTable(engravable, perPair)),
+    ...(parts.includes('kit') ? [...kitTable(roster, perPair), ``] : []),
+    ...(parts.includes('engrave') ? [...engraveTable(engravable, perPair), ``] : []),
+    ...(parts.includes('rank') ? rankTable(engravable, perPair) : []),
   ].join('\n')
 
   mkdirSync('logs/skills', { recursive: true })

@@ -321,9 +321,13 @@ describe('écrans', () => {
     // Le même statut change de signe avec son porteur ; une aura n'a jamais de label
     expect(statusSpecial('lifesteal', 'defender')?.sign).toBe('minus')
     expect(statusSpecial('powerAura', 'attacker', 2)).toBeUndefined()
-    // Une relique qui se déclenche : + pour l'attaquant, − pour le défenseur
-    expect(relicSpecial('wolf-fang', 'Dent de loup', 'attacker').sign).toBe('plus')
-    expect(relicSpecial('bramble-collar', 'Collier de ronces', 'defender').sign).toBe('minus')
+    // Une relique qui se déclenche : + pour le bonus de son porteur, même chez le défenseur (0.110.0) ; − seulement
+    // quand elle contre le coup en frappant l'attaquant (Conque des vents)
+    const armor = { type: 'applyStatus', target: 1, status: 'thorns', stacks: 2, result: { kind: 'applied', stacks: 2 } } as const
+    const gust = { type: 'damage', target: 0, amount: 2, source: 'wind' } as const
+    expect(relicSpecial('wolf-fang', 'Dent de loup', 'attacker', []).sign).toBe('plus')
+    expect(relicSpecial('bramble-collar', 'Collier de ronces', 'defender', [armor]).sign).toBe('plus')
+    expect(relicSpecial('wind-conch', 'Conque des vents', 'defender', [gust]).sign).toBe('minus')
   })
 
   it("zone de surcharge d'un coup : dans l'ordre du livre de règles, sans modificateur d'aura", () => {

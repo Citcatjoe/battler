@@ -1,5 +1,5 @@
 import type { CharacterDef } from './character'
-import { DIE_FACES, faceTrigger, relationOf, rollFace, type CharacterEvent, type Effect } from './events'
+import { DIE_FACES, faceTrigger, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
 
@@ -92,14 +92,14 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
     case 'gild':
       return FACES.filter((f) => !state.gilded.has(f) && isBare(base, state, f))
     case 'sharpen':
-      // Aiguisable : un rang de plus change ses effets (un statut au plafond, ou qui ne cumule pas, ne gagne rien). Pas de
-      // rang maximal : le nombre d'aiguisages se règle par le nombre d'occasions qu'un mode en donne (décision de
-      // l'utilisateur, 2026-10-23)
+      // Aiguisable : une compétence qui déclare son axe de rang (0.110.0, `RankAxis`), toutes celles du roster ; chaque rang
+      // change quelque chose. Pas de rang maximal : le nombre d'aiguisages se règle par le nombre d'occasions qu'un mode
+      // en donne (décision de l'utilisateur, 2026-10-23)
       return FACES.filter((f) =>
         skillsOn(base, state, f).some((e) => {
           const rank = state.ranks.get(e.id) ?? 0
           const [now, next] = [sharpen(e, rank), sharpen(e, rank + 1)]
-          return JSON.stringify([next.effects, next.hitMultiplier]) !== JSON.stringify([now.effects, now.hitMultiplier])
+          return JSON.stringify({ ...next, name: '' }) !== JSON.stringify({ ...now, name: '' })
         }),
       )
     case 'copy':
@@ -195,33 +195,69 @@ const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 /** Le rang affiché d'une compétence aiguisée `rank` fois : II, III… (une compétence nue est au rang I). */
 export const rankLabel = (rank: number) => ROMAN[rank + 1] ?? String(rank + 1)
 
-function sharpenEffect(effect: Effect, rank: number): Effect {
+/**
+ * Un effet aiguisé : `gain` de plus sur l'axe de la compétence (0.110.0). Les charges et l'intensité vont au statut posé,
+ * le montant aux dégâts et aux soins (le repli d'une purge compris), la part à une relâche.
+ */
+function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Effect {
   switch (effect.type) {
-    case 'applyStatus': {
-      const def = STATUSES[effect.status]
-      // Une charge de plus par rang, pour un statut qui cumule ses charges et sous son plafond
-      if (def.stacking !== 'add') return effect
-      return { ...effect, stacks: Math.min(def.maxStacks ?? Infinity, effect.stacks + rank) }
-    }
+    case 'applyStatus':
+      if (kind === 'stacks') return { ...effect, stacks: effect.stacks + gain }
+      return kind === 'power' ? { ...effect, power: (effect.power ?? 0) + gain } : effect
     case 'heal':
     case 'damage':
-      return { ...effect, amount: effect.amount + 2 * rank }
+      return kind === 'amount' ? { ...effect, amount: effect.amount + gain } : effect
     case 'release':
-      return { ...effect, min: effect.min + 2 * rank }
-    case 'cleanse':
-      return effect.orElse ? { ...effect, orElse: sharpenEffect(effect.orElse, rank) as typeof effect.orElse } : effect
+      return kind === 'share' ? { ...effect, share: (effect.share ?? 1) + gain } : effect
+    case 'cleanse': {
+      // Le repli d'une purge (Purification : sa lumière) gagne le montant
+      const fallback = effect.orElse
+      if (kind !== 'amount' || !fallback || (fallback.type !== 'damage' && fallback.type !== 'heal')) return effect
+      return { ...effect, orElse: { ...fallback, amount: fallback.amount + gain } }
+    }
   }
 }
 
-/** Une compétence aiguisée `rank` fois : son nom porte son rang, ses effets grandissent (Crescendo : ×1 de plus). */
+/**
+ * Une compétence aiguisée `rank` fois : son nom porte son rang, et elle gagne `rank` fois ce que son axe de rang dit
+ * (`RankAxis`, 0.110.0 : un statut, son premier effet qui en pose un ; un coup ×N ; une limite par combat). Sans axe :
+ * elle ne s'aiguise pas.
+ */
 function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
-  if (rank === 0) return e
+  if (rank === 0 || !e.rankAxis) return e
+  const { kind, per } = e.rankAxis
+  const gain = per * rank
+  const posed = e.effects.findIndex((x) => x.type === 'applyStatus')
   return {
     ...e,
     name: `${e.name} ${rankLabel(rank)}`,
-    effects: e.effects.map((x) => sharpenEffect(x, rank)),
-    ...(e.hitMultiplier !== undefined && { hitMultiplier: e.hitMultiplier + rank }),
+    effects: e.effects.map((x, k) => (x.type === 'applyStatus' && k !== posed ? x : sharpenEffect(x, kind, gain))),
+    ...(kind === 'multiplier' && e.hitMultiplier !== undefined && { hitMultiplier: e.hitMultiplier + gain }),
+    ...(kind === 'limit' && e.limit !== undefined && { limit: e.limit + gain }),
   }
+}
+
+/**
+ * Ce qu'un rang d'aiguisage ajoute à une compétence, en une ligne (« +1 Saignement » ; un demi-rang : « +1 coup par
+ * rafale une fois sur deux, dès la première »).
+ */
+export function rankText(e: CharacterEvent): string {
+  if (!e.rankAxis) return 'ne s’aiguise pas'
+  const { kind, per } = e.rankAxis
+  // Un demi-rang se paie en entier une fois sur deux (`paidOnFire`)
+  const half = kind !== 'share' && !Number.isInteger(per)
+  const n = half ? Math.ceil(per) : per
+  const posed = e.effects.find((x) => x.type === 'applyStatus')
+  const hits = e.effects.find((x) => x.type === 'damage')?.hits
+  const gain = {
+    stacks: `+${n} ${posed ? STATUSES[posed.status].name : 'charge'}`,
+    power: (posed && STATUSES[posed.status].power?.(n)) ?? `+${n}`,
+    amount: hits ? `+${n} à chacun de ses ${hits} coups` : `+${n} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : 'dégâts'}`,
+    multiplier: `coup ×${n} de plus`,
+    limit: `${n} fois de plus par combat`,
+    share: `+${Math.round(per * 100)} % des jauges relâchées`,
+  }[kind]
+  return half ? `${gain} une fois sur deux, dès la première` : gain
 }
 
 /**

@@ -29,15 +29,20 @@ export interface SceneTiming {
   aim?: 'opponent' | 'self'
   /** L'arène tremble à chaque impact (météores, roche qui jaillit) : la secousse des gros coups (FightScreen) */
   quake?: true
+  /**
+   * Son de chaque coup vers l'adversaire, à son impact (0.110.0, docs/SONS.md § 3 et § 4.1) : les coups d'une scène
+   * sont égaux, aucun n'est lourd. Défaut : Coup.
+   */
+  sound?: 'hit' | 'crit' | 'thunder'
 }
 
 export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   // Foudre (druide, 0.76.0) : l'arène s'assombrit, trois éclairs tombent l'un après l'autre autour de la
-  // cible (un coup de 2 chacun), puis la lumière revient
-  lightning: { impacts: [440, 800, 1160], length: 1750 },
+  // cible (un coup de 1 chacun), puis la lumière revient ; chacun sonne l'Éclair (0.110.0 ; le Coup critique avant)
+  lightning: { impacts: [440, 800, 1160], length: 1750, sound: 'thunder' },
   // Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : le sceau de l'objet se brise, sa magie envahit l'arène.
   // Braise captive : le ciel rougit, trois météores tombent en diagonale sur l'adversaire (un coup de 2 chacun)
-  emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true },
+  emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true, sound: 'crit' },
   // Conque des vents : l'esquive appelle le vent, trois lames d'air traversent l'arène vers l'adversaire
   gale: { impacts: [420, 640, 860], length: 1450 },
   // Larme de givre : le givre gagne l'écran, une gangue se referme sur le porteur et éclate (purge et soin)

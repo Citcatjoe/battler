@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import type { DamageSource } from './damage'
-import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
+import { DIE_FACES, effectsOnFire, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
@@ -465,18 +465,29 @@ export function resolveAttack(
     raw - def.armor < 1 ||
     (damage === 1 &&
       defenderStatuses.some((s) => STATUSES[s.id].shield && s.stacks > (shields.find((x) => x.status === s.id)?.absorbed ?? 0)))
-  // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers, au moins 1
+  // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers, additionnés, puis un seul plancher
+  // de 1 (le résultat ne dépend pas de l'ordre de pose)
   const shielded = damage
-  let finalFloor = false
+  const finals: Attack['modifiers'] = []
   for (const s of attackerStatuses) {
     const modify = STATUSES[s.id].modifyFinal
     if (!modify) continue
-    const wanted = Math.round(modify(damage, s))
-    const next = Math.max(1, wanted)
-    if (wanted < 1) finalFloor = true
-    if (next !== damage) modifiers.push({ status: s.id, by: 'attacker', delta: next - damage, final: true })
-    damage = next
+    const delta = Math.round(modify(damage, s)) - damage
+    if (delta !== 0) finals.push({ status: s.id, by: 'attacker', delta, final: true })
   }
+  const wanted = finals.reduce((t, m) => t + m.delta, shielded)
+  const finalFloor = wanted < 1
+  damage = Math.max(1, wanted)
+  // Le plancher se retranche des malus, du dernier posé au premier : la somme des écarts reste les dégâts finaux
+  let lift = damage - wanted
+  for (let k = finals.length - 1; k >= 0 && lift > 0; k--) {
+    const m = finals[k]
+    if (m.delta >= 0) continue
+    const back = Math.min(lift, -m.delta)
+    finals[k] = { ...m, delta: m.delta + back }
+    lift -= back
+  }
+  modifiers.push(...finals.filter((m) => m.delta !== 0))
   return {
     ...base,
     value: drawn,
@@ -496,6 +507,53 @@ export function resolveAttack(
   }
 }
 
+/* ---------- Effet nul ---------- */
+
+/** Le statut qu'un effet `applyStatus` pose, `extra` charges de plus (Pourfendre), durée et intensité comprises */
+function statusOfEffect(effect: Extract<Effect, { type: 'applyStatus' }>, extra = 0): Status {
+  const stacks = effect.stacks + extra
+  const status: Status = { id: effect.status, stacks }
+  // Une seule valeur (Brûlure, `turnsFromStacks`) : sans durée donnée, il dure autant de tours que de charges
+  const turns = effect.turns ?? (STATUSES[effect.status].turnsFromStacks ? stacks : undefined)
+  if (turns !== undefined) status.turns = turns
+  if (effect.power) status.power = effect.power
+  return status
+}
+
+/**
+ * L'effet ne changerait rien (0.110.0) : un soin sur des PV pleins, un statut déjà à son plafond ou bloqué par une
+ * immunité, une purge sans rien à retirer ni repli utile. Lu sur un état, sans rien appliquer ni tirer.
+ */
+function isNilEffect(effect: Effect, owner: Side, view: Snapshot, fighters: Pair<Pick<Character, 'maxHp' | 'immunities'>>): boolean {
+  const target = effect.target === 'opponent' ? other(owner) : owner
+  switch (effect.type) {
+    case 'heal':
+      return view.hp[target] >= fighters[target].maxHp
+    case 'damage':
+    case 'release':
+      return false
+    case 'applyStatus': {
+      const { outcome } = resolveApplication(view.statuses[target], statusOfEffect(effect), fighters[target].immunities)
+      // Une garde qui bloque s'use : ce n'est pas nul ; une immunité qui bloque, si
+      if (outcome.kind === 'blocked') return outcome.by === 'immunity' || !STATUSES[outcome.by].wards
+      return outcome.kind === 'applied' && outcome.stacks === 0 && !outcome.cancelled
+    }
+    case 'cleanse': {
+      const any = view.statuses[target].some((s) => STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id))
+      return !any && (effect.orElse === undefined || isNilEffect(effect.orElse, owner, view, fighters))
+    }
+  }
+}
+
+/**
+ * Une relique dont tous les effets seraient nuls sur cet état ne part pas et ne s'use pas (0.110.0, RESOLUTION § 5
+ * règle 6). Lu par le moteur au déclenchement et par l'audit.
+ */
+export function relicIsInert(relic: Relic, side: Side, view: Snapshot, fighters: Pair<Pick<Character, 'maxHp' | 'immunities'>>): boolean {
+  const effects = relic.effects ?? []
+  return effects.length > 0 && effects.every((e) => isNilEffect(e, side, view, fighters))
+}
+
 /* ---------- Combat complet ---------- */
 
 interface FighterState {
@@ -503,6 +561,8 @@ interface FighterState {
   statuses: Status[]
   /** Déclenchements par id d'événement, pour `limit` */
   fired: Record<string, number>
+  /** Actions par statut (effets de tour et réactions), pour payer ses demi-rangs une fois sur deux (0.110.0) */
+  acted: Map<StatusId, number>
   bloodied: boolean
   /** Statuts posés ou renouvelés pendant le tour en cours : pas de décompte à la fin de ce tour */
   fresh: Set<StatusId>
@@ -556,6 +616,7 @@ export function simulateCombat(
       hp: f.maxHp,
       statuses: formStatuses(f, 0),
       fired: {},
+      acted: new Map(),
       bloodied: false,
       fresh: new Set(),
       form: 0,
@@ -678,11 +739,8 @@ export function simulateCombat(
       }
       case 'applyStatus': {
         // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus
-        const stacks = effect.stacks + (effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0)
-        const status: Status = { id: effect.status, stacks }
-        // Une seule valeur (Brûlure, `turnsFromStacks`) : sans durée donnée, il dure autant de tours que de charges
-        const turns = effect.turns ?? (STATUSES[effect.status].turnsFromStacks ? stacks : undefined)
-        if (turns !== undefined) status.turns = turns
+        const status = statusOfEffect(effect, effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0)
+        const { stacks, turns } = status
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
         state.statuses = list
         if (outcome.kind === 'applied') state.fresh.add(effect.status)
@@ -723,6 +781,11 @@ export function simulateCombat(
     }
   }
 
+  /** Une relique dont tous les effets seraient nuls ne part pas et ne s'use pas (Dent de loup au plafond du Vol de vie) */
+  function inert(side: Side, relic: Relic) {
+    return relicIsInert(relic, side, { hp: [states[0].hp, states[1].hp], statuses: [states[0].statuses, states[1].statuses] }, fighters)
+  }
+
   /** Applique des effets dans l'ordre et s'arrête au premier K.O. (vérification d'état). */
   function applyEffects(owner: Side, effects: readonly Effect[]) {
     const applied: AppliedEffect[] = []
@@ -735,15 +798,17 @@ export function simulateCombat(
 
   /**
    * Ce qu'un statut fait dans une fenêtre : sa réaction déclarée (`reactions`), ou sa réaction à un coup qui touche
-   * (Vol de vie sur `hit` : les PV retirés lui reviennent ; Riposte sur `hurt` : une part renvoyée). Undefined : rien.
+   * (Vol de vie sur `hit` : les PV retirés lui reviennent ; Riposte sur `hurt` : une part renvoyée), son intensité en plus
+   * (rangs d'aiguisage, 0.110.0). Undefined : rien.
    */
   function reactionTo(status: Status, trigger: Trigger): Effect[] | undefined {
     const def = STATUSES[status.id]
     const declared = def.reactions?.[trigger]
     if (declared) return declared(status)
     if (!strike?.touched) return undefined
-    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt }]
-    if (trigger === 'hurt' && def.reflectsHit) return [{ type: 'damage', amount: Math.round(strike.dealt * def.reflectsHit), target: 'opponent', source: 'strike' }]
+    const more = status.power ?? 0
+    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt + more }]
+    if (trigger === 'hurt' && def.reflectsHit) return [{ type: 'damage', amount: Math.round(strike.dealt * def.reflectsHit) + more, target: 'opponent', source: 'strike' }]
     return undefined
   }
 
@@ -789,7 +854,7 @@ export function simulateCombat(
       const status = now && was && was.stacks < now.stacks ? { ...now, stacks: was.stacks } : now
       const react = status && reactionTo(status, trigger)
       if (!react) continue
-      const effects = applyEffects(side, react)
+      const effects = applyEffects(side, actedEffects(side, id, react))
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie, Riposte : le statut agit avec ses charges, puis en perd une dans la même étape
       else if (def.decays || def.drainsHit || def.reflectsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
@@ -847,8 +912,11 @@ export function simulateCombat(
 
   /** Une compétence part : ses effets s'appliquent, son étape est émise. Renvoie le perdant s'il y a K.O. */
   function fireEvent(side: Side, event: CharacterEvent, trigger: Trigger, cause?: number): Side | undefined {
-    states[side].fired[event.id] = (states[side].fired[event.id] ?? 0) + 1
-    const effects = applyEffects(side, event.effects)
+    const fired = (states[side].fired[event.id] ?? 0) + 1
+    states[side].fired[event.id] = fired
+    // Demi-rang (0.110.0) : ses quantités fractionnaires se paient en entier, une fois sur deux ; l'intensité d'une aura
+    // attend les actions de son statut (`actedEffects`)
+    const effects = applyEffects(side, effectsOnFire(event.effects, fired, true))
     const id = push({ type: 'event', event: { side, eventId: event.id, name: event.name, trigger, effects } }, cause)
     return fallen() ?? checkThresholds(id)
   }
@@ -876,8 +944,8 @@ export function simulateCombat(
   }
 
   /**
-   * Relique prête : il lui reste une charge, sa recharge est passée, ses conditions sont remplies. Aucun
-   * tirage : une relique n'a pas de chance de déclenchement.
+   * Relique prête : il lui reste une charge, sa recharge est passée, ses conditions sont remplies, et son effet change
+   * quelque chose (0.110.0). Aucun tirage : une relique n'a pas de chance de déclenchement.
    */
   function fireRelic(side: Side, relic: Relic, cause?: number): Side | undefined {
     const s = states[side]
@@ -885,6 +953,7 @@ export function simulateCombat(
     if (relic.charges !== undefined && uses >= relic.charges) return undefined
     if (s.turnsTaken < (s.relicReady[relic.id] ?? 0)) return undefined
     if (relic.when && !relic.when.every((c) => conditionMet(side, c))) return undefined
+    if (inert(side, relic)) return undefined
     s.relicUses[relic.id] = uses + 1
     if (relic.cooldown) s.relicReady[relic.id] = s.turnsTaken + relic.cooldown
     const effects = applyEffects(side, relic.effects ?? [])
@@ -895,50 +964,53 @@ export function simulateCombat(
   /**
    * Après chaque changement de PV : la fenêtre `healed` de qui a regagné des PV (Encens de l'abbaye), puis les seuils,
    * « bloodied » (la première fois sous la moitié) et les reliques de seuil, qui partent quand les PV passent sous le
-   * leur et se réarment s'ils remontent au-dessus.
+   * leur et se réarment s'ils remontent au-dessus. L'actif d'abord, puis le défenseur (§ 5, règle 1).
    * `cause` : l'étape dont le changement de PV est vérifié ; elle devient la cause de ce qui se déclenche.
    */
   function checkThresholds(cause: number): Side | undefined {
-    // Les passages se lisent sur les PV du changement vérifié (0.85.0) : une relique déclenchée pendant cette même
-    // vérification (Larme de givre qui soigne) n'efface pas le passage d'une autre relique (Trophée adverse, même coup)
-    const crossed = new Set<string>()
-    for (const side of SIDES)
-      for (const relic of fighters[side].relics) {
-        const t = relic.trigger
-        if (t?.type !== 'hpBelow') continue
-        const watched = t.who === 'opponent' ? other(side) : side
-        const hp = states[watched].hp
-        if (hp > 0 && hp < fighters[watched].maxHp * t.ratio && !states[side].relicBelow.has(relic.id)) crossed.add(`${side}:${relic.id}`)
-      }
-    // Soin reçu : la fenêtre s'ouvre une fois par étape soignante, avant les seuils ; ce qu'elle déclenche vérifie
-    // l'état à son tour (une relique qui soignerait rouvrirait la fenêtre, avec sa propre étape pour cause)
-    for (const side of SIDES) {
-      if (!healed[side]) continue
-      healed[side] = false
-      const down = fire(side, 'healed', cause)
-      if (down !== undefined) return down
-    }
-    for (const side of SIDES) {
-      const s = states[side]
-      if (!s.bloodied && s.hp > 0 && s.hp < fighters[side].maxHp / 2) {
-        s.bloodied = true
-        const down = fire(side, 'bloodied', cause)
-        if (down !== undefined) return down
-      }
+    const order: Side[] = [owner, other(owner)]
+    // Les passages se lisent sur les PV du changement vérifié (0.85.0) et sont tous marqués avant qu'aucun ne parte
+    // (0.110.0) : chacun a ce changement pour cause, pas la relique partie avant lui ; une relique qui soigne (Larme de
+    // givre) n'efface pas le passage d'une autre (Trophée adverse, même coup). Une relique dont l'effet serait nul
+    // n'est pas marquée : elle attend une vérification où elle ajoute quelque chose.
+    const due: [Side, Relic][] = []
+    for (const side of order)
       for (const relic of fighters[side].relics) {
         const t = relic.trigger
         if (t?.type !== 'hpBelow') continue
         // Le seuil lit les PV du porteur, ou ceux de l'adversaire (Trophée du chasseur) ; l'effet reste au porteur
         const watched = t.who === 'opponent' ? other(side) : side
         const hp = states[watched].hp
-        const passed = crossed.has(`${side}:${relic.id}`)
-        if (!passed && hp >= fighters[watched].maxHp * t.ratio) s.relicBelow.delete(relic.id)
-        else if ((passed || hp > 0) && !s.relicBelow.has(relic.id)) {
-          s.relicBelow.add(relic.id)
-          const down = fireRelic(side, relic, cause)
-          if (down !== undefined) return down
+        const below = states[side].relicBelow
+        if (hp >= fighters[watched].maxHp * t.ratio) below.delete(relic.id)
+        else if (hp > 0 && !below.has(relic.id) && !inert(side, relic)) {
+          below.add(relic.id)
+          due.push([side, relic])
         }
       }
+    // Soin reçu : la fenêtre s'ouvre une fois par étape soignante, avant les seuils ; ce qu'elle déclenche vérifie
+    // l'état à son tour (une relique qui soignerait rouvrirait la fenêtre, avec sa propre étape pour cause)
+    for (const side of order) {
+      if (!healed[side]) continue
+      healed[side] = false
+      const down = fire(side, 'healed', cause)
+      if (down !== undefined) return down
+    }
+    for (const side of order) {
+      const s = states[side]
+      if (s.bloodied || s.hp <= 0 || s.hp >= fighters[side].maxHp / 2) continue
+      s.bloodied = true
+      const down = fire(side, 'bloodied', cause)
+      if (down !== undefined) return down
+    }
+    for (const [side, relic] of due) {
+      // Devenue nulle entre-temps (une relique partie avant elle) : elle n'est plus marquée et attend
+      if (inert(side, relic)) {
+        states[side].relicBelow.delete(relic.id)
+        continue
+      }
+      const down = fireRelic(side, relic, cause)
+      if (down !== undefined) return down
     }
     return fallen()
   }
@@ -950,6 +1022,16 @@ export function simulateCombat(
       if (down !== undefined) return down
     }
     return undefined
+  }
+
+  /**
+   * Les effets d'une action de statut (effet de tour ou réaction) : son intensité à demi (aura aiguisée d'un demi-rang,
+   * 0.110.0) se paie en entier une fois sur deux, dès la première, comme les quantités d'une compétence.
+   */
+  function actedEffects(side: Side, id: StatusId, effects: Effect[]): Effect[] {
+    const k = (states[side].acted.get(id) ?? 0) + 1
+    states[side].acted.set(id, k)
+    return effectsOnFire(effects, k)
   }
 
   /**
@@ -967,7 +1049,7 @@ export function simulateCombat(
       const tick = phase === 'turnStart' ? def.onTurnStart?.(status) : def.onTurnEnd?.(status)
       // Un statut retiré entre-temps (ex. annulé par son opposé) n'agit plus.
       if (!tick || !states[side].statuses.some((s) => s.id === status.id)) continue
-      const effects = applyEffects(side, tick)
+      const effects = applyEffects(side, actedEffects(side, status.id, tick))
       // S'estomper est la règle même du statut : il perd une charge chaque fois qu'il agit, dans l'étape de son effet
       if (def.decays) {
         states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
@@ -1051,6 +1133,11 @@ export function simulateCombat(
    * `cause` : la rafale dont le jet fait partie (deux dés, Coup de chance).
    */
   function jet(attacker: Side, cause?: number): Side | undefined {
+    // Coups instantanés (Furie des vents) : juste après le jet qui les a posés, dans la même action (RESOLUTION § 2)
+    return throwDie(attacker, cause) ?? burst(attacker)
+  }
+
+  function throwDie(attacker: Side, cause?: number): Side | undefined {
     const { roll, forced } = drawDie()
     const source = fighters[attacker].attackSourceIn(states[attacker].form)
     if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, source, forced, replaced: true }, false, cause)
@@ -1077,8 +1164,15 @@ export function simulateCombat(
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
     if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)
     for (const { status, absorbed } of outcome.shields) def.statuses = consumeStatus(def.statuses, status, absorbed)
-    // Fausse note : le coup du porteur qui touche l'a subie, elle disparaît avec toutes ses charges (`spentOnHit`)
-    if (touched) att.statuses = att.statuses.filter((x) => !STATUSES[x.id].spentOnHit)
+    // Fausse note : le coup du porteur qui touche l'a subie, elle disparaît avec toutes ses charges (`spentOnHit`) ; aiguisée
+    // (0.110.0), elle use d'abord son intensité, un coup de plus chacune
+    if (touched)
+      att.statuses = att.statuses.flatMap((x) => {
+        if (!STATUSES[x.id].spentOnHit) return [x]
+        if (!x.power) return []
+        const { power, ...rest } = x
+        return [power > 1 ? { ...rest, power: power - 1 } : rest]
+      })
     // Vol de vie sur un coup esquivé : la charge est perdue sans soin, au moment même du coup (un jet remplacé ne
     // porte pas de coup : la charge reste). Sur un coup qui touche, il réagit dans la fenêtre `hit`.
     const drain = outcome.dodged ? att.statuses.find((s) => STATUSES[s.id].drainsHit) : undefined
@@ -1128,7 +1222,8 @@ export function simulateCombat(
     const forced = nextForced()
     const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
     const toss = STATUSES[coin.id].coinToss!
-    const extra = dealt * (toss.multiplier - 1)
+    // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
+    const extra = dealt * (toss.multiplier + (coin.power ?? 0) - 1)
     const effects = heads ? applyEffects(side, [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }]) : []
     const id = push(
       { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
@@ -1142,16 +1237,17 @@ export function simulateCombat(
   }
 
   /**
-   * Coups instantanés (Furie des vents) : une charge gagnée pendant l'action frappe tout de suite, en coups de base
-   * bruts (0.69.0), chacun avec son dé : ils ne déclenchent aucune compétence, donc aucune Furie en chaîne. Ils ont pour
-   * cause l'étape qui a posé la charge (Furie des vents sur un 2), à défaut le dernier coup.
+   * Coups instantanés (Furie des vents) : les charges gagnées pendant un jet frappent juste après lui, toutes à la fois,
+   * en coups de base bruts (0.69.0), chacun avec son dé : ils ne déclenchent aucune compétence, donc aucune Furie en
+   * chaîne. Chaque charge donne `extraStrikes` coups, plus son intensité (Furie aiguisée, 0.110.0). Ils ont pour cause
+   * l'étape qui a posé la charge (Furie des vents sur un 2), à défaut le dernier coup.
    */
   function burst(attacker: Side): Side | undefined {
     const att = states[attacker]
     const charge = att.statuses.find((s) => STATUSES[s.id].instantStrikes)
     if (!charge) return undefined
-    const strikes = STATUSES[charge.id].extraStrikes ?? 1
-    att.statuses = consumeStatus(att.statuses, charge.id, 1)
+    const strikes = ((STATUSES[charge.id].extraStrikes ?? 1) + (charge.power ?? 0)) * charge.stacks
+    att.statuses = att.statuses.filter((s) => s.id !== charge.id)
     const burstBeat = push(
       { type: 'flurry', side: attacker, status: charge.id, strikes, faces: Array.from({ length: strikes }, () => DIE_FACES) },
       posedBy[attacker][charge.id] ?? lastStrike,
@@ -1218,15 +1314,15 @@ export function simulateCombat(
     down = statusPhase(attacker, 'turnStart') ?? fire(attacker, 'turnStart')
     if (down !== undefined) return end(other(down), 'ko')
 
-    // Phase 2 · Action : un statut de contrôle fait perdre l'action, sinon ses jets, puis les coups instantanés d'une
-    // charge gagnée pendant l'action (Furie des vents)
+    // Phase 2 · Action : un statut de contrôle fait perdre l'action, sinon ses jets (chacun suivi des coups instantanés
+    // qu'il a posés : Furie des vents)
     phase = 'action'
     const control = att.statuses.find((s) => STATUSES[s.id].skipsAction)
     if (control) {
       att.statuses = consumeStatus(att.statuses, control.id, 1)
       push({ type: 'skip', side: attacker, status: control.id })
     } else {
-      down = action(attacker) ?? burst(attacker)
+      down = action(attacker)
       if (down !== undefined) return end(other(down), 'ko')
     }
 

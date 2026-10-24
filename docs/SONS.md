@@ -28,7 +28,7 @@ Bilan de la 0.36.0, jugé par l'utilisateur comme « une véritable cacophonie �
 7. **Le silence est permis.** Ce qui se voit déjà et revient souvent sans rien changer (un compteur qui baisse, un bonus qui expire) ne sonne pas.
 8. **Un son tient dans sa fenêtre.** Il se termine avant l'instant suivant à ×1 (durées du § 3). À ×2 et ×4, il est écourté au prorata, avec un fondu ; seuls le clic, le choc du face-à-face, le KO et la victoire jouent en entier.
 
-## 3. Le vocabulaire : 22 sons
+## 3. Le vocabulaire : 23 sons
 
 Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 
@@ -40,9 +40,10 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | | Pièce retombe | le résultat de la pièce est là, pile comme face | pièce qui claque net sur une table, plus fort que le lancer | 2 | 0,2 à 0,6 s |
 | | Pile réussie (Ding) | une bonne nouvelle : la pièce est tombée sur pile, ou un label + (qui amplifie l'action de l'attaquant) tombe sous le dé (2026-10-21, § 4.4) | « ding » clair et net : juste après la pièce qui retombe, ou avec le label | 2 | 0,5 à 0,8 s |
 | **Coups** | Coup | des dégâts portés par un coup, quelle qu'en soit la source | frappe d'épée, bruit métallique net | 2 | 0,3 à 0,4 s |
-| | Coup critique (composé) | un coup critique, le coup de Pile, ou le dernier coup d'une relâche (Rétribution) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
+| | Coup critique (composé) | un coup critique, le coup de Pile, le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts ou plus (la Rétribution, qui relâche la moitié de ses jauges en un coup) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
 | | *Grondement* | couche du Coup critique, jamais jouée seule | gros choc grave qui résonne | 1 | 0,6 à 0,9 s |
 | | Esquive | un coup qui manque sa cible | arme qui fend l'air dans le vide | 3 | 0,2 à 0,3 s |
+| | Éclair | un éclair de la Foudre tombe sur sa cible, à chaque impact de sa scène (0.110.0) : des dégâts égaux, aucun n'est lourd | claquement sec de la foudre, puis un roulement très bref ; ni choc d'arme, ni Grondement | 2 | 0,2 à 0,35 s (les éclairs tombent toutes les 0,36 s) |
 | **États** | Aura gagnée | un personnage pose son aura | souffle magique qui enfle, accord lumineux | 2 | 0,8 à 1,2 s |
 | | Aura perdue | une aura est retirée | le même souffle qui retombe et s'éteint | 3 | 0,6 à 1 s |
 | | Bonus gagné | un bonus posé sur soi (hors aura) | synthé magique en majeur, ascendant, lumineux | 3 | 0,4 à 0,7 s |
@@ -58,7 +59,7 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret.
 | **Interface** | Clic | un bouton | clic sec, bois ou métal léger | 4 | 0,05 à 0,1 s |
 | | Choc du face-à-face | la présentation du duel | choc glorieux, épique | 1 | 0,6 à 4 s |
 
-Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 22 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2).
+Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulaire compte donc 23 significations. Le Coup critique n'a pas de fichier, le Grondement en a un ; les dés en ont plusieurs (règle 2) ; l'Éclair n'a pas encore le sien (§ 7).
 
 **Retirés par rapport à la 0.36.0** (33 sons) : dé au maximum (décision de l'utilisateur), élan (décision : l'impact suffit à faire sonner un coup), les trois paliers d'impact (fondus dans Coup), annonce du critique, carillon d'événement, peur (devient Malus reçu quand elle est posée, puis Tour perdu), purification (Dissipation), épines et parade (Coup), vol de vie (Soin), attente de l'ogre (Malus reçu), Furie des vents (Bonus gagné), pile et face (Pièce retombe, la même sur les deux faces, puis Coup critique sur pile), druide vers ours et ours vers druide (Transformation), rugissement et griffes (Coup).
 
@@ -77,11 +78,12 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | `skip` | Tour perdu |
 | `shift` | Transformation |
 | `coin` | Pièce lancée, Pièce retombe ; sur pile, Pile réussie **en même temps** (0.55.0, demande de l'utilisateur : le résultat, son son, son badge et son texte tombent d'un bloc ; avant, 0,14 s après), puis, après un temps de lecture, Coup critique au coup ; sur face, rien de plus. La pièce seule ne disait pas assez si le pari était gagné (retour de l'utilisateur, 0.36.4). |
+| `relic` | Le son déduit de ses effets (§ 4.2), et le son du signe de son label (§ 4.4), au même instant ; vers l'adversaire, ses coups de scène sonnent le son que leur scène déclare (Coup pour la Conque des vents, Coup critique pour la Braise captive). Rien si aucun effet n'a de résultat (`MISE_EN_SCENE.md` M25) |
 | ~~`pair`~~ | Retirée en phase 5 ter avec les doubles de la barde, et avec elle le « ding » de tout double (Pile réussie en même temps que les dés, 0.46.0) : ses deux dés sont une rafale (`flurry`). |
 | `statusAge` | Rien : le compteur qui baisse et l'icône qui part se voient (règle 7) |
 | Fin du combat | KO, puis Victoire |
 
-Un coup de compétence (Rétribution, une jauge par coup) joue un Coup par jauge, l'un après l'autre ; le dernier, mis en scène comme un coup lourd, joue le Coup critique (décision de l'utilisateur). Un coup de compétence unique de 10 dégâts ou plus est aussi un coup lourd.
+Un coup de compétence qui relâche des jauges en entier joue un Coup par jauge, l'un après l'autre ; le dernier, mis en scène comme un coup lourd, joue le Coup critique (décision de l'utilisateur). Depuis la 0.107.0, la Rétribution ne relâche que la moitié de ses jauges : un seul coup, Coup, ou Coup critique à 10 dégâts ou plus (un coup de compétence unique de 10 dégâts ou plus est un coup lourd).
 
 ### 4.2 Le son d'une compétence
 
@@ -94,32 +96,34 @@ Une compétence joue **un seul son**, le premier de cette liste qui correspond �
 5. un bonus ou un malus retiré → **Dissipation** ;
 6. des PV regagnés → **Soin** ;
 7. des dégâts → **Coup** (un par coup joué) ;
-8. rien de tout cela (effet refusé par une immunité, statut déjà à son plafond, par exemple) → aucun son : le texte flottant suffit. Une aura cumulable reposée à son maximum (Aura de sainteté à 3) ne joue donc plus Aura gagnée (2026-10-21) : rien n'est arrivé, seul le texte neutre « … au maximum » s'affiche.
+8. rien de tout cela → aucun son : le texte flottant suffit. C'est le cas d'un effet sans résultat (refusé par une immunité, neutralisé par son opposé, statut déjà à son plafond, purge à vide) et d'un **mécanisme de compétence posé** (Pile ou face, Furie des vents : son sceau le montre, et ce qu'il déclenche a ses sons, 0.110.0 ; avant, Bonus gagné). Une aura cumulable reposée à son maximum (Aura de sainteté à 2) ne joue donc plus Aura gagnée (2026-10-21) : rien n'est arrivé, seul le texte neutre « … au maximum » s'affiche. Une **aura non cumulable reposée telle quelle** (Aura de puissance, Aura d'immunité) non plus (0.110.0) : le moteur la compte posée, mais rien n'a changé (`MISE_EN_SCENE.md` M25).
 
 Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), type d'effet (`heal`, `damage`, `cleanse`, `applyStatus`). Aucun nom de compétence ni de statut n'apparaît dans la règle.
 
-**Les reliques** (0.75.0, [RELIQUES.md](RELIQUES.md)) suivent la même règle : une relique qui se déclenche joue le son de ce qu'elle produit (le Chapelet, Dissipation ou Soin ; la Dent de loup, Bonus gagné ; la Clepsydre, Aura gagnée), sans son propre. Un coup renforcé par une relique (Fer à quatre clous) sonne comme un coup ; les dégâts directs de l'Osselet, comme une réaction (Coup). Depuis le 2026-10-21, une relique qui agit pose aussi son label sous le dé : le son de son signe (§ 4.4 ; le ding chez l'attaquant, Malus reçu chez le défenseur) s'ajoute au son de son effet. C'est la réponse retenue à la piste « on entend relique » (RELIQUES.md § 3) : le label dit « surcharge », le son de l'effet dit laquelle.
+**Les reliques** (0.75.0, [RELIQUES.md](RELIQUES.md)) suivent la même règle : une relique qui se déclenche joue le son de ce qu'elle produit (le Chapelet, Dissipation ou Soin ; la Dent de loup et la Clepsydre, Bonus gagné), sans son propre. Un coup renforcé par une relique (Fer à quatre clous) sonne comme un coup ; les dégâts directs de l'Osselet, comme une réaction (Coup). Depuis le 2026-10-21, une relique qui agit pose aussi son label sous le dé : le son de son signe (§ 4.4 : le ding pour un bonus de son porteur, chez l'attaquant comme chez le défenseur ; Malus reçu pour une relique du défenseur qui contre le coup, la Conque des vents) s'ajoute au son de son effet. C'est la réponse retenue à la piste « on entend relique » (RELIQUES.md § 3) : le label dit « surcharge », le son de l'effet dit laquelle. Une relique dont le label se tait (M25 : rien n'a changé) ne sonne pas.
 
-### 4.3 Vérification : les 28 compétences du roster
+### 4.3 Vérification : les 30 compétences du roster
 
 | Son | Compétences |
 | --- | --- |
-| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0) |
-| Bonus gagné | Furie des vents, Œil de faucon, Esquive améliorée, Peau de pierre, Épines acérées, Vol de vie, Coup de chance, Pile ou face, Riposte |
-| Malus reçu | Souffle de la tombe, Peur, Attente (ogre), Feux follets (0.73.0, Brûlure posée), Pourfendre (0.70.0 : son coup sonne d'abord comme un coup, puis la plaie posée joue Malus reçu ; avant, la Saignée, et la Rage du sang, qui jouait Soin) |
+| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0), Aura mélodieuse et Ouverture (la barde) |
+| Bonus gagné | Œil de faucon, Esquive améliorée, Peau de pierre, Épines acérées, Vol de vie, Coup de chance, Riposte, Siffloter |
+| Aucun son propre (mécanisme posé, § 4.2 règle 8) | Furie des vents (sa rafale sonne), Pile ou face (sa pièce sonne) : Bonus gagné jusqu'à la 0.109.1 ; Soliste et Crescendo (coup de base ×N, sans effet : leur coup sonne) |
+| Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0, Brûlure posée), Fausse note, Pourfendre (0.70.0 : son coup sonne d'abord comme un coup, puis la plaie posée joue Malus reçu ; avant, la Saignée, et la Rage du sang, qui jouait Soin) |
 | Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura ; sans bonus à retirer, ses dégâts directs sonnent comme un coup reçu) |
-| Coup | Rétribution |
-| Coup critique | Foudre (0.76.0 : un par éclair, trois coups de 2 dégâts directs, chacun joué à l'impact de son éclair ; 5 dégâts en un éclair avant) |
+| Coup | Rétribution (la moitié de ses jauges en un coup ; Coup critique à 10 dégâts ou plus) |
+| Éclair | Foudre (0.110.0 : un par éclair, à l'impact de chacun ; le son du critique jusqu'à la 0.109.1, trois fois pour 1 dégât chacun) |
 
 ### 4.4 Les labels de la zone de surcharge (2026-10-21)
 
 Un label (badge sous le dé : « Critique ×2 », « Armure temporaire −6 », « Saignement +2 », le nom d'une relique) marque ce qui change le coup en cours (la zone de surcharge, [RESOLUTION.md](RESOLUTION.md) § 11). Demande de l'utilisateur : « chaque label positif doit faire un ding positif au moment de son affichage ; les labels négatifs un son négatif. On devient capable de juger la valeur d'une action à l'oreille aussi. »
 
-1. **Le son suit le signe du label**, toujours du point de vue de l'attaquant (décision de l'utilisateur, 2026-10-21) : + si la surcharge amplifie son action (critique, relique, Vol de vie, Saignement qui coule sur le défenseur), − si elle la réduit ou la contre (Esquive assurée, bouclier qui absorbe, Fausse note, Riposte et Épines du défenseur). Le signe est déduit de la mécanique dans son registre (`SPECIAL_SIGNS`, `specials.ts`), jamais choisi au point d'appel ; la couleur (la source) ne compte pas pour le son.
+1. **Le son suit le signe du label**, toujours du point de vue de l'attaquant (décision de l'utilisateur, 2026-10-21) : + si la surcharge amplifie son action (critique, relique, Vol de vie, Saignement qui coule sur le défenseur), − si elle la réduit ou la contre (Esquive assurée, bouclier qui absorbe, Fausse note, Riposte et Épines du défenseur). Le signe est déduit de la mécanique dans son registre (`SPECIAL_SIGNS`, `specials.ts`), jamais choisi au point d'appel ; la couleur (la source) ne compte pas pour le son. **Exception, la relique du défenseur** (décision de l'utilisateur, 2026-10-24, 0.110.0) : elle ne pose jamais de malus, et un bonus gardé pour plus tard est un bonus pour son porteur. Son label est donc + (le ding), sauf si elle contre le coup en cours (la Conque des vents, qui frappe l'attaquant : −). Avant, toute relique du défenseur était −, et le même instant jouait Malus reçu avec le Bonus gagné ou le Soin de son effet.
 2. **Label + → Pile réussie** (le « ding » de la chance, choisi par l'utilisateur : « le ding de la pièce ? ») ; **label − → Malus reçu**. Pas de son nouveau : on pioche dans ce qui existe.
 3. **Son composé déclaré** (règle 3) : le son du label s'ajoute à celui de l'instant où il tombe (Dé posé, Soin, Coup…). Un critique s'annonce donc par le ding de son label, puis frappe avec son Coup critique à l'impact ; « Saignement +2 » sonne son ding à l'impact, puis la plaie son Ronge un battement après.
 4. **Jamais deux fois le même son au même instant** : plusieurs labels qui tombent ensemble (Critique assuré et Critique ; Armure temporaire et Fausse note) jouent un seul son par signe.
 5. **Pas de doublon de signification** : un label dont l'effet joue déjà le son de son signe dans la même frappe se tait (déduit : le son des effets, `cueOf`, est celui du signe). Aujourd'hui, les Épines acérées (−) et le Malus reçu du Saignement qu'elles posent.
+6. **Pas de label pour une réaction refusée** (0.110.0) : une réaction dont aucun effet n'a de résultat (les Épines acérées contre une Aura d'immunité : « Saignement résisté ») n'a ni label ni son ; seul son texte neutre s'affiche (règle 8 du § 4.2, `MISE_EN_SCENE.md` M25).
 
 Hors de la colonne, donc sans son de label : Pile ou face, la Furie des vents, Coup de chance, Rétribution, Crescendo et Soliste (ce coup ×N : leur coup sonne, la compétence est muette), les auras. La pièce sur pile garde son propre ding (§ 4.1).
 
@@ -160,6 +164,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Coup critique | `sfx.crit` | Coup + Grondement | | |
 | Grondement | `crit-rumble` | `crit-rumble.mp3` | `crit.wav`, déposé par l'utilisateur (0.36.4) | 1,20 s |
 | Esquive | `dodge`, `sfx.dodge` | `dodge.mp3` | `dodge-2` | 0,27 s |
+| Éclair | `thunder`, `sfx.thunder` | **aucun** : son synthétisé (claquement filtré, roulement bref) | à choisir à l'oreille par l'utilisateur (0.110.0) ; propositions possibles par `npm run sfx` | |
 | Aura gagnée | `aura-gain`, `sfx.auraGain` | `aura-gain.mp3` | `aura-gain-2` | 0,88 s |
 | Aura perdue | `aura-loss`, `sfx.auraLoss` | `aura-loss.mp3` | `aura-loss-1` | 0,80 s |
 | Bonus gagné | `buff`, `sfx.buff` | `buff.mp3` | `buff-1` | 0,55 s |
@@ -197,6 +202,8 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Le poison (2026-10-22, 0.90.0) | « Un son spécial pour le poison quand il tick », qui ne partage plus Ronge : « pas un son d'impact principal, plutôt un "pchhhhit" qui évoque un mal laissé par un coup ». Il pourra servir à des effets semblables (magie…), mais pour l'instant au poison seul : Grésillement, généré avec Artlist. |
 | Le lancement du combat (2026-10-22, 0.91.0) | « Un son de cri de guerre, pas trop long, 2 secondes peut-être, qui signe le clic » sur le bouton qui lance le combat animé : « Jouer » de l'écran d'affrontement, dans tous les modes (choix de l'utilisateur, plutôt que « Combattre » de la sélection, que suit le Choc du face-à-face). Généré avec ElevenLabs. L'ouverture du combat passe de 500 à 1 400 ms pour que le cri retombe avant les dés de l'initiative (règle 8). |
 | Le cri de guerre retiré (2026-10-23, 0.96.0) | « Retirer le hurlement ajouté en début de combat » : le cri de guerre de la 0.91.0 est retiré ; « Jouer » refait un clic, et l'ouverture du combat revient à 500 ms. |
+| Les reliques du défenseur (2026-10-24, 0.110.0) | « Un bonus gardé pour plus tard est un bonus pour son porteur » : leur label passe de − à + (le ding), avec le son qui va avec, et leur description dit le bonus du porteur. Une relique qui contre le coup (la Conque des vents) garde son −. |
+| La Foudre (2026-10-24, 0.110.0) | Le son d'un éclair, pas le son lourd du critique (trois fois pour 1 dégât chacun) : un son nouveau, l'Éclair (§ 3), synthétisé tant que l'utilisateur n'a pas choisi son fichier. |
 
 ## 9. Index : qui joue quel son
 
@@ -210,14 +217,15 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Dé posé | la fin de tout jet, quelle que soit la face |
 | Pièce lancée | Pile ou face, quand la pièce part |
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
-| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique de l'attaquant qui se déclenche, Luciole, Vol de vie, Saignement (2026-10-21, § 4.4). La barde sur un double jusqu'à la phase 5 ter |
-| Coup | un coup d'attaque qui touche (y compris ceux de l'ours et le coup de Pourfendre) ; la Riposte (renvoi) ; chaque jauge de la Rétribution sauf la dernière |
-| Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup de la Rétribution, ou un coup de compétence unique de 10 dégâts et plus ; la Foudre, un tonnerre par éclair, à son impact (trois en 0.76.0) |
+| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique qui se déclenche pour un bonus de son porteur (chez l'attaquant comme chez le défenseur, 0.110.0), Luciole, Vol de vie, Saignement (2026-10-21, § 4.4). La barde sur un double jusqu'à la phase 5 ter |
+| Coup | un coup d'attaque qui touche (y compris ceux de l'ours et le coup de Pourfendre) ; la Riposte (renvoi) ; la relâche de la Rétribution (un coup, la moitié de ses jauges, sous 10 dégâts) ; chaque jauge d'une relâche en entier sauf la dernière ; les lames d'air de la Conque des vents |
+| Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive. La Foudre jusqu'à la 0.109.1 |
+| Éclair | la Foudre, un par éclair, à l'impact de chacun (0.110.0) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |
-| Aura gagnée | les 8 compétences d'aura (§ 9.2) |
+| Aura gagnée | les 10 compétences d'aura (§ 4.3, Aura mélodieuse et Ouverture comprises) |
 | Aura perdue | une purification qui retire une aura |
-| Bonus gagné | les 9 compétences qui posent un bonus sur leur lanceur (§ 9.2) |
-| Malus reçu | Souffle de la tombe, Peur, Attente, Feux follets (0.73.0), Pourfendre (après son coup, s'il touche) ; l'Aura de décoction qui empoisonne, à l'impact du coup qui touche ; les Épines acérées qui font saigner l'attaquant (0.68.0) ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur (0.69.0) ; un label − sous le dé : Esquive assurée, bouclier qui absorbe, Fausse note, Riposte, relique du défenseur ; les Épines, dont le Malus reçu de leur effet parle déjà (2026-10-21, § 4.4) |
+| Bonus gagné | les 8 compétences qui posent un bonus sur leur lanceur (§ 4.3) ; plus la Furie des vents ni Pile ou face, qui posent un mécanisme (0.110.0) |
+| Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0), Fausse note, Pourfendre (après son coup, s'il touche) ; l'Aura de décoction qui empoisonne, à l'impact du coup qui touche ; les Épines acérées qui font saigner l'attaquant (0.68.0) ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur (0.69.0) ; un label − sous le dé : Esquive assurée, bouclier qui absorbe, Fausse note, Riposte, relique du défenseur qui contre le coup (la Conque des vents) ; les Épines, dont le Malus reçu de leur effet parle déjà (2026-10-21, § 4.4) |
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi |
 | Ronge | Pourriture et Brûlure qui agissent sur leur porteur ; le Saignement qui coule quand un coup touche son porteur (0.68.0) |
@@ -235,15 +243,15 @@ Les deux personnages d'une même race partagent leurs compétences.
 
 | Race (personnages) | Sur un 1 | Sur un 2 | Sur un 3 |
 | --- | --- | --- | --- |
-| Orc (Gorak, Murzug) | Pourfendre : Coup, puis Malus reçu s'il touche (0.70.0 ; la Saignée jouait Malus reçu, la Rage du sang Soin) | Furie des vents : Bonus gagné | Aura de puissance : Aura gagnée |
+| Orc (Gorak, Murzug) | Pourfendre : Coup, puis Malus reçu s'il touche (0.70.0 ; la Saignée jouait Malus reçu, la Rage du sang Soin) | Furie des vents : aucun son propre, sa rafale sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de puissance : Aura gagnée |
 | Elfe (Elaria, Sylwen) | Œil de faucon : Bonus gagné | Esquive améliorée : Bonus gagné | Aura de précision : Aura gagnée |
 | Nain (Brokk, Grimbald) | Peau de pierre : Bonus gagné | Épines acérées : Bonus gagné | Aura d'intimidation : Aura gagnée |
 | Mort-vivant (Ervald, Caldrec) | Souffle de la tombe : Malus reçu | Vol de vie : Bonus gagné | Aura glaciale : Aura gagnée |
 | Humain (Ysolde, Bérengère) | Peur : Malus reçu | Purification : Aura perdue ou Dissipation | Aura de sainteté : Aura gagnée |
-| Homme-lézard (Naraxes, Ssythra) | Coup de chance : Bonus gagné | Pile ou face : Bonus gagné | Aura de décoction : Aura gagnée |
-| Paladin (Aldric, Gauvain) | Rétribution : Coup par jauge, Coup critique sur la dernière | Riposte : Bonus gagné | Aura d'immunité : Aura gagnée |
+| Homme-lézard (Naraxes, Ssythra) | Coup de chance : Bonus gagné | Pile ou face : aucun son propre, sa pièce sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de décoction : Aura gagnée |
+| Paladin (Aldric, Gauvain) | Rétribution : Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0 ; Coup par jauge et Coup critique sur la dernière avant) | Riposte : Bonus gagné | Aura d'immunité : Aura gagnée |
 | Ogre (Morgrut, Gnashka) | Attente : Malus reçu | Attente : Malus reçu | Attente : Malus reçu |
-| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des trois éclairs (0.76.0 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
+| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Éclair à l'impact de chacun des trois éclairs (0.110.0 ; Coup critique de la 0.76.0 à la 0.109.1 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
 | Druide, forme d'ours | coup : Coup | coup : Coup | coup : Coup (0.73.0 ; Charge, Coup de griffe et Aura de rancune avant, et le relais Rancune et Sève, Bonus gagné, jusqu'à la 0.72.0) |
 
 Une compétence sans effet réel ne sonne pas (règle 8) : un soin à PV pleins, un malus bloqué par une immunité.
@@ -268,7 +276,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Peur, Étourdi | tour du porteur | Tour perdu |
 | Furie des vents, Coup de chance | action du porteur | Dé lancé, Dé posé, puis le son de chaque coup |
 | Pile ou face | action du porteur | Pièce lancée, Pièce retombe ; sur pile, Pile réussie puis Coup critique |
-| Rétribution | relâchée par sa compétence | Coup par jauge, Coup critique sur la dernière |
+| Rétribution | relâchée par sa compétence | Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0) |
 | Critique assuré, Esquive améliorée | le prochain coup | Coup critique, Esquive |
 | Expiration ou baisse de durée d'un statut | | aucun son (règle 7) |
 

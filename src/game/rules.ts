@@ -124,7 +124,7 @@ export const RULES: Record<RuleId, Rule> = {
   'final-damage': {
     group: 'damage',
     title: 'Dégâts finaux',
-    text: "Les dégâts finaux de l'attaquant (Aura mélodieuse, Fausse note) s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; au moins 1 dégât.",
+    text: "Les dégâts finaux de l'attaquant (Aura mélodieuse, Fausse note) s'additionnent, puis s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; le coup garde au moins 1 dégât.",
   },
   'direct-damage': {
     group: 'damage',
@@ -144,12 +144,12 @@ export const RULES: Record<RuleId, Rule> = {
   'dice-faces': {
     group: 'skills',
     title: 'Faces de compétence',
-    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine et aucun en ours. La barde lit les mêmes faces avec ses deux dés. D'autres compétences se gravent par la forge.",
+    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine, et en ours ne lance que ses gravures. La barde lit les mêmes faces avec ses deux dés. D'autres compétences se gravent par la forge.",
   },
   'hit-relations': {
     group: 'skills',
     title: 'Greffe, modifie, remplace',
-    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un jet de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change sa valeur (Soliste : ce coup ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base tout de suite).",
+    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un jet de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change la valeur du coup de base (Soliste : coup de base ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base par charge, juste après ce jet).",
   },
   conditions: {
     group: 'skills',
@@ -159,12 +159,12 @@ export const RULES: Record<RuleId, Rule> = {
   forms: {
     group: 'skills',
     title: 'Formes',
-    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; un coup de base physique à +3 en ours) : ce sont des mécanismes, ni bonus ni malus.",
+    text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet et un petit coup de base magique en homme ; en ours, seules ses gravures partent, et un coup de base physique à +3) : ce sont des mécanismes, ni bonus ni malus.",
   },
   polarity: {
     group: 'statuses',
     title: 'Bonus et malus',
-    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus » est le dernier apparu (un statut renforcé garde son rang). Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
+    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus posé » est le dernier apparu (un statut renforcé garde son rang, il ne redevient pas le dernier). Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
   },
   duration: {
     group: 'statuses',

@@ -83,8 +83,9 @@ export type Effect =
   /**
    * Pose un statut. `fromHit` (Pourfendre, 0.107.0) : des charges en plus, la part `fromHit` des PV que le coup de ce jet
    * a retirés, arrondie au-dessus (une compétence qui modifie son coup part s'il touche) ; `stacks` s'y ajoute (0 permis).
+   * `power` (0.110.0) : l'intensité que les rangs d'aiguisage donnent au statut (`Status.power`, axe `power`).
    */
-  | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target; fromHit?: number }
+  | { type: 'applyStatus'; status: StatusId; stacks: number; turns?: number; target?: Target; fromHit?: number; power?: number }
   /**
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count` derniers
    * apparus (un statut renforcé garde son rang). Les mécanismes de compétence et de forme ne se retirent pas.
@@ -143,6 +144,22 @@ export const DIE_FACES = 6
  */
 export type HitRelation = 'graft' | 'modify' | 'replace'
 
+/**
+ * L'axe de rang d'une compétence (E1, 0.110.0, docs/SORTS.md § 20) : ce qu'un rang d'aiguisage lui ajoute, `per` par
+ * rang, choisi dans son esprit et réglé pour qu'un rang vaille de +3 à +8 points de victoire (« un rang ajoute moins »).
+ * La forge le lit (`forge.ts`, `sharpen`) ; il ne connaît aucun plafond : chaque rang ajoute quelque chose.
+ * - `stacks` : charges du statut qu'elle pose (son premier `applyStatus`) ;
+ * - `amount` : dégâts ou soin de son effet, repli d'une purge compris (Foudre : chaque éclair) ;
+ * - `power` : intensité du statut qu'elle pose (`Status.power`) ; ce qu'elle vaut, le statut le dit (`StatusDef.power`) ;
+ * - `multiplier` : son coup ×N, `per` de plus (Soliste, Crescendo) ;
+ * - `limit` : `per` fois de plus par combat (Peur) ;
+ * - `share` : la part relâchée, `per` de plus (Rétribution).
+ */
+export interface RankAxis {
+  kind: 'stacks' | 'amount' | 'power' | 'multiplier' | 'limit' | 'share'
+  per: number
+}
+
 export interface CharacterEvent {
   id: string
   name: string
@@ -179,10 +196,57 @@ export interface CharacterEvent {
    * `SCENE_EVENTS` (`scenes.ts`) pour le rythme, `SceneEvent.tsx` pour le rendu.
    */
   scene?: SceneEventId
+  /** Ce qu'un rang d'aiguisage lui ajoute (0.110.0). Toute compétence du dé du roster en déclare un (`validateRoster`). */
+  rankAxis?: RankAxis
 }
 
 /** La relation d'une compétence au coup de base, `graft` par défaut. */
 export const relationOf = (e: Pick<CharacterEvent, 'relation'>): HitRelation => e.relation ?? 'graft'
+
+/**
+ * Demi-rang (0.110.0, axe de rang à `per: 0.5`) : une quantité fractionnaire d'une compétence aiguisée (charges,
+ * intensité, dégâts ou soin) se paie en entier, une fois sur deux, dès la première : la k-ième fois que la compétence
+ * part, ⌈q·k⌉ − ⌈q·(k − 1)⌉ (1,5 charge : 2, 1, 2, 1…). Une quantité entière part telle quelle.
+ */
+export const paidOnFire = (q: number, k: number) => (Number.isInteger(q) ? q : Math.ceil(q * k) - Math.ceil(q * (k - 1)))
+
+/**
+ * Les quantités d'effets (charges, intensité, dégâts, soin), passées par `pay` quand l'une est fractionnaire. `atPose` :
+ * une intensité qui se paie à chaque action de son statut (`powerPaidOnAction`, une aura) reste telle quelle.
+ */
+function mapQuantities(effects: readonly Effect[], pay: (q: number) => number, atPose = false): Effect[] {
+  return effects.map((x) => {
+    switch (x.type) {
+      case 'applyStatus': {
+        const power = x.power !== undefined && !(atPose && STATUSES[x.status].powerPaidOnAction) ? pay(x.power) : x.power
+        return Number.isInteger(x.stacks) && power === x.power ? x : { ...x, stacks: pay(x.stacks), ...(power !== undefined && { power }) }
+      }
+      case 'heal':
+      case 'damage':
+        return Number.isInteger(x.amount) ? x : { ...x, amount: pay(x.amount) }
+      default:
+        return x
+    }
+  })
+}
+
+/**
+ * Les effets d'une compétence (ou d'une action de statut) tels qu'ils partent la k-ième fois (k ≥ 1) : ses demi-rangs
+ * payés en entier ; à la pose d'une compétence (`atPose`), l'intensité d'une aura attend ses actions.
+ */
+export const effectsOnFire = (effects: readonly Effect[], k: number, atPose = false) => mapQuantities(effects, (q) => paidOnFire(q, k), atPose)
+
+/** Ce qu'un demi-rang ajoute une fois sur deux à un effet, en clair ; vide sans demi-rang. */
+function halfRankNote(effect: Effect): string {
+  const often = 'une fois sur deux, dès la première'
+  if (effect.type === 'applyStatus') {
+    if (!Number.isInteger(effect.stacks)) return `+1 ${STATUSES[effect.status].name} ${often}`
+    if (!Number.isInteger(effect.power ?? 0)) return `${STATUSES[effect.status].power?.(1) ?? '+1'} ${often}`
+  }
+  if ((effect.type === 'damage' || effect.type === 'heal') && !Number.isInteger(effect.amount))
+    return `+1${effect.type === 'damage' && effect.hits ? ` à chacun des ${effect.hits} coups` : effect.type === 'heal' ? ' PV' : ''} ${often}`
+  return ''
+}
 
 /** Déclencheurs nommés liés à la valeur du dé, connus dès le jet (reliques de coup). */
 export const ROLL_TRIGGERS: readonly NamedTrigger[] = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax']
@@ -218,27 +282,29 @@ export function describeEffect(effect: Effect): string {
     case 'heal':
       return effect.target === 'opponent' ? `soigne l'adversaire de ${effect.amount} PV` : `+${effect.amount} PV`
     case 'damage':
-      return `${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}${effect.hits ? `, ${effect.hits} fois (${effect.hits * effect.amount} en tout)` : ''}`
+      return effect.hits
+        ? `${effect.hits} × ${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${on ? ` ${on}` : ' à soi-même'} (${effect.hits * effect.amount} en tout)`
+        : `${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}`
     case 'applyStatus': {
       const def = STATUSES[effect.status]
       // Pourfendre : des charges tirées du coup, que la définition ne connaît pas
       if (effect.fromHit !== undefined)
-        return `${def.name}${on ? ` ${on}` : ''} : ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des PV que ce coup retire, arrondie au-dessus${effect.stacks ? `, plus ${effect.stacks}` : ''}`
+        return `${def.name}${effect.target === 'opponent' ? " sur l'adversaire" : ''} : ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des PV retirés (arrondie au-dessus)${effect.stacks ? `, plus ${effect.stacks}` : ''}${def.reactions?.hurt ? ' ; il coule dès le coup suivant' : ''}`
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
-      const status = { id: effect.status, stacks: effect.stacks, turns }
+      const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }
       return `${def.name}${on ? ` ${on}` : ''} : ${lowerFirst(def.describe(status))}`
     }
     case 'release': {
-      const share = effect.share === undefined ? 'la somme de ses jauges' : `${effect.share === 0.5 ? 'la moitié' : pct(effect.share)} de ses jauges, arrondie au-dessous,`
-      return `relâche ${STATUSES[effect.status].name} : ${share} en dégâts directs${on ? ` ${on}` : ''} (au moins ${effect.min})`
+      const share = effect.share === undefined ? 'la somme de ses jauges' : `${effect.share === 0.5 ? 'la moitié' : pct(effect.share)} de ses jauges (arrondie au-dessous, au moins ${effect.min})`
+      return `relâche ${share} en dégâts directs${on ? ` ${on}` : ''}, puis les vide`
     }
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
       const orElse = effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''
-      // « Le dernier » : le dernier apparu, avec toutes ses charges (un statut renforcé garde son rang : règle « Bonus et malus »)
+      // « Le dernier posé » : le dernier apparu, avec toutes ses charges (un statut renforcé garde son rang : règle « Bonus et malus »)
       const whose = effect.target === 'opponent' ? "à l'adversaire son" : 'son propre'
       if (effect.count === undefined) return `retire ${effect.target === 'opponent' ? `tous les ${kind} de l'adversaire` : `tous ses ${kind}`}${orElse}`
-      const what = effect.count === 1 ? `${whose} dernier ${kind}` : `${whose.replace(/son( propre)?$/, 'ses')} ${effect.count} derniers ${kind}`
+      const what = effect.count === 1 ? `${whose} dernier ${kind} posé` : `${whose.replace(/son( propre)?$/, 'ses')} ${effect.count} derniers ${kind} posés`
       return `retire ${what}${orElse}`
     }
   }
@@ -292,22 +358,28 @@ export interface SkillDescription {
 export function describeSkill(e: CharacterEvent, formName?: string): SkillDescription {
   const relation = relationOf(e)
   const modifies = relation === 'modify'
-  const effects = e.effects.map((effect, k) => {
+  const graftedOnDie = relation === 'graft' && isRollTrigger(e.trigger)
+  // Un demi-rang (0.110.0) : le texte dit la quantité entière, puis le +1 qu'elle gagne une fois sur deux
+  const effects = mapQuantities(e.effects, Math.floor).map((effect, k) => {
     // Une compétence qui modifie son coup (Pourfendre) : ses effets n'arrivent que s'il touche
     const touch = modifies && k === 0 ? "s'il touche, " : ''
+    const note = halfRankNote(e.effects[k])
+    const noted = (text: string) => (note ? `${text} ; ${note}` : text)
     // Pourfendre (`fromHit`) : ses charges viennent du coup, la phrase de l'effet le dit
-    if (effect.type !== 'applyStatus' || effect.fromHit !== undefined) return `${touch}${describeEffect(effect)}`
+    if (effect.type !== 'applyStatus' || effect.fromHit !== undefined) return noted(`${touch}${describeEffect(effect)}`)
     const def = STATUSES[effect.status]
     const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
-    const text = lowerFirst(def.describe({ id: effect.status, stacks: effect.stacks, turns }))
+    const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }
+    // Greffé sur son lanceur, il agit sur le coup de ce jet (Œil de faucon, Vol de vie : « ce coup », revue 0.110.0)
+    const text = lowerFirst(effect.target !== 'opponent' && graftedOnDie && def.grafted ? def.grafted(status) : def.describe(status))
     // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
     // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21). Posé par un coup
     // qui touche, un statut qui réagit aux coups reçus ne réagit pas à celui-ci : il agit dès le coup suivant (règle 9,
     // la plaie de Pourfendre coule au prochain coup qui touche l'adversaire).
-    if (effect.target !== 'opponent') return `${touch}${text}`
-    return `${touch}sur l'adversaire${modifies && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`
+    if (effect.target !== 'opponent') return noted(`${touch}${text}`)
+    return noted(`${touch}sur l'adversaire${modifies && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`)
   })
-  const boost = e.hitMultiplier ? `ce coup ×${e.hitMultiplier}${e.buildsUp ? ', puis ×1 de plus à chaque fois qu’il touche' : ''}` : ''
+  const boost = e.hitMultiplier ? `coup de base ×${e.hitMultiplier}${e.buildsUp ? ', puis ×1 de plus à chaque fois qu’il touche' : ''}` : ''
   const parts = [boost, ...effects]
     .filter(Boolean)
     .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
@@ -315,7 +387,10 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   const direct = e.effects.some((x) => x.type === 'damage' || x.type === 'release' || (x.type === 'cleanse' && x.orElse?.type === 'damage'))
   const caps = [...new Set(posedIds)].flatMap((id) => {
     const def = STATUSES[id]
-    return !def.mechanic && def.maxStacks !== undefined && def.maxStacks > 1 ? [{ label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : []
+    if (def.mechanic) return []
+    // Le cumul de chaque statut posé, en pastille (revue 0.110.0, T7) : un plafond de 1 vaut une pose qui remplace
+    const cumul = def.stacking === 'add' && def.maxStacks !== 1 ? { label: 'se cumule', rule: 'stacking-add' as const } : { label: 'non cumulable', rule: 'stacking-refresh' as const }
+    return def.maxStacks !== undefined && def.maxStacks > 1 ? [cumul, { label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : [cumul]
   })
   // Une compétence du dé dit sa relation au coup de base : se greffer est la règle, elle n'a pas de pastille
   const onDie = isRollTrigger(e.trigger)

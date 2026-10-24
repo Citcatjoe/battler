@@ -162,6 +162,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 - **Fantasy** : le champion des fosses, lent et inébranlable. C'est la référence de l'orc, et l'unité de taille du jeu (`scale: 1`).
 - **Stats** (0.43.0, celles de Murzug) : PV 57, d9 depuis la 0.69.0 (d8 de la 0.50.0 à la 0.68.3), armure 0, esquive 5 %, critique 19 % ×2 (18 % avant la 0.69.0) ; Pourfendre (coup, puis Saignement 2 s'il touche) depuis la 0.70.0, Saignée en 0.68.0 et 0.69.0, Rage du sang à 5 PV avant. Jusqu'à la 0.42.0 : PV 61, critique 10 %, Rage du sang à 3 PV.
+- **Fiche** (0.110.0, revue T14) : critique aujourd'hui **14 %** (`roster.ts`) ; sa force « Critiques fréquents pour un orc » disait encore 19 %, corrigée.
 - **Comment il gagne** : ses PV absorbent les pics de dégâts, et son d10 frappe régulièrement fort.
 - **Comment il perd** : il prend tous les coups, et n'a aucune réponse face à l'usure du nain.
 - **Mesures** : 50,0 % de victoires (0.26.0), environ 19 tours par combat. Duels les plus durs : les elfes (44 % contre Elaria, 45 % contre Sylwen).
@@ -341,6 +342,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 - **Fantasy** : le capitaine tombé en défendant Ostremort, revenu sous son étendard pourpre. Il ne fatigue jamais.
 - **Stats** (0.43.0, celles de Caldrec) : PV 56, d10, armure 0, esquive 8 %, critique 16 % ×2. Jusqu'à la 0.42.0 : PV 58, d8, armure 1, critique 12 %. Il est grand à l'écran.
+- **Fiche** (0.110.0, revue T14) : critique aujourd'hui **24 %** (`roster.ts`) ; sa force « Critiques fréquents » disait encore 16 %, corrigée.
 - **Comment il gagne** : il encaisse, et chaque jet raté ronge l'adversaire au fil des tours. Contre les elfes, peu nombreux en PV et sans armure, le poison pèse lourd (54 % contre Elaria). Le vol de vie le fait durer encore.
 - **Comment il perd** : ses propres coups sont faibles (4,4 dégâts par coup, comme Brokk). Et chaque 2 est un coup perdu, rattrapé seulement si le coup suivant touche. Les adversaires au d10 qui raccourcissent le combat (Grimbald, Caldrec) le gênent le plus.
 - **Mesures** : 48,8 % de victoires (0.26.0), environ 22 tours par combat. Il bat Sylwen (56 %), mais perd contre les orcs (45 % et 41 %), dont la puissance l'emporte sur son usure.

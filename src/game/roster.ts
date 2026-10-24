@@ -66,7 +66,7 @@ import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
 import { Character, type CharacterDef } from './character'
 import { DAMAGE_SOURCES, type AttackKind, type DamageSource } from './damage'
-import { faceTrigger, isRollTrigger, type CharacterEvent } from './events'
+import { faceTrigger, isRollTrigger, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
 import { STATUSES } from './statuses'
 
@@ -119,7 +119,7 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (19 %)', 'Pourfendre : la plaie suit le coup'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', 'Pourfendre : la plaie suit le coup'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   // Signature (règles v2, décision de l'utilisateur) : la Furie des vents, seule au départ d'une campagne
@@ -133,6 +133,9 @@ const gorak: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
+      // Axes de rang (E1, 0.110.0, SORTS.md § 20). Une aura non cumulable aiguisée vaut un cran de plus (son intensité) ;
+      // une aura cumulable, une charge de plus une pose sur deux, ou, si cela vaut trop, une intensité à demi
+      rankAxis: { kind: 'power', per: 1 },
     },
   ],
   events: [
@@ -147,6 +150,7 @@ const gorak: CharacterDef = {
       trigger: 'naturalOne',
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'bleed', stacks: 0, fromHit: 0.5, target: 'opponent' }],
+      rankAxis: { kind: 'stacks', per: 1 },
     },
     {
       // Phase 5 bis : elle remplace le coup du 2 par deux coups de base bruts, tout de suite
@@ -156,6 +160,9 @@ const gorak: CharacterDef = {
       trigger: 'naturalTwo',
       relation: 'replace',
       effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1 }],
+      // Un coup de plus une rafale sur deux (une charge de plus doublait la rafale : +15 points gravée ; un coup de plus à
+      // chaque rafale : +9,8)
+      rankAxis: { kind: 'power', per: 0.5 },
     },
   ],
 }
@@ -203,6 +210,7 @@ const elaria: CharacterDef = {
       nature: 'finesse',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 0.5 },
     },
   ],
   events: [
@@ -213,6 +221,7 @@ const elaria: CharacterDef = {
       trigger: 'naturalOne',
       // Phase 5 bis : greffé, le Critique assuré rend critique le coup de base de ce jet même
       effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
     },
     {
       id: 'evasion',
@@ -222,6 +231,8 @@ const elaria: CharacterDef = {
       // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
       // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
       effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
+      // Une esquive de plus une fois sur deux (à chaque fois : +9,6 points gravée)
+      rankAxis: { kind: 'stacks', per: 0.5 },
     },
   ],
 }
@@ -269,6 +280,7 @@ const brokk: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 0.5 },
     },
   ],
   events: [
@@ -278,6 +290,7 @@ const brokk: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 6 }],
+      rankAxis: { kind: 'stacks', per: 2 },
     },
     {
       id: 'thorns',
@@ -285,6 +298,9 @@ const brokk: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalTwo',
       effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
+      // Une charge de plus à demi : chaque coup encaissé fait saigner d'une charge de plus une fois sur deux (une charge
+      // entière à la première pose valait +8,9 points gravée : une aura vaut presque tout dès sa première pose)
+      rankAxis: { kind: 'power', per: 0.5 },
     },
   ],
 }
@@ -315,7 +331,7 @@ const ervald: CharacterDef = {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (16 %)'],
+    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (24 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   signature: 'frost-aura',
@@ -329,6 +345,7 @@ const ervald: CharacterDef = {
       trigger: 'naturalOne',
       // Poison 3 : 3, 2 puis 1 PV, les 6 PV de l'ancien poison 2 pendant 3 tours (0.36.4)
       effects: [{ type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
+      rankAxis: { kind: 'stacks', per: 1 },
     },
   ],
   events: [
@@ -340,6 +357,7 @@ const ervald: CharacterDef = {
       // 0.107.0 (SORTS.md § 19) : 1 charge au lieu de 2 (plafond 2 gardé) ; deux coups drainés à chaque 1 le mettaient à
       // +21 points gravé et +23,6 dans le kit d'Ervald
       effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       id: 'frost-aura',
@@ -348,6 +366,8 @@ const ervald: CharacterDef = {
       trigger: 'naturalTwo',
       // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
       effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }],
+      // Une charge de plus à demi : +1 Poison un tour sur deux (une charge entière : +10,2 points gravée)
+      rankAxis: { kind: 'power', per: 0.5 },
     },
   ],
 }
@@ -397,6 +417,7 @@ const ysolde: CharacterDef = {
       // 0.107.0 (SORTS.md § 19) : une fois par combat ; un tour perdu à chaque 1 valait +22 points gravé (+20 à deux fois)
       limit: 1,
       effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
+      rankAxis: { kind: 'limit', per: 1 },
     },
   ],
   events: [
@@ -413,6 +434,7 @@ const ysolde: CharacterDef = {
         { type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' } },
         { type: 'cleanse', polarity: 'negative', count: 1 },
       ],
+      rankAxis: { kind: 'amount', per: 3 },
     },
     {
       id: 'holy-aura',
@@ -420,6 +442,8 @@ const ysolde: CharacterDef = {
       nature: 'arcane',
       trigger: 'naturalTwo',
       effects: [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }],
+      // Plafonnée à 2 charges : +1 PV un tour sur deux (son intensité à demi ; +1 PV à chaque tour : +8,1 points gravée)
+      rankAxis: { kind: 'power', per: 0.5 },
     },
   ],
 }
@@ -468,6 +492,7 @@ const naraxes: CharacterDef = {
       // 0.107.0 (SORTS.md § 19) : il se greffe (le coup de ce jet part) ; il remplaçait le coup depuis la phase 5 bis. Le dé
       // qu'il donne, à l'action suivante, est un jet complet
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 0.5 },
     },
   ],
   events: [
@@ -480,6 +505,7 @@ const naraxes: CharacterDef = {
       // la 0.107.0, `COIN_HEADS`)
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
     },
     {
       id: 'decoction-aura',
@@ -487,6 +513,8 @@ const naraxes: CharacterDef = {
       nature: 'finesse',
       trigger: 'naturalTwo',
       effects: [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }],
+      // Une charge de plus à demi : +1 Poison un coup qui touche sur deux (une charge entière : +9,9 points gravée)
+      rankAxis: { kind: 'power', per: 0.5 },
     },
   ],
 }
@@ -539,6 +567,7 @@ const aldric: CharacterDef = {
         { type: 'cleanse', polarity: 'negative' },
         { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
       ],
+      rankAxis: { kind: 'power', per: 1 },
     },
   ],
   events: [
@@ -551,6 +580,7 @@ const aldric: CharacterDef = {
       // elle restait à +20,8 gravée, hors de la bande) ; un coup à chaque jet remplissait ses trois jauges à chaque tour
       // adverse (+38 points dans son kit, +28 gravée)
       effects: [{ type: 'release', status: 'retribution', min: 1, share: 0.5, target: 'opponent', source: 'strike' }],
+      rankAxis: { kind: 'share', per: 0.25 },
     },
     {
       id: 'riposte',
@@ -558,6 +588,7 @@ const aldric: CharacterDef = {
       nature: 'martial',
       trigger: 'naturalTwo',
       effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
+      rankAxis: { kind: 'power', per: 2 },
     },
   ],
 }
@@ -667,7 +698,7 @@ const thaldrin: CharacterDef = {
   // Répertoire : l'Orage et le Feu en dégâts qui durent (Souffle de la tombe, Aura de décoction), la Bête (Aura de puissance, Épines acérées)
   repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns'],
   reserve: [
-    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }] },
+    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }], rankAxis: { kind: 'stacks', per: 0.5 } },
   ],
   // Un même sort sur trois faces : trois déclencheurs de la même compétence (une compétence par face)
   events: [
@@ -680,6 +711,8 @@ const thaldrin: CharacterDef = {
         form: 'human',
         scene: 'lightning',
         effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent', source: 'lightning' }],
+        // +1 par éclair une fois sur deux (à chaque fois : +8,7 points gravée ; +2 par éclair avant la 0.110.0 : +15,1)
+        rankAxis: { kind: 'amount', per: 0.5 },
       }),
     ),
     ...([4, 5, 6] as const).map(
@@ -690,6 +723,7 @@ const thaldrin: CharacterDef = {
         trigger: faceTrigger(face),
         form: 'human',
         effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }],
+        rankAxis: { kind: 'stacks', per: 1 },
       }),
     ),
   ],
@@ -744,18 +778,32 @@ const fanchon: CharacterDef = {
   // sur 36) : Siffloter 3 → 2 charges, Fausse note 2 → 1, Crescendo ×4 à la place des deux coups → ce coup ×2. 0.107.0 :
   // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible
   reserve: [
-    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }] },
-    { id: 'false-note', name: 'Fausse note', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }] },
-    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [] },
+    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      id: 'false-note',
+      name: 'Fausse note',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }],
+      rankAxis: { kind: 'power', per: 0.5 },
+    },
+    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
   ],
   events: [
     { id: 'overture', name: 'Ouverture', nature: 'arcane', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }] },
     // Phase 5 ter : 1 charge sur le 1 (2 sur le double 3 avant) ; chacun de ses deux dés peut la déclencher
-    { id: 'melodious-aura', name: 'Aura mélodieuse', nature: 'arcane', trigger: 'naturalOne', effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }] },
+    {
+      id: 'melodious-aura',
+      name: 'Aura mélodieuse',
+      nature: 'arcane',
+      trigger: 'naturalOne',
+      effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 0.5 },
+    },
     // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il
     // modifie son coup de base, ce coup ×3. 0.107.0 (SORTS.md § 19) : le solo, une fois par combat (un solo qui touche) ;
     // à chaque 2, il valait +23 points gravé ; Crescendo, lui, monte à chaque fois
-    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [] },
+    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
   ],
 }
 
@@ -850,8 +898,10 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     for (const f of d.forms ?? [])
       for (const id of f.statuses ?? [])
         if (STATUSES[id]?.mechanic !== 'form') problems.push(`${at} forme ${f.id} : ${id} n'est pas un statut de forme (mechanic: 'form')`)
+    // Toutes ses compétences, celles du kit et celles hors kit (`reserve`) : les mêmes contrôles (revue 0.110.0)
+    const skills = [...d.events, ...(d.reserve ?? [])]
     for (const id of Object.keys(STATUSES) as (keyof typeof STATUSES)[])
-      if (STATUSES[id].mechanic === 'form' && d.events.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
+      if (STATUSES[id].mechanic === 'form' && skills.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
         problems.push(`${at} ${id} est un statut de forme : seul le moteur le pose`)
     // Une même compétence peut être imprimée sur plusieurs faces (la Foudre du druide) : ses déclencheurs seuls diffèrent
     const seen = new Map<string, CharacterEvent>()
@@ -859,6 +909,8 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       const twin = seen.get(e.id)
       if (twin && JSON.stringify({ ...twin, trigger: '' }) !== JSON.stringify({ ...e, trigger: '' })) problems.push(`${at} compétence en double (${e.id})`)
       seen.set(e.id, e)
+    }
+    for (const e of skills) {
       if (e.effects.length === 0 && !e.hitMultiplier) problems.push(`${at} la compétence ${e.id} n'a aucun effet`)
       const onDie = isRollTrigger(e.trigger)
       if (e.relation && !onDie) problems.push(`${at} ${e.id}.relation : réservée aux compétences du dé`)
@@ -901,6 +953,33 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       }
     }
     for (const e of d.reserve ?? []) if (seen.has(e.id)) problems.push(`${at} ${e.id} : à la fois dans le kit et hors kit`)
+    // Axe de rang (E1, 0.110.0) : toute compétence du dé en déclare un, qui a prise sur elle et grandit sans plafond
+    for (const e of skills) {
+      const axis = e.rankAxis
+      if (!isRollTrigger(e.trigger)) {
+        if (axis) problems.push(`${at} ${e.id} : hors du dé, elle ne s'aiguise pas (pas d'axe de rang)`)
+        continue
+      }
+      if (!axis) {
+        problems.push(`${at} ${e.id} : compétence du dé sans axe de rang (rankAxis)`)
+        continue
+      }
+      const posed = e.effects.find((x) => x.type === 'applyStatus')
+      const grip: Record<RankAxis['kind'], boolean> = {
+        // Des charges en plus : sur un statut sans plafond (au plafond, un rang ne gagnerait plus rien)
+        stacks: posed !== undefined && STATUSES[posed.status].maxStacks === undefined,
+        power: posed !== undefined && STATUSES[posed.status].power !== undefined,
+        amount: e.effects.some((x) => x.type === 'damage' || x.type === 'heal' || (x.type === 'cleanse' && (x.orElse?.type === 'damage' || x.orElse?.type === 'heal'))),
+        multiplier: e.hitMultiplier !== undefined,
+        limit: e.limit !== undefined,
+        share: e.effects.some((x) => x.type === 'release' && x.share !== undefined),
+      }
+      if (!grip[axis.kind]) problems.push(`${at} ${e.id} : axe de rang ${axis.kind} sans prise sur la compétence`)
+      // Un gain entier par rang ; un demi pour une quantité (charges, intensité, montant : payée une fois sur deux) ; une
+      // part, quelconque
+      const step = axis.kind === 'multiplier' || axis.kind === 'limit' ? axis.per : axis.per * 2
+      if (!(axis.per > 0) || (axis.kind !== 'share' && !Number.isInteger(step))) problems.push(`${at} ${e.id} : axe de rang, un gain par rang > 0 (entier, un demi pour une quantité)`)
+    }
     // Répertoire (règles v2) : des compétences gravables d'autres personnages (de tout le roster), sans doublon
     const others = ENGRAVABLE_SKILLS.filter((e) => ![...d.events, ...(d.reserve ?? [])].some((own) => own.id === e.id)).map((e) => e.id)
     for (const id of d.repertoire ?? []) if (!others.includes(id)) problems.push(`${at} répertoire : ${id} n'est pas une compétence gravable d'un autre personnage`)

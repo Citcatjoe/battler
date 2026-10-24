@@ -37,7 +37,10 @@ export const DICE_ROLL_MANY = 900
 export const DICE_READ = 350
 /** Lecture des dés d'une rafale, une fois posés */
 export const DICE_LAND_HOLD = 400
-/** Rafale instantanée (Furie des vents) : ses dés apparaissent à plat, un temps pour les voir */
+/**
+ * Rafale instantanée (Furie des vents) : ses dés apparaissent à plat, un temps pour les voir ; de même, les dés d'une
+ * rafale qui reviennent après la Furie posée par l'un de ses jets (docs/MISE_EN_SCENE.md, M27)
+ */
 export const VOLLEY_FLAT = 250
 /** Jet remplacé par une compétence sans compétence qui suive aussitôt : temps de lecture du dé */
 export const FORFEIT_HOLD = 650

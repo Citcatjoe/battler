@@ -32,6 +32,35 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.110.0] — 2026-10-24
+
+Les corrections de la revue (`docs/REVUE_CONTENU.md`), selon les décisions de l'utilisateur du 2026-10-24 : le moteur (M1 à M4), l'écran et le son (A1 à A7), l'axe de rang de chaque compétence (E1 : « un rang ajoute moins », chaque compétence s'aiguise sur un axe à elle), les textes (T1 à T15 sauf T12) et les documents en retard.
+
+### Corrigé
+- **M1 Furie des vents** ([docs/RESOLUTION.md](docs/RESOLUTION.md) § 2) : la rafale part juste après **chaque** jet qui la pose, avant le jet suivant de la même action, et dépense **toutes** les charges (`extraStrikes × charges` coups). Avant → après : deux dés, Furie gravée, dés sur 2 : `jet, jet, rafale 2, …` → `jet, rafale 2, brut, brut, jet, rafale 2, brut, brut` ; Furie à deux charges : rafale de 2 coups → de 4 coups.
+- **M2 Reliques de seuil** (§ 5 règle 6) : l'actif d'abord ; tous les seuils franchis sont marqués avant qu'aucun ne parte, et tous ont pour cause l'étape vérifiée. Avant → après : `['test-tear' (défenseur), 'test-trophy']` → `['test-trophy', 'test-tear']`. `bloodied` passe pour les deux camps avant les reliques de seuil.
+- **M3 Dégâts finaux** (§ 3 ligne 8 bis) : les écarts finaux sont additionnés, puis un seul plancher de 1. Avant → après : coup de 3 après l'armure, Fausse note 1 et Aura mélodieuse 1, note posée d'abord : 2 → 1. Le label de la Fausse note montre l'écart appliqué.
+- **M4 Relique dont l'effet serait nul** (`relicIsInert`) : une relique dont tous les effets seraient nuls ne part pas et ne s'use pas. Avant → après : la Dent de loup partait à l'ouverture sans rien poser et usait sa charge → elle attend et pose +1 après le premier coup. Le Chapelet de l'ermite ne part plus à vide.
+- **A1** L'Encens de l'abbaye tombe au milieu du coup qui le cause (4 900 → 3 925 ms). **A2** « Rien à purifier » ne s'affiche que si la purge est le seul effet de l'étape. **A4** Une aura reposée sans effet n'active plus rien (« au maximum »). **A5** Pile ou face et la Furie posés ne sonnent plus et ne flottent plus ; la pièce part au repos du coup (4 400 → 2 850 ms). **A6** Foudre : chaque éclair sonne l'Éclair, plus le critique. **A7** Des Épines bloquées par une immunité n'ont plus ni label ni son.
+- **Furie entre les deux dés de la barde** (M27) : les rafales s'empilent ; le second dé ne roule plus de nouveau après la Furie (impact 5 386 → 3 964 ms).
+
+### Modifié
+- **Axe de rang de chaque compétence** (E1, [docs/STATUTS.md](docs/STATUTS.md)) : chaque compétence du dé s'aiguise sur un axe à elle (charges, charges à demi, montant, intensité, coup ×N, limite, part) ; un rang ajoute de +3 à +8 points. Le **demi-rang** se paie une fois sur deux, dès la première, sans tirage ; pour une aura, à chaque action de l'aura. L'intensité (`Status.power`) ne se cumule pas. Toutes les compétences s'aiguisent sans plafond, Feux follets compris. `validateRoster` exige un axe qui a prise, et contrôle aussi les compétences de réserve.
+- **Textes** (T1 à T15 sauf T12) : « Coup de base ×N », Rétribution, Peau de pierre, Œil de faucon et Vol de vie (« ce coup »), Pourfendre, Aura mélodieuse, pastille « se cumule / non cumulable » sur chaque statut posé, Purification (« dernier bonus posé »), « à ce coup », « Sur un 6 », Écu cabossé, Force de l'ours, crit de Gorak (14 %) et d'Ervald (24 %), Épines, décoction, Coup de chance, Foudre, Feux follets ; Furie (charges, coups bruts, badge « ×(2 + intensité) × charges »).
+- **A3 Reliques du défenseur en « + »** : un bonus de son porteur s'annonce en + avec le ding, chez l'attaquant comme chez le défenseur ; − seulement quand la relique frappe l'attaquant (Conque des vents). Les dégâts directs d'une relique disent leur cible (« à l'attaquant »).
+
+### Ajouté
+- Tableau des rangs (axe, rang II et III) dans le rapport des compétences (`scripts/skills.report.ts`).
+- Contrôles d'audit : Furie (rafale reportée, coup avant la rafale, charges mal dépensées, Furie aiguisée, demi-rang payé), seuils (actif d'abord, cause), relique nulle qui attend, intensité (pièce, Vol de vie, Riposte, Fausse note, Aura glaciale) ; huit contrôles de mise en scène.
+- Son **Éclair** (`thunder`, 23e son, [docs/SONS.md](docs/SONS.md) § 3) : chaque scène déclare le son de ses coups ; en attendant un fichier, un son synthétisé (claquement filtré, roulement de 0,3 s).
+
+### Mesuré
+- `BALANCE_N=800 npm run balance` : rapports identiques ligne à ligne avant et après (Gorak 52,3 %, Naraxes 54,3 %, Ervald 46,8 % ; duel le plus déséquilibré Elaria contre Morgrut, 61,9 %) ; empreinte inchangée.
+- Rangs II (rapport des compétences, 200 combats par duel) : les 29 de +3,6 à +8,0, aucun drapeau ; rang III de +1,1 à +5,1. Furie II +15,0 → +7,9 (dans le kit de Gorak +23,7 → +12,3) ; Foudre II +15,1 → +6,5 (Thaldrin, trois faces : +11,8).
+
+### Restent
+- E4 et T12 (Élan) non tranchés ; cinq emblèmes d'état à générer (Pourriture, Brèche, Luciole, Coup gâché, Vulnérable) ; le fichier de l'Éclair.
+
 ## [0.109.1] — 2026-10-24
 
 Les icônes du lot des consommateurs, et la revue des compétences, des statuts et des reliques demandée par l'utilisateur. Aucune règle, aucun code de jeu changés.

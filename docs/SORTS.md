@@ -265,6 +265,18 @@ Ce que vaut un choix de forge : chaque compétence gravable est gravée sur la *
 
 Le repère de 8 à 20 points est celui des reliques (décision de l'utilisateur du 2026-10-24) : toute compétence gravable doit y entrer. La mesure jetable du § 19 (mesure 2) est devenue cette table.
 
+### La troisième table : un rang de plus (0.110.0)
+
+`SKILLS_PART=rank` (ou les trois tables par défaut). Chaque compétence gravée sur la face 3 nue de chaque hôte qui peut la recevoir, mêmes graines : rang I contre rang II (la gravure aiguisée une fois), puis rang II contre rang III, moyenne des hôtes, le plus mauvais et le meilleur ; dernière colonne, un rang de plus dans le kit de son porteur (toutes ses faces : la Foudre et les Feux follets du druide en ont trois). La colonne « Axe » est la ligne du rang (`rankText`).
+
+| Drapeau | Seuil | Ce qu'il signale |
+| --- | --- | --- |
+| hors bande (faible) | rang II sous +3 points | un aiguisage qui ne pèse rien |
+| hors bande (forte) | rang II au-delà de +8 points | un aiguisage qui vaut presque une gravure (« un rang ajoute moins », décision de l'utilisateur du 2026-10-24) |
+| ne s'aiguise pas | aucun axe de rang | n'arrive plus : toute compétence du dé en déclare un (`validateRoster`) |
+
+Trois minutes à 200 combats par duel. Mesures et réglage des axes : § 20.
+
 ### Premier audit (200 combats par duel, règles 0.36.4)
 
 | Compétence | Personnage | Valeur nette | Renversés | Gâchis | Drapeaux de jeu |
@@ -1098,3 +1110,49 @@ Mesures : `scripts/skills.report.ts` (table 2, 200 combats par duel, `logs/skill
 | Aura de puissance | **non cumulable** (+2 par charge cumulable ; plafond 2 : +21,8) | hors kit | +20,7 → +17,9 |
 
 Les 29 compétences gravables sont dans la bande : de +10,4 (Foudre) à +19,7 (Esquive améliorée), au lieu de +3,2 à +28,5. Personnages compensés (stats, après les compétences, jamais les PV) : Aldric attaque 4 à 6 (3 à 5), Ysolde 5 à 7 (4 à 6), Naraxes 5 à 6 (4 à 5), Ervald 24 % de critique (16), Gorak 14 % (19), Fanchon 10 % d'esquive (6). Roster de 46,8 % (Ervald) à 54,3 % (Naraxes), pire duel 61,9 % (Elaria contre Morgrut) ; tours par combat, moyenne des personnages, 15,8 → 15,2.
+
+## 20. L'axe de rang de chaque compétence (E1 à E3, 0.110.0)
+
+**Décision de l'utilisateur** (2026-10-24, revue `REVUE_CONTENU.md`, E1 à E3) : toutes les compétences s'aiguisent ; l'évolution d'une compétence se fait sur un axe qui dépend d'elle ; « un rang ajoute moins » : de +3 à +8 points de victoire par rang (Pourfendre II valait +6,0 et le Souffle aiguisé +6,3 dans la revue ; la Furie II +20,1 dans le kit de Gorak et la Foudre aiguisée +15,2 gravée chez Gorak, chiffres d'avant la correction de la Furie du lot A).
+
+**Ce qui change** : chaque compétence déclare `rankAxis` (`events.ts`), lu par `forge.ts` à la place de la règle commune (une charge par statut cumulable sous son plafond, +2 aux dégâts, soins et relâches). Six genres d'axe : charges, montant, intensité du statut posé (`Status.power`, que le statut lit lui-même), coup ×N, une fois de plus par combat, part relâchée. Quand le plus petit pas entier dépasse +8, l'axe est un **demi-rang** (`per: 0.5`) : +1 une fois sur deux, dès la première (sans tirage, [RESOLUTION.md](RESOLUTION.md) § 6) ; l'intensité d'une aura se paie alors à chacune de ses actions, et non à la pose (`powerPaidOnAction`) : payée à la pose, elle valait déjà tout (Aura glaciale +10,2), payée à partir de la deuxième pose, presque rien (+1,8).
+
+Mesure : table 3 de `scripts/skills.report.ts`, 200 combats par duel, face 3 de chaque hôte. Avant (règle commune, moteur du lot A) : `logs/skills/2026-10-24-16-25-47_v0.109.1.md` ; après : `logs/skills/2026-10-24-16-59-15_v0.109.1.md`.
+
+| Compétence | Axe (rang II) | I → II avant | I → II après | II → III après | Dans le kit (après) |
+| --- | --- | --- | --- | --- | --- |
+| Foudre | +1 par éclair une fois sur deux | +15,1 | +6,5 | +2,3 | Thaldrin +11,8 (trois faces) |
+| Furie des vents | intensité : +1 coup par rafale une fois sur deux | +15,0 | +7,9 | +1,9 | Gorak +12,3 |
+| Aura glaciale | intensité à demi : +1 Poison un tour sur deux | +10,9 | +7,5 | +2,7 | Ervald +10,8 |
+| Aura de décoction | intensité à demi : +1 Poison un coup qui touche sur deux | +10,6 | +7,4 | +2,5 | Naraxes +9,7 |
+| Esquive améliorée | +1 charge une fois sur deux | +9,6 | +7,3 | +2,3 | Elaria +9,2 |
+| Épines acérées | intensité à demi : +1 Saignement un coup encaissé sur deux | +9,6 | +6,1 | +2,7 | Brokk +8,8 |
+| Aura d'intimidation | +1 charge une pose sur deux | +9,3 | +8,0 | +1,3 | hors kit |
+| Coup de chance | +1 charge une fois sur deux | +9,1 | +7,7 | +1,5 | hors kit |
+| Vol de vie | intensité : +2 PV par coup drainé | +8,2 (puis plus rien : plafond) | +3,7 | +2,7 | Ervald +4,6 |
+| Aura de précision | +1 charge une pose sur deux | +8,0 | +6,6 | +1,4 | hors kit |
+| Œil de faucon | +1 charge | +7,7 | +7,7 | +3,1 | Elaria +12,2 |
+| Aura sauvage | +1 charge une pose sur deux | +7,6 | +6,5 | +1,1 | hors kit |
+| Aura mélodieuse | +1 charge une pose sur deux | +7,5 | +6,3 | +1,2 | Fanchon +16,0 (deux dés) |
+| Crescendo | coup ×1 de plus | +6,5 | +6,5 | +4,0 | hors kit |
+| Soliste | coup ×1 de plus | +6,1 | +6,1 | +4,3 | Fanchon +4,3 |
+| Souffle de la tombe | +1 Poison | +6,1 | +6,1 | +3,9 | hors kit |
+| Aura de sainteté | intensité à demi : +1 PV un tour sur deux | +5,3 (puis plus rien : plafond) | +4,7 | +3,5 | Ysolde +5,5 |
+| Pourfendre | +1 Saignement | +4,7 | +4,7 | +3,4 | Gorak +5,9 |
+| Siffloter | +1 Sifflotement | +3,6 | +3,6 | +1,9 | hors kit |
+| Purification | +3 à sa lumière de repli | +3,0 (+2) | +4,3 | +3,1 | Ysolde +6,6 |
+| Fausse note | intensité : +1 coup qui touche une fois sur deux | +2,6 (charges) | +6,4 | +2,3 | hors kit |
+| Peau de pierre | +2 Armure temporaire | +2,1 (+1) | +3,9 | +2,9 | Brokk +5,7 |
+| Rétribution | +25 % des jauges relâchées | +0,9 (minimum +2) | +6,4 | +4,5 | Aldric +9,9 |
+| Riposte | intensité : +2 PV à chaque coup renvoyé | ne s'aiguisait pas | +7,0 | +4,7 | Aldric +9,1 |
+| Peur | une fois de plus par combat | ne s'aiguisait pas | +6,5 | +2,2 | hors kit |
+| Feux follets | +1 Brûlure (4 PV pendant 4 tours) | ne s'aiguisaient pas | +5,9 | +3,5 | Thaldrin +16,3 (trois faces) |
+| Aura de puissance | intensité : +1 à chaque coup | ne s'aiguisait pas | +5,3 | +3,5 | hors kit |
+| Aura d'immunité | intensité : +1 d'armure | ne s'aiguisait pas | +8,0 | +5,1 | hors kit |
+| Pile ou face | intensité : pile ×1 de plus | ne s'aiguisait pas | +3,7 | +2,1 | Naraxes +5,2 |
+
+**Pas entiers écartés** (même mesure) : Furie, un coup de plus à chaque rafale +9,8 ; Foudre, +1 par éclair à chaque fois +8,7 ; Fausse note, un coup de plus à chaque fois +8,6 ; Aura glaciale, de décoction, Épines, une charge de plus (intensité entière) +10,2, +9,9, +8,8 ; Aura de sainteté, +1 PV à chaque tour +8,1. Demi-rang payé à partir de la deuxième fois (⌊ ⌋ au lieu de ⌈ ⌉) : trop faible, de +1,7 (Épines) à +3,3.
+
+**Les 29 rangs II sont dans la bande**, de +3,6 (Siffloter) à +8,0 (Aura d'intimidation et d'immunité, au bord). Le rang III ajoute moins (de +1,1 à +5,1) : un demi-rang paie dès la première fois au rang II, et seulement une fois sur deux de plus au rang III. **Feux follets** : ils s'aiguisent ; ils ne se copient pas, par la règle « une compétence sur deux faces au plus » (`MAX_COPIES`) : ils en occupent déjà trois. **Équilibre** : aucun kit de base ne change (le rang I est identique, l'empreinte de `balance.test.ts` n'a pas bougé) ; `npm run balance` n'a pas été relancé.
+
+**Contrôle des bords** (800 combats par duel, `logs/skills/2026-10-24-17-01-22_v0.109.1.md`) : Furie des vents +8,0, Coup de chance +7,8, Aura d'intimidation +7,8, Aura d'immunité +7,7, Œil de faucon +7,6 ; aucun drapeau.

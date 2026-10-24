@@ -39,7 +39,9 @@ function statusText(s: Status) {
   const turns = s.turns !== undefined ? `, ${s.turns} tour${s.turns > 1 ? 's' : ''}` : ''
   const counter = statusCounter(s)
   const shown = counter ? ` [affiche ${counter.value}]` : ''
-  return `${label(s.id)} ${s.stacks} charge${s.stacks > 1 ? 's' : ''}${turns}${shown}`
+  // Intensité d'un statut aiguisé (0.110.0)
+  const power = s.power ? `, intensité ${s.power}` : ''
+  return `${label(s.id)} ${s.stacks} charge${s.stacks > 1 ? 's' : ''}${turns}${power}${shown}`
 }
 
 function phaseOf(beat: Beat, fighters: Pair<Character>): string {

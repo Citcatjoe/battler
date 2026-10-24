@@ -115,7 +115,7 @@ describe('catalogue des compétences', () => {
       for (const e of [...c.events, ...(c.definition.reserve ?? [])])
         for (const effect of e.effects.filter((x) => x.target === 'opponent'))
           expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
-    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3 PV/)
+    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3, 2 puis 1 PV/)
   })
 })
 
@@ -723,10 +723,11 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture'])
-    family('buff', ['wind-fury', 'hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'coin-flip', 'riposte', 'whistle'])
+    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave'])
-    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist'])
+    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents et Pile ou face
+    // posent un mécanisme, muet (0.110.0) : leur rafale et leur pièce sonnent
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip'])
     // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak, ou Ervald pour l'Aura de puissance
     const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
       createCharacter(skill.id === 'power-aura' ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }]),

@@ -49,6 +49,8 @@ describe('audit de résolution', () => {
     // charge) : combat.test.ts les prouve par des combats construits.
     for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base DP', 'coup de base DM', 'coup de base multiplié', 'deux dés', 'jet de la barde', 'cause : jet greffé', 'esquive imposée', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'purge de ses malus', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', 'type de dégâts DP', 'type de dégâts DM', 'type de dégâts DT', 'charges tirées du coup', 'relâche en part', 'compétence épuisée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    // 0.110.0 : la Furie part juste après le jet qui la pose (RESOLUTION § 2)
+    expect(seen['furie juste après son jet'] ?? 0).toBeGreaterThan(0)
   })
 })
 
@@ -96,7 +98,8 @@ describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
           n++
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    // Crescendo (hors kit, 0.107.0) : seule une gravure le joue, son coup qui monte
-    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'deux dés', 'attaque trempée', 'coup qui monte']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    // Crescendo (hors kit, 0.107.0) : seule une gravure le joue, son coup qui monte. Une Furie aiguisée (0.110.0) ajoute
+    // un coup à sa rafale ; elle ne pose plus deux charges (la Furie à plusieurs charges ne vient plus d'un dé forgé)
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'deux dés', 'attaque trempée', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée', 'demi-rang payé']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

@@ -64,7 +64,8 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 
 ### Ce qui reste ouvert
 
-- **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes à faire.
+- **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1.
+- **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle, un rang II de +3,6 à +8,0 points). Restent : E4 et T12 (texte de l'Élan), non tranchés ; cinq emblèmes d'état à générer ; le fichier du son Éclair. Les demi-rangs et les nouveaux textes sont à juger en jeu.
 - **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
 - **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
 - **Les répertoires** : à relire sur le d6 et l'attaque (phase 6), puis à remplir de consommateurs (phase 8).
@@ -1261,7 +1262,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.109.0, lot des consommateurs et signature de Thaldrin livrés, § 13.3) : la lecture de l'état des lieux (§ 0 bis) par l'utilisateur, puis la seconde partie de la phase 7 (les reliques de durée et de type), ou la revue des auras et des compétences demandée au § 1.10._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.110.0, corrections de la revue livrées : moteur, écran et son, axe de rang, textes) : la lecture des corrections par l'utilisateur, en jeu, et ses choix sur E4 et T12 ; puis la seconde partie de la phase 7 (les reliques de durée et de type), ou la revue des auras et des compétences demandée au § 1.10._
 
 ```mermaid
 flowchart LR

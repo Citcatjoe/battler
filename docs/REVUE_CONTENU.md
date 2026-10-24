@@ -6,6 +6,10 @@ Méthode : trois revues menées en parallèle, en lecture seule (code, tests, do
 
 ## Synthèse : ce qu'il faut corriger, par gravité
 
+**État des corrections (0.110.0, décisions de l'utilisateur du 2026-10-24).**
+- **Corrigé** : M1 à M4 (moteur) ; A1 à A7 (écran et son) ; E1 à E3 (un axe de rang par compétence, demi-rangs) ; T1 à T11 et T13 à T15 (textes : les lignes du tableau ci-dessous, réécrites dans `describeSkill`, les `describe` et résumés des statuts, `describeRelic`, les règles du compendium et les fiches de Gorak et d'Ervald ; le cumul de chaque statut posé est maintenant une pastille, « se cumule » ou « non cumulable ») ; les documents en retard (SONS, STATUTS, RESOLUTION, RELIQUES § 3, § 5.1 et § 13, la Fiole remesurée chez Naraxes : +2,0, inchangée) ; la faiblesse du Colosse (« N'esquive jamais ») ; `validateRoster` contrôle aussi les compétences hors kit.
+- **Reste** : E4 (Peur bloquée par une immunité) et T12 (le nom de l'Élan), non tranchés ; A8, les cinq emblèmes d'état à générer (Coup gâché, Brèche, Pourriture, Luciole, Vulnérable) ; le fichier du son Éclair, à choisir à l'oreille (synthétisé en attendant). Hors de la demande : la phrase d'ambiance de la Larme de givre, les icônes de l'Encens et de l'Écu, le type « Coup » de l'Encens.
+
 ### Moteur (des règles écrites que le code ne suit pas)
 
 | # | Élément | Problème | Preuve | Proposition |

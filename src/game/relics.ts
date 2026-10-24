@@ -1,5 +1,5 @@
 import type { CharacterStats } from './character'
-import { describeCondition, rollFace, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
+import { describeCondition, DIE_FACES, rollFace, TRIGGERS, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { STATUSES, type StatusId } from './statuses'
@@ -342,12 +342,14 @@ const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
 
 /**
  * Un effet de relique au plus court : « 3 dégâts directs », « +2 Vol de vie », « retire son dernier malus, sinon +3 PV ».
+ * Un statut posé est toujours un bonus de son porteur (« +2 Armure temporaire », A3) ; `attacker` : la relique part sur un
+ * coup reçu ou esquivé, ses dégâts directs vont à l'attaquant, et le texte le dit (Conque des vents).
  * `validateRelics` garantit le reste : vers l'adversaire, seulement des dégâts directs ; aucune relâche de jauges.
  */
-function effectText(e: Effect): string {
+function effectText(e: Effect, attacker = false): string {
   switch (e.type) {
     case 'damage':
-      return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? '' : ' à soi-même'}`
+      return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? (attacker ? " à l'attaquant" : '') : ' à soi-même'}`
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus':
@@ -384,7 +386,10 @@ function momentOf(r: Relic): string {
       return `${t.who === 'opponent' ? 'Adversaire sous' : 'Sous'} ${Math.round(t.ratio * 100)} % PV${when}`
     case 'strike': {
       const face = rollFace(t.on)
-      const moment = face !== undefined ? `Sur un ${face}` : t.on === 'naturalMax' ? 'Sur un jet maximal' : TRIGGERS[t.on].label
+      // Un coup encaissé d'au moins N PV, seule condition (Écu cabossé) : « Quand il encaisse un coup de 6 PV ou plus »
+      const least = r.when?.length === 1 && r.when[0].type === 'hitAtLeast' && t.on === 'hurt' ? r.when[0].amount : undefined
+      if (least !== undefined) return `Quand il encaisse un coup de ${least} PV ou plus`
+      const moment = face !== undefined ? `Sur un ${face}` : t.on === 'naturalMax' ? `Sur un ${DIE_FACES}` : TRIGGERS[t.on].label
       return `${moment}${when}`
     }
   }
@@ -392,8 +397,8 @@ function momentOf(r: Relic): string {
 
 export interface RelicDescription {
   /**
-   * La règle en une ligne, moment puis effet : « Sur un 1 : 3 dégâts directs », « +4 dégâts aux frappes de 4 ». Le
-   * vocabulaire porte la résolution : « à la frappe », avant le critique ; « dégâts directs », ni coup ni armure.
+   * La règle en une ligne, moment puis effet : « Sur un 1 : 3 dégâts directs », « Sur un 4 : +4 dégâts à ce coup ». Le
+   * vocabulaire porte la résolution : « à ce coup », avant le critique ; « dégâts directs », ni coup ni armure.
    */
   text: string
   /** Ses limites : « 1 fois par combat », « recharge 3 tours » (vide sans limite) */
@@ -405,13 +410,10 @@ export interface RelicDescription {
 /** La seule rédaction d'une relique : infobulle, compendium, écran de récompense, trace et rapports la lisent. */
 export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
-  // Un bonus de face (Fer à quatre clous) se dit comme un événement, « Sur un 4 : +4 dégâts à ce coup », et non comme
-  // une face enrichie (2026-10-23, retour de l'utilisateur) ; la mécanique ne change pas
-  const onFace = r.rollBonus !== undefined && r.onFace !== undefined
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
-    r.rollBonus ? `${signed(r.rollBonus)} dégâts ${onFace ? 'à ce coup' : 'à la frappe'}` : '',
-    ...(r.effects ?? []).map(effectText),
+    r.rollBonus ? `${signed(r.rollBonus)} dégâts à ce coup` : '',
+    ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge'))),
   ]
     .filter(Boolean)
     .join(', ')

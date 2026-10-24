@@ -72,15 +72,15 @@ const withAmount = (name: string, sign: SpecialSign, amount?: number) =>
 /**
  * Une relique qui se déclenche (étape `relic`) : exception déclarée à la règle « ce qui se déclenche n'entre pas »
  * (demande de l'utilisateur, 2026-10-21 : « quand une relique se déclenche, il faudrait un label au centre ») ;
- * une relique n'a pas de sceau dans la barre de compétences. Son nom seul ; le signe suit son porteur :
- * + pour l'attaquant, − pour le défenseur (une relique ne pose jamais de malus, `validateRelics`).
+ * une relique n'a pas de sceau dans la barre de compétences. Son nom seul. Son signe, autre exception (décision de
+ * l'utilisateur, 0.110.0) : une relique ne pose jamais de malus (`validateRelics`), et un bonus gardé pour plus tard
+ * est un bonus pour son porteur, donc + chez l'attaquant comme chez le défenseur ; − seulement chez le défenseur,
+ * quand elle contre le coup en cours en frappant l'attaquant (la Conque des vents).
  */
-export const relicSpecial = (relic: string, name: string, bearer: SpecialBearer): SpecialSpec => ({
-  label: name,
-  source: 'relic',
-  sign: bearer === 'attacker' ? 'plus' : 'minus',
-  icon: { relic, name },
-})
+export function relicSpecial(relic: string, name: string, bearer: SpecialBearer, effects: readonly AppliedEffect[]): SpecialSpec {
+  const counters = bearer === 'defender' && effects.some((e) => e.type === 'damage' && e.amount > 0)
+  return { label: name, source: 'relic', sign: counters ? 'minus' : 'plus', icon: { relic, name } }
+}
 
 /**
  * Un statut est-il une surcharge, d'après sa mécanique ? Oui s'il change ce coup-ci et n'agit pas à chaque coup :

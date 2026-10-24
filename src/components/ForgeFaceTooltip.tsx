@@ -95,7 +95,12 @@ export function ForgeFaceTooltip({
           {`Dé ${face.face}`}
         </span>
       </div>
-      {then && then.tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{then.tags.map((t) => t.label).join(' · ')}</p>}
+      {/* Les pastilles aussi en avant → après : un rang peut changer une limite (Peur II : « 2 fois max. par combat ») */}
+      {then && then.tags.length > 0 && (
+        <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">
+          {engraved || !now ? then.tags.map((t) => t.label).join(' · ') : <Diff before={now.tags.map((t) => t.label).join(' · ')} after={then.tags.map((t) => t.label).join(' · ')} />}
+        </p>
+      )}
       <div className="codex-divider my-2.5" />
       {then ? (
         <p className="font-body text-[15px] leading-snug text-ink-1">{engraved || !now ? <New>{then.text}</New> : <Diff before={now.text} after={then.text} />}</p>
