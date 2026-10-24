@@ -7,6 +7,8 @@
  * les a confrontés au code (docs/AUDIT_COMPENDIUM.md). Une règle change avec le moteur, dans le même lot.
  */
 
+import { DAMAGE_SOURCE_IDS, DAMAGE_SOURCES, DAMAGE_TONES, type DamageSource, type DamageTone } from './damage'
+
 export type RuleGroup = 'turn' | 'dice' | 'dodge' | 'crit' | 'damage' | 'skills' | 'statuses'
 
 export const RULE_GROUPS: Record<RuleGroup, string> = {
@@ -33,6 +35,7 @@ export type RuleId =
   | 'shields'
   | 'final-damage'
   | 'direct-damage'
+  | 'damage-types'
   | 'skill'
   | 'dice-faces'
   | 'hit-relations'
@@ -50,7 +53,16 @@ export interface Rule {
   group: RuleGroup
   title: string
   text: string
+  /** Les règles voisines, en liens sous le texte (« Types de dégâts → » sous le coup de base) */
+  see?: readonly RuleId[]
 }
+
+/** Les sources d'un type, ou d'une teinte, par leur nom (damage.ts) : « Lumière, Foudre, Feu, Vent » */
+const sourceNames = (keep: (s: (typeof DAMAGE_SOURCES)[DamageSource]) => boolean) =>
+  DAMAGE_SOURCE_IDS.filter((id) => keep(DAMAGE_SOURCES[id]))
+    .map((id) => DAMAGE_SOURCES[id].name)
+    .join(', ')
+const tints = (Object.keys(DAMAGE_TONES) as DamageTone[]).map((tone) => `${DAMAGE_TONES[tone].label} (${sourceNames((s) => s.tone === tone)})`).join(', ')
 
 export const RULES: Record<RuleId, Rule> = {
   initiative: {
@@ -76,7 +88,8 @@ export const RULES: Record<RuleId, Rule> = {
   'base-hit': {
     group: 'dice',
     title: 'Coup de base',
-    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DP (dégâts physiques, une arme) ou DM (dégâts magiques). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Le type n'est qu'une étiquette pour l'instant.",
+    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), qui est DP (dégâts physiques, une arme) ou DM (dégâts magiques, une magie : la Lumière d'Ysolde, la Foudre du druide). C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche.",
+    see: ['damage-types'],
   },
   'twin-dice': {
     group: 'dice',
@@ -117,6 +130,11 @@ export const RULES: Record<RuleId, Rule> = {
     group: 'damage',
     title: 'Dégâts directs',
     text: "Les dégâts directs (poison, saignement, brûlure, foudre, riposte, rétribution, purification…) ignorent l'armure, l'esquive, les boucliers et les bonus de dégâts, et ne sont jamais critiques. Ce ne sont pas des coups, même quand l'écran en montre plusieurs impacts (les trois éclairs de la Foudre) : rien de ce qui réagit à un coup ne part. Seule exception : pile, à Pile ou face, compte comme un coup qui touche.",
+  },
+  'damage-types': {
+    group: 'damage',
+    title: 'Types de dégâts',
+    text: `Chaque dégât a un type, qui dit ce qu'il est : DP, dégâts physiques (un coup, une arme ; Pile ou face, la Riposte et la Rétribution aussi) ; DM, dégâts magiques (${sourceNames((s) => s.kind === 'magical')}) ; DT, dégâts temporaires, ceux d'un statut qui ronge tour après tour (${sourceNames((s) => s.kind === 'temporal')}). À l'écran, le chiffre des dégâts prend la couleur de sa source : ${tints}. L'or reste au critique et au coup lourd (pile, dernier coup d'une relâche). Le type n'est qu'une étiquette pour l'instant : aucune règle ne le lit.`,
   },
   skill: {
     group: 'skills',

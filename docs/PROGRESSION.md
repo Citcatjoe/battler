@@ -702,8 +702,8 @@ Les cas à déclarer, avec une proposition (à valider) :
 
 ### 9.3 L'interface : rien de nouveau à manipuler
 
-- **Le chiffre flottant** prend la couleur de son type et de sa source : DP rouge (l'or reste au critique), DT selon la source (déjà fait pour le poison et l'arcane, règle M37 de [MISE_EN_SCENE.md](MISE_EN_SCENE.md)), DM selon la source. Cela répond aussi à la question Q5 de MISE_EN_SCENE (« classer tous les dégâts en familles ? »).
-- **Le texte** de la compétence ou de la relique nomme le type (« 3 × 2 dégâts magiques ») ; le compendium a une règle « Types de dégâts ».
+- **Le chiffre flottant** prend la couleur de son type et de sa source : DP rouge (l'or reste au critique), DT selon la source (déjà fait pour le poison et l'arcane, règle M37 de [MISE_EN_SCENE.md](MISE_EN_SCENE.md)), DM selon la source. Cela répond aussi à la question Q5 de MISE_EN_SCENE (« classer tous les dégâts en familles ? »). **Livré en 0.108.0** : la palette est lue dans `DAMAGE_SOURCES` (`damage.ts`), six teintes : Coup et Saignement en rouge (l'ambre du critique et l'or d'un coup lourd restent), Lumière en ivoire cerclé d'or, Foudre en cyan, Vent en acier, Feu, Brûlure et Pourriture en mauve, Poison en vert acide ; les sources des DM du coup de base sont déclarées (`attackSource`, contrôlée par `validateRoster`) : Ysolde frappe de la Lumière, la forme humaine du druide de la Foudre, l'ours reste DP. Vu en capture (Ysolde contre Thaldrin, graine 22) : la Lumière et la Foudre ; pas vus : le Vent et le Feu.
+- **Le texte** de la compétence ou de la relique nomme le type (« 3 × 2 dégâts magiques ») ; le compendium a une règle « Types de dégâts ». **En 0.108.0, seule la règle est faite** (DP, DM, DT, leurs sources et leurs couleurs, liée depuis « Coup de base ») ; **les textes des compétences et des reliques ne nomment pas encore leur type** : à faire.
 - **Aucun nouvel écran, aucune nouvelle pastille.** La palette reste courte : la couleur par famille a été refusée pour les médaillons (0.51.0, « carnaval ») ; ici, une teinte par source, six au plus, sur le chiffre seulement.
 - **Brique connue** : `TONE_CLASS` (`narration.ts`), `DAMAGE_SOURCES` (`damage.ts`, 0.102.0, qui remplace `harm`), l'effet `damage` et ses `hits`.
 - **Coût** : faible ; l'étiquette ne change pas l'empreinte de non-régression.
@@ -954,6 +954,48 @@ Garder le hasard, mais le pencher vers le build.
 - **Coût** : faible.
 - **Estimation** : chance de voir une compétence de son répertoire à une forge : 11 % aujourd'hui, 100 % avec la carte garantie ; avec la seule pondération (α = 2, 5 compétences bienvenues sur 27), leur poids passe de 5/27 à 15/37, environ 41 % de la carte Graver.
 
+### 13.3 Les signatures et les auras : évaluation (2026-10-24, règles 0.107.0)
+
+Demande de l'utilisateur : « évalue les auras de signature : faut-il les garder en l'état, servent-elles les nouvelles règles ? L'idée est de garder les compétences aura comme elles sont, avec des retouches pour entrer dans nos règles : équilibrage, synergies. Deux personnages vanilla sont équilibrés ; ce sont l'évolution par le dé et les reliques qui créent les synergies. Idéalement, une compétence ou une aura signature pose les bases d'une mécanique du personnage. »
+
+**Verdict 1 : sur les nouvelles règles, les auras tiennent, en l'état.** Depuis la revue des compétences (0.107.0), chacune entre dans la bande d'une gravure : en moyenne sur les hôtes, de +12,5 (mélodieuse) à +17,9 (puissance) ; glaciale +13,5, précision +13,5, sainteté +13,8, intimidation +14,7, sauvage +15,2, immunité +16,8, décoction +17,5 (`logs/skills/2026-10-24-01-15-40_v0.106.1.md`, [SORTS.md](SORTS.md) § 19). Chacune vit avec le coup de base : une aura de coup vaut autant de fois qu'il y a de coups. Aucune retouche de valeur n'est proposée. **Un point à surveiller** : sur la barde, qui lance deux dés, une gravure vaut près du double (Aura de décoction +30,9, Aura de puissance +28,9) ; la moyenne reste dans la bande. **Une retouche faite** : les accroches (`hooks.ts`) déclarent maintenant que les auras de coup (puissance, sauvage, mélodieuse, force de l'ours) **consomment les coups** ; la Furie, Coup de chance, Pile ou face, Soliste et Crescendo les nourrissent. C'est une correction de la mesure, pas du jeu.
+
+**Verdict 2 : comme base d'une mécanique, la plupart des signatures sont des impasses.** Relevé des accroches (mesure jetable du 2026-10-24 : ce que la signature produit, qui dans son répertoire de campagne et parmi les reliques le consomme ; la signature seule contre le roster, 200 combats par duel) :
+
+| Personnage | Signature | La ressource qu'elle pose | Qui la consomme | Qui la nourrit | Signature seule |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Furie des vents | des coups de plus | Pourfendre, Aura de puissance, Vol de vie ; Dent de loup | — | 35,0 % |
+| Elaria | Œil de faucon | des critiques | Aura de précision | — | 32,6 % |
+| Brokk | Épines acérées | du Saignement (sur qui le frappe) | **personne** | — | 32,2 % |
+| Ervald | Aura glaciale | du Poison | **personne** | — | 33,1 % |
+| Ysolde | Aura de sainteté | des soins | **personne** | — | 27,2 % |
+| Naraxes | Aura de décoction | du Poison, à chaque coup | **personne** | Pile ou face, Coup de chance | 38,9 % |
+| Aldric | Rétribution | les coups qu'il encaisse, rendus | **personne** | — | 31,7 % |
+| Fanchon | Aura mélodieuse | un bonus sur chaque coup | — | Soliste, Crescendo, Coup de chance, Pile ou face | 18,1 % |
+| Morgrut | aucune (le cogneur nu) | son attaque | — | — | 49,6 % |
+| Thaldrin | kit entier (pas de signature) | des dégâts magiques | — | — | 45,8 % |
+
+**Lecture** : deux signatures sur huit nourrissent quelque chose (Gorak, Elaria). Quatre ressources du jeu n'ont **aucun consommateur**, nulle part : le **Poison** (Aura glaciale, Aura de décoction, Souffle de la tombe), le **Saignement** (Épines, Pourfendre), les **soins** (Sainteté, Vol de vie, Siffloter, Chapelet) et les **coups encaissés** (Rétribution, Riposte, Épines). Ces signatures font de la valeur, mais ne posent pas de mécanique : rien ne grandit avec elles. C'est le constat du § 3.2 (« il manque des consommateurs »), vu cette fois depuis les signatures.
+
+**Proposition (à valider)** :
+1. **Garder les auras et les signatures telles quelles** : le duel vanilla reste équilibré (42 à 58 %, aucune signature hors bande).
+2. **Nommer la mécanique de chaque personnage** par la ressource de sa signature (le tableau ci-dessus), et viser **deux consommateurs au moins** par ressource, comme le veut le kit ouvert (§ 6.2).
+3. **Les consommateurs viennent des reliques d'abord** : elles n'existent pas en duel vanilla (l'équilibre de base ne bouge pas), elles arrivent par l'évolution, comme le veut l'utilisateur, et `npm run relics` et `npm run synergy` les mesurent. Un premier lot, une relique par ressource orpheline, qui **lit par palier** (§ 10.3) :
+
+| Ressource | Relique proposée (nom provisoire) | Règle proposée |
+| --- | --- | --- |
+| Poison | Fiole de venin | ses coups font +2 contre un adversaire qui porte 3 Poison ou plus |
+| Saignement | Croc de boucher | ses coups font +2 contre un adversaire qui saigne |
+| Soins | Encens de l'abbaye | chaque fois qu'il regagne des PV, +1 à son prochain coup (cumulable) |
+| Coups encaissés | Écu cabossé | quand il encaisse un coup de 6 ou plus, +2 Armure temporaire |
+| Critiques (le second consommateur d'Elaria) | Plume d'aigle | après un critique, +1 Esquive améliorée (recharge 2 tours) |
+
+4. **Puis les répertoires** (phase 8) : une compétence consommatrice par fil, écrite pour le personnage.
+
+**Ce qu'il faut pour le lot de reliques** : cinq icônes peintes (règle du projet : jamais d'emoji, l'icône se demande à l'utilisateur ; une planche comme la v13, générée avec Artlist si l'utilisateur le veut), et une mesure par `npm run relics` (cible de 5 à 15 points, 20 au plus) et `npm run synergy` (un partenaire au-delà de +0,25).
+
+**Thaldrin, toujours sans signature** : sa forme humaine porte un sort sur chaque face. Proposition : sa signature devient les **Feux follets** (faces 4 à 6, la Brûlure comme ressource) ; en campagne, les faces 1 à 3 de la Foudre deviennent nues et se gravent, et la Foudre entre en tête de son répertoire.
+
 ---
 
 ## 14. Pistes de l'agent (P1 à P8)
@@ -1130,7 +1172,7 @@ _Demande de l'utilisateur : « il faudra déclarer ce qui manque ». Inventaire 
 - **à partir de la phase 5, la branche change les règles** : une trace d'avant la conversion ne se rejoue plus à l'identique, et l'empreinte de non-régression est mise à jour volontairement ;
 - **la fusion finale** se décide après la phase 6, une fois la campagne longue jugée en jeu par l'utilisateur.
 
-_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay._
+_Le plan a été écrit sans code (décision de l'utilisateur) ; les phases s'y cochent à mesure qu'elles sont livrées. Chaque phase livrée suit la procédure de `CLAUDE.md` (version, CHANGELOG, FEATURES, ETAT) et la vérification proportionnée : `npm run check`, un seul `npm run balance` quand l'équilibre peut bouger, aucun combat joué dans le navigateur pour valider le gameplay. **Prochaine étape** (0.108.0) : les réponses de l'utilisateur à la proposition du § 13.3 (le lot de cinq reliques consommatrices et leurs icônes, la signature de Thaldrin), puis la seconde partie de la phase 7, les reliques de durée et de type._
 
 ```mermaid
 flowchart LR
@@ -1159,7 +1201,7 @@ flowchart LR
 | **5 bis. L'attaque de base** (faite, 0.106.0 ; à jouer) | RESOLUTION.md d'abord ; l'attaque et le coup de base ; les relations greffe, modifie, remplace ; conversion des dix personnages et de leurs compétences ; forge sans valeurs imprimées (Tremper l'arme, Copier sur la face nue) ; reliques réécrites (le Fer sur le coup de base) ; recalage de la campagne avec la courbe abaissée (§ 1.6, § 11.6) | **oui**, volontairement | `npm run check` (312 tests) et `vite build` ; `BALANCE_N=800 npm run balance` : 48,8 à 52,2 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 17,2 → 16,0 tours ; `npm run relics` : Cotte +28,2, ramenée à +13,7 en 0.106.1 ; `npm run campaign` : boss atteint 27 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG (§ 6 bis.7) | tranché à la huitième passe (§ 1.8) : le vocabulaire, la Cotte, la revue des compétences |
 | **5 ter. Revue des compétences** (faite, 0.107.0 ; à jouer) | les compétences relues pour le d6 et l'attaque (bande de 8 à 20 points par gravure, § 1.9) ; la barde sur ses faces (deux jets complets, plus de doubles) ; « ce coup ×N », Crescendo qui monte, greffe épuisée qui laisse sa face nue ; signature de Naraxes, l'Aura de décoction ; table des gravures dans `scripts/skills.report.ts` ; Dent de loup +1 Vol de vie ; Copier sans gain retiré de l'offre | **oui**, volontairement | `npm run check` (317 tests) et `vite build` ; gravures avant → après : +3,2 à +28,5 → +10,4 à +19,7, les 29 dans la bande ([SORTS.md](SORTS.md) § 19) ; `BALANCE_N=800 npm run balance` : 46,8 à 54,3 %, pire duel Elaria contre Morgrut 61,9 %, aucun au-delà de 65/35 ; durée 15,8 → 15,2 tours ; `npm run relics` : tout +1 point environ, Dent de loup 22,0 → 12,4 ; `npm run campaign` : boss atteint 28 %, acte gagné 13 % ; empreinte mise à jour et notée au CHANGELOG | **l'utilisateur joue** ; ensuite : les auras de signature, la durée, la campagne |
 | **6. Campagne longue en d6** (en partie, 0.105.0 ; à jouer) | fait : les faces quittées en coups imprimés, Copier une face sous la limite de quatre, adversaires construits comme un champion, signature affichée (§ 11.5) ; Fanchon à la signature seule (0.107.0, § 11.7). Reste : Thaldrin à la signature seule ; répertoires relus pour le d6 ; auras de signature ; la courbe abaissée vient avec la phase 5 bis | en campagne | `npm run campaign` (§ 11.5) : boss atteint 48 %, acte gagné 24 %, adversaires à 46-50 % de leurs PV, 13,3 tours par combattant contre le boss | **l'utilisateur joue** : longueur, rythme des forges, difficulté, adversaires |
-| **7. Types à l'écran, durée, types en bonus** | la couleur des chiffres par type et par source ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison | `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
+| **7. Types à l'écran, durée, types en bonus** (en partie, 0.108.0 : types à l'écran) | fait : la couleur des chiffres par source (§ 9.3, `DAMAGE_SOURCES`, six teintes), la source du coup de base magique (`attackSource`), la règle « Types de dégâts » au compendium. Reste : les textes des compétences et des reliques qui nomment leur type ; les premières reliques qui font durer (« +15 PV ») et de type (« +N aux DM, par impact ») | en campagne et en saison (les types à l'écran : non, empreinte inchangée) | 0.108.0 : `npm run check` (319 tests) et `vite build` ; empreinte de non-régression inchangée ; capture Firefox (Ysolde contre Thaldrin, graine 22 : « −5 » ivoire cerclé d'or, « −1 » de la Foudre en cyan). Reste : `npm run relics` ; captures de l'écran touché seulement | le montant des bonus par impact |
 | **8. Lots de contenu** | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3) | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15 | lot par lot, ce qu'on garde |
 
 **Plus tard** : super coups, Sertir, défenses par type, vies (§ 15).

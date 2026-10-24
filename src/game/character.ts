@@ -1,5 +1,5 @@
 import type { PoseId } from './poses'
-import type { AttackKind } from './damage'
+import type { AttackKind, DamageSource } from './damage'
 import type { CharacterEvent } from './events'
 import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
@@ -106,6 +106,8 @@ export interface CharacterForm {
   statuses?: readonly StatusId[]
   /** Type du coup de base sous cette forme (règles v2, phase 5 bis : l'homme DM, l'ours DP) ; sinon celui du personnage */
   attackKind?: AttackKind
+  /** Source du coup de base sous cette forme, avec son `attackKind` (voir `CharacterDef.attackSource`) */
+  attackSource?: DamageSource
 }
 
 export interface CharacterDef {
@@ -124,6 +126,12 @@ export interface CharacterDef {
    * Ysolde, le druide sous forme humaine). Une étiquette : aucune règle ne la lit encore.
    */
   attackKind: AttackKind
+  /**
+   * Source de son coup de base (`damage.ts`) : la couleur de son chiffre à l'écran (docs/MISE_EN_SCENE.md, M37).
+   * Obligatoire pour un coup magique, qui nomme sa magie (Ysolde : `holy`) ; un coup physique est un `strike`, sans la
+   * déclarer. Son type doit être `attackKind` (validateRoster).
+   */
+  attackSource?: DamageSource
   /**
    * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
    * d'une campagne. Sans signature (le combattant nu, les exceptions de structure), il y part avec son kit entier.
@@ -216,6 +224,15 @@ export class Character {
   /** Type du coup de base sous une forme donnée (index dans `forms`) : celui de la forme, sinon le sien. */
   attackKindIn(form = 0): AttackKind {
     return this.forms?.[form].attackKind ?? this.#def.attackKind
+  }
+
+  /**
+   * Source du coup de base sous une forme donnée : celle de la forme qui a son propre type, sinon la sienne ; un coup
+   * sans source déclarée est un coup physique (`strike`), validateRoster exige la source d'un coup magique.
+   */
+  attackSourceIn(form = 0): DamageSource {
+    const own = this.forms?.[form]
+    return (own?.attackKind !== undefined ? own.attackSource : this.#def.attackSource) ?? 'strike'
   }
 
   /** Apparence sous une forme donnée (index dans `forms`) ; l'apparence de base sinon. */

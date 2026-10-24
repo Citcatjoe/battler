@@ -9,6 +9,7 @@ import {
   type TriggeredEvent,
   type Beat,
 } from './combat'
+import { DAMAGE_SOURCES, type DamageTone } from './damage'
 import { COIN_HEADS, lowerFirst, STATUSES, type StatusId } from './statuses'
 
 /*
@@ -25,8 +26,12 @@ export interface LogEntry {
   side?: Side
 }
 
-/** Couleur d'un texte flottant. `poison` et `arcane` : la famille des dégâts d'un statut (`harm`, statuses.ts) */
-export type Tone = 'heal' | 'damage' | 'positive' | 'negative' | 'neutral' | 'poison' | 'arcane'
+/**
+ * Couleur d'un texte flottant. Celle d'un chiffre de dégâts vient de sa source (`DamageTone`, `DAMAGE_SOURCES` de
+ * damage.ts ; docs/MISE_EN_SCENE.md, M37) : rouge des coups et du Saignement, ivoire de la Lumière, cyan de la Foudre,
+ * gris acier du Vent, mauve du Feu, de la Brûlure et de la Pourriture, vert acide du Poison.
+ */
+export type Tone = 'heal' | 'positive' | 'negative' | 'neutral' | DamageTone
 
 export const TONE_CLASS: Record<Tone, string> = {
   heal: 'text-emerald-300 [-webkit-text-stroke:3px_#064e3b]',
@@ -37,6 +42,23 @@ export const TONE_CLASS: Record<Tone, string> = {
   // Vert acide, loin de l'émeraude du soin ; mauve, loin du fuchsia d'un malus posé (docs/MISE_EN_SCENE.md, M37)
   poison: 'text-lime-300 [-webkit-text-stroke:3px_#1a2e05]',
   arcane: 'text-violet-300 [-webkit-text-stroke:3px_#2e1065]',
+  // Jetons du design system (index.css) : l'ivoire du texte cerclé de bronze, le cyan de l'esquive, l'acier de l'armure
+  light: 'text-ink-1 [-webkit-text-stroke:3px_var(--gold-700)]',
+  storm: 'text-dodge [-webkit-text-stroke:3px_#083344]',
+  air: 'text-armor [-webkit-text-stroke:3px_#1e293b]',
+}
+
+/**
+ * Le gros chiffre d'un coup qui touche (coup de base, coup de compétence), dans la teinte de sa source ; un critique ou
+ * un coup lourd garde son or (`Fighter.tsx`).
+ */
+export const HIT_TONE_CLASS: Record<DamageTone, string> = {
+  damage: 'text-red-500 [-webkit-text-stroke:4px_#450a0a]',
+  poison: 'text-lime-300 [-webkit-text-stroke:4px_#1a2e05]',
+  arcane: 'text-violet-300 [-webkit-text-stroke:4px_#2e1065]',
+  light: 'text-ink-1 [-webkit-text-stroke:4px_var(--gold-700)]',
+  storm: 'text-dodge [-webkit-text-stroke:4px_#083344]',
+  air: 'text-armor [-webkit-text-stroke:4px_#1e293b]',
 }
 
 // « PV » est une abréviation : invariable
@@ -68,7 +90,7 @@ export function effectBadge(e: AppliedEffect): Badge {
     case 'heal':
       return { text: `+${e.amount} PV`, tone: 'heal', rises: true }
     case 'damage':
-      return { text: `-${e.amount}`, tone: 'damage', rises: false }
+      return { text: `-${e.amount}`, tone: DAMAGE_SOURCES[e.source].tone, rises: false }
     case 'applyStatus': {
       const def = STATUSES[e.status]
       if (e.result.kind === 'blocked') return { text: `${def.name} résisté`, tone: 'neutral', rises: true }

@@ -1,12 +1,13 @@
 import { RULE_GROUPS, RULE_IDS, RULES, type RuleGroup } from '../../game/rules'
-import { useFocusRef } from './CodexBits'
+import { RuleLink, useFocusRef } from './CodexBits'
 import { matches, type SectionProps } from './sections'
 
 /**
  * Section « Règles » : les règles communes, écrites une seule fois (rules.ts) et regroupées par thème. Les
- * compétences et les statuts y renvoient par leurs pastilles au lieu de les répéter.
+ * compétences et les statuts y renvoient par leurs pastilles au lieu de les répéter ; une règle renvoie à ses voisines
+ * (`Rule.see`) par un lien sous son texte.
  */
-export function RulesSection({ focus, filter }: SectionProps) {
+export function RulesSection({ nav, focus, filter }: SectionProps) {
   const focusRef = useFocusRef(focus)
   const groups = (Object.keys(RULE_GROUPS) as RuleGroup[])
     .map((group) => ({
@@ -33,6 +34,7 @@ export function RulesSection({ focus, filter }: SectionProps) {
               >
                 <h4 className="font-body text-[16px] font-bold text-ink-1">{RULES[id].title}</h4>
                 <p className="font-body text-[15px] leading-snug text-ink-2">{RULES[id].text}</p>
+                {RULES[id].see?.map((to) => <RuleLink key={to} nav={nav} id={to} />)}
               </div>
             ))}
           </section>

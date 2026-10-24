@@ -7,7 +7,7 @@
  * Toute nouvelle mécanique ajoute ici son contrôle.
  */
 import { STAT_KEYS } from './character'
-import { DAMAGE_KINDS, DAMAGE_SOURCES, type DamageKind } from './damage'
+import { DAMAGE_KINDS, DAMAGE_SOURCES, damageKind, type DamageKind } from './damage'
 import { beatEffects, diceOf, effectiveStats, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Trigger } from './events'
 import { forgeState } from './forge'
@@ -284,13 +284,15 @@ export function createAudit() {
         if (a.faces !== DIE_FACES) flag('dé incohérent', r, i, `${a.faces} vs ${DIE_FACES}`)
         if (a.critMultiplier !== eff.critMultiplier) flag('multiplicateur incohérent', r, i, `${a.critMultiplier} vs ${eff.critMultiplier}`)
         if (a.armor !== effDef.armor) flag('armure incohérente', r, i, `${a.armor} vs ${effDef.armor}`)
-        // Le coup de base (phase 5 bis) : sa valeur dans l'attaque de l'attaquant (reliques et forge comprises), son type
-        // celui de sa forme du moment (le druide : l'homme DM, l'ours DP)
+        // Le coup de base (phase 5 bis) : sa valeur dans l'attaque de l'attaquant (reliques et forge comprises), sa source et
+        // son type ceux de sa forme du moment (le druide : l'homme DM, la Foudre ; l'ours DP)
+        const source = r.fighters[att].attackSourceIn(form[att])
         const kind = r.fighters[att].attackKindIn(form[att])
-        if (a.kind !== kind) flag('type du coup de base incohérent', r, i, `${a.kind} au lieu de ${kind}`)
+        if (a.source !== source) flag('source du coup de base incohérente', r, i, `${a.source} au lieu de ${source}`)
+        if (damageKind(a.source) !== kind) flag('type du coup de base incohérent', r, i, `${damageKind(a.source)} au lieu de ${kind}`)
         if (!a.replaced) {
           if (a.value < eff.attackMin || a.value > eff.attackMax) flag("coup de base hors de l'attaque", r, i, `${a.value} hors de ${eff.attackMin} à ${eff.attackMax}`)
-          else see(`coup de base ${DAMAGE_KINDS[a.kind].short}`)
+          else see(`coup de base ${DAMAGE_KINDS[kind].short}`)
           if (a.multiplier) see('coup de base multiplié')
         } else if (a.value !== 0) flag('jet remplacé avec une valeur', r, i, `${a.value}`)
         // Relations au coup (phase 5 bis) : une compétence de la face qui remplace le coup fait un jet remplacé ; une qui se

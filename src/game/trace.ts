@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
-import { DAMAGE_KINDS } from './damage'
+import { DAMAGE_KINDS, DAMAGE_SOURCES } from './damage'
 import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
@@ -107,8 +107,11 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
       const early = a.modifiers.filter((m) => !m.final)
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
-      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) »), ×N par Crescendo ou Soliste
-      const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${DAMAGE_KINDS[a.kind].short})${a.multiplier ? ` ×${a.multiplier}` : ''}`
+      // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7, DP) », « (5 à 7, DM Lumière) » pour un
+      // coup magique, qui nomme sa source), ×N par Crescendo ou Soliste
+      const source = DAMAGE_SOURCES[a.source]
+      const type = `${DAMAGE_KINDS[source.kind].short}${source.kind === 'magical' ? ` ${source.name}` : ''}`
+      const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax}, ${type})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
         return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
       const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)

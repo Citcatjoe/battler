@@ -10,6 +10,7 @@ import { EMOJI, testCharacter } from './test-utils'
 import { Character } from './character'
 import { getRelic, RELIC_IDS, relicKind, relicLine, RELICS, validateRelics, type Relic } from './relics'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
+import { damageKind } from './damage'
 
 const run = (fighters: Pair<Character>, seed = 1) =>
   simulateCombat(fighters, { rng: seededRng(seed) })
@@ -2577,25 +2578,39 @@ describe('attaque de base (phase 5 bis)', () => {
     expect([...values].every((v) => v >= 5 && v <= 7)).toBe(true)
   })
 
-  it('druide : le coup de base de l’homme est magique (DM), celui de l’ours physique (DP)', () => {
+  it('druide : le coup de base de l’homme est magique (DM, la Foudre), celui de l’ours physique (DP, un coup)', () => {
     const druid = createCharacter('thaldrin')
     expect([druid.attackKindIn(0), druid.attackKindIn(1)]).toEqual(['magical', 'physical'])
-    const kinds = { magical: 0, physical: 0 }
+    expect([druid.attackSourceIn(0), druid.attackSourceIn(1)]).toEqual(['lightning', 'strike'])
+    const kinds = { magical: 0, physical: 0, temporal: 0 }
     for (let seed = 1; seed < 20; seed++) {
       const r = simulateCombat([druid, createCharacter('gorak')], { seed })
       let form = 0
       for (const b of r.beats) {
         if (b.type === 'shift' && b.side === 0) form = b.form
         if (b.type !== 'attack') continue
-        if (b.attack.attacker === 1) expect(b.attack.kind).toBe('physical')
+        if (b.attack.attacker === 1) expect(b.attack.source).toBe('strike')
         else {
-          expect(b.attack.kind).toBe(form === 0 ? 'magical' : 'physical')
-          kinds[b.attack.kind]++
+          expect(b.attack.source).toBe(form === 0 ? 'lightning' : 'strike')
+          kinds[damageKind(b.attack.source)]++
         }
       }
     }
     expect(kinds.magical).toBeGreaterThan(20)
     expect(kinds.physical).toBeGreaterThan(20)
+  })
+
+  it('source du coup de base (phase 7) : Ysolde frappe en Lumière ; un coup magique déclare sa source, du type de l’attaque', () => {
+    expect(createCharacter('ysolde').attackSourceIn()).toBe('holy')
+    expect(createCharacter('gorak').attackSourceIn()).toBe('strike')
+    const ysolde = createCharacter('ysolde').definition
+    const druid = createCharacter('thaldrin').definition
+    expect(validateRoster([{ ...ysolde, attackSource: undefined }]).some((p) => p.includes('déclare sa source'))).toBe(true)
+    expect(validateRoster([{ ...ysolde, attackSource: 'poison' }]).some((p) => p.includes("n'est pas une source magical"))).toBe(true)
+    expect(validateRoster([{ ...createCharacter('gorak').definition, attackSource: 'holy' }]).some((p) => p.includes("n'est pas une source physical"))).toBe(true)
+    const [human, bear] = druid.forms!
+    expect(validateRoster([{ ...druid, forms: [{ ...human, attackSource: undefined }, bear] }]).some((p) => p.includes('forme human : un coup magique'))).toBe(true)
+    expect(validateRoster([{ ...druid, forms: [human, { ...bear, attackKind: undefined, attackSource: 'strike' }] }]).some((p) => p.includes('sans son attackKind'))).toBe(true)
   })
 
   it('Copier une face : la compétence d’une face, rang compris, sur la face nue de plus petit numéro qui n’est pas dorée ; une face nue ne se copie pas', () => {

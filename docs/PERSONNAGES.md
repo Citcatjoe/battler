@@ -396,6 +396,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6, **magique (DM)**, 52 PV, aucun autre changement. 50,9 → 49,1 %, 20,7 → 18,5 tours par combat. Voir « L'attaque de base ».
 
+**2026-10-24, les types à l'écran (règles v2, phase 7)** : son coup magique nomme sa source, la **Lumière** (`attackSource: 'holy'`), celle de sa Purification : son chiffre tombe en ivoire cerclé d'or ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) M37). Présentation seule : aucune règle ni mesure ne change.
+
 **Personnalité : la juge.**
 - **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
 - **Comment elle se bat** : elle laisse l'adversaire se condamner lui-même. Elle le paralyse de crainte (Peur), efface ce qui le salit (Purification) et tient bon dans sa lumière (sainteté). Ses coups sont faibles, et ce n'est pas eux qui comptent.
@@ -594,6 +596,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 **2026-10-23, le d6 imprimé (0.105.0)** : homme, Foudre sur 1, 2, 3 et Feux follets sur 4, 5, 6 (plus de d3) ; ours, coups de 3 à 8 (+3 Force de l'ours) ; Aura sauvage hors kit. 49,4 → 51,6 %. Voir « Le d6 imprimé ».
 
 **2026-10-23, l'attaque de base (0.106.0)** : une seule attaque, 3 à 4, dont le type suit la forme (`CharacterForm.attackKind`) : l'homme frappe en magique (DM) et chaque sort se greffe sur ce coup ; l'ours frappe en physique (DP), avec sa Force de l'ours (+3), gardée. Foudre 3×2 → 3×1 (elle gagne un coup de base). 51,6 → 49,4 %, 16,1 → 15,4 tours par combat. Voir « L'attaque de base ».
+
+**2026-10-24, les types à l'écran (règles v2, phase 7)** : le coup magique de l'homme nomme sa source, la **Foudre** (`attackSource: 'lightning'`, choix de l'agent) : il « appelle la foudre », son sort sur la moitié de ses faces, et son feu (les Feux follets) est une Brûlure qui dure, pas un coup. Son coup et ses éclairs tombent en cyan, l'ours en rouge ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) M37). Présentation seule : aucune règle ni mesure ne change.
 
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.

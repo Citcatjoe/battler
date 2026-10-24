@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { figureHeight, footDrop, type Character } from '../game/character'
 import type { Side } from '../game/combat'
-import { TONE_CLASS } from '../game/narration'
+import { HIT_TONE_CLASS, TONE_CLASS } from '../game/narration'
 import type { Float } from '../game/staging'
 import { isAura, STATUSES, type Status } from '../game/statuses'
 import { poseImage, poseImages, poseOf } from '../game/poses'
@@ -313,11 +313,12 @@ export function Fighter({
                 )}
                 <div
                   style={at(18)}
-                  // Les PV perdus tombent ; un critique, lui, jaillit vers le haut (demande de l'utilisateur)
+                  // Les PV perdus tombent ; un critique, lui, jaillit vers le haut (demande de l'utilisateur). Le chiffre
+                  // prend la teinte de sa source (docs/MISE_EN_SCENE.md, M37) ; l'or reste au critique et au coup lourd
                   className={`${f.crit ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 ${
                     f.crit
                       ? 'text-9xl text-amber-400 [-webkit-text-stroke:6px_#451a03]'
-                      : `text-red-500 [-webkit-text-stroke:4px_#450a0a] ${f.damage >= 10 ? 'text-7xl' : f.damage >= 7 ? 'text-6xl' : 'text-5xl'}`
+                      : `${HIT_TONE_CLASS[f.tone]} ${f.damage >= 10 ? 'text-7xl' : f.damage >= 7 ? 'text-6xl' : 'text-5xl'}`
                   }`}
                 >
                   {/* Un critique tremble sous le choc */}

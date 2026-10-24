@@ -32,6 +32,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.108.0] — 2026-10-24
+
+Règles v2 : évaluation des signatures et des auras ([docs/PROGRESSION.md](docs/PROGRESSION.md) § 13.3), puis la phase 7, première partie : **les types à l'écran** (§ 9.3).
+
+### Ajouté
+- **Chaque chiffre de dégâts prend la couleur de sa source**, lue dans le registre (`DAMAGE_SOURCES`, `damage.ts`), six teintes au plus : Coup et Saignement en rouge (l'ambre du critique et l'or d'un coup lourd restent), Lumière en ivoire cerclé d'or, Foudre en cyan, Vent en acier, Feu, Brûlure et Pourriture en mauve, Poison en vert acide.
+- **La source d'une attaque magique** (`attackSource`, contrôlée par `validateRoster`) : Ysolde frappe de la Lumière, la forme humaine du druide de la Foudre ; l'ours reste un coup physique. La trace l'écrit (« coup de base 5 (5 à 7, DM Lumière) ») et l'audit le contrôle.
+- Compendium : règle « Types de dégâts » (DP, DM, DT, leurs sources et leurs couleurs), liée depuis « Coup de base ».
+
+### Modifié
+- `Attack.kind` devient `Attack.source` (le type se déduit de la source) ; l'option de mise en scène `harm` est retirée.
+- Accroches (`hooks.ts`) : les auras de coup (puissance, sauvage, mélodieuse, force de l'ours) consomment les coups ; une correction de la mesure des synergies, sans effet sur les combats.
+
+### Mesuré
+- Évaluation des signatures (§ 13.3) : les auras tiennent sur les nouvelles règles, en moyenne de +12,5 à +17,9 points gravées ; deux signatures sur huit seulement nourrissent quelque chose (Furie, Œil de faucon) ; le Poison, le Saignement, les soins et les coups encaissés n'ont aucun consommateur dans le jeu. Proposition : un lot de cinq reliques consommatrices (à valider, icônes à faire).
+- Empreinte de non-régression inchangée (aucune règle de combat changée).
+
 ## [0.107.0] — 2026-10-24
 
 Phase 5 ter des règles v2 : la revue des compétences sur le d6 et l'attaque, et la barde sur les faces. Décisions de l'utilisateur du 2026-10-24 : une gravure vaut **de 8 à 20 points** ; la signature de Naraxes devient l'**Aura de décoction** ; l'**Aura sauvage** donne +1 à l'attaque par charge ; les compétences de la barde passent **sur les faces**, ses deux dés frappent deux fois. Détail : [docs/SORTS.md](docs/SORTS.md) § 19, [docs/PERSONNAGES.md](docs/PERSONNAGES.md).

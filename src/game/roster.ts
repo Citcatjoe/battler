@@ -65,6 +65,7 @@ import bardHurtImg from '../assets/bard-hurt.png'
 import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
 import { Character, type CharacterDef } from './character'
+import { DAMAGE_SOURCES, type AttackKind, type DamageSource } from './damage'
 import { faceTrigger, isRollTrigger, type CharacterEvent } from './events'
 import { isEngravable } from './forge'
 import { STATUSES } from './statuses'
@@ -364,6 +365,8 @@ const ysolde: CharacterDef = {
   // Mesuré : 49,1 % (43,9 % avant, la plus basse du roster). Phase 5 bis : son attaque est magique (DM, la lumière).
   stats: { maxHp: 52, attackMin: 5, attackMax: 7, armor: 0, dodgeChance: 0.08, critChance: 0.1, critMultiplier: 2 },
   attackKind: 'magical',
+  // Phase 7 (docs/MISE_EN_SCENE.md, M37) : la magie de son coup, la Lumière, que nomme aussi sa Purification
+  attackSource: 'holy',
   // Postures (atelier des postures, 2026-10-20). La masse levée et le halo dépassent de la tête : la taille
   // se règle sur le corps (tête-pieds, 74 % de la toile), le reste compte dans `headroom` (comme Aldric)
   look: {
@@ -610,6 +613,9 @@ const thaldrin: CharacterDef = {
   // la règle de forme la plus lisible).
   stats: { maxHp: 56, attackMin: 3, attackMax: 4, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
   attackKind: 'magical',
+  // Phase 7 (M37) : le coup de l'homme est la Foudre, son sort sur la moitié de ses faces (« il appelle la foudre et le
+  // feu ») ; son feu, les Feux follets, est une Brûlure, un dégât qui dure, pas un coup
+  attackSource: 'lightning',
   // Postures (atelier des postures, 2026-10-20). La garde (bâton et bois compris) occupe 83,9 % de la toile,
   // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
   look: {
@@ -625,7 +631,7 @@ const thaldrin: CharacterDef = {
   // Il change de forme au début de chacun de ses tours, sauf le premier. Depuis la 0.73.0 (SORTS.md § 18),
   // chaque forme a sa règle, un statut de forme : l'homme lance un sort à chaque jet, l'ours frappe à +3
   forms: [
-    { id: 'human', name: 'Forme humaine', statuses: ['casting'], attackKind: 'magical' },
+    { id: 'human', name: 'Forme humaine', statuses: ['casting'], attackKind: 'magical', attackSource: 'lightning' },
     // L'ours est une bête à quatre pattes (règle de l'utilisateur, POSTURES.md § 0) : bois compris, à peine
     // moins haut que le druide (96 %), et une fois et demie plus long que haut. La métamorphose le fait
     // grossir, pas grandir. La garde occupe 90 % de la hauteur de sa toile. Si large qu'il sortait de l'écran
@@ -813,6 +819,17 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     if (!Number.isInteger(s.attackMin) || !Number.isInteger(s.attackMax) || s.attackMin < 1 || s.attackMax < s.attackMin)
       problems.push(`${at} attaque : des entiers, 1 ≤ attackMin ≤ attackMax`)
     if (s.attackMax - s.attackMin > 3) problems.push(`${at} attaque : une petite fourchette (écart de 3 au plus)`)
+    // Sa source (phase 7, docs/MISE_EN_SCENE.md, M37) : un coup magique nomme sa magie, et une source déclarée est du type
+    // de l'attaque (jamais un dégât temporaire) ; une forme ne la déclare qu'avec son propre type
+    const attackSource = (where: string, kind: AttackKind, source: DamageSource | undefined) => {
+      if (kind === 'magical' && source === undefined) problems.push(`${at} ${where}un coup magique déclare sa source (attackSource)`)
+      if (source !== undefined && DAMAGE_SOURCES[source]?.kind !== kind) problems.push(`${at} ${where}attackSource ${source} n'est pas une source ${kind}`)
+    }
+    attackSource('', d.attackKind, d.attackSource)
+    for (const f of d.forms ?? []) {
+      if (f.attackKind !== undefined) attackSource(`forme ${f.id} : `, f.attackKind, f.attackSource)
+      else if (f.attackSource !== undefined) problems.push(`${at} forme ${f.id} : attackSource sans son attackKind`)
+    }
     if (!inRange(s.armor, 0)) problems.push(`${at} armor doit être ≥ 0`)
     if (!inRange(s.dodgeChance, 0, 1)) problems.push(`${at} dodgeChance hors de [0, 1]`)
     if (!inRange(s.critChance, 0, 1)) problems.push(`${at} critChance hors de [0, 1]`)

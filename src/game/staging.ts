@@ -23,7 +23,7 @@ import {
 } from './combat'
 import type { Character } from './character'
 import { cueOf } from './cues'
-import { DAMAGE_SOURCES } from './damage'
+import { DAMAGE_SOURCES, type DamageSource, type DamageTone } from './damage'
 import { relationOf, rollFace } from './events'
 import {
   atCap,
@@ -41,7 +41,6 @@ import {
   statusTickLog,
   type Badge,
   type LogEntry,
-  type Tone,
 } from './narration'
 import { RELICS } from './relics'
 import { SCENE_EVENTS, sceneTarget, type SceneEventId } from './scenes'
@@ -102,13 +101,15 @@ export interface Strike extends Attack {
 /**
  * Coup de compétence : des dégâts directs portés par une compétence ou un statut (Rétribution, pièce sur pile,
  * Épines, Riposte) joués comme un vrai coup, élan, impact et gros chiffre compris. Les montants viennent de la
- * chronologie (`parts` pour une relâche de jauges).
+ * chronologie (`parts` pour une relâche de jauges), comme leur source.
  */
 export interface Blow {
   key: number
   from: Side
   to: Side
   damage: number
+  /** Ce que sont ces dégâts (damage.ts) : la teinte de leur chiffre (M37) */
+  source: DamageSource
   /** Coup lourd (dernier coup d'une relâche, pièce) : chiffre doré, secousse */
   heavy: boolean
   /** Élan du lanceur vers sa cible ; sans élan pour une réaction (Épines) */
@@ -129,12 +130,13 @@ export interface EffectFx {
  * Un texte flottant, à côté de son combattant. Chacun a sa clé et sa durée de vie (`timing.FLOAT_LIFE`) ; aucun n'en
  * écrase un autre. `title` : le nom d'une compétence (violet), avec le statut qu'elle pose en sous-titre ; `badge` :
  * un effet sur sa cible (« −3 », « Poison », « Tour perdu »), au rang `row` de sa colonne, au-dessus du chiffre des
- * dégâts s'il monte avec l'impact d'un coup (`lift`) ; `hit` : ESQUIVE, CRITIQUE et le chiffre d'un coup.
+ * dégâts s'il monte avec l'impact d'un coup (`lift`) ; `hit` : ESQUIVE, CRITIQUE et le chiffre d'un coup, dans la teinte
+ * de sa source (`tone`, M37), l'or s'il est critique ou lourd.
  */
 export type Float =
   | { key: number; kind: 'title'; text: string; subtitle?: string }
   | { key: number; kind: 'badge'; badge: Badge; row: number; lift: boolean }
-  | { key: number; kind: 'hit'; damage: number; crit: boolean; dodged: boolean }
+  | { key: number; kind: 'hit'; damage: number; crit: boolean; dodged: boolean; tone: DamageTone }
 
 /** Événement de scène en cours (`scenes.ts`) : `source` lance, `target` reçoit ; `key` relance l'animation. */
 export interface SceneFx {
@@ -305,8 +307,6 @@ export interface FxSpec {
   effects: readonly AppliedEffect[]
   /** Textes qui ne viennent d'aucun effet, sur leur cible : « Tour perdu » */
   notes?: readonly (Badge & { target: Side })[]
-  /** Famille des dégâts (statut qui agit) : la couleur de leur « −N » (docs/MISE_EN_SCENE.md, M37) */
-  harm?: Tone
 }
 
 /**
@@ -324,7 +324,7 @@ export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOm
     .filter((name) => name !== fx.title)
     .join(' · ')
   const badges: Badge[] = [
-    ...mine.filter((e) => !echoes.includes(e)).map((e) => (e.type === 'damage' && fx.harm ? { ...effectBadge(e), tone: fx.harm } : effectBadge(e))),
+    ...mine.filter((e) => !echoes.includes(e)).map(effectBadge),
     ...(fx.notes?.filter((n) => n.target === side) ?? []),
   ]
   const floats: DistributiveOmit<Float, 'key'>[] = []
@@ -387,7 +387,6 @@ interface ShowOpts {
   /** Compétence ou aura d'où part un signal d'activation, s'il pose un état visible */
   signal?: string
   notes?: FxSpec['notes']
-  harm?: Tone
 }
 
 /**
@@ -471,12 +470,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   const setStrike = (next: Strike | null) => {
     strike = next
     emit({ channel: 'strike', strike: next })
-    if (next?.landed) emit({ channel: 'float', side: other(next.attacker), float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged } })
+    if (next?.landed)
+      emit({ channel: 'float', side: other(next.attacker), float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged, tone: DAMAGE_SOURCES[next.source].tone } })
   }
   const setBlow = (next: Blow | null) => {
     blow = next
     emit({ channel: 'blow', blow: next })
-    if (next?.landed) emit({ channel: 'float', side: next.to, float: { key: key++, kind: 'hit', damage: next.damage, crit: next.heavy, dodged: false } })
+    if (next?.landed)
+      emit({ channel: 'float', side: next.to, float: { key: key++, kind: 'hit', damage: next.damage, crit: next.heavy, dodged: false, tone: DAMAGE_SOURCES[next.source].tone } })
   }
   /** Ce combattant encaisse un coup arrivé, à cet instant (les textes qui montent passent au-dessus du chiffre) */
   const struck = (side: Side) =>
@@ -640,7 +641,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)
     if (cue) sound(cue)
-    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes, harm: o.harm }, o.relic)
+    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes }, o.relic)
     if (o.special) addSpecial(o.special)
     if (hits.length > 0 && source !== null) {
       hold('BLOWS_LEAD')
@@ -675,7 +676,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     impact: (damage: number, heavy: boolean) => SfxName,
     o: { schedule?: readonly number[]; onLand?: (last: boolean) => void; lastHold?: TimingName; heavy?: true } = {},
   ) {
-    const parts = hits.flatMap((e) => (e.type === 'damage' ? (e.parts ?? [e.amount]).map((n) => ({ n, to: e.target })) : []))
+    const parts = hits.flatMap((e) => (e.type === 'damage' ? (e.parts ?? [e.amount]).map((n) => ({ n, to: e.target, source: e.source })) : []))
     if (strike && parts.length > 0) setStrike(null)
     let elapsed = 0
     for (const [k, part] of parts.entries()) {
@@ -689,14 +690,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         wait(Math.max(0, at - T[wind] - elapsed), 'rythme de la scène')
         elapsed = Math.max(elapsed, at)
       }
-      setBlow({ key: id, from, to: part.to, damage: part.n, heavy, lunge, landed: false })
+      setBlow({ key: id, from, to: part.to, damage: part.n, source: part.source, heavy, lunge, landed: false })
       hold(wind)
       if (heavy) hold('HEAVY_FREEZE') // arrêt sur image avant le gros coup
       sound(impact(part.n, heavy))
       const next = [...hp] as Pair<number>
       next[part.to] = Math.max(0, next[part.to] - part.n)
       showHp(next)
-      setBlow({ key: id, from, to: part.to, damage: part.n, heavy, lunge, landed: true })
+      setBlow({ key: id, from, to: part.to, damage: part.n, source: part.source, heavy, lunge, landed: true })
       o.onLand?.(last)
       if (at === undefined || last) hold(last ? (o.lastHold ?? 'BLOW_LAST_HOLD') : 'BLOW_HOLD')
     }
@@ -1017,7 +1018,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // signal). Le poison subi n'a que son texte. Un statut posé déjà à son maximum n'annonce rien.
         const outward = beat.effects.some((e) => e.target !== beat.side) && !capped(beat.effects)
         const fromRing = STATUS_PLACE[beat.status].place === 'aura'
-        const harm = beat.effects.find((e) => e.type === 'damage')
+        const harms = beat.effects.some((e) => e.type === 'damage')
         const base = hp
         showEffects(
           outward ? beat.side : null,
@@ -1029,7 +1030,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             log(statusTickLog(beat.side, beat.status, beat.effects, fighters))
           },
           {
-            ...(harm && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const), harm: DAMAGE_SOURCES[harm.source].tone }),
+            ...(harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
             ...(fromRing && { signal: beat.status }),
           },
         )

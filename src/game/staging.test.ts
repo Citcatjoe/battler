@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import { simulateCombat, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
+import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { rollFace } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, CHARACTERS, createCharacter } from './roster'
@@ -502,7 +503,7 @@ describe('mise en scène', () => {
     expect(cast).toBeGreaterThan(3)
   })
 
-  it('les dégâts d’un statut qui agit ont la couleur de leur famille : Poison en vert, Brûlure en mauve, la plaie en rouge (M37)', () => {
+  it('les dégâts d’un statut qui agit ont la teinte de leur source : Poison en vert, Brûlure en mauve, la plaie en rouge (M37)', () => {
     const tones = new Map<string, Set<string>>()
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
@@ -516,6 +517,25 @@ describe('mise en scène', () => {
     expect(tones.get('poison')).toEqual(new Set(['poison']))
     expect(tones.get('burn')).toEqual(new Set(['arcane']))
     expect(tones.get('bleed')).toEqual(new Set(['damage']))
+  })
+
+  it('le chiffre de chaque coup a la teinte de sa source : coup de base DP en rouge, celui d’Ysolde (DM) en Lumière, la Foudre en cyan (M37)', () => {
+    const tones = new Map<DamageSource, Set<string>>()
+    for (const { moments } of corpus)
+      for (const m of moments)
+        m.cues.forEach((c, i) => {
+          const hit = c.channel === 'strike' ? c.strike : c.channel === 'blow' ? c.blow : null
+          if (!hit?.landed) return
+          // Le chiffre part avec l'impact, juste après lui
+          const float = m.cues[i + 1]
+          expect(float.channel === 'float' && float.float.kind === 'hit').toBe(true)
+          if (float.channel === 'float' && float.float.kind === 'hit' && !float.float.dodged)
+            tones.set(hit.source, (tones.get(hit.source) ?? new Set()).add(float.float.tone))
+        })
+    for (const [source, seen] of tones) expect(seen, source).toEqual(new Set([DAMAGE_SOURCES[source].tone]))
+    expect(tones.get('strike')).toEqual(new Set(['damage']))
+    expect(tones.get('holy')).toEqual(new Set(['light']))
+    expect(tones.get('lightning')).toEqual(new Set(['storm']))
   })
 
   it('combat test : un point d’attente avant chaque étape qui lance des dés, sans initiative animée', () => {

@@ -1,5 +1,5 @@
 import type { Character } from './character'
-import type { AttackKind, DamageSource } from './damage'
+import type { DamageSource } from './damage'
 import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
@@ -95,8 +95,11 @@ export interface Attack {
    * reliques, la dorure et le critique ; 0 pour un jet remplacé
    */
   value: number
-  /** Type du coup de base : celui de l'attaque de l'attaquant, sous sa forme du moment (DP ou DM) */
-  kind: AttackKind
+  /**
+   * Source du coup de base : celle de l'attaque de l'attaquant, sous sa forme du moment (`Character.attackSourceIn`) ;
+   * son type (DP ou DM) s'en déduit (`damageKind`). Sans effet sur la règle : l'étiquette et la couleur du chiffre
+   */
+  source: DamageSource
   /** Crescendo, Soliste (relation « modifie ») : ce coup ×N (`CharacterEvent.hitMultiplier`) */
   multiplier?: number
   dodged: boolean
@@ -354,8 +357,8 @@ function forceRoll(drawn: number, faces: number, forced: number | undefined) {
 export interface StrikeRoll {
   /** La face du dé */
   roll: number
-  /** Type du coup de base (l'attaque de l'attaquant, sous sa forme du moment) */
-  kind: AttackKind
+  /** Source du coup de base (l'attaque de l'attaquant, sous sa forme du moment), d'où son type */
+  source: DamageSource
   /** Le dé a été lancé par l'étape d'avant (jet greffé) : ce coup n'en lance pas */
   preset?: boolean
   /** Dé imposé par l'observateur (mode triche) */
@@ -388,7 +391,7 @@ export function resolveAttack(
   const base = {
     roll,
     faces: DIE_FACES,
-    kind: strike.kind,
+    source: strike.source,
     ...(strike.multiplier !== undefined && { multiplier: strike.multiplier }),
     ...(strike.forced && { forced: true as const }),
     ...(strike.preset && { preset: true as const }),
@@ -1023,13 +1026,13 @@ export function simulateCombat(
    */
   function jet(attacker: Side, cause?: number): Side | undefined {
     const { roll, forced } = drawDie()
-    const kind = fighters[attacker].attackKindIn(states[attacker].form)
-    if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, kind, forced, replaced: true }, false, cause)
-    if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, kind, forced }), false, cause)
+    const source = fighters[attacker].attackSourceIn(states[attacker].form)
+    if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, source, forced, replaced: true }, false, cause)
+    if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, source, forced }), false, cause)
     const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, ...(forced && { forced: true as const }) }, cause)
     const down = fireGrafts(attacker, roll, rolled)
     if (down !== undefined) return down
-    return strikeOnce(attacker, baseHit(attacker, { roll, kind, preset: true }), false, rolled)
+    return strikeOnce(attacker, baseHit(attacker, { roll, source, preset: true }), false, rolled)
   }
 
   /**
@@ -1129,7 +1132,7 @@ export function simulateCombat(
     )
     for (let k = 0; k < strikes; k++) {
       const { roll, forced } = drawDie()
-      const down = strikeOnce(attacker, { roll, kind: fighters[attacker].attackKindIn(att.form), forced }, true, burstBeat)
+      const down = strikeOnce(attacker, { roll, source: fighters[attacker].attackSourceIn(att.form), forced }, true, burstBeat)
       if (down !== undefined) return down
     }
     return undefined

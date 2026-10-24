@@ -125,6 +125,8 @@ Contraintes techniques :
 
 Taux de victoire : < 40 % rouille `#A86B4A`, 40–59 % laiton `#C9A65A`, ≥ 60 % `--good`. Le chiffre est toujours affiché.
 
+Chiffres de dégâts flottants (phase 7 des règles v2, 2026-10-24) : une teinte par source, six au plus, sur le chiffre seulement ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) M37, registre `DAMAGE_SOURCES` de `damage.ts`, classes `TONE_CLASS` et `HIT_TONE_CLASS` de `narration.ts`). Rouge des coups (et du Saignement), vert acide du Poison, mauve (`--arcane` en famille) du feu magique, de la Brûlure et de la Pourriture, et trois jetons réemployés : `--text-1` cerclé de `--gold-700` pour la Lumière, `--dodge` pour la Foudre, `--armor` pour le Vent. L'ambre reste au critique.
+
 Infobulles au survol (2026-10-21) : une seule visible à la fois, celle de l'élément survolé. Son déclencheur est un **groupe nommé** (`group/relic` sur l'élément, `group-hover/relic:` sur l'infobulle) : un `group-hover` nu réagit au survol de n'importe quel ancêtre `group` (une ligne de l'arbre, une case) et ouvre ensemble toutes les infobulles qu'il contient. Près d'un bord de la scène, l'infobulle change de côté plutôt que d'être coupée.
 
 ### 3.1 Labels de la zone de surcharge (2026-10-21)
