@@ -1,28 +1,84 @@
 /*
- * Mesure de la campagne : `npm run campaign` (CAMPAIGN_RUNS parties par champion, 12 par défaut). Chaque partie se joue
- * en pilote automatique, comme le champion de référence : un adversaire au hasard parmi ceux du nœud, la récompense du
- * choix par défaut. Donne, par champion, la profondeur moyenne, la part de parties qui atteignent le boss et
- * qui gagnent l'acte, la chance moyenne estimée avant chaque combat (bandes de danger) et la durée des combats (tours par
+ * Mesure de la campagne : `npm run campaign` (CAMPAIGN_RUNS parties par champion, 12 par défaut ; CAMPAIGN_SEEDS=b pour
+ * un autre jeu de graines, CAMPAIGN_TAG pour nommer le rapport, CAMPAIGN_BUILD_N combats par duel des builds). Chaque
+ * partie se joue en pilote automatique, comme le champion de référence : un adversaire au hasard parmi ceux du nœud, la
+ * récompense du choix par défaut. Donne, par champion, la profondeur moyenne, la part de parties qui atteignent le boss
+ * et qui gagnent l'acte, la chance estimée avant chaque combat (bandes de danger ; aux nœuds 1-2 et 3-10, et contre les
+ * combats normaux réellement gagnés), la part d'adversaires au plancher des PV et la durée des combats (tours par
  * combattant). Par nœud : « le build se voit-il ? » (chaque combat normal rejoué sur la même graine par le champion nu,
  * sans forge ni relique : l'écart de victoire est l'apport du build), la durée et les PV des adversaires réglés (moyenne
- * et plus bas, en part de leurs PV de base). Écrit dans logs/campaign/.
+ * et plus bas, en part de leurs PV de base). Les builds d'un acte complet (offre seule) : gravures, paires liées, force
+ * contre les builds des autres. Les briques des deux lots de la phase 8 : actes où chacune est offerte et prise, et la
+ * part prise quand elle est offerte. Écrit dans logs/campaign/.
  * Méthode et lecture : docs/CAMPAGNE.md § 18, docs/PROGRESSION.md § 3.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
-import { hashSeed } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, HP_FLOOR, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, referenceChampions, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
-import { MAX_SKILL_FACES, REWARDS } from '../src/game/offers'
+import { hashSeed, winRate } from '../src/game/analysis'
+import { ACT_FIGHTS, BOSS_TARGET, championOf, encountersFor, HP_FLOOR, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { drawReward, MAX_SKILL_FACES, REWARDS, type PendingReward } from '../src/game/offers'
 import { simulateCombat } from '../src/game/combat'
+import { withForgeStep, type ForgeStep } from '../src/game/forge'
 import { buildLinks } from '../src/game/hooks'
+import { getRelic } from '../src/game/relics'
 import { pick, seededRng } from '../src/game/rng'
-import { CHARACTER_IDS, createCharacter, repertoireOf } from '../src/game/roster'
+import { ALL_SKILLS, CHARACTER_IDS, createCharacter, repertoireOf } from '../src/game/roster'
 import pkg from '../package.json' with { type: 'json' }
 
 const RUNS = Number(process.env.CAMPAIGN_RUNS ?? 12)
+/** Un autre jeu de graines (CAMPAIGN_SEEDS=b) : à 30 parties, l'écart par champion se lit contre le bruit des graines */
+const SEEDS = process.env.CAMPAIGN_SEEDS ? `:${process.env.CAMPAIGN_SEEDS}` : ''
+/** Combats par duel pour la force d'un build d'acte contre le roster nu */
+const BUILD_N = Number(process.env.CAMPAIGN_BUILD_N ?? 20)
 const pct = (x: number) => `${Math.round(x * 100)} %`
 /** Tours par combattant : un tour du combat est l'action d'un seul des deux */
 const perFighter = (turns: number, fights: number) => (fights ? (turns / fights / 2).toFixed(1).replace('.', ',') : '—')
+
+/**
+ * Les briques des deux lots de la phase 8 (SORTS.md § 22 et § 23, RELIQUES.md § 15) : sont-elles offertes, et prises par
+ * le choix par défaut, dans la progression ?
+ */
+const LOT_SKILLS: Record<string, string> = {
+  quarry: '1',
+  harvest: '1',
+  virulence: '1',
+  sentence: '1',
+  grudge: '1',
+  conflagration: '2',
+  'loaded-die': '2',
+  'bristling-rampart': '2',
+  vendetta: '2',
+}
+const LOT_RELICS: readonly string[] = ['forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
+const LOT_BRICKS: readonly string[] = [...Object.keys(LOT_SKILLS), ...LOT_RELICS]
+/** Les briques des lots dans une offre, et celle que le choix par défaut a prise */
+function lotBricks(reward: PendingReward): { offered: string[]; taken?: string } {
+  if (reward.kind === 'relic') {
+    return { offered: reward.offer.filter((id) => LOT_RELICS.includes(id)), taken: reward.choice && LOT_RELICS.includes(reward.choice) ? reward.choice : undefined }
+  }
+  const offered = reward.offer.flatMap((o) => (o.op === 'engrave' && o.skill.id in LOT_SKILLS ? [o.skill.id] : []))
+  const step = reward.choice
+  return { offered, taken: step?.op === 'engrave' && step.skill.id in LOT_SKILLS ? step.skill.id : undefined }
+}
+
+/**
+ * Un acte complet tiré comme le champion de référence (`drawBuild` de campaign.ts, mêmes graines que
+ * `referenceChampions`), avec ses offres : la mesure de l'offre seule.
+ */
+function actBuild(championId: string, seed: number, v: number) {
+  const rng = seededRng(hashSeed(`campagne:${seed}:reference:${v}`))
+  const def = createCharacter(championId).definition
+  let forge: ForgeStep[] = []
+  const relics: string[] = []
+  const rewards: PendingReward[] = []
+  for (const kind of REWARDS) {
+    const reward = drawReward({ championId, forge, relics }, kind, rng)
+    rewards.push(reward)
+    if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
+    if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
+  }
+  return { champion: championOf({ championId, forge, relics }), rewards }
+}
 
 it('mesure de la campagne (pilote automatique)', () => {
   const rows: string[] = []
@@ -32,11 +88,14 @@ it('mesure de la campagne (pilote automatique)', () => {
   const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0, hp: 0, hpMin: Infinity }))
   const offered = { count: 0, hp: 0, hpMin: Infinity, under: 0 }
   const boss = { fights: 0, turns: 0 }
+  // Les briques des lots dans les parties : offres où elles figurent, et prises par le choix par défaut
+  const inRuns = Object.fromEntries(LOT_BRICKS.map((b) => [b, { offered: 0, taken: 0 }]))
   for (const id of CHARACTER_IDS) {
-    const tally = { depth: 0, boss: 0, won: 0, chance: 0, fights: 0, turns: 0 }
+    // Chance avant combat aux nœuds 1-2 (le plancher des PV y retient la courbe) et 3-10 ; adversaires normaux au plancher
+    const tally = { depth: 0, boss: 0, won: 0, chance: 0, fights: 0, turns: 0, early: [0, 0], late: [0, 0], floor: 0, normals: 0, normalWins: 0 }
     for (let k = 0; k < RUNS; k++) {
-      const rng = seededRng(hashSeed(`mesure:${id}:${k}`))
-      let run: CampaignRun = startRun(id, hashSeed(`partie:${id}:${k}`))
+      const rng = seededRng(hashSeed(`mesure:${id}:${k}${SEEDS}`))
+      let run: CampaignRun = startRun(id, hashSeed(`partie:${id}:${k}${SEEDS}`))
       while (!run.outcome) {
         const encounters = encountersFor(run)
         for (const e of encounters.filter((x) => !x.boss)) {
@@ -50,7 +109,14 @@ it('mesure de la campagne (pilote automatique)', () => {
         tally.chance += encounter.chance
         tally.fights++
         if (encounter.boss) tally.boss++
-        const seed = hashSeed(`combat:${id}:${k}:${run.wins}`)
+        else {
+          const span = run.wins < 2 ? tally.early : tally.late
+          span[0] += encounter.chance
+          span[1]++
+          tally.normals++
+          if (encounter.maxHp === Math.ceil(createCharacter(encounter.characterId).baseStats.maxHp * HP_FLOOR)) tally.floor++
+        }
+        const seed = hashSeed(`combat:${id}:${k}:${run.wins}${SEEDS}`)
         const opponent = opponentOf(encounter)
         const result = simulateCombat([championOf(run), opponent], { seed })
         tally.turns += result.turns
@@ -64,6 +130,7 @@ it('mesure de la campagne (pilote automatique)', () => {
           const hp = encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
           node.fights++
           node.built += result.winner === 0 ? 1 : 0
+          tally.normalWins += result.winner === 0 ? 1 : 0
           node.naked += naked.winner === 0 ? 1 : 0
           node.turns += result.turns
           node.nakedTurns += naked.turns
@@ -71,7 +138,12 @@ it('mesure de la campagne (pilote automatique)', () => {
           node.hpMin = Math.min(node.hpMin, hp)
         }
         run = withFightResult(run, encounter, result)
-        if (run.reward) run = withReward(run, rewardChoice(run.reward))
+        if (run.reward) {
+          const lot = lotBricks(run.reward)
+          for (const b of lot.offered) inRuns[b].offered++
+          if (lot.taken) inRuns[lot.taken].taken++
+          run = withReward(run, rewardChoice(run.reward))
+        }
       }
       tally.depth += run.wins
       if (run.outcome === 'won') tally.won++
@@ -79,22 +151,45 @@ it('mesure de la campagne (pilote automatique)', () => {
     all = { runs: all.runs + RUNS, boss: all.boss + tally.boss, won: all.won + tally.won }
     const start = createCharacter(id).events.map((e) => e.name).join(', ') || 'six faces nues'
     rows.push(
-      `| ${createCharacter(id).name} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${perFighter(tally.turns, tally.fights)} |`,
+      `| ${createCharacter(id).name} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${pct(tally.early[0] / tally.early[1])} | ${pct(tally.late[0] / tally.late[1])} | ${pct((tally.early[0] + tally.late[0]) / tally.normals)} → ${pct(tally.normalWins / tally.normals)} | ${pct(tally.floor / tally.normals)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
   }
   // Les builds d'un acte complet (`REWARDS`), tirés comme le champion de référence : sans combat, ils ne
-  // mesurent que l'offre. Diversité (compétences gravées distinctes) et cohérence (paires de briques qui se nourrissent)
-  const builds = CHARACTER_IDS.map((id) => {
-    const all = Array.from({ length: 10 }, (_, s) => referenceChampions(id, ACT_FIGHTS, hashSeed(`builds:${id}:${s}`))).flat()
-    const engraved = all.map((c) => c.forge.flatMap((f) => (f.op === 'engrave' ? [f.skill.id] : [])))
+  // mesurent que l'offre. Diversité (compétences gravées distinctes) et cohérence (paires de briques qui se nourrissent).
+  // Les briques des lots : part des actes où chacune est offerte au moins une fois, et prise.
+  const inActs = Object.fromEntries(LOT_BRICKS.map((b) => [b, CHARACTER_IDS.map(() => ({ offered: 0, taken: 0 }))]))
+  const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length
+  const actsOf = CHARACTER_IDS.map((id) => Array.from({ length: 10 }, (_, s) => Array.from({ length: 12 }, (_, v) => actBuild(id, hashSeed(`builds:${id}:${s}`), v))).flat())
+  const builds = CHARACTER_IDS.map((id, c) => {
+    const acts = actsOf[c]
+    const all = acts.map((a) => a.champion)
+    const engraved = all.map((ch) => ch.forge.flatMap((f) => (f.op === 'engrave' ? [f.skill.id] : [])))
     const own = new Set(repertoireOf(id).map((e) => e.id))
     const flat = engraved.flat()
     const links = all.map(buildLinks)
-    const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length
+    const lots = acts.map((a) => a.rewards.map(lotBricks))
+    for (const act of lots) {
+      for (const b of new Set(act.flatMap((r) => r.offered))) inActs[b][c].offered++
+      for (const b of new Set(act.flatMap((r) => (r.taken ? [r.taken] : [])))) inActs[b][c].taken++
+    }
+    const lotOffered = lots.filter((act) => act.some((r) => r.offered.length)).length
+    const lotTaken = lots.map((act) => act.filter((r) => r.taken).length)
+    // La force d'un build d'acte, comme en saison : chacun des 24 premiers contre le build de même rang des autres
+    // champions ; et son écart-type d'un build à l'autre (un build fort qui reste fort enchaîne les nœuds)
+    const rates = all.slice(0, 24).map((ch, b) => winRate(ch, actsOf.map((x) => x[b].champion), BUILD_N))
+    const rate = mean(rates)
+    const spread = Math.sqrt(mean(rates.map((r) => (r - rate) ** 2)))
     return {
-      line: `| ${createCharacter(id).name} | ${all.length} | ${mean(engraved.map((e) => e.length)).toFixed(2).replace('.', ',')} | ${flat.length ? pct(flat.filter((s) => own.has(s)).length / flat.length) : '—'} | ${new Set(flat).size} | ${mean(links.map((l) => l.linked)).toFixed(2).replace('.', ',')} | ${pct(mean(links.map((l) => l.linked / Math.max(1, l.pairs))))} |`,
+      line: `| ${createCharacter(id).name} | ${all.length} | ${mean(engraved.map((e) => e.length)).toFixed(2).replace('.', ',')} | ${flat.length ? pct(flat.filter((s) => own.has(s)).length / flat.length) : '—'} | ${new Set(flat).size} | ${mean(links.map((l) => l.linked)).toFixed(2).replace('.', ',')} | ${pct(mean(links.map((l) => l.linked / Math.max(1, l.pairs))))} | ${pct(rate)} ± ${Math.round(spread * 100)} | ${pct(lotOffered / acts.length)} | ${pct(lotTaken.filter((n) => n > 0).length / acts.length)} | ${mean(lotTaken).toFixed(2).replace('.', ',')} |`,
       linked: mean(links.map((l) => l.linked)),
     }
+  })
+  const brickRows = LOT_BRICKS.map((b) => {
+    const seers = CHARACTER_IDS.flatMap((id, c) => (inActs[b][c].offered ? [`${createCharacter(id).name} ${pct(inActs[b][c].offered / 120)} / ${pct(inActs[b][c].taken / 120)}`] : []))
+    const name = b in LOT_SKILLS ? ALL_SKILLS.find((e) => e.id === b)!.name : getRelic(b).name
+    const lot = b in LOT_SKILLS ? `${LOT_SKILLS[b]}, gravure` : '2, relique'
+    const r = inRuns[b]
+    return `| ${name} | ${lot} | ${seers.join(' ; ') || 'personne'} | ${r.offered} | ${r.taken} | ${r.offered ? pct(r.taken / r.offered) : '—'} |`
   })
   const expected = NORMAL_TARGETS.reduce((p, t) => p * t, 1)
   const out = [
@@ -105,8 +200,8 @@ it('mesure de la campagne (pilote automatique)', () => {
     `Mesuré, tous champions : boss atteint ${pct(all.boss / all.runs)}, acte gagné ${pct(all.won / all.runs)} (${all.runs} parties).`,
     `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %.`,
     '',
-    '| Champion | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Tours par combattant |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| Champion | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Chance aux nœuds 1-2 | Chance aux nœuds 3-10 | Combats normaux : chance estimée → gagnés | Adversaires au plancher des PV | Tours par combattant |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
     '',
     '## Le build se voit-il ? (par nœud, tous champions)',
@@ -123,13 +218,22 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises aux quatre compétences de son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises à son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build. Briques des lots : les ${LOT_BRICKS.length} briques de la phase 8 (premier et second lot) ; part des actes où l'une au moins est offerte, où l'une au moins est prise, et briques prises par acte.`,
     '',
-    "| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées |",
-    '| --- | --- | --- | --- | --- | --- | --- |',
+    `| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées | Construit contre construits (24 tirages, ${BUILD_N} combats par duel ; ± écart-type d'un build à l'autre) | Une brique des lots offerte | Une brique des lots prise | Briques des lots par build |`,
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...builds.map((b) => b.line),
+    '',
+    '## Les briques des lots dans la progression',
+    '',
+    `Actes complets (offre seule, 120 par champion) : par champion qui la voit, part des actes où elle est offerte au moins une fois / où elle est prise. Parties (${all.runs}, avec combats) : offres où elle figure, prises par le choix par défaut, et la part prise quand elle est offerte (au hasard dans l'offre : un tiers attendu, plus quand l'offre est plus courte).`,
+    '',
+    '| Brique | Lot | Actes : offerte / prise, par champion | Parties : offerte | Prise | Prise quand offerte |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...brickRows,
   ].join('\n')
   console.log(out)
   mkdirSync('logs/campaign', { recursive: true })
-  writeFileSync(`logs/campaign/${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}_campagne.md`, `${out}\n`)
+  const tag = process.env.CAMPAIGN_TAG ? `_${process.env.CAMPAIGN_TAG}` : ''
+  writeFileSync(`logs/campaign/${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}_campagne${tag}_${RUNS}.md`, `${out}\n`)
 }, 3_600_000)

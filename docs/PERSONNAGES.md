@@ -192,6 +192,29 @@ Quatre compétences et quatre reliques pour les ressources restées sans consomm
 
 **Naraxes et son Poison** (audit du premier lot, point 2) : rien n'est changé. La décoction à 2 Poison dès le rang I (son rang II d'aujourd'hui) la mettait à 66,8 % contre le roster (+13,1, hors de la tolérance), et la Virulence n'y gagnait que +2,4 : le Poison posé au coup s'estompe encore avant son jet. Sa consommatrice de lot 2 est le Dé pipé, qui lit sa pièce.
 
+**Le Rempart hérissé de Brokk** (nuit du 2026-10-25) : son rang passe de +2 à +6 Épines acérées par rang (rang II : +8 Épines par armure vidée), +1,7 → **+3,2** chez Brokk, dans la bande de justesse ; l'Embrasement de Thaldrin (+0,6) et le Dé pipé de Naraxes (+1,1) gardent leur rang, aucun axe entier ne les y met ([SORTS.md](SORTS.md) § 23, série 28).
+
+### Les deux lots dans la progression (calage de campagne, nuit du 2026-10-25)
+
+Mesures : [CAMPAGNE.md](CAMPAGNE.md) § 18.3. Actes complets d'une campagne (offre et choix par défaut, 120 par champion) ; force d'un build d'acte contre le build de même rang des neuf autres (24 tirages, 20 combats par duel) ; boss atteint sur 90 parties (trois jeux de graines).
+
+| Personnage | Une brique des lots offerte / prise, par acte | Briques des lots qu'il voit (offerte / prise, par acte) | Build contre builds | Boss atteint |
+| --- | --- | --- | --- | --- |
+| Gorak | 87 / 43 % | Curée 84 / 40 % ; Clous de pavois 18 / 6 % | 50 % | 22 % |
+| Elaria | 85 / 37 % | Gantelet du talion 65 / 21 % ; Curée 40 / 12 % ; Clous 19 / 9 % | **67 %** | 20 % |
+| Brokk | 100 / 73 % | Clous 66 / 26 % ; Rempart hérissé 63 / 21 % ; Curée 60 / 29 % ; Gantelet 57 / 22 % ; Vindicte 27 / 7 % ; Rancune 26 / 10 % | 45 % | 33 % |
+| Ervald | 98 / 69 % | Virulence 72 / 33 % ; Récolte 57 / 18 % ; Soufflet de forge 49 / 20 % ; Embrasement 33 / 15 % ; Clous 19 / 8 % | 38 % | 17 % |
+| Ysolde | 98 / 53 % | Sentence 78 / 33 % ; Gantelet 65 / 23 % ; Clous 60 / 17 % | **37 %** | 30 % |
+| Naraxes | 100 / 69 % | Pièce trouée 88 / 49 % ; Dé pipé 61 / 20 % ; Virulence 56 / 18 % ; Clous 19 / 8 % | 59 % | 18 % |
+| Aldric | 98 / 72 % | Vindicte 78 / 39 % ; Gantelet 68 / 37 % ; Rancune 40 / 15 % ; Clous 29 / 17 % | 54 % | 28 % |
+| Morgrut | 98 / 67 % | Clous 63 / 23 % ; Curée 57 / 20 % ; Rempart 57 / 27 % ; Rancune 50 / 22 % | 43 % | 18 % |
+| Thaldrin | 98 / 59 % | Embrasement 85 / 42 % ; Soufflet 70 / 27 % ; Clous 19 / 6 % | 42 % | 21 % |
+| Fanchon | 89 / 50 % | Pièce trouée 80 / 40 % ; Dé pipé 26 / 10 % ; Clous 24 / 9 % | **65 %** | 22 % |
+
+**Lecture** : chacun rencontre au moins une brique des lots dans presque chaque acte, et la prend une fois sur deux (au hasard dans l'offre). La campagne règle chaque champion sur lui-même : le boss atteint (17 à 33 % sur 90 parties) ne suit pas la force des builds. La saison, si : Elaria et Fanchon y dominent (66 %), Ervald, Ysolde et Morgrut souffrent (38 à 41 %). L'écart vient de la forge (forge seule : écart-type 9,2 points ; reliques seules : 4,0), Fanchon portant chaque gravure sur ses deux dés ; les briques des lots n'y sont presque pour rien. Deux pièges à connaître en jouant : la **Curée** chez Elaria et Morgrut ne vaut rien sans Pourfendre gravé avant elle, la **Pièce trouée** chez Fanchon rien sans Pile ou face ; chez Ysolde, l'écho de l'offre tire la **Sentence** (prise dans un acte sur trois) plus souvent que son **Aura d'immunité**, plus forte dans un build. La **Rancune** est la brique des lots qui paie le plus (Brokk, Morgrut).
+
+**Le producteur d'abord** (la même nuit, décision du parent, [CAMPAGNE.md](CAMPAGNE.md) § 18.2 et § 18.3) : les deux pièges disparaissent, une consommatrice n'est plus offerte avant son producteur. Le tableau ci-dessus est celui d'avant. Après : **Elaria** ne rencontre une brique des lots que dans 39 % de ses actes (la Curée attend Pourfendre gravé, le Gantelet sa Riposte), **Fanchon** dans 45 % (le Dé pipé et la Pièce trouée attendent Pile ou face) ; les huit autres de 89 à 100 %. Construit contre construits : Elaria 67 → 73 %, Ervald 38 → 45 %, Brokk 45 → 40 %, Morgrut 43 → 38 %, Thaldrin 42 → 38 % ; boss atteint sur 90 parties de 10 % (Ervald) à 25 % (Brokk).
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.

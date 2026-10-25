@@ -8,6 +8,7 @@
  */
 
 import { DAMAGE_SOURCE_IDS, DAMAGE_SOURCES, DAMAGE_TONES, type DamageSource, type DamageTone } from './damage'
+import { typeset } from './typography'
 
 export type RuleGroup = 'turn' | 'dice' | 'dodge' | 'crit' | 'damage' | 'skills' | 'statuses'
 
@@ -104,7 +105,7 @@ export const RULES: Record<RuleId, Rule> = {
   crit: {
     group: 'crit',
     title: 'Critique',
-    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le coup de base, ×N par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 à ×2,5 selon le personnage, plus avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
+    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (une charge par coup qui touche ; une esquive ne l'use pas) : la valeur du coup (le coup de base, ×N par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 ou plus selon le personnage, davantage avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
   },
   modifiers: {
     group: 'damage',
@@ -197,5 +198,8 @@ export const RULES: Record<RuleId, Rule> = {
     text: "Quand un statut est posé : 1. une immunité (du personnage, ou d'un statut comme l'Aura d'immunité, qui ne s'use pas) le bloque : « résisté » ; 2. sinon, une garde le bloque et perd une charge ; 3. le statut opposé annule ses charges une à une (« neutralisé » s'il n'en reste rien) ; 4. le reste se cumule selon sa règle, jusqu'au plafond (« au maximum » si rien ne change). Les mécanismes de compétence et de forme ne passent pas par ces étapes.",
   },
 }
+
+// Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % » et dans les guillemets
+for (const rule of Object.values(RULES)) rule.text = typeset(rule.text)
 
 export const RULE_IDS = Object.keys(RULES) as RuleId[]

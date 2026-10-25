@@ -63,13 +63,16 @@ const builtCharacter = (b: BuildState): Character => createCharacter(b.championI
 export const ECHO_WEIGHT = 2
 
 /**
- * Ce qui est à la portée du personnage (2026-10-24, l'offre pertinente) : ce que produisent ses compétences, son
- * répertoire (tout ce qu'il peut graver), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance.
+ * Ce qui est à la portée du personnage, l'offre pertinente : ce que produit **son build d'aujourd'hui**, ses compétences
+ * (le dé vanilla et ses faces gravées), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance. Du
+ * 2026-10-24 à la nuit du 2026-10-25, son répertoire comptait aussi (tout ce qu'il pourrait graver) : une consommatrice
+ * arrivait avant son producteur et restait une face morte (la Curée chez Elaria sans Pourfendre gravé, la Pièce trouée
+ * chez Fanchon sans Pile ou face ; docs/CAMPAGNE.md § 18.3). Décision du parent : le producteur d'abord.
  */
 function reachOf(b: BuildState): Set<Hook> {
   const character = builtCharacter(b)
   const reach = new Set<Hook>()
-  for (const e of [...character.events, ...REPERTOIRES[b.championId]]) for (const h of eventHooks(e).produces) reach.add(h)
+  for (const e of character.events) for (const h of eventHooks(e).produces) reach.add(h)
   for (const r of character.relics) for (const h of relicHooks(r).produces) reach.add(h)
   for (const s of (character.forms ?? []).flatMap((f) => f.statuses ?? [])) {
     reach.add(`status:${s}`)
@@ -82,8 +85,8 @@ function reachOf(b: BuildState): Set<Hook> {
 
 /**
  * Les reliques qu'on peut lui offrir (2026-10-24, retour de l'utilisateur : « la Fiole de venin m'est proposée à chaque
- * fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : celles dont la condition peut arriver
- * (`relicNeeds`, `reachOf`), parmi tout le registre (`RELIC_IDS`).
+ * fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : celles dont la condition peut arriver avec
+ * ce qu'il a déjà (`relicNeeds`, `reachOf`), parmi tout le registre (`RELIC_IDS`).
  */
 export function offerableRelics(b: BuildState): string[] {
   const reach = reachOf(b)
@@ -92,8 +95,8 @@ export function offerableRelics(b: BuildState): string[] {
 
 /**
  * Les compétences de `skills` qu'on peut lui offrir à graver (0.114.0, la même règle que les reliques) : celles dont le
- * besoin est à sa portée (`skillNeeds`). Une consommatrice sans sa ressource (la Curée sans Saignement, la Sentence sans
- * soin) vaudrait 0 gravée.
+ * besoin est déjà dans son build (`skillNeeds`, `reachOf`). Une consommatrice sans sa ressource (la Curée sans
+ * Saignement, la Sentence sans soin) vaudrait 0 gravée ; elle arrive une fois son producteur gravé ou porté.
  */
 export function offerableSkills(b: BuildState, skills: readonly CharacterEvent[]): CharacterEvent[] {
   const reach = reachOf(b)
@@ -104,10 +107,10 @@ export function offerableSkills(b: BuildState, skills: readonly CharacterEvent[]
  * Une récompense de construction, la même en campagne (joueur et champion de référence) et en saison (offre orientée,
  * règles v2, phase 2) :
  * - forge : Graver est toujours proposée quand une face peut la recevoir, sa compétence tirée dans le **répertoire** du
- *   personnage (`REPERTOIRES`), parmi celles dont le besoin est à sa portée (`offerableSkills`), au poids de son écho
+ *   personnage (`REPERTOIRES`), parmi celles dont le besoin est déjà dans son build (`offerableSkills`), au poids de son écho
  *   avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une compétence. Le
  *   répertoire (cinq compétences au moins) ne s'épuise pas en quatre forges ;
- * - relique : parmi celles dont la condition peut arriver (`offerableRelics`), la première carte au poids de son écho,
+ * - relique : parmi celles dont la condition peut arriver avec son build (`offerableRelics`), la première carte au poids de son écho,
  *   les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre.
  */

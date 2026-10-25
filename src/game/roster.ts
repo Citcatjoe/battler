@@ -295,13 +295,15 @@ const brokk: CharacterDef = {
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa Peau de pierre, le pont du Rempart vers les Épines
       // (FAMILLES § 7, « un bouclier consommé donne des Épines »). Une aura : +2 Épines acérées par charge à chaque armure
-      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7)
+      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7). Son rang
+      // (calage de campagne, nuit du 2026-10-25, laboratoire série 28) : +6 Épines (+3,1) ; +2 valait +1,7, +4 +2,5, et une
+      // armure temporaire posée par le rang (la ressource) +17 dès 1 point
       id: 'bristling-rampart',
       name: 'Rempart hérissé',
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'bristlingRampart', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 3 },
     },
   ],
   events: [

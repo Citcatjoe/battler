@@ -225,8 +225,9 @@ function StartSkillLine({ character, id, label }: { character: Character; id: st
 /** Le champion tel qu'il est : son portrait en pied, son dé forgé, ses reliques. */
 function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRun }) {
   return (
-    <section className="relative flex w-[560px] shrink-0 flex-col items-start justify-end gap-3 pb-6 pl-14" aria-label="Le champion">
-      <div className="h-[420px] w-[360px]">
+    <section className="relative flex w-[560px] shrink-0 flex-col items-start justify-end gap-3 pb-6 pl-14 pt-12" aria-label="Le champion">
+      {/* Le portrait prend la hauteur que le dé, les reliques et l'héritage laissent : il ne monte jamais sur la piste de l'acte */}
+      <div className="min-h-0 w-[360px] flex-1">
         <Fighter character={champion} side={0} anchor="inside" />
       </div>
       <div className="relative z-10">

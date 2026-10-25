@@ -22,6 +22,8 @@ import pkg from '../package.json' with { type: 'json' }
 const pct = (x: number) => `${Math.round(x * 100)} %`
 const dec = (x: number, n = 1) => x.toFixed(n).replace('.', ',')
 const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / Math.max(1, xs.length)
+/** Les briques des deux lots de la phase 8 (SORTS.md § 22 et § 23, RELIQUES.md § 15), comptées dans chaque build */
+const LOT_BRICKS: readonly string[] = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge', 'conflagration', 'loaded-die', 'bristling-rampart', 'vendetta', 'forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
 
 it('mesure de la saison construite', () => {
   const runs = Number(process.env.SEASON_RUNS ?? 4)
@@ -30,7 +32,7 @@ it('mesure de la saison construite', () => {
   const days = seasonSchedule(size)
   const thirds = [0, 1, 2].map(() => ({ fights: 0, turns: 0 }))
   const naked = new Map(CHARACTERS.map((c) => [c.id, winRate(c, CHARACTERS, perPair)]))
-  const gains: { id: string; built: number; complete: boolean; doneDay: number; engraved: number; linked: number }[] = []
+  const gains: { id: string; built: number; complete: boolean; doneDay: number; engraved: number; linked: number; lot: number }[] = []
   const record = new Map<string, { wins: number; played: number }>()
 
   for (let k = 0; k < runs; k++) {
@@ -63,6 +65,7 @@ it('mesure de la saison construite', () => {
         doneDay,
         engraved: forge.filter((s) => s.op === 'engrave').length,
         linked: buildLinks(built).linked,
+        lot: [...relics, ...forge.flatMap((s) => (s.op === 'engrave' ? [s.skill.id] : []))].filter((id) => LOT_BRICKS.includes(id)).length,
       })
     })
   }
@@ -77,7 +80,7 @@ it('mesure de la saison construite', () => {
     const own = gains.filter((g) => g.id === c.id)
     const built = mean(own.map((g) => g.built))
     const season = rates.find((r) => r.name === c.name)
-    return `| ${c.name} | ${own.length} | ${season ? pct(season.rate) : '—'} | ${pct(naked.get(c.id)!)} | ${pct(built)} | ${Math.round((built - naked.get(c.id)!) * 100)} points | ${dec(mean(own.map((g) => g.engraved)), 2)} | ${dec(mean(own.map((g) => g.linked)), 2)} |`
+    return `| ${c.name} | ${own.length} | ${season ? pct(season.rate) : '—'} | ${pct(naked.get(c.id)!)} | ${pct(built)} | ${Math.round((built - naked.get(c.id)!) * 100)} points | ${dec(mean(own.map((g) => g.engraved)), 2)} | ${dec(mean(own.map((g) => g.linked)), 2)} | ${dec(mean(own.map((g) => g.lot)), 2)} |`
   })
   const meanGain = mean(gains.map((g) => g.built - naked.get(g.id)!))
   const complete = gains.filter((g) => g.complete)
@@ -86,7 +89,7 @@ it('mesure de la saison construite', () => {
     '',
     '## Rythme de construction',
     '',
-    `Builds complets à l'arbre : ${complete.length} sur ${gains.length}, à la journée ${dec(mean(complete.map((g) => g.doneDay)))} en moyenne (sur ${days.length}). Gravures par build : ${dec(mean(gains.map((g) => g.engraved)), 2)} ; paires liées par build : ${dec(mean(gains.map((g) => g.linked)), 2)}.`,
+    `Builds complets à l'arbre : ${complete.length} sur ${gains.length}, à la journée ${dec(mean(complete.map((g) => g.doneDay)))} en moyenne (sur ${days.length}). Gravures par build : ${dec(mean(gains.map((g) => g.engraved)), 2)} ; paires liées par build : ${dec(mean(gains.map((g) => g.linked)), 2)} ; briques des lots de la phase 8 par build : ${dec(mean(gains.map((g) => g.lot)), 2)}.`,
     '',
     '## Taux de victoire de saison par personnage',
     '',
@@ -102,8 +105,8 @@ it('mesure de la saison construite', () => {
     '',
     `${perPair} combats par duel, mêmes graines pour le construit et le nu. Apport moyen : ${Math.round(meanGain * 100)} points.`,
     '',
-    '| Personnage | Participants | Saison | Nu | Construit | Apport du build | Gravures | Paires liées |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Personnage | Participants | Saison | Nu | Construit | Apport du build | Gravures | Paires liées | Briques des lots |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...byCharacter,
   ].join('\n')
   console.log(out)

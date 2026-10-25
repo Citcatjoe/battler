@@ -1,6 +1,7 @@
 import type { CharacterStats } from './character'
 import { triggerText, type Effect, type Trigger } from './events'
 import type { RuleId } from './rules'
+import { typeset } from './typography'
 
 /*
  * Statuts (« auras ») : effets durables portés par un combattant, positifs ou négatifs.
@@ -257,6 +258,21 @@ export interface StatusDef {
    * du même jet, il agit sur ce coup-ci (Œil de faucon, Vol de vie), là où `describe` dit « le prochain ».
    */
   grafted?: (s: Status) => string
+  /**
+   * Sa phrase posée sur l'adversaire (passe compendium, 2026-10-25) : le sujet devient l'adversaire (« Le prochain coup
+   * de l'adversaire qui touche fait −5 dégâts »). Sans elle : « L'adversaire » suivi de `describe` (« L'adversaire perd
+   * 3, 2 puis 1 PV au début de ses tours »), qui commence alors par un verbe.
+   */
+  onFoe?: (s: Status) => string
+  /**
+   * Le détail de sa règle (passe compendium, 2026-10-25) : ce que la phrase courte tait (arrondis, moment exact, jargon des
+   * coups bruts), une phrase. Le compendium l'affiche sous le texte d'une compétence qui le pose, en ligne « Détail ».
+   */
+  detail?: (s: Status) => string
+  /** Son porteur en un verbe d'état, pour une condition (« l'adversaire saigne », « est empoisonné », « brûle ») */
+  bears?: string
+  /** Son nom au pluriel, quand il se compte (« +2 coups de chance ») ; sans lui, le nom ne varie pas (« +4 armure temporaire ») */
+  plural?: string
 }
 
 /** Les charges qui agissent : les charges, plus l'intensité (une aura aiguisée compte autant de charges de plus, 0.110.0). */
@@ -292,6 +308,16 @@ const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
 // « PV » est une abréviation : invariable
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 && word !== 'PV' ? 's' : ''}`
 const forTurns = (s: Status) => (s.turns === undefined ? '' : `, encore ${plural(s.turns, 'tour')}`)
+/** Des dégâts signés, accordés : « +1 dégât », « −2 dégâts ». */
+const damageText = (n: number) => `${n < 0 ? '−' : '+'}${plural(Math.abs(n), 'dégât')}`
+/** Une perte qui baisse d'un à chaque fois, en toutes valeurs jusqu'à 5 (« 3, 2 puis 1 »), sinon sa première valeur. */
+const countdown = (n: number) => (n > 1 && n <= 5 ? Array.from({ length: n }, (_, k) => n - k).join(', ').replace(/, (\d+)$/, ' puis $1') : undefined)
+const triangle = (n: number) => (n * (n + 1)) / 2
+/** « trois fois », « quatre fois »… ; au-delà, « N fois ». */
+const TIMES_WORDS: Record<number, string> = { 2: 'deux fois', 3: 'trois fois', 4: 'quatre fois', 5: 'cinq fois', 6: 'six fois' }
+const times = (n: number) => TIMES_WORDS[n] ?? `${n} fois`
+/** Le prochain, ou les N prochains : « Son prochain coup reçu », « Ses 2 prochains coups reçus ». */
+const next = (n: number, one: string, many: string) => (n > 1 ? many.replace('N', String(n)) : one)
 
 /** PV rendus par Sifflotement à chaque fin de tour, et dégâts retirés par charge de Fausse note (barde). */
 export const WHISTLE_HEAL = 2
@@ -334,12 +360,11 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Critique assuré',
     look: { glow: 'rgba(251,191,36,0.85)' },
     polarity: 'positive',
-    summary: 'Le prochain coup qui touche est un coup critique.',
-    describe: (s) =>
-      s.stacks > 1
-        ? `Les ${s.stacks} prochains coups qui touchent sont critiques`
-        : 'Le prochain coup qui touche est critique',
-    grafted: (s) => (s.stacks > 1 ? `Ce coup et les ${s.stacks - 1} suivants qui touchent sont critiques` : "Ce coup est critique ; s'il est esquivé, le prochain qui touche"),
+    summary: 'Son prochain coup qui touche est critique, une charge par coup.',
+    describe: (s) => next(s.stacks, 'Son prochain coup qui touche est critique', 'Ses N prochains coups qui touchent sont critiques'),
+    grafted: (s) => (s.stacks > 2 ? `Ce coup et les ${s.stacks - 1} suivants sont critiques` : s.stacks === 2 ? 'Ce coup et le suivant sont critiques' : 'Ce coup est critique'),
+    detail: () => "Un coup esquivé ne l'use pas : le critique attend le prochain coup qui touche.",
+    plural: 'Critiques assurés',
     badge: (s) => `×${s.stacks}`,
     stacking: 'add',
     forcesCrit: true,
@@ -348,8 +373,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Armure temporaire',
     look: { glow: 'rgba(186,198,214,0.95)' },
     polarity: 'positive',
-    summary: "Un bouclier qui absorbe des dégâts après l'armure, puis s'épuise.",
-    describe: (s) => `Bouclier de ${s.stacks} : absorbe les dégâts après l'armure (le coup garde au moins 1), et s'use d'autant`,
+    summary: "Absorbe des dégâts, puis s'use d'autant.",
+    describe: (s) => `+${s.stacks} armure temporaire`,
+    detail: () => "Elle absorbe les dégâts après l'armure et s'use d'autant ; le coup garde au moins 1 dégât.",
     badge: (s) => String(s.stacks),
     stacking: 'add',
     shield: true,
@@ -359,11 +385,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Poison',
     look: { glow: 'rgba(74,222,128,0.75)' },
     polarity: 'negative',
-    summary: 'Au début de son tour, perd autant de PV que de charges (sans armure), puis perd une charge : Poison 3 = 3 + 2 + 1 PV. Se cumule.',
-    describe: (s) =>
-      s.stacks > 1 && s.stacks <= 3
-        ? `Perd ${Array.from({ length: s.stacks }, (_, k) => s.stacks - k).join(', ').replace(/, (\d+)$/, ' puis $1')} PV au début de ses tours (${(s.stacks * (s.stacks + 1)) / 2} en tout)`
-        : `Perd ${plural(s.stacks, 'PV')} au début de son prochain tour${s.stacks > 1 ? `, puis 1 de moins à chaque tour (${(s.stacks * (s.stacks + 1)) / 2} PV en tout)` : ''}`,
+    summary: 'Au début de ses tours, perd 1 PV par charge, puis une charge part.',
+    describe: (s) => {
+      const list = countdown(s.stacks)
+      if (s.stacks === 1) return 'Perd 1 PV au début de son prochain tour'
+      return list
+        ? `Perd ${list} PV au début de ses tours (${triangle(s.stacks)} en tout)`
+        : `Perd ${s.stacks} PV au début de son prochain tour, puis 1 de moins à chaque tour (${triangle(s.stacks)} en tout)`
+    },
+    bears: 'est empoisonné',
     badge: (s) => String(s.stacks),
     // Une seule valeur, comme les autres états : dégâts et durée à la fois (0.36.4, demande de l'utilisateur)
     counter: 'stacks',
@@ -384,12 +414,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Saignement',
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'negative',
-    summary:
-      'Chaque coup qui le touche lui fait perdre autant de PV que de charges (sans armure), puis une charge part : Saignement 2 = 2 + 1 PV. Ouverte pendant un coup, la plaie coule dès le suivant. Se cumule.',
-    describe: (s) =>
-      s.stacks > 1
-        ? `Les coups qui le touchent lui font perdre ${plural(s.stacks, 'PV')} de plus, puis 1 de moins à chaque coup (${(s.stacks * (s.stacks + 1)) / 2} PV en tout)`
-        : 'Le prochain coup qui le touche lui fait perdre 1 PV de plus, puis la plaie se referme',
+    summary: 'Chaque coup qui le touche lui fait perdre 1 PV par charge, puis une charge part.',
+    describe: (s) => {
+      const list = countdown(s.stacks)
+      if (s.stacks === 1) return 'Perd 1 PV au prochain coup qui le touche'
+      return list
+        ? `Perd ${list} PV aux prochains coups qui le touchent (${triangle(s.stacks)} en tout)`
+        : `Perd ${s.stacks} PV au prochain coup qui le touche, puis 1 de moins à chaque coup (${triangle(s.stacks)} en tout)`
+    },
+    detail: () => 'Posé pendant un coup, il coule dès le coup suivant.',
+    bears: 'saigne',
     badge: (s) => String(s.stacks),
     counter: 'stacks',
     stacking: 'add',
@@ -400,8 +434,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   regeneration: {
     name: 'Régénération',
     polarity: 'positive',
-    summary: 'Rend des PV au début de chaque tour du porteur.',
-    describe: (s) => `Regagne ${plural(s.stacks, 'PV')} au début de chacun de ses tours${forTurns(s)}`,
+    summary: 'Regagne des PV au début de chacun de ses tours.',
+    describe: (s) => `+${s.stacks} PV au début de chacun de ses tours${forTurns(s)}`,
     badge: (s) => `+${s.stacks}`,
     stacking: 'refresh',
     onTurnStart: (s) => [{ type: 'heal', amount: s.stacks }],
@@ -410,8 +444,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   weakened: {
     name: 'Affaibli',
     polarity: 'negative',
-    summary: "Ses coups font 1 de moins par charge, avant l'armure.",
-    describe: (s) => `Ses coups infligent ${s.stacks} de moins avant l'armure${forTurns(s)}`,
+    summary: 'Ses coups font 1 dégât de moins par charge.',
+    describe: (s) => `${damageText(-s.stacks)} à chacun de ses coups${forTurns(s)}`,
+    onFoe: (s) => `${damageText(-s.stacks)} à chacun des coups de l'adversaire${forTurns(s)}`,
+    detail: () => "Avant l'armure.",
     badge: (s) => `−${s.stacks}`,
     stacking: 'refresh',
     modifyOutgoing: (damage, s) => damage - s.stacks,
@@ -419,8 +455,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   exposed: {
     name: 'Brèche',
     polarity: 'negative',
-    summary: 'Son armure perd 1 par charge (3 au plus).',
-    describe: (s) => `Armure réduite de ${s.stacks}${forTurns(s)}`,
+    summary: 'Son armure perd 1 par charge, 3 au plus.',
+    describe: (s) => `−${s.stacks} armure${forTurns(s)}`,
+    onFoe: (s) => `−${s.stacks} armure à l'adversaire${forTurns(s)}`,
     badge: (s) => `−${s.stacks}`,
     stacking: 'add',
     maxStacks: 3,
@@ -431,7 +468,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   burn: {
     name: 'Brûlure',
     polarity: 'negative',
-    summary: 'À la fin de ses N prochains tours, perd N PV (Brûlure 3 : 3 × 3 PV). Une nouvelle Brûlure remplace l’ancienne.',
+    summary: 'Brûlure 3 : il perd 3 PV à la fin de ses 3 prochains tours. Une nouvelle Brûlure remplace l’ancienne.',
+    bears: 'brûle',
     describe: (s) =>
       s.turns === undefined
         ? `Perd ${plural(s.stacks, 'PV')} à la fin de chacun de ses tours`
@@ -451,8 +489,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   vulnerable: {
     name: 'Vulnérable',
     polarity: 'negative',
-    summary: "Chaque coup reçu fait +1 par charge, avant l'armure (3 au plus).",
-    describe: (s) => `Chaque coup reçu inflige ${s.stacks} de plus avant l'armure${forTurns(s)}`,
+    summary: 'Chaque coup reçu lui fait 1 dégât de plus par charge, 3 au plus.',
+    describe: (s) => `${damageText(s.stacks)} à chaque coup reçu${forTurns(s)}`,
+    onFoe: (s) => `${damageText(s.stacks)} à chaque coup que l'adversaire reçoit${forTurns(s)}`,
+    detail: () => "Avant l'armure.",
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
     maxStacks: 3,
@@ -461,7 +501,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   stunned: {
     name: 'Étourdi',
     polarity: 'negative',
-    summary: 'Le porteur perd sa prochaine action.',
+    summary: 'Perd sa prochaine action.',
     describe: (s) => (s.stacks > 1 ? `Perd ses ${s.stacks} prochaines actions` : 'Perd sa prochaine action'),
     badge: (s) => `×${s.stacks}`,
     stacking: 'add',
@@ -472,8 +512,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Épines acérées',
     look: { glow: 'rgba(132,204,22,0.85)' },
     polarity: 'positive',
-    summary: "Chaque coup encaissé fait saigner l'attaquant : 1 charge de Saignement par charge d'épines. Permanentes, elles se cumulent.",
-    describe: (s) => `Chaque coup qui le touche pose ${charges(s)} Saignement sur l'attaquant, pour le reste du combat`,
+    summary: "Chaque coup reçu fait saigner l'attaquant, 1 Saignement par charge.",
+    describe: (s) => `${charges(s)} Saignement à l'attaquant à chaque coup reçu`,
     badge: (s) => String(charges(s)),
     // 0.68.0 : les épines font saigner au lieu de renvoyer 1 dégât direct par charge (0.45.0). Le saignement
     // ne coule que quand le nain touche l'attaquant : la punition attend la riposte du porteur.
@@ -482,12 +522,12 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // Pas de `spentOnReaction` : contre une Furie des vents, chaque coup ouvre la plaie (voulu, 0.29.0).
     reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: charges(s), target: 'opponent' }] },
     // Aiguisées (0.110.0) : chaque coup encaissé fait saigner d'une charge de plus (une fois, pas par pose)
-    power: (n) => `+${n} Saignement par coup encaissé`,
+    power: (n) => `+${n} Saignement par coup reçu`,
   },
   ward: {
     name: 'Garde sacrée',
     polarity: 'positive',
-    summary: 'Bloque les prochains malus posés sur le porteur.',
+    summary: 'Bloque les prochains malus posés sur lui.',
     describe: (s) => (s.stacks > 1 ? `Bloque les ${s.stacks} prochains malus` : 'Bloque le prochain malus'),
     badge: (s) => `×${s.stacks}`,
     stacking: 'add',
@@ -497,19 +537,18 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Vol de vie',
     look: { glow: 'rgba(225,29,72,0.85)' },
     polarity: 'positive',
-    summary: 'Chaque charge : le prochain coup du porteur qui touche (pile comprise) lui rend autant de PV qu’il en retire. Un coup esquivé consomme la charge sans rien rendre.',
+    summary: 'Son prochain coup qui touche lui rend les PV qu’il retire, une charge par coup.',
     describe: (s) => {
-      const more = s.power ? `, plus ${plural(s.power, 'PV')}` : ''
-      return s.stacks > 1
-        ? `Ses ${s.stacks} prochains coups lui rendent les PV qu'ils retirent${more} (un coup esquivé use une charge)`
-        : `Son prochain coup lui rend les PV qu'il retire${more} (perdu si le coup est esquivé)`
+      const more = s.power ? `, +${s.power} PV` : ''
+      return next(s.stacks, `Son prochain coup qui touche lui rend les PV qu'il retire${more}`, `Ses N prochains coups qui touchent lui rendent les PV qu'ils retirent${more}`)
     },
     grafted: (s) => {
-      const more = s.power ? `, plus ${plural(s.power, 'PV')}` : ''
-      return s.stacks > 1
-        ? `Ce coup et les ${s.stacks - 1} suivants lui rendent les PV qu'ils retirent${more} (un coup esquivé use une charge)`
-        : `Ce coup lui rend les PV qu'il retire${more} (esquivé, rien)`
+      const more = s.power ? `, +${s.power} PV` : ''
+      if (s.stacks === 1) return `Ce coup lui rend les PV qu'il retire${more}`
+      return `Ce coup et ${s.stacks === 2 ? 'le suivant' : `les ${s.stacks - 1} suivants`} lui rendent les PV qu'ils retirent${more}`
     },
+    detail: () => 'Un coup esquivé use une charge sans rien rendre.',
+    plural: 'Vols de vie',
     badge: (s) => `×${s.stacks}`,
     // 0.45.0 : deux charges par Vol de vie (deux coups drainés), au lieu d'une ; le compteur dit
     // combien de coups drainent encore. Avant : +3 à +4 points, et un « 1 » qui n'apprenait rien.
@@ -517,15 +556,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     maxStacks: 2,
     drainsHit: true,
     // Aiguisé (0.110.0) : chaque coup drainé rend des PV en plus ; le plafond de 2 charges ne bouge pas
-    power: (n) => `+${plural(n, 'PV')} par coup drainé`,
+    power: (n) => `+${n} PV par coup qui touche`,
   },
   windFury: {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
-    summary:
-      'Ce jet ne frappe pas : tout de suite, deux coups de base bruts par charge, chacun avec son dé (leur face ne déclenche aucune compétence). Toutes les charges partent ensemble.',
-    describe: (s) => `${COUNT_WORDS[furyStrikes(s)] ?? furyStrikes(s)} coups de base bruts tout de suite, chacun son dé (aucune compétence)`,
+    summary: "Ce jet ne frappe pas : deux coups à la place, par charge.",
+    describe: (s) => `${COUNT_WORDS[furyStrikes(s)] ?? furyStrikes(s)} coups au lieu d'un`,
+    detail: () => 'Des coups de base bruts, tout de suite, chacun son dé : leur face ne déclenche aucune compétence.',
     badge: (s) => `×${furyStrikes(s)}`,
     // 0.50.0 (demande de l'utilisateur) : instantanée. Le 2 tombe, les deux coups partent dans la même
     // action, au lieu d'attendre la suivante (0.46.0 : en réserve). Le 2 lui-même ne frappe pas (relation « remplace »).
@@ -537,14 +576,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     extraStrikes: WIND_FURY_STRIKES,
     instantStrikes: true,
     // Aiguisée (E1, 0.110.0) : un coup de plus par rafale et par rang (une charge doublait la rafale : +15 points gravée)
-    power: (n) => `+${n} coup par rafale`,
+    power: (n) => `+${plural(n, 'coup')}`,
   },
   evasion: {
     name: 'Esquive améliorée',
     look: { glow: 'rgba(165,243,252,0.8)', opacity: 0.45 },
     polarity: 'positive',
-    summary: 'Esquive à coup sûr le prochain coup reçu, une charge par esquive. Se cumule.',
-    describe: (s) => (s.stacks > 1 ? `Esquive à coup sûr les ${s.stacks} prochains coups reçus${forTurns(s)}` : `Esquive à coup sûr le prochain coup reçu${forTurns(s)}`),
+    summary: 'Esquive à coup sûr le prochain coup reçu, une charge par esquive.',
+    describe: (s) => `${next(s.stacks, 'Esquive à coup sûr le prochain coup reçu', 'Esquive à coup sûr les N prochains coups reçus')}${forTurns(s)}`,
+    plural: 'Esquives améliorées',
     badge: () => '100 %',
     // 2026-10-21 (demande de l'utilisateur) : cumulable, une charge par esquive. Avant : plafonnée à 1 (`refresh`).
     counter: 'stacks',
@@ -556,8 +596,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   momentum: {
     name: 'Ferveur',
     polarity: 'positive',
-    summary: "Son prochain coup qui touche fait autant de dégâts de plus que de charges, avant l'armure. Se cumule ; disparaît, toutes charges comprises, dès que ce coup touche.",
-    describe: (s) => `Son prochain coup qui touche fait +${s.stacks}, avant l'armure`,
+    summary: 'Son prochain coup qui touche fait 1 dégât de plus par charge.',
+    describe: (s) => `Son prochain coup qui touche fait ${damageText(s.stacks)}`,
+    detail: () => "Avant l'armure ; toutes les charges partent sur ce coup.",
     badge: (s) => `+${s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
@@ -573,9 +614,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Curée',
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'positive',
-    summary:
-      'Juste après le coup de base du jet qui la pose : deux coups de base bruts par charge, chacun avec son dé (leur face ne déclenche aucune compétence). Toutes les charges partent ensemble.',
-    describe: (s) => `${COUNT_WORDS[quarryStrikes(s)] ?? quarryStrikes(s)} coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence)`,
+    summary: 'Deux coups de plus par charge, juste après le coup du jet.',
+    describe: (s) => `${COUNT_WORDS[quarryStrikes(s)] ?? quarryStrikes(s)} coups de plus`,
+    detail: () => 'Des coups de base bruts, juste après celui du jet, chacun son dé : leur face ne déclenche aucune compétence.',
     badge: (s) => `×${quarryStrikes(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -587,8 +628,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rancune',
     look: { glow: 'rgba(245,158,11,0.85)' },
     polarity: 'positive',
-    summary: 'Chaque coup qui touche le porteur lui donne un Critique assuré (son prochain coup qui touche est critique) ; une charge par coup encaissé. Se cumule.',
-    describe: (s) => `Son prochain coup est critique quand il encaisse un coup, ${s.stacks}x`,
+    summary: 'Chaque coup reçu lui donne un critique assuré, une charge par coup.',
+    describe: (s) => next(s.stacks, 'Son prochain coup reçu lui donne un critique assuré', 'Ses N prochains coups reçus lui donnent chacun un critique assuré'),
     badge: (s) => `×${s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
@@ -605,8 +646,12 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Embrasement',
     look: { glow: 'rgba(251,146,60,0.85)' },
     polarity: 'positive',
-    summary: `Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup ${CONFLAGRATION_TIMES} fois ce que sa Brûlure lui ferait encore perdre, et la Brûlure s'éteint. Sans Brûlure, la charge attend ; une charge par Brûlure relâchée. Se cumule.`,
-    describe: (s) => `Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup ${CONFLAGRATION_TIMES + (s.power ?? 0)} fois sa Brûlure restante, ${s.stacks}x`,
+    summary: `Son prochain coup qui touche un adversaire qui brûle lui fait perdre ${times(CONFLAGRATION_TIMES)} sa Brûlure restante, d'un coup, puis la Brûlure s'éteint.`,
+    describe: (s) => {
+      const many = times(CONFLAGRATION_TIMES + (s.power ?? 0))
+      return next(s.stacks, `Son prochain coup qui touche un adversaire qui brûle lui fait perdre ${many} sa Brûlure restante`, `Ses N prochains coups qui touchent un adversaire qui brûle lui font perdre ${many} sa Brûlure restante`)
+    },
+    detail: () => "D'un coup, puis la Brûlure s'éteint ; sans Brûlure, la charge attend.",
     badge: (s) => `×${CONFLAGRATION_TIMES + (s.power ?? 0)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -614,14 +659,18 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     decays: true,
     // Une relâche sans Brûlure ne part pas (combat.ts, `fire`) : la charge attend un coup sur un adversaire qui brûle
     reactions: { hit: (s) => [{ type: 'release', status: 'burn', from: 'opponent', min: 0, share: CONFLAGRATION_TIMES + (s.power ?? 0), target: 'opponent', source: 'burn' }] },
-    power: (n) => `×${n} de plus`,
+    power: (n) => `+${n} fois la Brûlure`,
   },
   loadedDie: {
     name: 'Dé pipé',
     look: { glow: 'rgba(167,139,250,0.85)' },
     polarity: 'positive',
-    summary: `Sa prochaine pièce (Pile ou face) tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}. Sans pièce, la charge attend ; une charge par pièce. Se cumule.`,
-    describe: (s) => `Sa prochaine pièce tombe sur pile, ×${LOADED_DIE_BONUS + (s.power ?? 0)} de plus, ${s.stacks}x`,
+    summary: `Sa prochaine pièce tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
+    describe: (s) => {
+      const more = `pile vaut ×${LOADED_DIE_BONUS + (s.power ?? 0)} de plus`
+      return next(s.stacks, `Sa prochaine pièce tombe sur pile, et ${more}`, `Ses N prochaines pièces tombent sur pile, et ${more}`)
+    },
+    detail: () => 'Sans pièce, la charge attend.',
     badge: (s) => `+×${LOADED_DIE_BONUS + (s.power ?? 0)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -633,7 +682,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rempart hérissé',
     look: { aura: 'rgba(148,163,184,0.6)' },
     polarity: 'positive',
-    summary: `Chaque fois que son armure temporaire est vidée, il gagne ${RAMPART_THORNS} Épines acérées par charge. Permanente, elle se cumule.`,
+    summary: `+${RAMPART_THORNS} Épines acérées par charge chaque fois que son armure temporaire est vidée.`,
     describe: (s) => `+${RAMPART_THORNS * charges(s)} Épines acérées quand son armure temporaire est vidée`,
     badge: (s) => `+${RAMPART_THORNS * charges(s)}`,
     counter: 'stacks',
@@ -645,7 +694,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Vindicte',
     look: { aura: 'rgba(253,186,116,0.5)' },
     polarity: 'positive',
-    summary: `Chaque fois qu'il renvoie des dégâts (Riposte, Rétribution), il gagne ${VENDETTA_MOMENTUM} Ferveur par charge : son prochain coup qui touche fait autant de plus. Permanente, elle se cumule.`,
+    summary: `+${VENDETTA_MOMENTUM} Ferveur par charge chaque fois qu'il renvoie des dégâts.`,
     describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur quand il renvoie des dégâts`,
     badge: (s) => `+${VENDETTA_MOMENTUM * charges(s)}`,
     counter: 'stacks',
@@ -659,8 +708,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Peur',
     look: { glow: 'rgba(148,163,184,0.7)', motion: 'tremble' },
     polarity: 'negative',
-    summary: 'Le porteur, terrifié, perd sa prochaine action.',
-    describe: () => 'Perd sa prochaine action, terrifié',
+    summary: 'Terrifié, il perd sa prochaine action.',
+    describe: () => 'Perd sa prochaine action',
     badge: () => '×1',
     // 2026-10-21 (audit S9) : non cumulable, plafonnée à 1 ; même comportement qu'un cumul plafonné à 1
     stacking: 'refresh',
@@ -671,8 +720,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
-    summary: `Le porteur lance aussitôt une pièce, juste après le coup qui l’a posée : pile, ce coup ×${COIN_HEADS}, l’adversaire perd encore ${COIN_HEADS - 1} fois les PV qu’il lui a retirés, en dégâts directs qui comptent comme un coup qui touche (tout ce qui réagit à un coup part : Aura de décoction, Épines, Saignement, Riposte, Vol de vie, jauges de Rétribution) ; face, rien.`,
+    summary: `Juste après son coup, une pièce : pile, ce coup ×${COIN_HEADS} ; face, rien.`,
     describe: (s) => `Une pièce : pile, ce coup ×${COIN_HEADS + (s.power ?? 0)} ; face, rien`,
+    detail: () => 'Pile compte comme un coup qui touche : tout ce qui réagit à un coup part.',
     badge: (s) => `×${COIN_HEADS + (s.power ?? 0)}`,
     stacking: 'refresh',
     mechanic: 'skill',
@@ -692,11 +742,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Coup de chance',
     look: { glow: 'rgba(52,211,153,0.85)', dieColor: '#34d399' },
     polarity: 'positive',
-    summary: 'À sa prochaine action, un d6 de plus par charge : chacun est un jet complet (sa compétence, puis son coup de base). Se cumule.',
-    describe: (s) =>
-      s.stacks > 1
-        ? `À sa prochaine action, ${s.stacks} jets de plus (chacun son dé, sa compétence, son coup)`
-        : 'À sa prochaine action, un jet de plus (son dé, sa compétence, son coup)',
+    summary: 'Un jet de plus à sa prochaine action, par charge.',
+    describe: (s) => next(s.stacks, 'Un jet de plus à sa prochaine action', 'N jets de plus à sa prochaine action'),
+    detail: () => 'Chaque jet est complet : son dé, sa compétence, son coup.',
+    plural: 'Coups de chance',
     badge: (s) => `+${s.stacks}d6`,
     // 0.50.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
     counter: 'stacks',
@@ -712,14 +761,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Riposte',
     look: { glow: 'rgba(253,230,138,0.9)' },
     polarity: 'positive',
-    summary:
-      "Chaque charge : le prochain coup qui touche le porteur (pile comprise) renvoie à l'attaquant la moitié des PV retirés, arrondie au-dessus, en dégâts directs. Sans durée : elle attend ce coup, même si l'adversaire n'en porte pas (jet remplacé, tour perdu).",
+    summary: "Son prochain coup reçu renvoie la moitié de ses dégâts à l'attaquant, une charge par coup.",
     describe: (s) => {
-      const more = s.power ? `, plus ${s.power}` : ''
-      return s.stacks > 1
-        ? `Ses ${s.stacks} prochains coups encaissés renvoient chacun la moitié de leurs dégâts (arrondie au-dessus)${more} à l'attaquant`
-        : `Le prochain coup encaissé renvoie la moitié de ses dégâts (arrondie au-dessus)${more} à l'attaquant`
+      const more = s.power ? `, +${s.power},` : ''
+      return next(
+        s.stacks,
+        `Son prochain coup reçu renvoie la moitié de ses dégâts${more} à l'attaquant`,
+        `Ses N prochains coups reçus renvoient chacun la moitié de leurs dégâts${more} à l'attaquant`,
+      )
     },
+    detail: () => 'Arrondie au-dessus, en dégâts directs.',
     badge: () => '50 %',
     // 0.50.0 : deux charges par Riposte (deux coups renvoyés), comme le Vol de vie
     counter: 'stacks',
@@ -732,9 +783,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   retribution: {
     name: 'Rétribution',
     polarity: 'positive',
-    summary:
-      'Trois jauges gardent les PV retirés par les trois derniers coups qui le touchent (pile comprise ; pas les dégâts directs). Sa compétence en relâche la moitié, arrondie au-dessous, puis les vide. Ni bonus ni malus : aucune purge ne les vide.',
-    describe: (s) => `Jauges : ${(s.slots ?? []).join(' · ') || 'vides'} (${s.stacks} PV gardés)`,
+    summary: 'Garde les dégâts des trois derniers coups reçus ; sa compétence les renvoie.',
+    describe: (s) => `Jauges : ${(s.slots ?? []).join(' · ') || 'vides'} (${s.stacks} PV gardé${s.stacks > 1 ? 's' : ''})`,
     badge: (s) => String(s.stacks),
     stacking: 'refresh',
     mechanic: 'skill',
@@ -746,9 +796,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura glaciale',
     look: { aura: 'rgba(147,197,253,0.6)' },
     polarity: 'positive',
-    summary:
-      "Au début de chacun de ses tours, le froid de la tombe pose 1 charge de Poison par charge d'aura sur l'adversaire. Le Poison perd une charge à chaque tour : une charge d'aura le fige à sa valeur. Permanente.",
-    describe: (s) => `Au début de chacun de ses tours, ${charges(s)} Poison sur l'adversaire`,
+    summary: "1 Poison par charge à l'adversaire, au début de chacun de ses tours.",
+    describe: (s) => `${charges(s)} Poison à l'adversaire au début de chacun de ses tours`,
     badge: (s) => `+${charges(s)}`,
     stacking: 'add',
     // 0.69.0 (choix de l'utilisateur, SORTS.md § 15) : elle pose du vrai Poison au lieu de dégâts directs
@@ -762,22 +811,24 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de puissance',
     look: { aura: 'rgba(251,146,60,0.55)' },
     polarity: 'positive',
-    summary: "Chaque coup du porteur inflige 2 dégâts de plus, après le critique et avant l'armure. Permanente, non cumulable.",
-    describe: (s) => `Ses coups font +${2 * s.stacks + (s.power ?? 0)}, après le critique et avant l'armure`,
+    summary: '+2 dégâts à chacun de ses coups.',
+    describe: (s) => `${damageText(2 * s.stacks + (s.power ?? 0))} à chacun de ses coups`,
+    detail: () => "Après le critique, avant l'armure.",
     badge: (s) => `+${2 * s.stacks + (s.power ?? 0)}`,
     // 0.107.0 (SORTS.md § 19) : non cumulable, comme l'Aura d'immunité ; +2 par charge cumulable valait +21 points gravée.
     // L'Aura sauvage, elle, cumule +1 à l'attaque (avant le critique)
     stacking: 'refresh',
     maxStacks: 1,
     modifyOutgoing: (damage, s) => damage + 2 * s.stacks + (s.power ?? 0),
-    power: (n) => `+${n} à chaque coup`,
+    power: (n) => `${damageText(n)} par coup`,
   },
   intimidationAura: {
     name: "Aura d'intimidation",
     look: { aura: 'rgba(185,28,28,0.6)' },
     polarity: 'positive',
-    summary: `Les coups de l'adversaire font ${INTIMIDATION} de moins par charge, avant l'armure. Permanente.`,
-    describe: (s) => `Les coups adverses lui font −${INTIMIDATION * s.stacks}, après le critique et avant l'armure`,
+    summary: `Chaque coup de l'adversaire lui fait ${plural(INTIMIDATION, 'dégât')} de moins par charge.`,
+    describe: (s) => `${damageText(-INTIMIDATION * s.stacks)} à chaque coup de l'adversaire`,
+    detail: () => "Après le critique, avant l'armure.",
     badge: (s) => `−${INTIMIDATION * s.stacks}`,
     stacking: 'add',
     // 0.107.0 (SORTS.md § 19) : −1 par charge au lieu de −2 ; sur une attaque de 5, −2 retirait 40 % de chaque coup
@@ -787,7 +838,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de précision',
     look: { aura: 'rgba(250,204,21,0.5)' },
     polarity: 'positive',
-    summary: `Par charge, le porteur gagne ${Math.round(PRECISION_CRIT * 100)} % de chance de critique et +1 à son multiplicateur de critique. Permanente.`,
+    summary: `+${Math.round(PRECISION_CRIT * 100)} % de critique et +1 au multiplicateur de critique, par charge.`,
     describe: (s) => `+${Math.round(PRECISION_CRIT * 100 * s.stacks)} % de critique et +${s.stacks} au multiplicateur de critique`,
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
@@ -798,8 +849,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'immunité",
     look: { aura: 'rgba(253,224,71,0.55)' },
     polarity: 'positive',
-    summary: 'Aucun malus ne peut plus lui être posé (les auras adverses agissent toujours) ; armure +1. Permanente, non cumulable.',
-    describe: (s) => `Aucun malus ne peut plus lui être posé (les auras adverses agissent toujours) ; armure +${charges(s)}`,
+    summary: 'Aucun malus ne peut plus lui être posé, et +1 armure.',
+    describe: (s) => `Aucun malus ne peut plus lui être posé, et +${charges(s)} armure`,
+    detail: () => "Les auras de l'adversaire agissent toujours.",
     badge: () => '∞',
     stacking: 'refresh',
     maxStacks: 1,
@@ -807,14 +859,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // 0.42.0 : +1 d'armure tant que l'aura est là. Seule, l'immunité coûtait des victoires (−2,7 à
     // −3,9 points) : peu d'adversaires posent des malus, et le 3 sacrifiait alors son coup.
     modifyStats: (stats, s) => ({ ...stats, armor: stats.armor + charges(s) }),
-    power: (n) => `+${n} d'armure`,
+    power: (n) => `+${n} armure`,
   },
   holyAura: {
     name: 'Aura de sainteté',
     look: { aura: 'rgba(254,243,199,0.6)' },
     polarity: 'positive',
-    summary: `Le porteur regagne ${plural(HOLY_HEAL, 'PV')} par charge à la fin de chacun de ses tours (${HOLY_CAP} charges au plus). Permanente.`,
-    describe: (s) => `Regagne ${plural(HOLY_HEAL * charges(s), 'PV')} à la fin de chacun de ses tours`,
+    summary: `+${HOLY_HEAL} PV par charge à la fin de chacun de ses tours, ${HOLY_CAP} charges au plus.`,
+    describe: (s) => `+${HOLY_HEAL * charges(s)} PV à la fin de chacun de ses tours`,
     badge: (s) => `+${HOLY_HEAL * charges(s)}`,
     stacking: 'add',
     // 0.42.0 : plafond de charges (`HOLY_CAP`). Sans plafond, les soins s'empilaient et les combats
@@ -830,8 +882,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Sentence',
     look: { aura: 'rgba(254,240,138,0.5)' },
     polarity: 'positive',
-    summary: `Chaque fois que le porteur regagne des PV, l'adversaire perd ${plural(SENTENCE_LOSS, 'PV')} par charge (dégâts directs). Permanente ; ${SENTENCE_CAP} charges au plus.`,
-    describe: (s) => `L'adversaire perd ${plural(SENTENCE_LOSS * charges(s), 'PV')} chaque fois qu'il regagne des PV`,
+    summary: `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS, 'PV')} par charge à l'adversaire, ${SENTENCE_CAP} charges au plus.`,
+    describe: (s) => `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS * charges(s), 'PV')} à l'adversaire`,
+    detail: () => 'En dégâts directs.',
     badge: (s) => `−${SENTENCE_LOSS * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -844,8 +897,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de décoction',
     look: { aura: 'rgba(163,230,53,0.5)' },
     polarity: 'positive',
-    summary: `Chaque coup qui touche (pile comprise) empoisonne la cible : ${plural(DECOCTION_POISON, 'charge')} de Poison par charge d’aura. Permanente.`,
-    describe: (s) => `Chacun de ses coups qui touche (pile comprise) pose ${DECOCTION_POISON * charges(s)} Poison sur l'adversaire`,
+    summary: `Chaque coup qui touche pose ${DECOCTION_POISON} Poison par charge à l'adversaire.`,
+    describe: (s) => `${DECOCTION_POISON * charges(s)} Poison à l'adversaire à chaque coup qui touche`,
+    detail: () => 'Pile compte comme un coup qui touche.',
     badge: (s) => `+${DECOCTION_POISON * charges(s)}`,
     stacking: 'add',
     // Poison qui s'estompe (0.36.4) : voir EQUILIBRAGE.md pour la valeur
@@ -859,9 +913,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Luciole',
     look: { motion: 'fireflies' },
     polarity: 'negative',
-    summary: "Des lucioles trahissent le porteur : il ne peut plus esquiver (une esquive imposée passe quand même), et chaque coup reçu lui inflige 2 dégâts de plus, avant l'armure. Chaque coup qui le touche en chasse une (une charge).",
-    // 0.50.0 : texte raccourci (l'audit le trouvait trop long)
-    describe: (s) => `Ne peut plus esquiver, chaque coup reçu fait +2 ; ${s.stacks > 1 ? `${s.stacks} coups encaissés` : 'un coup encaissé'} les chassent`,
+    summary: 'Il ne peut plus esquiver, et chaque coup reçu lui fait +2 dégâts ; chaque coup qui le touche chasse une luciole.',
+    describe: (s) => `Ne peut plus esquiver, et chaque coup reçu lui fait +2 dégâts ; ${next(s.stacks, 'le prochain coup reçu les chasse', 'N coups reçus les chassent')}`,
     badge: (s) => String(s.stacks),
     counter: 'stacks',
     stacking: 'add',
@@ -874,8 +927,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de pourriture',
     look: { aura: 'rgba(124,90,140,0.6)' },
     polarity: 'positive',
-    summary: 'Chaque coup qui touche infecte la cible : 1 charge de pourriture par charge d’aura, qui ne s’en va plus. Permanente.',
-    describe: (s) => `Chaque coup qui touche pose ${s.stacks} Pourriture`,
+    summary: "Chaque coup qui touche pose 1 Pourriture par charge à l'adversaire.",
+    describe: (s) => `${s.stacks} Pourriture à l'adversaire à chaque coup qui touche`,
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
     reactions: { hit: (s) => [{ type: 'applyStatus', status: 'rot', stacks: s.stacks, target: 'opponent' }] },
@@ -883,7 +936,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   rot: {
     name: 'Pourriture',
     polarity: 'negative',
-    summary: "Fait perdre 1 PV par charge au début de chaque tour du porteur, en ignorant l'armure. Ne s'estompe pas : seule une purge l'enlève.",
+    summary: "Perd 1 PV par charge au début de chacun de ses tours ; seule une purification l'enlève.",
     describe: (s) => `Perd ${plural(s.stacks, 'PV')} au début de chacun de ses tours, jusqu'à ce qu'on le purifie`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
@@ -900,7 +953,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
-    summary: 'Sous forme humaine, le druide lance ses sorts sur leurs faces, greffés sur son coup de base ; sous forme d’ours, ils se taisent.',
+    summary: 'Sous forme humaine, ses sorts partent sur leurs faces ; sous forme d’ours, ils se taisent.',
     describe: () => 'Ses sorts partent, puis un coup',
     badge: () => 'Sort',
     // Une règle, pas une réserve : aucun nombre sur le médaillon (`turns` sans durée n'affiche rien)
@@ -916,8 +969,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
-    summary: `Sous forme d'ours, le druide ne lance que ses gravures : son coup de base fait ${BEAR_MIGHT} de plus, après le critique et avant l'armure.`,
-    describe: () => `Chaque coup fait +${BEAR_MIGHT}, après le critique et avant l'armure`,
+    summary: `Sous forme d'ours, seules ses gravures partent, et ses coups font +${BEAR_MIGHT} dégâts.`,
+    describe: () => `${damageText(BEAR_MIGHT)} à chacun de ses coups`,
+    detail: () => "Après le critique, avant l'armure.",
     badge: () => `+${BEAR_MIGHT}`,
     counter: 'turns',
     stacking: 'refresh',
@@ -929,8 +983,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura sauvage',
     look: { aura: 'rgba(180,83,9,0.55)' },
     polarity: 'positive',
-    summary: `L'attaque du porteur gagne ${WILD_AURA_ATTACK} par charge, minimum et maximum : chaque coup vaut plus, avant le critique. Permanente.`,
-    describe: (s) => `Son attaque gagne +${WILD_AURA_ATTACK * s.stacks} (minimum et maximum)`,
+    summary: `+${WILD_AURA_ATTACK} à l'attaque par charge, minimum et maximum.`,
+    describe: (s) => `+${WILD_AURA_ATTACK * s.stacks} à l'attaque`,
+    detail: () => 'Le minimum et le maximum ; avant le critique.',
     badge: (s) => `+${WILD_AURA_ATTACK * s.stacks}`,
     stacking: 'add',
     // 0.107.0 (décision de l'utilisateur, SORTS.md § 19) : elle écrit la feuille (la ligne « Attaque » monte) et compte
@@ -942,8 +997,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   whistling: {
     name: 'Sifflotement',
     polarity: 'positive',
-    summary: `+${WHISTLE_HEAL} PV à la fin de chacun de ses tours, pendant autant de tours que de charges. Se cumule.`,
-    describe: (s) => `Regagne ${WHISTLE_HEAL} PV à la fin de ${s.stacks > 1 ? `ses ${s.stacks} prochains tours` : 'son prochain tour'} (${WHISTLE_HEAL * s.stacks} PV en tout)`,
+    summary: `+${WHISTLE_HEAL} PV à la fin de ses tours, pendant autant de tours que de charges.`,
+    describe: (s) => `+${WHISTLE_HEAL} PV à la fin de ${s.stacks > 1 ? `ses ${s.stacks} prochains tours` : 'son prochain tour'} (${WHISTLE_HEAL * s.stacks} en tout)`,
     badge: (s) => `+${WHISTLE_HEAL * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
@@ -953,11 +1008,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   falseNote: {
     name: 'Fausse note',
     polarity: 'negative',
-    summary: `Son prochain coup qui touche fait ${FALSE_NOTE} de moins par charge, après l'armure (au moins 1) ; puis elle part. Se cumule.`,
+    summary: `Son prochain coup qui touche fait ${FALSE_NOTE} dégâts de moins par charge.`,
     describe: (s) =>
       s.power
-        ? `Ses ${1 + s.power} prochains coups qui touchent font chacun −${FALSE_NOTE * s.stacks}, après l'armure (au moins 1)`
-        : `Son prochain coup qui touche fait −${FALSE_NOTE * s.stacks}, après l'armure (au moins 1)`,
+        ? `Ses ${1 + s.power} prochains coups qui touchent font chacun ${damageText(-FALSE_NOTE * s.stacks)}`
+        : `Son prochain coup qui touche fait ${damageText(-FALSE_NOTE * s.stacks)}`,
+    onFoe: (s) =>
+      s.power
+        ? `Les ${1 + s.power} prochains coups de l'adversaire qui touchent font chacun ${damageText(-FALSE_NOTE * s.stacks)}`
+        : `Le prochain coup de l'adversaire qui touche fait ${damageText(-FALSE_NOTE * s.stacks)}`,
+    detail: () => "Après l'armure ; le coup garde au moins 1 dégât.",
     badge: (s) => `−${FALSE_NOTE * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
@@ -965,19 +1025,33 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     spentOnHit: true,
     // Aiguisée (0.110.0) : elle dure un coup de plus par rang (un coup qui touche use l'intensité avant le statut) ; des
     // charges de plus ne gagnaient presque rien, la première rabat déjà souvent le coup à 1
-    power: (n) => `+${n} coup qui touche`,
+    power: (n) => `+${plural(n, 'coup')}`,
   },
   melodiousAura: {
     name: 'Aura mélodieuse',
     look: { aura: 'rgba(196,181,253,0.55)' },
     polarity: 'positive',
     // 0.45.0 : textes sans le jargon « dégâts finaux » (note de l'utilisateur : description peu claire)
-    summary: "Chacun de ses coups qui touche fait +1 par charge, ajouté après l'armure et les boucliers. Permanente, se cumule.",
-    describe: (s) => `Ses coups qui touchent font +${s.stacks}, après l'armure et les boucliers`,
+    summary: '+1 dégât par charge à chacun de ses coups qui touchent.',
+    describe: (s) => `${damageText(s.stacks)} à chacun de ses coups qui touchent`,
+    detail: () => "Après l'armure et les boucliers.",
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
     modifyFinal: (damage, s) => damage + s.stacks,
   },
+}
+
+// Typographie française (passe compendium, 2026-10-25) : les textes du registre s'écrivent avec des espaces simples, la
+// composition (`typeset`) leur met une fois pour toutes l'espace insécable devant « : ; ! ? % »
+for (const def of Object.values(STATUSES)) {
+  const { describe, badge, grafted, onFoe, detail, power } = def
+  def.summary = typeset(def.summary)
+  def.describe = (s) => typeset(describe(s))
+  def.badge = (s) => typeset(badge(s))
+  if (grafted) def.grafted = (s) => typeset(grafted(s))
+  if (onFoe) def.onFoe = (s) => typeset(onFoe(s))
+  if (detail) def.detail = (s) => typeset(detail(s))
+  if (power) def.power = (n) => typeset(power(n))
 }
 
 export const STATUS_IDS = Object.keys(STATUSES) as StatusId[]
@@ -1050,7 +1124,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   const def = STATUSES[id]
   const effect: RuleLine[] = []
   const consumption: RuleLine[] = []
-  const say = (list: RuleLine[], text: string, rule?: RuleId) => list.push(rule ? { text, rule } : { text })
+  const say = (list: RuleLine[], text: string, rule?: RuleId) => list.push(rule ? { text: typeset(text), rule } : { text: typeset(text) })
   if (def.forcesDodge) say(effect, 'Le prochain coup reçu est esquivé à coup sûr, sans tirage ; une charge par esquive.', 'dodge')
   if (def.drainsHit)
     say(
@@ -1110,7 +1184,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     const hurts = react({ id, stacks: 1 }).some((e) => e.type === 'damage')
     say(
       effect,
-      `Réagit ${lowerFirst(triggerText(trigger).label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''} ; sans réaction en chaîne. Posé pendant un coup, il ne réagit pas à ce coup : il agit dès le coup suivant (renforcé pendant un coup, il y réagit avec ses charges du début du coup).`,
+      `Réagit ${lowerFirst(triggerText(trigger).label)}${def.spentOnReaction ? ', une seule fois, puis disparaît' : ''}, sans réaction en chaîne. Posé pendant un coup, il agit dès le coup suivant.`,
       hurts ? 'direct-damage' : undefined,
     )
   }

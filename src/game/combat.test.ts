@@ -9,6 +9,7 @@ import { BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, PRECISION_CRIT, STATUSES, sta
 import { EMOJI, testCharacter } from './test-utils'
 import { Character } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
+import { typeset } from './typography'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
 import { relicNeeds, skillNeeds } from './hooks'
 
@@ -1997,7 +1998,9 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
 
   it('une ligne chacune, au style de l’utilisateur (2026-10-24) : l’effet, la condition en clair, une seule limite ; ni type ni élément', () => {
     const lines = RELICS.map((r) => describeRelic(r).text)
-    expect(lines).toEqual([
+    // Écrites avec des espaces simples ; la ligne affichée a l'espace insécable devant « % » (`typeset`, passe compendium)
+    expect(lines).toEqual(
+      [
       '+1 au multiplicateur de critique et −4 % de critique',
       "+6 % d'esquive",
       "+1 armure et −5 % d'esquive",
@@ -2028,8 +2031,10 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       '+3 dégâts aux adversaires qui brûlent',
       "3 dégâts directs à l'attaquant quand son armure temporaire est vidée",
       '+1 PV quand il renvoie des dégâts',
-      '+2 coup de chance sur pile',
-    ])
+      // Le pluriel d'un statut qui se compte (passe compendium, 2026-10-25)
+      '+2 coups de chance sur pile',
+      ].map(typeset),
+    )
     for (const line of lines) {
       expect(line).not.toMatch(EMOJI)
       expect(line).not.toMatch(/Caractéristique|Coup|Tour|Seuil|[ée]l[ée]mentaire|Feu|Givre|Vent|Terre|\b(DP|DM|DT)\b/)
@@ -2642,10 +2647,10 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(fire.map((e) => [rollFace(e.trigger), e.name, e.effects[0]])).toEqual([[1, 'Feux follets II', expect.objectContaining({ status: 'burn', stacks: 4 })]])
     // Le texte d'un rang le dit, en une ligne (`rankText`) et dans la compétence (aperçu de forge avant → après)
     expect(rankText(skill('cleave'))).toBe('+1 Saignement')
-    expect(rankText(skill('wind-fury'))).toBe('+1 coup par rafale')
-    expect(rankText(skill('retribution'))).toBe('+25 % des jauges relâchées')
-    expect(describeSkill(sharp('gorak', ranks(1, 1), 'wind-fury')).text).toContain('Trois coups de base')
-    expect(describeSkill(sharp('gorak', ranks(1, 2), 'wind-fury')).text).toContain('Quatre coups de base')
+    expect(rankText(skill('wind-fury'))).toBe('+1 coup')
+    expect(rankText(skill('retribution'))).toBe(typeset('+25 % des dégâts renvoyés'))
+    expect(describeSkill(sharp('gorak', ranks(1, 1), 'wind-fury')).text).toBe("Trois coups au lieu d'un.")
+    expect(describeSkill(sharp('gorak', ranks(1, 2), 'wind-fury')).text).toBe("Quatre coups au lieu d'un.")
     // Aucun chiffre à virgule dans le texte d'une compétence aiguisée, à aucun rang
     for (const c of CHARACTERS)
       for (const face of offerTargets(c.definition, [], { op: 'sharpen' }))
@@ -3127,20 +3132,22 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
   it('les cinq au roster : des compétences du dé, gravables, leurs textes courts', () => {
     expect(validateRoster()).toEqual([])
     const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('aldric'), id, rank).events.find((e) => e.id === id)!).text
-    expect(text('quarry')).toBe('Deux coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence).')
-    expect(text('quarry', 1)).toBe('Quatre coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence).')
-    expect(text('harvest')).toBe('+7 PV.')
-    expect(text('harvest', 1)).toBe('+11 PV.')
+    // Au style de l'utilisateur (passe compendium, 2026-10-25) : la condition dans la ligne, le jargon au détail
+    expect(text('quarry')).toBe("Deux coups de plus si l'adversaire saigne.")
+    expect(text('quarry', 1)).toBe("Quatre coups de plus si l'adversaire saigne.")
+    expect(describeSkill(skill('quarry')).detail).toBe(typeset('Des coups de base bruts, juste après celui du jet, chacun son dé : leur face ne déclenche aucune compétence.'))
+    expect(text('harvest')).toBe("+7 PV si l'adversaire est empoisonné.")
+    expect(text('harvest', 1)).toBe("+11 PV si l'adversaire est empoisonné.")
+    // La Virulence ne répète pas sa condition : tripler un Poison absent ne fait rien
     expect(text('virulence')).toBe("Triple le Poison de l'adversaire.")
-    expect(text('virulence', 1)).toBe("Triple le Poison de l'adversaire, +3.")
-    expect(text('sentence')).toBe("L'adversaire perd 1 PV chaque fois qu'il regagne des PV.")
-    expect(text('sentence', 1)).toBe("L'adversaire perd 2 PV chaque fois qu'il regagne des PV.")
-    expect(text('grudge')).toBe('Son prochain coup est critique quand il encaisse un coup, 1x.')
-    expect(text('grudge', 1)).toBe('Son prochain coup est critique quand il encaisse un coup, 2x.')
-    // Leur condition, en pastille : la Curée lit le Saignement, la Récolte et la Virulence le Poison
-    expect(describeSkill(skill('quarry')).tags.map((t) => t.label)).toContain("si l'adversaire porte Saignement")
-    for (const id of ['harvest', 'virulence']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain("si l'adversaire porte Poison")
-    expect(describeSkill(skill('sentence')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['aura permanente', 'Sentence : 2 charges au plus']))
+    expect(text('virulence', 1)).toBe("Triple le Poison de l'adversaire, puis +3.")
+    expect(text('sentence')).toBe("Chaque soin qu'il reçoit fait perdre 1 PV à l'adversaire.")
+    expect(text('sentence', 1)).toBe("Chaque soin qu'il reçoit fait perdre 2 PV à l'adversaire.")
+    expect(text('grudge')).toBe('Son prochain coup reçu lui donne un critique assuré.')
+    expect(text('grudge', 1)).toBe('Ses 2 prochains coups reçus lui donnent chacun un critique assuré.')
+    // Plus de pastille de condition : elle est dans la ligne
+    for (const id of ['quarry', 'harvest', 'virulence']) expect(describeSkill(skill(id)).tags.map((t) => t.label).join(' ')).not.toMatch(/\bsi\b/)
+    expect(describeSkill(skill('sentence')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['aura permanente', typeset('Sentence : 2 charges au plus')]))
   })
 
   it('Curée : si l’adversaire saigne, deux coups de base bruts par charge juste après le coup de base de son jet ; sinon, sa face est nue', () => {
@@ -3257,12 +3264,13 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
   it('les quatre au roster, gravables, leurs textes courts et leur rang', () => {
     expect(validateRoster()).toEqual([])
     const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('morgrut'), id, rank).events.find((e) => e.id === id)!).text
-    expect(text('conflagration')).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 3 fois sa Brûlure restante, 1x.")
-    expect(text('conflagration', 1)).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 4 fois sa Brûlure restante, 1x.")
-    expect(text('loaded-die')).toBe('Sa prochaine pièce tombe sur pile, ×2 de plus, 1x.')
-    expect(text('loaded-die', 1)).toBe('Sa prochaine pièce tombe sur pile, ×3 de plus, 1x.')
+    // Passe compendium (2026-10-25) : une charge par jet n'est pas une limite par combat, plus de « 1x » ; le détail dit le reste
+    expect(text('conflagration')).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre trois fois sa Brûlure restante.")
+    expect(text('conflagration', 1)).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre quatre fois sa Brûlure restante.")
+    expect(text('loaded-die')).toBe('Sa prochaine pièce tombe sur pile, et pile vaut ×2 de plus.')
+    expect(text('loaded-die', 1)).toBe('Sa prochaine pièce tombe sur pile, et pile vaut ×3 de plus.')
     expect(text('bristling-rampart')).toBe('+2 Épines acérées quand son armure temporaire est vidée.')
-    expect(text('bristling-rampart', 1)).toBe('+4 Épines acérées quand son armure temporaire est vidée.')
+    expect(text('bristling-rampart', 1)).toBe('+8 Épines acérées quand son armure temporaire est vidée.')
     expect(text('vendetta')).toBe('+3 Ferveur quand il renvoie des dégâts.')
     expect(text('vendetta', 1)).toBe('+6 Ferveur quand il renvoie des dégâts.')
     for (const id of ['bristling-rampart', 'vendetta']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
@@ -3324,7 +3332,7 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
         expect(b).toMatchObject({ side: 0, trigger: 'shieldBroken' })
         expect(emptied(r, b.cause!, 0)).toBe(true)
         const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'bristlingRampart')!
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'thorns', stacks: 2 * (held.stacks + rank) })])
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'thorns', stacks: 2 * (held.stacks + 3 * rank) })])
       }
       // Chaque coup qui vide son armure, quand le Rempart était là au début du coup, le fait réagir
       for (const a of ofType(r, 'attack'))

@@ -325,8 +325,11 @@ function RewardFrame({
         <p className="font-body text-xl text-ink-2">{sub}</p>
       </header>
       {children}
-      <div className="flex items-center gap-4">
-        <BackLink onClick={onBack}>Combat</BackLink>
+      {/* Le bouton primaire centré, comme en campagne ; le retour au combat se tient à sa gauche */}
+      <div className="relative flex justify-center">
+        <BackLink onClick={onBack} className="absolute right-full top-1/2 mr-8 -translate-y-1/2 whitespace-nowrap">
+          Combat
+        </BackLink>
         <Button variant="primary" size="xl" icon="tournoi" disabled={!ready} onClick={onContinue} className="w-96">
           {own ? 'Continuer' : 'Imposer ce choix'}
         </Button>

@@ -18,6 +18,11 @@
  * de Naraxes à 2 Poison) : retirées quand le lot est entré au registre, comme le premier (statuts d'essai `lab…`, et un
  * Dé pipé d'essai à l'ancienne forme de `loadsCoin`). Leurs résultats restent dans docs/SORTS.md § 23 et dans les
  * rapports `logs/lab/2026-10-24-23-56-16`, `2026-10-24-23-59-27`, `2026-10-25-00-01-08` et `2026-10-25-00-02-29`.
+ *
+ * Série 28 (calage de campagne, nuit du 2026-10-25 : un rang qui ajoute de la ressource ou de la fréquence aux trois rangs
+ * II du second lot sous la bande) : retirée une fois l'axe du Rempart hérissé passé au registre (ses rangs s'y lisaient
+ * par aiguisages successifs, à l'axe d'alors). Résultats : docs/SORTS.md § 23, rapports `logs/lab/2026-10-25-00-39-04`
+ * et `2026-10-25-00-39-53`.
  */
 import type { Character, CharacterStats } from '../../src/game/character'
 import { faceTrigger, type CharacterEvent } from '../../src/game/events'

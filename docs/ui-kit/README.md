@@ -105,3 +105,5 @@ Ajouté pour le bouton **Options** de la configuration du tournoi, qui ouvre la 
 ```tsx
 <Button variant="secondary" size="md" icon="reglages" aria-haspopup="dialog">Options</Button>
 ```
+
+**Tuiles de la boîte Options** (passe de finition du 2026-10-25) : chaque tuile ouvre sur une marque de 36 px, pour que les noms s'alignent d'une tuile à l'autre. Une option qui n'a pas d'objet à montrer prend un glyphe du kit à 24 px, or quand elle est active, `--text-3` sinon : `tournoi` (Phase de saison), `combattre` (Combattants), `chroniques` (Noms uniques). Les autres gardent leur contenu (face gravée de la forge, sceau de relique, Deniers), à la même taille.

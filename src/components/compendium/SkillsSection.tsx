@@ -4,6 +4,7 @@ import { describeSkill, triggerText, type CharacterEvent, type SkillNature } fro
 import { RULES, type RuleId } from '../../game/rules'
 import { STATUS_PLACE } from '../../game/states'
 import { STATUSES, statusRuleSections, type StatusId } from '../../game/statuses'
+import { NBSP } from '../../game/typography'
 import { RelicSeal } from '../RelicSeal'
 import { CodexBox, formName, Line, NATURE_LABEL, natureOf, RelicSource, RuleLink, SkillMedal, StatusChip, StatusMedal, triggerShort, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
@@ -80,7 +81,7 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
   const { event, owners, triggers } = entry
   // La forme qu'elle exige (druide) est une règle de la compétence, pas un porteur : sa pastille reste
   const form = formName(owners[0], event)
-  const { text, tags, posed } = describeSkill(event, form)
+  const { text, detail, tags, posed } = describeSkill(event, form)
   const nature = natureOf(event)
   // Ce qui appartient à la compétence : l'aura ou le mécanisme qu'elle pose ou relâche, sans fiche dans Statuts
   const own = posed
@@ -115,6 +116,13 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
 
       <CodexBox title="Effet">
         <p className="text-[17px] text-ink-1">{text}</p>
+        {/* Ce que la ligne tait (arrondis, moment exact, coups bruts) : la règle précise, en second plan */}
+        {detail && (
+          <p className="text-[15px] leading-snug text-ink-3">
+            <span className="font-bold text-ink-2">Détail{NBSP}: </span>
+            {detail}
+          </p>
+        )}
         {(tags.length > 0 || ruleTags.length > 0) && (
           <span className="mt-1 flex flex-wrap gap-1.5">
             {tags.map((t) => (

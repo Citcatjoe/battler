@@ -116,7 +116,7 @@ describe('catalogue des compétences', () => {
       for (const e of [...c.events, ...(c.definition.reserve ?? [])])
         for (const effect of e.effects.filter((x) => x.target === 'opponent'))
           expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
-    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toMatch(/^Sur l'adversaire : perd 3, 2 puis 1 PV/)
+    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toBe("L'adversaire perd 3, 2 puis 1 PV au début de ses tours (6 en tout).")
   })
 })
 
@@ -208,8 +208,13 @@ describe('catalogue des statuts', () => {
         { type: 'fromTurn', turn: 3 },
       ],
     })
-    expect(text).toContain('sous 50 %')
-    expect(text).toContain('tour 3')
+    // Toutes dans la ligne, en clair (passe compendium, 2026-10-25) : « s'il », la condition d'un statut en un verbe d'état
+    expect(text).toBe(
+      "+2 PV s'il est sous 50\u00a0% de ses PV et si l'adversaire porte 2 Poison ou plus et s'il ne porte pas Armure temporaire et si l'adversaire a au moins 25\u00a0% de ses PV et à partir du tour 3.",
+    )
+    expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects: [{ type: 'heal', amount: 2 }], when: [{ type: 'lacksStatus', who: 'opponent', status: 'poison' }] })).toBe(
+      "+2 PV si l'adversaire n'est pas empoisonné.",
+    )
   })
 })
 
@@ -370,7 +375,10 @@ describe('narration', () => {
       { type: 'applyStatus', status: 'poison', stacks: 1, turns: 2, target: 'opponent' },
       { type: 'cleanse', polarity: 'negative' },
     ]
-    expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects, chance: 0.25, limit: 2 })).toContain('25 %')
+    // La chance et la limite au bout de la ligne, sans pastille (passe compendium, 2026-10-25)
+    expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects, chance: 0.25, limit: 2 })).toBe(
+      "+2 PV. 2 dégâts directs à l'adversaire. L'adversaire perd 1 PV au début de son prochain tour. Retire tous ses malus, 25\u00a0% de chances, 2x. · dégâts directs · se cumule",
+    )
   })
   it('raconte un combat entier sans trou', () => {
     const r = duel('brokk', 'elaria', 3)
@@ -983,28 +991,37 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     // Le soin reçu : Elaria n'en a pas, la Dent de loup (Vol de vie) lui en donne
     expect(offerableRelics({ championId: 'elaria', forge: [], relics: [] })).not.toContain('abbey-incense')
     expect(offerableRelics({ championId: 'elaria', forge: [], relics: ['wolf-fang'] })).toContain('abbey-incense')
-    // Morgrut n'esquive pas : pas de Conque des vents, jusqu'au Dé creux (Esquive améliorée). Il ne critique pas, mais sa
-    // Rancune (hors kit, 0.114.0) donne des critiques : la Plume d'aigle, son partenaire (+0,30), lui est offerte
+    // Morgrut n'esquive pas : pas de Conque des vents, jusqu'au Dé creux (Esquive améliorée). Il ne critique pas : la Plume
+    // d'aigle attend sa Rancune gravée (elle donne des critiques ; nuit du 2026-10-25, le producteur d'abord)
+    const grudge = ENGRAVABLE_SKILLS.find((e) => e.id === 'grudge')!
     expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).not.toContain('wind-conch')
-    expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).toContain('eagle-feather')
+    expect(offerableRelics({ championId: 'morgrut', forge: [], relics: [] })).not.toContain('eagle-feather')
+    expect(offerableRelics({ championId: 'morgrut', forge: [{ op: 'engrave', face: 3, skill: grudge }], relics: [] })).toContain('eagle-feather')
     expect(offerableRelics({ championId: 'morgrut', forge: [], relics: ['hollow-die'] })).toContain('wind-conch')
   })
 
-  it('offre pertinente des compétences (0.114.0) : Graver ne propose pas une consommatrice dont la ressource ne peut pas arriver', () => {
+  it('offre pertinente des compétences : Graver ne propose une consommatrice qu’une fois son producteur dans le build (nuit du 2026-10-25)', () => {
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     const lot = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge'].map(skill)
     // Ce qu'elles attendent : le Saignement, le Poison, un soin ; la Rancune vit des coups encaissés, que tout le monde reçoit
     expect(lot.map((s) => skillNeeds(s))).toEqual([['status:bleed'], ['status:poison'], ['status:poison'], ['moment:heal'], []])
     // Ysolde ne fait ni saigner ni empoisonner : de tout le lot, seules la Sentence (ses soins) et la Rancune lui restent
     expect(offerableSkills({ championId: 'ysolde', forge: [], relics: [] }, lot).map((s) => s.id)).toEqual(['sentence', 'grudge'])
-    // Elaria : le Saignement de Pourfendre (son répertoire) ; un soin, seulement avec la Dent de loup (Vol de vie)
-    expect(offerableSkills({ championId: 'elaria', forge: [], relics: [] }, lot).map((s) => s.id)).toEqual(['quarry', 'grudge'])
-    expect(offerableSkills({ championId: 'elaria', forge: [], relics: ['wolf-fang'] }, lot).map((s) => s.id)).toEqual(['quarry', 'sentence', 'grudge'])
-    // Chaque répertoire de campagne ne porte que des compétences à la portée de son champion, et l'offre n'en sort pas
+    // Elaria : le Saignement, une fois Pourfendre (son répertoire) gravé ; un soin, seulement avec la Dent de loup (Vol de vie)
+    expect(offerableSkills({ championId: 'elaria', forge: [], relics: [] }, lot).map((s) => s.id)).toEqual(['grudge'])
+    expect(offerableSkills({ championId: 'elaria', forge: [{ op: 'engrave', face: 3, skill: skill('cleave') }], relics: [] }, lot).map((s) => s.id)).toEqual(['quarry', 'grudge'])
+    expect(offerableSkills({ championId: 'elaria', forge: [], relics: ['wolf-fang'] }, lot).map((s) => s.id)).toEqual(['sentence', 'grudge'])
+    // Fanchon : ni le Dé pipé ni la Pièce trouée sans Pile ou face ; Pile ou face gravé, les deux
+    const coin = { championId: 'fanchon', forge: [{ op: 'engrave' as const, face: 3, skill: skill('coin-flip') }], relics: [] }
+    expect(offerableSkills({ championId: 'fanchon', forge: [], relics: [] }, [skill('loaded-die')])).toEqual([])
+    expect(offerableRelics({ championId: 'fanchon', forge: [], relics: [] })).not.toContain('holed-coin')
+    expect(offerableSkills(coin, [skill('loaded-die')]).map((s) => s.id)).toEqual(['loaded-die'])
+    expect(offerableRelics(coin)).toContain('holed-coin')
+    // Le producteur d'abord : un répertoire peut porter une consommatrice hors de portée au départ, mais l'offre n'en sort pas
     for (const id of CHARACTER_IDS) {
       const run = { championId: id, forge: [], relics: [] }
-      expect(offerableSkills(run, REPERTOIRES[id]).map((s) => s.id), id).toEqual(REPERTOIRES[id].map((s) => s.id))
       const reach = offerableSkills(run, REPERTOIRES[id]).map((s) => s.id)
+      expect(reach.length, id).toBeGreaterThan(0)
       for (let k = 0; k < 20; k++) {
         const reward = drawReward(run, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')

@@ -12,6 +12,7 @@ import {
   type Status,
   type StatusId,
 } from './statuses'
+import { typeset } from './typography'
 
 /*
  * États affichés (0.79.0) : la présentation des statuts en combat, en deux niveaux de lecture.
@@ -64,16 +65,16 @@ export const STATES: Record<StateId, StateDef> = {
   // Puissance et Critique renforcé : sans source depuis la 0.79.7 (les auras qui les donnaient se lisent sur leur
   // anneau), gardés dans le vocabulaire avec leur emblème ; la Puissance revient avec la Ferveur (Encens de l'abbaye)
   power: { name: 'Puissance', polarity: 'positive', summary: 'Ses coups font plus de dégâts.', counter: 'amount' },
-  weakened: { name: 'Affaibli', polarity: 'negative', summary: "Ses coups font moins de dégâts, avant l'armure.", counter: 'amount' },
+  weakened: { name: 'Affaibli', polarity: 'negative', summary: 'Ses coups font moins de dégâts.', counter: 'amount' },
   shield: { name: 'Bouclier', polarity: 'positive', summary: "Absorbe des dégâts après l'armure, puis s'épuise.", counter: 'status' },
   sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Son prochain coup qui touche est critique.', counter: 'status' },
   critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Ses critiques frappent plus fort (multiplicateur).', counter: 'amount' },
   sureDodge: { name: 'Esquive assurée', polarity: 'positive', summary: 'Il esquive à coup sûr le prochain coup reçu.', counter: 'status' },
-  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Il lance des dés de plus à sa prochaine action, chacun résolu comme un jet.', counter: 'status' },
+  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Des jets de plus à sa prochaine action.', counter: 'status' },
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
   drain: { name: 'Drain', polarity: 'positive', summary: "Ses prochains coups qui touchent lui rendent les PV qu'ils retirent.", counter: 'status' },
-  reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup qui le touche lui revient : une part des dégâts renvoyée, ou son prochain coup critique.', counter: 'status' },
-  thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup encaissé fait saigner l'attaquant.", counter: 'status' },
+  reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup reçu lui revient : une part des dégâts renvoyée, ou un critique.', counter: 'status' },
+  thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup reçu fait saigner l'attaquant.", counter: 'status' },
   immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut plus lui être posé.', counter: 'none' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
   bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
@@ -85,8 +86,11 @@ export const STATES: Record<StateId, StateDef> = {
   firefly: { name: 'Luciole', polarity: 'negative', summary: 'Il ne peut plus esquiver et chaque coup reçu lui fait plus mal.', counter: 'status' },
   // Fausse note (audit du 2026-10-21) : un seul coup, après l'armure ; l'additionner à Affaibli (chaque coup, avant
   // l'armure) donnait un total qu'aucun coup ne subit
-  spoiled: { name: 'Coup gâché', polarity: 'negative', summary: "Son prochain coup qui touche fera moins de dégâts, retirés après l'armure.", counter: 'amount' },
+  spoiled: { name: 'Coup gâché', polarity: 'negative', summary: 'Son prochain coup qui touche fera moins de dégâts.', counter: 'amount' },
 }
+
+// Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % »
+for (const def of Object.values(STATES)) def.summary = typeset(def.summary)
 
 /** Ce qu'un statut verse à un état : sur son porteur (`self`) ou sur l'adversaire de son porteur (une aura qui agit sur lui). */
 export interface Relay {
@@ -157,7 +161,7 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
     state: 'weakened',
     on: 'opponent',
     amount: (s) => INTIMIDATION * s.stacks,
-    describe: (s) => `Ses coups lui font ${INTIMIDATION * s.stacks} de moins, avant l'armure, pour le reste du combat`,
+    describe: (s) => typeset(`Ses coups font −${INTIMIDATION * s.stacks} dégât${INTIMIDATION * s.stacks > 1 ? 's' : ''}, pour le reste du combat`),
   }),
   // Ces trois-là posent de vrais statuts (Poison, Pourriture) : ils s'affichent d'eux-mêmes chez la cible
   frostAura: aura(),

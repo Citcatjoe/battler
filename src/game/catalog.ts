@@ -5,6 +5,7 @@ import { RELICS, type Relic } from './relics'
 import { CHARACTERS } from './roster'
 import { STATUS_PLACE } from './states'
 import { POLARITY_STYLE, STATUS_IDS, STATUSES, statusRuleSections, type Polarity, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
+import { typeset } from './typography'
 
 /*
  * Catalogue : vues de lecture sur les registres (roster, statuts), pour le compendium et la
@@ -178,7 +179,7 @@ export function statusLinks(id: StatusId, characters: readonly Character[] = CHA
   const removed = STATUS_PLACE[id].place === 'aura' ? 'Peut être retirée' : 'Peut être retiré'
   for (const { character, event } of skills) if (purges(event.effects)) links.push({ text: `${removed} par ${event.name}.`, skill: { event, character } })
   for (const relic of RELICS) if (purges(relic.effects ?? [])) links.push({ text: `${removed} par la relique ${relic.name}.`, relic })
-  return links
+  return links.map((l) => ({ ...l, text: typeset(l.text) }))
 }
 
 /** Une compétence et les personnages qui la possèdent. */

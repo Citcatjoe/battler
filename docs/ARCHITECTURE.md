@@ -235,7 +235,7 @@ Ajouter un type de condition : étendre `Condition` (`events.ts`), `conditionMet
 
 ### Ajouter un statut (aura positive ou négative)
 Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. Chaque entrée porte :
-- sa **présentation** : `name`, son icône peinte dans `STATUS_ICON` (`Icon.tsx` ; **jamais d'emoji**, une icône manquante se demande à l'utilisateur), `polarity` (bonus ou malus), `summary` (une phrase pour le compendium), `describe`, `badge` ;
+- sa **présentation** : `name`, son icône peinte dans `STATUS_ICON` (`Icon.tsx` ; **jamais d'emoji**, une icône manquante se demande à l'utilisateur), `polarity` (bonus ou malus), `summary` (une phrase pour le compendium), `describe`, `badge`, et au besoin `onFoe` (sa phrase posé sur l'adversaire), `detail` (la ligne « Détail » du compendium), `bears` (son verbe d'état pour une condition) et `plural` ; le style de rédaction et son contrôle (`typeset`, `wording.test.ts`) : [SORTS.md](SORTS.md) § 24 ;
 - son **cumul** : `add` (les charges s'additionnent) ou `refresh` (l'application remplace l'existant), et un plafond facultatif `maxStacks` ;
 - ses **accroches** (règles v2) : une ligne dans `STATUS_HOOKS` (`hooks.ts`, le typage l'exige) : de quel côté on le pose (`side`), ce qu'il produit et consomme au-delà de lui-même, du point de vue de qui le pose ; `validateHooks` vérifie qu'il est toujours posé de ce côté ;
 - s'il fait des dégâts, leur **source** (`source` de l'effet `damage`, registre `DAMAGE_SOURCES` de `damage.ts`) : elle donne leur type (DT pour un statut qui ronge) et la couleur de leur « −N » ;

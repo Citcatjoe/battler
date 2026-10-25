@@ -4,6 +4,7 @@ import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, faceTrigger, rollFace, 
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
 import { STATUSES, type Status, type StatusId } from '../game/statuses'
 import type { SkillPulse, SkillSignal } from '../game/staging'
+import { NBSP } from '../game/typography'
 import { ForgeFaceTooltip } from './ForgeFaceTooltip'
 import { Icon, skillIcon, STATUS_ICON, StatusIcon } from './Icon'
 import { SkillSeal } from './SkillSeal'
@@ -60,7 +61,7 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
     <AuraToken key={id} side={side} id={id} character={character} status={statuses.find((s) => s.id === id)} lit={auraLit(id, events, pulse, signal)} align={tip} />
   )
   return (
-    <ul className={`skill-bar flex items-start gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`} aria-label={`Compétences de ${character.name}`}>
+    <ul className={`skill-bar flex items-start gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`} aria-label={`Compétences de ${character.name}`}>
       {faces.map(({ face, event }) => {
         const id = event && auraOfSkill(event)
         if (id && onFace.get(id) === face) return aura(id)
@@ -235,7 +236,7 @@ function AuraToken({
           return (
             <p key={e.id} className="mt-1.5 font-body text-[13px] font-medium text-ink-3">
               Posée par {e.name} ({notes.join(', ')})
-              {extra.length > 0 && ` : ${describeSkill({ ...e, effects: extra }).text}`}
+              {extra.length > 0 && `${NBSP}: ${describeSkill({ ...e, effects: extra }).text}`}
             </p>
           )
         })}
@@ -280,7 +281,7 @@ const auraValue = (s: Status) => {
 function Count({ text, aura }: { text: string; aura?: boolean }) {
   return (
     <span
-      className={`absolute -left-2 -top-2 z-[1] flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-display text-base font-extrabold leading-none ${
+      className={`absolute -left-2 -top-2 z-[1] flex h-7 min-w-7 items-center justify-center rounded-full border bg-stone-950 px-1.5 font-data text-[15px] font-bold leading-none tabular-nums ${
         aura ? 'border-amber-300/80 text-amber-100' : 'border-line-2 text-ink-1'
       }`}
     >

@@ -1522,18 +1522,21 @@ body {
   background: linear-gradient(180deg, rgba(12, 10, 9, 0.72), rgba(12, 10, 9, 0.45));
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 237, 213, 0.08);
 }
-/* Nom sous le sceau : lisible de loin, sur deux lignes au plus */
+/* Nom sous le sceau : lisible de loin, sur trois lignes au plus (le rang d'une compétence aiguisée, « Aura de décoction
+   III », prend la troisième). Un mot plus long que la case (« d'intimidation », « Régénération », « Embrasement »)
+   déborde un peu des deux côtés, centré, au lieu d'être coupé : 108 px tiennent le plus long mot du jeu en 13 px, et
+   l'écart entre deux sceaux (gap-2) garde deux noms longs voisins séparés. */
 .skill-bar-name {
-  max-width: 92px;
+  max-width: 108px;
   text-align: center;
   font-family: var(--font-display, inherit);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.1;
   color: var(--text-2, #d6d3d1);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2555,6 +2558,8 @@ body {
   align-items: center;
   gap: 12px;
   width: 300px;
+  /* Trois cartes de même hauteur, quelle que soit la longueur du nom et de la règle (deux lignes de nom, trois de règle) */
+  min-height: 340px;
   padding: 26px 22px 20px;
   border-radius: var(--r-sm, 4px);
   border: 1px solid var(--line-2);

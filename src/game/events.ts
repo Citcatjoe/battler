@@ -2,6 +2,7 @@ import type { DamageSource } from './damage'
 import type { SceneEventId } from './scenes'
 import type { RuleId } from './rules'
 import { lowerFirst, STATUSES, type Polarity, type StatusId } from './statuses'
+import { typeset } from './typography'
 
 /*
  * Événements (« compétences » dans l'interface) : capacités propres à un personnage, déclenchées à un moment précis du combat.
@@ -57,7 +58,7 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   crit: { label: 'Quand il porte un critique', short: 'critique' },
   missed: { label: 'Quand son coup est esquivé', short: 'esquivé' },
   dodge: { label: 'Quand il esquive', short: 'esquive' },
-  hurt: { label: 'Quand il encaisse un coup', short: 'coup encaissé' },
+  hurt: { label: 'Quand il reçoit un coup', short: 'coup reçu' },
   // Lot des consommateurs (docs/PROGRESSION.md § 13.3) : après l'étape qui lui a rendu des PV (soin, vol de vie, repli
   // d'une purge), jamais sur un soin nul (PV déjà pleins)
   healed: { label: 'Quand il regagne des PV', short: 'soin reçu' },
@@ -251,8 +252,6 @@ export function rollMatches(trigger: Trigger, roll: number, faces: number) {
   return rollFace(trigger) === roll
 }
 
-const who = (target: Target | undefined) => (target === 'opponent' ? "à l'adversaire" : '')
-
 const pct = (ratio: number) => `${Math.round(ratio * 100)} %`
 
 /** Un statut multiplié (Virulence) : « double », « triple »… ; au-delà, « multiplie par N ». */
@@ -261,56 +260,88 @@ const MULTIPLY: Record<number, string> = { 2: 'double', 3: 'triple', 4: 'quadrup
 /** Une relâche multipliée (Embrasement aiguisé) : « deux fois », « trois fois »… ; au-delà, en pourcentage. */
 const TIMES: Record<number, string> = { 2: 'deux fois', 3: 'trois fois', 4: 'quatre fois' }
 
-export function describeEffect(effect: Effect): string {
-  const on = who(effect.target)
+/** Une part, en clair : « la moitié », « tous les » (une part de 100 % ou plus), sinon en pourcentage. */
+const shareOf = (share: number, all: string) => (share === 0.5 ? 'la moitié des' : share >= 1 ? all : `${pct(share)} des`)
+
+/** Un petit nombre en toutes lettres, au milieu d'une phrase (« des trois derniers coups ») ; au-delà, en chiffres. */
+const SMALL_NUMBERS: Record<number, string> = { 2: 'deux', 3: 'trois', 4: 'quatre', 5: 'cinq' }
+
+/**
+ * Un effet, en clair, au style de l'utilisateur (passe compendium, 2026-10-25) : l'effet d'abord, sans jargon ; ce que la
+ * phrase tait va au détail (`effectDetail`). `grafted` : greffé sur le jet de son lanceur, un statut posé sur lui agit sur
+ * le coup de ce jet (Œil de faucon, Vol de vie : « ce coup », `StatusDef.grafted`). Posé sur l'adversaire, un statut a
+ * l'adversaire pour sujet (`StatusDef.onFoe`, sinon « L'adversaire » et sa phrase).
+ */
+export function describeEffect(effect: Effect, grafted = false): string {
+  const foe = effect.target === 'opponent'
   switch (effect.type) {
     case 'heal':
-      return effect.target === 'opponent' ? `soigne l'adversaire de ${effect.amount} PV` : `+${effect.amount} PV`
+      return `+${effect.amount} PV${foe ? " à l'adversaire" : ''}`
     case 'damage':
-      return effect.hits
-        ? `${effect.hits} × ${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${on ? ` ${on}` : ' à soi-même'} (${effect.hits * effect.amount} en tout)`
-        : `${effect.amount} dégâts directs${on ? ` ${on}` : ' à soi-même'}`
+      return `${effect.hits ? `${effect.hits} × ` : ''}${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${foe ? " à l'adversaire" : ' à soi-même'}`
     case 'applyStatus': {
       const def = STATUSES[effect.status]
       // Pourfendre : des charges tirées du coup, que la définition ne connaît pas
       if (effect.fromHit !== undefined)
-        return `${def.name}${effect.target === 'opponent' ? " sur l'adversaire" : ''} : ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des PV retirés (arrondie au-dessus)${effect.stacks ? `, plus ${effect.stacks}` : ''}${def.reactions?.hurt ? ' ; il coule dès le coup suivant' : ''}`
+        return `${foe ? "l'adversaire" : 'il'} ${def.bears ?? `prend ${def.name}`} de ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des dégâts du coup${effect.stacks ? `, +${effect.stacks}` : ''}`
       // Virulence : des charges tirées d'un statut ; le même statut, au même porteur, se multiplie (« Triple le Poison »)
       if (effect.fromStatus !== undefined) {
         const from = effect.fromStatus
         const whose = from.who === 'opponent' ? "de l'adversaire" : 'du porteur'
-        const plus = effect.stacks ? `, +${effect.stacks}` : ''
+        const plus = effect.stacks ? `, puis +${effect.stacks}` : ''
         if (from.status === effect.status && from.who === (effect.target ?? 'self'))
           return `${MULTIPLY[from.factor + 1] ?? `multiplie par ${from.factor + 1}`} le ${def.name} ${whose}${plus}`
-        return `${def.name}${on ? ` ${on}` : ''} : ${from.factor} par charge ${deName(STATUSES[from.status].name)} ${whose}${plus}`
+        return `+${from.factor} ${def.name}${foe ? " à l'adversaire" : ''} par charge ${deName(STATUSES[from.status].name)} ${whose}${plus}`
       }
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
       const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }
-      return `${def.name}${on ? ` ${on}` : ''} : ${lowerFirst(def.describe(status))}`
+      if (foe) return def.onFoe?.(status) ?? `L'adversaire ${lowerFirst(def.describe(status))}`
+      return grafted && def.grafted ? def.grafted(status) : def.describe(status)
     }
     case 'release': {
+      const def = STATUSES[effect.status]
       // Embrasement : le statut de l'adversaire, relâché d'un coup (la Brûlure : tous les PV qu'il lui reste à brûler)
       if (effect.from === 'opponent') {
-        const times = effect.share === undefined || effect.share === 1 ? '' : (TIMES[effect.share] ?? pct(effect.share))
-        return `l'adversaire perd d'un coup${times ? ` ${times}` : ''} ce que sa ${STATUSES[effect.status].name} lui ferait encore perdre, puis elle s'éteint`
+        const times = effect.share === undefined || effect.share === 1 ? '' : `${TIMES[effect.share] ?? pct(effect.share)} `
+        return `l'adversaire perd ${times}sa ${def.name} restante, d'un coup`
       }
-      const share = effect.share === undefined ? 'la somme de ses jauges' : `${effect.share === 0.5 ? 'la moitié' : pct(effect.share)} de ses jauges (arrondie au-dessous, au moins ${effect.min})`
-      return `relâche ${share} en dégâts directs${on ? ` ${on}` : ''}, puis les vide`
+      // Rétribution : ses jauges, les dégâts de ses derniers coups reçus
+      const share = shareOf(effect.share ?? 1, 'tous les')
+      return `${foe ? "l'adversaire" : 'il'} perd ${share} dégâts des ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} derniers coups reçus`
     }
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
-      const orElse = effect.orElse ? ` ; sinon, ${describeEffect(effect.orElse)}` : ''
-      // « Le dernier posé » : le dernier apparu, avec toutes ses charges (un statut renforcé garde son rang : règle « Bonus et malus »)
-      const whose = effect.target === 'opponent' ? "à l'adversaire son" : 'son propre'
-      if (effect.count === undefined) return `retire ${effect.target === 'opponent' ? `tous les ${kind} de l'adversaire` : `tous ses ${kind}`}${orElse}`
-      const what = effect.count === 1 ? `${whose} dernier ${kind} posé` : `${whose.replace(/son( propre)?$/, 'ses')} ${effect.count} derniers ${kind} posés`
-      return `retire ${what}${orElse}`
+      const what = effect.count === undefined ? `tous ${foe ? 'les' : 'ses'} ${kind}` : effect.count === 1 ? `son dernier ${kind}` : `ses ${effect.count} derniers ${kind}`
+      // Le repli vise l'adversaire comme la purge : il n'est pas répété (« sinon 5 dégâts directs »)
+      const orElse = effect.orElse ? `, sinon ${describeEffect(effect.orElse).replace(foe ? / à l'adversaire$/ : /$^/, '')}` : ''
+      return `retire ${what}${foe ? " à l'adversaire" : ''}${orElse}`
     }
+  }
+}
+
+/** Ce que la phrase d'un effet tait (arrondis, moment exact, jargon), en une phrase ; rien s'il n'y a rien à ajouter. */
+function effectDetail(effect: Effect): string | undefined {
+  switch (effect.type) {
+    case 'applyStatus': {
+      const def = STATUSES[effect.status]
+      const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
+      const detail = def.detail?.({ id: effect.status, stacks: effect.stacks, turns, power: effect.power })
+      return effect.fromHit !== undefined ? `Arrondi au-dessus.${detail ? ` ${detail}` : ''}` : detail
+    }
+    case 'release':
+      return effect.from === 'opponent'
+        ? `Puis la ${STATUSES[effect.status].name} s'éteint.`
+        : `Arrondi au-dessous, au moins ${effect.min} ; les jauges se vident.`
+    case 'cleanse':
+      return effect.count === undefined ? undefined : `Le ${effect.polarity === 'negative' ? 'malus' : 'bonus'} le plus récent, avec toutes ses charges.`
+    default:
+      return undefined
   }
 }
 
 const whom = (who: Target) => (who === 'opponent' ? "l'adversaire" : 'il')
 
+/** Une condition, en proposition : « l'adversaire saigne », « il est sous 50 % de ses PV ». Avec son mot de liaison : `conditionClause`. */
 export function describeCondition(c: Condition): string {
   switch (c.type) {
     case 'hpBelow':
@@ -319,66 +350,76 @@ export function describeCondition(c: Condition): string {
       return `${whom(c.who)} a au moins ${pct(c.ratio)} de ses PV`
     case 'hasStatus': {
       const def = STATUSES[c.status]
-      return `${whom(c.who)} porte ${c.stacks && c.stacks > 1 ? `${c.stacks} ${def.name} ou plus` : def.name}`
+      if (c.stacks && c.stacks > 1) return `${whom(c.who)} porte ${c.stacks} ${def.name} ou plus`
+      return `${whom(c.who)} ${def.bears ?? `porte ${def.name}`}`
     }
-    case 'lacksStatus':
-      return `${whom(c.who)} ne porte pas ${STATUSES[c.status].name}`
+    case 'lacksStatus': {
+      const bears = STATUSES[c.status].bears
+      const not = bears === undefined ? `ne porte pas ${STATUSES[c.status].name}` : bears.startsWith('est ') ? `n'est pas ${bears.slice(4)}` : `ne ${bears} pas`
+      return `${whom(c.who)} ${not}`
+    }
     case 'fromTurn':
-      return `à partir du tour ${c.turn}`
+      return `le tour ${c.turn} est atteint`
     case 'hitAtLeast':
       return `ce coup retire ${c.amount} PV ou plus`
   }
 }
 
+/** Une condition avec son mot de liaison, à la suite d'un effet : « si l'adversaire saigne », « s'il est sous 50 % de ses PV », « à partir du tour 3 ». */
+export function conditionClause(c: Condition): string {
+  if (c.type === 'fromTurn') return `à partir du tour ${c.turn}`
+  const text = describeCondition(c)
+  return text.startsWith('il ') ? `s'${text}` : `si ${text}`
+}
+
 /** « de » élidé devant une voyelle : « de Poison », « d'Aura de rancune ». */
 export const deName = (name: string) => (/^[aeiouyàâéèêëîïôûüh]/i.test(name) ? `d'${name}` : `de ${name}`)
 
-/** Une pastille d'une compétence (forme, relation au coup, condition…) et la règle commune qu'elle cite. */
+/** Une pastille d'une compétence (forme, relation au coup, cumul…) et la règle commune qu'elle cite. */
 export interface SkillTag {
   label: string
   rule: RuleId
 }
 
 export interface SkillDescription {
-  /** L'effet, une phrase par effet */
+  /** Sa ligne : l'effet, la condition en clair, la limite en « 2x » (« Deux coups de plus si l'adversaire saigne. ») */
   text: string
+  /** Ce que la ligne tait (arrondis, moment exact, coups bruts) : la ligne « Détail » du compendium, absente s'il n'y a rien */
+  detail?: string
   /** Les pastilles, dans l'ordre de lecture */
   tags: SkillTag[]
   /** Les statuts que la compétence pose (ou relâche, Rétribution), avec leur cible : une pastille qui mène au statut */
   posed: { status: StatusId; target: Target }[]
 }
 
+const capitalize = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`
+
 /**
  * Ce que fait une compétence, en clair. C'est la seule rédaction d'une compétence : le compendium (index et
- * fiche) et l'infobulle des dés l'affichent depuis cette source. Ce qui relève d'une règle commune (relation au coup
- * de base, dégâts directs, plafond, conditions…) n'est pas répété dans le texte : c'est une pastille
- * qui cite la règle. `formName` : le nom de la forme requise (personnage à formes), affiché en pastille.
+ * fiche), l'infobulle des dés et la forge l'affichent depuis cette source. Au style de l'utilisateur (passe compendium,
+ * 2026-10-25) : la ligne porte l'effet, puis la condition en clair (« si l'adversaire saigne »), sa chance et sa limite
+ * (« 1x ») ; le jargon va au détail. Ce qui relève d'une règle commune (relation au coup de base, dégâts directs, aura,
+ * cumul, plafond) est une pastille qui cite la règle. `formName` : le nom de la forme requise (personnage à formes).
  */
 export function describeSkill(e: CharacterEvent, formName?: string): SkillDescription {
   const relation = relationOf(e)
   const modifies = relation === 'modify'
   const graftedOnDie = relation === 'graft' && isRollTrigger(e.trigger)
-  const effects = e.effects.map((effect, k) => {
+  const sentences = [
+    e.hitMultiplier ? `ce coup ×${e.hitMultiplier}${e.buildsUp ? ', puis ×1 de plus à chaque fois qu’il touche' : ''}` : '',
     // Une compétence qui modifie son coup (Pourfendre) : ses effets n'arrivent que s'il touche
-    const touch = modifies && k === 0 ? "s'il touche, " : ''
-    // Pourfendre (`fromHit`), Virulence (`fromStatus`) : leurs charges viennent du coup ou d'un statut, la phrase de l'effet le dit
-    if (effect.type !== 'applyStatus' || effect.fromHit !== undefined || effect.fromStatus !== undefined) return `${touch}${describeEffect(effect)}`
-    const def = STATUSES[effect.status]
-    const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
-    const status = { id: effect.status, stacks: effect.stacks, turns, power: effect.power }
-    // Greffé sur son lanceur, il agit sur le coup de ce jet (Œil de faucon, Vol de vie : « ce coup », revue 0.110.0)
-    const text = lowerFirst(effect.target !== 'opponent' && graftedOnDie && def.grafted ? def.grafted(status) : def.describe(status))
-    // Le texte d'un statut parle de son porteur, sans le nommer : posé sur l'adversaire, on dit qui le subit
-    // (« Perd 3 PV… » se lisait comme une perte du lanceur ; retour de l'utilisateur, 2026-10-21). Posé par un coup
-    // qui touche, un statut qui réagit aux coups reçus ne réagit pas à celui-ci : il agit dès le coup suivant (règle 9,
-    // la plaie de Pourfendre coule au prochain coup qui touche l'adversaire).
-    if (effect.target !== 'opponent') return `${touch}${text}`
-    return `${touch}sur l'adversaire${modifies && def.reactions?.hurt ? ', dès le coup suivant' : ''} : ${text}`
-  })
-  const boost = e.hitMultiplier ? `coup de base ×${e.hitMultiplier}${e.buildsUp ? ', puis ×1 de plus à chaque fois qu’il touche' : ''}` : ''
-  const parts = [boost, ...effects]
-    .filter(Boolean)
-    .map((p) => `${p.charAt(0).toUpperCase()}${p.slice(1)}.`)
+    ...e.effects.map((effect, k) => (modifies && k === 0 ? `s'il touche, ${lowerFirst(describeEffect(effect, graftedOnDie))}` : describeEffect(effect, graftedOnDie))),
+  ].filter(Boolean)
+  // Virulence : la condition sur le statut qu'elle multiplie va de soi (tripler zéro ne fait rien)
+  const multiplied = (c: Condition) =>
+    c.type === 'hasStatus' && e.effects.some((x) => x.type === 'applyStatus' && x.fromStatus?.status === c.status && x.fromStatus.who === c.who)
+  const clauses = (e.when ?? []).filter((c) => !multiplied(c)).map(conditionClause)
+  const limits = [e.chance !== undefined && e.chance < 1 ? `${Math.round(e.chance * 100)} % de chances` : '', e.limit !== undefined ? `${e.limit}x` : ''].filter(Boolean)
+  // La condition suit une phrase seule (« Deux coups de plus si l'adversaire saigne ») ; devant plusieurs, elle ouvre la première
+  if (clauses.length > 0 && sentences.length === 1) sentences[0] = `${sentences[0]} ${clauses.join(' et ')}`
+  else if (clauses.length > 0) sentences[0] = `${clauses.join(' et ')}, ${lowerFirst(sentences[0])}`
+  if (limits.length > 0) sentences[sentences.length - 1] = `${sentences[sentences.length - 1]}, ${limits.join(', ')}`
+  const details = [...new Set(e.effects.flatMap((effect) => effectDetail(effect) ?? []))]
   const posedIds = e.effects.flatMap((effect) => (effect.type === 'applyStatus' ? [effect.status] : []))
   const direct = e.effects.some((x) => x.type === 'damage' || x.type === 'release' || (x.type === 'cleanse' && x.orElse?.type === 'damage'))
   const caps = [...new Set(posedIds)].flatMap((id) => {
@@ -399,13 +440,11 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     ...(direct ? [{ label: 'dégâts directs', rule: 'direct-damage' as const }] : []),
     ...(posedIds.some((id) => STATUSES[id].look?.aura) ? [{ label: 'aura permanente', rule: 'auras' as const }] : []),
     ...caps,
-    ...(e.when ?? []).map((c) => ({ label: `si ${describeCondition(c)}`, rule: 'conditions' as const })),
-    ...(e.chance !== undefined && e.chance < 1 ? [{ label: `${Math.round(e.chance * 100)} % de chances`, rule: 'skill' as const }] : []),
-    ...(e.limit !== undefined ? [{ label: `${e.limit} fois max. par combat`, rule: 'skill' as const }] : []),
   ]
   return {
-    text: parts.join(' '),
-    tags,
+    text: typeset(sentences.map((p) => `${capitalize(p)}.`).join(' ')),
+    ...(details.length > 0 && { detail: typeset(details.join(' ')) }),
+    tags: tags.map((t) => ({ ...t, label: typeset(t.label) })),
     posed: e.effects.flatMap((effect) =>
       effect.type === 'applyStatus' ? [{ status: effect.status, target: effect.target ?? 'self' }] : effect.type === 'release' ? [{ status: effect.status, target: effect.from ?? 'self' }] : [],
     ),

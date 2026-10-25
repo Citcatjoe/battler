@@ -277,7 +277,8 @@ function StepTile({ step, size }: { step: ForgeStep; size: number }) {
       data-gild={step.op === 'gild' ? '' : undefined}
       style={{ width: size, height: size }}
     >
-      {step.op === 'engrave' ? <SkillSeal id={step.skill.id} size={32} /> : text}
+      {/* Le sceau tient dans la tuile, liseré des runes compris : 22 px dans la tuile de 26 du classement de saison */}
+      {step.op === 'engrave' ? <SkillSeal id={step.skill.id} size={size < 32 ? 22 : 32} /> : text}
     </span>
   )
 }

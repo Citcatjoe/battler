@@ -9,8 +9,8 @@ import { Icon, skillIcon } from './Icon'
  */
 const SKILL_SEAL: Partial<Record<string, string>> = {}
 
-/** Fenêtre octogonale du sceau d'une compétence (.skill-seal de index.css), de 32, 40, 44 (dé de l'affrontement) ou 56 px. */
-export function SkillSeal({ id, size = 56 }: { id: string; size?: 32 | 40 | 44 | 56 }) {
+/** Fenêtre octogonale du sceau d'une compétence (.skill-seal de index.css), de 22 (classement de saison), 32, 40, 44 (dé de l'affrontement) ou 56 px. */
+export function SkillSeal({ id, size = 56 }: { id: string; size?: 22 | 32 | 40 | 44 | 56 }) {
   const [failed, setFailed] = useState(false)
   const seal = SKILL_SEAL[id]
   // L'icône de la compétence elle-même (et non l'étoile générique), cherchée par son id dans le roster, hors kit compris

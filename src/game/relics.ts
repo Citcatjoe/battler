@@ -1,8 +1,9 @@
 import type { CharacterStats } from './character'
-import { describeCondition, DIE_FACES, type Condition, type Effect, type Target, type Trigger } from './events'
+import { conditionClause, DIE_FACES, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { lowerFirst, STATUSES, type StatusId } from './statuses'
+import { typeset } from './typography'
 
 /*
  * Reliques (docs/RELIQUES.md) : des objets gagnés en tournoi, un par victoire, qui changent le profil d'un
@@ -397,8 +398,11 @@ function effectText(e: Effect, attacker = false): string {
       return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? (attacker ? " à l'attaquant" : '') : ' à soi-même'}`
     case 'heal':
       return `+${e.amount} PV`
-    case 'applyStatus':
-      return `+${e.stacks} ${lowerFirst(STATUSES[e.status].name)}${e.turns ? ` (${e.turns} tours)` : ''}`
+    case 'applyStatus': {
+      // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
+      const def = STATUSES[e.status]
+      return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}`
+    }
     case 'cleanse': {
       const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
       const what = e.count === undefined ? `tous ses ${kind}` : e.count === 1 ? `son dernier ${kind}` : `ses ${e.count} derniers ${kind}`
@@ -439,7 +443,7 @@ function conditionText(c: Condition, r: Relic): string {
     return `aux adversaires ${c.stacks ? `qui portent ${c.stacks} ${name} ou plus` : (BEARERS[c.status] ?? `qui portent ${name}`)}`
   }
   if (c.type === 'hitAtLeast') return `de ${c.amount} dégâts ou plus`
-  return `si ${describeCondition(c)}`
+  return conditionClause(c)
 }
 
 /**
@@ -499,7 +503,7 @@ export function describeRelic(r: Relic): RelicDescription {
   const rule = [effect, momentOf(r)].filter(Boolean).join(' ')
   const limit = limitOf(r)
   const posed = (r.effects ?? []).flatMap((e) => (e.type === 'applyStatus' ? [{ status: e.status, target: e.target ?? ('self' as const) }] : []))
-  return { text: capitalize(limit ? `${rule}, ${limit}` : rule), posed }
+  return { text: typeset(capitalize(limit ? `${rule}, ${limit}` : rule)), posed }
 }
 
 /* ---------- Validation ---------- */

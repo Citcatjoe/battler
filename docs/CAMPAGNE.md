@@ -507,8 +507,9 @@ Ce que les décisions du § 1 ne fixaient pas, choisi au plus simple :
 - **Les PV ne se gardent pas** d'un combat à l'autre, puisqu'il n'y a ni repos ni soin entre les combats.
 - **Le boss** : Le Colosse (§ 18.4), réglé lui aussi par ses PV, à 45 % contre le champion de référence du personnage tiré : la cible tient ainsi pour tous les champions.
 - **Graver** puise dans les compétences du dé des autres combattants (sur leur 1, leur 2 ou leur 3) : elles ont déjà leur icône peinte, et leurs statuts sont ceux du roster (§ 14). Une compétence d'un personnage à formes est gravée sans forme. **Depuis la 0.103.0** (règles v2, phase 2, un essai) : dans le **répertoire** du champion d'abord, et Graver est toujours proposée quand une face peut la recevoir ; la première relique proposée se tire à l'écho du build ([PROGRESSION.md](PROGRESSION.md) § 7.4).
-- **Une relique offerte peut partir** (0.111.0, retour de l'utilisateur : « la Fiole de venin m'est proposée à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : l'offre de relique (`drawReward`) ne tire que dans `offerableRelics`, les reliques dont la condition peut arriver avec le champion (sa signature, son répertoire de campagne, ses reliques, ses formes, sa chance d'esquive et de critique ; [RELIQUES.md](RELIQUES.md) § 3, règle 10). Le champion de référence suit la même offre : la courbe nominale en tient compte. Elaria, Gorak et Ysolde ne voient plus la Fiole de venin ; Morgrut ne voit pas la Conque des vents tant qu'il n'a rien qui esquive (la Plume d'aigle lui est offerte depuis la 0.114.0 : sa Rancune, hors kit, donne des critiques). Test : `modules.test.ts`, « offre pertinente ».
-- **Une compétence offerte peut servir** (0.114.0, la même règle étendue à Graver, avec le premier lot de consommatrices de la phase 8, [SORTS.md](SORTS.md) § 22) : la compétence de Graver se tire parmi celles du répertoire de campagne dont le besoin est à la portée du champion (`offerableSkills`, `skillNeeds` : un statut que ses conditions ou ses charges lisent chez l'adversaire, un soin, une esquive ou un critique que consomme le statut qu'elle pose). La portée est celle des reliques (`reachOf`). Les répertoires livrés ne portent que des compétences à leur portée : la règle ne retire rien aujourd'hui, elle garde les lots suivants honnêtes (la Curée sans Saignement, la Sentence sans soin vaudraient 0 gravées). Test : `modules.test.ts`, « offre pertinente des compétences ».
+- **Une relique offerte peut partir** (0.111.0, retour de l'utilisateur : « la Fiole de venin m'est proposée à chaque fois, alors qu'aucun des persos que j'ai joués ne joue sur le poison ») : l'offre de relique (`drawReward`) ne tire que dans `offerableRelics`, les reliques dont la condition peut arriver avec le champion (son dé, ses reliques, ses formes, sa chance d'esquive et de critique ; [RELIQUES.md](RELIQUES.md) § 3, règle 10). Le champion de référence suit la même offre : la courbe nominale en tient compte. Elaria, Gorak et Ysolde ne voient plus la Fiole de venin ; Morgrut ne voit pas la Conque des vents tant qu'il n'a rien qui esquive, ni la Plume d'aigle avant sa Rancune gravée (elle donne des critiques). Test : `modules.test.ts`, « offre pertinente ».
+- **Une compétence offerte peut servir** (0.114.0, la même règle étendue à Graver, avec le premier lot de consommatrices de la phase 8, [SORTS.md](SORTS.md) § 22) : la compétence de Graver se tire parmi celles du répertoire de campagne dont le besoin est à la portée du champion (`offerableSkills`, `skillNeeds` : un statut que ses conditions ou ses charges lisent chez l'adversaire, un soin, une esquive ou un critique que consomme le statut qu'elle pose). La portée est celle des reliques (`reachOf`). Test : `modules.test.ts`, « offre pertinente des compétences ».
+- **Le producteur d'abord** (nuit du 2026-10-25, décision du parent, sur la mesure du § 18.3 : des consommatrices prises avant leur producteur restaient des faces mortes) : la portée est le **build d'aujourd'hui** (dé vanilla, faces gravées, reliques, formes, esquive et critique) ; de la 0.111.0 à cette nuit, le répertoire de campagne comptait aussi, tout ce qu'il pourrait graver. Une consommatrice arrive donc après son producteur : la Curée chez Elaria et Morgrut après Pourfendre gravé ; l'Embrasement et le Soufflet de forge chez Ervald après ses Feux follets ; le Dé pipé et la Pièce trouée chez Fanchon après Pile ou face ; la Vindicte chez Brokk après sa Riposte ou sa Rétribution ; le Rempart chez Morgrut après une armure temporaire (Peau de pierre gravée, Chandelle, Géode, Écu) ; le Gantelet du talion chez Elaria, Brokk et Ysolde après un renvoi. La même offre vaut pour la saison et l'arbre du tournoi (`offers.ts`). Mesures : § 18.3.
 - **Aiguiser** : un rang monte la compétence sur son **axe de rang**, déclaré dans ses données (0.110.0, § 4.2 ; jusqu'à la 0.109.1, une règle commune : une charge à chaque statut cumulable sous son plafond, +2 aux dégâts, soins et relâches, et un statut qui ne cumulait pas ne s'aiguisait pas). Toutes les compétences s'aiguisent. Le nom porte le rang (« Pourfendre II »). **Pas de rang maximal** (décision de l'utilisateur, 2026-10-23 : brider l'opération est un mauvais choix) : le nombre d'aiguisages se règle par le nombre d'occasions que le mode en donne.
 - **Une face dont la compétence sacrifiait le coup ne se dorait pas** (0.88.0 à 0.105.0 ; la dorure n'aurait jamais servi). Depuis la 0.106.0, seules les faces nues se dorent.
 - **Abandonner** une partie compte comme une défaite, héritage compris.
@@ -645,6 +646,100 @@ Boss atteint par champion (± 8 points) : Gorak 20 → 17 %, Elaria 30 → 30 %,
 Builds d'un acte, par champion (gravures distinctes, paires liées par build) : Gorak 5 → 6, 5,05 → 5,43 ; Elaria 5 → 6, 4,73 → 4,58 ; Brokk 5 → 7, 1,38 → **2,30** ; Ervald 5 → 7, 2,02 → **3,40** ; Ysolde 5 → 6, 1,67 → **2,67** ; Naraxes 5 → 6, 6,03 → 5,96 ; Aldric 5 → 6, 0,94 → 1,00 ; Morgrut 4 → 6, 0,78 → **1,63** ; Thaldrin et Fanchon inchangés (rien de nouveau dans leur répertoire). Boss atteint par champion (± 8 points) : Gorak 17 → 17 %, Elaria 30 → 37 %, Brokk 40 → 37 %, Ervald 17 → 10 %, Ysolde 17 → 17 %, Naraxes 13 → 17 %, Aldric 20 → 13 %, Morgrut 40 → 30 %, Thaldrin 20 → 17 %, Fanchon 23 → 20 %.
 
 **Lecture** : le lot fait ce qu'on lui demandait dans les builds : les champions qui produisent une ressource sans consommateur (Brokk et son Saignement, Ervald et son Poison, Ysolde et ses soins, Morgrut qui encaisse) gagnent de 0,8 à 1,4 paire liée par build. L'acte mesuré baisse de 3 et 4 points (boss 24 → 21 %, acte 14 → 10 %), dans le bruit de 300 parties (± 2,5 points chacun ; l'écart vaut environ 1 et 1,5 écart-type) : le champion de référence et les adversaires reçoivent les mêmes répertoires, la courbe suit. À remesurer avec plus de parties si l'écart reste au lot suivant ([INFERENCE] : un pilote automatique qui grave une consommatrice chez Aldric ou Morgrut a moins de faces pour leurs meilleures gravures d'avant).
+
+**Nuit du 2026-10-25 : les deux lots de la phase 8 dans la progression** (calage de campagne ; premier lot : Curée, Récolte, Virulence, Sentence, Rancune ; second lot : Embrasement, Dé pipé, Rempart hérissé, Vindicte et quatre reliques, Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée). `CAMPAIGN_RUNS=30 npm run campaign`, 300 parties par jeu de graines ; le rapport compte désormais, pour chacune des treize briques, les actes où elle est offerte et prise, la part prise quand elle est offerte, la chance estimée avant combat aux nœuds 1-2 et 3-10 contre les combats réellement gagnés, la part d'adversaires au plancher des PV, et la force d'un build d'acte contre les builds des autres (`CAMPAIGN_SEEDS` change de graines). Avant : l'arbre de la vague 1 ; après : le Rempart hérissé à +6 Épines par rang ([SORTS.md](SORTS.md) § 23, série 28), seul changement de jeu. Rapports : `logs/campaign/2026-10-25-00-49_campagne_avant-vague2_30.md`, `…00-56_…avant-vague2-graines-b_30.md`, `…01-06_…apres-vague2_30.md`, `…01-06_…apres-vague2-graines-b_30.md`, `…01-12_…apres-vague2-graines-c_30.md`.
+
+| Mesure | Avant (graines a) | Après (graines a / b / c) |
+| --- | --- | --- |
+| Boss atteint (attendu 26 %) | 23 % | 23 % / 21 % / 24 % |
+| Acte gagné (attendu 12 %) | 10 % | 10 % / 11 % / 11 % |
+| Victoire aux nœuds 1 à 10 (graines a) | 75, 84, 87, 87, 93, 93, 85, 91, 82, 87 % | identique |
+| PV des adversaires normaux proposés | au plus bas 75 %, en moyenne 84 % | identique |
+| Chance estimée avant combat, par champion | 81 à 85 % (nœuds 1-2 : 77 à 80 % ; 3-10 : 85 à 91 %) | 81 à 87 % |
+
+Le Rempart hérissé aiguisé est trop rare pour changer une partie : avant et après donnent les mêmes 300 parties à l'unité, sur les deux jeux de graines mesurés des deux côtés.
+
+**Boss atteint par champion : du bruit de graines.** À 30 parties, l'ordre se renverse d'un jeu de graines à l'autre ; la chance estimée avant chaque combat, elle, est la même pour tous (81 à 87 %), et les combats normaux réellement gagnés la suivent à 4 points près (Brokk graines a : 86 → 92 %, le plus gros écart).
+
+| Champion | Graines a | b | c | Les 90 parties | Combats normaux gagnés (a / b / c), pour une chance estimée de 82 à 87 % |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | 20 % | 20 % | 27 % | 22 % | 82 / 85 / 88 % |
+| Elaria | 17 % | 33 % | 10 % | 20 % | 84 / 89 / 82 % |
+| Brokk | 43 % | 27 % | 30 % | 33 % | 92 / 86 / 86 % |
+| Ervald | 23 % | 10 % | 17 % | 17 % | 85 / 81 / 83 % |
+| Ysolde | 33 % | 20 % | 37 % | 30 % | 89 / 84 / 89 % |
+| Naraxes | 17 % | 10 % | 27 % | 18 % | 84 / 82 / 88 % |
+| Aldric | 13 % | 30 % | 40 % | 28 % | 82 / 88 / 91 % |
+| Morgrut | 27 % | 20 % | 7 % | 18 % | 87 / 86 / 80 % |
+| Thaldrin | 17 % | 23 % | 23 % | 21 % | 81 / 88 / 87 % |
+| Fanchon | 20 % | 20 % | 27 % | 22 % | 83 / 82 / 89 % |
+
+Sur 90 parties (± 4,4 points), de 17 % (Ervald) à 33 % (Brokk), dans la bande visée de 18 à 35 % au bruit près ; aucun champion ne reste hors de la bande sur les trois jeux (Brokk 43 → 27 → 30 %, Aldric 13 → 30 → 40 %, Morgrut 27 → 20 → 7 %). Le réglage sur le champion de référence fait son travail champion par champion : aucun levier n'a été tiré pour resserrer un écart que les graines suffisent à expliquer. Brokk est le seul au-dessus de deux écarts-types (+2,4) ; à surveiller s'il le reste avec plus de parties. La place à l'écran n'y est presque pour rien : un champion à gauche (la campagne) gagne au plus 4 points de plus qu'à droite (l'estimation alterne les côtés) au premier nœud (Fanchon +3,9, Brokk +3,3, Naraxes +3,0, Aldric −2,1), 3 points au septième (mesure jetable, 200 combats par duel).
+
+**Les briques des lots sont là** (actes complets, offre et choix par défaut, 120 par champion). Chaque champion se voit offrir au moins une brique des lots dans 85 à 100 % de ses actes et en prend au moins une dans 37 à 73 % ; aucune brique n'est cachée par l'offre pertinente à qui produit sa ressource (le Rempart à Brokk et Morgrut, l'Embrasement à Thaldrin et Ervald, les Clous de pavois à tous dès qu'une armure temporaire entre dans le build…).
+
+| Champion | Une brique des lots offerte | Prise | Briques des lots par build |
+| --- | --- | --- | --- |
+| Gorak | 87 % | 43 % | 0,46 |
+| Elaria | 85 % | 37 % | 0,42 |
+| Brokk | 100 % | 73 % | 1,14 |
+| Ervald | 98 % | 69 % | 0,93 |
+| Ysolde | 98 % | 53 % | 0,72 |
+| Naraxes | 100 % | 69 % | 0,95 |
+| Aldric | 98 % | 72 % | 1,07 |
+| Morgrut | 98 % | 67 % | 0,91 |
+| Thaldrin | 98 % | 59 % | 0,74 |
+| Fanchon | 89 % | 50 % | 0,59 |
+
+| Brique | Actes : offerte / prise, chez qui la voit | Parties (300) : offerte, prise, part prise |
+| --- | --- | --- |
+| Curée | Gorak 84 / 40 % ; Elaria 40 / 12 % ; Brokk 60 / 29 % ; Morgrut 57 / 20 % | 42, 19, 45 % |
+| Récolte | Ervald 57 / 18 % | 12, 4, 33 % |
+| Virulence | Ervald 72 / 33 % ; Naraxes 56 / 18 % | 22, 7, 32 % |
+| Sentence | Ysolde 78 / 33 % | 23, 7, 30 % |
+| Rancune | Brokk 26 / 10 % ; Aldric 40 / 15 % ; Morgrut 50 / 22 % | 20, 10, 50 % |
+| Embrasement | Ervald 33 / 15 % ; Thaldrin 85 / 42 % | 22, 10, 45 % |
+| Dé pipé | Naraxes 61 / 20 % ; Fanchon 26 / 10 % | 17, 2, 12 % |
+| Rempart hérissé | Brokk 63 / 21 % ; Morgrut 57 / 27 % | 35, 12, 34 % |
+| Vindicte | Brokk 27 / 7 % ; Aldric 78 / 39 % | 25, 7, 28 % |
+| Soufflet de forge | Ervald 49 / 20 % ; Thaldrin 70 / 27 % | 15, 6, 40 % |
+| Clous de pavois | Brokk 66 / 26 %, Morgrut 63 / 23 %, Ysolde 60 / 17 % ; les sept autres 18 à 29 % / 6 à 17 % | 60, 20, 33 % |
+| Gantelet du talion | Elaria 65 / 21 % ; Brokk 57 / 22 % ; Ysolde 65 / 23 % ; Aldric 68 / 37 % | 52, 15, 29 % |
+| Pièce trouée | Naraxes 88 / 49 % ; Fanchon 80 / 40 % | 38, 16, 42 % |
+
+**Le pilote automatique** (choix par défaut, champion de référence, adversaires, saison) prend une carte au hasard : une brique des lots offerte est prise une fois sur trois environ (28 à 50 %, plus quand l'offre est courte ; le Dé pipé 2 fois sur 17, petit nombre). L'écho n'oriente que l'offre (la première carte), pas le choix. Mesuré (jetable, 120 builds par champion, 20 combats par duel contre les builds des autres) : un choix au poids de l'écho (1 + 2 par accroche, comme l'offre) prend 0,15 à 0,65 brique des lots de plus par build (Gorak 0,39 → 0,75, Brokk 1,32 → 1,85, Fanchon 0,63 → 1,12) et 40 à 70 % de paires liées de plus, mais n'en gagne pas plus et creuse l'écart entre personnages (écart-type des taux construits 8,6 → 9,7 points). **Gardé : au hasard.**
+
+**La force des builds : les mêmes écarts qu'en saison** (vague 1 : Fanchon 67 %, Elaria 66 %, Morgrut 39 %). Chaque build d'acte contre le build de même rang des neuf autres (24 tirages, 20 combats par duel) : Elaria 67 %, Fanchon 65 %, Naraxes 59 %, Aldric 54 %, Gorak 50 %, Brokk 45 %, Morgrut 43 %, Thaldrin 42 %, Ervald 38 %, Ysolde 37 % (écart-type d'un build à l'autre : 11 à 15 points pour tous). La campagne ne le montre pas (chacun est réglé sur son propre champion de référence) ; la saison, si : `npm run season` après ce calage, 8 saisons de 24 : de 38 % (Ervald) à 66 % (Elaria, Fanchon), écart-type 10,1 points, inchangé par le Rempart. Mesures jetables pour en trouver la cause (120 builds par champion) :
+- **c'est la forge, pas les reliques** : reliques seules, écart-type 4,0 points (45 à 56 %) ; forge seule, 9,2 (Ysolde 35 %, Morgrut 41 %, Ervald 42 % ; Gorak 55 %, Aldric 56 %, Naraxes 57 %, Fanchon 62 %, Elaria 63 %). Fanchon porte chaque gravure sur ses deux dés ;
+- **les briques des lots n'y sont presque pour rien** : rendre plus fortes les quatre consommatrices des builds faibles (Sentence 2 PV par charge, Récolte +11 PV, Virulence ×4, Rempart +4 Épines) ne resserre l'écart que de 8,6 à 8,2 points (Ysolde +2, Ervald +1) ; non appliqué ;
+- **ce qui pèse dans un build** (avec la brique contre sans, bruit d'environ ± 5 points) : une consommatrice offerte sur la seule promesse de son répertoire, prise avant son producteur, est une face perdue (la Curée chez Elaria −12, 17 builds, et chez Morgrut −14, 19 builds, sans Pourfendre gravé ; la Pièce trouée chez Fanchon −9, 50 builds, sans Pile ou face) ; l'écho tire la Sentence chez Ysolde (48 builds sur 120, −2) plutôt que son Aura d'immunité (+15, 15 builds) ; la Rancune paie (Brokk +11, Morgrut +15).
+
+**Décisions laissées à l'utilisateur** : resserrer l'écart des builds en saison par la forge (Fanchon et ses deux dés ; une gravure qui ne compte qu'une fois chez elle ?). La seconde piste, l'offre d'une consommatrice seulement quand son producteur est déjà dans le build, a été appliquée la même nuit par décision du parent (ci-dessous).
+
+**Le producteur d'abord** (nuit du 2026-10-25, décision du parent, § 18.2) : la portée de l'offre pertinente est le build d'aujourd'hui seul ; ce que le répertoire pourrait produire ne compte plus. Même script, mêmes trois jeux de graines (rapports `logs/campaign/2026-10-25-01-23_campagne_producteur_30.md`, `…01-24_…producteur-graines-b_30.md`, `…01-24_…producteur-graines-c_30.md`) ; saison : `SEASON_RUNS=8 npm run season`, 8 saisons de 24, mêmes graines (`logs/season/2026-10-25-nuit_saison_avant-producteur.md` et `…_apres-producteur.md`, le rapport compte désormais les briques des lots par build).
+
+| Mesure | Répertoire compris | Le producteur d'abord |
+| --- | --- | --- |
+| Boss atteint (graines a / b / c ; attendu 26 %) | 23 / 21 / 24 % | 19 / 20 / 23 % |
+| Acte gagné (attendu 12 %) | 10 / 11 / 11 % | 7 / 10 / 9 % |
+| Boss atteint par champion, sur 90 parties | 17 % (Ervald) à 33 % (Brokk) | **10 % (Ervald)** à 25 % (Brokk) |
+| Briques des lots par build d'acte | 0,42 à 1,14 | 0,14 (Elaria) à 1,18 (Brokk) |
+| Actes où une brique des lots est offerte / prise | 85 à 100 % / 37 à 73 % | 39 à 100 % / 13 à 82 % |
+| Construit contre construits (écart-type entre personnages) | 37 à 67 %, 10,3 points | 38 à 73 %, 12,0 points |
+| Saison : taux de victoire par personnage | 38 à 66 %, écart-type 10,1 points | 37 à 68 %, écart-type 10,7 points |
+| Saison : briques des lots par build | 0,95 | 0,69 |
+
+Boss atteint par champion (a / b / c → 90 parties) : Gorak 17/23/30 → 23 % ; Elaria 23/27/23 → 24 % ; Brokk 30/27/17 → 25 % ; **Ervald 10/3/17 → 10 %** ; Ysolde 23/20/20 → 21 % ; Naraxes 17/17/27 → 20 % ; Aldric 13/17/20 → 17 % ; Morgrut 23/23/10 → 19 % ; Thaldrin 20/23/23 → 22 % ; Fanchon 13/17/40 → 23 %. Chance estimée avant combat : 80 à 86 % pour tous, comme avant.
+
+Ce qui change par champion (actes complets ; offerte / prise, par acte) :
+- **Elaria** : ses trois briques attendaient un producteur de son répertoire ; la Curée passe de 40 / 12 % à 8 / 3 %, le Gantelet du talion de 65 / 21 % à 6 / 1 % ; une brique des lots dans 39 % de ses actes (85 % avant), prise dans 13 % (37 %). Son build se renforce (67 → 73 % contre les builds) : les faces mortes disparaissent.
+- **Fanchon** : le Dé pipé 26 / 10 → 6 / 2 %, la Pièce trouée 80 / 40 → 17 / 8 % (Pile ou face doit être gravé d'abord) ; une brique des lots dans 45 % de ses actes (89 %), prise dans 21 % (50 %). Son build ne bouge pas (65 → 66 %).
+- **Ervald** : l'Embrasement 33 / 15 → 3 / 2 %, le Soufflet de forge 49 / 20 → 7 / 3 % (ses Feux follets d'abord) ; la Récolte monte (57 / 18 → 68 / 27 %). Son build se renforce (38 → 45 %), mais son boss atteint baisse (17 → 10 % sur 90 parties, sous la bande de 18 à 35 %) : [INFERENCE] ses actes, gagnés à la même chance estimée, se perdent plus souvent que l'estimation (combats normaux gagnés 80 / 78 / 83 % pour 82 à 83 % estimés) ; à remesurer avec plus de parties.
+- **Brokk** : la Vindicte 27 / 7 → 7 / 2 % et le Gantelet 57 / 22 → 9 / 3 % (sa Riposte ou sa Rétribution d'abord) ; le Rempart (63 → 70 %) et la Curée (60 → 76 %) en profitent ; toujours une brique dans 99 % de ses actes.
+- **Morgrut** : la Curée 57 → 35 %, le Rempart 57 → 38 % (une armure temporaire d'abord) ; la Rancune reste (50 %) ; une brique des lots dans 89 % de ses actes (98 %).
+- **Ysolde** : le Gantelet 65 → 7 % (sa Rétribution d'abord), la Sentence monte (78 → 87 %) ; **Gorak, Naraxes, Aldric, Thaldrin** : inchangés à quelques points près (leur producteur est sur leur dé vanilla).
+
+**Lecture** : la règle fait ce qu'elle promet (plus de face morte : les builds d'Elaria et d'Ervald gagnent 6 et 7 points), mais Elaria et Fanchon ne rencontrent plus une brique des lots que dans un acte sur trois ou deux (39 et 45 %), et l'écart entre personnages ne se resserre pas (10,3 → 12,0 points construit contre construits ; 10,1 → 10,7 en saison) : Elaria, déjà la plus forte, l'est davantage. L'acte baisse un peu (boss 23 → 21 % en moyenne des trois jeux, acte 11 → 9 %), dans le bruit de 900 parties (± 1,4 point). Gardée (décision du parent) ; seul Ervald passe sous la bande (10 %), à surveiller.
 
 ### 18.4 Le boss : Le Colosse
 

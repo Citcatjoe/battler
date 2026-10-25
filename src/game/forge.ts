@@ -2,6 +2,7 @@ import type { CharacterDef } from './character'
 import { DIE_FACES, faceTrigger, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
+import { typeset } from './typography'
 
 /*
  * La forge du dé (0.88.0, docs/CAMPAGNE.md § 4 ; règles v2, docs/PROGRESSION.md § 6.5 et § 6 bis) : le dé, c'est l'arme.
@@ -40,14 +41,15 @@ export const GILD_RULE = 'au coup de base'
 
 /**
  * Les cinq opérations : nom, règle au plus court (2026-10-23, demande de l'utilisateur : une information simple, pas
- * d'explication ; ce qu'elle change se lit dans l'aperçu du dé), et si elles visent une face.
+ * d'explication ; ce qu'elle change se lit dans l'aperçu du dé), et si elles visent une face. Une phrase, avec son point,
+ * comme la ligne d'une compétence à côté d'elle sur les cartes de récompense (passe compendium, 2026-10-25).
  */
 export const FORGE_OPS: Record<ForgeOpKind, { name: string; summary: string; targeted: boolean }> = {
-  engrave: { name: 'Graver', summary: 'Nouvelle compétence sur une face nue', targeted: true },
-  gild: { name: 'Dorer', summary: `+${GILD_BONUS} ${GILD_RULE}`, targeted: true },
-  sharpen: { name: 'Aiguiser', summary: '+1 rang à une compétence', targeted: true },
-  copy: { name: 'Copier une face', summary: 'Copie sa compétence sur une face libre', targeted: true },
-  temper: { name: 'Tremper l’arme', summary: `+${TEMPER_BONUS} à l'attaque`, targeted: false },
+  engrave: { name: 'Graver', summary: 'Nouvelle compétence sur une face nue.', targeted: true },
+  gild: { name: 'Dorer', summary: `+${GILD_BONUS} ${GILD_RULE}.`, targeted: true },
+  sharpen: { name: 'Aiguiser', summary: '+1 rang à une compétence.', targeted: true },
+  copy: { name: 'Copier une face', summary: 'Copie sa compétence sur une face libre.', targeted: true },
+  temper: { name: 'Tremper l’arme', summary: `+${TEMPER_BONUS} à l'attaque.`, targeted: false },
 }
 
 /** Une opération proposée, avant le choix de sa face. Graver porte la compétence à graver. */
@@ -238,7 +240,7 @@ function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Ef
  * (`RankAxis`, 0.110.0 : un statut, son premier effet qui en pose un ; un coup ×N ; une limite par combat). Sans axe :
  * elle ne s'aiguise pas.
  */
-function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
+export function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
   if (rank === 0 || !e.rankAxis) return e
   const { kind, per } = e.rankAxis
   const gain = per * rank
@@ -252,20 +254,25 @@ function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
   }
 }
 
-/** Ce qu'un rang d'aiguisage ajoute à une compétence, en une ligne (« +1 Saignement »). */
+/** Ce qu'un rang d'aiguisage ajoute à une compétence, en une ligne (« +1 Saignement », « +2 coups »). */
 export function rankText(e: CharacterEvent): string {
   if (!e.rankAxis) return 'ne s’aiguise pas'
   const { kind, per } = e.rankAxis
   const posed = e.effects.find((x) => x.type === 'applyStatus')
+  const def = posed && STATUSES[posed.status]
   const hits = e.effects.find((x) => x.type === 'damage')?.hits
-  return {
-    stacks: `+${per} ${posed ? STATUSES[posed.status].name : 'charge'}`,
-    power: (posed && STATUSES[posed.status].power?.(per)) ?? `+${per}`,
-    amount: hits ? `+${per} à chacun de ses ${hits} coups` : `+${per} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : 'dégâts'}`,
-    multiplier: `coup ×${per} de plus`,
-    limit: `${per} fois de plus par combat`,
-    share: `+${per} % des jauges relâchées`,
-  }[kind]
+  // Une charge de coups (Curée) se compte en coups ; un statut qui se compte prend son pluriel (« +2 coups de chance »)
+  const stacks = def?.instantStrikes && def.extraStrikes ? `+${per * def.extraStrikes} coups` : `+${per} ${def ? (per > 1 ? (def.plural ?? def.name) : def.name) : 'charge'}`
+  return typeset(
+    {
+      stacks,
+      power: (def && def.power?.(per)) ?? `+${per}`,
+      amount: hits ? `+${per} à chacun des ${hits} coups` : `+${per} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : per > 1 ? 'dégâts' : 'dégât'}`,
+      multiplier: `ce coup ×${per} de plus`,
+      limit: `${per} fois de plus par combat`,
+      share: `+${per} % des dégâts renvoyés`,
+    }[kind],
+  )
 }
 
 /**

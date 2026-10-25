@@ -11,6 +11,7 @@ import { Bracket } from './Bracket'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
 import { BackLink, Button, Glyph, IconButton, SegmentedControl } from './kit'
+import type { GlyphName } from './BattlerIcon'
 import { RelicSeal } from './RelicSeal'
 import { TipLayer, useTipLayer, type ShowTip } from './TipLayer'
 import { Switch } from './Switch'
@@ -51,8 +52,8 @@ const EMPTY_BRACKET: null[] = Array(SLOTS).fill(null)
  * d'options : un réglage de plus est une entrée de plus. `unavailable` : la raison pour laquelle l'option ne se règle
  * pas, écrite à la place de son état.
  */
-type Rule = { id: string; label: string; title: string; unavailable?: string } & (
-  | { kind: 'switch'; on: boolean; onToggle: () => void; states: [string, string]; visual?: ReactNode }
+type Rule = { id: string; label: string; title: string; unavailable?: string; visual?: ReactNode } & (
+  | { kind: 'switch'; on: boolean; onToggle: () => void; states: [string, string] }
   | {
       kind: 'choice'
       value: number
@@ -79,6 +80,15 @@ function RuleText({ label, state, on }: { label: string; state: string; on: bool
   )
 }
 
+/** Glyphe du kit en tête d'une tuile d'option, à la place d'une illustration : or quand l'option est active. */
+function TileGlyph({ name, on }: { name: GlyphName; on: boolean }) {
+  return (
+    <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${on ? 'text-gold-300' : 'text-ink-3'}`}>
+      <Glyph name={name} size={24} />
+    </span>
+  )
+}
+
 /**
  * Tuile d'une option. Interrupteur : l'illustration s'éteint quand il est coupé, le curseur passe à droite et en or quand
  * il est actif. Choix : le sélecteur segmenté du kit, ou la valeur fixe quand l'option ne se règle pas.
@@ -88,6 +98,7 @@ function RuleTile({ rule }: { rule: Rule }) {
     const active = !rule.unavailable
     return (
       <div title={rule.title} className={`${TILE} ${active ? 'border-gold-500/80' : 'border-line-2 opacity-50'}`}>
+        {rule.visual}
         <RuleText label={rule.label} state={rule.unavailable ?? rule.state} on={active} />
         <span className="ml-auto">
           {active ? (
@@ -397,11 +408,7 @@ export function TournamentOptions({
       title: season.enabled
         ? `Championnat aller-retour à ${season.size} avant l'arbre : les ${SLOTS} premiers s'y qualifient. Pas de pari pendant la saison.`
         : "Pas de saison : l'arbre seul",
-      visual: (
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${season.enabled ? 'text-gold-300' : 'text-ink-3'}`}>
-          <Glyph name="tournoi" size={24} />
-        </span>
-      ),
+      visual: <TileGlyph name="tournoi" on={season.enabled} />,
     },
     {
       kind: 'choice',
@@ -416,6 +423,7 @@ export function TournamentOptions({
       title: season.enabled
         ? `Les ${season.size} combattants de la saison sont tirés au sort au lancement, en équilibrant le roster`
         : `Sans saison, l'arbre compte ${SLOTS} cases, placées à la main`,
+      visual: <TileGlyph name="combattre" on={season.enabled} />,
     },
     {
       kind: 'switch',
@@ -436,7 +444,7 @@ export function TournamentOptions({
           className="forge-face shrink-0"
           data-size="sm"
           data-engraved={forge && season.enabled ? '' : undefined}
-          style={{ width: 32, height: 32, opacity: forge && season.enabled ? 1 : 0.45 }}
+          style={{ width: 36, height: 36, opacity: forge && season.enabled ? 1 : 0.45 }}
         >
           {DIE_FACES}
         </span>
@@ -467,6 +475,7 @@ export function TournamentOptions({
       title: uniqueNames
         ? 'Chaque participant reçoit une épithète de son personnage (Gorak le Borgne, Elaria Flèche-Grise)'
         : 'Les doublons sont numérotés (Gorak I, Gorak II)',
+      visual: <TileGlyph name="chroniques" on={uniqueNames} />,
     },
     {
       kind: 'switch',
@@ -478,7 +487,7 @@ export function TournamentOptions({
       title: betting.enabled
         ? `${betting.names[0]} et ${betting.names[1]} parient des Deniers sur chaque match de l’arbre, cotes cachées jusqu’au règlement`
         : 'Tournoi sans paris',
-      visual: <Icon name="coin-pile" className={`h-8 w-8 shrink-0 ${betting.enabled ? '' : 'opacity-45 grayscale'}`} />,
+      visual: <Icon name="coin-pile" className={`h-9 w-9 shrink-0 ${betting.enabled ? '' : 'opacity-45 grayscale'}`} />,
     },
   ]
   return (

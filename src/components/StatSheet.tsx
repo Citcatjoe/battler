@@ -53,7 +53,7 @@ function shownStat(character: Character, l: StatLine): ShownStat {
     return {
       text: low === high ? `${low}` : `${low} à ${high}`,
       bar: avg,
-      hint: `Coup de base de chaque action : ${low} à ${high} (moyenne ${avg.toFixed(1).replace('.', ',')})`,
+      hint: `Coup de base de chaque action, de ${low} à ${high}`,
       score: avg,
     }
   }

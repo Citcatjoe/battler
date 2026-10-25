@@ -1206,17 +1206,19 @@ Le personnage vanilla laisse la Foudre du druide sur une seule face : +6,0 point
 
 **Le constat** ([PROGRESSION.md](PROGRESSION.md) § 0 bis, § 13.3) : quatre ressources du jeu n'avaient pas de consommateur (le Poison, le Saignement, les soins, les coups encaissés). La proposition de l'agent Lot8Design (2026-10-25, six compétences, séries 18 à 23 du laboratoire, 400 combats par duel, 3 600 par hôte) a été livrée à cinq : **Curée, Récolte, Virulence, Sentence, Rancune**. Le Rempart hérissé (« +8 armure temporaire si l'adversaire saigne ») est écarté : son rang II restait hors bande (+1,3 à +2,0 quel que soit le pas d'armure essayé). Décisions prises par l'agent principal, à confirmer en jeu par l'utilisateur.
 
+Textes de la passe compendium du 2026-10-25 (§ 24) ; ceux de la livraison 0.114.0 sont au CHANGELOG.
+
 | Compétence | Famille | Texte en jeu | Rang (axe) | Porteur (hors kit) | Répertoires |
 | --- | --- | --- | --- | --- | --- |
-| **Curée** (`quarry`) | Tempo (Saignement → coups) | « Deux coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence). » · si l'adversaire porte Saignement | une charge, deux coups (`stacks` +1) | Gorak | Elaria, Brokk, Morgrut |
-| **Récolte** (`harvest`) | Soin (Poison → soin) | « +7 PV. » · si l'adversaire porte Poison | +4 PV (`amount`) | Ervald | — |
-| **Virulence** (`virulence`) | Affliction (l'amplificateur du Poison) | « Triple le Poison de l'adversaire. » · si l'adversaire porte Poison | +3 Poison à plat (`stacks`) | Ervald | Naraxes |
-| **Sentence** (`sentence`) | Affliction (soins → dégâts directs), une aura | « L'adversaire perd 1 PV chaque fois qu'il regagne des PV. » · aura permanente, 2 charges au plus | +1 PV par soin (`power`) | Ysolde | — |
-| **Rancune** (`grudge`) | Précision (coups encaissés → critiques) | « Son prochain coup est critique quand il encaisse un coup, 1x. » | une fois de plus (`stacks` +1) | Morgrut | Brokk, Aldric |
+| **Curée** (`quarry`) | Tempo (Saignement → coups) | « Deux coups de plus si l'adversaire saigne. » · détail : coups de base bruts, juste après celui du jet, chacun son dé | une charge, deux coups (`stacks` +1) | Gorak | Elaria, Brokk, Morgrut |
+| **Récolte** (`harvest`) | Soin (Poison → soin) | « +7 PV si l'adversaire est empoisonné. » | +4 PV (`amount`) | Ervald | — |
+| **Virulence** (`virulence`) | Affliction (l'amplificateur du Poison) | « Triple le Poison de l'adversaire. » (sa condition va de soi) | +3 Poison à plat (`stacks`) | Ervald | Naraxes |
+| **Sentence** (`sentence`) | Affliction (soins → dégâts directs), une aura | « Chaque soin qu'il reçoit fait perdre 1 PV à l'adversaire. » · aura permanente, 2 charges au plus | +1 PV par soin (`power`) | Ysolde | — |
+| **Rancune** (`grudge`) | Précision (coups encaissés → critiques) | « Son prochain coup reçu lui donne un critique assuré. » | une fois de plus (`stacks` +1) | Morgrut | Brokk, Aldric |
 
 **Ce que le moteur a reçu** : un seul champ, `applyStatus.fromStatus` (`{ status, who, factor }` : `factor` fois les charges du statut que porte `who`, lues quand l'effet part, plus `stacks`) pour la Virulence ×3, qu'une émulation par seuils remplaçait au laboratoire ; trois statuts au registre (`quarry`, `sentence`, `grudge`) avec les crochets existants (`instantStrikes`, `reactions.healed`, `reactions.hurt`, `decays`). L'audit (`audit.ts`) lit désormais les conditions d'une compétence greffée ou qui remplace (une condition fausse laisse la face nue, comme le moteur), et admet qu'une rafale posée par une greffe suive le coup de base de son jet : les deux faux positifs signalés par le laboratoire (2 800 à 3 800 fois par idée).
 
-**L'offre pertinente, étendue aux compétences** (règle des reliques de la 0.111.0) : en campagne, Graver ne tire que les compétences du répertoire dont le besoin est à la portée du champion (`skillNeeds`, `offerableSkills`) : un statut lu chez l'adversaire (Saignement, Poison), un soin, une esquive ou un critique consommés par le statut posé. Chaque répertoire livré ne porte que des compétences à la portée de son champion ; la règle garde les suivants honnêtes.
+**L'offre pertinente, étendue aux compétences** (règle des reliques de la 0.111.0) : en campagne, Graver ne tire que les compétences du répertoire dont le besoin est à la portée du champion (`skillNeeds`, `offerableSkills`) : un statut lu chez l'adversaire (Saignement, Poison), un soin, une esquive ou un critique consommés par le statut posé. **Depuis la nuit du 2026-10-25, le producteur d'abord** : la portée est le build d'aujourd'hui seul (dé vanilla, faces gravées, reliques, formes) ; ce que son répertoire pourrait produire ne compte plus. La Curée n'arrive chez Elaria et Morgrut qu'une fois Pourfendre gravé ([CAMPAGNE.md](CAMPAGNE.md) § 18.3).
 
 **Pas de fonds commun** : la proposition mettait aussi la Rancune dans le « fonds commun » de PROGRESSION § 7 ; il n'existe pas dans le code (la campagne tire dans `reserve` + `repertoire`, le tournoi et la saison dans toutes les compétences gravables). Rien n'a été inventé : la Rancune est chez Morgrut (hors kit), Brokk et Aldric.
 
@@ -1248,9 +1250,9 @@ Le drapeau « hors bande (faible) » des moyennes sur dix hôtes est attendu : u
 
 | Compétence | Famille | Texte en jeu | Rang (axe) | Porteur (hors kit) | Répertoires |
 | --- | --- | --- | --- | --- | --- |
-| **Embrasement** (`conflagration`) | Affliction (Brûlure → dégâts d'un coup) | « Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 3 fois sa Brûlure restante, 1x. » | ×1 de plus (`power`) | Thaldrin | Ervald |
-| **Dé pipé** (`loaded-die`) | Fortune (la pièce → pile) | « Sa prochaine pièce tombe sur pile, ×2 de plus, 1x. » (pile, ce coup ×5) | pile ×1 de plus (`power`) | Naraxes | Fanchon |
-| **Rempart hérissé** (`bristling-rampart`) | Affliction (armure vidée → Épines, le pont du Rempart, FAMILLES § 7) | « +2 Épines acérées quand son armure temporaire est vidée. » · aura permanente, se cumule | +2 Épines (`power`) | Brokk | Morgrut |
+| **Embrasement** (`conflagration`) | Affliction (Brûlure → dégâts d'un coup) | « Son prochain coup qui touche un adversaire qui brûle lui fait perdre trois fois sa Brûlure restante. » (§ 24 ; « d'un coup 3 fois…, 1x » à la livraison) | +1 fois la Brûlure (`power`) | Thaldrin | Ervald |
+| **Dé pipé** (`loaded-die`) | Fortune (la pièce → pile) | « Sa prochaine pièce tombe sur pile, et pile vaut ×2 de plus. » (pile, ce coup ×5 ; § 24) | pile ×1 de plus (`power`) | Naraxes | Fanchon |
+| **Rempart hérissé** (`bristling-rampart`) | Affliction (armure vidée → Épines, le pont du Rempart, FAMILLES § 7) | « +2 Épines acérées quand son armure temporaire est vidée. » · aura permanente, se cumule | +6 Épines (`power`, 3 par rang, depuis la nuit du 2026-10-25 ; +2 avant, série 28 ci-dessous) | Brokk | Morgrut |
 | **Vindicte** (`vendetta`) | Puissance (dégâts renvoyés → Ferveur) | « +3 Ferveur quand il renvoie des dégâts. » · aura permanente, se cumule | +3 Ferveur (`power`) | Aldric | Brokk |
 
 **Ce que le moteur a reçu** (une fois, pour toutes les briques à venir ; [RESOLUTION.md](RESOLUTION.md) § 2, § 3, § 5 règle 6) :
@@ -1258,7 +1260,7 @@ Le drapeau « hors bande (faible) » des moyennes sur dix hôtes est attendu : u
 - une **relâche du statut de l'adversaire** (`release` avec `from: 'opponent'`, `StatusDef.releases` : la Brûlure rend ses PV par tour × ses tours restants) ; une réaction qui ne relâcherait rien (pas de Brûlure) ne part pas, la charge attend ;
 - le **Dé pipé** (`StatusDef.loadsCoin`) : la pièce se tire quand même (même suite du hasard), puis tombe sur pile, et pile vaut ×N de plus ; l'étape `coin` le dit (`loadedBy`). Une pièce imposée en mode triche garde sa valeur.
 
-L'Embrasement et le Dé pipé sont des **mécanismes** (`mechanic: 'skill'`, comme Pile ou face et la Curée) : des charges qui attendent leur moment, qu'aucune purge ne retire. Le Rempart hérissé et la Vindicte sont des **auras** (bonus permanents, cumulables). **Offre pertinente** (`skillNeeds`, `relicNeeds`) : l'Embrasement et le Soufflet attendent la Brûlure (`status:burn`), le Dé pipé une pièce (`status:coinFlip`), le Rempart et les Clous une armure vidée (`moment:shieldBreak`), la Vindicte et le Gantelet un renvoi (`moment:reflect`), la Pièce trouée une pile (`moment:heads`) : la campagne ne les offre qu'à qui produit leur ressource (chaque répertoire livré reste entièrement à portée, test de `modules.test.ts`).
+L'Embrasement et le Dé pipé sont des **mécanismes** (`mechanic: 'skill'`, comme Pile ou face et la Curée) : des charges qui attendent leur moment, qu'aucune purge ne retire. Le Rempart hérissé et la Vindicte sont des **auras** (bonus permanents, cumulables). **Offre pertinente** (`skillNeeds`, `relicNeeds`) : l'Embrasement et le Soufflet attendent la Brûlure (`status:burn`), le Dé pipé une pièce (`status:coinFlip`), le Rempart et les Clous une armure vidée (`moment:shieldBreak`), la Vindicte et le Gantelet un renvoi (`moment:reflect`), la Pièce trouée une pile (`moment:heads`) : la campagne et la saison ne les offrent qu'à qui produit déjà leur ressource (depuis la nuit du 2026-10-25, son build seul : l'Embrasement chez Ervald attend ses Feux follets gravés, le Dé pipé et la Pièce trouée chez Fanchon son Pile ou face, le Rempart chez Morgrut une armure temporaire, la Vindicte chez Brokk sa Riposte ou sa Rétribution ; test de `modules.test.ts`).
 
 ### Le laboratoire (séries 24 à 27, 400 combats par duel, gravée sur le 3 de son producteur)
 
@@ -1282,19 +1284,69 @@ Rapports : `logs/lab/2026-10-24-23-56-16_v0.114.0.md` (série 24), `2026-10-24-2
 | --- | --- | --- | --- | --- |
 | Embrasement | Thaldrin **+8,0** (laboratoire +8,6 en bonus purgeable ; le mécanisme ne leurre plus la Purification) | 0 | +0,6 | **+0,33** |
 | Dé pipé | Naraxes **+9,7** | 0 | +1,1 | **+0,40** |
-| Rempart hérissé | Brokk **+8,1** | +0,0 (Ysolde) à +1,3 (Fanchon) : le leurre | +1,7 | **+0,33** |
+| Rempart hérissé | Brokk **+8,1** | +0,0 (Ysolde) à +1,3 (Fanchon) : le leurre | +1,7 ; **+3,2** depuis la nuit du 2026-10-25 (+6 Épines par rang, ci-dessous) | **+0,33** |
 | Vindicte | Aldric **+9,4** | +0,0 à +1,3 : le leurre | **+4,0** | **+0,38** |
 
 La log-cote de la dernière colonne est la synergie P8 avec le producteur du kit (l(AB) − l(A) − l(B) + l(∅), où ∅ est l'hôte sans son producteur) : une consommatrice ne fait rien sans sa ressource, donc l(B) ≈ l(∅) et la synergie vaut son gain en log-cote chez son producteur. Toutes les quatre dépassent +0,25.
 
 **À décider par l'utilisateur : trois rangs II sous la bande** (+3 à +8). Embrasement +0,6, Dé pipé +1,1, Rempart hérissé +1,7 : trois consommatrices **rares** (l'Embrasement relâche 0,26 fois par combat au laboratoire ; la pièce ne tombe que sur le 2 de Naraxes, s'il touche ; une armure vidée demande que la Peau de pierre soit partie), dont un rang ne change que l'effet, pas la fréquence. Essayés sans mieux : deux charges au lieu d'une (Embrasement +0,1, Dé pipé +0,3, Rempart +0,0), le rang par la part (Embrasement ×4 : +0,7). Propositions, à mesurer : un rang qui ajoute aussi de la ressource (l'Embrasement qui pose 1 Brûlure, le Dé pipé qui donne une pièce), ou accepter ces trois rangs faibles comme les onze rangs II au-dessus de la bande. La Vindicte, plus fréquente (0,9 moment par combat au laboratoire), a un rang dans la bande.
 
+**Série 28 : un rang qui ajoute de la ressource ou de la fréquence** (calage de campagne, nuit du 2026-10-25 ; laboratoire, 400 combats par duel, gravée sur le 3 du producteur ; le gain d'un rang est l'idée moins le rang I, mêmes graines ; rapports `logs/lab/2026-10-25-00-39-04_v0.114.0.md` et `2026-10-25-00-39-53_v0.114.0.md`) :
+
+| Compétence (rang I) | Rang livré (axe `power`, 1 par rang) | Le même axe, 2 et 3 par rang | La ressource posée par le rang | Retenu |
+| --- | --- | --- | --- | --- |
+| Embrasement (+8,0) | ×4 : +0,6 | ×5 : +0,9 ; ×6 : +1,0 | 1 Brûlure : +1,0 ; **2 Brûlure : +16,4** ; 3 : +23,4 | gardé (×1 de plus) |
+| Dé pipé (+9,7) | pile ×6 : +1,1 | ×7 : +1,6 ; ×8 : +2,0 | une pièce (Pile ou face) : **+19,5** | gardé (×1 de plus) |
+| Rempart hérissé (+8,1) | +2 Épines par rang (4 au rang II) : +1,7 | +4 par rang : +2,5 ; **+6 par rang (8 au rang II) : +3,1** | 1 armure temporaire : **+17,2** ; 2 à 4 : +18,4 à +20,7 | **+6 Épines par rang** (`power`, `per: 3`) |
+
+**Lecture** : la ressource est le bon levier, mais son plus petit pas entier est déjà trop gros. Une Brûlure de 1 remplace celle des Feux follets (« une nouvelle Brûlure remplace l'ancienne ») et ne relâche presque rien ; une Brûlure de 2 fait partir la charge dès le coup du même jet (4 × 3 = 12 PV d'un coup). Une pièce, c'est un pile garanti ×5 au coup du jet ; une armure temporaire de 1 se vide au premier coup reçu, donc chaque 3 donne ses Épines. Aucun pas entier ne tombe dans la bande. **Décision (conservatrice, l'utilisateur dormait)** : le Rempart hérissé passe à +6 Épines acérées par rang (rang II : +8 Épines par armure vidée) : **+3,2** chez Brokk au rapport des compétences (`logs/skills/2026-10-25-00-52-09_v0.114.0.md`), dans la bande de justesse. L'Embrasement (+0,6) et le Dé pipé (+1,1) gardent leur rang : aucun axe entier ne les met dans la bande, ils rejoignent les rangs acceptés hors bande. Un Rempart hérissé aiguisé est rare : rien ne bouge en campagne (mêmes résultats sur 300 parties, CAMPAGNE.md § 18.3) ni en saison (8 saisons de 24 : même écart, 38 à 66 %, écart-type 10,1 points).
+
 **Synergies** (laboratoire, log-cote, l'hôte de son producteur) : Soufflet de forge +3 × Embrasement ×3 **−0,14** (deux consommateurs de la même Brûlure : l'Embrasement l'éteint, le Soufflet en voit moins ; prévu par les accroches, `hinders: status:burn`, au bord du seuil de −0,15) ; Clous de pavois × Rempart hérissé (+2, 1x) −0,08 ; Gantelet (Ferveur) × Vindicte −0,05 ; Pièce trouée × Dé pipé −0,04 (le Dé pipé fait tomber pile, mais la pièce reste rare). Aucune anti-synergie non voulue sous −0,15. Paires de reliques : [RELIQUES.md](RELIQUES.md) § 15.
 
 **Naraxes** (audit du premier lot, point 2 : son Poison s'estompe avant son jet) : **rien n'est changé** (décision conservatrice). La décoction à 2 Poison dès le rang I (série 27) la porte à 66,8 % contre le roster (+13,1, hors de la tolérance de 42 à 58 %), et la Virulence n'y ajoute que +2,4 (+0,7 à la décoction d'aujourd'hui) : même à 2, le Poison posé au coup s'estompe au début du tour adverse. Aucune option propre n'existe sans changer l'ordre du Poison ou sa décoction vanilla ; sa consommatrice de ce lot est le Dé pipé, qui lit sa pièce (+9,7).
 
-**Le laboratoire** : les séries 24 à 27 sont retirées de `scripts/lab/ideas.ts` (statuts d'essai `lab…`, et un Dé pipé d'essai à l'ancienne forme de `loadsCoin`) ; leurs rapports restent dans `logs/lab/`.
+**Le laboratoire** : les séries 24 à 27 sont retirées de `scripts/lab/ideas.ts` (statuts d'essai `lab…`, et un Dé pipé d'essai à l'ancienne forme de `loadsCoin`) ; leurs rapports restent dans `logs/lab/`. La série 28 l'est aussi, une fois l'axe du Rempart passé au registre.
 
 **Icônes** (huit à peindre, ids stables : `src/assets/icons/<id>.png`). Compétences (l'objet en action, la magie peinte, la palette du porteur) : `conflagration`, une poignée de brindilles de chêne liées d'écorce qui s'embrase en une seule colonne de flamme ambre, les petits feux follets aspirés dedans ; `loaded-die`, un dé d'os fendu sur une arête, une goutte de plomb dans la fente, une traînée violette qui le tire vers sa face pile (un point doré) ; `bristling-rampart`, un pavois de chêne cerclé de fer qui éclate, ses éclats changés en épines de fer à la pointe rougie ; `vendetta`, un gantelet d'acier levé qui serre la lame brisée d'une épée ennemie, une onde dorée qui repart vers l'avant. Les statuts montrent l'icône de leur compétence. Reliques : § 15 de [RELIQUES.md](RELIQUES.md).
 
 **Non vu, non entendu** : aucun rendu (la relâche de la Brûlure, la pièce pipée, l'anneau du Rempart et de la Vindicte, les reliques sur leur moment ; mise en scène par l'agent de mise en scène), aucun son. Rien n'est mesuré en campagne ni en saison (lot suivant de la nuit).
+
+## 24. Le style de rédaction du compendium (passe du 2026-10-25)
+
+**La règle de l'utilisateur** (0.111.0, reprise la nuit du 2026-10-25) : une description **courte, simple, qui porte le fonctionnement** ; l'effet d'abord, la condition en clair, la limite en « 2x » ; ni type de dégâts, ni élément, ni type de relique ; jamais de décimale ; jamais d'emoji ; le bon pluriel ; la typographie française. Exemples validés : « Deux coups de plus si l'adversaire saigne. », « +2 dégâts aux adversaires empoisonnés », « +4 armure temporaire lors d'un coup reçu, 2x ».
+
+**Les générateurs, pas des textes à la main** : chaque compétence (rangs II et III compris, et toute compétence à venir) se rédige par `describeSkill` (`events.ts`) à partir des textes de ses statuts (`statuses.ts`). Ce qui fait la ligne :
+- **la condition dans la ligne**, après une phrase seule (« +7 PV si l'adversaire est empoisonné. »), en tête de plusieurs ; `conditionClause` écrit « si », « s'il », « à partir du tour N » ; un statut se lit par son verbe d'état (`StatusDef.bears` : « saigne », « est empoisonné », « brûle ») ; la condition sur le statut que la compétence multiplie ne se répète pas (Virulence). Plus de pastille de condition ;
+- **la chance et la limite au bout** : « Ce coup ×3, 1x. », « L'adversaire perd sa prochaine action, 1x. » ; une charge posée à chaque jet n'est pas une limite (plus de « 1x » à l'Embrasement, au Dé pipé, à la Rancune) ;
+- **l'adversaire pour sujet** de ce qu'il subit (`StatusDef.onFoe`, sinon « L'adversaire » et la phrase du statut) : « L'adversaire perd 3, 2 puis 1 PV au début de ses tours (6 en tout). » remplace « Sur l'adversaire : perd… » ;
+- **le détail à part** : ce que la ligne tait (arrondis, moment exact, coups bruts, « après l'armure ») vient de `StatusDef.detail` et des effets (`effectDetail`), et s'affiche dans le compendium sous la ligne, en « Détail : » (`SkillDescription.detail`). Les infobulles de combat et la forge montrent la ligne seule ;
+- **les nombres** : « +2 dégâts », « −1 dégât » (accordés), « Deux coups au lieu d'un » (Furie des vents), « Ce coup et le suivant sont critiques » ; un statut qui se compte a son pluriel (`StatusDef.plural` : « +2 coups de chance ») ; aucune décimale, ni dans les règles (« ×2 ou plus selon le personnage »), ni dans l'infobulle de l'attaque (plus de moyenne) ;
+- **la typographie** : les registres s'écrivent avec des espaces simples, `typeset` (`typography.ts`) met l'espace insécable devant « : ; ! ? % » et dans les guillemets, une fois, dans les générateurs et les registres (statuts, états, règles, liens du catalogue).
+
+**Le contrôle** : `wording.test.ts` lit tout ce que les générateurs produisent (chaque compétence aux rangs I à III, ligne, détail, pastilles et rang ; chaque statut à plusieurs charges, son badge, son intensité, sa fiche et ses liens ; chaque état, relique, déclencheur, opération de forge et règle) et refuse une décimale, un type de dégâts (DP, DM, « lumière », « magie »), un type de relique, un élément, une double espace, une espace simple ou absente devant « : ; ! ? % », un pluriel manqué (« 2 coup »), une limite à l'ancienne (« fois max. ») et un emoji.
+
+**Avant → après** (rangs I, sauf mention) :
+
+| Compétence | Avant | Après |
+| --- | --- | --- |
+| Curée | « Deux coups de base bruts de plus, tout de suite, chacun son dé (aucune compétence). » · si l'adversaire porte Saignement | « Deux coups de plus si l'adversaire saigne. » · Détail : coups de base bruts, juste après celui du jet, chacun son dé |
+| Furie des vents | « Deux coups de base bruts tout de suite, chacun son dé (aucune compétence). » | « Deux coups au lieu d'un. » |
+| Pourfendre | « S'il touche, Saignement sur l'adversaire : la moitié des PV retirés (arrondie au-dessus) ; il coule dès le coup suivant. » | « S'il touche, l'adversaire saigne de la moitié des dégâts du coup. » |
+| Récolte | « +7 PV. » · si l'adversaire porte Poison | « +7 PV si l'adversaire est empoisonné. » |
+| Souffle de la tombe | « Sur l'adversaire : perd 3, 2 puis 1 PV au début de ses tours (6 en tout). » | « L'adversaire perd 3, 2 puis 1 PV au début de ses tours (6 en tout). » |
+| Peau de pierre | « Bouclier de 6 : absorbe les dégâts après l'armure (le coup garde au moins 1), et s'use d'autant. » | « +6 armure temporaire. » |
+| Aura de puissance | « Ses coups font +2, après le critique et avant l'armure. » | « +2 dégâts à chacun de ses coups. » |
+| Œil de faucon III | « Ce coup et les 2 suivants qui touchent sont critiques. » (rang II : « les 1 suivants ») | « Ce coup et les 2 suivants sont critiques. » (rang II : « Ce coup et le suivant ») |
+| Peur | « Sur l'adversaire : perd sa prochaine action, terrifié. » · 1 fois max. par combat | « L'adversaire perd sa prochaine action, 1x. » |
+| Soliste | « Coup de base ×3. » · 1 fois max. par combat | « Ce coup ×3, 1x. » |
+| Purification | « Retire à l'adversaire son dernier bonus posé ; sinon, 5 dégâts directs à l'adversaire. » | « Retire son dernier bonus à l'adversaire, sinon 5 dégâts directs. » |
+| Rétribution | « Relâche la moitié de ses jauges (arrondie au-dessous, au moins 1) en dégâts directs à l'adversaire, puis les vide. » | « L'adversaire perd la moitié des dégâts des trois derniers coups reçus. » |
+| Sentence | « L'adversaire perd 1 PV chaque fois qu'il regagne des PV. » | « Chaque soin qu'il reçoit fait perdre 1 PV à l'adversaire. » |
+| Rancune | « Son prochain coup est critique quand il encaisse un coup, 1x. » | « Son prochain coup reçu lui donne un critique assuré. » |
+| Embrasement | « … lui fait perdre d'un coup 3 fois sa Brûlure restante, 1x. » | « … lui fait perdre trois fois sa Brûlure restante. » |
+| Dé pipé | « Sa prochaine pièce tombe sur pile, ×2 de plus, 1x. » | « Sa prochaine pièce tombe sur pile, et pile vaut ×2 de plus. » |
+| Fausse note | « Sur l'adversaire : son prochain coup qui touche fait −5, après l'armure (au moins 1). » | « Le prochain coup de l'adversaire qui touche fait −5 dégâts. » |
+| Aura sauvage | « Son attaque gagne +1 (minimum et maximum). » | « +1 à l'attaque. » |
+| Foudre | « 3 × 1 dégât direct à l'adversaire (3 en tout). » | « 3 × 1 dégât direct à l'adversaire. » |
+| Pièce trouée (relique) | « +2 coup de chance sur pile » | « +2 coups de chance sur pile » |
+| Rangs | « +1 coup par rafale », « +25 % des jauges relâchées », « +1 Curée » | « +1 coup », « +25 % des dégâts renvoyés », « +2 coups » |

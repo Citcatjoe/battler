@@ -214,9 +214,15 @@ export function SeasonReport({ season }: { season: Season }) {
                     <Portrait character={base} side={0} className="h-full w-full" />
                   </span>
                   <span className="min-w-0 flex-1 truncate font-body text-[17px] font-semibold text-ink-1">{label}</span>
-                  <RelicProcs relics={character.relics} report={reports[entrant]} size={28} tooltip="below" />
                 </div>
-                <FaceHistogram character={character} report={reports[entrant]} size="xs" barHeight={34} tooltip="below" />
+                {/* Ses faces jouées, puis ses reliques à droite, sur deux lignes au besoin : six reliques et leurs comptes
+                    ne tiennent pas à côté du nom */}
+                <div className="flex items-end gap-5">
+                  <FaceHistogram character={character} report={reports[entrant]} size="xs" barHeight={34} tooltip="below" />
+                  <div className="min-w-0 flex-1 pb-1">
+                    <RelicProcs relics={character.relics} report={reports[entrant]} size={28} tooltip="below" />
+                  </div>
+                </div>
               </li>
             ))}
           </ol>

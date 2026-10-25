@@ -126,9 +126,10 @@ function StatusToken({ state, leaving, cast, onLeft }: { state: TrayState; leavi
       <span aria-hidden className="state-tint" />
       {value !== undefined && (
         <span
-          // La clé relance le geste au moment exact où le nombre change
+          // La clé relance le geste au moment exact où le nombre change. Chiffres de la police des données, comme les
+          // charges des reliques : en Cinzel, « 11 » se lisait « II », le rang d'une compétence aiguisée
           key={`count-${count.key}`}
-          className={`absolute -bottom-1.5 -right-2 z-[1] flex h-6 min-w-6 items-center justify-center rounded-full border bg-stone-950 px-1 font-display text-sm font-extrabold leading-none ${COUNT[def.polarity]} ${pulse}`}
+          className={`absolute -bottom-1.5 -right-2 z-[1] flex h-6 min-w-6 items-center justify-center rounded-full border bg-stone-950 px-1 font-data text-sm font-bold leading-none tabular-nums ${COUNT[def.polarity]} ${pulse}`}
         >
           {state.unit === 'turns' && <Icon name="turns" className="-ml-0.5 h-3.5 w-3.5" />}
           {/* Fenêtre du chiffre : l'ancien en sort, le nouveau y entre */}
@@ -180,7 +181,7 @@ function StatusTooltip({ state, cast }: { state: TrayState; cast?: TrayCast }) {
           return (
             <li key={`${source.from}-${s.id}`} className="font-body text-[15px] leading-snug text-ink-1">
               {/* Le statut qui compose l'état, quand son nom dit plus que l'état (Aura de puissance, Force de l'ours) */}
-              {STATUSES[s.id].name !== def.name && source.from === 'self' && <span className="font-bold">{STATUSES[s.id].name} : </span>}
+              {STATUSES[s.id].name !== def.name && source.from === 'self' && <span className="font-bold">{STATUSES[s.id].name}{'\u00a0'}: </span>}
               {source.text ?? STATUSES[s.id].describe(s)}
               {(turns || origins.length > 0) && (
                 <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-ink-3">
