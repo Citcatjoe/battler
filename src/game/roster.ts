@@ -281,8 +281,8 @@ const brokk: CharacterDef = {
   },
   // Signature (décision de l'utilisateur) : Épines acérées, sur la face 1
   signature: 'thorns',
-  // Répertoire : le Rempart (Aura d'immunité, Rétribution, Rancune), les Représailles (Riposte, Pourfendre, Curée)
-  repertoire: ['immunity-aura', 'retribution', 'grudge', 'riposte', 'cleave', 'quarry'],
+  // Répertoire : le Rempart (Aura d'immunité, Rétribution, Rancune), les Représailles (Riposte, Pourfendre, Curée, Vindicte)
+  repertoire: ['immunity-aura', 'retribution', 'grudge', 'riposte', 'cleave', 'quarry', 'vendetta'],
   reserve: [
     {
       id: 'intimidation-aura',
@@ -291,6 +291,17 @@ const brokk: CharacterDef = {
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
+    },
+    {
+      // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa Peau de pierre, le pont du Rempart vers les Épines
+      // (FAMILLES § 7, « un bouclier consommé donne des Épines »). Une aura : +2 Épines acérées par charge à chaque armure
+      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7)
+      id: 'bristling-rampart',
+      name: 'Rempart hérissé',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'bristlingRampart', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
     },
   ],
   events: [
@@ -344,8 +355,8 @@ const ervald: CharacterDef = {
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   signature: 'frost-aura',
-  // Répertoire : le Poison (Aura de décoction, Feux follets), le Drain (Pourfendre, Peur)
-  repertoire: ['decoction-aura', 'firefly', 'cleave', 'fear'],
+  // Répertoire : le Poison (Aura de décoction, Feux follets, Embrasement), le Drain (Pourfendre, Peur)
+  repertoire: ['decoction-aura', 'firefly', 'conflagration', 'cleave', 'fear'],
   reserve: [
     {
       id: 'grave-breath',
@@ -531,6 +542,16 @@ const naraxes: CharacterDef = {
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
+    {
+      // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa pièce (la Fortune). Une charge qui attend sa prochaine
+      // pièce : pile, et pile vaut ×2 de plus (ce coup ×5). Gravée : +9,8 (pile seule, sans bonus : +5,1)
+      id: 'loaded-die',
+      name: 'Dé pipé',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'loadedDie', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
   events: [
     {
@@ -605,6 +626,16 @@ const aldric: CharacterDef = {
       ],
       rankAxis: { kind: 'power', per: 1 },
     },
+    {
+      // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Représailles, les dégâts qu'il renvoie (Riposte,
+      // Rétribution). Une aura : +3 Ferveur par charge à chaque renvoi (gravée : +9,4 ; « +2 » valait +7,0)
+      id: 'vendetta',
+      name: 'Vindicte',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
   events: [
     {
@@ -662,8 +693,8 @@ const morgrut: CharacterDef = {
     strengths: ['La plus forte attaque (7 à 9)', 'Beaucoup de PV', 'Frappe fort à chaque jet'],
     weaknesses: ['Aucune compétence', 'Six faces nues', 'Ni esquive ni critique'],
   },
-  // Répertoire : la Colère (Aura de puissance, Pourfendre, Curée), la Masse (Peau de pierre, Aura d'intimidation)
-  repertoire: ['power-aura', 'cleave', 'quarry', 'stoneskin', 'intimidation-aura'],
+  // Répertoire : la Colère (Aura de puissance, Pourfendre, Curée), la Masse (Peau de pierre, Aura d'intimidation, Rempart hérissé)
+  repertoire: ['power-aura', 'cleave', 'quarry', 'stoneskin', 'intimidation-aura', 'bristling-rampart'],
   // Hors kit (phase 8, premier lot, 0.114.0, SORTS.md) : la Rancune, sa Masse (il encaisse, et son critique sur 7 à 9 est
   // le plus lourd : +19,8 gravée, au bord de la bande ; +14,2 en moyenne sur le roster)
   reserve: [
@@ -743,6 +774,17 @@ const thaldrin: CharacterDef = {
   repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns'],
   reserve: [
     { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Feux follets (la Brûlure). Une charge qui attend son
+      // prochain coup qui touche un adversaire qui brûle : trois fois sa Brûlure restante, d'un coup (gravée : +8,6 ; au jet,
+      // sans attente, elle ne partait que 0,15 fois par combat : +2,2 à ×2)
+      id: 'conflagration',
+      name: 'Embrasement',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'conflagration', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
   events: [
     {
@@ -811,8 +853,8 @@ const fanchon: CharacterDef = {
   },
   // Signature (phase 5 ter) : l'Aura mélodieuse, sa chanson, sur la face 1 ; l'Ouverture n'est pas une face, elle reste
   signature: 'melodious-aura',
-  // Répertoire : la Fortune (Coup de chance, Pile ou face), le Chant (Esquive améliorée, Aura de précision)
-  repertoire: ['lucky-strike', 'coin-flip', 'evasion', 'precision-aura'],
+  // Répertoire : la Fortune (Coup de chance, Pile ou face, Dé pipé), le Chant (Esquive améliorée, Aura de précision)
+  repertoire: ['lucky-strike', 'coin-flip', 'loaded-die', 'evasion', 'precision-aura'],
   // Hors kit (phase 5 ter) : ses autres chansons, gravables, réécrites pour une face (elles valaient un double, un jet
   // sur 36) : Siffloter 3 → 2 charges, Fausse note 2 → 1, Crescendo ×4 à la place des deux coups → ce coup ×2. 0.107.0 :
   // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible

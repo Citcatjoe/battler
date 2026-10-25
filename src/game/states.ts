@@ -165,6 +165,10 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   rotAura: aura(),
   // Sentence (0.114.0) : elle agit sur l'adversaire à chaque soin du porteur, en dégâts directs ; rien de durable à relayer
   sentence: aura(),
+  // Phase 8, second lot : deux auras d'identité (le Rempart hérissé pose des Épines, la Vindicte de la Ferveur, qui
+  // s'affichent d'eux-mêmes) ; l'Embrasement et le Dé pipé sont des mécanismes (leur place découle de `mechanic`)
+  bristlingRampart: aura(),
+  vendetta: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

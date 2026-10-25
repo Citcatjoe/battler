@@ -146,11 +146,15 @@ export function attackSpecials(attack: Attack): { roll: SpecialSpec[]; crit: Spe
 }
 
 /**
- * Le label d'une réaction au coup (étape `statusReaction` : Vol de vie, Riposte, Saignement, Épines), ou undefined si
- * son statut n'est pas une surcharge. Son chiffre : les PV qu'elle fait perdre ou rendre (« Vol de vie +5 »,
- * « Riposte −3 », « Saignement +2 ») ; sans PV (les Épines posent un Saignement), pas de chiffre.
+ * Le label d'une réaction au coup (étape `statusReaction` : Vol de vie, Riposte, Saignement, Épines, Rancune), ou
+ * undefined si son statut n'est pas une surcharge. Son chiffre : les PV qu'elle fait perdre ou rendre (« Vol de vie +5 »,
+ * « Riposte −3 », « Saignement +2 ») ; sans PV (les Épines posent un Saignement), pas de chiffre. Son signe, la règle de
+ * la relique du défenseur (décision de l'utilisateur, 0.110.0) étendue aux statuts (0.114.1) : une réaction du défenseur
+ * qui ne fait que lui donner un bonus pour plus tard (la Rancune : un Critique assuré) est un bonus pour son porteur, +.
  */
 export function reactionSpecial(id: StatusId, bearer: SpecialBearer, effects: readonly AppliedEffect[]): SpecialSpec | undefined {
   const amount = effects.reduce((t, e) => t + (e.type === 'damage' || e.type === 'heal' ? e.amount : 0), 0)
-  return statusSpecial(id, bearer, amount > 0 ? amount : undefined)
+  const spec = statusSpecial(id, bearer, amount > 0 ? amount : undefined)
+  const keeps = effects.length > 0 && effects.every((e) => e.type === 'applyStatus' && STATUSES[e.status].polarity === 'positive')
+  return spec && bearer === 'defender' && keeps ? { ...spec, sign: 'plus' } : spec
 }

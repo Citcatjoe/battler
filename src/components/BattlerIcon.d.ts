@@ -30,6 +30,7 @@ export type GlyphName =
   | 'fermer'
   | 'filtrer'
   | 'info'
+  | 'reglages'
 
 export type GlyphSize = 14 | 16 | 18 | 20 | 22 | 24
 

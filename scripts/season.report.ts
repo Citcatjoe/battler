@@ -1,7 +1,10 @@
 /*
- * Mesure de la saison construite : `npm run season` (SEASON_RUNS saisons de 24, reliques et forge, 4 par défaut ;
- * SEASON_N combats par duel pour la valeur des constructions, 60 par défaut). Chaque saison se joue en entier, journée
- * par journée, avec les récompenses du choix par défaut, comme « Simuler » dans le jeu. Donne :
+ * Mesure de la saison construite : `npm run season` (SEASON_RUNS saisons de SEASON_SIZE, 24 par défaut, reliques et
+ * forge, 4 saisons par défaut ; SEASON_N combats par duel pour la valeur des constructions, 60 par défaut). Chaque saison
+ * se joue en entier, journée par journée, avec les récompenses du choix par défaut, comme « Simuler » dans le jeu. Donne :
+ * - le rythme de construction (0.115.0 : une récompense à chacun des dix premiers matchs, gagné ou perdu) : builds
+ *   complets à l'arbre, journée où ils le deviennent, gravures et paires liées par build ;
+ * - l'écart des taux de victoire de saison par personnage (la construction écrase-t-elle le classement ?) ;
  * - la durée des combats (tours par combattant) par tiers de saison : la construction raccourcit-elle les combats ?
  * - « le build se voit-il ? » : en fin de saison, chaque participant construit contre le roster nu, et le même nu, sur
  *   les mêmes graines (`winRate`) ; l'écart est l'apport de sa construction.
@@ -10,51 +13,84 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed, winRate } from '../src/game/analysis'
+import { buildLinks } from '../src/game/hooks'
 import { getRelic } from '../src/game/relics'
 import { CHARACTERS, createCharacter } from '../src/game/roster'
-import { buildOf, createSeasonTournament, drawSeasonParticipants, inSeason, seasonSchedule, simulateSeasonMatches } from '../src/game/season'
+import { buildDone, buildOf, createSeasonTournament, DEFAULT_SEASON_SIZE, drawSeasonParticipants, inSeason, SEASON_SIZES, seasonSchedule, simulateSeasonMatches } from '../src/game/season'
 import pkg from '../package.json' with { type: 'json' }
 
-const SIZE = 24
 const pct = (x: number) => `${Math.round(x * 100)} %`
-const dec = (x: number) => x.toFixed(1).replace('.', ',')
+const dec = (x: number, n = 1) => x.toFixed(n).replace('.', ',')
+const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / Math.max(1, xs.length)
 
 it('mesure de la saison construite', () => {
   const runs = Number(process.env.SEASON_RUNS ?? 4)
   const perPair = Number(process.env.SEASON_N ?? 60)
-  const days = seasonSchedule(SIZE)
+  const size = SEASON_SIZES.find((n) => n === Number(process.env.SEASON_SIZE)) ?? DEFAULT_SEASON_SIZE
+  const days = seasonSchedule(size)
   const thirds = [0, 1, 2].map(() => ({ fights: 0, turns: 0 }))
   const naked = new Map(CHARACTERS.map((c) => [c.id, winRate(c, CHARACTERS, perPair)]))
-  const gains: { id: string; built: number; rewards: number }[] = []
+  const gains: { id: string; built: number; complete: boolean; doneDay: number; engraved: number; linked: number }[] = []
+  const record = new Map<string, { wins: number; played: number }>()
 
   for (let k = 0; k < runs; k++) {
     const seed = hashSeed(`saison:${k}`)
-    let t = createSeasonTournament(drawSeasonParticipants(SIZE, seed), (id) => createCharacter(id).name, { relics: true, forge: true, seed })
+    let t = createSeasonTournament(drawSeasonParticipants(size, seed), (id) => createCharacter(id).name, { relics: true, forge: true, seed })
     for (const day of days) t = simulateSeasonMatches(t, day.map((f) => f.number))
     if (!inSeason(t)) throw new Error('Saison interrompue')
     const { season } = t
     for (const day of days)
       for (const f of day) {
+        const r = season.results[f.number]
         const third = thirds[Math.min(2, Math.floor((f.day * 3) / days.length))]
         third.fights++
-        third.turns += season.results[f.number].turns
+        third.turns += r.turns
+        ;[f.home, f.away].forEach((i, side) => {
+          const own = record.get(season.entrants[i].characterId) ?? { wins: 0, played: 0 }
+          own.played++
+          if (r.winner === side) own.wins++
+          record.set(season.entrants[i].characterId, own)
+        })
       }
     season.entrants.forEach((e, i) => {
       const { relics, forge } = buildOf(season, i)
       const built = createCharacter(e.characterId).withForge(forge).withRelics(relics.map(getRelic))
-      gains.push({ id: e.characterId, built: winRate(built, CHARACTERS, perPair), rewards: relics.length + forge.length })
+      const doneDay = days.findIndex((_, d) => buildDone(season, buildOf(season, i, d + 1))) + 1
+      gains.push({
+        id: e.characterId,
+        built: winRate(built, CHARACTERS, perPair),
+        complete: buildDone(season, { relics, forge }),
+        doneDay,
+        engraved: forge.filter((s) => s.op === 'engrave').length,
+        linked: buildLinks(built).linked,
+      })
     })
   }
 
+  const rates = CHARACTERS.flatMap((c) => {
+    const r = record.get(c.id)
+    return r ? [{ name: c.name, rate: r.wins / r.played, played: r.played }] : []
+  })
+  const avg = mean(rates.map((r) => r.rate))
+  const spread = Math.sqrt(mean(rates.map((r) => (r.rate - avg) ** 2)))
   const byCharacter = CHARACTERS.map((c) => {
     const own = gains.filter((g) => g.id === c.id)
-    const built = own.reduce((s, g) => s + g.built, 0) / own.length
-    return `| ${c.name} | ${own.length} | ${pct(naked.get(c.id)!)} | ${pct(built)} | ${Math.round((built - naked.get(c.id)!) * 100)} points |`
+    const built = mean(own.map((g) => g.built))
+    const season = rates.find((r) => r.name === c.name)
+    return `| ${c.name} | ${own.length} | ${season ? pct(season.rate) : '—'} | ${pct(naked.get(c.id)!)} | ${pct(built)} | ${Math.round((built - naked.get(c.id)!) * 100)} points | ${dec(mean(own.map((g) => g.engraved)), 2)} | ${dec(mean(own.map((g) => g.linked)), 2)} |`
   })
-  const meanGain = gains.reduce((s, g) => s + g.built - naked.get(g.id)!, 0) / gains.length
-  const complete = gains.filter((g) => g.rewards === 6).length
+  const meanGain = mean(gains.map((g) => g.built - naked.get(g.id)!))
+  const complete = gains.filter((g) => g.complete)
   const out = [
-    `# Saison construite · règles ${pkg.version} · ${runs} saisons de ${SIZE}, reliques et forge, choix par défaut`,
+    `# Saison construite · règles ${pkg.version} · ${runs} saisons de ${size}, reliques et forge, choix par défaut`,
+    '',
+    '## Rythme de construction',
+    '',
+    `Builds complets à l'arbre : ${complete.length} sur ${gains.length}, à la journée ${dec(mean(complete.map((g) => g.doneDay)))} en moyenne (sur ${days.length}). Gravures par build : ${dec(mean(gains.map((g) => g.engraved)), 2)} ; paires liées par build : ${dec(mean(gains.map((g) => g.linked)), 2)}.`,
+    '',
+    '## Taux de victoire de saison par personnage',
+    '',
+    `De ${pct(Math.min(...rates.map((r) => r.rate)))} à ${pct(Math.max(...rates.map((r) => r.rate)))}, écart-type ${dec(spread * 100)} points (${rates.reduce((s, r) => s + r.played, 0) / 2} matchs).`,
     '',
     '## Durée des combats, par tiers de saison',
     '',
@@ -64,10 +100,10 @@ it('mesure de la saison construite', () => {
     '',
     '## Le build se voit-il ? (fin de saison, contre le roster nu)',
     '',
-    `${perPair} combats par duel, mêmes graines pour le construit et le nu. Constructions complètes (six récompenses) : ${complete} sur ${gains.length}. Apport moyen : ${Math.round(meanGain * 100)} points.`,
+    `${perPair} combats par duel, mêmes graines pour le construit et le nu. Apport moyen : ${Math.round(meanGain * 100)} points.`,
     '',
-    '| Personnage | Participants | Nu | Construit | Apport du build |',
-    '| --- | --- | --- | --- | --- |',
+    '| Personnage | Participants | Saison | Nu | Construit | Apport du build | Gravures | Paires liées |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...byCharacter,
   ].join('\n')
   console.log(out)

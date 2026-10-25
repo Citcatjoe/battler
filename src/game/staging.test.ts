@@ -10,7 +10,7 @@ import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { isRollTrigger, rollFace } from './events'
 import { RELICS } from './relics'
-import { CHARACTER_IDS, CHARACTERS, createCharacter } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
 import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import type { Status } from './statuses'
@@ -95,6 +95,23 @@ function playedWithDie(beat: Beat): boolean {
   return trigger?.type === 'strike' && isRollTrigger(trigger.on)
 }
 
+/**
+ * La plaie qui coule et met K.O. son porteur après qu'il a réagi au coup (sa Riposte) : elle garde son rang parmi les
+ * réactions (M43). Ses sœurs plus anciennes qui comptent : ni jauge, ni relique du dé, ni ce que le coup produit (M14).
+ */
+function fatalAfterReaction(beats: readonly Beat[], wound: Beat): boolean {
+  if (wound.type !== 'statusReaction' || wound.state.hp[wound.side] > 0 || wound.cause === undefined) return false
+  const hit = beats[wound.cause]
+  if (hit.type !== 'attack') return false
+  const striker = hit.attack.attacker
+  return childrenOf(beats)[hit.id].some((b) => {
+    if (b.id >= wound.id || playedWithDie(b)) return false
+    if (b.type === 'statusReaction')
+      return b.effects.length > 0 && !(b.side === striker && b.trigger === 'hit' && b.effects.every((e) => (e.type === 'applyStatus' && e.target !== striker) || (e.type === 'heal' && e.target === striker)))
+    return b.type === 'relic' || (b.type === 'event' && rollFace(b.event.trigger) === undefined)
+  })
+}
+
 /** Mode triche : chaque dé du combat tombe sur `face`. */
 const everyDie = (face: number): Record<number, number> => Object.fromEntries(Array.from({ length: 120 }, (_, k) => [k, face]))
 
@@ -177,7 +194,7 @@ describe('mise en scène', () => {
     expect(riposted).toBeGreaterThan(0)
   })
 
-  it('le Saignement de Pourfendre tombe à l’impact du coup qui touche', () => {
+  it('le Saignement de Pourfendre tombe à l’impact du coup qui touche, avec son gain (« +3 Saignement », M42)', () => {
     let rides = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
@@ -185,14 +202,16 @@ describe('mise en scène', () => {
         const m = momentOf(moments, beat.id)
         const impact = impacts(m, result.beats).get(beat.cause)!
         const floats = at(m, 'float', impact).flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' ? [c.float.badge.text] : []))
-        for (const e of beat.event.effects) expect(floats).toContain(effectBadge(e).text)
+        for (const e of beat.event.effects)
+          expect(floats).toContain(e.type === 'applyStatus' && e.result.kind === 'applied' ? `+${e.result.stacks} ${STATUSES[e.status].name}` : effectBadge(e).text)
         rides++
       }
     expect(rides).toBeGreaterThan(20)
   })
 
-  it("la plaie qui coule tombe sur l'impact du coup qui la fait couler : son label à l'impact, ses PV un battement après", () => {
+  it("la plaie qui coule tombe sur l'impact du coup qui la fait couler : son label à l'impact, ses PV un battement après ; fatale après une réaction de son porteur, à son rang (M43)", () => {
     let flows = 0
+    let late = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
         if (beat.type !== 'statusReaction' || beat.status !== 'bleed' || beat.cause === undefined) continue
@@ -200,12 +219,20 @@ describe('mise en scène', () => {
         if (hit.type !== 'attack') continue
         const m = momentOf(moments, beat.id)
         const impact = impacts(m, result.beats).get(hit.id)!
+        if (fatalAfterReaction(result.beats, beat)) {
+          // Le K.O. tombe après la réaction du blessé (sa Riposte), jamais avant
+          const down = m.cues.find((c) => c.channel === 'hp' && c.hp[beat.side] === 0)!
+          expect(m.cues.some((c) => c.channel === 'blow' && c.blow?.from === beat.side && c.at > down.at)).toBe(false)
+          late++
+          continue
+        }
         const labels = at(m, 'special', impact).flatMap((c) => (c.channel === 'special' ? [c.special.label] : []))
         expect(labels.some((l) => l.startsWith(STATUSES.bleed.name))).toBe(true)
         expect(at(m, 'hp', impact + T.BLEED_DELAY).length).toBe(1)
         flows++
       }
     expect(flows).toBeGreaterThan(20)
+    expect(late).toBeGreaterThan(0)
   })
 
   it('le décompte et l’expiration d’un statut tombent avec son effet (« −2 » et compteur ensemble)', () => {
@@ -468,7 +495,7 @@ describe('mise en scène', () => {
         const m = momentOf(moments, hit.id)
         const impact = impacts(m, result.beats).get(hit.id)!
         const fast = m.cues.some((c) => c.channel === 'strike' && c.at === impact && c.strike?.fast)
-        const flow = children[hit.id].some((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.side !== striker)
+        const flow = children[hit.id].some((b) => b.type === 'statusReaction' && b.status === 'bleed' && b.side !== striker && !fatalAfterReaction(result.beats, b))
         const start = impact + (flow ? T.BLEED_DELAY : 0) + (fast ? T.VOLLEY_REACTION_LEAD : T.REACTION_LEAD)
         // Une réaction refusée (Épines contre une immunité) n'a que son texte neutre (M25)
         const starts = ['signal', 'aura', 'special', 'relicPulse', 'float']
@@ -917,5 +944,191 @@ describe('mise en scène', () => {
       }
     }
     expect(lit).toBeGreaterThan(50)
+  })
+})
+
+describe('mise en scène : phase 8, premier lot (0.114.0)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  /** La compétence gravée sur le 3 d'un personnage de test, chaque dé sur le 3 */
+  const engraved = (c: Character, id: string) => c.withForge([{ op: 'engrave', face: 3, skill: skill(id) }])
+  const play = (fighters: Pair<Character>, seed = 1) => {
+    const result = simulateCombat(fighters, { seed, forcedRolls: everyDie(3) })
+    return { result, moments: stage(result) }
+  }
+  const onTurn = (status: 'bleed' | 'poison' | 'holyAura', target: 'self' | 'opponent' = 'opponent') => ({
+    id: status,
+    name: status,
+    trigger: (status === 'holyAura' ? 'combatStart' : 'turnStart') as 'combatStart' | 'turnStart',
+    effects: [{ type: 'applyStatus' as const, status, stacks: 1, ...(status === 'holyAura' ? {} : { target }) }],
+  })
+
+  it('Curée : le coup de base de son jet, puis sa rafale au rythme d’une rafale, sans repos entre les deux (M27)', () => {
+    const { result, moments } = play([engraved(testCharacter('a', { maxHp: 400 }, [onTurn('bleed')]), 'quarry'), testCharacter('b', { maxHp: 400 })])
+    let bursts = 0
+    for (const burst of result.beats) {
+      if (burst.type !== 'flurry' || burst.status !== 'quarry') continue
+      const m = momentOf(moments, burst.id)
+      const base = result.beats.find((b) => b.type === 'attack' && b.cause === result.beats[burst.cause!].cause)!
+      const impact = impacts(m, result.beats).get(base.id)!
+      // Après la lecture du coup de base (la plaie qui coule comprise) : l'écart d'une rafale, ses dés à plat, puis ses coups
+      const after = m.spans.filter((s) => s.at >= impact).map((s) => s.name)
+      const gap = after.indexOf('VOLLEY_GAP')
+      expect(after.slice(gap - 1, gap + 3)).toEqual([after.includes('STRIKE_FLOW_HOLD') ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD', 'VOLLEY_GAP', 'VOLLEY_FLAT', 'VOLLEY_WIND'])
+      expect(after).not.toContain('READ_HOLD')
+      expect(after.slice(0, -1)).not.toContain('STRIKE_REST')
+      // La charge de Curée part avec ses dés
+      const flat = m.spans.find((s) => s.name === 'VOLLEY_FLAT')!.at
+      const quarry = (c: Cue) => (c.channel === 'statuses' ? c.statuses[0].some((s) => s.id === 'quarry') : undefined)
+      expect(m.cues.filter((c) => c.channel === 'statuses' && c.at === flat).map(quarry)).toEqual([false])
+      bursts++
+    }
+    expect(bursts).toBeGreaterThan(3)
+  })
+
+  it('Sentence : chaque soin de son porteur la fait réagir au milieu de sa lecture ; son anneau envoie le signal, la perte de PV tombe à son arrivée (M19 bis, M41)', () => {
+    const { result, moments } = play([engraved(testCharacter('a', { maxHp: 400 }, [onTurn('holyAura')]), 'sentence'), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+    let reactions = 0
+    for (const beat of result.beats) {
+      if (beat.type !== 'statusReaction' || beat.status !== 'sentence') continue
+      const m = momentOf(moments, beat.id)
+      const healed = m.cues.find((c) => c.channel === 'float' && c.side === 0 && c.float.kind === 'badge' && c.float.badge.tone === 'heal')!
+      const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'sentence')!
+      expect(signal.at).toBe(healed.at + T.EFFECT_REACTION_LEAD)
+      expect(signal.channel === 'signal' && signal.signal.to).toEqual([1])
+      const landed = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed)!
+      expect(landed.at).toBe(signal.at + T.SIGNAL + T.BLOW_WIND_REACTION)
+      expect(landed.channel === 'blow' && landed.blow).toMatchObject({ from: 0, to: 1, source: 'holy', lunge: false })
+      // Une aura ne flotte pas son nom : son anneau s'allume (M32)
+      expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title')).toBe(false)
+      reactions++
+    }
+    expect(reactions).toBeGreaterThan(5)
+  })
+
+  it('Rancune : au coup encaissé, son label + et le Critique assuré au milieu de la lecture ; la charge part à l’impact du coup critique (SONS § 4.4)', () => {
+    const { result, moments } = play([engraved(testCharacter('a', { maxHp: 400 }), 'grudge'), testCharacter('b', { maxHp: 400 })])
+    let grudges = 0
+    for (const beat of result.beats) {
+      if (beat.type !== 'statusReaction' || beat.status !== 'grudge') continue
+      const m = momentOf(moments, beat.id)
+      const impact = impacts(m, result.beats).get(beat.cause!)!
+      const label = m.cues.find((c) => c.channel === 'special' && c.special.label === 'Rancune')!
+      expect(label.at).toBe(impact + T.REACTION_LEAD)
+      expect(label.channel === 'special' && label.special.sign).toBe('plus')
+      expect(at(m, 'sound', label.at).map((c) => c.channel === 'sound' && c.cue)).toEqual(expect.arrayContaining(['coinWin', 'buff']))
+      expect(at(m, 'sound', label.at).map((c) => c.channel === 'sound' && c.cue)).not.toContain('debuff')
+      // Son prochain coup critique use le Critique assuré à son impact, pas avant
+      const crit = result.beats.find((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack' && b.id > beat.id && b.attack.attacker === 0 && b.attack.critForced)
+      if (!crit) continue
+      const next = momentOf(moments, crit.id)
+      const hit = impacts(next, result.beats).get(crit.id)!
+      const held = (c: Cue) => c.channel === 'statuses' && !c.statuses[0].some((s) => s.id === 'guaranteedCrit')
+      expect(next.cues.find(held)!.at).toBe(hit)
+      grudges++
+    }
+    expect(grudges).toBeGreaterThan(3)
+  })
+
+  it('Virulence : le Poison monte au compteur à l’arrivée du signal, avec son gain en clair (« +10 Poison », M42)', () => {
+    const { result, moments } = play([engraved(testCharacter('a', { maxHp: 2000 }, [onTurn('poison')]), 'virulence'), testCharacter('b', { maxHp: 2000 })])
+    let fired = 0
+    for (const beat of result.beats) {
+      if (beat.type !== 'event' || beat.event.eventId !== 'virulence') continue
+      const m = momentOf(moments, beat.id)
+      const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'virulence')!
+      const arrival = signal.at + T.SIGNAL
+      const posed = beat.event.effects[0]
+      if (posed.type !== 'applyStatus' || posed.result.kind !== 'applied') continue
+      const gain = `+${posed.result.stacks} Poison`
+      expect(at(m, 'float', arrival).some((c) => c.channel === 'float' && c.side === 1 && c.float.kind === 'badge' && c.float.badge.text === gain)).toBe(true)
+      const count = at(m, 'statuses', arrival).map((c) => (c.channel === 'statuses' ? c.statuses[1].find((s) => s.id === 'poison')?.stacks : undefined))
+      expect(count).toEqual([beat.state.statuses[1].find((s) => s.id === 'poison')!.stacks])
+      fired++
+    }
+    expect(fired).toBeGreaterThan(3)
+  })
+})
+
+describe('mise en scène : phase 8, second lot', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  /** Un personnage du roster, la compétence gravée sur son 3 ; des combats à graine contre chacun */
+  const fights = (id: string, engrave: string | null, relics: string[] = []) =>
+    CHARACTER_IDS.flatMap((y) =>
+      [1, 2, 3].map((seed) => {
+        const c = createCharacter(id).withForge(engrave ? [{ op: 'engrave', face: 3, skill: skill(engrave) }] : []).withRelics(relics.map((r) => RELICS.find((x) => x.id === r)!))
+        const result = simulateCombat([c, createCharacter(y)], { seed })
+        return { result, moments: stage(result) }
+      }),
+    )
+  const relicOn = (b: Beat, on: string) => {
+    const trigger = b.type === 'relic' ? RELICS.find((r) => r.id === b.relic)?.trigger : undefined
+    return trigger?.type === 'strike' && trigger.on === on
+  }
+
+  it('ce que décide la pièce part avec elle : une relique de pile tombe avec le résultat, avant le coup de pile (M40, M26)', () => {
+    let fired = 0
+    for (const { result, moments } of fights('naraxes', null, ['holed-coin']))
+      for (const relic of result.beats) {
+        if (!relicOn(relic, 'heads') || relic.type !== 'relic') continue
+        const m = momentOf(moments, relic.id)
+        const landed = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinLand')!
+        const lit = m.cues.find((c) => c.channel === 'relicPulse' && c.relics.includes(relic.relic))!
+        const blow = m.cues.find((c) => c.channel === 'blow' && c.blow && !c.blow.landed)
+        expect(lit.at).toBe(landed.at)
+        if (blow) expect(blow.at).toBeGreaterThan(lit.at)
+        fired++
+      }
+    expect(fired).toBeGreaterThan(3)
+  })
+
+  it('le Dé pipé reste dans la zone d’état jusqu’à ce que la pièce retombe, et part avec son label (M26)', () => {
+    let loaded = 0
+    for (const { result, moments } of fights('naraxes', 'loaded-die'))
+      for (const coin of result.beats) {
+        if (coin.type !== 'coin' || !coin.loadedBy) continue
+        const m = momentOf(moments, coin.id)
+        const toss = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinToss')!
+        const landed = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinLand')!
+        const charges = (list: readonly Status[]) => list.find((s) => s.id === coin.loadedBy)?.stacks ?? 0
+        const shown = (c: Cue) => (c.channel === 'statuses' ? charges(c.statuses[coin.side]) : undefined)
+        const statuses = m.cues.filter((c) => c.channel === 'statuses' && c.at >= toss.at && c.at <= landed.at)
+        expect(statuses.filter((c) => c.at < landed.at).map(shown)).toEqual([charges(result.beats[coin.id - 1].state.statuses[coin.side])])
+        expect(shown(statuses.at(-1)!)).toBe(charges(coin.state.statuses[coin.side]))
+        expect(at(m, 'special', landed.at).map((c) => c.channel === 'special' && c.special.label)).toContain(STATUSES[coin.loadedBy].name)
+        loaded++
+      }
+    expect(loaded).toBeGreaterThan(3)
+  })
+
+  it('Vindicte : son anneau répond au renvoi au milieu de la lecture de son dernier coup (M41)', () => {
+    let answered = 0
+    for (const { result, moments } of fights('aldric', 'vendetta'))
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'vendetta') continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'vendetta')!
+        const last = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.blow.from === beat.side && c.at < signal.at).at(-1)!
+        // Au milieu de la lecture de son dernier coup ; en rafale, après sa lecture de coup de rafale (M17 bis)
+        expect([T.REACTION_LEAD, T.VOLLEY_STRIKE_HOLD]).toContain(signal.at - last.at)
+        answered++
+      }
+    expect(answered).toBeGreaterThan(3)
+  })
+
+  it('Embrasement : le sceau de sa compétence s’allume, la Brûlure part avec son coup, d’un seul tenant (M39)', () => {
+    let fired = 0
+    for (const { result, moments } of fights('thaldrin', 'conflagration'))
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'conflagration') continue
+        const m = momentOf(moments, beat.id)
+        const blow = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed && c.blow.source === 'burn')!
+        const lit = m.cues.filter((c) => c.channel === 'skillPulse' && c.side === beat.side && c.face === 3 && c.at < blow.at)
+        expect(lit.length).toBeGreaterThan(0)
+        const burning = (c: Cue) => c.channel === 'statuses' && c.statuses[1 - beat.side].some((s) => s.id === 'burn')
+        expect(at(m, 'statuses', blow.at).some((c) => !burning(c))).toBe(true)
+        expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title')).toBe(false)
+        fired++
+      }
+    expect(fired).toBeGreaterThan(3)
   })
 })

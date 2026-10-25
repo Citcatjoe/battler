@@ -48,19 +48,20 @@ type Hover = { entrant: number } | { fixture: Fixture } | null
 
 /** Colonnes chiffrées du classement : libellé, infobulle, valeur */
 const COLUMNS: { label: string; title: string; value: (s: Standing) => string | number; width: string }[] = [
-  { label: 'J', title: 'Matchs joués', value: (s) => s.played, width: 'w-14' },
-  { label: 'V', title: 'Victoires', value: (s) => s.wins, width: 'w-14' },
-  { label: 'D', title: 'Défaites', value: (s) => s.losses, width: 'w-14' },
-  { label: 'Diff.', title: 'Différence de PV : dégâts infligés − dégâts subis', value: (s) => (s.diff > 0 ? `+${s.diff}` : s.diff), width: 'w-20' },
+  { label: 'J', title: 'Matchs joués', value: (s) => s.played, width: 'w-11' },
+  { label: 'V', title: 'Victoires', value: (s) => s.wins, width: 'w-11' },
+  { label: 'D', title: 'Défaites', value: (s) => s.losses, width: 'w-11' },
+  { label: 'Diff.', title: 'Différence de PV : dégâts infligés − dégâts subis', value: (s) => (s.diff > 0 ? `+${s.diff}` : s.diff), width: 'w-16' },
   { label: 'Pts', title: 'Points : 3 par victoire', value: (s) => s.points, width: 'w-16' },
 ]
 
 /**
  * Phase de saison (0.86.0) : le classement en une seule liste qui défile (0.87.0), avec la ligne de qualification
  * sous le 16e et les suivants atténués, la journée en cours et ses matchs, et les commandes de simulation. Saison
- * finie : passer à l'arbre. Construction (0.92.0) : ce que chacun a gagné (reliques, forge) au classement, combien ont
- * fini la leur, et ce que chaque vainqueur a tiré de son match. 0.96.0 : survol croisé classement ↔ journée, infobulles
- * des améliorations dans un calque (TipLayer) que le défilement ne coupe pas, grand bouton Combattre (nextSeasonMatch).
+ * finie : passer à l'arbre. Construction (0.92.0 ; une récompense par match en 0.115.0) : ce que chacun a reçu
+ * (reliques, forge) au classement, combien ont fini la leur, et ce que chaque combattant a tiré de son match. 0.96.0 :
+ * survol croisé classement ↔ journée, infobulles des améliorations dans un calque (TipLayer) que le défilement ne coupe
+ * pas, grand bouton Combattre (nextSeasonMatch).
  */
 export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulateSeason, onStop, onStartBracket, onMenu }: Props) {
   const n = season.entrants.length
@@ -108,12 +109,12 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
         <span className={`min-w-0 flex-1 truncate font-body text-[18px] font-semibold ${qualified ? 'text-ink-1' : 'text-ink-2'}`} title={e.label}>
           {e.label}
         </span>
-        {/* Sa construction : ses reliques, puis ses opérations de forge, dans l'ordre */}
+        {/* Sa construction : ses reliques, puis ses opérations de forge, dans l'ordre (dix au plus : un acte de campagne) */}
         {build && (
-          <span className="flex w-[236px] shrink-0 items-center gap-1" aria-label="Construction">
-            {build.relics.length > 0 && <RelicRow relics={build.relics.map(getRelic)} size={34} />}
+          <span className="flex w-[296px] shrink-0 items-center gap-1" aria-label="Construction">
+            {build.relics.length > 0 && <RelicRow relics={build.relics.map(getRelic)} size={26} />}
             {build.forge.map((_, i) => (
-              <ForgeMark key={i} base={baseOf(s.entrant)} steps={build.forge} index={i} />
+              <ForgeMark key={i} base={baseOf(s.entrant)} steps={build.forge} index={i} size={26} />
             ))}
           </span>
         )}
@@ -221,7 +222,7 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
           <div className="flex items-center gap-3 border-b-2 border-line-2 px-3 pb-1.5 pr-5">
             <h2 className="min-w-0 flex-1 font-display text-[22px] font-semibold tracking-wide text-ink-1">Classement</h2>
             {builds && (
-              <span title="Reliques et forge du dé gagnées pendant la construction" className="w-[236px] font-body text-[14px] font-bold uppercase tracking-wider text-ink-3">
+              <span title="Reliques et forge du dé reçues pendant la construction" className="w-[296px] font-body text-[14px] font-bold uppercase tracking-wider text-ink-3">
                 Construction
               </span>
             )}
@@ -262,8 +263,9 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
                 const e = season.entrants[i]
                 const won = r?.winner === s
                 const lost = !!r && !won
-                // Sa récompense, et pour une forge ce qu'il avait forgé avant cette journée (l'infobulle dit ce qu'elle a produit)
-                const reward = won ? r.reward : undefined
+                // Sa récompense (gagnant comme perdant), et pour une forge ce qu'il avait forgé avant cette journée
+                // (l'infobulle dit ce qu'elle a produit)
+                const reward = r?.rewards?.[s] ?? undefined
                 const forgedBefore = reward?.kind === 'forge' ? buildOf(season, i, f.day).forge : []
                 return (
                   <span className={`flex min-w-0 flex-1 items-center gap-2 ${s === 0 ? 'flex-row-reverse text-right' : ''}`}>

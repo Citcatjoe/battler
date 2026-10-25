@@ -18,16 +18,11 @@ import {
   ACT_FIGHTS,
   ACT_LENGTH,
   BOSS,
-  CAMPAIGN_REPERTOIRES,
   campaignCharacter,
   drawBuild,
-  drawReward,
-  offerableRelics,
-  offerableSkills,
   encountersFor,
   opponentOf,
   HP_FLOOR,
-  MAX_SKILL_FACES,
   OPPONENT_LAG,
   secondSkillOf,
   tuneHp,
@@ -39,12 +34,12 @@ import {
   recordHeritage,
   referenceChampions,
   rewardChoice,
-  REWARDS,
   startRun,
   withFightResult,
   withReward,
   type Encounter,
 } from './campaign'
+import { drawReward, MAX_SKILL_FACES, offerableRelics, offerableSkills, REPERTOIRES, REWARDS } from './offers'
 import { STATUS_IDS, statusCounter, type StatusId } from './statuses'
 import {
   allMatches,
@@ -144,7 +139,8 @@ describe('catalogue des statuts', () => {
     expect(who('casting')).toEqual(['form:thaldrin'])
     expect(who('bearMight')).toEqual(['form:thaldrin'])
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
-    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk'])
+    // Le Rempart hérissé (phase 8, second lot) en pose à chaque armure temporaire vidée
+    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'statut:bristlingRampart'])
     // La Rancune (0.114.0) en pose un à chaque coup encaissé
     expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
@@ -729,13 +725,13 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture', 'sentence'])
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture', 'sentence', 'bristling-rampart', 'vendetta'])
     family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
     family('heal', ['harvest'])
-    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée et Pile ou
-    // face posent un mécanisme, muet (0.110.0) : leur rafale et leur pièce sonnent
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry'])
+    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
+    // face, l'Embrasement et le Dé pipé posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'loaded-die'])
     // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak (il fait saigner), ou Ervald pour
     // l'Aura de puissance et les consommatrices du Poison (il empoisonne)
     const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
@@ -899,27 +895,27 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       const kit = c.events.map((e) => e.id)
       const reserve = (c.definition.reserve ?? []).filter((e) => ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
       // Pas de gravure en double : ni la signature ni la seconde dans le répertoire de campagne
-      expect(CAMPAIGN_REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...reserve, ...(c.definition.repertoire ?? [])])
-      expect(CAMPAIGN_REPERTOIRES[c.id].some((e) => kit.includes(e.id)), c.id).toBe(false)
+      expect(REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...reserve, ...(c.definition.repertoire ?? [])])
+      expect(REPERTOIRES[c.id].some((e) => kit.includes(e.id)), c.id).toBe(false)
     }
     // Seul Morgrut part sans signature
     expect(CHARACTERS.filter((c) => !c.definition.signature).map((c) => c.id)).toEqual(['morgrut'])
     // Gorak : la Furie des vents sur le 1, Pourfendre sur le 2 ; le 3 à 6 sont des faces nues qui se gravent
     const gorak = championOf(startRun('gorak', 1))
     expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalOne', 'cleave@naturalTwo'])
-    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.gorak[0] })).toEqual([3, 4, 5, 6])
+    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: REPERTOIRES.gorak[0] })).toEqual([3, 4, 5, 6])
   })
 
   it('Thaldrin (0.113.0) : un Feu follet sur le 1, une Foudre sur le 2, en forme humaine, attaque 5 à 6 ; des gravures jusqu’à la limite', () => {
     const thaldrin = createCharacter('thaldrin')
     expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@naturalOne@human', 'thunderbolt@naturalTwo@human'])
     expect(thaldrin.forms?.map((f) => f.statuses)).toEqual([['casting'], ['bearMight']])
-    expect(CAMPAIGN_REPERTOIRES.thaldrin.map((e) => e.id)).not.toContain('thunderbolt')
+    expect(REPERTOIRES.thaldrin.map((e) => e.id)).not.toContain('thunderbolt')
     expect([thaldrin.baseStats.attackMin, thaldrin.baseStats.attackMax]).toEqual([5, 6])
     // Les quatre faces nues se gravent
-    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES.thaldrin[0] })).toEqual([3, 4, 5, 6])
+    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: REPERTOIRES.thaldrin[0] })).toEqual([3, 4, 5, 6])
     // La limite compte des faces : le Feu follet, la Foudre et les gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
-    const engraved = CAMPAIGN_REPERTOIRES.thaldrin.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
+    const engraved = REPERTOIRES.thaldrin.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
       const under = drawReward({ championId: 'thaldrin', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
       const full = drawReward({ championId: 'thaldrin', forge: engraved, relics: [] }, 'forge', seededRng(k))
@@ -931,13 +927,13 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
 
   it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {
     for (const id of CHARACTER_IDS) {
-      const own = CAMPAIGN_REPERTOIRES[id].map((e) => e.id)
+      const own = REPERTOIRES[id].map((e) => e.id)
       const def = createCharacter(id).definition
       for (let k = 0; k < 20; k++) {
         const reward = drawReward({ championId: id, forge: [], relics: [] }, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')
         const engrave = reward.offer.find((o) => o.op === 'engrave')
-        const room = offerTargets(def, [], { op: 'engrave', skill: CAMPAIGN_REPERTOIRES[id][0] }).length > 0
+        const room = offerTargets(def, [], { op: 'engrave', skill: REPERTOIRES[id][0] }).length > 0
         expect(!!engrave, `${id} graine ${k}`).toBe(room)
         if (engrave?.op === 'engrave') expect(own).toContain(engrave.skill.id)
       }
@@ -946,7 +942,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
 
   it('`MAX_SKILL_FACES` faces de compétence au plus : la limite atteinte, plus de Graver ni de Copier ; Dorer, Aiguiser et Tremper restent', () => {
     // La signature, la seconde compétence et les gravures : `MAX_SKILL_FACES` faces de compétence, la limite
-    const engraved = CAMPAIGN_REPERTOIRES.gorak.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
+    const engraved = REPERTOIRES.gorak.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
       const under = drawReward({ championId: 'gorak', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
       const full = drawReward({ championId: 'gorak', forge: engraved, relics: [] }, 'forge', seededRng(k))
@@ -1007,8 +1003,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     // Chaque répertoire de campagne ne porte que des compétences à la portée de son champion, et l'offre n'en sort pas
     for (const id of CHARACTER_IDS) {
       const run = { championId: id, forge: [], relics: [] }
-      expect(offerableSkills(run, CAMPAIGN_REPERTOIRES[id]).map((s) => s.id), id).toEqual(CAMPAIGN_REPERTOIRES[id].map((s) => s.id))
-      const reach = offerableSkills(run, CAMPAIGN_REPERTOIRES[id]).map((s) => s.id)
+      expect(offerableSkills(run, REPERTOIRES[id]).map((s) => s.id), id).toEqual(REPERTOIRES[id].map((s) => s.id))
+      const reach = offerableSkills(run, REPERTOIRES[id]).map((s) => s.id)
       for (let k = 0; k < 20; k++) {
         const reward = drawReward(run, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')

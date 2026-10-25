@@ -114,6 +114,45 @@ describe('audit de résolution : phase 8, premier lot (0.114.0)', () => {
   })
 })
 
+describe('audit de résolution : phase 8, second lot', () => {
+  it('aucune anomalie pour l’Embrasement, le Dé pipé, le Rempart hérissé et la Vindicte gravés chez leurs producteurs, aux rangs I et II, ni pour leurs quatre reliques', () => {
+    const { audit, problems, seen } = createAudit()
+    // Chaque consommatrice chez ses producteurs : la Brûlure (Thaldrin, Ervald aux Feux follets gravés sur le 4), la pièce
+    // (Naraxes), l'armure temporaire (Brokk ; Morgrut à la Chandelle de veille), les renvois (Aldric ; Brokk à la Riposte
+    // gravée sur le 4)
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const hosts: Record<string, readonly [string, ForgeStep[], string[]][]> = {
+      conflagration: [['thaldrin', [], []], ['ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }], []]],
+      'loaded-die': [['naraxes', [], []]],
+      'bristling-rampart': [['brokk', [], []], ['morgrut', [], ['vigil-candle']]],
+      vendetta: [['aldric', [], []], ['brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }], []]],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const [host, before, relics] of list)
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 15000 + n++ }))
+        }
+    // Les quatre reliques chez leurs producteurs, seules puis avec la consommatrice de la même ressource
+    const relicHosts: Record<string, readonly [string, string][]> = {
+      'forge-bellows': [['thaldrin', 'conflagration']],
+      'pavise-nails': [['brokk', 'bristling-rampart']],
+      'talion-gauntlet': [['aldric', 'vendetta']],
+      'holed-coin': [['naraxes', 'loaded-die']],
+    }
+    for (const [id, list] of Object.entries(relicHosts))
+      for (const [host, partner] of list)
+        for (const steps of [[], [{ op: 'engrave' as const, face: 3, skill: skill(partner) }]])
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps).withRelics([getRelic(id)]), createCharacter(b)], { seed: 15000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['embrasement', 'pièce pipée', 'rempart hérissé', 'vindicte', 'relique : shieldBroken', 'relique : reflected', 'relique : heads', 'bonus de relique à conditions'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
   it('aucune anomalie pour des personnages forgés au hasard, ni pour le boss', () => {
     const { audit, problems, seen } = createAudit()

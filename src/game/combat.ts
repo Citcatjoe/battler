@@ -37,13 +37,15 @@ import {
  *               valeur tirée dans l'attaque → esquive → reliques de coup, face dorée → critique → dégâts sortants
  *               → dégâts entrants → armure → boucliers
  *               → fenêtres du coup : bloodied, la face du dé (naturalOne… face:4), naturalMax (coup brut : reliques seules),
- *                 puis esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt (défenseur).
+ *                 puis esquivé : missed (actif) → dodge (défenseur) ; touché : hit → crit (actif) → hurt → shieldBroken
+ *                 (défenseur, si ce coup a vidé un de ses boucliers). Pile : heads (lanceur), puis hit et hurt si pile touche.
  *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction. Seuls les statuts
  *                 présents au début du coup réagissent dans ses fenêtres (`strikeBase`, règle 9).
  *     Phase 3 · Fin de tour : effets `onTurnEnd` (bonus, puis malus) → durées « fin » → fenêtre « turnEnd »
  *   Dans une fenêtre, pour chaque camp concerné : réactions de ses statuts (ordre de pose), puis
  *   événements de son personnage (ordre de définition). Les effets ainsi produits ne déclenchent
- *   pas d'autres réactions (pas de chaîne), sauf le seuil « bloodied ».
+ *   pas d'autres réactions (pas de chaîne), sauf trois moments de la vérification d'état : le soin reçu (`healed`), les
+ *   dégâts renvoyés (`reflected`) et le seuil « bloodied ».
  *   Vérification d'état après chaque effet : un combattant à 0 PV met fin au combat aussitôt.
  */
 
@@ -237,9 +239,9 @@ export type BeatBody =
   | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
-   * deux fois, en coup), face, rien. Le statut est consommé
+   * deux fois, en coup), face, rien. Le statut est consommé. `loadedBy` : le statut qui l'a fait tomber sur pile (Dé pipé)
    */
-  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
+  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; loadedBy?: StatusId; forced?: true }
   /**
    * Une relique du porteur se déclenche (docs/RELIQUES.md) : sur un moment du coup, au début d'un de ses tours,
    * ou quand ses PV passent sous son seuil. `uses` : ses déclenchements dans ce combat, celui-ci compris.
@@ -646,6 +648,12 @@ export function simulateCombat(
    * `healed` (Encens de l'abbaye), une fois, avec pour cause l'étape qui les a soignés.
    */
   const healed: Pair<boolean> = [false, false]
+  /**
+   * Camps qui ont renvoyé des dégâts depuis la dernière vérification d'état (phase 8, second lot) : une Riposte qui rend
+   * une part du coup, une Rétribution qui relâche ses jauges. `checkThresholds` leur ouvre la fenêtre `reflected`, une fois,
+   * avec pour cause l'étape qui a renvoyé, comme le soin reçu.
+   */
+  const reflected: Pair<boolean> = [false, false]
   /** Les conditions d'une relique de coup, vues depuis chaque camp (`resolveAttack`) */
   const holds: Pair<(c: Condition) => boolean> = [(c) => conditionMet(0, c), (c) => conditionMet(1, c)]
   /**
@@ -748,14 +756,17 @@ export function simulateCombat(
         }
       }
       case 'release': {
-        // Le porteur de l'effet relâche son statut à jauges sur sa cible
-        const holder = states[owner]
+        // Le porteur de l'effet relâche son statut à jauges sur sa cible ; ou celui de l'adversaire (Embrasement : sa Brûlure)
+        const holder = states[effect.from === 'opponent' ? other(owner) : owner]
         const held = holder.statuses.find((s) => s.id === effect.status)
-        const stored = held?.stacks ?? 0
+        const releases = STATUSES[effect.status].releases
+        const stored = held ? (releases ? releases(held) : held.stacks) : 0
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
         // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
         const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
         state.hp = Math.max(0, state.hp - amount)
+        // Ses propres jauges, relâchées sur l'adversaire : des dégâts renvoyés (le moment `reflected`)
+        if (effect.from !== 'opponent' && target !== owner && amount > 0) reflected[owner] = true
         // Les jauges, une par impact, quand elles partent en entier (pas en part ni sous le minimum)
         const parts = held?.slots?.filter((n) => n > 0)
         return { type: 'damage', target, amount, source: effect.source, ...(amount === stored && parts && parts.length > 1 && { parts }) }
@@ -847,7 +858,11 @@ export function simulateCombat(
       const status = now && was && was.stacks < now.stacks ? { ...now, stacks: was.stacks } : now
       const react = status && reactionTo(status, trigger)
       if (!react) continue
+      // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte : sans lui, la réaction ne part pas
+      if (react.length > 0 && react.every((e) => e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status))) continue
       const effects = applyEffects(side, react)
+      // Riposte : la part du coup rendue à l'attaquant, des dégâts renvoyés (le moment `reflected`)
+      if (def.reflectsHit && trigger === 'hurt' && effects.some((e) => e.type === 'damage' && e.target !== side && e.amount > 0)) reflected[side] = true
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie, Riposte : le statut agit avec ses charges, puis en perd une dans la même étape
       else if (def.decays || def.drainsHit || def.reflectsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
@@ -984,6 +999,13 @@ export function simulateCombat(
       if (!healed[side]) continue
       healed[side] = false
       const down = fire(side, 'healed', cause)
+      if (down !== undefined) return down
+    }
+    // Dégâts renvoyés (phase 8, second lot) : de même, une fois par étape qui renvoie, après le soin reçu
+    for (const side of order) {
+      if (!reflected[side]) continue
+      reflected[side] = false
+      const down = fire(side, 'reflected', cause)
       if (down !== undefined) return down
     }
     for (const side of order) {
@@ -1143,6 +1165,8 @@ export function simulateCombat(
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
     if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)
     for (const { status, absorbed } of outcome.shields) def.statuses = consumeStatus(def.statuses, status, absorbed)
+    // Bouclier vidé (phase 8, second lot) : un bouclier du défenseur a absorbé tout ce qui lui restait
+    const emptied = outcome.shields.some(({ status }) => !def.statuses.some((s) => s.id === status))
     // Fausse note : le coup du porteur qui touche l'a subie, elle disparaît avec toutes ses charges (`spentOnHit`) ; aiguisée
     // (0.110.0), elle use d'abord son intensité, un coup de plus chacune
     if (touched)
@@ -1176,6 +1200,7 @@ export function simulateCombat(
         hitTriggers.push([attacker, 'hit'])
         if (outcome.crit) hitTriggers.push([attacker, 'crit'])
         hitTriggers.push([defender, 'hurt'])
+        if (emptied) hitTriggers.push([defender, 'shieldBroken'])
       }
       return fireStrike(hitTriggers, touched, dealt, hit, plain, outcome.replaced)
     })
@@ -1199,19 +1224,27 @@ export function simulateCombat(
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     states[side].statuses = states[side].statuses.filter((s) => s.id !== coin.id)
     const forced = nextForced()
-    const heads = forceRoll(rollDie(rng, 2), 2, forced) === 1
+    const drawn = forceRoll(rollDie(rng, 2), 2, forced) === 1
+    // Dé pipé (phase 8, second lot) : la pièce se tire quand même, puis tombe sur pile, une charge par pièce ; une pièce
+    // imposée par l'observateur (mode triche) garde sa valeur et laisse la charge
+    const loaded = forced === undefined ? states[side].statuses.find((s) => STATUSES[s.id].loadsCoin !== undefined) : undefined
+    if (loaded) states[side].statuses = consumeStatus(states[side].statuses, loaded.id, 1)
+    const heads = drawn || loaded !== undefined
     const toss = STATUSES[coin.id].coinToss!
-    // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
-    const extra = dealt * (toss.multiplier + (coin.power ?? 0) - 1)
+    // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile ; un Dé pipé aussi, sur la pièce qu'il pipe
+    const extra = dealt * (toss.multiplier + (coin.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0) - 1)
     const effects = heads ? applyEffects(side, [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }]) : []
     const id = push(
-      { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) },
+      { type: 'coin', side, status: coin.id, heads, effects, ...(loaded && { loadedBy: loaded.id }), ...(forced !== undefined && { forced: true as const }) },
       posedBy[side][coin.id] ?? after,
     )
     return withinStrike(base, () => {
       const down = fallen() ?? checkThresholds(id)
-      if (down !== undefined || !heads || !toss.headsTouches) return down
-      return fireStrike([[side, 'hit'], [other(side), 'hurt']], true, extra, id)
+      if (down !== undefined || !heads) return down
+      // Pile (phase 8, second lot) : la fenêtre `heads` du lanceur, puis, si pile touche, celles d'un coup qui touche
+      const windows: [Side, Trigger][] = [[side, 'heads']]
+      if (toss.headsTouches) windows.push([side, 'hit'], [other(side), 'hurt'])
+      return fireStrike(windows, !!toss.headsTouches, extra, id)
     })
   }
 

@@ -15,12 +15,18 @@ import { RelicCard, RelicRow } from './RelicSeal'
 import { CombatReportPanel } from './CombatReport'
 
 /**
- * Récompense du vainqueur d'un match (arbre du tournoi, construction de la saison) : une relique ou une
- * forge du dé, l'offre, le choix du vainqueur, et de quoi le changer.
+ * Récompense d'un combattant à la fin d'un match (arbre du tournoi, construction de la saison) : une relique ou une
+ * forge du dé, l'offre, son choix, et de quoi le changer.
  */
 export type MatchReward =
   | { kind: 'relic'; offer: readonly Relic[]; chosen: string; onChoose: (relic: string) => void }
   | { kind: 'forge'; offer: readonly ForgeOffer[]; chosen: ForgeStep; onChoose: (step: ForgeStep) => void }
+
+/** La récompense d'un côté du combat. */
+export interface SideReward {
+  side: Side
+  reward: MatchReward
+}
 
 interface Props {
   result: CombatResult
@@ -28,15 +34,15 @@ interface Props {
   onMenu: () => void
   /**
    * En tournoi, en saison ou en campagne : remplace Revanche / Menu par la suite (l'arbre, la saison, la carte de
-   * l'acte). `reward` : la récompense du vainqueur (arbre hors finale, construction de la saison), à choisir parmi
-   * l'offre ; `chosen` est le choix du vainqueur, que l'observateur peut changer. `icon` : le glyphe du bouton (le
-   * tournoi par défaut) ; `action` : son texte, quand la suite est une récompense ailleurs (campagne : « Relique »,
-   * « Forge du dé »).
+   * l'acte). `rewards` : les récompenses du match, dans l'ordre où on les montre (le vainqueur de l'arbre hors finale ;
+   * en saison, chaque côté qui se construit encore), chacune à choisir parmi son offre ; `chosen` est le choix du
+   * combattant, que l'observateur peut changer. `icon` : le glyphe du bouton (le tournoi par défaut) ; `action` : son
+   * texte, quand la suite est une récompense ailleurs (campagne : « Relique », « Forge du dé »).
    */
   tournament?: {
     label: string
     onContinue: () => void
-    reward?: MatchReward
+    rewards?: readonly SideReward[]
     icon?: GlyphName
     action?: string
   }
@@ -152,8 +158,11 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
     undefined,
   )
   const [details, setDetails] = useState(false)
-  const [rewardOpen, setRewardOpen] = useState(false)
-  const reward = tournament?.reward
+  // La récompense montrée (index dans `rewards`), null : l'écran de fin
+  const [rewardStep, setRewardStep] = useState<number | null>(null)
+  const rewards = tournament?.rewards ?? []
+  const shown = rewardStep === null ? undefined : rewards[rewardStep]
+  const nextReward = () => (rewardStep !== null && rewardStep + 1 < rewards.length ? setRewardStep(rewardStep + 1) : tournament?.onContinue())
   const w = stats[winner]
   const l = stats[loser]
   const totalDamage = w.totalDamage + l.totalDamage || 1
@@ -231,11 +240,11 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
               variant="primary"
               size="xl"
               icon={tournament.icon ?? 'tournoi'}
-              onClick={reward ? () => setRewardOpen(true) : tournament.onContinue}
+              onClick={rewards.length ? () => setRewardStep(0) : tournament.onContinue}
               title={tournament.label}
               className="flex-1"
             >
-              {reward ? 'Récompense' : (tournament.action ?? 'Continuer')}
+              {rewards.length > 1 ? 'Récompenses' : rewards.length ? 'Récompense' : (tournament.action ?? 'Continuer')}
             </Button>
           ) : (
             <>
@@ -275,11 +284,11 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
         </div>
       )}
 
-      {tournament && reward && rewardOpen && (
-        reward.kind === 'relic' ? (
-          <RelicMenu winner={fighters[winner]} reward={reward} onBack={() => setRewardOpen(false)} onContinue={tournament.onContinue} />
+      {tournament && shown && (
+        shown.reward.kind === 'relic' ? (
+          <RelicMenu key={rewardStep} fighter={fighters[shown.side]} reward={shown.reward} onBack={() => setRewardStep(null)} onContinue={nextReward} />
         ) : (
-          <ForgeMenu winner={fighters[winner]} reward={reward} onBack={() => setRewardOpen(false)} onContinue={tournament.onContinue} />
+          <ForgeMenu key={rewardStep} fighter={fighters[shown.side]} reward={shown.reward} onBack={() => setRewardStep(null)} onContinue={nextReward} />
         )
       )}
     </div>
@@ -287,8 +296,8 @@ export function EndScreen({ result, onReplay, onMenu, tournament, initialTab = '
 }
 
 /**
- * Récompense du vainqueur (docs/RELIQUES.md § 5), menu superposé à l'écran de victoire : trois grandes cartes. Le
- * vainqueur a déjà choisi (au hasard, sa carte porte « Choix de… ») ; un clic sur une autre carte décide à sa place.
+ * Récompense d'un combattant (docs/RELIQUES.md § 5), menu superposé à l'écran de fin : trois grandes cartes. Le
+ * combattant a déjà choisi (au hasard, sa carte porte « Choix de… ») ; un clic sur une autre carte décide à sa place.
  * `own` : le choix affiché est encore le sien ; `ready` : il est complet (une forge attend sa face).
  */
 function RewardFrame({
@@ -328,12 +337,12 @@ function RewardFrame({
 
 /** Une relique parmi l'offre ; ses reliques déjà portées sont rappelées en dessous. */
 function RelicMenu({
-  winner,
+  fighter,
   reward,
   onBack,
   onContinue,
 }: {
-  winner: Character
+  fighter: Character
   reward: Extract<MatchReward, { kind: 'relic' }>
   onBack: () => void
   onContinue: () => void
@@ -342,11 +351,11 @@ function RelicMenu({
   const own = picked === reward.chosen
   return (
     <RewardFrame
-      title={`${winner.name} gagne une relique`}
+      title={`${fighter.name} reçoit une relique`}
       sub={
         reward.offer.length > 1
-          ? `${winner.name} a fait son choix parmi ${reward.offer.length} : cliquez sur une autre carte pour décider à sa place.`
-          : `Une seule relique manque encore à ${winner.name} : elle lui revient.`
+          ? `${fighter.name} a fait son choix parmi ${reward.offer.length} : cliquez sur une autre carte pour décider à sa place.`
+          : `Une seule relique est à la portée de ${fighter.name} : elle lui revient.`
       }
       own={own}
       onBack={onBack}
@@ -361,39 +370,39 @@ function RelicMenu({
             key={r.id}
             relic={r}
             selected={picked === r.id}
-            mark={r.id === reward.chosen ? `Choix ${of(winner.name)}` : picked === r.id ? 'Votre choix' : undefined}
+            mark={r.id === reward.chosen ? `Choix ${of(fighter.name)}` : picked === r.id ? 'Votre choix' : undefined}
             onSelect={() => setPicked(r.id)}
           />
         ))}
       </div>
-      {winner.relics.length > 0 && (
+      {fighter.relics.length > 0 && (
         <div className="flex items-center gap-3 font-body text-[15px] text-ink-3">
           Déjà portées :
-          <RelicRow relics={winner.relics} size={40} tooltip="above" />
+          <RelicRow relics={fighter.relics} size={40} tooltip="above" />
         </div>
       )}
     </RewardFrame>
   )
 }
 
-/** Une opération de forge parmi l'offre, puis la face qu'elle vise sur le dé du vainqueur (tel qu'il a combattu). */
+/** Une opération de forge parmi l'offre, puis la face qu'elle vise sur le dé du combattant (tel qu'il a combattu). */
 function ForgeMenu({
-  winner,
+  fighter,
   reward,
   onBack,
   onContinue,
 }: {
-  winner: Character
+  fighter: Character
   reward: Extract<MatchReward, { kind: 'forge' }>
   onBack: () => void
   onContinue: () => void
 }) {
-  const choice = useForgeChoice(winner, reward.offer, reward.chosen)
+  const choice = useForgeChoice(fighter, reward.offer, reward.chosen)
   const own = !!choice.step && stepKey(choice.step) === stepKey(reward.chosen)
   return (
     <RewardFrame
-      title={`${winner.name} forge son dé`}
-      sub={`${winner.name} a fait son choix : cliquez sur une autre opération, puis sur une face, pour décider à sa place.`}
+      title={`${fighter.name} forge son dé`}
+      sub={`${fighter.name} a fait son choix : cliquez sur une autre opération, puis sur une face, pour décider à sa place.`}
       own={own}
       ready={!!choice.step}
       onBack={onBack}
@@ -402,7 +411,7 @@ function ForgeMenu({
         onContinue()
       }}
     >
-      <ForgeChoice character={winner} choice={choice} />
+      <ForgeChoice character={fighter} choice={choice} />
     </RewardFrame>
   )
 }

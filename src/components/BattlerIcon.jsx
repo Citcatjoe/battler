@@ -58,6 +58,8 @@ export const GLYPHS = {
   'filtrer': <><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></>,
   // Aide, règle liée
   'info': <><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></>,
+  // Réglages, options (ajout du 2026-10-25)
+  'reglages': <><path d="M4 6h9"/><path d="M17 6h3"/><circle cx="15" cy="6" r="2"/><path d="M4 12h3"/><path d="M11 12h9"/><circle cx="9" cy="12" r="2"/><path d="M4 18h11"/><path d="M19 18h1"/><circle cx="17" cy="18" r="2"/></>,
 };
 
 /** <BattlerIcon name="hasard" size={18} /> — size: 14 | 16 | 18 | 20 | 22 | 24 */

@@ -1241,3 +1241,60 @@ Le drapeau « hors bande (faible) » des moyennes sur dix hôtes est attendu : u
 **Naraxes** : la Virulence entre dans son répertoire, mais sa décoction pose son Poison au coup, et il s'estompe avant son jet suivant (Virulence +0,7 chez elle) : elle ne sert qu'avec le Souffle de la tombe ou l'Aura glaciale de son répertoire. À trancher plus tard (audit du lot, point 2) : une décoction plus forte, ou des consommatrices qui lisent le Poison au coup.
 
 **Le laboratoire** : les séries 18 à 23 sont retirées de `scripts/lab/ideas.ts` (elles portaient des statuts d'essai aux ids du registre, dont une Rancune en Ferveur qui aurait remplacé la livrée) ; leurs rapports restent dans `logs/lab/`.
+
+## 23. Phase 8, second lot : quatre consommatrices et trois moments de famille (2026-10-25)
+
+**Le constat** (audit du premier lot, [PROGRESSION.md](PROGRESSION.md) § 13.3 ; § 22 ci-dessus, « Audit ») : quatre ressources restaient sans consommateur après le premier lot. La **Brûlure** (les Feux follets de Thaldrin), la **pièce** (Pile ou face de Naraxes : le « jet modifié » de la Fortune), l'**armure temporaire vidée** (la Garde : Peau de pierre, Chandelle de veille, Géode fendue, Écu cabossé) et les **dégâts renvoyés** (ce que produisent les Représailles : Riposte, Rétribution). Le lot livre une compétence et une relique par ressource (reliques : [RELIQUES.md](RELIQUES.md) § 15). Décisions de l'agent (l'utilisateur dormait), à juger en jeu.
+
+| Compétence | Famille | Texte en jeu | Rang (axe) | Porteur (hors kit) | Répertoires |
+| --- | --- | --- | --- | --- | --- |
+| **Embrasement** (`conflagration`) | Affliction (Brûlure → dégâts d'un coup) | « Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 3 fois sa Brûlure restante, 1x. » | ×1 de plus (`power`) | Thaldrin | Ervald |
+| **Dé pipé** (`loaded-die`) | Fortune (la pièce → pile) | « Sa prochaine pièce tombe sur pile, ×2 de plus, 1x. » (pile, ce coup ×5) | pile ×1 de plus (`power`) | Naraxes | Fanchon |
+| **Rempart hérissé** (`bristling-rampart`) | Affliction (armure vidée → Épines, le pont du Rempart, FAMILLES § 7) | « +2 Épines acérées quand son armure temporaire est vidée. » · aura permanente, se cumule | +2 Épines (`power`) | Brokk | Morgrut |
+| **Vindicte** (`vendetta`) | Puissance (dégâts renvoyés → Ferveur) | « +3 Ferveur quand il renvoie des dégâts. » · aura permanente, se cumule | +3 Ferveur (`power`) | Aldric | Brokk |
+
+**Ce que le moteur a reçu** (une fois, pour toutes les briques à venir ; [RESOLUTION.md](RESOLUTION.md) § 2, § 3, § 5 règle 6) :
+- trois **moments de famille**, des déclencheurs nommés (`events.ts`, relics `STRIKE_TRIGGERS`, accroches `moment:shieldBreak`, `moment:reflect`, `moment:heads`) : `shieldBroken` (défenseur, après `hurt`, quand le coup qui le touche a vidé un de ses boucliers), `reflected` (ouvert par la vérification d'état, comme le soin reçu, après l'étape qui renvoie : une Riposte qui rend une part du coup, une Rétribution qui relâche ses jauges sur l'adversaire) et `heads` (le lanceur, quand sa pièce tombe sur pile, avant les fenêtres de pile qui touche). Sans brique qui les écoute, ils ne produisent aucune étape : l'empreinte de `balance.test.ts` est inchangée ;
+- une **relâche du statut de l'adversaire** (`release` avec `from: 'opponent'`, `StatusDef.releases` : la Brûlure rend ses PV par tour × ses tours restants) ; une réaction qui ne relâcherait rien (pas de Brûlure) ne part pas, la charge attend ;
+- le **Dé pipé** (`StatusDef.loadsCoin`) : la pièce se tire quand même (même suite du hasard), puis tombe sur pile, et pile vaut ×N de plus ; l'étape `coin` le dit (`loadedBy`). Une pièce imposée en mode triche garde sa valeur.
+
+L'Embrasement et le Dé pipé sont des **mécanismes** (`mechanic: 'skill'`, comme Pile ou face et la Curée) : des charges qui attendent leur moment, qu'aucune purge ne retire. Le Rempart hérissé et la Vindicte sont des **auras** (bonus permanents, cumulables). **Offre pertinente** (`skillNeeds`, `relicNeeds`) : l'Embrasement et le Soufflet attendent la Brûlure (`status:burn`), le Dé pipé une pièce (`status:coinFlip`), le Rempart et les Clous une armure vidée (`moment:shieldBreak`), la Vindicte et le Gantelet un renvoi (`moment:reflect`), la Pièce trouée une pile (`moment:heads`) : la campagne ne les offre qu'à qui produit leur ressource (chaque répertoire livré reste entièrement à portée, test de `modules.test.ts`).
+
+### Le laboratoire (séries 24 à 27, 400 combats par duel, gravée sur le 3 de son producteur)
+
+Rapports : `logs/lab/2026-10-24-23-56-16_v0.114.0.md` (série 24), `2026-10-24-23-59-27` (25), `2026-10-25-00-01-08` (26), `2026-10-25-00-02-29` (27). Points de victoire de l'hôte contre le roster, mêmes graines.
+
+| Piste | Mesure | Lecture |
+| --- | --- | --- |
+| Embrasement **au jet** (greffé, si l'adversaire brûle : la Brûlure relâchée ×1, ×2, ×3 ; ×1 + 3 dégâts) | Thaldrin +0,3 ; +2,2 ; +3,3 ; +1,4 | **0,15 fois par combat** : sa Brûlure n'est là à son jet que si les Feux follets sont partis au tour d'avant. Écarté |
+| Embrasement **en attente** du coup qui touche un adversaire qui brûle (×1, ×2, ×3, ×4) | +2,8 ; +7,1 ; **+8,6** ; +9,3 | retenu à ×3 ; deux charges au lieu d'une : +8,7 (rien de plus) |
+| Embrasement en aura (chaque coup qui touche un adversaire qui brûle, ×1) | +3,2 | la Brûlure est la limite, pas la charge |
+| Feux follets gravés chez Ervald (face 4), puis l'Embrasement ×2 | +18,0, puis +27,6 (**+9,6**) | un producteur gravé le nourrit |
+| Dé pipé : pile seule (1 et 2 charges), pile ×4, **×5**, ×6 ; ×5 à deux charges | +5,1 et +5,6 ; +7,9 ; **+9,8** ; +10,9 ; +10,1 | sa pièce est rare (le 2 de Naraxes) : le gain est dans le multiplicateur |
+| Rempart hérissé : +2 Épines 1x, +3 1x, +4 1x ; +2 2x, +3 2x ; aura +1, **aura +2**, aura +2 au rang II | +7,3, +8,8, +9,5 ; +7,4, +8,8 ; +5,3, **+8,1**, +9,8 | retenu en aura (son rang ajoute plus qu'une charge de plus) |
+| Vindicte : aura +2 Ferveur, **+3 Ferveur** et son rang II ; +2 PV, +3 PV et leurs rangs II | +7,0, **+9,4**, +13,3 ; +7,6, +10,7, +11,9 et +14,7 | retenue en Ferveur (la Puissance, un coup plus fort après un renvoi) |
+| Sans producteur (Embrasement, Dé pipé chez Gorak) | 0,0 | une consommatrice vaut 0 sans sa ressource |
+| Sans producteur, une aura (Rempart, Vindicte chez Gorak) | +0,7 | un bonus de plus détourne la Purification d'Ysolde (Gorak 58,0 → 64,5 % contre elle) : l'effet de leurre de tout bonus, déjà vu au premier lot |
+
+**Mesures une fois au registre** (`scripts/skills.report.ts`, 400 combats par duel, `SKILLS_ENGRAVE=conflagration,loaded-die,bristling-rampart,vendetta` : `logs/skills/2026-10-25-00-14-51_v0.114.0.md`, gravure, et `2026-10-25-00-15-46`, rang) :
+
+| Compétence | Gravée chez son producteur (rang I) | Ailleurs | Rang II chez son producteur | En log-cote chez lui (P8) |
+| --- | --- | --- | --- | --- |
+| Embrasement | Thaldrin **+8,0** (laboratoire +8,6 en bonus purgeable ; le mécanisme ne leurre plus la Purification) | 0 | +0,6 | **+0,33** |
+| Dé pipé | Naraxes **+9,7** | 0 | +1,1 | **+0,40** |
+| Rempart hérissé | Brokk **+8,1** | +0,0 (Ysolde) à +1,3 (Fanchon) : le leurre | +1,7 | **+0,33** |
+| Vindicte | Aldric **+9,4** | +0,0 à +1,3 : le leurre | **+4,0** | **+0,38** |
+
+La log-cote de la dernière colonne est la synergie P8 avec le producteur du kit (l(AB) − l(A) − l(B) + l(∅), où ∅ est l'hôte sans son producteur) : une consommatrice ne fait rien sans sa ressource, donc l(B) ≈ l(∅) et la synergie vaut son gain en log-cote chez son producteur. Toutes les quatre dépassent +0,25.
+
+**À décider par l'utilisateur : trois rangs II sous la bande** (+3 à +8). Embrasement +0,6, Dé pipé +1,1, Rempart hérissé +1,7 : trois consommatrices **rares** (l'Embrasement relâche 0,26 fois par combat au laboratoire ; la pièce ne tombe que sur le 2 de Naraxes, s'il touche ; une armure vidée demande que la Peau de pierre soit partie), dont un rang ne change que l'effet, pas la fréquence. Essayés sans mieux : deux charges au lieu d'une (Embrasement +0,1, Dé pipé +0,3, Rempart +0,0), le rang par la part (Embrasement ×4 : +0,7). Propositions, à mesurer : un rang qui ajoute aussi de la ressource (l'Embrasement qui pose 1 Brûlure, le Dé pipé qui donne une pièce), ou accepter ces trois rangs faibles comme les onze rangs II au-dessus de la bande. La Vindicte, plus fréquente (0,9 moment par combat au laboratoire), a un rang dans la bande.
+
+**Synergies** (laboratoire, log-cote, l'hôte de son producteur) : Soufflet de forge +3 × Embrasement ×3 **−0,14** (deux consommateurs de la même Brûlure : l'Embrasement l'éteint, le Soufflet en voit moins ; prévu par les accroches, `hinders: status:burn`, au bord du seuil de −0,15) ; Clous de pavois × Rempart hérissé (+2, 1x) −0,08 ; Gantelet (Ferveur) × Vindicte −0,05 ; Pièce trouée × Dé pipé −0,04 (le Dé pipé fait tomber pile, mais la pièce reste rare). Aucune anti-synergie non voulue sous −0,15. Paires de reliques : [RELIQUES.md](RELIQUES.md) § 15.
+
+**Naraxes** (audit du premier lot, point 2 : son Poison s'estompe avant son jet) : **rien n'est changé** (décision conservatrice). La décoction à 2 Poison dès le rang I (série 27) la porte à 66,8 % contre le roster (+13,1, hors de la tolérance de 42 à 58 %), et la Virulence n'y ajoute que +2,4 (+0,7 à la décoction d'aujourd'hui) : même à 2, le Poison posé au coup s'estompe au début du tour adverse. Aucune option propre n'existe sans changer l'ordre du Poison ou sa décoction vanilla ; sa consommatrice de ce lot est le Dé pipé, qui lit sa pièce (+9,7).
+
+**Le laboratoire** : les séries 24 à 27 sont retirées de `scripts/lab/ideas.ts` (statuts d'essai `lab…`, et un Dé pipé d'essai à l'ancienne forme de `loadsCoin`) ; leurs rapports restent dans `logs/lab/`.
+
+**Icônes** (huit à peindre, ids stables : `src/assets/icons/<id>.png`). Compétences (l'objet en action, la magie peinte, la palette du porteur) : `conflagration`, une poignée de brindilles de chêne liées d'écorce qui s'embrase en une seule colonne de flamme ambre, les petits feux follets aspirés dedans ; `loaded-die`, un dé d'os fendu sur une arête, une goutte de plomb dans la fente, une traînée violette qui le tire vers sa face pile (un point doré) ; `bristling-rampart`, un pavois de chêne cerclé de fer qui éclate, ses éclats changés en épines de fer à la pointe rougie ; `vendetta`, un gantelet d'acier levé qui serre la lame brisée d'une épée ennemie, une onde dorée qui repart vers l'avant. Les statuts montrent l'icône de leur compétence. Reliques : § 15 de [RELIQUES.md](RELIQUES.md).
+
+**Non vu, non entendu** : aucun rendu (la relâche de la Brûlure, la pièce pipée, l'anneau du Rempart et de la Vindicte, les reliques sur leur moment ; mise en scène par l'agent de mise en scène), aucun son. Rien n'est mesuré en campagne ni en saison (lot suivant de la nuit).

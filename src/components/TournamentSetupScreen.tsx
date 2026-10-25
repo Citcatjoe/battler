@@ -1,17 +1,16 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
 import { DIE_FACES } from '../game/events'
-import { GILD_BONUS } from '../game/forge'
 import { RELICS } from '../game/relics'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
-import { BRACKET_SEEDS, BUILD_REWARDS, SEASON_SIZES, type SeasonSize } from '../game/season'
+import { BRACKET_SEEDS, buildRewards, SEASON_SIZES, type SeasonSize } from '../game/season'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
 import { Portrait } from './Portrait'
 import { Icon } from './Icon'
-import { BackLink, Button, Glyph, SegmentedControl } from './kit'
+import { BackLink, Button, Glyph, IconButton, SegmentedControl } from './kit'
 import { RelicSeal } from './RelicSeal'
 import { TipLayer, useTipLayer, type ShowTip } from './TipLayer'
 import { Switch } from './Switch'
@@ -48,11 +47,11 @@ const SWITCH_RELIC = RELICS[0]
 const EMPTY_BRACKET: null[] = Array(SLOTS).fill(null)
 
 /**
- * Une règle du panneau « Règles » : un interrupteur, ou un choix parmi quelques valeurs. Le panneau n'est qu'une liste
- * de règles : un réglage de plus est une entrée de plus. `wide` : la tuile prend deux colonnes ; `unavailable` : la
- * raison pour laquelle la règle ne se règle pas, écrite à la place de son état.
+ * Une option de la boîte « Options » : un interrupteur, ou un choix parmi quelques valeurs. La boîte n'est qu'une liste
+ * d'options : un réglage de plus est une entrée de plus. `unavailable` : la raison pour laquelle l'option ne se règle
+ * pas, écrite à la place de son état.
  */
-type Rule = { id: string; label: string; title: string; wide?: boolean; unavailable?: string } & (
+type Rule = { id: string; label: string; title: string; unavailable?: string } & (
   | { kind: 'switch'; on: boolean; onToggle: () => void; states: [string, string]; visual?: ReactNode }
   | {
       kind: 'choice'
@@ -66,30 +65,29 @@ type Rule = { id: string; label: string; title: string; wide?: boolean; unavaila
     }
 )
 
-/** Cadre commun des tuiles de règle : le liseré d'or dit « actif ». */
+/** Cadre commun des tuiles d'option : le liseré d'or dit « actif ». Grandes tuiles, lisibles sur une télévision. */
 const TILE =
-  'flex h-11 w-full items-center gap-2 rounded-(--r-sm) border-2 bg-surface-1/90 pl-2 pr-3 text-left shadow-(--shadow-2) transition-colors'
+  'flex h-16 w-full items-center gap-3 rounded-(--r-sm) border-2 bg-surface-1/90 pl-3 pr-4 text-left shadow-(--shadow-2) transition-colors'
 
-/** Nom et état d'une règle, sur deux lignes. */
+/** Nom et état d'une option, sur deux lignes. */
 function RuleText({ label, state, on }: { label: string; state: string; on: boolean }) {
   return (
-    <span className="flex flex-col whitespace-nowrap leading-none">
-      <span className={`font-display text-[17px] font-semibold ${on ? 'text-gold-200' : 'text-ink-2'}`}>{label}</span>
-      <span className={`mt-0.5 font-body text-[11px] font-bold uppercase tracking-wider ${on ? 'text-good' : 'text-ink-3'}`}>{state}</span>
+    <span className="flex min-w-0 flex-col whitespace-nowrap leading-none">
+      <span className={`font-display text-[20px] font-semibold ${on ? 'text-gold-200' : 'text-ink-2'}`}>{label}</span>
+      <span className={`mt-1 font-body text-[13px] font-bold uppercase tracking-wider ${on ? 'text-good' : 'text-ink-3'}`}>{state}</span>
     </span>
   )
 }
 
 /**
- * Tuile d'une règle. Interrupteur : l'illustration s'éteint quand il est coupé, le curseur passe à droite et en or quand
- * il est actif. Choix : le sélecteur segmenté du kit, ou la valeur fixe quand la règle ne se règle pas.
+ * Tuile d'une option. Interrupteur : l'illustration s'éteint quand il est coupé, le curseur passe à droite et en or quand
+ * il est actif. Choix : le sélecteur segmenté du kit, ou la valeur fixe quand l'option ne se règle pas.
  */
 function RuleTile({ rule }: { rule: Rule }) {
-  const span = rule.wide ? 'col-span-2' : ''
   if (rule.kind === 'choice') {
     const active = !rule.unavailable
     return (
-      <div title={rule.title} className={`${TILE} ${span} ${active ? 'border-gold-500/80' : 'border-line-2 opacity-50'}`}>
+      <div title={rule.title} className={`${TILE} ${active ? 'border-gold-500/80' : 'border-line-2 opacity-50'}`}>
         <RuleText label={rule.label} state={rule.unavailable ?? rule.state} on={active} />
         <span className="ml-auto">
           {active ? (
@@ -120,7 +118,7 @@ function RuleTile({ rule }: { rule: Rule }) {
         rule.onToggle()
       }}
       title={rule.title}
-      className={`${TILE} ${span} disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`${TILE} disabled:cursor-not-allowed disabled:opacity-50 ${
         rule.on ? 'border-gold-500/80' : 'border-line-2 enabled:hover:border-gold-500/50'
       }`}
     >
@@ -132,11 +130,13 @@ function RuleTile({ rule }: { rule: Rule }) {
 }
 
 /**
- * Configuration du tournoi (refonte 0.47.0) : la grande palette centrale (le « pinceau »), puis le panneau « Règles ».
- * Sans saison, on choisit un combattant et on clique les cases du premier tour, aux deux extrémités de l'arbre, dont
- * les lignes convergent vers la palette. Avec la saison, l'arbre reste vide (les 16 premiers de la saison le
- * rempliront) et la palette ne sert qu'à consulter : les participants se tirent au lancement. La palette porte aussi
- * le compte et les actions (Compléter, Vider, Valider).
+ * Configuration du tournoi (refonte 0.47.0 ; options dans une boîte en 0.115.0, demande de l'utilisateur) : la grande
+ * palette centrale (le « pinceau »), le résumé des options et le lancement. Les options (saison et nombre de
+ * combattants, forge du dé, reliques, noms uniques, paris) sont rangées dans une boîte qui s'ouvre par le bouton
+ * « Options » de l'en-tête. Sans saison, on choisit un combattant et on clique les cases du premier tour, aux deux
+ * extrémités de l'arbre, dont les lignes convergent vers la palette. Avec la saison, l'arbre reste vide (les 16 premiers
+ * de la saison le rempliront) et la palette ne sert qu'à consulter : les participants se tirent au lancement. La palette
+ * porte aussi le compte et les actions (Compléter, Vider, Valider).
  */
 export function TournamentSetupScreen({
   slots,
@@ -161,6 +161,16 @@ export function TournamentSetupScreen({
   const filled = slots.filter(Boolean).length
   const complete = filled === slots.length
   const seasonMatches = season.size * (season.size - 1)
+  const [optionsOpen, setOptionsOpen] = useState(false)
+  const build = buildText(season.enabled, relics, forge)
+
+  // La boîte se ferme aussi par Échap
+  useEffect(() => {
+    if (!optionsOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOptionsOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [optionsOpen])
 
   const set = (slot: number, id: string | null) => {
     if (slots[slot] === id) return
@@ -171,91 +181,16 @@ export function TournamentSetupScreen({
   }
   const count = (id: string) => slots.filter((s) => s === id).length
 
-  // Le panneau « Règles », dans l'ordre d'affichage : la saison et ce qui en dépend, puis le reste
-  const rules: Rule[] = [
-    {
-      kind: 'switch',
-      id: 'season',
-      label: 'Phase de saison',
-      states: ['Activée', 'Désactivée'],
-      on: season.enabled,
-      onToggle: () => onSeasonChange({ ...season, enabled: !season.enabled }),
-      title: season.enabled
-        ? `Championnat aller-retour à ${season.size} avant l'arbre : les ${SLOTS} premiers s'y qualifient. Pas de pari pendant la saison.`
-        : "Pas de saison : l'arbre seul",
-      visual: (
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center ${season.enabled ? 'text-gold-300' : 'text-ink-3'}`}>
-          <Glyph name="tournoi" size={20} />
-        </span>
-      ),
-    },
-    {
-      kind: 'choice',
-      id: 'size',
-      wide: true,
-      label: 'Nombre de combattants',
-      value: season.size,
-      options: SEASON_SIZES.map((n) => ({ value: n, label: String(n), title: `${n} participants, ${n * (n - 1)} matchs de saison` })),
-      onChange: (size) => onSeasonChange({ ...season, size: size as SeasonSize }),
-      state: `Aller-retour, ${seasonMatches} matchs`,
-      fixed: String(SLOTS),
-      unavailable: season.enabled ? undefined : 'Avec la saison',
-      title: season.enabled
-        ? `Les ${season.size} combattants de la saison sont tirés au sort au lancement, en équilibrant le roster`
-        : `Sans saison, l'arbre compte ${SLOTS} cases, placées à la main`,
-    },
-    {
-      kind: 'switch',
-      id: 'forge',
-      label: 'Forge du dé',
-      states: ['Activée', 'Désactivée'],
-      on: forge && season.enabled,
-      onToggle: () => onForgeChange(!forge),
-      unavailable: season.enabled ? undefined : 'Avec la saison',
-      title: !season.enabled
-        ? 'La forge du dé se gagne pendant la phase de saison : activez-la d’abord'
-        : forge
-          ? `Chaque victoire de saison rapporte une forge du dé, en alternance avec les reliques si elles sont activées, jusqu'à ${BUILD_REWARDS} ; gardées jusqu'au bout`
-          : 'Saison sans forge du dé : chacun garde son dé d’origine',
-      // Une face dorée, éteinte quand la forge est coupée
-      visual: (
-        <span
-          className="forge-face shrink-0"
-          data-size="sm"
-          data-gild={forge && season.enabled ? '' : undefined}
-          style={{ width: 30, height: 30, opacity: forge && season.enabled ? 1 : 0.45 }}
-        >
-          +{GILD_BONUS}
-        </span>
-      ),
-    },
-    {
-      kind: 'switch',
-      id: 'relics',
-      label: 'Reliques',
-      states: ['Activées', 'Désactivées'],
-      on: relics,
-      onToggle: () => onRelicsChange(!relics),
-      title: !relics
-        ? 'Tournoi sans reliques : personne n’en gagne ni n’en porte'
-        : season.enabled
-          ? `Chaque victoire de saison rapporte une relique, en alternance avec la forge si elle est activée, jusqu'à ${BUILD_REWARDS} ; gardées jusqu'au bout, l'arbre n'en donne plus`
-          : 'Chaque victoire offre une relique au vainqueur (hors finale)',
-      // Le sceau s'éteint quand le système est désactivé
-      visual: <RelicSeal relic={SWITCH_RELIC} size={36} spent={!relics} />,
-    },
-    {
-      kind: 'switch',
-      id: 'uniqueNames',
-      label: 'Noms uniques',
-      states: ['Activés', 'Désactivés'],
-      on: uniqueNames,
-      onToggle: () => onUniqueNamesChange(!uniqueNames),
-      title: uniqueNames
-        ? 'Chaque participant reçoit une épithète de son personnage (Gorak le Borgne, Elaria Flèche-Grise)'
-        : 'Les doublons sont numérotés (Gorak I, Gorak II)',
-    },
+  // Le résumé des options, sous la palette : ce qui est actif, en clair
+  const summary = [
+    season.enabled ? `Saison de ${season.size}, aller-retour (${seasonMatches} matchs)` : `Arbre de ${SLOTS}, sans saison`,
+    relics && 'reliques',
+    forge && season.enabled && 'forge du dé',
+    uniqueNames && 'noms uniques',
+    betting.enabled && `paris entre ${betting.names[0]} et ${betting.names[1]}`,
   ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <TipLayer className="fade-in relative isolate h-full">
@@ -269,44 +204,13 @@ export function TournamentSetupScreen({
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
 
-      {/* Titre, paris : au-dessus de l'arbre, qui occupe toute la scène */}
+      {/* Titre : au-dessus de l'arbre, qui occupe toute la scène */}
       <header className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
           <BackLink onClick={onBack}>Retour</BackLink>
           <h1 className="on-illus mt-1 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">
             Configuration du tournoi
           </h1>
-        </div>
-        <div className="flex items-center gap-2 pt-2 font-body text-[15px]">
-          <label className="flex cursor-pointer items-center gap-2 text-ink-2">
-            <input
-              type="checkbox"
-              checked={betting.enabled}
-              onChange={(e) => onBettingChange({ ...betting, enabled: e.target.checked })}
-              className="h-4 w-4 accent-amber-500"
-            />
-            <Icon name="coin-pile" className="h-5 w-5" /> Paris entre
-          </label>
-          {([0, 1] as const).map((i) => [
-            i === 1 && (
-              <span key="et" className="text-ink-3">
-                et
-              </span>
-            ),
-            <input
-              key={i}
-              value={betting.names[i]}
-              disabled={!betting.enabled}
-              maxLength={16}
-              aria-label={`Parieur ${i + 1}`}
-              onChange={(e) => {
-                const names: [string, string] = [...betting.names]
-                names[i] = e.target.value
-                onBettingChange({ ...betting, names })
-              }}
-              className={`h-9 w-36 rounded-(--r-xs) border bg-surface-1 px-2 font-bold disabled:opacity-40 ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
-            />,
-          ])}
         </div>
       </header>
 
@@ -360,25 +264,38 @@ export function TournamentSetupScreen({
               })}
             </RosterPalette>
 
-            {/* Les règles du tournoi : une tuile par réglage, trois par ligne */}
-            <section className="mt-3" aria-label="Règles">
-              <h2 className="font-display text-[22px] font-semibold tracking-wide text-ink-1">Règles</h2>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {rules.map((rule) => (
-                  <RuleTile key={rule.id} rule={rule} />
-                ))}
+            {/* Les règles en clair, et le bouton qui ouvre la boîte des options */}
+            <section className="mt-4 flex items-center gap-5 rounded-(--r-sm) border-2 border-line-2 bg-surface-1/70 py-3 pl-5 pr-3" aria-label="Options">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-[22px] font-semibold tracking-wide text-ink-1">Règles du tournoi</h2>
+                <p className="mt-1 font-body text-[18px] font-semibold leading-snug text-gold-200">{summary}</p>
+                <p className="mt-1 font-body text-[15px] leading-snug text-ink-2">
+                  {season.enabled
+                    ? `${build ? `${build}. ` : ''}Les ${SLOTS} premiers entrent dans l'arbre en têtes de série.`
+                    : relics
+                      ? 'Chaque victoire de l’arbre offre au vainqueur une relique à sa portée (hors finale).'
+                      : 'Personne ne gagne ni ne porte de relique.'}
+                </p>
               </div>
+              <Button
+                variant="secondary"
+                size="md"
+                icon="reglages"
+                onClick={() => {
+                  sfx.click()
+                  setOptionsOpen(true)
+                }}
+                aria-haspopup="dialog"
+                title="Saison, nombre de combattants, forge du dé, reliques, noms uniques, paris"
+              >
+                Options
+              </Button>
             </section>
 
             {/* Compte et actions : Valider est le seul bouton primaire de l'écran */}
             <div className="mt-auto flex items-center gap-3 pt-3">
               {season.enabled ? (
-                <p className="min-w-0 flex-1 font-body text-[14px] leading-snug text-ink-2">
-                  {season.size} combattants, aller-retour ({seasonMatches} matchs).{' '}
-                  {(relics || forge) &&
-                    `Chaque victoire rapporte ${relics && forge ? 'une relique puis une forge du dé, tour à tour' : relics ? 'une relique' : 'une forge du dé'}, jusqu'à ${BUILD_REWARDS}${relics && forge ? ' de chaque' : ''}. `}
-                  Les {SLOTS} premiers entrent dans l'arbre en têtes de série.
-                </p>
+                <span className="flex-1" />
               ) : (
                 <>
                   <span className={`font-data text-[22px] font-semibold tabular-nums ${complete ? 'text-good' : 'text-ink-2'}`}>
@@ -417,7 +334,201 @@ export function TournamentSetupScreen({
           </div>
         }
       />
+
+      {/* La boîte des options : un menu superposé, fermé par sa croix, par Échap ou par un clic à côté */}
+      {optionsOpen && (
+        // Le fond assombri et flouté : la boîte se lit comme un menu de jeu posé sur la scène
+        <div className="desk-in absolute inset-0 z-40 flex items-center justify-center bg-black/85 backdrop-blur-md" onClick={() => setOptionsOpen(false)}>
+          <TournamentOptions {...{ betting, onBettingChange, relics, onRelicsChange, forge, onForgeChange, uniqueNames, onUniqueNamesChange, season, onSeasonChange }} onClose={() => setOptionsOpen(false)} />
+        </div>
+      )}
     </TipLayer>
+  )
+}
+
+/** Les options du tournoi, celles de la boîte « Options » (`Props`, sans l'arbre ni la navigation). */
+type OptionProps = Pick<
+  Props,
+  'betting' | 'onBettingChange' | 'relics' | 'onRelicsChange' | 'forge' | 'onForgeChange' | 'uniqueNames' | 'onUniqueNamesChange' | 'season' | 'onSeasonChange'
+>
+
+/**
+ * La construction de la saison, en une phrase (season.ts : une récompense par match, aux premiers matchs de chacun,
+ * l'ordre d'un acte de campagne) ; vide sans saison, ou sans reliques ni forge.
+ */
+function buildText(seasonOn: boolean, relics: boolean, forge: boolean): string {
+  const rewards = seasonOn ? buildRewards({ relics, forge }) : []
+  if (rewards.length === 0) return ''
+  const forges = rewards.filter((k) => k === 'forge').length
+  const relicCount = rewards.length - forges
+  const list = [forges && `${forges} forges du dé`, relicCount && `${relicCount} reliques`].filter(Boolean).join(' et ')
+  return `Une récompense à chacun des ${rewards.length} premiers matchs de chaque combattant, gagné ou perdu (${list}), puis son build est figé`
+}
+
+/**
+ * La boîte « Options » (0.115.0, demande de l'utilisateur : « une petite box qui s'ouvre avec l'activation des options
+ * dedans ») : une tuile par option, deux par ligne, les noms des parieurs quand les paris sont activés, et la règle de
+ * la saison en clair. Elle se ferme par sa croix (l'écran la ferme aussi par Échap et par un clic à côté).
+ */
+export function TournamentOptions({
+  betting,
+  onBettingChange,
+  relics,
+  onRelicsChange,
+  forge,
+  onForgeChange,
+  uniqueNames,
+  onUniqueNamesChange,
+  season,
+  onSeasonChange,
+  onClose,
+}: OptionProps & { onClose: () => void }) {
+  const seasonMatches = season.size * (season.size - 1)
+  const build = buildText(season.enabled, relics, forge)
+  // La boîte « Options », dans l'ordre d'affichage : la saison et ce qui en dépend, puis le reste
+  const rules: Rule[] = [
+    {
+      kind: 'switch',
+      id: 'season',
+      label: 'Phase de saison',
+      states: ['Activée', 'Désactivée'],
+      on: season.enabled,
+      onToggle: () => onSeasonChange({ ...season, enabled: !season.enabled }),
+      title: season.enabled
+        ? `Championnat aller-retour à ${season.size} avant l'arbre : les ${SLOTS} premiers s'y qualifient. Pas de pari pendant la saison.`
+        : "Pas de saison : l'arbre seul",
+      visual: (
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${season.enabled ? 'text-gold-300' : 'text-ink-3'}`}>
+          <Glyph name="tournoi" size={24} />
+        </span>
+      ),
+    },
+    {
+      kind: 'choice',
+      id: 'size',
+      label: 'Combattants',
+      value: season.size,
+      options: SEASON_SIZES.map((n) => ({ value: n, label: String(n), title: `${n} participants, ${n * (n - 1)} matchs de saison` })),
+      onChange: (size) => onSeasonChange({ ...season, size: size as SeasonSize }),
+      state: `Aller-retour, ${seasonMatches} matchs`,
+      fixed: String(SLOTS),
+      unavailable: season.enabled ? undefined : 'Avec la saison',
+      title: season.enabled
+        ? `Les ${season.size} combattants de la saison sont tirés au sort au lancement, en équilibrant le roster`
+        : `Sans saison, l'arbre compte ${SLOTS} cases, placées à la main`,
+    },
+    {
+      kind: 'switch',
+      id: 'forge',
+      label: 'Forge du dé',
+      states: ['Activée', 'Désactivée'],
+      on: forge && season.enabled,
+      onToggle: () => onForgeChange(!forge),
+      unavailable: season.enabled ? undefined : 'Avec la saison',
+      title: !season.enabled
+        ? 'La forge du dé se gagne pendant la phase de saison : activez-la d’abord'
+        : forge
+          ? build
+          : 'Saison sans forge du dé : chacun garde son dé d’origine',
+      // Une face gravée du dé (le cadre arcane de la forge), éteinte quand la forge est coupée
+      visual: (
+        <span
+          className="forge-face shrink-0"
+          data-size="sm"
+          data-engraved={forge && season.enabled ? '' : undefined}
+          style={{ width: 32, height: 32, opacity: forge && season.enabled ? 1 : 0.45 }}
+        >
+          {DIE_FACES}
+        </span>
+      ),
+    },
+    {
+      kind: 'switch',
+      id: 'relics',
+      label: 'Reliques',
+      states: ['Activées', 'Désactivées'],
+      on: relics,
+      onToggle: () => onRelicsChange(!relics),
+      title: !relics
+        ? 'Tournoi sans reliques : personne n’en gagne ni n’en porte'
+        : season.enabled
+          ? `${build} ; l'arbre n'en donne plus`
+          : 'Chaque victoire de l’arbre offre au vainqueur une relique à sa portée (hors finale)',
+      // Le sceau s'éteint quand le système est désactivé
+      visual: <RelicSeal relic={SWITCH_RELIC} size={36} spent={!relics} />,
+    },
+    {
+      kind: 'switch',
+      id: 'uniqueNames',
+      label: 'Noms uniques',
+      states: ['Activés', 'Désactivés'],
+      on: uniqueNames,
+      onToggle: () => onUniqueNamesChange(!uniqueNames),
+      title: uniqueNames
+        ? 'Chaque participant reçoit une épithète de son personnage (Gorak le Borgne, Elaria Flèche-Grise)'
+        : 'Les doublons sont numérotés (Gorak I, Gorak II)',
+    },
+    {
+      kind: 'switch',
+      id: 'betting',
+      label: 'Paris',
+      states: ['Activés', 'Désactivés'],
+      on: betting.enabled,
+      onToggle: () => onBettingChange({ ...betting, enabled: !betting.enabled }),
+      title: betting.enabled
+        ? `${betting.names[0]} et ${betting.names[1]} parient des Deniers sur chaque match de l’arbre, cotes cachées jusqu’au règlement`
+        : 'Tournoi sans paris',
+      visual: <Icon name="coin-pile" className={`h-8 w-8 shrink-0 ${betting.enabled ? '' : 'opacity-45 grayscale'}`} />,
+    },
+  ]
+  return (
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-label="Options du tournoi"
+      onClick={(e) => e.stopPropagation()}
+      className="bracket-panel w-[900px] border-2 border-gold-500/60 bg-surface-1 px-8 pb-8 pt-6 shadow-(--shadow-2)"
+    >
+      <header className="flex items-center gap-4">
+        <h2 className="flex-1 font-display text-[36px] font-bold leading-none tracking-wide text-gold-200">Options du tournoi</h2>
+        <IconButton icon="fermer" label="Fermer les options" onClick={onClose} />
+      </header>
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        {rules.map((rule) => (
+          <RuleTile key={rule.id} rule={rule} />
+        ))}
+      </div>
+      {/* Les noms des deux parieurs, quand les paris sont activés */}
+      {betting.enabled && (
+        <div className="mt-4 flex items-center gap-3 font-body text-[18px] text-ink-2">
+          <span>Parieurs :</span>
+          {([0, 1] as const).map((i) => [
+            i === 1 && (
+              <span key="et" className="text-ink-3">
+                et
+              </span>
+            ),
+            <input
+              key={i}
+              value={betting.names[i]}
+              maxLength={16}
+              aria-label={`Parieur ${i + 1}`}
+              onChange={(e) => {
+                const names: [string, string] = [...betting.names]
+                names[i] = e.target.value
+                onBettingChange({ ...betting, names })
+              }}
+              className={`h-12 w-52 rounded-(--r-xs) border-2 bg-surface-1 px-3 font-bold ${i === 0 ? 'border-emerald-400/60 text-emerald-300' : 'border-fuchsia-400/60 text-fuchsia-300'}`}
+            />,
+          ])}
+        </div>
+      )}
+      <p className="mt-5 font-body text-[16px] leading-snug text-ink-2">
+        {season.enabled
+          ? `${season.size} combattants tirés au sort, aller-retour (${seasonMatches} matchs). ${build ? `${build}. ` : ''}Les ${SLOTS} premiers entrent dans l'arbre en têtes de série.`
+          : `L'arbre seul : ${SLOTS} cases, placées à la main. Pas de forge du dé sans saison.`}
+      </p>
+    </section>
   )
 }
 

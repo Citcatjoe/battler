@@ -133,7 +133,7 @@ Mesuré sur 2 000 tournois simulés (15 matchs, deux joueurs qui parient au hasa
 
 ### 2.4 Création du tournoi
 
-Une case « Paris entre » et les noms des deux joueurs, sur l'écran de configuration. Sans paris, aucune trace de l'interface des paris dans le tournoi.
+L'option « Paris » et les noms des deux joueurs, dans la boîte « Options » de l'écran de configuration (0.115.0 ; une case « Paris entre » dans l'en-tête avant). Sans paris, aucune trace de l'interface des paris dans le tournoi.
 
 ---
 

@@ -174,7 +174,23 @@ Premier lot de compétences qui consomment une ressource du jeu ([SORTS.md](SORT
 | Aldric | — | Rancune (Ombre du serment brisé : « chaque coup reçu est une dette ») | ses coups encaissés, son critique ×2,5 | +15,9 |
 | Morgrut | Rancune (Masse) | Curée (Colère) | ses coups encaissés, son coup de 7 à 9 qui critique ×2 ; Pourfendre de son répertoire | Rancune +19,8 (au bord de la bande) ; Curée +4,0 avec Pourfendre gravé (laboratoire) |
 
-Thaldrin et Fanchon ne reçoivent rien. Le Rempart hérissé (Brokk, Thaldrin) est écarté. Morgrut n'est plus sans aucune compétence : son dé reste nu, mais la Rancune est sa compétence hors kit ; avec elle, il critique, et la Plume d'aigle (son partenaire, +0,30 en log-cote) lui est offerte en campagne.
+Thaldrin et Fanchon ne reçoivent rien au premier lot. Le Rempart hérissé du premier lot (Brokk, Thaldrin ; il lisait le Saignement) est écarté ; il revient au second lot sur l'armure temporaire vidée. Morgrut n'est plus sans aucune compétence : son dé reste nu, mais la Rancune est sa compétence hors kit ; avec elle, il critique, et la Plume d'aigle (son partenaire, +0,30 en log-cote) lui est offerte en campagne.
+
+### Le second lot (phase 8, 2026-10-25)
+
+Quatre compétences et quatre reliques pour les ressources restées sans consommateur : la Brûlure, la pièce, l'armure temporaire vidée, les dégâts renvoyés ([SORTS.md](SORTS.md) § 23, [RELIQUES.md](RELIQUES.md) § 15). Mêmes règles que le premier lot : hors kit chez son producteur, au répertoire de ceux qui produisent sa ressource, aucune sur un dé vanilla (empreinte inchangée). Mesures : `scripts/skills.report.ts` et `npm run relics`, 400 combats par duel.
+
+| Personnage | Hors kit | Répertoire (ajouts) | Ce qu'elle consomme chez lui | Gravée sur son 3 (rang I) | Relique faite pour lui |
+| --- | --- | --- | --- | --- | --- |
+| Thaldrin | Embrasement | — | ses Feux follets (face 1, forme humaine) | +8,0 | Soufflet de forge +7,8 |
+| Naraxes | Dé pipé | — | sa pièce (Pile ou face, face 2) | +9,7 | Pièce trouée +7,2 |
+| Brokk | Rempart hérissé | Vindicte (Représailles) | sa Peau de pierre (face 2) ; la Riposte et la Rétribution de son répertoire | +8,1 | Clous de pavois +7,5 |
+| Aldric | Vindicte | — | sa Riposte (face 2) et sa Rétribution (face 1) | +9,4 | Gantelet du talion +7,2 |
+| Ervald | — | Embrasement (fil Poison) | les Feux follets de son répertoire (Feux follets gravés sur le 4 : +9,6 de plus au laboratoire) | 0 seul | — |
+| Morgrut | — | Rempart hérissé (Masse) | la Peau de pierre de son répertoire | 0 seul | — |
+| Fanchon | — | Dé pipé (Fortune) | le Pile ou face de son répertoire | 0 seul | — |
+
+**Naraxes et son Poison** (audit du premier lot, point 2) : rien n'est changé. La décoction à 2 Poison dès le rang I (son rang II d'aujourd'hui) la mettait à 66,8 % contre le roster (+13,1, hors de la tolérance), et la Virulence n'y gagnait que +2,4 : le Poison posé au coup s'estompe encore avant son jet. Sa consommatrice de lot 2 est le Dé pipé, qui lit sa pièce.
 
 ## Personnalité (2026-10-20)
 

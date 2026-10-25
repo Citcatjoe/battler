@@ -93,3 +93,15 @@ import { Badge, SquareButton } from '../components/kit'
   <span class="bt-badge" aria-hidden="true">0/2</span>
 </button>
 ```
+
+## 6. Glyphe « réglages » (ajout du 2026-10-25)
+
+Ajouté pour le bouton **Options** de la configuration du tournoi, qui ouvre la boîte des options (saison, combattants, forge du dé, reliques, noms uniques, paris). Aucun glyphe du kit ne disait « réglages » ; `journal` (une liste) le remplaçait en attendant.
+
+**Anatomie** : trois curseurs horizontaux sur la grille 24, au trait du kit (1,75, `currentColor`, extrémités rondes) : une glissière à y = 6, 12 et 18, de x = 4 à x = 20, interrompue par un bouton rond de rayon 2 à x = 15, 9 et 17 (les positions alternent, pour qu'on lise des réglages et pas une liste). Aucun remplissage.
+
+**Usage** : une commande qui ouvre des réglages ou des options. Bouton secondaire à 18 px, comme les autres.
+
+```tsx
+<Button variant="secondary" size="md" icon="reglages" aria-haspopup="dialog">Options</Button>
+```

@@ -29,6 +29,9 @@ export type NamedTrigger =
   | 'hurt'
   | 'healed'
   | 'bloodied'
+  | 'shieldBroken'
+  | 'reflected'
+  | 'heads'
 
 /**
  * Une face au-delà de 3 (0.88.0, forge du dé, docs/CAMPAGNE.md § 4) : `face:4` se déclenche sur un 4 au dé.
@@ -59,6 +62,12 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   // d'une purge), jamais sur un soin nul (PV déjà pleins)
   healed: { label: 'Quand il regagne des PV', short: 'soin reçu' },
   bloodied: { label: 'La première fois qu’il passe sous la moitié de ses PV', short: 'mi-PV' },
+  // Phase 8, second lot : trois moments de famille, ajoutés une fois pour toutes (FAMILLES.md § 7). Le bouclier vidé
+  // (Garde) : un coup qui touche le porteur vide son armure temporaire ; les dégâts renvoyés (Représailles) : après
+  // l'étape qui renvoie (Riposte, Rétribution) ; pile (Fortune) : sa pièce tombe sur pile
+  shieldBroken: { label: 'Quand son armure temporaire est vidée', short: 'armure vidée' },
+  reflected: { label: 'Quand il renvoie des dégâts', short: 'dégâts renvoyés' },
+  heads: { label: 'Quand sa pièce tombe sur pile', short: 'pile' },
 }
 
 /** Le libellé de n'importe quel déclencheur, faces de la forge comprises. */
@@ -106,11 +115,13 @@ export type Effect =
    */
   | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number; orElse?: Exclude<Effect, { type: 'cleanse' }> }
   /**
-   * Relâche un statut à jauges (Rétribution) : la somme de ses jauges en dégâts directs à l'adversaire, ou sa part
-   * `share` arrondie au-dessous (0.107.0 : la moitié), au moins `min`, puis le statut est vidé. Le porteur ne remplit ses
-   * jauges que s'il a cet effet. `source` : comme `damage`.
+   * Relâche un statut d'un coup, puis le retire. Le sien (défaut, Rétribution) : la somme de ses jauges en dégâts directs
+   * à l'adversaire, ou sa part `share` arrondie au-dessous (0.107.0 : la moitié), au moins `min` ; le porteur ne remplit ses
+   * jauges que s'il a cet effet. Celui de l'adversaire (`from: 'opponent'`, Embrasement, phase 8) : tout ce qu'il lui
+   * ferait encore perdre (`StatusDef.releases`, la Brûlure : ses PV par tour × ses tours), ×`share`. `source` : comme
+   * `damage`.
    */
-  | { type: 'release'; status: StatusId; min: number; share?: number; target?: Target; source: DamageSource }
+  | { type: 'release'; status: StatusId; min: number; share?: number; from?: Target; target?: Target; source: DamageSource }
 
 /**
  * Condition à remplir pour qu'un événement se déclenche, évaluée au moment du déclencheur.
@@ -247,6 +258,9 @@ const pct = (ratio: number) => `${Math.round(ratio * 100)} %`
 /** Un statut multiplié (Virulence) : « double », « triple »… ; au-delà, « multiplie par N ». */
 const MULTIPLY: Record<number, string> = { 2: 'double', 3: 'triple', 4: 'quadruple' }
 
+/** Une relâche multipliée (Embrasement aiguisé) : « deux fois », « trois fois »… ; au-delà, en pourcentage. */
+const TIMES: Record<number, string> = { 2: 'deux fois', 3: 'trois fois', 4: 'quatre fois' }
+
 export function describeEffect(effect: Effect): string {
   const on = who(effect.target)
   switch (effect.type) {
@@ -275,6 +289,11 @@ export function describeEffect(effect: Effect): string {
       return `${def.name}${on ? ` ${on}` : ''} : ${lowerFirst(def.describe(status))}`
     }
     case 'release': {
+      // Embrasement : le statut de l'adversaire, relâché d'un coup (la Brûlure : tous les PV qu'il lui reste à brûler)
+      if (effect.from === 'opponent') {
+        const times = effect.share === undefined || effect.share === 1 ? '' : (TIMES[effect.share] ?? pct(effect.share))
+        return `l'adversaire perd d'un coup${times ? ` ${times}` : ''} ce que sa ${STATUSES[effect.status].name} lui ferait encore perdre, puis elle s'éteint`
+      }
       const share = effect.share === undefined ? 'la somme de ses jauges' : `${effect.share === 0.5 ? 'la moitié' : pct(effect.share)} de ses jauges (arrondie au-dessous, au moins ${effect.min})`
       return `relâche ${share} en dégâts directs${on ? ` ${on}` : ''}, puis les vide`
     }
@@ -388,7 +407,7 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     text: parts.join(' '),
     tags,
     posed: e.effects.flatMap((effect) =>
-      effect.type === 'applyStatus' ? [{ status: effect.status, target: effect.target ?? 'self' }] : effect.type === 'release' ? [{ status: effect.status, target: 'self' as const }] : [],
+      effect.type === 'applyStatus' ? [{ status: effect.status, target: effect.target ?? 'self' }] : effect.type === 'release' ? [{ status: effect.status, target: effect.from ?? 'self' }] : [],
     ),
   }
 }

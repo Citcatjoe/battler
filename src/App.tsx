@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Character } from './game/character'
-import { simulateCombat, type CombatResult, type Pair } from './game/combat'
+import { other, simulateCombat, type CombatResult, type Pair } from './game/combat'
 import { CHARACTERS, createCharacter } from './game/roster'
 import { nextSeed, reportCombat } from './game/debugConsole'
 import { recordMatch, recordTournamentWin } from './game/history'
@@ -155,12 +155,14 @@ export default function App() {
   const [seasonRun, setSeasonRun] = useState<'day' | 'all' | null>(null)
   /** Réglage de l'écran de configuration : tournoi avec ou sans reliques, gardé pour le tournoi suivant */
   const [relicsEnabled, setRelicsEnabled] = useState(true)
-  /** Forge du dé pendant la construction de la saison (désactivée par défaut), gardée pour le tournoi suivant */
-  const [forgeEnabled, setForgeEnabled] = useState(false)
+  /** Forge du dé pendant la construction de la saison (activée par défaut depuis la 0.115.0 : le tournoi est le bac à
+   * sable de la campagne), gardée pour le tournoi suivant */
+  const [forgeEnabled, setForgeEnabled] = useState(true)
   /** Noms uniques (une épithète par participant au lieu des chiffres romains), gardé pour le tournoi suivant */
   const [uniqueNames, setUniqueNames] = useState(false)
-  /** Phase de saison avant l'arbre (désactivée par défaut) et nombre de participants, gardés pour le tournoi suivant */
-  const [seasonSetup, setSeasonSetup] = useState<{ enabled: boolean; size: SeasonSize }>({ enabled: false, size: DEFAULT_SEASON_SIZE })
+  /** Phase de saison avant l'arbre (activée par défaut depuis la 0.115.0) et nombre de participants, gardés pour le
+   * tournoi suivant */
+  const [seasonSetup, setSeasonSetup] = useState<{ enabled: boolean; size: SeasonSize }>({ enabled: true, size: DEFAULT_SEASON_SIZE })
 
   // Campagne (docs/CAMPAGNE.md) : la partie en cours est enregistrée (campaign.ts, `saveRun`), et l'héritage de
   // chaque personnage aussi ; la rencontre en cours ne vit qu'en mémoire, le temps d'un combat.
@@ -521,28 +523,46 @@ export default function App() {
                 }
               : activeSeasonMatch !== null && tournament?.season
               ? (() => {
-                  // Journée de construction : la récompense du vainqueur, que l'observateur peut changer
-                  const reward = tournament.season.results[activeSeasonMatch]?.reward
-                  const name = screen.result.fighters[screen.result.winner].name
-                  const gain = reward ? (reward.kind === 'relic' ? ' et une relique' : ' et une forge du dé') : ''
+                  // Journée de construction : la récompense de chaque côté qui se construit encore, gagnant comme
+                  // perdant, que l'observateur peut changer ; celle du vainqueur d'abord
+                  const rewards = tournament.season.results[activeSeasonMatch]?.rewards
+                  const { winner } = screen.result
+                  const names = screen.result.fighters.map((f) => f.name)
+                  const sides = rewards ? ([winner, other(winner)] as const).flatMap((side) => {
+                    const reward = rewards[side]
+                    if (!reward) return []
+                    return [
+                      {
+                        side,
+                        reward:
+                          reward.kind === 'relic'
+                            ? {
+                                kind: 'relic' as const,
+                                offer: reward.offer.map(getRelic),
+                                chosen: reward.chosen,
+                                onChoose: (id: string) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, side, id)),
+                              }
+                            : {
+                                kind: 'forge' as const,
+                                offer: reward.offer,
+                                chosen: reward.chosen,
+                                onChoose: (step: ForgeStep) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, side, step)),
+                              },
+                      },
+                    ]
+                  }) : []
+                  const gain =
+                    sides.length === 2
+                      ? ' ; chacun reçoit une récompense'
+                      : sides.length === 1
+                        ? sides[0].side === winner
+                          ? ' et une récompense'
+                          : ` ; ${names[sides[0].side]} reçoit une récompense`
+                        : ''
                   return {
-                    label: `${name} prend les ${WIN_POINTS} points du match${gain}.`,
+                    label: `${names[winner]} prend les ${WIN_POINTS} points du match${gain}.`,
                     onContinue: backToSeason,
-                    reward:
-                      reward &&
-                      (reward.kind === 'relic'
-                        ? {
-                            kind: 'relic' as const,
-                            offer: reward.offer.map(getRelic),
-                            chosen: reward.chosen,
-                            onChoose: (id: string) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, id)),
-                          }
-                        : {
-                            kind: 'forge' as const,
-                            offer: reward.offer,
-                            chosen: reward.chosen,
-                            onChoose: (step: ForgeStep) => setTournament((t) => t && chooseSeasonReward(t, activeSeasonMatch, step)),
-                          }),
+                    rewards: sides,
                   }
                 })()
               : activeMatch && tournament
@@ -562,15 +582,20 @@ export default function App() {
                         }
                       : backToBracket,
                   // Récompense du vainqueur (hors finale) : son choix, que l'observateur peut changer
-                  reward: (() => {
+                  rewards: (() => {
                     const relic = tournament.results[matchKey(activeMatch)]?.relic
                     if (!relic) return undefined
-                    return {
-                      kind: 'relic' as const,
-                      offer: relic.offer.map(getRelic),
-                      chosen: relic.chosen,
-                      onChoose: (id: string) => setTournament((t) => t && chooseRelic(t, activeMatch, id)),
-                    }
+                    return [
+                      {
+                        side: screen.result.winner,
+                        reward: {
+                          kind: 'relic' as const,
+                          offer: relic.offer.map(getRelic),
+                          chosen: relic.chosen,
+                          onChoose: (id: string) => setTournament((t) => t && chooseRelic(t, activeMatch, id)),
+                        },
+                      },
+                    ]
                   })(),
                 }
               : undefined

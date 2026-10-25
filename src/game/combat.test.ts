@@ -10,6 +10,7 @@ import { EMOJI, testCharacter } from './test-utils'
 import { Character } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
+import { relicNeeds, skillNeeds } from './hooks'
 
 const run = (fighters: Pair<Character>, seed = 1) =>
   simulateCombat(fighters, { rng: seededRng(seed) })
@@ -1723,15 +1724,18 @@ describe('reliques (docs/RELIQUES.md)', () => {
   it('le registre est valide, chaque type a ses trois reliques, et aucune ne pose de malus sur l’adversaire', () => {
     expect(validateRelics()).toEqual([])
     // Les douze de la 0.77.0, trois par type, puis les quatre à scène de la 0.85.0, puis le lot des consommateurs
-    // (PROGRESSION.md § 13.3), cinq reliques de coup, puis les trois reliques de durée (phase 7). Les types restent
-    // internes : le joueur ne les voit pas (2026-10-24)
+    // (PROGRESSION.md § 13.3), cinq reliques de coup, puis les trois reliques de durée (phase 7), puis les quatre du second
+    // lot de la phase 8 (trois de coup sur un moment, une de coup à conditions). Les types restent internes : le joueur ne
+    // les voit pas (2026-10-24)
     const consumers = ['venom-vial', 'butcher-hook', 'abbey-incense', 'dented-shield', 'eagle-feather']
     const durability = ['quilted-gambison', 'bonesetter-salve', 'vigil-candle']
-    const plain = RELICS.filter((r) => !r.scene && !consumers.includes(r.id) && !durability.includes(r.id))
+    const lot2 = ['forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
+    const plain = RELICS.filter((r) => !r.scene && ![...consumers, ...durability, ...lot2].includes(r.id))
     expect(plain).toHaveLength(12)
     for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
     expect(consumers.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike', 'strike'])
     expect(durability.map((id) => relicKind(getRelic(id)))).toEqual(['stat', 'strike', 'turn'])
+    expect(lot2.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike'])
     expect(validateRelics([relic({ stats: { armor: 1 }, rollBonus: 1 })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'turn', turn: 0 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'hpBelow', ratio: 1.2 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
@@ -2020,6 +2024,11 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "+15 PV max et −1 à l'attaque",
       "+1 PV lors d'un coup reçu, 5x",
       '+2 armure temporaire tous les 3 tours',
+      // Phase 8, second lot
+      '+3 dégâts aux adversaires qui brûlent',
+      "3 dégâts directs à l'attaquant quand son armure temporaire est vidée",
+      '+1 PV quand il renvoie des dégâts',
+      '+2 coup de chance sur pile',
     ])
     for (const line of lines) {
       expect(line).not.toMatch(EMOJI)
@@ -3228,5 +3237,171 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
       const next = ofType(r, 'attack').find((x) => x.id > b.id && x.attack.attacker === 0 && !x.attack.dodged)
       if (next) expect(next.attack).toMatchObject({ crit: true, critForced: true })
     }
+  })
+})
+
+describe('phase 8, second lot : quatre consommatrices, trois moments, quatre reliques', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
+  /** La compétence gravée sur le 3, aiguisée `rank` fois (rang I : 0) */
+  const engraved = (c: Character, id: string, rank = 0) =>
+    c.withForge([{ op: 'engrave', face: 3, skill: skill(id) }, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face: 3 }))])
+  const reactions = (r: CombatResult, status: StatusId) => ofType(r, 'statusReaction').filter((b) => b.status === status)
+  const relicBeats = (r: CombatResult, id: string) => ofType(r, 'relic').filter((b) => b.relic === id)
+  /** Le coup `j` vide-t-il un bouclier du camp `side` ? */
+  const emptied = (r: CombatResult, j: number, side: 0 | 1) => {
+    const b = r.beats[j]
+    return b.type === 'attack' && b.attack.attacker !== side && b.attack.shields.some((sh) => r.beats[j - 1].state.statuses[side].find((x) => x.id === sh.status)?.stacks === sh.absorbed)
+  }
+
+  it('les quatre au roster, gravables, leurs textes courts et leur rang', () => {
+    expect(validateRoster()).toEqual([])
+    const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('morgrut'), id, rank).events.find((e) => e.id === id)!).text
+    expect(text('conflagration')).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 3 fois sa Brûlure restante, 1x.")
+    expect(text('conflagration', 1)).toBe("Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup 4 fois sa Brûlure restante, 1x.")
+    expect(text('loaded-die')).toBe('Sa prochaine pièce tombe sur pile, ×2 de plus, 1x.')
+    expect(text('loaded-die', 1)).toBe('Sa prochaine pièce tombe sur pile, ×3 de plus, 1x.')
+    expect(text('bristling-rampart')).toBe('+2 Épines acérées quand son armure temporaire est vidée.')
+    expect(text('bristling-rampart', 1)).toBe('+4 Épines acérées quand son armure temporaire est vidée.')
+    expect(text('vendetta')).toBe('+3 Ferveur quand il renvoie des dégâts.')
+    expect(text('vendetta', 1)).toBe('+6 Ferveur quand il renvoie des dégâts.')
+    for (const id of ['bristling-rampart', 'vendetta']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
+    for (const id of ['conflagration', 'loaded-die', 'bristling-rampart', 'vendetta']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
+  })
+
+  it('Embrasement : le coup qui touche un adversaire qui brûle relâche 3 fois sa Brûlure restante, l’éteint, et perd une charge ; sans Brûlure, la charge attend', () => {
+    const burner = ev('turnStart', [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 2000 }, [burner]), 'conflagration', rank), testCharacter('b', { maxHp: 2000 })])
+      const fired = reactions(r, 'conflagration')
+      expect(fired.length).toBeGreaterThan(5)
+      for (const b of fired) {
+        const before = r.beats[b.id - 1].state
+        const burn = before.statuses[1].find((s) => s.id === 'burn')!
+        expect(b).toMatchObject({ side: 0, trigger: 'hit' })
+        expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0 } })
+        expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: (3 + rank) * burn.stacks * burn.turns!, source: 'burn' }])
+        expect(stacksOf(b.state.statuses[1], 'burn')).toBe(0)
+        expect(stacksOf(b.state.statuses[0], 'conflagration')).toBe(stacksOf(before.statuses[0], 'conflagration') - 1)
+      }
+    }
+    // Sans Brûlure : aucune relâche, et les charges s'accumulent en attendant (un mécanisme : aucune purge ne les retire)
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'conflagration'), testCharacter('b', { maxHp: 400 })])
+    expect(reactions(dry, 'conflagration')).toEqual([])
+    expect(stacksOf(finalState(dry).statuses[0], 'conflagration')).toBeGreaterThan(3)
+    expect(STATUSES.conflagration.mechanic).toBe('skill')
+  })
+
+  it('Dé pipé : sa prochaine pièce tombe sur pile, ×2 de plus, une charge par pièce ; une pièce imposée garde sa valeur', () => {
+    const coin = ev('turnStart', [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }])
+    const loaded = ev('combatStart', [{ type: 'applyStatus', status: 'loadedDie', stacks: 2 }])
+    for (const seed of [1, 2, 3]) {
+      const r = run([testCharacter('a', { maxHp: 400 }, [loaded, coin]), testCharacter('b', { maxHp: 400 })], seed)
+      const coins = ofType(r, 'coin').filter((b) => b.side === 0)
+      // Les deux premières pièces, pipées : pile, et ce coup ×5 (le coup fixe de 1 rend encore 4)
+      for (const b of coins.slice(0, 2)) {
+        expect(b).toMatchObject({ heads: true, loadedBy: 'loadedDie' })
+        expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: 1 * (COIN_HEADS + 2 - 1), source: 'strike' }])
+      }
+      expect(stacksOf(coins[1].state.statuses[0], 'loadedDie')).toBe(0)
+      for (const b of coins.slice(2)) expect(b.loadedBy).toBeUndefined()
+    }
+    // Mode triche : la pièce imposée (face) reste face, la charge reste
+    const forced = runOn(2, [testCharacter('a', { maxHp: 400 }, [loaded, coin]), testCharacter('b', { maxHp: 400 })])
+    const first = ofType(forced, 'coin').find((b) => b.side === 0)!
+    expect(first).toMatchObject({ heads: false, forced: true })
+    expect(first.loadedBy).toBeUndefined()
+    expect(stacksOf(first.state.statuses[0], 'loadedDie')).toBe(2)
+  })
+
+  it('armure vidée (`shieldBroken`) : le Rempart hérissé donne 2 Épines acérées par charge à chaque coup qui vide l’armure temporaire de son porteur, et seulement alors', () => {
+    const shield = ev('turnStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 1 }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [shield]), 'bristling-rampart', rank), testCharacter('b', { maxHp: 400, attackMin: 3, attackMax: 3 })])
+      const fired = reactions(r, 'bristlingRampart')
+      expect(fired.length).toBeGreaterThan(5)
+      for (const b of fired) {
+        expect(b).toMatchObject({ side: 0, trigger: 'shieldBroken' })
+        expect(emptied(r, b.cause!, 0)).toBe(true)
+        const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'bristlingRampart')!
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'thorns', stacks: 2 * (held.stacks + rank) })])
+      }
+      // Chaque coup qui vide son armure, quand le Rempart était là au début du coup, le fait réagir
+      for (const a of ofType(r, 'attack'))
+        if (emptied(r, a.id, 0) && r.beats[a.id - 1].state.statuses[0].some((s) => s.id === 'bristlingRampart') && a.state.hp.every((h) => h > 0))
+          expect(fired.some((b) => b.cause === a.id)).toBe(true)
+    }
+    // Une armure qui ne se vide pas : aucun Rempart
+    const thick = ev('combatStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 1000 }])
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [thick]), 'bristling-rampart'), testCharacter('b', { maxHp: 400, attackMin: 3, attackMax: 3 })])
+    expect(reactions(r, 'bristlingRampart')).toEqual([])
+  })
+
+  it('dégâts renvoyés (`reflected`) : la Vindicte donne 3 Ferveur par charge après chaque Riposte qui rend une part du coup, l’étape de la Riposte pour cause', () => {
+    const riposte = ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [riposte]), 'vendetta', rank), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+      const fired = reactions(r, 'vendetta')
+      expect(fired.length).toBeGreaterThan(5)
+      for (const b of fired) {
+        expect(b).toMatchObject({ side: 0, trigger: 'reflected' })
+        const cause = r.beats[b.cause!]
+        expect(cause).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
+        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'vendetta')!
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks: 3 * (held.stacks + rank) })])
+      }
+    }
+    // La Rétribution qui relâche ses jauges renvoie aussi des dégâts : la Vindicte y répond, la Rétribution pour cause
+    const retribution = ev('naturalThree', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }], 'rel')
+    const vendetta = ev('combatStart', [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }], 'v')
+    const r = runOn(3, [testCharacter('a', { maxHp: 400 }, [vendetta, retribution]), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+    const fromRelease = reactions(r, 'vendetta').filter((b) => r.beats[b.cause!].type === 'event')
+    expect(fromRelease.length).toBeGreaterThan(3)
+  })
+
+  it('pile (`heads`) et les quatre reliques : chacune part à son moment, son étape pour cause', () => {
+    const pick = (id: string) => getRelic(id)
+    // Soufflet de forge : +3 au coup qui touche un adversaire qui brûle
+    const burner = ev('turnStart', [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }])
+    const bellows = run([testCharacter('a', { maxHp: 400 }, [burner]).withRelics([pick('forge-bellows')]), testCharacter('b', { maxHp: 400 })])
+    const mine = ofType(bellows, 'attack').filter((b) => b.attack.attacker === 0 && !b.attack.dodged)
+    for (const b of mine) expect(b.attack.relicBonus).toEqual([{ relic: 'forge-bellows', name: 'Soufflet de forge', amount: 3 }])
+    // Clous de pavois : 3 dégâts directs à l'attaquant, sur le coup qui vide l'armure temporaire
+    const shield = ev('turnStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 1 }])
+    const nails = run([testCharacter('a', { maxHp: 400 }, [shield]).withRelics([pick('pavise-nails')]), testCharacter('b', { maxHp: 400, attackMin: 3, attackMax: 3 })])
+    expect(relicBeats(nails, 'pavise-nails').length).toBeGreaterThan(5)
+    for (const b of relicBeats(nails, 'pavise-nails')) {
+      expect(emptied(nails, b.cause!, 0)).toBe(true)
+      expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: 3, source: 'strike' }])
+    }
+    // Gantelet du talion : +1 PV après chaque Riposte
+    const riposte = ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])
+    const gauntlet = run([testCharacter('a', { maxHp: 400 }, [riposte]).withRelics([pick('talion-gauntlet')]), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+    expect(relicBeats(gauntlet, 'talion-gauntlet').length).toBeGreaterThan(5)
+    for (const b of relicBeats(gauntlet, 'talion-gauntlet')) {
+      expect(gauntlet.beats[b.cause!]).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
+      expect(b.effects).toEqual([{ type: 'heal', target: 0, amount: 1 }])
+    }
+    // Pièce trouée : +2 Coup de chance sur pile, la pièce pour cause ; jamais sur face
+    const coin = ev('turnStart', [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }])
+    const holed = run([testCharacter('a', { maxHp: 400 }, [coin]).withRelics([pick('holed-coin')]), testCharacter('b', { maxHp: 400 })])
+    const heads = ofType(holed, 'coin').filter((b) => b.side === 0 && b.heads)
+    expect(heads.length).toBeGreaterThan(3)
+    for (const b of relicBeats(holed, 'holed-coin')) {
+      expect(holed.beats[b.cause!]).toMatchObject({ type: 'coin', side: 0, heads: true })
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'luckyStrike', stacks: 2 })])
+    }
+    expect(relicBeats(holed, 'holed-coin').length).toBe(heads.filter((b) => b.state.hp.every((h) => h > 0)).length)
+  })
+
+  it('offre pertinente : chacune ne vaut que chez qui produit sa ressource', () => {
+    expect(skillNeeds(skill('conflagration'))).toEqual(['status:burn'])
+    expect(skillNeeds(skill('loaded-die'))).toEqual(['status:coinFlip'])
+    expect(skillNeeds(skill('bristling-rampart'))).toEqual(['moment:shieldBreak'])
+    expect(skillNeeds(skill('vendetta'))).toEqual(['moment:reflect'])
+    expect(relicNeeds(getRelic('forge-bellows'))).toEqual(['status:burn'])
+    expect(relicNeeds(getRelic('pavise-nails'))).toEqual(['moment:shieldBreak'])
+    expect(relicNeeds(getRelic('talion-gauntlet'))).toEqual(['moment:reflect'])
+    expect(relicNeeds(getRelic('holed-coin'))).toEqual(['moment:heads'])
   })
 })

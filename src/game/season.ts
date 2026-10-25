@@ -1,11 +1,11 @@
 import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
-import type { RewardKind } from './campaign'
-import { autoForge, drawForgeOffer, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
+import { withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
+import { drawReward, REWARDS, type RewardKind } from './offers'
+import { getRelic } from './relics'
 import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
-import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
+import { CHARACTER_IDS, createCharacter } from './roster'
 import { computeStats } from './stats'
 import { fighterKey, fillSlots, labelEntrants, SLOTS, type Build, type Entrant, type MatchStatus, type Tournament } from './tournament'
 
@@ -16,11 +16,12 @@ import { fighterKey, fillSlots, labelEntrants, SLOTS, type Build, type Entrant, 
  * moteur ne produit jamais de nul (la limite de tours désigne aussi un vainqueur). Les 16 premiers du
  * classement entrent dans l'arbre, placés en têtes de série.
  *
- * Construction (0.92.0, demandes de l'utilisateur du 2026-10-22) : avec les reliques ou la forge du dé, chaque victoire
- * de saison rapporte au vainqueur sa récompense suivante, tour à tour relique puis forge (`Season.rewards`), jusqu'à trois
- * de chaque. Un combattant qui perd ses premiers matchs se construit plus tard, mais se construit. Une fois complet, il
- * se fige : il garde sa construction jusqu'à la fin de la saison et dans l'arbre, qui n'en donne plus. Ni pari pendant
- * la saison.
+ * Construction (0.92.0, demandes de l'utilisateur du 2026-10-22 ; rythme de la 0.115.0, choisi par l'agent sur mesure,
+ * docs/FEATURES.md § 8) : avec les reliques ou la forge du dé, chaque participant reçoit une récompense à **chacun de ses
+ * premiers matchs, gagné ou perdu**, dans l'ordre d'un acte de campagne (`REWARDS` : forge, relique, relique, forge…,
+ * quatre forges et six reliques), offerte comme en campagne (offers.ts : offre pertinente, orientée par l'écho). Au
+ * soir de la journée 10, tous portent un build d'acte complet ; il se fige alors jusqu'à la fin de la saison et dans
+ * l'arbre, qui n'en donne plus. Ni pari pendant la saison.
  *
  * Chaque combat a sa graine, dérivée de celle de la saison et du numéro du match, et la récompense aussi : toute la
  * saison se rejoue à l'identique. Seul un bilan compact de chaque match est gardé, jamais sa chronologie.
@@ -32,16 +33,13 @@ export const DEFAULT_SEASON_SIZE: SeasonSize = 24
 
 export const WIN_POINTS = 3
 
-/** Récompenses de chaque sorte pendant la construction (relique, forge du dé) : décision de l'utilisateur, 2026-10-22. */
-export const BUILD_REWARDS = 3
-
 /**
- * Les récompenses d'un participant, dans l'ordre de ses victoires. Reliques et forge alternent, relique d'abord (comme
- * l'acte de campagne) : six avec les deux, trois avec une seule, aucune sans.
+ * Les récompenses d'un participant, une par match dès son premier : l'ordre d'un acte de campagne (`REWARDS`), réduit
+ * aux sortes activées. Dix avec les deux (quatre forges, six reliques), six reliques seules, quatre forges seules,
+ * aucune sans.
  */
 export function buildRewards({ relics, forge }: { relics: boolean; forge: boolean }): RewardKind[] {
-  const kinds: RewardKind[] = [...(relics ? (['relic'] as const) : []), ...(forge ? (['forge'] as const) : [])]
-  return Array.from({ length: BUILD_REWARDS }, () => kinds).flat()
+  return REWARDS.filter((k) => (k === 'relic' ? relics : forge))
 }
 
 /**
@@ -62,7 +60,7 @@ export interface Fixture {
   away: number
 }
 
-/** Récompense d'un vainqueur qui se construit encore : l'offre, et son choix (au hasard, modifiable). */
+/** Récompense d'un participant qui se construit encore : l'offre, et son choix (au hasard, modifiable). */
 export type SeasonReward = { kind: 'relic'; offer: string[]; chosen: string } | { kind: 'forge'; offer: ForgeOffer[]; chosen: ForgeStep }
 
 /** Bilan compact d'un match de saison : de quoi tenir le classement et rejouer le combat (`seed`). */
@@ -79,8 +77,11 @@ export interface SeasonResult {
   damage: Pair<number>
   seed: number
   mode: CombatResult['mode']
-  /** Journée de construction : la récompense du vainqueur (absente si l'offre était vide) */
-  reward?: SeasonReward
+  /**
+   * Journée de construction : la récompense de chaque côté (0 = `home`, 1 = `away`), gagnant comme perdant ; `null` pour
+   * un côté déjà complet, ou dont l'offre était vide. Absente quand aucun des deux ne se construit plus.
+   */
+  rewards?: Pair<SeasonReward | null>
   /**
    * Rapport du combat (report.ts) : reliques déclenchées et faces jouées de chaque côté. Absent des matchs enregistrés
    * avant la 0.92 (le rapport de saison les ignore).
@@ -95,7 +96,7 @@ export interface Season {
   seed: number
   /** Résultats par numéro de match */
   results: Record<number, SeasonResult>
-  /** Récompenses de chaque participant, dans l'ordre de ses victoires (`buildRewards`) ; vide : personne ne construit */
+  /** Récompenses de chaque participant, une par match dans l'ordre (`buildRewards`) ; vide : personne ne construit */
   rewards: RewardKind[]
 }
 
@@ -198,17 +199,17 @@ const involves = (f: Fixture, entrant: number) => f.home === entrant || f.away =
 
 /**
  * Ce qu'un participant a construit avant la journée `beforeDay` (toute la saison par défaut) : les récompenses de ses
- * victoires, dans l'ordre. Elle se déduit des résultats : rien d'autre ne la stocke.
+ * matchs, dans l'ordre. Elle se déduit des résultats : rien d'autre ne la stocke.
  */
 export function buildOf(season: Season, entrant: number, beforeDay = Infinity): Build {
   const build: Build = { relics: [], forge: [] }
   for (const day of seasonSchedule(season.entrants.length).slice(0, beforeDay)) {
     if (buildDone(season, build)) break
     const f = day.find((g) => involves(g, entrant))!
-    const r = season.results[f.number]
-    if (!r?.reward || (r.winner === 0 ? f.home : f.away) !== entrant) continue
-    if (r.reward.kind === 'relic') build.relics.push(r.reward.chosen)
-    else build.forge.push(r.reward.chosen)
+    const reward = season.results[f.number]?.rewards?.[f.home === entrant ? 0 : 1]
+    if (!reward) continue
+    if (reward.kind === 'relic') build.relics.push(reward.chosen)
+    else build.forge.push(reward.chosen)
   }
   return build
 }
@@ -243,37 +244,31 @@ export function seasonFighters(season: Season, number: number): Pair<Character> 
 }
 
 /**
- * La récompense d'un vainqueur qui n'a pas fini sa construction : la suivante de `Season.rewards`, son offre (reliques
- * qu'il n'a pas, ou opérations jouables sur son dé) et son choix, au hasard. Tirée à la graine du match : regardé ou
- * simulé, même récompense.
+ * La récompense d'un participant qui n'a pas fini sa construction, gagnant ou perdant : la suivante de `Season.rewards`,
+ * tirée comme en campagne (`drawReward`, offers.ts : reliques et compétences à sa portée, la première carte à l'écho de
+ * son build), et son choix, au hasard. Tirée à la graine du match et du côté : regardé ou simulé, même récompense.
  */
-function drawReward(season: Season, number: number, entrant: number): SeasonReward | undefined {
-  const { day } = fixtureOf(season, number)
-  const build = buildOf(season, entrant, day)
-  if (buildDone(season, build)) return undefined
+function seasonReward(season: Season, number: number, side: Side): SeasonReward | null {
+  const f = fixtureOf(season, number)
+  const entrant = side === 0 ? f.home : f.away
+  const build = buildOf(season, entrant, f.day)
+  if (buildDone(season, build)) return null
   const kind = season.rewards[build.relics.length + build.forge.length]
-  const rng = seededRng((seasonMatchSeed(season, number) ^ 0x72657764) | 0)
-  if (kind === 'relic') {
-    const offer = drawOffer(build.relics, rng, RELIC_IDS)
-    const chosen = autoPick(offer, rng)
-    return chosen ? { kind, offer, chosen } : undefined
-  }
-  const def = createCharacter(season.entrants[entrant].characterId).definition
-  const offer = drawForgeOffer(def, build.forge, rng, ENGRAVABLE_SKILLS)
-  const chosen = autoForge(def, build.forge, offer, rng)
-  return chosen ? { kind, offer, chosen } : undefined
+  const rng = seededRng((seasonMatchSeed(season, number) ^ (side === 0 ? 0x72657764 : 0x70657264)) | 0)
+  const drawn = drawReward({ championId: season.entrants[entrant].characterId, ...build }, kind, rng)
+  if (drawn.kind === 'relic') return drawn.choice ? { kind: 'relic', offer: drawn.offer, chosen: drawn.choice } : null
+  return drawn.choice ? { kind: 'forge', offer: drawn.offer, chosen: drawn.choice } : null
 }
 
 /**
- * Enregistre l'issue d'un match de saison (renvoie un nouveau tournoi) : son bilan compact et, si le vainqueur se
- * construit encore, sa récompense. Refuse un match déjà joué ou pas encore prêt (`seasonStatus`), hors
+ * Enregistre l'issue d'un match de saison (renvoie un nouveau tournoi) : son bilan compact et la récompense de chaque
+ * côté qui se construit encore. Refuse un match déjà joué ou pas encore prêt (`seasonStatus`), hors
  * saison, ou un combat dont les combattants (personnages, reliques, forge) ne sont pas ceux du match : l'appelant
  * ne doit alors rien enregistrer.
  */
 export function withSeasonResult(t: Tournament, number: number, result: CombatResult): Tournament {
   if (!inSeason(t)) throw new Error('Pas de saison en cours')
   const { season } = t
-  const { home, away } = fixtureOf(season, number)
   const status = seasonStatus(season, number)
   if (status === 'done') throw new Error(`Match de saison ${number} déjà joué`)
   if (status === 'pending') throw new Error(`Match de saison ${number} pas encore prêt : ses participants n'ont pas fini leur construction`)
@@ -282,7 +277,7 @@ export function withSeasonResult(t: Tournament, number: number, result: CombatRe
   if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match de saison ${number}`)
   const stats = computeStats(result)
   const hp = finalState(result).hp
-  const reward = drawReward(season, number, result.winner === 0 ? home : away)
+  const rewards: Pair<SeasonReward | null> = [seasonReward(season, number, 0), seasonReward(season, number, 1)]
   const compact: SeasonResult = {
     winner: result.winner,
     turns: result.turns,
@@ -290,39 +285,41 @@ export function withSeasonResult(t: Tournament, number: number, result: CombatRe
     damage: [stats[0].totalDamage + stats[1].effectDamageTaken, stats[1].totalDamage + stats[0].effectDamageTaken],
     seed: result.seed ?? seasonMatchSeed(season, number),
     mode: result.mode,
-    ...(reward && { reward }),
+    ...((rewards[0] || rewards[1]) && { rewards }),
     report: combatReport(result),
   }
   return { ...t, season: { ...season, results: { ...season.results, [number]: compact } } }
 }
 
 /**
- * L'observateur change le choix du vainqueur d'un match à récompense (écran de victoire) : une relique de l'offre, ou
- * une opération de l'offre sur une face qu'elle peut viser. Refusé si le vainqueur a déjà joué un match suivant : il
+ * L'observateur change le choix d'un côté (`side`) d'un match à récompense (écran de fin) : une relique de l'offre, ou
+ * une opération de l'offre sur une face qu'elle peut viser. Refusé si ce participant a déjà joué un match suivant : il
  * s'est battu avec l'autre.
  */
-export function chooseSeasonReward(t: Tournament, number: number, choice: string | ForgeStep): Tournament {
+export function chooseSeasonReward(t: Tournament, number: number, side: Side, choice: string | ForgeStep): Tournament {
   if (!inSeason(t)) throw new Error('Pas de saison en cours')
   const { season } = t
   const r = season.results[number]
-  if (!r?.reward) throw new Error(`Aucune récompense au match de saison ${number}`)
+  const current = r?.rewards?.[side]
+  if (!r?.rewards || !current) throw new Error(`Aucune récompense de ce côté au match de saison ${number}`)
   const f = fixtureOf(season, number)
-  const winner = r.winner === 0 ? f.home : f.away
-  const later = seasonFixtures(season).filter((g) => g.day > f.day && involves(g, winner))
-  if (later.some((g) => season.results[g.number])) throw new Error(`Le vainqueur du match ${number} a déjà rejoué : sa récompense ne change plus`)
+  const entrant = side === 0 ? f.home : f.away
+  const later = seasonFixtures(season).filter((g) => g.day > f.day && involves(g, entrant))
+  if (later.some((g) => season.results[g.number])) throw new Error(`Ce participant du match ${number} a déjà rejoué : sa récompense ne change plus`)
   let reward: SeasonReward
-  if (r.reward.kind === 'relic') {
-    if (typeof choice !== 'string' || !r.reward.offer.includes(choice)) throw new Error(`Relique non proposée au match de saison ${number}`)
-    reward = { ...r.reward, chosen: choice }
+  if (current.kind === 'relic') {
+    if (typeof choice !== 'string' || !current.offer.includes(choice)) throw new Error(`Relique non proposée au match de saison ${number}`)
+    reward = { ...current, chosen: choice }
   } else {
     const offered =
-      typeof choice !== 'string' && r.reward.offer.some((o) => o.op === choice.op && (o.op !== 'engrave' || (choice.op === 'engrave' && choice.skill.id === o.skill.id)))
+      typeof choice !== 'string' && current.offer.some((o) => o.op === choice.op && (o.op !== 'engrave' || (choice.op === 'engrave' && choice.skill.id === o.skill.id)))
     if (!offered) throw new Error(`Opération non proposée au match de saison ${number}`)
     // La face doit être de celles que l'opération peut viser sur son dé de ce jour-là (erreur sinon)
-    withForgeStep(createCharacter(season.entrants[winner].characterId).definition, buildOf(season, winner, f.day).forge, choice)
-    reward = { ...r.reward, chosen: choice }
+    withForgeStep(createCharacter(season.entrants[entrant].characterId).definition, buildOf(season, entrant, f.day).forge, choice)
+    reward = { ...current, chosen: choice }
   }
-  return { ...t, season: { ...season, results: { ...season.results, [number]: { ...r, reward } } } }
+  const rewards: Pair<SeasonReward | null> = side === 0 ? [reward, r.rewards[1]] : [r.rewards[0], reward]
+  return { ...t, season: { ...season, results: { ...season.results, [number]: { ...r, rewards } } } }
 }
 
 /**

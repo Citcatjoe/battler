@@ -14,13 +14,12 @@ import {
   heritableGains,
   isBossNode,
   opponentOf,
-  REWARDS,
   secondSkillOf,
   type CampaignRun,
   type Encounter,
   type HeritageItem,
-  type PendingReward,
 } from '../game/campaign'
+import { REWARDS, type PendingReward } from '../game/offers'
 import type { Character } from '../game/character'
 import { rollFace } from '../game/events'
 import { stepLabel } from '../game/forge'

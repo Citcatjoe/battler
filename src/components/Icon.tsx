@@ -101,6 +101,11 @@ export type IconName =
   | 'harvest'
   | 'virulence'
   | 'sentence'
+  // Phase 8, second lot (2026-10-25) : planche à peindre (briefs : docs/SORTS.md § 23) ; une icône absente laisse un trou
+  | 'conflagration'
+  | 'loaded-die'
+  | 'bristling-rampart'
+  | 'vendetta'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -150,6 +155,11 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   quarry: 'quarry',
   sentence: 'sentence',
   grudge: 'grudge',
+  // Phase 8, second lot : de même
+  conflagration: 'conflagration',
+  loadedDie: 'loaded-die',
+  bristlingRampart: 'bristling-rampart',
+  vendetta: 'vendetta',
 }
 
 /**

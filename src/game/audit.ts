@@ -8,11 +8,11 @@
  */
 import { STAT_KEYS } from './character'
 import { DAMAGE_SOURCES, type DamageKind } from './damage'
-import { beatEffects, diceOf, effectiveStats, relicIsInert, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
+import { beatEffects, diceOf, effectiveStats, relicIsInert, type AppliedEffect, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
-import { charges, isMechanic, STATUSES, type Status } from './statuses'
+import { charges, CONFLAGRATION_TIMES, isMechanic, RAMPART_THORNS, STATUSES, VENDETTA_MOMENTUM, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
 
@@ -34,6 +34,29 @@ function holdsBefore(c: Condition, side: Side, before: Snapshot, r: CombatResult
     case 'lacksStatus':
       return !find(before.statuses[who], c.status)
   }
+}
+
+/** Les trois moments de famille du second lot de la phase 8 (moteur : `combat.ts`). */
+type FamilyMoment = 'shieldBroken' | 'reflected' | 'heads'
+
+/**
+ * L'étape `j` ouvre-t-elle ce moment pour `side` ? Son armure vidée : un coup qui le touche et vide un de ses boucliers
+ * (il absorbe tout ce qui lui restait) ; ses dégâts renvoyés : sa Riposte qui rend une part du coup, sa Rétribution qui
+ * relâche ses jauges sur l'adversaire ; sa pile : sa pièce tombée sur pile. Recompté sans le moteur.
+ */
+function opensMoment(r: CombatResult, j: number, side: Side, on: FamilyMoment): boolean {
+  const b = r.beats[j]
+  if (on === 'heads') return b.type === 'coin' && b.side === side && b.heads
+  if (on === 'shieldBroken') {
+    if (b.type !== 'attack' || b.attack.attacker === side || b.attack.dodged || b.attack.replaced) return false
+    const before = j > 0 ? r.beats[j - 1].state.statuses[side] : []
+    return b.attack.shields.some((sh) => find(before, sh.status)?.stacks === sh.absorbed)
+  }
+  const returned = (e: AppliedEffect | undefined) => e?.type === 'damage' && e.target !== side && e.amount > 0
+  if (b.type === 'statusReaction') return b.side === side && b.trigger === 'hurt' && !!STATUSES[b.status].reflectsHit && b.effects.some(returned)
+  if (b.type !== 'event' || b.event.side !== side) return false
+  const asked = r.fighters[side].events.find((e) => e.id === b.event.eventId)?.effects ?? []
+  return asked.some((e, k) => e.type === 'release' && e.from !== 'opponent' && returned(b.event.effects[k]))
 }
 
 /** Un audit qui accumule les anomalies (par type, avec un exemple) et les mécaniques rencontrées. */
@@ -299,6 +322,47 @@ export function createAudit() {
           const reacted = caused.some((x) => x.type === 'statusReaction' && x.status === 'sentence' && x.side === side)
           if (!reacted && !caused.some((x) => x.state.hp.some((h) => h === 0)) && s.hp.every((h) => h > 0)) flag('sentence non déclenchée', r, i, `${b.type} côté ${side}`)
         }
+      // Phase 8, second lot. Rempart hérissé : il réagit au coup qui vide une armure temporaire de son porteur (ce coup pour
+      // cause), de ses charges du début du coup : 2 Épines acérées par charge. Vindicte : à chaque étape où son porteur
+      // renvoie des dégâts (Riposte, Rétribution), cette étape pour cause : 3 Ferveur par charge. Embrasement : au coup qui
+      // touche un adversaire qui brûle, il relâche sa Brûlure (3 fois ce qu'elle ferait encore perdre), l'éteint et perd une
+      // charge. Chacun part à chaque fois, sauf si le combat finit avant
+      const diedAfter = (j: number) => r.beats.some((x) => (x.id === j || x.cause === j) && x.state.hp.includes(0))
+      const reactedTo = (j: number, side: Side, id: string) => r.beats.some((x) => x.cause === j && x.type === 'statusReaction' && x.status === id && x.side === side)
+      if (b.type === 'statusReaction' && b.status === 'bristlingRampart') {
+        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'bristlingRampart') : undefined
+        const thorns = b.effects[0]
+        if (b.trigger !== 'shieldBroken' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'shieldBroken')) flag('rempart hors d’une armure vidée', r, i, `${b.trigger}`)
+        else if (b.effects.length !== 1 || thorns?.type !== 'applyStatus' || thorns.status !== 'thorns' || thorns.target !== b.side || thorns.stacks !== RAMPART_THORNS * charges(held))
+          flag('rempart : épines fausses', r, i, JSON.stringify(b.effects))
+        else see('rempart hérissé')
+      }
+      if (b.type === 'statusReaction' && b.status === 'vendetta') {
+        const held = find(prev.statuses[b.side], 'vendetta')
+        const fervor = b.effects[0]
+        if (b.trigger !== 'reflected' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'reflected')) flag('vindicte hors d’un renvoi', r, i, `${b.trigger}`)
+        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.target !== b.side || fervor.stacks !== VENDETTA_MOMENTUM * charges(held))
+          flag('vindicte : ferveur fausse', r, i, JSON.stringify(b.effects))
+        else see('vindicte')
+      }
+      if (b.type === 'statusReaction' && b.status === 'conflagration') {
+        const held = find(prev.statuses[b.side], 'conflagration')
+        const burn = find(prev.statuses[1 - b.side], 'burn')
+        const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const struck = (cause?.type === 'attack' && cause.attack.attacker === b.side && !cause.attack.dodged && !cause.attack.replaced) || (cause?.type === 'coin' && cause.side === b.side && cause.heads)
+        const loss = b.effects[0]
+        const wanted = held && burn ? Math.floor(STATUSES.burn.releases!(burn) * (CONFLAGRATION_TIMES + (held.power ?? 0))) : 0
+        if (b.trigger !== 'hit' || !struck || !held || !burn) flag('embrasement hors d’un coup sur un adversaire qui brûle', r, i, `${b.trigger} ${cause?.type}`)
+        else if (b.effects.length !== 1 || loss?.type !== 'damage' || loss.target !== 1 - b.side || loss.amount !== wanted) flag('embrasement : relâche fausse', r, i, `${JSON.stringify(b.effects)} pour ${wanted}`)
+        else if (find(s.statuses[1 - b.side], 'burn') || (find(s.statuses[b.side], 'conflagration')?.stacks ?? 0) !== held.stacks - 1) flag('embrasement : brûlure ou charge restée', r, i, '')
+        else see('embrasement')
+      }
+      for (const side of [0, 1] as const) {
+        if (opensMoment(r, i, side, 'shieldBroken') && find(prev.statuses[side], 'bristlingRampart') && !diedAfter(i) && !reactedTo(i, side, 'bristlingRampart')) flag('rempart non déclenché', r, i, `côté ${side}`)
+        if (opensMoment(r, i, side, 'reflected') && find(prev.statuses[side], 'vendetta') && !diedAfter(i) && !reactedTo(i, side, 'vendetta')) flag('vindicte non déclenchée', r, i, `côté ${side}`)
+        const touched = (b.type === 'attack' && b.attack.attacker === side && !b.attack.dodged && !b.attack.replaced) || (b.type === 'coin' && b.side === side && b.heads && !!STATUSES[b.status].coinToss?.headsTouches)
+        if (touched && find(prev.statuses[side], 'conflagration') && find(s.statuses[1 - side], 'burn') && !diedAfter(i) && !reactedTo(i, side, 'conflagration')) flag('embrasement non déclenché', r, i, `côté ${side}`)
+      }
       // Règle 9 (2026-10-21) : pendant un coup (attaque ou pièce, jusqu'au coup, au jet ou à la rafale suivante),
       // seul un statut déjà là au début du coup réagit. Les jauges ne réagissent pas : elles se remplissent.
       if (b.type === 'statusReaction' && !STATUSES[b.status].fillsOnHurt) {
@@ -497,8 +561,15 @@ export function createAudit() {
         const dmg = b.effects.reduce((t, e) => t + (e.type === 'damage' && e.target !== b.side ? e.amount : 0), 0)
         const strike = r.beats.slice(0, i).reverse().find((x) => x.type === 'attack')
         // Pile : ce coup ×N, la pièce rend encore N − 1 fois les PV qu'il a retirés (phase 5 bis, ×3 depuis la 0.107.0 ; son
-        // intensité, Pile ou face aiguisée, monte N en 0.110.0)
-        const more = find(prev.statuses[b.side], b.status)?.power ?? 0
+        // intensité, Pile ou face aiguisée, monte N en 0.110.0). Dé pipé (phase 8, second lot) : sans pièce imposée, une
+        // charge du lanceur fait tomber pile et monte N de son bonus et de son intensité ; la charge part
+        const loaded = b.forced ? undefined : prev.statuses[b.side].find((x) => STATUSES[x.id].loadsCoin !== undefined)
+        if (loaded) {
+          if (!b.heads || b.loadedBy !== loaded.id) flag('dé pipé ignoré', r, i, `${b.heads} ${b.loadedBy}`)
+          else if ((find(s.statuses[b.side], loaded.id)?.stacks ?? 0) !== loaded.stacks - 1) flag('dé pipé non consommé', r, i, '')
+          else see('pièce pipée')
+        } else if (b.loadedBy) flag('pièce pipée sans dé pipé', r, i, b.loadedBy)
+        const more = (find(prev.statuses[b.side], b.status)?.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0)
         if (b.heads ? strike?.type !== 'attack' || !toss || dmg !== strike.attack.dealt * (toss.multiplier + more - 1) : dmg !== 0) flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
         if (!strike || strike.turn !== b.turn) flag('pièce sans le coup qui la lance', r, i, '')
         else see('pièce lancée aussitôt')
@@ -808,6 +879,25 @@ export function createAudit() {
               if (!spent && !relic.cooldown && !relic.when && !relicIsInert(relic, side, b.state, r.fighters)) pending = i
             }
           })
+        }
+        // Phase 8, second lot : l'armure vidée, les dégâts renvoyés, pile. Sa cause est l'étape qui ouvre le moment (le coup
+        // qui vide l'armure, l'étape qui renvoie, la pièce sur pile) ; sans limite ni condition, elle part à chacune, sauf si le
+        // combat finit avant ou si son effet serait nul (un soin à PV pleins)
+        if (t.type === 'strike' && (t.on === 'shieldBroken' || t.on === 'reflected' || t.on === 'heads')) {
+          const on = t.on
+          for (const i of fires) {
+            const cause = r.beats[i].cause
+            if (cause === undefined || !opensMoment(r, cause, side, on)) flag('relique hors de son moment', r, i, `${relic.id} sur ${on}`)
+            else see(`relique : ${on}`)
+          }
+          if (!relic.charges && !relic.cooldown && !relic.when)
+            r.beats.forEach((b, j) => {
+              if (!opensMoment(r, j, side, on) || fires.some((f) => r.beats[f].cause === j)) return
+              const after = [b, ...r.beats.filter((x) => x.cause === j)]
+              if (after.some((x) => x.state.hp.includes(0) || relicIsInert(relic, side, x.state, r.fighters))) return
+              flag('relique de moment manquée', r, j, `${relic.id} sur ${on}`)
+            })
+          continue
         }
         // Soin reçu (Encens de l'abbaye) : chaque étape qui lui rend des PV ouvre sa fenêtre, une fois, et rien d'autre
         if (t.type === 'strike' && t.on === 'healed') {

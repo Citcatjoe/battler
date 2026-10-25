@@ -13,6 +13,11 @@
  * Leurs statuts d'essai portaient les ids du registre (`quarry`, `sentence`, `grudge`, ce dernier en version Ferveur) et
  * auraient remplacé les statuts livrés ; la Virulence y était émulée par des seuils, que `fromStatus` remplace. Leurs
  * résultats restent dans docs/SORTS.md § 22 et dans les rapports `logs/lab/2026-10-24-22-*`.
+ *
+ * Séries 24 à 27 (phase 8, second lot : Embrasement, Dé pipé, Rempart hérissé, Vindicte et leurs reliques ; la décoction
+ * de Naraxes à 2 Poison) : retirées quand le lot est entré au registre, comme le premier (statuts d'essai `lab…`, et un
+ * Dé pipé d'essai à l'ancienne forme de `loadsCoin`). Leurs résultats restent dans docs/SORTS.md § 23 et dans les
+ * rapports `logs/lab/2026-10-24-23-56-16`, `2026-10-24-23-59-27`, `2026-10-25-00-01-08` et `2026-10-25-00-02-29`.
  */
 import type { Character, CharacterStats } from '../../src/game/character'
 import { faceTrigger, type CharacterEvent } from '../../src/game/events'

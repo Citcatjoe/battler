@@ -3,7 +3,8 @@ import { finalState, type CombatResult, type Pair } from './combat'
 import { stepKey, type ForgeStep } from './forge'
 import { computeStats, type FighterStats } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
-import { autoPick, drawOffer, getRelic } from './relics'
+import { drawReward } from './offers'
+import { getRelic } from './relics'
 import { createCharacter } from './roster'
 import type { Season } from './season'
 import { uniqueNames } from './epithets'
@@ -184,7 +185,8 @@ export function matchFighters(t: Tournament, ref: MatchRef): [Character, Charact
 /**
  * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi), avec la récompense du vainqueur
  * (hors finale, si le tournoi a ses reliques et pas de saison : après une saison, chacun garde sa construction
- * figée) : `OFFER_SIZE` reliques qu'il n'a pas encore, et son choix, tiré au hasard (`rng`).
+ * figée) : l'offre de relique de la campagne (`drawReward`, offers.ts : reliques à sa portée qu'il n'a pas encore, la
+ * première à l'écho de son build), et son choix, tiré au hasard (`rng`).
  * Refuse un match déjà joué ou pas encore prêt, ou un combat dont les combattants (personnages, reliques, forge)
  * ne sont pas ceux du match : l'appelant ne doit alors rien enregistrer.
  */
@@ -195,8 +197,11 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
   const actual = result.fighters.map(fighterKey)
   if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
-  const offer = t.relics && !t.season && ref.round < ROUNDS - 1 ? drawOffer(relicsOf(t, winner), rng) : []
-  const chosen = autoPick(offer, rng)
+  const drawn =
+    t.relics && !t.season && ref.round < ROUNDS - 1
+      ? drawReward({ championId: t.entrants[winner].characterId, forge: t.entrants[winner].build?.forge ?? [], relics: relicsOf(t, winner) }, 'relic', rng)
+      : undefined
+  const relic = drawn?.kind === 'relic' && drawn.choice ? { offer: drawn.offer, chosen: drawn.choice } : undefined
   return {
     ...t,
     results: {
@@ -210,7 +215,7 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
         players: [a, b],
         stats: computeStats(result),
         skills: [skillCounts(result, 0), skillCounts(result, 1)],
-        ...(chosen && { relic: { offer, chosen } }),
+        ...(relic && { relic }),
       },
     },
   }

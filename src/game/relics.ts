@@ -18,9 +18,10 @@ import { lowerFirst, STATUSES, type StatusId } from './statuses'
 
 /**
  * Moments sur lesquels une relique de coup peut se déclencher (ceux du porteur) : les moments d'un coup, et le soin
- * reçu (`healed`, lot des consommateurs, docs/PROGRESSION.md § 13.3), qui nourrit ses coups suivants.
+ * reçu (`healed`, lot des consommateurs, docs/PROGRESSION.md § 13.3), qui nourrit ses coups suivants ; depuis le second
+ * lot de la phase 8, son armure temporaire vidée, ses dégâts renvoyés et sa pièce sur pile.
  */
-export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt', 'healed'] as const satisfies readonly Trigger[]
+export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt', 'healed', 'shieldBroken', 'reflected', 'heads'] as const satisfies readonly Trigger[]
 export type StrikeTrigger = (typeof STRIKE_TRIGGERS)[number]
 
 /** Les moments d'un coup qui touche : seuls à connaître les PV que ce coup a retirés (condition `hitAtLeast`). */
@@ -311,6 +312,41 @@ export const RELICS: readonly Relic[] = [
     cooldown: 3,
     effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
   },
+  /*
+   * Phase 8, second lot (docs/RELIQUES.md § 15) : un consommateur par ressource restée sans lui. La Brûlure (Feux follets),
+   * l'armure temporaire vidée (Peau de pierre, Chandelle, Géode, Écu), les dégâts renvoyés (Riposte, Rétribution) et la
+   * pièce sur pile (Pile ou face). Chacune ne vaut que chez ses producteurs, comme la Fiole et le Croc : l'offre pertinente
+   * ne la propose qu'à eux (`relicNeeds`).
+   */
+  {
+    // Laboratoire (série 24) : +2 valait +6,1 chez Thaldrin, au partenaire de justesse (+0,25) ; +3, +7,8 (+0,32)
+    id: 'forge-bellows',
+    name: 'Soufflet de forge',
+    flavor: 'Un petit soufflet de cuir plissé entre deux planchettes de chêne, trois clous de laiton. Là où le feu couve déjà, il le ranime.',
+    rollBonus: 3,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'burn' }],
+  },
+  {
+    id: 'pavise-nails',
+    name: 'Clous de pavois',
+    flavor: 'Un éclat de pavois peint, trois gros clous forgés encore plantés. Quand le bouclier cède, ses pointes restent.',
+    trigger: { type: 'strike', on: 'shieldBroken' },
+    effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike' }],
+  },
+  {
+    id: 'talion-gauntlet',
+    name: 'Gantelet du talion',
+    flavor: 'La manchette d’un gantelet de fer, une courroie bouclée, une seule pointe sur le dos. Chaque coup rendu lui rend un peu de souffle.',
+    trigger: { type: 'strike', on: 'reflected' },
+    effects: [{ type: 'heal', amount: 1 }],
+  },
+  {
+    id: 'holed-coin',
+    name: 'Pièce trouée',
+    flavor: 'Une vieille pièce de cuivre percée, sur un cordon noué, deux étoiles frappées côté pile. Pile, la chance relance.',
+    trigger: { type: 'strike', on: 'heads' },
+    effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 2 }],
+  },
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
@@ -385,10 +421,13 @@ const STRIKE_MOMENT: Record<StrikeTrigger, string> = {
   dodge: "lors d'une esquive",
   hurt: "lors d'un coup reçu",
   healed: 'à chaque soin reçu',
+  shieldBroken: 'quand son armure temporaire est vidée',
+  reflected: 'quand il renvoie des dégâts',
+  heads: 'sur pile',
 }
 
 /** Les adversaires qui portent ce statut, en un mot quand il existe (« +2 dégâts aux adversaires empoisonnés »). */
-const BEARERS: Partial<Record<StatusId, string>> = { poison: 'empoisonnés', bleed: 'qui saignent' }
+const BEARERS: Partial<Record<StatusId, string>> = { poison: 'empoisonnés', bleed: 'qui saignent', burn: 'qui brûlent' }
 
 /**
  * Une condition, en clair, après l'effet : sur un bonus de coup, le statut que porte l'adversaire (« aux adversaires
@@ -453,7 +492,7 @@ export function describeRelic(r: Relic): RelicDescription {
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
     r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
-    ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge'))),
+    ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge' || t.on === 'shieldBroken'))),
   ]
     .filter(Boolean)
     .join(' et ')

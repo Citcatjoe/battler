@@ -58,6 +58,10 @@ export type StatusId =
   | 'quarry'
   | 'sentence'
   | 'grudge'
+  | 'conflagration'
+  | 'loadedDie'
+  | 'bristlingRampart'
+  | 'vendetta'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -162,6 +166,12 @@ export interface StatusDef {
    */
   coinToss?: { multiplier: number; headsTouches?: boolean }
   /**
+   * Dé pipé (phase 8, second lot) : la prochaine pièce du porteur tombe sur pile, et pile vaut ×N de plus (son intensité
+   * en ajoute) ; une charge par pièce. La pièce se tire quand même (la suite du hasard reste celle d'un combat sans lui) ;
+   * une pièce imposée par l'observateur (mode triche) garde sa valeur et laisse la charge.
+   */
+  loadsCoin?: number
+  /**
    * S'estompe : chaque fois qu'il agit (`onTurnStart`, `onTurnEnd` ou une réaction), le statut perd une
    * charge, et disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3,
    * 2, puis 1 PV ; saignement 2 : 2 puis 1 PV, sur les deux prochains coups reçus). Il n'a donc pas de
@@ -186,6 +196,11 @@ export interface StatusDef {
    * (Brûlure 3 : 3 PV à la fin de ses 3 prochains tours). `validateRoster` refuse une durée en plus.
    */
   turnsFromStacks?: boolean
+  /**
+   * Ce que le statut ferait encore perdre à son porteur, relâché d'un coup par l'adversaire (Embrasement, phase 8, second
+   * lot ; effet `release` avec `from: 'opponent'`). La Brûlure : ses PV par tour × ses tours restants.
+   */
+  releases?: (s: Status) => number
   /** Modifie les dégâts reçus par le porteur, avant l'armure (le coup garde au moins 1) */
   modifyIncoming?: (damage: number, s: Status) => number
   /** Immunité : aucun statut de cette polarité ne peut être posé sur le porteur (sans consommer de charge) */
@@ -259,6 +274,17 @@ const quarryStrikes = (s: Status) => QUARRY_STRIKES * s.stacks
 /** Sentence (phase 8, 0.114.0) : PV perdus par l'adversaire à chaque soin du porteur, par charge, et son plafond. */
 const SENTENCE_LOSS = 1
 const SENTENCE_CAP = 2
+
+/*
+ * Phase 8, second lot (docs/SORTS.md § 23) : les valeurs mesurées au laboratoire (séries 24 à 26, 400 combats par duel).
+ * Embrasement : la Brûlure relâchée ×3 (son rang : ×1 de plus). Dé pipé : pile ×2 de plus sur la pièce qu'il pipe (son
+ * rang : ×1 de plus). Rempart hérissé : Épines acérées par charge, à chaque armure temporaire vidée. Vindicte : Ferveur
+ * par charge, à chaque renvoi.
+ */
+export const CONFLAGRATION_TIMES = 3
+export const LOADED_DIE_BONUS = 2
+export const RAMPART_THORNS = 2
+export const VENDETTA_MOMENTUM = 3
 
 /** Un nombre en toutes lettres, en tête de phrase (au-delà, en chiffres). */
 const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
@@ -419,6 +445,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     turnsFromStacks: true,
     onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks, source: 'burn' }],
     expiresAt: 'turnEnd',
+    // Embrasement (phase 8, second lot) : relâchée d'un coup, ses PV par tour pour chacun de ses tours restants
+    releases: (s) => s.stacks * (s.turns ?? 1),
   },
   vulnerable: {
     name: 'Vulnérable',
@@ -566,6 +594,64 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     decays: true,
     reactions: { hurt: () => [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] },
+  },
+  /*
+   * Phase 8, second lot (docs/SORTS.md § 23) : quatre consommateurs des ressources restées sans eux. L'Embrasement (la
+   * Brûlure) et le Dé pipé (la pièce) sont des mécanismes de leur compétence, des charges qui attendent leur moment (comme
+   * Pile ou face) : ni bonus ni malus, aucune purge ne les retire. Le Rempart hérissé (l'armure temporaire vidée) et la
+   * Vindicte (les dégâts renvoyés) sont des auras.
+   */
+  conflagration: {
+    name: 'Embrasement',
+    look: { glow: 'rgba(251,146,60,0.85)' },
+    polarity: 'positive',
+    summary: `Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup ${CONFLAGRATION_TIMES} fois ce que sa Brûlure lui ferait encore perdre, et la Brûlure s'éteint. Sans Brûlure, la charge attend ; une charge par Brûlure relâchée. Se cumule.`,
+    describe: (s) => `Son prochain coup qui touche un adversaire qui brûle lui fait perdre d'un coup ${CONFLAGRATION_TIMES + (s.power ?? 0)} fois sa Brûlure restante, ${s.stacks}x`,
+    badge: (s) => `×${CONFLAGRATION_TIMES + (s.power ?? 0)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    mechanic: 'skill',
+    decays: true,
+    // Une relâche sans Brûlure ne part pas (combat.ts, `fire`) : la charge attend un coup sur un adversaire qui brûle
+    reactions: { hit: (s) => [{ type: 'release', status: 'burn', from: 'opponent', min: 0, share: CONFLAGRATION_TIMES + (s.power ?? 0), target: 'opponent', source: 'burn' }] },
+    power: (n) => `×${n} de plus`,
+  },
+  loadedDie: {
+    name: 'Dé pipé',
+    look: { glow: 'rgba(167,139,250,0.85)' },
+    polarity: 'positive',
+    summary: `Sa prochaine pièce (Pile ou face) tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}. Sans pièce, la charge attend ; une charge par pièce. Se cumule.`,
+    describe: (s) => `Sa prochaine pièce tombe sur pile, ×${LOADED_DIE_BONUS + (s.power ?? 0)} de plus, ${s.stacks}x`,
+    badge: (s) => `+×${LOADED_DIE_BONUS + (s.power ?? 0)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    mechanic: 'skill',
+    loadsCoin: LOADED_DIE_BONUS,
+    power: (n) => `pile ×${n} de plus`,
+  },
+  bristlingRampart: {
+    name: 'Rempart hérissé',
+    look: { aura: 'rgba(148,163,184,0.6)' },
+    polarity: 'positive',
+    summary: `Chaque fois que son armure temporaire est vidée, il gagne ${RAMPART_THORNS} Épines acérées par charge. Permanente, elle se cumule.`,
+    describe: (s) => `+${RAMPART_THORNS * charges(s)} Épines acérées quand son armure temporaire est vidée`,
+    badge: (s) => `+${RAMPART_THORNS * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { shieldBroken: (s) => [{ type: 'applyStatus', status: 'thorns', stacks: RAMPART_THORNS * charges(s) }] },
+    power: (n) => `+${RAMPART_THORNS * n} Épines acérées par armure vidée`,
+  },
+  vendetta: {
+    name: 'Vindicte',
+    look: { aura: 'rgba(253,186,116,0.5)' },
+    polarity: 'positive',
+    summary: `Chaque fois qu'il renvoie des dégâts (Riposte, Rétribution), il gagne ${VENDETTA_MOMENTUM} Ferveur par charge : son prochain coup qui touche fait autant de plus. Permanente, elle se cumule.`,
+    describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur quand il renvoie des dégâts`,
+    badge: (s) => `+${VENDETTA_MOMENTUM * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { reflected: (s) => [{ type: 'applyStatus', status: 'momentum', stacks: VENDETTA_MOMENTUM * charges(s) }] },
+    power: (n) => `+${VENDETTA_MOMENTUM * n} Ferveur par renvoi`,
   },
 
   /* Humains et hommes-lézards (0.30.0). */

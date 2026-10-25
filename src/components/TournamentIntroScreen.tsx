@@ -48,8 +48,8 @@ export function TournamentIntroScreen({ onHome, tournamentProgress, onNewTournam
           </p>
           <div className="mx-auto mt-4 h-px w-48 bg-gradient-to-r from-transparent via-amber-500/70 to-transparent" />
           <p className="mt-4 text-lg leading-relaxed text-stone-300">
-            16 participants, des huitièmes de finale jusqu'à la finale. Un même personnage peut être engagé plusieurs
-            fois. Chaque match se joue ou se simule, et compte dans les statistiques.
+            16 participants, des huitièmes de finale jusqu'à la finale, précédés en option d'une saison où chacun compose
+            son build, reliques et forge du dé, sur ses premiers matchs. Chaque match se joue ou se simule.
           </p>
         </div>
         <div className="flex flex-col items-center gap-3">

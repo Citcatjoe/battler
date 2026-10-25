@@ -8,7 +8,8 @@ import { ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
-import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type PendingReward } from '../game/campaign'
+import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter } from '../game/campaign'
+import type { PendingReward } from '../game/offers'
 import { Character } from '../game/character'
 import { CampaignScreen } from './CampaignScreen'
 import { STATUS_IDS } from '../game/statuses'
@@ -45,7 +46,7 @@ import { RecordsScreen } from './RecordsScreen'
 import { TournamentIntroScreen } from './TournamentIntroScreen'
 import { StatSheet } from './StatSheet'
 import { HomeScreen } from './HomeScreen'
-import { TournamentSetupScreen } from './TournamentSetupScreen'
+import { TournamentOptions, TournamentSetupScreen } from './TournamentSetupScreen'
 import { SeasonScreen } from './SeasonScreen'
 import { createSeasonTournament, DEFAULT_SEASON_SIZE, pendingOfDay, simulateSeasonMatches } from '../game/season'
 import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from './Betting'
@@ -467,17 +468,32 @@ describe('écrans', () => {
     const setup = renderToString(
       <TournamentSetupScreen slots={slots} onChange={noop} onValidate={noop} onBack={noop} betting={betting} onBettingChange={noop} relics onRelicsChange={noop} forge onForgeChange={noop} uniqueNames={false} onUniqueNamesChange={noop} season={season} onSeasonChange={noop} />,
     )
-    expect(setup).toContain('role="switch" aria-checked="true"')
-    // Le panneau « Règles » : tous les réglages, nombre de combattants compris
-    for (const label of ['Règles', 'Phase de saison', 'Nombre de combattants', 'Forge du dé', 'Reliques', 'Noms uniques']) expect(setup).toContain(label)
-    // Sans saison, la forge du dé ne s'actionne pas, et l'arbre se remplit à la main
-    expect(setup).toContain('Avec la saison')
+    // L'écran ne garde que l'essentiel : le résumé des options et le bouton qui ouvre leur boîte, fermée
+    expect(setup).toContain('Options')
+    expect(setup).toContain('aria-haspopup="dialog"')
+    expect(setup).not.toContain('role="dialog"')
+    expect(setup).not.toContain('role="switch"')
+    expect(setup).toContain('paris entre karma et MiaMiaM')
     expect(setup).toContain('Compléter')
+    // La boîte « Options » : tous les réglages, nombre de combattants et paris compris, et sa croix
+    const options = { betting, onBettingChange: noop, relics: true, onRelicsChange: noop, forge: true, onForgeChange: noop, uniqueNames: false, onUniqueNamesChange: noop, season, onSeasonChange: noop }
+    const box = renderToString(<TournamentOptions {...options} onClose={noop} />)
+    expect(box).toContain('role="dialog"')
+    expect(box).toContain('role="switch" aria-checked="true"')
+    for (const label of ['Phase de saison', 'Combattants', 'Forge du dé', 'Reliques', 'Noms uniques', 'Paris', 'Fermer les options', 'aria-label="Parieur 1"']) expect(box).toContain(label)
+    // Sans saison, la forge du dé ne s'actionne pas
+    expect(box).toContain('Avec la saison')
+    expect(box.match(EMOJI)?.[0]).toBeUndefined()
+    // Avec la saison, reliques et forge : la règle de construction, une récompense par match aux dix premiers
+    const seasonBox = renderToString(<TournamentOptions {...options} season={{ ...season, enabled: true }} onClose={noop} />)
+    expect(seasonBox).toContain('Une récompense à chacun des 10 premiers matchs de chaque combattant, gagné ou perdu (4 forges du dé et 6 reliques)')
     expect(setup).not.toContain('de la saison</span>')
     const setupOff = renderToString(
       <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} forge={false} onForgeChange={noop} uniqueNames onUniqueNamesChange={noop} season={{ ...season, enabled: true }} onSeasonChange={noop} />,
     )
-    expect(setupOff).toContain('Désactivées')
+    // Saison sans reliques ni forge : le résumé le dit, et la boîte montre les options coupées
+    expect(setupOff).toContain('Saison de 24, aller-retour (552 matchs) · noms uniques')
+    expect(renderToString(<TournamentOptions {...options} relics={false} forge={false} season={{ ...season, enabled: true }} onClose={noop} />)).toContain('Désactivées')
     // Avec la saison : l'arbre de 16 cases vides, chacune avec son rang de saison ; ni placement ni « Compléter », et le
     // lancement est toujours permis (les participants se tirent au lancement)
     expect(setupOff).toContain('1er de la saison')
@@ -547,8 +563,11 @@ describe('écrans', () => {
     render(<MatchupScreen mode="tournament" fighters={[holder, createCharacter('gorak')]} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
     // Écran de victoire d'un match de tournoi : le bouton principal mène à la récompense
     const reward = { kind: 'relic' as const, offer: RELICS.slice(0, 3), chosen: RELICS[1].id, onChoose: noop }
-    const end = renderToString(<EndScreen result={result} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop, reward }} />)
+    const end = renderToString(<EndScreen result={result} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop, rewards: [{ side: result.winner, reward }] }} />)
     expect(end).toContain('Récompense')
+    // En saison, les deux côtés qui se construisent encore : le bouton le dit au pluriel
+    const both = renderToString(<EndScreen result={result} onReplay={noop} onMenu={noop} tournament={{ label: 'x', onContinue: noop, rewards: [{ side: 0, reward }, { side: 1, reward }] }} />)
+    expect(both).toContain('Récompenses')
     render(<RelicCard relic={draught} selected mark="Choix de Brokk" onSelect={noop} />)
   })
 

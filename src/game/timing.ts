@@ -119,6 +119,16 @@ export const FLURRY_CHAIN_HOLD = 500
 export const WOUND_HOLD = 700
 /** Un décompte ou une expiration qui n'ont pas été montrés avec l'effet de leur statut */
 export const COUNT_HOLD = 650
+/**
+ * Ce qu'un soin déclenche (la Sentence, l'Encens de l'abbaye) part au milieu de sa lecture, comme une réaction au coup
+ * au milieu de la sienne : déduit de `READ_HOLD` (docs/MISE_EN_SCENE.md, M41)
+ */
+export const EFFECT_REACTION_LEAD = Math.round(READ_HOLD / 2)
+/**
+ * Temps de lecture minimal d'un label sous le dé : un nouveau dé (en rafale, le coup suivant) ne l'efface pas avant.
+ * C'est aussi la durée de son apparition (`.special-badge`) : un label n'est jamais retiré avant d'être posé (M9)
+ */
+export const LABEL_READ = 450
 
 /* ---------- Pile ou face ---------- */
 
@@ -136,6 +146,11 @@ export const COIN_TAILS_HOLD = 1000
 export const FLOAT_LIFE = 1700
 /** Vie d'un titre (`.dodge-text` : nom de compétence, ESQUIVE, CRITIQUE) */
 export const TITLE_LIFE = 1500
+/**
+ * Un texte flottant garde son rang le début de sa vie, le temps de monter (ou de tomber) assez pour laisser la place : un
+ * autre texte du même combattant, dans le même sens, qui part avant prend un rang libre (docs/MISE_EN_SCENE.md, M31)
+ */
+export const FLOAT_ROW = 600
 /** Secousse de l'arène sur un gros coup ; sur un critique ou un coup lourd */
 export const SHAKE = 350
 export const SHAKE_HEAVY = 500
@@ -152,4 +167,5 @@ export const TIMING_VARS = {
   '--t-read': `${READ_HOLD}ms`,
   '--t-float': `${FLOAT_LIFE}ms`,
   '--t-title': `${TITLE_LIFE}ms`,
+  '--t-label': `${LABEL_READ}ms`,
 } as const

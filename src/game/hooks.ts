@@ -21,8 +21,12 @@ import type { StatusId } from './statuses'
  * est écrit en code (crochets du moteur). Les opérations de forge viendront avec la forge du d6 (phase 5).
  */
 
-/** Les moments d'un combat, du point de vue de la brique : il touche, il encaisse, il critique, il esquive, il est esquivé, il se soigne. */
-export type Moment = 'hit' | 'hurt' | 'crit' | 'dodge' | 'missed' | 'heal'
+/**
+ * Les moments d'un combat, du point de vue de la brique : il touche, il encaisse, il critique, il esquive, il est esquivé, il
+ * se soigne ; depuis le second lot de la phase 8 : son armure temporaire est vidée, il renvoie des dégâts, sa pièce tombe
+ * sur pile.
+ */
+export type Moment = 'hit' | 'hurt' | 'crit' | 'dodge' | 'missed' | 'heal' | 'shieldBreak' | 'reflect' | 'heads'
 
 export type Hook =
   /** Un statut et ses charges (Poison sur l'adversaire, Esquive améliorée sur soi) */
@@ -43,7 +47,7 @@ export interface Hooks {
   hinders: Hook[]
 }
 
-type StatusHooks = { produces?: readonly Hook[]; consumes?: readonly Hook[]; side: Target }
+type StatusHooks = { produces?: readonly Hook[]; consumes?: readonly Hook[]; hinders?: readonly Hook[]; side: Target }
 
 /**
  * Ce que fait chaque statut, au-delà de lui-même (« status:X » est toujours produit par qui le pose), et de quel côté on
@@ -51,7 +55,8 @@ type StatusHooks = { produces?: readonly Hook[]; consumes?: readonly Hook[]; sid
  */
 export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   guaranteedCrit: { side: 'self', produces: ['moment:crit'] },
-  bonusArmor: { side: 'self' },
+  // Un bouclier qui s'use : un coup qui le vide ouvre le moment « armure vidée » (phase 8, second lot)
+  bonusArmor: { side: 'self', produces: ['moment:shieldBreak'] },
   poison: { side: 'opponent', produces: ['damage:temporal'] },
   bleed: { side: 'opponent', consumes: ['moment:hit'], produces: ['damage:temporal'] },
   regeneration: { side: 'self', produces: ['moment:heal'] },
@@ -77,11 +82,11 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant', 'moment:heads'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
-  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant'] },
+  riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant', 'moment:reflect'] },
   retribution: { side: 'self', consumes: ['moment:hurt'] },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
   firefly: { side: 'opponent', produces: ['moment:hit', 'damage:instant'] },
@@ -99,12 +104,21 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   quarry: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   sentence: { side: 'self', consumes: ['moment:heal'], produces: ['damage:instant'] },
   grudge: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:crit'] },
+  // Phase 8, second lot : l'Embrasement lit la Brûlure au coup qui touche et la retire (une brique qui la lit aussi en voit
+  // moins) ; le Dé pipé lit la pièce et fait tomber pile ; le Rempart hérissé vit des armures vidées, la Vindicte des renvois
+  conflagration: { side: 'self', consumes: ['moment:hit', 'status:burn'], hinders: ['status:burn'], produces: ['damage:temporal'] },
+  loadedDie: { side: 'self', consumes: ['status:coinFlip'], produces: ['moment:heads', 'damage:instant'] },
+  bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal'] },
+  vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
 function triggerHook(t: Trigger): Hook | undefined {
   if (t === 'naturalMax') return 'face:max'
   if (t === 'healed') return 'moment:heal'
+  if (t === 'shieldBroken') return 'moment:shieldBreak'
+  if (t === 'reflected') return 'moment:reflect'
+  if (t === 'heads') return 'moment:heads'
   const face = rollFace(t)
   if (face !== undefined) return `face:${face}`
   return t === 'hit' || t === 'hurt' || t === 'crit' || t === 'dodge' || t === 'missed' ? `moment:${t}` : undefined
@@ -116,11 +130,20 @@ function addEffect(into: Hooks, e: Effect) {
       const s = STATUS_HOOKS[e.status]
       into.produces.push(`status:${e.status}`, ...(s.produces ?? []))
       into.consumes.push(...(s.consumes ?? []))
+      into.hinders.push(...(s.hinders ?? []))
       break
     }
     case 'damage':
+      into.produces.push(`damage:${damageKind(e.source)}`)
+      break
     case 'release':
       into.produces.push(`damage:${damageKind(e.source)}`)
+      // Ses jauges relâchées : des dégâts renvoyés. Le statut de l'adversaire relâché (Embrasement) : elle le lit, et le
+      // retire (une brique qui le lit aussi en voit moins)
+      if (e.from === 'opponent') {
+        into.consumes.push(`status:${e.status}`)
+        into.hinders.push(`status:${e.status}`)
+      } else into.produces.push('moment:reflect')
       break
     case 'heal':
       into.produces.push('moment:heal')
@@ -177,26 +200,28 @@ export function relicHooks(r: Relic): Hooks {
 
 /**
  * Ce qu'une relique attend pour pouvoir partir, et que le combat seul ne donne pas (2026-10-24, offre de campagne) : les
- * statuts que ses conditions lisent chez l'adversaire (la Fiole de venin, le Poison), un soin reçu, une esquive ou un
- * critique (un personnage sans chance d'esquive ni de critique n'en fait jamais sans une brique qui les donne). Une
- * face, un coup qui touche ou un coup reçu arrivent toujours.
+ * statuts que ses conditions lisent chez l'adversaire (la Fiole de venin, le Poison), un soin reçu, une esquive, un
+ * critique (un personnage sans chance d'esquive ni de critique n'en fait jamais sans une brique qui les donne) ; depuis
+ * le second lot de la phase 8, une armure temporaire vidée, des dégâts renvoyés, une pièce sur pile. Une face, un coup
+ * qui touche ou un coup reçu arrivent toujours.
  */
 export function relicNeeds(r: Relic): Hook[] {
   const needs: Hook[] = []
   for (const c of r.when ?? []) if (c.type === 'hasStatus' && c.who === 'opponent') needs.push(`status:${c.status}`)
-  const on = r.trigger?.type === 'strike' ? r.trigger.on : undefined
-  if (on === 'healed' || on === 'dodge' || on === 'crit') needs.push(on === 'healed' ? 'moment:heal' : `moment:${on}`)
+  const on = r.trigger?.type === 'strike' ? triggerHook(r.trigger.on) : undefined
+  if (on && RARE_MOMENTS.includes(on)) needs.push(on)
   return needs
 }
 
-/** Les moments qu'un combat ne donne pas à coup sûr : un soin, une esquive, un critique. */
-const RARE_MOMENTS: readonly Hook[] = ['moment:heal', 'moment:dodge', 'moment:crit']
+/** Les moments qu'un combat ne donne pas à coup sûr : un soin, une esquive, un critique, une armure vidée, un renvoi, une pile. */
+const RARE_MOMENTS: readonly Hook[] = ['moment:heal', 'moment:dodge', 'moment:crit', 'moment:shieldBreak', 'moment:reflect', 'moment:heads']
 
 /**
  * Ce qu'une compétence attend pour servir (0.114.0, la règle de l'offre pertinente des reliques étendue aux compétences) :
  * les statuts que ses conditions ou ses charges lisent chez l'adversaire (la Curée, le Saignement ; la Virulence, le
- * Poison), et les moments rares que consomment les statuts qu'elle pose (la Sentence, un soin du porteur). Une compétence
- * dont un besoin n'est pas à la portée du champion est une gravure qui vaut 0 : la campagne ne l'offre pas.
+ * Poison), les moments rares que consomment les statuts qu'elle pose (la Sentence, un soin du porteur ; le Rempart
+ * hérissé, une armure vidée), et les statuts du porteur qu'ils lisent (le Dé pipé, une pièce). Une compétence dont un
+ * besoin n'est pas à la portée du champion est une gravure qui vaut 0 : la campagne ne l'offre pas.
  */
 export function skillNeeds(e: CharacterEvent): Hook[] {
   const needs: Hook[] = []
@@ -204,7 +229,7 @@ export function skillNeeds(e: CharacterEvent): Hook[] {
   for (const x of e.effects) {
     if (x.type !== 'applyStatus') continue
     if (x.fromStatus?.who === 'opponent') needs.push(`status:${x.fromStatus.status}`)
-    for (const h of STATUS_HOOKS[x.status].consumes ?? []) if (RARE_MOMENTS.includes(h)) needs.push(h)
+    for (const h of STATUS_HOOKS[x.status].consumes ?? []) if (RARE_MOMENTS.includes(h) || h.startsWith('status:')) needs.push(h)
   }
   return [...new Set(needs)]
 }

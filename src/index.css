@@ -168,9 +168,11 @@ body {
   100% { transform: translate(var(--float-x, -50%), -60px) scale(1) skewX(-12deg); opacity: 0; }
 }
 
-/* Label de la zone de surcharge (sous le dé) : il tombe droit dans sa colonne, sans inclinaison, pour que la pile reste nette */
+/* Label de la zone de surcharge (sous le dé) : il tombe droit dans sa colonne, sans inclinaison, pour que la pile reste
+   nette. Sa durée est le temps de lecture minimal d'un label (`--t-label`, timing.LABEL_READ) : jamais retiré avant d'être
+   posé (docs/MISE_EN_SCENE.md, M9) */
 .special-badge {
-  animation: special-badge 0.45s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+  animation: special-badge calc(var(--t-label) / var(--speed)) cubic-bezier(0.3, 1.8, 0.5, 1) both;
 }
 /* Surcharge qui réduit ou contre l'action de l'attaquant : de fines hachures sur la plaque, dans la teinte de sa source
    (`--hatch`, SPECIAL_SOURCES : sombres sur l'ivoire, dorées sur la plaque d'une relique) : la source reste lisible, le

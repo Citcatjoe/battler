@@ -93,8 +93,12 @@ export function applyCue(view: View, cue: Cue, now: number): View {
       return { ...view, dice: { ...cue.dice, specials: view.dice.specials } }
     case 'special':
       return { ...view, seq, dice: { ...view.dice, specials: [...(view.dice.specials ?? []), { key: view.seq, ...cue.special }] } }
-    case 'specialsClear':
-      return { ...view, dice: { ...view.dice, specials: undefined } }
+    case 'specialsClear': {
+      // Tous les labels, ou seulement ceux qu'elle nomme (lus, quand un label plus jeune reste à lire : M9)
+      const { labels } = cue
+      const kept = labels ? view.dice.specials?.filter((b) => !labels.includes(b.label)) : undefined
+      return { ...view, dice: { ...view.dice, specials: kept?.length ? kept : undefined } }
+    }
     case 'strike':
       return { ...view, strike: cue.strike }
     case 'blow':

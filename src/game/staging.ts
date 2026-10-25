@@ -190,7 +190,8 @@ export type CueBody =
   | { channel: 'aura'; fx: EffectFx | null }
   /** Ajoute un label sous le dé (la clé est donnée par le lecteur) */
   | { channel: 'special'; special: SpecialSpec }
-  | { channel: 'specialsClear' }
+  /** Efface les labels sous le dé : tous, ou seulement ceux de `labels` (lus, quand d'autres restent à lire : M9) */
+  | { channel: 'specialsClear'; labels?: string[] }
   /** Un son, déjà dédoublonné (un seul par nom et par instant). `arg` : durée à ×1 (dé qui roule, pièce) */
   | { channel: 'sound'; cue: SfxName; arg?: number }
   | { channel: 'hp'; hp: Pair<number> }
@@ -340,6 +341,11 @@ export interface FxSpec {
   effects: readonly AppliedEffect[]
   /** Textes qui ne viennent d'aucun effet, sur leur cible : « Tour perdu » */
   notes?: readonly (Badge & { target: Side })[]
+  /**
+   * Poses dont les charges se lisent ailleurs, sur le coup ou sur un statut (Pourfendre, Virulence) : leur texte dit le
+   * gain, « +10 Poison », le compteur de la zone d'état monte d'autant au même instant (M42)
+   */
+  counted?: readonly AppliedEffect[]
 }
 
 /**
@@ -358,7 +364,13 @@ export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOm
     .filter((name) => name !== fx.title)
     .join(' · ')
   const badges: Badge[] = [
-    ...mine.filter((e) => !echoes.includes(e)).map(effectBadge),
+    ...mine
+      .filter((e) => !echoes.includes(e))
+      .map((e) =>
+        e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks > 0 && fx.counted?.includes(e)
+          ? { ...effectBadge(e), text: `+${e.result.stacks} ${STATUSES[e.status].name}` }
+          : effectBadge(e),
+      ),
     ...(fx.notes?.filter((n) => n.target === side) ?? []),
   ]
   const floats: DistributiveOmit<Float, 'key'>[] = []
@@ -375,6 +387,12 @@ export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOm
 
 /** Un coup de compétence unique de cette force est un coup lourd (chiffre doré, secousse, son du critique). */
 const HEAVY_BLOW = 10
+
+/**
+ * Les moments d'un effet (pas d'un coup) auxquels un statut ou une relique répondent : le soin de leur porteur, le renvoi
+ * qu'il vient de faire. Ce qu'ils déclenchent part au milieu de la lecture de l'effet (docs/MISE_EN_SCENE.md, M41).
+ */
+const EFFECT_MOMENTS: Partial<Record<string, true>> = { healed: true, reflected: true }
 
 /**
  * Relique déclenchée par la valeur du dé (une face, le jet maximal : l'Osselet fendu, le Dé creux) : elle part avec le
@@ -446,7 +464,15 @@ interface ShowOpts {
   schedule?: readonly number[]
   /** Compétence ou aura d'où part un signal d'activation, s'il pose un état visible */
   signal?: string
+  /**
+   * Le signal part de l'anneau d'une aura (`signal`) : sans état visible à poser, il file vers la cible de ses dégâts
+   * directs (la Sentence), qui tombent à son arrivée (M19 bis)
+   */
+  ring?: true
+  /** Ce que l'effet déclenche et qui part au milieu de sa lecture (ce qu'un soin déclenche, M41) */
+  reactions?: readonly Beat[]
   notes?: FxSpec['notes']
+  counted?: FxSpec['counted']
 }
 
 /**
@@ -466,9 +492,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   let t = 0
   let key = 0
   let heard = new Set<string>()
+  /** Les textes flottants posés récemment : combattant, sens (au-dessus ou en dessous), rang, instant (M31) */
+  let placed: { side: Side; lift: boolean; row: number; at: number }[] = []
   let hp: Pair<number> = [fighters[0].maxHp, fighters[1].maxHp]
   let dice: DiceState = IDLE_DICE
-  let labels: string[] = []
+  /** Les labels sous le dé et l'instant de leur pose dans le moment en cours */
+  let labels: { label: string; at: number }[] = []
+  /**
+   * Labels qu'un nouveau dé a remplacés avant leur temps de lecture (`LABEL_READ`) : ils restent à l'écran jusqu'à leur
+   * heure, puis partent seuls (M9). En rafale, le label d'une réaction n'est plus coupé par le coup suivant.
+   */
+  let leaving: { label: string; due: number }[] = []
   let strike: Strike | null = null
   let blow: Blow | null = null
   let aura = false
@@ -479,6 +513,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   let shownStatuses = ''
   /** Étapes dont les PV sont appliqués, et la plus longue suite sans trou depuis le début */
   const settled = new Set<number>()
+  /** Étapes dont les statuts sont montrés avant leurs PV (la pièce, qui consomme son statut en partant, M26) */
+  const shownEarly = new Set<number>()
   let settledUpTo = -1
 
   const begin = (ids: number[], turn: number, owner: Side) => {
@@ -491,11 +527,24 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     moment.duration = t
     // Tri stable : à instant égal, l'ordre d'émission
     moment.cues.sort((x, y) => x.at - y.at)
+    // Les labels encore à lire et les rangs des textes récents passent au moment suivant, sur son horloge
+    labels = labels.map((l) => ({ ...l, at: l.at - t }))
+    leaving = leaving.map((l) => ({ ...l, due: l.due - t }))
+    placed = placed.flatMap((p) => (t - p.at < T.FLOAT_ROW ? [{ ...p, at: p.at - t }] : []))
+  }
+  /** Les labels remplacés dont l'heure est venue partent, chacun à son heure (M9). */
+  const release = () => {
+    const due = leaving.filter((l) => l.due <= t)
+    if (due.length === 0) return
+    leaving = leaving.filter((l) => l.due > t)
+    for (const at of new Set(due.map((l) => l.due)))
+      moment.cues.push({ at: Math.max(0, at), channel: 'specialsClear', labels: due.filter((l) => l.due === at).map((l) => l.label) })
   }
   /** Attend `ms` ; `name` dit d'où vient cette durée (constante de `timing.ts` ou libellé d'une durée calculée). */
   const wait = (ms: number, name: string) => {
     if (ms > 0) moment.spans.push({ at: t, ms, name })
-    t += ms
+    t += Math.max(0, ms)
+    release()
   }
   /** Attend la durée nommée `name` de `timing.ts`. */
   const hold = (name: TimingName) => wait(T[name], name)
@@ -517,16 +566,31 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     dice = { ...dice, ...patch }
     emit({ channel: 'dice', dice })
   }
+  /**
+   * Un nouveau dé efface les labels du précédent (M9) ; un label posé depuis moins de `LABEL_READ` reste jusqu'à son
+   * heure (le label d'une réaction à un coup de rafale, que le coup suivant coupait avant qu'il ait fini d'apparaître).
+   */
   const clearSpecials = () => {
+    const young = labels.filter((l) => t - l.at < T.LABEL_READ)
+    if (young.length === 0 && leaving.length === 0) emit({ channel: 'specialsClear' })
+    else {
+      const read = labels.filter((l) => !young.includes(l)).map((l) => l.label)
+      if (read.length > 0) emit({ channel: 'specialsClear', labels: read })
+      leaving = [...leaving, ...young.map((l) => ({ label: l.label, due: l.at + T.LABEL_READ }))]
+    }
     labels = []
-    emit({ channel: 'specialsClear' })
   }
-  /** Empile un label sous le dé (une seule fois par libellé pour un même jet) et joue le son de son signe. */
+  /**
+   * Empile un label sous le dé (une seule fois par libellé pour un même jet) et joue le son de son signe. Un label encore
+   * à l'écran, remplacé mais pas encore parti, sert au nouveau coup : il reste, son heure de départ est oubliée.
+   */
   const addSpecial = (spec: SpecialSpec) => {
     sound(SPECIAL_SIGNS[spec.sign as SpecialSign].cue)
-    if (labels.includes(spec.label)) return
-    labels = [...labels, spec.label]
-    emit({ channel: 'special', special: spec })
+    if (labels.some((l) => l.label === spec.label)) return
+    const shown = leaving.some((l) => l.label === spec.label)
+    leaving = leaving.filter((l) => l.label !== spec.label)
+    labels = [...labels, { label: spec.label, at: t }]
+    if (!shown) emit({ channel: 'special', special: spec })
   }
   const setStrike = (next: Strike | null) => {
     strike = next
@@ -549,10 +613,32 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     aura = source !== null
     emit({ channel: 'aura', fx: source === null ? null : { key: key++, source } })
   }
-  /** Les textes flottants d'un effet sur chaque combattant, sans toucher à l'aura */
+  /**
+   * Les textes flottants d'un effet sur chaque combattant, sans toucher à l'aura. Aucun texte n'en recouvre un autre
+   * (M31) : ceux d'un effet prennent, dans leur sens (au-dessus du chiffre ou en dessous), les premiers rangs libres,
+   * ceux qu'un texte parti depuis moins de `FLOAT_ROW` tient encore (ce que le coup produit à l'impact, puis le soin
+   * d'une relique au milieu de sa lecture). Un titre tient le premier rang au-dessus.
+   */
   const emitFloats = (fx: FxSpec) => {
-    for (const side of [0, 1] as Side[])
-      for (const float of fxFloats(fx, side, struck(side))) emit({ channel: 'float', side, float: { key: key++, ...float } as Float })
+    const recent = placed.filter((p) => t - p.at < T.FLOAT_ROW)
+    for (const side of [0, 1] as Side[]) {
+      const floats = fxFloats(fx, side, struck(side))
+      const sense = (f: (typeof floats)[number]) => f.kind === 'title' || (f.kind === 'badge' && f.lift)
+      for (const lift of [true, false]) {
+        const mine = floats.filter((f) => sense(f) === lift)
+        if (mine.length === 0) continue
+        const rowOf = (f: (typeof floats)[number]) => (f.kind === 'badge' ? f.row : 0)
+        const span = Math.max(...mine.map(rowOf)) + 1
+        const busy = new Set(recent.filter((p) => p.side === side && p.lift === lift).map((p) => p.row))
+        let offset = 0
+        while (Array.from({ length: span }, (_, r) => offset + r).some((r) => busy.has(r))) offset++
+        for (const f of mine) {
+          const row = rowOf(f) + offset
+          placed.push({ side, lift, row, at: t })
+          emit({ channel: 'float', side, float: { key: key++, ...(f.kind === 'badge' ? { ...f, row } : f) } as Float })
+        }
+      }
+    }
   }
   /** Les effets apparaissent : aura sur la source, textes flottants sur chaque combattant */
   const showFx = (fx: FxSpec, relic = false) => {
@@ -576,7 +662,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   const display = (state: Pair<Status[]>): Pair<Status[]> => {
     let shown = state
     for (let d = shownState - 1; d > settledUpTo; d--) {
-      if (settled.has(d)) continue
+      if (settled.has(d) || shownEarly.has(d)) continue
       const before = beats[d - 1]?.state.statuses ?? [[], []]
       const after = beats[d].state.statuses
       shown = shown.map((list, side) => {
@@ -694,12 +780,16 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    * Affiche des effets ; `apply` met à jour PV, statuts et journal au moment de l'apparition. `blows` : les dégâts
    * directs sur l'adversaire de `source` sont joués comme des coups (avec ou sans élan) au lieu d'un simple badge ;
    * ce que l'effet pose sur la cible des coups tombe alors avec leur dernier impact, textes et zone d'état ensemble (M21).
+   * Une scène (`schedule`) porte son propre rythme : ses coups tombent sur ses impacts, comptés depuis l'apparition.
    */
   function showEffects(source: Side | null, title: string, effects: readonly AppliedEffect[], apply: () => void, o: ShowOpts = {}) {
     const hits = source !== null && o.blows ? effects.filter((e) => e.type === 'damage' && e.target !== source && e.amount > 0) : []
     const landing = hits.length > 0 ? effects.filter((e) => !hits.includes(e) && e.target === hits[0].target) : []
     if (o.lead !== 0) hold('LEAD')
-    const aim = o.signal !== undefined && source !== null ? signalTargets(effects) : undefined
+    // Le signal file vers la zone d'état où un état apparaît ; de l'anneau d'une aura qui n'en pose pas, vers la cible
+    // de ses dégâts directs, qui tombent à son arrivée (M19 bis)
+    const ringed = o.ring && hits.length > 0 ? { to: [hits[0].target], polarity: 'negative' as const } : undefined
+    const aim = o.signal !== undefined && source !== null ? (signalTargets(effects) ?? ringed) : undefined
     // Une relique s'annonce (sceau et label) au départ de son signal, ses effets tombent à son arrivée (M23)
     const early = !!aim && !!o.relic
     const announce = () => {
@@ -714,23 +804,29 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (!early) o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)
     if (cue) sound(cue)
-    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes }, o.relic)
+    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes, counted: o.counted }, o.relic)
     if (!early && o.special) addSpecial(o.special)
+    // Ce qu'il déclenche (un soin, un renvoi : M41) part au milieu de sa lecture, ou de celle de son dernier coup, et la
+    // prolonge ; en rafale, la réaction suivante part sans attendre (M17 bis)
+    const later = o.brisk ? [] : (o.reactions?.filter((b) => !absorbed.has(b.id)) ?? [])
     if (hits.length > 0 && source !== null) {
-      if (!o.brisk) hold('BLOWS_LEAD')
+      // Le vol du signal vers la cible des coups tient lieu d'attente avant eux, comme le rythme d'une scène
+      if (!o.brisk && !o.schedule && !aim?.to.includes(hits[0].target)) hold('BLOWS_LEAD')
       blows(source, hits, o.blows === 'lunge', o.impact ?? ((_, heavy) => (heavy ? 'crit' : 'hit')), {
-        schedule: o.schedule?.map((x) => x - T.BLOWS_LEAD),
+        schedule: o.schedule,
         onLand: (last) => {
           if (!last) return
           if (landing.length > 0) emitFloats({ source: null, title: '', effects: landing })
           apply()
         },
-        ...(o.brisk && { lastHold: 'VOLLEY_STRIKE_HOLD' as const }),
+        ...(o.brisk ? { lastHold: 'VOLLEY_STRIKE_HOLD' as const } : later.length > 0 ? { lastHold: 'REACTION_LEAD' as const } : {}),
       })
-      if (!o.brisk) hold('BLOWS_HOLD')
+      if (later.length > 0) react(later)
+      else if (!o.brisk) hold('BLOWS_HOLD')
     } else {
       apply()
-      if (!o.brisk) hold(o.hold ?? 'READ_HOLD')
+      if (later.length > 0) react(later, 'EFFECT_REACTION_LEAD')
+      else if (!o.brisk) hold(o.hold ?? 'READ_HOLD')
     }
     if (!o.brisk) setAura(null)
   }
@@ -770,10 +866,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       sound(impact(part.n, heavy))
       const next = [...hp] as Pair<number>
       next[part.to] = Math.max(0, next[part.to] - part.n)
+      // Le coup qui met K.O. est le dernier montré : on ne frappe pas un combattant à terre
+      const end = last || next[part.to] === 0
       showHp(next)
       setBlow({ key: id, from, to: part.to, damage: part.n, source: part.source, heavy, lunge, landed: true })
-      o.onLand?.(last)
-      if (at === undefined || last) hold(last ? (o.lastHold ?? 'BLOW_LAST_HOLD') : 'BLOW_HOLD')
+      o.onLand?.(end)
+      if (at === undefined || end) hold(end ? (o.lastHold ?? 'BLOW_LAST_HOLD') : 'BLOW_HOLD')
+      if (end) break
     }
     setBlow(null)
   }
@@ -806,7 +905,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   function landRide(ride: Beat) {
     const side = ride.type === 'event' ? ride.event.side : ride.type === 'statusReaction' ? ride.side : undefined
     const effects = beatEffects(ride)
-    showFx({ source: null, title: '', effects })
+    showFx({ source: null, title: '', effects, counted: countedOf(ride) })
     if (ride.type === 'statusReaction') {
       const special = reactionSpecial(ride.status, ride.side === ride.owner ? 'attacker' : 'defender', ride.effects)
       if (special) addSpecial(special)
@@ -819,14 +918,19 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   }
 
   /**
-   * Ce qu'un coup entraîne, rangé par instant : voir `Consequences`. Une relique déclenchée par ce que le coup produit
-   * (l'Encens de l'abbaye, causé par le soin du Vol de vie), par la plaie qui coule ou par une autre réaction (une
-   * relique de seuil en chaîne) est une réaction au coup, elle aussi (M17) ; les réactions se jouent dans l'ordre du
-   * moteur.
+   * Ce qu'un coup entraîne, rangé par instant : voir `Consequences`. Une relique ou un statut déclenchés par ce que le
+   * coup produit (l'Encens de l'abbaye, causé par le soin du Vol de vie), par la plaie qui coule ou par une autre
+   * réaction (une relique de seuil en chaîne, la Vindicte après la Riposte) sont des réactions au coup, eux aussi (M17) ;
+   * les réactions se jouent dans l'ordre du moteur. La plaie qui coule tombe à l'impact (M15), sauf si elle met K.O. son
+   * porteur après qu'il a réagi au coup (sa Riposte) : elle garde alors son rang parmi les réactions, pour qu'on ne voie
+   * pas un combattant à terre riposter (M43).
    */
   function consequencesOf(hit: Beat): Consequences {
     const rides = ridesOf(hit)
-    const flow = hit.type === 'attack' ? flowOf(hit) : undefined
+    const wound = hit.type === 'attack' ? flowOf(hit) : undefined
+    const answered = (w: Beat) =>
+      children[hit.id].some((b) => b.id < w.id && !rides.includes(b) && !absorbed.has(b.id) && !(b.type === 'statusReaction' && b.effects.length === 0))
+    const flow = wound && wound.state.hp[wound.side] === 0 && answered(wound) ? undefined : wound
     const quiet: Beat[] = []
     const reactions: Beat[] = []
     for (const next of children[hit.id]) {
@@ -839,12 +943,41 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const carriers = [...rides, ...(flow ? [flow] : []), ...reactions]
     for (const from of carriers)
       for (const next of children[from.id])
-        if (next.type === 'relic' && !reactions.includes(next)) {
+        if ((next.type === 'relic' || (next.type === 'statusReaction' && next.effects.length > 0)) && !reactions.includes(next)) {
           reactions.push(next)
           carriers.push(next)
         }
     reactions.sort((x, y) => x.id - y.id)
     return { rides, flow, quiet, reactions }
+  }
+
+  /**
+   * Ce qui répond à un effet (M41) : un soin (la Sentence, l'Encens de l'abbaye), un renvoi (la Vindicte, le Gantelet du
+   * talion, après une Riposte ou une Rétribution). Un statut qui réagit, une relique d'un moment du coup.
+   */
+  function answersEffect(next: Beat): boolean {
+    if (next.type === 'statusReaction') return next.effects.length > 0 && !!EFFECT_MOMENTS[next.trigger]
+    const trigger = next.type === 'relic' ? RELICS.find((r) => r.id === next.relic)?.trigger : undefined
+    return trigger?.type === 'strike' && !!EFFECT_MOMENTS[trigger.on]
+  }
+  /**
+   * Ce que déclenche une étape d'effets (une compétence, un statut qui agit, une relique, une réaction au coup qui soigne
+   * ou qui renvoie) : il part au milieu de sa lecture, ou de la lecture de son dernier coup (M41), sauf en rafale, où la
+   * réaction suivante part sans attendre
+   */
+  const answersOf = (beat: Beat) => children[beat.id].filter((next) => answersEffect(next) && !absorbed.has(next.id))
+  /**
+   * Les poses dont les charges se lisent ailleurs (sur le coup : Pourfendre ; sur un statut : Virulence) : leur texte dit
+   * le gain (M42). Lues dans la définition de la compétence, effet par effet.
+   */
+  function countedOf(beat: Beat): AppliedEffect[] {
+    if (beat.type !== 'event') return []
+    const def = fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
+    if (!def || def.effects.length !== beat.event.effects.length) return []
+    return beat.event.effects.filter((_, k) => {
+      const asked = def.effects[k]
+      return asked.type === 'applyStatus' && (asked.fromHit !== undefined || asked.fromStatus !== undefined)
+    })
   }
 
   /** À l'impact : les statuts posés et les PV rendus, les jauges qui comptent le coup, puis la plaie qui coule. */
@@ -872,6 +1005,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (reactions.length === 0) return
     if (lead) hold(lead)
     for (const reaction of reactions) {
+      // Déjà jouée : ce qu'un soin a déclenché, parti au milieu de sa lecture (M41)
+      if (absorbed.has(reaction.id)) continue
       absorbed.add(reaction.id)
       snapped.add(reaction.id)
       if (quick) brisk.add(reaction.id)
@@ -1086,6 +1221,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         if (skill) snapped.add(skill.id)
         // Un jet greffé : son dé est déjà tombé, sa compétence s'est déjà montrée (étape `roll`)
         const rolled = beat.cause !== undefined && beats[beat.cause].type === 'roll'
+        // Sa greffe a posé une rafale instantanée qui part juste après ce coup (la Curée) : pas de repos, la rafale suit
+        // au rythme de ses coups (M27)
+        const burst = rolled && children[beat.cause!].some((g) => g.type === 'event' && children[g.id].some((f) => f.type === 'flurry'))
         const volley = volleys.at(-1)
         if (volley?.strikes.includes(beat.id)) {
           uncover(volley)
@@ -1093,11 +1231,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           stageVolleyStrike(beat, index, face, !!skill, rolled)
           const last = volley.next === volley.strikes.length
           if (last) volleys.pop()
-          if (!skill) hold(last && volleys.length === 0 ? 'STRIKE_REST' : 'VOLLEY_GAP')
+          if (!skill) hold(last && volleys.length === 0 && !burst ? 'STRIKE_REST' : 'VOLLEY_GAP')
           break
         }
         stageAttack(beat, face, !!skill, rolled)
-        if (!skill) hold('STRIKE_REST')
+        if (!skill) hold(burst ? 'VOLLEY_GAP' : 'STRIKE_REST')
         break
       }
       case 'roll': {
@@ -1159,8 +1297,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             // Furie instantanée : ses frappes suivent vite (son nom est déjà tombé avec le dé)
             hold: children[beat.id].some((b) => b.type === 'flurry') ? 'FLURRY_CHAIN_HOLD' : undefined,
             signal: beat.event.eventId,
-            // Compétence déclenchée par un coup de rafale : la rafale garde son rythme (M17 bis)
-            ...(brisk.has(beat.id) && !timing && { brisk: true as const }),
+            counted: countedOf(beat),
+            reactions: answersOf(beat),
+            // Compétence déclenchée par un coup de rafale : la rafale garde son rythme (M17 bis), une scène le sien (M24)
+            ...(brisk.has(beat.id) && { brisk: true as const }),
           },
         )
         break
@@ -1184,7 +1324,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           },
           {
             ...(harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
-            ...(fromRing && { signal: beat.status }),
+            ...(fromRing && { signal: beat.status, ring: true as const }),
+            reactions: answersOf(beat),
           },
         )
         break
@@ -1204,8 +1345,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // Rien n'a changé (Saignement des Épines résisté par une immunité, plafond) : ni label ni son (M25)
         const still = idle(beat.effects)
         const special = still ? undefined : reactionSpecial(beat.status, beat.side === beat.owner ? 'attacker' : 'defender', beat.effects)
-        // Son nom ne flotte plus au-dessus du porteur quand son label le dit déjà sous le dé
-        const named = wound === 0 && !still && !special
+        // Son nom ne flotte plus au-dessus du porteur quand son label le dit déjà sous le dé ; une aura ne flotte pas son
+        // nom, son anneau s'allume et envoie le signal (M32) ; un mécanisme de compétence qui agit (l'Embrasement) non plus :
+        // le sceau de la compétence qui l'a posé s'allume (M39)
+        const ring = STATUS_PLACE[beat.status].place === 'aura'
+        const mechanic = isMechanic(beat.status)
+        const named = wound === 0 && !still && !special && !ring && !mechanic
+        const seal = mechanic
+          ? fighters[beat.side].events.map((e) => (e.effects.some((x) => x.type === 'applyStatus' && x.status === beat.status) ? rollFace(e.trigger) : undefined)).find((f) => f !== undefined)
+          : undefined
         const base = hp
         showEffects(
           wound > 0 || still ? null : beat.side,
@@ -1226,8 +1374,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
                   ? { cue: 'rot', lead: 0, hold: 'WOUND_HOLD' }
                   : {}),
             special,
-            // L'Aura de décoction empoisonne à chaque coup : la lueur part de son anneau
-            ...(STATUS_PLACE[beat.status].place === 'aura' && { signal: beat.status }),
+            ...(seal !== undefined && { onShow: () => pulse(beat.side, seal) }),
+            // Une aura agit depuis son anneau : la lueur part de lui (l'Aura de décoction empoisonne à chaque coup ; la
+            // Sentence frappe à chaque soin, M19 bis)
+            ...(ring && { signal: beat.status, ring: true }),
+            reactions: answersOf(beat),
             // Réaction au coup : elle part au milieu de sa lecture, sans attente de plus (M17)
             ...(snapped.has(beat.id) && { lead: 0 }),
             // Réaction à un coup de rafale : elle ne s'attarde pas, la rafale garde son rythme (M17 bis)
@@ -1302,11 +1453,40 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         break
       }
       case 'coin': {
-        // La pièce remplace le dé, tournoie, retombe ; pile, la voleuse fond sur sa cible, un seul coup lourd
+        // La pièce remplace le dé, tournoie, retombe ; pile, la voleuse fond sur sa cible, un seul coup lourd. Ce que décide
+        // la pièce part avec elle, comme ce que décide le dé (M40) : les reliques de pile (la Pièce trouée) tombent avec
+        // son résultat, avant le coup de pile, qui suit leur lecture
+        const onHeads = beat.heads
+          ? children[beat.id].filter((b) => {
+              const trigger = b.type === 'relic' ? RELICS.find((r) => r.id === b.relic)?.trigger : undefined
+              return trigger?.type === 'strike' && trigger.on === 'heads'
+            })
+          : []
+        for (const relic of onHeads) absorbed.add(relic.id)
         const after: Consequences = beat.heads ? consequencesOf(beat) : { rides: [], quiet: [], reactions: [] }
         const shown = { ...IDLE_DICE, owner: beat.side }
         const base = hp
-        showStatuses(beat.id)
+        // Le Dé pipé qui a fait tomber pile reste dans la zone d'état jusqu'à ce que la pièce retombe : sa charge part
+        // avec le résultat qu'elle décide, avec son label (M26)
+        const loaded = beat.loadedBy
+        shownEarly.add(beat.id)
+        if (loaded) {
+          shownState = Math.max(shownState, beat.id)
+          const was = beats[beat.id - 1]?.state.statuses[beat.side] ?? []
+          const keep = was.findIndex((s) => s.id === loaded)
+          // Sa charge d'avant la pièce, à sa place : remplacée si une charge reste, remise sinon
+          const next = display(beats[shownState].state.statuses).map((list, side) => {
+            if (side !== beat.side || keep < 0) return list
+            const rest = list.filter((s) => s.id !== loaded)
+            return [...rest.slice(0, keep), was[keep], ...rest.slice(keep)]
+          }) as Pair<Status[]>
+          shownStatuses = JSON.stringify(next)
+          emit({ channel: 'statuses', statuses: next })
+        } else showStatuses(beat.id)
+        // Dans une rafale, la pièce prend la place de ses dés le temps de son jet ; ils reviennent ensuite, à plat, pour
+        // le coup suivant (M26, M27)
+        const outer = volleys.at(-1)
+        if (outer) outer.covered = true
         setDice({ ...shown, coin: {} })
         sound('coinToss', T.COIN_SPIN)
         hold('COIN_SPIN')
@@ -1315,7 +1495,16 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // Le résultat tombe d'un bloc : la pièce, le « ding » de la réussite et le texte flottant
         if (beat.heads) sound('coinWin')
         showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
-        hold('COIN_READ')
+        if (loaded) {
+          shownStatuses = ''
+          showStatuses(beat.id)
+          addSpecial({ label: STATUSES[loaded].name, source: 'skill', sign: 'plus' })
+        }
+        for (const relic of onHeads) {
+          snapped.add(relic.id)
+          stageBeat(relic)
+        }
+        if (onHeads.length === 0) hold('COIN_READ')
         // Pile : son coup lourd (ce coup, à nouveau ; lourd même petit), puis ce qu'il entraîne, comme un coup (M26) ; ses
         // réactions au milieu de sa lecture
         if (beat.heads)
@@ -1383,13 +1572,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             special: still ? undefined : relicSpecial(beat.relic, beat.name, beat.side === beat.owner ? 'attacker' : 'defender', effects),
             ...((timing || snapped.has(beat.id)) && { lead: 0 as const }),
             ...(timing && !onSelf && { schedule: timing.impacts, impact: () => timing.sound ?? 'hit' }),
-            // Une relique à scène garde le rythme de sa scène (M24) : ni signal, ni rythme de rafale
+            // Une relique à scène garde le rythme de sa scène (M24) : pas de signal ; en rafale, ni lecture ni attente de
+            // plus que sa scène (M17 bis)
             ...(!timing && !still && { signal: relicSignal(beat.relic) }),
-            ...(!timing && brisk.has(beat.id) && { brisk: true as const }),
+            ...(brisk.has(beat.id) && { brisk: true as const }),
+            reactions: answersOf(beat),
           },
         )
-        // La scène sur le porteur va jusqu'au bout (la gangue qui éclate, la poussière qui retombe)
-        if (timing && onSelf) wait(timing.length - timing.impacts[0] - T.READ_HOLD, 'fin de la scène')
+        // La scène sur le porteur va jusqu'au bout (la gangue qui éclate, la poussière qui retombe), lecture comprise
+        if (timing && onSelf) wait(timing.length - timing.impacts[0] - (brisk.has(beat.id) ? 0 : T.READ_HOLD), 'fin de la scène')
         break
       }
       default:
