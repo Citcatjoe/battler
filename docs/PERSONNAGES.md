@@ -155,9 +155,26 @@ Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, 
 **Lecture** :
 - **Dans la tolérance sans autre levier** : de 45,8 % (Ervald) à 55,6 % (Thaldrin) ; pire duel Naraxes contre Ysolde, 62,3 % (60,9 % avant). Aucune valeur n'a été retouchée après le passage au modèle unique.
 - **Thaldrin** passe de 48,1 à 55,6 % : le haut du roster, dans la bande, et le plus régulier (aucun duel sous 50 %). Ses deux sorts pèsent moins (Feux follets +36,3 → +13,4, Foudre +18,4 → +6,0 : une face au lieu de trois) et son coup de base porte le personnage (Force de l'ours, 8,9 PV par combat ; dégâts par coup 5,1 → 7,2). Leviers mesurés au laboratoire (800 combats par duel) : attaque 4 à 6, 44,5 % (−11,1 ± 0,7) ; 53 PV, 47,6 % (−8,1 ± 0,6) ; 4 à 5, 34,0 %. Gardé à 5 à 6 : le point de départ fixé par la consigne, dans la bande. La Foudre à +6,0 dans son dé est la plus faible compétence du roster : à suivre si le druide doit redevenir un lanceur de sorts.
-- **Ysolde** perd 2,5 points avec la Purification (48,4 → 45,9 %), qui reste sa compétence la plus forte (+21,7 → +19,3). Compensation mesurée, non appliquée (les 5 dégâts sont fixés par l'utilisateur) : **lumière 6, 48,3 %** (+2,5 ± 0,4), lumière 7, 50,6 % (+4,8 ± 0,5).
+- **Ysolde** perd 2,5 points avec la Purification (48,4 → 45,9 %), qui reste sa compétence la plus forte (+21,7 → +19,3). Compensation mesurée : **lumière 6, 48,3 %** (+2,5 ± 0,4), lumière 7, 50,6 % (+4,8 ± 0,5) ; la lumière 6 est livrée en 0.115.1 (décision de l'utilisateur, plus bas).
 - **Ervald**, le plus bas (45,8 %), perd surtout contre le nouveau Thaldrin (47 → 40 %). Leviers mesurés, non appliqués : critique 26 %, 47,8 % (+2,0 ± 0,3) ; 58 PV, 50,4 % (+4,6 ± 0,5).
 - **Brokk** (52,0 → 49,8 %) et **Morgrut** (49,1 → 47,2 %) reculent face au nouveau Thaldrin (Brokk 55 → 44 %, Morgrut 59 → 42 % contre lui).
+
+**Purification à 6 (0.115.1)** (décision de l'utilisateur du 2026-10-25, au réveil ; `BALANCE_N=800 npm run balance`, ± 1,2 point par personnage ; avant : 0.115.0, lumière 5) : valeur nette de la Purification +19,3 → +21,8 points, Ysolde 45,9 → **48,3 %**, comme mesuré au laboratoire. Durée d'Ysolde 15,6 → 15,4 tours.
+
+| Personnage | Victoires |
+| --- | --- |
+| Gorak | 53,5 → 53,1 % |
+| Elaria | 50,4 → 50,0 % |
+| Brokk | 49,8 → 49,7 % |
+| Ervald | 45,8 → 45,5 % |
+| Ysolde | 45,9 → 48,3 % |
+| Naraxes | 53,8 → 53,5 % |
+| Aldric | 51,3 → 51,1 % |
+| Morgrut | 47,2 → 46,8 % |
+| Thaldrin | 55,6 → 55,3 % |
+| Fanchon | 46,8 → 46,7 % |
+
+De 45,5 % (Ervald) à 55,3 % (Thaldrin) ; pire duel Elaria contre Morgrut, 61,9 % (Naraxes contre Ysolde 62,3 → 59 %) ; Ysolde contre Fanchon 61 %, son pire duel Naraxes 41 %. Aucun duel au-delà de 65/35.
 
 ## Les consommatrices de la phase 8 (0.114.0)
 

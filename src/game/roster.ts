@@ -416,8 +416,8 @@ const ervald: CharacterDef = {
   ],
 }
 
-/** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0). */
-const PURIFICATION_LIGHT = 5
+/** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0 ; 6 depuis 0.115.1). */
+const PURIFICATION_LIGHT = 6
 
 const ysolde: CharacterDef = {
   id: 'ysolde',
@@ -491,7 +491,7 @@ const ysolde: CharacterDef = {
       // 0.42.0 : quand l'adversaire n'a aucun bonus à retirer, la lumière le blesse (dégâts directs) au lieu
       // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
       // 0.69.0 à 0.112.0 : elle retirait aussi son propre dernier malus ; retiré en 0.113.0 (décision de l'utilisateur :
-      // « l'effet sur soi doit être retiré ») : un bonus en face, ou 5 dégâts s'il n'en a pas. Son rang aiguise ces dégâts.
+      // « l'effet sur soi doit être retiré ») : un bonus en face, ou 6 dégâts s'il n'en a pas. Son rang aiguise ces dégâts.
       effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' } }],
       rankAxis: { kind: 'amount', per: 3 },
     },

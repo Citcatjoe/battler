@@ -32,6 +32,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.115.1] — 2026-10-25
+
+Décision de l'utilisateur au réveil ([PROGRESSION.md](docs/PROGRESSION.md) § 1.15).
+
+### Modifié
+- **Purification : 6 dégâts directs** quand l'adversaire n'a aucun bonus à retirer (5 avant, `PURIFICATION_LIGHT`) ; l'axe de rang ne change pas (+3 par rang). Valeur nette +19,3 → +21,8 points ; Ysolde 45,9 → 48,3 % (`BALANCE_N=800 npm run balance`) ; roster de 45,5 % (Ervald) à 55,3 % (Thaldrin), pire duel Elaria–Morgrut 61,9 % ([PERSONNAGES.md](docs/PERSONNAGES.md)).
+- Empreinte de non-régression (`balance.test.ts`) régénérée volontairement.
+
 ## [0.115.0] — 2026-10-25
 
 La passe de nuit du 2026-10-25, demandée par l'utilisateur avant d'aller dormir : « que tu intègres le lot suivant, que tu cales le mode campagne pour que je puisse tester demain avec ces deux lots équilibrés intégrés dans la progression », le tournoi saison mis à jour (« un menu exprès pour les options », le build d'un perso composé sur ses premiers matchs de saison), et « les animations, la doc, le compendium, le style de rédaction du compendium, le contrôle des timings d'animation, tout doit être super nickel premium ». Les choix ouverts ont été tranchés par l'agent, **à confirmer en jeu** ([PROGRESSION.md](docs/PROGRESSION.md) § 1.14).

@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.115.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.115.1, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-25, version 0.115.0)
+## 0 bis. État des lieux (2026-10-25, version 0.115.1)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.115.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0 ni la 0.115.0 (passe de nuit, § 1.14)._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.115.1). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0 ni la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15)._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -43,6 +43,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.113.0 | **Un seul modèle de personnage** : le personnage du tournoi est celui du départ de campagne (signature sur le 1, seconde compétence sur le 2) ; Thaldrin, Feux follets sur le 1, Foudre sur le 2, attaque 5 à 6 partout ; Purification sans effet sur soi ; courbe de campagne option B (78, 86 %) (§ 1.13, § 11.9) |
 | 0.114.0 | **Cinq compétences consommatrices** (phase 8, premier lot, [SORTS.md](SORTS.md) § 22) : Curée (deux coups bruts de plus si l'adversaire saigne), Récolte (+7 PV s'il est empoisonné), Virulence (triple son Poison), Sentence (il perd 1 PV à chaque soin), Rancune (son prochain coup est critique quand il encaisse un coup) ; dans les répertoires et hors kit ; Graver ne propose que des compétences à la portée du champion ; une compétence à condition fausse laisse sa face nue |
 | 0.115.0 | **Passe de nuit** (§ 1.14) : le second lot de la phase 8 (Embrasement, Dé pipé, Rempart hérissé, Vindicte ; Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée ; [SORTS.md](SORTS.md) § 23, [RELIQUES.md](RELIQUES.md) § 15) ; une offre ne propose une consommatrice qu'une fois son producteur dans le build (« le producteur d'abord »), en campagne comme au tournoi ; la saison compose un build d'acte (4 forges, 6 reliques) sur les dix premiers matchs, gagnés ou perdus ; les options du tournoi dans une boîte ; textes du compendium réécrits courts ; mise en scène contrôlée par un test des timings |
+| 0.115.1 | **Purification à 6 dégâts** quand l'adversaire n'a aucun bonus (5 avant) : Ysolde 45,9 → 48,3 % (§ 1.15) |
 
 ### Le combat, en une page
 
@@ -73,7 +74,7 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 - **Synergies** : quatre ressources sans consommateur (Poison, Saignement, soins, coups encaissés) ; un premier lot de cinq reliques consommatrices validé (§ 13.3), livré en 0.109.0, icônes peintes en 0.109.1 ; l'Onguent du rebouteux (0.112.0) consomme aussi les coups encaissés, et ses soins nourrissent l'Encens. **0.114.0** : cinq compétences consommatrices (Curée, Récolte, Virulence, Sentence, Rancune ; [SORTS.md](SORTS.md) § 22), chacune de +8,1 à +10,4 gravée chez son producteur (Rancune +14,2 en moyenne) ; en campagne, paires liées par build 3,27 → 3,70. **0.115.0** : les quatre restes ont leur consommateur : la Brûlure (Embrasement, Soufflet de forge), la pile (Dé pipé, Pièce trouée), les dégâts renvoyés (Vindicte, Gantelet du talion), le bouclier vidé (Rempart hérissé, Clous de pavois) ; gravées de +8,0 à +9,7 chez leur producteur, reliques de +7,2 à +7,8, partenaires de +0,29 à +0,40 en log-cote. Restent : les rangs II de l'Embrasement et du Dé pipé sous la bande, et la présence des lots chez Elaria et Fanchon depuis « le producteur d'abord ».
 - **La revue du contenu** ([REVUE_CONTENU.md](REVUE_CONTENU.md), écrite en 0.109.1) : **corrigée en 0.110.0** (moteur M1 à M4, écran et son A1 à A7, textes T1 à T15 sauf T12, documents en retard ; « un rang ajoute moins » : chaque compétence s'aiguise sur un axe à elle). **Restes fermés en 0.110.1** : T12 (l'Élan s'appelle Ferveur), E4 (une Peur bloquée par une immunité use sa fois), les cinq emblèmes d'état (A8, planche v15), le son de la Foudre (l'ancien gardé, l'Éclair retiré). Reste le résumé de l'état Puissance (second volet de T12). Les demi-rangs sont retirés en 0.111.0 (§ 1.11) ; les nouveaux textes et les emblèmes sont à juger en jeu.
 - **Retours de partie du 2026-10-24 (0.111.0, § 1.11)** : axes de rang entiers, signature sur la face 1, dorure sur une face libre, copie vers une face choisie, six faces en combat, reliques en texte court et offre pertinente, attaque d'un type unique, mise en scène dé rendu → intervalle → impact. **Réponses de l'utilisateur** (§ 1.12) : rangs II au-dessus de +8 gardés ; le levier des PV moins fort et deux compétences au départ, livrés en 0.112.0. **Décisions du 2026-10-25** (§ 1.13, livrées en 0.113.0) : Purification sans effet sur soi, courbe option B, un seul modèle de personnage, Gambison et noms des reliques de durée gardés.
-- **Décisions ouvertes après la 0.113.0** : Purification 5 → 6 dégâts pour compenser (Ysolde 45,9 → 48,3 % au laboratoire) ; Thaldrin à 55,6 % (garder, ou 53 PV : 47,6 %) ; Ervald à 45,8 % (critique 26 % : 47,8 %) ; un Onguent plus fort ([RELIQUES.md](RELIQUES.md) § 14) ; Brokk et Ysolde, dont la seconde compétence vaut autant ou plus que la signature.
+- **Décisions ouvertes après la 0.113.0** : Thaldrin à 55,6 % (garder, ou 53 PV : 47,6 %) ; Ervald à 45,8 % (critique 26 % : 47,8 %) ; un Onguent plus fort ([RELIQUES.md](RELIQUES.md) § 14) ; Brokk et Ysolde, dont la seconde compétence vaut autant ou plus que la signature. La Purification 5 → 6 est tranchée et livrée en 0.115.1 (§ 1.15).
 - **Choix de l'agent en 0.114.0, à confirmer** (l'utilisateur a dit « enchaîne ») : cinq compétences sans le Rempart hérissé (rang II hors bande) ; la Virulence « Triple » (`fromStatus`) ; la Rancune critique ; Naraxes inchangée (Virulence +0,7 chez elle, son Poison s'estompe avant son jet) ; la Rancune sous l'état Renvoi. Anti-synergie Virulence × Fiole de venin −0,17, non traitée.
 - **Les auras** : elles tiennent en valeur ; reste à voir si elles s'insèrent **naturellement** dans le nouveau jeu, et à les retoucher pour qu'elles soient plus utiles et plus synergiques (§ 1.10).
 - **Les compétences** : à valider, tester et auditer encore, à compléter par d'autres, en pensant **familles** ([FAMILLES.md](FAMILLES.md)) ; leurs descriptions doivent rester courtes, simples, et porter le fonctionnement (§ 1.10).
@@ -269,7 +270,15 @@ L'utilisateur dormait : chaque choix ouvert a été tranché par l'agent, au plu
 | Écrans | portrait du champion plus petit sur la carte de l'acte (il montait sur la piste) ; les builds restent hors des cartes de l'arbre (ce serait une fonctionnalité) | captures de la passe de finition |
 | Icônes | planches v18 (compétences) et v19 (reliques), générées avec Artlist, version A gardée pour les huit | [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 |
 
-**À trancher par l'utilisateur** : la Purification 5 → 6 (toujours en attente), Ervald au boss (à remesurer), la présence des lots chez Elaria et Fanchon, l'écart des builds de saison (37 à 68 %, écart-type 10,7 : la forge, dont les deux dés de Fanchon), les rangs II de l'Embrasement et du Dé pipé, les défauts du tournoi, les builds dans l'arbre, les multiplicateurs de critique, les choix de mise en scène ([ETAT.md](ETAT.md), limites connues ; [TODO.md](TODO.md) § 20).
+**À trancher par l'utilisateur** : Ervald au boss (à remesurer), la présence des lots chez Elaria et Fanchon, l'écart des builds de saison (37 à 68 %, écart-type 10,7 : la forge, dont les deux dés de Fanchon), les défauts du tournoi, les builds dans l'arbre, les multiplicateurs de critique, les choix de mise en scène ([ETAT.md](ETAT.md), limites connues ; [TODO.md](TODO.md) § 20). La Purification et les rangs II du lot sont tranchés au réveil (§ 1.15).
+
+### 1.15 Décisions du 2026-10-25, au réveil (livrées en 0.115.1)
+
+| Sujet | Décision de l'utilisateur | Mesure, suite |
+| --- | --- | --- |
+| La Purification | 6 dégâts quand l'adversaire n'a aucun bonus à retirer (5 avant) ; axe de rang inchangé (+3 par rang) | valeur nette +19,3 → +21,8 ; Ysolde 45,9 → 48,3 % ; roster de 45,5 à 55,3 %, pire duel Elaria–Morgrut 61,9 % (800 combats par duel) ; empreinte régénérée |
+| Rangs II du second lot | les trois acceptés pour le moment : Rempart hérissé (+3,2), Embrasement (+0,6), Dé pipé (+1,1) | aucun changement |
+| Fanchon | à revoir | chantier ouvert (46,7 % ; ses deux dés portent chaque gravure en saison) |
 
 ---
 
