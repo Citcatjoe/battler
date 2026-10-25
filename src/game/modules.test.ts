@@ -733,7 +733,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'melodious-aura', 'overture', 'sentence', 'bristling-rampart', 'vendetta'])
+    // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2)
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta'])
     family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
     family('heal', ['harvest'])
@@ -877,7 +878,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   })
 
   it('un seul modèle (0.113.0, règle de l’utilisateur) : un personnage part du même point en campagne et en tournoi, le personnage vanilla du roster', () => {
-    const start = (c: Character) => ({ stats: c.baseStats, events: c.events, forms: c.forms, twinDice: c.definition.twinDice, forge: c.forge, relics: c.relics })
+    const start = (c: Character) => ({ stats: c.baseStats, events: c.events, forms: c.forms, forge: c.forge, relics: c.relics })
     for (const id of CHARACTER_IDS) {
       const vanilla = start(createCharacter(id))
       // Le champion de campagne, un adversaire de campagne avant sa construction, un participant de tournoi au premier tour
@@ -898,7 +899,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       else expect(onFaces, c.id).toEqual([`${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
     }
     // Ce qui n'est pas une face reste : l'Ouverture de Fanchon
-    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['overture', 'melodious-aura', 'soloist'])
+    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['overture', 'duo', 'soloist'])
     for (const c of CHARACTERS) {
       const kit = c.events.map((e) => e.id)
       const reserve = (c.definition.reserve ?? []).filter((e) => ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)

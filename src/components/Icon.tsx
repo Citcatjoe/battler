@@ -106,6 +106,8 @@ export type IconName =
   | 'loaded-die'
   | 'bristling-rampart'
   | 'vendetta'
+  // Planche v20 (2026-10-25) : le Duo de la barde (compétence et statut)
+  | 'duo'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -160,6 +162,8 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   loadedDie: 'loaded-die',
   bristlingRampart: 'bristling-rampart',
   vendetta: 'vendetta',
+  // Le Duo (2026-10-25) : la compétence et son statut partagent l'icône
+  duo: 'duo',
 }
 
 /**
@@ -215,7 +219,6 @@ export const SKILL_ICON: Partial<Record<string, IconName>> = {
   firefly: 'fireflies',
   whistle: 'whistle',
   'false-note': 'false-note',
-  'melodious-aura': 'melodious-aura',
   overture: 'melodious-aura',
   crescendo: 'crescendo',
   soloist: 'soloist',

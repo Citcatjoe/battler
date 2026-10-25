@@ -63,6 +63,7 @@ export type StatusId =
   | 'loadedDie'
   | 'bristlingRampart'
   | 'vendetta'
+  | 'duo'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -405,7 +406,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
   /*
    * Saignement (0.68.0) : le pendant du Poison, qui compte les coups au lieu des tours. Chaque coup qui
-   * touche le porteur rouvre la plaie ; plusieurs coups dans une action (Furie des vents, deux dés) la
+   * touche le porteur rouvre la plaie ; plusieurs coups dans une action (Furie des vents, Coup de chance) la
    * vident d'un coup, une esquive ou une action perdue la laissent ouverte. Comme tout statut (règle 9 de
    * RESOLUTION, 2026-10-21), une plaie ouverte pendant un coup ne coule pas sur ce coup, et une plaie grossie y coule
    * de ses charges du début du coup : la plaie de Pourfendre coule dès le coup suivant qui touche le porteur.
@@ -993,7 +994,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     modifyStats: (stats, s) => ({ ...stats, attackMin: stats.attackMin + WILD_AURA_ATTACK * s.stacks, attackMax: stats.attackMax + WILD_AURA_ATTACK * s.stacks }),
   },
 
-  /* Barde (0.41.0) : deux dés ; ses compétences sur les faces depuis la phase 5 ter (doubles avant). */
+  /* Barde (0.41.0) : ses compétences sur les faces depuis la phase 5 ter (doubles avant) ; un seul d6 depuis le Duo. */
   whistling: {
     name: 'Sifflotement',
     polarity: 'positive',
@@ -1038,6 +1039,22 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     badge: (s) => `+${s.stacks}`,
     stacking: 'add',
     modifyFinal: (damage, s) => damage + s.stacks,
+  },
+  // Le Duo (2026-10-25, piste D validée par l'utilisateur) : le second dé de la barde vit dans sa signature. La mécanique
+  // de Coup de chance (un jet complet de plus par charge, toutes à sa prochaine action), sous son nom, son icône et sa couleur
+  duo: {
+    name: 'Duo',
+    look: { glow: 'rgba(196,181,253,0.85)', dieColor: '#c4b5fd' },
+    polarity: 'positive',
+    summary: 'Un dé de plus à sa prochaine action, par charge.',
+    describe: (s) => `${s.stacks > 1 ? `${1 + s.stacks} dés` : 'Deux dés'} à sa prochaine action`,
+    detail: () => 'Chaque dé est un jet complet : sa face, sa compétence, son coup.',
+    plural: 'Duos',
+    badge: (s) => `+${s.stacks}d6`,
+    counter: 'stacks',
+    stacking: 'add',
+    extraStrikes: 1,
+    strikeCharges: 'all',
   },
 }
 

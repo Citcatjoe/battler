@@ -32,6 +32,25 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.116.0] — 2026-10-25
+
+Décisions de l'utilisateur du 2026-10-25 ([PROGRESSION.md](docs/PROGRESSION.md) § 1.16) : lancer le Duo de Fanchon ; un aperçu du build sur les cartes de l'arbre (« Carte de l'arbre : mets un aperçu du build ») ; la zone des bandeaux sous le dé devient un chantier à part entière.
+
+### Ajouté
+- **Duo** (compétence de Fanchon sur le 1, signature, se greffe) : +1 Aura mélodieuse, puis 1 charge du statut `duo` (registre) : sa prochaine action lance **deux dés** (mécanique de Coup de chance : `extraStrikes: 1`, `strikeCharges: 'all'`), le dé de plus en mauve, zone d'état « Dé de plus ». Son déduit : Aura gagnée. Icône peinte `duo.png` (planche v20, Artlist, GPT Image 2.5 à partir de la planche de référence des compétences : deux dés ivoire sur une portée, halo mauve), pour la compétence et le statut. Contrôles d'audit « jets de plus : charges mal dépensées », « Duo : rafale sans un 1 avant elle ».
+- **Aperçu du build sur les cartes de l'arbre** : sous le nom de chaque combattant, son dé forgé en miniature (tuiles de 20 px, taille `xs` de `ForgedDie`, icônes de 16 px) et les reliques qu'il porte à ce match (18 px), avec leurs infobulles au survol. Lignes de 70 px (32 avant), colonnes des tours suivants à 180 px, finale centrée à y 560. Page de dev `?bracket=saison` (saison de 20 simulée, reliques et forge, huitièmes et un quart joués).
+
+### Modifié
+- **Fanchon à un seul d6** : Ouverture gardée, Duo sur le 1, Soliste sur le 2 ; attaque 1-3 → **4-6**, critique 10 → **5 %** ; PV 46 et esquive 10 % inchangés ; fiche réécrite. Mesuré (`BALANCE_N=800 npm run balance`) : Fanchon 46,7 → 47,4 %, ses duels 42 (Aldric) – 54 % ; pire duel du roster inchangé (Elaria – Morgrut 61,9 %). Saison (4 de 24) : Fanchon 69 → 57 %. Campagne (12 parties, bruit large) : construite contre construits 66 ± 12 → 56 ± 10 %.
+- **Répertoire de Fanchon** : Coup de chance (la mécanique du Duo) remplacé par l'Aura de puissance (égalité dans le bruit : 57 ± 10 contre 56 ± 10 %).
+- Le sceau du Duo garde sa face dans la barre de compétences (`auraOfSkill`) ; une pastille par libellé dans `describeSkill`.
+- `npm run logs` écarte les anciennes traces à deux dés de la barde.
+- Arbre du tournoi : une ligne n'est plus un groupe de survol hors de la configuration ; `docs/ui-kit/README.md` (ligne de 70 px).
+- Empreinte de non-régression (`balance.test.ts`) mise à jour volontairement (Fanchon à un dé).
+
+### Retiré
+- Les deux dés de la barde (coupure nette) : `CharacterDef.twinDice`, `Character.dice`, le jet par dé de `action()`, la rafale sans statut, la règle compendium `twin-dice` et les « deux dés » / « 2 × d6 » des règles et des écrans, la ligne de trace « lance ses deux dés », les contrôles d'audit « deux dés » et « jet de la barde », les séries 15 et 29 du laboratoire.
+
 ## [0.115.1] — 2026-10-25
 
 Décision de l'utilisateur au réveil ([PROGRESSION.md](docs/PROGRESSION.md) § 1.15).

@@ -1556,7 +1556,7 @@ describe('mode triche : dés imposés (0.33.0)', () => {
 
   it('combat test : chaque dé choisi un par un, du premier au K.O., sans changer ce qui précède', () => {
     // Le déroulé de `useCombat` en combat test : on choisit le dé du rang suivant, le moteur résout à
-    // nouveau, et ainsi de suite. Le hasard (0) laisse le dé tiré ; deux dés (barde) et pièce compris.
+    // nouveau, et ainsi de suite. Le hasard (0) laisse le dé tiré ; rafale (le Duo de la barde) et pièce compris.
     for (const ids of [['gorak', 'naraxes'], ['fanchon', 'elaria']] as const) {
       const fighters: Pair<ReturnType<typeof createCharacter>> = [createCharacter(ids[0]), createCharacter(ids[1])]
       const forced: Record<number, number> = {}
@@ -1802,7 +1802,7 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(plainOnes).toBeGreaterThan(0)
   })
 
-  it('deux dés : chaque dé se lit seul (un 1 de Fanchon éveille l’Osselet, le bonus du 4 va au coup du 4)', () => {
+  it('rafale du Duo : chaque dé se lit seul (un 1 de Fanchon éveille l’Osselet, le bonus du 4 va au coup du 4)', () => {
     let ones = 0
     for (let seed = 0; seed < 40; seed++) {
       const r = simulateCombat([createCharacter('fanchon').withRelics([getRelic('split-knucklebone'), getRelic('four-nail-shoe')]), createCharacter('morgrut')], { seed })
@@ -2208,20 +2208,39 @@ describe('causes des étapes (moteur v2, docs/MOTEUR_V2.md § 3)', () => {
     expect(cuts).toBeGreaterThan(20)
   })
 
-  it('deux dés (Fanchon) : son action est une rafale sans statut de deux jets ; chaque coup a la rafale pour cause, ou son jet greffé', () => {
+  it('Duo (Fanchon, signature sur le 1) : +1 Aura mélodieuse et le Duo ; à sa prochaine action, une rafale de jets complets, un de plus par charge', () => {
+    let duos = 0
     let actions = 0
     let grafted = 0
-    for (const r of rosterCombats(4))
-      for (const f of ofType(r, 'flurry')) {
-        if (r.fighters[f.side].id !== 'fanchon' || f.status) continue
-        actions++
-        expect(f.strikes).toBe(2)
-        const strikes = r.beats.filter((b) => b.type === 'attack' && b.cause !== undefined && (b.cause === f.id || (r.beats[b.cause].type === 'roll' && r.beats[b.cause].cause === f.id)))
-        if (f.turn < r.turns) expect(strikes).toHaveLength(2)
-        grafted += strikes.filter((s) => s.cause !== f.id).length
+    for (const r of rosterCombats(4)) {
+      for (const b of ofType(r, 'event')) {
+        if (b.event.eventId !== 'duo') continue
+        expect(causeOf(r, b)).toMatchObject({ type: 'roll', roll: 1 })
+        expect(b.event.effects).toEqual([
+          expect.objectContaining({ type: 'applyStatus', target: b.event.side, status: 'melodiousAura', stacks: 1 }),
+          expect.objectContaining({ type: 'applyStatus', target: b.event.side, status: 'duo', stacks: 1 }),
+        ])
+        duos++
       }
-    expect(actions).toBeGreaterThan(50)
-    expect(grafted).toBeGreaterThan(10)
+      for (const f of ofType(r, 'flurry')) {
+        if (f.status !== 'duo') continue
+        expect(r.fighters[f.side].id).toBe('fanchon')
+        // Le Duo vient d'un 1 d'une action passée, et toutes ses charges partent ici
+        const held = stacksOf(r.beats[f.id - 1].state.statuses[f.side], 'duo')
+        expect(f.strikes).toBe(1 + held)
+        expect(stacksOf(f.state.statuses[f.side], 'duo')).toBe(0)
+        const posed = ofType(r, 'event').filter((b) => b.id < f.id && b.event.eventId === 'duo' && b.event.side === f.side)
+        expect(posed.at(-1)!.turn).toBeLessThan(f.turn)
+        const strikes = r.beats.filter((b) => b.type === 'attack' && b.cause !== undefined && (b.cause === f.id || (r.beats[b.cause].type === 'roll' && r.beats[b.cause].cause === f.id)))
+        if (f.turn < r.turns) expect(strikes).toHaveLength(f.strikes)
+        grafted += strikes.filter((s) => s.cause !== f.id).length
+        actions++
+      }
+    }
+    expect(duos).toBeGreaterThan(50)
+    expect(actions).toBeGreaterThan(30)
+    // Chaque jet est complet : un 1 ou un 2 de la rafale fait partir sa compétence
+    expect(grafted).toBeGreaterThan(5)
   })
 
   it('rafale : chaque coup a la rafale pour cause ; des coups instantanés ont pour cause ce qui a posé leur charge', () => {
@@ -2566,29 +2585,27 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(ones).toBeGreaterThan(0)
   })
 
-  it('deux dés : la forge vise les faces nues, comme pour tous ; une face gravée ou dorée vaut pour chacun des deux dés', () => {
+  it('Duo : la forge de la barde vise les faces nues, comme pour tous ; une face gravée ou dorée vaut pour chaque dé de sa rafale', () => {
     const fanchon = def('fanchon')
     expect(offerTargets(fanchon, [], { op: 'engrave', skill: skill('fear') })).toEqual([3, 4, 5, 6])
     expect(offerTargets(fanchon, [], { op: 'gild' })).toEqual([3, 4, 5, 6])
     expect(() => forgeState(fanchon, [{ op: 'gild', face: 1 }])).toThrow()
     const bard = createCharacter('fanchon').withForge([{ op: 'engrave', face: 6, skill: skill('grave-breath') }, { op: 'gild', face: 5 }])
     expect(bard.events.find((e) => e.id === 'grave-breath')!.trigger).toBe(faceTrigger(6))
-    // Une compétence qui modifie son coup le modifie aussi sur la barde : chaque dé porte son coup
+    // Une compétence qui modifie son coup le modifie aussi dans la rafale : chaque dé porte son coup
     expect(relationOf(createCharacter('fanchon').withForge([{ op: 'engrave', face: 6, skill: skill('cleave') }]).events.find((e) => e.id === 'cleave')!)).toBe('modify')
     let sixes = 0
-    let both = 0
     let gilded = 0
     for (let seed = 0; seed < 150; seed++) {
       const r = simulateCombat([bard, createCharacter('morgrut')], { seed })
-      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0 && !x.status)) {
-        // Ses deux jets, dans l'ordre : un 6 lance le Souffle (greffé : étape roll, le Souffle, puis le coup), sur chacun des dés
+      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0 && x.status === 'duo')) {
+        // Ses jets, dans l'ordre : un 6 lance le Souffle (greffé : étape roll, le Souffle, puis le coup), sur chacun des dés
         const rolls = r.beats.filter((x) => x.type === 'roll' && x.cause === f.id)
         const feared = rolls.filter((x) => x.type === 'roll' && x.roll === 6)
         for (const roll of feared) {
           expect(r.beats[roll.id + 1]).toMatchObject({ type: 'event', event: { eventId: 'grave-breath', trigger: faceTrigger(6) } })
           sixes++
         }
-        if (feared.length === 2) both++
       }
       for (const a of attacksOf(r).filter((x) => x.attacker === 0 && !x.dodged && !x.replaced)) {
         expect(a.gild ?? 0).toBe(a.roll === 5 ? GILD_BONUS : 0)
@@ -2596,7 +2613,6 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       }
     }
     expect(sixes).toBeGreaterThan(20)
-    expect(both).toBeGreaterThan(0)
     expect(gilded).toBeGreaterThan(0)
   })
 
@@ -2894,15 +2910,16 @@ describe('attaque de base (phase 5 bis)', () => {
     expect(attacksOf(r).filter((a) => a.attacker === 0 && !a.plain).every((a) => a.replaced)).toBe(true)
   })
 
-  it('Furie des vents gravée sur deux dés (0.110.0) : chaque rafale suit le jet qui la pose, avant le second dé', () => {
+  it('Furie des vents dans une rafale de jets (0.110.0) : chaque Furie suit le jet qui la pose, avant le jet suivant', () => {
     const fury = createCharacter('gorak').events.find((e) => e.id === 'wind-fury')!
-    const twin = new Character({ ...testCharacter('a', { maxHp: 200 }, [fury]).definition, twinDice: true })
-    const r = runOn(1, [twin, testCharacter('b', { maxHp: 400 })])
+    // Un jet de plus à chaque action (Coup de chance posé au début de chaque tour), et chaque dé fait 1
+    const luck: CharacterEvent = { id: 'luck', name: 'luck', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }] }
+    const r = runOn(1, [testCharacter('a', { maxHp: 200 }, [fury, luck]), testCharacter('b', { maxHp: 400 })])
     let actions = 0
-    for (const volley of ofType(r, 'flurry').filter((b) => b.side === 0 && !b.status)) {
+    for (const volley of ofType(r, 'flurry').filter((b) => b.side === 0 && b.status === 'luckyStrike')) {
       const turn = r.beats.filter((b) => b.turn === volley.turn && b.id > volley.id)
       if (turn.some((b) => b.state.hp.includes(0))) continue
-      // Jet remplacé, Furie, rafale de deux coups bruts ; puis le second dé, sa Furie, sa rafale
+      // Jet remplacé, Furie, rafale de deux coups bruts ; puis le second jet, sa Furie, sa rafale
       const shape = turn.filter((b) => b.type === 'attack' || b.type === 'flurry').map((b) => (b.type === 'flurry' ? `rafale ${b.strikes}` : b.attack.replaced ? 'jet' : 'brut'))
       expect(shape).toEqual(['jet', 'rafale 2', 'brut', 'brut', 'jet', 'rafale 2', 'brut', 'brut'])
       // Aucune rafale reportée : la Furie ne survit pas à l'action
@@ -3093,31 +3110,23 @@ describe('attaque de base (phase 5 bis)', () => {
     expect(ofType(r, 'attack').filter((x) => x.attack.attacker === 0).length).toBeGreaterThan(3)
   })
 
-  it('barde (phase 5 ter) : ses deux dés sont deux jets complets ; chacun déclenche la compétence de sa face, puis son coup de base', () => {
+  it('barde (le Duo) : un seul d6 ; sur le 2, Soliste une fois ; chaque 1 donne un dé de plus à sa prochaine action', () => {
     const fanchon = createCharacter('fanchon')
-    // Plus aucun déclencheur de double : ses compétences sont sur ses faces, comme celles de tous
+    // Ses compétences sont sur ses faces, comme celles de tous ; l'Ouverture n'est pas une face
     for (const e of [...fanchon.events, ...(fanchon.definition.reserve ?? [])]) expect(e.trigger === 'combatStart' || rollFace(e.trigger) !== undefined).toBe(true)
-    for (const face of [1, 2]) {
-      const skill = fanchon.events.find((e) => rollFace(e.trigger) === face)!
-      const r = runOn(face, [fanchon, testCharacter('cible', { maxHp: 400, dodgeChance: 0.3 })])
-      const actions = ofType(r, 'flurry').filter((f) => f.side === 0 && !f.status)
-      expect(actions.length).toBeGreaterThan(3)
-      let total = 0
-      for (const f of actions) {
-        if (f.turn === r.turns) continue
-        expect(f).toMatchObject({ strikes: 2, faces: [DIE_FACES, DIE_FACES] })
-        // Ses deux coups, chacun sous sa rafale ou son jet greffé, et la compétence de la face sur chacun des deux
-        const jets = r.beats.filter((b) => b.cause === f.id)
-        const strikes = jets.flatMap((b) => (b.type === 'roll' ? causedBy(r, b.id) : [b])).filter((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack')
-        expect(strikes).toHaveLength(2)
-        for (const s of strikes) expect(s.attack.roll).toBe(face)
-        const fired = r.beats.filter((b) => b.type === 'event' && b.event.eventId === skill.id && strikes.some((s) => b.cause === s.id || b.cause === s.cause))
-        if (skill.limit === undefined) expect(fired.length).toBe(strikes.filter((s) => s.cause !== f.id || !s.attack.dodged).length)
-        total += fired.length
-      }
-      // Soliste, une fois par combat (0.107.0) : un seul solo, puis sa face est nue
-      if (skill.limit !== undefined) expect(total).toBe(skill.limit)
-    }
+    const target = () => testCharacter('cible', { maxHp: 400, dodgeChance: 0.3 })
+    // Sur le 2 : un dé par action, aucune rafale ; Soliste une seule fois (0.107.0), puis sa face est nue
+    const solo = runOn(2, [fanchon, target()])
+    expect(ofType(solo, 'flurry')).toHaveLength(0)
+    expect(ofType(solo, 'event').filter((b) => b.event.eventId === 'soloist')).toHaveLength(1)
+    // Sur le 1 : chaque jet pose un Duo, toutes ses charges partent à l'action suivante : 1 jet, puis 2, 3, 4…
+    const duo = runOn(1, [fanchon, target()])
+    const volleys = ofType(duo, 'flurry').filter((f) => f.side === 0)
+    expect(volleys.length).toBeGreaterThan(3)
+    volleys.forEach((f, k) => expect(f).toMatchObject({ status: 'duo', strikes: k + 2, faces: Array(k + 2).fill(DIE_FACES) }))
+    // Un Duo par jet : chaque jet de la rafale est complet (son 1 fait partir la compétence, greffée)
+    const rolls = ofType(duo, 'roll').filter((b) => b.side === 0)
+    expect(ofType(duo, 'event').filter((b) => b.event.eventId === 'duo')).toHaveLength(rolls.length)
   })
 })
 

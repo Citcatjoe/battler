@@ -772,7 +772,7 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : la Foudre fait 3 fois 2 dégâts directs (6 au lieu de 5), jamais critiques, sans armure ni esquive. À l'écran, trois éclairs tombent l'un après l'autre à gauche, à droite puis au centre de la cible, chacun avec son « 2 ». **Compensation, choix de l'agent** : Force de l'ours +4 → **+3**. Sans elle, Thaldrin montait à 58,0 % et Brokk tombait à 31,5 % contre lui, au-delà de 65/35. Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup (toujours le plus haut) ; ses duels de 38 à 62 % (Brokk 38,5 % contre lui). Valeurs nettes : Foudre +15,6, Feux follets +11,6, Aura sauvage +5,5 points (400 combats par duel).
 
-## Barde : deux dés, et la musique sur ses faces (doubles jusqu'à la phase 5 ter)
+## Barde : la musique sur ses faces, et le Duo (deux dés jusqu'à la 0.115.1, doubles jusqu'à la phase 5 ter)
 
 **Images** : `bard-idle.png` et cinq postures (0.41.0, session images). Saltimbanque de foire, en tenue bigarrée à losanges et chapeau à plume, avec un luth et une rapière. Taille 1,00, celle d'un humain.
 
@@ -817,13 +817,25 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 - **Départ en campagne (0.112.0)** : l'Aura mélodieuse sur le 1, le Soliste sur le 2, et **son Ouverture** (pas une face, gardée depuis qu'elle part de deux compétences) : 24,7 → 49,5 % contre le roster. Voir « Le départ en campagne ».
 - **Mesures** (`BALANCE_N=800 npm run balance`) : 49,5 → **55,2 %** (± 1,1), 13,1 → 12,4 tours par combat ; duels de 47 % (Morgrut) à 60 % (Elaria, Ervald) ; valeurs nettes : Ouverture +26,1 → +22,5, Aura mélodieuse +5,3 → **+31,9**, Soliste +3,5 → **+18,2** ; apport de l'Aura mélodieuse 12,4 → 21,3 PV par combat. Les autres personnages ne changent qu'à travers leur duel contre elle (de 47,9 à 51,4 %).
 
+**2026-10-25, le Duo (piste D de l'agent FanchonLab, validée par l'utilisateur)**. Un seul d6, comme tout le monde : son second dé vit dans sa signature ([RESOLUTION.md](RESOLUTION.md) § 2). Les deux autres pistes mesurées (le Crescendo en signature ; la Mélodie, l'aura comme ressource et un Point d'orgue qui la lit) sont dans les rapports `logs/lab/2026-10-25-08-21-26_v0.115.1.md` et `…08-27-03…` (série 29 du laboratoire, retirée à la livraison).
+
+- **Pourquoi** : chaque gravure, dorure et rang comptait sur ses deux dés. Gravées sur son 3, ses compétences valaient +17,1 points en moyenne (environ +11 chez les autres), son rang II d'aura +18,9 (la bande va de +3 à +8) ; construite contre construits, 65,5 % ; en saison, 68 % (FanchonLab, 8 saisons de 24). Son kit tel quel à un dé : 0,4 % : le second dé valait à lui seul environ 47 points.
+- **Kit** : Ouverture (gardée) ; **Duo** sur le 1 (**signature**) : « +1 Aura mélodieuse, et deux dés à sa prochaine action ». Le Duo est un statut du registre (`duo`) qui a la mécanique de Coup de chance : à sa prochaine action, un jet complet de plus par charge (sa face, sa compétence, son coup) ; un 1 dans cette rafale en pose un nouveau. **Soliste** sur le 2 (ce coup ×3, une fois par combat), inchangé. L'Aura mélodieuse quitte les compétences du dé : elle vit dans le Duo et l'Ouverture. Son aura passe en premier : un rang d'aiguisage va à l'aura (+1 charge), pas au dé de plus.
+- **Compensation** (stats secondaires, PV intacts) : attaque 1 à 3 → **4 à 6**, critique 10 → **5 %** ; PV 46 et esquive 10 % inchangés. Elle reste sous l'attaque des autres (5 à 6 en général) : sa chanson fait le reste, après l'armure.
+- **Mesures** (`BALANCE_N=800 npm run balance`, 0.115.1 → le Duo ; `logs/balance/2026-10-25-09-09-43_v0.115.1_avant-duo.md` → `…09-17-37_v0.115.1_duo.md`) : **46,7 → 47,4 %** (± 1,2) ; 12,7 → 12,5 tours par combat ; ses duels de 39 % (Ysolde) à 56 % (Ervald) → de **42 % (Aldric) à 54 %** (Ervald, Ysolde) ; valeurs nettes : Ouverture +23,2 → +13,9, Aura mélodieuse +35,9 → **Duo +30,5**, Soliste +8,0 → +15,6 ; apport : Aura mélodieuse 22,2 → 10,6 PV par combat, Duo 7,1 PV. Le reste du roster bouge de 1,7 point au plus (Ysolde 48,3 → 46,6 % : son duel contre elle passe de 61 à 46 %) ; de 45,7 % (Ervald) à 55,0 % (Thaldrin), pire duel inchangé (Elaria contre Morgrut, 61,9 %).
+- **Rang II** (`scripts/skills.report.ts`, 400 combats par duel) : Duo **+7,8** (+1 Aura mélodieuse ; +18,9 pour l'aura sur deux dés), Soliste **+8,3**, à la limite haute de la bande (+3 à +8) : signalé, rien changé.
+- **Gravures sur son 3** (400 combats par duel, points gagnés) : Esquive améliorée +19,4, Coup de chance +18,0, Crescendo +14,7, Aura de puissance +13,7, Fausse note +13,6, Pile ou face +13,4, Siffloter +10,3, Aura de précision +7,9 (juste sous la bande), Dé pipé 0,0 (sans Pile ou face, il n'est pas offert). Toutes dans la bande, ou juste sous elle.
+- **Coup de chance quitte son répertoire, l'Aura de puissance le remplace**. Les deux mesurés, son répertoire seul changé : gravé chez elle, Coup de chance +18,0, Aura de puissance +13,7 ; construite contre construits (24 tirages, 20 combats par duel), 57 ± 10 % contre 56 ± 10 % ; en saison (`npm run season`, 4 saisons de 24), 58 % contre 57 %. Égalité dans le bruit (± 2,5 points). Le choix se fait donc sur la lecture : Coup de chance est la mécanique même du Duo (un seul de leurs statuts part par action, l'autre attend), un 3 gravé en faisait un second Duo sans aura, rien de neuf à lire ; l'Aura de puissance (+2 à chaque coup qui touche, donc à chaque jet du Duo) ouvre un second axe, « sa chanson fait ses dégâts ». La Pièce trouée peut encore lui donner Coup de chance (avec Pile ou face).
+- **Construite** (`npm run campaign`, `npm run season`, avant → après) : construite contre construits **66 ± 12 → 56 ± 10 %**, au niveau de Naraxes et d'Aldric (59 %) ; saison **69 → 57 %**, et l'écart-type de la saison passe de 11,9 à 10,2 points (de 36 à 71 % → de 37 à 72 %) ; le plus fort de la saison est désormais Elaria seule (72 %), dont l'écart vient de la forge ([CAMPAGNE.md](CAMPAGNE.md) § 18.3). Campagne (12 parties, bruit large) : boss atteint 17 → 8 %, acte gagné 8 → 8 %, chance avant combat 85 → 80 %. Rapports : `logs/season/2026-10-25-09-09_saison_avant-duo.md` → `…09-20_saison_duo.md`, `logs/campaign/2026-10-25-09-12_campagne_avant-duo_12.md` → `…09-22_campagne_duo_12.md` (avec Coup de chance au répertoire : `…_duo-coup-de-chance…`).
+- **Historique** : ses combats déjà joués restent (`battler:history:v1` ne garde ni les dés ni le kit) ; `npm run logs` écarte ses anciennes traces à deux dés, avec la raison (« barde à deux dés, d'avant le Duo »). Une campagne en cours garde ses gravures (faces 3 à 6, toujours nues) ; un rang déjà aiguisé sur le 1 passe au Duo, sur le même axe (des charges d'aura).
+
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
-- **Comment elle se bat** : deux dés, deux mains, un rythme. Elle frappe vite et léger, et quand les dés s'accordent, c'est la musique qui frappe (les doubles). Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée.
-- **Pistes** : réagir au public ou aux paris, enchaîner (un double qui en prépare un autre), un rappel en fin de combat.
+- **Comment elle se bat** : une chanson, un rythme. Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée. Quand la foule reprend le refrain (son 1), elle lance deux dés au tour suivant, deux jets complets : le Duo.
+- **Pistes** : réagir au public ou aux paris, enchaîner (un Duo qui en prépare un autre), un rappel en fin de combat.
 
-- **Stats** : PV 46, 2 × d6, attaque 1 à 3 (DP), armure 0, esquive 6 %, critique 10 % ×2 (phase 5 ter).
-- **Mesures** : 55,2 % (phase 5 ter, 800 combats par duel). Duels de 47 à 60 %.
+- **Stats** : PV 46, d6, attaque 4 à 6 (DP), armure 0, esquive 10 %, critique 5 % ×2 (le Duo, 2026-10-25).
+- **Mesures** : 47,4 % (le Duo, 800 combats par duel). Duels de 42 à 54 %.
 
 ### Mélisande · Ménestrelle · retiré en 0.43.0
 
@@ -860,20 +872,20 @@ Pire duel : Elaria contre Morgrut, 61,9 %. La matrice ci-dessous date encore de 
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne. Règles 0.113.0 (un seul modèle de personnage, Purification sans effet sur soi), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/`).
+Taux de victoire de la ligne contre la colonne. Règles du Duo (2026-10-25 : Fanchon à un seul d6), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/2026-10-25-09-17-37_v0.115.1_duo.md`).
 
 | | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 49 % | 55 % | 58 % | 56 % | 48 % | 55 % | 59 % | 47 % | 55 % | **53,5 %** |
-| **Elaria** | 51 % | — | 45 % | 50 % | 51 % | 53 % | 48 % | 62 % | 48 % | 46 % | **50,4 %** |
-| **Brokk** | 46 % | 56 % | — | 53 % | 53 % | 46 % | 49 % | 46 % | 44 % | 57 % | **49,8 %** |
-| **Ervald** | 42 % | 50 % | 47 % | — | 51 % | 41 % | 49 % | 49 % | 40 % | 44 % | **45,8 %** |
-| **Ysolde** | 44 % | 49 % | 47 % | 49 % | — | 38 % | 42 % | 44 % | 40 % | 61 % | **45,9 %** |
-| **Naraxes** | 52 % | 47 % | 55 % | 59 % | 62 % | — | 49 % | 60 % | 48 % | 53 % | **53,8 %** |
-| **Aldric** | 45 % | 52 % | 51 % | 51 % | 58 % | 52 % | — | 56 % | 50 % | 48 % | **51,3 %** |
-| **Morgrut** | 42 % | 38 % | 54 % | 51 % | 56 % | 40 % | 44 % | — | 42 % | 57 % | **47,2 %** |
-| **Thaldrin** | 53 % | 52 % | 56 % | 60 % | 60 % | 52 % | 50 % | 59 % | — | 59 % | **55,6 %** |
-| **Fanchon** | 45 % | 54 % | 43 % | 56 % | 39 % | 47 % | 52 % | 43 % | 42 % | — | **46,8 %** |
+| **Gorak** | — | 49 % | 55 % | 58 % | 53 % | 48 % | 55 % | 59 % | 47 % | 52 % | **52,7 %** |
+| **Elaria** | 51 % | — | 45 % | 50 % | 47 % | 53 % | 48 % | 62 % | 48 % | 55 % | **51,0 %** |
+| **Brokk** | 46 % | 56 % | — | 53 % | 52 % | 46 % | 49 % | 46 % | 44 % | 51 % | **49,0 %** |
+| **Ervald** | 42 % | 50 % | 47 % | — | 48 % | 41 % | 49 % | 49 % | 40 % | 46 % | **45,7 %** |
+| **Ysolde** | 47 % | 53 % | 48 % | 52 % | — | 41 % | 44 % | 47 % | 43 % | 46 % | **46,6 %** |
+| **Naraxes** | 52 % | 47 % | 55 % | 59 % | 59 % | — | 49 % | 60 % | 48 % | 55 % | **53,7 %** |
+| **Aldric** | 45 % | 52 % | 51 % | 51 % | 56 % | 52 % | — | 56 % | 50 % | 59 % | **52,3 %** |
+| **Morgrut** | 42 % | 38 % | 54 % | 51 % | 53 % | 40 % | 44 % | — | 42 % | 54 % | **46,5 %** |
+| **Thaldrin** | 53 % | 52 % | 56 % | 60 % | 57 % | 52 % | 50 % | 59 % | — | 56 % | **55,0 %** |
+| **Fanchon** | 48 % | 45 % | 49 % | 54 % | 54 % | 45 % | 42 % | 46 % | 44 % | — | **47,4 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 

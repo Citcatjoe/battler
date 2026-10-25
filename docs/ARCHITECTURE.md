@@ -119,8 +119,9 @@ src/
                          MatchupReference.tsx (`?matchup=<cas>`), l'écran d'affrontement sur les cas des références
                          docs/ref/affrontement-*.png (duel, duel-droit, tournoi, saison-son, et les cas de la géométrie fixe ;
                          fiches factices construites par les vraies fonctions du jeu, panneau du son ouvert par SoundToggle initialOpen) ;
-                         BracketReference.tsx (`?bracket=survol|paris|reel|fini`), l'arbre du tournoi sur un tournoi factice
-                         (createTournament, simulateCombat), carte survolée et panneau Paris forcés (docs/ref/tournoi-*.png)
+                         BracketReference.tsx (`?bracket=survol|paris|reel|fini|saison`), l'arbre du tournoi sur un tournoi factice
+                         (createTournament, simulateCombat ; `saison` : une saison de 20 simulée, reliques et forge, puis son
+                         arbre), carte survolée et panneau Paris forcés (docs/ref/tournoi-*.png)
 ```
 
 ## Principe central : un moteur, une chronologie
@@ -169,7 +170,7 @@ Les règles sont spécifiées dans **[RESOLUTION.md](RESOLUTION.md)**. Côté co
 | Vérification d'état (K.O.) après chaque effet, puis seuils de PV (mi-PV, reliques de seuil) | `applyEffects`, `fallen`, `checkThresholds` |
 | Reliques : après les compétences dans chaque fenêtre ; charges, recharge, conditions ; bonus de coup | `fire`, `fireRelic`, `checkThresholds`, `resolveAttack` |
 
-Étapes de la chronologie : `attack`, `roll` (jet greffé), `event`, `statusTick` (avec `phase`), `statusAge` (avec `phase`), `statusReaction` (Vol de vie, Riposte et jauges en sont), `skip`, `flurry` (plusieurs jets dans une action : les deux dés de la barde, sans statut ; Coup de chance ; les coups bruts de la Furie des vents), `coin`, `shift`, `relic`. Chacune a sa mise en scène dans `stage` (`staging.ts`) : un `switch` exhaustif (`satisfies never`) refuse un type oublié. Les effets d'une étape, quelle que soit leur source, se lisent avec `beatEffects` (stats, audit).
+Étapes de la chronologie : `attack`, `roll` (jet greffé), `event`, `statusTick` (avec `phase`), `statusAge` (avec `phase`), `statusReaction` (Vol de vie, Riposte et jauges en sont), `skip`, `flurry` (plusieurs jets dans une action, toujours sous un statut : Coup de chance et le Duo de la barde, des jets complets ; les coups bruts de la Furie des vents), `coin`, `shift`, `relic`. Chacune a sa mise en scène dans `stage` (`staging.ts`) : un `switch` exhaustif (`satisfies never`) refuse un type oublié. Les effets d'une étape, quelle que soit leur source, se lisent avec `beatEffects` (stats, audit).
 
 ## Du moteur à l'écran (staging.ts, useCombat.ts, timing.ts)
 
@@ -196,7 +197,7 @@ Les stats effectives (`effectiveStats`) = stats de base modifiées par les statu
 3. Un seul personnage par famille (0.43.0) : plus de variantes de coloris (`variant()` et `baseId` sont retirés).
    - **Personnage à formes** (druide) : `forms: [{ id, name, statuses?, attackKind?, attackSource? }, { id, name, statuses?, attackKind?, look: { image, portrait } }]`. Chaque compétence de forme porte `form: '<id>'`. Le moteur bascule la forme au début de chacun de ses tours, sauf le premier (étape `shift`) ; `Fighter` fait le fondu, et `Character.lookFor(form)` donne l'apparence. `attackKind` d'une forme, avec son `attackSource`, remplace celui du personnage (`Character.attackKindIn(form)`, `Character.attackSourceIn(form)` : l'homme frappe en DM, la Foudre, l'ours en DP) ; la fourchette d'attaque est la même pour toutes les formes.
    - **Statuts de forme** (0.73.0) : `statuses` d'une forme liste des statuts marqués `innate: true` dans `STATUSES` (Incantation, Force de l'ours). Le moteur les pose au début du combat (première forme) et à chaque `shift`, et retire ceux de la forme quittée ; une purge (`cleanse`) les ignore, aucune immunité ne les bloque. `validateRoster` refuse un statut de forme non `innate` et une compétence qui pose un statut `innate` ; l'audit vérifie à chaque étape que le porteur a exactement les statuts de sa forme.
-   - **Personnage à deux dés** (barde) : `twinDice: true` dans la définition, `Character.dice` vaut 2. L'action (`action` dans `combat.ts`) fait un jet complet par dé (`jet`), dans une rafale sans statut (étape `flurry`) : chaque dé désigne une face, qui déclenche sa compétence (greffe, modifie ou remplace, comme pour tous), puis le coup de base de ce dé. Ses compétences sont sur ses faces, comme celles de tous ; une face gravée, dorée ou copiée vaut pour chacun des deux dés. Avec Coup de chance, les jets du statut suivent les deux siens dans la même rafale. Un K.O. au premier jet arrête l'action. Phase 5 ter : plus de doubles ([RESOLUTION.md](RESOLUTION.md) § 2).
+   - **Un dé de plus** : tout personnage lance un seul d6 (le double dé de la barde, `twinDice`, est retiré avec le Duo, 2026-10-25). Des jets en plus viennent d'un statut `extraStrikes` non instantané (Coup de chance, le Duo de la barde), posé par une compétence : l'action suivante (`action` dans `combat.ts`) est une rafale (étape `flurry`) d'un jet complet par charge en plus du sien, chacun avec sa face, sa compétence et son coup de base. Un seul de ces statuts part par action.
    - **Icône et nature** : l'icône d'une compétence va dans `SKILL_ICON` (`Icon.tsx`), son futur sceau peint (asset A-01) dans `SKILL_SEAL` (`SkillSeal.tsx`). Sa nature (`nature?: 'martial' | 'finesse' | 'arcane'`, arcane par défaut) colore seulement sa carte.
    - **Événement de scène** (0.73.0, Foudre) : `scene: '<id>'` sur la compétence. Voir « Ajouter un événement de scène ».
 4. L'ajouter à `ROSTER`. La sélection (rangée par famille via `FAMILIES`), les fiches, les statistiques et le tournoi le prennent en compte automatiquement.
@@ -256,7 +257,7 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | `forcesCrit` | le prochain coup qui touche est critique, et consomme une charge |
 | `forcesDodge` | le prochain coup reçu est esquivé sans tirage, et consomme une charge |
 | `drainsHit` | le prochain coup qui touche rend les PV retirés (étape `statusReaction` sur `hit`), et consomme une charge |
-| `extraStrikes` | coups supplémentaires à la prochaine action ; le statut est consommé au début de l'action (étape `flurry`). Coup de chance : des jets complets d'un d6 (sa compétence, puis son coup de base) ; Furie des vents : des coups bruts. La couleur des dés vient de `look.dieColor` |
+| `extraStrikes` | coups supplémentaires à la prochaine action ; le statut est consommé au début de l'action (étape `flurry`). Coup de chance et le Duo : des jets complets d'un d6 (sa compétence, puis son coup de base) ; Furie des vents : des coups bruts. La couleur des dés vient de `look.dieColor` |
 | `reflectsHit` | Riposte : part des PV retirés renvoyée à l'attaquant sur le prochain coup qui touche ; consommé |
 | `immune` | bloque toute pose d'une polarité, sans s'user (Aura d'immunité) ; vérifié dans `resolveApplication` après les immunités du personnage |
 | `fillsOnHurt` | statut à jauges (`Status.slots`) : rempli par les coups qui touchent le porteur, seulement s'il a un effet `release` de ce statut |
@@ -316,7 +317,7 @@ Une nouvelle étape de chronologie doit recevoir sa ligne dans `beatLines` (`tra
 - `Stage.tsx` dessine une scène fixe de **1600×900**, mise à l'échelle par `transform`. Dans les écrans, on raisonne en pixels de cette scène : pas de breakpoints `sm:` ni d'unités `vh`.
 - Les animations de combat dépendent de la variable CSS `--speed`. Le tremblement de l'arène passe par la Web Animations API sur une ref.
 - `Fighter` affiche l'image (orientation, échelle, teinte), les effets du coup, l'aura et le titre de l'événement dont il est la source, les badges des effets qui le visent, et une aura au sol pour ses statuts actifs : verte pour les bonus, rouge pour les malus.
-- L'arbre du tournoi (`Bracket.tsx`) est placé en pixels absolus avec des connecteurs SVG. Sa racine est en `pointer-events-none`. En suivi, `next` cadre d'or le prochain match ; les actions d'un match prêt (`SquareButton size="sm"`) n'apparaissent qu'au survol, au focus ou sur écran tactile (`.bracket-actions`, `index.css`).
+- L'arbre du tournoi (`Bracket.tsx`) est placé en pixels absolus avec des connecteurs SVG. Sa racine est en `pointer-events-none`. En suivi, `next` cadre d'or le prochain match ; les actions d'un match prêt (`SquareButton size="sm"`) n'apparaissent qu'au survol, au focus ou sur écran tactile (`.bracket-actions`, `index.css`). Chaque participant y montre l'aperçu de son build à ce match : `ForgedDie size="xs"` (tuiles de 20 px, sceaux de 16) et `RelicRow` de 18 px, avec leurs infobulles ; le combattant se construit comme `matchFighters` (`withForge(build.forge)`, `withRelics(relicsOf(t, i, tour))`). Une ligne n'est un `group` que si la case se modifie (configuration) : un groupe nu ouvrirait toutes les infobulles du dé.
 
 ## Données persistées
 

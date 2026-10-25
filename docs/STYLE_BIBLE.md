@@ -1025,6 +1025,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 113 | `pavise-nails` | Clous de pavois (relique, v19) | Éclat de planche de pavois peint où restent plantés trois gros clous forgés (les 3 dégâts), un fil de fer tordu pour attache, reflet bleu-gris |
 | 114 | `talion-gauntlet` | Gantelet du talion (relique, v19) | Manchette de gantelet de fer rivetée, courroie de cuir bouclée, une seule pointe rabattue (le +1), lueur dorée dans les rivets |
 | 115 | `holed-coin` | Pièce trouée (relique, v19) | Vieille pièce de cuivre percée, sur un cordon de cuir noué, face « pile » frappée de deux petites étoiles (les deux jets), lueur violette dans le trou ; ni dé, ni la pièce de Pile ou face |
+| 116 | `duo` | Duo (compétence de la barde et son statut, v20, 2026-10-25) | Deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans un halo mauve de l'Aura mélodieuse |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1228,6 +1229,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v18 et v19, second lot de la phase 8 (4 + 4 icônes, deux planches 2×2, intégrées le 2026-10-25 pendant la passe de nuit, générées par l'agent avec Artlist : GPT Image 2.5 en image à image) :** une planche par grammaire (règle de cette bible). **v18**, les quatre compétences, sur la référence des compétences (l'objet en action, la magie peinte, la palette du porteur) : 1. Embrasement (Thaldrin : vert de chêne, ambre, braise) · 2. Dé pipé (Naraxes : vert des marais, or, violet de la chance) · 3. Rempart hérissé (Brokk : acier bleu-gris, chêne, rouge sombre) · 4. Vindicte (Aldric : or, ivoire, bleu nuit). **v19**, les quatre reliques, sur la référence des reliques (un objet immobile et patiné, son attache, la magie contenue, le chiffre de la règle dessiné dans l'objet) : 1. Soufflet de forge (trois clous) · 2. Clous de pavois (trois clous) · 3. Gantelet du talion (une pointe) · 4. Pièce trouée (deux étoiles). Motifs complets : inventaire, n° 108 à 115. Les quatre statuts du lot (`conflagration`, `loadedDie`, `bristlingRampart`, `vendetta`) montrent l'icône de leur compétence, comme la Curée, la Sentence et la Rancune.
 
+**v20, le Duo (1 icône, intégrée le 2026-10-25, générée par l'agent avec Artlist : GPT Image 2.5 en image à image, référence : la planche des compétences) :** deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans le halo mauve de l'Aura mélodieuse (palette de la barde). Une seule icône pour la compétence et son statut `duo`.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1255,6 +1258,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v20 | 2026-10-25 | 116 | Le Duo (compétence de la barde et son statut). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une icône, deux versions générées (160 crédits), la version A retenue. Découpe par `scripts/slice-icons.py`, `src/assets/icons/duo.png`. Pas encore vue dans un écran de jeu. |
 | v19 | 2026-10-25 | 112 à 115 | Les quatre reliques du second lot de la phase 8 (Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées, la version A retenue pour les quatre (v18 et v19 : 320 crédits en tout). Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; vues dans les écrans par la passe de finition. |
 | v18 | 2026-10-25 | 108 à 111 | Les quatre compétences du second lot de la phase 8 (Embrasement, Dé pipé, Rempart hérissé, Vindicte ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2, deux versions générées, la version A retenue pour les quatre. Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; vues dans les écrans par la passe de finition. |
 | v17 | 2026-10-25 | 104 à 107 | Les quatre compétences consommatrices peintes de la phase 8 (Curée, Récolte, Virulence, Sentence ; la Rancune reprend `grudge.png`). Artlist, GPT Image 2.5 en image à image, référence : seize icônes de compétences ; une planche 2×2, deux versions générées (160 crédits) : Curée et Virulence de la version B, Récolte et Sentence de la version A. Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |

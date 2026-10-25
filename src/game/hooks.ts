@@ -74,7 +74,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
   // Une aura de coup (puissance, sauvage, mélodieuse, force de l'ours) vaut autant de fois qu'il y a de coups : elle
-  // consomme les coups de plus (Furie, Coup de chance, deux dés), revue des signatures du 2026-10-24
+  // consomme les coups de plus (Furie, Coup de chance, Duo), revue des signatures du 2026-10-24
   powerAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   intimidationAura: { side: 'self' },
   // 0.107.0 : +5 % de critique par charge en plus du multiplicateur : elle fait aussi critiquer
@@ -110,6 +110,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   loadedDie: { side: 'self', consumes: ['status:coinFlip'], produces: ['moment:heads', 'damage:instant'] },
   bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal'] },
   vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
+  // Le Duo (barde) : le dé de plus de Coup de chance, sous son nom
+  duo: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */

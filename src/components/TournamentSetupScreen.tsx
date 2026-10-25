@@ -554,7 +554,7 @@ function CharacterTooltip({ character: c }: { character: Character }) {
       </p>
       <div className="codex-divider my-2.5" />
       <p className="font-data text-[14px] leading-snug text-ink-1">
-        {c.maxHp} PV · attaque {c.stats.attackMin} à {c.stats.attackMax} · {c.dice > 1 ? `${c.dice} × ` : ''}d{DIE_FACES} · esquive {percent(c.stats.dodgeChance)} · critique{' '}
+        {c.maxHp} PV · attaque {c.stats.attackMin} à {c.stats.attackMax} · d{DIE_FACES} · esquive {percent(c.stats.dodgeChance)} · critique{' '}
         {percent(c.stats.critChance)} {multiplier(c.stats.critMultiplier)}
       </p>
     </div>

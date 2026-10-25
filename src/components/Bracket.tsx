@@ -1,15 +1,19 @@
 import type { ReactNode } from 'react'
-import { CHARACTERS } from '../game/roster'
+import { createCharacter, CHARACTERS } from '../game/roster'
+import { getRelic } from '../game/relics'
 import { STAGE_WIDTH } from './Stage'
-import { allMatches, matchesInRound, matchKey, players, ROUNDS, status, type MatchRef, type Tournament } from '../game/tournament'
+import { allMatches, matchesInRound, matchKey, players, relicsOf, ROUNDS, status, type MatchRef, type Tournament } from '../game/tournament'
+import { ForgedDie } from './ForgedDie'
 import { Portrait } from './Portrait'
+import { RelicRow } from './RelicSeal'
 import { Glyph, SquareButton } from './kit'
 
 /*
  * Arbre du tournoi (design system, refonte 0.47.0, cartes épurées en 0.100.0), en pixels de la scène 1600×900.
  * Deux mises en page :
- * - `track` (suivi) : les quatre tours, les deux moitiés convergent vers la finale au centre. Les cartes ne
- *   montrent que le portrait, le nom et, au premier tour, la tête de série (docs/ref/tournoi-arbre-survol.png).
+ * - `track` (suivi) : les quatre tours, les deux moitiés convergent vers la finale au centre. Chaque participant montre
+ *   son portrait, son nom, au premier tour sa tête de série, et l'aperçu de son build : son dé forgé en miniature et
+ *   les reliques qu'il porte à ce match (infobulle de chaque face et de chaque relique au survol).
  * - `setup` (configuration) : seul le premier tour se remplit. Ses cases sont grandes, les tours
  *   suivants ne sont plus que des jonctions, et les lignes convergent vers le grand panneau central
  *   (la palette des combattants et les règles), qui prend toute la place libérée et monte jusque sous le titre.
@@ -21,6 +25,8 @@ interface Geometry {
   bottom: number
   /** Haut du panneau central (il peut monter plus haut que les cases) */
   centerTop: number
+  /** Centre vertical de la finale */
+  finalCy: number
   margin: number
   /** Largeur d'une case par tour (0 : une simple jonction) ; la finale est au centre */
   widths: readonly number[]
@@ -31,11 +37,12 @@ interface Geometry {
 }
 
 const GEOMETRY: Record<Layout, Geometry> = {
-  // Cotes de docs/ref/tournoi-arbre-survol.png (1440×810, ×10/9) : cartes de 64 px, premier tour à 244 px. Le haut
-  // du panneau central laisse la place au champion, sous le titre ; le sceau de la finale se pose plus bas
-  track: { top: 115, bottom: 739, centerTop: 120, margin: 36, widths: [244, 167, 156, 178], rowH: [32, 32, 32, 32], gap: 30 },
+  // Suivi : deux lignes par participant (le nom, puis le dé forgé et les reliques), d'où des cartes de 140 px ; les
+  // colonnes des tours suivants gardent la place d'un dé de six faces de 20 px à côté des actions. La finale se pose
+  // sous le trophée (ou le champion), plus bas que les demi-finales
+  track: { top: 96, bottom: 808, centerTop: 120, finalCy: 560, margin: 28, widths: [244, 180, 180, 180], rowH: [70, 70, 70, 70], gap: 24 },
   // Le panneau de la configuration monte jusque sous le titre de l'écran (palette et règles)
-  setup: { top: 176, bottom: 884, centerTop: 120, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
+  setup: { top: 176, bottom: 884, centerTop: 120, finalCy: 530, margin: 24, widths: [252, 0, 0, 0], rowH: [42, 0, 0, 0], gap: 30 },
 }
 
 interface Box {
@@ -59,7 +66,7 @@ function boxOf(layout: Layout, { round, index }: MatchRef): Box {
   const g = GEOMETRY[layout]
   const w = g.widths[round]
   const rowH = g.rowH[round]
-  if (round === ROUNDS - 1) return { x: STAGE_WIDTH / 2 - w / 2, cy: (g.top + g.bottom) / 2, w, rowH, side: 'center' }
+  if (round === ROUNDS - 1) return { x: STAGE_WIDTH / 2 - w / 2, cy: g.finalCy, w, rowH, side: 'center' }
   const perSide = matchesInRound(round) / 2
   const left = index < perSide
   const cy = g.top + (((index % perSide) + 0.5) * (g.bottom - g.top)) / perSide
@@ -118,18 +125,22 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
   const zone = centerZone(layout)
   const box = (ref: MatchRef) => boxOf(layout, ref)
 
-  // Participant affiché sur une ligne : en configuration, les cases ; en tournoi, les entrants.
+  // Participant affiché sur une ligne : en configuration, les cases ; en tournoi, les entrants, avec le combattant qu'ils
+  // sont à ce match (build de saison figé, reliques portées : celles gagnées aux tours d'avant comprises)
   const entrantAt = (ref: MatchRef, row: 0 | 1) => {
     if (tournament) {
       const idx = players(tournament, ref)[row]
       if (idx === null) return null
       const e = tournament.entrants[idx]
-      return { idx, character: characterById(e.characterId), label: e.label }
+      const fighter = createCharacter(e.characterId)
+        .withForge(e.build?.forge ?? [])
+        .withRelics(relicsOf(tournament, idx, ref.round).map(getRelic))
+      return { idx, character: characterById(e.characterId), label: e.label, fighter }
     }
     if (ref.round !== 0 || !slots) return null
     const slot = 2 * ref.index + row
     const id = slots[slot]
-    return id ? { idx: slot, character: characterById(id), label: characterById(id).name } : null
+    return id ? { idx: slot, character: characterById(id), label: characterById(id).name, fighter: null } : null
   }
   /** Un match de configuration dont les deux cases sont remplies : sa ligne s'éclaire */
   const filled = (ref: MatchRef): boolean =>
@@ -196,6 +207,9 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
         const result = tournament?.results[matchKey(ref)]
         const right = b.side === 'right'
         const isNext = !!next && matchKey(next) === matchKey(ref)
+        // Infobulles de l'aperçu : vers le centre de l'écran, du côté de la carte
+        const tip = b.cy < 450 ? 'below' : 'above'
+        const align = right ? 'right' : b.side === 'center' ? 'center' : 'left'
         return (
           <div
             key={matchKey(ref)}
@@ -225,14 +239,31 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                 </span>
               )
               const portraitSize = layout === 'setup' ? 'h-8 w-8' : 'h-6 w-6'
-              const content = e ? (
+              const face = e && (
+                <span className={`bracket-face ${portraitSize}`} data-lost={lost || undefined}>
+                  <Portrait character={e.character} side={right ? 1 : 0} className="h-full w-full" />
+                </span>
+              )
+              const name = e && (
+                <span className="bracket-name" data-won={won || undefined} data-lost={lost || undefined} data-leaf={leaf || undefined}>
+                  {e.label}
+                </span>
+              )
+              const content = e?.fighter ? (
+                <div className="bracket-fighter" data-lost={lost || undefined}>
+                  <div className={`bracket-fighter-head ${right ? 'flex-row-reverse' : ''}`}>
+                    {face}
+                    {name}
+                  </div>
+                  <ForgedDie character={e.fighter} size="xs" tooltip={tip} align={align} />
+                  <div className="bracket-build-relics">
+                    <RelicRow relics={e.fighter.relics} size={18} tooltip={tip} align={align} />
+                  </div>
+                </div>
+              ) : e ? (
                 <>
-                  <span className={`bracket-face ${portraitSize}`} data-lost={lost || undefined}>
-                    <Portrait character={e.character} side={right ? 1 : 0} className="h-full w-full" />
-                  </span>
-                  <span className="bracket-name" data-won={won || undefined} data-lost={lost || undefined} data-leaf={leaf || undefined}>
-                    {e.label}
-                  </span>
+                  {face}
+                  {name}
                 </>
               ) : editable ? (
                 <>
@@ -255,7 +286,9 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
                 <div
                   key={row}
                   data-row={row}
-                  className={`bracket-row group ${right ? 'flex-row-reverse text-right' : ''}`}
+                  // `group` seulement sur une case modifiable (survol : vider, placer) : au suivi, un groupe nu ouvrirait
+                  // d'un coup les infobulles de toutes les faces du dé (docs/design-system.md, infobulles au survol)
+                  className={`bracket-row ${editable ? 'group' : ''} ${right ? 'flex-row-reverse text-right' : ''}`}
                   style={{ height: b.rowH }}
                 >
                   {editable ? (

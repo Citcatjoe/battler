@@ -722,6 +722,26 @@ body {
   .bracket-name[data-leaf] { font-size: 16px; }
   .bracket-name[data-won] { font-weight: 700; color: var(--gold-200); }
   .bracket-name[data-lost] { color: var(--text-off); text-decoration: line-through; }
+  /* Aperçu du build : sous le nom, le dé forgé en miniature puis les reliques, de hauteur fixe (les deux
+     participants d'une carte s'alignent) ; le perdant s'éteint avec son nom */
+  .bracket-fighter {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .bracket-row.flex-row-reverse .bracket-fighter { align-items: flex-end; }
+  .bracket-fighter-head {
+    display: flex;
+    min-width: 0;
+    align-self: stretch;
+    align-items: center;
+    gap: 8px;
+  }
+  .bracket-build-relics { min-height: 18px; }
+  .bracket-fighter[data-lost] .forge-face,
+  .bracket-fighter[data-lost] .relic-seal { opacity: 0.35; filter: grayscale(0.8); }
   .bracket-actions {
     position: absolute;
     top: 0;
@@ -2652,6 +2672,8 @@ body {
   font: 800 11px/13px var(--font-display);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
+/* Aperçu de l'arbre du tournoi (tuiles de 20 px) : le rang en petite pastille, collée au coin */
+.forge-face[data-size='xs'] .forge-face-rank { right: -4px; top: -5px; padding: 0 2px; font-size: 9px; line-height: 11px; }
 
 /* ---------- Rapport de combat (CombatReport.tsx, écran de victoire et fin de saison) ----------
    Un cadre par combattant ; les déclenchements de relique en gros chiffres ; les faces jouées en barres d'or au-dessus

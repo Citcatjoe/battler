@@ -480,7 +480,7 @@ export function createAudit() {
         if (!a.replaced && faceSkills.every((e) => !e.when) && (a.multiplier ?? 1) !== boost) flag('coup multiplié faux', r, i, `×${a.multiplier ?? 1} au lieu de ×${boost}`)
         else if (faceSkills.some((e) => e.buildsUp) && (a.multiplier ?? 1) > (faceSkills.find((e) => e.buildsUp)?.hitMultiplier ?? 1)) see('coup qui monte')
         // Un coup brut ne vient que d'une rafale instantanée du même tour
-        if (a.plain && !r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'flurry' && x.status && STATUSES[x.status].instantStrikes))
+        if (a.plain && !r.beats.slice(0, i).some((x) => x.type === 'flurry' && x.turn === b.turn && STATUSES[x.status].instantStrikes))
           flag('coup brut hors d’une Furie', r, i, '')
         // Luciole : plus d'esquive (sauf esquive imposée) ; chaque coup qui touche retire une charge
         const firefly = find(prev.statuses[def], 'firefly')
@@ -607,7 +607,7 @@ export function createAudit() {
       }
       if (b.type === 'flurry') {
         // Les coups de la rafale : ceux qu'elle cause, directement ou par l'étape `roll` d'un jet (0.110.0 : une Furie
-        // peut partir au milieu d'une rafale de jets, entre deux dés de la barde)
+        // peut partir au milieu d'une rafale de jets, entre deux jets de Coup de chance)
         const strikes = r.beats.filter(
           (x, j) =>
             j > i && x.turn === b.turn && x.type === 'attack' && (x.cause === i || (x.cause !== undefined && r.beats[x.cause].type === 'roll' && r.beats[x.cause].cause === i)),
@@ -615,18 +615,24 @@ export function createAudit() {
         const ended = r.turns === b.turn
         if (strikes.length !== b.strikes && !ended) flag('coups multiples : nombre de coups', r, i, `${strikes.length}`)
         if (b.side !== active(b.turn)) flag('Furie hors de son tour', r, i, '')
-        const def = b.status ? STATUSES[b.status] : undefined
-        // Deux dés (barde, phase 5 ter) : une rafale sans statut, un jet complet par dé ; avec Coup de chance, les jets du
-        // statut suivent les siens dans la même rafale
-        const dice = r.fighters[b.side].dice
-        if (!def) {
-          see('deux dés')
-          if (dice < 2) flag('rafale sans statut ni deux dés', r, i, '')
-          if (b.strikes !== dice) flag('deux dés : nombre de jets', r, i, `${b.strikes}`)
-        } else if (!def.instantStrikes && dice > 1) see('deux dés et Coup de chance')
+        const def = STATUSES[b.status]
+        // Jets de plus (Coup de chance, Duo) : le jet de l'action, plus un par charge, toutes dépensées à cette action. Le
+        // Duo est posé par un 1 d'une action passée : sa rafale suit l'action après le 1 (2026-10-25)
+        if (!def.instantStrikes && def.strikeCharges === 'all') {
+          const held = find(prev.statuses[b.side], b.status)?.stacks ?? 0
+          if (!held || b.strikes !== 1 + def.extraStrikes! * held || find(s.statuses[b.side], b.status)) flag('jets de plus : charges mal dépensées', r, i, `${held} charges, ${b.strikes} jets`)
+          if (b.status === 'duo') {
+            const posed = r.beats
+              .slice(0, i)
+              .reverse()
+              .find((x) => x.type === 'event' && x.event.effects.some((e) => e.type === 'applyStatus' && e.status === 'duo' && e.target === b.side))
+            if (!posed || posed.turn >= b.turn) flag('Duo : rafale sans un 1 avant elle', r, i, `${posed?.turn}`)
+            else see('duo : la rafale suit l’action après le 1')
+          }
+        }
         // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le jet qui l'a déclenchée (un jet remplacé) ;
         // ses coups sont bruts (0.69.0), et un 1 à 3 y frappe sans compétence
-        if (def?.instantStrikes) {
+        if (def.instantStrikes) {
           const before = r.beats.slice(0, i).reverse().find((x) => x.turn === b.turn && x.type === 'attack')
           if (!before) flag('Furie instantanée sans jet déclencheur', r, i, '')
           else see('furie instantanée')
@@ -648,16 +654,16 @@ export function createAudit() {
           else if (between.some((x) => graftRoll === undefined || x.cause !== graftRoll)) flag('Furie : un coup passe avant la rafale', r, i, '')
           else if (between.length) see('rafale après le coup de base de son jet')
           else see('furie juste après son jet')
-          const held = b.status ? find(prev.statuses[b.side], b.status) : undefined
+          const held = find(prev.statuses[b.side], b.status)
           const charges = held?.stacks ?? 0
-          const left = b.status ? find(s.statuses[b.side], b.status) : undefined
+          const left = find(s.statuses[b.side], b.status)
           // Furie aiguisée (0.110.0) : son intensité ajoute des coups à chaque charge
           if (left || b.strikes !== ((def.extraStrikes ?? 1) + (held?.power ?? 0)) * charges) flag('Furie : charges mal dépensées', r, i, `${charges} charges, ${b.strikes} coups`)
           else if (charges > 1) see('furie à plusieurs charges')
           if (held?.power) see('furie aiguisée')
         }
         // Charges en réserve (0.46.0) : une seule est dépensée par action, les autres restent
-        if (b.status && def?.strikeCharges === 'one') {
+        if (def.strikeCharges === 'one') {
           const before = find(prev.statuses[b.side], b.status)?.stacks ?? 0
           const after = find(s.statuses[b.side], b.status)?.stacks ?? 0
           if (after !== before - 1) flag('Furie : charges mal dépensées', r, i, `${before} → ${after}`)
@@ -683,13 +689,6 @@ export function createAudit() {
       if (b.type === 'attack' && b.attack.preset) {
         const from = b.cause === undefined ? undefined : r.beats[b.cause]
         if (from?.type !== 'roll') flag('coup au dé déjà tiré sans son jet', r, i, `${from?.type}`)
-      }
-      // Deux dés (phase 5 ter) : chaque jet de la barde appartient à la rafale de son action (un jet greffé, par son étape roll)
-      if (b.type === 'attack' && !b.attack.plain && r.fighters[b.attack.attacker].dice > 1) {
-        const from = b.cause === undefined ? undefined : r.beats[b.cause]
-        const root = from?.type === 'roll' && from.cause !== undefined ? r.beats[from.cause] : from
-        if (root?.type !== 'flurry') flag('deux dés : jet hors de la rafale', r, i, `${root?.type}`)
-        else see('jet de la barde')
       }
       // Un jet greffé (phase 5 bis) : l'étape roll, puis ses compétences greffées, puis son coup de base, au même dé
       if (b.type === 'roll') {

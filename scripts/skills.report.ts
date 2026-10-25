@@ -239,7 +239,7 @@ function engraveTable(skills: readonly CharacterEvent[], perPair: number): strin
   return [
     `## 2. Chaque compétence gravée`,
     ``,
-    `Gravée sur la face ${ENGRAVE_FACE} nue de chaque hôte qui peut la recevoir, contre les ${CHARACTERS.length - 1} autres personnages, ${perPair} combats par duel, mêmes graines que \`npm run balance\` : points de victoire gagnés par l'hôte (moyenne des hôtes, puis le plus mauvais et le meilleur). Repère : de ${T.engraveMin * 100} à ${T.engraveMax * 100} points, comme une relique ; hors bande au-dessous ou au-delà. La barde porte sa gravure sur ses deux dés.`,
+    `Gravée sur la face ${ENGRAVE_FACE} nue de chaque hôte qui peut la recevoir, contre les ${CHARACTERS.length - 1} autres personnages, ${perPair} combats par duel, mêmes graines que \`npm run balance\` : points de victoire gagnés par l'hôte (moyenne des hôtes, puis le plus mauvais et le meilleur). Repère : de ${T.engraveMin * 100} à ${T.engraveMax * 100} points, comme une relique ; hors bande au-dessous ou au-delà.`,
     ``,
     `| Compétence | Porteur | Moyenne (pts) | De … | … à | Hôtes | Drapeau |`,
     `| --- | --- | --- | --- | --- | --- | --- |`,

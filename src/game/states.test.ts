@@ -64,9 +64,10 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     const gorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: skill('power-aura') }])
     expect(auraIdsOf(gorak)).toEqual(['powerAura'])
     expect(gorak.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['power-aura'])
-    // L'Ouverture de la barde pose aussi son aura : l'anneau rassemble les deux
+    // L'Ouverture de la barde pose aussi son aura ; le Duo, qui pose aussi son dé de plus, garde son sceau (2026-10-25)
     const fanchon = createCharacter('fanchon')
-    expect(fanchon.events.filter((e) => auraOfSkill(e) === 'melodiousAura').map((e) => e.id).sort()).toEqual(['melodious-aura', 'overture'])
+    expect(fanchon.events.filter((e) => auraOfSkill(e) === 'melodiousAura').map((e) => e.id)).toEqual(['overture'])
+    expect(auraOfSkill(fanchon.events.find((e) => e.id === 'duo')!)).toBeUndefined()
     // L'Aura d'immunité purge aussi ses malus : elle se fond quand même dans son anneau, sans second sceau
     const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
     expect(aldric.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['immunity-aura'])

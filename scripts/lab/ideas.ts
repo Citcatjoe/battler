@@ -23,8 +23,13 @@
  * II du second lot sous la bande) : retirée une fois l'axe du Rempart hérissé passé au registre (ses rangs s'y lisaient
  * par aiguisages successifs, à l'axe d'alors). Résultats : docs/SORTS.md § 23, rapports `logs/lab/2026-10-25-00-39-04`
  * et `2026-10-25-00-39-53`.
+ *
+ * Séries 15 et 29 (la barde : son kit sur ses deux dés, phase 5 ter ; puis Fanchon à un seul d6, agent FanchonLab) :
+ * retirées quand le Duo est entré au registre (2026-10-25). Ses deux dés n'existent plus ; le statut d'essai `labDuo`
+ * est devenu le statut `duo`. Résultats : docs/SORTS.md, docs/PERSONNAGES.md (Fanchon), rapports
+ * `logs/lab/2026-10-25-08-21-26_v0.115.1.md` et `2026-10-25-08-27-03_v0.115.1.md`.
  */
-import type { Character, CharacterStats } from '../../src/game/character'
+import { Character, type CharacterStats } from '../../src/game/character'
 import { faceTrigger, type CharacterEvent } from '../../src/game/events'
 import { STATUSES, type StatusDef, type StatusId } from '../../src/game/statuses'
 
@@ -79,81 +84,6 @@ const SERIES_14: LabIdea[] = [
     apply: replace('thunderbolt', (e) => ({ ...e, effects: e.effects.map((x) => (x.type === 'damage' ? { ...x, amount: 2 } : x)) })),
     watch: ['thunderbolt'],
   },
-]
-
-/* --- Série 15 : le kit de la barde sur ses faces (phase 5 ter, décision de l'utilisateur du 2026-10-24). Ses deux dés
-   sont deux jets complets ; chaque idée lui donne un kit entier (ses faces 1 et 2, avec ou sans l'Ouverture), ou sa
-   signature seule (la campagne). --- */
-type Song = 'melodious-aura' | 'whistle' | 'false-note' | 'crescendo' | 'soloist'
-
-/** Une chanson de la barde sur une face, à une valeur : charges posées, ou multiplicateur du coup. */
-function song(id: Song, face: number, value: number): CharacterEvent {
-  const trigger = faceTrigger(face)
-  switch (id) {
-    case 'melodious-aura':
-      return { id, name: 'Aura mélodieuse', trigger, effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: value }] }
-    case 'whistle':
-      return { id, name: 'Siffloter', trigger, effects: [{ type: 'applyStatus', status: 'whistling', stacks: value }] }
-    case 'false-note':
-      return { id, name: 'Fausse note', trigger, effects: [{ type: 'applyStatus', status: 'falseNote', stacks: value, target: 'opponent' }] }
-    case 'crescendo':
-      return { id, name: 'Crescendo', trigger, relation: 'modify', hitMultiplier: value, effects: [] }
-    case 'soloist':
-      return { id, name: 'Soliste', trigger, relation: 'modify', hitMultiplier: value, effects: [] }
-  }
-}
-
-const OVERTURE: CharacterEvent = { id: 'overture', name: 'Ouverture', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }] }
-
-/** Une idée de kit : ses chansons (id, face, valeur), avec ou sans l'Ouverture, et ses stats si on y touche. */
-function bardKit(id: string, name: string, pitch: string, overture: boolean, songs: [Song, number, number][], stats?: Partial<CharacterStats>): LabIdea {
-  return {
-    series: 15,
-    id,
-    character: 'fanchon',
-    name,
-    schema: 'Kit',
-    family: 'Chant',
-    pitch,
-    apply: (c) => c.adjusted({ events: [...(overture ? [OVERTURE] : []), ...songs.map(([s, face, value]) => song(s, face, value))], stats }),
-    watch: songs.map(([s]) => s),
-  }
-}
-
-const SERIES_15: LabIdea[] = [
-  bardKit('barde-aura1-solo2', 'Aura 1 / Soliste ×2', 'Ouverture ; sur le 1, Aura mélodieuse +1 ; sur le 2, ce coup ×2.', true, [['melodious-aura', 1, 1], ['soloist', 2, 2]]),
-  bardKit('barde-aura1-solo3-sans', 'Aura 1 / Soliste ×3, sans Ouverture', 'Sur le 1, Aura mélodieuse +1 ; sur le 2, ce coup ×3 ; pas d’Ouverture.', false, [['melodious-aura', 1, 1], ['soloist', 2, 3]]),
-  bardKit('barde-aura1-solo2-sans', 'Aura 1 / Soliste ×2, sans Ouverture', 'Sur le 1, Aura mélodieuse +1 ; sur le 2, ce coup ×2 ; pas d’Ouverture.', false, [['melodious-aura', 1, 1], ['soloist', 2, 2]]),
-  bardKit('barde-siffle2-solo3', 'Siffloter 2 / Soliste ×3', 'Ouverture ; sur le 1, Sifflotement 2 ; sur le 2, ce coup ×3.', true, [['whistle', 1, 2], ['soloist', 2, 3]]),
-  bardKit('barde-siffle2-solo2', 'Siffloter 2 / Soliste ×2', 'Ouverture ; sur le 1, Sifflotement 2 ; sur le 2, ce coup ×2.', true, [['whistle', 1, 2], ['soloist', 2, 2]]),
-  bardKit('barde-siffle1-solo2', 'Siffloter 1 / Soliste ×2', 'Ouverture ; sur le 1, Sifflotement 1 ; sur le 2, ce coup ×2.', true, [['whistle', 1, 1], ['soloist', 2, 2]]),
-  bardKit('barde-note1-solo3', 'Fausse note 1 / Soliste ×3', 'Ouverture ; sur le 1, Fausse note 1 à l’adversaire ; sur le 2, ce coup ×3.', true, [['false-note', 1, 1], ['soloist', 2, 3]]),
-  bardKit('barde-note1-solo2', 'Fausse note 1 / Soliste ×2', 'Ouverture ; sur le 1, Fausse note 1 à l’adversaire ; sur le 2, ce coup ×2.', true, [['false-note', 1, 1], ['soloist', 2, 2]]),
-  bardKit('barde-siffle2-note1', 'Siffloter 2 / Fausse note 1', 'Ouverture ; sur le 1, Sifflotement 2 ; sur le 2, Fausse note 1 : tout en soutien.', true, [['whistle', 1, 2], ['false-note', 2, 1]]),
-  bardKit('barde-solo3-cresc2', 'Soliste ×3 / Crescendo ×2', 'Ouverture ; sur le 1, ce coup ×3 ; sur le 2, ce coup ×2 : tout en gros coups.', true, [['soloist', 1, 3], ['crescendo', 2, 2]]),
-  bardKit('barde-seule-solo3', 'Signature seule : Soliste ×3', 'Campagne : Soliste ×3 sur le 2, rien d’autre (ni Ouverture).', false, [['soloist', 2, 3]]),
-  bardKit('barde-seule-aura1', 'Signature seule : Aura mélodieuse 1', 'Campagne : Aura mélodieuse +1 sur le 1, rien d’autre (ni Ouverture).', false, [['melodious-aura', 1, 1]]),
-  bardKit('barde-seule-siffle2', 'Signature seule : Siffloter 2', 'Campagne : Sifflotement 2 sur le 1, rien d’autre (ni Ouverture).', false, [['whistle', 1, 2]]),
-  bardKit('barde-nue', 'Barde nue', 'Ses deux dés, aucune compétence : le repère.', false, []),
-  // Deuxième tour : les kits proches de la tolérance, avec un levier de stats (critique, attaque), jamais les PV
-  bardKit('barde-aura1-solo2-sans-crit5', 'Aura 1 / Soliste ×2, sans Ouverture, critique 5 %', 'Le kit sans Ouverture, et 5 % de critique au lieu de 10.', false, [['melodious-aura', 1, 1], ['soloist', 2, 2]], { critChance: 0.05 }),
-  bardKit('barde-aura1-solo2-sans-att13', 'Aura 1 / Soliste ×2, sans Ouverture, attaque 1 à 3', 'Le kit sans Ouverture, et une attaque de 1 à 3 au lieu de 2 à 4.', false, [['melodious-aura', 1, 1], ['soloist', 2, 2]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-aura1-solo3-sans-att13', 'Aura 1 / Soliste ×3, sans Ouverture, attaque 1 à 3', 'Soliste ×3 sans Ouverture, et une attaque de 1 à 3.', false, [['melodious-aura', 1, 1], ['soloist', 2, 3]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-aura1-solo2-att13', 'Aura 1 / Soliste ×2, attaque 1 à 3', 'Avec l’Ouverture, et une attaque de 1 à 3.', true, [['melodious-aura', 1, 1], ['soloist', 2, 2]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-aura1-solo3-att12', 'Aura 1 / Soliste ×3, attaque 1 à 2', 'Avec l’Ouverture, et une attaque de 1 à 2 : la chanson fait les dégâts.', true, [['melodious-aura', 1, 1], ['soloist', 2, 3]], { attackMin: 1, attackMax: 2 }),
-  bardKit('barde-siffle1-solo2-crit5', 'Siffloter 1 / Soliste ×2, critique 5 %', 'Avec l’Ouverture, et 5 % de critique.', true, [['whistle', 1, 1], ['soloist', 2, 2]], { critChance: 0.05 }),
-  bardKit('barde-siffle1-solo2-att23', 'Siffloter 1 / Soliste ×2, attaque 2 à 3', 'Avec l’Ouverture, et une attaque de 2 à 3.', true, [['whistle', 1, 1], ['soloist', 2, 2]], { attackMax: 3 }),
-  bardKit('barde-siffle1-solo3-att13', 'Siffloter 1 / Soliste ×3, attaque 1 à 3', 'Avec l’Ouverture, Soliste ×3, et une attaque de 1 à 3.', true, [['whistle', 1, 1], ['soloist', 2, 3]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-note1-solo2-att13', 'Fausse note 1 / Soliste ×2, attaque 1 à 3', 'Avec l’Ouverture, et une attaque de 1 à 3.', true, [['false-note', 1, 1], ['soloist', 2, 2]], { attackMin: 1, attackMax: 3 }),
-  // Troisième tour : l'Ouverture gardée, l'attaque de 1 à 3, autour de 50 %
-  bardKit('barde-aura1-solo3-att13', 'Aura 1 / Soliste ×3, attaque 1 à 3', 'Avec l’Ouverture, Soliste ×3, et une attaque de 1 à 3.', true, [['melodious-aura', 1, 1], ['soloist', 2, 3]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-aura1-solo2-att23', 'Aura 1 / Soliste ×2, attaque 2 à 3', 'Avec l’Ouverture, et une attaque de 2 à 3.', true, [['melodious-aura', 1, 1], ['soloist', 2, 2]], { attackMax: 3 }),
-  bardKit('barde-aura1-solo2-att13-crit15', 'Aura 1 / Soliste ×2, attaque 1 à 3, critique 15 %', 'Avec l’Ouverture, une attaque de 1 à 3 et 15 % de critique.', true, [['melodious-aura', 1, 1], ['soloist', 2, 2]], { attackMin: 1, attackMax: 3, critChance: 0.15 }),
-  bardKit('barde-siffle1-solo2-sans', 'Siffloter 1 / Soliste ×2, sans Ouverture', 'Sans Ouverture : Sifflotement 1 sur le 1, ce coup ×2 sur le 2.', false, [['whistle', 1, 1], ['soloist', 2, 2]]),
-  bardKit('barde-aura1-solo3-att13-crit5', 'Aura 1 / Soliste ×3, attaque 1 à 3, critique 5 %', 'Avec l’Ouverture, Soliste ×3, une attaque de 1 à 3 et 5 % de critique.', true, [['melodious-aura', 1, 1], ['soloist', 2, 3]], { attackMin: 1, attackMax: 3, critChance: 0.05 }),
-  // La signature seule (campagne), au kit retenu : attaque de 1 à 3
-  bardKit('barde-seule-aura1-att13', 'Signature seule : Aura mélodieuse 1, attaque 1 à 3', 'Campagne : Aura mélodieuse +1 sur le 1, attaque de 1 à 3, ni Ouverture ni Soliste.', false, [['melodious-aura', 1, 1]], { attackMin: 1, attackMax: 3 }),
-  bardKit('barde-seule-solo3-att13', 'Signature seule : Soliste ×3, attaque 1 à 3', 'Campagne : Soliste ×3 sur le 2, attaque de 1 à 3, ni Ouverture ni Aura mélodieuse.', false, [['soloist', 2, 3]], { attackMin: 1, attackMax: 3 }),
 ]
 
 /* --- Série 16 : la revue des compétences (phase 5 ter, partie B, 0.107.0, docs/SORTS.md § 19). Rétribution baissée,
@@ -276,4 +206,4 @@ const SERIES_17_B: LabIdea[] = [
   tune('fanchon-esq10', 'fanchon', 'Esquive 10 %', { dodgeChance: 0.1 }),
 ]
 
-export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_15, ...SERIES_16, ...SERIES_17, ...SERIES_17_B]
+export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B]

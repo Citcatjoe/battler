@@ -18,8 +18,7 @@ import { typeset } from './typography'
  *   - Tremper l'arme (phase 5 bis, remplace Refondre) : +1 à l'attaque (minimum et maximum), cumulable, sans face visée.
  * Règles de l'utilisateur : une compétence d'origine ne se déplace pas, ses faces sont irréductibles, seules les faces
  * nues se gravent ou se dorent, et (0.111.0) une face dorée ne reçoit pas de compétence : dorure et compétence ne se
- * cumulent jamais sur une face. Personnage à deux dés (barde) : chacun de ses dés lit le même dé forgé, une face
- * gravée, dorée ou copiée vaut donc pour chacun des deux.
+ * cumulent jamais sur une face.
  */
 
 /** Bonus d'une dorure, ajouté au coup de base avant le critique. */

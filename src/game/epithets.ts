@@ -28,7 +28,7 @@ export const EPITHETS: Record<string, readonly string[]> = {
   morgrut: ['Grosse-Bedaine', 'le Lent', 'Tape-Dur', 'Mange-Tout', 'le Ventru', 'Casse-Pierre', 'le Placide', 'Bas-du-Front'],
   // Sylvain, druide aux deux visages
   thaldrin: ['Mousse-Ancienne', 'le Grand Chêne', "Croc-d'Ours", 'Deux-Visages', 'Écorce-Vive', "Appel-d'Orage", 'le Sauvage', 'Racine-Profonde'],
-  // Saltimbanque : deux dés, une chanson
+  // Saltimbanque : une chanson, et deux dés quand la foule reprend le refrain (le Duo)
   fanchon: ['la Chanteuse', 'Fausse-Note', 'Deux-Dés', 'la Rieuse', 'Doigts-de-Fée', 'des Tavernes', 'la Vagabonde', 'Belle-Voix'],
 }
 

@@ -31,7 +31,7 @@ export const HANDOVER = 400
 
 /** Un dé roule (coup ordinaire) */
 export const DICE_ROLL = 800
-/** Plusieurs dés roulent ensemble (initiative, rafale, les deux dés de la barde) */
+/** Plusieurs dés roulent ensemble (initiative, rafale : Coup de chance, Duo) */
 export const DICE_ROLL_MANY = 900
 /** Lecture du résultat d'un coup avant l'élan (ou avant le critique) */
 export const DICE_READ = 350

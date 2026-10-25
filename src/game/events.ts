@@ -422,13 +422,16 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   const details = [...new Set(e.effects.flatMap((effect) => effectDetail(effect) ?? []))]
   const posedIds = e.effects.flatMap((effect) => (effect.type === 'applyStatus' ? [effect.status] : []))
   const direct = e.effects.some((x) => x.type === 'damage' || x.type === 'release' || (x.type === 'cleanse' && x.orElse?.type === 'damage'))
-  const caps = [...new Set(posedIds)].flatMap((id) => {
-    const def = STATUSES[id]
-    if (def.mechanic) return []
-    // Le cumul de chaque statut posé, en pastille (revue 0.110.0, T7) : un plafond de 1 vaut une pose qui remplace
-    const cumul = def.stacking === 'add' && def.maxStacks !== 1 ? { label: 'se cumule', rule: 'stacking-add' as const } : { label: 'non cumulable', rule: 'stacking-refresh' as const }
-    return def.maxStacks !== undefined && def.maxStacks > 1 ? [cumul, { label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : [cumul]
-  })
+  // Une pastille par règle : deux statuts cumulables (le Duo : l'aura et le dé de plus) n'en montrent qu'une
+  const caps = [...new Set(posedIds)]
+    .flatMap((id) => {
+      const def = STATUSES[id]
+      if (def.mechanic) return []
+      // Le cumul de chaque statut posé, en pastille (revue 0.110.0, T7) : un plafond de 1 vaut une pose qui remplace
+      const cumul = def.stacking === 'add' && def.maxStacks !== 1 ? { label: 'se cumule', rule: 'stacking-add' as const } : { label: 'non cumulable', rule: 'stacking-refresh' as const }
+      return def.maxStacks !== undefined && def.maxStacks > 1 ? [cumul, { label: `${def.name} : ${def.maxStacks} charges au plus`, rule: 'max-stacks' as const }] : [cumul]
+    })
+    .filter((t, k, all) => all.findIndex((x) => x.label === t.label) === k)
   // Une compétence du dé dit sa relation au coup de base : se greffer est la règle, elle n'a pas de pastille
   const onDie = isRollTrigger(e.trigger)
   const tags: SkillTag[] = [

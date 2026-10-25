@@ -139,6 +139,7 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   momentum: tray('power', (s) => s.stacks),
   fear: tray('lostTurn'),
   luckyStrike: tray('extraDie'),
+  duo: tray('extraDie'),
   riposte: tray('reflect'),
   firefly: tray('firefly'),
   rot: tray('rot'),
@@ -288,10 +289,14 @@ export function originsOf(id: StatusId, bearer: Character, opponent: Character):
 
 /**
  * Une compétence qui pose une aura sur son lanceur se montre dans l'anneau de cette aura, même si elle fait
- * autre chose au passage (l'Aura d'immunité purge d'abord ses malus) : l'infobulle de l'anneau dit le reste.
+ * autre chose au passage (l'Aura d'immunité purge d'abord ses malus) : l'infobulle de l'anneau dit le reste. Une
+ * compétence qui pose aussi un autre statut garde son sceau (le Duo : son dé de plus a sa vie propre, 2026-10-25).
  */
-export const auraOfSkill = (e: Pick<CharacterEvent, 'effects'>): StatusId | undefined =>
-  posedBy(e.effects).find((p) => p.target === 'self' && isAura(p.status))?.status
+export const auraOfSkill = (e: Pick<CharacterEvent, 'effects'>): StatusId | undefined => {
+  const posed = posedBy(e.effects)
+  if (posed.some((p) => !isAura(p.status))) return undefined
+  return posed.find((p) => p.target === 'self' && isAura(p.status))?.status
+}
 
 /** Les auras qu'un personnage peut porter : posées par ses compétences (toutes formes) ou ses reliques. */
 export function auraIdsOf(character: Character): StatusId[] {

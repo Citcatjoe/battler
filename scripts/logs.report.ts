@@ -57,6 +57,12 @@ it('rapport des combats joués', () => {
       skipped.push(`${file} (relique inconnue)`)
       continue
     }
+    // La barde à deux dés (jusqu'à la 0.115.1) : son action était une rafale sans statut, que le Duo a remplacée ; ses
+    // combats ne se rejouent plus
+    if (/ lance ses deux dés \(|, dont ses 2 dés\)/.test(text)) {
+      skipped.push(`${file} (barde à deux dés, d'avant le Duo)`)
+      continue
+    }
     let forge: Pair<ForgeStep[]>
     try {
       forge = parseForge(text, ENGRAVABLE_SKILLS)

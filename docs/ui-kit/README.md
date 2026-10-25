@@ -71,7 +71,7 @@ Ajoutés au kit avec l'accord de l'utilisateur, pour les actions secondaires en 
 
 **Anatomie**
 - `.bt-square` : 44 × 44, coins de 2 px, le serti du secondaire (plaque `--bg-2`, filet `--frame`, puis filet bronze à 4 px), glyphe de 20 px en `--gold-300`. Survol : plaque `--bg-3`, filets or, glyphe `--gold-200`. Pressé : plaque `--bg-1`, descend d'un pixel. Focus : anneau `--focus`. Désactivé : plaque `--bg-1`, glyphe `--text-off`, filet `--line-1`.
-- `.bt-square--sm` (`<SquareButton size="sm">`) : 28 × 28, glyphe de 16, serti resserré (filet bronze à 3 px), sans pastille. Réservé aux actions d'une carte de l'arbre du tournoi (Affronter, Simuler), qui doivent tenir dans une ligne de 32 px (`docs/ref/tournoi-arbre-survol.png`).
+- `.bt-square--sm` (`<SquareButton size="sm">`) : 28 × 28, glyphe de 16, serti resserré (filet bronze à 3 px), sans pastille. Réservé aux actions d'une carte de l'arbre du tournoi (Affronter, Simuler), qui tiennent dans une ligne de 70 px depuis la 0.116.0 (le nom, puis l'aperçu du build : dé forgé et reliques ; 32 px avant, `docs/ref/tournoi-arbre-survol.png`, qui ne correspond plus à l'arbre).
 - `.bt-badge` : pastille de compteur, cartouche `--bg-0` de 16 px de haut (22 px de large au moins), filet `--gold-500`, IBM Plex Mono 10 / 500, chiffres tabulaires, texte `--text-1`. Dans un `.bt-square`, elle s'accroche en bas à droite, débordant de 6 px.
 
 **Usage**

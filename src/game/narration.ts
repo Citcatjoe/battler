@@ -265,12 +265,9 @@ export function shiftLog(turn: number, side: Side, form: number, fighters: Pair<
   return { kind: 'event', side, text: `Tour ${turn} · ${c.name} prend sa ${c.forms?.[form].name.toLowerCase() ?? 'autre forme'}.` }
 }
 
-/** Coups multiples (ex. Furie des vents), ou les deux dés de la barde (sans statut) */
-export function flurryLog(turn: number, side: Side, status: StatusId | undefined, strikes: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
-  const name = fighters[side].name
-  return status
-    ? { kind: 'status', side, text: `Tour ${turn} · ${statusLabel(status)} · ${name} frappe ${strikes} fois !` }
-    : { kind: 'attack', side, text: `Tour ${turn} · ${name} lance ses deux dés.` }
+/** Coups multiples (Furie des vents, Coup de chance, Duo) */
+export function flurryLog(turn: number, side: Side, status: StatusId, strikes: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  return { kind: 'status', side, text: `Tour ${turn} · ${statusLabel(status)} · ${fighters[side].name} frappe ${strikes} fois !` }
 }
 
 /** Un jet dont la face porte une compétence qui se greffe : le dé, avant la compétence et le coup de base */

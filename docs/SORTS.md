@@ -256,7 +256,7 @@ Un drapeau de jeu compte double dans le classement. Les trois Attente de l'ogre 
 
 ### La seconde table : la valeur d'une gravure (phase 5 ter, 0.107.0)
 
-Ce que vaut un choix de forge : chaque compétence gravable est gravée sur la **face 3 nue de chaque hôte qui peut la recevoir** (la forge refuse une compétence de son kit et une face qui en porte une : le druide, dont le 3 porte la Foudre, n'en reçoit aucune ; la barde la porte sur ses deux dés). L'hôte gravé affronte les 9 autres personnages, sur les mêmes graines que `npm run balance`, avant → après : la valeur est l'écart apparié de son taux de victoire. La table donne la moyenne des hôtes, le plus mauvais et le meilleur, puis le détail hôte par hôte.
+Ce que vaut un choix de forge : chaque compétence gravable est gravée sur la **face 3 nue de chaque hôte qui peut la recevoir** (la forge refuse une compétence de son kit et une face qui en porte une : le druide, dont le 3 porte la Foudre, n'en reçoit aucune ; jusqu'à la 0.115.1, la barde la portait sur ses deux dés). L'hôte gravé affronte les 9 autres personnages, sur les mêmes graines que `npm run balance`, avant → après : la valeur est l'écart apparié de son taux de victoire. La table donne la moyenne des hôtes, le plus mauvais et le meilleur, puis le détail hôte par hôte.
 
 | Drapeau | Seuil | Ce qu'il signale |
 | --- | --- | --- |
@@ -1350,3 +1350,18 @@ La log-cote de la dernière colonne est la synergie P8 avec le producteur du kit
 | Foudre | « 3 × 1 dégât direct à l'adversaire (3 en tout). » | « 3 × 1 dégât direct à l'adversaire. » |
 | Pièce trouée (relique) | « +2 coup de chance sur pile » | « +2 coups de chance sur pile » |
 | Rangs | « +1 coup par rafale », « +25 % des jauges relâchées », « +1 Curée » | « +1 coup », « +25 % des dégâts renvoyés », « +2 coups » |
+
+## 25. Le Duo de la barde (2026-10-25)
+
+**La décision de l'utilisateur** : la piste D de l'agent FanchonLab, « le Duo ». Fanchon passe à un seul d6, comme tout le monde ; son second dé vit dans sa signature. Mesures et kit : [PERSONNAGES.md](PERSONNAGES.md), « Barde ».
+
+**La compétence** : sur le 1, **Duo** (signature, se greffe) : « +1 dégât à chacun de ses coups qui touchent. Deux dés à sa prochaine action. » Elle pose 1 Aura mélodieuse, puis 1 charge de **Duo**, un statut du registre qui a la mécanique de Coup de chance (`extraStrikes: 1`, `strikeCharges: 'all'`) : à sa prochaine action, un jet complet de plus par charge. Aucune brique moteur nouvelle : la rafale de jets existe depuis Coup de chance. Son axe de rang (`stacks`) va à son premier statut posé, l'aura : « +1 Aura mélodieuse ». Le laboratoire l'avait mesurée avec un statut d'essai (`labDuo`), de forme identique.
+
+**Ce qui part avec elle** : le double dé (`twinDice`, `Character.dice`), la rafale sans statut, la règle « Deux dés » du compendium, la ligne de trace « lance ses deux dés », les contrôles d'audit « deux dés » et « jet de la barde » (remplacés par « Duo : la rafale suit l'action après le 1 »). Les séries 15 et 29 du laboratoire sont retirées.
+
+| Mesure (400 combats par duel, `scripts/skills.report.ts`) | Valeur |
+| --- | --- |
+| Rang II dans son kit | Duo +7,8 (dans la bande) ; Soliste +8,3 (limite haute, signalé) |
+| Gravures sur son 3 | Esquive améliorée +19,4, Coup de chance +18,0, Crescendo +14,7, Aura de puissance +13,7, Fausse note +13,6, Pile ou face +13,4, Siffloter +10,3, Aura de précision +7,9, Dé pipé 0,0 |
+
+**Coup de chance hors de son répertoire** : il fait doublon avec le Duo (même statut sous un autre nom ; `action()` ne dépense qu'un statut de jets de plus par action, l'autre attend). Remplacé par l'**Aura de puissance**, mesurée à force égale (construite 56 contre 57 %, saison 57 contre 58 %, gravée +13,7 contre +18,0) : elle ouvre un second axe, des dégâts sur chaque jet du Duo, au lieu d'un second Duo sans aura. Rapports : `logs/skills/2026-10-25-09-18-58_v0.115.1.md` (gravures) et `…09-20-50…` (rangs).

@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.115.1, ce qui a été vu, mesuré, et ce qui reste ouvert.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.116.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-25, version 0.115.1)
+## 0 bis. État des lieux (2026-10-25, version 0.116.0)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.115.1). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0 ni la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15)._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.116.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0, la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15) ni la 0.116.0 (Fanchon à un dé, § 1.16)._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -44,6 +44,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.114.0 | **Cinq compétences consommatrices** (phase 8, premier lot, [SORTS.md](SORTS.md) § 22) : Curée (deux coups bruts de plus si l'adversaire saigne), Récolte (+7 PV s'il est empoisonné), Virulence (triple son Poison), Sentence (il perd 1 PV à chaque soin), Rancune (son prochain coup est critique quand il encaisse un coup) ; dans les répertoires et hors kit ; Graver ne propose que des compétences à la portée du champion ; une compétence à condition fausse laisse sa face nue |
 | 0.115.0 | **Passe de nuit** (§ 1.14) : le second lot de la phase 8 (Embrasement, Dé pipé, Rempart hérissé, Vindicte ; Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée ; [SORTS.md](SORTS.md) § 23, [RELIQUES.md](RELIQUES.md) § 15) ; une offre ne propose une consommatrice qu'une fois son producteur dans le build (« le producteur d'abord »), en campagne comme au tournoi ; la saison compose un build d'acte (4 forges, 6 reliques) sur les dix premiers matchs, gagnés ou perdus ; les options du tournoi dans une boîte ; textes du compendium réécrits courts ; mise en scène contrôlée par un test des timings |
 | 0.115.1 | **Purification à 6 dégâts** quand l'adversaire n'a aucun bonus (5 avant) : Ysolde 45,9 → 48,3 % (§ 1.15) |
+| 0.116.0 | **Fanchon à un seul d6** : le Duo sur le 1 (+1 Aura mélodieuse, puis deux dés à son action suivante), Soliste sur le 2, attaque 4 à 6, critique 5 % ; les deux dés de la barde retirés ; **l'arbre du tournoi montre le build** de chaque participant (dé forgé en miniature, reliques) (§ 1.16) |
 
 ### Le combat, en une page
 
@@ -81,7 +82,7 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 - **Les répertoires** : une relecture légère sur le d6 et l'attaque (reste de la phase 6) ; premiers consommateurs ajoutés en 0.114.0 (de quatre à six compétences par répertoire).
 - **Les types** : l'attaque est d'un type unique depuis la 0.111.0 ; les textes ne nomment pas de type, et les bonus de relique par type sont abandonnés (0.112.0).
 - **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.113.0 (modèle unique, courbe option B), boss atteint 24 % (26 % attendus), acte gagné 14 % (12 %), sur 30 parties par champion.
-- **Points à surveiller** : une gravure sur la barde vaut près du double (deux dés) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
+- **Points à surveiller** : depuis la 0.116.0, la barde n'a plus qu'un dé (une gravure ne compte plus double) ; le rang II du Soliste à +8,3 (limite haute) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
@@ -279,6 +280,16 @@ L'utilisateur dormait : chaque choix ouvert a été tranché par l'agent, au plu
 | La Purification | 6 dégâts quand l'adversaire n'a aucun bonus à retirer (5 avant) ; axe de rang inchangé (+3 par rang) | valeur nette +19,3 → +21,8 ; Ysolde 45,9 → 48,3 % ; roster de 45,5 à 55,3 %, pire duel Elaria–Morgrut 61,9 % (800 combats par duel) ; empreinte régénérée |
 | Rangs II du second lot | les trois acceptés pour le moment : Rempart hérissé (+3,2), Embrasement (+0,6), Dé pipé (+1,1) | aucun changement |
 | Fanchon | à revoir | chantier ouvert (46,7 % ; ses deux dés portent chaque gravure en saison) |
+
+### 1.16 Décisions du 2026-10-25, Fanchon et la zone des bandeaux (livrées en 0.116.0, sauf le chantier)
+
+| Sujet | Décision de l'utilisateur | Mesure, suite |
+| --- | --- | --- |
+| Fanchon | **lancer le Duo** : un seul d6 ; Duo sur le 1 (signature, se greffe : +1 Aura mélodieuse, puis 1 charge de Duo, deux dés à l'action suivante, la mécanique de Coup de chance), Soliste sur le 2, Ouverture gardée ; attaque 1-3 par dé → 4-6, critique 10 → 5 % | `BALANCE_N=800 npm run balance` : Fanchon 46,7 → 47,4 %, ses duels 42 (Aldric) – 54 % ; pire duel inchangé (Elaria–Morgrut 61,9 %) ; valeurs nettes Ouverture +23,2 → +13,9, Aura mélodieuse +35,9 → Duo +30,5, Soliste +8,0 → +15,6 ; rang II Duo +7,8, **Soliste +8,3** (limite haute, signalé). Saison (4 de 24) : Fanchon 69 → 57 %, écart-type 11,9 → 10,2 points, Elaria seule en tête (72 %). Campagne (12 parties, bruit large) : construite contre construits 66 ± 12 → 56 ± 10 %. Empreinte mise à jour volontairement |
+| Répertoire de Fanchon | choix de l'agent : Aura de puissance à la place de Coup de chance (la mécanique du Duo ; un seul de leurs statuts part par action) | construite 57 ± 10 contre 56 ± 10 %, saison 58 contre 57 % : égalité dans le bruit |
+| L'arbre du tournoi | « Carte de l'arbre : mets un aperçu du build » | dé forgé en miniature et reliques sous chaque nom ; lignes de 70 px ([FEATURES.md](FEATURES.md#8-tournoi)) |
+| La zone des bandeaux sous le dé | « c'est un peu le bordel cette zone… ça marchait bien avec les anciennes règles, mais avec la multiplication des briques et des events qui s'affichent dans cette zone, je pense que la revoir fait l'office d'un chantier à part entière » | **un chantier, pas encore fait.** Étude : 10,5 labels par combat avec les constructions (5,0 nus), pile de 3 ou plus dans 37,8 % des combats, 43 % des labels sans signe écrit, 12,4 % à convention inverse. Recommandation : **chacun chez soi** (le critique sous le dé, chaque statut à la zone d'état de son porteur, chaque relique à son sceau, plus de hachures ; pile de 3 ou plus au centre 37,8 → 1,3 %), en quatre phases (0 corrections, 1 reliques, 2 statuts, 3 signe et mots). **Trois choix à faire** : le signe (texte en PV, liseré du camp ou non), le son des labels (point de vue de l'attaquant ou du propriétaire), le critique sans décimale (« Critique +7 » ou multiplicateur arrondi) ; [TODO.md](TODO.md) § 20 |
+| Les sources des familles | à étudier | étude en cours |
 
 ---
 

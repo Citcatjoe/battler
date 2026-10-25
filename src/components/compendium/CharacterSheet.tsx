@@ -136,8 +136,8 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
   )
 }
 
-/** La règle qui dit comment jouent ses compétences : ses deux dés (barde), selon sa forme (druide), ou sur son dé. */
-const skillRule = (c: Character): RuleId => (c.dice > 1 ? 'twin-dice' : c.forms ? 'forms' : 'dice-faces')
+/** La règle qui dit comment jouent ses compétences : selon sa forme (druide), ou sur son dé. */
+const skillRule = (c: Character): RuleId => (c.forms ? 'forms' : 'dice-faces')
 
 /** Onglet « Performances » : le palmarès, les adversaires et les derniers combats, avec le lien vers Statistiques. */
 function Performance({ character, record, nav }: { character: Character; record: CharacterRecord; nav: CompendiumNav }) {

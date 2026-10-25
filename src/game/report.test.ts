@@ -36,14 +36,14 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
 }
 
 describe('rapport de combat (report.ts)', () => {
-  it('compte exact sur une chronologie connue : dés lancés, jet greffé, rafale des deux dés, reliques', () => {
+  it('compte exact sur une chronologie connue : dés lancés, jet greffé, rafale du Duo, reliques', () => {
     const attack = (attacker: 0 | 1, roll: number, extra: object = {}) => ({ type: 'attack', attack: { attacker, roll, faces: 6, ...extra } })
     const beats = [
       attack(0, 4, { relicBonus: [{ relic: 'four-nail-shoe', name: 'Fer à quatre clous', amount: 4 }] }),
       attack(1, 6),
       { type: 'relic', side: 1, relic: 'wolf-fang', name: 'Dent de loup', effects: [], uses: 1 },
-      // Les deux dés de la barde : une rafale sans dé à elle, puis ses deux jets, chacun avec son dé
-      { type: 'flurry', side: 0, strikes: 2, faces: [6, 6] },
+      // La rafale du Duo : une étape sans dé à elle, puis ses deux jets, chacun avec son dé
+      { type: 'flurry', side: 0, status: 'duo', strikes: 2, faces: [6, 6] },
       attack(0, 2),
       attack(0, 2),
       { type: 'coin', side: 1, status: 'heads', heads: true, effects: [] },
@@ -59,7 +59,7 @@ describe('rapport de combat (report.ts)', () => {
     ])
   })
 
-  it('cohérent avec la trace, sur des graines fixes (reliques de tous les types, deux dés)', () => {
+  it('cohérent avec la trace, sur des graines fixes (reliques de tous les types, rafale du Duo)', () => {
     const fighters = [
       createCharacter('brokk').withRelics(RELICS),
       createCharacter('fanchon').withRelics([getRelic('four-nail-shoe'), getRelic('split-knucklebone'), getRelic('wolf-fang')]),
@@ -79,7 +79,7 @@ describe('rapport de combat (report.ts)', () => {
       const bonuses = result.beats.reduce((t, b) => t + (b.type === 'attack' ? (b.attack.relicBonus?.length ?? 0) : 0), 0)
       expect(Object.values(report[0].relics).concat(Object.values(report[1].relics)).reduce((t, n) => t + n, 0)).toBe(relicBeats + bonuses)
       procs += relicBeats + bonuses
-      flurries += result.beats.filter((b) => b.type === 'flurry' && b.side === 1 && !b.status).length
+      flurries += result.beats.filter((b) => b.type === 'flurry' && b.side === 1 && b.status === 'duo').length
       // La barde lance un dé par jet : ceux de ses coups lancés et de ses jets greffés, aucun autre
       const fanchonDice = result.beats.reduce(
         (t, b) => t + ((b.type === 'roll' && b.side === 1) || (b.type === 'attack' && b.attack.attacker === 1 && !b.attack.preset) ? 1 : 0),

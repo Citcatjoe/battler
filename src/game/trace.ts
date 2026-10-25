@@ -165,15 +165,10 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [`${label(beat.status)} : ${fighters[beat.side].name} perd son action (une charge consommée)`]
     case 'shift':
       return [`${fighters[beat.side].name} change de forme : ${fighters[beat.side].forms?.[beat.form].name ?? beat.form}`]
-    case 'flurry': {
-      const c = fighters[beat.side]
-      const dice = beat.faces.map((f) => `d${f}`).join(' + ')
+    case 'flurry':
       return [
-        beat.status
-          ? `${label(beat.status)} : ${c.name} frappe ${beat.strikes} fois cette action (${dice}${c.dice > 1 && !STATUSES[beat.status].instantStrikes ? `, dont ses ${c.dice} dés` : ''}), chaque jet résolu à part (statut consommé)`
-          : `${c.name} lance ses deux dés (${dice}) : deux jets complets, chacun sa face, sa compétence et son coup de base`,
+        `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque jet résolu à part (statut consommé)`,
       ]
-    }
     case 'roll':
       return [`${fighters[beat.side].name} lance son dé : ${beat.roll}${beat.forced ? ' [imposé]' : ''} → sa compétence se greffe, puis le coup de base`]
     case 'coin':

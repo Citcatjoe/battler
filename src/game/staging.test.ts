@@ -1,7 +1,7 @@
 /*
  * La mise en scène (docs/MOTEUR_V2.md § 4), sans navigateur : des combats à graine de tout le roster, mis en scène par
  * `stage`, puis rejoués par le réducteur du lecteur (`applyCue`). Les invariants valent pour tous ; les cas précis
- * (poison et Riposte, plaie qui coule, Peur, rafales, deux dés de la barde, pièce, relique, druide, Foudre) sont
+ * (poison et Riposte, plaie qui coule, Peur, rafales, Duo de la barde, pièce, relique, druide, Foudre) sont
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
@@ -314,27 +314,32 @@ describe('mise en scène', () => {
     expect(rolled).toBeGreaterThan(5)
   })
 
-  it('deux dés de la barde : ils roulent ensemble, une fois ; chaque jet ressort son dé ; plus de « ding » de double (phase 5 ter)', () => {
+  it('Duo de la barde : annoncé sur son 1 (Aura gagnée), sa rafale à l’action suivante roule une fois, le dé de plus en mauve ; chaque jet ressort son dé', () => {
+    let announced = 0
     let actions = 0
-    let doubles = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
+        if (beat.type === 'event' && beat.event.eventId === 'duo') {
+          const m = momentOf(moments, beat.id)
+          expect(m.cues.some((c) => c.channel === 'sound' && c.cue === 'auraGain')).toBe(true)
+          announced++
+        }
         // Une action coupée par un K.O. n'a tiré que les dés de ses jets joués
-        if (beat.type !== 'flurry' || beat.status || beat.turn === result.turns) continue
+        if (beat.type !== 'flurry' || beat.status !== 'duo' || beat.turn === result.turns) continue
         const m = momentOf(moments, beat.id)
-        expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling && c.dice.values.length === 2)).toHaveLength(1)
-        const land = m.cues.find((c) => c.channel === 'dice' && !c.dice.rolling && c.dice.values.length === 2 && c.dice.values[0] > 0)!
+        expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling && c.dice.values.length === beat.strikes)).toHaveLength(1)
+        const land = m.cues.find((c) => c.channel === 'dice' && !c.dice.rolling && c.dice.values.length === beat.strikes && c.dice.values[0] > 0)!
         expect(land).toBeDefined()
+        if (land.channel === 'dice') expect(land.dice.dieColors).toEqual([undefined, ...Array(beat.strikes - 1).fill(STATUSES.duo.look!.dieColor)])
         expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(false)
-        if (land.channel === 'dice' && land.dice.values[0] === land.dice.values[1]) doubles++
-        // Chaque jet joué désigne son dé : le premier, puis le second
+        // Chaque jet joué désigne son dé : le premier, puis le suivant
         const children = childrenOf(result.beats)
         const strikes = children[beat.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
         for (let k = 0; k < strikes.length; k++) expect(m.cues.some((c) => c.channel === 'dice' && c.dice.active === k)).toBe(true)
         actions++
       }
-    expect(actions).toBeGreaterThan(100)
-    expect(doubles).toBeGreaterThan(10)
+    expect(announced).toBeGreaterThan(50)
+    expect(actions).toBeGreaterThan(30)
   })
 
   it('pile ou face : pile tombe d’un bloc avec son ding, puis un seul coup lourd', () => {
@@ -776,23 +781,24 @@ describe('mise en scène', () => {
     expect(bolts).toBeGreaterThan(15)
   })
 
-  it('Furie sur le premier dé de la barde : ses coups, puis le second dé, sans nouveau roulement (M27)', () => {
-    const fury = CHARACTERS.find((c) => c.id === 'gorak')!.definition.events.find((e) => e.id === 'wind-fury')!
+  it('Furie sur le premier jet d’une rafale (Coup de chance) : ses coups, puis le jet suivant, sans nouveau roulement (M27)', () => {
+    const lucky = ENGRAVABLE_SKILLS.find((e) => e.id === 'lucky-strike')!
     let nested = 0
     for (const y of CHARACTER_IDS)
-      for (const seed of [1, 2, 3, 4]) {
-        const result = simulateCombat([createCharacter('fanchon').withForge([{ op: 'engrave', face: 3, skill: fury }]), createCharacter(y)], { seed })
+      for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        // Gorak : la Furie sur son 1, Coup de chance gravé sur son 3
+        const result = simulateCombat([createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: lucky }]), createCharacter(y)], { seed })
         const moments = stage(result)
         const children = childrenOf(result.beats)
         for (const outer of result.beats) {
-          if (outer.type !== 'flurry' || outer.status) continue
+          if (outer.type !== 'flurry' || outer.status !== 'luckyStrike') continue
           const strikes = children[outer.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
           const inner = result.beats.find((b) => b.type === 'flurry' && b.status === 'windFury' && b.cause !== undefined && result.beats[b.cause].cause === strikes[0]?.id)
           if (!inner || strikes.length < 2) continue
           const m = momentOf(moments, outer.id)
           // Un seul roulement pour toute l'action
           expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling)).toHaveLength(1)
-          // Après le dernier coup de la Furie, les dés de la barde reviennent tels quels
+          // Après le dernier coup de la Furie, les dés de la rafale reviennent tels quels
           const furyStrikes = children[inner.id].filter((b) => b.type === 'attack')
           const lastFury = impacts(m, result.beats).get(furyStrikes[furyStrikes.length - 1].id)!
           const values = strikes.map((b) => (b.type === 'attack' ? b.attack.roll : 0))

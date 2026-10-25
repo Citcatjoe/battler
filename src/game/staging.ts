@@ -1042,9 +1042,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   }
 
   /**
-   * Rafales en cours, la plus récente en dernier (deux dés, Furie des vents, Coup de chance) : ses coups, le prochain
-   * à jouer, ses dés posés. Une Furie posée par un jet d'une rafale (le premier dé de la barde) s'empile sur elle : ses
-   * dés remplacent ceux de la rafale le temps de ses coups (`covered`), puis ceux-ci reviennent, sans nouveau
+   * Rafales en cours, la plus récente en dernier (Furie des vents, Coup de chance, Duo) : ses coups, le prochain à
+   * jouer, ses dés posés. Une Furie posée par un jet d'une rafale (un jet de Coup de chance ou du Duo) s'empile sur elle :
+   * ses dés remplacent ceux de la rafale le temps de ses coups (`covered`), puis ceux-ci reviennent, sans nouveau
    * roulement (M27).
    */
   const volleys: Volley[] = []
@@ -1177,10 +1177,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
   /**
    * Rafale : tous les dés roulent ensemble, le second jaillit, ou apparaît dans sa couleur s'il est d'une autre sorte
-   * (les dés d'un statut, après les `own` dés du personnage). `flat` : rafale instantanée (Furie des vents), déclenchée
-   * par le dé qui vient de tomber : les dés apparaissent d'un coup, à plat.
+   * (les dés du statut, après le premier). `flat` : rafale instantanée (Furie des vents), déclenchée par le dé qui vient
+   * de tomber : les dés apparaissent d'un coup, à plat.
    */
-  function rollVolley(attacks: Attack[], color: string | undefined, flat: boolean, own: number): DiceState {
+  function rollVolley(attacks: Attack[], color: string | undefined, flat: boolean): DiceState {
     const { attacker, faces } = attacks[0]
     const shown: DiceState = {
       ...IDLE_DICE,
@@ -1188,7 +1188,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       owner: attacker,
       volley: true,
       dieFaces: attacks.map((a) => a.faces),
-      dieColors: attacks.map((_, k) => (k >= own ? color : undefined)),
+      dieColors: attacks.map((_, k) => (k >= 1 ? color : undefined)),
     }
     const landed = { ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced) }
     if (flat) {
@@ -1240,7 +1240,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       }
       case 'roll': {
         // Le dé tombe ; le sceau de la compétence greffée s'allume avec lui, et elle suit un battement après, comme l'élan
-        // d'un coup (M10). Dans une rafale (deux dés, Coup de chance), le dé est déjà sur le plateau : il ne roule pas de
+        // d'un coup (M10). Dans une rafale (Coup de chance, Duo), le dé est déjà sur le plateau : il ne roule pas de
         // nouveau, il ressort
         const grafts = children[beat.id].filter((b) => b.type === 'event')
         for (const g of grafts) snapped.add(g.id)
@@ -1402,16 +1402,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         )
         break
       case 'flurry': {
-        // Furie instantanée : la compétence qui la pose vient de s'afficher ; la rafale part sans répéter son nom. Les
-        // deux dés de la barde (sans statut) n'ont pas de nom : ils roulent, c'est tout
+        // Furie instantanée : la compétence qui la pose vient de s'afficher ; la rafale part sans répéter son nom
         const chained = beat.cause !== undefined && beats[beat.cause].type === 'event'
-        const def = beat.status && STATUSES[beat.status]
+        const def = STATUSES[beat.status]
         const apply = () => {
           settle(beat)
           showStatuses(beat.id)
           log(flurryLog(beat.turn, beat.side, beat.status, beat.strikes, fighters))
         }
-        if (chained || !def) apply()
+        if (chained) apply()
         else showEffects(beat.side, def.name, [], apply)
         // Tous les dés de la rafale roulent ensemble : en combat test, le joueur les choisit d'abord, un par un
         moment.rolls.push({ at: t, upTo: ranks[beat.id] + beat.strikes })
@@ -1421,15 +1420,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           .filter((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack')
           .slice(0, beat.strikes)
         if (strikes.length > 0) {
-          // Les dés du statut prennent sa couleur : après le dé de la Furie, après ceux du personnage (Coup de chance)
-          const own = def && !def.instantStrikes ? fighters[beat.side].dice : 1
+          // Les dés du statut prennent sa couleur, après le premier (le dé de la Furie, le dé de l'action)
           const outer = volleys.at(-1)
           if (outer) outer.covered = true
           const landed = rollVolley(
             strikes.map((b) => b.attack),
-            def?.look?.dieColor,
+            def.look?.dieColor,
             chained,
-            own,
           )
           volleys.push({ strikes: strikes.map((b) => b.id), next: 0, dice: landed, covered: false })
         }

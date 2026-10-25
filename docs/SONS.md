@@ -70,7 +70,7 @@ Le Grondement n'est pas un son à part entière : c'est une couche. Le vocabulai
 | --- | --- |
 | Initiative | Dé lancé, puis Dé posé (une fois, même avec deux dés) |
 | `attack` | Dé lancé, Dé posé, puis Coup, Coup critique ou Esquive. L'élan vers l'adversaire est muet : seul l'impact sonne. Un jet de compétence (1, 2 ou 3) s'arrête au Dé posé : le son de la compétence suit. Un coup transformé (Charge, Coup de griffe) sonne comme un coup. |
-| `flurry` (Furie des vents, Coup de chance, les deux dés de la barde) | Un seul Dé lancé pour tous les dés, un seul Dé posé ; puis le son de chaque coup, qui se suivent sans se chevaucher. Les deux dés de la barde (phase 5 ter) : aucun son de plus, même sur deux faces égales ; chaque jet sonne comme un jet (le son de sa compétence, puis son coup) |
+| `flurry` (Furie des vents, Coup de chance, Duo) | Un seul Dé lancé pour tous les dés, un seul Dé posé ; puis le son de chaque coup, qui se suivent sans se chevaucher. Une rafale de jets (Coup de chance, Duo) : chaque jet sonne comme un jet (le son de sa compétence, puis son coup), aucun son de plus sur deux faces égales. Les deux dés de la barde (rafale sans statut, phase 5 ter) sont retirés avec le Duo (2026-10-25) |
 | `event` (compétence) | Le son déduit de ses effets (§ 4.2) |
 | `statusTick` | Ronge si le statut inflige des dégâts, ou le son propre que son registre déclare (`tickSound` : Grésillement pour le Poison, 0.90.0) ; Soin s'il soigne |
 | `statusReaction` | Coup si le statut renvoie des dégâts (Riposte), même pour un gros renvoi, ou s'il frappe en dégâts directs (la Sentence, l'Embrasement : leur coup sonne, sans son propre) ; Soin s'il soigne (Vol de vie) ; Ronge s'il fait perdre des PV à son propre porteur (Saignement, 0.68.0 ; depuis la 0.68.1, joué un battement après l'impact du coup qui fait couler la plaie, sur la même frappe) ; sinon le son déduit de ses effets (§ 4.2), par exemple Malus reçu quand l'Aura de décoction empoisonne ou quand les Épines acérées font saigner, Bonus gagné quand la Rancune donne son Critique assuré, le Rempart hérissé ses Épines, la Vindicte sa Ferveur. Un statut posé par le coup qui vient de toucher (l'Aura de décoction, 2026-10-21) tombe avec l'impact de ce coup : son Malus reçu suit le Coup d'un battement (0,12 s), sur la même frappe, comme le Ronge du Saignement |
@@ -105,7 +105,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 
 | Son | Compétences |
 | --- | --- |
-| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0), Aura mélodieuse et Ouverture (la barde) ; Sentence (0.114.0), Rempart hérissé et Vindicte (second lot) |
+| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0), Ouverture (la barde) ; Sentence (0.114.0), Rempart hérissé et Vindicte (second lot) ; le Duo (2026-10-25 : il pose l'Aura mélodieuse, puis son dé de plus ; l'aura passe en premier, § 4.2 ; l'Aura mélodieuse, sa signature jusqu'à la 0.115.1, sonnait de même) |
 | Bonus gagné | Œil de faucon, Esquive améliorée, Peau de pierre, Épines acérées, Vol de vie, Coup de chance, Riposte, Siffloter ; Rancune (0.114.0) |
 | Aucun son propre (mécanisme posé, § 4.2 règle 8) | Furie des vents (sa rafale sonne), Pile ou face (sa pièce sonne) : Bonus gagné jusqu'à la 0.109.1 ; Soliste et Crescendo (coup de base ×N, sans effet : leur coup sonne) ; Curée (0.114.0 : sa rafale sonne) ; Embrasement (son coup sonne) et Dé pipé (sa pièce sonne), second lot |
 | Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0, Brûlure posée), Fausse note, Pourfendre (0.70.0 : son coup sonne d'abord comme un coup, puis la plaie posée joue Malus reçu ; avant, la Saignée, et la Rage du sang, qui jouait Soin) ; Virulence (0.114.0, le Poison multiplié) |
@@ -212,7 +212,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 
 | Son | Ce qui le fait jouer |
 | --- | --- |
-| Dé lancé | tout jet : attaque, initiative, rafale (Furie des vents, Coup de chance), un seul pour tous les dés |
+| Dé lancé | tout jet : attaque, initiative, rafale (Furie des vents, Coup de chance, Duo), un seul pour tous les dés |
 | Dé posé | la fin de tout jet, quelle que soit la face |
 | Pièce lancée | Pile ou face, quand la pièce part |
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
@@ -220,7 +220,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Coup | un coup d'attaque qui touche (y compris ceux de l'ours, le coup de Pourfendre et les coups de la Curée) ; la Riposte (renvoi) ; la perte de PV de la Sentence et la frappe de l'Embrasement (2026-10-25) ; la relâche de la Rétribution (un coup, la moitié de ses jauges, sous 10 dégâts) ; chaque jauge d'une relâche en entier sauf la dernière ; les lames d'air de la Conque des vents |
 | Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive ; la Foudre, un par éclair, à l'impact de chacun (0.76.0, gardé le 2026-10-24) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |
-| Aura gagnée | les 13 compétences d'aura (§ 4.3 : Aura mélodieuse et Ouverture comprises ; Sentence, Rempart hérissé et Vindicte depuis la 0.114.0 et le second lot) |
+| Aura gagnée | les 13 compétences d'aura (§ 4.3 : le Duo et l'Ouverture compris ; Sentence, Rempart hérissé et Vindicte depuis la 0.114.0 et le second lot) |
 | Aura perdue | une purification qui retire une aura |
 | Bonus gagné | les 9 compétences qui posent un bonus sur leur lanceur (§ 4.3, Rancune comprise) ; la Rancune, le Rempart hérissé et la Vindicte quand ils agissent (§ 9.3) ; plus la Furie des vents, Pile ou face, la Curée, l'Embrasement ni le Dé pipé, qui posent un mécanisme (0.110.0) |
 | Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0), Fausse note, Pourfendre (après son coup, s'il touche), Virulence (0.114.0) ; l'Aura de décoction qui empoisonne, à l'impact du coup qui touche ; les Épines acérées qui font saigner l'attaquant (0.68.0) ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur (0.69.0) ; un label − sous le dé : Esquive assurée, bouclier qui absorbe, Fausse note, Riposte, relique du défenseur qui contre le coup (la Conque des vents, les Clous de pavois) ; les Épines, dont le Malus reçu de leur effet parle déjà (2026-10-21, § 4.4) |
@@ -251,6 +251,7 @@ Les deux personnages d'une même race partagent leurs compétences.
 | Ogre (Morgrut, Gnashka) | Attente : Malus reçu | Attente : Malus reçu | Attente : Malus reçu |
 | Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des trois éclairs (0.76.0 ; Éclair synthétisé en 0.110.0, retiré le 2026-10-24 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
 | Druide, forme d'ours | coup : Coup | coup : Coup | coup : Coup (0.73.0 ; Charge, Coup de griffe et Aura de rancune avant, et le relais Rancune et Sève, Bonus gagné, jusqu'à la 0.72.0) |
+| Barde (Fanchon) | Duo : Aura gagnée (son aura passe avant son dé de plus ; sa rafale, à l'action suivante, sonne comme toute rafale), 2026-10-25 | Soliste : aucun son propre, son coup sonne | face nue ; l'Ouverture, au début du combat : Aura gagnée |
 
 Une compétence sans effet réel ne sonne pas (règle 8) : un soin à PV pleins, un malus bloqué par une immunité.
 
@@ -272,7 +273,7 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Vol de vie | le coup du porteur touche | Soin, un battement après le Coup de ce coup (0.97.0 : le soin tombe à l'impact, `MISE_EN_SCENE.md` M14) |
 | Aura de décoction | le coup du porteur touche | Malus reçu (poison posé), un battement après le Coup de ce coup (2026-10-21) |
 | Peur, Étourdi | tour du porteur | Tour perdu |
-| Furie des vents, Coup de chance | action du porteur | Dé lancé, Dé posé, puis le son de chaque coup |
+| Furie des vents, Coup de chance, Duo | action du porteur | Dé lancé, Dé posé, puis le son de chaque coup |
 | Pile ou face | action du porteur | Pièce lancée, Pièce retombe ; sur pile, Pile réussie puis Coup critique |
 | Rétribution | relâchée par sa compétence | Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0) |
 | Critique assuré, Esquive améliorée | le prochain coup | Coup critique, Esquive |

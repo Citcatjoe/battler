@@ -35,7 +35,7 @@ import { HpBar } from './HpBar'
 import { StatusTray, trayAfter } from './StatusTray'
 import { SkillBar } from './SkillBar'
 import { DieBuild, dieCells } from './DieBuild'
-import { offerTargets } from '../game/forge'
+import { offerTargets, type ForgeStep } from '../game/forge'
 import { STATES, STATUS_PLACE, trayStates } from '../game/states'
 import { skillIcon, STATE_ICON, statusIcon } from './Icon'
 import { RelicCard } from './RelicSeal'
@@ -455,8 +455,8 @@ describe('écrans', () => {
     // Aura de sainteté : sa vie, son plafond et ce qui la retire
     const holy = sheet('holy-aura')
     for (const text of ["jusqu'à la fin du combat", '2 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
-    // Aura mélodieuse : l'autre compétence qui la pose
-    expect(sheet('melodious-aura')).toContain('Ouverture')
+    // Le Duo : le dé de plus qu'il pose, et l'autre compétence qui pose son aura
+    expect(sheet('duo')).toContain('Ouverture')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
   })
@@ -530,13 +530,22 @@ describe('écrans', () => {
     expect(live).toContain('aria-label="Paris (0/2)"')
     expect(live).toContain('aria-label="Simuler le tour (7 combats) (×7)"')
     expect(live).toContain('mises de ce tour 0 / 2')
+    // Après une saison, la carte montre le build figé du participant : sa face dorée et sa relique
+    const gild: ForgeStep = { op: 'gild', face: 3 }
+    const built = { ...t, results: {}, entrants: t.entrants.map((e, i) => (i === 0 ? { ...e, build: { relics: [RELICS[0].id], forge: [gild] } } : e)) }
+    const builtHtml = renderToString(<BracketScreen tournament={built} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
+    expect(builtHtml.match(/data-gild=""/g)).toHaveLength(1)
+    expect(builtHtml).toContain(`aria-label="${RELICS[0].name}"`)
     // Tournoi complet : l'arbre terminé, puis l'écran du champion et son bilan cumulé
     let seed = 10
     for (const ref of allMatches()) if (!t.results[matchKey(ref)]) t = withResult(t, ref, simulateCombat(matchFighters(t, ref), { seed: seed++ }))
     const tree = renderToString(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
     expect(tree.match(EMOJI)?.[0]).toBeUndefined()
-    // Les cartes de l'arbre ne montrent plus les reliques : seulement portrait, nom et tête de série
-    for (const id of championRun(t)!.relics) expect(tree).not.toContain(`aria-label="${getRelic(id).name}"`)
+    // Aperçu du build sur chaque carte : le dé en miniature de chaque participant (30 lignes remplies), et les reliques
+    // qu'il porte à ce match (le champion, celles gagnées en chemin)
+    expect(tree.match(/aria-label="Dé de /g)).toHaveLength(30)
+    expect(tree).toContain('data-size="xs"')
+    for (const id of championRun(t)!.relics) expect(tree).toContain(`aria-label="${getRelic(id).name}"`)
     const run = championRun(t)!
     expect(run.matches).toHaveLength(4)
     expect(run.totals.damage).toBeGreaterThan(0)

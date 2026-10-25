@@ -28,7 +28,6 @@ export type RuleId =
   | 'ko'
   | 'die'
   | 'base-hit'
-  | 'twin-dice'
   | 'dodge'
   | 'crit'
   | 'modifiers'
@@ -74,7 +73,7 @@ export const RULES: Record<RuleId, Rule> = {
   phases: {
     group: 'turn',
     title: 'Un tour, trois phases',
-    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son jet et son coup de base, ou ses coups : deux dés, Furie des vents, Coup de chance ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
+    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son jet et son coup de base, ou ses coups : Furie des vents, Coup de chance, Duo ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
   },
   ko: {
     group: 'turn',
@@ -84,18 +83,13 @@ export const RULES: Record<RuleId, Rule> = {
   die: {
     group: 'dice',
     title: 'Le dé',
-    text: "L'attaquant lance un d6 (deux pour la barde). Le dé ne fait aucun dégât : il désigne une face (« sur un 4 » : la face 4), qui déclenche sa compétence, ou rien (une face nue). Les reliques de face et la dorure lisent aussi la face, que le coup touche ou non.",
+    text: "L'attaquant lance un d6. Le dé ne fait aucun dégât : il désigne une face (« sur un 4 » : la face 4), qui déclenche sa compétence, ou rien (une face nue). Les reliques de face et la dorure lisent aussi la face, que le coup touche ou non.",
   },
   'base-hit': {
     group: 'dice',
     title: 'Coup de base',
     text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), la même sorte de coup pour tous. C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche.",
     see: ['damage-types'],
-  },
-  'twin-dice': {
-    group: 'dice',
-    title: 'Deux dés',
-    text: "Un personnage à deux dés lance deux dés à chaque action : deux jets complets, un par dé. Chaque dé désigne une face, qui déclenche sa compétence (greffée, modifiée ou remplacée, comme pour tous), puis le coup de base de ce dé (esquive et critique chacun). Une face gravée, dorée ou copiée vaut pour chacun des deux dés.",
   },
   dodge: {
     group: 'dodge',
@@ -145,7 +139,7 @@ export const RULES: Record<RuleId, Rule> = {
   'dice-faces': {
     group: 'skills',
     title: 'Faces de compétence',
-    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine, et en ours ne lance que ses gravures. La barde lit les mêmes faces avec ses deux dés. D'autres compétences se gravent par la forge.",
+    text: "Chaque personnage a deux compétences, sur les faces 1 et 2 de son d6 ; les quatre autres faces sont nues : leur jet ne porte que le coup de base. Exceptions : l'ogre n'en a aucune, le druide a un sort sur chaque face sous forme humaine, et en ours ne lance que ses gravures. D'autres compétences se gravent par la forge.",
   },
   'hit-relations': {
     group: 'skills',

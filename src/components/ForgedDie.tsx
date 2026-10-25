@@ -31,7 +31,9 @@ import { useTipLayer } from './TipLayer'
  * forge.ts.
  */
 
-const TILE = { sm: 40, md: 52 } as const
+/** Côté d'une tuile et de son sceau ; `xs` : l'aperçu de l'arbre du tournoi, sans cartouche (la place dit la face) */
+const TILE = { xs: 20, sm: 40, md: 52 } as const
+const SEAL = { xs: 16, sm: 32, md: 40 } as const
 
 export function ForgedDie({
   character,
@@ -57,7 +59,7 @@ export function ForgedDie({
 }) {
   const faces = forgedFaces(character.definition, character.forge)
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label={`Dé de ${character.name} : d${faces.length}${character.dice > 1 ? ', deux dés' : ''}`}>
+    <ul className={`flex flex-wrap ${size === 'xs' ? 'gap-0.5' : 'gap-1.5'}`} aria-label={`Dé de ${character.name} : d${faces.length}`}>
       {faces.map((f) => {
         const skill = f.engraved ?? f.origin[0]
         const target = targets?.includes(f.face)
@@ -80,8 +82,8 @@ export function ForgedDie({
               data-off={targets && !target ? '' : undefined}
               style={{ width: TILE[size], height: TILE[size] }}
             >
-              {skill ? <SkillSeal id={skill.id} size={size === 'md' ? 40 : 32} /> : f.face}
-              {skill && <span className="forge-face-num">{f.face}</span>}
+              {skill ? <SkillSeal id={skill.id} size={SEAL[size]} /> : f.face}
+              {skill && size !== 'xs' && <span className="forge-face-num">{f.face}</span>}
               {f.rank > 0 && <span className="forge-face-rank">{rankLabel(f.rank)}</span>}
             </button>
             {/* Une face sans compétence, dorée, ou en aperçu de forge : son infobulle de face ; sinon celle de sa compétence */}

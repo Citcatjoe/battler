@@ -100,7 +100,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
               </div>
               <h2 className="font-display text-4xl font-extrabold text-ink-1">{c.name}</h2>
               <p className="font-body text-lg text-ink-2">
-                {c.race} · {c.archetype} · {c.dice > 1 ? c.dice : ''}d{DIE_FACES}
+                {c.race} · {c.archetype} · d{DIE_FACES}
               </p>
               <StartSkills character={c} />
               <p className="min-h-6 font-body text-[15px] font-bold text-gold-300">{legacy ? `Héritage : ${legacy} amélioration${legacy > 1 ? 's' : ''} de sa dernière partie` : ''}</p>

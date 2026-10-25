@@ -65,9 +65,8 @@ const formLabel = (name: string) => {
 export function DieBuild({ character }: { character: Character }) {
   const [form, setForm] = useState(0)
   const cells = dieCells(character, form)
-  const dice = character.dice > 1 ? String(character.dice) : ''
   return (
-    <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : ${dice ? 'deux ' : ''}d${cells.length}`}>
+    <section className="flex h-[124px] shrink-0 flex-col" aria-label={`Dé de ${character.name} : d${cells.length}`}>
       <header className="matchup-section-head">
         <span>Dé de combat</span>
         <span className="flex items-center gap-3">
@@ -83,7 +82,7 @@ export function DieBuild({ character }: { character: Character }) {
             </span>
           )}
           <span className="matchup-section-count">
-            {dice}d{cells.length}
+            d{cells.length}
           </span>
         </span>
       </header>

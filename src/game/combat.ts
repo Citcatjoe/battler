@@ -30,8 +30,8 @@ import {
  *   Chaque tour, pour le joueur actif (l'attaquant) :
  *     Phase 1 · Début de tour : effets `onTurnStart` (bonus, puis malus) → durées « début »
  *               → fenêtre « turnStart »
- *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un jet, ou plusieurs (deux dés, Coup de
- *               chance), et des coups instantanés (Furie des vents). Un jet : le d6 désigne une face ; sa compétence se
+ *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un jet, ou plusieurs (Coup de chance, Duo),
+ *               et des coups instantanés (Furie des vents). Un jet : le d6 désigne une face ; sa compétence se
  *               greffe (étape roll, la compétence, puis le coup de base), modifie le coup (il part, elle suit s'il
  *               touche) ou le remplace (jet remplacé, pas de coup). Chaque coup de base, résolu en entier à son tour :
  *               valeur tirée dans l'attaque → esquive → reliques de coup, face dorée → critique → dégâts sortants
@@ -226,11 +226,10 @@ export type BeatBody =
   /** Changement de forme (druide), au tout début de son tour : `form` est l'index de la nouvelle forme */
   | { type: 'shift'; side: Side; form: number }
   /**
-   * Une action à plusieurs jets : deux dés (personnage `twinDice`, `status` absent), ou un statut qui donne plusieurs
-   * coups (Furie des vents : deux coups bruts ; Coup de chance : des jets de plus), qui est consommé. Les jets d'une
-   * barde qui porte Coup de chance : ses deux dés, puis ceux du statut, dans la même rafale.
+   * Une action à plusieurs jets : un statut qui donne plusieurs coups (Furie des vents : deux coups bruts ; Coup de
+   * chance, Duo : des jets de plus), qui est consommé.
    */
-  | { type: 'flurry'; side: Side; status?: StatusId; strikes: number; faces: number[] }
+  | { type: 'flurry'; side: Side; status: StatusId; strikes: number; faces: number[] }
   /**
    * Un jet dont la face porte une compétence qui se greffe (règles v2, phase 5 bis) : le dé tombe, la compétence suit
    * (étape event), puis le coup de base, au dé déjà tiré (`Attack.preset`). Un jet sans greffe n'a pas cette étape : son
@@ -409,7 +408,7 @@ export function resolveAttack(
     return { ...base, ...nothing, value: drawn, dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
-  // clous) ne vaut que si le dé de ce coup fait cette face (deux dés : chaque dé se lit seul), coup brut compris
+  // clous) ne vaut que si le dé de ce coup fait cette face (chaque dé d'une rafale se lit seul), coup brut compris
   // (2026-10-23 : une relique ou une dorure lit la face du dé, quel que soit le coup) ; un bonus à conditions (Fiole de
   // venin) ne vaut que si elles sont vraies à ce coup
   const relicBonus = attacker.relics.flatMap((r) =>
@@ -1132,7 +1131,7 @@ export function simulateCombat(
    * Un jet complet (règles v2, phase 5 bis, docs/RESOLUTION.md § 2) : un dé, qui désigne une face. Sa compétence
    * remplace le coup (jet remplacé), ou se greffe (étape roll, la compétence, puis le coup de base au dé tiré), ou modifie
    * le coup (elle part dans ses fenêtres s'il touche, ou le multiplie) ; une face nue ne porte que le coup de base.
-   * `cause` : la rafale dont le jet fait partie (deux dés, Coup de chance).
+   * `cause` : la rafale dont le jet fait partie (Coup de chance, Duo).
    */
   function jet(attacker: Side, cause?: number): Side | undefined {
     // Coups instantanés (Furie des vents) : juste après le jet qui les a posés, dans la même action (RESOLUTION § 2)
@@ -1273,22 +1272,21 @@ export function simulateCombat(
   }
 
   /**
-   * L'action : un jet par dé (deux pour un personnage à deux dés), plus ceux d'un statut de coups supplémentaires non
-   * instantané (Coup de chance, consommé au début de l'action : un nouveau déclenchement pendant ces jets vaut pour la
-   * prochaine action). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base. Plusieurs jets font une
-   * rafale (étape flurry), cause de chacun ; sans statut, celle des deux dés de la barde.
+   * L'action : un jet, plus ceux d'un statut de coups supplémentaires non instantané (Coup de chance, Duo, consommé au
+   * début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action ; un seul de ces statuts
+   * par action, l'autre attend la suivante). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base.
+   * Plusieurs jets font une rafale (étape flurry), cause de chacun.
    */
   function action(attacker: Side): Side | undefined {
     const att = states[attacker]
     const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes && !STATUSES[s.id].instantStrikes)
-    const def = flurry && STATUSES[flurry.id]
-    const extra = flurry && def ? def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1) : 0
-    const jets = fighters[attacker].dice + extra
-    if (jets === 1) return jet(attacker)
+    if (!flurry) return jet(attacker)
+    const def = STATUSES[flurry.id]
+    const jets = 1 + def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1)
     // Charges en réserve (`strikeCharges: 'one'`) : une seule est dépensée, les autres attendent
-    if (flurry && def) att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
+    att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
     // Tous les jets d'une rafale, celui de l'action compris, ont la rafale pour cause
-    const volley = push({ type: 'flurry', side: attacker, ...(flurry && { status: flurry.id }), strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
+    const volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
     for (let k = 0; k < jets; k++) {
       const down = jet(attacker, volley)
       if (down !== undefined) return down

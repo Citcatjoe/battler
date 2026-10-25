@@ -15,8 +15,8 @@ export interface FighterReport {
   relics: Record<string, number>
   /**
    * Faces jouées : `faces[k]`, le nombre de dés tombés sur la face k + 1. Chaque dé lancé compte : le coup de l'action
-   * (ou le jet d'une compétence greffée, étape `roll`), les coups d'une rafale (deux dés de la barde, Furie des vents,
-   * Coup de chance). Le coup qui reprend un dé déjà tiré (jet greffé) ne relance rien, il ne compte pas une seconde
+   * (ou le jet d'une compétence greffée, étape `roll`), les coups d'une rafale (Furie des vents, Coup de chance, Duo).
+   * Le coup qui reprend un dé déjà tiré (jet greffé) ne relance rien, il ne compte pas une seconde
    * fois ; une pièce n'est pas un dé.
    */
   faces: number[]
