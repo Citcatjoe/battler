@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { skillCatalog, statusCatalog, statusLinks } from './catalog'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
-import { cueOf } from './cues'
+import { cueOf, FAMILY_CUES } from './cues'
 import { describeEffect, describeEvent, describeSkill, faceTrigger, rollFace, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
@@ -95,8 +95,9 @@ describe('catalogue des compétences', () => {
       for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
     // Une ligne par compétence, avec ses déclencheurs (la Foudre du druide, sur le 2 de son dé vanilla depuis la 0.113.0)
     expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalTwo'])
-    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune sur son dé ; sa Rancune est hors kit (0.114.0)
-    expect(skills.filter((s) => s.owners.some((c) => c.id === 'morgrut')).map((s) => [s.event.id, s.outside])).toEqual([['grudge', true]])
+    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune sur son dé ; sa Rancune est hors kit (0.114.0), le
+    // Brise-garde et le Coup de massue aussi (phase 8, lot 3)
+    expect(skills.filter((s) => s.owners.some((c) => c.id === 'morgrut')).map((s) => [s.event.id, s.outside])).toEqual([['guard-break', true], ['grudge', true], ['stunning-blow', true]])
     // Hors kit (règles v2, d6) : listée chez son personnage, sans face
     expect(skills.find((s) => s.event.id === 'power-aura')).toMatchObject({ outside: true, triggers: [], owners: [createCharacter('gorak')] })
     // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
@@ -129,8 +130,9 @@ describe('catalogue des statuts', () => {
         .find((e) => e.id === id)!
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
-    // Poison : posé par Ervald (Souffle de la tombe, Virulence), par deux auras (effet de tour, réaction), et par le Dard de guêpe
-    expect(who('poison')).toEqual(['relique:wasp-sting', 'skill:ervald', 'skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
+    // Poison : posé par Ervald (Souffle de la tombe, Virulence), par trois auras (effet de tour, réactions ; la Sève noire,
+    // phase 8, lot 3), et par le Dard de guêpe
+    expect(who('poison')).toEqual(['relique:wasp-sting', 'skill:ervald', 'skill:ervald', 'statut:blackSap', 'statut:decoctionAura', 'statut:frostAura'])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
     // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
@@ -141,8 +143,8 @@ describe('catalogue des statuts', () => {
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
     // Le Rempart hérissé (phase 8, second lot) en pose à chaque armure temporaire vidée
     expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'statut:bristlingRampart'])
-    // La Rancune (0.114.0) en pose un à chaque coup encaissé
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:grudge'])
+    // La Rancune (0.114.0) en pose un à chaque coup encaissé, la Feinte (phase 8, lot 3) à chaque esquive
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:feint', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -736,9 +738,23 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2). Les trois auras de la revue des compétences
     // (Bouclier de foi, Pas de côté, Plaie ouverte) : une aura, son son se déduit de sa nature ; l'Aura d'épines aussi
     // depuis la revue X1 (0.118.1)
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns'])
-    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
-    family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
+    // Un bonus ou un malus posé sonne sa famille (règle 4 étendue, 2026-10-25 ; Bonus gagné et Malus reçu avant)
+    family('precisionUp', ['hawk-eye', 'grudge'])
+    family('evasionUp', ['evasion'])
+    family('guardUp', ['stoneskin'])
+    family('healingUp', ['life-steal', 'whistle'])
+    family('fortuneUp', ['lucky-strike'])
+    family('retaliationUp', ['riposte'])
+    family('afflictionDown', ['grave-breath', 'firefly', 'cleave', 'virulence', 'stoke'])
+    family('tempoDown', ['fear', 'stunning-blow'])
+    family('powerDown', ['false-note'])
+    // Les malus de famille du lot 3 (2026-10-25) : chacun le son de malus de sa famille
+    family('guardDown', ['guard-break'])
+    family('fortuneDown', ['jinx'])
+    family('precisionDown', ['blinding'])
+    family('healingDown', ['hemorrhage'])
+    family('sealDown', ['seal-theft'])
     family('heal', ['harvest'])
     // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
     // face, l'Embrasement et le Dé pipé posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent
@@ -754,7 +770,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
         for (let seed = 1; seed <= 6; seed++)
           for (const beat of simulateCombat([a, b], { rng: seededRng(seed) }).beats) {
             if (beat.type !== 'event') continue
-            const blocked = beat.event.effects.some((e) => e.type === 'applyStatus' && e.result.kind !== 'applied')
+            // Un effet bloqué ne sonne pas ; un bonus volé (Sceau de vol) sonne le vol, vérifié à part (test suivant)
+            const blocked = beat.event.effects.some((e) => e.type === 'applyStatus' && (e.result.kind !== 'applied' || e.stolenBy !== undefined))
             if (!blocked) (seen[beat.event.eventId] ??= new Set()).add(cueOf(beat.event.side, beat.event.effects))
           }
     expect(Object.keys(expected).filter((id) => !seen[id])).toEqual([])
@@ -771,6 +788,30 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const capped = { type: 'applyStatus', target: 0, status: 'holyAura', stacks: 1, result: { kind: 'applied', stacks: 0 } } as const
     expect(cueOf(0, [capped])).toBeNull()
     expect(cueOf(0, [{ ...capped, result: { kind: 'applied', stacks: 1 } }])).toBe('auraGain')
+  })
+
+  it('chaque famille a un son de pose par polarité, et un son de famille a une méthode et un nom de fichier (§ 3, 2026-10-25)', async () => {
+    // Le module du son se charge à part, comme dans les tests voisins : son état (interrupteurs) est global au module
+    const { sfx, SAMPLE_URLS, SOUND_NAMES } = await import('./sound')
+    const names: readonly string[] = SOUND_NAMES
+    const cues = Object.values(FAMILY_CUES).flatMap((c) => [c.positive, c.negative])
+    for (const cue of cues) expect(typeof sfx[cue], cue).toBe('function')
+    // Les sons propres à une famille : 16, distincts (règle 1), chacun nommé comme sa méthode (`powerUp` → `power-up.mp3`),
+    // chacun avec son fichier (générés avec ElevenLabs, 2026-10-25)
+    const own = cues.filter((c) => c !== 'buff' && c !== 'debuff')
+    expect(new Set(own).size).toBe(16)
+    expect(own).toHaveLength(16)
+    const files = own.map((c) => c.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`))
+    expect(files.filter((f) => !names.includes(f))).toEqual([])
+    expect(files.filter((f) => SAMPLE_URLS[f]?.length !== 1)).toEqual([])
+    // Un malus posé sonne la famille de ce malus, même posé avec un bonus ; le bonus seul, la sienne
+    const posed = (status: 'poison' | 'bonusArmor' | 'guaranteedCrit', target: 0 | 1) =>
+      ({ type: 'applyStatus', target, status, stacks: 1, result: { kind: 'applied', stacks: 1 } }) as const
+    expect(cueOf(0, [posed('bonusArmor', 0), posed('poison', 1)])).toBe('afflictionDown')
+    expect(cueOf(0, [posed('guaranteedCrit', 0), posed('bonusArmor', 0)])).toBe('precisionUp')
+    // Un bonus volé (Sceau de vol) sonne le vol, la famille du voleur, même quand c'est une aura qui change de camp
+    const stolen = { type: 'applyStatus', target: 1, status: 'powerAura', stacks: 1, result: { kind: 'applied', stacks: 1 }, stolenBy: 'sealTheft' } as const
+    expect(cueOf(0, [stolen])).toBe('sealDown')
   })
 })
 

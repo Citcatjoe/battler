@@ -4,27 +4,35 @@
  * scène par `stage` et rejoués sur une seule horloge. Chaque contrôle cherche une entorse au principe « dé rendu →
  * intervalle → impact → réactions » qu'aucun combat construit ne prévoit : le contenu nouveau (compétences, statuts,
  * reliques) y entre de lui-même, par les registres. Un échec donne le duel, la graine et l'instant pour le rejouer.
+ * Les compétences des répertoires et des réserves y entrent aussi gravées chez leurs porteurs : les moments qu'elles
+ * seules font naître (jet à vide, critique raté, soin empêché, bonus volé, armure brisée : le lot 3) y sont assez
+ * nombreux pour que chaque contrôle les rencontre.
  */
 import { describe, expect, it } from 'vitest'
 import { other, simulateCombat, type Beat, type CombatResult, type Side } from './combat'
 import type { Character } from './character'
-import { isRollTrigger, relationOf } from './events'
-import { autoForge, drawForgeOffer, withForgeStep, type ForgeStep } from './forge'
+import { isRollTrigger, relationOf, type CharacterEvent } from './events'
+import { autoForge, drawForgeOffer, validOnOrigin, withForgeStep, type ForgeStep } from './forge'
+import { STOLEN_BADGE } from './narration'
 import { RELICS } from './relics'
 import { seededRng, shuffle, type Rng } from './rng'
-import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf } from './roster'
 import { childrenOf, stage, type Cue, type Moment } from './staging'
 import { signalTargets } from './states'
-import type { Status } from './statuses'
+import { STATUSES, type Status } from './statuses'
 import * as T from './timing'
 import { applyCue, initialView, type View } from './useCombat'
 
 type Attack = Extract<Beat, { type: 'attack' }>
 
-/** Une construction au hasard : jusqu'à six opérations de forge tirées comme en campagne, jusqu'à trois reliques. */
-function randomBuild(id: string, rng: Rng): { fighter: Character; text: string } {
+/**
+ * Une construction au hasard : jusqu'à six opérations de forge tirées comme en campagne, jusqu'à trois reliques.
+ * `engraved` : une compétence gravée d'abord, sur le 3 ou la première face qui l'accepte.
+ */
+function randomBuild(id: string, rng: Rng, engraved?: CharacterEvent): { fighter: Character; text: string } {
   const base = createCharacter(id)
-  let steps: ForgeStep[] = []
+  const first = engraved && [3, 1, 2, 4, 5, 6].map((face): ForgeStep => ({ op: 'engrave', face, skill: engraved })).find((s) => validOnOrigin(base.definition, s))
+  let steps: ForgeStep[] = first ? [first] : []
   for (let k = Math.floor(rng() * 7); k > 0; k--) {
     const step = autoForge(base.definition, steps, drawForgeOffer(base.definition, steps, rng, ENGRAVABLE_SKILLS), rng)
     if (step) steps = withForgeStep(base.definition, steps, step)
@@ -47,6 +55,16 @@ for (const x of CHARACTER_IDS)
     for (const seed of SEEDS) {
       const rng = seededRng(seed * 7919 + corpus.length)
       const [a, b] = [randomBuild(x, rng), randomBuild(y, rng)]
+      const result = simulateCombat([a.fighter, b.fighter], { seed })
+      corpus.push({ name: `${a.text} contre ${b.text}, graine ${seed}`, result, moments: stage(result) })
+    }
+// Chaque compétence du répertoire ou de la réserve d'un personnage gravée chez lui, contre chacun, une graine par duel
+for (const host of CHARACTERS)
+  for (const skill of [...(host.definition.reserve ?? []), ...repertoireOf(host.id)])
+    for (const y of CHARACTER_IDS) {
+      const seed = corpus.length
+      const rng = seededRng(seed * 7919)
+      const [a, b] = [randomBuild(host.id, rng, skill), randomBuild(y, rng)]
       const result = simulateCombat([a.fighter, b.fighter], { seed })
       corpus.push({ name: `${a.text} contre ${b.text}, graine ${seed}`, result, moments: stage(result) })
     }
@@ -122,7 +140,8 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
     const start = starts[k]
     const cues = timed.filter((x) => x.moment === k)
     const index = (x: Timed) => timed.indexOf(x)
-    const strikes = m.beats.map((id) => beats[id]).filter((b): b is Attack => b.type === 'attack' && !b.attack.replaced)
+    // Un jet tombé à vide (Malchance) n'a pas de coup : il a son contrôle (11)
+    const strikes = m.beats.map((id) => beats[id]).filter((b): b is Attack => b.type === 'attack' && !b.attack.replaced && !b.attack.jinxed)
     const landed = cues.filter((x) => x.cue.channel === 'strike' && x.cue.strike?.landed)
     expect(landed.length, c.name).toBe(strikes.length)
 
@@ -154,6 +173,22 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
         if (impact.at - wind.at !== freeze) flag("un critique sans son arrêt sur image avant l'impact", impact.at, `${impact.at - wind.at} ms`)
         const told = cues.find((x) => x.cue.channel === 'special' && x.cue.special.label.startsWith('Critique') && x.at <= wind.at && x.at >= dice[since].at)
         if (!told) flag("un critique annoncé après l'élan", wind.at)
+      }
+      // 1 ter. Le critique d'un aveuglé (M47) s'annonce entre le dé et l'élan, comme tout critique, puis rate à l'impact
+      // (« RATÉ »), sans arrêt sur image
+      if (beat.attack.blindedBy && wind) {
+        count('critique raté')
+        const told = cues.find((x) => x.cue.channel === 'special' && x.cue.special.label.startsWith('Critique') && x.at <= wind.at && x.at >= dice[since].at)
+        if (!told) flag("un critique raté annoncé après l'élan", wind.at)
+        const missed = together.some((x) => x.cue.channel === 'float' && x.cue.float.kind === 'hit' && x.cue.float.missed)
+        if (!missed || impact.at - wind.at !== (dice[since].dice.volley ? T.VOLLEY_WIND : T.WIND)) flag('un critique raté sans « RATÉ », ou figé avant son impact', impact.at)
+      }
+      // 1 quater. L'armure temporaire qu'une garde brisée fait voler en éclats (M48) : son texte tombe à l'impact
+      const guard = beats[beat.id - 1]?.state.statuses[other(beat.attack.attacker)] ?? []
+      if (beat.attack.shatteredBy && !beat.attack.dodged && guard.some((s) => STATUSES[s.id].shield)) {
+        count('armure brisée')
+        const said = together.some((x) => x.cue.channel === 'float' && x.cue.float.kind === 'badge' && x.cue.float.badge.text.endsWith('brisée'))
+        if (!said) flag("une armure brisée sans son texte à l'impact", impact.at)
       }
       // Le bonus d'une relique de coup tombe avec le dé posé (M8)
       const bonus = beat.attack.relicBonus?.[0]
@@ -205,7 +240,7 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
       if (flurry.type !== 'flurry') continue
       const own = children[id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b): b is Attack => b.type === 'attack')
       own.slice(0, -1).forEach((b, n) => {
-        if (b.attack.replaced) return
+        if (b.attack.replaced || b.attack.jinxed) return
         const impact = landed[strikes.indexOf(b)]
         const next = cues.find((x) => x.at > impact.at && x.cue.channel === 'dice' && x.cue.dice.active === n + 1)
         if (!next) return
@@ -214,6 +249,52 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
         const slow = m.spans.find((sp) => sp.at + start >= impact.at && sp.at + start < next.at && LINGER[sp.name])
         if (slow) flag('une réaction casse le rythme de la rafale', slow.at + start, `${slow.name} après l'étape ${b.id}`)
       })
+    }
+
+    // 11. Le jet à vide (M46) : sa face s'allume avec son dé ; ni élan ni coup ; un battement après le dé, le statut qui
+    // l'a fait tomber à vide flotte sur son porteur avec Tour perdu, et sa charge part à cet instant, pas avant
+    // Les jets à vide d'un moment (deux dans une rafale du Duo) et leurs textes, dans l'ordre
+    const jinxed = m.beats.map((id) => beats[id]).filter((b): b is Extract<Beat, { type: 'roll' }> => b.type === 'roll' && !!b.jinxedBy)
+    jinxed.forEach((roll, n) => {
+      const id = roll.id
+      const jinx = roll.jinxedBy!
+      count('jet à vide')
+      const told = cues.filter((x) => x.cue.channel === 'float' && x.cue.side === roll.side && x.cue.float.kind === 'badge' && x.cue.float.badge.text === STATUSES[jinx].name)[n]
+      // Le dé du jet : le premier des dés qui montrent sa valeur sans interruption jusqu'au texte (comme au contrôle 1)
+      const dice = told ? cues.filter((x) => x.cue.channel === 'dice' && x.at <= told.at) : []
+      const shows = (x: Timed) => x.cue.channel === 'dice' && !x.cue.dice.rolling && x.cue.dice.values[x.cue.dice.active ?? 0] === roll.roll
+      let since = dice.length - 1
+      while (since > 0 && shows(dice[since - 1])) since--
+      const shown = since >= 0 && shows(dice[since]) ? dice[since] : undefined
+      if (!shown || !told) {
+        flag('un jet à vide sans son dé ou sans son texte', start, `étape ${id}`)
+        return
+      }
+      // Sa face s'allume quand son dé se montre (posé, ou ressorti dans une rafale), et le texte suit sa lecture
+      const lit = cues.find((x) => x.at >= shown.at && x.at <= told.at && x.cue.channel === 'skillPulse' && x.cue.side === roll.side && x.cue.face === roll.roll)
+      if (!lit) flag("un jet à vide dont la face ne s'allume pas avec le dé", shown.at)
+      else if (told.at - lit.at < T.DICE_READ) flag('un jet à vide qui tombe avant la lecture de son dé', told.at)
+      if (!cues.some((x) => x.at === told.at && x.cue.channel === 'sound' && x.cue.cue === 'stun')) flag('un jet à vide sans Tour perdu', told.at)
+      const was = stacks(beats[id - 1]?.state.statuses[roll.side] ?? [], jinx)
+      const early = cues.find((x) => x.at >= shown.at && x.at < told.at && x.cue.channel === 'statuses' && stacks(x.cue.statuses[roll.side], jinx) !== was)
+      if (early) flag('la charge de Malchance part avant que le jet tombe à vide', early.at)
+    })
+
+    // 12. Le soin empêché (Hémorragie) : son « 0 » barré tombe sans le son du Soin, qui dirait des PV regagnés
+    for (const x of cues) {
+      if (x.cue.channel !== 'float' || x.cue.float.kind !== 'badge' || !x.cue.float.badge.struck) continue
+      count('soin empêché')
+      if (cues.some((y) => y.cue.channel === 'sound' && y.cue.cue === 'heal' && y.at >= x.at && y.at <= x.at + T.RIDE_CUE)) flag('un soin empêché qui sonne le Soin', x.at)
+    }
+
+    // 13. Le bonus volé (Sceau de vol) : son icône file du volé vers le voleur ; à son arrivée, « Volé » sur le volé
+    for (const s of cues) {
+      if (s.cue.channel !== 'signal' || !s.cue.signal.icon) continue
+      count('bonus volé')
+      const victim = s.cue.signal.side
+      const arrival = s.at + T.SIGNAL
+      if (!cues.some((x) => x.at === arrival && x.cue.channel === 'float' && x.cue.side === victim && x.cue.float.kind === 'badge' && x.cue.float.badge.text === STOLEN_BADGE.text))
+        flag('un bonus volé sans « Volé » sur le volé', arrival)
     }
 
     // 6. Le K.O. après son coup : des PV qui tombent à 0 tombent avec un coup, un coup de compétence ou un chiffre
@@ -295,5 +376,7 @@ describe('contrôle des timings (constructions au hasard)', () => {
     // Chaque contrôle a rencontré ses cas
     const kinds = ['coup', 'critique', 'bonus de relique', 'relique du dé', 'charge usée par un coup', 'signal', 'compétence à signal', 'coup de rafale suivi', 'K.O.', 'passage de main', 'label', 'textes voisins']
     for (const kind of kinds) expect(seen[kind] ?? 0, kind).toBeGreaterThan(20)
+    // Les moments du lot 3, plus rares : chacun rencontré (compétences gravées chez leurs porteurs)
+    for (const kind of ['jet à vide', 'critique raté', 'armure brisée', 'soin empêché', 'bonus volé']) expect(seen[kind] ?? 0, kind).toBeGreaterThan(3)
   })
 })

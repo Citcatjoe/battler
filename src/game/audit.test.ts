@@ -232,6 +232,63 @@ describe('audit de résolution : revue des auras et des compétences (docs/REVUE
   })
 })
 
+describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
+  it('aucune anomalie pour la Feinte, la Sève noire, la Dette de sang, Attiser, le Ciel d’orage, l’Ivresse du sang et le Coup de massue, gravés chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    // Chaque compétence chez ses porteurs, et chez qui produit sa ressource : l'esquive (Naraxes, Fanchon, Elaria), les soins
+    // (Ervald ; Aldric au Vol de vie gravé sur le 4), les renvois (Aldric ; Brokk à la Riposte sur le 4), la Brûlure
+    // (Thaldrin ; Ervald aux Feux follets sur le 4), les critiques (Gorak, Elaria, Ervald)
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
+      feint: [['naraxes', []], ['fanchon', []], ['elaria', []]],
+      'black-sap': [['ervald', []], ['aldric', [{ op: 'engrave', face: 4, skill: skill('life-steal') }]]],
+      'blood-debt': [['aldric', []], ['brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }]]],
+      stoke: [['thaldrin', []], ['ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }]]],
+      'storm-sky': [['thaldrin', []], ['ervald', []]],
+      'blood-frenzy': [['gorak', []], ['elaria', []], ['ervald', []]],
+      'stunning-blow': [['morgrut', []], ['ysolde', []], ['thaldrin', []]],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const [host, before] of list)
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 19000 + n++ }))
+        }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['feinte', 'sève noire', 'dette de sang', 'statut qui repart', 'ciel d’orage', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : phase 8, lot 3, les malus de famille', () => {
+  it('aucune anomalie pour Brise-garde, Malchance, Éclair aveuglant, Hémorragie et Confiscation, gravés chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    // Chaque malus chez son hôte (réserve) et au répertoire où il est proposé ; Brise-garde aussi contre de l'armure
+    // temporaire (Brokk et sa Peau de pierre, adversaire du roster), Confiscation contre des bonus (Ervald, Elaria, Brokk)
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const hosts: Record<string, readonly string[]> = {
+      'guard-break': ['morgrut', 'brokk'],
+      jinx: ['naraxes', 'fanchon'],
+      blinding: ['thaldrin', 'ysolde'],
+      hemorrhage: ['gorak', 'aldric'],
+      'seal-theft': ['aldric', 'ysolde'],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const host of list)
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [{ op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 20000 + n++ }))
+        }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['garde brisée', 'garde brisée : armure brisée', 'malchance', 'aveuglé', 'hémorragie', 'sceau de vol'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : les reliques de source (2026-10-25)', () => {
   it('aucune anomalie pour le Dard, le Briquet, la Pièce de foire et le Brassard chez tout le roster, seuls puis avec les reliques qu’ils ouvrent', () => {
     const { audit, problems, seen } = createAudit()

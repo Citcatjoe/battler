@@ -127,6 +127,21 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   faithShield: { side: 'self', consumes: ['moment:heal'], produces: ['status:bonusArmor', 'moment:shieldBreak'] },
   sidestep: { side: 'self', produces: ['moment:dodge'] },
   openWound: { side: 'self', consumes: ['moment:crit'], produces: ['status:bleed', 'damage:temporal'] },
+  // Phase 8, lot 3 : les malus de famille ; Garde brisée part sur un coup qui touche (relation « modifie ») et le double
+  guardBreak: { side: 'opponent', consumes: ['moment:hit'], produces: ['damage:instant'] },
+  jinx: { side: 'opponent' },
+  blinded: { side: 'opponent' },
+  hemorrhage: { side: 'opponent' },
+  sealTheft: { side: 'opponent' },
+  // Phase 8, lot 3 : la Feinte vit des esquives et en donne (son esquive), puis des critiques ; la Sève noire vit des soins,
+  // la Dette de sang des renvois ; le Ciel d'orage frappe en dégâts directs ; l'Ivresse du sang vit des critiques, en
+  // donne (chaque pose de plus) et frappe ; le Coup de massue fait perdre une action (`stunned`, déjà au registre)
+  feint: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge', 'status:guaranteedCrit', 'moment:crit'] },
+  blackSap: { side: 'self', consumes: ['moment:heal'], produces: ['status:poison', 'damage:temporal'] },
+  bloodDebt: { side: 'self', consumes: ['moment:reflect'], produces: ['status:bleed', 'damage:temporal'] },
+  stormSky: { side: 'self', produces: ['damage:instant'] },
+  bloodFrenzy: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'status:bloodFrenzyStrike', 'moment:hit', 'damage:instant'] },
+  bloodFrenzyStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -184,6 +199,12 @@ export function eventHooks(e: CharacterEvent): Hooks {
   // Crescendo, Soliste : ce coup ×N, un gros coup qui touche
   if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:instant')
   for (const effect of e.effects) addEffect(h, effect)
+  // Attiser (lot 3, X2) : une pose qui lit le même statut chez sa cible et s'y ajoute ne l'écrase jamais d'une plus faible ;
+  // elle ne gêne pas sa place unique
+  const adds = e.effects.flatMap((x) =>
+    x.type === 'applyStatus' && x.fromStatus?.status === x.status && x.fromStatus.who === (x.target ?? 'self') && x.fromStatus.factor >= 1 ? [`slot:${x.status}`] : [],
+  )
+  h.hinders = h.hinders.filter((x) => !adds.includes(x))
   return unique(h)
 }
 

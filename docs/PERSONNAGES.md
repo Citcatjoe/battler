@@ -232,6 +232,42 @@ Mesures : [CAMPAGNE.md](CAMPAGNE.md) § 18.3. Actes complets d'une campagne (off
 
 **Le producteur d'abord** (la même nuit, décision du parent, [CAMPAGNE.md](CAMPAGNE.md) § 18.2 et § 18.3) : les deux pièges disparaissent, une consommatrice n'est plus offerte avant son producteur. Le tableau ci-dessus est celui d'avant. Après : **Elaria** ne rencontre une brique des lots que dans 39 % de ses actes (la Curée attend Pourfendre gravé, le Gantelet sa Riposte), **Fanchon** dans 45 % (le Dé pipé et la Pièce trouée attendent Pile ou face) ; les huit autres de 89 à 100 %. Construit contre construits : Elaria 67 → 73 %, Ervald 38 → 45 %, Brokk 45 → 40 %, Morgrut 43 → 38 %, Thaldrin 42 → 38 % ; boss atteint sur 90 parties de 10 % (Ervald) à 25 % (Brokk).
 
+### Le lot 3 : les malus de famille (phase 8, 2026-10-25)
+
+Cinq malus, un par famille qui n'en avait pas ([SORTS.md](SORTS.md) § 29). Ce sont des généralistes (une valeur directe, aucun besoin d'offre ni gêne) : hors kit chez l'hôte dont ils disent l'histoire, au répertoire d'un second porteur ; aucun sur un dé vanilla (empreinte inchangée). Mesures au registre : `scripts/skills.report.ts`, gravée sur la face 3 nue, 400 combats par duel, identiques au laboratoire de Lot3Maluses.
+
+| Personnage | Hors kit | Répertoire (ajouts) | Pourquoi lui | Gravée sur son 3 (rang I) | Rang II |
+| --- | --- | --- | --- | --- | --- |
+| Morgrut | Brise-garde (Garde) | — | la Masse fracasse la garde ; sans critique, ce coup ×2 est son critique | +18,6 | +5,8 |
+| Brokk | — | Brise-garde (Rempart) | le nain sait comment cède un pavois | +14,3 | +7,8 |
+| Naraxes | Malchance (Fortune) | — | le mauvais œil de la voleuse, à côté de Coup de chance et du Dé pipé | +15,7 | +4,6 |
+| Fanchon | — | Malchance (Fortune) | sa Fortune, avec Pile ou face et le Dé pipé | +16,1 | +4,9 |
+| Thaldrin | Éclair aveuglant (Précision) | — | l'éclair de l'Orage qui éblouit ; le contre d'Elaria (+30 points par duel au laboratoire) | +13,8 | +3,8 |
+| Ysolde | — | Éclair aveuglant, Confiscation (Lumière) | la Lumière qui aveugle, puis qui confisque (avec la Purification) | +15,8 ; +11,5 | +5,6 ; +2,6 |
+| Gorak | Hémorragie (Soin) | — | la plaie qui ne se referme pas | +14,0 | +5,4 |
+| Aldric | Confiscation (Sceaux) | Hémorragie (Ombre) | le paladin confisque ; le serment brisé refuse la guérison | +9,3 ; +13,6 | +3,1 ; +4,6 |
+
+**À surveiller** : le rang II de Confiscation (+2,5 en moyenne, Ysolde +2,6) est au bord bas de la bande ; Malchance (+18,2 en moyenne, Morgrut +22,1 et Ysolde +20,5 s'ils l'avaient) et Naraxes construite (55,6 → 57,1 % au ramp de Lot3Maluses, builds au-dessus de 65 % de 10 à 17 %).
+
+### Le lot 3 : les fils minces (phase 8, 2026-10-25)
+
+Sept compétences qui donnent une seconde consommatrice aux ressources qui n'en avaient qu'une et remplissent les fils d'une brique ou deux ([SORTS.md](SORTS.md) § 28, [PROGRESSION.md](PROGRESSION.md) § 7.2). Hors kit chez l'hôte dont elles remplissent le fil, au répertoire des autres porteurs ; aucune sur un dé vanilla (empreinte inchangée). Une consommatrice n'est offerte qu'une fois sa ressource dans le build (le producteur d'abord). Mesures au registre : `scripts/skills.report.ts`, gravée sur la face 3 nue, 400 combats par duel, identiques au laboratoire de Lot3Threads (à ±0,1 près pour les rangs). **Chaque personnage gagne au moins une option ; Thaldrin en gagne trois**, une par fil mince.
+
+| Personnage | Hors kit | Répertoire (ajouts) | Le fil qu'elle remplit | Gravée sur son 3 (rang I) | Rang II |
+| --- | --- | --- | --- | --- | --- |
+| Thaldrin | Attiser (Feu), Ciel d'orage (Orage) | Coup de massue (Bête) | Orage 1 → 2, Feu 2 → 3, Bête 3 → 4 ; toutes au-dessus de son répertoire actuel chez son porteur réel | Attiser +11,7, Ciel d'orage +10,5, Coup de massue +13,2 | +5,5 ; +4,7 ; — |
+| Gorak | Ivresse du sang (Furie) | — | la Furie sans consommatrice de ses critiques | +11,8 | +3,9 |
+| Ervald | Sève noire (Drain) | Attiser (Poison) | le Drain sans consommatrice ; Attiser une fois ses Feux follets gravés | Sève noire +8,9 ; Attiser +11,1 | +2,6 (sous la bande, comme la Récolte : ses soins sont rares) |
+| Aldric | Dette de sang (Représailles) | Sève noire (Lumière ↔ Ombre) | ses renvois n'avaient que la Vindicte ; la Sève une fois son Vol de vie gravé | +12,1 | +4,0 |
+| Brokk | — | Dette de sang (Représailles), Coup de massue (Rempart) | la Dette une fois sa Riposte ou sa Rétribution gravée | Coup de massue +13,2 | +5,3 |
+| Morgrut | Coup de massue (Masse) | — | « Coup de massue : la Masse étourdit » (PROGRESSION § 7.2) ; le premier porteur d'Étourdi | +15,3 | +5,3 |
+| Ysolde | — | Coup de massue (Contrôle) | Contrôle 1 → 2, avec la Peur | +13,8 | +6,1 |
+| Naraxes | Feinte (Fortune ↔ Fuite) | — | ses esquives (20 %) sans consommatrice | +11,2 | +3,8 |
+| Fanchon | — | Feinte (Chant) | avec l'Esquive améliorée et le Pas de côté | +9,5 | +3,7 |
+| Elaria | — | Coup de massue | **la Feinte ne lui est pas donnée** (décision conservatrice du parent, l'utilisateur absent) : elle y vaudrait +18,3, et elle est la plus construite (PROGRESSION § 13.4) ; sa Fuite reste sans consommatrice, à trancher par l'utilisateur | +12,9 | +4,9 |
+
+**À surveiller** : le rang II de la Sève noire (+2,6, sous la bande) ; l'Ivresse du sang, au seul Gorak (elle vaudrait Elaria +18,8, Ervald +17,5 : à n'ajouter à aucun répertoire sans mesure) ; la valeur chez le porteur construit (`npm run ramp`), non mesurée.
+
 ## Personnalité (2026-10-20)
 
 **Décision de l'utilisateur** : la personnalité d'un personnage passe en premier. Description, style de combat, postures et compétences en découlent. Ce n'est ni un lore profond ni la fiche affichée en jeu (`lore` dans `roster.ts`) : c'est une courte description du personnage et de son archétype, qui relie un background léger à son style de combat et sert de base aux futures compétences, postures et personnages. Elle n'a pas à justifier chaque compétence, ni l'inverse.

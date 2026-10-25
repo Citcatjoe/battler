@@ -47,6 +47,12 @@ export type StateId =
   | 'vulnerable'
   | 'firefly'
   | 'spoiled'
+  // Phase 8, lot 3 : les malus de famille manquants
+  | 'guardBroken'
+  | 'jinxed'
+  | 'blinded'
+  | 'noHealing'
+  | 'bonusStolen'
 
 export interface StateDef {
   /** Nom générique, le même quel que soit le personnage qui l'a posé */
@@ -88,6 +94,12 @@ export const STATES: Record<StateId, StateDef> = {
   // Fausse note (audit du 2026-10-21) : un seul coup, après l'armure ; l'additionner à Affaibli (chaque coup, avant
   // l'armure) donnait un total qu'aucun coup ne subit
   spoiled: { name: 'Coup gâché', polarity: 'negative', summary: 'Son prochain coup qui touche fera moins de dégâts.', counter: 'amount' },
+  // Phase 8, lot 3 : les malus de famille manquants (Garde, Fortune, Précision, Soin, Sceaux)
+  guardBroken: { name: 'Garde brisée', polarity: 'negative', summary: 'Le prochain coup qu’il reçoit ×2 et brise son armure temporaire.', counter: 'status' },
+  jinxed: { name: 'Malchance', polarity: 'negative', summary: 'Son prochain jet sur une compétence tombe à vide.', counter: 'status' },
+  blinded: { name: 'Aveuglé', polarity: 'negative', summary: 'Ses critiques ratent.', counter: 'none' },
+  noHealing: { name: 'Hémorragie', polarity: 'negative', summary: 'Il ne regagne plus de PV.', counter: 'none' },
+  bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
 }
 
 // Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % »
@@ -182,6 +194,20 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // Revue X1 (0.118.1) : l'Aura d'épines, permanente et cumulable, se lit sur son anneau ; le Saignement qu'elle pose
   // s'affiche de lui-même chez l'attaquant
   thorns: aura(),
+  // Phase 8, lot 3 : les malus de famille, chacun son état dans la zone de l'adversaire
+  guardBreak: tray('guardBroken'),
+  jinx: tray('jinxed'),
+  blinded: tray('blinded'),
+  hemorrhage: tray('noHealing'),
+  sealTheft: tray('bonusStolen'),
+  // Phase 8, lot 3 : cinq auras d'identité. La Feinte se lit sur son anneau (son esquive) ; les autres posent de vrais
+  // statuts (Critique assuré, Poison, Saignement) ou frappent en dégâts directs (Ciel d'orage), qui s'affichent d'eux-mêmes.
+  // Les coups de l'Ivresse sont un mécanisme (leur place découle de `mechanic`)
+  feint: aura(),
+  blackSap: aura(),
+  bloodDebt: aura(),
+  stormSky: aura(),
+  bloodFrenzy: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

@@ -1,5 +1,7 @@
 import { useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react'
 import type { SkillSignal } from '../game/staging'
+import type { StatusId } from '../game/statuses'
+import { StatusIcon } from './Icon'
 
 interface Flight {
   key: string
@@ -8,6 +10,8 @@ interface Flight {
   x: number
   y: number
   tone: string
+  /** Un bonus volé (Sceau de vol) : son icône vole à la place de la lueur */
+  icon?: StatusId
 }
 
 const TONE = { positive: '#6ee7b7', negative: '#fca5a5' }
@@ -41,7 +45,16 @@ export function SignalLayer({ signal, root }: { signal: SkillSignal | null; root
       // Une courbe qui file d'abord à l'horizontale sous l'en-tête, puis plonge vers la zone d'état
       const cx = a.x + (b.x - a.x) * 0.8
       const cy = a.y + (b.y - a.y) * 0.15
-      return [{ key: `${signal.key}-${k}`, path: `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`, x: b.x, y: b.y, tone: TONE[signal.polarity] }]
+      return [
+        {
+          key: `${signal.key}-${k}`,
+          path: `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`,
+          x: b.x,
+          y: b.y,
+          tone: TONE[signal.polarity],
+          ...(signal.icon && { icon: signal.icon }),
+        },
+      ]
     })
     // Les positions ne se lisent que dans la page, une fois l'en-tête et les zones d'état posés
     setFlights((list) => [...list, ...next])
@@ -51,7 +64,13 @@ export function SignalLayer({ signal, root }: { signal: SkillSignal | null; root
     <div aria-hidden className="pointer-events-none absolute inset-0 z-[58]">
       {flights.map((f) => (
         <span key={f.key} style={{ '--tone': f.tone } as CSSProperties}>
-          <span className="signal-orb" style={{ offsetPath: `path('${f.path}')` }} />
+          {f.icon ? (
+            <span className="signal-orb signal-icon" style={{ offsetPath: `path('${f.path}')` }}>
+              <StatusIcon id={f.icon} className="h-full w-full" />
+            </span>
+          ) : (
+            <span className="signal-orb" style={{ offsetPath: `path('${f.path}')` }} />
+          )}
           <span className="signal-hit" style={{ left: f.x, top: f.y }} onAnimationEnd={() => done(f.key)} />
         </span>
       ))}

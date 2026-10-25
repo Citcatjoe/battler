@@ -132,9 +132,12 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Le critique d'un aveuglé rate (lot 3) : le coup ne parvient pas au défenseur, qui n'esquive ni n'encaisse
   const receivedBy = (side: Side): Received | undefined =>
     strike && strike.attacker !== side
-      ? { key: strike.key, damage: strike.damage, crit: strike.crit, dodged: strike.dodged, landed: strike.landed }
+      ? strike.blindedBy
+        ? undefined
+        : { key: strike.key, damage: strike.damage, crit: strike.crit, dodged: strike.dodged, landed: strike.landed }
       : blow && blow.to === side
         ? { key: blow.key, damage: blow.damage, crit: blow.heavy, dodged: false, landed: blow.landed }
         : undefined

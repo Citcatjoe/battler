@@ -48,6 +48,18 @@ const LOT_SKILLS: Record<string, string> = {
   'loaded-die': '2',
   'bristling-rampart': '2',
   vendetta: '2',
+  'guard-break': '3',
+  jinx: '3',
+  blinding: '3',
+  hemorrhage: '3',
+  'seal-theft': '3',
+  feint: '3',
+  'black-sap': '3',
+  'blood-debt': '3',
+  stoke: '3',
+  'storm-sky': '3',
+  'blood-frenzy': '3',
+  'stunning-blow': '3',
 }
 const LOT_RELICS: readonly string[] = ['forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
 const LOT_BRICKS: readonly string[] = [...Object.keys(LOT_SKILLS), ...LOT_RELICS]
@@ -218,7 +230,7 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises à son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build. Briques des lots : les ${LOT_BRICKS.length} briques de la phase 8 (premier et second lot) ; part des actes où l'une au moins est offerte, où l'une au moins est prise, et briques prises par acte.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises à son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build. Briques des lots : les ${LOT_BRICKS.length} briques de la phase 8 (les trois lots) ; part des actes où l'une au moins est offerte, où l'une au moins est prise, et briques prises par acte.`,
     '',
     `| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées | Construit contre construits (24 tirages, ${BUILD_N} combats par duel ; ± écart-type d'un build à l'autre) | Une brique des lots offerte | Une brique des lots prise | Briques des lots par build |`,
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

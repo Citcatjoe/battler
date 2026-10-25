@@ -4,6 +4,7 @@ import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type Ch
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
+  BLIND_MISS,
   consumeStatus,
   isMechanic,
   removeStatuses,
@@ -72,7 +73,8 @@ export interface Snapshot {
 
 /** Effet réellement appliqué (un soin peut être réduit par le plafond de PV, etc.). */
 export type AppliedEffect =
-  | { type: 'heal'; target: Side; amount: number }
+  /** `wanted` : le soin d'avant les filtres des statuts du soigné (Hémorragie, `modifyHealing`), s'ils l'ont changé */
+  | { type: 'heal'; target: Side; amount: number; wanted?: number }
   | {
       type: 'damage'
       target: Side
@@ -82,8 +84,11 @@ export type AppliedEffect =
       /** Le détail par coup, dont la somme vaut `amount` (jauges d'une relâche, coups de `hits`) ; l'écran en fait autant de coups */
       parts?: number[]
     }
-  /** `stacks` : charges demandées ; `result` : ce qui s'est réellement passé (posé, annulé, bloqué) */
-  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome }
+  /**
+   * `stacks` : charges demandées ; `result` : ce qui s'est réellement passé (posé, annulé, bloqué). `stolenBy` : le bonus
+   * que le lanceur se posait est allé à l'adversaire, pris par ce statut du lanceur (Sceau de vol, `stealsBonus`)
+   */
+  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId }
   | { type: 'cleanse'; target: Side; removed: StatusId[] }
 
 export interface Attack {
@@ -118,6 +123,15 @@ export interface Attack {
    * dorure, elles, lisent son dé (2026-10-23).
    */
   plain?: true
+  /**
+   * Jet tombé à vide (Malchance, `StatusDef.jinxesRoll`) : ni compétence de la face, ni coup ; seules les reliques de face
+   * lisent son dé, comme pour un coup brut
+   */
+  jinxed?: true
+  /** Coup raté par un critique de l'attaquant aveuglé (Aveuglé, `StatusDef.blinds`) : le statut ; `dodged` est vrai */
+  blindedBy?: StatusId
+  /** Coup qui brise l'armure temporaire du défenseur (Garde brisée, `StatusDef.shatters`) : aucun bouclier n'absorbe */
+  shatteredBy?: StatusId
   crit: boolean
   /** Critique imposé par un statut (ex. « Critique assuré ») */
   critForced: boolean
@@ -235,7 +249,8 @@ export type BeatBody =
    * (étape event), puis le coup de base, au dé déjà tiré (`Attack.preset`). Un jet sans greffe n'a pas cette étape : son
    * coup lance lui-même son dé.
    */
-  | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true }
+  /** `jinxedBy` : ce jet tombe à vide, par ce statut du lanceur (Malchance) ; l'étape `attack` qui suit est `jinxed` */
+  | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true; jinxedBy?: StatusId }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
    * deux fois, en coup), face, rien. Le statut est consommé. `loadedBy` : le statut qui l'a fait tomber sur pile (Dé pipé)
@@ -361,6 +376,8 @@ export interface StrikeRoll {
   replaced?: boolean
   /** Ce coup ×N (Crescendo, Soliste : une compétence de sa face qui le modifie) */
   multiplier?: number
+  /** Jet tombé à vide (Malchance) : aucun coup */
+  jinxed?: boolean
 }
 
 /**
@@ -399,6 +416,7 @@ export function resolveAttack(
   }
   const nothing = { crit: false, critForced: false, raw: 0, damage: 0, armorAbsorbed: 0, shieldAbsorbed: 0 }
   if (strike.replaced) return { ...base, ...nothing, value: 0, dodged: false, replaced: true }
+  if (strike.jinxed) return { ...base, ...nothing, value: 0, dodged: false, jinxed: true }
   // Le coup de base : sa valeur tirée dans l'attaque (aucun tirage pour une attaque fixe), qu'il touche ou soit esquivé
   const drawn = att.attackMax > att.attackMin ? att.attackMin - 1 + rollDie(rng, att.attackMax - att.attackMin + 1) : att.attackMin
   // Esquive imposée : pas de tirage (les combats sans ce statut gardent la même suite de hasard).
@@ -422,7 +440,11 @@ export function resolveAttack(
 
   const critBy = attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
   const critForced = critBy !== undefined
-  const crit = critForced || chance(rng, att.critChance)
+  // Aveuglé (lot 3) : le tirage du critique a lieu, chance de critique plus BLIND_MISS par intensité ; un critique, tiré ou
+  // assuré, devient un coup raté (le critique assuré part). Sans Aveuglé, le tirage est celui d'avant.
+  const blind = attackerStatuses.find((s) => STATUSES[s.id].blinds)
+  const crit = critForced || chance(rng, blind ? Math.min(1, att.critChance + BLIND_MISS * (blind.power ?? 0)) : att.critChance)
+  if (crit && blind) return { ...base, ...nothing, value: drawn, dodged: true, critForced, blindedBy: blind.id, ...(critBy && { critBy }) }
   let raw = crit ? Math.round(value * att.critMultiplier) : value
   // Dégâts sortants (statuts de l'attaquant), puis entrants (statuts du défenseur), dans l'ordre de pose.
   const modifiers: AttackModifier[] = []
@@ -445,8 +467,10 @@ export function resolveAttack(
   const afterArmor = Math.max(1, raw - def.armor)
   let damage = afterArmor
   const shields: Attack['shields'] = []
+  // Garde brisée (lot 3) : l'armure temporaire n'absorbe rien, le coup la brise (`strikeOnce`)
+  const shatteredBy = defenderStatuses.find((s) => STATUSES[s.id].shatters)?.id
   for (const s of defenderStatuses) {
-    if (!STATUSES[s.id].shield || damage <= 1) continue
+    if (shatteredBy || !STATUSES[s.id].shield || damage <= 1) continue
     const taken = Math.min(s.stacks, damage - 1)
     if (taken > 0) {
       shields.push({ status: s.id, absorbed: taken })
@@ -493,6 +517,7 @@ export function resolveAttack(
     crit,
     critForced,
     ...(critBy && { critBy }),
+    ...(shatteredBy && { shatteredBy }),
     raw,
     damage,
     armorAbsorbed: raw - afterArmor,
@@ -513,6 +538,14 @@ function statusOfEffect(effect: Extract<Effect, { type: 'applyStatus' }>, extra 
   return status
 }
 
+/** Un soin reçu après les filtres des statuts du soigné (Hémorragie, `modifyHealing`), dans l'ordre de pose, au moins 0 ; lu par le moteur et l'audit */
+export function healingOf(amount: number, statuses: readonly Status[]): number {
+  return clamp(Math.round(statuses.reduce((n, s) => STATUSES[s.id].modifyHealing?.(n, s) ?? n, amount)), 0)
+}
+
+/** Les relations au coup d'une compétence qu'un jet malchanceux fait tomber à vide (Malchance) : toutes */
+const JINXED_RELATIONS: readonly HitRelation[] = ['replace', 'graft', 'modify']
+
 /**
  * L'effet ne changerait rien (0.110.0) : un soin sur des PV pleins, un statut déjà à son plafond ou bloqué par une
  * immunité, une purge sans rien à retirer ni repli utile. Lu sur un état, sans rien appliquer ni tirer.
@@ -521,7 +554,7 @@ function isNilEffect(effect: Effect, owner: Side, view: Snapshot, fighters: Pair
   const target = effect.target === 'opponent' ? other(owner) : owner
   switch (effect.type) {
     case 'heal':
-      return view.hp[target] >= fighters[target].maxHp
+      return view.hp[target] >= fighters[target].maxHp || healingOf(effect.amount, view.statuses[target]) <= 0
     case 'damage':
     case 'release':
       return false
@@ -719,11 +752,13 @@ export function simulateCombat(
     const state = states[target]
     switch (effect.type) {
       case 'heal': {
-        const amount = clamp(Math.min(effect.amount, fighters[target].maxHp - state.hp), 0)
+        // Hémorragie (`modifyHealing`) : le soin passe par les filtres des statuts du soigné, puis le plafond de PV
+        const kept = healingOf(effect.amount, state.statuses)
+        const amount = clamp(Math.min(kept, fighters[target].maxHp - state.hp), 0)
         state.hp += amount
         rearmThresholds(target)
         if (amount > 0) healed[target] = true
-        return { type: 'heal', target, amount }
+        return { type: 'heal', target, amount, ...(kept !== effect.amount && { wanted: effect.amount }) }
       }
       case 'damage': {
         // Montant compté en entier (overkill compris) ; les PV s'arrêtent à 0. En `hits` coups : tous comptés
@@ -734,6 +769,17 @@ export function simulateCombat(
         return { type: 'damage', target, amount, source: effect.source, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
       }
       case 'applyStatus': {
+        // Sceau de vol (lot 3) : un bonus que le lanceur se pose, hors mécanisme, va à l'adversaire (une charge par vol) ;
+        // ce sont les règles de la pose chez l'adversaire qui s'appliquent (plafond, immunité, opposition, garde)
+        const thief =
+          target === owner && STATUSES[effect.status].polarity === 'positive' && !isMechanic(effect.status)
+            ? state.statuses.find((s) => STATUSES[s.id].stealsBonus)
+            : undefined
+        if (thief) {
+          state.statuses = consumeStatus(state.statuses, thief.id, 1)
+          const stolen = applyEffect(owner, { ...effect, target: 'opponent' })
+          return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id } : stolen
+        }
         // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus ;
         // Virulence (`fromStatus`) : `factor` fois les charges d'un statut, lues maintenant chez son porteur
         const fromHit = effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0
@@ -1140,6 +1186,14 @@ export function simulateCombat(
 
   function throwDie(attacker: Side, cause?: number): Side | undefined {
     const { roll, forced } = drawDie()
+    // Malchance (lot 3) : un jet qui porterait une compétence tombe à vide (une charge par jet). Le dé est tiré comme
+    // avant ; un dé imposé (mode triche) garde sa valeur et laisse la charge
+    const jinx = forced ? undefined : states[attacker].statuses.find((s) => STATUSES[s.id].jinxesRoll)
+    if (jinx && JINXED_RELATIONS.some((r) => ready(attacker, roll, r).length > 0)) {
+      states[attacker].statuses = consumeStatus(states[attacker].statuses, jinx.id, 1)
+      const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, jinxedBy: jinx.id }, cause)
+      return strikeOnce(attacker, { roll, preset: true, jinxed: true }, false, rolled)
+    }
     if (ready(attacker, roll, 'replace').length > 0) return strikeOnce(attacker, { roll, forced, replaced: true }, false, cause)
     if (!grafts(attacker, roll)) return strikeOnce(attacker, baseHit(attacker, { roll, forced }), false, cause)
     const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, ...(forced && { forced: true as const }) }, cause)
@@ -1160,7 +1214,7 @@ export function simulateCombat(
     // État de référence du coup : les statuts de ce moment, après une compétence greffée (règle 9)
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], att.statuses, def.statuses, jetRoll, holds[attacker])
-    const touched = !outcome.dodged && !outcome.replaced
+    const touched = !outcome.dodged && !outcome.replaced && !outcome.jinxed
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
     if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)
     for (const { status, absorbed } of outcome.shields) def.statuses = consumeStatus(def.statuses, status, absorbed)
@@ -1179,6 +1233,8 @@ export function simulateCombat(
     // porte pas de coup : la charge reste). Sur un coup qui touche, il réagit dans la fenêtre `hit`.
     const drain = outcome.dodged ? att.statuses.find((s) => STATUSES[s.id].drainsHit) : undefined
     if (drain) att.statuses = consumeStatus(att.statuses, drain.id, 1)
+    // Garde brisée : le coup qui touche brise toute l'armure temporaire du défenseur, sans ouvrir sa fenêtre `shieldBroken`
+    if (touched && outcome.shatteredBy) def.statuses = def.statuses.filter((s) => !STATUSES[s.id].shield)
     // Luciole : chaque coup qui touche le porteur lui retire une charge (`spentOnHurt`)
     if (touched) for (const s of def.statuses.filter((x) => STATUSES[x.id].spentOnHurt)) def.statuses = consumeStatus(def.statuses, s.id, 1)
     const dealt = outcome.damage
@@ -1194,14 +1250,16 @@ export function simulateCombat(
       const down = checkThresholds(hit)
       if (down !== undefined) return down
       const hitTriggers: [Side, Trigger][] = [faceTrigger(outcome.roll), ...(outcome.roll === DIE_FACES ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
-      if (outcome.dodged) hitTriggers.push([attacker, 'missed'], [defender, 'dodge'])
+      // Un coup raté d'aveuglé (lot 3) n'ouvre que `missed` : l'esquive est un geste du défenseur
+      if (outcome.dodged) hitTriggers.push([attacker, 'missed'], ...(outcome.blindedBy ? [] : [[defender, 'dodge'] as [Side, Trigger]]))
       else if (touched) {
         hitTriggers.push([attacker, 'hit'])
         if (outcome.crit) hitTriggers.push([attacker, 'crit'])
         hitTriggers.push([defender, 'hurt'])
         if (emptied) hitTriggers.push([defender, 'shieldBroken'])
       }
-      return fireStrike(hitTriggers, touched, dealt, hit, plain, outcome.replaced)
+      // Un jet tombé à vide : ses fenêtres du dé n'éveillent que les reliques, comme un coup brut
+      return fireStrike(hitTriggers, touched, dealt, hit, plain || !!outcome.jinxed, outcome.replaced)
     })
     if (fell !== undefined) return fell
     // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
@@ -1251,22 +1309,28 @@ export function simulateCombat(
    * Coups instantanés (Furie des vents) : les charges gagnées pendant un jet frappent juste après lui, toutes à la fois,
    * en coups de base bruts (0.69.0), chacun avec son dé : ils ne déclenchent aucune compétence, donc aucune Furie en
    * chaîne. Chaque charge donne `extraStrikes` coups, plus son intensité (Furie aiguisée, 0.110.0). Ils ont pour cause
-   * l'étape qui a posé la charge (Furie des vents sur un 2), à défaut le dernier coup.
+   * l'étape qui a posé la charge (Furie des vents sur un 2), à défaut le dernier coup. Chaque statut de coups instantanés
+   * détenu au début de la rafale part, dans l'ordre de pose (phase 8, lot 3) : une charge que l'Ivresse du sang a posée au
+   * critique d'un coup brut, qui attendait ce jet, puis celle de ce jet. Une charge gagnée pendant ces coups attend le
+   * prochain jet.
    */
   function burst(attacker: Side): Side | undefined {
-    const att = states[attacker]
-    const charge = att.statuses.find((s) => STATUSES[s.id].instantStrikes)
-    if (!charge) return undefined
-    const strikes = ((STATUSES[charge.id].extraStrikes ?? 1) + (charge.power ?? 0)) * charge.stacks
-    att.statuses = att.statuses.filter((s) => s.id !== charge.id)
-    const burstBeat = push(
-      { type: 'flurry', side: attacker, status: charge.id, strikes, faces: Array.from({ length: strikes }, () => DIE_FACES) },
-      posedBy[attacker][charge.id] ?? lastStrike,
-    )
-    for (let k = 0; k < strikes; k++) {
-      const { roll, forced } = drawDie()
-      const down = strikeOnce(attacker, { roll, forced }, true, burstBeat)
-      if (down !== undefined) return down
+    const held = states[attacker].statuses.filter((s) => STATUSES[s.id].instantStrikes).map((s) => s.id)
+    for (const id of held) {
+      const att = states[attacker]
+      const charge = att.statuses.find((s) => s.id === id)
+      if (!charge) continue
+      const strikes = ((STATUSES[charge.id].extraStrikes ?? 1) + (charge.power ?? 0)) * charge.stacks
+      att.statuses = att.statuses.filter((s) => s.id !== charge.id)
+      const burstBeat = push(
+        { type: 'flurry', side: attacker, status: charge.id, strikes, faces: Array.from({ length: strikes }, () => DIE_FACES) },
+        posedBy[attacker][charge.id] ?? lastStrike,
+      )
+      for (let k = 0; k < strikes; k++) {
+        const { roll, forced } = drawDie()
+        const down = strikeOnce(attacker, { roll, forced }, true, burstBeat)
+        if (down !== undefined) return down
+      }
     }
     return undefined
   }

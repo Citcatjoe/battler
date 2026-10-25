@@ -67,8 +67,27 @@ export type StatusId =
   | 'faithShield'
   | 'sidestep'
   | 'openWound'
+  // Phase 8, lot 3 (docs/SORTS.md § 29) : les malus de famille manquants
+  | 'guardBreak'
+  | 'jinx'
+  | 'blinded'
+  | 'hemorrhage'
+  | 'sealTheft'
+  // Phase 8, lot 3 (docs/SORTS.md § 28) : les fils minces
+  | 'feint'
+  | 'blackSap'
+  | 'bloodDebt'
+  | 'stormSky'
+  | 'bloodFrenzy'
+  | 'bloodFrenzyStrike'
 
 export type Polarity = 'positive' | 'negative'
+
+/**
+ * La famille d'un statut (docs/FAMILLES.md § 2) : celle de son effet principal ; un convertisseur (« quand il touche,
+ * pose X ») est de la famille de ce qu'il produit. Elle choisit le son de sa pose (docs/SONS.md, règle 4, 2026-10-25).
+ */
+export type Family = 'power' | 'guard' | 'precision' | 'evasion' | 'tempo' | 'fortune' | 'affliction' | 'healing' | 'retaliation' | 'seals'
 
 /** Un statut actif sur un combattant. */
 export interface Status {
@@ -91,6 +110,8 @@ export type CombatStats = Omit<CharacterStats, 'maxHp'>
 export interface StatusDef {
   name: string
   polarity: Polarity
+  /** Sa famille (docs/FAMILLES.md § 2) : le son de sa pose s'en déduit (`cueOf`, docs/SONS.md § 4.2) */
+  family: Family
   /** Une phrase générique, pour le compendium et la documentation */
   summary: string
   /** Explication au survol, selon l'état courant */
@@ -277,6 +298,28 @@ export interface StatusDef {
   bears?: string
   /** Son nom au pluriel, quand il se compte (« +2 coups de chance ») ; sans lui, le nom ne varie pas (« +4 armure temporaire ») */
   plural?: string
+  /**
+   * Garde brisée (phase 8, lot 3) : le coup qui touche le porteur ne laisse absorber aucune de ses armures temporaires
+   * (`shield`) et les brise toutes, sans ouvrir sa fenêtre `shieldBroken` (son armure n'a pas encaissé jusqu'au bout)
+   */
+  shatters?: true
+  /**
+   * Malchance (lot 3) : le prochain jet du porteur qui porterait une compétence de sa face (remplacer, se greffer,
+   * modifier, prête) tombe à vide : ni compétence, ni coup ; une charge par jet. Un dé imposé (mode triche) ne l'use pas
+   */
+  jinxesRoll?: true
+  /**
+   * Aveuglé (lot 3) : un critique du porteur, tiré ou assuré, devient un coup raté ; son intensité ajoute `BLIND_MISS` à
+   * la chance de ce tirage. Le raté n'ouvre que la fenêtre `missed` du porteur, pas l'esquive du défenseur
+   */
+  blinds?: true
+  /** Hémorragie (lot 3) : chaque soin que reçoit le porteur passe par ce filtre (montant voulu → montant gardé) */
+  modifyHealing?: (amount: number, s: Status) => number
+  /**
+   * Sceau de vol (lot 3) : le prochain bonus que le porteur se pose (hors mécanisme) va à l'adversaire, avec ses charges,
+   * selon les règles de pose de l'adversaire ; une charge par vol
+   */
+  stealsBonus?: true
 }
 
 /** Les charges qui agissent : les charges, plus l'intensité (une aura aiguisée compte autant de charges de plus, 0.110.0). */
@@ -323,6 +366,21 @@ export const FAITH_SHIELD_ARMOR = 2
 export const SIDESTEP_DODGE = 0.08
 export const OPEN_WOUND_BLEED = 3
 
+/**
+ * Phase 8, lot 3 (docs/SORTS.md § 28, séries 60 à 69, 400 combats par duel) : les fils minces. Feinte : esquive par
+ * charge (chaque esquive, un critique assuré). Sève noire : Poison posé à l'adversaire par charge, à chaque soin reçu.
+ * Dette de sang : Saignement par charge, à chaque renvoi. Ciel d'orage : PV perdus par l'adversaire au début de chaque
+ * tour du porteur, un éclair par charge. Ivresse du sang : coups bruts par critique, et critique par pose de plus.
+ */
+export const FEINT_DODGE = 0.05
+export const BLACK_SAP_POISON = 4
+export const BLOOD_DEBT_BLEED = 3
+export const STORM_SKY_LOSS = 1
+export const BLOOD_FRENZY_STRIKES = 2
+export const BLOOD_FRENZY_CRIT = 0.05
+/** Ivresse du sang : la première pose donne les coups ; chaque charge de plus, et chaque rang, du critique. */
+const frenzyCrit = (s: Status) => BLOOD_FRENZY_CRIT * (s.stacks - 1 + (s.power ?? 0))
+
 /** Un nombre en toutes lettres, en tête de phrase (au-delà, en chiffres). */
 const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
 
@@ -365,6 +423,9 @@ export const WILD_AURA_ATTACK = 1
 /** Aura d'intimidation : dégâts retirés à chaque coup de l'adversaire, par charge (2 jusqu'à la 0.106.1). */
 export const INTIMIDATION = 1
 
+/** Aveuglé aiguisé (lot 3) : chaque rang ajoute 10 % de coups ratés, dans le tirage du critique. */
+export const BLIND_MISS = 0.1
+
 /** Aura de précision (0.107.0) : par charge, +1 au multiplicateur de critique et ce gain de chance de critique. */
 export const PRECISION_CRIT = 0.05
 
@@ -391,6 +452,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Critique assuré',
     look: { glow: 'rgba(251,191,36,0.85)' },
     polarity: 'positive',
+    family: 'precision',
     summary: 'Son prochain coup qui touche est critique, une charge par coup.',
     describe: (s) => next(s.stacks, 'Son prochain coup qui touche est critique', 'Ses N prochains coups qui touchent sont critiques'),
     grafted: (s) => (s.stacks > 2 ? `Ce coup et les ${s.stacks - 1} suivants sont critiques` : s.stacks === 2 ? 'Ce coup et le suivant sont critiques' : 'Ce coup est critique'),
@@ -404,6 +466,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Armure temporaire',
     look: { glow: 'rgba(186,198,214,0.95)' },
     polarity: 'positive',
+    family: 'guard',
     summary: "Absorbe des dégâts, puis s'use d'autant.",
     describe: (s) => `+${s.stacks} armure temporaire`,
     detail: () => "Elle absorbe les dégâts après l'armure et s'use d'autant ; le coup garde au moins 1 dégât.",
@@ -416,6 +479,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Poison',
     look: { glow: 'rgba(74,222,128,0.75)' },
     polarity: 'negative',
+    family: 'affliction',
     summary: 'Au début de ses tours, perd 1 PV par charge, puis une charge part.',
     describe: (s) => {
       const list = countdown(s.stacks)
@@ -445,6 +509,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Saignement',
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'negative',
+    family: 'affliction',
     summary: 'Chaque coup qui le touche lui fait perdre 1 PV par charge, puis une charge part.',
     describe: (s) => {
       const list = countdown(s.stacks)
@@ -465,6 +530,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   regeneration: {
     name: 'Régénération',
     polarity: 'positive',
+    family: 'healing',
     summary: 'Regagne des PV au début de chacun de ses tours.',
     describe: (s) => `+${s.stacks} PV au début de chacun de ses tours${forTurns(s)}`,
     badge: (s) => `+${s.stacks}`,
@@ -475,6 +541,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   weakened: {
     name: 'Affaibli',
     polarity: 'negative',
+    family: 'power',
     summary: 'Ses coups font 1 dégât de moins par charge.',
     describe: (s) => `${damageText(-s.stacks)} à chacun de ses coups${forTurns(s)}`,
     onFoe: (s) => `${damageText(-s.stacks)} à chacun des coups de l'adversaire${forTurns(s)}`,
@@ -486,6 +553,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   exposed: {
     name: 'Brèche',
     polarity: 'negative',
+    family: 'guard',
     summary: 'Son armure perd 1 par charge, 3 au plus.',
     describe: (s) => `−${s.stacks} armure${forTurns(s)}`,
     onFoe: (s) => `−${s.stacks} armure à l'adversaire${forTurns(s)}`,
@@ -499,6 +567,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   burn: {
     name: 'Brûlure',
     polarity: 'negative',
+    family: 'affliction',
     summary: 'Brûlure 3 : il perd 3 PV à la fin de ses 3 prochains tours. Une nouvelle Brûlure remplace l’ancienne.',
     bears: 'brûle',
     describe: (s) =>
@@ -520,6 +589,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   vulnerable: {
     name: 'Vulnérable',
     polarity: 'negative',
+    family: 'guard',
     summary: 'Chaque coup reçu lui fait 1 dégât de plus par charge, 3 au plus.',
     describe: (s) => `${damageText(s.stacks)} à chaque coup reçu${forTurns(s)}`,
     onFoe: (s) => `${damageText(s.stacks)} à chaque coup que l'adversaire reçoit${forTurns(s)}`,
@@ -532,6 +602,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   stunned: {
     name: 'Étourdi',
     polarity: 'negative',
+    family: 'tempo',
     summary: 'Perd sa prochaine action.',
     describe: (s) => (s.stacks > 1 ? `Perd ses ${s.stacks} prochaines actions` : 'Perd sa prochaine action'),
     badge: (s) => `×${s.stacks}`,
@@ -545,6 +616,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'épines",
     look: { aura: 'rgba(132,204,22,0.55)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: "Chaque coup reçu fait saigner l'attaquant, 1 Saignement par charge.",
     describe: (s) => `${charges(s)} Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat`,
     badge: (s) => String(charges(s)),
@@ -560,6 +632,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   ward: {
     name: 'Garde sacrée',
     polarity: 'positive',
+    family: 'seals',
     summary: 'Bloque les prochains malus posés sur lui.',
     describe: (s) => (s.stacks > 1 ? `Bloque les ${s.stacks} prochains malus` : 'Bloque le prochain malus'),
     badge: (s) => `×${s.stacks}`,
@@ -570,6 +643,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Vol de vie',
     look: { glow: 'rgba(225,29,72,0.85)' },
     polarity: 'positive',
+    family: 'healing',
     summary: 'Son prochain coup qui touche lui rend les PV qu’il retire, une charge par coup.',
     // Le rang I rend déjà +2 PV (revue des compétences, P3) : l'intensité posée par la compétence, que ses rangs grossissent
     describe: (s) => {
@@ -596,6 +670,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Furie des vents',
     look: { glow: 'rgba(186,230,253,0.95)' },
     polarity: 'positive',
+    family: 'tempo',
     summary: "Ce jet ne frappe pas : deux coups à la place, par charge.",
     describe: (s) => `${COUNT_WORDS[furyStrikes(s)] ?? furyStrikes(s)} coups au lieu d'un`,
     detail: () => 'Des coups de base bruts, tout de suite, chacun son dé : leur face ne déclenche aucune compétence.',
@@ -616,6 +691,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Esquive améliorée',
     look: { glow: 'rgba(165,243,252,0.8)', opacity: 0.45 },
     polarity: 'positive',
+    family: 'evasion',
     summary: 'Esquive à coup sûr le prochain coup reçu.',
     describe: (s) => `Esquive à coup sûr le prochain coup reçu${s.power ? ` ; d'ici là, ses coups font ${damageText(s.power)}` : ''}${forTurns(s)}`,
     grafted: (s) => (s.power ? `Esquive à coup sûr le prochain coup reçu ; d'ici là, ce coup et les suivants font ${damageText(s.power)}` : 'Esquive à coup sûr le prochain coup reçu'),
@@ -639,6 +715,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   momentum: {
     name: 'Ferveur',
     polarity: 'positive',
+    family: 'power',
     summary: 'Son prochain coup qui touche fait 1 dégât de plus par charge.',
     describe: (s) => `Son prochain coup qui touche fait ${damageText(s.stacks)}`,
     detail: () => "Avant l'armure ; toutes les charges partent sur ce coup.",
@@ -657,6 +734,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Curée',
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'positive',
+    family: 'tempo',
     summary: 'Deux coups de plus par charge, juste après le coup du jet.',
     describe: (s) => `${COUNT_WORDS[quarryStrikes(s)] ?? quarryStrikes(s)} coups de plus`,
     detail: () => 'Des coups de base bruts, juste après celui du jet, chacun son dé : leur face ne déclenche aucune compétence.',
@@ -671,6 +749,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rancune',
     look: { glow: 'rgba(245,158,11,0.85)' },
     polarity: 'positive',
+    family: 'precision',
     summary: 'Chaque coup reçu lui donne un critique assuré, une charge par coup.',
     describe: (s) => next(s.stacks, 'Son prochain coup reçu lui donne un critique assuré', 'Ses N prochains coups reçus lui donnent chacun un critique assuré'),
     badge: (s) => `×${s.stacks}`,
@@ -689,6 +768,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Embrasement',
     look: { glow: 'rgba(251,146,60,0.85)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: `Son prochain coup qui touche un adversaire qui brûle lui fait perdre ${times(CONFLAGRATION_TIMES)} sa Brûlure restante, d'un coup, puis la Brûlure s'éteint.`,
     // Revue des compétences (T6) : la condition en tête, sans « restante » ni « d'un coup » (le détail le dit)
     describe: (s) => {
@@ -709,6 +789,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Dé pipé',
     look: { glow: 'rgba(167,139,250,0.85)' },
     polarity: 'positive',
+    family: 'fortune',
     summary: `Sa prochaine pièce tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
     // Revue des compétences (T4) : le multiplicateur du coup, pas celui qui s'ajoute (« ×3 de plus » se lisait ×3 ou ×6)
     describe: (s) => {
@@ -727,6 +808,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rempart hérissé',
     look: { aura: 'rgba(148,163,184,0.6)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: `+${RAMPART_THORNS} Aura d'épines et +${RAMPART_ARMOR} armure temporaire par charge chaque fois que son armure temporaire est vidée.`,
     describe: (s) => `+${RAMPART_THORNS * charges(s)} Aura d'épines et +${RAMPART_ARMOR * charges(s)} armure temporaire quand son armure temporaire est vidée`,
     badge: (s) => `+${RAMPART_THORNS * charges(s)}`,
@@ -745,6 +827,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Vindicte',
     look: { aura: 'rgba(253,186,116,0.5)' },
     polarity: 'positive',
+    family: 'power',
     summary: `+${VENDETTA_MOMENTUM} Ferveur par charge chaque fois qu'il renvoie des dégâts.`,
     describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur quand il renvoie des dégâts`,
     badge: (s) => `+${VENDETTA_MOMENTUM * charges(s)}`,
@@ -759,6 +842,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Peur',
     look: { glow: 'rgba(148,163,184,0.7)', motion: 'tremble' },
     polarity: 'negative',
+    family: 'tempo',
     summary: 'Terrifié, il perd sa prochaine action.',
     describe: () => 'Perd sa prochaine action',
     badge: () => '×1',
@@ -771,6 +855,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pile ou face',
     look: { glow: 'rgba(250,204,21,0.85)' },
     polarity: 'positive',
+    family: 'fortune',
     summary: `Juste après son coup, une pièce : pile, ce coup ×${COIN_HEADS} ; face, rien.`,
     describe: (s) => `Une pièce : pile, ce coup ×${COIN_HEADS + (s.power ?? 0)} ; face, rien`,
     detail: () => 'Pile compte comme un coup qui touche : tout ce qui réagit à un coup part.',
@@ -793,6 +878,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Coup de chance',
     look: { glow: 'rgba(52,211,153,0.85)', dieColor: '#34d399' },
     polarity: 'positive',
+    family: 'fortune',
     summary: 'Un jet de plus à sa prochaine action, par charge.',
     describe: (s) => next(s.stacks, 'Un jet de plus à sa prochaine action', 'N jets de plus à sa prochaine action'),
     detail: () => 'Chaque jet est complet : son dé, sa compétence, son coup.',
@@ -812,6 +898,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Riposte',
     look: { glow: 'rgba(253,230,138,0.9)' },
     polarity: 'positive',
+    family: 'retaliation',
     summary: "Son prochain coup reçu renvoie la moitié de ses dégâts à l'attaquant, une charge par coup.",
     describe: (s) => {
       const more = s.power ? `, +${s.power},` : ''
@@ -834,6 +921,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   retribution: {
     name: 'Rétribution',
     polarity: 'positive',
+    family: 'retaliation',
     summary: 'Garde les dégâts des trois derniers coups reçus ; sa compétence les renvoie.',
     describe: (s) => `Jauges : ${(s.slots ?? []).join(' · ') || 'vides'} (${s.stacks} PV gardé${s.stacks > 1 ? 's' : ''})`,
     badge: (s) => String(s.stacks),
@@ -847,6 +935,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura glaciale',
     look: { aura: 'rgba(147,197,253,0.6)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: "1 Poison par charge à l'adversaire, au début de chacun de ses tours.",
     describe: (s) => `${charges(s)} Poison à l'adversaire au début de chacun de ses tours`,
     badge: (s) => `+${charges(s)}`,
@@ -862,6 +951,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de puissance',
     look: { aura: 'rgba(251,146,60,0.55)' },
     polarity: 'positive',
+    family: 'power',
     summary: `+2 dégâts à chacun de ses coups, +1 par charge de plus, ${POWER_AURA_CAP} charges au plus.`,
     describe: (s) => `${damageText(powerAuraBonus(s))} à chacun de ses coups`,
     detail: (s) => `Après le critique, avant l'armure. Chaque nouvelle pose ajoute +1, jusqu'à +${powerAuraBonus({ ...s, stacks: POWER_AURA_CAP })}.`,
@@ -878,6 +968,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'intimidation",
     look: { aura: 'rgba(185,28,28,0.6)' },
     polarity: 'positive',
+    family: 'guard',
     summary: `Chaque coup de l'adversaire lui fait ${plural(INTIMIDATION, 'dégât')} de moins par charge.`,
     describe: (s) => `${damageText(-INTIMIDATION * s.stacks)} à chaque coup de l'adversaire`,
     detail: () => "Après le critique, avant l'armure.",
@@ -890,6 +981,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de précision',
     look: { aura: 'rgba(250,204,21,0.5)' },
     polarity: 'positive',
+    family: 'precision',
     summary: `+${Math.round(PRECISION_CRIT * 100)} % de critique et +1 au multiplicateur de critique, par charge.`,
     describe: (s) => `+${Math.round(PRECISION_CRIT * 100 * s.stacks)} % de critique et +${s.stacks} au multiplicateur de critique`,
     badge: (s) => `+${s.stacks}`,
@@ -901,6 +993,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Aura d'immunité",
     look: { aura: 'rgba(253,224,71,0.55)' },
     polarity: 'positive',
+    family: 'seals',
     summary: 'Aucun malus ne peut plus lui être posé, et +1 armure.',
     describe: (s) => `Aucun malus ne peut plus lui être posé, et +${charges(s)} armure`,
     detail: () => "Les auras de l'adversaire agissent toujours, sans pouvoir lui poser de malus.",
@@ -917,6 +1010,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de sainteté',
     look: { aura: 'rgba(254,243,199,0.6)' },
     polarity: 'positive',
+    family: 'healing',
     summary: `+${HOLY_HEAL} PV par charge à la fin de chacun de ses tours, ${HOLY_CAP} charges au plus.`,
     describe: (s) => `+${HOLY_HEAL * charges(s)} PV à la fin de chacun de ses tours`,
     badge: (s) => `+${HOLY_HEAL * charges(s)}`,
@@ -934,6 +1028,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Sentence',
     look: { aura: 'rgba(254,240,138,0.5)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS, 'PV')} par charge à l'adversaire, ${SENTENCE_CAP} charges au plus.`,
     describe: (s) => `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS * charges(s), 'PV')} à l'adversaire`,
     detail: () => 'En dégâts directs.',
@@ -949,6 +1044,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de décoction',
     look: { aura: 'rgba(163,230,53,0.5)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: `Chaque coup qui touche pose ${DECOCTION_POISON} Poison par charge à l'adversaire.`,
     describe: (s) => `${DECOCTION_POISON * charges(s)} Poison à l'adversaire à chaque coup qui touche`,
     detail: () => 'Pile compte comme un coup qui touche.',
@@ -965,6 +1061,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Luciole',
     look: { motion: 'fireflies' },
     polarity: 'negative',
+    family: 'evasion',
     summary: 'Il ne peut plus esquiver, et chaque coup reçu lui fait +2 dégâts ; chaque coup qui le touche chasse une luciole.',
     describe: (s) => `Ne peut plus esquiver, et chaque coup reçu lui fait +2 dégâts ; ${next(s.stacks, 'le prochain coup reçu les chasse', 'N coups reçus les chassent')}`,
     badge: (s) => String(s.stacks),
@@ -979,6 +1076,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de pourriture',
     look: { aura: 'rgba(124,90,140,0.6)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: "Chaque coup qui touche pose 1 Pourriture par charge à l'adversaire.",
     describe: (s) => `${s.stacks} Pourriture à l'adversaire à chaque coup qui touche`,
     badge: (s) => `+${s.stacks}`,
@@ -988,6 +1086,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   rot: {
     name: 'Pourriture',
     polarity: 'negative',
+    family: 'affliction',
     summary: "Perd 1 PV par charge au début de chacun de ses tours ; seule une purification l'enlève.",
     describe: (s) => `Perd ${plural(s.stacks, 'PV')} au début de chacun de ses tours, jusqu'à ce qu'on le purifie`,
     badge: (s) => String(s.stacks),
@@ -1005,6 +1104,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Incantation',
     look: { glow: 'rgba(163,230,53,0.7)' },
     polarity: 'positive',
+    family: 'fortune',
     summary: 'Sous forme humaine, ses sorts partent sur leurs faces ; sous forme d’ours, ils se taisent.',
     describe: () => 'Ses sorts partent, puis un coup',
     badge: () => 'Sort',
@@ -1021,6 +1121,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: "Force de l'ours",
     look: { glow: 'rgba(180,83,9,0.7)' },
     polarity: 'positive',
+    family: 'power',
     summary: `Sous forme d'ours, seules ses gravures partent, et ses coups font +${BEAR_MIGHT} dégâts.`,
     describe: () => `${damageText(BEAR_MIGHT)} à chacun de ses coups`,
     detail: () => "Après le critique, avant l'armure.",
@@ -1035,6 +1136,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura sauvage',
     look: { aura: 'rgba(180,83,9,0.55)' },
     polarity: 'positive',
+    family: 'power',
     summary: `+${WILD_AURA_ATTACK} à l'attaque par charge, minimum et maximum.`,
     describe: (s) => `+${WILD_AURA_ATTACK * s.stacks} à l'attaque`,
     detail: () => 'Le minimum et le maximum ; avant le critique.',
@@ -1049,6 +1151,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   whistling: {
     name: 'Sifflotement',
     polarity: 'positive',
+    family: 'healing',
     summary: `+${WHISTLE_HEAL} PV à la fin de ses tours, pendant autant de tours que de charges.`,
     describe: (s) => `+${WHISTLE_HEAL} PV à la fin de ${s.stacks > 1 ? `ses ${s.stacks} prochains tours` : 'son prochain tour'} (${WHISTLE_HEAL * s.stacks} en tout)`,
     badge: (s) => `+${WHISTLE_HEAL * s.stacks}`,
@@ -1060,6 +1163,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   falseNote: {
     name: 'Fausse note',
     polarity: 'negative',
+    family: 'power',
     summary: `Son prochain coup qui touche fait ${FALSE_NOTE} dégâts de moins par charge.`,
     // Revue des compétences (P4) : la compétence la pose déjà pour deux coups (une intensité de 1), chacun à −4
     describe: (s) =>
@@ -1084,6 +1188,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura mélodieuse',
     look: { aura: 'rgba(196,181,253,0.55)' },
     polarity: 'positive',
+    family: 'power',
     // 0.45.0 : textes sans le jargon « dégâts finaux » (note de l'utilisateur : description peu claire)
     summary: '+1 dégât par charge à chacun de ses coups qui touchent.',
     describe: (s) => `${damageText(s.stacks)} à chacun de ses coups qui touchent`,
@@ -1098,6 +1203,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Duo',
     look: { glow: 'rgba(196,181,253,0.85)', dieColor: '#c4b5fd' },
     polarity: 'positive',
+    family: 'tempo',
     summary: 'Un dé de plus à sa prochaine action, par charge.',
     describe: (s) => `${s.stacks > 1 ? `${1 + s.stacks} dés` : 'Deux dés'} à sa prochaine action`,
     detail: () => 'Chaque dé est un jet complet : sa face, sa compétence, son coup.',
@@ -1119,6 +1225,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Bouclier de foi',
     look: { aura: 'rgba(253,230,138,0.55)' },
     polarity: 'positive',
+    family: 'guard',
     summary: `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR} armure temporaire par charge.`,
     describe: (s) => `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR * charges(s)} armure temporaire`,
     badge: (s) => `+${FAITH_SHIELD_ARMOR * charges(s)}`,
@@ -1131,6 +1238,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pas de côté',
     look: { aura: 'rgba(125,211,252,0.5)' },
     polarity: 'positive',
+    family: 'evasion',
     summary: `+${Math.round(SIDESTEP_DODGE * 100)} % d'esquive par charge.`,
     describe: (s) => `+${Math.round(SIDESTEP_DODGE * 100 * s.stacks)} % d'esquive`,
     badge: (s) => `+${Math.round(SIDESTEP_DODGE * 100 * s.stacks)} %`,
@@ -1142,6 +1250,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Plaie ouverte',
     look: { aura: 'rgba(220,38,38,0.5)' },
     polarity: 'positive',
+    family: 'affliction',
     summary: `Chacun de ses critiques fait saigner l'adversaire de ${OPEN_WOUND_BLEED} par charge.`,
     describe: (s) => `Ses critiques font saigner l'adversaire de ${OPEN_WOUND_BLEED * charges(s)}`,
     detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
@@ -1150,6 +1259,182 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     reactions: { crit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * charges(s), target: 'opponent' }] },
     power: (n) => `+${OPEN_WOUND_BLEED * n} Saignement par critique`,
+  },
+  // Phase 8, lot 3 (docs/SORTS.md § 29) : les malus de famille manquants, Garde, Fortune, Précision, Soin, Sceaux
+  guardBreak: {
+    name: 'Garde brisée',
+    polarity: 'negative',
+    family: 'guard',
+    summary: 'Le prochain coup qu’il reçoit ×2, et ce coup brise son armure temporaire.',
+    describe: (s) => next(s.stacks, 'Le prochain coup qu’il reçoit ×2', 'Ses N prochains coups reçus ×2'),
+    onFoe: (s) =>
+      s.stacks > 1
+        ? `Les ${s.stacks} prochains coups que reçoit l'adversaire ×2 et brisent son armure temporaire`
+        : "Le prochain coup que reçoit l'adversaire ×2 et brise son armure temporaire",
+    detail: () => "Avant l'armure. Le coup ×2 n'est pas absorbé par l'armure temporaire : il la brise.",
+    bears: 'a la garde brisée',
+    plural: 'Gardes brisées',
+    badge: (s) => `×${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyIncoming: (damage) => damage * 2,
+    spentOnHurt: true,
+    shatters: true,
+  },
+  jinx: {
+    name: 'Malchance',
+    polarity: 'negative',
+    family: 'fortune',
+    summary: 'Son prochain jet sur une compétence tombe à vide.',
+    describe: (s) => next(s.stacks, 'Son prochain jet sur une compétence tombe à vide', 'Ses N prochains jets sur une compétence tombent à vide'),
+    onFoe: (s) =>
+      s.stacks > 1 ? `Les ${s.stacks} prochains jets de l'adversaire sur une compétence tombent à vide` : "Le prochain jet de l'adversaire sur une compétence tombe à vide",
+    detail: () => 'Ni la compétence ni le coup de base. Un jet sur une face nue ne l’use pas, un dé imposé non plus.',
+    plural: 'Malchances',
+    badge: (s) => `×${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    jinxesRoll: true,
+  },
+  blinded: {
+    name: 'Aveuglé',
+    polarity: 'negative',
+    family: 'precision',
+    summary: 'Ses critiques ratent.',
+    describe: (s) => `Ses critiques ratent${s.power ? `, et +${Math.round(BLIND_MISS * 100 * s.power)} % de coups ratés` : ''}`,
+    onFoe: (s) => `Les critiques de l'adversaire ratent${s.power ? `, et +${Math.round(BLIND_MISS * 100 * s.power)} % de coups ratés` : ''}, jusqu'à la fin du combat`,
+    detail: () => 'Un critique qu’il porterait, critique assuré compris, devient un coup raté ; le critique assuré part.',
+    bears: 'est aveuglé',
+    badge: () => '×0',
+    stacking: 'refresh',
+    maxStacks: 1,
+    blinds: true,
+    power: (n) => `+${Math.round(BLIND_MISS * 100 * n)} % de coups ratés`,
+  },
+  hemorrhage: {
+    name: 'Hémorragie',
+    polarity: 'negative',
+    family: 'healing',
+    summary: 'Ne regagne plus de PV.',
+    describe: () => 'Ne regagne plus de PV',
+    onFoe: () => "L'adversaire ne regagne plus de PV, jusqu'à la fin du combat",
+    detail: () => 'Ni soin, ni vol de vie, ni aura. Un soin empêché ne compte pas comme reçu.',
+    badge: () => '0',
+    stacking: 'refresh',
+    maxStacks: 1,
+    modifyHealing: () => 0,
+  },
+  sealTheft: {
+    name: 'Sceau de vol',
+    polarity: 'negative',
+    family: 'seals',
+    summary: 'Son prochain bonus va à l’adversaire.',
+    describe: (s) => (s.stacks > 1 ? `Ses ${s.stacks} prochains bonus vont à l'adversaire` : "Son prochain bonus va à l'adversaire"),
+    onFoe: (s) => (s.stacks > 1 ? `Vole les ${s.stacks} prochains bonus de l'adversaire` : "Vole le prochain bonus de l'adversaire"),
+    detail: () => 'Le prochain bonus qu’il se donne revient au lanceur à sa place, avec ses charges. Les mécanismes (jauges, pièce, rafale) ne se volent pas.',
+    plural: 'Sceaux de vol',
+    badge: (s) => `×${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    stealsBonus: true,
+  },
+  /*
+   * Phase 8, lot 3 (docs/SORTS.md § 28) : cinq auras qui remplissent les fils minces. La Feinte nourrit sa propre
+   * ressource (l'esquive) et la convertit en critiques ; la Sève noire (soins → Poison) et la Dette de sang (renvois →
+   * Saignement) sont les secondes consommatrices de leur ressource ; le Ciel d'orage frappe l'adversaire à chaque début
+   * de tour du porteur, en dégâts directs ; l'Ivresse du sang change chaque critique en deux coups bruts.
+   */
+  feint: {
+    name: 'Feinte',
+    look: { aura: 'rgba(52,211,153,0.5)' },
+    polarity: 'positive',
+    family: 'precision',
+    summary: `+${Math.round(FEINT_DODGE * 100)} % d'esquive par charge ; chaque esquive lui donne un critique assuré.`,
+    describe: (s) => `+${Math.round(FEINT_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui donne un critique assuré`,
+    detail: () => 'Le critique attend son prochain coup qui touche. Chaque nouvelle pose ajoute +5 %.',
+    badge: (s) => `+${Math.round(FEINT_DODGE * 100 * charges(s))} %`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + FEINT_DODGE * charges(s) }),
+    reactions: { dodge: () => [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] },
+    power: (n) => `+${Math.round(FEINT_DODGE * 100 * n)} % d'esquive`,
+  },
+  blackSap: {
+    name: 'Sève noire',
+    look: { aura: 'rgba(126,34,206,0.5)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `Chaque soin qu'il reçoit donne ${BLACK_SAP_POISON} Poison par charge à l'adversaire.`,
+    describe: (s) => `Chaque soin qu'il reçoit donne ${BLACK_SAP_POISON * charges(s)} Poison à l'adversaire`,
+    badge: (s) => `+${BLACK_SAP_POISON * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { healed: (s) => [{ type: 'applyStatus', status: 'poison', stacks: BLACK_SAP_POISON * charges(s), target: 'opponent' }] },
+    power: (n) => `+${BLACK_SAP_POISON * n} Poison par soin`,
+  },
+  bloodDebt: {
+    name: 'Dette de sang',
+    look: { aura: 'rgba(185,28,28,0.5)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `L'adversaire saigne de ${BLOOD_DEBT_BLEED} par charge quand il renvoie des dégâts.`,
+    describe: (s) => `L'adversaire saigne de ${BLOOD_DEBT_BLEED * charges(s)} quand il renvoie des dégâts`,
+    detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
+    badge: (s) => `+${BLOOD_DEBT_BLEED * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { reflected: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: BLOOD_DEBT_BLEED * charges(s), target: 'opponent' }] },
+    power: (n) => `+${BLOOD_DEBT_BLEED * n} Saignement par renvoi`,
+  },
+  stormSky: {
+    name: "Ciel d'orage",
+    look: { aura: 'rgba(186,230,253,0.55)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `Au début de chacun de ses tours, l'adversaire perd ${plural(STORM_SKY_LOSS, 'PV')} par charge.`,
+    describe: (s) => `Au début de chacun de ses tours, l'adversaire perd ${plural(STORM_SKY_LOSS * charges(s), 'PV')}`,
+    detail: () => 'Un éclair par charge, en dégâts directs ; chaque nouvelle pose en ajoute un.',
+    badge: (s) => `−${STORM_SKY_LOSS * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    // Un tick qui frappe l'adversaire : des dégâts directs (la Foudre), pas un statut qui ronge son porteur
+    onTurnStart: (s) => [{ type: 'damage', amount: STORM_SKY_LOSS, hits: charges(s), target: 'opponent', source: 'lightning' }],
+    power: (n) => `+${plural(STORM_SKY_LOSS * n, 'PV')} par tour`,
+  },
+  bloodFrenzy: {
+    name: 'Ivresse du sang',
+    look: { aura: 'rgba(132,204,22,0.5)' },
+    polarity: 'positive',
+    family: 'tempo',
+    summary: `Chacun de ses critiques lui donne deux coups de plus ; chaque charge de plus, +${Math.round(BLOOD_FRENZY_CRIT * 100)} % de critique.`,
+    describe: (s) => {
+      const crit = Math.round(frenzyCrit(s) * 100)
+      return `Chacun de ses critiques lui donne deux coups de plus${crit > 0 ? `, et +${crit} % de critique` : ''}`
+    },
+    detail: () => 'Des coups de base bruts, juste après le coup qui a critiqué ; chaque nouvelle pose : +5 % de critique.',
+    badge: (s) => `×${BLOOD_FRENZY_STRIKES}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + frenzyCrit(s) }),
+    reactions: { crit: () => [{ type: 'applyStatus', status: 'bloodFrenzyStrike', stacks: BLOOD_FRENZY_STRIKES }] },
+    power: (n) => `+${Math.round(BLOOD_FRENZY_CRIT * 100 * n)} % de critique`,
+  },
+  // Les coups de l'Ivresse : une rafale comme la Curée, posée par un critique. Un critique pendant une rafale pose une
+  // charge que la rafale en cours ne relance pas : elle part après le prochain jet du porteur (RESOLUTION § 2)
+  bloodFrenzyStrike: {
+    name: 'Ivresse du sang',
+    look: { glow: 'rgba(132,204,22,0.85)' },
+    polarity: 'positive',
+    family: 'tempo',
+    summary: 'Un coup de plus par charge, juste après le coup qui a critiqué.',
+    describe: (s) => `${COUNT_WORDS[s.stacks] ?? s.stacks} ${s.stacks > 1 ? 'coups' : 'coup'} de plus`,
+    detail: () => 'Des coups de base bruts, chacun son dé : leur face ne déclenche aucune compétence.',
+    badge: (s) => `×${s.stacks}`,
+    counter: 'stacks',
+    stacking: 'add',
+    mechanic: 'skill',
+    extraStrikes: 1,
+    instantStrikes: true,
   },
 }
 
@@ -1331,6 +1616,12 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.decays) say(consumption, "S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
   if (def.spentOnHit) say(consumption, 'Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ne le consomme pas.')
   if (def.spentOnHurt) say(consumption, 'Perd une charge chaque fois qu’un coup touche le porteur.')
+  if (def.shatters) say(effect, "Le coup qui touche le porteur n'est absorbé par aucune armure temporaire : il les brise toutes.", 'shields')
+  if (def.jinxesRoll)
+    say(effect, 'Le prochain jet du porteur qui porterait une compétence tombe à vide : le dé est lancé, mais ni la compétence ni le coup de base ne partent ; une charge par jet.', 'die')
+  if (def.blinds) say(effect, 'Chaque critique du porteur, tiré ou assuré, devient un coup raté ; le critique assuré part.', 'crit')
+  if (def.modifyHealing) say(effect, 'Le porteur ne regagne plus de PV : un soin empêché ne compte pas comme reçu.')
+  if (def.stealsBonus) say(effect, "Le prochain bonus que le porteur se pose va à l'adversaire, avec ses charges ; une charge par vol. Les mécanismes ne se volent pas.", 'application')
   if (def.turnsFromStacks) say(consumption, 'Une seule valeur : il dure autant de tours que de charges.', 'duration')
   else if (def.expiresAt === 'turnEnd') say(consumption, 'Sa durée se décompte à la fin des tours du porteur.', 'duration')
   else if (def.expiresAt === 'turnStart') say(consumption, 'Sa durée se décompte au début des tours du porteur, avant son action.', 'duration')

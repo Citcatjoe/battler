@@ -5,7 +5,7 @@
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
-import { simulateCombat, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
+import { beatEffects, simulateCombat, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { isRollTrigger, rollFace } from './events'
@@ -15,7 +15,7 @@ import { SCENE_EVENTS } from './scenes'
 import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import type { Status } from './statuses'
 import { testCharacter } from './test-utils'
-import { effectBadge } from './narration'
+import { effectBadge, STOLEN_BADGE } from './narration'
 import { signalTargets, STATES } from './states'
 import { STATUSES } from './statuses'
 import * as T from './timing'
@@ -77,10 +77,13 @@ function changesNothing(beats: readonly Beat[], beat: Beat, effects: readonly Ap
 
 /** Le moment qui couvre l'étape `id`. */
 const momentOf = (moments: Moment[], id: number) => moments.find((m) => m.beats.includes(id))!
-/** L'instant de l'impact de chaque coup (non remplacé) d'un moment, par étape, dans l'ordre. */
+/** L'instant de l'impact de chaque coup (non remplacé, non tombé à vide) d'un moment, par étape, dans l'ordre. */
 function impacts(moment: Moment, beats: Beat[]): Map<number, number> {
   const landed = moment.cues.filter((c) => c.channel === 'strike' && c.strike?.landed).map((c) => c.at)
-  const strikes = moment.beats.filter((id) => beats[id].type === 'attack' && !(beats[id] as Extract<Beat, { type: 'attack' }>).attack.replaced)
+  const strikes = moment.beats.filter((id) => {
+    const b = beats[id]
+    return b.type === 'attack' && !b.attack.replaced && !b.attack.jinxed
+  })
   return new Map(strikes.map((id, k) => [id, landed[k]]))
 }
 const at = (moment: Moment, channel: Cue['channel'], when: number) => moment.cues.filter((c) => c.channel === channel && c.at === when)
@@ -263,13 +266,18 @@ describe('mise en scène', () => {
     expect(counted + expired).toBeGreaterThan(20)
   })
 
-  it('le poison qui agit grésille ; les autres statuts qui rongent gardent Ronge (SONS.md § 9.3)', () => {
+  it('le poison qui agit grésille ; les autres statuts qui rongent gardent Ronge (SONS.md § 9.3) ; un tick qui frappe l’adversaire est un coup', () => {
     const heard = { poison: 0, other: 0 }
     for (const { result, moments } of corpus)
       for (const tick of result.beats) {
         if (tick.type !== 'statusTick' || !tick.effects.some((e) => e.type === 'damage')) continue
-        const poison = tick.status === 'poison'
         const sounds = momentOf(moments, tick.id).cues.flatMap((c) => (c.channel === 'sound' ? [c.cue] : []))
+        // Ciel d'orage (lot 3) : il frappe l'adversaire, en dégâts directs ; aucun Ronge
+        if (!tick.effects.some((e) => e.type === 'damage' && e.target === tick.side)) {
+          expect(sounds, tick.status).not.toContain('rot')
+          continue
+        }
+        const poison = tick.status === 'poison'
         expect(sounds, tick.status).toContain(poison ? 'fizz' : 'rot')
         heard[poison ? 'poison' : 'other']++
       }
@@ -321,7 +329,9 @@ describe('mise en scène', () => {
       for (const beat of result.beats) {
         if (beat.type === 'event' && beat.event.eventId === 'duo') {
           const m = momentOf(moments, beat.id)
-          expect(m.cues.some((c) => c.channel === 'sound' && c.cue === 'auraGain')).toBe(true)
+          // Son aura volée (Sceau de vol, lot 3) sonne le vol, la famille du voleur (SONS § 4.2, 2026-10-25)
+          const stolen = beat.event.effects.some((e) => e.type === 'applyStatus' && e.stolenBy !== undefined)
+          expect(m.cues.some((c) => c.channel === 'sound' && c.cue === (stolen ? 'sealDown' : 'auraGain'))).toBe(true)
           announced++
         }
         // Une action coupée par un K.O. n'a tiré que les dés de ses jets joués
@@ -1023,7 +1033,8 @@ describe('mise en scène : phase 8, premier lot (0.114.0)', () => {
       const label = m.cues.find((c) => c.channel === 'special' && c.special.label === 'Rancune')!
       expect(label.at).toBe(impact + T.REACTION_LEAD)
       expect(label.channel === 'special' && label.special.sign).toBe('plus')
-      expect(at(m, 'sound', label.at).map((c) => c.channel === 'sound' && c.cue)).toEqual(expect.arrayContaining(['coinWin', 'buff']))
+      // Le Critique assuré posé sonne sa famille, la Précision (SONS règle 4, 2026-10-25 ; Bonus gagné avant)
+      expect(at(m, 'sound', label.at).map((c) => c.channel === 'sound' && c.cue)).toEqual(expect.arrayContaining(['coinWin', 'precisionUp']))
       expect(at(m, 'sound', label.at).map((c) => c.channel === 'sound' && c.cue)).not.toContain('debuff')
       // Son prochain coup critique use le Critique assuré à son impact, pas avant
       const crit = result.beats.find((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack' && b.id > beat.id && b.attack.attacker === 0 && b.attack.critForced)
@@ -1138,5 +1149,280 @@ describe('mise en scène : phase 8, second lot', () => {
         fired++
       }
     expect(fired).toBeGreaterThan(3)
+  })
+})
+
+describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  /** Un personnage du roster, la compétence gravée sur son 3 ; des combats à graine contre chacun */
+  const fights = (id: string, engrave: string, seeds = [1, 2, 3]) =>
+    CHARACTER_IDS.flatMap((y) =>
+      seeds.map((seed) => {
+        const result = simulateCombat([createCharacter(id).withForge([{ op: 'engrave', face: 3, skill: skill(engrave) }]), createCharacter(y)], { seed })
+        return { result, moments: stage(result) }
+      }),
+    )
+  const sounds = (m: Moment, when: number) => at(m, 'sound', when).map((c) => c.channel === 'sound' && c.cue)
+  const badge = (c: Cue, side: number, text: string) => c.channel === 'float' && c.side === side && c.float.kind === 'badge' && c.float.badge.text === text
+  const charges = (c: Cue, side: number, id: string) => (c.channel === 'statuses' ? (c.statuses[side].find((s) => s.id === id)?.stacks ?? 0) : undefined)
+
+  it('Malchance : la face s’allume avec le dé, puis le jet tombe à vide un battement après, Tour perdu, sans élan ni chiffre ; la charge part à cet instant (M46)', () => {
+    let fizzled = 0
+    for (const { result, moments } of fights('naraxes', 'jinx'))
+      for (const roll of result.beats) {
+        if (roll.type !== 'roll' || !roll.jinxedBy) continue
+        const m = momentOf(moments, roll.id)
+        const lit = m.cues.find((c) => c.channel === 'skillPulse' && c.side === roll.side && c.face === roll.roll)!
+        const told = m.cues.find((c) => badge(c, roll.side, STATUSES.jinx.name) && c.at >= lit.at)!
+        expect(told.at).toBe(lit.at + T.DICE_READ)
+        expect(sounds(m, told.at)).toContain('stun')
+        // Aucun coup : ni élan, ni chiffre, jusqu'à l'étape suivante
+        const attack = result.beats.find((b) => b.type === 'attack' && b.cause === roll.id)!
+        expect(m.cues.some((c) => c.at >= lit.at && c.at <= told.at + T.READ_HOLD && ((c.channel === 'strike' && c.strike) || (c.channel === 'float' && c.float.kind === 'hit')))).toBe(false)
+        // La charge reste jusqu'au jet à vide, part avec lui
+        const was = result.beats[roll.id - 1].state.statuses[roll.side].find((s) => s.id === 'jinx')!.stacks
+        const shown = m.cues.filter((c) => c.channel === 'statuses' && c.at >= lit.at && c.at <= told.at).map((c) => charges(c, roll.side, 'jinx'))
+        expect(shown.at(-1)).toBe(attack.state.statuses[roll.side].find((s) => s.id === 'jinx')?.stacks ?? 0)
+        expect(shown.slice(0, -1).every((n) => n === was)).toBe(true)
+        expect(m.cues.some((c) => c.channel === 'log' && c.entry.text.includes('tombe à vide'))).toBe(true)
+        fizzled++
+      }
+    expect(fizzled).toBeGreaterThan(3)
+  })
+
+  it('Éclair aveuglant : le critique s’annonce, puis rate à l’impact (Esquive, « RATÉ », « Aveuglé »), sans arrêt sur image (M47)', () => {
+    let missed = 0
+    for (const { result, moments } of fights('thaldrin', 'blinding', [1, 2, 3, 4, 5, 6]))
+      for (const hit of result.beats) {
+        if (hit.type !== 'attack' || !hit.attack.blindedBy) continue
+        const m = momentOf(moments, hit.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        const wind = m.cues.filter((c) => c.channel === 'strike' && c.strike && !c.strike.landed && c.at < impact).at(-1)!
+        const told = m.cues.find((c) => c.channel === 'special' && c.special.label.startsWith('Critique') && c.at <= wind.at)
+        expect(told).toBeDefined()
+        expect(impact - wind.at).toBe(wind.channel === 'strike' && wind.strike?.fast ? T.VOLLEY_WIND : T.WIND)
+        expect(sounds(m, impact)).toContain('dodge')
+        expect(sounds(m, impact)).not.toContain('crit')
+        const attacker = hit.attack.attacker
+        expect(at(m, 'float', impact).some((c) => c.channel === 'float' && c.side === 1 - attacker && c.float.kind === 'hit' && c.float.missed)).toBe(true)
+        expect(at(m, 'float', impact).some((c) => badge(c, attacker, STATUSES.blinded.name))).toBe(true)
+        missed++
+      }
+    expect(missed).toBeGreaterThan(3)
+  })
+
+  it('Hémorragie : le soin empêché montre un « 0 » barré et sonne le malus de Soin, jamais le Soin (SONS § 9.3)', () => {
+    let blocked = 0
+    for (const { result, moments } of [...fights('gorak', 'hemorrhage', [1, 2, 3, 4, 5, 6]), ...fights('aldric', 'hemorrhage', [1, 2, 3, 4, 5, 6])])
+      for (const beat of result.beats) {
+        const healed = beatEffects(beat).find((e) => e.type === 'heal' && e.wanted !== undefined && e.amount === 0)
+        if (!healed) continue
+        const m = momentOf(moments, beat.id)
+        const zero = m.cues.find((c) => c.channel === 'float' && c.side === healed.target && c.float.kind === 'badge' && c.float.badge.struck)!
+        expect(zero.channel === 'float' && zero.float.kind === 'badge' && zero.float.badge.text).toBe('0')
+        const heard = [...sounds(m, zero.at), ...sounds(m, zero.at + T.RIDE_CUE)]
+        expect(heard).toContain('healingDown')
+        expect(heard).not.toContain('heal')
+        blocked++
+      }
+    expect(blocked).toBeGreaterThan(3)
+  })
+
+  it('Confiscation : l’icône du bonus volé file du lanceur vers le voleur ; à son arrivée, « Volé », le bonus chez le voleur et le son du vol (Sceaux −)', () => {
+    let stolen = 0
+    let late = 0
+    for (const { result, moments } of [...fights('aldric', 'seal-theft'), ...fights('ysolde', 'seal-theft')])
+      for (const beat of result.beats) {
+        if (beat.type !== 'event') continue
+        const taken = beat.event.effects.find((e) => e.type === 'applyStatus' && e.stolenBy !== undefined && e.result.kind === 'applied')
+        if (taken?.type !== 'applyStatus') continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.side === beat.event.side && c.signal.from === beat.event.eventId)!
+        // Une aura volée aussi : l'icône file vers le voleur, même sans état à viser
+        expect(signal.channel === 'signal' && signal.signal).toMatchObject({ side: beat.event.side, to: expect.arrayContaining([taken.target]), icon: taken.status, polarity: 'negative' })
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, beat.event.side, STOLEN_BADGE.text))).toBe(true)
+        expect(sounds(m, arrival)).toContain('sealDown')
+        expect(at(m, 'statuses', arrival).some((c) => (charges(c, taken.target, taken.status) ?? 0) > 0)).toBe(true)
+        // Son coup de base esquivé par le bonus volé : « Esquive assurée » tombe au départ du coup, pas avec le dé
+        const base = result.beats.find((b) => b.type === 'attack' && b.cause === beat.cause && b.attack.dodgeBy === taken.status)
+        if (base) {
+          const dodge = m.cues.find((c) => c.channel === 'special' && c.special.label === 'Esquive assurée')!
+          expect(dodge.at).toBeGreaterThanOrEqual(arrival)
+          late++
+        }
+        stolen++
+      }
+    expect(stolen).toBeGreaterThan(3)
+    expect(late).toBeGreaterThan(0)
+  })
+
+  it('Brise-garde : le coup ×2 a son label à l’impact, et l’armure temporaire vole en éclats au même instant, pas avant (M48)', () => {
+    let shattered = 0
+    // Contre une armure temporaire reposée à chaque tour (combat construit, chaque dé sur le 3), et chez ses porteurs
+    const armor = { id: 'armor', name: 'armor', trigger: 'turnStart' as const, effects: [{ type: 'applyStatus' as const, status: 'bonusArmor' as const, stacks: 3 }] }
+    const built = [1, 2, 3].map((seed) => {
+      const a = testCharacter('a', { maxHp: 400, attackMin: 6, attackMax: 6 }).withForge([{ op: 'engrave', face: 3, skill: skill('guard-break') }])
+      const result = simulateCombat([a, testCharacter('b', { maxHp: 400 }, [armor])], { seed, forcedRolls: everyDie(3) })
+      return { result, moments: stage(result) }
+    })
+    for (const { result, moments } of [...built, ...fights('morgrut', 'guard-break'), ...fights('brokk', 'guard-break')])
+      for (const hit of result.beats) {
+        if (hit.type !== 'attack' || !hit.attack.shatteredBy || hit.attack.dodged) continue
+        const defender = 1 - hit.attack.attacker
+        const armor = result.beats[hit.id - 1].state.statuses[defender].find((s) => STATUSES[s.id].shield)
+        if (!armor) continue
+        const m = momentOf(moments, hit.id)
+        const impact = impacts(m, result.beats).get(hit.id)!
+        expect(at(m, 'special', impact).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES.guardBreak.name))).toBe(true)
+        expect(at(m, 'float', impact).some((c) => badge(c, defender, `${STATUSES[armor.id].name} brisée`))).toBe(true)
+        const shown = m.cues.filter((c) => c.channel === 'statuses' && c.at <= impact).map((c) => charges(c, defender, armor.id))
+        expect(shown.at(-1)).toBe(0)
+        expect(m.cues.filter((c) => c.channel === 'statuses' && c.at < impact).every((c) => charges(c, defender, armor.id) === armor.stacks)).toBe(true)
+        shattered++
+      }
+    expect(shattered).toBeGreaterThan(3)
+  })
+
+  it('Feinte : l’esquive fait réagir son anneau au milieu de la lecture du coup ; le Critique assuré arrive avec le signal (Précision +)', () => {
+    let dodges = 0
+    for (const { result, moments } of fights('naraxes', 'feint'))
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'feint') continue
+        const m = momentOf(moments, beat.id)
+        const impact = impacts(m, result.beats).get(beat.cause!)!
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'feint')!
+        expect([T.REACTION_LEAD, T.VOLLEY_REACTION_LEAD]).toContain(signal.at - impact)
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, beat.side, STATUSES.guaranteedCrit.name))).toBe(true)
+        expect(sounds(m, arrival)).toContain('precisionUp')
+        dodges++
+      }
+    expect(dodges).toBeGreaterThan(3)
+  })
+
+  it('Sève noire : ce qu’un soin déclenche part au milieu de sa lecture ; le Poison arrive avec le signal de son anneau (M41)', () => {
+    let sapped = 0
+    for (const { result, moments } of [...fights('ervald', 'black-sap'), ...fights('aldric', 'black-sap')])
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'blackSap') continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'blackSap')!
+        const healed = m.cues.filter((c) => c.channel === 'float' && c.side === beat.side && c.float.kind === 'badge' && c.float.badge.tone === 'heal' && c.at < signal.at).at(-1)!
+        expect([T.REACTION_LEAD, T.VOLLEY_REACTION_LEAD, T.EFFECT_REACTION_LEAD]).toContain(signal.at - healed.at)
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, 1 - beat.side, STATUSES.poison.name))).toBe(true)
+        expect(sounds(m, arrival)).toContain('afflictionDown')
+        sapped++
+      }
+    expect(sapped).toBeGreaterThan(3)
+  })
+
+  it('Dette de sang : son anneau répond au renvoi au milieu de la lecture de son dernier coup ; le Saignement arrive avec le signal (M41)', () => {
+    let owed = 0
+    for (const { result, moments } of [...fights('aldric', 'blood-debt'), ...fights('brokk', 'blood-debt')])
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'bloodDebt') continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'bloodDebt')
+        // En rafale, le renvoi garde le rythme de la volée (M17 bis)
+        if (!signal) continue
+        const last = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.blow.from === beat.side && c.at < signal.at).at(-1)!
+        expect([T.REACTION_LEAD, T.VOLLEY_STRIKE_HOLD]).toContain(signal.at - last.at)
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, 1 - beat.side, STATUSES.bleed.name))).toBe(true)
+        expect(sounds(m, arrival)).toContain('afflictionDown')
+        owed++
+      }
+    expect(owed).toBeGreaterThan(3)
+  })
+
+  it('Attiser : la Brûlure repart plus haut ; son texte dit le gain, pas sa nouvelle valeur, avec le compteur à l’arrivée du signal (M42)', () => {
+    let stoked = 0
+    let restarted = 0
+    for (const { result, moments } of [...fights('thaldrin', 'stoke'), ...fights('ervald', 'stoke')])
+      for (const beat of result.beats) {
+        if (beat.type !== 'event' || beat.event.eventId !== 'stoke') continue
+        const target = 1 - beat.event.side
+        const burn = (statuses: readonly Status[]) => statuses.find((s) => s.id === 'burn')?.stacks ?? 0
+        const [before, after] = [burn(result.beats[beat.id - 1].state.statuses[target]), burn(beat.state.statuses[target])]
+        if (after <= before) continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'stoke')!
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, target, `+${after - before} ${STATUSES.burn.name}`))).toBe(true)
+        expect(at(m, 'statuses', arrival).map((c) => charges(c, target, 'burn'))).toEqual([after])
+        if (before > 0) restarted++
+        stoked++
+      }
+    expect(stoked).toBeGreaterThan(3)
+    expect(restarted).toBeGreaterThan(0)
+  })
+
+  it('Ciel d’orage : au début du tour de son porteur, son anneau envoie le signal ; l’éclair tombe à son arrivée en coup sans élan, teinte de la Foudre, sans Ronge (M19 bis)', () => {
+    let struck = 0
+    for (const { result, moments } of fights('thaldrin', 'storm-sky'))
+      for (const tick of result.beats) {
+        if (tick.type !== 'statusTick' || tick.status !== 'stormSky') continue
+        const m = momentOf(moments, tick.id)
+        expect(m.owner).toBe(tick.side)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'stormSky')!
+        expect(signal.channel === 'signal' && signal.signal.to).toEqual([1 - tick.side])
+        const landed = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed)!
+        expect(landed.at).toBe(signal.at + T.SIGNAL + T.BLOW_WIND_REACTION)
+        expect(landed.channel === 'blow' && landed.blow).toMatchObject({ from: tick.side, to: 1 - tick.side, source: 'lightning', lunge: false })
+        expect(sounds(m, landed.at)).toContain('hit')
+        expect(m.cues.some((c) => c.channel === 'sound' && c.cue === 'rot')).toBe(false)
+        expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title')).toBe(false)
+        struck++
+      }
+    expect(struck).toBeGreaterThan(3)
+  })
+
+  it('Ivresse du sang : au critique, son sceau et son anneau s’allument à l’impact, muets ; après la lecture du coup, ses deux coups à plat, au rythme d’une rafale (M27, M39)', () => {
+    let frenzies = 0
+    for (const { result, moments } of fights('gorak', 'blood-frenzy', [1, 2, 3, 4, 5, 6, 7, 8]))
+      for (const burst of result.beats) {
+        if (burst.type !== 'flurry' || burst.status !== 'bloodFrenzyStrike') continue
+        const posed = result.beats[burst.cause!]
+        const crit = posed.cause !== undefined ? result.beats[posed.cause] : undefined
+        // Une charge posée en rafale attend le prochain jet (RESOLUTION § 2) : ici, le critique d'un coup seul
+        if (crit?.type !== 'attack' || !momentOf(moments, crit.id).beats.includes(burst.id) || moments.some((m) => m.beats.includes(crit.id) && m.beats.some((id) => result.beats[id].type === 'flurry' && id < crit.id))) continue
+        const m = momentOf(moments, burst.id)
+        const impact = impacts(m, result.beats).get(crit.id)!
+        expect(at(m, 'skillPulse', impact).some((c) => c.channel === 'skillPulse' && c.side === burst.side && c.face === 3)).toBe(true)
+        expect(at(m, 'statuses', impact).some((c) => (charges(c, burst.side, 'bloodFrenzyStrike') ?? 0) > 0)).toBe(true)
+        const after = m.spans.filter((s) => s.at >= impact).map((s) => s.name)
+        const gap = after.indexOf('VOLLEY_GAP')
+        expect(after.slice(gap - 1, gap + 3)).toEqual([after.includes('STRIKE_FLOW_HOLD') ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD', 'VOLLEY_GAP', 'VOLLEY_FLAT', 'VOLLEY_WIND'])
+        expect(after).not.toContain('READ_HOLD')
+        expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title')).toBe(false)
+        // La charge part avec ses dés
+        const flat = m.spans.find((s) => s.name === 'VOLLEY_FLAT')!.at
+        expect(m.cues.filter((c) => c.channel === 'statuses' && c.at === flat).map((c) => charges(c, burst.side, 'bloodFrenzyStrike'))).toEqual([0])
+        frenzies++
+      }
+    expect(frenzies).toBeGreaterThan(3)
+  })
+
+  it('Coup de massue : Étourdi tombe à l’impact du coup qui touche (Tempo −), puis « Tour perdu » sur celui qui perd son action (M14, M29)', () => {
+    let stunned = 0
+    for (const { result, moments } of fights('morgrut', 'stunning-blow'))
+      for (const beat of result.beats) {
+        if (beat.type !== 'event' || beat.event.eventId !== 'stunning-blow' || beat.cause === undefined) continue
+        const posed = beat.event.effects.find((e) => e.type === 'applyStatus' && e.status === 'stunned' && e.result.kind === 'applied')
+        if (!posed) continue
+        const m = momentOf(moments, beat.id)
+        const impact = impacts(m, result.beats).get(beat.cause)!
+        expect(at(m, 'float', impact).some((c) => badge(c, posed.target, STATUSES.stunned.name))).toBe(true)
+        expect(sounds(m, impact + T.RIDE_CUE)).toContain('tempoDown')
+        const skip = result.beats.find((b) => b.type === 'skip' && b.id > beat.id && b.side === posed.target)
+        if (!skip) continue
+        const lost = momentOf(moments, skip.id)
+        const note = lost.cues.find((c) => badge(c, posed.target, STATES.lostTurn.name))!
+        expect(sounds(lost, note.at)).toContain('stun')
+        stunned++
+      }
+    expect(stunned).toBeGreaterThan(3)
   })
 })

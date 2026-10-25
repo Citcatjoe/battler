@@ -29,6 +29,10 @@ MAX_DURATION = {
     'dice-roll': 1.2, 'dice-land': 0.3, 'coin-toss': 1.5, 'coin-land': 0.6, 'coin-win': 0.8,
     'hit': 0.7, 'crit-rumble': 1.2, 'dodge': 0.3,
     'aura-gain': 1.3, 'aura-loss': 1.0, 'buff': 0.7, 'debuff': 0.7, 'dispel': 0.6, 'stun': 0.9, 'rot': 0.5, 'fizz': 0.6, 'heal': 0.7,
+    # Sons de pose par famille (2026-10-25)
+    'power-up': 0.8, 'power-down': 0.7, 'guard-up': 0.7, 'guard-down': 0.7, 'precision-up': 0.8, 'precision-down': 0.7,
+    'evasion-up': 0.6, 'evasion-down': 0.6, 'tempo-down': 0.8, 'fortune-up': 0.7, 'fortune-down': 0.8,
+    'affliction-down': 0.6, 'healing-up': 0.8, 'healing-down': 0.8, 'retaliation-up': 0.7, 'seal-down': 0.8,
     'shift': 1.2, 'ko': 1.5, 'victory': 5.0, 'click': 0.1, 'clash': 4.0,
 }
 # Sons à plusieurs fichiers, tirés au hasard en jeu (`VARIED_SOUNDS`, `sound.ts`)

@@ -24,11 +24,16 @@ let musicMuted = readMuted(MUSIC_MUTE_KEY)
 /** Vitesse du combat (×1, ×2, ×4) : au-delà de ×1, les sons du combat sont écourtés d'autant. */
 let speed = 1
 
-/** Les sons du jeu, un fichier chacun (`docs/SONS.md` § 3). `crit-rumble` est la couche du Coup critique. */
+/**
+ * Les sons du jeu, un fichier chacun (`docs/SONS.md` § 3). `crit-rumble` est la couche du Coup critique. La seconde
+ * ligne : les sons de pose par famille (2026-10-25, `FAMILY_CUES`, cues.ts).
+ */
 export const SOUND_NAMES = [
   'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
   'hit', 'crit-rumble', 'dodge',
   'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'fizz', 'heal',
+  'power-up', 'power-down', 'guard-up', 'guard-down', 'precision-up', 'precision-down', 'evasion-up', 'evasion-down',
+  'tempo-down', 'fortune-up', 'fortune-down', 'affliction-down', 'healing-up', 'healing-down', 'retaliation-up', 'seal-down',
   'shift', 'ko', 'victory', 'click', 'clash',
 ] as const
 export type SoundName = (typeof SOUND_NAMES)[number]
@@ -76,6 +81,23 @@ const MIX: Record<SoundName, number> = {
   rot: LEVEL[4],
   fizz: LEVEL[4],
   heal: LEVEL[3],
+  // Sons de famille (2026-10-25) : au niveau du Bonus gagné et du Malus reçu qu'ils relaient
+  'power-up': LEVEL[3],
+  'power-down': LEVEL[3],
+  'guard-up': LEVEL[3],
+  'guard-down': LEVEL[3],
+  'precision-up': LEVEL[3],
+  'precision-down': LEVEL[3],
+  'evasion-up': LEVEL[3],
+  'evasion-down': LEVEL[3],
+  'tempo-down': LEVEL[3],
+  'fortune-up': LEVEL[3],
+  'fortune-down': LEVEL[3],
+  'affliction-down': LEVEL[3],
+  'healing-up': LEVEL[3],
+  'healing-down': LEVEL[3],
+  'retaliation-up': LEVEL[3],
+  'seal-down': LEVEL[3],
   shift: LEVEL[2],
   ko: LEVEL[1],
   victory: LEVEL[2],
@@ -468,6 +490,75 @@ export const sfx = {
     if (play('debuff')) return
     ;[311, 330].forEach((f) => tone({ freq: f, to: f * 0.6, dur: 0.6, type: 'sawtooth', gain: 0.06 }))
     noise({ dur: 0.45, filter: 'bandpass', freq: 600, to: 200, q: 2, gain: 0.16 })
+  },
+
+  /*
+   * Sons de pose par famille (2026-10-25, `docs/SONS.md` § 3) : un bonus posé sur soi ou un malus posé sonne sa famille.
+   * Sans son fichier, chacun reprend le Bonus gagné ou le Malus reçu générique.
+   */
+  /** Puissance + : un tambour de guerre grave qui enfle. */
+  powerUp() {
+    if (!play('power-up')) sfx.buff()
+  },
+  /** Puissance − : le même tambour, peau détendue, qui s'affaisse. */
+  powerDown() {
+    if (!play('power-down')) sfx.debuff()
+  },
+  /** Garde + : des dalles de pierre qui se referment. */
+  guardUp() {
+    if (!play('guard-up')) sfx.buff()
+  },
+  /** Garde − : la pierre qui se fend et s'émiette. */
+  guardDown() {
+    if (!play('guard-down')) sfx.debuff()
+  },
+  /** Précision + : une corde d'arc qui se tend, un éclat de verre. */
+  precisionUp() {
+    if (!play('precision-up')) sfx.buff()
+  },
+  /** Précision − : du sable jeté aux yeux. */
+  precisionDown() {
+    if (!play('precision-down')) sfx.debuff()
+  },
+  /** Esquive + : un battement d'ailes vif. */
+  evasionUp() {
+    if (!play('evasion-up')) sfx.buff()
+  },
+  /** Esquive − : un collet de corde qui se serre. */
+  evasionDown() {
+    if (!play('evasion-down')) sfx.debuff()
+  },
+  /** Tempo − : une vieille horloge qui ralentit. */
+  tempoDown() {
+    if (!play('tempo-down')) sfx.debuff()
+  },
+  /** Fortune + : des pièces secouées dans une bourse. */
+  fortuneUp() {
+    if (!play('fortune-up')) sfx.buff()
+  },
+  /** Fortune − : une cloche fêlée, un coup sourd et faux. */
+  fortuneDown() {
+    if (!play('fortune-down')) sfx.debuff()
+  },
+  /** Affliction − : une goutte de venin épais qui s'écrase. */
+  afflictionDown() {
+    if (!play('affliction-down')) sfx.debuff()
+  },
+  /** Soin + : un glissando de harpe qui monte. */
+  healingUp() {
+    if (!play('healing-up')) sfx.buff()
+  },
+  /** Soin − : un cœur qui flanche. */
+  healingDown() {
+    if (!play('healing-down')) sfx.debuff()
+  },
+  /** Représailles + : une lame tirée du fourreau. */
+  retaliationUp() {
+    if (!play('retaliation-up')) sfx.buff()
+  },
+  /** Sceaux − : une chaîne qui casse, un sceau de cire qui craque. */
+  sealDown() {
+    if (!play('seal-down')) sfx.debuff()
   },
 
   /** Dissipation : un bonus ou un malus retiré, souffle bref qui balaie. */

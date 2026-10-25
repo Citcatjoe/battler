@@ -112,6 +112,20 @@ export type IconName =
   | 'faith-shield'
   | 'sidestep'
   | 'open-wound'
+  // Planche v23 (2026-10-25) : phase 8, lot 3, les malus de famille (compétence et statut)
+  | 'guard-break'
+  | 'jinx'
+  | 'blinding'
+  | 'hemorrhage'
+  | 'seal-theft'
+  // Planches v23 et v24 (2026-10-25) : phase 8, lot 3, les fils minces (compétence et statut)
+  | 'feint'
+  | 'black-sap'
+  | 'blood-debt'
+  | 'stoke'
+  | 'storm-sky'
+  | 'blood-frenzy'
+  | 'stunning-blow'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -172,6 +186,19 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   faithShield: 'faith-shield',
   sidestep: 'sidestep',
   openWound: 'open-wound',
+  // Phase 8, lot 3 : les malus de famille ; dans la zone d'état, leur état emprunte la même icône (`STATE_ICON`)
+  guardBreak: 'guard-break',
+  jinx: 'jinx',
+  blinded: 'blinding',
+  hemorrhage: 'hemorrhage',
+  sealTheft: 'seal-theft',
+  // Phase 8, lot 3 : la compétence et son statut partagent l'icône ; les coups de l'Ivresse, celle de leur aura
+  feint: 'feint',
+  blackSap: 'black-sap',
+  bloodDebt: 'blood-debt',
+  stormSky: 'storm-sky',
+  bloodFrenzy: 'blood-frenzy',
+  bloodFrenzyStrike: 'blood-frenzy',
 }
 
 /**
@@ -202,6 +229,12 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   firefly: 'state-firefly',
   spoiled: 'state-spoiled',
   vulnerable: 'state-vulnerable',
+  // Phase 8, lot 3 : pas encore d'emblème d'état peint (pièce ronde monochrome) ; l'icône de la compétence en tient lieu
+  guardBroken: 'guard-break',
+  jinxed: 'jinx',
+  blinded: 'blinding',
+  noHealing: 'hemorrhage',
+  bonusStolen: 'seal-theft',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

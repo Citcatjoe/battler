@@ -5,7 +5,7 @@ import { autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFa
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
-import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
 import { EMOJI, testCharacter } from './test-utils'
 import { Character } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
@@ -13,6 +13,7 @@ import { typeset } from './typography'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
 import { buildHooks, echoOf, eventHooks, linkBetween, relicHooks, relicNeeds, skillNeeds } from './hooks'
 import { SCENE_EVENTS } from './scenes'
+import { offerableSkills } from './offers'
 
 const run = (fighters: Pair<Character>, seed = 1) =>
   simulateCombat(fighters, { rng: seededRng(seed) })
@@ -3678,5 +3679,298 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     const withConflagration = (id: string) => buildHooks(createCharacter(id).withForge([{ op: 'engrave', face: 3, skill: skill('conflagration') }]))
     expect(echoOf(relicHooks(getRelic('tinder-box')), withConflagration('ervald'))).toBe(1)
     expect(echoOf(relicHooks(getRelic('tinder-box')), withConflagration('thaldrin'))).toBe(0)
+  })
+})
+
+describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
+  /** La compétence gravée sur le 3, aiguisée `rank` fois (rang I : 0) */
+  const engraved = (c: Character, id: string, rank = 0) =>
+    c.withForge([{ op: 'engrave', face: 3, skill: skill(id) }, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face: 3 }))])
+  const reactions = (r: CombatResult, status: StatusId) => ofType(r, 'statusReaction').filter((b) => b.status === status)
+  const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('brokk'), id, rank).events.find((e) => e.id === id)!).text
+
+  it('les textes, au style de l’utilisateur, et leurs rangs', () => {
+    expect(validateRoster()).toEqual([])
+    expect(text('feint')).toBe(typeset("+5 % d'esquive. Chaque esquive lui donne un critique assuré."))
+    expect(text('feint', 1)).toBe(typeset("+10 % d'esquive. Chaque esquive lui donne un critique assuré."))
+    expect(text('black-sap')).toBe("Chaque soin qu'il reçoit donne 4 Poison à l'adversaire.")
+    expect(text('black-sap', 1)).toBe("Chaque soin qu'il reçoit donne 8 Poison à l'adversaire.")
+    expect(text('blood-debt')).toBe("L'adversaire saigne de 3 quand il renvoie des dégâts.")
+    expect(text('blood-debt', 1)).toBe("L'adversaire saigne de 6 quand il renvoie des dégâts.")
+    expect(text('stoke')).toBe("+2 à la Brûlure de l'adversaire, qui repart.")
+    expect(text('stoke', 1)).toBe("+3 à la Brûlure de l'adversaire, qui repart.")
+    expect(describeSkill(skill('stoke')).detail).toBe(typeset("Une Brûlure de 3 à un tour de sa fin devient une Brûlure de 5, pour 5 tours ; sans Brûlure, l'adversaire brûle de 2."))
+    expect(text('storm-sky')).toBe("Au début de chacun de ses tours, l'adversaire perd 1 PV.")
+    expect(text('storm-sky', 1)).toBe("Au début de chacun de ses tours, l'adversaire perd 2 PV.")
+    expect(text('blood-frenzy')).toBe('Chacun de ses critiques lui donne deux coups de plus.')
+    expect(text('blood-frenzy', 1)).toBe(typeset('Chacun de ses critiques lui donne deux coups de plus, et +5 % de critique.'))
+    expect(text('stunning-blow')).toBe("S'il touche, l'adversaire perd sa prochaine action, 1x.")
+    expect(text('stunning-blow', 1)).toBe("S'il touche, l'adversaire perd sa prochaine action, 2x.")
+    for (const id of ['feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
+    for (const id of ['feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']) {
+      expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
+      expect(EMOJI.test(describeSkill(skill(id)).text), id).toBe(false)
+    }
+  })
+
+  it('Feinte : +5 % d’esquive par charge ; chaque esquive de son porteur lui donne un critique assuré', () => {
+    const base = createCharacter('naraxes')
+    expect(effectiveStats(base, [{ id: 'feint', stacks: 2 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
+    expect(effectiveStats(base, [{ id: 'feint', stacks: 1, power: 1 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, dodgeChance: 0.4 }), 'feint'), testCharacter('b', { maxHp: 400 })])
+    const fired = reactions(r, 'feint')
+    expect(fired.length).toBeGreaterThan(5)
+    for (const b of fired) {
+      expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: true } })
+      expect(b).toMatchObject({ side: 0, trigger: 'dodge' })
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
+    }
+  })
+
+  it('Sève noire : chaque soin reçu donne 4 Poison par charge à l’adversaire, le soin pour cause ; sans soin, rien', () => {
+    const holy = ev('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [holy]), 'black-sap', rank), testCharacter('b', { maxHp: 400, attackMin: 6, attackMax: 6 })])
+      const fired = reactions(r, 'blackSap')
+      expect(fired.length).toBeGreaterThan(5)
+      for (const b of fired) {
+        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'blackSap')!
+        expect(b).toMatchObject({ side: 0, trigger: 'healed' })
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'poison', stacks: 4 * (held.stacks + rank) })])
+      }
+    }
+    expect(reactions(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'black-sap'), testCharacter('b', { maxHp: 400 })]), 'blackSap')).toEqual([])
+  })
+
+  it('Dette de sang : chaque renvoi fait saigner l’adversaire de 3 par charge', () => {
+    const riposte = ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [riposte]), 'blood-debt', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+      const fired = reactions(r, 'bloodDebt')
+      expect(fired.length).toBeGreaterThan(3)
+      for (const b of fired) {
+        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'bloodDebt')!
+        expect(b).toMatchObject({ side: 0, trigger: 'reflected' })
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: 3 * (held.stacks + rank) })])
+      }
+    }
+  })
+
+  it('Attiser : +2 à la Brûlure de l’adversaire, qui se remplace et repart ; sans Brûlure, 2', () => {
+    for (const start of [0, 3])
+      for (const rank of [0, 1]) {
+        const burn = ev('combatStart', start ? [{ type: 'applyStatus', status: 'burn', stacks: start, target: 'opponent' }] : [])
+        const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [burn]), 'stoke', rank), testCharacter('b', { maxHp: 400 })])
+        const stokes = ofType(r, 'event').filter((b) => b.event.eventId === 'stoke')
+        expect(stokes.length).toBeGreaterThan(3)
+        for (const b of stokes) {
+          const read = r.beats[b.id - 1].state.statuses[1].find((s) => s.id === 'burn')?.stacks ?? 0
+          expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'burn', target: 1, stacks: read + 2 + rank })
+          expect(b.state.statuses[1].find((s) => s.id === 'burn')).toMatchObject({ stacks: read + 2 + rank, turns: read + 2 + rank })
+        }
+      }
+  })
+
+  it('Ciel d’orage : au début de chaque tour de son porteur, un éclair de 1 PV par charge à l’adversaire, en dégâts directs', () => {
+    expect(hurtsEachTurn('stormSky')).toBe(false)
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'storm-sky', rank), testCharacter('b', { maxHp: 400 })])
+      const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'stormSky')
+      expect(ticks.length).toBeGreaterThan(3)
+      for (const t of ticks) {
+        const held = r.beats[t.id - 1].state.statuses[0].find((s) => s.id === 'stormSky')!
+        expect(t).toMatchObject({ side: 0, phase: 'turnStart' })
+        expect(t.effects).toEqual([expect.objectContaining({ type: 'damage', target: 1, amount: held.stacks + rank, source: 'lightning' })])
+      }
+    }
+  })
+
+  it('Ivresse du sang : chaque critique, deux coups bruts ; un critique pendant une rafale attend le jet suivant, sans retarder une Furie', () => {
+    const base = createCharacter('gorak')
+    expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 1 }]).critChance).toBeCloseTo(base.stats.critChance)
+    expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 2 }]).critChance).toBeCloseTo(base.stats.critChance + 0.05)
+    expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 1, power: 1 }]).critChance).toBeCloseTo(base.stats.critChance + 0.05)
+    let deferred = 0
+    for (let seed = 1; seed < 40; seed++) {
+      const r = run([engraved(createCharacter('gorak'), 'blood-frenzy'), testCharacter('b', { maxHp: 200, dodgeChance: 0 })], seed)
+      for (const b of reactions(r, 'bloodFrenzy')) {
+        expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, crit: true, dodged: false } })
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bloodFrenzyStrike', stacks: 2 })])
+      }
+      for (const f of ofType(r, 'flurry')) {
+        const posed = r.beats[f.cause!]
+        const cause = posed.cause !== undefined ? r.beats[posed.cause] : undefined
+        // Posée au critique d'un coup brut : elle part après le jet suivant de son porteur, pas pendant la rafale
+        if (f.status === 'bloodFrenzyStrike' && cause?.type === 'attack' && cause.attack.plain) {
+          deferred++
+          const jets = r.beats.slice(posed.id + 1, f.id).filter((x) => x.type === 'attack' && x.attack.attacker === 0 && !x.attack.plain)
+          expect(jets).toHaveLength(1)
+        }
+        // Une Furie des vents part toujours dans le tour de son jet
+        if (f.status === 'windFury') expect(posed.turn).toBe(f.turn)
+      }
+    }
+    expect(deferred).toBeGreaterThan(0)
+  })
+
+  it('Coup de massue : s’il touche, l’adversaire perd sa prochaine action (Étourdi), une fois par rang', () => {
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'stunning-blow', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+      const blows = ofType(r, 'event').filter((b) => b.event.eventId === 'stunning-blow')
+      expect(blows).toHaveLength(1 + rank)
+      for (const b of blows) expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'stunned', target: 1, stacks: 1 })
+      expect(ofType(r, 'skip').filter((b) => b.side === 1 && b.status === 'stunned')).toHaveLength(1 + rank)
+    }
+    // Un coup esquivé ne pose rien, et la fois reste
+    const dodged = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'stunning-blow'), testCharacter('b', { maxHp: 400, dodgeChance: 1 })])
+    expect(ofType(dodged, 'event').filter((b) => b.event.eventId === 'stunning-blow')).toHaveLength(0)
+  })
+
+  it('offre pertinente (le producteur d’abord) et X2 : Attiser ne gêne pas la place de la Brûlure', () => {
+    const needs = Object.fromEntries(['feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow'].map((id) => [id, skillNeeds(skill(id))]))
+    expect(needs).toEqual({
+      feint: ['moment:dodge'],
+      'black-sap': ['moment:heal'],
+      'blood-debt': ['moment:reflect'],
+      stoke: ['status:burn'],
+      'storm-sky': [],
+      'blood-frenzy': ['moment:crit'],
+      'stunning-blow': [],
+    })
+    const offered = (championId: string, forge: ForgeStep[], ids: string[]) => offerableSkills({ championId, forge, relics: [] }, ids.map(skill)).map((s) => s.id)
+    // Ervald : Attiser une fois ses Feux follets gravés ; Brokk : la Dette de sang une fois sa Riposte gravée
+    expect(offered('ervald', [], ['stoke'])).toEqual([])
+    expect(offered('ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }], ['stoke'])).toEqual(['stoke'])
+    expect(offered('brokk', [], ['blood-debt'])).toEqual([])
+    expect(offered('brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }], ['blood-debt'])).toEqual(['blood-debt'])
+    expect(offered('thaldrin', [], ['stoke', 'storm-sky', 'stunning-blow'])).toEqual(['stoke', 'storm-sky', 'stunning-blow'])
+    // X2 : Attiser lit la Brûlure et s'y ajoute ; il ne gêne ni les Feux follets ni le Briquet
+    expect(eventHooks(skill('stoke')).hinders).not.toContain('slot:burn')
+    expect(linkBetween(eventHooks(skill('firefly')), eventHooks(skill('stoke')))).toEqual({ feeds: ['status:burn'], conflicts: [] })
+    expect(linkBetween(relicHooks(getRelic('tinder-box')), eventHooks(skill('stoke'))).conflicts).toEqual([])
+  })
+})
+
+describe('phase 8, lot 3 : les malus de famille (docs/SORTS.md § 29)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
+  const engraved = (c: Character, id: string, rank = 0) =>
+    c.withForge([{ op: 'engrave', face: 3, skill: skill(id) }, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face: 3 }))])
+  const text = (id: string, rank = 0) => describeSkill(engraved(createCharacter('morgrut'), id, rank).events.find((e) => e.id === id)!).text
+  /** `a` pose ce malus sur son adversaire au début du combat */
+  const curse = (status: StatusId, stacks = 1, power?: number) =>
+    testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status, stacks, target: 'opponent', ...(power && { power }) }], 'curse')])
+
+  it('les textes, au style de l’utilisateur, et les axes de rang', () => {
+    expect(validateRoster()).toEqual([])
+    expect(text('guard-break')).toBe("S'il touche, le prochain coup que reçoit l'adversaire ×2 et brise son armure temporaire.")
+    expect(text('guard-break', 1)).toBe("S'il touche, les 2 prochains coups que reçoit l'adversaire ×2 et brisent son armure temporaire.")
+    expect(text('jinx')).toBe("Le prochain jet de l'adversaire sur une compétence tombe à vide.")
+    expect(text('jinx', 1)).toBe("Les 2 prochains jets de l'adversaire sur une compétence tombent à vide.")
+    expect(text('blinding')).toBe("Les critiques de l'adversaire ratent, jusqu'à la fin du combat.")
+    expect(text('blinding', 1)).toBe(typeset("Les critiques de l'adversaire ratent, et +10 % de coups ratés, jusqu'à la fin du combat."))
+    expect(text('hemorrhage')).toBe("4 dégâts directs à l'adversaire. L'adversaire ne regagne plus de PV, jusqu'à la fin du combat.")
+    expect(text('hemorrhage', 1)).toBe("6 dégâts directs à l'adversaire. L'adversaire ne regagne plus de PV, jusqu'à la fin du combat.")
+    expect(text('seal-theft')).toBe("Vole le prochain bonus de l'adversaire.")
+    expect(text('seal-theft', 1)).toBe("Vole les 2 prochains bonus de l'adversaire.")
+    for (const id of ['guard-break', 'jinx', 'blinding', 'hemorrhage', 'seal-theft']) expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
+  })
+
+  it('Brise-garde : le prochain coup reçu ×2, avant l’armure, sans armure temporaire qui absorbe, et il la brise', () => {
+    const shield = ev('combatStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 50 }], 'shield')
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 0 }), 'guard-break'), testCharacter('b', { maxHp: 400, dodgeChance: 0 }, [shield])])
+    const hits = ofType(r, 'attack').filter((b) => b.attack.attacker === 0 && stacksOf(r.beats[b.id - 1].state.statuses[1], 'guardBreak') > 0)
+    expect(hits.length).toBeGreaterThan(3)
+    for (const b of hits) {
+      expect(b.attack.shatteredBy).toBe('guardBreak')
+      expect(b.attack.shields).toEqual([])
+      expect(b.attack.modifiers).toContainEqual(expect.objectContaining({ status: 'guardBreak', by: 'defender' }))
+      expect(stacksOf(b.state.statuses[1], 'bonusArmor')).toBe(0)
+      expect(stacksOf(b.state.statuses[1], 'guardBreak')).toBe(stacksOf(r.beats[b.id - 1].state.statuses[1], 'guardBreak') - 1)
+    }
+    // Le premier coup brisant trouve encore l'armure temporaire, et la brise
+    expect(stacksOf(r.beats[hits[0].id - 1].state.statuses[1], 'bonusArmor')).toBeGreaterThan(0)
+  })
+
+  it('Malchance : le prochain jet sur une compétence tombe à vide, une charge par jet ; une face nue ne l’use pas, un dé imposé non plus', () => {
+    // b porte une compétence sur le 6 seulement : ses autres jets ne l'usent pas
+    const six = ev(faceTrigger(6), [{ type: 'heal', amount: 1 }], 'six')
+    let jinxed = 0
+    for (let seed = 1; seed < 20; seed++) {
+      const r = run([curse('jinx', 2), testCharacter('b', { maxHp: 400 }, [six])], seed)
+      const empty = ofType(r, 'roll').filter((b) => b.jinxedBy === 'jinx')
+      expect(empty.length).toBeLessThanOrEqual(2)
+      for (const b of empty) {
+        jinxed++
+        expect(b).toMatchObject({ side: 1, roll: 6 })
+        const hit = r.beats[b.id + 1]
+        expect(hit).toMatchObject({ type: 'attack', cause: b.id, attack: { attacker: 1, jinxed: true, damage: 0, dealt: 0 } })
+        expect(stacksOf(b.state.statuses[1], 'jinx')).toBe(stacksOf(r.beats[b.id - 1].state.statuses[1], 'jinx') - 1)
+      }
+      // Les deux premiers jets de 6 tombent à vide : la compétence ne part qu'au troisième
+      const sixes = ofType(r, 'attack').filter((b) => b.attack.attacker === 1 && b.attack.roll === 6)
+      sixes.slice(0, 2).forEach((b) => expect(b.attack.jinxed).toBe(true))
+      expect(ofType(r, 'event').filter((b) => b.event.eventId === 'six').length).toBe(Math.max(0, sixes.length - 2))
+    }
+    expect(jinxed).toBeGreaterThan(10)
+    // Un dé imposé (mode triche) ne tombe jamais à vide
+    const forced = runOn(6, [curse('jinx', 2), testCharacter('b', { maxHp: 400 }, [six])])
+    expect(ofType(forced, 'roll').filter((b) => b.jinxedBy)).toEqual([])
+  })
+
+  it('Aveuglé : ses critiques, assurés compris, deviennent des coups ratés ; seule sa fenêtre « raté » s’ouvre', () => {
+    const dodge = ev('dodge', [{ type: 'heal', amount: 1 }], 'on-dodge')
+    const missed = ev('missed', [{ type: 'heal', amount: 1 }], 'on-missed')
+    const r = run([testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], 'curse'), dodge]), testCharacter('b', { maxHp: 400, critChance: 1 }, [missed])])
+    const b = ofType(r, 'attack').filter((x) => x.attack.attacker === 1)
+    expect(b.length).toBeGreaterThan(3)
+    for (const x of b) expect(x.attack).toMatchObject({ dodged: true, crit: false, damage: 0, blindedBy: 'blinded' })
+    expect(ofType(r, 'event').filter((x) => x.event.eventId === 'on-dodge')).toEqual([])
+    expect(ofType(r, 'event').filter((x) => x.event.eventId === 'on-missed').length).toBe(b.length)
+    // Le critique assuré part dans le coup raté
+    const sure = run([testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], 'curse')]), testCharacter('b', { maxHp: 400, critChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 2 }], 'sure')])])
+    const first = ofType(sure, 'attack').filter((x) => x.attack.attacker === 1).slice(0, 2)
+    for (const x of first) expect(x.attack).toMatchObject({ dodged: true, critForced: true, critBy: 'guaranteedCrit', blindedBy: 'blinded' })
+    expect(stacksOf(first[1].state.statuses[1], 'guaranteedCrit')).toBe(0)
+    // Aiguisé : +10 % de coups ratés par rang, même sans critique
+    let misses = 0
+    let total = 0
+    for (let seed = 1; seed < 20; seed++) {
+      const rr = run([curse('blinded', 1, 1), testCharacter('b', { maxHp: 400, critChance: 0 })], seed)
+      const x = ofType(rr, 'attack').filter((y) => y.attack.attacker === 1)
+      total += x.length
+      misses += x.filter((y) => y.attack.blindedBy).length
+    }
+    expect(misses / total).toBeGreaterThan(0.05)
+    expect(misses / total).toBeLessThan(0.15)
+  })
+
+  it('Hémorragie : 4 PV perdus, puis aucun soin, et la fenêtre « soin reçu » ne s’ouvre pas', () => {
+    const healed = ev('healed', [{ type: 'applyStatus', status: 'momentum', stacks: 1 }], 'on-healed')
+    const r = run([curse('hemorrhage'), testCharacter('b', { maxHp: 400 }, [ev('combatStart', [{ type: 'applyStatus', status: 'regeneration', stacks: 3 }], 'regen'), healed])])
+    const ticks = ofType(r, 'statusTick').filter((b) => b.side === 1 && b.status === 'regeneration')
+    expect(ticks.length).toBeGreaterThan(0)
+    for (const t of ticks) expect(t.effects).toEqual([{ type: 'heal', target: 1, amount: 0, wanted: 3 }])
+    expect(ofType(r, 'event').filter((b) => b.event.eventId === 'on-healed')).toEqual([])
+    const hit = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'hemorrhage'), testCharacter('b', { maxHp: 400 })])
+    const fired = ofType(hit, 'event').find((b) => b.event.eventId === 'hemorrhage')!
+    expect(fired.event.effects).toEqual([
+      expect.objectContaining({ type: 'damage', target: 1, amount: 4, source: 'bleed' }),
+      expect.objectContaining({ type: 'applyStatus', target: 1, status: 'hemorrhage' }),
+    ])
+  })
+
+  it('Sceau de vol : le prochain bonus que l’adversaire se pose lui revient, une charge par vol ; un mécanisme ne se vole pas', () => {
+    const pose = ev(faceTrigger(3), [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }, { type: 'applyStatus', status: 'powerAura', stacks: 1 }], 'pose')
+    const r = runOn(3, [curse('sealTheft'), testCharacter('b', { maxHp: 400 }, [pose])])
+    const [first, second] = ofType(r, 'event').filter((b) => b.event.eventId === 'pose')
+    expect(first.event.effects[0]).toMatchObject({ target: 1, status: 'coinFlip' })
+    expect(first.event.effects[0]).not.toHaveProperty('stolenBy')
+    expect(first.event.effects[1]).toMatchObject({ target: 0, status: 'powerAura', stolenBy: 'sealTheft' })
+    expect(stacksOf(first.state.statuses[0], 'powerAura')).toBe(1)
+    expect(stacksOf(first.state.statuses[1], 'sealTheft')).toBe(0)
+    expect(second.event.effects[1]).toMatchObject({ target: 1, status: 'powerAura' })
   })
 })

@@ -22,8 +22,8 @@ import pkg from '../package.json' with { type: 'json' }
 const pct = (x: number) => `${Math.round(x * 100)} %`
 const dec = (x: number, n = 1) => x.toFixed(n).replace('.', ',')
 const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / Math.max(1, xs.length)
-/** Les briques des deux lots de la phase 8 (SORTS.md § 22 et § 23, RELIQUES.md § 15), comptées dans chaque build */
-const LOT_BRICKS: readonly string[] = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge', 'conflagration', 'loaded-die', 'bristling-rampart', 'vendetta', 'forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
+/** Les briques des trois lots de la phase 8 (SORTS.md § 22, § 23, § 28 et § 29, RELIQUES.md § 15), comptées dans chaque build */
+const LOT_BRICKS: readonly string[] = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge', 'conflagration', 'loaded-die', 'bristling-rampart', 'vendetta', 'forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin', 'guard-break', 'jinx', 'blinding', 'hemorrhage', 'seal-theft', 'feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']
 
 it('mesure de la saison construite', () => {
   const runs = Number(process.env.SEASON_RUNS ?? 4)

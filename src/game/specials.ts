@@ -123,20 +123,23 @@ export function statusSpecial(id: StatusId, bearer: SpecialBearer, amount?: numb
  * - `crit`, juste avant l'élan : le critique assuré, puis le critique (3) ;
  * - `impact`, à l'impact : les modificateurs qui s'usent sur ce coup (4-5 : Luciole), les boucliers (8), les dégâts
  *   finaux qui s'usent sur ce coup (8 bis : Fausse note). Un modificateur d'aura ou d'état durable n'y est pas.
- * Un jet remplacé n'en a aucune. Les réactions au coup (Vol de vie, Riposte, Saignement) ont leur propre étape.
+ * Un jet remplacé ou tombé à vide (Malchance) n'en a aucune. Le critique d'un aveuglé (`blindedBy`) s'annonce comme un
+ * critique : c'est lui qui rate. Les réactions au coup (Vol de vie, Riposte, Saignement) ont leur propre étape.
  * Le statut d'un critique ou d'une esquive imposés est celui que le moteur nomme (`critBy`, `dodgeBy`).
  */
 export function attackSpecials(attack: Attack): { roll: SpecialSpec[]; crit: SpecialSpec[]; impact: SpecialSpec[] } {
   const roll: (SpecialSpec | undefined)[] = []
   const crit: (SpecialSpec | undefined)[] = []
   const impact: (SpecialSpec | undefined)[] = []
-  if (!attack.replaced) {
+  if (!attack.replaced && !attack.jinxed) {
     if (attack.dodged && attack.dodgeBy) roll.push(statusSpecial(attack.dodgeBy, 'defender'))
     for (const b of attack.relicBonus ?? [])
       roll.push({ label: withAmount(b.name, 'plus', b.amount), source: 'relic', sign: 'plus', icon: { relic: b.relic, name: b.name } })
     if (attack.gild) roll.push({ label: withAmount('Face dorée', 'plus', attack.gild), source: 'strike', sign: 'plus' })
-    if (attack.crit && attack.critBy) crit.push(statusSpecial(attack.critBy, 'attacker'))
-    if (attack.crit) crit.push({ label: `Critique ${multiplier(attack.critMultiplier)}`, source: 'strike', sign: 'plus' })
+    // Le critique d'un aveuglé a été tiré (ou assuré) : il s'annonce, puis rate (lot 3)
+    const critical = attack.crit || attack.blindedBy !== undefined
+    if (critical && attack.critBy) crit.push(statusSpecial(attack.critBy, 'attacker'))
+    if (critical) crit.push({ label: `Critique ${multiplier(attack.critMultiplier)}`, source: 'strike', sign: 'plus' })
     const [before, final] = [attack.modifiers.filter((m) => !m.final), attack.modifiers.filter((m) => m.final)]
     impact.push(...before.map((m) => statusSpecial(m.status, m.by, m.delta)))
     impact.push(...attack.shields.map((s) => statusSpecial(s.status, 'defender', -s.absorbed)))

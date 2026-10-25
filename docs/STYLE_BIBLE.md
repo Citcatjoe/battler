@@ -1033,6 +1033,18 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 121 | `faith-shield` | Bouclier de foi (compétence d'Ysolde et son statut `faithShield`, v22, 2026-10-25) | Écu d'ivoire et d'or qui durcit dans une lumière de soin, halo d'aura |
 | 122 | `sidestep` | Pas de côté (compétence et statut, v22) | Botte de cuir qui fait un pas de côté devant une flèche, une rémanence bleue derrière elle, halo d'aura |
 | 123 | `open-wound` | Plaie ouverte (compétence et statut `openWound`, v22) | Pointe de flèche qui ouvre une entaille sanglante dans une armure de cuir, étincelle d'or du critique, halo d'aura |
+| 124 | `guard-break` | Brise-garde (compétence et statut `guardBreak`, v23, 2026-10-25) | Masse de bois cerclée de fer qui fend un écu de bois, éclats qui volent |
+| 125 | `jinx` | Malchance (compétence et statut `jinx`, v23, version B) | Dé d'os ligoté d'une cordelette noire, lueur verdâtre de mauvais sort, pions noirs autour |
+| 126 | `blinding` | Éclair aveuglant (compétence et statut `blinded`, v23, version B) | Œil sur un disque de bois, fendu d'un éclair bleu, une corne pendue à une lanière |
+| 127 | `hemorrhage` | Hémorragie (compétence et statut `hemorrhage`, v23) | Couperet ensanglanté au-dessus d'une plante de soin tranchée, terre noire |
+| 128 | `seal-theft` | Confiscation (compétence et statut `sealTheft`, « Sceau de vol », v23) | Gantelet de fer qui arrache un sceau de cire rouge à un parchemin, traînée de feu doré |
+| 129 | `feint` | Feinte (compétence et statut, v23) | Cape à capuche vide qui tourbillonne, une dague qui en sort, étincelle d'or du critique |
+| 130 | `black-sap` | Sève noire (compétence et statut `blackSap`, v23, version B) | Calice d'étain qui déborde d'une sève violette et noire, fumée mauve |
+| 131 | `blood-debt` | Dette de sang (compétence et statut `bloodDebt`, v23) | Épée ensanglantée, une reconnaissance de dette scellée pendue à la garde |
+| 132 | `stoke` | Attiser (compétence, v23) | Tison entouré de lianes planté dans un feu de feuilles mortes |
+| 133 | `storm-sky` | Ciel d'orage (compétence et statut `stormSky`, v24, 2026-10-25) | Couronne de bois de cerf moussus, un arc d'éclair bleu entre les andouillers, feuilles de chêne |
+| 134 | `blood-frenzy` | Ivresse du sang (compétence, statuts `bloodFrenzy` et `bloodFrenzyStrike`, v24) | Poing vert d'orc qui brandit une hache, traînées de sang rouges et rémanences bleues des coups de plus |
+| 135 | `stunning-blow` | Coup de massue (compétence, v24) | Heaume cabossé et fendu, étoiles d'or de l'étourdissement, éclats de pierre |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1269,6 +1281,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v24 | 2026-10-25 | 133 à 135 | Trois compétences du lot 3 de la phase 8 (Ciel d'orage, Ivresse du sang, Coup de massue ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2 de trois, deux versions générées ; la version A retenue pour les trois (v23 et v24 : 320 crédits en tout). Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
+| v23 | 2026-10-25 | 124 à 132 | Neuf compétences du lot 3 de la phase 8 (Brise-garde, Malchance, Éclair aveuglant, Hémorragie, Confiscation, Feinte, Sève noire, Dette de sang, Attiser ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 3×3, deux versions générées : Malchance, Éclair aveuglant et Sève noire de la version B, les six autres de la version A. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
 | v22 | 2026-10-25 | 121 à 123 | Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2 de trois, deux versions générées (160 crédits) : Bouclier de foi et Plaie ouverte de la version B, Pas de côté de la version A. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
 | v21 | 2026-10-25 | 117 à 120 | Les quatre reliques de source (Dard de guêpe, Briquet d'amadou, Pièce de foire, Brassard à pointes). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées (160 crédits), la version A retenue pour les quatre. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v20 | 2026-10-25 | 116 | Le Duo (compétence de la barde et son statut). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une icône, deux versions générées (160 crédits), la version A retenue. Découpe par `scripts/slice-icons.py`, `src/assets/icons/duo.png`. Pas encore vue dans un écran de jeu. |

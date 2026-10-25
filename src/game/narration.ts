@@ -85,12 +85,19 @@ export interface Badge {
   text: string
   tone: Tone
   rises: boolean
+  /** Barré : ce qui aurait dû arriver et n'arrive pas (le soin empêché par l'Hémorragie, lot 3) */
+  struck?: true
 }
+
+/** Le bonus que le lanceur se posait est parti chez l'adversaire (Sceau de vol, lot 3) : le texte du volé, qui le perd */
+export const STOLEN_BADGE: Badge = { text: 'Volé', tone: 'negative', rises: false }
 
 /** Badge flottant au-dessus de la cible d'un effet. */
 export function effectBadge(e: AppliedEffect): Badge {
   switch (e.type) {
     case 'heal':
+      // Un soin empêché (l'Hémorragie, `wanted`) : son « 0 » barré (lot 3)
+      if (e.wanted !== undefined && e.amount === 0) return { text: '0', tone: 'heal', rises: true, struck: true }
       return { text: `+${e.amount} PV`, tone: 'heal', rises: true }
     case 'damage':
       return { text: `-${e.amount}`, tone: DAMAGE_SOURCES[e.source].tone, rises: false }
@@ -121,6 +128,7 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
   const name = fighters[e.target].name
   switch (e.type) {
     case 'heal':
+      if (e.wanted !== undefined && e.amount === 0) return `${name} ne regagne pas les ${plural(e.wanted, 'PV')} : soin empêché`
       return e.amount > 0 ? `${name} regagne ${plural(e.amount, 'PV')}` : `${name} est déjà au maximum de ses PV`
     case 'damage':
       // Dégâts directs (poison, effets) : le dire, sinon on croit que l'armure a été oubliée.
@@ -138,7 +146,8 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
       if (r.kind === 'cancelled') return `${cancel} sur ${name}`
       if (atCap(e)) return `${name} a déjà ${statusLabel(e.status)} au maximum : rien ne change`
       const status = { id: e.status, stacks: r.stacks, turns: e.turns }
-      const gets = `${name} reçoit ${statusLabel(e.status)} (${lowerFirst(def.describe(status))})`
+      // Un bonus volé (Sceau de vol, lot 3) : le voleur le prend à sa place
+      const gets = `${name} ${e.stolenBy ? 'vole' : 'reçoit'} ${statusLabel(e.status)} (${lowerFirst(def.describe(status))})`
       return cancel ? `${cancel}, puis ${gets}` : gets
     }
     case 'cleanse':
@@ -186,8 +195,18 @@ export function attackLog(
       text: `Tour ${turn} · ${att.name} fait ${attack.roll} : pas de coup, sa compétence le remplace.`,
     }
   }
+  // Jet tombé à vide (Malchance, lot 3) : ni compétence ni coup
+  if (attack.jinxed)
+    return { kind: 'attack', side: attack.attacker, text: `Tour ${turn} · Le jet de ${attack.roll} ${of(att.name)} tombe à vide : ni compétence ni coup.` }
   // Le coup de base : sa valeur tirée, multipliée par Crescendo ou Soliste
   const value = attack.multiplier ? `${attack.value} ×${attack.multiplier}` : String(attack.value)
+  // Critique raté d'un aveuglé (lot 3) : le critique tiré, ou assuré, rate
+  if (attack.blindedBy)
+    return {
+      kind: 'dodge',
+      side: attack.attacker,
+      text: `Tour ${turn} · ${att.name} ${STATUSES[attack.blindedBy].bears ?? `subit ${statusLabel(attack.blindedBy)}`} : son ${attack.critForced ? 'critique assuré' : 'critique'} (${value}) rate ${def.name} !`,
+    }
   if (attack.dodged) {
     return {
       kind: 'dodge',

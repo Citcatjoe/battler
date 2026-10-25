@@ -1464,3 +1464,78 @@ Le reste des mesures (roster nu, Elaria construite, saison, campagne, reliques) 
 **Contrôles** : un test par mécanique dans `combat.test.ts` (« revue des auras et des compétences »), un contrôle d'audit par aura nouvelle et pour le Rempart (`audit.ts` : « bouclier de foi… », « plaie ouverte… », « rempart : épines ou armure fausses »), et un corpus d'audit (`audit.test.ts`) qui les grave chez leurs porteurs aux rangs I et II : aucune anomalie.
 
 **Les deux questions en attente, tranchées** (décisions de l'utilisateur du 2026-10-25, 0.118.1) : **I2 (Brèche) abandonnée**, rien de changé. **X1 appliquée** : les Épines acérées deviennent l'**Aura d'épines**, nom et classement (`look.aura`) seulement. Valeurs, règle et purge inchangées, empreinte `balance.test.ts` identique : aucune mesure à refaire (les valeurs nettes des sections précédentes, « Épines acérées », valent pour l'Aura d'épines). Ce que le classement change, à l'écran et au son seulement : anneau dans l'en-tête, halo, plus de label sous le dé, son « Aura gagnée » (et « Aura perdue » purgée). Le moteur et l'audit ne traitent les auras à part nulle part (ni immunité, ni ordre de purge, ni plafond) ; seule la forge lit `look.aura`, pour une aura plafonnée à une charge (la seconde face qui ne rapporte rien), ce que l'Aura d'épines, cumulable sans plafond, n'est pas. Ids `thorns` gardés.
+
+## 28. Phase 8, lot 3 : les fils minces (2026-10-25)
+
+Les points 2 et 3 du lot 3 (spec du parent) : les ressources à une seule consommatrice (l'esquive, les soins, les dégâts renvoyés) et les « fils » de chaque personnage qui n'avaient qu'une brique ou deux ([PROGRESSION.md](PROGRESSION.md) § 7.2). Proposition et laboratoire : agent Lot3Threads (séries 60 à 69, 400 combats par duel, gravée sur le 3 nu de ses porteurs, contre le roster nu, mêmes graines que `npm run balance`) ; livraison au registre : agent ThreadsBuild. Les séries d'essai (`scripts/lab/threads.ts`) sont retirées : les compétences vivent au registre. **Aucun kit vanilla touché** : tout vit dans les réserves et les répertoires, l'empreinte `balance.test.ts` ne bouge pas.
+
+### Les sept compétences
+
+| Compétence (`id`, statut) | Texte (`describeSkill`) | Famille | Rang (axe) | Réserve | Répertoires | Besoin (offre) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Feinte (`feint`, `feint`) | « +5 % d'esquive. Chaque esquive lui donne un critique assuré. » | Précision (ce qu'elle produit) | +5 % d'esquive (`power`) | Naraxes | Fanchon | `moment:dodge` (tout le roster esquive) |
+| Sève noire (`black-sap`, `blackSap`) | « Chaque soin qu'il reçoit donne 4 Poison à l'adversaire. » | Affliction | +4 Poison par soin (`power`) | Ervald | Aldric | `moment:heal` |
+| Dette de sang (`blood-debt`, `bloodDebt`) | « L'adversaire saigne de 3 quand il renvoie des dégâts. » | Affliction | +3 Saignement par renvoi (`power`) | Aldric | Brokk | `moment:reflect` |
+| Attiser (`stoke`, pose `burn`) | « +2 à la Brûlure de l'adversaire, qui repart. » · Détail : « Une Brûlure de 3 à un tour de sa fin devient une Brûlure de 5, pour 5 tours ; sans Brûlure, l'adversaire brûle de 2. » | Affliction | +1 Brûlure (`stacks`) | Thaldrin | Ervald | `status:burn` (le producteur d'abord : Ervald l'a une fois ses Feux follets gravés) |
+| Ciel d'orage (`storm-sky`, `stormSky`) | « Au début de chacun de ses tours, l'adversaire perd 1 PV. » | Affliction | +1 PV par tour (`power`) | Thaldrin | — | aucun |
+| Ivresse du sang (`blood-frenzy`, `bloodFrenzy`, `bloodFrenzyStrike`) | « Chacun de ses critiques lui donne deux coups de plus. » (rang II : « …, et +5 % de critique. ») | Tempo | +5 % de critique (`power`) | Gorak | — | `moment:crit` |
+| Coup de massue (`stunning-blow`, pose `stunned`) | « S'il touche, l'adversaire perd sa prochaine action, 1x. » | Tempo (malus) | 1 fois de plus (`limit`) | Morgrut | Ysolde, Brokk, Thaldrin, Elaria | aucun |
+
+Décisions du parent (l'utilisateur absent, choix conservateurs) : **la Feinte va à Naraxes et Fanchon, pas à Elaria** (la plus construite, +18,3 gravée chez elle) ; **Elaria reçoit le Coup de massue** ; la **Sève noire est gardée** malgré son rang II sous la bande (comme la Récolte) ; l'**Ivresse du sang garde le comportement mesuré** (les coups d'un critique pendant une rafale attendent le jet suivant) et l'audit l'accepte. L'id du Coup de massue est `stunning-blow` (icône fixée par le parent ; `mace-blow` dans la proposition).
+
+### Les briques de moteur et d'audit
+
+- **L'Ivresse du sang** (RESOLUTION § 2, coups instantanés) : ses charges sont posées par une réaction au critique. Au critique du coup de base, elles partent juste après le jet ; au critique d'un coup brut (pendant une rafale), elles attendent le prochain jet de leur porteur. **Correction du moteur** : la rafale (`burst`) ne dépensait que le premier statut de coups instantanés ; une charge de l'Ivresse en attente repoussait la Furie des vents de ce jet au jet suivant (28 fois sur 4 000 combats de Gorak gravé). Elle dépense désormais tous les statuts de coups instantanés détenus à son début, dans l'ordre de pose. Aucun kit vanilla ne porte deux de ces statuts : l'empreinte ne bouge pas. **Audit** : « Furie : charge réactive reportée » (vu) au lieu de « rafale reportée » et « Furie en chaîne » pour une charge posée par une réaction au critique d'un coup brut, avec un seul jet de son porteur entre la pose et la rafale ; les coups bruts d'une rafale qui précède dans la même salve ne comptent plus comme « un coup qui passe avant la rafale ».
+- **Attiser** (RESOLUTION § 7) : `fromStatus` sur un statut qui se remplace (la Brûlure, `stacking: 'refresh'`). L'audit « statut multiplié faux » supposait un statut qui s'additionne ; il vérifie désormais qu'un statut qui se remplace repart de ses charges d'avant plus celles de la définition (« statut qui repart »). Texte et détail générés par `describeEffect` et `effectDetail` (« +N à la … , qui repart »). **X2** : une pose qui lit le même statut chez sa cible et s'y ajoute ne gêne pas sa place unique (`eventHooks` retire `slot:burn`) : Attiser nourrit les Feux follets et le Briquet, sans conflit.
+- **Le Ciel d'orage** (RESOLUTION § 2, phase 1) : le premier tick qui frappe l'adversaire (`onTurnStart`, effet `damage` à l'adversaire, source `lightning`). L'audit des familles de dégâts attendait « temporaire » pour tout `statusTick` ; un tick qui frappe l'adversaire est désormais un dégât de l'instant (un tick qui ronge son porteur reste temporaire). Mise en scène minimale : le tick joue comme la Sentence (un coup, son impact), plus le Ronge.
+- **Le Coup de massue** : rien de nouveau (`relation: 'modify'`, `limit`, `stunned`). L'audit gagne un contrôle générique de l'action perdue (« action perdue : <statut> ») : le porteur détenait un statut de contrôle, en perd une charge et ne frappe pas.
+- **Feinte, Sève noire, Dette de sang** : des réactions existantes (`dodge`, `healed`, `reflected`) ; un contrôle d'audit chacune (« feinte », « sève noire », « dette de sang », et leur « non déclenchée »), comme l'Ivresse (« ivresse du sang ») et le Ciel d'orage (« ciel d'orage »).
+
+### Mesures au registre (`scripts/skills.report.ts`, `SKILLS_N=400`, `SKILLS_PART=engrave` puis `rank`)
+
+Gravée sur la face 3 nue de chaque hôte, contre le roster, mêmes graines ; rang II chez les porteurs : rang II moins rang I, mêmes graines (`duelFight`, 400 combats par duel).
+
+| Compétence | Gravée chez ses porteurs (labo → registre) | Moyenne des 10 hôtes | Rang II, porteurs (labo → registre) | Rang II, moyenne | Drapeau |
+| --- | --- | --- | --- | --- | --- |
+| Feinte | Naraxes +11,2 → **+11,2**, Fanchon +9,5 → **+9,5** (Elaria +18,3, hors répertoire) | +10,6 | Naraxes +3,7 → **+3,8**, Fanchon +3,6 → **+3,7** | +3,9 (Elaria +2,9 à Ysolde +5,2) | — |
+| Sève noire | Ervald +8,9 → **+8,9** | +3,6 (Ysolde +20,8, hors répertoire ; les autres +0,5 à +1,0 : sans soin) | Ervald +2,6 → **+2,6** | +0,5 | hors bande (consommatrice, attendu) ; rang II sous la bande, gardé |
+| Dette de sang | Aldric +12,1 → **+12,1** | +1,8 (les autres +0,0 à +1,0 : sans renvoi) | Aldric +4,0 → **+4,0** | +0,4 | hors bande (consommatrice, attendu) |
+| Attiser | Thaldrin +11,7 → **+11,7** ; Ervald +11,1 → **+11,1** | +11,8 | Thaldrin +5,4 → **+5,5** | +7,5 (Thaldrin +5,5 à Brokk +9,3) | — |
+| Ciel d'orage | Thaldrin +10,5 → **+10,5** | +11,0 | Thaldrin +4,8 → **+4,7** | +5,7 | — |
+| Ivresse du sang | Gorak +11,8 → **+11,8** | +10,8 (Morgrut +3,1, sans critique, à Elaria +18,8) | Gorak +3,9 → **+3,9** | +4,2 | — |
+| Coup de massue | Morgrut +15,3 → **+15,3**, Ysolde +13,8 → **+13,8**, Brokk +13,2 → **+13,2**, Thaldrin +13,2 → **+13,2**, Elaria +12,9 → **+12,9** | +12,7 | Morgrut **+5,3**, Ysolde **+6,1**, Brokk **+5,3**, Elaria **+4,9** | +5,3 | — |
+
+**Les valeurs du registre sont celles du laboratoire** (mêmes graines, à ±0,1 près pour les rangs) : la correction de la rafale ne bouge pas l'Ivresse chez Gorak (+11,8, rang +3,9). Le drapeau « hors bande (faible) » de la Sève noire et de la Dette de sang vient de la moyenne des hôtes : une consommatrice ne vaut rien sans sa ressource, et l'offre ne la propose qu'une fois son producteur dans le build (`skillNeeds`).
+
+**Non mesuré** : la valeur chez le porteur réel construit (`npm run ramp`), la campagne et la saison (`npm run campaign`, `npm run season`), et un `npm run balance` (aucun kit vanilla ne change ; l'empreinte `balance.test.ts` le vérifie).
+
+**Contrôles** : un test par mécanique dans `combat.test.ts` (« phase 8, lot 3 : les fils minces » : textes et rangs, chaque réaction, Attiser qui repart, le Ciel d'orage en dégâts directs, l'Ivresse reportée sans retarder une Furie, le Coup de massue 1x par rang, l'offre pertinente et X2) ; un corpus d'audit (`audit.test.ts`, « phase 8, lot 3, les fils minces ») qui grave chacune chez ses porteurs et ses producteurs, aux rangs I et II : aucune anomalie.
+
+## 29. Phase 8, lot 3 : les malus de famille (2026-10-25)
+
+Proposition et mesures de Lot3Maluses (laboratoire série 50, briques prototypées dans une copie du moteur, `logs/lab/lot3-maluses/`) ; livraison par MalusBuild. La Garde, la Précision, la Fortune, le Soin et les Sceaux n'avaient pas de malus : chacun en reçoit un, avec une petite brique de moteur ([RESOLUTION.md](RESOLUTION.md) § 3, § 5 règle 6, § 6 ; [STATUTS.md](STATUTS.md) § Catalogue). Ce sont des généralistes : aucune compétence du jeu ne les lit encore, aucun partenaire au-delà de +0,25 en log-cote (le plus proche : Malchance × Esquive améliorée, +0,17, chez Naraxes).
+
+| Compétence (statut) | Texte | Brique | Hors kit ; répertoire | Gravée, moyenne des hôtes (registre) | Chez ses porteurs | Rang II (moyenne ; porteurs) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Brise-garde (`guard-break`, Garde brisée) | « S'il touche, le prochain coup que reçoit l'adversaire ×2 et brise son armure temporaire. » | `shatters` | Morgrut ; Brokk | **+14,5** (de Fanchon +12,2 à Morgrut +18,6) | Morgrut +18,6, Brokk +14,3 | **+6,2** ; Morgrut +5,8, Brokk +7,8 |
+| Malchance (`jinx`) | « Le prochain jet de l'adversaire sur une compétence tombe à vide. » | `jinxesRoll` | Naraxes ; Fanchon | **+18,2** (de Naraxes +15,7 à Morgrut +22,1) | Naraxes +15,7, Fanchon +16,1 | **+4,6** |
+| Éclair aveuglant (`blinding`, Aveuglé) | « Les critiques de l'adversaire ratent, jusqu'à la fin du combat. » | `blinds` | Thaldrin ; Ysolde | **+13,6** (d'Elaria +10,8 à Morgrut +17,2) | Thaldrin +13,8, Ysolde +15,8 | **+4,8** (+10 % de coups ratés) |
+| Hémorragie (`hemorrhage`) | « 4 dégâts directs à l'adversaire. L'adversaire ne regagne plus de PV, jusqu'à la fin du combat. » | `modifyHealing` | Gorak ; Aldric | **+14,1** (de Naraxes +11,9 à Brokk +16,2) | Gorak +14,0, Aldric +13,6 | **+4,8** (+2 PV) |
+| Confiscation (`seal-theft`, Sceau de vol) | « Vole le prochain bonus de l'adversaire. » | `stealsBonus` | Aldric ; Ysolde | **+10,0** (de Fanchon +8,2 à Morgrut +12,1) | Aldric +9,3, Ysolde +11,5 | **+2,5**, hors bande (faible) ; Aldric +3,1 |
+
+Mesures au registre : `SKILLS_N=400 SKILLS_ENGRAVE=guard-break,jinx,blinding,hemorrhage,seal-theft` sur `scripts/skills.report.ts` (`logs/skills/2026-10-25-17-41-44_v0.118.1.md`), face 3 nue, 400 combats par duel (± 1,2 point par hôte). **Identiques au laboratoire** de Lot3Maluses à la décimale, hôte par hôte et au rang II : les briques réécrites tirent le hasard dans le même ordre que la copie. Le seul écart de règle avec la copie (Aveuglé n'ouvre plus la fenêtre `dodge` du défenseur) ne touche que la Conque, absente du roster nu.
+
+**Décisions prudentes du parent** (l'utilisateur absent ; à lui de trancher en jeu) :
+- **Hémorragie garde la perte de 4 PV** : l'arrêt des soins seul vaut +1,9 gravé (deux soigneurs sur neuf). Sans la perte, sa place serait une relique (un contre qu'on choisit).
+- **Aveuglé : un coup raté n'ouvre que la fenêtre « raté » de l'attaquant**, pas l'esquive du défenseur. S'il doit compter comme une esquive, il nourrira les consommatrices d'esquive (la Feinte du lot 3).
+- **Le texte de Brise-garde** met la condition en tête (« S'il touche, … »), comme Pile ou face : c'est la règle des compétences qui modifient leur coup. La proposition l'écrivait à la fin ; la tête évite une règle de texte de plus.
+- **Confiscation, rang II au bord bas** (+2,5 ; Aldric +3,1) : le seul axe essayé, un vol de plus. Un rang d'intensité (« le bonus volé, +1 charge ») reste une piste non mesurée.
+
+**Écarts de règle connus** : Malchance ne se déclenche pas sur un dé imposé (combat test), par construction. Une pièce (Pile ou face) déjà posée part encore après un jet tombé à vide, à 0. Un bonus volé que le voleur ne sait pas utiliser lui reste (l'Aura de décoction chez Aldric empoisonne à ses coups). Le Duo : la première charge vole l'Aura mélodieuse ; le `duo` lui-même, un bonus et pas un mécanisme, se vole aussi.
+
+**Affichage** (minimal, mise en scène à suivre) : chaque malus a son état dans la zone d'état (« Garde brisée », « Malchance », « Aveuglé », « Hémorragie », « Sceau de vol ») ; leur emblème est l'icône de la compétence (planche v23), en attendant des pièces rondes peintes. La Garde brisée entre dans la zone de surcharge (son label sous le dé du défenseur). Le jet tombé à vide, le coup raté, le soin empêché et le vol se rejouent avec les étapes existantes (`roll`, `attack`) ; leur mise en scène dédiée, les textes flottants « Malchance », « Aveuglé », « Volé » et le « 0 » barré sont à faire.
+
+**Contrôles** : un test par brique dans `combat.test.ts` (« phase 8, lot 3 : les malus de famille »), des contrôles d'audit (`audit.ts` : « malchance : jet faux », « malchance non déclenchée », « aveuglé : critique porté », « aveuglé : raté faux », « garde brisée : coup faux », « garde brisée : charge », « garde brisée : armure restante », « hémorragie : soin reçu », « sceau de vol : vol faux », « sceau de vol : bonus gardé », « sceau de vol : charge non consommée » ; les contrôles existants lisent `jinxed`, `blindedBy`, `shatteredBy`, `stolenBy` et le filtre des soins) et un corpus d'audit (`audit.test.ts`) qui grave les cinq chez leurs deux porteurs aux rangs I et II : aucune anomalie. La série 50 du laboratoire (`scripts/lab/maluses.ts`) est retirée.
+
+**Consommatrices possibles** (non mesurées, pour un lot suivant) : une Représaille de Brokk qui renvoie plus contre une garde brisée ; chez Naraxes, « +1 coup de chance quand un jet de l'adversaire tombe à vide » ; la Curée de Gorak qui lirait aussi l'Hémorragie ; une Vindicte d'Aldric qui compterait un vol comme un renvoi.
+

@@ -297,9 +297,14 @@ export function Fighter({
               // Le sens dit gain ou perte de la chose nommée (`Badge.rises`) : un statut gagné monte, même un malus
               <div
                 style={f.lift ? at(6 - f.row * 9) : at(30 + f.row * 9)}
-                className={`${f.badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[f.badge.tone]}`}
+                className={`${f.badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[f.badge.tone]} ${f.badge.struck ? 'line-through decoration-4' : ''}`}
               >
                 {f.badge.text}
+              </div>
+            ) : f.missed ? (
+              // Le critique d'un aveuglé rate (lot 3) : rien à esquiver, le coup passe à côté
+              <div style={at(18)} className="dodge-text float-text absolute inset-x-0 text-4xl text-stone-200 [-webkit-text-stroke:3px_#292524]">
+                RATÉ !
               </div>
             ) : f.dodged ? (
               <div style={at(18)} className="dodge-text float-text absolute inset-x-0 text-4xl text-cyan-200 [-webkit-text-stroke:3px_#164e63]">

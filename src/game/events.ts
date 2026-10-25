@@ -298,8 +298,11 @@ export function describeEffect(effect: Effect, grafted = false): string {
         const from = effect.fromStatus
         const whose = from.who === 'opponent' ? "de l'adversaire" : 'du porteur'
         const plus = effect.stacks ? `, puis +${effect.stacks}` : ''
-        if (from.status === effect.status && from.who === (effect.target ?? 'self'))
+        if (from.status === effect.status && from.who === (effect.target ?? 'self')) {
+          // Attiser (lot 3) : un statut qui se remplace (la Brûlure) repart, plus fort de ses charges d'avant
+          if (def.stacking === 'refresh' && from.factor === 1) return `+${effect.stacks} à la ${def.name} ${whose}, qui repart`
           return `${MULTIPLY[from.factor + 1] ?? `multiplie par ${from.factor + 1}`} le ${def.name} ${whose}${plus}`
+        }
         return `+${from.factor} ${def.name}${foe ? " à l'adversaire" : ''} par charge ${deName(STATUSES[from.status].name)} ${whose}${plus}`
       }
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
@@ -335,6 +338,13 @@ function effectDetail(effect: Effect): string | undefined {
       const def = STATUSES[effect.status]
       const turns = effect.turns ?? (def.turnsFromStacks ? effect.stacks : undefined)
       const detail = def.detail?.({ id: effect.status, stacks: effect.stacks, turns, power: effect.power })
+      // Attiser (lot 3) : ce que devient le statut qui repart, en exemple, et sans lui
+      const from = effect.fromStatus
+      if (from?.status === effect.status && from.factor === 1 && def.stacking === 'refresh' && def.turnsFromStacks) {
+        const who = effect.target === 'opponent' ? "l'adversaire" : 'il'
+        const n = 3 + effect.stacks
+        return `Une ${def.name} de 3 à un tour de sa fin devient une ${def.name} de ${n}, pour ${n} tours ; sans ${def.name}, ${who} ${def.bears ?? `prend ${def.name}`} de ${effect.stacks}.`
+      }
       return effect.fromHit !== undefined ? `Arrondi au-dessus.${detail ? ` ${detail}` : ''}` : detail
     }
     case 'release':

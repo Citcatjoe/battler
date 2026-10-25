@@ -310,8 +310,9 @@ describe('écrans', () => {
     // Critique et esquive imposés, bouclier, modificateurs qui s'usent sur le coup (Fausse note, Ferveur), réactions au coup
     // (Rancune comprise, 0.114.0). Pas d'aura (agit à chaque coup), pas de modificateur durable (Affaibli, Force de l'ours),
     // pas de Pile ou face ni de Furie
-    // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé
-    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'lifesteal', 'momentum', 'riposte'].sort())
+    // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé. La Garde brisée (lot 3) y
+    // entre : elle double le coup qui la consomme (label « Garde brisée ×2 » sous le dé du défenseur)
+    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte'].sort())
     for (const id of STATUS_IDS) {
       const def = STATUSES[id]
       if (def.coinToss || def.extraStrikes || isAura(id)) expect(isSurcharge(id), def.name).toBe(false)
@@ -445,8 +446,11 @@ describe('écrans', () => {
 
   it("la section Statuts ne liste que les statuts en jeu de la zone d'état : une aura ou un mécanisme appartient à sa compétence", () => {
     const html = renderToString(<StatusesSection nav={{ go: noop }} filter="" />)
+    // L'index seul : la fiche du statut choisi cite ses sources, dont une aura qui porte le nom de sa compétence (la
+    // Feinte, lot 3, pose des Critiques assurés)
+    const index = html.slice(html.indexOf('aria-label="Statuts"'), html.indexOf('</nav>'))
     for (const e of statusCatalog()) {
-      const listed = html.includes(`>${e.def.name.replace(/'/g, '&#x27;')}<`)
+      const listed = index.includes(`>${e.def.name.replace(/'/g, '&#x27;')}<`)
       expect(listed, e.id).toBe(e.inGame && STATUS_PLACE[e.id].place === 'tray')
     }
   })

@@ -39,6 +39,7 @@ import {
   statusAgeLog,
   statusReactionLog,
   statusTickLog,
+  STOLEN_BADGE,
   type Badge,
   type LogEntry,
 } from './narration'
@@ -136,7 +137,8 @@ export interface EffectFx {
 export type Float =
   | { key: number; kind: 'title'; text: string; subtitle?: string }
   | { key: number; kind: 'badge'; badge: Badge; row: number; lift: boolean }
-  | { key: number; kind: 'hit'; damage: number; crit: boolean; dodged: boolean; tone: DamageTone }
+  /** `missed` : le critique d'un aveuglé qui rate (lot 3) : « RATÉ », pas « ESQUIVE », le défenseur n'a rien fait */
+  | { key: number; kind: 'hit'; damage: number; crit: boolean; dodged: boolean; tone: DamageTone; missed?: true }
 
 /** Événement de scène en cours (`scenes.ts`) : `source` lance, `target` reçoit ; `key` relance l'animation. */
 export interface SceneFx {
@@ -164,6 +166,8 @@ export interface SkillSignal {
   from: string
   to: Side[]
   polarity: Polarity
+  /** Un bonus volé (Sceau de vol, lot 3) : son icône file du volé vers le voleur, à la place de la lueur */
+  icon?: StatusId
 }
 
 /** Relique qui agit : son sceau s'illumine dans l'en-tête de son camp (RelicSeals). */
@@ -342,10 +346,10 @@ export interface FxSpec {
   /** Textes qui ne viennent d'aucun effet, sur leur cible : « Tour perdu » */
   notes?: readonly (Badge & { target: Side })[]
   /**
-   * Poses dont les charges se lisent ailleurs, sur le coup ou sur un statut (Pourfendre, Virulence) : leur texte dit le
-   * gain, « +10 Poison », le compteur de la zone d'état monte d'autant au même instant (M42)
+   * Poses dont les charges se lisent ailleurs, sur le coup ou sur un statut (Pourfendre, Virulence, Attiser), avec leur
+   * gain : leur texte dit le gain, « +10 Poison », le compteur de la zone d'état monte d'autant au même instant (M42)
    */
-  counted?: readonly AppliedEffect[]
+  counted?: ReadonlyMap<AppliedEffect, number>
 }
 
 /**
@@ -366,20 +370,23 @@ export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOm
   const badges: Badge[] = [
     ...mine
       .filter((e) => !echoes.includes(e))
-      .map((e) =>
-        e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks > 0 && fx.counted?.includes(e)
-          ? { ...effectBadge(e), text: `+${e.result.stacks} ${STATUSES[e.status].name}` }
-          : effectBadge(e),
-      ),
+      .map((e) => {
+        const gain = fx.counted?.get(e)
+        return e.type === 'applyStatus' && e.result.kind === 'applied' && gain !== undefined && gain > 0
+          ? { ...effectBadge(e), text: `+${gain} ${STATUSES[e.status].name}` }
+          : effectBadge(e)
+      }),
     ...(fx.notes?.filter((n) => n.target === side) ?? []),
   ]
   const floats: DistributiveOmit<Float, 'key'>[] = []
   if (isSource && fx.title) floats.push({ kind: 'title', text: fx.title, ...(subtitle && { subtitle }) })
   badges.forEach((badge, i) => {
-    if (!struck) floats.push({ kind: 'badge', badge: { text: badge.text, tone: badge.tone, rises: badge.rises }, row: i, lift: false })
+    // Sans la cible d'une note ; barré pour un soin empêché (lot 3)
+    const shown: Badge = { text: badge.text, tone: badge.tone, rises: badge.rises, ...(badge.struck && { struck: badge.struck }) }
+    if (!struck) floats.push({ kind: 'badge', badge: shown, row: i, lift: false })
     else {
       const row = badges.slice(0, i).filter((b) => b.rises === badge.rises).length
-      floats.push({ kind: 'badge', badge: { text: badge.text, tone: badge.tone, rises: badge.rises }, row, lift: badge.rises })
+      floats.push({ kind: 'badge', badge: shown, row, lift: badge.rises })
     }
   })
   return floats
@@ -597,7 +604,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     emit({ channel: 'strike', strike: next })
     // Le coup de base, d'un type unique : le « coup blanc » (2026-10-24), la teinte d'un coup
     if (next?.landed)
-      emit({ channel: 'float', side: other(next.attacker), float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged, tone: DAMAGE_SOURCES.strike.tone } })
+      emit({
+        channel: 'float',
+        side: other(next.attacker),
+        float: { key: key++, kind: 'hit', damage: next.damage, crit: next.crit, dodged: next.dodged, tone: DAMAGE_SOURCES.strike.tone, ...(next.blindedBy && { missed: true as const }) },
+      })
   }
   const setBlow = (next: Blow | null) => {
     blow = next
@@ -739,8 +750,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    * Ce que le coup qui vient de toucher (attaque, ou pièce sur pile) produit sans nouveau coup, sur sa cible ou sur
    * le frappeur : la réaction du frappeur sur `hit` qui pose des statuts sur sa cible (poison de l'Aura de décoction)
    * ou lui rend des PV (Vol de vie), ou la compétence qui modifie le coup s'il touche (Pourfendre : Saignement ;
-   * Crescendo, Soliste : ce coup ×N, sans autre effet ; Pile ou face : son mécanisme, muet, M26). Jouées à son impact
-   * (`landRide`, docs/MISE_EN_SCENE.md, M14).
+   * Crescendo, Soliste : ce coup ×N, sans autre effet ; Pile ou face : son mécanisme, muet, M26), ou la réaction du
+   * frappeur au coup ou à son critique qui ne lui pose qu'un mécanisme (l'Ivresse du sang, lot 3 : ses coups de plus,
+   * muets, M39). Jouées à son impact (`landRide`, docs/MISE_EN_SCENE.md, M14).
    */
   const ridesOf = (hit: Beat): Beat[] => {
     const striker = hit.type === 'attack' ? hit.attack.attacker : hit.type === 'coin' ? hit.side : undefined
@@ -755,13 +767,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           relationOf(fighters[striker].events.find((e) => e.id === next.event.eventId) ?? {}) === 'modify' &&
           quietOrOnTarget(next.event.effects)
         )
-      return (
-        next.type === 'statusReaction' &&
-        next.side === striker &&
-        next.trigger === 'hit' &&
-        next.effects.length > 0 &&
-        next.effects.every((e) => (e.type === 'applyStatus' && e.target !== striker) || (e.type === 'heal' && e.target === striker))
-      )
+      if (next.type !== 'statusReaction' || next.side !== striker || next.effects.length === 0) return false
+      if (next.trigger === 'hit' && next.effects.every((e) => (e.type === 'applyStatus' && e.target !== striker) || (e.type === 'heal' && e.target === striker))) return true
+      return (next.trigger === 'hit' || next.trigger === 'crit') && next.effects.every((e) => e.type === 'applyStatus' && e.target === striker && isMechanic(e.status))
     })
   }
   /** Étapes déjà jouées avec le coup qui les a provoquées : à leur place, il ne reste rien à montrer */
@@ -773,6 +781,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   const snapped = new Set<number>()
   /** Étapes jouées au rythme d'une rafale : réactions à un coup de rafale, reliques du dé d'un coup de rafale (M17 bis) */
   const brisk = new Set<number>()
+  /**
+   * Coups dont l'esquive assurée vient d'un bonus volé par la greffe de leur propre jet (Sceau de vol, lot 3) : son label
+   * ne tombe pas avec le dé, avant le vol, mais au départ du coup (M8)
+   */
+  const lateDodge = new Set<number>()
+  /**
+   * La face de la compétence qui pose ce statut chez `side` : un mécanisme ou une aura qui agit d'eux-mêmes allument son
+   * sceau, et l'anneau de l'aura (M39)
+   */
+  const posingFace = (side: Side, status: StatusId) =>
+    fighters[side].events.map((e) => (e.effects.some((x) => x.type === 'applyStatus' && x.status === status) ? rollFace(e.trigger) : undefined)).find((f) => f !== undefined)
 
   /* ----- Mise en scène de chaque sorte d'étape ----- */
 
@@ -785,11 +804,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   function showEffects(source: Side | null, title: string, effects: readonly AppliedEffect[], apply: () => void, o: ShowOpts = {}) {
     const hits = source !== null && o.blows ? effects.filter((e) => e.type === 'damage' && e.target !== source && e.amount > 0) : []
     const landing = hits.length > 0 ? effects.filter((e) => !hits.includes(e) && e.target === hits[0].target) : []
+    // Un bonus volé (Sceau de vol, lot 3) : son icône file du lanceur, qui le perd, vers le voleur ; « Volé » sur le volé
+    const stolen = effects.filter((e): e is Extract<AppliedEffect, { type: 'applyStatus' }> => e.type === 'applyStatus' && e.stolenBy !== undefined && e.result.kind === 'applied')
+    const notes = [...(o.notes ?? []), ...stolen.map((e) => ({ ...STOLEN_BADGE, target: other(e.target) }))]
     if (o.lead !== 0) hold('LEAD')
     // Le signal file vers la zone d'état où un état apparaît ; de l'anneau d'une aura qui n'en pose pas, vers la cible
-    // de ses dégâts directs, qui tombent à son arrivée (M19 bis)
+    // de ses dégâts directs, qui tombent à son arrivée (M19 bis). Un bonus volé file toujours vers le voleur, aura
+    // comprise, son icône à la place de la lueur, en rouge : une confiscation
     const ringed = o.ring && hits.length > 0 ? { to: [hits[0].target], polarity: 'negative' as const } : undefined
-    const aim = o.signal !== undefined && source !== null ? (signalTargets(effects) ?? ringed) : undefined
+    const targets = signalTargets(effects) ?? ringed
+    const theft = stolen.length > 0 ? { to: [...new Set([...(targets?.to ?? []), stolen[0].target])], polarity: 'negative' as const, icon: stolen[0].status } : undefined
+    const aim = o.signal !== undefined && source !== null ? (theft ?? targets) : undefined
     // Une relique s'annonce (sceau et label) au départ de son signal, ses effets tombent à son arrivée (M23)
     const early = !!aim && !!o.relic
     const announce = () => {
@@ -804,7 +829,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (!early) o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)
     if (cue) sound(cue)
-    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes: o.notes, counted: o.counted }, o.relic)
+    showFx({ source, title, effects: effects.filter((e) => !hits.includes(e) && !landing.includes(e)), notes, counted: o.counted }, o.relic)
     if (!early && o.special) addSpecial(o.special)
     // Ce qu'il déclenche (un soin, un renvoi : M41) part au milieu de sa lecture, ou de celle de son dernier coup, et la
     // prolonge ; en rafale, la réaction suivante part sans attendre (M17 bis)
@@ -877,11 +902,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     setBlow(null)
   }
 
-  /** Surcharges au résultat du dé : l'esquive assurée, le bonus d'une relique de coup, dont le sceau s'illumine. */
-  const rollSpecials = (attack: Attack) => {
+  /**
+   * Surcharges au résultat du dé : l'esquive assurée, le bonus d'une relique de coup, dont le sceau s'illumine. `late` :
+   * l'esquive assurée vient d'un bonus que la greffe de ce jet va voler, elle attend le départ du coup (`lateDodge`).
+   */
+  const rollSpecials = (attack: Attack, late = false) => {
     if (attack.relicBonus?.length && !attack.dodged)
       emit({ channel: 'relicPulse', side: attack.attacker, relics: attack.relicBonus.map((b) => b.relic) })
-    for (const s of attackSpecials(attack).roll) addSpecial(s)
+    for (const s of attackSpecials(attack).roll.slice(late ? 1 : 0)) addSpecial(s)
   }
 
   /**
@@ -900,7 +928,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
   /**
    * Ce que le coup produit sans nouveau coup tombe à son impact, avec son label (Vol de vie) ; son son suit le Coup
-   * d'un battement (SONS.md § 4.1).
+   * d'un battement (SONS.md § 4.1). Une réaction qui ne pose qu'un mécanisme (l'Ivresse du sang) n'a ni son ni texte : le
+   * sceau de la compétence qui l'a posée s'allume, et son anneau (M39).
    */
   function landRide(ride: Beat) {
     const side = ride.type === 'event' ? ride.event.side : ride.type === 'statusReaction' ? ride.side : undefined
@@ -909,6 +938,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (ride.type === 'statusReaction') {
       const special = reactionSpecial(ride.status, ride.side === ride.owner ? 'attacker' : 'defender', ride.effects)
       if (special) addSpecial(special)
+      if (ride.effects.every((e) => e.type === 'applyStatus' && isMechanic(e.status))) pulse(ride.side, posingFace(ride.side, ride.status))
     }
     settle(ride)
     showStatuses(ride.id)
@@ -967,17 +997,23 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    */
   const answersOf = (beat: Beat) => children[beat.id].filter((next) => answersEffect(next) && !absorbed.has(next.id))
   /**
-   * Les poses dont les charges se lisent ailleurs (sur le coup : Pourfendre ; sur un statut : Virulence) : leur texte dit
-   * le gain (M42). Lues dans la définition de la compétence, effet par effet.
+   * Les poses dont les charges se lisent ailleurs (sur le coup : Pourfendre ; sur un statut : Virulence, Attiser) et leur
+   * gain, que dit leur texte (M42). Lues dans la définition de la compétence, effet par effet. Le gain d'un statut qui
+   * repart (`refresh`, la Brûlure d'Attiser) est ce que son compteur gagne, pas sa nouvelle valeur.
    */
-  function countedOf(beat: Beat): AppliedEffect[] {
-    if (beat.type !== 'event') return []
+  function countedOf(beat: Beat): Map<AppliedEffect, number> {
+    const gains = new Map<AppliedEffect, number>()
+    if (beat.type !== 'event') return gains
     const def = fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
-    if (!def || def.effects.length !== beat.event.effects.length) return []
-    return beat.event.effects.filter((_, k) => {
+    if (!def || def.effects.length !== beat.event.effects.length) return gains
+    beat.event.effects.forEach((e, k) => {
       const asked = def.effects[k]
-      return asked.type === 'applyStatus' && (asked.fromHit !== undefined || asked.fromStatus !== undefined)
+      if (e.type !== 'applyStatus' || e.result.kind !== 'applied' || asked.type !== 'applyStatus' || (asked.fromHit === undefined && asked.fromStatus === undefined)) return
+      const held = (statuses: readonly Status[] | undefined) => statuses?.find((s) => s.id === e.status)?.stacks ?? 0
+      const restarts = STATUSES[e.status].stacking === 'refresh'
+      gains.set(e, restarts ? held(beat.state.statuses[e.target]) - held(beats[beat.id - 1]?.state.statuses[e.target]) : e.result.stacks)
     })
+    return gains
   }
 
   /** À l'impact : les statuts posés et les PV rendus, les jauges qui comptent le coup, puis la plaie qui coule. */
@@ -1057,6 +1093,37 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   }
 
   /**
+   * Un jet tombé à vide (Malchance, lot 3 ; docs/MISE_EN_SCENE.md, M46) : sa face s'est allumée avec le dé (étape `roll`) ;
+   * un battement après, à la place de l'élan, le statut qui l'a fait tomber à vide flotte sur son porteur avec Tour
+   * perdu (il ne peut pas agir : SONS.md § 9.3), et sa charge part. Ni élan, ni coup, ni chiffre.
+   */
+  function fizzle(beat: Extract<Beat, { type: 'attack' }>) {
+    const roll = beats[beat.cause!]
+    const by = roll.type === 'roll' ? roll.jinxedBy : undefined
+    sound('stun')
+    if (by) emitFloats({ source: null, title: '', effects: [], notes: [{ target: beat.attack.attacker, text: STATUSES[by].name, tone: 'negative', rises: false }] })
+    settle(beat)
+    showStatuses(beat.id)
+    log(attackLog(beat.turn, beat.attack, fighters, hp[other(beat.attack.attacker)]))
+  }
+
+  /**
+   * Les textes de l'impact qui ne viennent d'aucun effet (lot 3) : « Aveuglé » sur l'attaquant dont le critique rate
+   * (M47) ; l'armure temporaire brisée par une garde brisée, sur le défenseur, avec sa disparition de la zone d'état (M48).
+   */
+  function impactNotes(beat: Extract<Beat, { type: 'attack' }>): (Badge & { target: Side })[] {
+    const { attack } = beat
+    const defender = other(attack.attacker)
+    const notes: (Badge & { target: Side })[] = []
+    if (attack.blindedBy) notes.push({ target: attack.attacker, text: STATUSES[attack.blindedBy].name, tone: 'negative', rises: false })
+    if (attack.shatteredBy && !attack.dodged)
+      for (const s of beats[beat.id - 1]?.state.statuses[defender] ?? [])
+        if (STATUSES[s.id].shield && !beat.state.statuses[defender].some((x) => x.id === s.id))
+          notes.push({ target: defender, text: `${STATUSES[s.id].name} brisée`, tone: 'negative', rises: false })
+    return notes
+  }
+
+  /**
    * Le coup d'une action : le dé roule, retombe, l'élan part, l'impact tombe. `rolled` : le dé est déjà tombé (étape
    * `roll`, et la compétence greffée qui a suivi, ses reliques du dé aussi) : le coup part de là, sans nouveau jet.
    */
@@ -1084,6 +1151,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const after = consequencesOf(beat)
     const base = hp
 
+    // Jet tombé à vide (Malchance) : il se lit comme un tour perdu (M46)
+    if (attack.jinxed) {
+      fizzle(beat)
+      hold('READ_HOLD')
+      return
+    }
+
     // Jet remplacé par sa compétence : pas d'élan ; la compétence qui suit prend le relais un battement après le dé
     // posé, comme l'élan d'un coup (docs/MISE_EN_SCENE.md, M10)
     if (attack.replaced) {
@@ -1095,7 +1169,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     }
 
     if (!rolled && !relicked) hold('DICE_READ')
-    if (attack.crit) {
+    // L'esquive assurée d'un bonus que la greffe de ce jet vient de voler : au départ du coup, après le vol (M8)
+    if (lateDodge.has(beat.id)) addSpecial(specials.roll[0])
+    // Le critique d'un aveuglé s'annonce comme tout critique, puis rate (M47) : ni arrêt sur image, ni chiffre
+    if (attack.crit || attack.blindedBy) {
       patchDice({ crit: true, critForced: attack.critForced })
       for (const s of specials.crit) addSpecial(s)
       hold('CRIT_ANNOUNCE')
@@ -1111,6 +1188,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showStatuses(beat.id)
     setStrike({ ...attack, key: id, landed: true })
     for (const s of specials.impact) addSpecial(s)
+    const notes = impactNotes(beat)
+    if (notes.length > 0) emitFloats({ source: null, title: '', effects: [], notes })
     log(attackLog(beat.turn, attack, fighters, hp[other(attacker)]))
     afterImpact(after, after.flow ? 'STRIKE_FLOW_HOLD' : 'STRIKE_HOLD', 'REACTION_LEAD')
   }
@@ -1123,7 +1202,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   function stageVolleyStrike(beat: Extract<Beat, { type: 'attack' }>, index: number | undefined, face: number | undefined, grouped: boolean, rolled: boolean) {
     const { attack } = beat
     const specials = attackSpecials(attack)
-    patchDice({ active: index, crit: attack.crit, critForced: attack.critForced, critMultiplier: attack.critMultiplier })
+    patchDice({ active: index, crit: attack.crit || !!attack.blindedBy, critForced: attack.critForced, critMultiplier: attack.critMultiplier })
     if (!rolled) {
       if (labels.length > 0) clearSpecials()
       pulse(attack.attacker, face)
@@ -1133,6 +1212,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     for (const s of specials.crit) addSpecial(s)
     const after = consequencesOf(beat)
     const base = hp
+    if (attack.jinxed) {
+      fizzle(beat)
+      hold('VOLLEY_STRIKE_HOLD')
+      return
+    }
     if (attack.replaced) {
       // Le dé de la rafale ressort, son dé de l'en-tête s'allume, et sa compétence suit sans attente
       settle(beat, base)
@@ -1142,6 +1226,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       return
     }
     const id = key++
+    if (lateDodge.has(beat.id)) addSpecial(specials.roll[0])
     setStrike({ ...attack, key: id, landed: false, fast: true })
     hold('VOLLEY_WIND')
     if (attack.crit && !attack.dodged) hold('VOLLEY_CRIT_FREEZE')
@@ -1150,6 +1235,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     showStatuses(beat.id)
     setStrike({ ...attack, key: id, landed: true, fast: true })
     for (const s of specials.impact) addSpecial(s)
+    const notes = impactNotes(beat)
+    if (notes.length > 0) emitFloats({ source: null, title: '', effects: [], notes })
     log(attackLog(beat.turn, attack, fighters, hp[other(attack.attacker)]))
     afterImpact(after, after.flow ? 'VOLLEY_FLOW_HOLD' : 'VOLLEY_STRIKE_HOLD', 'VOLLEY_REACTION_LEAD', true)
   }
@@ -1221,9 +1308,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         if (skill) snapped.add(skill.id)
         // Un jet greffé : son dé est déjà tombé, sa compétence s'est déjà montrée (étape `roll`)
         const rolled = beat.cause !== undefined && beats[beat.cause].type === 'roll'
-        // Sa greffe a posé une rafale instantanée qui part juste après ce coup (la Curée) : pas de repos, la rafale suit
-        // au rythme de ses coups (M27)
-        const burst = rolled && children[beat.cause!].some((g) => g.type === 'event' && children[g.id].some((f) => f.type === 'flurry'))
+        // Sa greffe a posé une rafale instantanée qui part juste après ce coup (la Curée), ou ce qu'il produit à son impact
+        // (l'Ivresse du sang, au critique) : pas de repos, la rafale suit au rythme de ses coups (M27)
+        const poses = (from: number, type: Beat['type']) =>
+          children[from].some((g) => g.type === type && children[g.id].some((f) => f.type === 'flurry' && moment.beats.includes(f.id)))
+        const burst = (rolled && poses(beat.cause!, 'event')) || poses(beat.id, 'statusReaction')
         const volley = volleys.at(-1)
         if (volley?.strikes.includes(beat.id)) {
           uncover(volley)
@@ -1260,10 +1349,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           sound('diceLand')
           setDice({ ...shown, values: [beat.roll], forced: beat.forced })
         }
-        if (grafts.length > 0) pulse(beat.side, beat.roll)
-        if (strikeOf) rollSpecials(strikeOf.attack)
+        // Un jet tombé à vide (Malchance, M46) : sa face s'allume quand même, et la charge attend que le jet tombe à vide
+        if (grafts.length > 0 || beat.jinxedBy) pulse(beat.side, beat.roll)
+        // L'esquive assurée que la greffe de ce jet va voler (Sceau de vol) attend le départ du coup (M8)
+        const dodgeBy = strikeOf?.attack.dodgeBy
+        const late = dodgeBy !== undefined && !(beats[beat.id - 1]?.state.statuses[other(beat.side)] ?? []).some((s) => s.id === dodgeBy)
+        if (late) lateDodge.add(strikeOf!.id)
+        if (strikeOf) rollSpecials(strikeOf.attack, late)
         settle(beat)
-        showStatuses(beat.id)
+        if (!beat.jinxedBy) showStatuses(beat.id)
         log(rollLog(beat.turn, beat.side, beat.roll, fighters))
         // Les reliques du dé partent avec lui, avant la compétence greffée, qui suit alors leur lecture sans second
         // battement (M40)
@@ -1311,7 +1405,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // signal). Le poison subi n'a que son texte. Un statut dont la pose ne change rien n'annonce rien (M25).
         const outward = beat.effects.some((e) => e.target !== beat.side) && !idle(beat.effects)
         const fromRing = STATUS_PLACE[beat.status].place === 'aura'
-        const harms = beat.effects.some((e) => e.type === 'damage')
+        // Un tick qui ronge son porteur (Poison, Brûlure) sonne le Ronge ; un tick qui frappe l'adversaire (Ciel d'orage,
+        // lot 3), un coup, comme la Sentence
+        const harms = beat.effects.some((e) => e.type === 'damage' && e.target === beat.side)
+        const strikes = beat.effects.some((e) => e.type === 'damage' && e.target !== beat.side)
         const base = hp
         showEffects(
           outward ? beat.side : null,
@@ -1323,7 +1420,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             log(statusTickLog(beat.side, beat.status, beat.effects, fighters))
           },
           {
-            ...(harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
+            ...(strikes ? { blows: 'reaction' as const, cue: null, impact: () => 'hit' as const } : harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
             ...(fromRing && { signal: beat.status, ring: true as const }),
             reactions: answersOf(beat),
           },
@@ -1351,9 +1448,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const ring = STATUS_PLACE[beat.status].place === 'aura'
         const mechanic = isMechanic(beat.status)
         const named = wound === 0 && !still && !special && !ring && !mechanic
-        const seal = mechanic
-          ? fighters[beat.side].events.map((e) => (e.effects.some((x) => x.type === 'applyStatus' && x.status === beat.status) ? rollFace(e.trigger) : undefined)).find((f) => f !== undefined)
-          : undefined
+        const seal = mechanic ? posingFace(beat.side, beat.status) : undefined
         const base = hp
         showEffects(
           wound > 0 || still ? null : beat.side,
@@ -1365,11 +1460,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             log(statusReactionLog(beat.side, beat.status, beat.effects, fighters))
           },
           {
-            // Un renvoi de dégâts n'est qu'un coup, même gros ; le vol de vie, un soin ; la plaie, le Ronge
+            // Un renvoi de dégâts n'est qu'un coup, même gros ; le vol de vie, un soin (empêché par l'Hémorragie : son
+            // malus de Soin, lot 3) ; la plaie, le Ronge
             ...(harms
               ? { blows: reflects ? 'lunge' : 'reaction', cue: null, impact: () => 'hit' }
               : def.drainsHit
-                ? { cue: 'heal' }
+                ? { cue: cueOf(beat.side, beat.effects) ?? 'heal' }
                 : wound > 0
                   ? { cue: 'rot', lead: 0, hold: 'WOUND_HOLD' }
                   : {}),
@@ -1403,8 +1499,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         )
         break
       case 'flurry': {
-        // Furie instantanée : la compétence qui la pose vient de s'afficher ; la rafale part sans répéter son nom
-        const chained = beat.cause !== undefined && beats[beat.cause].type === 'event'
+        // Rafale instantanée : la compétence qui la pose vient de s'afficher (Furie des vents), ou le statut qui l'a posée à
+        // l'impact du coup, sceau et anneau allumés (l'Ivresse du sang, lot 3) ; la rafale part sans répéter son nom
+        const chained = beat.cause !== undefined && (beats[beat.cause].type === 'event' || beats[beat.cause].type === 'statusReaction')
         const def = STATUSES[beat.status]
         const apply = () => {
           settle(beat)
@@ -1424,10 +1521,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           // Les dés du statut prennent sa couleur, après le premier (le dé de la Furie, le dé de l'action)
           const outer = volleys.at(-1)
           if (outer) outer.covered = true
+          // À plat pour une rafale instantanée (Furie des vents, Curée, coups de l'Ivresse du sang, lot 3) : ses dés suivent
+          // le jet, sans relancer le gobelet
           const landed = rollVolley(
             strikes.map((b) => b.attack),
             def.look?.dieColor,
-            chained,
+            chained || !!def.instantStrikes,
           )
           volleys.push({ strikes: strikes.map((b) => b.id), next: 0, dice: landed, covered: false })
         }
