@@ -432,9 +432,11 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 
 **2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), décisions de l'utilisateur) : son kit ne change pas. Sa réserve : le **Rempart hérissé** redonne +2 armure temporaire avec ses +2 Épines à chaque armure vidée (A3 ; rang +2 et +2, au lieu de +6 Épines), gravé chez lui **+7,8 → +12,4** (rang II +1,3, toujours faible) ; la **Curée** de son répertoire frappe trois coups (O1), +10,4 → **+12,9** chez lui. Vanilla 49,0 → 48,4 % (800 combats par duel, bruit) ; construit contre construits 44 → 43 % ; saison 48 → 50 %.
 
+**2026-10-25, l'Aura d'épines (0.118.1, revue X1, décision de l'utilisateur)** : sa signature, les Épines acérées, s'appelle désormais **« Aura d'épines »** et se classe en aura : elle l'était sans le nom (permanente, cumulable, sans usure). Règles et valeurs inchangées (empreinte `balance.test.ts` identique, aucune mesure à refaire) ; à l'écran, un anneau dans l'en-tête et un halo vert, plus de label sous le dé quand elle fait saigner, le son « Aura gagnée ». Gravée avec une Aura d'intimidation, le halo du modèle est celui de la dernière posée, chacune a son anneau. Id `thorns` gardé.
+
 **Personnalité : le roc.**
 - **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
-- **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Épines acérées), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
+- **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Aura d'épines), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
 - **Pistes** : devenir plus fort quand le combat dure, résister à tout ce qui déplace ou fait perdre un tour.
 
 - **Fantasy** : le gardien qui ne recule jamais.

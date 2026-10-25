@@ -310,7 +310,8 @@ describe('écrans', () => {
     // Critique et esquive imposés, bouclier, modificateurs qui s'usent sur le coup (Fausse note, Ferveur), réactions au coup
     // (Rancune comprise, 0.114.0). Pas d'aura (agit à chaque coup), pas de modificateur durable (Affaibli, Force de l'ours),
     // pas de Pile ou face ni de Furie
-    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'lifesteal', 'momentum', 'riposte', 'thorns'].sort())
+    // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé
+    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'lifesteal', 'momentum', 'riposte'].sort())
     for (const id of STATUS_IDS) {
       const def = STATUSES[id]
       if (def.coinToss || def.extraStrikes || isAura(id)) expect(isSurcharge(id), def.name).toBe(false)
@@ -337,7 +338,7 @@ describe('écrans', () => {
     expect(spec('evasion', 'defender')).toBe('Esquive assurée [skill minus]')
     expect(spec('bonusArmor', 'defender', -6)).toBe('Armure temporaire −6 [skill minus]')
     expect(spec('riposte', 'defender', 3)).toBe('Riposte −3 [skill minus]')
-    expect(spec('thorns', 'defender')).toBe('Épines acérées [skill minus]')
+    expect(statusSpecial('thorns', 'defender')).toBeUndefined()
     expect(spec('falseNote', 'attacker', -10)).toBe('Fausse note −10 [skill minus]')
     // Le même statut change de signe avec son porteur ; une aura n'a jamais de label
     expect(statusSpecial('lifesteal', 'defender')?.sign).toBe('minus')

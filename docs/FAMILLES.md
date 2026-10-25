@@ -116,7 +116,7 @@ La règle de travail : pour chaque personnage, sa **signature**, ce dont on se s
 | --- | --- | --- | --- |
 | Orcs | frapper fort, et deux fois | Puissance, Tempo, Affliction | Pourfendre (Affliction, 0.70.0 ; Saignée en 0.68.0, Rage du sang, Soin, avant) / Furie des vents (Tempo) / Aura de puissance (Puissance) |
 | Elfes | ne pas être touchée, punir par le critique | Précision, Esquive | Œil de faucon (Précision) / Esquive améliorée (Esquive) / Aura de précision (Précision) |
-| Nains | tenir la ligne, faire payer chaque coup | Garde, Affliction | Peau de pierre (Garde) / Épines acérées (Affliction depuis la 0.114.0, en Saignement depuis la 0.68.0 ; Représailles avant) / Aura d'intimidation (Garde) |
+| Nains | tenir la ligne, faire payer chaque coup | Garde, Affliction | Peau de pierre (Garde) / Aura d'épines (Épines acérées jusqu'à la 0.118.1, une aura depuis, famille inchangée ; Affliction depuis la 0.114.0, en Saignement depuis la 0.68.0 ; Représailles avant) / Aura d'intimidation (Garde) |
 | Morts-vivants | ronger et drainer | Affliction, Soin | Souffle de la tombe (Affliction) / Vol de vie (Soin) / Aura glaciale (Affliction) |
 | Prêtresses | contrôler et durer | Tempo (malus), Sceaux, Soin | Peur (Tempo) / Purification (Sceaux) / Aura de sainteté (Soin) |
 | Voleuses | le hasard et le poison | Fortune, Affliction | Coup de chance (Fortune) / Pile ou face (Fortune) / Aura de décoction (Affliction) |

@@ -2047,7 +2047,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       'Retire son dernier malus (sinon +3 PV) tous les 3 tours',
       '+1 critique assuré au 6e tour, puis tous les 4 tours',
       '+1 vol de vie quand ses PV passent sous 40 %, 1x',
-      '+2 épines acérées quand ses PV passent sous 50 %, 1x',
+      "+2 aura d'épines quand ses PV passent sous 50 %, 1x",
       "+1 critique assuré quand les PV de l'adversaire passent sous 30 %, 1x",
       '3 × 2 dégâts directs au 4e tour',
       'Retire tous ses malus et +5 PV quand ses PV passent sous 35 %, 1x',
@@ -3340,8 +3340,8 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     expect(text('conflagration', 1)).toBe("Si l'adversaire brûle, son prochain coup qui touche lui fait perdre quatre fois sa Brûlure.")
     expect(text('loaded-die')).toBe(typeset('Sa prochaine pièce tombe sur pile : ce coup ×6.'))
     expect(text('loaded-die', 1)).toBe(typeset('Sa prochaine pièce tombe sur pile : ce coup ×7.'))
-    expect(text('bristling-rampart')).toBe('+2 Épines acérées et +2 armure temporaire quand son armure temporaire est vidée.')
-    expect(text('bristling-rampart', 1)).toBe('+4 Épines acérées et +4 armure temporaire quand son armure temporaire est vidée.')
+    expect(text('bristling-rampart')).toBe("+2 Aura d'épines et +2 armure temporaire quand son armure temporaire est vidée.")
+    expect(text('bristling-rampart', 1)).toBe("+4 Aura d'épines et +4 armure temporaire quand son armure temporaire est vidée.")
     expect(text('vendetta')).toBe('+6 Ferveur quand il renvoie des dégâts.')
     expect(text('vendetta', 1)).toBe('+12 Ferveur quand il renvoie des dégâts.')
     for (const id of ['bristling-rampart', 'vendetta']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')

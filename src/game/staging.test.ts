@@ -916,9 +916,11 @@ describe('mise en scène', () => {
           const impact = hits.get(strike.id)!
           const thorns = children[strike.id].find((b) => b.type === 'statusReaction' && b.status === 'thorns')
           expect(thorns, `Épines au coup ${k + 1}`).toBeDefined()
-          // Son label et le Saignement posé tombent au milieu de la lecture du coup, sans s'attarder
+          // Le Saignement posé tombe au milieu de la lecture du coup, sans s'attarder ; l'Aura d'épines (une aura depuis la
+          // revue X1, 0.118.1) n'a pas de label sous le dé, ni de vol de signal en rafale (M17 bis)
           const react = impact + T.VOLLEY_REACTION_LEAD
-          expect(at(m, 'special', react).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES.thorns.name))).toBe(true)
+          expect(at(m, 'special', react).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES.thorns.name))).toBe(false)
+          expect(at(m, 'signal', react).some((c) => c.channel === 'signal')).toBe(false)
           const shown = at(m, 'statuses', react).at(-1)
           expect(shown?.channel === 'statuses' && shown.statuses[0].some((s) => s.id === 'bleed')).toBe(true)
           // Le coup suivant part au rythme de la rafale, comme sans Épines

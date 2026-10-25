@@ -74,6 +74,7 @@ export const STATES: Record<StateId, StateDef> = {
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
   drain: { name: 'Drain', polarity: 'positive', summary: "Ses prochains coups qui touchent lui rendent les PV qu'ils retirent.", counter: 'status' },
   reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup reçu lui revient : une part des dégâts renvoyée, ou un critique.', counter: 'status' },
+  // Épines : sans source depuis la 0.118.1 (l'Aura d'épines se lit sur son anneau), gardé dans le vocabulaire avec son emblème
   thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup reçu fait saigner l'attaquant.", counter: 'status' },
   immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut plus lui être posé.', counter: 'none' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
@@ -131,7 +132,6 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   burn: tray('burn'),
   vulnerable: tray('vulnerable'),
   stunned: tray('lostTurn'),
-  thorns: tray('thorns'),
   ward: tray('immunity'),
   lifesteal: tray('drain'),
   evasion: tray('sureDodge'),
@@ -179,6 +179,9 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   faithShield: aura(),
   sidestep: aura(),
   openWound: aura(),
+  // Revue X1 (0.118.1) : l'Aura d'épines, permanente et cumulable, se lit sur son anneau ; le Saignement qu'elle pose
+  // s'affiche de lui-même chez l'attaquant
+  thorns: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

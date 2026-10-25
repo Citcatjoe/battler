@@ -32,6 +32,18 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.118.1] — 2026-10-25
+
+Décisions de l'utilisateur du 2026-10-25 sur les deux questions laissées en attente par la revue ([REVUE_COMPETENCES.md](docs/REVUE_COMPETENCES.md), [PROGRESSION.md](docs/PROGRESSION.md) § 1.19) : **I2 (Brèche) abandonnée**, **X1 appliquée**.
+
+### Modifié
+- **Les Épines acérées deviennent l'« Aura d'épines »** (X1) : la compétence de Brokk (sa signature, face 1 ; répertoires de Gorak et de Thaldrin) et son statut s'appellent « Aura d'épines » partout où le joueur les lit (compétence, statut, infobulles, compendium, textes du Rempart hérissé et du Collier de ronces). Le statut est classé aura (`look.aura`, vert épine) : **règles inchangées** (même Saignement par charge à chaque coup encaissé, permanente, cumulable, purgeable comme avant ; le moteur et l'audit ne traitent les auras à part nulle part), empreinte `balance.test.ts` inchangée. Ids gardés (`thorns`, compétence et statut) : les renommer remuerait traces, historique et tests pour rien.
+- **Ce que change son classement d'aura, à l'écran et au son** : un anneau dans l'en-tête (barre de compétences) au lieu d'un état dans la zone (`STATUS_PLACE.thorns` : `aura()` ; l'état générique « Épines » reste au vocabulaire, sans source) ; un halo sur le modèle ; plus de label « Épines acérées » sous le dé quand elle répond à un coup (une aura n'est pas une surcharge, `isSurcharge`) ; le signal de sa réaction part de son anneau vers le Saignement posé, sauf dans une rafale (Furie des vents), où la rafale garde son rythme (M17 bis) ; sa pose sonne « Aura gagnée » (Bonus gagné avant ; aussi pour le Rempart hérissé et le Collier de ronces qui en posent), sa purge « Aura perdue » ; l'infobulle dit « Aura : sans durée… ».
+- **Deux auras sur un modèle** (`Fighter.tsx`) : le halo est celui de la dernière aura posée (la première avant), chacune garde son anneau dans la barre de compétences (Brokk : son Aura d'épines et une Aura d'intimidation gravée).
+
+### Retiré
+- **I2 (Brèche)** : abandonnée, rien de changé.
+
 ## [0.118.0] — 2026-10-25
 
 Application de la revue des auras et des compétences ([REVUE_COMPETENCES.md](docs/REVUE_COMPETENCES.md), [PROGRESSION.md](docs/PROGRESSION.md) § 1.19), validée par l'utilisateur : « ce qui n'est pas l'objet d'une remarque est validé ». Valeurs exactement celles de la revue. En attente (questions de l'utilisateur) : I2 Brèche, X1 Épines acérées en aura ; R4 (Purification) écartée.

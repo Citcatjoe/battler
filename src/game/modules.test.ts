@@ -734,9 +734,10 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
     // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2). Les trois auras de la revue des compétences
-    // (Bouclier de foi, Pas de côté, Plaie ouverte) : une aura, son son se déduit de sa nature
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound'])
-    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
+    // (Bouclier de foi, Pas de côté, Plaie ouverte) : une aura, son son se déduit de sa nature ; l'Aura d'épines aussi
+    // depuis la revue X1 (0.118.1)
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns'])
+    family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
     family('heal', ['harvest'])
     // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou

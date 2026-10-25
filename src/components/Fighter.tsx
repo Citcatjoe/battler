@@ -45,12 +45,13 @@ interface Props {
 
 /**
  * Rappel visuel des statuts actifs, d'après leur `look` (registre). Une seule lumière sur le modèle :
- * celle de son aura de personnage (posée sur un 3), jamais un cumul de halos. Le reste : transparence
- * (esquive) et tremblement (peur).
+ * celle de son aura de personnage, jamais un cumul de halos. Avec plusieurs auras (Brokk : son Aura d'épines et une
+ * Aura d'intimidation gravée, 0.118.1), la dernière posée prend le halo ; chacune garde son anneau dans la barre de
+ * compétences. Le reste : transparence (esquive) et tremblement (peur).
  */
 function statusLooks(statuses: readonly Status[]) {
   const looks = statuses.flatMap((s) => (STATUSES[s.id].look ? [{ id: s.id, ...STATUSES[s.id].look }] : []))
-  const aura = statuses.find((s) => isAura(s.id))
+  const aura = statuses.filter((s) => isAura(s.id)).at(-1)
   return {
     aura: aura && { id: aura.id, color: STATUSES[aura.id].look!.aura! },
     opacity: Math.min(1, ...looks.map((l) => l.opacity ?? 1)),

@@ -6,7 +6,7 @@ _Demandée par l'utilisateur : « Je veux qu'on fasse la revue des auras et comp
 
 ## Décisions de l'utilisateur et application (2026-10-25)
 
-« Ce qui n'est pas l'objet d'une remarque est validé. » **Appliqués** : A1 à A5, P1 à P5, R1 à R3, I1 (avec A1 : les deux), I3, I4, O1 à O3, T1 à T7, X2 ; X3 en outil à part (`npm run ramp`). **En attente** (questions de l'utilisateur) : I2 (Brèche), X1 (Épines acérées en aura). **Écartée** : R4. Valeurs exactement celles de la revue ; mesurées ensemble après application (`scripts/skills.report.ts` 400 combats par duel, `BALANCE_N=800 npm run balance`, `npm run campaign` 30 parties, `npm run season`). Détail, choix de l'agent et contrôles : [SORTS.md](SORTS.md) § 27.
+« Ce qui n'est pas l'objet d'une remarque est validé. » **Appliqués** : A1 à A5, P1 à P5, R1 à R3, I1 (avec A1 : les deux), I3, I4, O1 à O3, T1 à T7, X2 ; X3 en outil à part (`npm run ramp`) ; **X1 en 0.118.1** (les Épines acérées deviennent l'Aura d'épines, décision de l'utilisateur du 2026-10-25). **Abandonnée** : I2 (Brèche, même décision). **Écartée** : R4. Valeurs exactement celles de la revue ; mesurées ensemble après application (`scripts/skills.report.ts` 400 combats par duel, `BALANCE_N=800 npm run balance`, `npm run campaign` 30 parties, `npm run season`). Détail, choix de l'agent et contrôles : [SORTS.md](SORTS.md) § 27.
 
 | Id | Statut | Mesure de la revue (seule) | Livrée (ensemble) |
 | --- | --- | --- | --- |
@@ -32,7 +32,8 @@ _Demandée par l'utilisateur : « Je veux qu'on fasse la revue des auras et comp
 | T1 à T7 | **appliqués** | textes | dans les générateurs (`describeSkill`, registres) |
 | X2 Accroche « gêne » | **appliquée** | — | `slot:<statut>` (Esquive améliorée, Brûlure, Pile ou face) ; l'écho de l'offre retire les gênes |
 | X3 Rapport du porteur réel | **appliquée** à part | — | `npm run ramp` (agent RampReport) |
-| I2 Brèche, X1 Épines en aura | **en attente** | — | rien de changé |
+| X1 Épines en aura | **appliquée** (0.118.1) : « Aura d'épines », classée aura (`look.aura`) ; ids `thorns` gardés | — | règles et empreinte inchangées ; anneau, halo, pas de label sous le dé, son d'aura |
+| I2 Brèche | **abandonnée** (2026-10-25) | — | rien de changé |
 | R4 Purification | **écartée** | — | rien de changé |
 
 **Ensemble** : roster vanilla de 45,6 % (Morgrut) à 55,9 % (Thaldrin), pire duel inchangé (Elaria contre Morgrut, 61,9 %), aucune compensation. Construits contre construits (campagne, 30 parties, avant → après) : Ervald 42 → 47 %, Ysolde 43 → 44 %, Fanchon 52 → 54 %, Thaldrin 46 → 43 %, Aldric 56 → 56 %, Brokk 44 → 43 %, Elaria 66 → 63 %, Naraxes 53 → 56 % ; campagne, tous champions, boss atteint 22 → 21 %, acte gagné 12 → 10 %. Saison (4 de 24) : de 37-71 % à 32-69 %, écart-type 10,3 → 10,0 points ; Ervald 38 → 44 %, Fanchon 59 → 56 %, Elaria 71 → 69 %, Morgrut 37 → 32 %.
@@ -79,7 +80,7 @@ Valeurs en points de victoire ; « gravée » : sur la face 3 nue des hôtes, co
 | 22 | **R4** Purification | rang : +6 au repli (au lieu de +3), ou « retire 2 bonus » | rang II gravé, Aldric : +6 : +4,0 → +7,1 ; 2 bonus : +4,0 → +4,0 | +6 : Ysolde +1,9 → +3,5 ; 2 bonus : +2,3 de plus au rang I | +6 : kit vanilla +6,9 → +11,8 (au-dessus) | — | rang | écarté (aucun axe clairement meilleur ; à remesurer si les reliques à malus se multiplient) |
 
 **À trancher, sans mesure de valeur** :
-- **X1. Les Épines acérées sont une aura sans le nom** (relevé par les deux relecteurs, vérifié dans `statuses.ts`) : ni usure, ni durée, ni `spentOnReaction`, donc permanentes, cumulables, purgeables, sans `look.aura` (pas d'anneau, pas rangées parmi les auras au compendium). En faire une aura, ou dire pourquoi elle n'en est pas une (T3 en dépend).
+- **X1. Les Épines acérées sont une aura sans le nom** (relevé par les deux relecteurs, vérifié dans `statuses.ts`) : ni usure, ni durée, ni `spentOnReaction`, donc permanentes, cumulables, purgeables, sans `look.aura` (pas d'anneau, pas rangées parmi les auras au compendium). En faire une aura, ou dire pourquoi elle n'en est pas une (T3 en dépend). **Appliquée en 0.118.1** : « Aura d'épines ».
 - **X2. Une accroche « gêne » (`hinders`)** pour les producteurs d'une même ressource que l'offre orientée (`echoOf`) présente comme liés (Dé creux et Esquive, Briquet et Feux follets, Pièce de foire et Pile ou face), comme l'Embrasement et le Soufflet.
 - **X3. Le rapport du porteur réel** en outil permanent (le script de cette revue, ou la piste 1 de § 13.4).
 

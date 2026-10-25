@@ -1376,8 +1376,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             special,
             ...(seal !== undefined && { onShow: () => pulse(beat.side, seal) }),
             // Une aura agit depuis son anneau : la lueur part de lui (l'Aura de décoction empoisonne à chaque coup ; la
-            // Sentence frappe à chaque soin, M19 bis)
-            ...(ring && { signal: beat.status, ring: true }),
+            // Sentence frappe à chaque soin, M19 bis). Sauf une réaction au coup encaissé dans une rafale (l'Aura d'épines,
+            // une aura depuis 0.118.1) : elle répond à chaque impact, et le vol du signal casserait le rythme (M17 bis)
+            ...(ring && !(brisk.has(beat.id) && def.reactions?.hurt) && { signal: beat.status, ring: true }),
             reactions: answersOf(beat),
             // Réaction au coup : elle part au milieu de sa lecture, sans attente de plus (M17)
             ...(snapped.has(beat.id) && { lead: 0 }),

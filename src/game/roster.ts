@@ -315,7 +315,7 @@ const brokk: CharacterDef = {
   events: [
     {
       id: 'thorns',
-      name: 'Épines acérées',
+      name: "Aura d'épines",
       nature: 'martial',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],

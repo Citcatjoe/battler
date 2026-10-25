@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.118.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.118.1, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-25, version 0.118.0)
+## 0 bis. État des lieux (2026-10-25, version 0.118.1)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.118.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0, la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15), la 0.116.0 (Fanchon à un dé, § 1.16), la 0.117.0 (reliques de source, § 1.17), la 0.117.1 (Esquive améliorée non cumulable, § 1.18) ni la 0.118.0 (revue des auras et des compétences, § 1.19)._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.118.1). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0, la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15), la 0.116.0 (Fanchon à un dé, § 1.16), la 0.117.0 (reliques de source, § 1.17), la 0.117.1 (Esquive améliorée non cumulable, § 1.18), la 0.118.0 (revue des auras et des compétences, § 1.19) ni la 0.118.1 (l'Aura d'épines, § 1.19)._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -48,6 +48,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.117.0 | **Quatre reliques de source**, offertes à tous : Dard de guêpe (2 poison sur un 6), Briquet d'amadou (2 brûlure sur un 6), Pièce de foire (pile ou face sur un 6, recharge 3), Brassard à pointes (+1 riposte au 1er tour) ; elles ouvrent leurs consommatrices ; la règle 7 admet le Poison et la Brûlure vers l'adversaire (§ 1.17) |
 | 0.117.1 | **Esquive améliorée non cumulable** (une charge au plus) ; son rang : +2 dégâts à ses coups en attendant l'esquive ; Elaria construite 67,8 → 65,0 %, builds au-dessus de 65 % 57 → 48 % ; roster nu inchangé (§ 1.18) |
 | 0.118.0 | **La revue des auras et des compétences appliquée** (§ 1.19) : Sentence 3 PV par soin, Vindicte +6, Rempart hérissé +2 armure, Aura de puissance cumulable, Virulence sans condition, Récolte 14 PV, Vol de vie +2 (Ervald), Fausse note deux coups à −4, Siffloter 3 PV, Curée trois coups, Dé pipé ×6, Foudre quatre éclairs (Thaldrin), rangs de Pourfendre, Pile ou face, Feux follets relevés ; trois auras (Bouclier de foi, Pas de côté, Plaie ouverte) ; l'offre lit les gênes (X2) ; `npm run ramp` (X3). Roster de 45,6 à 55,9 %, Ervald 45,7 → 49,7 % ; écart des construits à 10 récompenses 26,1 → 20,9 points |
+| 0.118.1 | **L'Aura d'épines** : les Épines acérées de Brokk portent le nom d'aura qu'elles avaient dans les faits (anneau, halo, plus de label sous le dé, son d'aura) ; règles et équilibre inchangés. La Brèche (I2) est abandonnée (§ 1.19) |
 
 ### Le combat, en une page
 
@@ -87,7 +88,7 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 - **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.113.0 (modèle unique, courbe option B), boss atteint 24 % (26 % attendus), acte gagné 14 % (12 %), sur 30 parties par champion.
 - **Points à surveiller** : depuis la 0.116.0, la barde n'a plus qu'un dé (une gravure ne compte plus double) ; le rang II du Soliste à +8,3 (limite haute) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
 - **Elaria construite** (§ 1.17, § 1.18) : la plus forte presque à chaque build en 0.117.0 (moyenne 67,8 %, 57 % de builds au-dessus de 65 %). **0.117.1** : Esquive améliorée non cumulable (décision de l'utilisateur), moyenne 65,0 %, 48 % au-dessus de 65 %, pire build 44,4, meilleur 90,0 ; elle reste première (saison 68 %). Coup de chance gardé (« ne pas fermer de possibilité »). Question ouverte de l'utilisateur : sa montée en puissance ne serait-elle pas la cible des autres, plutôt qu'elle ne rentre dans le rang ? **Piste consignée au § 13.4** : sa pente vient de la qualité des briques de son offre et d'une boucle multiplicative (Œil de faucon, Aura de précision), pas de ses stats ; relever le plancher des briques des autres et donner une boucle à chacun, en quatre étapes à valider.
-- **La revue des auras et des compétences** (§ 1.19, 0.118.0) : appliquée ; en attente, I2 (Brèche) et X1 (Épines acérées en aura). À juger en jeu : la Fausse note au bord haut (+20,0), les rangs II gravés des Feux follets (+9,2) et de la Foudre (+9,6) au-dessus de la bande. Thaldrin reste le cas à part de la montée (pente −12,9, 62 % de gravures sous la bande).
+- **La revue des auras et des compétences** (§ 1.19, 0.118.0) : appliquée ; les deux questions en attente tranchées en 0.118.1 (X1 appliquée, l'Aura d'épines ; I2 Brèche abandonnée). À juger en jeu : la Fausse note au bord haut (+20,0), les rangs II gravés des Feux follets (+9,2) et de la Foudre (+9,6) au-dessus de la bande. Thaldrin reste le cas à part de la montée (pente −12,9, 62 % de gravures sous la bande).
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
@@ -318,7 +319,7 @@ L'utilisateur dormait : chaque choix ouvert a été tranché par l'agent, au plu
 | La zone des bandeaux | attend | chantier inchangé ([TODO.md](TODO.md) § 20) |
 | Une piste plus large sur Elaria, hors des leviers mesurés ici | question ouverte de l'utilisateur | étudiée à part, rien de livré ici |
 
-### 1.19 Décisions du 2026-10-25, revue des auras et des compétences (livrées en 0.118.0, sauf I2 et X1)
+### 1.19 Décisions du 2026-10-25, revue des auras et des compétences (livrées en 0.118.0 ; X1 en 0.118.1, I2 abandonnée)
 
 La réponse de l'utilisateur à [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) : « ce qui n'est pas l'objet d'une remarque est validé ». Valeurs exactement celles de la revue, mesurées ensemble après application.
 
@@ -329,7 +330,8 @@ La réponse de l'utilisateur à [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) : �
 | R1 à R3 (rangs de Pourfendre, Pile ou face, Feux follets) | validées | livrées ; Feux follets II gravé +9,2, au-dessus de la bande |
 | R4 (Purification) | écartée | rien de changé |
 | I1 Bouclier de foi, I3 Pas de côté, I4 Plaie ouverte | validées | livrées, icônes peintes (planche v22). Bouclier de foi chez Ysolde +10,2 (18 builds) ; Pas de côté et Plaie ouverte rares (n < 6) |
-| I2 Brèche, X1 Épines acérées en aura | questions de l'utilisateur | **en attente**, rien de changé |
+| I2 Brèche | abandonnée (décision du 2026-10-25, après la 0.118.0) | rien de changé |
+| X1 Épines acérées en aura | appliquée (décision du 2026-10-25, après la 0.118.0) | livrée en 0.118.1 : « Aura d'épines », classée aura (`look.aura`) ; ids `thorns` gardés ; règles, valeurs, purge et empreinte inchangées ; à l'écran, anneau, halo, plus de label sous le dé, son « Aura gagnée » |
 | O1 à O3 (Curée trois coups, Dé pipé ×6, Foudre quatre éclairs) | validées | livrées ; Foudre (kit de Thaldrin) +5,8 → +7,3, rang II gravé +9,6, au-dessus de la bande ; Thaldrin 55,0 → 55,9 % |
 | T1 à T7 (textes) | validés | livrés dans les générateurs et les registres |
 | X2 accroche « gêne » | validée | livrée : `slot:<statut>`, l'écho de l'offre retire les conflits |

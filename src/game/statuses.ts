@@ -540,8 +540,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     skipsAction: true,
   },
   thorns: {
-    name: 'Épines acérées',
-    look: { glow: 'rgba(132,204,22,0.85)' },
+    // Aura d'épines (revue X1, 0.118.1) : une aura sans le nom, permanente et cumulable, désormais classée comme
+    // telle (anneau, son d'aura) ; règles inchangées. L'id reste `thorns` (traces et tests).
+    name: "Aura d'épines",
+    look: { aura: 'rgba(132,204,22,0.55)' },
     polarity: 'positive',
     summary: "Chaque coup reçu fait saigner l'attaquant, 1 Saignement par charge.",
     describe: (s) => `${charges(s)} Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat`,
@@ -725,8 +727,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rempart hérissé',
     look: { aura: 'rgba(148,163,184,0.6)' },
     polarity: 'positive',
-    summary: `+${RAMPART_THORNS} Épines acérées et +${RAMPART_ARMOR} armure temporaire par charge chaque fois que son armure temporaire est vidée.`,
-    describe: (s) => `+${RAMPART_THORNS * charges(s)} Épines acérées et +${RAMPART_ARMOR * charges(s)} armure temporaire quand son armure temporaire est vidée`,
+    summary: `+${RAMPART_THORNS} Aura d'épines et +${RAMPART_ARMOR} armure temporaire par charge chaque fois que son armure temporaire est vidée.`,
+    describe: (s) => `+${RAMPART_THORNS * charges(s)} Aura d'épines et +${RAMPART_ARMOR * charges(s)} armure temporaire quand son armure temporaire est vidée`,
     badge: (s) => `+${RAMPART_THORNS * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -737,7 +739,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
         { type: 'applyStatus', status: 'bonusArmor', stacks: RAMPART_ARMOR * charges(s) },
       ],
     },
-    power: (n) => `+${RAMPART_THORNS * n} Épines acérées et +${RAMPART_ARMOR * n} armure temporaire par armure vidée`,
+    power: (n) => `+${RAMPART_THORNS * n} Aura d'épines et +${RAMPART_ARMOR * n} armure temporaire par armure vidée`,
   },
   vendetta: {
     name: 'Vindicte',

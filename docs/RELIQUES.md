@@ -123,7 +123,7 @@ flowchart LR
 | Chapelet de l'ermite | Retire son dernier malus (sinon +3 PV) tous les 3 tours | Tous les 3 tours : retire son dernier malus, sinon +3 PV |
 | Clepsydre du siège | +1 critique assuré au 6e tour, puis tous les 4 tours | Au 6e tour, puis tous les 4 tours : +1 Critique assuré |
 | Dent de loup | +1 vol de vie quand ses PV passent sous 40 %, 1x | Sous 40 % PV : +1 Vol de vie · 1 fois par combat |
-| Collier de ronces | +2 épines acérées quand ses PV passent sous 50 %, 1x | Sous 50 % PV : +2 Épines acérées · 1 fois par combat |
+| Collier de ronces | +2 aura d'épines quand ses PV passent sous 50 %, 1x | Sous 50 % PV : +2 Aura d'épines · 1 fois par combat |
 | Trophée du chasseur | +1 critique assuré quand les PV de l'adversaire passent sous 30 %, 1x | Adversaire sous 30 % PV : +1 Critique assuré · 1 fois par combat |
 | Braise captive | 3 × 2 dégâts directs au 4e tour | Au 4e tour : 3 × 2 dégâts directs |
 | Larme de givre | Retire tous ses malus et +5 PV quand ses PV passent sous 35 %, 1x | Sous 35 % PV : retire tous ses malus, +5 PV · 1 fois par combat |
@@ -188,7 +188,7 @@ Mesure : apport en points de taux de victoire contre le roster sans relique (`np
 | Chapelet de l'ermite (`hermit-beads`) | Tour | 3e tour, puis tous les 3 : retire son dernier malus, sinon +3 PV | **+16,3** | Morgrut +12,5 à Ysolde +20,3 | 3,0 |
 | Clepsydre du siège (`siege-clepsydra`) | Tour | 6e tour, puis tous les 4 : Aura de puissance, cumulée | +12,8 | Naraxes +9,2 à Fanchon +15,0 | 1,3 |
 | Dent de loup (`wolf-fang`) | Seuil | sous 40 %, se réarme : Vol de vie 2 | **+21,4** | Ervald +15,6 à Fanchon +24,1 | 1,6 |
-| Collier de ronces (`bramble-collar`) | Seuil | sous 50 %, une fois : Épines acérées 2 | +13,8 | Naraxes +10,2 à Gorak +17,2 | 0,9 |
+| Collier de ronces (`bramble-collar`) | Seuil | sous 50 %, une fois : Aura d'épines 2 (Épines acérées avant la 0.118.1) | +13,8 | Naraxes +10,2 à Gorak +17,2 | 0,9 |
 | Trophée du chasseur (`hunter-trophy`) | Seuil | adversaire sous 30 %, une fois : Critique assuré | +8,4 | Thaldrin +4,8 à Morgrut +11,9 | 0,8 |
 
 **Sur le d6 imprimé (0.105.0)**, même mesure (`npm run relics`, 400 combats par duel, roster de la 0.105.0) :
@@ -344,7 +344,7 @@ Une relique de seuil se réarmait quand les PV remontaient au-dessus : sans char
 - **Illustration** : une canine de loup enfermée dans une petite cage de fil de fer, la dent fêlée aux quatre dixièmes de sa hauteur. Sur un cordon.
 
 #### Collier de ronces
-- **Règle** : quand ses PV passent sous 50 %, une fois : 2 Épines acérées (chaque coup encaissé fait saigner l'attaquant), pour le reste du combat. Les Épines ne répondent pas au coup qui fait passer le seuil : elles répondent dès le coup suivant, même le coup suivant d'une rafale (RESOLUTION règle 9, 2026-10-21).
+- **Règle** : quand ses PV passent sous 50 %, une fois : 2 Aura d'épines (Épines acérées avant la 0.118.1, une aura depuis : règle inchangée, son « Aura gagnée » ; chaque coup encaissé fait saigner l'attaquant), pour le reste du combat. Les Épines ne répondent pas au coup qui fait passer le seuil : elles répondent dès le coup suivant, même le coup suivant d'une rafale (RESOLUTION règle 9, 2026-10-21).
 - **Pourquoi** : acculé, il devient dangereux à frapper. Gros gain contre ceux qui frappent souvent (Fanchon et ses deux dés, la Furie de Gorak) ; pour Brokk, qui porte déjà les Épines, les charges s'ajoutent. Une seule fois : sans charge, un soigneur empilerait les épines à chaque passage.
 - **Illustration** : un collier de ronce séchée tressée, refermé sur un médaillon de bois fendu par le milieu.
 
