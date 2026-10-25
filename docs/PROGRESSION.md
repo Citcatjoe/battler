@@ -212,6 +212,8 @@ Réponses de l'utilisateur aux questions de l'audit ([SORTS.md](SORTS.md) § 19)
 | Thaldrin | **Signature : les Feux follets** (« super idée »). |
 | La suite | **Un état des lieux** avant la seconde partie de la phase 7 (§ 0 bis). |
 
+**Revue écrite (2026-10-25, règles 0.117.1)** : [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), les auras et les 27 autres compétences mesurées, gravées et chez leurs porteurs réels, avec le tableau des décisions à prendre ; rien n'est changé dans le jeu.
+
 ### 1.11 Retours de partie du 2026-10-24 (trois campagnes : Elaria, Gorak, Ysolde ; livrés en 0.111.0)
 
 | Retour | Décision |
@@ -1273,6 +1275,7 @@ Mesuré (`npm run campaign`, toute la livraison 0.111.0, 12 parties par champion
 1. **Pas son châssis.** Retirer ses 22 % d'esquive et son ×2,4, à vanilla égal (PV réglés), ne change pas sa montée (66,6 / 66,4 / 66,6 %). Donner ce châssis, ou un « moteur » permanent d'identité (coups de plus, renvoi, soin au coup), à Gorak, Brokk et Ysolde ne leur donne aucune pente (+0 à +3 points, dans le bruit) ; les coups de plus raccourcissent même les combats (4,5 tours), le contraire du § 12.
 2. **La qualité des briques de son offre** (environ deux tiers de l'avance) : ses gravures valent +13,4 en moyenne (les autres +7,8 à +11,9), et elle ne reçoit presque jamais de consommatrice faible (1 % de ses gravures, contre 20 à 60 % chez sept des neuf autres, à +5 à +7 points, parce que l'écho les pousse dès que leur producteur est là).
 3. **La seule vraie boucle multiplicative du jeu** : Œil de faucon fait grandir ses critiques (30 → 43 % de ses coups qui touchent), l'Aura de précision ajoute +1 au multiplicateur : +17,7 chez elle, +9,3 chez Gorak.
+   _Remesuré par la revue des auras et des compétences ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md)) : aucune boucle Œil de faucon × Aura de précision ne se mesure en synergie (−0,09 en log-cote chez Elaria, ± 0,07 de bruit) ; l'aura vaut chez elle par sa valeur chez la porteuse construite (+15,2), et l'étape 3 doit se mesurer ainsi._
 4. **Une attaque basse** (4 à 5) : chaque bonus à plat pèse plus lourd (Tremper +12,0 chez elle).
 
 **La réponse** : sa montée est la bonne cible **en partie**. Son **niveau** contre les autres n'est pas une cible : la force construite contre construits est à somme nulle (si les dix montent comme elle, chacun revient vers 50 %, et il ne reste que des builds *parfois* cheatés, de 0 à 21 % au-dessus de 65 % chez les autres aujourd'hui). Son **plancher de briques** et **sa boucle** sont la cible. En campagne, une montée plus raide pour tous est absorbée par le réglage des PV adverses contre chaque champion (Elaria : boss atteint 27 %, dans le peloton).

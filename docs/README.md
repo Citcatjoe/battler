@@ -28,6 +28,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [SORTS.md](SORTS.md) | Brainstorm des sorts, laboratoire (`scripts/lab.report.ts`) et audit des compétences (`scripts/skills.report.ts`), résultats des essais |
 | | [AUDIT_COMPENDIUM.md](AUDIT_COMPENDIUM.md) | Audit des textes des compétences et des statuts (0.72.0) : incohérences entre code, textes générés et documents, propositions de reformulation et d'interactions |
 | | [REVUE_CONTENU.md](REVUE_CONTENU.md) | Revue des compétences, des statuts et des reliques (0.109.1) : chaque brique relue une par une, synthèse par gravité (moteur, équilibre, textes, écran et son, documents), corrections à décider |
+| | [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) | Revue des auras et des compétences (2026-10-25, règles 0.117.1) : chaque brique mesurée gravée et chez ses porteurs réels, tempo des auras, familles et idées ; tableau des décisions à prendre (A1 à A5, P1 à P5, R1 à R3, O1 à O3, I1 à I4) |
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
 | **Direction artistique** | [STYLE_BIBLE.md](STYLE_BIBLE.md) | Style visuel, contraintes des images, prompts de génération |
 | | [design-system.md](design-system.md) | Tokens (couleurs, formes, polices) et composants de l'interface |
