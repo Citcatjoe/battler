@@ -1731,12 +1731,15 @@ describe('reliques (docs/RELIQUES.md)', () => {
     const consumers = ['venom-vial', 'butcher-hook', 'abbey-incense', 'dented-shield', 'eagle-feather']
     const durability = ['quilted-gambison', 'bonesetter-salve', 'vigil-candle']
     const lot2 = ['forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin']
-    const plain = RELICS.filter((r) => !r.scene && ![...consumers, ...durability, ...lot2].includes(r.id))
+    // Les reliques de source (2026-10-25) : trois de coup sur un 6, une de tour
+    const sources = ['wasp-sting', 'tinder-box', 'fair-coin', 'spiked-bracer']
+    const plain = RELICS.filter((r) => !r.scene && ![...consumers, ...durability, ...lot2, ...sources].includes(r.id))
     expect(plain).toHaveLength(12)
     for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
     expect(consumers.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike', 'strike'])
     expect(durability.map((id) => relicKind(getRelic(id)))).toEqual(['stat', 'strike', 'turn'])
     expect(lot2.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike'])
+    expect(sources.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'turn'])
     expect(validateRelics([relic({ stats: { armor: 1 }, rollBonus: 1 })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'turn', turn: 0 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
     expect(validateRelics([relic({ trigger: { type: 'hpBelow', ratio: 1.2 }, effects: [{ type: 'heal', amount: 1 }] })])).toHaveLength(1)
@@ -1749,6 +1752,11 @@ describe('reliques (docs/RELIQUES.md)', () => {
     const stun = relic({ trigger: { type: 'strike', on: 'naturalMax' }, effects: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }] })
     expect(validateRelics([stun])).toHaveLength(2)
     expect(validateRelics([relic({ trigger: { type: 'strike', on: 'hit' }, effects: [{ type: 'damage', amount: 2, target: 'opponent', source: 'strike' }] })])).toEqual([])
+    // Exception des reliques de source (2026-10-25) : le Poison et la Brûlure seuls ; un autre malus reste refusé
+    const bleed = relic({ trigger: { type: 'strike', on: 'naturalMax' }, effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }] })
+    expect(validateRelics([bleed])).toHaveLength(2)
+    const poison = relic({ trigger: { type: 'strike', on: 'naturalMax' }, effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }] })
+    expect(validateRelics([poison])).toEqual([])
   })
 
   it('caractéristique : les stats s’ajoutent à plat, la base reste connue, une stat peut passer sous 0', () => {
@@ -2033,6 +2041,11 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       '+1 PV quand il renvoie des dégâts',
       // Le pluriel d'un statut qui se compte (passe compendium, 2026-10-25)
       '+2 coups de chance sur pile',
+      // Les reliques de source (2026-10-25)
+      "2 poison à l'adversaire sur un 6",
+      "2 brûlure à l'adversaire sur un 6",
+      'Lance une pièce (pile, ce coup ×3) sur un 6, recharge 3 tours',
+      '+1 riposte au 1er tour',
       ].map(typeset),
     )
     for (const line of lines) {
@@ -3420,5 +3433,69 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     expect(relicNeeds(getRelic('pavise-nails'))).toEqual(['moment:shieldBreak'])
     expect(relicNeeds(getRelic('talion-gauntlet'))).toEqual(['moment:reflect'])
     expect(relicNeeds(getRelic('holed-coin'))).toEqual(['moment:heads'])
+  })
+})
+
+describe('les reliques de source (2026-10-25) : Poison, Brûlure, pièce et renvoi pour tous', () => {
+  const relicBeats = (r: CombatResult, id: string) => ofType(r, 'relic').filter((b) => b.relic === id)
+  /** Chaque déclenchement d'une relique du dé suit un jet de 6 du porteur, son coup pour cause */
+  const onSix = (r: CombatResult, id: string) => {
+    const fired = relicBeats(r, id)
+    for (const b of fired) expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, roll: DIE_FACES } })
+    return fired
+  }
+
+  it('textes au style de l’utilisateur : l’effet d’abord, puis le moment, puis la limite', () => {
+    expect(describeRelic(getRelic('wasp-sting')).text).toBe(typeset(`2 poison à l'adversaire sur un ${DIE_FACES}`))
+    expect(describeRelic(getRelic('tinder-box')).text).toBe(typeset(`2 brûlure à l'adversaire sur un ${DIE_FACES}`))
+    expect(describeRelic(getRelic('fair-coin')).text).toBe(typeset(`Lance une pièce (pile, ce coup ×${COIN_HEADS}) sur un ${DIE_FACES}, recharge 3 tours`))
+    expect(describeRelic(getRelic('spiked-bracer')).text).toBe(typeset('+1 riposte au 1er tour'))
+    for (const id of ['wasp-sting', 'tinder-box', 'fair-coin', 'spiked-bracer']) expect(describeRelic(getRelic(id)).text).not.toMatch(EMOJI)
+  })
+
+  it('Dard de guêpe et Briquet d’amadou : 2 Poison, 2 Brûlure à l’adversaire sur un 6', () => {
+    for (const [id, status] of [['wasp-sting', 'poison'], ['tinder-box', 'burn']] as const) {
+      let seen = 0
+      for (let seed = 1; seed < 20; seed++) {
+        const r = run([testCharacter('a', { maxHp: 200 }).withRelics([getRelic(id)]), testCharacter('b', { maxHp: 200 })], seed)
+        for (const b of onSix(r, id)) {
+          expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status, stacks: 2 })])
+          expect(stacksOf(b.state.statuses[1], status)).toBeGreaterThanOrEqual(2)
+          seen++
+        }
+      }
+      expect(seen, id).toBeGreaterThan(10)
+    }
+  })
+
+  it('Pièce de foire : sur un 6, une pièce lancée aussitôt (pile ou face), recharge 3 tours', () => {
+    let coins = 0
+    for (let seed = 1; seed < 20; seed++) {
+      const r = run([testCharacter('a', { maxHp: 200 }).withRelics([getRelic('fair-coin')]), testCharacter('b', { maxHp: 200 })], seed)
+      const fired = onSix(r, 'fair-coin')
+      for (const b of fired) {
+        // La pièce part, puis le statut n'est plus là
+        expect(r.beats.slice(b.id + 1).some((x) => x.type === 'coin' && x.side === 0)).toBe(true)
+        coins++
+      }
+      // Recharge de 3 tours du porteur : 6 tours du combat au moins entre deux déclenchements
+      const turns = fired.map((b) => b.turn)
+      for (let k = 1; k < turns.length; k++) expect(turns[k] - turns[k - 1]).toBeGreaterThanOrEqual(6)
+    }
+    expect(coins).toBeGreaterThan(5)
+  })
+
+  it('Brassard à pointes : 1 Riposte au début de son 1er tour, une seule fois', () => {
+    for (let seed = 1; seed < 10; seed++) {
+      const r = run([testCharacter('a', { maxHp: 200 }).withRelics([getRelic('spiked-bracer')]), testCharacter('b', { maxHp: 200 })], seed)
+      const fired = relicBeats(r, 'spiked-bracer')
+      expect(fired).toHaveLength(1)
+      expect(fired[0].effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'riposte', stacks: 1 })])
+      expect(ofType(r, 'statusReaction').filter((b) => b.status === 'riposte' && b.side === 0).length).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('offre : sans besoin, offertes à tous ; elles ouvrent leurs consommatrices', () => {
+    for (const id of ['wasp-sting', 'tinder-box', 'fair-coin', 'spiked-bracer']) expect(relicNeeds(getRelic(id)), id).toEqual([])
   })
 })

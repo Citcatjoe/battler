@@ -129,8 +129,8 @@ describe('catalogue des statuts', () => {
         .find((e) => e.id === id)!
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
-    // Poison : posé par Ervald (Souffle de la tombe, Virulence), et aussi par deux auras (effet de tour, réaction)
-    expect(who('poison')).toEqual(['skill:ervald', 'skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
+    // Poison : posé par Ervald (Souffle de la tombe, Virulence), par deux auras (effet de tour, réaction), et par le Dard de guêpe
+    expect(who('poison')).toEqual(['relique:wasp-sting', 'skill:ervald', 'skill:ervald', 'statut:decoctionAura', 'statut:frostAura'])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
     // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
@@ -1018,6 +1018,16 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(offerableRelics({ championId: 'fanchon', forge: [], relics: [] })).not.toContain('holed-coin')
     expect(offerableSkills(coin, [skill('loaded-die')]).map((s) => s.id)).toEqual(['loaded-die'])
     expect(offerableRelics(coin)).toContain('holed-coin')
+    // Les reliques de source (2026-10-25) : offertes à tous dès le départ, elles ouvrent les reliques qui lisent leur ressource
+    for (const id of CHARACTER_IDS)
+      for (const source of ['wasp-sting', 'tinder-box', 'fair-coin', 'spiked-bracer']) expect(offerableRelics({ championId: id, forge: [], relics: [] }), id).toContain(source)
+    const opened = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'fair-coin': 'holed-coin', 'spiked-bracer': 'talion-gauntlet' }
+    for (const [source, consumer] of Object.entries(opened)) {
+      expect(offerableRelics({ championId: 'elaria', forge: [], relics: [] })).not.toContain(consumer)
+      expect(offerableRelics({ championId: 'elaria', forge: [], relics: [source] }), source).toContain(consumer)
+    }
+    // La Pièce de foire ouvre le Dé pipé à Fanchon sans graver Pile ou face
+    expect(offerableSkills({ championId: 'fanchon', forge: [], relics: ['fair-coin'] }, [skill('loaded-die')]).map((s) => s.id)).toEqual(['loaded-die'])
     // Le producteur d'abord : un répertoire peut porter une consommatrice hors de portée au départ, mais l'offre n'en sort pas
     for (const id of CHARACTER_IDS) {
       const run = { championId: id, forge: [], relics: [] }

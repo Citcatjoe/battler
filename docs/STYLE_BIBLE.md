@@ -1026,6 +1026,10 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 114 | `talion-gauntlet` | Gantelet du talion (relique, v19) | Manchette de gantelet de fer rivetée, courroie de cuir bouclée, une seule pointe rabattue (le +1), lueur dorée dans les rivets |
 | 115 | `holed-coin` | Pièce trouée (relique, v19) | Vieille pièce de cuivre percée, sur un cordon de cuir noué, face « pile » frappée de deux petites étoiles (les deux jets), lueur violette dans le trou ; ni dé, ni la pièce de Pile ou face |
 | 116 | `duo` | Duo (compétence de la barde et son statut, v20, 2026-10-25) | Deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans un halo mauve de l'Aura mélodieuse |
+| 117 | `wasp-sting` | Dard de guêpe (relique de source, v21, 2026-10-25) | Dard de guêpe séché serti dans un capuchon de laiton, deux gouttes de venin (les 2 Poison) |
+| 118 | `tinder-box` | Briquet d'amadou (relique de source, v21) | Boîte à briquet de fer, son silex et son battant, deux braises dans l'amadou (les 2 Brûlure) |
+| 119 | `fair-coin` | Pièce de foire (relique de source, v21) | Jeton de foire en laiton frappé d'une tête de bouffon, sur un cordon rouge et jaune ; ni la Pièce trouée, ni la pièce de Pile ou face |
+| 120 | `spiked-bracer` | Brassard à pointes (relique de source, v21) | Brassard de cuir clouté, une seule grosse pointe rabattue vers l'arrière (la Riposte, 1x) |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1231,6 +1235,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v20, le Duo (1 icône, intégrée le 2026-10-25, générée par l'agent avec Artlist : GPT Image 2.5 en image à image, référence : la planche des compétences) :** deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans le halo mauve de l'Aura mélodieuse (palette de la barde). Une seule icône pour la compétence et son statut `duo`.
 
+**v21, les quatre reliques de source (4 icônes, une planche 2×2, intégrées le 2026-10-25, générées par l'agent avec Artlist : GPT Image 2.5 en image à image, référence : la planche des reliques) :** 1. Dard de guêpe (dard séché dans un capuchon de laiton, deux gouttes de venin) · 2. Briquet d'amadou (boîte à briquet de fer, deux braises, silex et battant) · 3. Pièce de foire (jeton de foire en laiton à tête de bouffon, cordon rouge et jaune) · 4. Brassard à pointes (brassard de cuir à pointes, une grande pointe rabattue vers l'arrière). Le chiffre de la règle est dessiné dans l'objet (2 gouttes, 2 braises, 1 pointe).
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1258,6 +1264,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v21 | 2026-10-25 | 117 à 120 | Les quatre reliques de source (Dard de guêpe, Briquet d'amadou, Pièce de foire, Brassard à pointes). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées (160 crédits), la version A retenue pour les quatre. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v20 | 2026-10-25 | 116 | Le Duo (compétence de la barde et son statut). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une icône, deux versions générées (160 crédits), la version A retenue. Découpe par `scripts/slice-icons.py`, `src/assets/icons/duo.png`. Pas encore vue dans un écran de jeu. |
 | v19 | 2026-10-25 | 112 à 115 | Les quatre reliques du second lot de la phase 8 (Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées, la version A retenue pour les quatre (v18 et v19 : 320 crédits en tout). Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; vues dans les écrans par la passe de finition. |
 | v18 | 2026-10-25 | 108 à 111 | Les quatre compétences du second lot de la phase 8 (Embrasement, Dé pipé, Rempart hérissé, Vindicte ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2, deux versions générées, la version A retenue pour les quatre. Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; vues dans les écrans par la passe de finition. |

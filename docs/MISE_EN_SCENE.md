@@ -138,6 +138,9 @@ Comment chaque compétence et chaque relique des lots de la phase 8 s'anime, et 
 | **Clous de pavois** (second lot) | Relique du défenseur qui contre le coup : au milieu de sa lecture, label − et ses dégâts en coups, sans élan. | M17, M23 |
 | **Gantelet du talion** (second lot) | Relique de renvoi : au milieu de la lecture du dernier coup de la Riposte ou de la Rétribution, label + et son soin. | M41, M23 |
 | **Pièce trouée** (second lot) | Relique de pile : avec le résultat de la pièce, son sceau, son label et son signal ; Coup de chance à l'arrivée, puis le coup de pile. | M40, M19 |
+| **Dard de guêpe**, **Briquet d'amadou** (reliques de source, 2026-10-25) | Reliques du dé : sur un 6, à l'instant où le dé se pose, son sceau et son label, puis le signal file du sceau vers la zone d'état de l'adversaire ; à son arrivée, « +2 Poison » ou « +2 Brûlure », Malus reçu ; puis l'action suit. Aucune règle nouvelle : la règle 7 de RELIQUES (exception des reliques de source) change ce que la relique pose, pas la façon dont il arrive. | M40, M19, M23 |
+| **Pièce de foire** (relique de source) | Relique du dé : sur un 6, son sceau et son label avec le dé posé ; Pile ou face se pose comme un mécanisme (ni son ni texte), puis la pièce tournoie juste après le coup, comme celle de Pile ou face. | M40, M39, M26 |
+| **Brassard à pointes** (relique de source) | Relique de tour : au début de son 1er tour, sceau et label, le signal vers sa propre zone d'état, la Riposte à son arrivée ; elle répond ensuite au premier coup qui touche, au milieu de sa lecture. | M23, M19, M17 |
 
 ## 4. Couplages avec le CSS et durées déduites
 
@@ -172,7 +175,46 @@ Les scènes (`scenes.ts`) portent leur propre rythme (`impacts`, `length`), que 
 
 ### 5.2 Ouvertes
 
-Aucune.
+Aucune question de règle. Un chantier ouvert : la zone des bandeaux (§ 5 bis).
+
+## 5 bis. Chantier : la zone des bandeaux
+
+_Ouvert par l'utilisateur le 2026-10-25 (0.116.0) ; pistes notées le 2026-10-25 (0.117.0). Rien de codé : les règles M8, M9 et M40 restent en vigueur. Suivi : [TODO.md](TODO.md) § 20, [PROGRESSION.md](PROGRESSION.md) § 1.16 et § 1.17._
+
+L'utilisateur : « noter ta piste ; noter d'autres pistes aussi : uniquement ceux de l'attaquant ? bandeaux plutôt placés du côté de qui ils appartiennent ? remettre à plat l'utilité et le but d'un bandeau ? à réfléchir. Aujourd'hui c'est fouillis et on ne sait plus trop à quel saint se vouer. »
+
+### Le constat (étude du 2026-10-25, version 0.115.1)
+
+Mesuré sur 1 200 combats construits (forge et reliques, générateur du contrôle des timings) et les 1 200 mêmes combats nus :
+- 10,5 labels par combat (5,0 nus) ; une pile de 3 ou plus sous le dé dans 37,8 % des combats (5,0 % nus), de 4 ou plus dans 12,0 % (0,3 %) ;
+- trois usages dans une colonne : le coup, les statuts des deux combattants, les reliques des deux camps (26,5 % des labels, 2,78 par combat) ;
+- 47,5 % des labels sont causés par le défenseur ; 12,4 % suivent la convention de signe inverse de leurs voisins (relique et Rancune du défenseur) ; 43 % n'ont ni « + » ni « − » écrit ;
+- 58 labels de la Cloche d'ouverture sonnent sans s'afficher (`dice.owner` nul) ; 829 tombent sous un plateau vide (reliques de début de tour) ;
+- redondances : chaque relique déclenchée s'allume aussi à son sceau, à quelque 700 px ; le critique est repris à l'impact ; Critique assuré double Critique ×N.
+
+### Piste de l'agent : chacun chez soi
+
+Chaque surcharge parle là où vit sa cause :
+- **sous le dé, le coup seulement** : le critique (Critique assuré fondu dedans) ; Face dorée et relique de coup en pastilles accrochées au dé ;
+- **à la zone d'état du porteur** : ses statuts qui surchargent le coup (icône qui s'allume, courte bulle « Bloque 2 », « −3 PV ») ;
+- **au sceau de la relique**, dans l'en-tête : la relique déclenchée, avec l'éclat de son sceau ;
+- **plus de hachures** : l'emplacement dit à qui, le texte dit l'effet en PV ou en action.
+
+Mesuré (mêmes 1 200 combats, durées d'aujourd'hui) : pile de 3 ou plus au centre 37,8 → 1,3 % des combats (zone d'état du défenseur 1,6 %, sceaux 0,7 %) ; plus de label sans dé ni de label invisible, par construction. Contre : l'œil voyage davantage ; la zone d'état du défenseur est proche de ses textes flottants.
+
+Phases : **0**, corrections sans refonte (la Cloche visible ou tue, Critique assuré fondu, critique sans décimale, contrôles « aucun label invisible » et « aucun label sous un plateau vide ») ; **1**, les reliques à leur sceau (avec la phase 0 : piles de 3 ou plus 37,8 → 14,9 %) ; **2**, les statuts à leur zone d'état ; **3**, le signe et les mots. Aucune ne touche au moteur.
+
+Trois choix ouverts : (1) **le signe** : l'emplacement et un texte en PV à la place des hachures, avec ou sans liseré à la couleur du camp ; (2) **le son des labels** : point de vue de l'attaquant (recommandé, sans les exceptions du défenseur) ou du propriétaire ; (3) **le critique sans décimale** : « Critique 2x » si entier, et pour ×2,4, « Critique +7 » ou le multiplicateur arrondi.
+
+Écartées par l'étude : une ligne de calcul sous le dé (un label principal et des coches : elle ressemble à une addition sans en être une, et laisse la question « à qui ? ») ; un bandeau-journal en bas de l'écran (l'œil quitte l'action, doublon du journal).
+
+### Pistes de l'utilisateur (questions ouvertes, à réfléchir)
+
+- **Uniquement ceux de l'attaquant ?** La zone ne montrerait que ce qui vient du maître du tour ; les causes du défenseur (47,5 % des labels) parleraient ailleurs, ou pas du tout.
+- **Les bandeaux du côté de qui ils appartiennent ?** Un bandeau placé vers son propriétaire (à gauche ou à droite), plutôt qu'en colonne centrale. Proche de « chacun chez soi », sans forcément aller jusqu'à la zone d'état et au sceau.
+- **Remettre à plat l'utilité et le but d'un bandeau ?** Qu'est-ce qu'un bandeau doit dire que le reste de l'écran (textes flottants, sceaux, zone d'état, chiffres colorés) ne dit pas déjà ? La réponse décide des deux autres.
+
+Aucune piste n'est retenue : à réfléchir avec l'utilisateur avant toute phase.
 
 ## 6. Introduire une mécanique qui s'anime
 

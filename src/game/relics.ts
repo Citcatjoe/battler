@@ -348,6 +348,46 @@ export const RELICS: readonly Relic[] = [
     trigger: { type: 'strike', on: 'heads' },
     effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 2 }],
   },
+  /*
+   * Les reliques de source (option C1 de l'étude des sources, validée par l'utilisateur le 2026-10-25 ; docs/RELIQUES.md
+   * § 16) : une relique par ressource qu'aucune relique ne produisait (Poison, Brûlure, pièce, renvoi). Sans besoin, elles
+   * sont offertes à tous ; elles ouvrent l'offre de leurs consommatrices (le producteur d'abord). Le Dard et le Briquet
+   * sont l'exception à la règle 7 : ils posent une affliction à l'adversaire (`SOURCE_AFFLICTIONS`).
+   */
+  {
+    // Calage (200 combats par duel) : sur un 6, +10,6 ; au coup qui touche 1x, +7,8 (une seule fenêtre de Poison) ; 2x, +20,0
+    id: 'wasp-sting',
+    name: 'Dard de guêpe',
+    flavor: 'Un dard de guêpe séché dans un capuchon de laiton, deux gouttes de venin perlées à la pointe. Le coup parfait pique.',
+    trigger: { type: 'strike', on: 'naturalMax' },
+    effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }],
+  },
+  {
+    // Calage : sur un 6, +9,6 ; au coup reçu 1x, +14,3 (Morgrut +19,3) ; recharge 3, +29,2
+    id: 'tinder-box',
+    name: 'Briquet d’amadou',
+    flavor: 'Un briquet de fer, son silex et son battant, deux braises dans l’amadou. Le coup parfait fait jaillir l’étincelle.',
+    trigger: { type: 'strike', on: 'naturalMax' },
+    effects: [{ type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent' }],
+  },
+  {
+    // Calage : sans limite, +14,1 (Morgrut +17,4) ; 2x, +12,9 ; recharge 3, +11,6 ; 1x, +8,9
+    id: 'fair-coin',
+    name: 'Pièce de foire',
+    flavor: 'Un jeton de foire en laiton, une tête de bouffon frappée dessus, sur un cordon rouge et jaune. Le coup parfait tente sa chance.',
+    trigger: { type: 'strike', on: 'naturalMax' },
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
+  },
+  {
+    // Calage : 1 charge, +8,9 ; 2 charges, +17,3
+    id: 'spiked-bracer',
+    name: 'Brassard à pointes',
+    flavor: 'Un brassard de cuir clouté, une grosse pointe rabattue vers l’arrière. Le premier qui frappe s’y pique.',
+    trigger: { type: 'turn', turn: 1 },
+    charges: 1,
+    effects: [{ type: 'applyStatus', status: 'riposte', stacks: 1 }],
+  },
 ]
 
 export const RELIC_IDS = RELICS.map((r) => r.id)
@@ -399,8 +439,12 @@ function effectText(e: Effect, attacker = false): string {
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus': {
-      // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
       const def = STATUSES[e.status]
+      // Une pièce se lance (Pièce de foire) : son pari, en clair
+      if (def.coinToss) return `lance une pièce (pile, ce coup ×${def.coinToss.multiplier})`
+      // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence
+      if (e.target === 'opponent') return `${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)} à l'adversaire`
+      // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
       return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}`
     }
     case 'cleanse': {
@@ -508,6 +552,9 @@ export function describeRelic(r: Relic): RelicDescription {
 
 /* ---------- Validation ---------- */
 
+/** Les seules afflictions qu'une relique pose à l'adversaire : les reliques de source (exception à la règle 7, 2026-10-25). */
+const SOURCE_AFFLICTIONS: readonly StatusId[] = ['poison', 'burn']
+
 /** Erreurs de définition du registre (vide si tout va bien). Vérifié par les tests. */
 export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
   const errors: string[] = []
@@ -560,9 +607,11 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
       if (e.type === 'applyStatus' && !STATUSES[e.status]) at(`statut inconnu : ${e.status}`)
       if (e.type === 'release') at('une relique ne relâche pas de jauges')
       // Règle 7 (décision de l'utilisateur) : une relique agit sur son porteur, jamais de malus sur l'adversaire.
-      // Vers l'adversaire, seuls les dégâts directs ; un statut posé est un bonus du porteur.
-      if (e.target === 'opponent' && e.type !== 'damage') at('vers l’adversaire, une relique ne fait que des dégâts directs')
-      if (e.type === 'applyStatus' && STATUSES[e.status]?.polarity === 'negative') at(`une relique ne pose pas de malus : ${e.status}`)
+      // Vers l'adversaire, seuls les dégâts directs ; un statut posé est un bonus du porteur. Exception (reliques de
+      // source, 2026-10-25) : le Poison et la Brûlure, des afflictions de source
+      const source = e.type === 'applyStatus' && e.target === 'opponent' && SOURCE_AFFLICTIONS.includes(e.status)
+      if (e.target === 'opponent' && e.type !== 'damage' && !source) at('vers l’adversaire, une relique ne fait que des dégâts directs')
+      if (e.type === 'applyStatus' && STATUSES[e.status]?.polarity === 'negative' && !source) at(`une relique ne pose pas de malus : ${e.status}`)
     }
   }
   return errors

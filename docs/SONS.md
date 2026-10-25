@@ -101,6 +101,8 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 
 **Les reliques** (0.75.0, [RELIQUES.md](RELIQUES.md)) suivent la même règle : une relique qui se déclenche joue le son de ce qu'elle produit (le Chapelet, Dissipation ou Soin ; la Dent de loup et la Clepsydre, Bonus gagné), sans son propre. Un coup renforcé par une relique (Fer à quatre clous) sonne comme un coup ; les dégâts directs de l'Osselet, comme une réaction (Coup). Depuis le 2026-10-21, une relique qui agit pose aussi son label sous le dé : le son de son signe (§ 4.4 : le ding pour un bonus de son porteur, chez l'attaquant comme chez le défenseur ; Malus reçu pour une relique du défenseur qui contre le coup, la Conque des vents) s'ajoute au son de son effet. C'est la réponse retenue à la piste « on entend relique » (RELIQUES.md § 3) : le label dit « surcharge », le son de l'effet dit laquelle. Une relique dont le label se tait (M25 : rien n'a changé) ne sonne pas.
 
+**Les reliques de source** (2026-10-25, [RELIQUES.md](RELIQUES.md) § 16) n'ajoutent aucun son : leurs effets tombent dans les règles existantes. Le Dard de guêpe et le Briquet d'amadou posent un malus sur l'adversaire (règle 3 : Malus reçu, à l'arrivée de leur signal), avec le ding de leur label au dé posé ; puis le Poison grésille et la Brûlure ronge, comme ceux des compétences (§ 9.3). La Pièce de foire pose un mécanisme (règle 8 : aucun son propre) : sa pièce sonne comme celle de Pile ou face (Pièce lancée, Pièce retombe, sur pile Pile réussie puis Coup critique). Le Brassard à pointes pose un bonus sur son porteur (Bonus gagné) ; sa Riposte sonne Coup quand elle renvoie. Non vérifiable par l'agent : l'écoute.
+
 ### 4.3 Vérification : les compétences du roster
 
 | Son | Compétences |

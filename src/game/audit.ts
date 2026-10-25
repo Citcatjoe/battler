@@ -814,6 +814,16 @@ export function createAudit() {
         fires.forEach((i, n) => {
           const b = r.beats[i]
           if (b.type === 'relic' && b.uses !== n + 1) flag('relique : compte faux', r, i, `${b.uses} au lieu de ${n + 1}`)
+          // Le statut posé (reliques de source, 2026-10-25) : sur la cible que la relique déclare, et présent après la pose
+          if (b.type !== 'relic') return
+          for (const e of b.effects) {
+            if (e.type !== 'applyStatus') continue
+            const declared = relic.effects?.find((x) => x.type === 'applyStatus' && x.status === e.status)
+            const target: Side = declared?.target === 'opponent' ? (side === 0 ? 1 : 0) : side
+            if (e.target !== target) flag('relique : statut sur la mauvaise cible', r, i, `${relic.id} : ${e.status}`)
+            else if (e.result.kind === 'applied' && e.result.stacks > 0 && !find(b.state.statuses[target], e.status)) flag('relique : statut posé absent', r, i, `${relic.id} : ${e.status}`)
+            else if (target !== side) see('relique : affliction à l’adversaire')
+          }
         })
         if (relic.charges !== undefined && fires.length > relic.charges) flag('relique : charges dépassées', r, fires[relic.charges], relic.id)
         if (relic.cooldown)

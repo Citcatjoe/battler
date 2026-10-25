@@ -203,6 +203,21 @@ describe('audit de résolution : phase 8, second lot', () => {
   })
 })
 
+describe('audit de résolution : les reliques de source (2026-10-25)', () => {
+  it('aucune anomalie pour le Dard, le Briquet, la Pièce de foire et le Brassard chez tout le roster, seuls puis avec les reliques qu’ils ouvrent', () => {
+    const { audit, problems, seen } = createAudit()
+    const opened: Record<string, string> = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'fair-coin': 'holed-coin', 'spiked-bracer': 'talion-gauntlet' }
+    let n = 0
+    for (const [source, consumer] of Object.entries(opened))
+      for (const relics of [[source], [source, consumer]])
+        for (const a of CHARACTER_IDS)
+          for (const b of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 16000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['relique : affliction à l’adversaire', 'relique de coup', 'relique de tour', 'relique : heads', 'relique : reflected', 'bonus de relique à conditions'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
   it('aucune anomalie pour des personnages forgés au hasard, ni pour le boss', () => {
     const { audit, problems, seen } = createAudit()

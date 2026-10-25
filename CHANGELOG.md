@@ -32,6 +32,30 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.117.0] — 2026-10-25
+
+Décisions de l'utilisateur du 2026-10-25 ([PROGRESSION.md](docs/PROGRESSION.md) § 1.17) : les reliques de source validées et intégrées (« je te laisse intégrer »), « dans la perspective de régler un peu » Elaria, au côté de Fanchon ; la zone des bandeaux reste un chantier, avec de nouvelles pistes à réfléchir.
+
+### Ajouté
+- **Quatre reliques de source** (option C1, [RELIQUES.md](docs/RELIQUES.md) § 16), offertes à tous (aucun besoin) et productrices de leur ressource, donc elles ouvrent « le producteur d'abord » :
+  - **Dard de guêpe** (`wasp-sting`) : 2 poison à l'adversaire sur un 6 ; ouvre la Fiole de venin ;
+  - **Briquet d'amadou** (`tinder-box`) : 2 brûlure à l'adversaire sur un 6 ; ouvre le Soufflet de forge ;
+  - **Pièce de foire** (`fair-coin`) : lance une pièce (pile, ce coup ×3) sur un 6, recharge 3 tours ; ouvre la Pièce trouée, et le Dé pipé chez Fanchon ;
+  - **Brassard à pointes** (`spiked-bracer`) : +1 riposte au 1er tour ; ouvre le Gantelet du talion.
+  Mesuré (`npm run relics`, 400 combats par duel) : Dard +10,7 (7,8–12,0), Briquet +9,6 (7,6–11,2), Pièce de foire +11,8 (10,4–14,7), Brassard +8,8 (7,5–11,8) ; les 28 autres inchangées. Synergies (`npm run synergy`) : Briquet + Soufflet +0,43, Pièce de foire + Pièce trouée +0,36, Dard + Fiole +0,32 ; Brassard sans partenaire au-dessus de +0,25 (meilleur +0,12).
+- Quatre icônes peintes (planche v21, Artlist, GPT Image 2.5 à partir de la planche de référence des reliques, version A gardée) : dard séché dans un capuchon de laiton et deux gouttes, briquet de fer avec deux braises, silex et briquet, jeton de foire en laiton à tête de bouffon et cordon rouge et jaune, brassard de cuir à pointes dont une grande pointe recourbée.
+- Audit : « relique : statut sur la mauvaise cible », « relique : statut posé absent » ; tests « les reliques de source » (`combat.test.ts`, `audit.test.ts`, `modules.test.ts`).
+
+### Modifié
+- **Règle 7 des reliques resserrée en exception** (règle fixée par l'utilisateur, pliée par ce lot) : une relique ne pose aucun malus à l'adversaire, **sauf le Poison et la Brûlure** (`SOURCE_AFFLICTIONS` dans `validateRelics`) ; tout autre malus reste refusé (testé avec le Saignement).
+- Texte des reliques : « lance une pièce (pile, ce coup ×3) », « 2 poison à l'adversaire ».
+- Choix de l'agent : Pièce de foire à recharge 3 tours (+11,8, Morgrut +14,7) plutôt que sans limite (+14,1) ; les trois sur un 6 (le 6 revient 1,4 fois par combat), au prix d'un partage avec le Dé creux (Dé creux + Pièce de foire −0,12, Morgrut −0,24).
+- Campagne (`npm run campaign`, 30 × 2) : construit contre construits 42–68 %, écart-type 7,5 ; boss 21 et 22 % ; briques liées par build 0,72 (0,25–1,10). Saison (8 de 24) : 42–70 %, écart-type 8,5, Elaria 70 %.
+
+### Étudié, rien de changé
+- **Elaria systématiquement la plus forte une fois construite** (60 builds par personnage) : moyenne 68,3 %, pire build 49,2, 57 % de ses builds au-dessus de 65 % (2 à 17 % chez les autres) ; cause : la forge vaut +45,9 chez elle, +29 à +32 ailleurs. Trois propositions en attente ([PROGRESSION.md](docs/PROGRESSION.md) § 1.17) : Coup de chance hors de son répertoire (68,3 → 65,3), Esquive améliorée non cumulable (63,3 ; **valeur fixée par l'utilisateur le 2026-10-21**), les deux (60,6, recommandé).
+- Zone des bandeaux : nouvelles pistes de l'utilisateur notées ([MISE_EN_SCENE.md](docs/MISE_EN_SCENE.md), chantier).
+
 ## [0.116.0] — 2026-10-25
 
 Décisions de l'utilisateur du 2026-10-25 ([PROGRESSION.md](docs/PROGRESSION.md) § 1.16) : lancer le Duo de Fanchon ; un aperçu du build sur les cartes de l'arbre (« Carte de l'arbre : mets un aperçu du build ») ; la zone des bandeaux sous le dé devient un chantier à part entière.
