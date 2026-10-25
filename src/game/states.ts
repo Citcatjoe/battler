@@ -174,6 +174,11 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // s'affichent d'eux-mêmes) ; l'Embrasement et le Dé pipé sont des mécanismes (leur place découle de `mechanic`)
   bristlingRampart: aura(),
   vendetta: aura(),
+  // Revue des compétences (I1, I3, I4) : trois auras d'identité. Le Bouclier de foi et la Plaie ouverte posent de vrais
+  // statuts (armure temporaire, Saignement), qui s'affichent d'eux-mêmes ; le Pas de côté se lit sur son anneau
+  faithShield: aura(),
+  sidestep: aura(),
+  openWound: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

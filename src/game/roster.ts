@@ -70,11 +70,12 @@ import { isEngravable } from './forge'
 import { STATUSES } from './statuses'
 
 /**
- * Foudre du druide (0.76.0, demande de l'utilisateur) : trois éclairs de dégâts directs, jamais critiques. 2 chacun
- * jusqu'à la 0.105.0 ; 1 depuis la 0.106.0 (phase 5 bis) : la Foudre se greffe sur son coup de base.
+ * Foudre du druide (0.76.0, demande de l'utilisateur) : des éclairs de dégâts directs, jamais critiques. 2 chacun
+ * jusqu'à la 0.105.0 ; 1 depuis la 0.106.0 (phase 5 bis) : la Foudre se greffe sur son coup de base. Trois éclairs jusqu'à
+ * la revue des compétences (O3, docs/REVUE_COMPETENCES.md), quatre depuis : la plus faible brique de kit du jeu.
  */
 const THUNDERBOLT = 1
-const THUNDERBOLT_HITS = 3
+const THUNDERBOLT_HITS = 4
 
 /*
  * Archétypes par race :
@@ -123,8 +124,9 @@ const gorak: CharacterDef = {
   },
   // Signature (règles v2, décision de l'utilisateur) : la Furie des vents, sur la face 1
   signature: 'wind-fury',
-  // Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : le Sang (Épines acérées, Vol de vie), la Furie (Œil de faucon, Aura de précision)
-  repertoire: ['thorns', 'life-steal', 'hawk-eye', 'precision-aura'],
+  // Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : le Sang (Épines acérées, Vol de vie, Plaie ouverte), la Furie
+  // (Œil de faucon, Aura de précision). La Plaie ouverte (revue des compétences, I4) : ses critiques nourrissent sa Curée
+  repertoire: ['thorns', 'life-steal', 'open-wound', 'hawk-eye', 'precision-aura'],
   reserve: [
     {
       id: 'power-aura',
@@ -133,13 +135,15 @@ const gorak: CharacterDef = {
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
       // Axes de rang (E1, 0.110.0, SORTS.md § 20 ; entiers depuis la 0.111.0). Une aura non cumulable aiguisée vaut un
-      // cran de plus (son intensité) ; une aura cumulable, une charge de plus, ou une intensité
+      // cran de plus (son intensité) ; une aura cumulable, une charge de plus, ou une intensité. Cumulable à 3 charges depuis
+      // la revue des auras (A4) : son rang reste une intensité, +1 par coup
       rankAxis: { kind: 'power', per: 1 },
     },
     {
       // Phase 8, premier lot (0.114.0, SORTS.md) : le pont du Sang vers la Furie. Greffée, elle part si l'adversaire saigne :
-      // deux coups de base bruts juste après le coup de base de son jet. Gravée : Brokk +10,4, Gorak +7,0 ; un coup de
-      // plus valait +6,3 et +3,8. Rang : une charge de plus, deux coups (« un coup » par rang ne valait que +1,5 à +1,9)
+      // des coups de base bruts juste après le coup de base de son jet, deux jusqu'à la revue des compétences (O1), trois
+      // depuis (Gorak construit +5,8 → +7,4). Gravée : Brokk +10,4, Gorak +7,0. Rang : une charge de plus, trois coups
+      // (« un coup » par rang ne valait que +1,5 à +1,9)
       id: 'quarry',
       name: 'Curée',
       nature: 'martial',
@@ -173,7 +177,8 @@ const gorak: CharacterDef = {
       trigger: 'naturalTwo',
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'bleed', stacks: 0, fromHit: 0.5, target: 'opponent' }],
-      rankAxis: { kind: 'stacks', per: 1 },
+      // +2 Saignement par rang depuis la revue des compétences (R1) : +1 laissait le rang II à +2,4 chez Gorak construit
+      rankAxis: { kind: 'stacks', per: 2 },
     },
   ],
 }
@@ -296,15 +301,15 @@ const brokk: CharacterDef = {
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa Peau de pierre, le pont du Rempart vers les Épines
       // (FAMILLES § 7, « un bouclier consommé donne des Épines »). Une aura : +2 Épines acérées par charge à chaque armure
-      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7). Son rang
-      // (calage de campagne, nuit du 2026-10-25, laboratoire série 28) : +6 Épines (+3,1) ; +2 valait +1,7, +4 +2,5, et une
-      // armure temporaire posée par le rang (la ressource) +17 dès 1 point
+      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7). Revue des
+      // auras (A3) : +2 armure temporaire avec elles, la boucle qui nourrit sa ressource (Brokk +7,8 → +11,7, 0,39 armure
+      // vidée par combat avant). Son rang : +2 Épines et +2 armure ; il était de +6 Épines (calage de campagne, série 28)
       id: 'bristling-rampart',
       name: 'Rempart hérissé',
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'bristlingRampart', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 3 },
+      rankAxis: { kind: 'power', per: 1 },
     },
   ],
   events: [
@@ -370,27 +375,39 @@ const ervald: CharacterDef = {
       effects: [{ type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
-    // Phase 8, premier lot (0.114.0, SORTS.md) : les consommateurs de son Poison. Le pont vers le Drain (Récolte, +8,7
-    // gravée) et l'amplificateur du fil Poison (Virulence, +8,4) ; sans Poison, ni l'une ni l'autre ne part
+    // Phase 8, premier lot (0.114.0, SORTS.md) : les consommateurs de son Poison. Le pont vers le Drain (Récolte) et
+    // l'amplificateur du fil Poison (Virulence). Revue des compétences (P1, P2) : elles mouraient sur leur condition et leur
+    // montant (Ervald construit +5,3 et +5,2)
     {
+      // +14 PV si l'adversaire est empoisonné (7 avant la revue), rang +6 (+4 avant)
       id: 'harvest',
       name: 'Récolte',
       nature: 'arcane',
       trigger: 'naturalThree',
       when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
-      effects: [{ type: 'heal', amount: 7 }],
-      rankAxis: { kind: 'amount', per: 4 },
+      effects: [{ type: 'heal', amount: 14 }],
+      rankAxis: { kind: 'amount', per: 6 },
     },
     {
-      // Le Poison de l'adversaire triplé : deux fois ses charges en plus (`fromStatus`), lues quand elle part. Elle grandit
-      // avec le Poison (Aura glaciale aiguisée, Souffle gravé) ; son rang ajoute 3 Poison à plat
+      // Le Poison de l'adversaire triplé (`fromStatus`, deux fois ses charges en plus, lues quand elle part), puis +2. Sans
+      // condition depuis la revue (P1) : elle part à chaque fois (0,51 → 1,23 fois par combat), et pose elle-même son Poison
+      // sur un adversaire sain. Son rang ajoute 1 Poison à plat (3 avant la revue : sans condition, +3 sortait de la bande)
       id: 'virulence',
       name: 'Virulence',
       nature: 'arcane',
       trigger: 'naturalThree',
-      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
-      effects: [{ type: 'applyStatus', status: 'poison', stacks: 0, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 2 } }],
-      rankAxis: { kind: 'stacks', per: 3 },
+      effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 2 } }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
+    {
+      // Revue des compétences (I4) : la seconde consommatrice de critiques (Précision → Saignement), une aura. Réservée aux
+      // critiques fréquents : gravée, Ervald +10,3, Elaria +12,5, ailleurs +0,9 à +6,3. Son rang : +3 Saignement
+      id: 'open-wound',
+      name: 'Plaie ouverte',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'openWound', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
     },
   ],
   events: [
@@ -410,9 +427,10 @@ const ervald: CharacterDef = {
       nature: 'arcane',
       trigger: 'naturalTwo',
       // 0.107.0 (SORTS.md § 19) : 1 charge au lieu de 2 (plafond 2 gardé) ; deux coups drainés à chaque 1 le mettaient à
-      // +21 points gravé et +23,6 dans le kit d'Ervald
-      effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 2 },
+      // +21 points gravé et +23,6 dans le kit d'Ervald. Revue des compétences (P3) : +2 PV par coup drainé dès le rang I
+      // (l'intensité posée), +4 par rang ; la plus faible compétence de kit après la Foudre (+5,9 dans les builds d'Ervald)
+      effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1, power: 2 }],
+      rankAxis: { kind: 'power', per: 4 },
     },
   ],
 }
@@ -464,13 +482,23 @@ const ysolde: CharacterDef = {
       rankAxis: { kind: 'limit', per: 1 },
     },
     {
-      // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). 2 PV par charge
-      // valaient +13,5 et la mettaient à 58,8 % contre le roster
+      // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). Revue des auras
+      // (A1) : 3 PV par charge (1 avant), Ysolde +7,9 → +15,9 ; son rang, +3 par soin
       id: 'sentence',
       name: 'Sentence',
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'sentence', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
+      // Revue des compétences (I1, retenue avec la Sentence) : l'autre consommatrice de ses soins, Soin → Garde, une aura.
+      // Gravée : Ysolde +16,1 (ailleurs +0,5 à +4,1) ; à la place de la Sentence dans ses builds, 37,0 → 43,9 %
+      id: 'faith-shield',
+      name: 'Bouclier de foi',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'faithShield', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
   ],
@@ -531,9 +559,9 @@ const naraxes: CharacterDef = {
   // Signature : Pile ou face jusqu'à la 0.106.1 (l'identité plutôt que la valeur) ; l'Aura de décoction depuis la 0.107.0
   // (décision de l'utilisateur, SORTS.md § 19) : en campagne, elle partait sans ce qui la fait gagner
   signature: 'decoction-aura',
-  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée), le Poison (Souffle de la tombe, Aura glaciale, Virulence ;
-  // la Virulence ne lit que le Poison qui tient jusqu'à son jet : celui du Souffle ou de l'Aura glaciale, pas sa décoction)
-  repertoire: ['hawk-eye', 'evasion', 'grave-breath', 'frost-aura', 'virulence'],
+  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée, Pas de côté), le Poison (Souffle de la tombe, Aura glaciale,
+  // Virulence). Le Pas de côté (revue des compétences, I3) : l'esquive permanente de la voleuse qui esquive déjà (20 %)
+  repertoire: ['hawk-eye', 'evasion', 'sidestep', 'grave-breath', 'frost-aura', 'virulence'],
   reserve: [
     {
       id: 'lucky-strike',
@@ -547,7 +575,8 @@ const naraxes: CharacterDef = {
     },
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa pièce (la Fortune). Une charge qui attend sa prochaine
-      // pièce : pile, et pile vaut ×2 de plus (ce coup ×5). Gravée : +9,8 (pile seule, sans bonus : +5,1)
+      // pièce : pile, et pile vaut ×3 de plus (ce coup ×6 ; ×5 jusqu'à la revue des compétences, O2). Gravée : +9,8 à ×5
+      // (pile seule, sans bonus : +5,1)
       id: 'loaded-die',
       name: 'Dé pipé',
       nature: 'finesse',
@@ -575,7 +604,8 @@ const naraxes: CharacterDef = {
       // la 0.107.0, `COIN_HEADS`)
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      // Pile ×2 de plus par rang depuis la revue des compétences (R2) : ×1 laissait le rang II à +2,3 chez Naraxes construite
+      rankAxis: { kind: 'power', per: 2 },
     },
   ],
 }
@@ -631,7 +661,8 @@ const aldric: CharacterDef = {
     },
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Représailles, les dégâts qu'il renvoie (Riposte,
-      // Rétribution). Une aura : +3 Ferveur par charge à chaque renvoi (gravée : +9,4 ; « +2 » valait +7,0)
+      // Rétribution). Une aura : +6 Ferveur par charge à chaque renvoi depuis la revue des auras (A2 ; +3 avant, Aldric
+      // +9,0 → +12,9 gravée ; +9 valait +15,4, plus risqué)
       id: 'vendetta',
       name: 'Vindicte',
       nature: 'martial',
@@ -766,7 +797,7 @@ const thaldrin: CharacterDef = {
     tagline: 'La forêt a deux visages.',
     background:
       "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
-    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', 'Foudre : trois éclairs'],
+    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', 'Foudre : quatre éclairs'],
     weaknesses: ['Aucun soin ni armure', 'Ses sorts, sous forme d’homme seulement', 'Forme imposée à chaque tour'],
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
@@ -797,7 +828,8 @@ const thaldrin: CharacterDef = {
       trigger: 'naturalOne',
       form: 'human',
       effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }],
-      rankAxis: { kind: 'stacks', per: 1 },
+      // +2 Brûlure par rang depuis la revue des compétences (R3) : +1 laissait le rang II à +3,4 chez Thaldrin construit
+      rankAxis: { kind: 'stacks', per: 2 },
     },
     {
       id: 'thunderbolt',
@@ -860,7 +892,9 @@ const fanchon: CharacterDef = {
   repertoire: ['power-aura', 'coin-flip', 'loaded-die', 'evasion', 'precision-aura'],
   // Hors kit (phase 5 ter) : ses autres chansons, gravables, réécrites pour une face (elles valaient un double, un jet
   // sur 36) : Siffloter 3 → 2 charges, Fausse note 2 → 1, Crescendo ×4 à la place des deux coups → ce coup ×2. 0.107.0 :
-  // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible
+  // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible. Revue des compétences
+  // (P5, P4) : Siffloter rend 3 PV par tour (2 avant) ; la Fausse note vaut deux coups à −4 (un coup à −5 avant), son
+  // intensité de départ (1) les compte. Le Pas de côté (I3) : la saltimbanque qui esquive d'un pas de danse
   reserve: [
     { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
     {
@@ -868,10 +902,20 @@ const fanchon: CharacterDef = {
       name: 'Fausse note',
       nature: 'arcane',
       trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, target: 'opponent' }],
+      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, power: 1, target: 'opponent' }],
       rankAxis: { kind: 'power', per: 1 },
     },
     { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    // Revue des compétences (I3) : la première esquive permanente, une aura cumulable (+8 % par charge ; gravée +8,2, de
+    // Fanchon +6,4 à Ervald +10,0). Son rang : une charge de plus
+    {
+      id: 'sidestep',
+      name: 'Pas de côté',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'sidestep', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
   ],
   events: [
     { id: 'overture', name: 'Ouverture', nature: 'arcane', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }] },

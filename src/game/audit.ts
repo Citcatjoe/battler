@@ -12,7 +12,7 @@ import { beatEffects, diceOf, effectiveStats, relicIsInert, type AppliedEffect, 
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
-import { charges, CONFLAGRATION_TIMES, isMechanic, RAMPART_THORNS, STATUSES, VENDETTA_MOMENTUM, type Status } from './statuses'
+import { charges, CONFLAGRATION_TIMES, FAITH_SHIELD_ARMOR, isMechanic, OPEN_WOUND_BLEED, RAMPART_ARMOR, RAMPART_THORNS, STATUSES, VENDETTA_MOMENTUM, type Status } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
 
@@ -343,19 +343,52 @@ export function createAudit() {
           if (!reacted && !caused.some((x) => x.state.hp.some((h) => h === 0)) && s.hp.every((h) => h > 0)) flag('sentence non déclenchée', r, i, `${b.type} côté ${side}`)
         }
       // Phase 8, second lot. Rempart hérissé : il réagit au coup qui vide une armure temporaire de son porteur (ce coup pour
-      // cause), de ses charges du début du coup : 2 Épines acérées par charge. Vindicte : à chaque étape où son porteur
-      // renvoie des dégâts (Riposte, Rétribution), cette étape pour cause : 3 Ferveur par charge. Embrasement : au coup qui
-      // touche un adversaire qui brûle, il relâche sa Brûlure (3 fois ce qu'elle ferait encore perdre), l'éteint et perd une
-      // charge. Chacun part à chaque fois, sauf si le combat finit avant (dans une fenêtre de l'étape, de proche en proche)
+      // cause), de ses charges du début du coup : 2 Épines acérées et 2 armure temporaire par charge (l'armure depuis la
+      // revue des auras, A3). Vindicte : à chaque étape où son porteur renvoie des dégâts (Riposte, Rétribution), cette
+      // étape pour cause : 6 Ferveur par charge. Embrasement : au coup qui touche un adversaire qui brûle, il relâche sa
+      // Brûlure (3 fois ce qu'elle ferait encore perdre), l'éteint et perd une charge. Revue des compétences (I1, I4) : le
+      // Bouclier de foi à chaque soin reçu, 2 armure temporaire par charge ; la Plaie ouverte à chaque critique de son
+      // porteur qui touche, de ses charges du début du coup, 3 Saignement par charge à l'adversaire. Chacun part à chaque
+      // fois, sauf si le combat finit avant (dans une fenêtre de l'étape, de proche en proche)
       const diedAfter = (j: number) => [r.beats[j], ...descendantsOf(r, j)].some((x) => x.state.hp.includes(0))
       const reactedTo = (j: number, side: Side, id: string) => r.beats.some((x) => x.cause === j && x.type === 'statusReaction' && x.status === id && x.side === side)
       if (b.type === 'statusReaction' && b.status === 'bristlingRampart') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'bristlingRampart') : undefined
-        const thorns = b.effects[0]
+        const [thorns, armor] = b.effects
         if (b.trigger !== 'shieldBroken' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'shieldBroken')) flag('rempart hors d’une armure vidée', r, i, `${b.trigger}`)
-        else if (b.effects.length !== 1 || thorns?.type !== 'applyStatus' || thorns.status !== 'thorns' || thorns.target !== b.side || thorns.stacks !== RAMPART_THORNS * charges(held))
-          flag('rempart : épines fausses', r, i, JSON.stringify(b.effects))
+        else if (
+          b.effects.length !== 2 ||
+          thorns?.type !== 'applyStatus' ||
+          thorns.status !== 'thorns' ||
+          thorns.target !== b.side ||
+          thorns.stacks !== RAMPART_THORNS * charges(held) ||
+          armor?.type !== 'applyStatus' ||
+          armor.status !== 'bonusArmor' ||
+          armor.target !== b.side ||
+          armor.stacks !== RAMPART_ARMOR * charges(held)
+        )
+          flag('rempart : épines ou armure fausses', r, i, JSON.stringify(b.effects))
         else see('rempart hérissé')
+      }
+      if (b.type === 'statusReaction' && b.status === 'faithShield') {
+        const held = find(prev.statuses[b.side], 'faithShield')
+        const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const healedBy = !!cause && beatEffects(cause).some((e) => e.type === 'heal' && e.target === b.side && e.amount > 0)
+        const armor = b.effects[0]
+        if (b.trigger !== 'healed' || !held || !healedBy) flag('bouclier de foi hors d’un soin', r, i, `${b.trigger} ${cause?.type}`)
+        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== b.side || armor.stacks !== FAITH_SHIELD_ARMOR * charges(held))
+          flag('bouclier de foi : armure fausse', r, i, JSON.stringify(b.effects))
+        else see('bouclier de foi')
+      }
+      if (b.type === 'statusReaction' && b.status === 'openWound') {
+        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'openWound') : undefined
+        const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const crit = cause?.type === 'attack' && cause.attack.attacker === b.side && cause.attack.crit && !cause.attack.dodged && !cause.attack.replaced
+        const wound = b.effects[0]
+        if (b.trigger !== 'crit' || !crit || !held) flag('plaie ouverte hors d’un critique', r, i, `${b.trigger} ${cause?.type}`)
+        else if (b.effects.length !== 1 || wound?.type !== 'applyStatus' || wound.status !== 'bleed' || wound.target !== 1 - b.side || wound.stacks !== OPEN_WOUND_BLEED * charges(held))
+          flag('plaie ouverte : saignement faux', r, i, JSON.stringify(b.effects))
+        else see('plaie ouverte')
       }
       if (b.type === 'statusReaction' && b.status === 'vendetta') {
         const held = find(prev.statuses[b.side], 'vendetta')
@@ -380,6 +413,10 @@ export function createAudit() {
       for (const side of [0, 1] as const) {
         if (opensMoment(r, i, side, 'shieldBroken') && find(prev.statuses[side], 'bristlingRampart') && !diedAfter(i) && !reactedTo(i, side, 'bristlingRampart')) flag('rempart non déclenché', r, i, `côté ${side}`)
         if (opensMoment(r, i, side, 'reflected') && find(prev.statuses[side], 'vendetta') && !diedAfter(i) && !reactedTo(i, side, 'vendetta')) flag('vindicte non déclenchée', r, i, `côté ${side}`)
+        if (find(prev.statuses[side], 'faithShield') && beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0) && !diedAfter(i) && !reactedTo(i, side, 'faithShield'))
+          flag('bouclier de foi non déclenché', r, i, `${b.type} côté ${side}`)
+        const crit = b.type === 'attack' && b.attack.attacker === side && b.attack.crit && !b.attack.dodged && !b.attack.replaced
+        if (crit && find(prev.statuses[side], 'openWound') && !diedAfter(i) && !reactedTo(i, side, 'openWound')) flag('plaie ouverte non déclenchée', r, i, `côté ${side}`)
         const touched = (b.type === 'attack' && b.attack.attacker === side && !b.attack.dodged && !b.attack.replaced) || (b.type === 'coin' && b.side === side && b.heads && !!STATUSES[b.status].coinToss?.headsTouches)
         // Sauf une Brûlure éteinte dans les fenêtres du coup (une purge de seuil, la Larme de givre, avant la fenêtre du coup)
         if (touched && find(prev.statuses[side], 'conflagration') && find(s.statuses[1 - side], 'burn') && !diedAfter(i) && !reactedTo(i, side, 'conflagration'))

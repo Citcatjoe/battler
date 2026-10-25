@@ -107,14 +107,14 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 
 | Son | Compétences |
 | --- | --- |
-| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0), Ouverture (la barde) ; Sentence (0.114.0), Rempart hérissé et Vindicte (second lot) ; le Duo (2026-10-25 : il pose l'Aura mélodieuse, puis son dé de plus ; l'aura passe en premier, § 4.2 ; l'Aura mélodieuse, sa signature jusqu'à la 0.115.1, sonnait de même) |
+| Aura gagnée | Aura de puissance, Aura de précision, Aura d'intimidation, Aura glaciale, Aura de sainteté, Aura de décoction, Aura d'immunité (elle purge aussi, mais l'aura passe en premier), Aura sauvage (0.73.0), Ouverture (la barde) ; Sentence (0.114.0), Rempart hérissé et Vindicte (second lot) ; le Duo (2026-10-25 : il pose l'Aura mélodieuse, puis son dé de plus ; l'aura passe en premier, § 4.2 ; l'Aura mélodieuse, sa signature jusqu'à la 0.115.1, sonnait de même) ; Bouclier de foi, Pas de côté et Plaie ouverte (revue des compétences, 2026-10-25 : trois auras, aucun son nouveau) |
 | Bonus gagné | Œil de faucon, Esquive améliorée, Peau de pierre, Épines acérées, Vol de vie, Coup de chance, Riposte, Siffloter ; Rancune (0.114.0) |
 | Aucun son propre (mécanisme posé, § 4.2 règle 8) | Furie des vents (sa rafale sonne), Pile ou face (sa pièce sonne) : Bonus gagné jusqu'à la 0.109.1 ; Soliste et Crescendo (coup de base ×N, sans effet : leur coup sonne) ; Curée (0.114.0 : sa rafale sonne) ; Embrasement (son coup sonne) et Dé pipé (sa pièce sonne), second lot |
 | Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0, Brûlure posée), Fausse note, Pourfendre (0.70.0 : son coup sonne d'abord comme un coup, puis la plaie posée joue Malus reçu ; avant, la Saignée, et la Rage du sang, qui jouait Soin) ; Virulence (0.114.0, le Poison multiplié) |
 | Soin | Récolte (0.114.0) |
 | Dissipation ou Aura perdue | Purification (Aura perdue si le bonus retiré est une aura ; sans bonus à retirer, ses dégâts directs sonnent comme un coup reçu) |
 | Coup | Rétribution (la moitié de ses jauges en un coup ; Coup critique à 10 dégâts ou plus) |
-| Coup critique | Foudre (0.76.0 : un par éclair, à l'impact de chacun, trois coups de 1 dégât ; l'Éclair synthétisé de la 0.110.0 retiré le 2026-10-24 : l'utilisateur garde ce son) |
+| Coup critique | Foudre (0.76.0 : un par éclair, à l'impact de chacun ; quatre coups de 1 dégât depuis la revue des compétences, trois avant ; l'Éclair synthétisé de la 0.110.0 retiré le 2026-10-24 : l'utilisateur garde ce son) |
 
 ### 4.4 Les labels de la zone de surcharge (2026-10-21)
 
@@ -222,9 +222,9 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Coup | un coup d'attaque qui touche (y compris ceux de l'ours, le coup de Pourfendre et les coups de la Curée) ; la Riposte (renvoi) ; la perte de PV de la Sentence et la frappe de l'Embrasement (2026-10-25) ; la relâche de la Rétribution (un coup, la moitié de ses jauges, sous 10 dégâts) ; chaque jauge d'une relâche en entier sauf la dernière ; les lames d'air de la Conque des vents |
 | Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive ; la Foudre, un par éclair, à l'impact de chacun (0.76.0, gardé le 2026-10-24) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) |
-| Aura gagnée | les 13 compétences d'aura (§ 4.3 : le Duo et l'Ouverture compris ; Sentence, Rempart hérissé et Vindicte depuis la 0.114.0 et le second lot) |
+| Aura gagnée | les 16 compétences d'aura (§ 4.3 : le Duo et l'Ouverture compris ; Sentence, Rempart hérissé et Vindicte depuis la 0.114.0 et le second lot ; Bouclier de foi, Pas de côté et Plaie ouverte depuis la revue des compétences) |
 | Aura perdue | une purification qui retire une aura |
-| Bonus gagné | les 9 compétences qui posent un bonus sur leur lanceur (§ 4.3, Rancune comprise) ; la Rancune, le Rempart hérissé et la Vindicte quand ils agissent (§ 9.3) ; plus la Furie des vents, Pile ou face, la Curée, l'Embrasement ni le Dé pipé, qui posent un mécanisme (0.110.0) |
+| Bonus gagné | les 9 compétences qui posent un bonus sur leur lanceur (§ 4.3, Rancune comprise) ; la Rancune, le Rempart hérissé, la Vindicte et le Bouclier de foi quand ils agissent (§ 9.3) ; plus la Furie des vents, Pile ou face, la Curée, l'Embrasement ni le Dé pipé, qui posent un mécanisme (0.110.0) |
 | Malus reçu | Souffle de la tombe, Peur, Feux follets (0.73.0), Fausse note, Pourfendre (après son coup, s'il touche), Virulence (0.114.0) ; l'Aura de décoction qui empoisonne, à l'impact du coup qui touche ; les Épines acérées qui font saigner l'attaquant (0.68.0) ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur (0.69.0) ; un label − sous le dé : Esquive assurée, bouclier qui absorbe, Fausse note, Riposte, relique du défenseur qui contre le coup (la Conque des vents, les Clous de pavois) ; les Épines, dont le Malus reçu de leur effet parle déjà (2026-10-21, § 4.4) |
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi |
@@ -251,7 +251,7 @@ Les deux personnages d'une même race partagent leurs compétences.
 | Homme-lézard (Naraxes, Ssythra) | Coup de chance : Bonus gagné | Pile ou face : aucun son propre, sa pièce sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de décoction : Aura gagnée |
 | Paladin (Aldric, Gauvain) | Rétribution : Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0 ; Coup par jauge et Coup critique sur la dernière avant) | Riposte : Bonus gagné | Aura d'immunité : Aura gagnée |
 | Ogre (Morgrut, Gnashka) | Attente : Malus reçu | Attente : Malus reçu | Attente : Malus reçu |
-| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des trois éclairs (0.76.0 ; Éclair synthétisé en 0.110.0, retiré le 2026-10-24 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
+| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des quatre éclairs (trois jusqu'à la revue des compétences ; 0.76.0 ; Éclair synthétisé en 0.110.0, retiré le 2026-10-24 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Malus reçu (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
 | Druide, forme d'ours | coup : Coup | coup : Coup | coup : Coup (0.73.0 ; Charge, Coup de griffe et Aura de rancune avant, et le relais Rancune et Sève, Bonus gagné, jusqu'à la 0.72.0) |
 | Barde (Fanchon) | Duo : Aura gagnée (son aura passe avant son dé de plus ; sa rafale, à l'action suivante, sonne comme toute rafale), 2026-10-25 | Soliste : aucun son propre, son coup sonne | face nue ; l'Ouverture, au début du combat : Aura gagnée |
 
@@ -282,10 +282,12 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2). 
 | Sentence | le porteur regagne des PV | Coup (sa perte de PV, en coup sans élan, à l'arrivée du signal de son anneau, au milieu de la lecture du soin : `MISE_EN_SCENE.md` M19 bis, M41) |
 | Rancune | le porteur encaisse un coup | Bonus gagné (Critique assuré posé) et Pile réussie (son label +), au milieu de la lecture du coup |
 | Curée | juste après le coup de base de son jet | aucun son propre : ses dés apparaissent à plat, sans Dé lancé (`MISE_EN_SCENE.md` M27), puis le son de chaque coup |
-| Rempart hérissé | un coup vide l'armure temporaire du porteur | Bonus gagné (Épines acérées posées) |
+| Rempart hérissé | un coup vide l'armure temporaire du porteur | Bonus gagné (Épines acérées et armure temporaire posées ensemble, un seul son ; l'armure depuis la revue des auras) |
 | Vindicte | le porteur renvoie des dégâts (Riposte, Rétribution) | Bonus gagné (Ferveur posée), au milieu de la lecture du dernier coup du renvoi |
 | Embrasement | le coup du porteur touche un adversaire qui brûle | Coup, même gros, comme un renvoi (§ 4.1 : la frappe d'un statut n'est qu'un coup) ; son chiffre, lui, est doré à 10 dégâts et plus |
 | Dé pipé | la pièce suivante | Pile réussie (son label, avec le ding de pile) |
+| Bouclier de foi | le porteur regagne des PV | Bonus gagné (armure temporaire posée), au milieu de la lecture du soin (`MISE_EN_SCENE.md` M41) |
+| Plaie ouverte | le coup critique du porteur touche | Malus reçu (le Saignement posé sur l'adversaire, comme l'Aura de décoction qui empoisonne), au milieu de la lecture du coup |
 | Expiration ou baisse de durée d'un statut | | aucun son (règle 7) |
 
 ### 9.4 Par écran

@@ -2,7 +2,40 @@
 
 _Demandée par l'utilisateur : « Je veux qu'on fasse la revue des auras et compétences » ([PROGRESSION.md](PROGRESSION.md) § 1.10 : les auras s'insèrent-elles naturellement dans le nouveau jeu, et comment les rendre plus naturelles, utiles et synergiques ; valider, tester et auditer les compétences, en ajouter en pensant familles, avec des descriptions courtes et simples qui portent le fonctionnement). S'y ajoute la piste de la montée (§ 13.4). Même forme que [REVUE_CONTENU.md](REVUE_CONTENU.md) (0.109.1) : les décisions d'abord, le détail ensuite._
 
-**Rien n'est changé dans le jeu.** Toutes les mesures viennent de scripts jetables (supprimés) et de séries de laboratoire étiquetées (retirées) ; chaque proposition est mesurée seule, avant → après, aux mêmes graines. L'utilisateur tranche.
+**Au moment de la revue, rien n'était changé dans le jeu.** Toutes les mesures viennent de scripts jetables (supprimés) et de séries de laboratoire étiquetées (retirées) ; chaque proposition est mesurée seule, avant → après, aux mêmes graines. L'utilisateur a tranché le 2026-10-25 : voir « Décisions de l'utilisateur et application » ci-dessous.
+
+## Décisions de l'utilisateur et application (2026-10-25)
+
+« Ce qui n'est pas l'objet d'une remarque est validé. » **Appliqués** : A1 à A5, P1 à P5, R1 à R3, I1 (avec A1 : les deux), I3, I4, O1 à O3, T1 à T7, X2 ; X3 en outil à part (`npm run ramp`). **En attente** (questions de l'utilisateur) : I2 (Brèche), X1 (Épines acérées en aura). **Écartée** : R4. Valeurs exactement celles de la revue ; mesurées ensemble après application (`scripts/skills.report.ts` 400 combats par duel, `BALANCE_N=800 npm run balance`, `npm run campaign` 30 parties, `npm run season`). Détail, choix de l'agent et contrôles : [SORTS.md](SORTS.md) § 27.
+
+| Id | Statut | Mesure de la revue (seule) | Livrée (ensemble) |
+| --- | --- | --- | --- |
+| A1 Sentence 3 PV | **appliquée** | Ysolde gravée +7,9 → +15,9 ; rang II +4,3 | Ysolde **+16,2** ; rang II +4,3 |
+| A2 Vindicte +6 | **appliquée** | Aldric +9,0 → +12,9 ; rang II +4,0 | Aldric **+13,2** ; rang II +4,0 |
+| A3 Rempart +2 Épines et +2 armure | **appliquée** | Brokk +7,8 → +11,7 ; rang II +1,4 | Brokk **+12,4** ; rang II +1,3 |
+| A4 Puissance cumulable, 3 charges | **appliquée** | +16,2 → +18,0 ; rang II +4,1 (Gorak) | **+17,9** ; rang II +4,3 |
+| A5 Immunité, détail | **appliquée** | texte | « Les auras de l'adversaire agissent toujours, sans pouvoir lui poser de malus. » |
+| P1 Virulence sans condition, +2 | **appliquée** | Ervald +8,3 → +18,8, Naraxes +0,7 → +12,9 ; rang II Ervald +6,2 | Ervald **+17,5**, Naraxes **+13,0** ; rang II Ervald +5,8 (moyenne +7,2) |
+| P2 Récolte +14 | **appliquée** | Ervald +8,6 → +12,7 ; rang II +1,8 | Ervald **+11,9** ; rang II +1,4 |
+| P3 Vol de vie +2 dès le rang I | **appliquée** | Ervald vanilla 46,6 → 51,2 % ; kit +14,8 → +19,4 | Ervald vanilla **45,7 → 49,7 %** ; kit **+14,4 → +18,6** ; gravé Gorak +16,0, Ysolde +19,9, Aldric +15,8 ; rang II +4,5 |
+| P4 Fausse note, 2 coups à −4 | **appliquée** | Fanchon +13,6 → +20,1 ; rang II +5,6 | Fanchon **+20,1** (moyenne +20,0, drapeau « forte », au bord) ; rang II +4,9 |
+| P5 Siffloter +3 PV | **appliquée**, test ajouté | Fanchon +10,3 → +15,3 ; rang II +4,2 | Fanchon **+15,3** ; rang II +4,3 |
+| R1 Pourfendre +2 par rang | **appliquée** | rang II Elaria +9,7, kit +10,6 | rang II **+7,0** (Elaria +9,7) ; kit de Gorak **+10,6** |
+| R2 Pile ou face ×2 par rang | **appliquée** | rang II Fanchon +5,0, kit +7,3 | rang II **+5,4** ; kit de Naraxes **+7,3** |
+| R3 Feux follets +2 par rang | **appliquée** | rang II Ervald +10,6, kit +7,9 | rang II **+9,2** (Ervald +10,0) ; kit de Thaldrin **+7,7** |
+| I1 Bouclier de foi | **appliquée** (`faith-shield`, réserve d'Ysolde, avec la Sentence) | Ysolde +16,1 ; rang II +5,2 | Ysolde **+16,2** ; rang II +5,2 |
+| I3 Pas de côté | **appliquée** (`sidestep`, réserve de Fanchon, répertoire de Naraxes) | +8,2 ; rang II +7,0 | **+8,2** ; rang II +7,1 |
+| I4 Plaie ouverte | **appliquée** (`open-wound`, réserve d'Ervald, répertoire de Gorak) | +5,5 ; Elaria +12,5, Ervald +10,3 ; rang II Ervald +5,5 | **+5,5** ; Elaria +12,8, Ervald +9,0 ; rang II +2,5 (Elaria +4,9) |
+| O1 Curée, trois coups | **appliquée** | Gorak +6,6 → +8,3, Brokk +10,4 → +12,6 | Gorak **+8,3**, Brokk **+12,9** |
+| O2 Dé pipé ×6 | **appliquée** | Naraxes +9,7 → +11,0 | Naraxes **+11,0** |
+| O3 Foudre 4 × 1 | **appliquée**, scène à quatre éclairs | Thaldrin vanilla 54,9 → 56,4 % ; kit +6,2 → +7,7 | Thaldrin vanilla **55,0 → 55,9 %** ; kit **+5,8 → +7,3** ; rang II gravé **+9,6** (au-dessus de la bande, signalé) |
+| T1 à T7 | **appliqués** | textes | dans les générateurs (`describeSkill`, registres) |
+| X2 Accroche « gêne » | **appliquée** | — | `slot:<statut>` (Esquive améliorée, Brûlure, Pile ou face) ; l'écho de l'offre retire les gênes |
+| X3 Rapport du porteur réel | **appliquée** à part | — | `npm run ramp` (agent RampReport) |
+| I2 Brèche, X1 Épines en aura | **en attente** | — | rien de changé |
+| R4 Purification | **écartée** | — | rien de changé |
+
+**Ensemble** : roster vanilla de 45,6 % (Morgrut) à 55,9 % (Thaldrin), pire duel inchangé (Elaria contre Morgrut, 61,9 %), aucune compensation. Construits contre construits (campagne, 30 parties, avant → après) : Ervald 42 → 47 %, Ysolde 43 → 44 %, Fanchon 52 → 54 %, Thaldrin 46 → 43 %, Aldric 56 → 56 %, Brokk 44 → 43 %, Elaria 66 → 63 %, Naraxes 53 → 56 % ; campagne, tous champions, boss atteint 22 → 21 %, acte gagné 12 → 10 %. Saison (4 de 24) : de 37-71 % à 32-69 %, écart-type 10,3 → 10,0 points ; Ervald 38 → 44 %, Fanchon 59 → 56 %, Elaria 71 → 69 %, Morgrut 37 → 32 %.
 
 ## En bref
 

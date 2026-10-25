@@ -203,6 +203,35 @@ describe('audit de résolution : phase 8, second lot', () => {
   })
 })
 
+describe('audit de résolution : revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () => {
+  it('aucune anomalie pour le Bouclier de foi, la Plaie ouverte, le Pas de côté et les compétences retouchées, gravés chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    // Chaque nouvelle aura chez son porteur et chez qui la nourrit le mieux : les soins (Ysolde ; Ervald au Vol de vie), les
+    // critiques (Ervald, Elaria), l'esquive (Fanchon, Naraxes) ; puis les retouches qui changent une règle : la Virulence
+    // sans condition, le Rempart qui redonne de l'armure (Brokk, à la Peau de pierre), la Fausse note sur deux coups
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
+      'faith-shield': [['ysolde', []], ['ervald', []]],
+      'open-wound': [['ervald', []], ['elaria', []]],
+      sidestep: [['fanchon', []], ['naraxes', []]],
+      virulence: [['ervald', []], ['naraxes', []]],
+      'bristling-rampart': [['brokk', []]],
+      'false-note': [['fanchon', []]],
+      sentence: [['ysolde', []]],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const [host, before] of list)
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 18000 + n++ }))
+        }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['bouclier de foi', 'plaie ouverte', 'rempart hérissé', 'sentence', 'fausse note aiguisée', 'charges tirées d’un statut']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : les reliques de source (2026-10-25)', () => {
   it('aucune anomalie pour le Dard, le Briquet, la Pièce de foire et le Brassard chez tout le roster, seuls puis avec les reliques qu’ils ouvrent', () => {
     const { audit, problems, seen } = createAudit()

@@ -32,6 +32,41 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.118.0] — 2026-10-25
+
+Application de la revue des auras et des compétences ([REVUE_COMPETENCES.md](docs/REVUE_COMPETENCES.md), [PROGRESSION.md](docs/PROGRESSION.md) § 1.19), validée par l'utilisateur : « ce qui n'est pas l'objet d'une remarque est validé ». Valeurs exactement celles de la revue. En attente (questions de l'utilisateur) : I2 Brèche, X1 Épines acérées en aura ; R4 (Purification) écartée.
+
+### Ajouté
+- **Trois auras hors kit** (gravables), chacune avec son statut, son icône peinte (planche v22, `STYLE_BIBLE.md` § 7) et son état (`states.ts`, trois `aura()`) :
+  - **Bouclier de foi** (`faith-shield`, statut `faithShield`, I1) : chaque soin qu'il reçoit lui donne +2 armure temporaire par charge (`reactions.healed`, `FAITH_SHIELD_ARMOR`), cumulable sans plafond ; rang +2 par rang ; réserve d'Ysolde, avec la Sentence ;
+  - **Pas de côté** (`sidestep`, I3) : +8 % d'esquive par charge (`SIDESTEP_DODGE`), cumulable ; rang +1 charge ; réserve de Fanchon, répertoire de Naraxes ;
+  - **Plaie ouverte** (`open-wound`, statut `openWound`, I4) : chaque critique pose 3 Saignement par charge à l'adversaire (`reactions.crit`, `OPEN_WOUND_BLEED`) ; rang +3 par rang ; réserve d'Ervald, répertoire de Gorak.
+- **`npm run ramp`** (X3, `scripts/ramp.report.ts`) : rapport permanent de la montée en puissance chez le porteur réel. 48 builds par personnage (graines de `npm run campaign`), force relative de 0 à 10 récompenses contre les builds de même rang des neuf autres (60 combats par duel), ablations à 10, offres sur 120 actes, briques prises hors de leur bande ; en parallèle (`RAMP_WORKERS`, `RAMP_SHARD`), 6 713 280 combats en 98 à 106 s sur 22 processus. Écrit dans `logs/ramp/`. Documenté dans `docs/EQUILIBRAGE.md` § 3 et `docs/SORTS.md` § 8.
+- **Accroche « gêne »** (X2) : un `Hook` `slot:<statut>` ; l'Esquive améliorée, la Brûlure et Pile ou face gênent leur emplacement (`STATUS_HOOKS`, `hinders`) ; `linkBetween` compte un conflit quand deux briques gênent le même emplacement, et l'écho vaut max(0, liens − conflits) : l'offre orientée change (Embrasement × Soufflet de forge, reliques qui retirent une stat consommée). Le Rempart hérissé produit aussi `status:bonusArmor` et `moment:shieldBreak`.
+
+### Modifié
+- **Sentence** (A1) : 1 → **3 PV** par charge à chaque soin (`SENTENCE_LOSS`) ; rang +1 → +3 (plafond 2 gardé).
+- **Vindicte** (A2) : +3 → **+6 Ferveur** par renvoi (`VENDETTA_MOMENTUM`) ; rang +6.
+- **Rempart hérissé** (A3) : armure vidée → +2 Épines **et +2 armure temporaire** par charge (`RAMPART_ARMOR`) ; rang +6 Épines → +2 Épines et +2 armure.
+- **Aura de puissance** (A4) : non cumulable (+2) → **cumulable**, 3 charges au plus (+2, +3, +4) ; « Chaque nouvelle pose ajoute +1, jusqu'à +4 » ; elle se copie désormais.
+- **Aura d'immunité** (A5), texte : « Les auras de l'adversaire agissent toujours, sans pouvoir lui poser de malus. »
+- **Virulence** (P1) : sans condition, « Triple le Poison de l'adversaire, puis +2. » (avant : triple, si l'adversaire porte Poison) ; rang +3 → +1 Poison ; toujours offerte à qui produit du Poison.
+- **Récolte** (P2) : 7 → **14 PV** ; rang +4 → +6.
+- **Vol de vie** (P3, kit d'Ervald) : le drain rend aussi **+2 PV** ; rang +2 → +4. La Dent de loup, sans intensité, draine sans le +2.
+- **Fausse note** (P4) : 1 coup à −5 → **2 coups à −4** (`FALSE_NOTE`) ; rang +1 coup.
+- **Siffloter** (P5) : 2 → **3 PV** par tour (`WHISTLE_HEAL`) ; test ajouté.
+- Rangs (R1 à R3) : Pourfendre +1 → **+2 Saignement**, Pile ou face ×1 → **×2 de plus**, Feux follets +1 → **+2 Brûlure**.
+- **Curée** (O1) : 2 → **3 coups** bruts (`QUARRY_STRIKES`). **Dé pipé** (O2) : ×2 → **×3 de plus** sur pile, ce coup ×6 (`LOADED_DIE_BONUS`).
+- **Foudre** (O3, kit de Thaldrin) : 3 → **4 éclairs** de 1 (`THUNDERBOLT_HITS`) ; scène `lightning` à quatre impacts (440, 800, 1 160, 1 520 ms ; durée 1 750 → 2 110), un quatrième point d'éclair (`BOLT_SPOTS`) ; force de fiche « Foudre : quatre éclairs ».
+- Textes (T1 à T7) : Pourfendre (« L'adversaire saigne de la moitié des dégâts de ce coup, s'il touche. »), Esquive améliorée (« Une seule à la fois : une nouvelle pose ne s'ajoute pas. »), Épines (« …, jusqu'à la fin du combat »), Dé pipé (« Sa prochaine pièce tombe sur pile : ce coup ×6. »), Foudre (« L'adversaire perd 4 PV, en quatre éclairs. », rang « +1 à chacun des 4 éclairs », `HIT_NOUNS`), Embrasement (« Si l'adversaire brûle, son prochain coup qui touche lui fait perdre trois fois sa Brûlure. »), Crescendo (apostrophe droite).
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour volontairement (Vol de vie et Foudre vanilla).
+- **Mesuré**, avant → après :
+  - roster nu (`BALANCE_N=800`) : Gorak 52,7 → 52,2, Elaria 51,0 → 50,3, Brokk 49,0 → 48,4, **Ervald 45,7 → 49,7**, Ysolde 46,6 → 46,0, Naraxes 53,7 → 53,2, Aldric 52,3 → 51,7, Morgrut 46,5 → 45,6, Thaldrin 55,0 → 55,9, Fanchon 47,4 → 46,9 % ; pire duel inchangé (Elaria contre Morgrut 61,9 %) ; Vol de vie (kit) +14,4 → +18,6, Foudre +5,8 → +7,3 ; aucune compensation ;
+  - compétences (400 combats par duel, `docs/SORTS.md` § 27) : Fausse note « forte » à la moyenne (+20,0, Fanchon +20,1, au bord) ; Feux follets II +9,2 et Foudre II +9,6 gravés au-dessus de la bande ;
+  - campagne (30 parties) : boss 22 → 21 %, acte 12 → 10 % ; construit contre construits Ervald 42 → 47, Ysolde 43 → 44, Naraxes 53 → 56, Fanchon 52 → 54, Elaria 66 → 63, Thaldrin 46 → 43, Morgrut 47 → 45 % ; Sentence offerte chez Ysolde 94 → 78 % des actes (partage avec le Bouclier de foi) ;
+  - saison (4 × 24) : 37-71 % → 32-69 %, écart-type 10,3 → 10,0 ;
+  - montée (`npm run ramp`, 48 builds) : écart premier − dernier à 10 récompenses 26,1 → 20,9 points ; Ervald construit 43,3 → 48,2 %, Ysolde 39,8 → 42,2 % (pente −6,1 → −2,8), Elaria 66,0 → 63,0 %, Thaldrin pente −11,1 → −12,9 ; briques souvent prises hors de leur bande 22 + 3 → 10 + 2.
+
 ## [0.117.1] — 2026-10-25
 
 Décisions de l'utilisateur du 2026-10-25 sur Elaria ([PROGRESSION.md](docs/PROGRESSION.md) § 1.18) : « retirer son Coup de chance, non : il ne faut pas fermer de possibilité, c'est bridant, frustrant » ; l'**Esquive améliorée ne se cumule plus** (il avait fixé le cumul le 2026-10-21) ; la zone des bandeaux attend.

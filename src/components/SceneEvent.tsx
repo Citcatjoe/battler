@@ -41,11 +41,12 @@ const BOLT_H = 900
 /** Vie d'un éclair à l'écran (ms à ×1) ; il frappe à 38 % de sa vie (keyframes `scene-bolt`) */
 const BOLT_LIFE = 640
 const BOLT_PEAK = BOLT_LIFE * 0.38
-/** Où tombe chaque éclair autour de la cible : décalage horizontal (px) et hauteur de l'impact */
+/** Où tombe chaque éclair autour de la cible : décalage horizontal (px) et hauteur de l'impact (quatre depuis la revue O3) */
 const BOLT_SPOTS = [
   { dx: -85, bottom: '46%' },
   { dx: 75, bottom: '33%' },
   { dx: 0, bottom: '39%' },
+  { dx: -40, bottom: '30%' },
 ]
 
 /** Rythme d'un éclair : il frappe à l'impact `at` (ms depuis le début de l'événement) */

@@ -1,5 +1,5 @@
 import type { CharacterDef } from './character'
-import { DIE_FACES, faceTrigger, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
+import { DIE_FACES, faceTrigger, HIT_NOUNS, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { STATUSES } from './statuses'
 import { typeset } from './typography'
@@ -259,14 +259,14 @@ export function rankText(e: CharacterEvent): string {
   const { kind, per } = e.rankAxis
   const posed = e.effects.find((x) => x.type === 'applyStatus')
   const def = posed && STATUSES[posed.status]
-  const hits = e.effects.find((x) => x.type === 'damage')?.hits
+  const strike = e.effects.find((x) => x.type === 'damage')
   // Une charge de coups (Curée) se compte en coups ; un statut qui se compte prend son pluriel (« +2 coups de chance »)
   const stacks = def?.instantStrikes && def.extraStrikes ? `+${per * def.extraStrikes} coups` : `+${per} ${def ? (per > 1 ? (def.plural ?? def.name) : def.name) : 'charge'}`
   return typeset(
     {
       stacks,
       power: (def && def.power?.(per)) ?? `+${per}`,
-      amount: hits ? `+${per} à chacun des ${hits} coups` : `+${per} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : per > 1 ? 'dégâts' : 'dégât'}`,
+      amount: strike?.hits ? `+${per} à chacun des ${strike.hits} ${HIT_NOUNS[strike.source] ?? 'coups'}` : `+${per} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : per > 1 ? 'dégâts' : 'dégât'}`,
       multiplier: `ce coup ×${per} de plus`,
       limit: `${per} fois de plus par combat`,
       share: `+${per} % des dégâts renvoyés`,

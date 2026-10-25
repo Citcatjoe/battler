@@ -64,6 +64,9 @@ export type StatusId =
   | 'bristlingRampart'
   | 'vendetta'
   | 'duo'
+  | 'faithShield'
+  | 'sidestep'
+  | 'openWound'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -284,24 +287,41 @@ const WIND_FURY_STRIKES = 2
 /** Coups de la rafale : chaque charge en donne autant, toutes partent ensemble (M1, 0.110.0 ; `burst`, combat.ts). */
 const furyStrikes = (s: Status) => (WIND_FURY_STRIKES + (s.power ?? 0)) * s.stacks
 
-/** Curée (phase 8, 0.114.0) : coups de base bruts par charge, sa rafale. Son rang ajoute une charge, deux coups. */
-const QUARRY_STRIKES = 2
+/**
+ * Curée (phase 8, 0.114.0) : coups de base bruts par charge, sa rafale. Son rang ajoute une charge. Trois depuis la revue
+ * des compétences (O1, docs/REVUE_COMPETENCES.md) : deux la laissaient à +5,8 chez Gorak construit.
+ */
+const QUARRY_STRIKES = 3
 const quarryStrikes = (s: Status) => QUARRY_STRIKES * s.stacks
 
-/** Sentence (phase 8, 0.114.0) : PV perdus par l'adversaire à chaque soin du porteur, par charge, et son plafond. */
-const SENTENCE_LOSS = 1
+/**
+ * Sentence (phase 8, 0.114.0) : PV perdus par l'adversaire à chaque soin du porteur, par charge, et son plafond. 3 PV
+ * depuis la revue des auras (A1) : à 1, elle valait +5,8 chez Ysolde construite, la plus prise des auras sous la bande.
+ */
+const SENTENCE_LOSS = 3
 const SENTENCE_CAP = 2
 
 /*
  * Phase 8, second lot (docs/SORTS.md § 23) : les valeurs mesurées au laboratoire (séries 24 à 26, 400 combats par duel).
- * Embrasement : la Brûlure relâchée ×3 (son rang : ×1 de plus). Dé pipé : pile ×2 de plus sur la pièce qu'il pipe (son
- * rang : ×1 de plus). Rempart hérissé : Épines acérées par charge, à chaque armure temporaire vidée. Vindicte : Ferveur
- * par charge, à chaque renvoi.
+ * Embrasement : la Brûlure relâchée ×3 (son rang : ×1 de plus). Dé pipé : pile ×3 de plus sur la pièce qu'il pipe, ce
+ * coup ×6 (son rang : ×1 de plus ; ×2 de plus jusqu'à la revue des compétences, O2). Rempart hérissé : Épines acérées et
+ * armure temporaire par charge, à chaque armure temporaire vidée (l'armure depuis la revue des auras, A3 : la boucle qui
+ * nourrit sa ressource). Vindicte : Ferveur par charge, à chaque renvoi (6 depuis la revue des auras, A2 ; 3 avant).
  */
 export const CONFLAGRATION_TIMES = 3
-export const LOADED_DIE_BONUS = 2
+export const LOADED_DIE_BONUS = 3
 export const RAMPART_THORNS = 2
-export const VENDETTA_MOMENTUM = 3
+export const RAMPART_ARMOR = 2
+export const VENDETTA_MOMENTUM = 6
+
+/**
+ * Revue des auras et des compétences (docs/REVUE_COMPETENCES.md, I1, I3, I4) : trois auras nouvelles. Bouclier de foi :
+ * armure temporaire par charge à chaque soin reçu. Pas de côté : esquive par charge. Plaie ouverte : Saignement posé à
+ * l'adversaire par charge, à chaque critique du porteur.
+ */
+export const FAITH_SHIELD_ARMOR = 2
+export const SIDESTEP_DODGE = 0.08
+export const OPEN_WOUND_BLEED = 3
 
 /** Un nombre en toutes lettres, en tête de phrase (au-delà, en chiffres). */
 const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
@@ -320,9 +340,12 @@ const times = (n: number) => TIMES_WORDS[n] ?? `${n} fois`
 /** Le prochain, ou les N prochains : « Son prochain coup reçu », « Ses 2 prochains coups reçus ». */
 const next = (n: number, one: string, many: string) => (n > 1 ? many.replace('N', String(n)) : one)
 
-/** PV rendus par Sifflotement à chaque fin de tour, et dégâts retirés par charge de Fausse note (barde). */
-export const WHISTLE_HEAL = 2
-export const FALSE_NOTE = 5
+/**
+ * PV rendus par Sifflotement à chaque fin de tour, et dégâts retirés par charge de Fausse note (barde). Revue des
+ * compétences (P5, P4) : 3 PV au lieu de 2 ; −4 sur deux coups au lieu de −5 sur un.
+ */
+export const WHISTLE_HEAL = 3
+export const FALSE_NOTE = 4
 
 /**
  * Charges de poison posées par coup qui touche, par charge d'Aura de décoction. 2 jusqu'à la 0.106.1 ; 1 depuis la
@@ -355,6 +378,13 @@ export const COIN_HEADS = 3
  */
 const HOLY_CAP = 2
 const HOLY_HEAL = 1
+
+/**
+ * Aura de puissance (revue des auras, A4) : cumulable à 3 charges, +2 à la première, +1 par charge de plus (+2, +3, +4) ;
+ * son intensité (rangs) s'y ajoute. Lu par son texte, son anneau et le moteur.
+ */
+const POWER_AURA_CAP = 3
+const powerAuraBonus = (s: Status) => 1 + s.stacks + (s.power ?? 0)
 
 export const STATUSES: Record<StatusId, StatusDef> = {
   guaranteedCrit: {
@@ -514,7 +544,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(132,204,22,0.85)' },
     polarity: 'positive',
     summary: "Chaque coup reçu fait saigner l'attaquant, 1 Saignement par charge.",
-    describe: (s) => `${charges(s)} Saignement à l'attaquant à chaque coup reçu`,
+    describe: (s) => `${charges(s)} Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat`,
     badge: (s) => String(charges(s)),
     // 0.68.0 : les épines font saigner au lieu de renvoyer 1 dégât direct par charge (0.45.0). Le saignement
     // ne coule que quand le nain touche l'attaquant : la punition attend la riposte du porteur.
@@ -539,12 +569,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(225,29,72,0.85)' },
     polarity: 'positive',
     summary: 'Son prochain coup qui touche lui rend les PV qu’il retire, une charge par coup.',
+    // Le rang I rend déjà +2 PV (revue des compétences, P3) : l'intensité posée par la compétence, que ses rangs grossissent
     describe: (s) => {
-      const more = s.power ? `, +${s.power} PV` : ''
+      const more = s.power ? `, +${s.power}` : ''
       return next(s.stacks, `Son prochain coup qui touche lui rend les PV qu'il retire${more}`, `Ses N prochains coups qui touchent lui rendent les PV qu'ils retirent${more}`)
     },
     grafted: (s) => {
-      const more = s.power ? `, +${s.power} PV` : ''
+      const more = s.power ? `, +${s.power}` : ''
       if (s.stacks === 1) return `Ce coup lui rend les PV qu'il retire${more}`
       return `Ce coup et ${s.stacks === 2 ? 'le suivant' : `les ${s.stacks - 1} suivants`} lui rendent les PV qu'ils retirent${more}`
     },
@@ -586,7 +617,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Esquive à coup sûr le prochain coup reçu.',
     describe: (s) => `Esquive à coup sûr le prochain coup reçu${s.power ? ` ; d'ici là, ses coups font ${damageText(s.power)}` : ''}${forTurns(s)}`,
     grafted: (s) => (s.power ? `Esquive à coup sûr le prochain coup reçu ; d'ici là, ce coup et les suivants font ${damageText(s.power)}` : 'Esquive à coup sûr le prochain coup reçu'),
-    detail: () => "Une charge au plus : une nouvelle pose ne s'ajoute pas, elle garde la plus forte intensité.",
+    detail: () => "Une seule à la fois : une nouvelle pose ne s'ajoute pas.",
     plural: 'Esquives améliorées',
     badge: () => '100 %',
     // 2026-10-25 (décision de l'utilisateur, 0.117.1) : ne se cumule plus. Une charge au plus (`add` plafonné à 1, comme
@@ -657,9 +688,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(251,146,60,0.85)' },
     polarity: 'positive',
     summary: `Son prochain coup qui touche un adversaire qui brûle lui fait perdre ${times(CONFLAGRATION_TIMES)} sa Brûlure restante, d'un coup, puis la Brûlure s'éteint.`,
+    // Revue des compétences (T6) : la condition en tête, sans « restante » ni « d'un coup » (le détail le dit)
     describe: (s) => {
       const many = times(CONFLAGRATION_TIMES + (s.power ?? 0))
-      return next(s.stacks, `Son prochain coup qui touche un adversaire qui brûle lui fait perdre ${many} sa Brûlure restante`, `Ses N prochains coups qui touchent un adversaire qui brûle lui font perdre ${many} sa Brûlure restante`)
+      return next(s.stacks, `Si l'adversaire brûle, son prochain coup qui touche lui fait perdre ${many} sa Brûlure`, `Si l'adversaire brûle, ses N prochains coups qui touchent lui font perdre ${many} sa Brûlure`)
     },
     detail: () => "D'un coup, puis la Brûlure s'éteint ; sans Brûlure, la charge attend.",
     badge: (s) => `×${CONFLAGRATION_TIMES + (s.power ?? 0)}`,
@@ -676,9 +708,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(167,139,250,0.85)' },
     polarity: 'positive',
     summary: `Sa prochaine pièce tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
+    // Revue des compétences (T4) : le multiplicateur du coup, pas celui qui s'ajoute (« ×3 de plus » se lisait ×3 ou ×6)
     describe: (s) => {
-      const more = `pile vaut ×${LOADED_DIE_BONUS + (s.power ?? 0)} de plus`
-      return next(s.stacks, `Sa prochaine pièce tombe sur pile, et ${more}`, `Ses N prochaines pièces tombent sur pile, et ${more}`)
+      const blow = `ce coup ×${COIN_HEADS + LOADED_DIE_BONUS + (s.power ?? 0)}`
+      return next(s.stacks, `Sa prochaine pièce tombe sur pile : ${blow}`, `Ses N prochaines pièces tombent sur pile : chaque fois, ${blow}`)
     },
     detail: () => 'Sans pièce, la charge attend.',
     badge: (s) => `+×${LOADED_DIE_BONUS + (s.power ?? 0)}`,
@@ -692,13 +725,19 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Rempart hérissé',
     look: { aura: 'rgba(148,163,184,0.6)' },
     polarity: 'positive',
-    summary: `+${RAMPART_THORNS} Épines acérées par charge chaque fois que son armure temporaire est vidée.`,
-    describe: (s) => `+${RAMPART_THORNS * charges(s)} Épines acérées quand son armure temporaire est vidée`,
+    summary: `+${RAMPART_THORNS} Épines acérées et +${RAMPART_ARMOR} armure temporaire par charge chaque fois que son armure temporaire est vidée.`,
+    describe: (s) => `+${RAMPART_THORNS * charges(s)} Épines acérées et +${RAMPART_ARMOR * charges(s)} armure temporaire quand son armure temporaire est vidée`,
     badge: (s) => `+${RAMPART_THORNS * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
-    reactions: { shieldBroken: (s) => [{ type: 'applyStatus', status: 'thorns', stacks: RAMPART_THORNS * charges(s) }] },
-    power: (n) => `+${RAMPART_THORNS * n} Épines acérées par armure vidée`,
+    // Revue des auras (A3) : l'armure qu'il redonne nourrit sa ressource, la prochaine armure vidée
+    reactions: {
+      shieldBroken: (s) => [
+        { type: 'applyStatus', status: 'thorns', stacks: RAMPART_THORNS * charges(s) },
+        { type: 'applyStatus', status: 'bonusArmor', stacks: RAMPART_ARMOR * charges(s) },
+      ],
+    },
+    power: (n) => `+${RAMPART_THORNS * n} Épines acérées et +${RAMPART_ARMOR * n} armure temporaire par armure vidée`,
   },
   vendetta: {
     name: 'Vindicte',
@@ -821,15 +860,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Aura de puissance',
     look: { aura: 'rgba(251,146,60,0.55)' },
     polarity: 'positive',
-    summary: '+2 dégâts à chacun de ses coups.',
-    describe: (s) => `${damageText(2 * s.stacks + (s.power ?? 0))} à chacun de ses coups`,
-    detail: () => "Après le critique, avant l'armure.",
-    badge: (s) => `+${2 * s.stacks + (s.power ?? 0)}`,
+    summary: `+2 dégâts à chacun de ses coups, +1 par charge de plus, ${POWER_AURA_CAP} charges au plus.`,
+    describe: (s) => `${damageText(powerAuraBonus(s))} à chacun de ses coups`,
+    detail: (s) => `Après le critique, avant l'armure. Chaque nouvelle pose ajoute +1, jusqu'à +${powerAuraBonus({ ...s, stacks: POWER_AURA_CAP })}.`,
+    badge: (s) => `+${powerAuraBonus(s)}`,
     // 0.107.0 (SORTS.md § 19) : non cumulable, comme l'Aura d'immunité ; +2 par charge cumulable valait +21 points gravée.
-    // L'Aura sauvage, elle, cumule +1 à l'attaque (avant le critique)
-    stacking: 'refresh',
-    maxStacks: 1,
-    modifyOutgoing: (damage, s) => damage + 2 * s.stacks + (s.power ?? 0),
+    // Revue des auras (A4) : cumulable à 3 charges, +2, +3 puis +4 (+18,0 gravée) : 36 % des poses ne faisaient rien. L'Aura
+    // sauvage, elle, cumule +1 à l'attaque (avant le critique)
+    stacking: 'add',
+    maxStacks: POWER_AURA_CAP,
+    modifyOutgoing: (damage, s) => damage + powerAuraBonus(s),
     power: (n) => `${damageText(n)} par coup`,
   },
   intimidationAura: {
@@ -861,7 +901,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     summary: 'Aucun malus ne peut plus lui être posé, et +1 armure.',
     describe: (s) => `Aucun malus ne peut plus lui être posé, et +${charges(s)} armure`,
-    detail: () => "Les auras de l'adversaire agissent toujours.",
+    detail: () => "Les auras de l'adversaire agissent toujours, sans pouvoir lui poser de malus.",
     badge: () => '∞',
     stacking: 'refresh',
     maxStacks: 1,
@@ -1019,13 +1059,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Fausse note',
     polarity: 'negative',
     summary: `Son prochain coup qui touche fait ${FALSE_NOTE} dégâts de moins par charge.`,
+    // Revue des compétences (P4) : la compétence la pose déjà pour deux coups (une intensité de 1), chacun à −4
     describe: (s) =>
       s.power
-        ? `Ses ${1 + s.power} prochains coups qui touchent font chacun ${damageText(-FALSE_NOTE * s.stacks)}`
+        ? `Ses ${1 + s.power} prochains coups qui touchent font ${damageText(-FALSE_NOTE * s.stacks)}`
         : `Son prochain coup qui touche fait ${damageText(-FALSE_NOTE * s.stacks)}`,
     onFoe: (s) =>
       s.power
-        ? `Les ${1 + s.power} prochains coups de l'adversaire qui touchent font chacun ${damageText(-FALSE_NOTE * s.stacks)}`
+        ? `Les ${1 + s.power} prochains coups de l'adversaire qui touchent font ${damageText(-FALSE_NOTE * s.stacks)}`
         : `Le prochain coup de l'adversaire qui touche fait ${damageText(-FALSE_NOTE * s.stacks)}`,
     detail: () => "Après l'armure ; le coup garde au moins 1 dégât.",
     badge: (s) => `−${FALSE_NOTE * s.stacks}`,
@@ -1064,6 +1105,49 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     extraStrikes: 1,
     strikeCharges: 'all',
+  },
+
+  /*
+   * Revue des auras et des compétences (docs/REVUE_COMPETENCES.md, I1, I3, I4) : trois auras qui bouchent un trou de
+   * famille. Le Bouclier de foi consomme les soins du porteur (Soin → Garde, la boucle d'Ysolde : il nourrit aussi l'armure
+   * vidée) ; le Pas de côté est la première esquive permanente ; la Plaie ouverte, la seconde consommatrice de critiques
+   * (Précision → Saignement).
+   */
+  faithShield: {
+    name: 'Bouclier de foi',
+    look: { aura: 'rgba(253,230,138,0.55)' },
+    polarity: 'positive',
+    summary: `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR} armure temporaire par charge.`,
+    describe: (s) => `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR * charges(s)} armure temporaire`,
+    badge: (s) => `+${FAITH_SHIELD_ARMOR * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { healed: (s) => [{ type: 'applyStatus', status: 'bonusArmor', stacks: FAITH_SHIELD_ARMOR * charges(s) }] },
+    power: (n) => `+${FAITH_SHIELD_ARMOR * n} armure temporaire par soin`,
+  },
+  sidestep: {
+    name: 'Pas de côté',
+    look: { aura: 'rgba(125,211,252,0.5)' },
+    polarity: 'positive',
+    summary: `+${Math.round(SIDESTEP_DODGE * 100)} % d'esquive par charge.`,
+    describe: (s) => `+${Math.round(SIDESTEP_DODGE * 100 * s.stacks)} % d'esquive`,
+    badge: (s) => `+${Math.round(SIDESTEP_DODGE * 100 * s.stacks)} %`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + SIDESTEP_DODGE * s.stacks }),
+  },
+  openWound: {
+    name: 'Plaie ouverte',
+    look: { aura: 'rgba(220,38,38,0.5)' },
+    polarity: 'positive',
+    summary: `Chacun de ses critiques fait saigner l'adversaire de ${OPEN_WOUND_BLEED} par charge.`,
+    describe: (s) => `Ses critiques font saigner l'adversaire de ${OPEN_WOUND_BLEED * charges(s)}`,
+    detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
+    badge: (s) => `+${OPEN_WOUND_BLEED * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { crit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * charges(s), target: 'opponent' }] },
+    power: (n) => `+${OPEN_WOUND_BLEED * n} Saignement par critique`,
   },
 }
 

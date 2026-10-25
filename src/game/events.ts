@@ -267,6 +267,12 @@ const shareOf = (share: number, all: string) => (share === 0.5 ? 'la moitié des
 const SMALL_NUMBERS: Record<number, string> = { 2: 'deux', 3: 'trois', 4: 'quatre', 5: 'cinq' }
 
 /**
+ * Dégâts directs en plusieurs impacts qui ont un nom (revue des compétences, T5) : « L'adversaire perd 4 PV, en quatre
+ * éclairs », au lieu de l'écriture de calcul « 4 × 1 dégât direct ». Les autres gardent « 3 × 2 dégâts directs ».
+ */
+export const HIT_NOUNS: Partial<Record<DamageSource, string>> = { lightning: 'éclairs' }
+
+/**
  * Un effet, en clair, au style de l'utilisateur (passe compendium, 2026-10-25) : l'effet d'abord, sans jargon ; ce que la
  * phrase tait va au détail (`effectDetail`). `grafted` : greffé sur le jet de son lanceur, un statut posé sur lui agit sur
  * le coup de ce jet (Œil de faucon, Vol de vie : « ce coup », `StatusDef.grafted`). Posé sur l'adversaire, un statut a
@@ -277,13 +283,16 @@ export function describeEffect(effect: Effect, grafted = false): string {
   switch (effect.type) {
     case 'heal':
       return `+${effect.amount} PV${foe ? " à l'adversaire" : ''}`
-    case 'damage':
+    case 'damage': {
+      const noun = effect.hits ? HIT_NOUNS[effect.source] : undefined
+      if (noun && effect.hits) return `${foe ? "l'adversaire" : 'il'} perd ${effect.amount * effect.hits} PV, en ${SMALL_NUMBERS[effect.hits] ?? effect.hits} ${noun}`
       return `${effect.hits ? `${effect.hits} × ` : ''}${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${foe ? " à l'adversaire" : ' à soi-même'}`
+    }
     case 'applyStatus': {
       const def = STATUSES[effect.status]
       // Pourfendre : des charges tirées du coup, que la définition ne connaît pas
       if (effect.fromHit !== undefined)
-        return `${foe ? "l'adversaire" : 'il'} ${def.bears ?? `prend ${def.name}`} de ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des dégâts du coup${effect.stacks ? `, +${effect.stacks}` : ''}`
+        return `${foe ? "l'adversaire" : 'il'} ${def.bears ?? `prend ${def.name}`} de ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des dégâts de ce coup${effect.stacks ? `, +${effect.stacks}` : ''}`
       // Virulence : des charges tirées d'un statut ; le même statut, au même porteur, se multiplie (« Triple le Poison »)
       if (effect.fromStatus !== undefined) {
         const from = effect.fromStatus
@@ -406,9 +415,14 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   const modifies = relation === 'modify'
   const graftedOnDie = relation === 'graft' && isRollTrigger(e.trigger)
   const sentences = [
-    e.hitMultiplier ? `ce coup ×${e.hitMultiplier}${e.buildsUp ? ', puis ×1 de plus à chaque fois qu’il touche' : ''}` : '',
-    // Une compétence qui modifie son coup (Pourfendre) : ses effets n'arrivent que s'il touche
-    ...e.effects.map((effect, k) => (modifies && k === 0 ? `s'il touche, ${lowerFirst(describeEffect(effect, graftedOnDie))}` : describeEffect(effect, graftedOnDie))),
+    e.hitMultiplier ? `ce coup ×${e.hitMultiplier}${e.buildsUp ? ", puis ×1 de plus à chaque fois qu'il touche" : ''}` : '',
+    // Une compétence qui modifie son coup : ses effets n'arrivent que s'il touche. Des charges tirées du coup (Pourfendre)
+    // disent l'effet d'abord, la condition ensuite (revue des compétences, T1) ; la pièce (Pile ou face) la garde en tête
+    ...e.effects.map((effect, k) => {
+      const text = describeEffect(effect, graftedOnDie)
+      if (!modifies || k > 0) return text
+      return effect.type === 'applyStatus' && effect.fromHit !== undefined ? `${text}, s'il touche` : `s'il touche, ${lowerFirst(text)}`
+    }),
   ].filter(Boolean)
   // Virulence : la condition sur le statut qu'elle multiplie va de soi (tripler zéro ne fait rien)
   const multiplied = (c: Condition) =>

@@ -1030,6 +1030,9 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 118 | `tinder-box` | Briquet d'amadou (relique de source, v21) | Boîte à briquet de fer, son silex et son battant, deux braises dans l'amadou (les 2 Brûlure) |
 | 119 | `fair-coin` | Pièce de foire (relique de source, v21) | Jeton de foire en laiton frappé d'une tête de bouffon, sur un cordon rouge et jaune ; ni la Pièce trouée, ni la pièce de Pile ou face |
 | 120 | `spiked-bracer` | Brassard à pointes (relique de source, v21) | Brassard de cuir clouté, une seule grosse pointe rabattue vers l'arrière (la Riposte, 1x) |
+| 121 | `faith-shield` | Bouclier de foi (compétence d'Ysolde et son statut `faithShield`, v22, 2026-10-25) | Écu d'ivoire et d'or qui durcit dans une lumière de soin, halo d'aura |
+| 122 | `sidestep` | Pas de côté (compétence et statut, v22) | Botte de cuir qui fait un pas de côté devant une flèche, une rémanence bleue derrière elle, halo d'aura |
+| 123 | `open-wound` | Plaie ouverte (compétence et statut `openWound`, v22) | Pointe de flèche qui ouvre une entaille sanglante dans une armure de cuir, étincelle d'or du critique, halo d'aura |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1237,6 +1240,8 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 **v21, les quatre reliques de source (4 icônes, une planche 2×2, intégrées le 2026-10-25, générées par l'agent avec Artlist : GPT Image 2.5 en image à image, référence : la planche des reliques) :** 1. Dard de guêpe (dard séché dans un capuchon de laiton, deux gouttes de venin) · 2. Briquet d'amadou (boîte à briquet de fer, deux braises, silex et battant) · 3. Pièce de foire (jeton de foire en laiton à tête de bouffon, cordon rouge et jaune) · 4. Brassard à pointes (brassard de cuir à pointes, une grande pointe rabattue vers l'arrière). Le chiffre de la règle est dessiné dans l'objet (2 gouttes, 2 braises, 1 pointe).
 
+**v22, trois compétences de la revue des auras (3 icônes, une planche 2×2, intégrées le 2026-10-25, générées par l'agent avec Artlist : GPT Image 2.5 en image à image, référence : la planche des compétences) :** 1. Bouclier de foi (écu d'ivoire et d'or qui durcit dans une lumière de soin) · 2. Pas de côté (botte de cuir qui esquive une flèche d'un pas de côté, rémanence bleue) · 3. Plaie ouverte (pointe de flèche qui ouvre une entaille sanglante dans une armure de cuir, étincelle d'or du critique). La quatrième case reste vide.
+
 ### Résultat attendu et intégration
 
 | Élément | Convention |
@@ -1264,6 +1269,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v22 | 2026-10-25 | 121 à 123 | Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2 de trois, deux versions générées (160 crédits) : Bouclier de foi et Plaie ouverte de la version B, Pas de côté de la version A. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
 | v21 | 2026-10-25 | 117 à 120 | Les quatre reliques de source (Dard de guêpe, Briquet d'amadou, Pièce de foire, Brassard à pointes). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées (160 crédits), la version A retenue pour les quatre. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée (128 et 24 px) ; pas encore vues dans un écran de jeu. |
 | v20 | 2026-10-25 | 116 | Le Duo (compétence de la barde et son statut). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une icône, deux versions générées (160 crédits), la version A retenue. Découpe par `scripts/slice-icons.py`, `src/assets/icons/duo.png`. Pas encore vue dans un écran de jeu. |
 | v19 | 2026-10-25 | 112 à 115 | Les quatre reliques du second lot de la phase 8 (Soufflet de forge, Clous de pavois, Gantelet du talion, Pièce trouée). Artlist, GPT Image 2.5 en image à image, référence : la planche des reliques ; une planche 2×2, deux versions générées, la version A retenue pour les quatre (v18 et v19 : 320 crédits en tout). Découpe par `scripts/slice-icons.py`, optimisées. Planche de contrôle regardée (128 et 24 px) ; vues dans les écrans par la passe de finition. |

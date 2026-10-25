@@ -39,6 +39,12 @@ export type Hook =
   | 'face:max'
   /** Une stat de base */
   | `stat:${keyof CharacterStats}`
+  /**
+   * La place unique d'un statut qui ne s'ajoute pas (revue des compétences, X2) : une Esquive améliorée au plus, une
+   * Brûlure qui remplace l'ancienne, une pièce au plus. Chaque brique qui le pose la gêne (`hinders`) : deux producteurs
+   * du même statut se gênent (`linkBetween`), la seconde pose ne fait rien ou écrase la première.
+   */
+  | `slot:${StatusId}`
 
 export interface Hooks {
   produces: Hook[]
@@ -62,14 +68,16 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   regeneration: { side: 'self', produces: ['moment:heal'] },
   weakened: { side: 'opponent' },
   exposed: { side: 'opponent' },
-  burn: { side: 'opponent', produces: ['damage:temporal'] },
+  // Une nouvelle Brûlure remplace l'ancienne : deux producteurs se gênent (X2 ; Briquet d'amadou × Feux follets −0,64)
+  burn: { side: 'opponent', produces: ['damage:temporal'], hinders: ['slot:burn'] },
   vulnerable: { side: 'opponent', produces: ['damage:instant'] },
   stunned: { side: 'opponent' },
   thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bleed', 'damage:temporal'] },
   ward: { side: 'self' },
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
   windFury: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
-  evasion: { side: 'self', produces: ['moment:dodge'] },
+  // Une charge au plus depuis la 0.117.1 : deux producteurs se gênent (X2 ; Dé creux × Esquive améliorée −0,61)
+  evasion: { side: 'self', produces: ['moment:dodge'], hinders: ['slot:evasion'] },
   // Ferveur (Encens de l'abbaye) : le prochain coup qui touche fait plus
   momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
@@ -82,7 +90,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant', 'moment:heads'] },
+  // Une pièce au plus : deux producteurs se gênent (X2 ; Pièce de foire × Pile ou face −0,45)
+  coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant', 'moment:heads'], hinders: ['slot:coinFlip'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
@@ -105,13 +114,19 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   sentence: { side: 'self', consumes: ['moment:heal'], produces: ['damage:instant'] },
   grudge: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:crit'] },
   // Phase 8, second lot : l'Embrasement lit la Brûlure au coup qui touche et la retire (une brique qui la lit aussi en voit
-  // moins) ; le Dé pipé lit la pièce et fait tomber pile ; le Rempart hérissé vit des armures vidées, la Vindicte des renvois
+  // moins) ; le Dé pipé lit la pièce et fait tomber pile ; le Rempart hérissé vit des armures vidées (et en redonne une,
+  // revue des auras, A3), la Vindicte des renvois
   conflagration: { side: 'self', consumes: ['moment:hit', 'status:burn'], hinders: ['status:burn'], produces: ['damage:temporal'] },
   loadedDie: { side: 'self', consumes: ['status:coinFlip'], produces: ['moment:heads', 'damage:instant'] },
-  bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal'] },
+  bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal', 'status:bonusArmor', 'moment:shieldBreak'] },
   vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
   // Le Duo (barde) : le dé de plus de Coup de chance, sous son nom
   duo: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
+  // Revue des compétences (I1, I3, I4) : le Bouclier de foi vit des soins et donne de l'armure temporaire (qui se vide) ; le
+  // Pas de côté fait esquiver ; la Plaie ouverte vit des critiques et fait saigner
+  faithShield: { side: 'self', consumes: ['moment:heal'], produces: ['status:bonusArmor', 'moment:shieldBreak'] },
+  sidestep: { side: 'self', produces: ['moment:dodge'] },
+  openWound: { side: 'self', consumes: ['moment:crit'], produces: ['status:bleed', 'damage:temporal'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -236,12 +251,16 @@ export function skillNeeds(e: CharacterEvent): Hook[] {
   return [...new Set(needs)]
 }
 
-/** Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits. */
+/**
+ * Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits : ce que
+ * l'une gêne et que l'autre consomme, ou la place unique d'un statut que les deux posent (`slot:`, X2).
+ */
 export function linkBetween(a: Hooks, b: Hooks): { feeds: Hook[]; conflicts: Hook[] } {
   const meet = (given: readonly Hook[], wanted: readonly Hook[]) => wanted.filter((w) => given.includes(w))
+  const shared = a.hinders.filter((h) => h.startsWith('slot:') && b.hinders.includes(h))
   return {
     feeds: [...new Set([...meet(a.produces, b.consumes), ...meet(b.produces, a.consumes)])],
-    conflicts: [...new Set([...meet(a.hinders, b.consumes), ...meet(b.hinders, a.consumes)])],
+    conflicts: [...new Set([...meet(a.hinders, b.consumes), ...meet(b.hinders, a.consumes), ...shared])],
   }
 }
 
@@ -258,9 +277,14 @@ export function buildHooks(c: Pick<Character, 'events' | 'relics'>): Hooks {
 
 /**
  * L'écho d'une brique dans un build (l'offre orientée, docs/PROGRESSION.md § 13.2) : combien d'accroches la relient à ce
- * qu'il porte déjà, dans un sens ou dans l'autre. 0 : elle n'y touche rien.
+ * qu'il porte déjà, dans un sens ou dans l'autre, moins celles où elle le gêne (revue des compétences, X2 : un second
+ * producteur d'un statut unique, ou ce qui retire ce qu'il consomme), jamais sous 0. 0 : elle n'y touche rien, ou elle
+ * gêne autant qu'elle nourrit.
  */
-export const echoOf = (brick: Hooks, build: Hooks) => linkBetween(brick, build).feeds.length
+export function echoOf(brick: Hooks, build: Hooks): number {
+  const { feeds, conflicts } = linkBetween(brick, build)
+  return Math.max(0, feeds.length - conflicts.length)
+}
 
 /** La cohérence d'un build : ses paires de briques qui se nourrissent, sur toutes ses paires. */
 export function buildLinks(c: Pick<Character, 'events' | 'relics'>): { linked: number; pairs: number } {

@@ -24,15 +24,15 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
   })
 
   it('les statuts de même effet se regroupent en un seul état, au total signé', () => {
-    // Régénération et Sifflotement : un seul « Soin », en PV par tour
+    // Régénération et Sifflotement : un seul « Soin », en PV par tour (le Sifflotement rend 3 PV depuis la revue P5)
     const [heal] = trayStates([{ id: 'regeneration', stacks: 3 }, { id: 'whistling', stacks: 2 }], [])
-    expect(heal).toMatchObject({ id: 'healing', value: 5, unit: 'amount' })
+    expect(heal).toMatchObject({ id: 'healing', value: 6, unit: 'amount' })
     expect(heal.sources.map((s) => s.status.id)).toEqual(['regeneration', 'whistling'])
-    expect(stateValueText(heal)).toBe('+5')
+    expect(stateValueText(heal)).toBe('+6')
     // Fausse note et Affaibli : deux états, car ils ne frappent pas au même moment (audit du 2026-10-21) : Affaibli
-    // retire à chaque coup, avant l'armure ; la Fausse note au seul prochain coup qui touche, après l'armure
+    // retire à chaque coup, avant l'armure ; la Fausse note au seul prochain coup qui touche, après l'armure (−4 depuis la revue P4)
     const [note, weak] = trayStates([{ id: 'falseNote', stacks: 1 }, { id: 'weakened', stacks: 2 }], [])
-    expect(note).toMatchObject({ id: 'spoiled', value: 5 })
+    expect(note).toMatchObject({ id: 'spoiled', value: 4 })
     expect(weak).toMatchObject({ id: 'weakened', value: 2 })
     expect(stateValueText(weak)).toBe('−2')
   })

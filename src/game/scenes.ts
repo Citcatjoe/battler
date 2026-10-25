@@ -36,10 +36,11 @@ export interface SceneTiming {
 }
 
 export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
-  // Foudre (druide, 0.76.0) : l'arène s'assombrit, trois éclairs tombent l'un après l'autre autour de la
-  // cible (un coup de 1 chacun), puis la lumière revient ; chacun sonne le Coup critique, le son de l'éclair
-  // (0.76.0 ; gardé par l'utilisateur le 2026-10-24, après le son de synthèse « Éclair » de la 0.110.0)
-  lightning: { impacts: [440, 800, 1160], length: 1750, sound: 'crit' },
+  // Foudre (druide, 0.76.0) : l'arène s'assombrit, les éclairs tombent l'un après l'autre autour de la cible (un coup de 1
+  // chacun), puis la lumière revient ; chacun sonne le Coup critique, le son de l'éclair (0.76.0 ; gardé par l'utilisateur
+  // le 2026-10-24, après le son de synthèse « Éclair » de la 0.110.0). Quatre éclairs depuis la revue des compétences
+  // (O3) : le quatrième au même pas (360 ms), la scène s'allonge d'autant
+  lightning: { impacts: [440, 800, 1160, 1520], length: 2110, sound: 'crit' },
   // Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : le sceau de l'objet se brise, sa magie envahit l'arène.
   // Braise captive : le ciel rougit, trois météores tombent en diagonale sur l'adversaire (un coup de 2 chacun)
   emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true, sound: 'crit' },

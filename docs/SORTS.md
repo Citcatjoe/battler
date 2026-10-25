@@ -277,6 +277,29 @@ Le repère de 8 à 20 points est celui des reliques (décision de l'utilisateur 
 
 Trois minutes à 200 combats par duel. Mesures et réglage des axes : § 20.
 
+### Chez le porteur réel : la montée en puissance (`npm run ramp`)
+
+Les trois tables ci-dessus mesurent une brique **gravée sur un personnage nu, contre le roster nu**. Chez un porteur construit, la même brique vaut 40 à 60 % de cette valeur (REVUE_COMPETENCES.md, constat transversal 1) : juger une brique sur sa valeur gravée seule la surestime. Ce rapport mesure l'autre échelle, celle du jeu (X3 de la revue ; méthode de l'étude de la montée, PROGRESSION.md § 13.4).
+
+```
+npm run ramp
+RAMP_BUILDS=96 RAMP_N=100 npm run ramp
+```
+
+- **Builds** : `RAMP_BUILDS` actes par personnage (48 par défaut), tirés comme le champion de référence de la campagne (les graines `builds:<id>:<s>` de `npm run campaign`, 8 variantes par graine ; offre orientée, choix par défaut). L'état après k récompenses est le début de l'acte.
+- **Force relative** au rang k (0 à 10) : le build contre le build de même indice et de même rang des neuf autres, `RAMP_N` combats par duel (60 par défaut), graines de `npm run balance`. La **pente** est la force à 10 récompenses moins la force à 0.
+- **Ablations** à 10 récompenses, sur les mêmes graines : toute la forge, toutes les reliques, chaque pas de forge (le reste rejoué : un pas qui ne vaut plus sans lui tombe aussi, comme l'aiguisage ou la copie d'une gravure retirée), chaque relique, chaque compétence du kit (sa face nue). La valeur d'une brique est l'écart apparié, en points, moyenné sur les builds qui la portent (n, marge à 95 %).
+- **Offres** : 120 actes par personnage (10 graines × 12 variantes, ceux de `npm run campaign`), sans combat : actes où chaque gravure et chaque relique est offerte au moins une fois, puis prise.
+
+Le rapport donne, dans l'ordre : les courbes de montée ; à 10 récompenses, la distribution (moyenne, 10e centile, pire, meilleur, part au-delà de 65 % et sous 50 %, écart-type vrai), l'apport de toute la forge et de toutes les reliques, la force absolue contre le roster nu et sa montée en log-cote, les tours par combattant ; l'apport moyen de chaque opération (graver, aiguiser, copier, une relique, tremper, dorer) ; par personnage, la valeur moyenne d'une gravure et d'une relique prises et **la part sous la bande des 8 points** ; **les briques souvent prises hors de leur bande** (dans un huitième des builds au moins : gravures hors de 8 à 20, aiguisages hors de 3 à 8, reliques au-delà de 20) ; la valeur de chaque compétence du kit dans les builds ; enfin chaque brique chez chacun de ses porteurs.
+
+Lecture :
+- **Deux échelles** : la bande de 8 à 20 points se juge gravée contre le roster nu (seconde table). Chez le porteur construit, une brique sous 8 n'est pas forcément faible ; une brique **souvent prise** et sous 8 l'est, parce qu'elle prend la place d'une généraliste. C'est la liste à relever en premier.
+- **À somme nulle** : la force relative se mesure contre les builds des autres. Relever un personnage abaisse les autres sans qu'on les touche ; on lit l'écart entre le premier et le dernier (affiché en tête) et les pentes négatives, pas un taux isolé.
+- **Marge** : 540 combats par build à 60 combats par duel (± 4 points sur un build) ; l'écart apparié d'une ablation est bien plus précis. Sous 6 builds porteurs, une valeur est un ordre de grandeur.
+
+Environ deux minutes sur 22 cœurs : les builds se répartissent sur `RAMP_WORKERS` processus (le nombre de cœurs moins 2 par défaut ; `RAMP_WORKERS=1` mesure dans le processus du rapport). Écrit dans `logs/ramp/`.
+
 ### Premier audit (200 combats par duel, règles 0.36.4)
 
 | Compétence | Personnage | Valeur nette | Renversés | Gâchis | Drapeaux de jeu |
@@ -1382,3 +1405,60 @@ La log-cote de la dernière colonne est la synergie P8 avec le producteur du kit
 | Gravée (rang I) | +18,9, inchangée (deux poses sans coup reçu entre elles sont rares sans forge) |
 
 Le reste des mesures (roster nu, Elaria construite, saison, campagne, reliques) : [PERSONNAGES.md](PERSONNAGES.md), « Elaria », 0.117.1.
+
+## 27. La revue des auras et des compétences, appliquée (2026-10-25)
+
+**Les décisions de l'utilisateur** sur [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) (« ce qui n'est pas l'objet d'une remarque est validé ») : A1 à A5, P1 à P5, R1 à R3, I1 (avec A1 : les deux), I3, I4, O1 à O3, T1 à T7, X2 ; X3 (le rapport du porteur réel) est un outil livré à part (`npm run ramp`). En attente : I2 (Brèche) et X1 (Épines acérées en aura). Écartée : R4. Chaque valeur est celle mesurée par la revue, sans retouche.
+
+**Ce qui a changé** (registres seuls, aucune règle de moteur nouvelle) :
+
+| Id | Compétence | Avant | Après |
+| --- | --- | --- | --- |
+| A1 | Sentence | 1 PV par soin, rang +1 | **3 PV**, rang +3 (`SENTENCE_LOSS`) |
+| A2 | Vindicte | +3 Ferveur par renvoi | **+6**, rang +6 (`VENDETTA_MOMENTUM`) |
+| A3 | Rempart hérissé | +2 Épines par armure vidée, rang +6 Épines | **+2 Épines et +2 armure temporaire**, rang +2 et +2 (`RAMPART_ARMOR`) |
+| A4 | Aura de puissance | +2, non cumulable | **cumulable, 3 charges : +2, +3, +4** ; rang +1 inchangé |
+| A5 | Aura d'immunité | détail « Les auras de l'adversaire agissent toujours. » | « …, sans pouvoir lui poser de malus. » |
+| P1 | Virulence | si l'adversaire est empoisonné, triple ; rang +3 | **sans condition** : triple, puis +2 ; rang +1 |
+| P2 | Récolte | +7 PV, rang +4 | **+14 PV**, rang +6 |
+| P3 | Vol de vie | les PV retirés ; rang +2 PV | **+2 PV dès le rang I** (une intensité posée), rang +4 |
+| P4 | Fausse note | le prochain coup adverse à −5 | **les 2 prochains à −4** (une intensité de 1 posée), rang : un coup de plus |
+| P5 | Siffloter | +2 PV par tour, 2 tours | **+3 PV**, 2 tours |
+| R1, R2, R3 | Pourfendre, Pile ou face, Feux follets | rang +1 Saignement, pile ×1, +1 Brûlure | rang **+2 Saignement**, **pile ×2**, **+2 Brûlure** |
+| O1 | Curée | deux coups par charge | **trois** |
+| O2 | Dé pipé | pile ×2 de plus (ce coup ×5) | **×3 de plus (ce coup ×6)** |
+| O3 | Foudre | 3 × 1 | **4 × 1**, une scène à quatre éclairs |
+| I1 | Bouclier de foi (`faith-shield`) | — | aura nouvelle, réserve d'Ysolde : +2 armure temporaire par charge à chaque soin reçu ; rang +2 |
+| I3 | Pas de côté (`sidestep`) | — | aura nouvelle, cumulable, réserve de Fanchon et répertoire de Naraxes : +8 % d'esquive par charge ; rang : une charge |
+| I4 | Plaie ouverte (`open-wound`) | — | aura nouvelle, réserve d'Ervald et répertoire de Gorak : 3 Saignement par charge à chaque critique ; rang +3 |
+| T1 à T7 | textes | — | Pourfendre (l'effet d'abord, « s'il touche » ensuite), Esquive améliorée (détail), Épines acérées (« jusqu'à la fin du combat »), Dé pipé (« ce coup ×6 »), Foudre (« L'adversaire perd 4 PV, en quatre éclairs. »), Embrasement (la condition en tête), Crescendo (apostrophe droite) |
+| X2 | accroches | — | `slot:<statut>` gêné par chaque producteur d'un statut unique (Esquive améliorée, Brûlure, Pile ou face) ; l'écho de l'offre orientée retire les gênes (`echoOf`) |
+
+**Choix de l'agent** (la revue ne les fixait pas) : le Bouclier de foi sans plafond de charges, comme le Rempart et la Vindicte (la Sentence garde le sien) ; le Pas de côté chez Fanchon (la saltimbanque, un pas de danse) et dans le répertoire de Naraxes (la Fuite, 20 % d'esquive), pas chez Elaria (« prudence chez Elaria ») ; la Plaie ouverte chez Ervald (24 % de critique, le plus bas construit) et dans le répertoire de Gorak (le Sang : ses critiques nourrissent sa Curée), pas chez Elaria (déjà première construite) ; la Virulence garde son besoin d'offre (le Poison lu, `skillNeeds`) ; un `Hook` de plus (`slot:`) plutôt qu'un cas dans `linkBetween` ; la Foudre nomme ses impacts (`HIT_NOUNS`, la Foudre seule : les reliques élémentaires gardent « 3 × 2 dégâts directs »).
+
+**Mesures après** (`scripts/skills.report.ts`, 400 combats par duel, mêmes graines ; gravures `logs/skills/2026-10-25-14-03-41_v0.117.1.md`, rangs `…14-07-18…`) :
+
+| Compétence | Gravée chez son porteur (revue → livrée) | Moyenne des hôtes | Rang II (moyenne ; porteur) | Drapeau |
+| --- | --- | --- | --- | --- |
+| Sentence | Ysolde +15,9 → **+16,2** | +2,6 | +0,6 ; Ysolde +4,3 | faible hors d'Ysolde (consommatrice) |
+| Bouclier de foi | Ysolde +16,1 → **+16,2** | +2,5 | +0,7 ; Ysolde +5,2 | idem |
+| Vindicte | Aldric +12,9 → **+13,2** | +1,9 | Aldric +4,0 | idem |
+| Rempart hérissé | Brokk +11,7 → **+12,4** | +1,8 | Brokk +1,3 | idem ; rang faible, connu |
+| Aura de puissance | +18,0 → **+17,9** | +17,9 | +4,3 | — |
+| Virulence | Ervald +18,8 → **+17,5**, Naraxes +12,9 → **+13,0** | +12,8 | +7,2 ; Ervald +5,8 | — |
+| Récolte | Ervald +12,7 → **+11,9** | +1,4 | Ervald +1,4 | rang faible, connu |
+| Vol de vie | Gorak +16,2 → **+16,0**, Ysolde +19,8 → **+19,9**, Aldric +15,9 → **+15,8** | +17,4 | +4,5 ; kit d'Ervald +6,1 | — |
+| Fausse note | Fanchon +20,1 → **+20,1** | **+20,0** | +4,9 | « forte » à la moyenne, au bord haut (signalé) |
+| Siffloter | Fanchon +15,3 → **+15,3** | +15,6 | +4,3 | — |
+| Curée | Gorak +8,3 → **+8,3**, Brokk +12,6 → **+12,9** | +2,1 | Brokk +2,1 | consommatrice |
+| Dé pipé | Naraxes +11,0 → **+11,0** | +1,1 | Naraxes +0,6 | rang faible, connu |
+| Pas de côté | +8,2 → **+8,2** (Fanchon +6,4, Ervald +9,4) | +8,2 | +7,1 | — |
+| Plaie ouverte | +5,5 → **+5,5** (Elaria +12,8, Ervald +9,0) | +5,5 | +2,5 ; Elaria +4,9 | faible hors des critiques fréquents, attendu |
+| Pourfendre II | (revue : Elaria +9,7, Ervald +8,4) | — | +7,0 (Elaria +9,7) ; kit de Gorak +10,6 | — |
+| Pile ou face II | (revue : Fanchon +5,0) | — | +5,4 ; kit de Naraxes +7,3 | — |
+| Feux follets II | (revue : Ervald +10,6) | — | **+9,2** (Ervald +10,0) ; kit de Thaldrin +7,7 | « forte » gravée (attendu par la revue) |
+| Foudre II | — | — | **+9,6** ; kit de Thaldrin +5,7 | « forte » gravée : son rang compte quatre éclairs (non mesuré par la revue, signalé) |
+
+**Ensemble, au roster** (`BALANCE_N=800 npm run balance`, avant → après) : tous dans la bande, de 45,6 % (Morgrut) à 55,9 % (Thaldrin) ; Ervald 45,7 → **49,7 %**, Thaldrin 55,0 → **55,9 %** ; les autres bougent de 0,9 point au plus ; pire duel inchangé (Elaria contre Morgrut, 61,9 %) ; Vol de vie dans le kit d'Ervald +14,4 → +18,6, Foudre dans le kit de Thaldrin +5,8 → +7,3. Aucune compensation. Construits et saison (`npm run campaign`, 30 parties ; `npm run season`) : [PERSONNAGES.md](PERSONNAGES.md), Ervald, Thaldrin, Ysolde, Aldric, Brokk, Fanchon, et [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) § Décisions.
+
+**Contrôles** : un test par mécanique dans `combat.test.ts` (« revue des auras et des compétences »), un contrôle d'audit par aura nouvelle et pour le Rempart (`audit.ts` : « bouclier de foi… », « plaie ouverte… », « rempart : épines ou armure fausses »), et un corpus d'audit (`audit.test.ts`) qui les grave chez leurs porteurs aux rangs I et II : aucune anomalie.

@@ -621,7 +621,7 @@ describe('écrans', () => {
     )
     expect(weak.match(/data-state="/g)).toHaveLength(2)
     expect(weak).toContain('Affaibli −1')
-    expect(weak).toContain('Coup gâché −5')
+    expect(weak).toContain('Coup gâché −4')
     expect(weak).toContain('Aura d&#x27;intimidation (Brokk)')
     // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille. L'Aura de
     // puissance, hors kit depuis le d6, est gravée sur le 3 de Gorak

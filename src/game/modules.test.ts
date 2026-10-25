@@ -733,8 +733,9 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2)
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta'])
+    // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2). Les trois auras de la revue des compétences
+    // (Bouclier de foi, Pas de côté, Plaie ouverte) : une aura, son son se déduit de sa nature
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound'])
     family('buff', ['hawk-eye', 'evasion', 'stoneskin', 'thorns', 'life-steal', 'lucky-strike', 'riposte', 'whistle', 'grudge'])
     family('debuff', ['grave-breath', 'fear', 'firefly', 'false-note', 'cleave', 'virulence'])
     family('heal', ['harvest'])

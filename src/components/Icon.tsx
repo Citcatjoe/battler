@@ -108,6 +108,10 @@ export type IconName =
   | 'vendetta'
   // Planche v20 (2026-10-25) : le Duo de la barde (compétence et statut)
   | 'duo'
+  // Planche v22 (2026-10-25) : la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte)
+  | 'faith-shield'
+  | 'sidestep'
+  | 'open-wound'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -164,6 +168,10 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   vendetta: 'vendetta',
   // Le Duo (2026-10-25) : la compétence et son statut partagent l'icône
   duo: 'duo',
+  // Revue des compétences (2026-10-25) : la compétence et son statut partagent l'icône
+  faithShield: 'faith-shield',
+  sidestep: 'sidestep',
+  openWound: 'open-wound',
 }
 
 /**

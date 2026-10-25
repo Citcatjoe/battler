@@ -430,6 +430,8 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 5 à 6 (DP), 57 PV ; critique ×2,5 → ×2,2 (10 %). 49,9 → 51,5 %, 18,1 → 17,0 tours par combat. Voir « L'attaque de base ».
 
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), décisions de l'utilisateur) : son kit ne change pas. Sa réserve : le **Rempart hérissé** redonne +2 armure temporaire avec ses +2 Épines à chaque armure vidée (A3 ; rang +2 et +2, au lieu de +6 Épines), gravé chez lui **+7,8 → +12,4** (rang II +1,3, toujours faible) ; la **Curée** de son répertoire frappe trois coups (O1), +10,4 → **+12,9** chez lui. Vanilla 49,0 → 48,4 % (800 combats par duel, bruit) ; construit contre construits 44 → 43 % ; saison 48 → 50 %.
+
 **Personnalité : le roc.**
 - **Qui il est** : très costaud, endurant, têtu et peu bavard. Il défend un lieu, pas sa gloire : sa fierté, c'est de ne jamais reculer.
 - **Comment il se bat** : il encaisse. Sa carrure et son armure grandissent pendant le combat (Peau de pierre), on se blesse en le frappant et la plaie s'ouvre quand il rend le coup (Épines acérées), et sa seule présence décourage (Intimidation). Il gagne à l'usure, pas à l'éclat.
@@ -483,6 +485,22 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 **2026-10-23, le d6 imprimé (0.105.0)** : Vol de vie et Aura glaciale, coups de 6, 6, 7, 9 ; Souffle de la tombe hors kit. 53,9 → 49,3 %. Voir « Le d6 imprimé ».
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 6 (DP), 56 PV, aucun autre changement ; Vol de vie greffé draine le coup de base de son propre jet. 49,3 → 49,8 %, 18,7 → 17,9 tours par combat. Voir « L'attaque de base ».
+
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), décisions de l'utilisateur ; P3, P1, P2, I4) : son **Vol de vie** rend +2 PV dès le rang I (une intensité de 2 ; rang +4 au lieu de +2) : la seule retouche de son kit vanilla. Sa réserve : la **Virulence** sans condition, « Triple le Poison de l'adversaire, puis +2 » (rang +1 au lieu de +3) ; la **Récolte** à +14 PV (rang +6) ; la **Plaie ouverte**, nouvelle (« Ses critiques font saigner l'adversaire de 3 », une aura : ses 24 % de critique la nourrissent). Le Briquet d'amadou et ses Feux follets gravés se gênent désormais dans l'offre (X2). Mesures, avant → après :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Vanilla (`BALANCE_N=800 npm run balance`) | 45,7 % | **49,7 %** (± 1,2) |
+| Tours par combat | 16,2 | 16,4 |
+| Vol de vie dans son kit (valeur nette) | +14,4 | **+18,6** |
+| Pire duel | Thaldrin, 40,1 % | Naraxes, 43 % |
+| Gravées chez lui (400 combats par duel) : Virulence, Récolte, Plaie ouverte | +8,3, +8,6, — | **+17,5, +11,9, +9,0** |
+| Rang II gravé : Vol de vie (moyenne des hôtes), Virulence | +3,3, +3,3 | +4,5, +5,8 |
+| Construit contre construits (`npm run campaign`, 30 parties) | 42 ± 9 % | **47 ± 10 %** |
+| Saison (`npm run season`, 4 saisons de 24) | 38 % | **44 %** |
+| Campagne : boss atteint, acte gagné | 17 %, 3 % | 17 %, 3 % |
+
+La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 49,7 %, dans la bande, sans compensation.
 
 **Personnalité : le devoir qui ne meurt pas.**
 - **Qui il est** : un soldat mort à son poste et revenu par devoir. Il est froid, sans haine ni colère ; il n'a plus rien à perdre, et il a donc tout son temps.
@@ -552,6 +570,8 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 **2026-10-24, le coup blanc** : son coup de base n'a plus de type ni de source ; son chiffre est blanc comme celui de tous. La Lumière reste à sa Purification (ivoire cerclé d'or).
 
 **2026-10-25, un seul modèle et la Purification sans effet sur soi (0.113.0)** : en tournoi comme en campagne, l'Aura de sainteté sur le 1 et la Purification sur le 2 ; la Purification ne retire plus son propre dernier malus (décision de l'utilisateur) : un bonus en face, sinon 5 dégâts. 48,4 → 45,9 % (800 combats par duel) ; Purification +21,7 → +19,3. Lumière 6 la ramènerait à 48,3 % : proposée, non appliquée. Voir « Un seul modèle de personnage ».
+
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), A1 et I1 retenues ensemble par l'utilisateur) : son kit ne change pas. Sa réserve : la **Sentence** fait perdre **3 PV** par soin (1 avant ; rang +3), et le **Bouclier de foi**, nouveau, lui donne +2 armure temporaire par soin (une aura ; rang +2) : ses deux consommatrices de soins, que son Aura de sainteté nourrit. Gravées chez elle (400 combats par duel) : Sentence **+7,9 → +16,2**, Bouclier de foi **+16,2** ; rangs II +4,3 et +5,2. Le Vol de vie de son répertoire rend +2 PV dès le rang I (+16,1 → +19,9 gravé chez elle). Vanilla 46,6 → 46,0 % (inchangé, bruit) ; construite contre construits 43 ± 15 → **44 ± 13 %** ; saison 43 → 41 % ; campagne, acte gagné 13 → 10 % (30 parties, bruit large). Les deux consommatrices se partagent l'offre : la Sentence, offerte dans 94 % de ses actes avant, l'est dans 78 % (prise 50 → 41 %). La pente de la montée (étude § 13.4) n'est pas remesurée ici : le rapport du porteur réel (X3) le fera.
 
 **Personnalité : la juge.**
 - **Qui elle est** : sereine, sûre d'elle, elle ne hausse jamais la voix. Elle ne combat pas, elle rend un verdict.
@@ -652,6 +672,8 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 **2026-10-23, le d6 imprimé (0.105.0)** : Rétribution et Riposte, coups de 4, 5, 6, 7 ; Aura d'immunité hors kit. 53,9 → 50,2 %. Voir « Le d6 imprimé ».
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 3 à 5 (DP), 54 PV, aucun autre changement. 50,2 → 50,3 %, 15,4 → 14,6 tours par combat. Voir « L'attaque de base ».
+
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), A2) : son kit ne change pas. Sa réserve : la **Vindicte** donne **+6 Ferveur** par renvoi (3 avant ; rang +6), gravée chez lui **+9,0 → +13,2** (rang II +4,0). Le Vol de vie de son répertoire rend +2 PV dès le rang I (+15,8 gravé chez lui). Vanilla 52,3 → 51,7 % (bruit) ; construit contre construits 56 → 56 % ; saison 50 → 51 %.
 
 **Personnalité : le créancier.**
 - **Qui il est** : un paladin rigide et discipliné. Sa ferveur est réelle mais contenue : il encaisse en silence, et il compte (choix de 2026-10-20 entre le « fanatique » de son image et le « tient le compte » de sa fiche : le fanatique n'apparaît qu'au moment où il rend les coups, dans sa posture d'attaque par exemple).
@@ -762,6 +784,20 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 **2026-10-25, un seul modèle (0.113.0, règle de l'utilisateur)** : ce départ devient Thaldrin lui-même, en tournoi aussi : Feux follets sur le 1, Foudre sur le 2, quatre faces nues, **attaque 5 à 6** (`CAMPAIGN_STATS` retiré). En tournoi, 48,1 → **55,6 %** (800 combats par duel), duels de 50 à 60 % ; Feux follets +36,3 → +13,4, Foudre +18,4 → +6,0, Force de l'ours 9,2 → 8,9 PV par combat. Laboratoire : 4 à 6, 44,5 % ; 53 PV, 47,6 %. Gardé à 5 à 6. Voir « Un seul modèle de personnage ».
 
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), O3 et R3, décisions de l'utilisateur) : sa **Foudre** tombe en **quatre éclairs** de 1 (trois avant), sa scène en compte quatre ; texte : « L'adversaire perd 4 PV, en quatre éclairs. » Ses **Feux follets** gagnent +2 Brûlure par rang (+1 avant). Sa force « Foudre : trois éclairs » devient « quatre éclairs ». Mesures, avant → après :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Vanilla (`BALANCE_N=800 npm run balance`) | 55,0 % | **55,9 %** (± 1,1), toujours le premier du roster, dans la bande |
+| Foudre dans son kit (valeur nette) | +5,8 | **+7,3** |
+| Tours par combat | 14,4 | 14,3 |
+| Ses duels | de 51 à 60 % | de 51 à 60 % (Morgrut 60 %, Ysolde 59 %) |
+| Rang II gravé : Foudre, Feux follets (moyenne des hôtes) | +8,2, +5,7 | **+9,6, +9,2**, au-dessus de la bande (+3 à +8), signalés |
+| Construit contre construits (`npm run campaign`, 30 parties) | 46 ± 8 % | 43 ± 7 % |
+| Saison (4 saisons de 24) | 42 % | 44 % |
+
+La revue attendait 54,9 → 56,4 % : 55,9 %, sans compensation. La Foudre II passe au-dessus de la bande parce que son rang (+1 par éclair) compte désormais quatre fois : dans son kit, le rang II vaut +5,7.
+
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
 - **Comment il se bat** : la forme lui est imposée à chaque tour. L'homme lance un sort à chaque tour (Foudre, Feux follets, Aura sauvage) sans jamais frapper ; l'ours frappe toujours, et fort (+3, plus l'Aura sauvage que l'homme a accumulée).
@@ -845,6 +881,8 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 - **Construite** (`npm run campaign`, `npm run season`, avant → après) : construite contre construits **66 ± 12 → 56 ± 10 %**, au niveau de Naraxes et d'Aldric (59 %) ; saison **69 → 57 %**, et l'écart-type de la saison passe de 11,9 à 10,2 points (de 36 à 71 % → de 37 à 72 %) ; le plus fort de la saison est désormais Elaria seule (72 %), dont l'écart vient de la forge ([CAMPAGNE.md](CAMPAGNE.md) § 18.3). Campagne (12 parties, bruit large) : boss atteint 17 → 8 %, acte gagné 8 → 8 %, chance avant combat 85 → 80 %. Rapports : `logs/season/2026-10-25-09-09_saison_avant-duo.md` → `…09-20_saison_duo.md`, `logs/campaign/2026-10-25-09-12_campagne_avant-duo_12.md` → `…09-22_campagne_duo_12.md` (avec Coup de chance au répertoire : `…_duo-coup-de-chance…`).
 - **Historique** : ses combats déjà joués restent (`battler:history:v1` ne garde ni les dés ni le kit) ; `npm run logs` écarte ses anciennes traces à deux dés, avec la raison (« barde à deux dés, d'avant le Duo »). Une campagne en cours garde ses gravures (faces 3 à 6, toujours nues) ; un rang déjà aiguisé sur le 1 passe au Duo, sur le même axe (des charges d'aura).
 
+**2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), P4, P5, I3) : son kit ne change pas. Sa réserve : la **Fausse note** vaut **les 2 prochains coups de l'adversaire qui touchent à −4** (un coup à −5 avant ; son intensité de départ compte le second coup, son rang en ajoute un) ; **Siffloter** rend **3 PV** par tour (2 avant), 6 en tout ; le **Pas de côté**, nouveau (« +8 % d'esquive », une aura cumulable, la saltimbanque qui esquive d'un pas de danse), entre dans sa réserve et dans le répertoire de Naraxes. Gravées chez elle (400 combats par duel) : Fausse note +13,6 → **+20,1** (au bord haut : drapeau « forte » à la moyenne des hôtes, +20,0), Siffloter +10,3 → **+15,3**, Pas de côté **+6,4** (sous la bande chez elle ; +8,2 en moyenne) ; rangs II : Fausse note +4,9, Siffloter +4,3. Vanilla 47,4 → 46,9 % (bruit) ; construite contre construits 52 ± 13 → 54 ± 13 % ; saison 59 → 56 % ; campagne, acte gagné 30 → 17 % (30 parties, bruit large : boss atteint 40 → 30 %).
+
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
 - **Comment elle se bat** : une chanson, un rythme. Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée. Quand la foule reprend le refrain (son 1), elle lance deux dés au tour suivant, deux jets complets : le Duo.
@@ -888,20 +926,20 @@ Pire duel : Elaria contre Morgrut, 61,9 %. La matrice ci-dessous date encore de 
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne. Règles du Duo (2026-10-25 : Fanchon à un seul d6), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/2026-10-25-09-17-37_v0.115.1_duo.md`).
+Taux de victoire de la ligne contre la colonne. Revue des auras et des compétences (2026-10-25 : Vol de vie +2 PV, Foudre à quatre éclairs), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/2026-10-25-14-00-49_v0.117.1_apres-revue.md` ; avant : `…13-56-24_v0.117.1_avant-revue.md`). Pire duel : Elaria contre Morgrut, 61,9 % (inchangé).
 
 | | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 49 % | 55 % | 58 % | 53 % | 48 % | 55 % | 59 % | 47 % | 52 % | **52,7 %** |
-| **Elaria** | 51 % | — | 45 % | 50 % | 47 % | 53 % | 48 % | 62 % | 48 % | 55 % | **51,0 %** |
-| **Brokk** | 46 % | 56 % | — | 53 % | 52 % | 46 % | 49 % | 46 % | 44 % | 51 % | **49,0 %** |
-| **Ervald** | 42 % | 50 % | 47 % | — | 48 % | 41 % | 49 % | 49 % | 40 % | 46 % | **45,7 %** |
-| **Ysolde** | 47 % | 53 % | 48 % | 52 % | — | 41 % | 44 % | 47 % | 43 % | 46 % | **46,6 %** |
-| **Naraxes** | 52 % | 47 % | 55 % | 59 % | 59 % | — | 49 % | 60 % | 48 % | 55 % | **53,7 %** |
-| **Aldric** | 45 % | 52 % | 51 % | 51 % | 56 % | 52 % | — | 56 % | 50 % | 59 % | **52,3 %** |
-| **Morgrut** | 42 % | 38 % | 54 % | 51 % | 53 % | 40 % | 44 % | — | 42 % | 54 % | **46,5 %** |
-| **Thaldrin** | 53 % | 52 % | 56 % | 60 % | 57 % | 52 % | 50 % | 59 % | — | 56 % | **55,0 %** |
-| **Fanchon** | 48 % | 45 % | 49 % | 54 % | 54 % | 45 % | 42 % | 46 % | 44 % | — | **47,4 %** |
+| **Gorak** | — | 49 % | 55 % | 55 % | 53 % | 48 % | 55 % | 59 % | 45 % | 52 % | **52,2 %** |
+| **Elaria** | 51 % | — | 45 % | 46 % | 47 % | 53 % | 48 % | 62 % | 46 % | 55 % | **50,3 %** |
+| **Brokk** | 46 % | 56 % | — | 50 % | 52 % | 46 % | 49 % | 46 % | 42 % | 51 % | **48,4 %** |
+| **Ervald** | 45 % | 54 % | 51 % | — | 53 % | 43 % | 53 % | 55 % | 45 % | 49 % | **49,7 %** |
+| **Ysolde** | 47 % | 53 % | 48 % | 47 % | — | 41 % | 44 % | 47 % | 42 % | 46 % | **46,0 %** |
+| **Naraxes** | 52 % | 47 % | 55 % | 57 % | 59 % | — | 49 % | 60 % | 46 % | 55 % | **53,2 %** |
+| **Aldric** | 45 % | 52 % | 51 % | 47 % | 56 % | 52 % | — | 56 % | 49 % | 59 % | **51,7 %** |
+| **Morgrut** | 42 % | 38 % | 54 % | 45 % | 53 % | 40 % | 44 % | — | 40 % | 54 % | **45,6 %** |
+| **Thaldrin** | 55 % | 54 % | 58 % | 56 % | 59 % | 54 % | 51 % | 60 % | — | 58 % | **55,9 %** |
+| **Fanchon** | 48 % | 45 % | 49 % | 51 % | 54 % | 45 % | 42 % | 46 % | 42 % | — | **46,9 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 
