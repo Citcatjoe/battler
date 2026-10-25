@@ -114,6 +114,56 @@ describe('audit de résolution : phase 8, premier lot (0.114.0)', () => {
   })
 })
 
+describe('audit de résolution : un combat qui change dans les fenêtres d’un coup, de proche en proche', () => {
+  it('une Sentence qui achève l’adversaire dans la fenêtre du soin (celui d’un Vol de vie au coup compris) la ferme : l’Encens, les Épines, l’Écu cabossé qui n’ont pas eu leur tour ne sont pas des anomalies', () => {
+    const { audit, problems } = createAudit()
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    const ysolde = createCharacter('ysolde')
+      .withForge([
+        { op: 'engrave', face: 3, skill: skill('sentence') },
+        { op: 'engrave', face: 4, skill: skill('life-steal') },
+      ])
+      .withRelics([getRelic('abbey-incense')])
+    let finishing = 0
+    let midStrike = 0
+    for (let seed = 0; seed < 300; seed++)
+      for (const b of CHARACTER_IDS) {
+        const r = simulateCombat([ysolde, createCharacter(b).withRelics([getRelic('dented-shield')])], { seed: 16000 + seed })
+        audit(r)
+        const last = r.beats.at(-1)!
+        if (last.type !== 'statusReaction' || last.status !== 'sentence' || last.trigger !== 'healed') continue
+        finishing++
+        const heal = last.cause !== undefined ? r.beats[last.cause] : undefined
+        if (heal?.type === 'statusReaction' && heal.status === 'lifesteal') midStrike++
+      }
+    expect(finishing).toBeGreaterThan(0)
+    expect(midStrike).toBeGreaterThan(0)
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+  })
+
+  it('une purge de seuil entre le coup et sa fenêtre (la Larme de givre) éteint la Brûlure avant l’Embrasement : rien ne manque', () => {
+    const { audit, problems } = createAudit()
+    const conflagration = ENGRAVABLE_SKILLS.find((e) => e.id === 'conflagration')!
+    const thaldrin = createCharacter('thaldrin').withForge([{ op: 'engrave', face: 3, skill: conflagration }]).withRelics([getRelic('split-knucklebone')])
+    let purged = 0
+    for (let seed = 0; seed < 300; seed++)
+      for (const b of CHARACTER_IDS) {
+        const r = simulateCombat([thaldrin, createCharacter(b).withRelics([getRelic('frost-tear')])], { seed: 17000 + seed })
+        audit(r)
+        // La Larme partie dans les fenêtres d'un coup de Thaldrin qui touche, sur un adversaire qui brûlait
+        for (const tear of r.beats)
+          if (tear.type === 'relic' && tear.relic === 'frost-tear' && tear.cause !== undefined) {
+            let k: number | undefined = tear.cause
+            while (k !== undefined && r.beats[k].type !== 'attack') k = r.beats[k].cause
+            const hit = k !== undefined ? r.beats[k] : undefined
+            if (hit?.type === 'attack' && hit.attack.attacker === 0 && hit.state.statuses[1].some((s) => s.id === 'burn')) purged++
+          }
+      }
+    expect(purged).toBeGreaterThan(0)
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+  })
+})
+
 describe('audit de résolution : phase 8, second lot', () => {
   it('aucune anomalie pour l’Embrasement, le Dé pipé, le Rempart hérissé et la Vindicte gravés chez leurs producteurs, aux rangs I et II, ni pour leurs quatre reliques', () => {
     const { audit, problems, seen } = createAudit()

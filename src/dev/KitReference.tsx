@@ -40,6 +40,7 @@ const GLYPH_USES: Record<GlyphName, string> = {
   filtrer: 'Champ de filtre',
   info: 'Aide, règle liée',
   reglages: 'Options, réglages (configuration du tournoi)',
+  relique: 'Reliques (option du tournoi)',
 }
 
 const SPEEDS = [1, 2, 4].map((s) => ({ value: s, label: `×${s}` }))

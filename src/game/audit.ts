@@ -59,6 +59,21 @@ function opensMoment(r: CombatResult, j: number, side: Side, on: FamilyMoment): 
   return asked.some((e, k) => e.type === 'release' && e.from !== 'opponent' && returned(b.event.effects[k]))
 }
 
+/**
+ * Les étapes qui découlent de `j`, de proche en proche (ses réactions, ce que celles-ci déclenchent : une relique de seuil
+ * après une relique de face, une Sentence après le soin d'un Vol de vie) : toutes les fenêtres ouvertes par cette étape.
+ */
+function descendantsOf(r: CombatResult, j: number): Beat[] {
+  const ids = new Set([j])
+  const out: Beat[] = []
+  for (const b of r.beats.slice(j + 1))
+    if (b.cause !== undefined && ids.has(b.cause)) {
+      ids.add(b.id)
+      out.push(b)
+    }
+  return out
+}
+
 /** Un audit qui accumule les anomalies (par type, avec un exemple) et les mécaniques rencontrées. */
 export function createAudit() {
   const problems = new Map<string, { n: number; example: string }>()
@@ -130,7 +145,10 @@ export function createAudit() {
       const s = r.beats[i].state
       const coin = r.beats[i].type === 'coin'
       const caused = r.beats.filter((x) => x.cause === i)
-      const died = caused.some((x) => x.state.hp.some((h) => h === 0))
+      // Le combat fini dans les fenêtres du coup, de proche en proche (une Sentence après le soin d'un Vol de vie) : ce
+      // qui attendait une fenêtre suivante ne part plus
+      const within = descendantsOf(r, i)
+      const died = within.some((x) => x.state.hp.some((h) => h === 0))
       const reaction = (id: string) => caused.find((x): x is Extract<Beat, { type: 'statusReaction' }> => x.type === 'statusReaction' && x.status === id)
       const before = (x: Beat) => r.beats[x.id - 1].state
       // Vol de vie
@@ -194,7 +212,9 @@ export function createAudit() {
         else see('saignement')
         if (was > atStart) see('plaie grossie pendant le coup, qui coule de ses charges du début')
       } else {
-        const end = caused.length ? caused[caused.length - 1].state : s
+        // L'état au bout des fenêtres du coup : une purge entre-temps (Larme de givre, relique de seuil après l'Osselet
+        // fendu) retire la plaie avant qu'elle coule
+        const end = within.length ? within[within.length - 1].state : s
         const left = find(end.statuses[target], 'bleed')
         if (left && atStart && !died) flag('saignement non déclenché', r, i, '')
         else if (left && !atStart) see('plaie ouverte pendant le coup, qui attend le suivant')
@@ -326,8 +346,8 @@ export function createAudit() {
       // cause), de ses charges du début du coup : 2 Épines acérées par charge. Vindicte : à chaque étape où son porteur
       // renvoie des dégâts (Riposte, Rétribution), cette étape pour cause : 3 Ferveur par charge. Embrasement : au coup qui
       // touche un adversaire qui brûle, il relâche sa Brûlure (3 fois ce qu'elle ferait encore perdre), l'éteint et perd une
-      // charge. Chacun part à chaque fois, sauf si le combat finit avant
-      const diedAfter = (j: number) => r.beats.some((x) => (x.id === j || x.cause === j) && x.state.hp.includes(0))
+      // charge. Chacun part à chaque fois, sauf si le combat finit avant (dans une fenêtre de l'étape, de proche en proche)
+      const diedAfter = (j: number) => [r.beats[j], ...descendantsOf(r, j)].some((x) => x.state.hp.includes(0))
       const reactedTo = (j: number, side: Side, id: string) => r.beats.some((x) => x.cause === j && x.type === 'statusReaction' && x.status === id && x.side === side)
       if (b.type === 'statusReaction' && b.status === 'bristlingRampart') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'bristlingRampart') : undefined
@@ -361,7 +381,9 @@ export function createAudit() {
         if (opensMoment(r, i, side, 'shieldBroken') && find(prev.statuses[side], 'bristlingRampart') && !diedAfter(i) && !reactedTo(i, side, 'bristlingRampart')) flag('rempart non déclenché', r, i, `côté ${side}`)
         if (opensMoment(r, i, side, 'reflected') && find(prev.statuses[side], 'vendetta') && !diedAfter(i) && !reactedTo(i, side, 'vendetta')) flag('vindicte non déclenchée', r, i, `côté ${side}`)
         const touched = (b.type === 'attack' && b.attack.attacker === side && !b.attack.dodged && !b.attack.replaced) || (b.type === 'coin' && b.side === side && b.heads && !!STATUSES[b.status].coinToss?.headsTouches)
-        if (touched && find(prev.statuses[side], 'conflagration') && find(s.statuses[1 - side], 'burn') && !diedAfter(i) && !reactedTo(i, side, 'conflagration')) flag('embrasement non déclenché', r, i, `côté ${side}`)
+        // Sauf une Brûlure éteinte dans les fenêtres du coup (une purge de seuil, la Larme de givre, avant la fenêtre du coup)
+        if (touched && find(prev.statuses[side], 'conflagration') && find(s.statuses[1 - side], 'burn') && !diedAfter(i) && !reactedTo(i, side, 'conflagration'))
+          if (!descendantsOf(r, i).some((x) => !find(x.state.statuses[1 - side], 'burn'))) flag('embrasement non déclenché', r, i, `côté ${side}`)
       }
       // Règle 9 (2026-10-21) : pendant un coup (attaque ou pièce, jusqu'au coup, au jet ou à la rafale suivante),
       // seul un statut déjà là au début du coup réagit. Les jauges ne réagissent pas : elles se remplissent.
@@ -893,7 +915,7 @@ export function createAudit() {
           if (!relic.charges && !relic.cooldown && !relic.when)
             r.beats.forEach((b, j) => {
               if (!opensMoment(r, j, side, on) || fires.some((f) => r.beats[f].cause === j)) return
-              const after = [b, ...r.beats.filter((x) => x.cause === j)]
+              const after = [b, ...descendantsOf(r, j)]
               if (after.some((x) => x.state.hp.includes(0) || relicIsInert(relic, side, x.state, r.fighters))) return
               flag('relique de moment manquée', r, j, `${relic.id} sur ${on}`)
             })
@@ -907,9 +929,12 @@ export function createAudit() {
             if (cause === undefined || !heals(r.beats[cause])) flag('relique de soin sans soin', r, i, relic.id)
             else see('relique de soin reçu')
           }
+          // Le combat qui finit dans la fenêtre (une Sentence qui achève l'adversaire, partie avant elle) la ferme aussi
           if (!relic.charges && !relic.cooldown && !relic.when)
             r.beats.forEach((b, i) => {
-              if (heals(b) && !b.state.hp.includes(0) && !fires.some((f) => r.beats[f].cause === i)) flag('relique de soin manquée', r, i, relic.id)
+              if (!heals(b) || fires.some((f) => r.beats[f].cause === i)) return
+              if ([b, ...descendantsOf(r, i)].some((x) => x.state.hp.includes(0))) return
+              flag('relique de soin manquée', r, i, relic.id)
             })
           continue
         }
@@ -949,12 +974,12 @@ export function createAudit() {
               }
           }
           // Sans charge ni recharge, et sa seule condition un seuil de dégâts : chaque coup encaissé assez gros la réveille,
-          // sauf si le combat finit dans les fenêtres de ce coup
+          // sauf si le combat finit dans les fenêtres de ce coup (de proche en proche : une Sentence après un Vol de vie)
           const least = relic.when?.length === 1 ? relic.when[0] : undefined
           if (t.on === 'hurt' && least?.type === 'hitAtLeast' && !relic.charges && !relic.cooldown)
             r.beats.forEach((b, j) => {
               if (b.type !== 'attack' || b.attack.attacker === side || b.attack.dodged || b.attack.replaced || b.attack.dealt < least.amount) return
-              if (r.beats.some((x) => (x.id === j || x.cause === j) && x.state.hp.includes(0))) return
+              if ([b, ...descendantsOf(r, j)].some((x) => x.state.hp.includes(0))) return
               if (!fires.some((f) => r.beats[f].cause === j)) flag('relique sur un gros coup manquée', r, j, relic.id)
             })
         }

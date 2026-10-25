@@ -2,17 +2,14 @@ import { useEffect, useState, type ReactNode } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
 import { DIE_FACES } from '../game/events'
-import { RELICS } from '../game/relics'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
 import { BRACKET_SEEDS, buildRewards, SEASON_SIZES, type SeasonSize } from '../game/season'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
 import { Portrait } from './Portrait'
-import { Icon } from './Icon'
 import { BackLink, Button, Glyph, IconButton, SegmentedControl } from './kit'
 import type { GlyphName } from './BattlerIcon'
-import { RelicSeal } from './RelicSeal'
 import { TipLayer, useTipLayer, type ShowTip } from './TipLayer'
 import { Switch } from './Switch'
 import type { Character } from '../game/character'
@@ -40,9 +37,6 @@ interface Props {
   season: { enabled: boolean; size: SeasonSize }
   onSeasonChange: (season: { enabled: boolean; size: SeasonSize }) => void
 }
-
-/** Le sceau qui illustre l'interrupteur des reliques : la forme hexagonale suffit à dire « relique ». */
-const SWITCH_RELIC = RELICS[0]
 
 /** Avec la saison, l'arbre de la configuration reste vide : les 16 premiers de la saison le rempliront. */
 const EMPTY_BRACKET: null[] = Array(SLOTS).fill(null)
@@ -462,8 +456,7 @@ export function TournamentOptions({
         : season.enabled
           ? `${build} ; l'arbre n'en donne plus`
           : 'Chaque victoire de l’arbre offre au vainqueur une relique à sa portée (hors finale)',
-      // Le sceau s'éteint quand le système est désactivé
-      visual: <RelicSeal relic={SWITCH_RELIC} size={36} spent={!relics} />,
+      visual: <TileGlyph name="relique" on={relics} />,
     },
     {
       kind: 'switch',
@@ -487,7 +480,7 @@ export function TournamentOptions({
       title: betting.enabled
         ? `${betting.names[0]} et ${betting.names[1]} parient des Deniers sur chaque match de l’arbre, cotes cachées jusqu’au règlement`
         : 'Tournoi sans paris',
-      visual: <Icon name="coin-pile" className={`h-9 w-9 shrink-0 ${betting.enabled ? '' : 'opacity-45 grayscale'}`} />,
+      visual: <TileGlyph name="parier" on={betting.enabled} />,
     },
   ]
   return (

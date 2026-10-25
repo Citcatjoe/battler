@@ -31,6 +31,7 @@ export type GlyphName =
   | 'filtrer'
   | 'info'
   | 'reglages'
+  | 'relique'
 
 export type GlyphSize = 14 | 16 | 18 | 20 | 22 | 24
 

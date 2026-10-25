@@ -35,7 +35,12 @@ src/
     forge.ts             forge du dé (0.88.0, CAMPAGNE.md § 4) : journal d'opérations (ForgeStep), rejoué sur la définition d'origine
                          (forgeState, forgedEvents, forgedFaces), offre et choix automatique (drawForgeOffer, autoForge), validité
     campaign.ts          campagne (0.88.0) : partie (CampaignRun), boss, réglage des rencontres sur le champion de référence
-                         (referenceChampions, tuneHp, encountersFor), récompenses, héritage, sauvegarde
+                         (referenceChampions, tuneHp, encountersFor), champion (championOf, secondSkillOf, drawBuild), héritage, sauvegarde
+    offers.ts            offre commune à la campagne, à la saison et à l'arbre (0.115.0) : ordre d'un acte (REWARDS, RewardKind),
+                         MAX_SKILL_FACES, répertoires (REPERTOIRES), BuildState, offre pertinente « le producteur d'abord » (reachOf,
+                         offerableRelics, offerableSkills), écho (ECHO_WEIGHT), tirage d'une récompense (drawReward, PendingReward)
+    typography.ts        typeset (0.115.0) : espaces insécables devant « : ; ! ? % » et dans les guillemets, appliqué aux registres
+                         et aux sorties de describeSkill, describeRelic, rankText ; contrôlé par wording.test.ts
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
     arenas.ts            ARENAS : cadres visuels des combats (image, cadrage, traitement)
     catalog.ts           vues de lecture sur les registres : statusCatalog, statusSources, statusLinks (interactions), skillCatalog (compendium)
@@ -58,9 +63,10 @@ src/
                          figée des qualifiés (Entrant.build), fighterKey, fillSlots, labelEntrants
     season.ts            phase de saison facultative avant l'arbre (0.86.0) : calendrier aller-retour (seasonSchedule, Berger), graine par match,
                          bilans compacts, simulation sans trace ni historique (simulateSeasonMatches), classement et départage
-                         (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS) ; construction (0.92.0, 0.92.1) :
-                         récompenses de chaque participant (buildRewards), la suivante à chaque victoire, construction d'un participant
-                         (buildOf, buildDone), match prêt (seasonStatus), choix de l'observateur (chooseSeasonReward) ; rapport de chaque
+                         (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS) ; construction (0.92.0 ; rythme de
+                         la 0.115.0) : une récompense à chacun des dix premiers matchs de chaque côté (buildRewards, seasonReward par
+                         drawReward, SeasonResult.rewards), construction d'un participant (buildOf, buildDone), match prêt (seasonStatus),
+                         choix de l'observateur (chooseSeasonReward, par côté) ; rapport de chaque
                          match dans son bilan (SeasonResult.report, facultatif) et cumul par participant (seasonReport)
     epithets.ts          noms uniques des participants (0.87.0) : EPITHETS, huit épithètes par personnage, et uniqueNames (tirage par Rng)
     betting.ts           paris : quatre parieurs (deux de l'ordinateur), cotes simulées, mises fixes, règlement, coups de théâtre (docs/PARIS.md)
@@ -202,7 +208,7 @@ Une entrée dans `RELICS` (`relics.ts`), un seul type (`stats`, `rollBonus`, ou 
 ### Donner la forge du dé à un mode (tournoi, duel…)
 La forge est une donnée du personnage, comme ses reliques (`forge.ts`, règles : [CAMPAGNE.md](CAMPAGNE.md) § 4). Ses opérations sur le d6 (0.106.0) : graver (`engrave`, une face libre : nue et non dorée depuis la 0.111.0), dorer (`gild`, une face libre : +2 au coup de base quand elle tombe), aiguiser (`sharpen`), copier une face de compétence sur une face libre (`copy`, `{ face, to }` depuis la 0.111.0 : `copyDestinations` donne les destinations ; une copie sans `to`, d'avant, va sur la plus petite) et tremper l'arme (`temper`, sans face : +1 à l'attaque, minimum et maximum, cumulable, `ForgeState.temper`, appliqué dans `Character.baseStats`). Refondre (`reforge`) est retirée en 0.106.0 : un journal qui la contient est refusé (`stepValid`), un héritage qui ne vaut plus est écarté au chargement. La campagne (`campaign.ts`) et la construction de la saison (`season.ts`, `drawReward`, 0.92.0) la donnent déjà ; Tremper l'arme est toujours jouable, une offre n'est donc jamais vide. Pour qu'un autre mode la donne :
 1. Garder le journal du participant (`ForgeStep[]`), ou le déduire des résultats, comme `buildOf` dans `season.ts`.
-2. À la récompense : `drawForgeOffer(personnage.definition, journal, rng, ENGRAVABLE_SKILLS)`, le choix par défaut `autoForge(…)`, puis `withForgeStep(…)` pour l'ajouter (une opération impossible lève une erreur).
+2. À la récompense : `drawReward(build, kind, rng)` d'`offers.ts` (0.115.0 : l'offre commune de la campagne, de la saison et de l'arbre, pertinente, à l'écho, sous la limite de faces), ou `drawForgeOffer(…)` pour une offre de forge seule ; le choix par défaut `autoForge(…)`, puis `withForgeStep(…)` pour l'ajouter (une opération impossible lève une erreur).
 3. Au combat : `createCharacter(id).withForge(journal).withRelics(…)`. Le moteur, la trace (en-tête `Forge (…)`, relu par `npm run logs`), l'audit, la barre des compétences et les cotes suivent sans rien de plus. Pour valider un résultat : `fighterKey` (personnage, reliques, forge).
 4. À l'écran : `useForgeChoice` et `ForgeChoice` (cartes de l'offre, puis la face sur `ForgedDie`), comme la récompense de `CampaignScreen` et le menu Récompense d'`EndScreen` ; `ForgeMark` pour une opération déjà faite.
 

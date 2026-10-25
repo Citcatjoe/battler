@@ -94,7 +94,7 @@ import { Badge, SquareButton } from '../components/kit'
 </button>
 ```
 
-## 6. Glyphe « réglages » (ajout du 2026-10-25)
+## 6. Glyphes « réglages » et « relique » (ajout du 2026-10-25)
 
 Ajouté pour le bouton **Options** de la configuration du tournoi, qui ouvre la boîte des options (saison, combattants, forge du dé, reliques, noms uniques, paris). Aucun glyphe du kit ne disait « réglages » ; `journal` (une liste) le remplaçait en attendant.
 
@@ -106,4 +106,6 @@ Ajouté pour le bouton **Options** de la configuration du tournoi, qui ouvre la 
 <Button variant="secondary" size="md" icon="reglages" aria-haspopup="dialog">Options</Button>
 ```
 
-**Tuiles de la boîte Options** (passe de finition du 2026-10-25) : chaque tuile ouvre sur une marque de 36 px, pour que les noms s'alignent d'une tuile à l'autre. Une option qui n'a pas d'objet à montrer prend un glyphe du kit à 24 px, or quand elle est active, `--text-3` sinon : `tournoi` (Phase de saison), `combattre` (Combattants), `chroniques` (Noms uniques). Les autres gardent leur contenu (face gravée de la forge, sceau de relique, Deniers), à la même taille.
+**Glyphe « relique »** : ajouté pour la tuile **Reliques** de la boîte des options, qui est un interrupteur (une commande) : le sceau peint d'une relique n'y a pas sa place. **Anatomie** : l'hexagone des reliques, pointe en haut, de rayon 9 centré sur la grille 24 (sommets à y = 3 et y = 21, côtés verticaux à x = 4,2 et 19,8), et une gemme en losange au centre (de 9 à 15 en x, de 8,5 à 15,5 en y), au trait du kit, sans remplissage. **Usage** : une commande qui active, filtre ou ouvre les reliques.
+
+**Tuiles de la boîte Options** (passe de finition du 2026-10-25) : chaque tuile est une commande (interrupteur ou sélecteur) et ouvre sur une marque de 36 px, pour que les noms s'alignent d'une tuile à l'autre : un glyphe du kit à 24 px, or quand l'option est active, `--text-3` sinon : `tournoi` (Phase de saison), `combattre` (Combattants), `relique` (Reliques), `chroniques` (Noms uniques), `parier` (Paris). La Forge du dé garde sa face de dé gravée, dessinée en CSS (`.forge-face`, le chiffre du d6) : aucune image peinte dans une tuile.
