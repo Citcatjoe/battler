@@ -32,6 +32,22 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.117.1] — 2026-10-25
+
+Décisions de l'utilisateur du 2026-10-25 sur Elaria ([PROGRESSION.md](docs/PROGRESSION.md) § 1.18) : « retirer son Coup de chance, non : il ne faut pas fermer de possibilité, c'est bridant, frustrant » ; l'**Esquive améliorée ne se cumule plus** (il avait fixé le cumul le 2026-10-21) ; la zone des bandeaux attend.
+
+### Modifié
+- **Esquive améliorée non cumulable** (`statuses.ts`, `evasion`) : une charge au plus (`add` plafonné à 1, comme l'Étourdissement). Une nouvelle pose ne s'ajoute pas et garde la plus forte intensité (`refresh` l'aurait remplacée : la Plume d'aigle aurait effacé un rang) ; une relique qui la pose sur un porteur qui l'a déjà ne part pas et ne s'use pas (pose nulle). Du 2026-10-21 à la 0.117.0 : cumulable, une charge par esquive.
+- **Son rang** (`roster.ts`) : l'axe « +1 charge » n'a plus de prise ; il devient l'**intensité**, **+2 dégâts par coup en attendant l'esquive** (`modifyOutgoing`, après le critique ; greffée, elle compte dès le coup de son propre jet). Rang II (`scripts/skills.report.ts`, 200 combats par duel) : **+9,1 → +3,3** points (Naraxes +2,7 à Brokk +4,2 ; chez Elaria +14,0 → +5,3), dans la bande (+3 à +8) ; à +1 dégât, +1,8 (sous la bande).
+- Label du coup : chez l'attaquant, son intensité se chiffre (« Esquive améliorée +2 ») ; chez le défenseur, « Esquive assurée » comme avant (`specials.ts`).
+- Textes : « Esquive à coup sûr le prochain coup reçu » (plus de « une charge par esquive ») ; aiguisée, « ; d'ici là, ce coup et les suivants font +2 dégâts » ; pastille « non cumulable ».
+- **Mesuré**, avant → après :
+  - roster nu (`BALANCE_N=800 npm run balance`) : **inchangé**, Elaria 51,0 %, de 45,7 % (Ervald) à 55,0 % (Thaldrin), pire duel Elaria–Morgrut 61,9 % ; l'empreinte `balance.test.ts` ne bouge pas (sans forge ni relique, deux esquives sûres ne s'empilaient presque jamais) ;
+  - **Elaria construite** (60 builds, 40 combats par duel contre le build de même rang des neuf autres) : moyenne **67,8 → 65,0 %**, médiane 67,8 → 64,6, 10e centile 56,9 → 53,1, pire 49,2 → 44,4, meilleur 86,7 → 90,0, builds au-dessus de 65 % **57 → 48 %**, sous 50 % 2 → 8 % ; les neuf autres bougent de 0,6 point au plus ;
+  - saison (`SEASON_RUNS=8 npm run season`) : Elaria 70 → 68 %, de 42–70 % à 42–68 %, écart-type 8,5 → 8,1 points ; campagne (`CAMPAIGN_RUNS=30`) : construite contre construits 68 ± 10 → 66 ± 10 %, boss atteint 21 → 22 %, acte gagné 11 → 12 % (Elaria 20 → 20 %, 7 → 13 %) ;
+  - gravée (rang I) : +18,9, inchangée ; reliques (`npm run relics`) : Plume d'aigle +9,6 → +9,5 (Elaria +19,6 → +18,9), Dé creux +15,4 inchangé.
+- Audit : « esquive imposée cumulée » devient une anomalie ; contrôle « esquive imposée, plus aucune charge » ; tests « non cumulable » et « aiguisée » (`combat.test.ts`, `audit.test.ts`).
+
 ## [0.117.0] — 2026-10-25
 
 Décisions de l'utilisateur du 2026-10-25 ([PROGRESSION.md](docs/PROGRESSION.md) § 1.17) : les reliques de source validées et intégrées (« je te laisse intégrer »), « dans la perspective de régler un peu » Elaria, au côté de Fanchon ; la zone des bandeaux reste un chantier, avec de nouvelles pistes à réfléchir.

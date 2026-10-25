@@ -5,7 +5,7 @@ import { autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFa
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { computeStats } from './stats'
-import { BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
 import { EMOJI, testCharacter } from './test-utils'
 import { Character } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
@@ -955,7 +955,7 @@ describe('compétences du 2 au dé (0.25.0)', () => {
     expect(forced).toBeGreaterThan(0)
   })
 
-  it('Esquive améliorée (2026-10-21) : cumulable, chaque charge esquive un coup reçu', () => {
+  it('Esquive améliorée (2026-10-25, 0.117.1) : non cumulable, une charge au plus ; une nouvelle pose garde la plus forte intensité', () => {
     const evade: CharacterEvent['effects'] = [{ type: 'applyStatus', status: 'evasion', stacks: 1 }]
     const r = run([
       testCharacter('a', { maxHp: 200 }),
@@ -964,17 +964,36 @@ describe('compétences du 2 au dé (0.25.0)', () => {
         { id: 'e2', name: 'e2', trigger: 'combatStart', effects: evade },
       ]),
     ])
-    // Deux poses à l'ouverture : deux charges
+    // Deux poses à l'ouverture : une seule charge (du 2026-10-21 à la 0.117.0 : deux, cumulées)
     const posed = ofType(r, 'event').filter((e) => e.event.side === 1)
-    expect(stacksOf(posed.at(-1)!.state.statuses[1], 'evasion')).toBe(2)
-    // Les deux premiers coups de a sont esquivés à coup sûr (2 → 1 → 0), le troisième touche
+    expect(stacksOf(posed.at(-1)!.state.statuses[1], 'evasion')).toBe(1)
+    // Le premier coup de a est esquivé à coup sûr et use la charge ; le deuxième touche
     const hits = ofType(r, 'attack').filter((b) => b.attack.attacker === 0)
-    expect(hits.slice(0, 3).map((b) => [b.attack.dodgeForced, b.attack.dodged])).toEqual([
-      [true, true],
+    expect(hits.slice(0, 2).map((b) => [b.attack.dodgeForced, b.attack.dodged])).toEqual([
       [true, true],
       [false, false],
     ])
-    expect(hits.slice(0, 2).map((b) => stacksOf(b.state.statuses[1], 'evasion'))).toEqual([1, 0])
+    expect(stacksOf(hits[0].state.statuses[1], 'evasion')).toBe(0)
+    // Esquive aiguisée puis reposée sans intensité (Plume d'aigle, Dé creux) : la charge reste une, l'intensité la plus forte
+    expect(applyStatus([{ id: 'evasion', stacks: 1, power: 2 }], { id: 'evasion', stacks: 1 })).toEqual([{ id: 'evasion', stacks: 1, power: 2 }])
+    expect(applyStatus([{ id: 'evasion', stacks: 1 }], { id: 'evasion', stacks: 2, power: 1 })).toEqual([{ id: 'evasion', stacks: 1, power: 1 }])
+  })
+
+  it('Esquive améliorée aiguisée (0.117.1) : son intensité ajoute des dégâts aux coups du porteur tant qu’il attend l’esquive', () => {
+    const r = run([
+      testCharacter('a', { maxHp: 200, attackMin: 4, attackMax: 4 }, [{ id: 'e', name: 'e', trigger: 'naturalTwo', effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1, power: 3 }] }]),
+      testCharacter('b', { maxHp: 200 }),
+    ])
+    let boosted = 0
+    r.beats.forEach((beat, i) => {
+      if (beat.type !== 'attack' || beat.attack.attacker !== 0 || beat.attack.dodged || beat.attack.replaced) return
+      const held = has(before(r, i).statuses[0], 'evasion')
+      const evasion = beat.attack.modifiers.filter((m) => m.status === 'evasion')
+      expect(evasion).toEqual(held ? [{ status: 'evasion', by: 'attacker', delta: 3 }] : [])
+      if (held) boosted++
+    })
+    // Greffée sur le 2, elle compte dès le coup de son propre jet
+    expect(boosted).toBeGreaterThan(2)
   })
 
   it('Épines acérées (0.68.0) : chaque coup encaissé pose sur l’attaquant une charge de Saignement par épine, à chaque coup d’une Furie', () => {
@@ -2662,13 +2681,18 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     // Part relâchée : en points de pourcentage, +25 par rang (0,5 → 0,75 → 1)
     expect(sharp('aldric', ranks(1, 1), 'retribution').effects[0]).toMatchObject({ type: 'release', share: 0.75, min: 1 })
     expect(sharp('aldric', ranks(1, 2), 'retribution').effects[0]).toMatchObject({ type: 'release', share: 1, min: 1 })
-    // Plus de demi-rang (0.111.0) : chaque rang ajoute une quantité entière (Esquive améliorée II : 2 charges), et le
-    // roster refuse un axe de rang à virgule
-    expect(sharp('elaria', ranks(2, 1), 'evasion').effects[0]).toMatchObject({ stacks: 2 })
+    // Plus de demi-rang (0.111.0) : chaque rang ajoute une quantité entière (Esquive améliorée II : intensité 2, +2 dégâts
+    // à ses coups en attendant l'esquive ; une charge de plus jusqu'à la 0.117.0), et le roster refuse un axe de rang à virgule
+    expect(sharp('elaria', ranks(2, 1), 'evasion').effects[0]).toMatchObject({ stacks: 1, power: 2 })
+    expect(sharp('elaria', ranks(2, 2), 'evasion').effects[0]).toMatchObject({ stacks: 1, power: 4 })
+    expect(rankText(def('elaria').events.find((e) => e.id === 'evasion')!)).toBe(typeset("+2 dégâts par coup en attendant l'esquive"))
     for (const e of [...ENGRAVABLE_SKILLS, ...CHARACTERS.flatMap((c) => c.events)]) if (e.rankAxis) expect(Number.isInteger(e.rankAxis.per), e.id).toBe(true)
     const elaria = def('elaria')
-    const halfEvasion = elaria.events.map((e) => (e.id === 'evasion' ? { ...e, rankAxis: { kind: 'stacks' as const, per: 0.5 } } : e))
+    const halfEvasion = elaria.events.map((e) => (e.id === 'evasion' ? { ...e, rankAxis: { kind: 'power' as const, per: 0.5 } } : e))
     expect(validateRoster([{ ...elaria, events: halfEvasion }])).toEqual(['elaria : evasion : axe de rang, un gain entier ≥ 1 par rang'])
+    // Non cumulable (0.117.1) : une charge de plus n'aurait plus de prise
+    const stackedEvasion = elaria.events.map((e) => (e.id === 'evasion' ? { ...e, rankAxis: { kind: 'stacks' as const, per: 1 } } : e))
+    expect(validateRoster([{ ...elaria, events: stackedEvasion }])).toEqual(['elaria : evasion : axe de rang stacks sans prise sur la compétence'])
     // Une gravure s'aiguise sur sa face
     expect(sharp('ervald', ranks(5, 1, [{ op: 'engrave', face: 5, skill: skill('cleave') }]), 'cleave').effects[0]).toMatchObject({ stacks: 1 })
     // Feux follets (E3) : ils s'aiguisent (+1 Brûlure : 4 PV pendant 4 tours), sur leur face 1 depuis la 0.113.0
@@ -2710,10 +2734,14 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     const fires = ofType(runOn(1, [createCharacter('thaldrin').withForge([{ op: 'sharpen', face: 1 }]), foe]), 'event').filter((b) => b.event.eventId === 'firefly')
     expect(fires.length).toBeGreaterThan(2)
     for (const b of fires) expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'burn', stacks: 4, turns: 4 })
-    // Esquive améliorée II : deux charges à chaque fois
-    const dodges = ofType(runOn(2, [createCharacter('elaria').withForge([{ op: 'sharpen', face: 2 }]), foe]), 'event').filter((b) => b.event.eventId === 'evasion')
+    // Esquive améliorée II (0.117.1) : une charge, d'intensité 2, à chaque fois (deux charges jusqu'à la 0.117.0)
+    const sharpened = runOn(2, [createCharacter('elaria').withForge([{ op: 'sharpen', face: 2 }]), foe])
+    const dodges = ofType(sharpened, 'event').filter((b) => b.event.eventId === 'evasion')
     expect(dodges.length).toBeGreaterThan(3)
-    for (const b of dodges) expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'evasion', stacks: 2 })
+    for (const b of dodges) {
+      expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'evasion', stacks: 1 })
+      expect(b.state.statuses[0].find((s) => s.id === 'evasion')).toEqual({ id: 'evasion', stacks: 1, power: 2 })
+    }
     // Aura glaciale II (intensité 1) : un Poison de plus à chaque tour
     const frost = runOn(1, [createCharacter('ervald').withForge([{ op: 'sharpen', face: 1 }]), foe])
     const ticks = ofType(frost, 'statusTick').filter((t) => t.side === 0 && t.status === 'frostAura')

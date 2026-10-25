@@ -1365,3 +1365,20 @@ La log-cote de la dernière colonne est la synergie P8 avec le producteur du kit
 | Gravures sur son 3 | Esquive améliorée +19,4, Coup de chance +18,0, Crescendo +14,7, Aura de puissance +13,7, Fausse note +13,6, Pile ou face +13,4, Siffloter +10,3, Aura de précision +7,9, Dé pipé 0,0 |
 
 **Coup de chance hors de son répertoire** : il fait doublon avec le Duo (même statut sous un autre nom ; `action()` ne dépense qu'un statut de jets de plus par action, l'autre attend). Remplacé par l'**Aura de puissance**, mesurée à force égale (construite 56 contre 57 %, saison 57 contre 58 %, gravée +13,7 contre +18,0) : elle ouvre un second axe, des dégâts sur chaque jet du Duo, au lieu d'un second Duo sans aura. Rapports : `logs/skills/2026-10-25-09-18-58_v0.115.1.md` (gravures) et `…09-20-50…` (rangs).
+
+## 26. L'Esquive améliorée non cumulable (0.117.1)
+
+**La décision de l'utilisateur** (2026-10-25, sur Elaria construite, [PROGRESSION.md](PROGRESSION.md) § 1.18) : l'Esquive améliorée **ne se cumule plus**. Il avait fixé le cumul le 2026-10-21 (« cumulable, une charge par esquive ») ; l'étude d'Elaria construite (§ 1.17) en faisait la cause qui garde son plafond : les esquives sûres empilées par la forge (copie, aiguisage, Dé creux, Plume d'aigle). Dans la même réponse, il garde Coup de chance dans son répertoire : « il ne faut pas fermer de possibilité, c'est bridant, frustrant ».
+
+**La règle choisie** : une charge au plus, `add` plafonné à 1 (comme l'Étourdissement). Deux règles possibles ; celle-ci parce qu'une pose sans rang (Plume d'aigle, Dé creux) ne doit pas effacer une esquive aiguisée : un `refresh` remplace aussi l'intensité, un cumul plafonné garde la plus forte. Une relique qui la pose sur un porteur qui l'a déjà ne part pas et ne s'use pas (pose nulle, règle existante). « Reposée, elle remet sa valeur » (un `refresh` sans plafond, rang II à deux charges) aurait gardé deux esquives sûres en réserve : le cumul par la forge que l'utilisateur retire.
+
+**Le rang** : l'axe « +1 charge » n'a plus de prise (`validateRoster` refuse des charges sur un statut plafonné). Il devient une **intensité** : +N dégâts à ses coups tant qu'elle attend l'esquive (`modifyOutgoing`, après le critique, avant l'armure) ; greffée sur le 2, elle compte dès le coup de son propre jet. « Elle esquive, puis tire à couvert. »
+
+| Mesure (`scripts/skills.report.ts`, 200 combats par duel) | Valeur |
+| --- | --- |
+| Rang II, avant (+1 charge, cumulable) | +9,1 (Thaldrin +7,5 à Ervald +10,7 ; chez Elaria +14,0), hors bande |
+| Rang II à +1 dégât | +1,8 (Morgrut +1,4 à Brokk +2,5), sous la bande |
+| **Rang II à +2 dégâts, retenu** | **+3,3** (Naraxes +2,7 à Brokk +4,2 ; chez Elaria +5,3), dans la bande (+3 à +8) |
+| Gravée (rang I) | +18,9, inchangée (deux poses sans coup reçu entre elles sont rares sans forge) |
+
+Le reste des mesures (roster nu, Elaria construite, saison, campagne, reliques) : [PERSONNAGES.md](PERSONNAGES.md), « Elaria », 0.117.1.

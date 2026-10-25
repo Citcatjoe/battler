@@ -21,11 +21,11 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Gardés pour plus tard** (§ 15) : les super coups, le sertissage d'une relique dans une face, les défenses par type de dégâts, les vies.
 - **Ce qui manque** (§ 17) : l'inventaire de ce que le cadre suppose et qui n'existe pas encore (moteur, données, contenu, icônes, écrans, mesures).
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
-- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.117.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
+- **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.117.1, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-25, version 0.117.0)
+## 0 bis. État des lieux (2026-10-25, version 0.117.1)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.117.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0, la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15), la 0.116.0 (Fanchon à un dé, § 1.16) ni la 0.117.0 (reliques de source, § 1.17)._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.117.1). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11) ; il n'a pas encore joué la 0.111.0, la 0.112.0, la 0.113.0, la 0.114.0, la 0.115.x (passe de nuit, § 1.14 ; décisions au réveil, § 1.15), la 0.116.0 (Fanchon à un dé, § 1.16), la 0.117.0 (reliques de source, § 1.17) ni la 0.117.1 (Esquive améliorée non cumulable, § 1.18)._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -46,6 +46,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.115.1 | **Purification à 6 dégâts** quand l'adversaire n'a aucun bonus (5 avant) : Ysolde 45,9 → 48,3 % (§ 1.15) |
 | 0.116.0 | **Fanchon à un seul d6** : le Duo sur le 1 (+1 Aura mélodieuse, puis deux dés à son action suivante), Soliste sur le 2, attaque 4 à 6, critique 5 % ; les deux dés de la barde retirés ; **l'arbre du tournoi montre le build** de chaque participant (dé forgé en miniature, reliques) (§ 1.16) |
 | 0.117.0 | **Quatre reliques de source**, offertes à tous : Dard de guêpe (2 poison sur un 6), Briquet d'amadou (2 brûlure sur un 6), Pièce de foire (pile ou face sur un 6, recharge 3), Brassard à pointes (+1 riposte au 1er tour) ; elles ouvrent leurs consommatrices ; la règle 7 admet le Poison et la Brûlure vers l'adversaire (§ 1.17) |
+| 0.117.1 | **Esquive améliorée non cumulable** (une charge au plus) ; son rang : +2 dégâts à ses coups en attendant l'esquive ; Elaria construite 67,8 → 65,0 %, builds au-dessus de 65 % 57 → 48 % ; roster nu inchangé (§ 1.18) |
 
 ### Le combat, en une page
 
@@ -84,7 +85,7 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 - **Les types** : l'attaque est d'un type unique depuis la 0.111.0 ; les textes ne nomment pas de type, et les bonus de relique par type sont abandonnés (0.112.0).
 - **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.113.0 (modèle unique, courbe option B), boss atteint 24 % (26 % attendus), acte gagné 14 % (12 %), sur 30 parties par champion.
 - **Points à surveiller** : depuis la 0.116.0, la barde n'a plus qu'un dé (une gravure ne compte plus double) ; le rang II du Soliste à +8,3 (limite haute) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
-- **Elaria construite** (§ 1.17) : la plus forte presque à chaque build (moyenne 68,3 %, 57 % de builds au-dessus de 65 %) ; trois propositions en attente de l'utilisateur (Coup de chance hors de son répertoire, Esquive améliorée non cumulable, les deux).
+- **Elaria construite** (§ 1.17, § 1.18) : la plus forte presque à chaque build en 0.117.0 (moyenne 67,8 %, 57 % de builds au-dessus de 65 %). **0.117.1** : Esquive améliorée non cumulable (décision de l'utilisateur), moyenne 65,0 %, 48 % au-dessus de 65 %, pire build 44,4, meilleur 90,0 ; elle reste première (saison 68 %). Coup de chance gardé (« ne pas fermer de possibilité »). Question ouverte de l'utilisateur : sa montée en puissance ne serait-elle pas la cible des autres, plutôt qu'elle ne rentre dans le rang ? Étude de l'agent ([TODO.md](TODO.md) § 20) : sa pente vient de la qualité des briques de son offre et d'une boucle multiplicative (Œil de faucon, Aura de précision), pas de ses stats ; piste proposée : relever le plancher des briques des autres et donner une boucle à chacun.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
@@ -301,6 +302,15 @@ L'utilisateur dormait : chaque choix ouvert a été tranché par l'agent, au plu
 | La règle 7 des reliques | (règle fixée par l'utilisateur : aucun malus à l'adversaire) | **pliée par ce lot, à signaler** : exception explicite pour le Poison et la Brûlure ; tout autre malus reste refusé |
 | Elaria | « qu'elle puisse devenir cheatée n'est pas un problème, mais si elle l'est systématiquement » | **elle l'est**. 60 builds par personnage : moyenne 68,3 %, médiane 67,8, pire build 49,2 (la moyenne de Brokk), 57 % de builds au-dessus de 65 % (2 à 17 % chez les autres), vanilla 51,2 %. Cause : la forge vaut +45,9 chez elle (+29,3 à +32,4 ailleurs), chaque pas +10 à +15 ; ses reliques valent comme ailleurs (+41,2). **Trois propositions, aucune livrée** : A, Coup de chance hors de son répertoire (moyenne 65,3, > 65 % : 47 %) ; B, Esquive améliorée non cumulable (63,3, 43 % ; **valeur fixée par l'utilisateur le 2026-10-21**, à lui de trancher ; `balance.test.ts` à vérifier, Fanchon et Naraxes touchés à la marge) ; **A + B, recommandé** (60,6, 37 %, 22 % sous 50 %, meilleur 90,3). Écartées : retirer la copie d'esquive de l'offre, affaiblir Plume d'aigle et Conque, retirer l'Aura de précision. |
 | La zone des bandeaux | « noter ta piste ; noter d'autres pistes aussi : uniquement ceux de l'attaquant ? bandeaux plutôt placés du côté de qui ils appartiennent ? remettre à plat l'utilité et le but d'un bandeau ? à réfléchir. Aujourd'hui c'est fouillis et on ne sait plus trop à quel saint se vouer. » | **chantier, rien de codé** : la piste de l'agent (« chacun chez soi ») et les trois pistes de l'utilisateur, en questions ouvertes, dans [MISE_EN_SCENE.md](MISE_EN_SCENE.md) (« Chantier : la zone des bandeaux ») et [TODO.md](TODO.md) § 20 |
+
+### 1.18 Décisions du 2026-10-25, Elaria (livrées en 0.117.1, sauf le chantier et l'étude à part)
+
+| Sujet | Décision de l'utilisateur | Mesure, suite |
+| --- | --- | --- |
+| Coup de chance hors de son répertoire (proposition A, § 1.17) | « retirer son Coup de chance, non : il ne faut pas fermer de possibilité, c'est bridant, frustrant » | **gardé**. Un principe de design : on ne règle pas un personnage en retirant une option de son répertoire. |
+| Esquive améliorée (proposition B ; cumul fixé par lui le 2026-10-21) | elle **ne se cumule plus** | livrée : une charge au plus, `add` plafonné à 1 (une nouvelle pose garde la plus forte intensité ; un `refresh` aurait laissé la Plume d'aigle effacer un rang). Son rang passe des charges à l'intensité : +2 dégâts à ses coups en attendant l'esquive (rang II +9,1 → +3,3 ; +1 dégât : +1,8, sous la bande). Roster nu inchangé (Elaria 51,0 %, de 45,7 à 55,0 %, pire duel 61,9 %), empreinte inchangée. Elaria construite (60 builds, 40 combats par duel) : moyenne 67,8 → **65,0 %**, médiane 67,8 → 64,6, pire 49,2 → 44,4, meilleur 86,7 → 90,0, au-dessus de 65 % 57 → **48 %**, sous 50 % 2 → 8 % ; les neuf autres à 0,6 point près. Saison (8 de 24) 70 → 68 % ; campagne (30) construite contre construits 68 → 66 ± 10 %, boss 21 → 22 %. Gravée (rang I) +18,9 inchangée ; Plume d'aigle +9,6 → +9,5, Dé creux +15,4. Aucune compensation : son vanilla ne bouge pas ([PERSONNAGES.md](PERSONNAGES.md), Elaria ; [SORTS.md](SORTS.md) § 26) |
+| La zone des bandeaux | attend | chantier inchangé ([TODO.md](TODO.md) § 20) |
+| Une piste plus large sur Elaria, hors des leviers mesurés ici | question ouverte de l'utilisateur | étudiée à part, rien de livré ici |
 
 ---
 

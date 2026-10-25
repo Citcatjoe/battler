@@ -94,7 +94,7 @@ export const RULES: Record<RuleId, Rule> = {
   dodge: {
     group: 'dodge',
     title: 'Esquive',
-    text: "Le défenseur tente d'esquiver (sa chance d'esquive), sauf s'il porte une esquive imposée (Esquive améliorée) : elle réussit sans tirage, même contre une esquive nulle, et perd une charge par coup esquivé. Un coup esquivé ne fait aucun dégât, ne peut pas être critique et ne déclenche rien de ce qui demande de toucher ; il use pourtant une charge de Vol de vie de l'attaquant, sans rien rendre.",
+    text: "Le défenseur tente d'esquiver (sa chance d'esquive), sauf s'il porte une esquive imposée (Esquive améliorée) : elle réussit sans tirage, même contre une esquive nulle, puis disparaît. Un coup esquivé ne fait aucun dégât, ne peut pas être critique et ne déclenche rien de ce qui demande de toucher ; il use pourtant une charge de Vol de vie de l'attaquant, sans rien rendre.",
   },
   crit: {
     group: 'crit',

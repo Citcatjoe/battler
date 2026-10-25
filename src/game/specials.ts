@@ -109,8 +109,9 @@ export function statusSpecial(id: StatusId, bearer: SpecialBearer, amount?: numb
   const sign: SpecialSign = (def.polarity === 'positive') === (bearer === 'attacker') ? 'plus' : 'minus'
   // Un critique imposé est le critique lui-même : la source Coup, avec l'icône du critique
   if (def.forcesCrit) return { label: def.name, source: 'strike', sign, icon: { icon: 'crit' } }
-  // L'esquive imposée dit son effet plutôt que son statut (« Esquive améliorée ») : rien à chiffrer
-  if (def.forcesDodge) return { label: 'Esquive assurée', source: 'skill', sign }
+  // L'esquive imposée dit son effet plutôt que son statut (« Esquive améliorée ») : rien à chiffrer. Chez l'attaquant, son
+  // intensité (Esquive améliorée aiguisée, 0.117.1) est un modificateur comme un autre, chiffré
+  if (def.forcesDodge && bearer === 'defender') return { label: 'Esquive assurée', source: 'skill', sign }
   return { label: withAmount(def.name, sign, amount), source: 'skill', sign }
 }
 

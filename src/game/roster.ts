@@ -241,8 +241,9 @@ const elaria: CharacterDef = {
       // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
       // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
       effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
-      // Une esquive de plus : +9,6 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi en 0.110.0 : +7,3)
-      rankAxis: { kind: 'stacks', per: 1 },
+      // Son rang (0.117.1, non cumulable) : +2 dégâts à ses coups tant qu'elle attend l'esquive, +3,3 points gravée (+1 :
+      // +1,8, sous la bande). Avant : une esquive de plus (+9,6 en 0.111.0), que « une charge au plus » ne permet plus
+      rankAxis: { kind: 'power', per: 2 },
     },
   ],
 }

@@ -583,14 +583,23 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Esquive améliorée',
     look: { glow: 'rgba(165,243,252,0.8)', opacity: 0.45 },
     polarity: 'positive',
-    summary: 'Esquive à coup sûr le prochain coup reçu, une charge par esquive.',
-    describe: (s) => `${next(s.stacks, 'Esquive à coup sûr le prochain coup reçu', 'Esquive à coup sûr les N prochains coups reçus')}${forTurns(s)}`,
+    summary: 'Esquive à coup sûr le prochain coup reçu.',
+    describe: (s) => `Esquive à coup sûr le prochain coup reçu${s.power ? ` ; d'ici là, ses coups font ${damageText(s.power)}` : ''}${forTurns(s)}`,
+    grafted: (s) => (s.power ? `Esquive à coup sûr le prochain coup reçu ; d'ici là, ce coup et les suivants font ${damageText(s.power)}` : 'Esquive à coup sûr le prochain coup reçu'),
+    detail: () => "Une charge au plus : une nouvelle pose ne s'ajoute pas, elle garde la plus forte intensité.",
     plural: 'Esquives améliorées',
     badge: () => '100 %',
-    // 2026-10-21 (demande de l'utilisateur) : cumulable, une charge par esquive. Avant : plafonnée à 1 (`refresh`).
+    // 2026-10-25 (décision de l'utilisateur, 0.117.1) : ne se cumule plus. Une charge au plus (`add` plafonné à 1, comme
+    // l'Étourdissement : une nouvelle pose garde la plus forte intensité, là où `refresh` la remplacerait par la sienne).
+    // Du 2026-10-21 à la 0.117.0 : cumulable, une charge par esquive ; les esquives sûres empilées par la forge (copie,
+    // aiguisage, Dé creux, Plume d'aigle) faisaient d'Elaria construite la plus forte presque à chaque build.
     counter: 'stacks',
     stacking: 'add',
+    maxStacks: 1,
     forcesDodge: true,
+    // Son rang (0.117.1) : l'intensité, des dégâts en plus à ses coups tant qu'elle attend le coup reçu (avant : une charge)
+    modifyOutgoing: (damage, s) => damage + (s.power ?? 0),
+    power: (n) => `${damageText(n)} par coup en attendant l'esquive`,
   },
   // Lot des consommateurs (docs/PROGRESSION.md § 13.3) : posé par l'Encens de l'abbaye, chaque fois que son porteur
   // regagne des PV. Aucun statut ne disait « +N au prochain coup » : la Puissance dure, la Fausse note est un malus.

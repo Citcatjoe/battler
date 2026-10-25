@@ -494,10 +494,12 @@ export function createAudit() {
         }
         const evasion = !!find(prev.statuses[def], 'evasion')
         if (!a.replaced && a.dodgeForced !== evasion) flag('esquive imposée incohérente', r, i, `evasion ${evasion}`)
-        // Esquive améliorée cumulable (2026-10-21) : une esquive imposée use exactement une charge
+        // Esquive améliorée non cumulable (2026-10-25, 0.117.1) : une charge au plus, que l'esquive imposée use ; le
+        // défenseur n'en garde aucune après le coup (une pose pendant le coup attend sa fenêtre, après cette étape)
         const kept = (find(prev.statuses[def], 'evasion')?.stacks ?? 0) - (find(s.statuses[def], 'evasion')?.stacks ?? 0)
         if (a.dodgeForced && kept !== 1) flag('esquive imposée : une charge par esquive', r, i, `${kept} charge(s) usée(s)`)
-        else if (a.dodgeForced && find(s.statuses[def], 'evasion')) see('esquive imposée cumulée')
+        else if (a.dodgeForced && find(s.statuses[def], 'evasion')) flag('esquive imposée cumulée', r, i, '')
+        else if (a.dodgeForced) see('esquive imposée, plus aucune charge')
         if (!a.dodged && !a.replaced) {
           // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
           // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, coup brut compris (2026-10-23) ; un bonus

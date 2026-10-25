@@ -356,6 +356,22 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **2026-10-23, l'attaque de base (0.106.0)** : attaque 4 à 5 (DP), 53 PV ; esquive 26 → 22 %, critique 17 → 15 % (×2,4). Œil de faucon greffé rend critique le coup de base de son propre jet. 49,2 → 48,9 %, 20,4 → 18,0 tours par combat. Voir « L'attaque de base ».
 
+**2026-10-25, l'Esquive améliorée non cumulable (0.117.1, décision de l'utilisateur)**. Constat de la 0.117.0 ([PROGRESSION.md](PROGRESSION.md) § 1.17) : construite, elle était la plus forte presque à chaque build. L'utilisateur tranche ([PROGRESSION.md](PROGRESSION.md) § 1.18) : son **Coup de chance reste** dans son répertoire (« il ne faut pas fermer de possibilité, c'est bridant, frustrant ») ; son **Esquive améliorée ne se cumule plus** (une charge au plus ; il avait fixé le cumul le 2026-10-21). Son rang devient une intensité : +2 dégâts à ses coups tant qu'elle attend l'esquive (rang II +14,0 → +5,3 chez elle ; [SORTS.md](SORTS.md) § 26). Rien d'autre ne bouge : ni stats, ni PV, ni répertoire.
+
+| Mesure, avant → après | 0.117.0 | 0.117.1 |
+| --- | --- | --- |
+| Vanilla contre le roster (`BALANCE_N=800 npm run balance`) | 51,0 % | 51,0 % (inchangé ; pire duel Elaria–Morgrut 61,9 %, empreinte inchangée) |
+| Construite : moyenne (60 builds, 40 combats par duel contre le build de même rang des neuf autres) | 67,8 % | **65,0 %** |
+| Médiane, 10e centile | 67,8, 56,9 | 64,6, 53,1 |
+| Pire build, meilleur build | 49,2, 86,7 | 44,4, **90,0** |
+| Builds au-dessus de 65 % | 57 % | **48 %** (les autres : 0 à 20 %) |
+| Builds sous 50 % | 2 % | 8 % |
+| Saison (`SEASON_RUNS=8 npm run season`) | 70 % (première) | 68 % (première ; puis Naraxes et Fanchon, 55) |
+| Campagne (`CAMPAIGN_RUNS=30`), construite contre construits | 68 ± 10 % | 66 ± 10 % |
+| Campagne, boss atteint, acte gagné | 20 %, 7 % | 20 %, 13 % (± 7 sur 30 parties) |
+
+Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4, 8 % de builds sous 50 %) ; elle reste première, avec moins de builds au-dessus de 65 %. Les neuf autres bougent de 0,6 point au plus. La piste plus large que l'utilisateur a ouverte sur elle, hors des leviers mesurés ici, s'étudie à part. Les mesures de la 0.117.0 (68,3 %) venaient d'un script jetable sur les mêmes graines ; la base 67,8 % ci-dessus est remesurée sur les règles 0.117.0 livrées.
+
 **Personnalité : la chasseresse solitaire.**
 - **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.
 - **Comment elle se bat** : elle observe, se dérobe, et attend l'ouverture. Un tir manqué lui sert à régler le suivant (Œil de faucon). Elle frappe peu, mais au bon endroit.
