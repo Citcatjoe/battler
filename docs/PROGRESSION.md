@@ -85,7 +85,7 @@ Les règles se vérifient sans écran (tests, audit, simulations) ; à l'écran,
 - **Les types** : l'attaque est d'un type unique depuis la 0.111.0 ; les textes ne nomment pas de type, et les bonus de relique par type sont abandonnés (0.112.0).
 - **Campagne** : la difficulté est plus dure qu'avant, voulue (courbe abaissée), à juger en jeu ; en 0.113.0 (modèle unique, courbe option B), boss atteint 24 % (26 % attendus), acte gagné 14 % (12 %), sur 30 parties par champion.
 - **Points à surveiller** : depuis la 0.116.0, la barde n'a plus qu'un dé (une gravure ne compte plus double) ; le rang II du Soliste à +8,3 (limite haute) ; Crescendo et Soliste restent proches ; Peur et Soliste ne partent qu'une fois par combat ; la matrice des duels de [PERSONNAGES.md](PERSONNAGES.md) date de la 0.106.0.
-- **Elaria construite** (§ 1.17, § 1.18) : la plus forte presque à chaque build en 0.117.0 (moyenne 67,8 %, 57 % de builds au-dessus de 65 %). **0.117.1** : Esquive améliorée non cumulable (décision de l'utilisateur), moyenne 65,0 %, 48 % au-dessus de 65 %, pire build 44,4, meilleur 90,0 ; elle reste première (saison 68 %). Coup de chance gardé (« ne pas fermer de possibilité »). Question ouverte de l'utilisateur : sa montée en puissance ne serait-elle pas la cible des autres, plutôt qu'elle ne rentre dans le rang ? Étude de l'agent ([TODO.md](TODO.md) § 20) : sa pente vient de la qualité des briques de son offre et d'une boucle multiplicative (Œil de faucon, Aura de précision), pas de ses stats ; piste proposée : relever le plancher des briques des autres et donner une boucle à chacun.
+- **Elaria construite** (§ 1.17, § 1.18) : la plus forte presque à chaque build en 0.117.0 (moyenne 67,8 %, 57 % de builds au-dessus de 65 %). **0.117.1** : Esquive améliorée non cumulable (décision de l'utilisateur), moyenne 65,0 %, 48 % au-dessus de 65 %, pire build 44,4, meilleur 90,0 ; elle reste première (saison 68 %). Coup de chance gardé (« ne pas fermer de possibilité »). Question ouverte de l'utilisateur : sa montée en puissance ne serait-elle pas la cible des autres, plutôt qu'elle ne rentre dans le rang ? **Piste consignée au § 13.4** : sa pente vient de la qualité des briques de son offre et d'une boucle multiplicative (Œil de faucon, Aura de précision), pas de ses stats ; relever le plancher des briques des autres et donner une boucle à chacun, en quatre étapes à valider.
 - **La branche** `regles-v2` n'est pas fusionnée ; la fusion se décide après la campagne longue jouée par l'utilisateur (§ 18).
 
 ### Où en est le plan (§ 18)
@@ -1249,6 +1249,43 @@ Validé par l'utilisateur le 2026-10-24 (§ 1.10) : le lot de cinq et la signatu
 Décision du § 1.11 : un champion de campagne commence avec sa signature **sur le 1 seulement**, une fois ; ses cinq autres faces sont nues. Passent du 2 au 1 : Gorak (Furie des vents), Brokk (Épines acérées), Ervald (Aura glaciale), Ysolde (Aura de sainteté), Naraxes (Aura de décoction) ; Thaldrin : les Feux follets du 4, 5 et 6 au 1 seul ; déjà sur le 1 : Elaria, Aldric, Fanchon ; Morgrut inchangé (sans signature).
 
 Mesuré (`npm run campaign`, toute la livraison 0.111.0, 12 parties par champion, 120 parties) : **boss atteint 23 → 27 %** (31 % attendus), **acte gagné 10 → 10 %** (14 %). Boss atteint par champion : Gorak 17 %, Elaria 50 %, Brokk 25 %, Ervald 33 %, Ysolde 25 %, Naraxes 25 %, Aldric 17 %, Morgrut 17 %, Thaldrin 17 %, Fanchon 42 % ; à 12 parties, l'écart par champion est dans le bruit. Gravures par build d'un acte : de 1,18 (Gorak) à 1,44 (Morgrut) ; Thaldrin 0,82 → 1,33. L'apport du build monte de 0 (nœud 1) à 72 à 74 points (nœuds 9 et 10). PV des adversaires, en part de leurs PV de base, par nœud : 70, 66, 65, 64, 62, 56, 57, 63, 56, 60 %.
+
+### 13.4 La montée en puissance : la piste d'Elaria (2026-10-25, consignée à la demande de l'utilisateur)
+
+**La question de l'utilisateur** : « le fonctionnement et la montée en puissance d'Elaria, que nous estimons "cassée" actuellement par rapport aux autres, pourrait-il devenir la base de tous les persos ? Je me pose la question si son état actuel n'est pas en fait la cible que les autres doivent atteindre, plutôt que de faire rentrer Elaria dans le rang. » Puis : « consigne la piste ». Rien n'est changé dans le jeu ; c'est une piste à suivre, pas une décision de contenu.
+
+**La mesure** (règles 0.117.1, 48 builds par personnage tirés comme le champion de référence de la campagne, force contre les builds de même rang des neuf autres, 180 combats par build, ± 0,5 à 1 point sur une moyenne) :
+
+| Personnage | Nu (0 récompense) | Construit (10) | Pente | Toute la forge | Builds au-dessus de 65 % |
+| --- | --- | --- | --- | --- | --- |
+| **Elaria** | 51 | **66** | **+15,6** | **+42,7** | **50 %** |
+| Aldric | 52 | 56 | +4,0 | +32,5 | 17 % |
+| Fanchon | 48 | 52 | +4,3 | +31,4 | 19 % |
+| Naraxes | 55 | 56 | +0,2 | +31,4 | 21 % |
+| Gorak | 52 | 51 | −1,3 | +30,6 | 12 % |
+| Morgrut | 47 | 45 | −2,5 | +29,1 | 6 % |
+| Ervald | 46 | 42 | −3,9 | +26,4 | 0 % |
+| Brokk | 50 | 45 | −5,0 | +28,9 | 6 % |
+| Ysolde | 46 | 40 | −6,0 | +25,7 | 4 % |
+| Thaldrin | 55 | 44 | **−10,7** | +26,5 | 2 % |
+
+**Ce qui fait sa pente** (mesuré) :
+1. **Pas son châssis.** Retirer ses 22 % d'esquive et son ×2,4, à vanilla égal (PV réglés), ne change pas sa montée (66,6 / 66,4 / 66,6 %). Donner ce châssis, ou un « moteur » permanent d'identité (coups de plus, renvoi, soin au coup), à Gorak, Brokk et Ysolde ne leur donne aucune pente (+0 à +3 points, dans le bruit) ; les coups de plus raccourcissent même les combats (4,5 tours), le contraire du § 12.
+2. **La qualité des briques de son offre** (environ deux tiers de l'avance) : ses gravures valent +13,4 en moyenne (les autres +7,8 à +11,9), et elle ne reçoit presque jamais de consommatrice faible (1 % de ses gravures, contre 20 à 60 % chez sept des neuf autres, à +5 à +7 points, parce que l'écho les pousse dès que leur producteur est là).
+3. **La seule vraie boucle multiplicative du jeu** : Œil de faucon fait grandir ses critiques (30 → 43 % de ses coups qui touchent), l'Aura de précision ajoute +1 au multiplicateur : +17,7 chez elle, +9,3 chez Gorak.
+4. **Une attaque basse** (4 à 5) : chaque bonus à plat pèse plus lourd (Tremper +12,0 chez elle).
+
+**La réponse** : sa montée est la bonne cible **en partie**. Son **niveau** contre les autres n'est pas une cible : la force construite contre construits est à somme nulle (si les dix montent comme elle, chacun revient vers 50 %, et il ne reste que des builds *parfois* cheatés, de 0 à 21 % au-dessus de 65 % chez les autres aujourd'hui). Son **plancher de briques** et **sa boucle** sont la cible. En campagne, une montée plus raide pour tous est absorbée par le réglage des PV adverses contre chaque champion (Elaria : boss atteint 27 %, dans le peloton).
+
+**Preuve au laboratoire** (valeurs relevées en mémoire, rien de livré) : Sentence ×3 (+6,9 → +16,5) fait passer Ysolde construite de 40,4 à 46,1 % (sa pente de −6 à 0) ; Vindicte ×3 fait passer Aldric de 56,1 à 58,5 % ; les quatre relevées ensemble (Sentence ×3, Vindicte ×3, Virulence ×2, Récolte ×2) resserrent l'écart entre le plus fort et le plus faible construit de 25,8 à 21,5 points, et Elaria descend d'elle-même de 66,2 à 64,6 % sans être touchée ; durée et dispersion inchangées.
+
+**La piste, en quatre étapes** (à valider par l'utilisateur avant chacune ; aucune ne ferme de possibilité, § 1.18) :
+1. **Mesurer la pente en permanence** : la courbe des dix (force relative de 0 à 10 récompenses), l'apport de chaque gravure chez son porteur réel, la part des briques prises sous la bande, dans un rapport (`npm run campaign` a déjà les builds).
+2. **Relever les briques souvent prises sous la bande** vers +10 à +16 points gravées chez leur producteur (levier 1 d'[EQUILIBRAGE.md](EQUILIBRAGE.md) : une valeur) : Sentence, Vindicte, Virulence, Récolte, Rempart hérissé, Fausse note, Curée chez Gorak, et les rangs II de kit sous +4 (Pile ou face, Purification, Pourfendre…).
+3. **Une boucle multiplicative par personnage**, au laboratoire d'abord : une consommatrice d'identité qui fait grandir un multiplicateur que son kit nourrit déjà, comme le critique d'Elaria (pistes à mesurer : les coups de la Furie pour Gorak, la part renvoyée pour Brokk, les soins pour Ysolde, le Poison pour Ervald).
+4. **Remesurer Elaria** après 2 et 3, sans la toucher ; si elle reste au-dessus de 60 % de moyenne et de 35 % de builds au-dessus de 65 %, revenir à des leviers mesurés sur elle (son attaque basse) plutôt qu'à son répertoire.
+
+**Thaldrin à part** : la pente la plus mauvaise du roster (55 → 44, premier nu, dans le dernier tiers construit), à cause de ses rangs II de kit (+3,5, +3,7) et d'un Embrasement souvent pris ; il relève de l'étape 2.
 
 ---
 
