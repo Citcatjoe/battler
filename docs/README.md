@@ -30,6 +30,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | [REVUE_CONTENU.md](REVUE_CONTENU.md) | Revue des compétences, des statuts et des reliques (0.109.1) : chaque brique relue une par une, synthèse par gravité (moteur, équilibre, textes, écran et son, documents), corrections à décider |
 | | [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) | Revue des auras et des compétences (2026-10-25, règles 0.117.1) : chaque brique mesurée gravée et chez ses porteurs réels, tempo des auras, familles et idées ; tableau des décisions à prendre (A1 à A5, P1 à P5, R1 à R3, O1 à O3, I1 à I4) |
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
+| | [EN_LIGNE.md](EN_LIGNE.md) | Plan de mise en ligne (2026-10-26, rien de codé) : partager le jeu entre amis, connexion Google (Firebase Auth) et historique lié au compte sur le VPS (API Node, SQLite), synchronisation locale d'abord, décisions à prendre, étapes, et ce qui vient après (salons de paris, classements) |
 | **Direction artistique** | [STYLE_BIBLE.md](STYLE_BIBLE.md) | Style visuel, contraintes des images, prompts de génération |
 | | [design-system.md](design-system.md) | Tokens (couleurs, formes, polices) et composants de l'interface |
 | | [ui-kit/README.md](ui-kit/README.md) | **Source de vérité des contrôles** : boutons, onglets, barre de lecture, glyphes de commande (`battler-ui-kit.css`, `BattlerIcon.jsx`, page et capture de référence). On copie, on ne réinterprète pas |

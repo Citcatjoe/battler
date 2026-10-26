@@ -257,3 +257,18 @@ Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (d�
   - [ ] **Effets de scène pour les compétences** (l'utilisateur, 2026-10-25) : certaines compétences devraient avoir leur scène, comme les éclairs de la Foudre de Thaldrin (aujourd'hui seules la Foudre et quelques reliques en ont : Conque des vents, Braise captive, Géode). Aucune compétence du lot 3 n'en a. À affiner après ses tests.
   - [ ] **Progression entre les parties, à réfléchir** (l'utilisateur, 2026-10-25) : aujourd'hui tout le contenu est disponible d'emblée, et l'équilibre est fait à ce stade (10 % d'actes gagnés avec les meilleurs éléments : très peu, mais acceptable en l'état). Piste : débloquer au fil des parties des briques qui font boule de neige avec les mécaniques de départ ; au début, presque impossible de finir, puis beaucoup plus facile une fois les meilleurs éléments débloqués. Rien de décidé.
 - Plus tard : super coups, sertissage, défenses par type, vies.
+
+## 21. Mise en ligne (demande du 2026-10-26)
+
+Plan : [EN_LIGNE.md](EN_LIGNE.md). Premier objectif de l'utilisateur : partager le jeu avec des amis, se connecter avec Google et retrouver son historique lié à son compte, sans gérer de communauté. Montage retenu : option A (Firebase Auth seul ; Caddy, API Node et SQLite sur le VPS Infomaniak). Aucun code avant le feu vert de l'utilisateur.
+
+- [x] Étude (Firebase, problèmes, possibilités) et plan rédigé (2026-10-26).
+- [ ] **Décisions de l'utilisateur** (EN_LIGNE.md § 9) : D1 sur invitation ou ouvert ; D2 l'adresse ; D3 jeu public ; D4 réécrire le principe 6 d'`INTENTION.md` ; D5 campagne synchronisée ; D6 droits des images (ChatGPT) et des sons (ElevenLabs, offre gratuite sans licence commerciale, voir § 20).
+- [ ] **Vérifier le VPS** : système, Node, mémoire et disque libres avec le cache et le poller météo, serveur web déjà en place, trafic inclus dans la formule.
+- [ ] Étape 1 : mise en ligne statique (Caddy, HTTPS, script de déploiement).
+- [ ] Étape 2 : couche de stockage dans le jeu (`history.ts`, `campaign.ts`), sans changement visible.
+- [ ] Étape 3 : connexion Google (Firebase Auth), bouton et écran du compte.
+- [ ] Étape 4 : API Node et SQLite, vérification du jeton, liste d'invités.
+- [ ] Étape 5 : synchronisation (import à la première connexion, écran de choix, envois groupés, hors ligne).
+- [ ] Étape 6 : solidité (sauvegarde quotidienne de la base, surveillance, suppression des données, page « Ce qu'on garde »).
+- Plus tard : remontée des combats, salons de paris sur téléphone (graine et cotes tenues par le serveur), classements et PvP asynchrone.
