@@ -227,7 +227,7 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Embrasement | compétence | si l'adversaire brûle, son prochain coup qui touche : trois fois sa Brûlure | dégâts | Brûlure | Thaldrin +10,6 (moy. +8,6) | — |
 | Attiser | compétence | +2 à la Brûlure, qui repart | Brûlure | Brûlure (amplifie) | moy. +11,8 | — |
 | Éclair aveuglant | compétence | les critiques de l'adversaire ratent | malus | critiques adverses | moy. +13,6 | — |
-| Duo | compétence | des dés de plus à sa prochaine action (retiré par B10, remplaçant en attente) | jets | — | signature | Fanchon (2) |
+| Duo | compétence | des dés de plus à sa prochaine action (B10 : laissé en l'état, décision de l'utilisateur) | jets | — | signature | Fanchon (2) |
 
 #### Synthèse
 
@@ -251,7 +251,7 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 4. **Lumière : un seul porteur** (Ysolde) et aucune brique qui gêne l'adversaire hors de la Purification (« le fait-il payer ? » ne tient qu'à la Sentence).
 5. **Consommatrices sans producteur au départ** : réglé par la règle (§ B5, le producteur d'abord) : elles ne sont plus proposées au départ, et restent à graver une fois leur producteur dans le build.
 6. **Hors bande gravées** (déjà connus) : Dé pipé +0,8, Dette de sang +1,8, Sève noire +3,6, Aura de pourriture +7,0 (toutes des consommatrices).
-7. **Duo** : sans dés de plus (B10), la signature de Fanchon et une brique de la Magie attendent leur remplaçant.
+7. **Duo** : l'utilisateur le juge trop fort (B10) mais le laisse en l'état pour le moment ; son avenir reste à décider.
 
 **Trous de contenu à combler par l'utilisateur (sans invention ici) :**
 - Sang : une seconde consommatrice du Saignement, une compétence de plus (aujourd'hui Pourfendre seule pose sur jet).
