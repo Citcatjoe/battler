@@ -45,7 +45,8 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
   const faces = Array.from({ length: DIE_FACES }, (_, k) => ({ face: k + 1, event: events.find((e) => e.trigger === faceTrigger(k + 1)) }))
-  // Les compétences hors dé (Ouverture : au début du combat) qui ne posent pas d'aura ont aussi leur sceau
+  // Les compétences hors dé (au début du combat ; aucune depuis le départ de l'Ouverture, 2026-10-27) qui ne posent pas
+  // d'aura ont aussi leur sceau
   const offDice = events.filter((e) => rollFace(e.trigger) === undefined && !auraOfSkill(e))
   // Ses auras : celles qu'il peut poser, et toute aura qu'il porte (posée par une relique, ou par l'autre forme) ; celle
   // que pose une face prend la place de sa première face, les autres suivent

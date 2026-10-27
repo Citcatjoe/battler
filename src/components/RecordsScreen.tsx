@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { Character } from "../game/character";
 import { clearHistory, emptyRecord, ratios, useHistory } from "../game/history";
 import { CHARACTERS } from "../game/roster";
 import {

@@ -939,8 +939,8 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 11 | `regen` | Régénération | Cœur vert lumineux |
 | 12 | `weakened` | Affaibli | Rose rouge sombre fanée |
 | 13 | `breach` | Brèche | Cœur rouge fendu |
-| 14 | `sound-on` | Son activé | Cor de guerre et ondes sonores |
-| 15 | `sound-off` | Son coupé | Même cor, barré en rouge |
+| 14 | `sound-on` | Son activé ; **retirée en 0.121.0** (fichier à la corbeille, remplacé par les glyphes du UI kit) | Cor de guerre et ondes sonores |
+| 15 | `sound-off` | Son coupé ; **retirée en 0.121.0** (glyphes du kit) | Même cor, barré en rouge |
 | 16 | `turns` | Tours restants d'un statut | Sablier en bronze |
 | 17 | `thorns` | Épines (nain) | Ronce épineuse enroulée |
 | 18 | `lifesteal` | Vol de vie (mort-vivant) | Cœur pourpre traversé d'un filet de sang |
@@ -962,23 +962,23 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 34 | `riposte` | Riposte (paladin) | Lame qui en pare une autre, étincelles |
 | 35 | `immunity-aura` | Aura d'immunité (paladin) | Sceau de cire rouge, rubans ivoire, feu sacré |
 | 36 | `waiting` | Patience (ogre) | Montre à gousset cabossée, chaîne rouillée |
-| 37 | `life-bloom` | Graine de vie (druide) ; sans usage depuis la 0.73.0 (Fleur de vie retirée) | Graine qui germe, lueur vert sève |
-| 38 | `bark-skin` | Peau épaisse (druide) ; sans usage depuis la 0.73.0 (Écorce épaisse retirée) | Plaque d'écorce moussue |
+| 37 | `life-bloom` | Graine de vie (druide) ; sans usage depuis la 0.73.0 (Fleur de vie retirée) ; **retirée en 0.121.0** (fichier à la corbeille) | Graine qui germe, lueur vert sève |
+| 38 | `bark-skin` | Peau épaisse (druide) ; sans usage depuis la 0.73.0 (Écorce épaisse retirée) ; **retirée en 0.121.0** | Plaque d'écorce moussue |
 | 39 | `fireflies` | Lucioles (druide) ; statut `firefly`, hors jeu | Trois grosses lucioles en spirale |
 | 40 | `charge` | Charge (druide en ours) ; sans usage depuis la 0.73.0 | Tête d'ours qui fonce, traînées de vitesse |
-| 41 | `claw` | Coup de griffe (druide en ours) ; sans usage depuis la 0.73.0 | Patte griffue, trois entailles |
+| 41 | `claw` | Coup de griffe (druide en ours) ; sans usage depuis la 0.73.0 ; **retirée en 0.121.0** | Patte griffue, trois entailles |
 | 42 | `rot-aura` | Aura de pourriture (druide en ours) ; sert aussi, en attendant, au malus Pourriture | Bois de cerf pourri sous les champignons, halo brun-violet |
 | 43 | `whistle` | Siffloter et le statut Sifflotement (barde, double 1) | Flûtiau de cuivre, notes en lumière corail |
 | 44 | `false-note` | Fausse note, compétence et malus (barde, double 2) | Diapason de bronze fendu, onde brisée violet terne |
-| 45 | `melodious-aura` | Aura mélodieuse (barde, double 3) et Ouverture (l'aura posée au début du combat) | Caisse de luth à rosace de cuivre, notes et halo magenta |
+| 45 | `melodious-aura` | Aura mélodieuse (barde) et Ouverture ; **retirée en 0.121.0** avec l'Aura mélodieuse (fichier à la corbeille) | Caisse de luth à rosace de cuivre, notes et halo magenta |
 | 46 | `crescendo` | Crescendo (barde, double 4 : un coup de 12 depuis la 0.41.0, plus trois coups) | Trois notes-lames en escalier, traînée magenta ; le motif évoque encore trois coups, à refaire si besoin |
 | 47 | `soloist` | Soliste (barde, double 5 : un coup de 15) | Une grosse note forgée en lame, éclat magenta |
 | 48 | `bleed` | Saignement (malus, v8) | Trois gouttes de sang rouge sombre tombant d'une entaille |
 | 49 | `cleave` | Pourfendre (Gorak, v8) | Couperet de fer ébréché en plein élan, sang projeté |
 | 50 | `grudge` | Rancune (druide, relais, v8) ; sans usage depuis la 0.73.0 (relais retiré) | Croc d'ours sur cordelette de cuir, braise ambre dans ses fêlures |
-| 51 | `sap` | Sève (druide, relais, v8) ; sans usage depuis la 0.73.0 (relais retiré) | Goutte de sève émeraude qui perle d'une écorce entaillée |
+| 51 | `sap` | Sève (druide, relais, v8) ; sans usage depuis la 0.73.0 (relais retiré) ; **retirée en 0.121.0** | Goutte de sève émeraude qui perle d'une écorce entaillée |
 | 52 | `grudge-aura` | Aura de rancune (druide en ours, v8) ; depuis la 0.73.0, Aura sauvage (druide en homme) | Empreinte d'ours brûlée dans une rondelle de chêne, braise ambre, halo ambre-brun |
-| 53 | `sap-aura` | Aura de sève (druide en homme, v8) ; sans usage depuis la 0.73.0 | Bois de cerf vivant qui bourgeonne, feuilles vert sève, halo émeraude |
+| 53 | `sap-aura` | Aura de sève (druide en homme, v8) ; sans usage depuis la 0.73.0 ; **retirée en 0.121.0** | Bois de cerf vivant qui bourgeonne, feuilles vert sève, halo émeraude |
 | 54 | `thunderbolt` | Foudre (druide en homme, v9) | Nuage d'orage noir, éclair fourchu bleu-blanc, étincelles émeraude, rochers brisés |
 | 55 | `casting` | Incantation (forme humaine du druide, v9) | Tête de bâton noueux couronnée de bois de cerf, anneau de runes émeraude |
 | 56 | `bear-might` | Force de l'ours (forme d'ours du druide, v9) | Patte d'ours châtaigne qui fend un rocher, éclats ambre |
@@ -995,12 +995,12 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 67 | `wolf-fang` | Dent de loup (relique, v10) | Croc fêlé dans une cage de fil de fer, lueur rouge dans la fêlure |
 | 68 | `bramble-collar` | Collier de ronces (relique, v10) | Couronne de ronce tressée, médaillon de bois fendu |
 | 69 | `hunter-trophy` | Trophée du chasseur (relique, v10) | Mâchoire de bête sur un lacet, entailles gravées |
-| 70 | `music-on` | Musique allumée (second bouton du son, v11) | Tambour de bronze, deux baguettes croisées |
-| 71 | `music-off` | Musique coupée (v11) | Même tambour, barré en rouge |
+| 70 | `music-on` | Musique allumée (v11) ; **retirée en 0.121.0** (glyphes du kit) | Tambour de bronze, deux baguettes croisées |
+| 71 | `music-off` | Musique coupée (v11) ; **retirée en 0.121.0** (glyphes du kit) | Même tambour, barré en rouge |
 | 72 | `purse` | Bourse d'un parieur (guichet, classement des paris, v11) | Bourse de cuir nouée, pièces d'or qui dépassent |
 | 73 | `bet-token` | Titre « Combien ? » des mises (guichet, v11) | Jeton de bronze cranté, couronne de laurier |
 | 74 | `twist` | Bandeau du coup de théâtre (v11 ; remplace `coin-flip` dans le bandeau) | Embrasse de rideau de velours rouge, gland doré |
-| 75 | `ticket` | Bouton « Parier » de l'affrontement (v11) | Ticket de pari déchiré, épinglé, traits d'encre illisibles |
+| 75 | `ticket` | Bouton « Parier » de l'affrontement (v11) ; **retirée en 0.121.0** (glyphe du kit) | Ticket de pari déchiré, épinglé, traits d'encre illisibles |
 | 92 | `caged-ember` | Braise captive (relique élémentaire, Feu, v13) | Cage ronde de fer forgé à quatre barreaux, braise rouge et orange enfermée, chaîne |
 | 93 | `frost-tear` | Larme de givre (relique élémentaire, Givre, v13) | Larme de glace bleu pâle dans une griffe d'argent terni, fougères de givre, fêlure au tiers, lanière |
 | 94 | `wind-conch` | Conque des vents (relique élémentaire, Vent, v13) | Coquillage spiralé ivoire, tourbillon turquoise dans l'ouverture, lanière nouée |
@@ -1011,7 +1011,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 99 | `dented-shield` | Écu cabossé (relique de coup, v14) | Bosse de fer d'un vieil écu (umbo), exactement six creux (le seuil de 6), lanière passée dans un rivet |
 | 100 | `eagle-feather` | Plume d'aigle (relique de coup, v14) | Rémige d'aigle liée d'un fil rouge à un anneau de cuivre, deux barbes arrachées |
 | 101 | `quilted-gambison` | Gambison matelassé (relique de caractéristique, v16) | Gambison plié, matelassure piquée, col lacé, une pièce recousue ; pas de mailles (c'est la Cotte) |
-| 102 | `bonesetter-salve` | Onguent du rebouteux (relique de coup, v16) | Pot de terre cuite, cinq creux de doigts dans l'onguent (les cinq charges), ficelle nouée au col |
+| 102 | `bonesetter-salve` | Onguent du rebouteux (relique de coup, v16 ; **repeinte en v25**, 0.121.0) | Pot de terre cuite, **deux** creux de doigts dans l'onguent (les deux charges depuis la 0.121.0 ; cinq en v16), ficelle nouée au col |
 | 103 | `vigil-candle` | Chandelle de veille (relique de tour, v16) | Chandelle de suif aux trois anneaux gravés (l'intervalle de 3 tours), dans un bougeoir de fer à anneau ; ni sablier ni clepsydre |
 | 104 | `quarry` | Curée (compétence, v17) | Corne tachée de sang, deux entailles rouges |
 | 105 | `harvest` | Récolte (compétence, v17) | Faucille d'os givrée qui tranche de la ciguë, une goutte violette |
@@ -1028,7 +1028,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 116 | `duo` | Duo (compétence de la barde et son statut, v20, 2026-10-25) | Deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans un halo mauve de l'Aura mélodieuse |
 | 117 | `wasp-sting` | Dard de guêpe (relique de source, v21, 2026-10-25) | Dard de guêpe séché serti dans un capuchon de laiton, deux gouttes de venin (les 2 Poison) |
 | 118 | `tinder-box` | Briquet d'amadou (relique de source, v21) | Boîte à briquet de fer, son silex et son battant, deux braises dans l'amadou (les 2 Brûlure) |
-| 119 | `fair-coin` | Pièce de foire (relique de source, v21) | Jeton de foire en laiton frappé d'une tête de bouffon, sur un cordon rouge et jaune ; ni la Pièce trouée, ni la pièce de Pile ou face |
+| 119 | `fair-coin` | Pièce de foire (relique de source, v21) ; **retirée en 0.121.0** avec la relique (les pièces sont des compétences de Chance) | Jeton de foire en laiton frappé d'une tête de bouffon, sur un cordon rouge et jaune |
 | 120 | `spiked-bracer` | Brassard à pointes (relique de source, v21) | Brassard de cuir clouté, une seule grosse pointe rabattue vers l'arrière (la Riposte, 1x) |
 | 121 | `faith-shield` | Bouclier de foi (compétence d'Ysolde et son statut `faithShield`, v22, 2026-10-25) | Écu d'ivoire et d'or qui durcit dans une lumière de soin, halo d'aura |
 | 122 | `sidestep` | Pas de côté (compétence et statut, v22) | Botte de cuir qui fait un pas de côté devant une flèche, une rémanence bleue derrière elle, halo d'aura |
@@ -1045,10 +1045,35 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 133 | `storm-sky` | Ciel d'orage (compétence et statut `stormSky`, v24, 2026-10-25) | Couronne de bois de cerf moussus, un arc d'éclair bleu entre les andouillers, feuilles de chêne |
 | 134 | `blood-frenzy` | Ivresse du sang (compétence, statuts `bloodFrenzy` et `bloodFrenzyStrike`, v24) | Poing vert d'orc qui brandit une hache, traînées de sang rouges et rémanences bleues des coups de plus |
 | 135 | `stunning-blow` | Coup de massue (compétence, v24) | Heaume cabossé et fendu, étoiles d'or de l'étourdissement, éclats de pierre |
+| 136 | `reprieve-medal` | Médaille de sursis (relique, v25, 2026-10-27) | Médaille d'argent bleuté sur un ruban de soie bleu roi délavé, une seule entaille en plein centre, arrêtée net, lueur blanche froide dans la fente |
+| 137 | `vanguard-horn` | Cor d'avant-garde (relique, v25) | Petit cor de corne ivoire cerclé de cuivre vert-de-gris, lanière de cuir rouge sang, une bague gravée |
+| 138 | `weighted-coin` | Pièce lestée (relique, v25) | Pièce d'argent rognée, grain de plomb serti sur une face, l'autre polie ; fil d'émail turquoise ; un quart du bord limé |
+| 139 | `lucky-streak` | Veine (aura, Chance, v26, 2026-10-27) | Dé de verre bleu ciel qui roule face 6, points d'or, l'ombre d'un second dé qui rebondit |
+| 140 | `dread` | Effroi (aura, Ombre, v26) | Crâne de corbeau noir au-dessus d'une étincelle de critique, brume grise des orbites |
+| 141 | `rancor` | Rancœur (aura, Représailles, v26) | Enclume de fer noir fendue frappée par une lame, étincelles qui montent en flamme cuivrée |
+| 142 | `storm-field` | Champ d'orage (aura, Orage, v26) | Bouclier rond en nuée d'orage, éclairs jaune électrique depuis son bord |
+| 143 | `ballad` | Ballade (aura, Chant, v26) | Partition roulée nouée d'un ruban, trois notes qui deviennent des feuilles de soin, accent rose |
+| 144 | `prayer` | Prière (Lumière, v26) | Livre de prières ivoire ouvert sur un lutrin, colonne de lumière nacrée |
+| 145 | `wither` | Flétrissure (Ombre, v26) | Lame rouillée qui ploie comme une tige fanée, poussière dans une brume olive |
+| 146 | `assault` | Assaut (Fureur, v26) | Marteau d'arme en plein élan, tête doublée d'une rémanence turquoise |
+| 147 | `stone-fist` | Poing de pierre (statut `stoneFist`, posé par Peau de pierre, v26) | Poing de basalte noir cerclé de bronze, fissures rouge magma, éclats de pierre |
+| 148 | `lucky-coin` | Pièce porte-bonheur (compétence et statut `luckyCoin`, Chance, v26) | Pièce émeraude et or qui tournoie, trèfle à quatre feuilles frappé, étincelles vertes |
+| 149 | `cursed-coin` | Pièce maudite (compétence et statut `cursedCoin`, Chance, v26) | Pièce de fer noirci à liseré violet, crâne de lézard frappé, fumée violette |
+| 150 | `mastery-fury` | Emblème de la Fureur (v27, 2026-10-27) | Poing qui serre un manche de hache levée, orange feu |
+| 151 | `mastery-blood` | Emblème du Sang (v27) | Goutte de sang qui coule le long d'une courte lame, cramoisi |
+| 152 | `mastery-hunt` | Emblème de la Chasse (v27) | Œil de rapace transpercé d'une flèche, bleu nuit |
+| 153 | `mastery-bulwark` | Emblème du Rempart (v27) | Bouclier rond clouté vu de face, gris fer |
+| 154 | `mastery-retaliation` | Emblème des Représailles (v27) | Deux lames croisées dont les pointes reviennent vers soi, bronze bruni |
+| 155 | `mastery-poison` | Emblème du Poison (v27) | Fiole ventrue d'où monte une fumée, vert toxique |
+| 156 | `mastery-chance` | Emblème de la Chance (v27) | Pièce debout contre un dé à six faces, or de pièce |
+| 157 | `mastery-light` | Emblème de la Lumière (v27) | Disque solaire à rayons droits et épais, blanc ivoire |
+| 158 | `mastery-shadow` | Emblème de l'Ombre (v27) | Crâne sous un croissant de lune noir, violet-noir |
+| 159 | `mastery-storm` | Emblème de l'Orage (v27) | Éclair qui fend une nuée, cyan électrique |
+| 160 | `mastery-song` | Emblème du Chant (v27) | Luth à une corde qui vibre, magenta |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
-**À refaire (2026-10-20) :** ~~Fleur de vie~~ (retirée en 0.73.0). L'Aura sauvage garde `grudge-aura` ; `bark-skin`, `charge`, `claw`, `grudge`, `life-bloom`, `sap` et `sap-aura` sont sans usage depuis la 0.73.0.
+**À refaire (2026-10-20) :** ~~Fleur de vie~~ (retirée en 0.73.0). L'Aura sauvage garde `grudge-aura` ; `charge` et `grudge` sont sans usage depuis la 0.73.0. `bark-skin`, `claw`, `life-bloom`, `sap` et `sap-aura` sont passées à la corbeille en 0.121.0, avec `sound-on`, `sound-off`, `music-on`, `music-off`, `ticket` (remplacées par les glyphes du UI kit), `fair-coin` et `melodious-aura` (leur contenu retiré).
 
 ### Icônes à générer
 
@@ -1166,6 +1191,7 @@ Intégration : les noms dans `IconName`, et l'état dans `STATE_ICON` (`Icon.tsx
 - **Rappeler le personnage** quand c'est possible : le sceau de l'Aura d'immunité pend à l'armure du paladin, le bois pourri vient de la couronne du druide.
 - **Pas de symbole religieux réel** (croix comprise) : on invente les emblèmes (épée flamboyante, disque solaire).
 - **Reliques : une couleur dominante chacune** (retour de l'utilisateur du 2026-10-27, U6 : « la majorité sont brunâtres, patinées ; le traitement est bon mais les couleurs pourraient être plus variées »). On garde le traitement (objet usé, cabossé, patiné, avec son attache, [RELIQUES.md](RELIQUES.md) § 6.2), mais le brun, le bronze et le cuir ne dominent plus : chaque nouvelle relique reçoit **une teinte maîtresse franche**, tirée d'un matériau qui la porte naturellement (verre bleu cobalt, émail rouge, jade, argent bleuté, ivoire, ambre clair, cuivre vert-de-gris, laque noire, soie teinte, plume colorée), et le brun ne reste qu'en attache ou en accent. Avant une planche : poser les reliques côte à côte avec la planche précédente, et ne jamais donner deux fois de suite la même teinte maîtresse ; la viser dans le prompt (« dominant color: cobalt blue glass… »). La patine se lit dans l'usure (éclats, rayures, réparations), pas dans un voile brun sur toute l'image. La teinte n'est jamais une couleur de type ou de famille (refus de l'utilisateur, « c'est carnaval ») : elle vient de l'objet.
+- **Emblèmes de maîtrise : une grammaire à part** (v27, 2026-10-27, [MAITRISES.md](MAITRISES.md) § 12). Un emblème n'est ni une compétence (geste), ni un état (pièce gravée), ni une relique (objet) : **une seule pièce héraldique simple, vue bien de face, plate**, sans cadre, sans contour d'écu, sans pièce ni fond, silhouette épaisse lisible à 24 px ; **une seule couleur maîtresse** par emblème (une ombre de la même couleur et un petit rehaut), les onze bien distinctes ; pas de liseré d'or sauf si l'or est la couleur maîtresse ; **aucun halo** (ce ne sont pas des auras) ; jamais mélangés sur une planche avec d'autres types. Couleurs : Fureur orange feu, Sang cramoisi, Chasse bleu nuit, Rempart gris fer, Représailles bronze bruni, Poison vert toxique, Chance or de pièce, Lumière blanc ivoire, Ombre violet-noir, Orage cyan électrique, Chant magenta. Sans fichier, `MasteryIcon` montre l'initiale dorée dans un rond.
 
 ### Gabarit de planche (à copier)
 
@@ -1282,6 +1308,9 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v27 | 2026-10-27 | 150 à 160 | Les onze emblèmes de maîtrise (grammaire nouvelle, ci-dessus). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions générées, **la version B retenue**. Découpe par `scripts/slice-icons.py`. Vus dans le compendium (onglet Maîtrises) et à l'affrontement (captures Firefox). |
+| v26 | 2026-10-27 | 139 à 149 | Onze compétences et statuts des Maîtrises (Veine, Effroi, Rancœur, Champ d'orage, Ballade, Prière, Flétrissure, Assaut, Poing de pierre, Pièce porte-bonheur, Pièce maudite). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions : **la version A retenue**, sauf `lucky-streak` découpée de la version B sur fond noir. Les pièces remplacent leurs remplaçants temporaires (`coin-pile`, `coin-face`). |
+| v25 | 2026-10-27 | 102, 136 à 138 | Trois reliques nouvelles (Médaille de sursis, Cor d'avant-garde, Pièce lestée) et l'Onguent du rebouteux repeint avec deux creux. Premières reliques sous la règle U6 (une teinte maîtresse franche). Artlist, GPT Image 2.5 ; planche 2×2, deux versions : **la version damier retenue**. Les trois planches v25 à v27 : 480 crédits. |
 | v24 | 2026-10-25 | 133 à 135 | Trois compétences du lot 3 de la phase 8 (Ciel d'orage, Ivresse du sang, Coup de massue ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2 de trois, deux versions générées ; la version A retenue pour les trois (v23 et v24 : 320 crédits en tout). Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
 | v23 | 2026-10-25 | 124 à 132 | Neuf compétences du lot 3 de la phase 8 (Brise-garde, Malchance, Éclair aveuglant, Hémorragie, Confiscation, Feinte, Sève noire, Dette de sang, Attiser ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 3×3, deux versions générées : Malchance, Éclair aveuglant et Sève noire de la version B, les six autres de la version A. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |
 | v22 | 2026-10-25 | 121 à 123 | Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte ; leurs statuts reprennent ces icônes). Artlist, GPT Image 2.5 en image à image, référence : la planche des compétences ; une planche 2×2 de trois, deux versions générées (160 crédits) : Bouclier de foi et Plaie ouverte de la version B, Pas de côté de la version A. Découpe par `scripts/slice-icons.py`. Planche de contrôle regardée seulement ; pas encore vues dans un écran de jeu. |

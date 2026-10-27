@@ -228,7 +228,6 @@ describe('audit de résolution : revue des auras et des compétences (docs/REVUE
     // Chaque nouvelle aura chez son porteur et chez qui la nourrit le mieux : les soins (Ysolde ; Ervald au Vol de vie), les
     // critiques (Ervald, Elaria), l'esquive (Fanchon, Naraxes) ; puis les retouches qui changent une règle : la Virulence
     // sans condition, le Rempart qui redonne de l'armure (Brokk, à la Peau de pierre), la Fausse note sur deux coups
-    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
       'faith-shield': [['ysolde', []], ['ervald', []]],
       'open-wound': [['ervald', []], ['elaria', []]],
@@ -282,9 +281,8 @@ describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
 describe('audit de résolution : phase 8, lot 3, les malus de famille', () => {
   it('aucune anomalie pour Brise-garde, Malchance, Éclair aveuglant, Hémorragie et Confiscation, gravés chez leurs porteurs, aux rangs I et II', () => {
     const { audit, problems, seen } = createAudit()
-    // Chaque malus chez son hôte (réserve) et au répertoire où il est proposé ; Brise-garde aussi contre de l'armure
+    // Chaque malus chez son hôte et chez un autre porteur possible ; Brise-garde aussi contre de l'armure
     // temporaire (Brokk et sa Peau de pierre, adversaire du roster), Confiscation contre des bonus (Ervald, Elaria, Brokk)
-    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     const hosts: Record<string, readonly string[]> = {
       'guard-break': ['morgrut', 'brokk'],
       jinx: ['naraxes', 'fanchon'],

@@ -261,8 +261,6 @@ export function traceCombat(result: CombatResult): CombatTrace {
 export const turnTitle = (t: TraceTurn, fighters: Pair<Character>) =>
   t.active === undefined ? 'Ouverture' : `Tour ${t.turn} · ${fighters[t.active].name} actif`
 
-const eventName = (c: Character, id: string) => c.events.find((e) => e.id === id)?.name ?? id
-
 /** En-tête des reliques d'un camp : « Reliques (gauche, Gorak) : wolf-fang « Dent de loup » (…) ; … » */
 export const RELICS_PREFIX = 'Reliques ('
 

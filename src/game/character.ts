@@ -1,6 +1,6 @@
 import type { SinglePoseId } from './poses'
 import { faceTrigger, rollFace, type CharacterEvent } from './events'
-import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
+import { forgedEvents, forgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
 import { skillById } from './skills'
 import type { MasteryId } from './masteries'

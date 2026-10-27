@@ -1,6 +1,5 @@
 import type { Character } from './character'
 import type { CharacterEvent, Effect, Target, Trigger } from './events'
-import type { RuleId } from './rules'
 import { RELICS, type Relic } from './relics'
 import { characterPool } from './masteries'
 import { CHARACTERS } from './roster'

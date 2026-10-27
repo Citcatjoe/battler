@@ -5,7 +5,7 @@ import { simulateCombat, type CombatResult } from './combat'
 import { isOffered, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { drawReward, REWARDS, type PendingReward } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
-import { pick, seededRng, shuffle, type Rng } from './rng'
+import { seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
 import { sumTriggers, triggerCounts, type TriggerCounts } from './stats'
 

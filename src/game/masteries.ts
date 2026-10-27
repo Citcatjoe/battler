@@ -3,7 +3,6 @@ import type { CharacterEvent } from './events'
 import { isEngravable } from './forge'
 import { MASTERY_SKILLS } from './skills'
 import { auraOfSkill } from './states'
-import { typeset } from './typography'
 
 /*
  * Les Maîtrises (retour de l'utilisateur du 2026-10-27, V1 à V5 ; docs/MAITRISES.md) : onze grandes familles de sorts,

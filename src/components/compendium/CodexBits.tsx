@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { statusHome } from '../../game/catalog'
 import type { Character } from '../../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
+import { DEFAULT_SKILL_NATURE, triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
 import { MASTERIES, type MasteryId } from '../../game/masteries'
 import type { Relic } from '../../game/relics'
 import { RULES, type RuleId } from '../../game/rules'

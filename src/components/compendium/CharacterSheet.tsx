@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { footDrop, type Character } from '../../game/character'
+import type { Character } from '../../game/character'
 import { skillCatalog } from '../../game/catalog'
 import { ForgedDie } from '../ForgedDie'
 import { emptyRecord, ratios, useHistory, type CharacterRecord } from '../../game/history'

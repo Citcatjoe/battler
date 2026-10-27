@@ -8,7 +8,7 @@ import { characterPool, MASTERIES, MASTERY_IDS, masteryOfSkill, poolOf, validate
 import { skillById } from './skills'
 import { computeStats } from './stats'
 import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, LUCKY_COIN_CRITS, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
-import { DIE_0120, EMOJI, oldDie, onOldDie, testCharacter } from './test-utils'
+import { EMOJI, oldDie, onOldDie, testCharacter } from './test-utils'
 import { Character, type CharacterStats } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
 import { typeset } from './typography'

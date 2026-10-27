@@ -4,7 +4,7 @@
  * scène par `stage` et rejoués sur une seule horloge. Chaque contrôle cherche une entorse au principe « dé rendu →
  * intervalle → impact → réactions » qu'aucun combat construit ne prévoit : le contenu nouveau (compétences, statuts,
  * reliques) y entre de lui-même, par les registres. Un échec donne le duel, la graine et l'instant pour le rejouer.
- * Les compétences des répertoires et des réserves y entrent aussi gravées chez leurs porteurs : les moments qu'elles
+ * Les compétences de la réserve de chacun (`characterPool`, ses maîtrises) y entrent aussi gravées chez lui : les moments qu'elles
  * seules font naître (jet à vide, critique raté, soin empêché, bonus volé, armure brisée : le lot 3) y sont assez
  * nombreux pour que chaque contrôle les rencontre.
  */

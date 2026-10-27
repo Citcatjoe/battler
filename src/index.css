@@ -975,7 +975,7 @@ body {
   .codex-filter::placeholder { color: var(--text-3); }
   .codex-filter:focus { outline: none; border-color: var(--gold-400); }
 
-  /* Boutons de filtre (Toutes, Martiale… ; Tous, Bonus, Malus) */
+  /* Boutons de filtre (Tous, Bonus, Malus) */
   .codex-pill {
     display: inline-flex;
     align-items: center;

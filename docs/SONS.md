@@ -126,7 +126,7 @@ Les sons se déduisent des registres : aura (`isAura`), polarité (`polarity`), 
 
 **Les reliques** (0.75.0, [RELIQUES.md](RELIQUES.md)) suivent la même règle : une relique qui se déclenche joue le son de ce qu'elle produit (le Chapelet, Dissipation ou Soin ; la Dent de loup, Soin + par son Vol de vie, et la Clepsydre, Précision + par son Critique assuré, depuis le 2026-10-25 ; Bonus gagné avant), sans son propre. Un coup renforcé par une relique (Fer à quatre clous) sonne comme un coup ; les dégâts directs de l'Osselet, comme une réaction (Coup). Depuis le 2026-10-21, une relique qui agit pose aussi son label sous le dé : le son de son signe (§ 4.4 : le ding pour un bonus de son porteur, chez l'attaquant comme chez le défenseur ; Malus reçu pour une relique du défenseur qui contre le coup, la Conque des vents) s'ajoute au son de son effet. C'est la réponse retenue à la piste « on entend relique » (RELIQUES.md § 3) : le label dit « surcharge », le son de l'effet dit laquelle. Une relique dont le label se tait (M25 : rien n'a changé) ne sonne pas.
 
-**Les reliques de source** (2026-10-25, [RELIQUES.md](RELIQUES.md) § 16) n'ajoutent aucun son : leurs effets tombent dans les règles existantes. Le Dard de guêpe et le Briquet d'amadou posent un malus sur l'adversaire (règle 3 : Affliction −, à l'arrivée de leur signal ; Malus reçu avant les sons de famille), avec le ding de leur label au dé posé ; puis le Poison grésille et la Brûlure ronge, comme ceux des compétences (§ 9.3). La Pièce de foire pose un mécanisme (règle 8 : aucun son propre) : sa pièce sonne comme celle de Pile ou face (Pièce lancée, Pièce retombe, sur pile Pile réussie puis Coup critique). Le Brassard à pointes pose un bonus sur son porteur (Représailles +, Bonus gagné avant) ; sa Riposte sonne Coup quand elle renvoie. Non vérifiable par l'agent : l'écoute.
+**Les reliques de source** (2026-10-25, [RELIQUES.md](RELIQUES.md) § 16) n'ajoutent aucun son : leurs effets tombent dans les règles existantes. Le Dard de guêpe et le Briquet d'amadou posent un malus sur l'adversaire (règle 3 : Affliction −, à l'arrivée de leur signal ; Malus reçu avant les sons de famille), avec le ding de leur label au dé posé ; puis le Poison grésille et la Brûlure ronge, comme ceux des compétences (§ 9.3). La Pièce de foire (retirée le 2026-10-27) posait un mécanisme (règle 8 : aucun son propre) : sa pièce sonnait comme celle de Pile ou face (Pièce lancée, Pièce retombe, sur pile Pile réussie puis Coup critique). Le Brassard à pointes pose un bonus sur son porteur (Représailles +, Bonus gagné avant) ; sa Riposte sonne Coup quand elle renvoie. Non vérifiable par l'agent : l'écoute.
 
 ### 4.3 Vérification : les compétences du roster
 
@@ -294,7 +294,7 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi (Coup de massue, lot 3) ; le jet tombé à vide d'un combattant malchanceux (Malchance, lot 3 : il ne peut pas agir, `MISE_EN_SCENE.md` M46) |
 | Ronge | Pourriture et Brûlure qui agissent sur leur porteur ; le Saignement qui coule quand un coup touche son porteur (0.68.0) |
-| Grésillement | le Poison qui agit sur son porteur, au début de son tour (dont le Poison posé par l'Aura glaciale ou l'Aura de décoction) (0.90.0) |
+| Grésillement | le Poison qui agit sur son porteur, à la fin de son tour (au début jusqu'au 2026-10-27 ; dont le Poison posé par l'Aura glaciale ou l'Aura de décoction) (0.90.0) |
 | Soin | le vol de vie (Vol de vie) ; la Récolte (0.114.0) ; l'Aura de sainteté et la Régénération qui soignent (la Régénération est sans porteur depuis la 0.73.0) |
 | Transformation | le druide qui change de forme, dans les deux sens |
 | KO | la fin du combat, par K.O. ou à la limite de tours |
@@ -304,21 +304,21 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 
 ### 9.2 Par personnage
 
-Les deux personnages d'une même race partagent leurs compétences.
+Dé vanilla depuis les maîtrises (2026-10-27, `modules.test.ts`, « le dé vanilla ») : l'aura de départ sur le 1, la compétence du personnage sur le 2, quatre faces nues. Les sons, déduits (§ 4.2), sont ceux que fige `modules.test.ts` ; avant les maîtrises, chaque race avait trois compétences sur ses faces 1 à 3 (voir l'historique de PERSONNAGES.md).
 
-| Race (personnages) | Sur un 1 | Sur un 2 | Sur un 3 |
+| Personnage | Sur un 1 (aura de départ) | Sur un 2 | Faces 3 à 6 |
 | --- | --- | --- | --- |
-| Orc (Gorak, Murzug) | Pourfendre : Coup, puis Affliction − s'il touche (0.70.0 ; Malus reçu jusqu'au 2026-10-25 ; la Saignée jouait Malus reçu, la Rage du sang Soin) | Furie des vents : aucun son propre, sa rafale sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de puissance : Aura gagnée |
-| Elfe (Elaria, Sylwen) | Œil de faucon : Précision + | Esquive améliorée : Esquive + | Aura de précision : Aura gagnée |
-| Nain (Brokk, Grimbald) | Peau de pierre : Garde + | Aura d'épines : Aura gagnée (Bonus gagné avant la 0.118.1) | Aura d'intimidation : Aura gagnée |
-| Mort-vivant (Ervald, Caldrec) | Souffle de la tombe : Affliction − | Vol de vie : Soin + | Aura glaciale : Aura gagnée |
-| Humain (Ysolde, Bérengère) | Peur : Tempo − | Purification : Aura perdue ou Dissipation | Aura de sainteté : Aura gagnée |
-| Homme-lézard (Naraxes, Ssythra) | Coup de chance : Fortune + | Pile ou face : aucun son propre, sa pièce sonne (Bonus gagné jusqu'à la 0.109.1) | Aura de décoction : Aura gagnée |
-| Paladin (Aldric, Gauvain) | Rétribution : Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0 ; Coup par jauge et Coup critique sur la dernière avant) | Riposte : Représailles + | Aura d'immunité : Aura gagnée |
-| Ogre (Morgrut, Gnashka) | face nue (Attente : Malus reçu jusqu'à la phase 5 bis) | face nue | face nue |
-| Druide, forme humaine (Thaldrin, Brannoc) | Foudre : Coup critique à l'impact de chacun des quatre éclairs (trois jusqu'à la revue des compétences ; 0.76.0 ; Éclair synthétisé en 0.110.0, retiré le 2026-10-24 ; un seul éclair en 0.73.0, Fleur de vie avant) | Feux follets : Affliction − (0.73.0 ; Écorce épaisse avant) | Aura sauvage : Aura gagnée (0.73.0 ; Aura de sève avant) |
-| Druide, forme d'ours | coup : Coup | coup : Coup | coup : Coup (0.73.0 ; Charge, Coup de griffe et Aura de rancune avant, et le relais Rancune et Sève, Bonus gagné, jusqu'à la 0.72.0) |
-| Barde (Fanchon) | Duo : Bonus gagné (2026-10-27, ses dés de plus seuls ; Aura gagnée du 2026-10-25 au 2026-10-27, avec l'Aura mélodieuse ; sa rafale, à l'action suivante, s'annonce avec Pile réussie puis sonne comme toute rafale) | Soliste : aucun son propre, son coup sonne | face nue (l'Ouverture et son Aura gagnée, retirées le 2026-10-27) |
+| Gorak (orc) | Ivresse du sang : Aura gagnée | Furie des vents : aucun son propre, sa rafale sonne (Bonus gagné jusqu'à la 0.109.1) | faces nues |
+| Elaria (elfe) | Feinte : Aura gagnée | Œil de faucon : Précision + | faces nues |
+| Brokk (nain) | Aura d'épines : Aura gagnée (Bonus gagné avant la 0.118.1) | Peau de pierre : Garde + | faces nues |
+| Ervald (mort-vivant) | Aura glaciale : Aura gagnée | Vol de vie : Soin + | faces nues |
+| Ysolde (humaine) | Aura de sainteté : Aura gagnée | Purification : Aura perdue ou Dissipation | faces nues |
+| Naraxes (homme-lézard) | Aura de décoction : Aura gagnée | Pile ou face : aucun son propre, sa pièce sonne (Bonus gagné jusqu'à la 0.109.1) | faces nues |
+| Aldric (paladin) | Vindicte : Aura gagnée | Rétribution : Coup, Coup critique à 10 dégâts et plus (la moitié de ses jauges en un coup, 0.107.0 ; Coup par jauge et Coup critique sur la dernière avant) | faces nues |
+| Morgrut (ogre) | Aura de puissance : Aura gagnée | face nue | faces nues |
+| Thaldrin, forme humaine (druide) | Ciel d'orage : Aura gagnée | Feux follets : Affliction − (0.73.0 ; Écorce épaisse avant) | faces nues |
+| Thaldrin, forme d'ours | coup : Coup (ses faces de compétence sont à la forme humaine) | coup : Coup | coup : Coup |
+| Fanchon (barde) | Ballade : Aura gagnée | Duo : Bonus gagné (ses dés de plus seuls depuis le 2026-10-27 ; Aura gagnée du 2026-10-25 au 2026-10-27, avec l'Aura mélodieuse, quand il était sur le 1 ; sa rafale, à l'action suivante, s'annonce avec Pile réussie puis sonne comme toute rafale) | faces nues (l'Ouverture et son Aura gagnée, retirées le 2026-10-27) |
 
 Une compétence sans effet réel ne sonne pas (règle 8) : un soin à PV pleins, un malus bloqué par une immunité.
 
@@ -328,10 +328,10 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2), 
 
 | Statut | Quand il agit | Son |
 | --- | --- | --- |
-| Poison | début du tour du porteur | Grésillement (0.90.0 ; Ronge avant) |
+| Poison | fin du tour du porteur (début jusqu'au 2026-10-27) | Grésillement (0.90.0 ; Ronge avant) |
 | Pourriture | début du tour du porteur | Ronge |
 | Brûlure | fin du tour du porteur | Ronge |
-| Aura glaciale | début du tour du porteur, Poison posé sur l'adversaire | Affliction − (2026-10-25 ; Malus reçu depuis la 0.69.0 ; Ronge avant, quand elle infligeait des dégâts directs). Le Poison qu'elle nourrit joue Grésillement au début du tour de la victime |
+| Aura glaciale | début du tour du porteur, Poison posé sur l'adversaire | Affliction − (2026-10-25 ; Malus reçu depuis la 0.69.0 ; Ronge avant, quand elle infligeait des dégâts directs). Le Poison qu'elle nourrit joue Grésillement à la fin du tour de la victime (au début jusqu'au 2026-10-27) |
 | Régénération | début du tour du porteur | Soin |
 | Aura de sainteté | fin du tour du porteur | Soin |
 | Aura d'épines (Épines acérées avant la 0.118.1) | le porteur est touché | Affliction − (Saignement posé sur l'attaquant ; Malus reçu jusqu'au 2026-10-25 ; Coup jusqu'à la 0.67.3, quand elles renvoyaient des dégâts) ; purgée, Aura perdue (0.118.1) |

@@ -43,7 +43,7 @@ export const ALIGN = {
 
 /**
  * Infobulle d'une compétence (sceau de la zone de compétences du combat, dé forgé, fiche d'affrontement). `face` : la
- * face du dé qui la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `badge` :
+ * face du dé qui la déclenche ; absente pour une compétence hors dé (« début du combat » ; l'Ouverture jusqu'au 2026-10-27). `badge` :
  * remplace la pastille de face quand la compétence n'est sur aucun dé (une maîtrise au compendium : « Aura »). `notes` :
  * ce que la forge a fait de la face (gravée), en pied.
  */
