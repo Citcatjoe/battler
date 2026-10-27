@@ -101,7 +101,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
   const [champion, setChampion] = useState<Character>(CHARACTERS[0])
   const [choices, setChoices] = useState(loadCampaignChoices)
   const [picking, setPicking] = useState(false)
-  // L'aura mémorisée, si elle est toujours une de ses auras de départ ; sinon la première (celle du tournoi)
+  // L'aura mémorisée, si elle est toujours une de ses auras de départ ; sinon la première (l'aura par défaut)
   const auras = startAurasOf(champion.id)
   const remembered = choices[champion.id]?.aura
   const aura = remembered && auras.includes(remembered) ? remembered : auras[0]

@@ -54,11 +54,13 @@ import {
   championRun,
   chooseRelic,
   createTournament,
+  entrantAura,
   fillSlots,
   matchFighters,
   matchKey,
   nextMatch,
   playOrder,
+  players,
   readyMatches,
   relicsOf,
   ROUNDS,
@@ -106,10 +108,10 @@ describe('catalogue des compétences', () => {
       }
     expect(skills.find((s) => s.event.id === 'wind-fury')).toMatchObject({ triggers: ['naturalTwo'], owners: [createCharacter('gorak')] })
     // Chaque brique gravable d'une réserve y est, avec tous ceux à qui sa maîtrise l'offre (V5) : la Foudre, hors de tout
-    // dé depuis les Maîtrises, s'offre à Thaldrin et à Ysolde (Orage)
+    // dé depuis les Maîtrises, s'offre à Fanchon, Thaldrin et Ysolde (la Magie, B1)
     for (const c of CHARACTERS) for (const e of characterPool(c.definition)) expect(skills.some((s) => s.event.id === e.id), `${c.id} ${e.id}`).toBe(true)
     expect(skills.find((s) => s.event.id === 'thunderbolt')).toMatchObject({ outside: true, triggers: [] })
-    expect(skills.find((s) => s.event.id === 'thunderbolt')!.owners.map((c) => c.id).sort()).toEqual(['thaldrin', 'ysolde'])
+    expect(skills.find((s) => s.event.id === 'thunderbolt')!.owners.map((c) => c.id).sort()).toEqual(['fanchon', 'thaldrin', 'ysolde'])
     // Morgrut : l'Aura de puissance sur son 1, le reste de ses deux maîtrises (Fureur, Rempart) hors kit
     const morgrut = skills.filter((s) => s.owners.some((c) => c.id === 'morgrut'))
     expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura'])
@@ -157,8 +159,9 @@ describe('catalogue des statuts', () => {
     ])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
-    // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
-    expect(who('retribution')).toEqual(['release:aldric'])
+    // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche (et la réserve du Rempart l'offre à Brokk et
+    // Morgrut depuis B1) ; elle était absente du compendium
+    expect(who('retribution')).toEqual(['release:aldric', 'release:brokk', 'release:morgrut'])
     // Statuts de forme (0.73.0) : posés par la forme du druide, pas par une compétence
     expect(who('casting')).toEqual(['form:thaldrin'])
     expect(who('bearMight')).toEqual(['form:thaldrin'])
@@ -167,7 +170,7 @@ describe('catalogue des statuts', () => {
     // 1 de Brokk et dans la réserve de Gorak et d'Elaria
     expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'skill:elaria', 'skill:gorak', 'statut:bristlingRampart'])
     // La Rancune (0.114.0) en pose un à chaque coup encaissé, la Feinte (phase 8, lot 3) à chaque esquive
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:feint', 'statut:grudge'])
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'skill:fanchon', 'skill:naraxes', 'statut:feint', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -429,6 +432,33 @@ describe('tournoi', () => {
     const labels = t.entrants.map((e) => e.label)
     expect(new Set(labels).size).toBe(SLOTS)
     expect(labels.some((l) => / (I|II|III)$/.test(l))).toBe(true)
+  })
+
+  it('aura de départ tirée (B7) : au lancement, une aura des startAuras de chacun, reproductible ; ses combats partent de ce dé', () => {
+    const ids = slots(seededRng(2))
+    const make = (seed: number) => createTournament(ids, (id) => createCharacter(id).name, { auras: seededRng(seed) })
+    expect(make(9).entrants.map((e) => e.aura)).toEqual(make(9).entrants.map((e) => e.aura))
+    expect(make(9).entrants.map((e) => e.aura)).not.toEqual(make(10).entrants.map((e) => e.aura))
+    for (const e of make(9).entrants) expect(createCharacter(e.characterId).definition.startAuras, e.label).toContain(e.aura)
+    // Sans le hasard du tirage, chacun part de son dé vanilla (l'aura par défaut)
+    const plain = createTournament(ids, (id) => createCharacter(id).name)
+    expect(plain.entrants.every((e) => e.aura === undefined && entrantAura(e) === createCharacter(e.characterId).definition.startAuras![0])).toBe(true)
+    // Un tournoi entier : chaque combattant porte son aura tirée sur le 1 ; un combat parti du dé vanilla est refusé
+    const rng = seededRng(4)
+    let t = make(9)
+    const faceOne = (c: Character) => c.definition.events.find((e) => rollFace(e.trigger) === 1)?.id
+    const moved = t.entrants.findIndex((e) => e.aura !== createCharacter(e.characterId).definition.startAuras![0])
+    expect(moved).toBeGreaterThanOrEqual(0)
+    const ref = { round: 0, index: Math.floor(moved / 2) }
+    const pair = matchFighters(t, ref)
+    const vanilla = createCharacter(pair[moved % 2].id).withName(pair[moved % 2].name)
+    expect(() => withResult(t, ref, simulateCombat(moved % 2 === 0 ? [vanilla, pair[1]] : [pair[0], vanilla], { rng }), rng)).toThrow()
+    while (champion(t) === null)
+      for (const r of readyMatches(t)) {
+        const fighters = matchFighters(t, r)
+        expect(fighters.map(faceOne)).toEqual(players(t, r).map((i) => t.entrants[i!].aura))
+        t = withResult(t, r, simulateCombat(fighters, { rng }), rng)
+      }
   })
 
   it('« Combat suivant » : tour par tour, et dans un tour des extrémités de chaque moitié vers le centre', () => {
@@ -1302,6 +1332,12 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       // Une aura qui n'est plus une aura de départ : la partie repart de l'aura par défaut
       save({ ...run, aura: 'fear' })
       expect(loadRun()?.aura).toBe(startAurasOf('gorak')[0])
+      // Huit maîtrises (B1) : l'Aura d'immunité a quitté le Rempart pour la Lumière ; une partie de Brokk partie d'elle
+      // repart de son Aura d'épines. Une aura de départ gagnée par la règle (B5 : toutes celles de ses maîtrises) se relit
+      save({ ...startRun('brokk', 2), aura: 'immunity-aura' })
+      expect(loadRun()?.aura).toBe('thorns')
+      save(startRun('gorak', 2, undefined, 'thorns'))
+      expect(loadRun()?.aura).toBe('thorns')
     } finally {
       vi.unstubAllGlobals()
     }

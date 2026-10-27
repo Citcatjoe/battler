@@ -1,8 +1,9 @@
 import type { Character } from './character'
 import { finalState, type CombatResult, type Pair } from './combat'
 import { stepKey, type ForgeStep } from './forge'
+import { rollFace } from './events'
 import { computeStats, sumTriggers, triggerCounts, type FighterStats, type TriggerCounts } from './stats'
-import { defaultRng, shuffle, type Rng } from './rng'
+import { defaultRng, pick, shuffle, type Rng } from './rng'
 import { drawReward } from './offers'
 import { getRelic } from './relics'
 import { createCharacter } from './roster'
@@ -34,6 +35,12 @@ export interface Entrant {
   characterId: string
   /** Nom affiché, numéroté si le personnage est présent plusieurs fois (« Gorak II ») */
   label: string
+  /**
+   * Son aura de départ (retour du 2026-10-27, B7 ; docs/MAITRISES.md § 5.3) : tirée au lancement parmi les `startAuras`
+   * de sa fiche, sur le 1 de son dé pour tout le tournoi (et toute la saison). Absente (un tournoi d'avant le tirage) ou
+   * qui n'est plus l'une de ses auras de départ : l'aura par défaut (`entrantAura`).
+   */
+  aura?: string
   /** Rang au classement final de la saison, s'il y en a eu une (tête de série dans l'arbre) */
   seasonRank?: number
   /** Sa construction de saison (season.ts), figée : il la porte à chaque match de l'arbre */
@@ -113,16 +120,42 @@ export function labelEntrants(ids: readonly string[], nameOf: (id: string) => st
 }
 
 /**
+ * Le tirage des auras de départ (retour du 2026-10-27, B7), « comme si chaque participant choisissait son build » avant
+ * le premier combat : pour chacun, dans l'ordre, une aura au hasard parmi les `startAuras` de sa fiche (toutes les
+ * auras de ses deux maîtrises), chacune avec la même chance. Le hasard est injecté : à graine égale, même tirage.
+ */
+export function drawStartAuras(entrants: readonly Entrant[], rng: Rng): Entrant[] {
+  return entrants.map((e) => {
+    const auras = createCharacter(e.characterId).definition.startAuras ?? []
+    return auras.length > 0 ? { ...e, aura: pick(rng, auras) } : e
+  })
+}
+
+/**
+ * L'aura de départ d'un participant : celle de son tirage, si elle est encore l'une des `startAuras` de son personnage ;
+ * sinon (participant d'avant le tirage, liste changée depuis) l'aura par défaut, la première.
+ */
+export function entrantAura(e: Pick<Entrant, 'characterId' | 'aura'>): string | undefined {
+  const auras = createCharacter(e.characterId).definition.startAuras ?? []
+  return e.aura !== undefined && auras.includes(e.aura) ? e.aura : auras[0]
+}
+
+/** Le personnage d'un participant, sans sa construction : son dé de départ (son aura sur le 1), sous son nom de tournoi. */
+export const entrantCharacter = (e: Entrant): Character => createCharacter(e.characterId, { aura: entrantAura(e) }).withName(e.label)
+
+/**
  * Crée le tournoi à partir des 16 cases (ids de personnages), dans l'ordre de l'arbre. `relics` : le système
  * de reliques est actif (par défaut) ou non pour tout le tournoi. `epithets` : noms uniques, tirés avec ce hasard.
+ * `auras` : le hasard du tirage des auras de départ (`drawStartAuras`) ; sans lui, chacun part de son dé vanilla.
  */
 export function createTournament(
   slots: string[],
   nameOf: (id: string) => string,
-  { relics = true, epithets }: { relics?: boolean; epithets?: Rng } = {},
+  { relics = true, epithets, auras }: { relics?: boolean; epithets?: Rng; auras?: Rng } = {},
 ): Tournament {
   if (slots.length !== SLOTS) throw new Error(`Il faut ${SLOTS} participants`)
-  return { entrants: labelEntrants(slots, nameOf, epithets), results: {}, relics }
+  const entrants = labelEntrants(slots, nameOf, epithets)
+  return { entrants: auras ? drawStartAuras(entrants, auras) : entrants, results: {}, relics }
 }
 
 /** Les deux participants d'un match (null tant que le tour précédent n'est pas joué). */
@@ -185,19 +218,22 @@ export function relicsOf(t: Tournament, entrant: number, beforeRound = ROUNDS): 
   return [...(t.entrants[entrant]?.build?.relics ?? []), ...won]
 }
 
-/** Ce qui fait un combattant de tournoi : son personnage, ses reliques, sa forge (validation d'un résultat). */
-export const fighterKey = (c: Character) => `${c.id}+${c.relics.map((r) => r.id).join(',')}+${c.forge.map(stepKey).join(';')}`
+/**
+ * Ce qui fait un combattant de tournoi : son personnage, l'aura sur le 1 de son dé de départ, ses reliques, sa forge
+ * (validation d'un résultat).
+ */
+export const fighterKey = (c: Character) =>
+  `${c.id}@${c.definition.events.find((e) => rollFace(e.trigger) === 1)?.id ?? ''}+${c.relics.map((r) => r.id).join(',')}+${c.forge.map(stepKey).join(';')}`
 
 /**
- * Les deux combattants d'un match, sous leur nom de tournoi, avec leur construction de saison et les reliques gagnées
- * aux tours précédents.
+ * Les deux combattants d'un match, sous leur nom de tournoi, partis de leur aura de départ, avec leur construction de
+ * saison et les reliques gagnées aux tours précédents.
  */
 export function matchFighters(t: Tournament, ref: MatchRef): [Character, Character] {
   const [a, b] = players(t, ref)
   if (a === null || b === null) throw new Error('Match pas encore prêt')
   const make = (i: number) =>
-    createCharacter(t.entrants[i].characterId)
-      .withName(t.entrants[i].label)
+    entrantCharacter(t.entrants[i])
       .withForge(t.entrants[i].build?.forge ?? [])
       .withRelics(relicsOf(t, i, ref.round).map(getRelic))
   return [make(a), make(b)]
@@ -220,7 +256,11 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
   const winner = result.winner === 0 ? a : b
   const drawn =
     t.relics && !t.season && ref.round < ROUNDS - 1
-      ? drawReward({ championId: t.entrants[winner].characterId, forge: t.entrants[winner].build?.forge ?? [], relics: relicsOf(t, winner) }, 'relic', rng)
+      ? drawReward(
+          { championId: t.entrants[winner].characterId, aura: entrantAura(t.entrants[winner]), forge: t.entrants[winner].build?.forge ?? [], relics: relicsOf(t, winner) },
+          'relic',
+          rng,
+        )
       : undefined
   const relic = drawn?.kind === 'relic' && drawn.choice ? { offer: drawn.offer, chosen: drawn.choice } : undefined
   return {

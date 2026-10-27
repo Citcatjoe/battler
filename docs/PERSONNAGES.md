@@ -178,7 +178,9 @@ De 45,5 % (Ervald) à 55,3 % (Thaldrin) ; pire duel Elaria contre Morgrut, 61,9 
 
 ## Les Maîtrises (2026-10-27, tranches A à C livrées)
 
-**Demande de l'utilisateur** (retour du 2026-10-27, V1 à V5) : chaque personnage joue sur deux maîtrises, de grandes familles de sorts par thème ; une aura sur le 1 de son dé, choisie au début d'une campagne parmi ses **auras de départ** (`startAuras`, la première est celle du tournoi) ; sa compétence de personnage (`signature`) est fixe sur le 2 ; les faces 3 à 6 sont nues. Conception, mesures et plan : [MAITRISES.md](MAITRISES.md).
+**Demande de l'utilisateur** (retour du 2026-10-27, V1 à V5) : chaque personnage joue sur deux maîtrises, de grandes familles de sorts par thème ; une aura sur le 1 de son dé, choisie au début d'une campagne parmi ses **auras de départ** (`startAuras`, la première est celle du duel ; le tournoi et la saison en tirent une au hasard) ; sa compétence de personnage (`signature`) est fixe sur le 2 ; les faces 3 à 6 sont nues. Conception, mesures et plan : [MAITRISES.md](MAITRISES.md).
+
+**Huit maîtrises** (second retour du 2026-10-27, B1, B2, B5 ; MAITRISES.md, « Huit maîtrises ») : la Chasse, les Représailles et le Chant fondus, l'Orage devenu la Magie. **Elaria** Chance et Sang, **Ysolde** Lumière et Magie, **Aldric** Rempart et Ombre, **Thaldrin** Magie et Poison, **Fanchon** Magie et Chance ; les autres gardent leurs deux maîtrises. Aucun dé vanilla ne change (chaque signature reste dans l'une de ses maîtrises). Les auras de départ de chacun sont désormais **toutes celles de ses deux maîtrises que son dé de départ sert** (le producteur d'abord, la règle de l'offre ; de 4 à 6 par personnage) ; leurs taux, 6 sur 55 sous 42 % (Morgrut 3, Elaria 2, Naraxes 1), sont au § B5 de MAITRISES.md. Le tableau ci-dessous est celui d'avant (onze maîtrises, auras de départ choisies).
 
 **Compensations de stats** (tranche C, sans toucher aux PV) : **Aldric** attaque 4 à 6 → **5 à 6** (il perd la Riposte de son dé : sans elle, chaque aura le laissait de 41 à 45 %) ; **Morgrut** attaque 7 à 9 → **6 à 8** (l'Aura de puissance sur son 1 le menait à 65 %). **Fanchon** : la **Ballade** (chaque coup qui touche lui rend 1 PV par charge) sur le 1, le **Duo** sur le 2 (trois charges : quatre dés à l'action suivante) ; l'Aura mélodieuse quitte le jeu.
 
@@ -448,7 +450,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 **Image** : `elf.png`, une chasseresse de la nuit qui bande son arc en croissant de lune, en bleu nuit et argent (0.30.1). Elle remplace l'ancienne elfe lie-de-vin, une placeholder tirée d'une œuvre existante. Le design prévu pour une « Chasseresse de la nuit » distincte (STYLE_BIBLE) sert maintenant de modèle à Elaria et à Sylwen.
 
-**Compétence du 1 : Œil de faucon** (🎯 le prochain coup qui touche est critique). Un mauvais jet prépare le coup suivant, ce qui colle à l'archère qui ajuste son tir. La charge n'est pas consommée par une esquive adverse. Environ 1,4 critique assuré par combat.
+**Compétence du 1 : Œil de faucon** (🎯 le prochain coup qui touche est critique). Un mauvais jet prépare le coup suivant, ce qui colle à l'archère qui ajuste son tir. La charge n'était pas consommée par une esquive adverse (jusqu'à B8, le 2026-10-27 : depuis, sa frappe esquivée la perd). Environ 1,4 critique assuré par combat.
 
 **Compétence du 2 : Esquive améliorée** (💨 sans durée depuis la 0.36.5 : le prochain coup reçu est esquivé à coup sûr). L'esquive vaut pour le prochain coup reçu, sans tirage, et la charge est consommée. **0.36.5** : elle durait un tour, et s'éteignait sans servir une fois sur trois quand l'adversaire sacrifiait son coup (jet de 1 à 3) ou perdait son tour, le même défaut que la Riposte avant la 0.32.0 (audit des compétences, `docs/SORTS.md` § 8). Valeur nette de +6,7 à +10,3 points pour Elaria (49,0 → 52,1 %), de +7,5 à +9,9 pour Sylwen. Contre une Furie des vents, elle n'annule que le premier des deux coups. Un coup sacrifié (Vol de vie) ne la consomme pas. Environ 1,3 esquive imposée par combat.
 
@@ -481,6 +483,8 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 | Campagne, boss atteint, acte gagné | 20 %, 7 % | 20 %, 13 % (± 7 sur 30 parties) |
 
 Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4, 8 % de builds sous 50 %) ; elle reste première, avec moins de builds au-dessus de 65 %. Les neuf autres bougent de 0,6 point au plus. La piste plus large que l'utilisateur a ouverte sur elle, hors des leviers mesurés ici, s'étudie à part. Les mesures de la 0.117.0 (68,3 %) venaient d'un script jetable sur les mêmes graines ; la base 67,8 % ci-dessus est remesurée sur les règles 0.117.0 livrées.
+
+**2026-10-27, le Critique assuré à une charge (B8, second retour de l'utilisateur)**. Son Œil de faucon et sa Feinte posent un Critique assuré qui ne se cumule plus, que sa prochaine frappe dépense et qu'un coup esquivé perd ([STATUTS.md](STATUTS.md), « le Critique assuré à une charge »). Le rang de l'Œil de faucon devient une intensité, +3 dégâts au coup critique par rang (une charge de plus avant). Mesures (`BALANCE_N=400 npm run balance`, règles 0.121.0 → B8 seul) : Elaria 46,5 → **45,2 %** (dans la bande) ; dans son kit, Œil de faucon +12,7 → +11,4, Feinte +17,6 → +16,8 ; pire duel Aldric contre Elaria 59,8 → 60,8 %. Gravé (200 par duel) : Œil de faucon +15,1 → +13,8, son rang +6,4 → +4,9. Les neuf autres bougent de 0,3 point au plus.
 
 **Personnalité : la chasseresse solitaire.**
 - **Qui elle est** : patiente, distante, un peu hautaine. Elle trouve la mêlée grossière et ne se bat jamais là où on l'attend.

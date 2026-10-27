@@ -15,8 +15,9 @@ import { it } from 'vitest'
 import { hashSeed, winRate } from '../src/game/analysis'
 import { buildLinks } from '../src/game/hooks'
 import { getRelic } from '../src/game/relics'
-import { CHARACTERS, createCharacter } from '../src/game/roster'
+import { ALL_SKILLS, CHARACTERS, createCharacter } from '../src/game/roster'
 import { buildDone, buildOf, createSeasonTournament, DEFAULT_SEASON_SIZE, drawSeasonParticipants, inSeason, SEASON_SIZES, seasonSchedule, simulateSeasonMatches } from '../src/game/season'
+import { entrantAura, entrantCharacter } from '../src/game/tournament'
 import pkg from '../package.json' with { type: 'json' }
 
 const pct = (x: number) => `${Math.round(x * 100)} %`
@@ -48,15 +49,20 @@ it('mesure de la saison construite', () => {
         third.fights++
         third.turns += r.turns
         ;[f.home, f.away].forEach((i, side) => {
-          const own = record.get(season.entrants[i].characterId) ?? { wins: 0, played: 0 }
-          own.played++
-          if (r.winner === side) own.wins++
-          record.set(season.entrants[i].characterId, own)
+          const e = season.entrants[i]
+          // Par personnage, puis par aura de départ tirée (B7) : `perso:aura`
+          for (const key of [e.characterId, `${e.characterId}:${entrantAura(e)}`]) {
+            const own = record.get(key) ?? { wins: 0, played: 0 }
+            own.played++
+            if (r.winner === side) own.wins++
+            record.set(key, own)
+          }
         })
       }
     season.entrants.forEach((e, i) => {
       const { relics, forge } = buildOf(season, i)
-      const built = createCharacter(e.characterId).withForge(forge).withRelics(relics.map(getRelic))
+      // Son dé de départ (l'aura tirée sur le 1), sa construction forgée dessus
+      const built = entrantCharacter(e).withForge(forge).withRelics(relics.map(getRelic))
       const doneDay = days.findIndex((_, d) => buildDone(season, buildOf(season, i, d + 1))) + 1
       gains.push({
         id: e.characterId,
@@ -83,6 +89,13 @@ it('mesure de la saison construite', () => {
     return `| ${c.name} | ${own.length} | ${season ? pct(season.rate) : '—'} | ${pct(naked.get(c.id)!)} | ${pct(built)} | ${Math.round((built - naked.get(c.id)!) * 100)} points | ${dec(mean(own.map((g) => g.engraved)), 2)} | ${dec(mean(own.map((g) => g.linked)), 2)} | ${dec(mean(own.map((g) => g.lot)), 2)} |`
   })
   const meanGain = mean(gains.map((g) => g.built - naked.get(g.id)!))
+  // Saison par aura de départ tirée (B7) : chaque aura de chaque personnage, ses matchs et son taux
+  const byAura = CHARACTERS.flatMap((c) =>
+    (c.definition.startAuras ?? []).map((aura) => {
+      const r = record.get(`${c.id}:${aura}`)
+      return `| ${c.name} | ${ALL_SKILLS.find((s) => s.id === aura)?.name ?? aura} | ${r?.played ?? 0} | ${r ? pct(r.wins / r.played) : '—'} |`
+    }),
+  )
   const complete = gains.filter((g) => g.complete)
   const out = [
     `# Saison construite · règles ${pkg.version} · ${runs} saisons de ${size}, reliques et forge, choix par défaut`,
@@ -100,6 +113,14 @@ it('mesure de la saison construite', () => {
     '| Tiers | Journées | Combats | Tours par combattant |',
     '| --- | --- | --- | --- |',
     ...thirds.map((th, i) => `| ${i + 1} | ${Math.ceil((i * days.length) / 3) + 1} à ${Math.ceil(((i + 1) * days.length) / 3)} | ${th.fights} | ${dec(th.turns / th.fights / 2)} |`),
+    '',
+    '## Aura de départ tirée (B7)',
+    '',
+    'Chaque participant tire au lancement une aura parmi ses `startAuras` ; taux de saison de chaque personnage selon son aura (peu de participants par aura : à lire comme une tendance).',
+    '',
+    '| Personnage | Aura | Matchs | Saison |',
+    '| --- | --- | --- | --- |',
+    ...byAura,
     '',
     '## Le build se voit-il ? (fin de saison, contre le roster nu)',
     '',

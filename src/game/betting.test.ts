@@ -115,6 +115,15 @@ describe('paris : cotes', () => {
     expect(simulateCombat(fighters, { seed: 42 }).beats).toEqual(before.beats)
   })
 
+  it('cote le dé réel (B7) : l’aura de départ tirée change la cote cachée, comme le combat', () => {
+    // Chaque personnage à plusieurs auras de départ, contre le même adversaire : sa cote suit l'aura sur son 1
+    for (const c of [createCharacter('brokk'), createCharacter('ervald'), createCharacter('aldric')]) {
+      const auras = c.definition.startAuras!
+      const priced = auras.map((aura) => outcomeOf(priceMatch([createCharacter(c.id, { aura }), createCharacter('gorak')], 'aura', 120), winner0).probability)
+      expect(new Set(priced).size, c.id).toBeGreaterThan(1)
+    }
+  })
+
   it('tire des coups de théâtre sur environ un match sur trois, de tous les genres', () => {
     const fighters = pair('gorak', 'morgrut')
     const kinds = new Map<string, number>()

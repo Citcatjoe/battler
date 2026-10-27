@@ -17,7 +17,7 @@ interface Props {
 }
 
 /**
- * Compendium : le savoir du jeu, en sections (combattants, maîtrises, compétences, auras, statuts, reliques, règles).
+ * Compendium : le savoir du jeu, en sections (combattants, maîtrises, compétences, statuts, reliques, règles).
  * Chaque section a son propre filtre, en haut à droite ; les liens d'une section à l'autre passent par `onNavigate`.
  */
 export function CompendiumScreen({ section, characterId, focus, onNavigate, onOpenRecords, onBack, backLabel = 'Retour' }: Props) {

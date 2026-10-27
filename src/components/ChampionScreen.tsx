@@ -1,5 +1,5 @@
 import type { ChampionRun } from '../game/tournament'
-import { ROUND_NAMES } from '../game/tournament'
+import { entrantCharacter, ROUND_NAMES } from '../game/tournament'
 import { createCharacter } from '../game/roster'
 import { Fighter } from './Fighter'
 import { Icon } from './Icon'
@@ -27,7 +27,8 @@ const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)} %` : '�
  * victoires) et le bilan cumulé de son tournoi (dégâts, critiques, soins, compétences…).
  */
 export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallets }: Props) {
-  const character = createCharacter(run.entrant.characterId)
+  // Son dé de départ (l'aura tirée sur le 1), que sa construction de saison a forgé
+  const character = entrantCharacter(run.entrant)
   const { totals } = run
   const final = run.matches[run.matches.length - 1]
   const tiles: { label: string; value: string | number; sub?: string; accent?: string }[] = [

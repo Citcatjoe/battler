@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import type { CharacterEvent } from './events'
 import { autoForge, drawForgeOffer, forgedFaces, type ForgeOffer, type ForgeStep } from './forge'
-import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, skillNeeds, STATUS_HOOKS, type Hook } from './hooks'
+import { buildHooks, echoOf, eventHooks, reachOf as fighterReach, relicHooks, relicNeeds, skillNeeds, type Hook } from './hooks'
 import { characterPool, masteryOfSkill } from './masteries'
 import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import type { Rng } from './rng'
@@ -37,8 +37,8 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 export const MAX_SKILL_FACES = 5
 
 /**
- * Ce qu'un personnage a construit : son id (le « champion » qui se construit), l'aura de départ sur son 1 (campagne ;
- * l'aura par défaut sans elle, le tournoi), son journal de forge, ses reliques.
+ * Ce qu'un personnage a construit : son id (le « champion » qui se construit), l'aura de départ sur son 1 (choisie en
+ * campagne, tirée en tournoi et en saison ; l'aura par défaut sans elle), son journal de forge, ses reliques.
  */
 export interface BuildState {
   championId: string
@@ -60,24 +60,13 @@ export const ECHO_WEIGHT = 2
 
 /**
  * Ce qui est à la portée du personnage, l'offre pertinente : ce que produit **son build d'aujourd'hui**, ses compétences
- * (le dé vanilla et ses faces gravées), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance. Du
- * 2026-10-24 à la nuit du 2026-10-25, son répertoire comptait aussi (tout ce qu'il pourrait graver) : une consommatrice
- * arrivait avant son producteur et restait une face morte (la Curée chez Elaria sans Pourfendre gravé, la Pièce trouée
- * chez Fanchon sans Pile ou face ; docs/CAMPAGNE.md § 18.3). Décision du parent : le producteur d'abord.
+ * (le dé vanilla et ses faces gravées), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance
+ * (`reachOf`, hooks.ts, la même règle que les auras de départ). Du 2026-10-24 à la nuit du 2026-10-25, son répertoire
+ * comptait aussi (tout ce qu'il pourrait graver) : une consommatrice arrivait avant son producteur et restait une face
+ * morte (la Curée chez Elaria sans Pourfendre gravé, la Pièce trouée chez Fanchon sans Pile ou face ; docs/CAMPAGNE.md
+ * § 18.3). Décision du parent : le producteur d'abord.
  */
-function reachOf(b: BuildState): Set<Hook> {
-  const character = builtCharacter(b)
-  const reach = new Set<Hook>()
-  for (const e of character.events) for (const h of eventHooks(e).produces) reach.add(h)
-  for (const r of character.relics) for (const h of relicHooks(r).produces) reach.add(h)
-  for (const s of (character.forms ?? []).flatMap((f) => f.statuses ?? [])) {
-    reach.add(`status:${s}`)
-    for (const h of STATUS_HOOKS[s].produces ?? []) reach.add(h)
-  }
-  if (character.stats.dodgeChance > 0) reach.add('moment:dodge')
-  if (character.stats.critChance > 0) reach.add('moment:crit')
-  return reach
-}
+const reachOf = (b: BuildState): Set<Hook> => fighterReach(builtCharacter(b))
 
 /**
  * Les reliques qu'on peut lui offrir (2026-10-24, retour de l'utilisateur : « la Fiole de venin m'est proposée à chaque

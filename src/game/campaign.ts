@@ -179,7 +179,7 @@ export function opponentOf(encounter: Encounter): Character {
 /** Le nœud en cours (0 à `ACT_FIGHTS`) ; le dernier est le boss. */
 export const isBossNode = (run: CampaignRun) => run.wins === ACT_FIGHTS
 
-/** Les auras de départ d'un champion (la première : l'aura par défaut, celle du tournoi). */
+/** Les auras de départ d'un champion (la première : l'aura par défaut, celle du duel ; le tournoi en tire une au hasard). */
 export const startAurasOf = (championId: string): readonly string[] => rosterDef(championId).startAuras ?? []
 
 /**

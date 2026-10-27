@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { beatEffects, simulateCombat, splitAmong, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
-import { isRollTrigger, rollFace } from './events'
+import { isRollTrigger, rollFace, type CharacterEvent } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
@@ -954,8 +954,8 @@ describe('mise en scène', () => {
     expect(signals).toBeGreaterThan(50)
   })
 
-  it('Critique assuré, puis le coup critique, puis le Trophée du chasseur : 2 → 1 à l’impact, +1 → 2 à l’arrivée de son signal (retour du 2026-10-24, Elaria contre Ervald)', () => {
-    const eye = { id: 'eye', name: 'Œil', nature: 'finesse' as const, trigger: 'naturalThree' as const, effects: [{ type: 'applyStatus' as const, status: 'guaranteedCrit' as const, stacks: 2 }] }
+  it('Critique assuré, puis le coup critique, puis le Trophée du chasseur : 1 → 0 à l’impact, un nouveau à l’arrivée de son signal (retour du 2026-10-24, Elaria contre Ervald ; une charge, B8)', () => {
+    const eye = { id: 'eye', name: 'Œil', nature: 'finesse' as const, trigger: 'naturalThree' as const, effects: [{ type: 'applyStatus' as const, status: 'guaranteedCrit' as const, stacks: 1 }] }
     const trophy = RELICS.find((r) => r.id === 'hunter-trophy')!
     const crit = (c: Cue) => (c.channel === 'statuses' ? (c.statuses[0].find((s) => s.id === 'guaranteedCrit')?.stacks ?? 0) : undefined)
     let seen = 0
@@ -972,18 +972,18 @@ describe('mise en scène', () => {
         const shown = m.cues.filter((c) => c.channel === 'statuses')
         // Le statut gagné arrive (son signal), puis le coup qui en profite
         const wind = m.cues.find((c) => c.channel === 'strike' && c.strike && !c.strike.landed)!
-        const gained = shown.find((c) => crit(c) === 2)!
+        const gained = shown.find((c) => crit(c) === 1)!
         expect(m.cues.some((c) => c.channel === 'signal' && c.signal.from === 'eye' && c.at === gained.at - T.SIGNAL)).toBe(true)
         expect(gained.at).toBeLessThan(wind.at)
-        // Sa charge baisse à l'impact du coup critique
-        expect(crit(at(m, 'statuses', impact).at(-1)!)).toBe(1)
+        // Sa charge part à l'impact du coup critique
+        expect(crit(at(m, 'statuses', impact).at(-1)!)).toBe(0)
         // Le Trophée part au milieu de la lecture du coup, son signal rend la charge à son arrivée
         const depart = impact + T.REACTION_LEAD
         expect(at(m, 'signal', depart).some((c) => c.channel === 'signal' && c.signal.from === relicSignal(trophy.id))).toBe(true)
         expect(at(m, 'relicPulse', depart)).toHaveLength(1)
         const arrival = depart + T.SIGNAL
-        expect(crit(at(m, 'statuses', arrival).at(-1)!)).toBe(2)
-        // Entre les deux, le compteur reste à 1 : la baisse se voit avant la hausse
+        expect(crit(at(m, 'statuses', arrival).at(-1)!)).toBe(1)
+        // Entre les deux, rien ne bouge : la perte se voit avant le gain
         expect(shown.filter((c) => c.at > impact && c.at < arrival).map(crit)).toEqual([])
         seen++
       }
@@ -1252,6 +1252,34 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
         fizzled++
       }
     expect(fizzled).toBeGreaterThan(3)
+  })
+
+  it('Malchance et relique du dé : le dé, puis « Malchance » (sa charge part), puis l’Osselet fendu ; jamais l’état d’après avant le texte (M46)', () => {
+    const curse: CharacterEvent = { id: 'curse', name: 'curse', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'jinx', stacks: 3, target: 'opponent' }] }
+    const ready: CharacterEvent = { id: 'one', name: 'one', trigger: 'naturalOne', effects: [{ type: 'heal', amount: 1 }] }
+    const bone = RELICS.find((r) => r.id === 'split-knucklebone')!
+    let seen = 0
+    for (const seed of [1, 2, 3]) {
+      const result = simulateCombat([testCharacter('a', { maxHp: 400 }, [curse]), testCharacter('b', { maxHp: 400 }, [ready]).withRelics([bone])], { seed, forcedRolls: everyDie(1) })
+      const moments = stage(result)
+      for (const roll of result.beats) {
+        if (roll.type !== 'roll' || !roll.jinxedBy) continue
+        const attack = result.beats.find((b) => b.type === 'attack' && b.cause === roll.id)!
+        const relic = result.beats.find((b) => b.type === 'relic' && b.relic === bone.id && b.cause === attack.id)
+        if (!relic) continue
+        const m = momentOf(moments, roll.id)
+        const told = m.cues.find((c) => badge(c, roll.side, STATUSES.jinx.name))!
+        // L'Osselet part après le texte, d'un temps de lecture
+        const pulse = m.cues.find((c) => c.channel === 'relicPulse' && c.relics.includes(bone.id))!
+        expect(pulse.at).toBeGreaterThanOrEqual(told.at + T.READ_HOLD)
+        // Avant le texte, la zone d'état garde la charge de Malchance
+        const was = result.beats[roll.id - 1].state.statuses[roll.side].find((s) => s.id === 'jinx')!.stacks
+        const early = m.cues.filter((c) => c.channel === 'statuses' && c.at < told.at).map((c) => charges(c, roll.side, 'jinx'))
+        expect(early.every((n) => n === was)).toBe(true)
+        seen++
+      }
+    }
+    expect(seen).toBeGreaterThan(0)
   })
 
   it('Éclair aveuglant : le critique s’annonce, puis rate à l’impact (Esquive, « RATÉ », « Aveuglé »), sans arrêt sur image (M47)', () => {

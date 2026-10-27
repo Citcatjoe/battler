@@ -89,7 +89,7 @@ import bardDazedBImg from '../assets/bard-dazed-b.png'
 import { Character, type CharacterDef } from './character'
 import { faceTrigger, isRollTrigger, rollFace, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
-import { characterPool, masteryOfSkill } from './masteries'
+import { characterPool, masteryOfSkill, startAurasFor } from './masteries'
 import { MASTERY_SKILLS, skillById } from './skills'
 import { auraOfSkill } from './states'
 import { STATUSES } from './statuses'
@@ -150,7 +150,6 @@ const gorak: CharacterDef = {
   // Maîtrises (retour du 2026-10-27, docs/MAITRISES.md § 5 et § 7) : sur le 1, son aura de départ (l'Ivresse du sang par
   // défaut), sur le 2 sa signature, la Furie des vents ; Pourfendre quitte son dé pour la réserve du Sang
   masteries: ['fury', 'blood'],
-  startAuras: ['blood-frenzy', 'wild-aura', 'open-wound'],
   signature: 'wind-fury',
   events: startDie('blood-frenzy', 'wind-fury'),
 }
@@ -190,9 +189,9 @@ const elaria: CharacterDef = {
     strengths: ['Meilleure esquive (22 %)', 'Critiques fréquents (17 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
     weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
-  // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la Chasse
-  masteries: ['hunt', 'blood'],
-  startAuras: ['feint', 'precision-aura', 'open-wound', 'thorns', 'sidestep'],
+  // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la réserve.
+  // Second retour du 2026-10-27 (B2) : la Chasse fondue dans la Chance, ses deux écoles sont la Chance et le Sang
+  masteries: ['chance', 'blood'],
   signature: 'hawk-eye',
   events: startDie('feint', 'hawk-eye'),
 }
@@ -231,7 +230,6 @@ const brokk: CharacterDef = {
   },
   // Maîtrises : le Rempart et le Sang (Q1) ; l'Aura d'épines sur le 1 par défaut, la Peau de pierre (et son Poing) sur le 2
   masteries: ['bulwark', 'blood'],
-  startAuras: ['thorns', 'intimidation-aura', 'immunity-aura', 'bristling-rampart', 'open-wound'],
   signature: 'stoneskin',
   events: startDie('thorns', 'stoneskin'),
 }
@@ -266,7 +264,6 @@ const ervald: CharacterDef = {
   },
   // Maîtrises : dé inchangé, l'Aura glaciale sur le 1 par défaut, le Vol de vie sur le 2
   masteries: ['poison', 'shadow'],
-  startAuras: ['frost-aura', 'decoction-aura', 'dread', 'rot-aura', 'black-sap'],
   signature: 'life-steal',
   events: startDie('frost-aura', 'life-steal'),
 }
@@ -301,8 +298,7 @@ const ysolde: CharacterDef = {
     weaknesses: ['Compétences sur un jet sur trois seulement', 'Peu de critiques (10 %)', 'Esquive faible'],
   },
   // Maîtrises : dé inchangé, l'Aura de sainteté sur le 1 par défaut, la Purification sur le 2
-  masteries: ['light', 'storm'],
-  startAuras: ['holy-aura', 'storm-sky', 'storm-field'],
+  masteries: ['light', 'magic'],
   signature: 'purification',
   events: startDie('holy-aura', 'purification'),
 }
@@ -338,7 +334,6 @@ const naraxes: CharacterDef = {
   },
   // Maîtrises : dé inchangé, l'Aura de décoction sur le 1 par défaut (sa signature de la 0.107.0), Pile ou face sur le 2
   masteries: ['chance', 'poison'],
-  startAuras: ['decoction-aura', 'frost-aura', 'lucky-streak'],
   signature: 'coin-flip',
   events: startDie('decoction-aura', 'coin-flip'),
 }
@@ -379,9 +374,9 @@ const aldric: CharacterDef = {
     strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Vindicte : chaque renvoi nourrit son coup'],
     weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure'],
   },
-  // Maîtrises : la Vindicte sur le 1 par défaut, la Rétribution sur le 2 ; la Riposte quitte son dé pour les Représailles
-  masteries: ['retaliation', 'shadow'],
-  startAuras: ['vendetta', 'rancor', 'dread', 'blood-debt', 'rot-aura'],
+  // Maîtrises : la Vindicte sur le 1 par défaut, la Rétribution sur le 2 ; la Riposte quitte son dé pour la réserve. Second
+  // retour du 2026-10-27 (B2) : les Représailles fondues dans le Rempart (« encaisse-t-il, puis le rend-il ? »)
+  masteries: ['bulwark', 'shadow'],
   signature: 'retribution',
   events: startDie('vendetta', 'retribution'),
 }
@@ -423,7 +418,6 @@ const morgrut: CharacterDef = {
   },
   // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, aucune signature
   masteries: ['fury', 'bulwark'],
-  startAuras: ['power-aura'],
   events: startDie('power-aura'),
 }
 
@@ -486,9 +480,8 @@ const thaldrin: CharacterDef = {
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
   // aussi, d'un petit coup de base. Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe et ses deux auras.
   // Maîtrises : le Ciel d'orage sur le 1 par défaut, les Feux follets sur le 2 (sa signature, décision de l'utilisateur du
-  // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour l'Orage
-  masteries: ['storm', 'poison'],
-  startAuras: ['storm-sky', 'storm-field', 'decoction-aura', 'frost-aura'],
+  // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour la réserve. L'Orage est la Magie depuis B1
+  masteries: ['magic', 'poison'],
   signature: 'firefly',
   events: startDie('storm-sky', 'firefly', 'human'),
 }
@@ -531,27 +524,22 @@ const fanchon: CharacterDef = {
     strengths: ['Duo : quatre dés au tour suivant', 'Ballade : chaque coup la soigne', 'Frappe fort pour une saltimbanque (4 à 6)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
-  // Maîtrises (P7) : le Chant et la Chance ; la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité, les dés de plus) ;
-  // le Soliste quitte son dé pour le Chant. Ses stats ne bougent pas : Ballade / Duo 50,4 % (série 70)
-  masteries: ['song', 'chance'],
-  startAuras: ['ballad', 'lucky-streak'],
+  // Maîtrises (P7) : la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité) ; le Soliste quitte son dé pour la
+  // réserve. Ses stats ne bougent pas : Ballade / Duo 50,4 % (série 70). Second retour du 2026-10-27 (B2) : le Chant fondu,
+  // ses sorts (Ballade, Duo) à la Magie, ses gros coups à la Fureur ; ses deux écoles sont la Magie et la Chance
+  masteries: ['magic', 'chance'],
   signature: 'duo',
   events: startDie('ballad', 'duo'),
 }
 
-/** Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
-export const ROSTER: readonly CharacterDef[] = [
-  gorak,
-  elaria,
-  brokk,
-  ervald,
-  ysolde,
-  naraxes,
-  aldric,
-  morgrut,
-  thaldrin,
-  fanchon,
-]
+/**
+ * Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. Leurs auras de
+ * départ ne se listent pas : la règle les dérive de leur dé et de leurs deux maîtrises (`startAurasFor`, B5).
+ */
+export const ROSTER: readonly CharacterDef[] = [gorak, elaria, brokk, ervald, ysolde, naraxes, aldric, morgrut, thaldrin, fanchon].map((def) => ({
+  ...def,
+  startAuras: startAurasFor(def),
+}))
 
 /** Les personnages instanciés une fois pour toutes (ils sont immuables). */
 export const CHARACTERS: readonly Character[] = ROSTER.map((def) => new Character(def))
@@ -704,6 +692,7 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     if (starts.length === 0) problems.push(`${at} aucune aura de départ`)
     if (new Set(starts).size !== starts.length) problems.push(`${at} aura de départ en double`)
     if (starts.length > 0 && onFace(1).join() !== starts[0]) problems.push(`${at} le 1 du dé vanilla porte ${onFace(1).join() || 'rien'}, pas ${starts[0]}`)
+    if (starts.join() !== startAurasFor(d).join()) problems.push(`${at} aura de départ hors de la règle (celles de ses maîtrises que son dé sert, le producteur d'abord) : ${startAurasFor(d).join(', ')} attendues`)
     for (const id of starts) {
       const m = masteryOfSkill(id)
       if (!m || !d.masteries.includes(m)) problems.push(`${at} aura de départ ${id} hors de ses maîtrises`)

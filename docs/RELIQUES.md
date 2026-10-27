@@ -691,7 +691,7 @@ _Points M10, M11, M12, R1 à R5, U6 de la spec du retour du 2026-10-27 (parole d
 | Pièce | Pile | Gravée sur le 3 (Naraxes · Fanchon · Gorak · Brokk) | Rang II |
 | --- | --- | --- | --- |
 | Pile ou face (référence) | ce coup ×3 | — · +14,8 · +11,5 · +13,7 | — |
-| Pièce porte-bonheur (`lucky-coin`) | +3 critiques assurés au lanceur | **+9,2 · +12,8 · +8,5 · +10,3** (à 2 critiques : +6,7 · +7,8 · +5,3 · +7,1, sous la bande) | non remesuré à 3 critiques (à 2 : +1,4 à +2,4) |
+| Pièce porte-bonheur (`lucky-coin`) | un critique assuré qui fait +4 dégâts au lanceur (B8, 2026-10-27 : le Critique assuré n'a plus qu'une charge ; +3 critiques assurés avant) | **+9,2 · +12,8 · +8,5 · +10,3** à 3 critiques ; à 1 critique +4 dégâts, moyenne des dix hôtes **+9,9 → +9,2** (Naraxes +9,8, Fanchon +8,2 ; 200 par duel) (à 2 critiques : +6,7 · +7,8 · +5,3 · +7,1, sous la bande) | +2,7 → +2,6 (sous la bande d'un rang, d'avant B8) |
 | Pièce maudite (`cursed-coin`) | l'adversaire perd sa prochaine action (Étourdi) | **+10,3 · +8,9 · +8,5 · +9,6** | +2,1 à +3,4 |
 
 Variantes de pile mesurées (gravées sur le 3, Naraxes · Fanchon) : 1 critique +6,1 · +6,8 ; +6 Ferveur +6,8 · +8,2 ; +6 armure temporaire +7,9 · +7,5 ; Esquive améliorée +8,3 · +7,8 ; un coup de chance +9,3 · +7,3 ; 2 Affaibli à l'adversaire +9,6 · +8,4 ; Malchance +9,4 · +7,9 ; 5 Poison +11,9 · +15,4. Les rangs sont sous la bande de +3 à +8 (+1,4 à +3,4) : à remesurer avec `npm run ramp` ; levier si besoin, +2 chances sur 6 par rang.

@@ -7,7 +7,7 @@ import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
 import { CHARACTER_IDS, createCharacter } from './roster'
 import { computeStats } from './stats'
-import { fighterKey, fillSlots, labelEntrants, SLOTS, type Build, type Entrant, type MatchStatus, type Tournament } from './tournament'
+import { drawStartAuras, entrantAura, entrantCharacter, fighterKey, fillSlots, labelEntrants, SLOTS, type Build, type Entrant, type MatchStatus, type Tournament } from './tournament'
 
 /*
  * Phase de saison (0.86.0), facultative, avant l'arbre du tournoi : un championnat aller-retour à 20, 24 ou
@@ -169,7 +169,9 @@ export function drawSeasonParticipants(size: SeasonSize, seed: number): string[]
 /**
  * Crée un tournoi qui commence par une saison. `participants` : ids des personnages, dans l'ordre de tirage ;
  * `seed` : graine de la saison (tirée par l'appelant). `relics`, `forge` : les récompenses des journées de
- * construction (`buildRewards`).
+ * construction (`buildRewards`). Chacun reçoit son aura de départ au lancement (`drawStartAuras`, retour du 2026-10-27,
+ * B7), tirée à la graine de la saison sur un hasard à part : elle tient toute la saison, puis dans l'arbre, car sa
+ * forge se construit sur ce dé.
  */
 export function createSeasonTournament(
   participants: string[],
@@ -178,8 +180,9 @@ export function createSeasonTournament(
 ): Tournament {
   if (!(SEASON_SIZES as readonly number[]).includes(participants.length))
     throw new Error(`Une saison compte ${SEASON_SIZES.join(', ')} participants (${participants.length})`)
-  // Noms uniques : tirés à la graine de la saison, sur un hasard à part de celui des matchs
-  const entrants = labelEntrants(participants, nameOf, uniqueNames ? seededRng((seed ^ 0x6e6f6d73) | 0) : undefined)
+  // Noms uniques et auras : tirés à la graine de la saison, chacun sur un hasard à part de celui des matchs
+  const labeled = labelEntrants(participants, nameOf, uniqueNames ? seededRng((seed ^ 0x6e6f6d73) | 0) : undefined)
+  const entrants = drawStartAuras(labeled, seededRng((seed ^ 0x61757261) | 0))
   return { entrants: [], results: {}, relics, season: { entrants, seed: seed >>> 0, results: {}, rewards: buildRewards({ relics, forge }) } }
 }
 
@@ -233,12 +236,12 @@ export function seasonStatus(season: Season, number: number): MatchStatus {
   return known(f.home) && known(f.away) ? 'ready' : 'pending'
 }
 
-/** Les deux combattants d'un match de saison, sous leur nom de tournoi, avec leur construction à cette journée. */
+/** Les deux combattants d'un match de saison, sous leur nom de tournoi, partis de leur aura de départ, avec leur construction à cette journée. */
 export function seasonFighters(season: Season, number: number): Pair<Character> {
   const { home, away, day } = fixtureOf(season, number)
   const make = (i: number) => {
     const { relics, forge } = buildOf(season, i, day)
-    return createCharacter(season.entrants[i].characterId).withName(season.entrants[i].label).withForge(forge).withRelics(relics.map(getRelic))
+    return entrantCharacter(season.entrants[i]).withForge(forge).withRelics(relics.map(getRelic))
   }
   return [make(home), make(away)]
 }
@@ -255,7 +258,8 @@ function seasonReward(season: Season, number: number, side: Side): SeasonReward 
   if (buildDone(season, build)) return null
   const kind = season.rewards[build.relics.length + build.forge.length]
   const rng = seededRng((seasonMatchSeed(season, number) ^ (side === 0 ? 0x72657764 : 0x70657264)) | 0)
-  const drawn = drawReward({ championId: season.entrants[entrant].characterId, ...build }, kind, rng)
+  const e = season.entrants[entrant]
+  const drawn = drawReward({ championId: e.characterId, aura: entrantAura(e), ...build }, kind, rng)
   if (drawn.kind === 'relic') return drawn.choice ? { kind: 'relic', offer: drawn.offer, chosen: drawn.choice } : null
   return drawn.choice ? { kind: 'forge', offer: drawn.offer, chosen: drawn.choice } : null
 }
@@ -313,7 +317,7 @@ export function chooseSeasonReward(t: Tournament, number: number, side: Side, ch
   } else {
     if (typeof choice === 'string' || !isOffered(current.offer, choice)) throw new Error(`Opération non proposée au match de saison ${number}`)
     // La face doit être de celles que l'opération peut viser sur son dé de ce jour-là (erreur sinon)
-    withForgeStep(createCharacter(season.entrants[entrant].characterId).definition, buildOf(season, entrant, f.day).forge, choice)
+    withForgeStep(entrantCharacter(season.entrants[entrant]).definition, buildOf(season, entrant, f.day).forge, choice)
     reward = { ...current, chosen: choice }
   }
   const rewards: Pair<SeasonReward | null> = side === 0 ? [reward, r.rewards[1]] : [r.rewards[0], reward]

@@ -45,7 +45,7 @@ export const ALIGN = {
  * Infobulle d'une compétence (sceau de la zone de compétences du combat, dé forgé, fiche d'affrontement). `face` : la
  * face du dé qui la déclenche ; absente pour une compétence hors dé (« début du combat » ; l'Ouverture jusqu'au 2026-10-27). `badge` :
  * remplace la pastille de face quand la compétence n'est sur aucun dé (une maîtrise au compendium : « Aura »). `notes` :
- * ce que la forge a fait de la face (gravée), en pied.
+ * ce que la forge a fait de la face (gravée), en pied. `floating` : ouverte dans un calque (TipLayer), sans position propre.
  */
 export function SkillTooltip({
   event,
@@ -58,8 +58,8 @@ export function SkillTooltip({
   event: CharacterEvent
   face?: number
   badge?: string
-  placement: 'above' | 'below'
-  align: 'left' | 'center' | 'right'
+  placement: 'above' | 'below' | 'floating'
+  align?: 'left' | 'center' | 'right'
   notes?: readonly string[]
 }) {
   // Le même texte que le compendium (describeSkill) : pastilles en tête, puis l'effet et les statuts posés
@@ -68,9 +68,13 @@ export function SkillTooltip({
   return (
     <div
       role="tooltip"
-      className={`pointer-events-none invisible absolute z-[70] w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left opacity-0 shadow-(--shadow-2) transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
-        placement === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
-      } ${ALIGN[align]}`}
+      className={`w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2) ${
+        placement === 'floating'
+          ? ''
+          : `pointer-events-none invisible absolute z-[70] opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 ${
+              placement === 'above' ? 'bottom-full mb-3' : 'top-full mt-3'
+            } ${ALIGN[align ?? 'left']}`
+      }`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-display text-lg font-extrabold leading-tight text-ink-1">

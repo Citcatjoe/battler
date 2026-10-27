@@ -125,8 +125,10 @@ export interface CharacterDef {
    */
   masteries: readonly [MasteryId, MasteryId]
   /**
-   * Ses auras de départ (docs/MAITRISES.md § 5) : celles de ses maîtrises qu'il peut porter sur le 1, choisies au début
-   * d'une campagne (`createCharacter(id, { aura })`) ; la première est celle de son dé vanilla (tournoi, duel).
+   * Ses auras de départ (docs/MAITRISES.md § 5) : les auras de ses deux maîtrises que son dé de départ sert (B5, le producteur d'abord, une règle pour tous), choisies
+   * au début d'une campagne (`createCharacter(id, { aura })`) ; la première est celle de son dé vanilla (le duel ; le
+   * tournoi et la saison en tirent une au hasard, § 5.3). Dérivées par la règle (`startAurasFor`, masteries.ts), remplies
+   * par le roster : jamais listées à la main.
    */
   startAuras?: readonly string[]
   /**

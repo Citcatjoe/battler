@@ -2,12 +2,272 @@
 
 _Conception (vague 1) demandée par l'utilisateur le 2026-10-27 ([retour du 27 octobre](../prompts/Retour%20du%2027%20octobre.md), points V1 à V5, P1 à P11, M9 et R5). Les mesures de conception sont celles des séries 70 à 75 du laboratoire (`scripts/lab/ideas.ts`), sur la branche `regles-v2` en 0.120.0 (§ 15). **Vague 2 : les tranches A (registre), B (briques) et C (dés de départ) sont codées** ; leurs mesures au registre remplacent les estimations (§ 4 bis, § 5.2, § 14)._
 
+## Huit maîtrises (second retour du 2026-10-27, B1 à B6)
+
+_Ce qui suit fait foi ; les § 0 à 17 décrivent la conception et la vague 2 à onze maîtrises (l'historique, les mesures d'avant). Aucune compétence nouvelle dans ce lot (principe de l'utilisateur) : on déplace l'existant, on mesure, on fait l'état des lieux._
+
+### B1. Onze → huit maîtrises
+
+Disparaissent la **Chasse**, les **Représailles** et le **Chant** ; l'**Orage devient la Magie** (id de code `storm` → `magic`, emblème `mastery-storm` renommé `mastery-magic` en attendant le sien ; `mastery-hunt`, `mastery-retaliation`, `mastery-song` mis à la corbeille). Chaque brique garde son id, son nom, son icône, son texte et sa mécanique : aucune identité n'était incompatible avec sa nouvelle maîtrise. Seuls changent la question et la phrase de quatre maîtrises (`masteries.ts`).
+
+| Brique | Avant | Après | Pourquoi |
+| --- | --- | --- | --- |
+| Feinte, Pas de côté, Œil de faucon, Esquive améliorée | Chasse | **Chance** | critiques et esquives sont des tirages : « le hasard joue pour lui » (la suggestion de l'utilisateur) ; même nature (adresse) |
+| Aura de précision | Chasse | **Fureur** | « frappe-t-il plus fort ? » : le critique est un gros coup ; la Chance avait déjà dix briques |
+| Vindicte, Rancœur, Riposte, Rétribution, Dette de sang | Représailles | **Rempart** | la question du Rempart le disait déjà : « Encaisse-t-il, **puis le rend-il** ? ». L'utilisateur suggérait la Fureur ; elle aurait eu quatorze briques et mêlé deux boucles sans lien (frapper, encaisser). Dette de sang reste avec les renvois qu'elle consomme (§ 2, règle 2) |
+| Ballade, Duo | Chant | **Magie** | les sorts du barde (nature arcane) |
+| Soliste, Crescendo | Chant | **Fureur** | des gros coups martiaux (« ce coup ×3 », « ×2 qui monte ») |
+| Siffloter | Chant | **Lumière** | un soin |
+| Fausse note | Chant | **Ombre** | un malus (ses coups font moins) |
+| Ivresse du sang | Fureur | **Sang** | son nom ; la Fureur passait à dix briques |
+| Aura d'immunité | Rempart | **Lumière** | se garder des malus, l'esprit de la Purification ; le Rempart passait à dix |
+| Malchance | Chance | **Ombre** | le mauvais œil, une malédiction (« l'adversaire est-il maudit ? ») |
+
+Les nouvelles phrases : **Fureur** « Des rafales, des critiques et de gros coups » ; **Rempart** « … qu'il rend ensuite : ripostes et représailles » ; **Chance** « Le hasard joue-t-il pour lui ? — Des pièces, des jets de plus, des critiques et des esquives » ; **Lumière** « Il se soigne et se garde des malus… » ; **Ombre** « … ses coups, ses bonus et sa chance » ; **Magie** « Ses sorts tombent-ils ? — Des sorts : la foudre et le feu frappent sans coup, ses chants portent ses coups. » Le registre exige désormais six briques et deux auras par maîtrise (`validateMasteries`), sans exception.
+
+### B2. Deux des huit par personnage
+
+| Personnage | Maîtrises (avant → après) | Dé vanilla (1 / 2) | La signature est dans |
+| --- | --- | --- | --- |
+| Gorak | Fureur, Sang | Ivresse du sang / Furie des vents | Fureur |
+| Elaria | Chasse, Sang → **Chance, Sang** | Feinte / Œil de faucon | Chance |
+| Brokk | Rempart, Sang | Aura d'épines / Peau de pierre | Rempart |
+| Ervald | Poison, Ombre | Aura glaciale / Vol de vie | Ombre |
+| Ysolde | Lumière, Orage → **Lumière, Magie** | Aura de sainteté / Purification | Lumière |
+| Naraxes | Chance, Poison | Aura de décoction / Pile ou face | Chance |
+| Aldric | Représailles, Ombre → **Rempart, Ombre** | Vindicte / Rétribution | Rempart |
+| Morgrut | Fureur, Rempart | Aura de puissance / — | — |
+| Thaldrin | Orage, Poison → **Magie, Poison** | Ciel d'orage / Feux follets | Magie |
+| Fanchon | Chant, Chance → **Magie, Chance** | Ballade / Duo | Magie |
+
+Aucun dé vanilla ne change : les signatures et les auras du 1 restent ; le balance ne bouge que par les chantiers parallèles. Porteurs : Fureur 2, Sang 3, Rempart 3, Poison 3, Chance 3, Lumière **1**, Ombre 2, Magie 3. Réserves qui changent : Brokk et Morgrut perdent l'Aura d'immunité et gagnent les Représailles ; Gorak gagne Aura de précision, Soliste, Crescendo ; Naraxes perd la Malchance et gagne la Chasse ; Fanchon perd Soliste, Crescendo, Siffloter, Fausse note et gagne l'Orage ; Ysolde, Thaldrin gagnent Ballade et Duo.
+
+**Migrations** : aucun id de maîtrise n'est enregistré ; une partie v5 dont l'aura n'est plus une aura de départ repart de l'aura par défaut (Brokk parti de l'Aura d'immunité : Aura d'épines ; test `modules.test.ts`), le choix d'aura mémorisé retombe de même sur la première (CampaignScreen). Une gravure faite avant la fusion, hors des nouvelles réserves (le Soliste de Fanchon), reste sur son dé : la forge ne vérifie pas la réserve, seule l'offre la lit.
+
+### B3, B4. Compendium
+
+- **B3** : plus de porteurs dans l'onglet Maîtrises (ni portraits sur les tuiles, ni « La jouent » dans le panneau, ni recherche par nom de porteur). Les maîtrises restent sur la fiche du personnage et sur l'écran d'affrontement.
+- **B4** : l'onglet **Auras** est supprimé. L'onglet Compétences liste **toutes** les briques, auras comprises (64, par ordre alphabétique, chacune avec l'emblème de sa maîtrise) : chaque lien vers une compétence ou une aura (`skillLink`) mène à sa fiche. La règle courte des auras (« Une aura dure jusqu'à la fin du combat… l'une des auras de ses deux maîtrises ; les autres s'obtiennent en gravant », lien vers la règle « Auras ») passe en tête de l'encadré Auras de chaque maîtrise.
+
+### B5. Les auras de départ : toutes celles de ses deux maîtrises
+
+**Règle** (`startAurasFor`, `masteries.ts`) : les auras de départ d'un personnage sont **les auras de ses deux maîtrises dont le besoin est servi par son dé de départ** (sans le 1, où elle se pose) : « le producteur d'abord », la règle de l'offre, par la même fonction (`reachOf`, `skillNeeds`, `hooks.ts` ; `offerableSkills` l'emploie aussi). La première est celle du 1 de son dé vanilla. Rien n'est listé à la main : le roster les dérive, `validateRoster` refuse une liste qui s'en écarte. Une règle pour tous, aucune exclusion par tolérance ni par personnage (décision du parent, 2026-10-27, après la première mesure).
+
+Première mesure, sans le producteur d'abord (toutes les auras, 68 départs) : 17 hors bande, dont 9 consommatrices sans producteur au taux d'un 1 nu (Dé pipé chez Elaria 29,2 et Fanchon 36,1 ; Vindicte et Dette de sang chez Brokk 34,8 et Morgrut 25,6 ; Rempart hérissé chez Morgrut 25,6 ; Sentence et Bouclier de foi chez Ysolde 36,1). La règle retire 13 départs : ces neuf, plus Sève noire chez Naraxes (38,3) et Thaldrin (49,1), Rempart hérissé chez Aldric (47,0), Aura de précision chez Morgrut (36,9 : sans critique, elle n'a rien à amplifier).
+
+Mesure avec la règle (2026-10-27, moteur du jour avec les chantiers parallèles en cours ; 400 combats par duel, mêmes graines que `npm run balance` : la ligne « défaut » est le taux du balance ; marge ± 1,6 point) :
+
+| Personnage | Aura de départ | Taux % | Pire duel | Meilleur duel | Bande 42-58 |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Ivresse du sang (défaut) | 49,4 | Thaldrin 42,5 | Ervald 58,5 |  |
+| Gorak | Aura de puissance | 55,3 | Thaldrin 50,2 | Ervald 61,0 |  |
+| Gorak | Aura sauvage | 49,5 | Thaldrin 43,5 | Ervald 56,0 |  |
+| Gorak | Aura de précision | 50,5 | Thaldrin 44,3 | Ervald 57,3 |  |
+| Gorak | Aura d'épines | 47,5 | Thaldrin 37,3 | Fanchon 53,5 |  |
+| Gorak | Plaie ouverte | 47,1 | Thaldrin 37,8 | Ervald 52,0 |  |
+| Elaria | Feinte (défaut) | 45,2 | Aldric 39,3 | Gorak 50,7 |  |
+| Elaria | Veine | 38,7 | Thaldrin 33,8 | Naraxes 42,5 | hors bande |
+| Elaria | Pas de côté | 39,0 | Thaldrin 33,3 | Naraxes 44,3 | hors bande |
+| Elaria | Ivresse du sang | 54,4 | Thaldrin 50,7 | Ervald 60,8 |  |
+| Elaria | Aura d'épines | 43,0 | Thaldrin 34,8 | Gorak 49,5 |  |
+| Elaria | Plaie ouverte | 43,3 | Thaldrin 37,0 | Gorak 46,5 |  |
+| Brokk | Aura d'épines (défaut) | 51,8 | Morgrut 47,0 | Elaria 58,5 |  |
+| Brokk | Aura d'intimidation | 49,7 | Fanchon 42,3 | Elaria 60,5 |  |
+| Brokk | Rempart hérissé | 49,5 | Aldric 41,8 | Elaria 58,0 |  |
+| Brokk | Rancœur | 48,3 | Thaldrin 43,0 | Elaria 55,3 |  |
+| Brokk | Ivresse du sang | 47,9 | Fanchon 41,8 | Ysolde 54,3 |  |
+| Brokk | Plaie ouverte | 49,1 | Fanchon 43,0 | Ysolde 58,0 |  |
+| Ervald | Aura glaciale (défaut) | 47,4 | Gorak 41,5 | Ysolde 54,8 |  |
+| Ervald | Aura de décoction | 49,2 | Gorak 43,5 | Ysolde 57,8 |  |
+| Ervald | Sève noire | 45,1 | Fanchon 41,0 | Ysolde 51,2 |  |
+| Ervald | Effroi | 51,6 | Fanchon 46,3 | Morgrut 58,8 |  |
+| Ervald | Aura de pourriture | 51,0 | Gorak 45,0 | Elaria 56,0 |  |
+| Ysolde | Aura de sainteté (défaut) | 48,3 | Aldric 42,0 | Elaria 59,0 |  |
+| Ysolde | Aura d'immunité | 48,6 | Aldric 39,8 | Fanchon 57,3 |  |
+| Ysolde | Ciel d'orage | 47,0 | Thaldrin 40,3 | Fanchon 57,3 |  |
+| Ysolde | Champ d'orage | 46,8 | Thaldrin 39,3 | Fanchon 59,3 |  |
+| Ysolde | Ballade | 47,8 | Aldric 41,8 | Fanchon 56,5 |  |
+| Naraxes | Aura de décoction (défaut) | 49,8 | Aldric 43,8 | Gorak 55,3 |  |
+| Naraxes | Dé pipé | 41,2 | Brokk 31,8 | Fanchon 48,5 | hors bande |
+| Naraxes | Feinte | 51,5 | Aldric 44,5 | Gorak 58,5 |  |
+| Naraxes | Veine | 45,9 | Brokk 40,8 | Gorak 53,3 |  |
+| Naraxes | Pas de côté | 46,1 | Brokk 38,8 | Gorak 53,0 |  |
+| Naraxes | Aura glaciale | 47,2 | Thaldrin 40,5 | Gorak 52,8 |  |
+| Aldric | Vindicte (défaut) | 54,7 | Gorak 47,3 | Elaria 60,8 |  |
+| Aldric | Aura d'intimidation | 57,6 | Fanchon 52,5 | Elaria 66,0 |  |
+| Aldric | Rancœur | 56,3 | Gorak 51,2 | Elaria 61,3 |  |
+| Aldric | Dette de sang | 53,9 | Gorak 46,3 | Elaria 59,3 |  |
+| Aldric | Effroi | 56,0 | Gorak 52,3 | Morgrut 61,8 |  |
+| Aldric | Aura de pourriture | 54,3 | Gorak 48,5 | Elaria 59,3 |  |
+| Morgrut | Aura de puissance (défaut) | 48,9 | Aldric 40,3 | Brokk 53,0 |  |
+| Morgrut | Aura sauvage | 40,5 | Thaldrin 33,8 | Gorak 44,5 | hors bande |
+| Morgrut | Aura d'intimidation | 40,6 | Thaldrin 32,0 | Gorak 46,8 | hors bande |
+| Morgrut | Rancœur | 39,0 | Thaldrin 29,8 | Gorak 44,5 | hors bande |
+| Thaldrin | Ciel d'orage (défaut) | 54,6 | Aldric 48,0 | Elaria 59,0 |  |
+| Thaldrin | Champ d'orage | 54,7 | Aldric 47,5 | Elaria 58,8 |  |
+| Thaldrin | Ballade | 54,4 | Aldric 47,3 | Elaria 58,0 |  |
+| Thaldrin | Aura de décoction | 54,5 | Aldric 47,8 | Elaria 58,5 |  |
+| Thaldrin | Aura glaciale | 53,7 | Aldric 46,0 | Elaria 58,8 |  |
+| Fanchon | Ballade (défaut) | 50,0 | Ysolde 42,8 | Ervald 56,5 |  |
+| Fanchon | Ciel d'orage | 43,3 | Thaldrin 37,8 | Elaria 47,8 |  |
+| Fanchon | Champ d'orage | 42,5 | Thaldrin 37,0 | Gorak 45,8 |  |
+| Fanchon | Feinte | 44,4 | Ysolde 35,8 | Ervald 50,0 |  |
+| Fanchon | Veine | 43,8 | Thaldrin 37,0 | Elaria 48,8 |  |
+| Fanchon | Pas de côté | 42,2 | Ysolde 35,5 | Gorak 47,0 |  |
+
+**Lecture.** **55 départs, 6 sous 42 %**, aucun au-dessus ; un pire duel dépasse 65/35 (Aldric à l'Aura d'intimidation contre Elaria, 66,0 %).
+- **Morgrut** (4 départs) : Aura sauvage 40,5, Aura d'intimidation 40,6, Rancœur 39,0 ; seule la Puissance le tient (48,9). Son dé n'a que son aura (face 2 nue) : sa face 2 ou les valeurs de ces auras, pour tous, sont les leviers.
+- **Elaria** : Veine 38,7 et Pas de côté 39,0 (elle perd la Feinte, sa boucle esquive → critique) ; Ivresse du sang 54,4, au-dessus de son défaut 45,2.
+- **Naraxes** : Dé pipé 41,2 (vivant : sa Pile ou face le nourrit ; proposition d'AuraDesign : +5 % de critique et d'esquive par charge, 49,1).
+- **Bord bas** : Fanchon Pas de côté 42,2, Champ d'orage 42,5. **Haut** : Aldric Aura d'intimidation 57,6 (pire duel 66,0), Rancœur 56,3, Effroi 56,0 ; Gorak Aura de puissance 55,3.
+
+### B6. État des compétences par maîtrise
+
+_Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un état des lieux, pour que l'utilisateur propose le contenu qui manque. Gravée : points de victoire gagnés quand la brique est gravée sur le 3 nu (bande 8 à 20) ; « moy. » = moyenne des dix hôtes du roster (rapports `logs/skills/` du 2026-10-25 et du 2026-10-27), sinon la mesure connue chez un hôte, avec sa source dans `skills.ts`. Porteurs : ceux qui jouent la maîtrise ; « dé » : la brique est sur leur dé de départ._
+
+#### Fureur — Gorak, Morgrut (2 porteurs) · 3 auras, 6 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aura de puissance | aura | +2 dégâts à chacun de ses coups | dégâts par coup | — | moy. +17,9 | Morgrut (1) |
+| Aura sauvage | aura | +1 à l'attaque | dégâts par coup | — | Gorak +13,0 | — |
+| Aura de précision | aura | +5 % de critique, +1 au multiplicateur | critiques | — | Elaria construite +18,8 (gravée : non mesurée) | — |
+| Furie des vents | compétence | deux coups au lieu d'un | coups | — | signature | Gorak (2) |
+| Coup de massue | compétence | s'il touche, l'adversaire perd sa prochaine action, 1x | tours perdus | — | moy. +12,7 | — |
+| Brise-garde | compétence | s'il touche, le prochain coup reçu ×2 et brise l'armure temporaire | — | l'armure temporaire adverse | moy. +14,5 | — |
+| Assaut | compétence | ce coup ×2 | gros coup | — | moy. +14,1 | — |
+| Soliste | compétence | ce coup ×3, 1x | gros coup | — | moy. +17,2 | — |
+| Crescendo | compétence | ce coup ×2, puis ×1 de plus à chaque fois qu'il touche | gros coup | ses propres touches | moy. +17,1 | — |
+
+#### Sang — Gorak, Elaria, Brokk (3) · 3 auras, 3 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Ivresse du sang | aura | chacun de ses critiques lui donne deux coups de plus | coups | critiques | moy. +10,8 (Morgrut +3,1 ; Elaria +18,8) | Gorak (1) |
+| Aura d'épines | aura | 1 Saignement à l'attaquant à chaque coup reçu | Saignement | coups reçus | rang +8,8 ; signature | Brokk (1) |
+| Plaie ouverte | aura | 1 Saignement à chaque coup qui touche | Saignement | — | moy. +10,6 | — |
+| Pourfendre | compétence | saignement de la moitié des dégâts du coup | Saignement | — | — (rang II : +2 Saignement) | — |
+| Curée | compétence | trois coups de plus si l'adversaire saigne | coups | Saignement (condition) | Brokk +10,4, Gorak +7,0 | — |
+| Hémorragie | compétence | 4 dégâts directs ; l'adversaire ne regagne plus de PV | malus de soin | — | moy. +14,1 | — |
+
+#### Rempart — Brokk, Aldric, Morgrut (3) · 5 auras, 4 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aura d'intimidation | aura | −1 dégât à chaque coup de l'adversaire | réduction | — | — (départ de Brokk 49,7 %) | — |
+| Vindicte | aura | +6 Ferveur à chaque renvoi | Ferveur | renvois | Aldric +12,9 | Aldric (1) |
+| Rempart hérissé | aura | +2 Épines et +2 armure temporaire quand son armure temporaire est vidée | Saignement, armure | armure vidée | Brokk +11,7 | — |
+| Rancœur | aura | chaque coup reçu : +1 Ferveur | Ferveur | coups reçus | moy. +9,3 | — |
+| Dette de sang | aura | l'adversaire saigne de 3 à chaque renvoi | Saignement | renvois | moy. +1,8 (Aldric +12,1) — hors bande | — |
+| Peau de pierre | compétence | +6 armure temporaire ; tant qu'elle tient, +1 à ses coups | armure temporaire | — | moy. +17,9 | Brokk (2) |
+| Rancune | compétence | son prochain coup reçu lui donne un critique assuré | critique assuré | coups reçus | Morgrut construit +20,5 | — |
+| Riposte | compétence | ses 2 prochains coups reçus renvoient la moitié de leurs dégâts | renvois | coups reçus | — | — |
+| Rétribution | compétence | la moitié des dégâts des trois derniers coups reçus | renvois | coups reçus (jauges) | signature | Aldric (2) |
+
+#### Poison — Ervald, Naraxes, Thaldrin (3) · 3 auras, 3 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aura de décoction | aura | 1 Poison à chaque coup qui touche | Poison | — | rang +9,9 ; signature | Naraxes (1) |
+| Aura glaciale | aura | 1 Poison au début de chacun de ses tours | Poison | — | rang +10,2 ; signature | Ervald (1) |
+| Sève noire | aura | chaque soin reçu : 4 Poison à l'adversaire | Poison | soins | moy. +3,6 (Ervald +8,9) — hors bande | — |
+| Souffle de la tombe | compétence | 3, 2 puis 1 PV à la fin de ses tours | Poison | — | Ervald construit +14,5 | — |
+| Virulence | compétence | triple le Poison de l'adversaire, puis +2 | Poison | Poison (amplifie) | Ervald +17,5 | — |
+| Récolte | compétence | +14 PV si l'adversaire est empoisonné | soins | Poison (condition) | Ervald +11,9 | — |
+
+#### Chance — Elaria, Naraxes, Fanchon (3) · 4 auras, 6 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dé pipé | aura | +25 % de chances de faire pile à ses pièces | pile | pièces | moy. +0,8 (Naraxes +3,4) — hors bande | — |
+| Feinte | aura | +5 % d'esquive ; chaque esquive, un critique assuré | esquives, critiques | esquives | moy. +10,6 (Gorak +8,2 ; Elaria +18,3) | Elaria (1) |
+| Veine | aura | chaque 6 au dé : un jet de plus à sa prochaine action | jets | les 6 au dé | moy. +8,6 | — |
+| Pas de côté | aura | +8 % d'esquive | esquives | — | moy. +8,2 | — |
+| Pile ou face | compétence | s'il touche, une pièce : pile, ce coup ×3 | pièce, gros coup | — | signature | Naraxes (2) |
+| Pièce porte-bonheur | compétence | s'il touche, une pièce : pile, critique assuré +4 | pièce, critique | — | non mesurée au registre | — |
+| Pièce maudite | compétence | s'il touche, une pièce : pile, l'adversaire perd sa prochaine action | pièce, tour perdu | — | non mesurée au registre | — |
+| Coup de chance | compétence | un jet de plus à sa prochaine action | jets | — | Naraxes construite +13,6 | — |
+| Œil de faucon | compétence | ce coup est critique | critique | — | signature | Elaria (2) |
+| Esquive améliorée | compétence | esquive à coup sûr le prochain coup reçu | esquive | — | rang +3,3 | — |
+
+#### Lumière — Ysolde (1) · 4 auras, 3 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aura de sainteté | aura | +1 PV à la fin de chacun de ses tours | soins | — | rang +8,1 ; signature | Ysolde (1) |
+| Sentence | aura | chaque soin reçu : l'adversaire perd 3 PV | dégâts directs | soins | Ysolde construite +15,9 | — |
+| Bouclier de foi | aura | chaque soin reçu : +2 armure temporaire | armure temporaire | soins | Ysolde +16,1 (ailleurs +0,5 à +4,1) | — |
+| Aura d'immunité | aura | retire ses malus ; plus aucun malus ; +1 armure | — | malus adverses (les bloque) | — | — |
+| Purification | compétence | retire son dernier bonus à l'adversaire, sinon 8 dégâts directs | dégâts directs | bonus adverses | signature | Ysolde (2) |
+| Prière | compétence | +6 PV | soins | — | moy. +13,6 | — |
+| Siffloter | compétence | +3 PV à la fin de ses 2 prochains tours | soins | — | moy. +13,5 | — |
+
+#### Ombre — Ervald, Aldric (2) · 2 auras, 6 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Effroi | aura | chacun de ses critiques : l'adversaire perd sa prochaine action | tours perdus | critiques | moy. +8,8 (Morgrut +2,9 ; Elaria +16,4) | — |
+| Aura de pourriture | aura | chacun de ses critiques : 2 Pourriture | Pourriture | critiques | moy. +7,0 (Morgrut +0,7 ; Elaria +14,7) — sous la bande | — |
+| Vol de vie | compétence | ce coup lui rend les PV qu'il retire, +4 | soins | — | signature | Ervald (2) |
+| Peur | compétence | l'adversaire perd sa prochaine action, 1x | tour perdu | — | — | — |
+| Confiscation | compétence | vole le prochain bonus de l'adversaire | — | bonus adverses | moy. +10,0 | — |
+| Malchance | compétence | le prochain jet de l'adversaire sur une compétence tombe à vide | malus | — | moy. +18,2 | — |
+| Flétrissure | compétence | −2 dégâts à chacun de ses coups, 3 tours | malus | — | moy. +9,1 | — |
+| Fausse note | compétence | ses 2 prochains coups qui touchent font −4 | malus | — | moy. +17,5 | — |
+
+#### Magie — Ysolde, Thaldrin, Fanchon (3) · 3 auras, 6 compétences
+
+| Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
+| --- | --- | --- | --- | --- | --- | --- |
+| Ciel d'orage | aura | au début de chacun de ses tours, l'adversaire perd 1 PV | dégâts directs | — | moy. +11,0 | Thaldrin (1) |
+| Champ d'orage | aura | chaque coup reçu foudroie l'attaquant : 1 PV | dégâts directs | coups reçus | moy. +9,8 | — |
+| Ballade | aura | chaque coup qui touche lui rend 1 PV | soins | — | moy. +11,3 | Fanchon (1) |
+| Feux follets | compétence | 3 Brûlure | Brûlure | — | signature | Thaldrin (2) |
+| Foudre | compétence | 4 PV en quatre éclairs | dégâts directs | — | rang +8,7 | — |
+| Embrasement | compétence | si l'adversaire brûle, son prochain coup qui touche : trois fois sa Brûlure | dégâts | Brûlure | Thaldrin +10,6 (moy. +8,6) | — |
+| Attiser | compétence | +2 à la Brûlure, qui repart | Brûlure | Brûlure (amplifie) | moy. +11,8 | — |
+| Éclair aveuglant | compétence | les critiques de l'adversaire ratent | malus | critiques adverses | moy. +13,6 | — |
+| Duo | compétence | des dés de plus à sa prochaine action (retiré par B10, remplaçant en attente) | jets | — | signature | Fanchon (2) |
+
+#### Synthèse
+
+| Maîtrise | Auras | Compétences | Total | Porteurs | Ressource propre (produite → consommée dans la maîtrise) |
+| --- | --- | --- | --- | --- | --- |
+| Chance | 4 | 6 | **10** | 3 | pièces → Dé pipé ; esquives → Feinte ; les 6 → Veine |
+| Rempart | 5 | 4 | 9 | 3 | renvois → Vindicte, Dette de sang ; armure vidée → Rempart hérissé ; coups reçus → Rancœur, Rancune |
+| Fureur | 3 | 6 | 9 | 2 | gros coups, critiques : **aucun consommateur dans la maîtrise** |
+| Magie | 3 | 6 | 9 | 3 | Brûlure → Embrasement, Attiser |
+| Ombre | **2** | 6 | 8 | 2 | malus posés : **aucun consommateur** ; ses deux auras vivent du critique, qu'elle ne produit pas |
+| Lumière | 4 | 3 | 7 | **1** | soins → Sentence, Bouclier de foi |
+| Sang | 3 | 3 | **6** | 3 | Saignement → Curée (une seule consommatrice) |
+| Poison | 3 | 3 | **6** | 3 | Poison → Virulence, Récolte ; soins → Sève noire |
+
+64 briques (27 auras, 37 compétences), 8 en moyenne. Écart : de 6 (Sang, Poison) à 10 (Chance).
+
+**Déséquilibres constatés (chiffres ci-dessus et § B5) :**
+1. **Taille** : Sang et Poison (6) contre Chance (10). Pour « globalement égales en contenu », il manque environ deux briques au Sang et au Poison, une à la Lumière ; la Chance en a deux de trop (ou une sous-famille à part : esquive et critique, une 3e maîtrise plus tard).
+2. **Ombre : deux auras seulement, toutes deux au critique**, qu'elle ne produit pas : faibles chez qui critique peu (Morgrut +2,9 et +0,7). Il manque une aura qui vit de ses propres malus.
+3. **Fureur et Ombre n'ont pas de boucle** (règle 2 : producteur et consommateurs) : la Fureur produit gros coups et critiques que consomment le Sang (Ivresse) et l'Ombre (Effroi, Pourriture) ; l'Ombre pose des malus que rien ne lit.
+4. **Lumière : un seul porteur** (Ysolde) et aucune brique qui gêne l'adversaire hors de la Purification (« le fait-il payer ? » ne tient qu'à la Sentence).
+5. **Consommatrices sans producteur au départ** : réglé par la règle (§ B5, le producteur d'abord) : elles ne sont plus proposées au départ, et restent à graver une fois leur producteur dans le build.
+6. **Hors bande gravées** (déjà connus) : Dé pipé +0,8, Dette de sang +1,8, Sève noire +3,6, Aura de pourriture +7,0 (toutes des consommatrices).
+7. **Duo** : sans dés de plus (B10), la signature de Fanchon et une brique de la Magie attendent leur remplaçant.
+
+**Trous de contenu à combler par l'utilisateur (sans invention ici) :**
+- Sang : une seconde consommatrice du Saignement, une compétence de plus (aujourd'hui Pourfendre seule pose sur jet).
+- Poison : une ou deux compétences (généraliste ou consommatrice).
+- Lumière : une brique qui fait payer l'adversaire ; un second porteur (personnage futur).
+- Ombre : une aura qui lit ses malus (ressource propre), pour tenir deux auras hors critique.
+- Fureur : un consommateur de ses gros coups ou de ses critiques, dans la maîtrise.
+- Chance : rien à ajouter ; une pièce de plus donnerait de la valeur au Dé pipé.
+
+
 ## 0. En bref
 
-- **Une maîtrise est une grande famille de sorts, par thème, lisible par le joueur** : Fureur, Sang, Chasse, Rempart, Représailles, Poison, Chance, Lumière, Ombre, Orage, Chant (onze). Elle remplace, côté joueur, les mots « famille » et « répertoire ». Les dix familles de statuts de [FAMILLES.md](FAMILLES.md) restent une donnée technique (le son d'une pose, `family`), jamais affichée comme maîtrise.
+- **Une maîtrise est une grande famille de sorts, par thème, lisible par le joueur** : Fureur, Sang, Rempart, Poison, Chance, Lumière, Ombre, Magie (**huit** depuis le second retour du 2026-10-27, section « Huit maîtrises » ci-dessus ; onze dans la conception : Chasse, Représailles, Orage et Chant en plus). Elle remplace, côté joueur, les mots « famille » et « répertoire ». Les dix familles de statuts de [FAMILLES.md](FAMILLES.md) restent une donnée technique (le son d'une pose, `family`), jamais affichée comme maîtrise.
 - **Chaque personnage joue sur deux maîtrises** (V1) ; une maîtrise est partagée par un à trois personnages, qui tirent ses auras et ses compétences dans **la même réserve** (V5 : Naraxes, Ervald et Thaldrin pour le Poison).
 - **Chaque compétence et chaque aura appartient à une seule maîtrise** (V2) ; une aura s'offre en cours de partie comme toute compétence, par Graver.
-- **Le dé de départ** (V4) : **une aura sur le 1, choisie** au début de la campagne parmi celles de ses deux maîtrises (V3), et **sur le 2 sa compétence de personnage, fixe** (Furie des vents pour Gorak, Pile ou face pour Naraxes). Quatre faces nues. Le tournoi joue l'aura par défaut. Chaque aura proposée au départ est mesurée dans la tolérance (42 à 58 %).
+- **Le dé de départ** (V4) : **une aura sur le 1, choisie** au début de la campagne parmi celles de ses deux maîtrises (V3), et **sur le 2 sa compétence de personnage, fixe** (Furie des vents pour Gorak, Pile ou face pour Naraxes). Quatre faces nues. Le duel joue l'aura par défaut ; le tournoi et la saison en tirent une au hasard (§ 5.3). Ses auras de départ : toutes celles de ses deux maîtrises que son dé de départ sert (B5, le producteur d'abord), mesurées sans exclusion par taux.
 - **L'offre ne verrouille rien** (V3) : Graver propose **deux compétences, une de chaque maîtrise**, au lieu d'une ; la règle « le producteur d'abord » reste.
 - **Cinq dés vanilla changent** (Gorak, Elaria, Aldric, Thaldrin, Fanchon), deux se retouchent (Brokk : Poing de pierre ; Morgrut : une aura, question Q2), trois ne bougent pas (Ervald, Ysolde, Naraxes).
 - **M9** : Dé pipé devient une aura (Chance) ; Plaie ouverte est refaite (« 1 Saignement à chaque coup qui touche », +13 à +14 gravée au lieu de +6 à +13) ; Ivresse du sang et Sève noire sont déjà des auras, gardées, rangées en Fureur et en Poison.
@@ -28,10 +288,10 @@ _Conception (vague 1) demandée par l'utilisateur le 2026-10-27 ([retour du 27 o
 1. **Maîtrise** : un thème que le joueur reconnaît en une phrase (« il fait saigner », « il joue aux pièces »), avec son emblème peint. C'est le seul mot montré au joueur pour ce niveau ; « famille » et « répertoire » disparaissent de l'écran.
 2. **Une maîtrise tient une boucle** : au moins un producteur de sa ressource, ses consommateurs, et des généralistes. Une consommatrice appartient à la maîtrise qui produit sa ressource (Dette de sang vit des renvois : Représailles, pas Sang), sinon elle serait offerte à des personnages qui n'ont jamais sa ressource.
 3. **Une brique, une maîtrise.** Pas de double appartenance : la réserve d'une maîtrise est une liste, la même pour tous ses porteurs.
-4. **Taille** : au moins deux auras (le choix du départ) et cinq briques par maîtrise ; au moins huit briques gravables par personnage (ses deux réserves moins son dé), pour que quatre forges ne l'épuisent pas (règle actuelle de `offers.ts`). Exception assumée : le Chant n'a qu'une aura (§ 4, à écrire).
+4. **Taille** : au moins deux auras (le choix du départ) et cinq briques par maîtrise ; au moins huit briques gravables par personnage (ses deux réserves moins son dé), pour que quatre forges ne l'épuisent pas (règle actuelle de `offers.ts`). Exception assumée : le Chant n'a qu'une aura (§ 4, à écrire). _Depuis B1 : six briques et deux auras, sans exception (`validateMasteries`)._
 5. **La famille de statut reste** (`StatusDef.family`) : elle choisit le son ([SONS.md](SONS.md) § 4.2) et sert aux règles de rangement de [FAMILLES.md](FAMILLES.md). Elle n'est plus affichée comme une maîtrise. Dans le compendium (vague 1, agent Compendium), le libellé d'une aura passe par un seul point, `familyLabel` (`statuses.ts`) : en vague 2, il devient le nom de sa maîtrise.
 
-## 3. Les onze maîtrises
+## 3. Les onze maîtrises (conception, avant B1)
 
 | Id (code) | Maîtrise | La question du joueur | Familles de statuts couvertes | Ressource (la boucle) | Personnages | Emblème à peindre (à demander) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -205,13 +465,13 @@ Réglage livré : `ROT_AURA_ROT = 2` (`statuses.ts`), le texte suit (« 2 Pourri
 
 ### 5.1 La règle : l'aura sur le 1, au choix ; la face 2, fixe
 
-- **Face 1 : une aura**, choisie en début de campagne parmi les **auras de départ** du personnage (§ 5.2) ; en tournoi et en duel, la première de la liste (le dé vanilla).
+- **Face 1 : une aura**, choisie en début de campagne parmi les **auras de départ** du personnage (§ 5.2) ; en duel, la première de la liste (le dé vanilla) ; en tournoi et en saison, tirée au hasard (§ 5.3).
 - **Face 2 : sa compétence de personnage**, fixe (`signature`). **Pourquoi fixe** : (1) un personnage est un personnage précis (principe 8 de [INTENTION.md](INTENTION.md)) : Gorak sans Furie des vents, Naraxes sans Pile ou face ne sont plus eux ; (2) l'aura porte déjà la personnalisation : un second choix multiplierait les départs à mesurer (auras × faces 2) et à équilibrer, pour une liberté que la forge donne déjà ensuite (Graver, Copier, Refondre) ; (3) la face 2 travaille avec les auras des deux maîtrises (Pile ou face touche, donc nourrit aussi la Décoction).
-- **Les auras de départ** d'un personnage : celles de ses deux maîtrises dont la ressource est déjà dans son dé de départ (le producteur d'abord : Vindicte a la Rétribution d'Aldric ; la Sentence n'a aucun soin chez Ysolde sans Sainteté, elle n'est pas proposée) **et** dont le départ mesuré tient la tolérance (42 à 58 %, aucun duel au-delà de 65/35). La liste est une donnée du personnage (`startAuras`), figée par un test.
+- **Les auras de départ** d'un personnage : celles de ses deux maîtrises dont la ressource est déjà dans son dé de départ (le producteur d'abord : Vindicte a la Rétribution d'Aldric ; la Sentence n'a aucun soin chez Ysolde sans Sainteté, elle n'est pas proposée) **et** dont le départ mesuré tient la tolérance (42 à 58 %, aucun duel au-delà de 65/35). La liste est une donnée du personnage (`startAuras`), figée par un test. _Depuis B5 (second retour du 2026-10-27) : le producteur d'abord reste la règle, mais plus la tolérance ; les auras de départ sont dérivées (`startAurasFor`) : toutes celles de ses deux maîtrises que son dé de départ sert, sans exclusion par taux ni par personnage ; mesures : section « Huit maîtrises », B5._
 
 ### 5.2 Les départs mesurés
 
-Dé de départ contre le roster nu d'aujourd'hui, 400 combats par duel (3 600 par départ ; marge d'un taux ± 1,6 point, d'un écart apparié ± 1 à 2). En gras, l'aura par défaut (tournoi).
+Dé de départ contre le roster nu d'aujourd'hui, 400 combats par duel (3 600 par départ ; marge d'un taux ± 1,6 point, d'un écart apparié ± 1 à 2). En gras, l'aura par défaut (le dé vanilla).
 
 | Personnage | Maîtrises | Face 2 | Dé vanilla aujourd'hui | Auras de départ proposées (taux) | Écartées au départ |
 | --- | --- | --- | --- | --- | --- |
@@ -251,9 +511,11 @@ Lecture :
 - **Naraxes** perd le Dé pipé au départ (41,4 %, § 4 bis).
 - **Ysolde** (42,6 à 43,8 %) et **Ervald** (42,4 à 48,9 %) tiennent la tolérance au ras du bas : leurs dés vanilla sont les plus faibles du `npm run balance` (44,2 et 44,4 %). À relever par leurs compétences avant d'ajouter une aura de départ.
 
-### 5.3 Le tournoi et le duel
+### 5.3 Le tournoi, la saison et le duel
 
-Le tournoi joue le dé vanilla : l'aura par défaut. Sur l'écran d'affrontement, le dé montre l'aura sur le 1 comme aujourd'hui (aucun choix d'aura en tournoi : le tournoi est le laboratoire du dé vanilla, règle de l'utilisateur du 2026-10-25, « un seul modèle »). Un choix d'aura en duel est possible plus tard, comme le pavé de triche ; il n'est pas prévu.
+**Tournoi et saison : l'aura de départ tirée** (retour du 2026-10-27, B7, « comme si chaque participant choisissait son build ») : au lancement, avant le premier combat, chaque participant reçoit une aura **au hasard parmi les `startAuras` de sa fiche** (toutes les auras de ses deux maîtrises, chacune avec la même chance ; `drawStartAuras`, `tournament.ts`), tirée à la graine du tournoi ou de la saison sur un hasard à part (`seed ^ 'aura'`) : même graine, même tirage. Elle est sur le 1 de son dé **pour tout le tournoi**, et pour une saison **pour toute la saison puis l'arbre** (choix de l'agent : sa forge de saison se construit et se valide sur ce dé, les offres le lisent ; une aura qui changerait à chaque match invaliderait un Aiguiser de l'aura ou une gravure qui dépend d'elle, et brouillerait l'identité du participant). Elle se voit avant le premier combat : sceau de l'aura à côté du nom au classement de saison (infobulle au survol), 1 du dé en miniature de chaque carte de l'arbre, dé de l'écran d'affrontement et du champion. Les cotes cachées et les parieurs de l'ordinateur se calculent sur ces combattants mêmes (`priceMatch`) : ils suivent le dé réel. Un participant sans aura (tournoi d'avant le tirage) ou dont l'aura n'est plus l'une de ses `startAuras` part de l'aura par défaut (`entrantAura`). Le duel joue toujours le dé vanilla (l'aura par défaut) ; un choix d'aura en duel est possible plus tard, comme le pavé de triche ; il n'est pas prévu.
+
+Mesure (`npm run season`, section « Aura de départ tirée », taux de saison par aura ; et douze saisons de 24, même arbre de travail, sans puis avec tirage) : taux de saison par personnage de 42-56 % (écart-type 4,7 points) à 41-54 % (4,1 points), 6 624 matchs chacun ; durée 5,98 → 6,11 tours par combattant.
 
 ## 6. L'offre en cours de partie (V3, V5)
 
@@ -364,13 +626,15 @@ Esprit : ne pas fermer de possibilité, on remplace plutôt qu'on ampute. Les id
 
 **Recommandation** : ne pas la livrer telle quelle ; si on la veut, sous sa forme avec prix. L'agent CoinsRelics l'a notée en idée ([RELIQUES.md](RELIQUES.md) § 17).
 
+**Suite (second retour du 2026-10-27, B11)** : faire vivre les auras sans relique obligatoire, dans [AURAS.md](AURAS.md). Recommandation mesurée : « son aura de départ arrive au plus tard à son 3e tour » (présence 38,5 → 72 %, combats sans aura 28 → 0 %) ; la relique R5 y retombe à +5 / +13, une relique ordinaire. Le Dé pipé à double effet (B12) et les dés de plus par maîtrise (B13) y sont aussi.
+
 ## 11. Le modèle de données (vague 2)
 
 ### 11.1 Les fichiers
 
 - **`src/game/masteries.ts`** (nouveau) :
   ```ts
-  export type MasteryId = 'fury' | 'blood' | 'hunt' | 'bulwark' | 'retaliation' | 'poison' | 'chance' | 'light' | 'shadow' | 'storm' | 'song'
+  export type MasteryId = 'fury' | 'blood' | 'bulwark' | 'poison' | 'chance' | 'light' | 'shadow' | 'magic' // huit depuis B1 (onze à la conception)
   export interface Mastery {
     id: MasteryId
     name: string            // « Fureur »
@@ -415,7 +679,7 @@ Esprit : ne pas fermer de possibilité, on remplace plutôt qu'on ampute. Les id
 
 ## 12. L'interface (vague 2)
 
-- **Compendium, onglet Maîtrises** : une tuile par maîtrise (emblème, nom, question, les portraits de ceux qui la jouent), ouverte sur ses auras puis ses compétences (icône, nom, une ligne d'effet ; détail au survol). Dans l'onglet Auras et l'onglet Compétences (C1, C2), chaque brique nomme sa maîtrise (son emblème en petit) au lieu de sa famille de statut. La règle « Auras » dit : une par personnage sur le 1 de son dé, choisie au début d'une campagne ; les autres s'obtiennent en gravant. La fiche d'un personnage (C6) nomme ses deux maîtrises sous son nom.
+- **Compendium, onglet Maîtrises** : une tuile par maîtrise (emblème, nom, question, les portraits de ceux qui la jouent), ouverte sur ses auras puis ses compétences (icône, nom, une ligne d'effet ; détail au survol). Dans l'onglet Auras et l'onglet Compétences (C1, C2), chaque brique nomme sa maîtrise (son emblème en petit) au lieu de sa famille de statut. La règle « Auras » dit : une par personnage sur le 1 de son dé, choisie au début d'une campagne ; les autres s'obtiennent en gravant. La fiche d'un personnage (C6) nomme ses deux maîtrises sous son nom. _Depuis B3 et B4 : plus de porteurs dans l'onglet Maîtrises, plus d'onglet Auras (toutes les fiches dans Compétences ; la règle courte des auras en tête de l'encadré Auras de chaque maîtrise)._
 - **Écran d'affrontement** (U5, agent Screens) : sous le nom, « Chasse · Sang » avec les deux emblèmes, à la place de « Elfe · Rôdeuse » (race et classe restent dans la fiche du compendium).
 - **Livré (tranches F et G, agent MasteriesUI)** :
   - compendium : onglet **Maîtrises** entre Combattants et Compétences (`MasteriesSection.tsx`) : onze tuiles à gauche (emblème, nom, question, portraits des porteurs), la maîtrise ouverte à droite (emblème, question, phrase, « La jouent » en liens vers les fiches, puis les encadrés « Auras » et « Compétences » : sceau, nom en lien vers sa fiche, une ligne d'effet, l'infobulle de la compétence au survol, pastille « Aura » ou « Compétence » au lieu d'une face) ;

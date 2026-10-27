@@ -4,16 +4,16 @@ import { describeSkill, DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollF
 import { autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFaces, forgeState, GILD_BONUS, offerTargets, rankText, sharpen, stepKey, stepLabel, stepOf, TEMPER_BONUS, withForgeStep, writtenFace, type ForgeBase, type ForgeStep } from './forge'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
-import { characterPool, MASTERIES, MASTERY_IDS, masteryOfSkill, poolOf, validateMasteries } from './masteries'
+import { aurasOf, characterPool, MASTERIES, MASTERY_IDS, masteryOfSkill, poolOf, validateMasteries } from './masteries'
 import { skillById } from './skills'
 import { computeStats } from './stats'
-import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, LUCKY_COIN_CRITS, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, LUCKY_COIN_POWER, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
 import { EMOJI, oldDie, onOldDie, testCharacter } from './test-utils'
 import { Character, type CharacterStats } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
 import { typeset } from './typography'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from './trace'
-import { buildHooks, echoOf, eventHooks, linkBetween, relicHooks, relicNeeds, skillNeeds } from './hooks'
+import { buildHooks, echoOf, eventHooks, linkBetween, reachOf, relicHooks, relicNeeds, skillNeeds } from './hooks'
 import { SCENE_EVENTS } from './scenes'
 import { offerableSkills } from './offers'
 
@@ -199,54 +199,44 @@ const withStart = (effects: CharacterEvent['effects'], statsA = {}, statsB = {})
   ])
 
 describe('statuts', () => {
-  it('Critique assuré : force le critique du prochain coup qui touche et consomme une charge ; s’use d’une charge à la fin de chaque tour (M1, 2026-10-27)', () => {
-    const r = withStart([{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 3 }])
-    const mine = attacksOf(r).filter((a) => a.attacker === 0)
-    // 3 : le coup du premier tour (→ 2), l'usure de sa fin (→ 1), le coup du deuxième tour (→ 0), plus rien
-    expect(mine.slice(0, 2).every((a) => a.crit && a.critForced)).toBe(true)
-    expect(mine[2].crit).toBe(false)
-    const worn = ofType(r, 'statusAge').filter((b) => b.side === 0 && b.worn)
-    expect(worn[0]).toMatchObject({ phase: 'turnEnd', worn: [{ status: 'guaranteedCrit', from: 2, to: 1 }] })
-    expect(stacksOf(worn[0].state.statuses[0], 'guaranteedCrit')).toBe(1)
-  })
-
-  it("Critique assuré : n'est pas consommé par une esquive, mais s'use à la fin du tour ; à 0, il s'éteint", () => {
-    const r = run([
-      testCharacter('a', { dodgeChance: 1 }, [
-        {
-          id: 's',
-          name: 's',
-          trigger: 'combatStart',
-          effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
-        },
-      ]),
-      testCharacter('b', { dodgeChance: 1 }),
+  it('Critique assuré (B8, 2026-10-27) : une seule charge, qui ne se cumule pas ; la prochaine frappe est critique et la dépense', () => {
+    const r = withStart([
+      { type: 'applyStatus', status: 'guaranteedCrit', stacks: 3 },
+      { type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 },
     ])
-    expect(attacksOf(r).length).toBe(MAX_TURNS)
-    const first = attacksOf(r).find((a) => a.attacker === 0)!
-    expect(first).toMatchObject({ dodged: true, critForced: false })
-    const worn = ofType(r, 'statusAge').find((b) => b.worn)!
-    expect(worn).toMatchObject({ side: 0, phase: 'turnEnd', worn: [{ status: 'guaranteedCrit', from: 1, to: 0 }], expired: ['guaranteedCrit'] })
-    expect(finalState(r).statuses[0]).toEqual([])
+    const start = ofType(r, 'event').find((b) => b.event.eventId === 'start')!
+    expect(stacksOf(start.state.statuses[0], 'guaranteedCrit')).toBe(1)
+    const mine = ofType(r, 'attack').filter((b) => b.attack.attacker === 0)
+    expect(mine[0].attack).toMatchObject({ crit: true, critForced: true, critBy: 'guaranteedCrit' })
+    expect(stacksOf(mine[0].state.statuses[0], 'guaranteedCrit')).toBe(0)
+    expect(mine[1].attack).toMatchObject({ critForced: false })
+    // Plus d'usure par tour : aucune étape d'usure ne le nomme
+    expect(ofType(r, 'statusAge').some((b) => b.expired.includes('guaranteedCrit'))).toBe(false)
   })
 
-  it('Critique assuré : pas d’usure le tour de sa pose (comme une durée), il attend le tour suivant', () => {
-    // Posé au début de son premier tour, son coup esquivé : la charge passe ce tour, puis s'use à la fin du suivant
-    const once: CharacterEvent = { id: 's', name: 's', trigger: 'turnStart', limit: 1, effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] }
-    const r = run([testCharacter('a', { maxHp: 400 }, [once]), testCharacter('b', { maxHp: 400, dodgeChance: 1 })])
-    const posed = ofType(r, 'event').find((b) => b.event.eventId === 's')!
-    const ends = ofType(r, 'statusAge').filter((b) => b.side === 0 && b.phase === 'turnEnd')
-    // Aucune usure à la fin du tour de la pose ; à la fin du tour suivant du porteur, 1 → 0
-    expect(ends.filter((b) => b.turn === posed.turn)).toEqual([])
-    const worn = ends.find((b) => b.worn)!
-    expect(worn.turn).toBe(posed.turn + 2)
-    expect(worn.worn).toEqual([{ status: 'guaranteedCrit', from: 1, to: 0 }])
-    // Une charge posée pendant le tour de l'adversaire (Rancune, Feinte) sert encore au tour suivant du porteur
+  it('Critique assuré : un coup esquivé le perd', () => {
+    const r = run([
+      testCharacter('a', { maxHp: 400 }, [{ id: 's', name: 's', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] }]),
+      testCharacter('b', { maxHp: 400, dodgeChance: 1 }),
+    ])
+    const first = ofType(r, 'attack').find((b) => b.attack.attacker === 0)!
+    expect(first.attack).toMatchObject({ dodged: true, crit: false, critForced: true, critBy: 'guaranteedCrit', damage: 0 })
+    expect(stacksOf(first.state.statuses[0], 'guaranteedCrit')).toBe(0)
+    expect(traceText(r)).toContain('Critique assuré perdu')
+  })
+
+  it('Critique assuré : il attend la prochaine frappe sans s’user, d’un tour à l’autre ; son intensité s’ajoute au coup critique', () => {
+    // Posé pendant le tour de l'adversaire (comme la Rancune, la Feinte) : la frappe suivante du porteur est critique
     const grudge: CharacterEvent = { id: 'g', name: 'g', trigger: 'hurt', limit: 1, effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] }
     const g = run([testCharacter('a', { maxHp: 400 }, [grudge]), testCharacter('b', { maxHp: 400 })])
     const got = ofType(g, 'event').find((b) => b.event.eventId === 'g')!
     const next = ofType(g, 'attack').find((b) => b.attack.attacker === 0 && b.id > got.id)!
     expect(next.attack).toMatchObject({ crit: true, critForced: true })
+    // Intensité (Œil de faucon aiguisé, Pièce porte-bonheur) : +3 après le multiplicateur, avant l'armure
+    const r = withStart([{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1, power: 3 }])
+    const a = attacksOf(r).find((x) => x.attacker === 0)!
+    expect(a).toMatchObject({ crit: true, critForced: true })
+    expect(a.raw).toBe(Math.round(a.value * a.critMultiplier) + 3)
   })
 
   it('Armure temporaire : absorbe sans descendre sous 1, puis disparaît', () => {
@@ -1409,10 +1399,10 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     expect(kept).toBeGreaterThan(10)
   })
 
-  it('Aura d’immunité (0.42.0) : tant qu’elle est là, l’armure du porteur gagne 1 ; une aura du Rempart (Maîtrises)', () => {
+  it('Aura d’immunité (0.42.0) : tant qu’elle est là, l’armure du porteur gagne 1 ; une aura de la Lumière (B1)', () => {
     const paladin = createCharacter('aldric')
     expect(effectiveStats(paladin, [{ id: 'immunityAura', stacks: 1 }]).armor).toBe(paladin.stats.armor + 1)
-    expect(masteryOfSkill('immunity-aura')).toBe('bulwark')
+    expect(masteryOfSkill('immunity-aura')).toBe('light')
   })
 
   it('Saignement dans le roster (règle 9) : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une', () => {
@@ -3383,9 +3373,9 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
       expect(b).toMatchObject({ side: 0, trigger: 'hurt' })
       expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
       expect(stacksOf(b.state.statuses[0], 'grudge')).toBe(stacksOf(r.beats[b.id - 1].state.statuses[0], 'grudge') - 1)
-      // Son prochain coup qui touche est critique
-      const next = ofType(r, 'attack').find((x) => x.id > b.id && x.attack.attacker === 0 && !x.attack.dodged)
-      if (next) expect(next.attack).toMatchObject({ crit: true, critForced: true })
+      // Sa prochaine frappe porte le critique : critique si elle touche, perdu si elle est esquivée (B8)
+      const next = ofType(r, 'attack').find((x) => x.id > b.id && x.attack.attacker === 0 && !x.attack.replaced && !x.attack.jinxed)
+      if (next) expect(next.attack).toMatchObject({ crit: !next.attack.dodged, critForced: true })
     }
   })
 })
@@ -3628,11 +3618,14 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
     expect(RELICS.flatMap((r) => r.effects ?? []).some((e) => e.type === 'applyStatus' && STATUSES[e.status].coinToss)).toBe(false)
   })
 
-  it('Pièce porte-bonheur : juste après le coup qui la pose, une pièce ; pile, +2 critiques assurés au lanceur ; face, rien', () => {
+  it('Pièce porte-bonheur : juste après le coup qui la pose, une pièce ; pile, un critique assuré qui fait des dégâts en plus (B8) ; face, rien', () => {
     const all = coins(thrower('lucky-coin'))
     for (const c of all) {
       expect(c).toMatchObject({ side: 0, status: 'luckyCoin' })
-      if (c.heads) expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: LUCKY_COIN_CRITS })])
+      if (c.heads) {
+        expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
+        expect(c.state.statuses[0].find((s) => s.id === 'guaranteedCrit')).toMatchObject({ stacks: 1, power: LUCKY_COIN_POWER })
+      }
       else expect(c.effects).toEqual([])
       expect(stacksOf(c.state.statuses[0], 'luckyCoin')).toBe(0)
     }
@@ -4103,11 +4096,12 @@ describe('phase 8, lot 3 : les malus de famille (docs/SORTS.md § 29)', () => {
     for (const x of b) expect(x.attack).toMatchObject({ dodged: true, crit: false, damage: 0, blindedBy: 'blinded' })
     expect(ofType(r, 'event').filter((x) => x.event.eventId === 'on-dodge')).toEqual([])
     expect(ofType(r, 'event').filter((x) => x.event.eventId === 'on-missed').length).toBe(b.length)
-    // Le critique assuré part dans le coup raté (trois charges : une par coup, une usée à la fin de son premier tour)
-    const sure = run([testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], 'curse')]), testCharacter('b', { maxHp: 400, critChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 3 }], 'sure')])])
-    const first = ofType(sure, 'attack').filter((x) => x.attack.attacker === 1).slice(0, 2)
-    for (const x of first) expect(x.attack).toMatchObject({ dodged: true, critForced: true, critBy: 'guaranteedCrit', blindedBy: 'blinded' })
-    expect(stacksOf(first[1].state.statuses[1], 'guaranteedCrit')).toBe(0)
+    // Le critique assuré part dans le coup raté (une seule charge, B8) ; le coup suivant ne l'a plus
+    const sure = run([testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], 'curse')]), testCharacter('b', { maxHp: 400, critChance: 0 }, [ev('combatStart', [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }], 'sure')])])
+    const [first, second] = ofType(sure, 'attack').filter((x) => x.attack.attacker === 1)
+    expect(first.attack).toMatchObject({ dodged: true, critForced: true, critBy: 'guaranteedCrit', blindedBy: 'blinded' })
+    expect(stacksOf(first.state.statuses[1], 'guaranteedCrit')).toBe(0)
+    expect(second.attack).toMatchObject({ critForced: false })
     // Aiguisé : +10 % de coups ratés par rang, même sans critique
     let misses = 0
     let total = 0
@@ -4261,17 +4255,19 @@ describe('retour de l’utilisateur du 2026-10-27 : règles du moteur (M1 à M8,
 })
 
 describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', () => {
-  it('le registre : onze maîtrises, chaque compétence dans une seule, deux maîtrises distinctes par personnage', () => {
+  it('le registre : huit maîtrises (B1), chaque compétence dans une seule, deux maîtrises distinctes par personnage', () => {
     expect(validateMasteries(ROSTER)).toEqual([])
-    expect(MASTERY_IDS).toHaveLength(11)
+    expect(MASTERY_IDS).toEqual(['fury', 'blood', 'bulwark', 'poison', 'chance', 'light', 'shadow', 'magic'])
     // Toute compétence gravable du roster a sa maîtrise, une seule
     for (const e of ENGRAVABLE_SKILLS) expect(masteryOfSkill(e.id), e.id).toBeDefined()
     expect(Object.values(MASTERIES).flatMap((m) => m.skills)).toHaveLength(new Set(Object.values(MASTERIES).flatMap((m) => m.skills)).size)
     for (const d of ROSTER) expect(new Set(d.masteries).size, d.id).toBe(2)
     // Une compétence de son dé hors de ses maîtrises, deux fois la même maîtrise : signalées
     const gorak = ROSTER.find((d) => d.id === 'gorak')!
-    expect(validateMasteries([{ ...gorak, masteries: ['fury', 'fury'] }])).toEqual(['gorak : deux maîtrises distinctes attendues'])
-    expect(validateMasteries([{ ...gorak, masteries: ['blood', 'hunt'] }])).toEqual(['gorak : blood-frenzy (fury) hors de ses maîtrises', 'gorak : wind-fury (fury) hors de ses maîtrises'])
+    expect(validateMasteries([{ ...gorak, masteries: ['fury', 'fury'] }])).toEqual(['gorak : deux maîtrises distinctes attendues', 'gorak : blood-frenzy (blood) hors de ses maîtrises'])
+    expect(validateMasteries([{ ...gorak, masteries: ['chance', 'light'] }])).toEqual(['gorak : blood-frenzy (blood) hors de ses maîtrises', 'gorak : wind-fury (fury) hors de ses maîtrises'])
+    // Chaque signature appartient à l'une de ses deux maîtrises (B2)
+    for (const d of ROSTER) if (d.signature) expect(d.masteries, d.id).toContain(masteryOfSkill(d.signature))
   })
 
   it('V5 : deux personnages qui partagent une maîtrise tirent dans la même réserve', () => {
@@ -4296,8 +4292,12 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     expect(validateRoster()).toEqual([])
     for (const d of ROSTER) {
       const faces = d.events.map((e) => `${e.id}@${rollFace(e.trigger)}`)
+      // B5 : ses auras de départ, celles de ses deux maîtrises dont le besoin est servi par son dé de départ sans le 1 (le
+      // producteur d'abord, la règle de l'offre : `reachOf`, `skillNeeds`), l'aura de son dé vanilla d'abord
+      const reach = reachOf({ ...d, events: d.events.filter((e) => rollFace(e.trigger) !== 1) })
+      for (const a of d.masteries.flatMap(aurasOf)) expect(d.startAuras!.includes(a.id), `${d.id} ${a.id}`).toBe(skillNeeds(a).every((h) => reach.has(h)))
       expect(faces, d.id).toEqual([`${d.startAuras![0]}@1`, ...(d.signature ? [`${d.signature}@2`] : [])])
-      // Le tournoi joue l'aura par défaut : le personnage du roster, tel quel
+      // L'aura par défaut (la première, celle du duel) donne le personnage du roster, tel quel ; le tournoi et la saison en tirent une au hasard
       expect(createCharacter(d.id, { aura: d.startAuras![0] }), d.id).toBe(createCharacter(d.id))
       for (const aura of d.startAuras!) {
         const c = createCharacter(d.id, { aura })
@@ -4305,6 +4305,15 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
         expect(c.events.filter((e) => rollFace(e.trigger) !== 1)).toEqual(d.events.filter((e) => rollFace(e.trigger) !== 1))
       }
     }
+    // Les consommatrices sans producteur sur le dé de départ ne sont pas proposées ; avec, elles le sont
+    const starts = (id: string) => ROSTER.find((d) => d.id === id)!.startAuras!
+    expect(starts('ysolde')).not.toContain('sentence')
+    expect(starts('ysolde')).not.toContain('faith-shield')
+    expect(starts('brokk')).not.toContain('vendetta')
+    expect(starts('aldric')).toEqual(expect.arrayContaining(['vendetta', 'blood-debt']))
+    expect(starts('naraxes')).toContain('loaded-die')
+    expect(starts('elaria')).not.toContain('loaded-die')
+    expect(starts('morgrut')).not.toContain('bristling-rampart')
     // Le druide garde ses sorts sous forme humaine, l'aura choisie comprise
     expect(createCharacter('thaldrin', { aura: 'storm-field' }).events.map((e) => e.form)).toEqual(['human', 'human'])
     // Une aura hors de ses auras de départ est refusée

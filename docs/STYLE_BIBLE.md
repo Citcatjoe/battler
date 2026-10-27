@@ -1061,15 +1061,15 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 149 | `cursed-coin` | Pièce maudite (compétence et statut `cursedCoin`, Chance, v26) | Pièce de fer noirci à liseré violet, crâne de lézard frappé, fumée violette |
 | 150 | `mastery-fury` | Emblème de la Fureur (v27, 2026-10-27) | Poing qui serre un manche de hache levée, orange feu |
 | 151 | `mastery-blood` | Emblème du Sang (v27) | Goutte de sang qui coule le long d'une courte lame, cramoisi |
-| 152 | `mastery-hunt` | Emblème de la Chasse (v27) | Œil de rapace transpercé d'une flèche, bleu nuit |
+| 152 | ~~`mastery-hunt`~~ | Emblème de la Chasse (v27) ; **retiré en 0.122.0** (maîtrise fondue dans la Chance), fichier à la corbeille | Œil de rapace transpercé d'une flèche, bleu nuit |
 | 153 | `mastery-bulwark` | Emblème du Rempart (v27) | Bouclier rond clouté vu de face, gris fer |
-| 154 | `mastery-retaliation` | Emblème des Représailles (v27) | Deux lames croisées dont les pointes reviennent vers soi, bronze bruni |
+| 154 | ~~`mastery-retaliation`~~ | Emblème des Représailles (v27) ; **retiré en 0.122.0** (maîtrise fondue dans le Rempart), fichier à la corbeille | Deux lames croisées dont les pointes reviennent vers soi, bronze bruni |
 | 155 | `mastery-poison` | Emblème du Poison (v27) | Fiole ventrue d'où monte une fumée, vert toxique |
 | 156 | `mastery-chance` | Emblème de la Chance (v27) | Pièce debout contre un dé à six faces, or de pièce |
 | 157 | `mastery-light` | Emblème de la Lumière (v27) | Disque solaire à rayons droits et épais, blanc ivoire |
 | 158 | `mastery-shadow` | Emblème de l'Ombre (v27) | Crâne sous un croissant de lune noir, violet-noir |
-| 159 | `mastery-storm` | Emblème de l'Orage (v27) | Éclair qui fend une nuée, cyan électrique |
-| 160 | `mastery-song` | Emblème du Chant (v27) | Luth à une corde qui vibre, magenta |
+| 159 | `mastery-magic` | Emblème de la Magie (v27, `mastery-storm` renommé en 0.122.0 : l'Orage devient la Magie) | Éclair qui fend une nuée, cyan électrique |
+| 160 | ~~`mastery-song`~~ | Emblème du Chant (v27) ; **retiré en 0.122.0** (maîtrise répartie entre Magie, Fureur, Lumière et Ombre), fichier à la corbeille | Luth à une corde qui vibre, magenta |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1308,6 +1308,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v28 | 2026-10-27 | reliques d'avant la 0.121.0 | **Recoloration** (B14, demande de l'utilisateur : des reliques plus colorées, comme les nouvelles, couleurs plus intenses et variées). Artlist, GPT Image 2.5, 320 crédits ; deux planches 4×4 en image-à-image, depuis une mosaïque des anciennes icônes, la planche v25 en cible de couleur ; **la version A retenue** : 29 icônes repeintes (`caged-ember` prise dans la version B, restée rouge). `venom-vial` gardée telle quelle (déjà verte). Mêmes identifiants, mêmes motifs. Emblèmes : `mastery-storm` renommé `mastery-magic`, `mastery-hunt`, `mastery-retaliation` et `mastery-song` retirés (0.122.0, huit maîtrises). Non vues dans un écran du jeu. |
 | v27 | 2026-10-27 | 150 à 160 | Les onze emblèmes de maîtrise (grammaire nouvelle, ci-dessus). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions générées, **la version B retenue**. Découpe par `scripts/slice-icons.py`. Vus dans le compendium (onglet Maîtrises) et à l'affrontement (captures Firefox). |
 | v26 | 2026-10-27 | 139 à 149 | Onze compétences et statuts des Maîtrises (Veine, Effroi, Rancœur, Champ d'orage, Ballade, Prière, Flétrissure, Assaut, Poing de pierre, Pièce porte-bonheur, Pièce maudite). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions : **la version A retenue**, sauf `lucky-streak` découpée de la version B sur fond noir. Les pièces remplacent leurs remplaçants temporaires (`coin-pile`, `coin-face`). |
 | v25 | 2026-10-27 | 102, 136 à 138 | Trois reliques nouvelles (Médaille de sursis, Cor d'avant-garde, Pièce lestée) et l'Onguent du rebouteux repeint avec deux creux. Premières reliques sous la règle U6 (une teinte maîtresse franche). Artlist, GPT Image 2.5 ; planche 2×2, deux versions : **la version damier retenue**. Les trois planches v25 à v27 : 480 crédits. |

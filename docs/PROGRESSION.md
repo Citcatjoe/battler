@@ -23,9 +23,9 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
 - **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.119.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-27, version 0.121.0)
+## 0 bis. État des lieux (2026-10-27, version 0.122.0)
 
-_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.121.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11), puis une campagne avec chaque personnage sur la 0.120.0 le 2026-10-27 (retour traité en 0.121.0, § 1.21 : les Maîtrises). Il n'a pas encore joué la 0.121.0._
+_Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.122.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11), puis une campagne avec chaque personnage sur la 0.120.0 le 2026-10-27 (retour traité en 0.121.0, § 1.21 : les Maîtrises), puis a rendu un second retour le même jour sur la 0.121.0 (traité en 0.122.0, § 1.22 : huit maîtrises, règles pour tous). Il n'a pas encore joué la 0.122.0._
 
 ### Ce qui a changé depuis la 0.104.x
 
@@ -52,6 +52,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.119.0 | **Le lot 3 de la phase 8** (§ 1.20) : cinq malus de famille (Brise-garde, Malchance, Éclair aveuglant, Hémorragie, Confiscation) et sept fils minces (Feinte, Sève noire, Dette de sang, Attiser, Ciel d'orage, Ivresse du sang, Coup de massue), hors kit, dans les réserves et les répertoires, la même offre en campagne et en saison ; **chaque bonus ou malus posé sonne sa famille** (16 sons, ElevenLabs) ; roster nu inchangé ; saison 32-69 % → 34-65 % |
 | 0.120.0 | La perte de contrôle : deux images par personnage qui alternent tant qu'il porte la Peur ou l'Étourdi ; aucune règle changée |
 | 0.121.0 | **Les Maîtrises** (§ 1.21, [MAITRISES.md](MAITRISES.md)) : deux par personnage, la réserve d'une maîtrise partagée par ceux qui la jouent ; le dé de départ porte une aura au choix sur le 1 et la signature sur le 2 ; Graver propose une compétence par maîtrise ; onze briques nouvelles ou refaites ; Critique assuré qui s'use, Poison en fin de tour ; Fanchon sans Aura mélodieuse (Ballade, Duo à 3 charges) ; pièces en compétences, trois reliques ; compendium par maîtrise. Roster de 46,0 à 54,9 % ; construits : écart 24,5 points, Fanchon 62,2 %, Ysolde 37,7 % |
+| 0.122.0 | **Huit maîtrises** (§ 1.22) : Chant, Chasse et Représailles fondus dans les autres, Orage devenu Magie ; deux par personnage ; les auras de départ suivent une règle commune (celles de ses deux maîtrises que son dé nourrit) ; en tournoi et en saison, l'aura de départ est tirée au hasard ; le Critique assuré n'a plus qu'une charge, perdue si la frappe est esquivée ou ratée ; plus d'onglet Auras ni de porteurs au compendium ; reliques recolorées. Roster de 45,2 à 54,7 %, pire duel 60,8 % ; six auras de départ sous 42 % |
 
 ### Le combat, en une page
 
@@ -432,6 +433,34 @@ L'utilisateur a joué une campagne avec chaque personnage sur la 0.120.0 et rend
 | R5 | Relique qui active les auras d'entrée | Réfléchi, non livré : +14,9 à +25,5, deviendrait obligatoire ; avec un prix +2,5 à +7,0 | RELIQUES § 17 ; MAITRISES § 10 |
 
 **Ensemble** (0.120.0 → 0.121.0) : roster de 46,0 % (Elaria) à 54,9 % (Thaldrin), pire duel 59 % ; construits (`npm run ramp`) écart 24,5 points, Fanchon 62,2 %, Elaria 57,4 %, Ysolde 37,7 % ; saison 42-59 %, écart-type 5,7 ; campagne (12 parties × 36 départs) boss 15 %, acte 9 %. Empreinte mise à jour. Questions ouvertes : [ETAT.md](ETAT.md) limites connues.
+
+### 1.22 Second retour du 2026-10-27 (après la 0.121.0 ; livré en 0.122.0)
+
+Le même jour, l'utilisateur a rendu un second retour sur la 0.121.0 (B1 à B19). Deux principes, à tenir partout : « tu dois être le garant des règles » (une règle vaut pour tous, **aucune exception par personnage** ; on teste d'abord sur un pied d'égalité, puis on adapte les valeurs ; décisions parallèles cohérentes) et « mes inputs et propositions arrivent avant ta génération et tes inventions spontanées » (**aucune compétence nouvelle inventée** : on déplace, renomme, adapte l'existant, on fait l'état des lieux ; l'utilisateur proposera). « La progression était bien » : forge, offres et Graver à deux cartes gardés.
+
+| Point | Demande | Traité | Où |
+| --- | --- | --- | --- |
+| B1 | Onze → huit maîtrises ; Chant, Représailles, Chasse disparaissent ; Orage devient Magie | Livré : Chasse → Chance (Aura de précision → Fureur) ; Représailles → Rempart ; Chant réparti (Ballade, Duo → Magie ; Soliste, Crescendo → Fureur ; Siffloter → Lumière ; Fausse note → Ombre) ; Ivresse du sang → Sang, Aura d'immunité → Lumière, Malchance → Ombre. Aucune brique changée ; 64 briques, de 6 à 10 par maîtrise ; emblème `mastery-magic` | MAITRISES « Huit maîtrises » § B1 |
+| B2 | Deux des huit par personnage | Livré : Elaria Chance + Sang, Ysolde Lumière + Magie, Aldric Rempart + Ombre, Thaldrin Magie + Poison, Fanchon Magie + Chance ; aucun dé ne change | MAITRISES § B2 ; PERSONNAGES « Les Maîtrises » |
+| B3 | Retirer les porteurs des maîtrises | Livré : ni portraits, ni « La jouent », ni recherche par porteur | FEATURES § 9 |
+| B4 | Supprimer l'onglet Auras | Livré : les auras dans Compétences (64 briques) et dans l'encadré Auras de chaque maîtrise, règle courte en tête | FEATURES § 9 |
+| B5 | Auras de départ = celles de ses deux maîtrises, même règle pour tous | Livré avec « le producteur d'abord » (décision du parent après mesure : 9 départs consommateurs sans producteur donnaient le taux du 1 nu) : 68 → 55 départs, 6 sous 42 %, aucun au-dessus de 58 %, Aldric en Intimidation contre Elaria 66,0 % | MAITRISES § B5 et § 5.1 |
+| B6 | État des compétences par maîtrise, avant toute création | Livré : huit tableaux et une synthèse des trous, rien d'inventé | MAITRISES « Huit maîtrises » § B6 |
+| B7 | Tournoi et saison : aura de départ tirée au hasard | Livré : tirage par le `Rng`, visible avant le premier combat, parieurs sur le dé réel, historique inchangé ; effet isolé : 42-56 % → 41-54 %, écart-type 4,7 → 4,1 | MAITRISES § 5.3 ; FEATURES § 8 |
+| B8 | Critique assuré : une charge, prochaine frappe, perdue si elle rate | Livré : non cumulable, usure par tour retirée ; Œil de faucon aiguisé « +3 dégâts au coup critique », Pièce porte-bonheur « un critique assuré qui fait +4 dégâts » ; Elaria 46,5 → 45,2 % | RESOLUTION ; STATUTS ; FEATURES § 1 |
+| B9 | Vol de vie sur Riposte et Rétribution, sans effet de bord | Analysé, **non implémenté** : option A (des coups) recommandée, Aldric nu 50,7 → 53,4 % au prototype ; quatre questions à trancher | RESOLUTION § 9 |
+| B10 | Duo sans dés de plus | En l'état, décision de l'utilisateur (« pour le moment, laisse en l'état ») | — |
+| B11 | Faire vivre les auras sans relique obligatoire | Étude : onze règles mesurées pour tous ; recommandation « au plus tard à son 3e tour » avec Purification +5 ; rien d'appliqué | AURAS § 2 |
+| B12 | Dé pipé à double effet | Étude : « +25 % pile, +5 % crit, +5 % esquive par charge » recommandé (départ de Naraxes 41,2 → 49,1 %) ; rien d'appliqué | AURAS § 3 |
+| B13 | Plusieurs dés bonus, déclinés par maîtrise | Idées seulement : grammaire en trois dés, une forme par maîtrise | AURAS § 5 |
+| B14 | Icônes des reliques d'avant la 0.121.0 plus colorées | Livré : 29 icônes repeintes (planche v28, Artlist, 320 crédits) ; `venom-vial` gardée | STYLE_BIBLE § 7 |
+| B15 | Ysolde, Pièce maudite, Pièce de foire, dés de plus | Pris acte : Ysolde en l'état, Pièce maudite en l'état, Pièce de foire retirée (confirmé) | — |
+| B16 | Longueur des combats | Étude : recommandation « +2 PV max par récompense » (construits 6,1 → 7,8 actions), PV ×1,25 en réserve ; rien d'appliqué | [etudes/LONGUEUR_COMBATS.md](etudes/LONGUEUR_COMBATS.md) |
+| B17 | Temps de génération et contexte | Étude : l'écriture des docs est le vrai poste ; options O1 à O10 chiffrées ; rien d'appliqué | [etudes/CONTEXTE.md](etudes/CONTEXTE.md) |
+| B18 | Format des retours | Étude et gabarit : étiquette, priorité, marge par point, liste « Gelé » | [etudes/RETOURS.md](etudes/RETOURS.md) ; `prompts/GABARIT_RETOUR.md` |
+| B19 | Vérifier, mesurer, documenter, faire le ménage | `npm run check` 481 tests, `npx vite build`, balance à 400 combats par duel, empreinte mise à jour une fois ; docs et commentaires obsolètes retirés | ETAT ; CHANGELOG |
+
+**Ensemble** (0.121.0 → 0.122.0, `BALANCE_N=400`) : roster de 45,2 % (Elaria) à 54,7 % (Aldric), pire duel Aldric contre Elaria 60,8 %. Questions ouvertes : [TODO.md](TODO.md) § 20 et [ETAT.md](ETAT.md) limites connues.
 
 ---
 
@@ -1237,6 +1266,8 @@ Mesuré (`npm run campaign`, 30 parties par champion, mêmes graines) :
 
 ## 12. La durée des combats et les PV
 
+> **Mesure et options (2026-10-27, B16)** : la longueur des combats, du roster nu au build complet, et neuf leviers chiffrés sont dans l'étude [etudes/LONGUEUR_COMBATS.md](etudes/LONGUEUR_COMBATS.md). Elle recommande le repli du § 12.3, l'endurcissement, à +2 PV max par récompense ; à trancher par l'utilisateur.
+
 ### 12.1 Le problème
 
 Un build agressif raccourcit les combats, au point qu'on n'a plus le temps de le voir. **Estimation** : un combat dure environ 17 tours, soit 8 à 9 tours par combattant. Le nombre de tours pour abattre l'adversaire est à peu près PV ÷ dégâts par tour : avec **+50 %** de dégâts, il passe de 8,5 à 5,7 tours ; avec **le double**, à **4,2 tours**, le chiffre que l'utilisateur pressent.
@@ -1617,6 +1648,7 @@ flowchart LR
 | **7. Types à l'écran, durée** (faite, 0.108.0 et 0.112.0) | 0.108.0 : la couleur des chiffres par source (§ 9.3, `DAMAGE_SOURCES`, six teintes), la source du coup de base magique (`attackSource`), la règle « Types de dégâts » au compendium ; retirés en 0.111.0 (attaque d'un type unique, choix de l'utilisateur). 0.112.0 : trois reliques de durée (Gambison matelassé, Onguent du rebouteux, Chandelle de veille ; [RELIQUES.md](RELIQUES.md) § 14). Les **bonus par type** (« +N aux DM, par impact ») sont **abandonnés** | en campagne et en saison (les types à l'écran : non, empreinte inchangée) | 0.108.0 : `npm run check` (319 tests) et `vite build` ; empreinte inchangée ; capture Firefox. 0.112.0 : `npm run check` (355 tests), `vite build`, empreinte inchangée ; `npm run relics` (400 combats par duel) : +8,7, +12,0, +11,5 points, durée 7,9 → 9,6, 8,2, 8,1 tours par combattant | le troc du Gambison, un Onguent plus fort, les noms |
 | **8. Lots de contenu** (lots 1, 2 et 3 livrés, 0.114.0, 0.115.0 et 0.119.0 ; à jouer) | compétences des répertoires et du fonds commun (environ 35, en lots, au laboratoire), leurs icônes (une planche par lot, demandées à l'utilisateur) ; reliques qui lisent la forge (P4), pièces maîtresses (P5), paliers (P6), recettes (P7), plateau (P3). **Lot 1 livré** : cinq compétences consommatrices (Curée, Récolte, Virulence, Sentence, Rancune ; [SORTS.md](SORTS.md) § 22), `applyStatus.fromStatus`, offre de compétences pertinente, planche v17. **Lot 2 livré** (passe de nuit, § 1.14) : Embrasement, Dé pipé, Rempart hérissé, Vindicte ([SORTS.md](SORTS.md) § 23) et quatre reliques ([RELIQUES.md](RELIQUES.md) § 15) ; déclencheurs `shieldBroken`, `reflected`, `heads` ; « le producteur d'abord » dans tous les modes ; la saison compose un build d'acte ; planches v18 et v19. **Lot 3 livré** (§ 1.20) : cinq malus de famille et sept fils minces ([SORTS.md](SORTS.md) § 28 et § 29), cinq briques de moteur, sons de famille (ElevenLabs), planches v23 et v24 | en campagne et en saison | P8 : un partenaire au-delà de +0,25 par brique, aucune anti-synergie non voulue sous −0,15. Lot 1 : `npm run check` (364 tests), empreinte inchangée ; gravées chez leur producteur de +8,1 à +10,4 (Rancune +14,2 en moyenne) ; partenaires de +0,30 à +0,42 au laboratoire ; Virulence × Fiole −0,17 ; campagne : paires liées 3,27 → 3,70. Lot 2 : `npm run check` (387 tests), empreinte inchangée ; gravées de +8,0 à +9,7, reliques de +7,2 à +7,8 ; partenaires de +0,29 à +0,40 ; pire anti-synergie Soufflet × Embrasement −0,14 (prévue) ; campagne : boss atteint 19 / 20 / 23 %, acte gagné 7 / 10 / 9 % ; saison : builds complets 192 sur 192. Lot 3 : `npm run check` (432 tests), empreinte inchangée ; gravées de +8,9 à +18,6, chez les porteurs construits de +2,8 (Ciel d'orage, 3 builds) à +15,9 ; campagne : boss atteint 21 → 17 % ; saison 34-65 %, écart-type 8,6 | lot par lot, ce qu'on garde ; lot 1 : les choix de l'agent (Virulence « Triple », Rancune critique, Naraxes) ; lot 2 : les choix de la nuit (§ 1.14) ; lot 3 : les choix du parent (§ 1.20) ; ensuite le jugement en jeu, puis P4 à P7 |
 | **Retour du 2026-10-27 : les Maîtrises** (livré, 0.121.0 ; à jouer) | onze maîtrises, deux par personnage, réserve partagée, dé de départ (aura au choix sur le 1, signature sur le 2), Graver par maîtrise, choix d'aura en campagne (partie v5) ; briques nouvelles ou refaites ; corrections (§ 1.21) | **oui**, volontairement | `npm run check` (475 tests), `vite build` ; balance 46,0 à 54,9 %, pire duel 59 % ; ramp écart 24,5 ; empreinte mise à jour | **l'utilisateur joue** : Fanchon construite, Q1, Q2, Q4, Q7 |
+| **Second retour du 2026-10-27** (livré, 0.122.0 ; à jouer) | huit maîtrises, deux par personnage, auras de départ par la règle du producteur d'abord, aura tirée en tournoi et en saison, Critique assuré à une charge, compendium sans onglet Auras ni porteurs (§ 1.22) | **oui**, volontairement | `npm run check` (481 tests), `vite build` ; balance 45,2 à 54,7 %, pire duel 60,8 % ; empreinte mise à jour | **l'utilisateur** : contenu des maîtrises, B9, études B11 à B13 et B16 à B18 ([TODO.md](TODO.md) § 20) |
 
 **Plus tard** : super coups, Sertir, défenses par type, vies (§ 15). **Après le retour du 2026-10-27** (§ 1.21) : progression entre les parties par maîtrise (P11), relique « face 6 joue la 2 » (P10), scènes proposées (S10), puis le lot suivant de la phase 8.
 

@@ -173,14 +173,11 @@ export interface StatusDef {
    * Contrairement à `modifyOutgoing`, ni l'armure ni l'intimidation ne le rognent.
    */
   modifyFinal?: (damage: number, s: Status) => number
-  /** Le prochain coup qui touche est critique ; consomme une charge */
-  forcesCrit?: boolean
   /**
-   * S'use avec le temps (retour de l'utilisateur du 2026-10-27, M1 : Critique assuré) : une charge part à la fin de chacun
-   * des tours de son porteur, sauf celui où il a été posé ou renforcé (« pas de décompte le tour de la pose »), dans
-   * l'étape d'usure de la phase (`statusAge.worn`). Les charges qu'il ne dépense pas ne s'accumulent donc plus.
+   * Le prochain coup du porteur est critique (retour de l'utilisateur du 2026-10-27, B8) : la charge part avec ce coup,
+   * qu'il touche ou qu'il soit esquivé ou raté (Aveuglé). Un jet sans coup (remplacé, tombé à vide) la garde.
    */
-  wearsOff?: boolean
+  forcesCrit?: boolean
   /** Le prochain coup reçu est esquivé à coup sûr ; consomme une charge par esquive */
   forcesDodge?: boolean
   /**
@@ -472,10 +469,11 @@ export const PRECISION_CRIT = 0.05
 export const COIN_HEADS = 3
 
 /**
- * Pièce porte-bonheur (retour du 2026-10-27, R2) : critiques assurés sur pile. Gravée sur le 3, 200 combats par duel :
- * 2 critiques, Naraxes +6,7 et Fanchon +7,8 (sous la bande de 8 à 20) ; 3 critiques, +9,2 et +12,8.
+ * Pièce porte-bonheur (retour du 2026-10-27, R2) : un critique assuré sur pile. Jusqu'à B8 (2026-10-27), 3 critiques
+ * assurés (gravée +9,9) ; le critique assuré n'ayant plus qu'une charge, pile pose un critique assuré qui fait aussi
+ * ces dégâts en plus (son intensité, comme l'Œil de faucon aiguisé).
  */
-export const LUCKY_COIN_CRITS = 3
+export const LUCKY_COIN_POWER = 4
 
 /**
  * Une pièce d'effet aiguisée (2026-10-27) : chaque rang ajoute 1 chance sur 6 de faire pile (3 sur 6, puis 4, puis 5 au
@@ -507,17 +505,22 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(251,191,36,0.85)' },
     polarity: 'positive',
     family: 'precision',
-    summary: 'Son prochain coup qui touche est critique ; une charge par coup, et une de moins à la fin de chacun de ses tours.',
-    describe: (s) => next(s.stacks, 'Son prochain coup qui touche est critique', 'Ses N prochains coups qui touchent sont critiques'),
-    grafted: (s) => (s.stacks > 2 ? `Ce coup et les ${s.stacks - 1} suivants sont critiques` : s.stacks === 2 ? 'Ce coup et le suivant sont critiques' : 'Ce coup est critique'),
-    // Retour de l'utilisateur du 2026-10-27 (M1) : il s'use, une charge à la fin de chaque tour du porteur, sauf celui de
-    // sa pose ; sans usure, les critiques que la Rancune, la Feinte ou un coup esquivé laissaient en attente s'empilaient
-    detail: () => "Un coup esquivé ne l'use pas. Une charge part à la fin de chacun de ses tours, sauf celui où il l'a reçue.",
+    summary: 'Son prochain coup est critique ; esquivé ou raté, le critique est perdu.',
+    describe: (s) => `Son prochain coup est critique${s.power ? `, et fait ${damageText(s.power)}` : ''}`,
+    grafted: (s) => `Ce coup est critique${s.power ? `, et fait ${damageText(s.power)}` : ''}`,
+    // Retour de l'utilisateur du 2026-10-27 (B8) : une seule charge, qui ne se cumule pas, pour la prochaine frappe ; un coup
+    // esquivé ou raté la perd. Elle remplace l'usure d'une charge par tour (M1, 0.121.0), qui laissait encore les critiques
+    // de la Rancune, de la Feinte ou de la Pièce porte-bonheur s'empiler entre deux tours
+    detail: () => "Une seule à la fois : une nouvelle pose ne s'ajoute pas. Un coup esquivé ou raté le perd.",
     plural: 'Critiques assurés',
-    badge: (s) => `×${s.stacks}`,
+    badge: () => '100 %',
     stacking: 'add',
+    maxStacks: 1,
     forcesCrit: true,
-    wearsOff: true,
+    // Son intensité (Œil de faucon aiguisé, Pièce porte-bonheur) : des dégâts en plus au coup critique, après le
+    // multiplicateur, avant l'armure. Le statut part avec ce coup : elle ne sert qu'à lui
+    modifyOutgoing: (damage, s) => damage + (s.power ?? 0),
+    power: (n) => `${damageText(n)} au coup critique`,
   },
   bonusArmor: {
     name: 'Armure temporaire',
@@ -941,13 +944,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(52,211,153,0.85)', coin: 'hue-rotate(95deg) saturate(1.3)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: `Juste après son coup, une pièce : pile, +${LUCKY_COIN_CRITS} critiques assurés ; face, rien.`,
-    describe: (s) => `${coinOdds(s)} : pile, +${LUCKY_COIN_CRITS} critiques assurés ; face, rien`,
-    badge: () => `+${LUCKY_COIN_CRITS}`,
+    summary: `Juste après son coup, une pièce : pile, un critique assuré qui fait ${damageText(LUCKY_COIN_POWER)} ; face, rien.`,
+    describe: (s) => `${coinOdds(s)} : pile, un critique assuré qui fait ${damageText(LUCKY_COIN_POWER)} ; face, rien`,
+    badge: () => damageText(LUCKY_COIN_POWER),
     stacking: 'refresh',
     mechanic: 'skill',
     maxStacks: 1,
-    coinToss: { heads: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: LUCKY_COIN_CRITS }] },
+    coinToss: { heads: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1, power: LUCKY_COIN_POWER }] },
     // Aiguisée : pile plus souvent (`COIN_RANK_HEADS`), comme toutes les pièces d'effet
     power: (n) => `+${n} chance${n > 1 ? 's' : ''} sur 6 de faire pile`,
   },
@@ -1433,7 +1436,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'precision',
     summary: `+${Math.round(FEINT_DODGE * 100)} % d'esquive par charge ; chaque esquive lui donne un critique assuré.`,
     describe: (s) => `+${Math.round(FEINT_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui donne un critique assuré`,
-    detail: () => 'Le critique attend son prochain coup qui touche. Chaque nouvelle pose ajoute +5 %.',
+    detail: () => 'Le critique attend sa prochaine frappe. Chaque nouvelle pose ajoute +5 %.',
     badge: (s) => `+${Math.round(FEINT_DODGE * 100 * charges(s))} %`,
     counter: 'stacks',
     stacking: 'add',
@@ -1735,7 +1738,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     )
   else if (def.coinToss)
     say(effect, 'Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, son effet tombe aussitôt ; face, rien. Le statut est consommé.')
-  if (def.forcesCrit) say(effect, 'Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.', 'crit')
+  if (def.forcesCrit) say(effect, 'Force le critique du prochain coup du porteur. Le coup esquivé ou raté perd ce critique.', 'crit')
   if (def.shield) say(effect, "Absorbe autant de points que de charges, après l'armure, sans faire descendre un coup sous 1 dégât.", 'shields')
   if (def.onTurnStart) say(effect, 'Agit au début de chaque tour du porteur, avant son action.', 'phases')
   if (def.modifyOutgoing) say(effect, "Modifie les dégâts des coups du porteur, après le critique et avant l'armure ; un coup garde au moins 1 dégât.", 'modifiers')
@@ -1794,7 +1797,6 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
       'application',
     )
   if (def.decays) say(consumption, "S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
-  if (def.wearsOff) say(consumption, 'S’use : perd une charge à la fin de chaque tour du porteur, sauf celui où il a été posé ou renforcé.', 'phases')
   if (def.spentOnHit) say(consumption, 'Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ne le consomme pas.')
   if (def.spentOnHurt) say(consumption, 'Perd une charge chaque fois qu’un coup touche le porteur.')
   if (def.shatters) say(effect, 'Ce coup brise toute son armure temporaire, qui n’en absorbe rien.', 'shields')
@@ -1849,8 +1851,12 @@ export function applyStatus(list: readonly Status[], added: Status): Status[] {
 
 /** Issue de la pose d'un statut (voir `resolveApplication`). */
 export type ApplicationOutcome =
-  /** Posé, éventuellement après annulation partielle par l'opposé */
-  | { kind: 'applied'; stacks: number; cancelled?: { status: StatusId; stacks: number } }
+  /**
+   * Posé, éventuellement après annulation partielle par l'opposé. `raised` : au plafond (aucune charge gagnée), la pose a
+   * pourtant renforcé l'intensité du statut (un Œil de faucon aiguisé sur un Critique assuré déjà là) : ce n'est pas une
+   * pose sans effet
+   */
+  | { kind: 'applied'; stacks: number; cancelled?: { status: StatusId; stacks: number }; raised?: true }
   /** Entièrement absorbé par le statut opposé */
   | { kind: 'cancelled'; cancelled: { status: StatusId; stacks: number } }
   /** Bloqué : immunité du personnage, ou garde (qui perd une charge) */
@@ -1895,10 +1901,12 @@ export function resolveApplication(
     cancelled = { status: opposite.id, stacks: n }
     if (stacks <= 0) return { list: current, outcome: { kind: 'cancelled', cancelled } }
   }
-  const before = stacksOf(current, added.id)
+  const was = findStatus(current, added.id)
   current = applyStatus(current, { ...added, stacks })
-  const gained = stacksOf(current, added.id) - (def.stacking === 'add' ? before : 0)
-  return { list: current, outcome: { kind: 'applied', stacks: Math.max(gained, 0), ...(cancelled && { cancelled }) } }
+  const now = findStatus(current, added.id)
+  const gained = (now?.stacks ?? 0) - (def.stacking === 'add' ? (was?.stacks ?? 0) : 0)
+  const raised = gained <= 0 && was !== undefined && (now?.power ?? 0) > (was.power ?? 0)
+  return { list: current, outcome: { kind: 'applied', stacks: Math.max(gained, 0), ...(cancelled && { cancelled }), ...(raised && { raised: true as const }) } }
 }
 
 /** Retire des charges ; le statut disparaît à 0. */

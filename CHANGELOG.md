@@ -32,6 +32,31 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.122.0] — 2026-10-27
+
+Le second retour de l'utilisateur du 2026-10-27, après la 0.121.0 (B1 à B19) : « tu dois être le garant des règles » (une règle vaut pour tous, aucune exception par personnage) et aucune compétence nouvelle inventée (on déplace, on renomme, on fait l'état des lieux ; l'utilisateur proposera). Tableau point par point dans [PROGRESSION.md](docs/PROGRESSION.md) § 1.22. Règles changées voulues (Critique assuré à une charge, huit maîtrises, auras de départ) : l'empreinte de non-régression (`balance.test.ts`) est mise à jour une fois.
+
+### Ajouté
+- **Aura de départ tirée en tournoi et en saison** (B7) : chaque participant reçoit au hasard (tirage par le `Rng`, avant le premier combat) l'une de ses auras de départ, sur le 1 de son dé. Visible sur l'arbre, l'affrontement, le sacre et le classement de saison (sceau de l'aura et son infobulle) ; les parieurs et la cote cachée simulent le dé réel. Historique `battler:history:v1` inchangé. Effet isolé (12 saisons de 24, 6 624 matchs) : taux de saison 42-56 % (écart-type 4,7) → 41-54 % (4,1).
+- **État des compétences par maîtrise** (B6) : huit tableaux et une synthèse des manques en tête de [MAITRISES.md](docs/MAITRISES.md), pour que l'utilisateur propose le contenu qui manque.
+- **Études** : [AURAS.md](docs/AURAS.md) (B11 à B13 : faire vivre les auras, Dé pipé, dés de plus ; recommandations mesurées, rien d'appliqué), [etudes/LONGUEUR_COMBATS.md](docs/etudes/LONGUEUR_COMBATS.md) (B16), [etudes/CONTEXTE.md](docs/etudes/CONTEXTE.md) (B17), [etudes/RETOURS.md](docs/etudes/RETOURS.md) (B18) et le gabarit `prompts/GABARIT_RETOUR.md`. B9 (Riposte et Rétribution comme coups) analysé dans [RESOLUTION.md](docs/RESOLUTION.md) § 9, non implémenté.
+- Laboratoire : règles « pour tous » (`LabIdea.world`, `everyone`, `presence`), séries 76 à 78 ; `npm run season` : section « Aura de départ tirée ».
+
+### Modifié
+- **Huit maîtrises au lieu de onze** (B1) : Chant, Chasse et Représailles disparaissent, Orage devient **Magie**. Chasse → Chance (Feinte, Pas de côté, Œil de faucon, Esquive améliorée), Aura de précision → Fureur ; Représailles → Rempart ; Ballade et Duo → Magie, Soliste et Crescendo → Fureur, Siffloter → Lumière, Fausse note → Ombre ; Ivresse du sang → Sang, Aura d'immunité → Lumière, Malchance → Ombre. Aucune brique changée. 64 briques, de 6 (Sang, Poison) à 10 (Chance). `validateMasteries` : 6 briques et 2 auras au moins, pour toutes.
+- **Deux maîtrises par personnage** (B2) : Elaria Chance et Sang, Ysolde Lumière et Magie, Aldric Rempart et Ombre, Thaldrin Magie et Poison, Fanchon Magie et Chance ; les autres inchangés. Aucun dé de départ ne change.
+- **Auras de départ par la règle** (B5) : celles de ses deux maîtrises dont la ressource est produite par son dé de départ (le « producteur d'abord » de l'offre, `reachOf` partagé), l'aura par défaut en tête (`startAurasFor`). Plus aucune liste dans le roster. 55 départs (400 combats par duel) : 6 sous 42 % (Morgrut Sauvage 40,5, Intimidation 40,6, Rancœur 39,0 ; Elaria Veine 38,7, Pas de côté 39,0 ; Naraxes Dé pipé 41,2), aucun au-dessus de 58 % ; un duel à 66,0 % (Aldric en Intimidation contre Elaria).
+- **Critique assuré à une charge** (B8) : une seule charge, qui ne se cumule pas ; la prochaine frappe du porteur la dépense, et le critique est perdu si elle est esquivée ou ratée. L'usure par tour (M1, 0.121.0) est retirée. Œil de faucon : son rang donne « +3 dégâts au coup critique » ; **Pièce porte-bonheur** : pile, « un critique assuré qui fait +4 dégâts » (au lieu de +3 critiques assurés). Gravés : Œil de faucon +15,1 → +13,8, Pièce porte-bonheur +9,9 → +9,2 points.
+- **Compendium** (B3, B4) : plus d'onglet Auras, l'onglet Compétences liste les 64 briques, auras comprises, chacune avec l'emblème de sa maîtrise ; l'onglet Maîtrises n'a plus de porteurs (« La jouent ») et donne la règle courte des auras en tête de chaque encadré Auras.
+- **Icônes de reliques recolorées** (B14, Artlist, GPT Image 2.5, 320 crédits, planche v28) : 29 reliques d'avant la 0.121.0 repeintes plus colorées (toutes sauf `venom-vial`). Emblème `mastery-storm` → `mastery-magic`.
+- Équilibre (`BALANCE_N=400 npm run balance`) : de 45,2 % (Elaria) à 54,7 % (Aldric), pire duel Aldric contre Elaria 60,8 %.
+
+### Corrigé
+- Malchance et relique du dé : sur un jet tombé à vide, l'Osselet fendu part après « Malchance » et non plus avec le dé (M46).
+
+### Retiré
+- Maîtrises Chant, Chasse, Représailles ; emblèmes `mastery-hunt`, `mastery-retaliation`, `mastery-song` ; onglet Auras du compendium ; `holdersOf` ; usure du Critique assuré (`wearsOff`, `statusAge.worn`) ; `LUCKY_COIN_CRITS`.
+
 ## [0.121.0] — 2026-10-27
 
 Le retour de l'utilisateur du 2026-10-27, après une campagne avec chaque personnage (`prompts/Retour du 27 octobre.md`) : « chaque point doit être traité ». Chaque point (V1 à V5, P1 à P11, M1 à M12, S1 à S11, C1 à C7, U1 à U6, R1 à R5) est corrigé, vérifié ou réfléchi avec une proposition chiffrée : tableau point par point dans [PROGRESSION.md](docs/PROGRESSION.md) § 1.21. La vision des **Maîtrises** est conçue dans [MAITRISES.md](docs/MAITRISES.md) puis livrée. Règles changées voulues : l'empreinte de non-régression (`balance.test.ts`) est mise à jour une fois.

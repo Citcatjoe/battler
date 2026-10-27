@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
+import { rollFace, type CharacterEvent } from '../game/events'
 import { getRelic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
 import {
@@ -16,13 +17,15 @@ import {
   type Season,
   type Standing,
 } from '../game/season'
-import { SLOTS } from '../game/tournament'
+import { entrantCharacter, SLOTS } from '../game/tournament'
 import { ForgeMark } from './ForgedDie'
 import { Portrait } from './Portrait'
 import { BackLink, Button, IconButton } from './kit'
 import { RelicRow } from './RelicSeal'
 import { SeasonReport } from './CombatReport'
-import { TipLayer } from './TipLayer'
+import { SkillSeal } from './SkillSeal'
+import { SkillTooltip } from './SkillDice'
+import { TipLayer, useTipLayer } from './TipLayer'
 
 interface Props {
   season: Season
@@ -78,7 +81,9 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
   // Construction de chacun : complète, elle est figée
   const builds = season.rewards.length > 0 ? season.entrants.map((_, i) => buildOf(season, i)) : undefined
   const finished = builds?.filter((b) => buildDone(season, b)).length ?? 0
-  const baseOf = (entrant: number) => characterById(season.entrants[entrant].characterId).definition
+  // Le dé de départ de chacun, son aura tirée au lancement sur le 1 (B7) : la base de sa forge
+  const starts = season.entrants.map(entrantCharacter)
+  const baseOf = (entrant: number) => starts[entrant].definition
   // Survol croisé : un combattant allume son match de la journée affichée, un match allume ses deux lignes
   const [hover, setHover] = useState<Hover>(null)
   const rowLit = (entrant: number) => !!hover && 'fixture' in hover && (hover.fixture.home === entrant || hover.fixture.away === entrant)
@@ -109,6 +114,7 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
         <span className={`min-w-0 flex-1 truncate font-body text-[18px] font-semibold ${qualified ? 'text-ink-1' : 'text-ink-2'}`} title={e.label}>
           {e.label}
         </span>
+        <AuraMark event={starts[s.entrant].events.find((x) => rollFace(x.trigger) === 1)!} />
         {/* Sa construction : ses reliques, puis ses opérations de forge, dans l'ordre (dix au plus : un acte de campagne) */}
         {build && (
           <span className="flex w-[296px] shrink-0 items-center gap-1" aria-label="Construction">
@@ -321,5 +327,23 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
         </section>
       </div>
     </TipLayer>
+  )
+}
+
+/**
+ * L'aura de départ d'un participant (retour du 2026-10-27, B7), tirée au lancement de la saison : son sceau à côté de
+ * son nom, son infobulle au survol, ouverte dans le calque de l'écran (la liste qui défile ne la coupe pas).
+ */
+function AuraMark({ event }: { event: CharacterEvent }) {
+  const tip = useTipLayer()
+  return (
+    <span
+      className="shrink-0 cursor-help"
+      aria-label={`Aura de départ : ${event.name}`}
+      onMouseEnter={(e) => tip?.(<SkillTooltip event={event} face={1} placement="floating" />, e.currentTarget)}
+      onMouseLeave={() => tip?.(null)}
+    >
+      <SkillSeal id={event.id} size={22} />
+    </span>
   )
 }

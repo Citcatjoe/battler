@@ -1,102 +1,64 @@
 import { skillCatalog, statusHome, statusSources, type SkillEntry } from '../../game/catalog'
 import { describeSkill, triggerText, type CharacterEvent } from '../../game/events'
-import { MASTERIES, MASTERY_IDS, masteryOfSkill } from '../../game/masteries'
+import { MASTERIES, masteryOfSkill } from '../../game/masteries'
 import { RULES, type RuleId } from '../../game/rules'
 import { auraOfSkill, STATUS_PLACE } from '../../game/states'
 import { STATUSES, statusRuleSections, type StatusId } from '../../game/statuses'
-import { NBSP, typeset } from '../../game/typography'
+import { NBSP } from '../../game/typography'
 import { CodexBox, formName, Line, MasteryName, RelicSource, RuleLink, SkillMedal, skillLink, StatusChip, triggerShort, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
 
-/** Les deux onglets qui se partagent les compétences : celles qui posent une aura sur leur lanceur, et les autres. */
-export type SkillKind = 'skills' | 'auras'
-
-/** Les compétences d'un onglet, par ordre alphabétique (une ligne par compétence, `skillCatalog`). */
-export function compendiumSkills(kind: SkillKind): SkillEntry[] {
-  return skillCatalog()
-    .filter((s) => (auraOfSkill(s.event) !== undefined) === (kind === 'auras'))
-    .sort((a, b) => a.event.name.localeCompare(b.event.name, 'fr'))
+/** Toutes les compétences, auras comprises, par ordre alphabétique (une ligne par compétence, `skillCatalog`). */
+export function compendiumSkills(): SkillEntry[] {
+  return skillCatalog().sort((a, b) => a.event.name.localeCompare(b.event.name, 'fr'))
 }
 
-/** Ce qu'est une aura et comment on l'obtient : l'en-tête de l'onglet Auras (docs/MAITRISES.md § 5 et § 12). */
-const AURA_INTRO = typeset(
-  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Chaque combattant en porte une sur le 1 de son dé, choisie parmi celles de ses deux maîtrises au début d'une campagne ; les autres s'obtiennent en gravant.",
-)
-
 /**
- * Sections « Compétences » et « Auras » (retour du 2026-10-27) : deux onglets, une seule mise en page. À gauche
- * l'index (les compétences par ordre alphabétique ; les auras rangées par maîtrise, sous un court texte qui dit ce
- * qu'elles sont), à droite le détail de celle choisie. Chaque brique nomme sa maîtrise, avec son petit emblème. Une
+ * Section « Compétences » : à gauche l'index de toutes les briques, auras comprises (second retour du 2026-10-27, B4 :
+ * plus d'onglet Auras ; les auras se rangent par maîtrise dans l'onglet Maîtrises), par ordre alphabétique ; à droite
+ * le détail de celle choisie, la fiche de chaque lien. Chaque brique nomme sa maîtrise, avec son petit emblème. Une
  * compétence se décrit pour elle-même, jamais par ses porteurs (0.98.1), ni par ses interactions avec les autres (au
  * joueur de les découvrir) : sa description (`describeSkill`), les états qu'elle pose, et ce qui lui appartient, son aura
  * ou son mécanisme.
  */
-export function SkillsSection({ kind, nav, focus, filter }: SectionProps & { kind: SkillKind }) {
+export function SkillsSection({ nav, focus, filter }: SectionProps) {
   const focusRef = useFocusRef<HTMLButtonElement>(focus)
-  const all = compendiumSkills(kind)
+  const all = compendiumSkills()
   const shown = all.filter((s) => {
     const mastery = masteryOfSkill(s.event.id)
     return matches(filter, s.event.name, describeSkill(s.event).text, ...describeSkill(s.event).posed.map((p) => STATUSES[p.status].name), mastery && MASTERIES[mastery].name)
   })
-  // Les auras par maîtrise, dans l'ordre du registre (celui de l'onglet Maîtrises) ; une aura hors catalogue, à la fin
-  const groups =
-    kind === 'auras'
-      ? [...MASTERY_IDS, undefined]
-          .map((m) => ({ mastery: m, skills: shown.filter((s) => masteryOfSkill(s.event.id) === m) }))
-          .filter((g) => g.skills.length > 0)
-      : [{ mastery: undefined, skills: shown }]
   const selected = all.find((s) => s.events.some((e) => e.id === focus)) ?? shown[0] ?? all[0]
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      {kind === 'auras' && (
-        <p className="max-w-[1100px] font-body text-[17px] leading-snug text-ink-2">
-          {AURA_INTRO}{' '}
-          <button type="button" className="codex-link" onClick={() => nav.go({ section: 'rules', id: 'auras' })}>
-            {RULES.auras.title} →
-          </button>
-        </p>
-      )}
-      <div className="grid min-h-0 flex-1 grid-cols-[520px_1fr] gap-6">
-        <nav aria-label={kind === 'auras' ? 'Auras' : 'Compétences'} className="codex-panel scroll-panel min-h-0 overflow-y-auto">
-          {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">{kind === 'auras' ? 'Aucune aura ne correspond.' : 'Aucune compétence ne correspond.'}</p>}
-          {groups.map((group) => (
-            <section key={group.mastery ?? 'all'}>
-              {group.mastery && (
-                <h3 className="codex-label flex items-center bg-surface-2/70 px-4 py-1.5 text-gold-300!">
-                  <MasteryName id={group.mastery} />
-                  &nbsp;· {group.skills.length}
-                </h3>
-              )}
-              {group.skills.map((s) => {
-                const mastery = masteryOfSkill(s.event.id)
-                return (
-                  <button
-                    key={s.event.id}
-                    type="button"
-                    ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
-                    aria-current={s === selected}
-                    onClick={() => nav.go(skillLink(s.event))}
-                    className="codex-row w-full"
-                  >
-                    <SkillMedal event={s.event} size={40} />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline gap-2.5">
-                        <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
-                        {/* Sa maîtrise ; dans l'onglet Auras, l'en-tête du groupe la dit déjà */}
-                        {kind === 'skills' && mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
-                      </span>
-                      <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
-                    </span>
-                    <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
-                  </button>
-                )
-              })}
-            </section>
-          ))}
-        </nav>
-        {selected && <SkillDetail key={selected.event.id} entry={selected} nav={nav} />}
-      </div>
+    <div className="grid h-full min-h-0 grid-cols-[520px_1fr] gap-6">
+      <nav aria-label="Compétences" className="codex-panel scroll-panel min-h-0 overflow-y-auto">
+        {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">Aucune compétence ne correspond.</p>}
+        {shown.map((s) => {
+          const mastery = masteryOfSkill(s.event.id)
+          return (
+            <button
+              key={s.event.id}
+              type="button"
+              ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
+              aria-current={s === selected}
+              onClick={() => nav.go(skillLink(s.event))}
+              className="codex-row w-full"
+            >
+              <SkillMedal event={s.event} size={40} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline gap-2.5">
+                  <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
+                  {mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
+                </span>
+                <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
+              </span>
+              <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
+            </button>
+          )
+        })}
+      </nav>
+      {selected && <SkillDetail key={selected.event.id} entry={selected} nav={nav} />}
     </div>
   )
 }

@@ -1107,9 +1107,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /**
    * Les reliques du dé partent avec le dé posé, avant l'action qu'il décide (M40) : son sceau et son label, puis ses
    * effets (signal, ou coups de relique). `quick` : un dé de rafale, elles suivent son rythme (M17 bis). Rend vrai si
-   * une relique est partie : l'action suit alors leur lecture, sans second battement.
+   * une relique est partie : l'action suit alors leur lecture, sans second battement. Un jet tombé à vide (Malchance) :
+   * elles attendent le texte du statut (`fizzle`), car leur étape montre déjà l'état d'après le jet, sans sa charge (M46).
    */
   function playDieRelics(hit: Beat, quick: boolean): boolean {
+    if (hit.type === 'attack' && hit.attack.jinxed) return false
+    return stageDieRelics(hit, quick)
+  }
+  function stageDieRelics(hit: Beat, quick: boolean): boolean {
     const relics = dieRelicsOf(hit).filter((b) => !absorbed.has(b.id))
     for (const relic of relics) {
       absorbed.add(relic.id)
@@ -1138,9 +1143,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /**
    * Un jet tombé à vide (Malchance, lot 3 ; docs/MISE_EN_SCENE.md, M46) : sa face s'est allumée avec le dé (étape `roll`) ;
    * un battement après, à la place de l'élan, le statut qui l'a fait tomber à vide flotte sur son porteur avec Tour
-   * perdu (il ne peut pas agir : SONS.md § 9.3), et sa charge part. Ni élan, ni coup, ni chiffre.
+   * perdu (il ne peut pas agir : SONS.md § 9.3), et sa charge part. Ni élan, ni coup, ni chiffre. Puis les reliques de
+   * son dé (l'Osselet fendu sur un 1), qui l'attendaient (`playDieRelics`). `quick` : un dé de rafale.
    */
-  function fizzle(beat: Extract<Beat, { type: 'attack' }>) {
+  function fizzle(beat: Extract<Beat, { type: 'attack' }>, quick: boolean) {
     const roll = beats[beat.cause!]
     const by = roll.type === 'roll' ? roll.jinxedBy : undefined
     sound('stun')
@@ -1148,6 +1154,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     settle(beat)
     showStatuses(beat.id)
     log(attackLog(beat.turn, beat.attack, fighters, hp[other(beat.attack.attacker)]))
+    // Le texte se lit avant que les reliques du dé ne partent
+    if (dieRelicsOf(beat).some((b) => !absorbed.has(b.id))) hold(quick ? 'VOLLEY_STRIKE_HOLD' : 'READ_HOLD')
+    stageDieRelics(beat, quick)
   }
 
   /**
@@ -1196,7 +1205,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
 
     // Jet tombé à vide (Malchance) : il se lit comme un tour perdu (M46)
     if (attack.jinxed) {
-      fizzle(beat)
+      fizzle(beat, false)
       hold('READ_HOLD')
       return
     }
@@ -1256,7 +1265,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     const after = consequencesOf(beat)
     const base = hp
     if (attack.jinxed) {
-      fizzle(beat)
+      fizzle(beat, true)
       hold('VOLLEY_STRIKE_HOLD')
       return
     }
@@ -1726,13 +1735,11 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       }
       case 'statusAge': {
         // Le compteur rebondit sur sa nouvelle valeur (ou l'état passe à 0 et quitte la zone d'état), sauf s'il l'a déjà
-        // fait avec l'effet du statut ; une charge usée (Critique assuré, `worn`) n'a pas d'effet avant elle
-        const shown = [...beat.changes.map((c) => c.status), ...(beat.worn ?? []).map((w) => w.status), ...beat.expired].every((id) =>
-          previews.some((p) => p.until === beat.id && p.status === id),
-        )
+        // fait avec l'effet du statut
+        const shown = [...beat.changes.map((c) => c.status), ...beat.expired].every((id) => previews.some((p) => p.until === beat.id && p.status === id))
         settle(beat)
         showStatuses(beat.id)
-        log(statusAgeLog(beat.side, beat.changes, beat.expired, fighters, beat.worn))
+        log(statusAgeLog(beat.side, beat.changes, beat.expired, fighters))
         if (!shown) hold('COUNT_HOLD')
         break
       }

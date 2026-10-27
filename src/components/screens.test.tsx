@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import { ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
-import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
 import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type HeritageItem } from '../game/campaign'
 import type { PendingReward } from '../game/offers'
 import { Character } from '../game/character'
@@ -25,8 +25,9 @@ import { CheatPad } from './CheatPad'
 import { CharacterSheet } from './compendium/CharacterSheet'
 import { CompendiumScreen } from './compendium/CompendiumScreen'
 import { COMPENDIUM_SECTIONS } from './compendium/sections'
-import { holdersOf, MasteriesSection } from './compendium/MasteriesSection'
-import { compendiumSkills, SkillsSection, type SkillKind } from './compendium/SkillsSection'
+import { MasteriesSection } from './compendium/MasteriesSection'
+import { compendiumSkills, SkillsSection } from './compendium/SkillsSection'
+import { skillLink } from './compendium/CodexBits'
 import { StatusesSection } from './compendium/StatusesSection'
 import { sheetStatuses, statusCatalog } from '../game/catalog'
 import { EndScreen } from './EndScreen'
@@ -55,12 +56,8 @@ import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from
 import { createWallets, placeBet, placeBotBets, priceMatch, settleMatch, worthOf, type MatchOdds } from '../game/betting'
 
 const noop = () => {}
-const SKILL_KINDS: SkillKind[] = ['skills', 'auras']
-/** L'onglet d'une compétence du compendium : Auras ou Compétences. */
-const kindOf = (id: string): SkillKind => (compendiumSkills('auras').some((s) => s.event.id === id) ? 'auras' : 'skills')
-/** Les fiches de toutes les compétences et auras, chacune dans son onglet. */
-const skillPages = () =>
-  SKILL_KINDS.flatMap((kind) => compendiumSkills(kind).map((s) => renderToString(<SkillsSection kind={kind} nav={{ go: noop }} focus={s.event.id} filter="" />)))
+/** Les fiches de toutes les compétences, auras comprises (un seul onglet depuis B4). */
+const skillPages = () => compendiumSkills().map((s) => renderToString(<SkillsSection nav={{ go: noop }} focus={s.event.id} filter="" />))
 /** Le texte affiché seul, sans balises ni commentaires de React, apostrophes décodées. */
 const textOf = (html: string) => html.replace(/<[^>]*>/g, '').replace(/&#x27;/g, "'")
 const fighters = [createCharacter('gorak'), createCharacter('brokk')] as [
@@ -453,7 +450,7 @@ describe('écrans', () => {
     }
     // Chaque statut de la section Statuts et chaque compétence ou aura ont leur fiche détaillée
     for (const e of sheetStatuses()) render(<StatusesSection nav={nav} focus={e.id} filter="" />)
-    for (const kind of SKILL_KINDS) for (const s of compendiumSkills(kind)) render(<SkillsSection kind={kind} nav={nav} focus={s.event.id} filter="" />)
+    for (const s of compendiumSkills()) render(<SkillsSection nav={nav} focus={s.event.id} filter="" />)
     render(<RecordsScreen onOpenCharacter={noop} onBack={noop} />)
   })
 
@@ -492,7 +489,7 @@ describe('écrans', () => {
   })
 
   it('la fiche d’une compétence porte son aura ou son mécanisme', () => {
-    const sheet = (id: string) => renderToString(<SkillsSection kind={kindOf(id)} nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
+    const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
     // Aura de sainteté : sa vie, son plafond et sa maîtrise
     const holy = sheet('holy-aura')
     for (const text of ["jusqu'à la fin du combat", '2 charges au plus']) expect(holy).toContain(text)
@@ -501,33 +498,28 @@ describe('écrans', () => {
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
   })
 
-  it('compendium (retour du 2026-10-27) : deux onglets, Compétences et Auras ; chaque brique dit sa maîtrise', () => {
-    const auras = compendiumSkills('auras').map((s) => s.event.id)
-    const skills = compendiumSkills('skills').map((s) => s.event.id)
-    // Classées selon le moteur : ce qui pose une aura sur son lanceur est une aura (Sève noire, Ivresse du sang)
-    expect(auras).toEqual(expect.arrayContaining(['black-sap', 'blood-frenzy', 'thorns']))
-    expect(skills).toEqual(expect.arrayContaining(['cleave']))
-    expect(auras.some((id) => skills.includes(id))).toBe(false)
+  it('compendium (second retour du 2026-10-27, B4) : plus d’onglet Auras ; un seul index Compétences, auras comprises ; chaque brique dit sa maîtrise', () => {
+    expect(COMPENDIUM_SECTIONS.map((s) => s.id)).not.toContain('auras')
+    const ids = compendiumSkills().map((s) => s.event.id)
+    // Auras (Sève noire, Ivresse du sang, Épines) et compétences (Pourfendre) dans le même index, chacune une fois
+    expect(ids).toEqual(expect.arrayContaining(['black-sap', 'blood-frenzy', 'thorns', 'cleave']))
+    expect(new Set(ids).size).toBe(ids.length)
+    // Toute brique, aura comprise, a sa fiche dans l'onglet Compétences
+    for (const s of compendiumSkills()) expect(skillLink(s.event), s.event.id).toEqual({ section: 'skills', id: s.event.id })
     // Une brique sur un dé de départ n'est jamais « hors kit », même dans la réserve d'un autre (Épines : Brokk, et Gorak par le Sang)
     const onFace = new Set(CHARACTER_IDS.flatMap((id) => createCharacter(id).events.map((e) => e.id)))
-    for (const s of [...compendiumSkills('auras'), ...compendiumSkills('skills')]) if (onFace.has(s.event.id)) expect(s.outside, s.event.id).toBeUndefined()
-    const html = renderToString(<SkillsSection kind="auras" nav={{ go: noop }} filter="" />).replace(/&#x27;/g, "'")
-    expect(html).toContain("Une aura dure jusqu'à la fin du combat")
-    expect(html).toContain('choisie parmi celles de ses deux maîtrises')
-    // Chaque brique nomme sa maîtrise (son emblème peint), dans l'index et en tête de sa fiche
-    for (const s of compendiumSkills('auras')) {
+    for (const s of compendiumSkills()) if (onFace.has(s.event.id)) expect(s.outside, s.event.id).toBeUndefined()
+    // Chaque brique nomme sa maîtrise (son emblème peint), dans l'index
+    const list = renderToString(<SkillsSection nav={{ go: noop }} filter="" />)
+    for (const s of compendiumSkills()) {
       const m = masteryOfSkill(s.event.id)
-      expect(m, s.event.id).toBeDefined()
-      expect(html, s.event.id).toContain(MASTERIES[m!].name)
-      expect(html, s.event.id).toContain(`mastery-${m}`)
-    }
-    const list = renderToString(<SkillsSection kind="skills" nav={{ go: noop }} filter="" />)
-    for (const s of compendiumSkills('skills')) {
-      const m = masteryOfSkill(s.event.id)
-      if (m) expect(list, s.event.id).toContain(MASTERIES[m].name)
+      if (m) {
+        expect(list, s.event.id).toContain(MASTERIES[m].name)
+        expect(list, s.event.id).toContain(`mastery-${m}`)
+      }
     }
     // Plus de niveau Martiale / Adresse / Arcane
-    for (const kind of SKILL_KINDS) for (const word of ['Martiale', 'Adresse', 'Arcane']) expect(renderToString(<SkillsSection kind={kind} nav={{ go: noop }} filter="" />)).not.toContain(word)
+    for (const word of ['Martiale', 'Adresse', 'Arcane']) expect(list).not.toContain(word)
   })
 
   it('compendium : ni interaction ni purification dans les fiches de compétence, d’aura et de statut', () => {
@@ -537,18 +529,17 @@ describe('écrans', () => {
     for (const html of pages) for (const word of ['Interactions', 'purifi', 'purge', 'Peut être retiré']) expect(html.replace(/<[^>]*>/g, '')).not.toContain(word)
   })
 
-  it('compendium, onglet Maîtrises : une tuile par maîtrise, ses porteurs, ses auras puis ses compétences ; ni interaction ni purification', () => {
+  it('compendium, onglet Maîtrises : une tuile par maîtrise, sans porteurs (B3) ; la règle courte des auras, ses auras puis ses compétences ; ni interaction ni purification', () => {
     expect(COMPENDIUM_SECTIONS.map((s) => s.id)).toContain('masteries')
     const index = renderToString(<MasteriesSection nav={{ go: noop }} filter="" />).replace(/&#x27;/g, "'")
-    for (const id of MASTERY_IDS) {
-      for (const text of [MASTERIES[id].name, MASTERIES[id].question, `mastery-${id}`]) expect(index, id).toContain(text)
-      expect(holdersOf(id).length, id).toBeGreaterThan(0)
-    }
-    // Le Poison se partage (V5) : Naraxes, Ervald et Thaldrin
-    expect(holdersOf('poison').map((c) => c.id)).toEqual(expect.arrayContaining(['naraxes', 'ervald', 'thaldrin']))
+    for (const id of MASTERY_IDS) for (const text of [MASTERIES[id].name, MASTERIES[id].question, `mastery-${id}`]) expect(index, id).toContain(text)
     for (const id of MASTERY_IDS) {
       const text = textOf(renderToString(<MasteriesSection nav={{ go: noop }} focus={id} filter="" />))
-      for (const c of holdersOf(id)) expect(text, `${id} ${c.id}`).toContain(c.name)
+      // Ni portraits ni noms de porteurs
+      expect(text, id).not.toMatch(/La jouen?t?/)
+      for (const c of CHARACTERS) expect(text, `${id} ${c.id}`).not.toContain(c.name)
+      expect(text, id).toContain("Une aura dure jusqu'à la fin du combat")
+      expect(text, id).toContain("l'une des auras de ses deux maîtrises")
       // Ses auras avant ses compétences
       const aurasAt = text.indexOf('Auras · ')
       expect(aurasAt, id).toBeGreaterThan(-1)

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { createCharacter, CHARACTERS } from '../game/roster'
+import { CHARACTERS } from '../game/roster'
 import { getRelic } from '../game/relics'
 import { STAGE_WIDTH } from './Stage'
-import { allMatches, matchesInRound, matchKey, players, relicsOf, ROUNDS, status, type MatchRef, type Tournament } from '../game/tournament'
+import { allMatches, entrantCharacter, matchesInRound, matchKey, players, relicsOf, ROUNDS, status, type MatchRef, type Tournament } from '../game/tournament'
 import { ForgedDie } from './ForgedDie'
 import { Portrait } from './Portrait'
 import { RelicRow } from './RelicSeal'
@@ -126,13 +126,14 @@ export function Bracket({ slots, tournament, onSlotClick, onSlotClear, slotHint,
   const box = (ref: MatchRef) => boxOf(layout, ref)
 
   // Participant affiché sur une ligne : en configuration, les cases ; en tournoi, les entrants, avec le combattant qu'ils
-  // sont à ce match (build de saison figé, reliques portées : celles gagnées aux tours d'avant comprises)
+  // sont à ce match (aura de départ tirée sur le 1, build de saison figé, reliques portées : celles gagnées aux tours
+  // d'avant comprises)
   const entrantAt = (ref: MatchRef, row: 0 | 1) => {
     if (tournament) {
       const idx = players(tournament, ref)[row]
       if (idx === null) return null
       const e = tournament.entrants[idx]
-      const fighter = createCharacter(e.characterId)
+      const fighter = entrantCharacter(e)
         .withForge(e.build?.forge ?? [])
         .withRelics(relicsOf(tournament, idx, ref.round).map(getRelic))
       return { idx, character: characterById(e.characterId), label: e.label, fighter }

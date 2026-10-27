@@ -141,7 +141,10 @@ export interface Attack {
   /** Coup qui brise l'armure temporaire du défenseur (Garde brisée, `StatusDef.shatters`) : aucun bouclier n'absorbe */
   shatteredBy?: StatusId
   crit: boolean
-  /** Critique imposé par un statut (ex. « Critique assuré ») */
+  /**
+   * Critique imposé par un statut (ex. « Critique assuré ») : ce coup a dépensé sa charge. Sur un coup esquivé ou raté
+   * (Aveuglé), le critique est perdu (B8, 2026-10-27)
+   */
   critForced: boolean
   /** Le statut de l'attaquant qui a imposé le critique (présent si `critForced`) */
   critBy?: StatusId
@@ -235,11 +238,9 @@ export type BeatBody =
   | { type: 'statusTick'; phase: TurnPhase; side: Side; status: StatusId; effects: AppliedEffect[] }
   /**
    * Usure de la phase (2026-10-21 : une seule étape au lieu de `statusDuration` et `statusExpire`) : `changes`, les
-   * durées décomptées (un tour de moins) ; `expired`, les statuts éteints (charges épuisées ou durée écoulée) ; `worn`
-   * (2026-10-27, M1), les charges qu'un statut qui s'use (`wearsOff`, Critique assuré) perd à la fin du tour, avant → après
-   * (à 0, il est aussi dans `expired`).
+   * durées décomptées (un tour de moins) ; `expired`, les statuts éteints (charges épuisées ou durée écoulée).
    */
-  | { type: 'statusAge'; phase: TurnPhase; side: Side; changes: DurationChange[]; expired: StatusId[]; worn?: DurationChange[] }
+  | { type: 'statusAge'; phase: TurnPhase; side: Side; changes: DurationChange[]; expired: StatusId[] }
   /**
    * Réaction d'un statut à un moment du combat (ex. Épines quand le porteur encaisse, Vol de vie quand il touche).
    * Sans effet pour une jauge qui se remplit (Rétribution) : l'état de l'étape montre les jauges. `dodgedBy`
@@ -471,11 +472,14 @@ export function resolveAttack(
   if (strike.jinxed) return { ...base, ...nothing, value: 0, dodged: false, jinxed: true }
   // Le coup de base : sa valeur tirée dans l'attaque (aucun tirage pour une attaque fixe), qu'il touche ou soit esquivé
   const drawn = att.attackMax > att.attackMin ? att.attackMin - 1 + rollDie(rng, att.attackMax - att.attackMin + 1) : att.attackMin
+  // Critique assuré (B8, 2026-10-27) : la prochaine frappe le porte, qu'elle touche ou non ; un coup esquivé le perd
+  const critBy = attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
+  const critForced = critBy !== undefined
   // Esquive imposée : pas de tirage (les combats sans ce statut gardent la même suite de hasard).
   const dodgeBy = defenderStatuses.find((s) => STATUSES[s.id].forcesDodge)?.id
   const dodgeForced = dodgeBy !== undefined
   if (dodgeForced || chance(rng, def.dodgeChance)) {
-    return { ...base, ...nothing, value: drawn, dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true }
+    return { ...base, ...nothing, value: drawn, dodgeForced, ...(dodgeBy && { dodgeBy }), dodged: true, critForced, ...(critBy && { critBy }) }
   }
   // Reliques de coup : la valeur du coup qui touche grandit, avant le critique ; un bonus de face (Fer à quatre
   // clous) ne vaut que si le dé de ce coup fait cette face (chaque dé d'une rafale se lit seul), coup brut compris
@@ -490,8 +494,6 @@ export function resolveAttack(
   const gild = attacker.gilded[roll] ?? 0
   const value = drawn * (strike.multiplier ?? 1) + relicBonus.reduce((t, b) => t + b.amount, 0) + gild
 
-  const critBy = attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
-  const critForced = critBy !== undefined
   // Aveuglé (lot 3) : le tirage du critique a lieu, chance de critique plus BLIND_MISS par intensité ; un critique, tiré ou
   // assuré, devient un coup raté (le critique assuré part). Sans Aveuglé, le tirage est celui d'avant.
   const blind = attackerStatuses.find((s) => STATUSES[s.id].blinds)
@@ -1226,19 +1228,12 @@ export function simulateCombat(
         : []
     })
     states[side].statuses = kept
-    // S'user (2026-10-27, M1, Critique assuré) : une charge part à la fin du tour du porteur, sauf s'il l'a reçu ou vu
-    // renforcé pendant ce tour
-    const worn: DurationChange[] = []
-    if (phase === 'turnEnd')
-      for (const s of states[side].statuses)
-        if (STATUSES[s.id].wearsOff && !states[side].fresh.has(s.id)) worn.push({ status: s.id, from: s.stacks, to: s.stacks - 1 })
-    for (const w of worn) states[side].statuses = consumeStatus(states[side].statuses, w.status, 1)
-    // Une seule étape pour l'usure de la phase : durées décomptées, charges usées et statuts éteints (épuisés ou expirés).
-    // Sa cause : l'effet du premier statut concerné qui a agi dans cette phase (son « −2 » et son compteur vont ensemble)
-    const gone = [...faded, ...expired, ...worn.filter((w) => w.to === 0).map((w) => w.status)]
-    if (changes.length || gone.length || worn.length)
+    // Une seule étape pour l'usure de la phase : durées décomptées et statuts éteints (épuisés ou expirés). Sa cause :
+    // l'effet du premier statut concerné qui a agi dans cette phase (son « −2 » et son compteur vont ensemble)
+    const gone = [...faded, ...expired]
+    if (changes.length || gone.length)
       push(
-        { type: 'statusAge', phase, side, changes, expired: gone, ...(worn.length > 0 && { worn }) },
+        { type: 'statusAge', phase, side, changes, expired: gone },
         [...changes.map((c) => c.status), ...gone].map((s) => ticks.get(s)).find((t) => t !== undefined),
       )
     return undefined

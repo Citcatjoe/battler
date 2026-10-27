@@ -61,6 +61,7 @@ LAB_N=400 LAB_ONLY=sylwen-second-tir,naraxes-main-leste npx vitest run --config 
 ### Fichiers
 
 - `scripts/lab/ideas.ts` : les idées, une fiche chacune. Une idée a un id, le personnage visé, un nom, un schéma, une famille, la phrase en jeu, la modification à appliquer (`add` ajoute des compétences, `replace` en remplace une), et ce qu'il faut compter (`watch`). Elle peut aussi déclarer des **statuts d'essai**, construits avec les crochets existants. Ils ne sont ajoutés au registre que le temps du laboratoire, sans modifier `statuses.ts`.
+- **Règles pour tous** (2026-10-27, [AURAS.md](AURAS.md)) : `everyone` donne l'idée aussi aux adversaires (une règle du jeu, et non la compétence d'un seul) ; `world` pose une règle sur tout le roster, avant comme après (pour mesurer une relique ou une forge dans un monde où la règle a changé) ; `presence` mesure la part de ses actions où le personnage porte un statut, et les combats où il ne vient jamais. Le rapport ajoute alors une table « Règles pour tous » : taux du plus bas au plus haut, écart-type entre personnages, pire duel, tours, présence.
 - `scripts/lab/spectacle.ts` : les mesures de spectacle.
 - `scripts/lab.report.ts` : le banc d'essai.
 
@@ -77,6 +78,7 @@ Le personnage modifié affronte les 17 autres, **sur les mêmes graines que `npm
 | Retours | part des combats où le vainqueur est passé sous 30 % de ses PV |
 | Fins serrées | part des combats où le vainqueur finit sous 20 % de ses PV |
 | Moments | déclenchements de l'idée par combat, et part des combats où on la voit au moins une fois |
+| Présence (jamais) | avec `presence` : part de ses actions où il porte le statut au moment d'agir, avant → après ; entre parenthèses, part des combats où il ne le porte jamais |
 | Verdict | hors budget (hors de 42-58 %), duel extrême (au-delà de 65/35, marge déduite), effet non significatif, rare à l'écran (moins d'un combat sur trois), AUDIT |
 
 Chaque combat passe aussi par **l'audit de résolution** (`audit.ts`). Une idée qui produit une chronologie incohérente est signalée.

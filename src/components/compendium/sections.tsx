@@ -14,11 +14,12 @@ import { StatusesSection } from './StatusesSection'
  * Sections du compendium : le savoir du jeu, ce qui ne change pas d'un combat à l'autre (les résultats sont dans
  * l'écran Statistiques). Une donnée, une maison : chaque information est décrite dans une seule section, et
  * apparaît ailleurs en résumé avec un lien vers elle (`CompendiumNav.go`).
- * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent. Les compétences
- * et les auras ont chacune leur onglet (retour du 2026-10-27) ; les Maîtrises, le leur (docs/MAITRISES.md § 12).
+ * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent. Toutes les
+ * compétences, auras comprises, ont leur fiche dans l'onglet Compétences ; les auras se rangent par maîtrise dans
+ * l'onglet Maîtrises (docs/MAITRISES.md § 12 ; l'onglet Auras du premier retour du 2026-10-27 est retiré au second, B4).
  */
 
-export type CompendiumSectionId = 'characters' | 'masteries' | 'skills' | 'auras' | 'statuses' | 'relics' | 'rules'
+export type CompendiumSectionId = 'characters' | 'masteries' | 'skills' | 'statuses' | 'relics' | 'rules'
 
 /** Où mène un lien du compendium : une section, et l'élément à montrer (personnage, compétence, statut, relique, règle). */
 export interface CompendiumTarget {
@@ -72,16 +73,9 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
   {
     id: 'skills',
     label: 'Compétences',
-    count: compendiumSkills('skills').length,
+    count: compendiumSkills().length,
     placeholder: 'Filtrer les compétences…',
-    render: (props) => <SkillsSection kind="skills" {...props} />,
-  },
-  {
-    id: 'auras',
-    label: 'Auras',
-    count: compendiumSkills('auras').length,
-    placeholder: 'Filtrer les auras…',
-    render: (props) => <SkillsSection kind="auras" {...props} />,
+    render: (props) => <SkillsSection {...props} />,
   },
   {
     id: 'statuses',

@@ -605,13 +605,7 @@ export function createAudit() {
       }
       // Usure (2026-10-21, une seule étape) : chaque décompte et chaque extinction annoncés se lisent dans l'état
       if (b.type === 'statusAge') {
-        if (b.changes.length === 0 && b.expired.length === 0 && !b.worn?.length) flag('usure vide', r, i, '')
-        // Charges usées (2026-10-27, M1) : à la fin du tour seulement, un statut qui s'use, une charge, lue dans l'état
-        for (const w of b.worn ?? []) {
-          if (b.phase !== 'turnEnd' || !STATUSES[w.status].wearsOff || w.to !== w.from - 1) flag('usure de charge fausse', r, i, `${w.status} ${w.from}→${w.to}`)
-          if ((find(s.statuses[b.side], w.status)?.stacks ?? 0) !== w.to || (find(prev.statuses[b.side], w.status)?.stacks ?? 0) !== w.from) flag('usure de charge : état faux', r, i, w.status)
-          else see(w.to === 0 ? 'critique assuré usé jusqu’au bout' : 'critique assuré usé d’une charge')
-        }
+        if (b.changes.length === 0 && b.expired.length === 0) flag('usure vide', r, i, '')
         for (const c of b.changes)
           if (find(s.statuses[b.side], c.status)?.turns !== c.to || c.to !== c.from - 1) flag('usure : décompte faux', r, i, `${c.status} ${c.from}→${c.to}`)
         for (const id of b.expired) if (find(s.statuses[b.side], id)) flag('usure : statut éteint encore présent', r, i, id)
@@ -715,6 +709,15 @@ export function createAudit() {
         if (a.dodgeForced && kept !== 1) flag('esquive imposée : une charge par esquive', r, i, `${kept} charge(s) usée(s)`)
         else if (a.dodgeForced && find(s.statuses[def], 'evasion')) flag('esquive imposée cumulée', r, i, '')
         else if (a.dodgeForced) see('esquive imposée, plus aucune charge')
+        // Critique assuré (B8, 2026-10-27) : la prochaine frappe le porte et le dépense, qu'elle touche, soit esquivée ou
+        // ratée (Aveuglé) ; un coup qui touche est alors critique. Un jet sans coup (remplacé, tombé à vide) le garde
+        if (!a.replaced && !a.jinxed) {
+          const sure = find(prev.statuses[att], 'guaranteedCrit')
+          if (!!sure !== a.critForced) flag('critique assuré incohérent', r, i, '')
+          else if (sure && find(s.statuses[att], 'guaranteedCrit')) flag('critique assuré gardé après sa frappe', r, i, '')
+          else if (sure && !a.dodged && !a.crit) flag('critique assuré sans critique', r, i, '')
+          else if (sure) see(a.blindedBy ? 'critique assuré raté' : a.dodged ? 'critique assuré perdu sur une esquive' : 'critique assuré')
+        }
         if (!a.dodged && !a.replaced && !a.jinxed) {
           // Reliques de coup : recomptées depuis les reliques de l'attaquant, avant le critique ; un bonus de face
           // (Fer à quatre clous) ne vaut que si le dé de ce coup fait cette face, coup brut compris (2026-10-23) ; un bonus
@@ -754,8 +757,6 @@ export function createAudit() {
           }
           if (a.damage !== expected) flag('dégâts finaux faux', r, i, `${a.damage} vs ${expected}`)
           if (a.dealt !== a.damage) flag('dégâts comptés faux', r, i, '')
-          const forcing = find(prev.statuses[att], 'guaranteedCrit')
-          if (!!forcing !== a.critForced) flag('critique assuré incohérent', r, i, '')
           // Garde brisée : une charge par coup qui touche, et plus aucune armure temporaire après lui
           const broken = find(prev.statuses[def], 'guardBreak')
           if (broken) {

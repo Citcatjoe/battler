@@ -4,6 +4,7 @@ import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './eve
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
 import { describeRelic, RELIC_KINDS, relicKind } from './relics'
+import { STATES, STATUS_PLACE } from './states'
 import { STATUSES, statusCounter, type Status, type StatusId } from './statuses'
 
 /*
@@ -36,7 +37,10 @@ const label = (id: StatusId) => STATUSES[id].name
 /** « Poison 2 charges, 3 tours » */
 function statusText(s: Status) {
   const turns = s.turns !== undefined ? `, ${s.turns} tour${s.turns > 1 ? 's' : ''}` : ''
-  const counter = statusCounter(s)
+  // Le nombre que montre la zone d'état : aucun pour un état sans compteur (Critique assuré depuis B8, Tour perdu…)
+  const place = STATUS_PLACE[s.id]
+  const uncounted = place.place === 'tray' && place.relays.every((r) => STATES[r.state].counter === 'none')
+  const counter = uncounted ? null : statusCounter(s)
   const shown = counter ? ` [affiche ${counter.value}]` : ''
   // Intensité d'un statut aiguisé (0.110.0)
   const power = s.power ? `, intensité ${s.power}` : ''
@@ -114,7 +118,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       // type d'attaque unique depuis le 2026-10-24 (« DP », « DM Lumière » avant)
       const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax})${a.multiplier ? ` ×${a.multiplier}` : ''}`
       if (a.dodged)
-        return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}, aucun dégât`]
+        return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}${a.critBy ? ` · ${label(a.critBy)} perdu` : ''}, aucun dégât`]
       const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
       const struck = a.value * (a.multiplier ?? 1) + bonus
       const steps = [
@@ -162,7 +166,6 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [
         `usure sur ${fighters[beat.side].name} : ${[
           ...beat.changes.map((c) => `${label(c.status)} ${c.from} → ${c.to} tour${c.to > 1 ? 's' : ''}`),
-          ...(beat.worn ?? []).map((w) => `${label(w.status)} ${w.from} → ${w.to} charge${w.to > 1 ? 's' : ''} (s'use)`),
           ...beat.expired.map((id) => `${label(id)} s'éteint`),
         ].join(', ')}`,
       ]

@@ -74,7 +74,8 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
       events: result.beats.filter((b) => b.type === 'event' && b.event.side === side).length,
       healed: sum('heal'),
       effectDamageTaken: sum('damage'),
-      forcedCrits: mine.filter((a) => a.critForced).length,
+      // Ceux qui ont frappé : un critique assuré perdu sur un coup esquivé ou raté (B8) n'est pas « utilisé »
+      forcedCrits: mine.filter((a) => a.crit && a.critForced).length,
       shieldAbsorbed: theirs.reduce((s, a) => s + a.shieldAbsorbed, 0),
       // Seuls les malus réellement posés (ni bloqués ni annulés par leur opposé)
       debuffsTaken: onMe.filter((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && isNegative(e.status))

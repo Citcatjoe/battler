@@ -127,18 +127,15 @@ export type IconName =
   | 'wither'
   | 'assault'
   | 'stone-fist'
-  // Les emblèmes des onze maîtrises (docs/MAITRISES.md § 3)
+  // Les emblèmes des huit maîtrises (docs/MAITRISES.md « Huit maîtrises » ; la Magie reprend l'emblème de l'Orage en attendant le sien)
   | 'mastery-fury'
   | 'mastery-blood'
-  | 'mastery-hunt'
   | 'mastery-bulwark'
-  | 'mastery-retaliation'
   | 'mastery-poison'
   | 'mastery-chance'
   | 'mastery-light'
   | 'mastery-shadow'
-  | 'mastery-storm'
-  | 'mastery-song'
+  | 'mastery-magic'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose

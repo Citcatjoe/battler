@@ -33,7 +33,9 @@ import {
   type Season,
   type SeasonResult,
 } from './season'
-import { championRun, createTournament, fillSlots, matchFighters, matchKey, players, readyMatches, SLOTS, withResult, type Tournament } from './tournament'
+import { championRun, createTournament, entrantAura, fillSlots, matchFighters, matchKey, players, readyMatches, SLOTS, withResult, type Tournament } from './tournament'
+import { rollFace } from './events'
+import type { Character } from './character'
 
 const nameOf = (id: string) => createCharacter(id).name
 const participants = (n: number, seed = 5) => fillSlots(Array(n).fill(null), CHARACTER_IDS, seededRng(seed))
@@ -174,13 +176,15 @@ describe('saison', () => {
         expect(reward?.kind).toBe(f.day < 10 ? season.rewards[f.day] : undefined)
         // L'offre de la campagne (offers.ts) : reliques à sa portée qu'il n'a pas, gravures de ses maîtrises à sa portée
         const championId = season.entrants[i].characterId
+        // Sa construction part de l'aura tirée au lancement (B7)
+        const aura = season.entrants[i].aura
         if (reward?.kind === 'relic') {
-          const pool = offerableRelics({ championId, ...before })
+          const pool = offerableRelics({ championId, aura, ...before })
           for (const id of reward.offer) expect(pool, `${championId} ${id}`).toContain(id)
           expect(reward.offer.some((id) => before.relics.includes(id))).toBe(false)
         }
         if (reward?.kind === 'forge') {
-          const reach = offerableSkills({ championId, ...before }, characterPool(createCharacter(championId).definition)).map((s) => s.id)
+          const reach = offerableSkills({ championId, aura, ...before }, characterPool(createCharacter(championId, { aura }).definition)).map((s) => s.id)
           for (const o of reward.offer) if (o.op === 'engrave') for (const s of o.skills) expect(reach).toContain(s.id)
         }
         // Chacun combat avec ce qu'il a reçu aux journées précédentes
@@ -198,7 +202,8 @@ describe('saison', () => {
       expect(build.relics).toHaveLength(6)
       expect(new Set(build.relics).size).toBe(6)
       expect(buildOf(season, i)).toEqual(build)
-      const faces = forgedFaces(createCharacter(e.characterId).definition, build.forge)
+      // Forgé sur son dé de départ : l'aura tirée sur le 1 (B7)
+      const faces = forgedFaces(createCharacter(e.characterId, { aura: e.aura }).definition, build.forge)
       expect(faces.filter((f) => f.origin.length > 0 || f.engraved).length).toBeLessThanOrEqual(MAX_SKILL_FACES)
     })
     // Rejouer un match avec sa graine notée redonne le même vainqueur, avec la même construction
@@ -395,5 +400,52 @@ describe('noms uniques', () => {
     const many = uniqueNames(Array(20).fill('gorak'), nameOf, seededRng(1))
     expect(new Set(many).size).toBe(20)
     expect(createTournament(participants(SLOTS), nameOf, { epithets: seededRng(2) }).entrants.every((e) => !/ I+$/.test(e.label))).toBe(true)
+  })
+})
+
+describe('aura de départ tirée (retour du 2026-10-27, B7)', () => {
+  const faceOne = (c: Character) => c.definition.events.find((e) => rollFace(e.trigger) === 1)?.id
+
+  it('saison : chacun tire au lancement une aura parmi ses startAuras, reproductible à graine égale, toutes possibles', () => {
+    const ids = participants(32, 4)
+    const draw = (seed: number) => seasonOf(createSeasonTournament(ids, nameOf, { seed })).entrants.map((e) => e.aura)
+    expect(draw(3)).toEqual(draw(3))
+    expect(draw(3)).not.toEqual(draw(4))
+    const seen = new Map<string, Set<string>>()
+    for (let seed = 1; seed <= 40; seed++)
+      draw(seed).forEach((aura, i) => {
+        expect(createCharacter(ids[i]).definition.startAuras, ids[i]).toContain(aura)
+        seen.set(ids[i], (seen.get(ids[i]) ?? new Set()).add(aura!))
+      })
+    // Sur quarante saisons, chaque aura de départ de chaque personnage sort au moins une fois
+    for (const [id, auras] of seen) expect([...auras].sort(), id).toEqual([...createCharacter(id).definition.startAuras!].sort())
+  })
+
+  it('saison forgée : l’aura tient toute la saison puis l’arbre ; un combat parti d’une autre aura est refusé', () => {
+    let t = createSeasonTournament(participants(20), nameOf, { seed: 3, forge: true })
+    const season = () => seasonOf(t)
+    // Un participant dont l'aura tirée n'est pas l'aura par défaut : son dé vanilla n'est pas celui du match
+    const f = seasonFixtures(season()).find((g) => [g.home, g.away].some((i) => season().entrants[i].aura !== createCharacter(season().entrants[i].characterId).definition.startAuras![0]))!
+    const side = season().entrants[f.home].aura !== createCharacter(season().entrants[f.home].characterId).definition.startAuras![0] ? 0 : 1
+    t = simulateSeasonMatches(t, seasonFixtures(season()).filter((g) => g.day < f.day).map((g) => g.number))
+    const pair = seasonFighters(season(), f.number)
+    const vanilla = createCharacter(pair[side].id).withName(pair[side].name).withForge(pair[side].forge).withRelics(pair[side].relics)
+    expect(() => withSeasonResult(t, f.number, simulateCombat(side === 0 ? [vanilla, pair[1]] : [pair[0], vanilla], { seed: 1 }))).toThrow()
+    // Toute la saison : chaque combattant part de son aura tirée, sa forge (offerte sur ce dé) s'y applique
+    t = simulateSeasonMatches(t, seasonFixtures(season()).map((g) => g.number).filter((n) => !season().results[n]))
+    for (const g of seasonFixtures(season()))
+      seasonFighters(season(), g.number).forEach((c, s) => expect(faceOne(c)).toBe(season().entrants[s === 0 ? g.home : g.away].aura))
+    t = startBracket(t)
+    for (const ref of readyMatches(t)) {
+      const [a, b] = players(t, ref) as [number, number]
+      expect(matchFighters(t, ref).map(faceOne)).toEqual([t.entrants[a].aura, t.entrants[b].aura])
+    }
+  })
+
+  it('un participant sans aura (tournoi d’avant le tirage) ou dont l’aura n’est plus de ses startAuras part de l’aura par défaut', () => {
+    const def = createCharacter('brokk').definition.startAuras!
+    expect(entrantAura({ characterId: 'brokk' })).toBe(def[0])
+    expect(entrantAura({ characterId: 'brokk', aura: 'holy-aura' })).toBe(def[0])
+    expect(entrantAura({ characterId: 'brokk', aura: def.at(-1) })).toBe(def.at(-1))
   })
 })

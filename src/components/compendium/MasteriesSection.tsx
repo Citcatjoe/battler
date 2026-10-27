@@ -1,29 +1,29 @@
-import type { Character } from '../../game/character'
 import { describeSkill, type CharacterEvent } from '../../game/events'
-import { aurasOf, MASTERIES, MASTERY_IDS, type Mastery, type MasteryId } from '../../game/masteries'
-import { CHARACTERS } from '../../game/roster'
+import { aurasOf, MASTERIES, MASTERY_IDS, type Mastery } from '../../game/masteries'
+import { RULES } from '../../game/rules'
 import { MASTERY_SKILLS } from '../../game/skills'
 import { auraOfSkill } from '../../game/states'
+import { typeset } from '../../game/typography'
 import { MasteryIcon } from '../Icon'
-import { Portrait } from '../Portrait'
 import { SkillTooltip } from '../SkillDice'
-import { CharacterLink, CodexBox, SkillMedal, skillLink, useFocusRef } from './CodexBits'
+import { CodexBox, SkillMedal, skillLink, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
 
-/** Ceux qui jouent une maîtrise, dans l'ordre du roster. */
-export const holdersOf = (id: MasteryId): Character[] => CHARACTERS.filter((c) => c.definition.masteries.includes(id))
+/** Ce qu'est une aura et comment on l'obtient : en tête des auras de chaque maîtrise (docs/MAITRISES.md § 5 et § 12). */
+const AURA_INTRO = typeset(
+  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Chaque combattant en porte une sur le 1 de son dé, l'une des auras de ses deux maîtrises ; les autres s'obtiennent en gravant.",
+)
 
 /**
  * Section « Maîtrises » (docs/MAITRISES.md § 12) : à gauche une tuile par maîtrise (son emblème, son nom, la question du
- * joueur, les portraits de ceux qui la jouent) ; à droite celle qui est ouverte, ses auras puis ses compétences, une
- * ligne d'effet chacune, le détail au survol. Comme ailleurs, ni interaction ni ce qui retire un statut.
+ * joueur) ; à droite celle qui est ouverte, ses auras (sous la règle courte des auras) puis ses compétences, une ligne
+ * d'effet chacune, le détail au survol. Ses porteurs ne s'y montrent plus (second retour du 2026-10-27, B3) : ses
+ * maîtrises se lisent sur la fiche du personnage. Comme ailleurs, ni interaction ni ce qui retire un statut.
  */
 export function MasteriesSection({ nav, focus, filter }: SectionProps) {
   const focusRef = useFocusRef<HTMLButtonElement>(focus)
   const all = MASTERY_IDS.map((id) => MASTERIES[id])
-  const shown = all.filter((m) =>
-    matches(filter, m.name, m.question, m.summary, ...holdersOf(m.id).map((c) => c.name), ...MASTERY_SKILLS[m.id].map((e) => e.name)),
-  )
+  const shown = all.filter((m) => matches(filter, m.name, m.question, m.summary, ...MASTERY_SKILLS[m.id].map((e) => e.name)))
   const selected = all.find((m) => m.id === focus) ?? shown[0] ?? all[0]
 
   return (
@@ -44,13 +44,6 @@ export function MasteriesSection({ nav, focus, filter }: SectionProps) {
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="font-display text-[20px] font-extrabold leading-tight text-ink-1">{m.name}</span>
                 <span className="font-body text-[14px] leading-snug text-ink-3">{m.question}</span>
-                <span className="mt-0.5 flex gap-1">
-                  {holdersOf(m.id).map((c) => (
-                    <span key={c.id} title={c.name} className="h-8 w-8 shrink-0 overflow-hidden rounded-(--r-xs) border border-line-2 bg-surface-1">
-                      <Portrait character={c} side={0} className="h-full w-full" />
-                    </span>
-                  ))}
-                </span>
               </span>
             </button>
           ))}
@@ -65,7 +58,6 @@ function MasteryDetail({ mastery, nav }: { mastery: Mastery; nav: CompendiumNav 
   // Ses auras, puis ses compétences, dans l'ordre du catalogue
   const auras = aurasOf(mastery.id)
   const skills = MASTERY_SKILLS[mastery.id].filter((e) => auraOfSkill(e) === undefined)
-  const holders = holdersOf(mastery.id)
   return (
     <article className="codex-panel fade-in scroll-panel flex min-h-0 flex-col gap-4 overflow-y-auto p-6">
       <header className="flex items-center gap-5">
@@ -77,19 +69,13 @@ function MasteryDetail({ mastery, nav }: { mastery: Mastery; nav: CompendiumNav 
         </div>
       </header>
 
-      <p className="flex flex-wrap items-center gap-x-4 gap-y-2 font-body text-[15px] text-ink-2">
-        <span className="codex-label">{holders.length > 1 ? 'La jouent' : 'La joue'}</span>
-        {holders.map((c) => (
-          <span key={c.id} className="flex items-center gap-2">
-            <span className="h-9 w-9 shrink-0 overflow-hidden rounded-(--r-xs) border border-line-2 bg-surface-1">
-              <Portrait character={c} side={0} className="h-full w-full" />
-            </span>
-            <CharacterLink character={c} nav={nav} />
-          </span>
-        ))}
-      </p>
-
       <CodexBox title={`Auras · ${auras.length}`}>
+        <p className="mb-2 font-body text-[15px] leading-snug text-ink-2">
+          {AURA_INTRO}{' '}
+          <button type="button" className="codex-link" onClick={() => nav.go({ section: 'rules', id: 'auras' })}>
+            {RULES.auras.title} →
+          </button>
+        </p>
         <SkillRows events={auras} nav={nav} />
       </CodexBox>
       <CodexBox title={`Compétences · ${skills.length}`}>

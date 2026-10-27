@@ -18,19 +18,17 @@ const THUNDERBOLT_HITS = 4
 /** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0 ; 6 en 0.115.1 ; 8 depuis les Maîtrises). */
 const PURIFICATION_LIGHT = 8
 
-/** Les compétences de chaque maîtrise : ses auras d'abord, puis ses compétences, dans l'ordre du compendium. */
+/**
+ * Les compétences de chaque maîtrise : ses auras d'abord, puis ses compétences, dans l'ordre du compendium. Second retour
+ * du 2026-10-27 (B1) : onze → huit maîtrises, aucune compétence nouvelle. La Chasse (finesse : critiques et esquives)
+ * passe à la Chance, l'Aura de précision à la Fureur ; les Représailles (rendre les coups) au Rempart, Dette de sang
+ * comprise (une consommatrice reste avec le producteur de sa ressource, les renvois) ; l'Orage devient la Magie, qui
+ * reçoit les sorts du Chant (Ballade, Duo) ; ses gros coups martiaux (Soliste, Crescendo) vont à la Fureur, Siffloter (un
+ * soin) à la Lumière, la Fausse note (un malus) à l'Ombre. Ivresse du sang passe au Sang, l'Aura d'immunité à la
+ * Lumière, la Malchance à l'Ombre (docs/MAITRISES.md, « Huit maîtrises »).
+ */
 export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
   fury: [
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de critiques de sa Furie, une aura. Chaque critique : deux coups
-      // de base bruts juste après ; chaque pose de plus et chaque rang : +5 % de critique. Gravée : Gorak +11,8, rang II +3,9
-      id: 'blood-frenzy',
-      name: 'Ivresse du sang',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'bloodFrenzy', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
     {
       id: 'power-aura',
       name: 'Aura de puissance',
@@ -45,6 +43,14 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Les Maîtrises (2026-10-27) : une aura de la Fureur, sans forme (elle n'agissait que sous la forme humaine du druide).
     // Gravée chez Gorak +13,0 (série 73)
     { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      id: 'precision-aura',
+      name: 'Aura de précision',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
     {
       // Phase 5 bis : elle remplace le coup de sa face par deux coups de base bruts, tout de suite
       id: 'wind-fury',
@@ -82,8 +88,23 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Les Maîtrises (2026-10-27) : le gros coup de la Fureur. Gravé : Gorak +14,8, Morgrut +20,6 (au bord haut, série 71)
     { id: 'assault', name: 'Assaut', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il
+    // modifie son coup de base, ce coup ×3. 0.107.0 (SORTS.md § 19) : le solo, une fois par combat (un solo qui touche) ;
+    // à chaque 2, il valait +23 points gravé ; Crescendo, lui, monte à chaque fois
+    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
   ],
   blood: [
+    {
+      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de critiques de sa Furie, une aura. Chaque critique : deux coups
+      // de base bruts juste après ; chaque pose de plus et chaque rang : +5 % de critique. Gravée : Gorak +11,8, rang II +3,9
+      id: 'blood-frenzy',
+      name: 'Ivresse du sang',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'bloodFrenzy', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
     {
       id: 'thorns',
       name: "Aura d'épines",
@@ -146,57 +167,6 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       rankAxis: { kind: 'amount', per: 2 },
     },
   ],
-  hunt: [
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de ses esquives, qui nourrit sa ressource (+5 % d'esquive par
-      // charge) ; chaque esquive, un critique assuré. Gravée : Naraxes +11,2, rang II +3,8
-      id: 'feint',
-      name: 'Feinte',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'feint', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'precision-aura',
-      name: 'Aura de précision',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    // Revue des compétences (I3) : la première esquive permanente, une aura cumulable (+8 % par charge ; gravée +8,2, de
-    // Fanchon +6,4 à Ervald +10,0). Son rang : une charge de plus
-    {
-      id: 'sidestep',
-      name: 'Pas de côté',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'sidestep', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      id: 'hawk-eye',
-      name: 'Œil de faucon',
-      nature: 'finesse',
-      trigger: 'naturalOne',
-      // Phase 5 bis : greffé, le Critique assuré rend critique le coup de base de ce jet même
-      effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      id: 'evasion',
-      name: 'Esquive améliorée',
-      nature: 'finesse',
-      trigger: 'naturalTwo',
-      // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
-      // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
-      effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
-      // Son rang (0.117.1, non cumulable) : +2 dégâts à ses coups tant qu'elle attend l'esquive, +3,3 points gravée (+1 :
-      // +1,8, sous la bande). Avant : une esquive de plus (+9,6 en 0.111.0), que « une charge au plus » ne permet plus
-      rankAxis: { kind: 'power', per: 2 },
-    },
-  ],
   bulwark: [
     {
       id: 'intimidation-aura',
@@ -205,6 +175,17 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
+    },
+    {
+      // Phase 8, second lot (SORTS.md § 23) : le consommateur des dégâts qu'il renvoie (Riposte, Rétribution, au Rempart
+      // depuis B1). Une aura : +6 Ferveur par charge à chaque renvoi depuis la revue des auras (A2 ; +3 avant, Aldric
+      // +9,0 → +12,9 gravée ; +9 valait +15,4, plus risqué)
+      id: 'vendetta',
+      name: 'Vindicte',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
     },
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa Peau de pierre, le pont du Rempart vers les Épines
@@ -219,15 +200,16 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'bristlingRampart', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
+    // Les Maîtrises (2026-10-27) : une aura qui vit des coups reçus (des Représailles, au Rempart depuis B1). Gravée chez Aldric +9,5
+    { id: 'rancor', name: 'Rancœur', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
-      id: 'immunity-aura',
-      name: "Aura d'immunité",
-      nature: 'arcane',
+      // Phase 8, lot 3 (SORTS.md § 28) : la seconde consommatrice des renvois (Riposte, Rétribution) vers le Sang, une aura.
+      // Gravée : Aldric +12,1, rang II +4,0
+      id: 'blood-debt',
+      name: 'Dette de sang',
+      nature: 'martial',
       trigger: 'naturalThree',
-      effects: [
-        { type: 'cleanse', polarity: 'negative' },
-        { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
-      ],
+      effects: [{ type: 'applyStatus', status: 'bloodDebt', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
     {
@@ -251,29 +233,6 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'grudge', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
-  ],
-  retaliation: [
-    {
-      // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Représailles, les dégâts qu'il renvoie (Riposte,
-      // Rétribution). Une aura : +6 Ferveur par charge à chaque renvoi depuis la revue des auras (A2 ; +3 avant, Aldric
-      // +9,0 → +12,9 gravée ; +9 valait +15,4, plus risqué)
-      id: 'vendetta',
-      name: 'Vindicte',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la seconde consommatrice des renvois, ses Représailles vers le Sang, une aura.
-      // Gravée : Aldric +12,1, rang II +4,0
-      id: 'blood-debt',
-      name: 'Dette de sang',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'bloodDebt', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
     {
       id: 'retribution',
       name: 'Rétribution',
@@ -293,8 +252,6 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
       rankAxis: { kind: 'power', per: 2 },
     },
-    // Les Maîtrises (2026-10-27) : la troisième aura des Représailles, qui vit des coups reçus. Gravée chez Aldric +9,5
-    { id: 'rancor', name: 'Rancœur', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
   ],
   poison: [
     {
@@ -371,8 +328,28 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'loadedDie', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
+    {
+      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de ses esquives, qui nourrit sa ressource (+5 % d'esquive par
+      // charge) ; chaque esquive, un critique assuré. Gravée : Naraxes +11,2, rang II +3,8
+      id: 'feint',
+      name: 'Feinte',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'feint', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
     // Les Maîtrises (2026-10-27) : une aura de la Chance qui lit le dé, à côté des pièces. Gravée chez Naraxes +8,5
     { id: 'lucky-streak', name: 'Veine', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'luckyStreak', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    // Revue des compétences (I3) : la première esquive permanente, une aura cumulable (+8 % par charge ; gravée +8,2, de
+    // Fanchon +6,4 à Ervald +10,0). Son rang : une charge de plus
+    {
+      id: 'sidestep',
+      name: 'Pas de côté',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'sidestep', stacks: 1 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
     {
       id: 'coin-flip',
       name: 'Pile ou face',
@@ -416,9 +393,28 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Fortune, le mauvais œil de la voleuse ; gravée +15,7 chez elle, +18,2
-    // en moyenne, rang II +4,6
-    { id: 'jinx', name: 'Malchance', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'jinx', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      id: 'hawk-eye',
+      name: 'Œil de faucon',
+      nature: 'finesse',
+      trigger: 'naturalOne',
+      // Phase 5 bis : greffé, le Critique assuré rend critique le coup de base de ce jet même. Son rang (B8, 2026-10-27 :
+      // le Critique assuré n'a plus qu'une charge) : des dégâts en plus à ce coup critique (avant : une charge de plus)
+      effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 3 },
+    },
+    {
+      id: 'evasion',
+      name: 'Esquive améliorée',
+      nature: 'finesse',
+      trigger: 'naturalTwo',
+      // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
+      // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
+      effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
+      // Son rang (0.117.1, non cumulable) : +2 dégâts à ses coups tant qu'elle attend l'esquive, +3,3 points gravée (+1 :
+      // +1,8, sous la bande). Avant : une esquive de plus (+9,6 en 0.111.0), que « une charge au plus » ne permet plus
+      rankAxis: { kind: 'power', per: 2 },
+    },
   ],
   light: [
     {
@@ -451,6 +447,17 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       rankAxis: { kind: 'power', per: 1 },
     },
     {
+      id: 'immunity-aura',
+      name: "Aura d'immunité",
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'cleanse', polarity: 'negative' },
+        { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
+      ],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
       id: 'purification',
       name: 'Purification',
       nature: 'arcane',
@@ -465,6 +472,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Les Maîtrises (P9, 2026-10-27) : le soin franc de la Lumière. Gravée : Ysolde +17,7, Gorak +14,2 (série 71)
     { id: 'prayer', name: 'Prière', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'heal', amount: 6 }], rankAxis: { kind: 'amount', per: 3 } },
+    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
   ],
   shadow: [
     // Les Maîtrises (2026-10-27) : les deux auras de l'Ombre, au critique. Effroi gravé : Ervald +12,1, Aldric +6,7 ; Aura de
@@ -498,10 +506,21 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Phase 8, lot 3 (SORTS.md § 29) : le malus de Sceaux, le paladin confisque ; gravée +9,3 chez lui, +10,0 en moyenne,
     // rang II +3,1 (au bord bas de la bande)
     { id: 'seal-theft', name: 'Confiscation', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'sealTheft', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
+    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Fortune, le mauvais œil de la voleuse ; gravée +15,7 chez elle, +18,2
+    // en moyenne, rang II +4,6
+    { id: 'jinx', name: 'Malchance', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'jinx', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
     // Les Maîtrises (2026-10-27) : le malus de Puissance de l'Ombre (Affaibli). Gravée : Ervald +11,5, Aldric +8,2
     { id: 'wither', name: 'Flétrissure', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'weakened', stacks: 2, turns: 3, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      id: 'false-note',
+      name: 'Fausse note',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, power: 1, target: 'opponent' }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
-  storm: [
+  magic: [
     {
       // Phase 8, lot 3 (SORTS.md § 28) : son Orage, une aura qui frappe l'adversaire au début de chacun de ses tours, un éclair
       // de dégâts directs par charge ; gravée, elle agit sous ses deux formes. Gravée : Thaldrin +10,5, rang II +4,7
@@ -512,8 +531,11 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'stormSky', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
-    // Les Maîtrises (2026-10-27) : la seconde aura de l'Orage, la foudre sur qui le frappe. Gravée : Ysolde +11,8, Thaldrin +10,7
+    // Les Maîtrises (2026-10-27) : la seconde aura de l'Orage (la Magie depuis B1), la foudre sur qui le frappe. Gravée : Ysolde +11,8, Thaldrin +10,7
     { id: 'storm-field', name: "Champ d'orage", nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'stormField', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant (la Magie depuis B1), la chanson qui soigne à chaque coup. Gravée chez Fanchon +12,4 (à 2 PV,
+    // son départ passait 62,4 % : trop)
+    { id: 'ballad', name: 'Ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'firefly',
       name: 'Feux follets',
@@ -559,11 +581,6 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // moyenne, rang II +3,8 (+10 % de coups ratés)
     // Retour du 2026-10-27 (S10) : un éclair blanc frappe la cible, l'arène blanchit, puis « Aveuglé » (MISE_EN_SCENE.md M54)
     { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', scene: 'blindFlash', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
-  ],
-  song: [
-    // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant, la chanson qui soigne à chaque coup. Gravée chez Fanchon +12,4 (à 2 PV,
-    // son départ passait 62,4 % : trop)
-    { id: 'ballad', name: 'Ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     // Le Duo (2026-10-25) : des dés de plus à sa prochaine action, joués en entier (la mécanique de Coup de chance). Jusqu'à
     // la 0.120.0, il posait d'abord +1 Aura mélodieuse, et un seul dé de plus. Retour du 2026-10-27 (P7) : l'aura quitte le
     // jeu, le Duo la compense par ses charges, 1 → 3 (quatre dés à l'action suivante). Mesuré (winRate, 300 combats par
@@ -575,20 +592,6 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'duo', stacks: 3 }],
       rankAxis: { kind: 'stacks', per: 1 },
-    },
-    // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il
-    // modifie son coup de base, ce coup ×3. 0.107.0 (SORTS.md § 19) : le solo, une fois par combat (un solo qui touche) ;
-    // à chaque 2, il valait +23 points gravé ; Crescendo, lui, monte à chaque fois
-    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
-    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
-    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
-    {
-      id: 'false-note',
-      name: 'Fausse note',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, power: 1, target: 'opponent' }],
-      rankAxis: { kind: 'power', per: 1 },
     },
   ],
 }

@@ -344,13 +344,14 @@ describe('audit de résolution : retour du 2026-10-27 (pièces de la Fortune, su
   })
 })
 
-describe('audit de résolution : retour du 2026-10-27, règles du moteur (usure du critique, Riposte esquivée, Clous contre l’armure)', () => {
-  it('aucune anomalie quand le Critique assuré s’use, quand la Riposte manque une esquive assurée, et pour les Clous contre l’armure', () => {
+describe('audit de résolution : retour du 2026-10-27, règles du moteur (critique assuré à une charge, Riposte esquivée, Clous contre l’armure)', () => {
+  it('aucune anomalie quand le Critique assuré sert ou se perd sur une esquive, quand la Riposte manque une esquive assurée, et pour les Clous contre l’armure', () => {
     const { audit, problems, seen } = createAudit()
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     let n = 0
-    // Œil de faucon (et aiguisé) et Rancune : des critiques qui attendent ; Esquive améliorée contre la Riposte d'Aldric
-    const elaria = [withSkill('elaria', 'evasion', 0), withSkill('elaria', 'evasion', 1)]
+    // Œil de faucon aiguisé (son intensité) et Rancune : des critiques qui attendent leur frappe ; Esquive améliorée contre
+    // la Riposte d'Aldric
+    const elaria = [withSkill('elaria', 'evasion', 0), withSkill('elaria', 'evasion', 1), withSkill('elaria', 'hawk-eye', 1)]
     const grudge = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: skill('grudge') }])
     // La Riposte d'Aldric a quitté son dé (Maîtrises) : gravée sur son 3
     const foe = (b: string) => (b === 'aldric' ? withSkill('aldric', 'riposte', 0) : createCharacter(b))
@@ -367,7 +368,7 @@ describe('audit de résolution : retour du 2026-10-27, règles du moteur (usure 
       for (let k = 0; k < 8; k++) audit(simulateCombat([nails, b], { seed: 28000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['riposte esquivée', 'riposte', 'dégâts renvoyés contre l’armure', 'dégâts contre l’armure, sans armure']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
-    expect((seen['critique assuré usé d’une charge'] ?? 0) + (seen['critique assuré usé jusqu’au bout'] ?? 0)).toBeGreaterThan(0)
+    for (const k of ['critique assuré', 'critique assuré perdu sur une esquive']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 

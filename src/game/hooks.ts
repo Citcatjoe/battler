@@ -292,6 +292,29 @@ export function skillNeeds(e: CharacterEvent): Hook[] {
 }
 
 /**
+ * Ce qui est à la portée d'un combattant, la règle « le producteur d'abord » (décision du parent, 2026-10-25) : ce que
+ * produisent ses compétences (son dé), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance. Une
+ * seule fonction pour l'offre (`offerableSkills`, `offerableRelics`) et pour les auras de départ (`startAurasFor`, B5).
+ */
+export function reachOf(c: {
+  events: readonly CharacterEvent[]
+  relics?: readonly Relic[]
+  forms?: readonly { statuses?: readonly StatusId[] }[]
+  stats: Pick<CharacterStats, 'dodgeChance' | 'critChance'>
+}): Set<Hook> {
+  const reach = new Set<Hook>()
+  for (const e of c.events) for (const h of eventHooks(e).produces) reach.add(h)
+  for (const r of c.relics ?? []) for (const h of relicHooks(r).produces) reach.add(h)
+  for (const s of (c.forms ?? []).flatMap((f) => f.statuses ?? [])) {
+    reach.add(`status:${s}`)
+    for (const h of STATUS_HOOKS[s].produces ?? []) reach.add(h)
+  }
+  if (c.stats.dodgeChance > 0) reach.add('moment:dodge')
+  if (c.stats.critChance > 0) reach.add('moment:crit')
+  return reach
+}
+
+/**
  * Le lien entre deux briques : ce que l'une produit et que l'autre consomme, dans les deux sens, et les conflits : ce que
  * l'une gêne et que l'autre consomme, ou la place unique d'un statut que les deux posent (`slot:`, X2).
  */

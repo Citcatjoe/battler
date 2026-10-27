@@ -5,8 +5,8 @@ import { DEFAULT_SKILL_NATURE, DIE_FACES } from '../game/events'
 import { forgedFaces, rankLabel } from '../game/forge'
 import { getRelic, relicKind, type Relic } from '../game/relics'
 import { addReport, combatReport, emptyReport, relicsByProcs, type FighterReport } from '../game/report'
-import { CHARACTERS } from '../game/roster'
 import { buildOf, seasonReport, standings, type Season } from '../game/season'
+import { entrantCharacter } from '../game/tournament'
 import { ForgeFaceTooltip } from './ForgeFaceTooltip'
 import { Portrait } from './Portrait'
 import { RelicSeal, RelicTooltip } from './RelicSeal'
@@ -179,8 +179,9 @@ export function SeasonReport({ season }: { season: Season }) {
     const rows = standings(season).map((s) => {
       const e = season.entrants[s.entrant]
       const build = buildOf(season, s.entrant)
-      const base = CHARACTERS.find((c) => c.id === e.characterId)!
-      return { entrant: s.entrant, label: e.label, base, character: base.withName(e.label).withRelics(build.relics.map(getRelic)).withForge(build.forge) }
+      // Parti de son aura de départ (le 1 de son dé), sa construction de saison forgée dessus
+      const base = entrantCharacter(e)
+      return { entrant: s.entrant, label: e.label, base, character: base.withRelics(build.relics.map(getRelic)).withForge(build.forge) }
     })
     return { reports, total, top: relicsByProcs(total), counted: Object.values(season.results).filter((r) => r.report).length, rows }
   }, [season])

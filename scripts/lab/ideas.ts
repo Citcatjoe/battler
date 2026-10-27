@@ -30,9 +30,9 @@
  * `logs/lab/2026-10-25-08-21-26_v0.115.1.md` et `2026-10-25-08-27-03_v0.115.1.md`.
  */
 import { Character, type CharacterStats } from '../../src/game/character'
-import { faceTrigger, type CharacterEvent } from '../../src/game/events'
-import { getRelic } from '../../src/game/relics'
-import { ALL_SKILLS } from '../../src/game/roster'
+import { faceTrigger, rollFace, type CharacterEvent } from '../../src/game/events'
+import { getRelic, type Relic } from '../../src/game/relics'
+import { ALL_SKILLS, CHARACTERS } from '../../src/game/roster'
 import { charges, STATUSES, type StatusDef, type StatusId } from '../../src/game/statuses'
 
 export interface LabIdea {
@@ -53,6 +53,15 @@ export interface LabIdea {
   watch: readonly string[]
   /** Statuts d'essai, ajoutés au registre le temps du laboratoire */
   statuses?: Record<string, StatusDef>
+  /**
+   * Règle du monde (faire vivre les auras, B11, 2026-10-27) : posée sur tout le roster, avant comme après (le personnage
+   * et ses adversaires). Sert à mesurer une amélioration (relique, forge) dans un monde où une règle a changé.
+   */
+  world?: (c: Character) => Character
+  /** Règle pour tous : ses adversaires reçoivent aussi l'idée (après seulement) ; `apply` vaut alors pour tout personnage */
+  everyone?: boolean
+  /** Statut dont le rapport mesure la présence chez le personnage (part de ses actions où il le porte) */
+  presence?: StatusId
 }
 
 /** Remplace une compétence existante (toutes ses faces : la Foudre du druide en a trois). */
@@ -285,6 +294,8 @@ function start(character: string, id: string, name: string, first: CharacterEven
 const loadedFromStart = (idea: LabIdea): LabIdea => ({ ...idea, apply: (c) => idea.apply(c).withRelics([getRelic('weighted-coin')]) })
 const H = 'human'
 
+// Série 70 (0.121.0) : les paires de maîtrises d'alors (onze maîtrises), gardées telles quelles pour
+// rejouer la série ; les paires en vigueur depuis la 0.122.0 sont dans docs/MAITRISES.md « Huit maîtrises ».
 const SERIES_70: LabIdea[] = [
   // Gorak (Fureur + Sang) : la Furie des vents sur le 2
   start('gorak', 'm-gorak-puissance', 'Gorak : Puissance / Furie', 'power-aura', 'wind-fury'),
@@ -494,4 +505,126 @@ const SERIES_75_B: LabIdea[] = [
   priced(kitOf('ysolde', 'r5p-ysolde', 'Ysolde (kit d’aujourd’hui)'), 'holyAura'),
 ]
 
-export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B]
+/* --- Série 76 : faire vivre les auras (second retour du 2026-10-27, B11 ; docs/AURAS.md). Chaque idée est une
+   règle pour tous (`everyone`) : le personnage et tous ses adversaires la reçoivent, chacun avec l'aura de la face 1 de son
+   dé vanilla. Les règles sont émulées avec les déclencheurs existants (`combatStart`, `naturalMax`, `bloodied`, `hurt`) ou
+   une relique d'essai (« au plus tard à son N-ième tour ») ; livrée, une telle règle vivrait dans le moteur. --- */
+type Rule = (c: Character) => Character
+/** L'aura de la face 1 : sa compétence, et le statut qu'elle pose sur son lanceur */
+function faceOneAura(c: Character): { one: CharacterEvent; status: StatusId } | undefined {
+  const one = c.events.find((e) => rollFace(e.trigger) === 1)
+  const pose = one?.effects.find((x) => x.type === 'applyStatus' && (x.target ?? 'self') === 'self')
+  return one && pose?.type === 'applyStatus' ? { one, status: pose.status } : undefined
+}
+const lacks = (status: StatusId) => [{ type: 'lacksStatus' as const, who: 'self' as const, status }]
+const poseAura = (status: StatusId, turns?: number) => [{ type: 'applyStatus' as const, status, stacks: 1, ...(turns !== undefined && { turns }) }]
+/** Une règle bâtie sur l'aura de la face 1 (un personnage sans aura sur le 1 ne change pas) */
+const auraRule =
+  (build: (c: Character, aura: { one: CharacterEvent; status: StatusId }) => Character): Rule =>
+  (c) => {
+    const aura = faceOneAura(c)
+    return aura ? build(c, aura) : c
+  }
+const atStart = (status: StatusId, turns?: number): CharacterEvent => ({ id: 'lab-aura-start', name: "Aura d'office", trigger: 'combatStart', effects: poseAura(status, turns) })
+/** Au plus tard à son N-ième tour : au début de ce tour, avant son jet, l'aura se pose si elle n'est pas là (une fois) */
+const latest = (turn: number): Rule =>
+  auraRule((c, a) => {
+    const relic: Relic = { ...getRelic('weighted-coin'), id: 'lab-aura-latest', name: 'Au plus tard', headsChance: undefined, trigger: { type: 'turn', turn }, charges: 1, when: lacks(a.status), effects: poseAura(a.status) }
+    return c.withRelics([...c.relics, relic])
+  })
+/** L'aura de la face 1 posée au début du combat, le 1 la repose : la relique R5 (Clairon du héraut), en règle ou en relique */
+const office: Rule = auraRule((c, a) => c.adjusted({ events: [...c.events, atStart(a.status)] }))
+const RULES_76: [key: string, label: string, rule: Rule][] = [
+  ['office', "R5 pour tous : l'aura posée au début, le 1 la repose", office],
+  ['office-nu', "L'aura posée au début, le 1 nu", auraRule((c, a) => c.adjusted({ events: [...c.events.filter((e) => e !== a.one), atStart(a.status)] }))],
+  [
+    'office-sig',
+    "L'aura posée au début, le 1 joue la face 2",
+    auraRule((c, a) => {
+      const two = c.events.find((e) => rollFace(e.trigger) === 2)
+      return c.adjusted({ events: [...c.events.filter((e) => e !== a.one), ...(two ? [{ ...two, trigger: a.one.trigger }] : []), atStart(a.status)] })
+    }),
+  ],
+  ['eveil3', "Éveil : posée au début pour 3 tours, le 1 la rend permanente", auraRule((c, a) => c.adjusted({ events: [...c.events, atStart(a.status, 3)] }))],
+  ['tour2', 'Au plus tard à son 2e tour', latest(2)],
+  ['tour3', 'Au plus tard à son 3e tour', latest(3)],
+  ['tour4', 'Au plus tard à son 4e tour', latest(4)],
+  ['six', 'Le 1 et le 6 la posent', auraRule((c, a) => c.adjusted({ events: [...c.events, { ...a.one, id: 'lab-aura-six', trigger: 'naturalMax' }] }))],
+  ['six-eveil', "Le 6 la pose si elle n'est pas là", auraRule((c, a) => c.adjusted({ events: [...c.events, { ...a.one, id: 'lab-aura-six', trigger: 'naturalMax', when: lacks(a.status) }] }))],
+  ['coup', "Le premier coup encaissé la pose si elle n'est pas là", auraRule((c, a) => c.adjusted({ events: [...c.events, { id: 'lab-aura-hurt', name: 'Éveil', trigger: 'hurt', limit: 1, when: lacks(a.status), effects: poseAura(a.status) }] }))],
+  ['mi-pv', "Sous la moitié de ses PV, elle se pose si elle n'est pas là", auraRule((c, a) => c.adjusted({ events: [...c.events, { id: 'lab-aura-bloodied', name: 'Éveil', trigger: 'bloodied', when: lacks(a.status), effects: poseAura(a.status) }] }))],
+]
+const SERIES_76: LabIdea[] = RULES_76.flatMap(([key, label, rule]) =>
+  CHARACTERS.flatMap((c) => {
+    const aura = faceOneAura(c)
+    if (!aura) return []
+    return [{ series: 76, id: `aura-${key}-${c.id}`, character: c.id, name: `${label} · ${c.name}`, schema: 'Règle', family: 'Auras', pitch: label, apply: rule, everyone: true, watch: [aura.one.id, 'lab-aura-start', 'lab-aura-six', 'lab-aura-hurt', 'lab-aura-bloodied'], presence: aura.status }]
+  }),
+)
+
+/* --- Série 77 : la règle « au plus tard à son 3e tour » (série 76) et la progression. Monde : tout le roster porte la règle
+   (`world`). Ce que vaut alors la relique R5 (l'aura dès le début), comparée à sa valeur d'aujourd'hui (sans la règle) ; et
+   la cause de la baisse d'Ysolde (sa Purification retire l'aura adverse au lieu de blesser). --- */
+const tour3 = latest(3)
+/** Purification : `bite` de ses dégâts partent aussi quand elle retire un bonus (sans bonus en face : 8, comme aujourd'hui) */
+const purificationBite = (bite: number) =>
+  replace('purification', (e) => ({
+    ...e,
+    effects: e.effects.flatMap((x) =>
+      x.type === 'cleanse' && x.orElse?.type === 'damage'
+        ? [{ ...x, ...(bite < x.orElse.amount ? { orElse: { ...x.orElse, amount: x.orElse.amount - bite } } : { orElse: undefined }) }, { type: 'damage' as const, amount: bite, target: 'opponent' as const, source: 'holy' as const }]
+        : [x],
+    ),
+  }))
+const s77 = (character: string, id: string, name: string, apply: Rule, world?: Rule): LabIdea => {
+  const aura = faceOneAura(CHARACTERS.find((c) => c.id === character)!)
+  return { series: 77, id, character, name, schema: 'Règle', family: 'Auras', pitch: name, apply, ...(world && { world }), watch: aura ? [aura.one.id, 'lab-aura-start'] : [], presence: aura?.status }
+}
+const SERIES_77: LabIdea[] = [
+  ...['gorak', 'brokk', 'ervald', 'naraxes', 'ysolde', 'morgrut'].flatMap((who) => [
+    s77(who, `r5-aujourdhui-${who}`, `${who} : la relique R5, sans la règle`, office),
+    s77(who, `r5-tour3-${who}`, `${who} : la relique R5, avec la règle du 3e tour`, office, tour3),
+  ]),
+  s77('ysolde', 'tour3-ysolde-seule', 'Ysolde seule reçoit la règle du 3e tour', tour3),
+  s77('ysolde', 'purif-ysolde', 'Ysolde : Purification +3 quand elle retire un bonus, sans la règle', purificationBite(3)),
+  ...[3, 5, 8].map((bite) => s77('ysolde', `purif${bite}-ysolde-tour3`, `Ysolde : Purification +${bite} quand elle retire un bonus, avec la règle du 3e tour`, purificationBite(bite), tour3)),
+  // Le paquet recommandé, pour tous : la règle du 3e tour, et la Purification qui blesse de 5 quand elle retire un bonus
+  ...CHARACTERS.map((c) => ({ ...s77(c.id, `tour3-purif5-${c.id}`, `Au plus tard à son 3e tour, Purification +5 au retrait · ${c.name}`, (x: Character) => purificationBite(5)(tour3(x))), pitch: 'Au plus tard à son 3e tour, Purification +5 au retrait', everyone: true })),
+]
+
+/* --- Série 78 : le Dé pipé à double effet (second retour du 2026-10-27, B12 ; docs/AURAS.md). La chance de pile du
+   registre (+25 % par charge), plus un second effet par charge ; essayé au départ de Naraxes (sur le 1, Pile ou face sur le
+   2) et de Fanchon (sur le 1, Duo sur le 2), et gravé sur le 3 nu de trois hôtes : Naraxes (une pièce), Fanchon et Elaria
+   (aucune). --- */
+const LAB_LOADED_CRIT5 = 'labLoadedCrit5' as StatusId
+const LAB_LOADED_CRIT10 = 'labLoadedCrit10' as StatusId
+const LAB_LOADED_DODGE5 = 'labLoadedDodge5' as StatusId
+const LAB_LOADED_HEADS_CRIT = 'labLoadedHeadsCrit' as StatusId
+const LAB_LOADED_BOTH = 'labLoadedBoth' as StatusId
+const loadedVariant = (name: string, rest: Partial<StatusDef>): StatusDef => ({ ...STATUSES.loadedDie, name, summary: name, describe: () => name, ...rest })
+const SERIES_78_STATUSES: Record<string, StatusDef> = {
+  ...SERIES_70_STATUSES,
+  [LAB_LOADED_CRIT5]: loadedVariant('Dé pipé (et +5 % de critique)', { modifyStats: (s, st) => ({ ...s, critChance: s.critChance + 0.05 * charges(st) }) }),
+  [LAB_LOADED_CRIT10]: loadedVariant('Dé pipé (et +10 % de critique)', { modifyStats: (s, st) => ({ ...s, critChance: s.critChance + 0.1 * charges(st) }) }),
+  [LAB_LOADED_DODGE5]: loadedVariant('Dé pipé (et +5 % d’esquive)', { modifyStats: (s, st) => ({ ...s, dodgeChance: s.dodgeChance + 0.05 * charges(st) }) }),
+  // Pile, puis la chance : chaque pile de ses pièces lui donne un Critique assuré (une charge, B8)
+  [LAB_LOADED_HEADS_CRIT]: loadedVariant('Dé pipé (pile : Critique assuré)', { reactions: { heads: () => [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }] } }),
+  [LAB_LOADED_BOTH]: loadedVariant('Dé pipé (et +5 % de critique et d’esquive)', { modifyStats: (s, st) => ({ ...s, critChance: s.critChance + 0.05 * charges(st), dodgeChance: s.dodgeChance + 0.05 * charges(st) }) }),
+}
+const LOADED_VARIANTS: [key: string, skill: CharacterEvent][] = [
+  ['registre', skill('loaded-die')],
+  ['crit5', auraSkill('lab-loaded-crit5', 'Dé pipé, pile et +5 % de critique', LAB_LOADED_CRIT5)],
+  ['crit10', auraSkill('lab-loaded-crit10', 'Dé pipé, pile et +10 % de critique', LAB_LOADED_CRIT10)],
+  ['esquive5', auraSkill('lab-loaded-dodge5', 'Dé pipé, pile et +5 % d’esquive', LAB_LOADED_DODGE5)],
+  ['pile-crit', auraSkill('lab-loaded-heads-crit', 'Dé pipé, pile puis Critique assuré', LAB_LOADED_HEADS_CRIT)],
+  ['les-deux', auraSkill('lab-loaded-both', 'Dé pipé, pile et +5 % de critique et d’esquive', LAB_LOADED_BOTH)],
+]
+const s78 = (idea: LabIdea): LabIdea => ({ ...idea, series: 78, statuses: SERIES_78_STATUSES })
+const SERIES_78: LabIdea[] = LOADED_VARIANTS.flatMap(([key, e]) => [
+  s78(start('naraxes', `pipe-${key}-depart`, `Naraxes : ${e.name} / Pile ou face`, e, 'coin-flip')),
+  s78(start('fanchon', `pipe-${key}-depart-fanchon`, `Fanchon : ${e.name} / Duo`, e, 'duo')),
+  s78(start('elaria', `pipe-${key}-depart-elaria`, `Elaria : ${e.name} / Œil de faucon`, e, 'hawk-eye')),
+  ...['naraxes', 'fanchon', 'elaria'].map((who) => s78(engrave(who, `pipe-${key}-${who}`, `${e.name}, gravé (${who})`, e))),
+])
+
+export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B, ...SERIES_76, ...SERIES_77, ...SERIES_78]

@@ -74,7 +74,8 @@ export const STATES: Record<StateId, StateDef> = {
   power: { name: 'Puissance', polarity: 'positive', summary: 'Ses coups font plus de dégâts.', counter: 'amount' },
   weakened: { name: 'Affaibli', polarity: 'negative', summary: 'Ses coups font moins de dégâts.', counter: 'amount' },
   shield: { name: 'Bouclier', polarity: 'positive', summary: "Absorbe des dégâts après l'armure, puis s'épuise.", counter: 'status' },
-  sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Son prochain coup qui touche est critique.', counter: 'status' },
+  // Une seule charge depuis B8 (2026-10-27) : rien à compter
+  sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Sa prochaine frappe est critique.', counter: 'none' },
   critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Ses critiques frappent plus fort (multiplicateur).', counter: 'amount' },
   sureDodge: { name: 'Esquive assurée', polarity: 'positive', summary: 'Il esquive à coup sûr le prochain coup reçu.', counter: 'status' },
   extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Des jets de plus à sa prochaine action.', counter: 'status' },

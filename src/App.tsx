@@ -648,11 +648,16 @@ export default function App() {
             const seed = randomSeed()
             // Saison : ses participants sont tirés au lancement, à la graine de la saison, et se découvrent sur l'écran de
             // saison ; l'arbre reste vide jusqu'à la fin de la saison (startBracket). Sans saison : les cases de l'arbre,
-            // toutes remplies (l'écran ne valide qu'un arbre complet).
+            // toutes remplies (l'écran ne valide qu'un arbre complet). Dans les deux cas, chacun reçoit son aura de départ,
+            // tirée à la graine du tournoi (B7) : l'arbre et la saison la montrent avant le premier combat.
             setTournament(
               seasonSetup.enabled
                 ? createSeasonTournament(drawSeasonParticipants(seasonSetup.size, seed), nameOf, { relics: relicsEnabled, forge: forgeEnabled, seed, uniqueNames })
-                : createTournament(slots as string[], nameOf, { relics: relicsEnabled, epithets: uniqueNames ? seededRng(seed) : undefined }),
+                : createTournament(slots as string[], nameOf, {
+                    relics: relicsEnabled,
+                    epithets: uniqueNames ? seededRng(seed) : undefined,
+                    auras: seededRng((seed ^ 0x61757261) | 0),
+                  }),
             )
             setActiveMatch(null)
             setActiveSeasonMatch(null)

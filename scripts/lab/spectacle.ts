@@ -46,3 +46,23 @@ export function momentsOf(r: CombatResult, side: Side, watch: readonly string[])
   }
   return n
 }
+
+/**
+ * Présence d'un statut chez `side` (faire vivre les auras, B11, 2026-10-27) : ses actions (une par tour joué), celles où il
+ * le porte au moment d'agir (l'état juste avant la première étape de son action), et s'il l'a porté au moins une fois.
+ */
+export function presenceOf(r: CombatResult, side: Side, status: string) {
+  const seen = new Set<number>()
+  let withStatus = 0
+  let ever = false
+  let prev = r.beats[0]?.state
+  for (const b of r.beats) {
+    if (b.phase === 'action' && b.owner === side && !seen.has(b.turn)) {
+      seen.add(b.turn)
+      if (prev?.statuses[side].some((s) => s.id === status)) withStatus++
+    }
+    if (b.state.statuses[side].some((s) => s.id === status)) ever = true
+    prev = b.state
+  }
+  return { actions: seen.size, withStatus, ever }
+}

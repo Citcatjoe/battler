@@ -27,8 +27,8 @@ export const formName = (character: Character, event: CharacterEvent) =>
 /** La nature d'une compétence ne fait que colorer son liseré (sceau, face du dé) : le compendium ne la nomme plus (2026-10-27). */
 export const natureOf = (e: CharacterEvent) => e.nature ?? DEFAULT_SKILL_NATURE
 
-/** Où le compendium décrit une compétence : l'onglet Auras pour celle qui pose une aura sur son lanceur, sinon Compétences. */
-export const skillLink = (event: CharacterEvent): CompendiumTarget => ({ section: auraOfSkill(event) ? 'auras' : 'skills', id: event.id })
+/** Où le compendium décrit une compétence, aura comprise : sa fiche dans l'onglet Compétences (B4, plus d'onglet Auras). */
+export const skillLink = (event: CharacterEvent): CompendiumTarget => ({ section: 'skills', id: event.id })
 
 /** Ref de l'élément visé par un lien (`focus`) : il défile au centre de sa liste à chaque nouveau lien. */
 export function useFocusRef<T extends HTMLElement = HTMLDivElement>(focus?: string) {
