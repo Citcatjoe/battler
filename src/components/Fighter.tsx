@@ -23,6 +23,11 @@ interface Props {
   lunging?: boolean
   /** Élan raccourci, pour les coups en rafale (Furie des vents) */
   fastLunge?: boolean
+  /**
+   * Clé du coup en cours (coup, coup de compétence) : quand elle change pendant un élan (les coups d'une Rétribution, une
+   * série de coups de compétence), l'élan repart, un par coup (retour du 2026-10-27, S1)
+   */
+  lungeKey?: number
   received?: Received
   state?: 'idle' | 'ko' | 'victory'
   /** Aura d'une compétence qui agit, sur son lanceur : sa clé relance l'animation (`EffectFx`) */
@@ -75,6 +80,16 @@ const FIREFLIES = [
 /** Feuilles de la métamorphose : angle et distance de chaque feuille qui s'envole. */
 const LEAVES = Array.from({ length: 14 }, (_, k) => ({ angle: (360 / 14) * k + (k % 2) * 11, dist: 120 + (k % 4) * 28, delay: (k % 5) * 0.03 }))
 
+/**
+ * Bascule à chaque changement de `key` : deux noms d'animation identiques (`lunge`, `lunge-alt`) relancent l'élan quand
+ * un coup en suit un autre sans que l'élan s'arrête (changer de nom d'animation la fait repartir de zéro).
+ */
+function useRestart(key: number | undefined) {
+  const [state, setState] = useState({ key, alt: false })
+  if (key !== state.key) setState({ key, alt: !state.alt })
+  return state.alt
+}
+
 /** Retient la forme précédente pour le fondu ; `key` change à chaque métamorphose. */
 function useFormChange(form: number) {
   const [state, setState] = useState({ form, prev: form, key: 0 })
@@ -97,6 +112,7 @@ export function Fighter({
   side,
   lunging = false,
   fastLunge = false,
+  lungeKey,
   received,
   state = 'idle',
   aura,
@@ -108,6 +124,7 @@ export function Fighter({
   anchor = 'center',
 }: Props) {
   const morph = useFormChange(form)
+  const lungeAlt = useRestart(lungeKey)
   const look = character.lookFor(form)
   const style = { '--dir': side === 0 ? 1 : -1 } as CSSProperties
   const looks = statusLooks(statuses)
@@ -177,7 +194,7 @@ export function Fighter({
     <div className={`pointer-events-none relative aspect-[636/1062] h-full ${lunging ? 'z-20' : 'z-10'} ${className}`} style={style}>
       {/* ombre au sol */}
       <div className="absolute bottom-[1%] left-1/2 h-[5%] w-[80%] -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
-      <div className={`relative h-full ${lunging ? (fastLunge ? 'lunge lunge-fast' : 'lunge') : ''}`}>
+      <div className={`relative h-full ${lunging ? `lunge${fastLunge ? ' lunge-fast' : ''}${lungeAlt ? ' lunge-alt' : ''}` : ''}`}>
         {/* Aura de personnage : halo qui pulse, cercle au sol et particules qui montent ; elle suit l'élan.
             Un combattant vaincu perd son aura : elle s'éteint en fondu (`char-aura-out`) */}
         {looks.aura && (

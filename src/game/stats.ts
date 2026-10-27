@@ -83,3 +83,31 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
   }
   return [forSide(0), forSide(1)]
 }
+
+/**
+ * Déclenchements d'un combattant (écrans de victoire, retour du 2026-10-27), lus dans la chronologie : chaque relique
+ * (par identifiant) et chaque face de son dé tombée (`faces[0]` : la face 1), coups bruts et jets à vide compris.
+ */
+export interface TriggerCounts {
+  relics: Record<string, number>
+  faces: number[]
+}
+
+export function triggerCounts(result: CombatResult, side: Side): TriggerCounts {
+  const counts: TriggerCounts = { relics: {}, faces: [] }
+  for (const b of result.beats) {
+    if (b.type === 'relic' && b.side === side) counts.relics[b.relic] = (counts.relics[b.relic] ?? 0) + 1
+    if (b.type === 'attack' && b.attack.attacker === side) counts.faces[b.attack.roll - 1] = (counts.faces[b.attack.roll - 1] ?? 0) + 1
+  }
+  return { relics: counts.relics, faces: Array.from(counts.faces, (n) => n ?? 0) }
+}
+
+/** La somme de plusieurs bilans de déclenchements (un parcours de tournoi, une partie de campagne). */
+export function sumTriggers(all: readonly TriggerCounts[]): TriggerCounts {
+  const sum: TriggerCounts = { relics: {}, faces: [] }
+  for (const t of all) {
+    for (const [id, n] of Object.entries(t.relics)) sum.relics[id] = (sum.relics[id] ?? 0) + n
+    t.faces.forEach((n, i) => (sum.faces[i] = (sum.faces[i] ?? 0) + n))
+  }
+  return { relics: sum.relics, faces: Array.from(sum.faces, (n) => n ?? 0) }
+}

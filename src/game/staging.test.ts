@@ -5,7 +5,7 @@
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
-import { beatEffects, simulateCombat, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
+import { beatEffects, simulateCombat, splitAmong, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { isRollTrigger, rollFace } from './events'
@@ -13,7 +13,7 @@ import { RELICS } from './relics'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
 import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
-import type { Status } from './statuses'
+import { isAura, type Status } from './statuses'
 import { testCharacter } from './test-utils'
 import { effectBadge, STOLEN_BADGE } from './narration'
 import { signalTargets, STATES } from './states'
@@ -342,10 +342,12 @@ describe('mise en scène', () => {
         const strikes = children[beat.id].flatMap((b) => (b.type === 'roll' ? children[b.id] : [b])).filter((b) => b.type === 'attack')
         const volley = m.cues.find((c) => c.channel === 'dice' && c.dice.volley && c.dice.values.length === strikes.length)
         expect(volley, `rafale ${beat.id}`).toBeDefined()
+        // Une rafale qui en pose une autre dans le même moment (le Duo qui retombe sur un 1, 2026-10-27) compte aussi ses coups
+        const nested = m.beats.some((id) => id !== beat.id && result.beats[id].type === 'flurry')
         const fast = m.cues.filter((c) => c.channel === 'strike' && c.strike?.fast && !c.strike.landed).length
-        expect(fast).toBe(strikes.filter((b) => b.type === 'attack' && !b.attack.replaced).length)
+        if (!nested) expect(fast).toBe(strikes.filter((b) => b.type === 'attack' && !b.attack.replaced).length)
         if (beat.status && STATUSES[beat.status].instantStrikes) {
-          expect(m.cues.some((c) => c.channel === 'dice' && c.dice.volley && c.dice.rolling)).toBe(false)
+          if (!nested) expect(m.cues.some((c) => c.channel === 'dice' && c.dice.volley && c.dice.rolling)).toBe(false)
           instant++
         } else rolled++
       }
@@ -353,21 +355,28 @@ describe('mise en scène', () => {
     expect(rolled).toBeGreaterThan(5)
   })
 
-  it('Duo de la barde : annoncé sur son 1 (Aura gagnée), sa rafale à l’action suivante roule une fois, le dé de plus en mauve ; chaque jet ressort son dé', () => {
+  it('Duo de la barde : annoncé sur son 1, sa rafale à l’action suivante s’annonce avec le ding, sa charge part avec lui, roule une fois, le dé de plus en mauve ; chaque jet ressort son dé', () => {
     let announced = 0
     let actions = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
         if (beat.type === 'event' && beat.event.eventId === 'duo') {
           const m = momentOf(moments, beat.id)
-          // Son aura volée (Sceau de vol, lot 3) sonne le vol, la famille du voleur (SONS § 4.2, 2026-10-25)
+          // Son bonus volé (Sceau de vol, lot 3) sonne le vol, la famille du voleur (SONS § 4.2, 2026-10-25) ; posé, le son
+          // déduit de ce qu'il pose (Aura gagnée tant qu'il posait l'Aura mélodieuse)
           const stolen = beat.event.effects.some((e) => e.type === 'applyStatus' && e.stolenBy !== undefined)
-          expect(m.cues.some((c) => c.channel === 'sound' && c.cue === (stolen ? 'sealDown' : 'auraGain'))).toBe(true)
+          const aura = beat.event.effects.some((e) => e.type === 'applyStatus' && isAura(e.status))
+          expect(m.cues.some((c) => c.channel === 'sound' && c.cue === (stolen ? 'sealDown' : aura ? 'auraGain' : 'buff'))).toBe(true)
           announced++
         }
         // Une action coupée par un K.O. n'a tiré que les dés de ses jets joués
         if (beat.type !== 'flurry' || beat.status !== 'duo' || beat.turn === result.turns) continue
         const m = momentOf(moments, beat.id)
+        // La consommation (S9, retour du 2026-10-27) : « Duo », le ding et la charge qui quitte la zone d'état, ensemble
+        const title = m.cues.find((c) => c.channel === 'float' && c.float.kind === 'title' && c.float.text === STATUSES.duo.name)!
+        expect(at(m, 'sound', title.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(true)
+        const before = result.beats[beat.id - 1]?.state.statuses[beat.side].find((s) => s.id === 'duo')?.stacks ?? 0
+        expect(at(m, 'statuses', title.at).some((c) => c.channel === 'statuses' && (c.statuses[beat.side].find((s) => s.id === 'duo')?.stacks ?? 0) < before)).toBe(true)
         expect(m.cues.filter((c) => c.channel === 'dice' && c.dice.rolling && c.dice.values.length === beat.strikes)).toHaveLength(1)
         const land = m.cues.find((c) => c.channel === 'dice' && !c.dice.rolling && c.dice.values.length === beat.strikes && c.dice.values[0] > 0)!
         expect(land).toBeDefined()
@@ -383,8 +392,9 @@ describe('mise en scène', () => {
     expect(actions).toBeGreaterThan(30)
   })
 
-  it('pile ou face : pile tombe d’un bloc avec son ding, puis un seul coup lourd', () => {
+  it('pile ou face : pile tombe d’un bloc avec son ding, puis un seul coup lourd qui sonne le Coup ; une pièce qui pose un statut le pose comme une compétence', () => {
     let heads = 0
+    let posed = 0
     for (const { result, moments } of corpus)
       for (const beat of result.beats) {
         if (beat.type !== 'coin' || !beat.heads) continue
@@ -392,11 +402,29 @@ describe('mise en scène', () => {
         const land = m.cues.find((c) => c.channel === 'dice' && c.dice.coin?.heads === true)!
         expect(at(m, 'sound', land.at).some((c) => c.channel === 'sound' && c.cue === 'coinWin')).toBe(true)
         expect(at(m, 'float', land.at).some((c) => c.channel === 'float' && c.float.kind === 'title' && c.float.text === 'Pile !')).toBe(true)
-        const blow = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed && c.at > land.at)
-        expect(blow?.channel === 'blow' && blow.blow?.heavy).toBe(true)
-        heads++
+        if (beat.effects.some((e) => e.type === 'damage')) {
+          const blow = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed && c.at > land.at)
+          expect(blow?.channel === 'blow' && blow.blow?.heavy).toBe(true)
+          // Le coup de pile sonne le Coup, pas le critique (retour du 2026-10-27, S2)
+          expect(at(m, 'sound', blow!.at).some((c) => c.channel === 'sound' && c.cue === 'hit')).toBe(true)
+          expect(at(m, 'sound', blow!.at).some((c) => c.channel === 'sound' && c.cue === 'crit')).toBe(false)
+          heads++
+          continue
+        }
+        // Une pièce qui pose un statut sur pile (bonus, malus) : son signal après le résultat, le statut à son arrivée,
+        // jamais avant
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.at >= land.at)
+        expect(signal).toBeDefined()
+        for (const e of beat.effects)
+          if (e.type === 'applyStatus' && e.result.kind === 'applied') {
+            const was = result.beats[beat.id - 1]?.state.statuses[e.target].find((s) => s.id === e.status)?.stacks ?? 0
+            const first = m.cues.find((c) => c.channel === 'statuses' && (c.statuses[e.target].find((s) => s.id === e.status)?.stacks ?? 0) > was)
+            expect(first?.at).toBe(signal!.at + T.SIGNAL)
+          }
+        posed++
       }
     expect(heads).toBeGreaterThan(10)
+    expect(posed).toBeGreaterThan(0)
   })
 
   it("relique : son sceau s'illumine avec son label, au même instant", () => {
@@ -892,7 +920,9 @@ describe('mise en scène', () => {
         const depart = use.at - T.SIGNAL
         expect(at(m, 'signal', depart).some((c) => c.channel === 'signal' && c.signal.side === relic.side && c.signal.from === relicSignal(relic.relic))).toBe(true)
         expect(at(m, 'relicPulse', depart).some((c) => c.channel === 'relicPulse' && c.relics.includes(relic.relic))).toBe(true)
-        expect(at(m, 'special', depart).some((c) => c.channel === 'special' && c.special.source === 'relic')).toBe(true)
+        // Le même label encore à l'écran (deux Dards de guêpe sur les dés d'une rafale, joués à leur atterrissage) reste,
+        // sans nouvelle apparition (M9)
+        expect(m.cues.some((c) => c.channel === 'special' && c.special.source === 'relic' && c.at <= depart && depart - c.at < T.LABEL_READ), `${relic.relic}, étape ${relic.id}`).toBe(true)
         // Le statut n'apparaît qu'à l'arrivée du signal
         const shown = at(m, 'statuses', use.at).at(-1)
         for (const e of relic.effects)
@@ -1455,5 +1485,63 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
         stunned++
       }
     expect(stunned).toBeGreaterThan(3)
+  })
+})
+
+describe('retour du 2026-10-27', () => {
+  it('Rétribution : la relâche se répartit en un coup par jauge, sa somme intacte (S1) ; le coup fatal d’une série emporte le reste (S7, M52)', () => {
+    expect(splitAmong(6, [7, 6])).toEqual([3, 3])
+    expect(splitAmong(13, [7, 4, 2])).toEqual([7, 4, 2])
+    expect(splitAmong(5, [1, 1, 10])).toEqual([1, 1, 3])
+    expect(splitAmong(2, [1, 1, 10])).toEqual([1, 1])
+    for (let n = 1; n < 30; n++) expect(splitAmong(n, [9, 3, 5]).reduce((a, b) => a + b, 0)).toBe(n)
+    let releases = 0
+    let fatal = 0
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats)
+        for (const e of beatEffects(beat)) {
+          if (e.type !== 'damage' || !e.parts || e.parts.length < 2) continue
+          const m = momentOf(moments, beat.id)
+          const shown = m.cues.flatMap((c) => (c.channel === 'float' && c.side === e.target && c.float.kind === 'hit' && !c.float.dodged ? [c.float.damage] : []))
+          // Les chiffres d'une série montrent toute sa valeur, même quand un coup met K.O. avant la fin
+          expect(shown.reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(e.amount)
+          if (beat.state.hp[e.target] === 0) fatal++
+          releases++
+        }
+    expect(releases).toBeGreaterThan(5)
+    expect(fatal).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('sorts à scène (retour du 2026-10-27, S10, M54)', () => {
+  it('Éclair aveuglant et Peur : la scène part, le malus tombe sur la cible à son impact, sans signal ni coup', () => {
+    let seen = 0
+    for (const skill of ['blinding', 'fear'])
+      for (const y of CHARACTER_IDS)
+        for (const seed of [1, 2, 3]) {
+          const def = ENGRAVABLE_SKILLS.find((s) => s.id === skill)!
+          const carrier = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: def }])
+          const result = simulateCombat([carrier, createCharacter(y)], { seed })
+          const moments = stage(result)
+          for (const beat of result.beats) {
+            if (beat.type !== 'event' || beat.event.eventId !== skill) continue
+            const applied = beat.event.effects.find((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks > 0)
+            if (!applied || applied.type !== 'applyStatus') continue
+            // Une pose qui ne change rien (plafond, aveuglé déjà) n'active rien, scène comprise (M25)
+            const before = result.beats[beat.id - 1]?.state.statuses[applied.target].find((s) => s.id === applied.status)?.stacks ?? 0
+            if ((beat.state.statuses[applied.target].find((s) => s.id === applied.status)?.stacks ?? 0) <= before) continue
+            const m = momentOf(moments, beat.id)
+            const scene = m.cues.find((c) => c.channel === 'scene' && c.scene.id === def.scene)!
+            expect(scene, `${skill} contre ${y}, graine ${seed}`).toBeDefined()
+            const was = result.beats[beat.id - 1]?.state.statuses[applied.target].find((s) => s.id === applied.status)?.stacks ?? 0
+            const shown = m.cues.find((c) => c.channel === 'statuses' && (c.statuses[applied.target].find((s) => s.id === applied.status)?.stacks ?? 0) > was)!
+            expect(shown.at - scene.at).toBe(SCENE_EVENTS[def.scene!].impacts[0])
+            expect(m.cues.some((c) => c.channel === 'signal' && c.signal.from === skill)).toBe(false)
+            // Son texte et son son tombent avec lui (M20)
+            expect(at(m, 'float', shown.at).some((c) => c.channel === 'float' && c.float.kind === 'badge' && c.float.badge.text === STATUSES[applied.status].name)).toBe(true)
+            seen++
+          }
+        }
+    expect(seen).toBeGreaterThan(5)
   })
 })

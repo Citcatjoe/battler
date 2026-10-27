@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { finalState, type CombatResult, type Pair } from './combat'
 import { stepKey, type ForgeStep } from './forge'
-import { computeStats, type FighterStats } from './stats'
+import { computeStats, sumTriggers, triggerCounts, type FighterStats, type TriggerCounts } from './stats'
 import { defaultRng, shuffle, type Rng } from './rng'
 import { drawReward } from './offers'
 import { getRelic } from './relics'
@@ -53,6 +53,8 @@ export interface MatchResult {
   stats?: Pair<FighterStats>
   /** Compétences déclenchées par chaque côté, par nom */
   skills?: Pair<Record<string, number>>
+  /** Déclenchements de chaque côté (reliques, faces du dé), pour l'écran du champion ; absents d'un match d'avant 0.121 */
+  triggers?: Pair<TriggerCounts>
   /**
    * Récompense du vainqueur (docs/RELIQUES.md) : les reliques proposées, et celle qu'il garde. Absente après la
    * finale, ou s'il n'y a plus rien à proposer. `chosen` est d'abord le choix du vainqueur (au hasard dans
@@ -143,6 +145,25 @@ export const allMatches = (): MatchRef[] =>
 
 export const readyMatches = (t: Tournament) => allMatches().filter((m) => status(t, m) === 'ready')
 
+/**
+ * L'ordre de jeu d'un tour (retour du 2026-10-27) : chaque moitié de l'arbre (gauche, puis droite), de ses extrémités
+ * (le haut et le bas) vers son centre : le haut, le bas, puis on resserre. Les tours se jouent l'un après l'autre.
+ */
+export function playOrder(round: number): MatchRef[] {
+  const n = matchesInRound(round)
+  const perSide = Math.max(1, n / 2)
+  const side = (start: number, count: number) =>
+    Array.from({ length: count }, (_, k) => start + (k % 2 ? count - 1 - (k >> 1) : k >> 1))
+  const order = n === 1 ? [0] : [...side(0, perSide), ...side(perSide, perSide)]
+  return order.map((index) => ({ round, index }))
+}
+
+/** Le prochain combat à jouer : le premier prêt du tour en cours, dans l'ordre de jeu (`playOrder`). */
+export function nextMatch(t: Tournament): MatchRef | undefined {
+  const round = currentRound(t)
+  return round === null ? undefined : playOrder(round).find((m) => status(t, m) === 'ready')
+}
+
 /** Tour en cours : le premier qui a encore des matchs à jouer (null si tout est fini). */
 export function currentRound(t: Tournament): number | null {
   const next = allMatches().find((m) => status(t, m) !== 'done')
@@ -215,6 +236,7 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
         players: [a, b],
         stats: computeStats(result),
         skills: [skillCounts(result, 0), skillCounts(result, 1)],
+        triggers: [triggerCounts(result, 0), triggerCounts(result, 1)],
         ...(relic && { relic }),
       },
     },
@@ -278,6 +300,8 @@ export interface ChampionRun {
   skills: [string, number][]
   /** Reliques gagnées en chemin, dans l'ordre d'obtention */
   relics: string[]
+  /** Déclenchements de ses reliques et des faces de son dé sur tout le tournoi (les matchs sans bilan comptent pour 0) */
+  triggers: TriggerCounts
 }
 
 /** Bilan du champion (null tant que la finale n'est pas jouée). Les bilans manquants comptent pour 0. */
@@ -287,6 +311,7 @@ export function championRun(t: Tournament): ChampionRun | null {
   const matches: RunMatch[] = []
   const totals = { turns: 0, damage: 0, effectDamage: 0, hits: 0, attacks: 0, crits: 0, critDamage: 0, best: 0, dodges: 0, healed: 0, events: 0, absorbed: 0, damageTaken: 0 }
   const skills = new Map<string, number>()
+  const triggers: TriggerCounts[] = []
   for (const ref of allMatches()) {
     const r = t.results[matchKey(ref)]
     const [a, b] = players(t, ref)
@@ -316,8 +341,16 @@ export function championRun(t: Tournament): ChampionRun | null {
       totals.damageTaken += (theirs?.totalDamage ?? 0) + mine.effectDamageTaken
     }
     for (const [name, n] of Object.entries(r.skills?.[side] ?? {})) skills.set(name, (skills.get(name) ?? 0) + n)
+    if (r.triggers) triggers.push(r.triggers[side])
   }
-  return { entrant: t.entrants[champ], matches, totals, skills: [...skills].sort((x, y) => y[1] - x[1]), relics: relicsOf(t, champ) }
+  return {
+    entrant: t.entrants[champ],
+    matches,
+    totals,
+    skills: [...skills].sort((x, y) => y[1] - x[1]),
+    relics: relicsOf(t, champ),
+    triggers: sumTriggers(triggers),
+  }
 }
 
 /**

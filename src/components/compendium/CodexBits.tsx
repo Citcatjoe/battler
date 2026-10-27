@@ -1,36 +1,21 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { statusHome } from '../../game/catalog'
 import type { Character } from '../../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type SkillNature, type Target, type Trigger } from '../../game/events'
+import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
 import type { Relic } from '../../game/relics'
 import { RULES, type RuleId } from '../../game/rules'
-import { STATUS_PLACE } from '../../game/states'
+import { auraOfSkill, STATUS_PLACE } from '../../game/states'
 import { POLARITY_STYLE, STATUSES, type Polarity, type RuleLine, type StatusId } from '../../game/statuses'
 import { Icon, skillIcon, StatusIcon } from '../Icon'
 import { RelicSeal } from '../RelicSeal'
-import type { CompendiumNav } from './sections'
+import type { CompendiumNav, CompendiumTarget } from './sections'
 
 /*
- * Petites pièces partagées par les sections du compendium : sceaux, pastilles de statut et de règle, et la ligne
- * d'une compétence (fiche d'un combattant, « posé par » d'un statut). Elles ne rédigent rien : le texte d'une
+ * Petites pièces partagées par les sections du compendium : sceaux, pastilles de statut et de règle, liens vers une
+ * compétence ou une aura (`skillLink`), la ligne « posé par » d'un statut. Elles ne rédigent rien : le texte d'une
  * compétence vient de `describeSkill`, celui d'un statut de son registre. Une grammaire par objet, comme en
  * combat : un octogone peint pour une compétence, une pièce gravée pour un état, un hexagone pour une relique.
  */
-
-export const NATURE_LABEL: Record<SkillNature, string> = {
-  martial: 'Martiale',
-  finesse: 'Adresse',
-  arcane: 'Arcane',
-  neutral: 'Neutre',
-}
-
-/** « de » suivi de la nature : « Compétence d'adresse » */
-const NATURE_OF: Record<SkillNature, string> = {
-  martial: 'martiale',
-  finesse: "d'adresse",
-  arcane: 'arcane',
-  neutral: 'neutre',
-}
 
 const POLARITY_TEXT: Record<Polarity, string> = { positive: 'text-good', negative: 'text-bad' }
 
@@ -38,7 +23,11 @@ const POLARITY_TEXT: Record<Polarity, string> = { positive: 'text-good', negativ
 export const formName = (character: Character, event: CharacterEvent) =>
   event.form ? character.forms?.find((f) => f.id === event.form)?.name : undefined
 
+/** La nature d'une compétence ne fait que colorer son liseré (sceau, face du dé) : le compendium ne la nomme plus (2026-10-27). */
 export const natureOf = (e: CharacterEvent) => e.nature ?? DEFAULT_SKILL_NATURE
+
+/** Où le compendium décrit une compétence : l'onglet Auras pour celle qui pose une aura sur son lanceur, sinon Compétences. */
+export const skillLink = (event: CharacterEvent): CompendiumTarget => ({ section: auraOfSkill(event) ? 'auras' : 'skills', id: event.id })
 
 /** Ref de l'élément visé par un lien (`focus`) : il défile au centre de sa liste à chaque nouveau lien. */
 export function useFocusRef<T extends HTMLElement = HTMLDivElement>(focus?: string) {
@@ -74,9 +63,9 @@ export function triggerShort(triggers: readonly Trigger[]) {
   return `dés ${triggers.map((t) => triggerText(t).short.replace('dé ', '')).join(', ')}`
 }
 
-/** « Compétence d'adresse · sur un 1 au dé » : nature et déclencheur en toutes lettres. */
+/** « Aura · sur un 1 au dé » : ce qu'elle est et son déclencheur en toutes lettres. */
 export function skillLine(event: CharacterEvent) {
-  return `Compétence ${NATURE_OF[natureOf(event)]} · ${triggerText(event.trigger).label.toLowerCase()}`
+  return `${auraOfSkill(event) ? 'Aura' : 'Compétence'} · ${triggerText(event.trigger).label.toLowerCase()}`
 }
 
 const TARGET_WORD: Record<Target, string> = { self: 'sur soi', opponent: 'adversaire' }
@@ -91,7 +80,7 @@ export function StatusChip({ status, target, nav, from }: { status: StatusId; ta
   if (home?.kind === 'skill') {
     if (from?.name === home.event.name) return null
     return (
-      <button type="button" className="codex-chip" onClick={() => nav.go({ section: 'skills', id: home.event.id })}>
+      <button type="button" className="codex-chip" onClick={() => nav.go(skillLink(home.event))}>
         <SkillMedal event={home.event} size={26} />
         <span className="min-w-0 leading-tight">
           <span className="block truncate font-body text-[15px] font-bold text-ink-1">{home.event.name}</span>
@@ -119,21 +108,6 @@ export function StatusChip({ status, target, nav, from }: { status: StatusId; ta
   )
 }
 
-/** Pastilles d'une compétence (relation au coup, conditions…) : chacune mène à la règle commune qu'elle cite. */
-export function SkillTags({ event, nav, form }: { event: CharacterEvent; nav: CompendiumNav; form?: string }) {
-  const { tags } = describeSkill(event, form)
-  if (tags.length === 0) return null
-  return (
-    <span className="mt-1 flex flex-wrap gap-1.5">
-      {tags.map((t) => (
-        <button key={t.label} type="button" className="codex-tag" title={RULES[t.rule].title} onClick={() => nav.go({ section: 'rules', id: t.rule })}>
-          {t.label}
-        </button>
-      ))}
-    </span>
-  )
-}
-
 /** Encadré titré d'une fiche détaillée (Effet, Consommation, Cumul ; Quand, Effet d'une relique). */
 export function CodexBox({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -150,34 +124,6 @@ export function CharacterLink({ character, nav, children }: { character: Charact
     <button type="button" className="codex-link font-body" onClick={() => nav.go({ section: 'characters', id: character.id })}>
       {children ?? character.name}
     </button>
-  )
-}
-
-/**
- * Une compétence en résumé : sceau, nom (lien vers l'index des compétences), déclencheur, texte, pastilles et
- * statuts posés. Même texte que l'index et l'infobulle des dés (`describeSkill`).
- */
-export function SkillSummary({ event, triggers = [event.trigger], form, nav }: { event: CharacterEvent; triggers?: readonly Trigger[]; form?: string; nav: CompendiumNav }) {
-  const { text, posed } = describeSkill(event)
-  return (
-    <div className="flex items-start gap-3 border-b border-line-1 py-2.5 last:border-b-0">
-      <SkillMedal event={event} size={42} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go({ section: 'skills', id: event.id })}>
-            {event.name}
-          </button>
-          <span className="font-data text-[13px] text-ink-3">{triggerShort(triggers)}</span>
-        </div>
-        <p className="font-body text-[15px] leading-snug text-ink-2">{text}</p>
-        <SkillTags event={event} nav={nav} form={form} />
-      </div>
-      <div className="flex w-[210px] shrink-0 flex-col gap-1.5">
-        {posed.map((p) => (
-          <StatusChip key={p.status} status={p.status} target={p.target} nav={nav} from={event} />
-        ))}
-      </div>
-    </div>
   )
 }
 

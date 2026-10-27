@@ -8,7 +8,7 @@
  */
 import { STAT_KEYS } from './character'
 import { DAMAGE_SOURCES, type DamageKind } from './damage'
-import { beatEffects, diceOf, effectiveStats, healingOf, relicIsInert, type AppliedEffect, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
+import { beatEffects, diceOf, effectiveStats, firstSide, healingOf, relicIsInert, type AppliedEffect, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
@@ -144,8 +144,7 @@ export function createAudit() {
     // Statuts de forme (0.73.0) : un personnage à formes commence avec ceux de sa première forme
     const startStatuses = (side: 0 | 1) => (r.fighters[side].forms?.[0].statuses ?? []).map((id) => ({ id, stacks: 1 }))
     const init: Snapshot = { hp: [r.fighters[0].maxHp, r.fighters[1].maxHp], statuses: [startStatuses(0), startStatuses(1)] }
-    const last = r.initiative[r.initiative.length - 1]
-    const first = last[0] > last[1] ? 0 : 1
+    const first = firstSide(r)
     const active = (t: number) => (t % 2 === 1 ? first : 1 - first)
     // Forme en cours de chaque camp (druide) : une compétence de forme n'existe que sous sa forme
     const form = [0, 0]
@@ -185,10 +184,18 @@ export function createAudit() {
       // Riposte
       const riposted = reaction('riposte')
       if (find(s.statuses[target], 'riposte') && !riposted && !died) flag('riposte non déclenchée', r, i, '')
-      if (riposted) {
+      if (riposted?.dodgedBy) {
+        // Riposte esquivée (2026-10-27, M3) : l'attaquant portait une esquive assurée ; aucun effet, une charge de chaque part
+        const was = before(riposted)
+        if (riposted.effects.length > 0 || !find(was.statuses[striker], riposted.dodgedBy) || !STATUSES[riposted.dodgedBy].forcesDodge) flag('riposte esquivée : incohérente', r, i, '')
+        if ((find(riposted.state.statuses[target], 'riposte')?.stacks ?? 0) !== (find(was.statuses[target], 'riposte')?.stacks ?? 0) - 1) flag('riposte non consommée', r, i, '')
+        if ((find(riposted.state.statuses[striker], riposted.dodgedBy)?.stacks ?? 0) !== (find(was.statuses[striker], riposted.dodgedBy)?.stacks ?? 0) - 1) flag('riposte esquivée : esquive non consommée', r, i, '')
+        see('riposte esquivée')
+      } else if (riposted) {
         const was = before(riposted)
         const back = riposted.effects[0]
         const more = find(was.statuses[target], 'riposte')?.power ?? 0
+        if (find(was.statuses[striker], 'evasion')) flag('riposte sur un attaquant sous esquive assurée', r, i, '')
         if (back?.type !== 'damage' || back.target !== striker || back.amount !== Math.round(dealt * STATUSES.riposte.reflectsHit!) + more) flag('riposte : montant faux', r, i, `${JSON.stringify(back)} vs dealt ${dealt}`)
         if ((find(riposted.state.statuses[target], 'riposte')?.stacks ?? 0) !== (find(was.statuses[target], 'riposte')?.stacks ?? 0) - 1) flag('riposte non consommée', r, i, '')
         see(coin ? 'pile : riposte' : 'riposte')
@@ -266,8 +273,12 @@ export function createAudit() {
         let delta = 0
         for (const e of beatEffects(b)) if (e.target === side) delta += e.type === 'heal' ? e.amount : e.type === 'damage' ? -e.amount : 0
         if (b.type === 'attack' && b.attack.attacker !== side) delta -= b.attack.dealt
-        // Dégâts comptés en entier (overkill) : les PV, eux, s'arrêtent à 0
-        if (s.hp[side] !== Math.max(0, prev.hp[side] + delta)) flag('PV inexpliqués', r, i, `${b.type} côté ${side} : ${prev.hp[side]} → ${s.hp[side]}, attendu ${delta}`)
+        // Dégâts comptés en entier (overkill) : les PV, eux, s'arrêtent à 0 ; à 1 si une Médaille de sursis le garde (son
+        // étape suit celle-ci, 2026-10-27)
+        const next = r.beats[i + 1]
+        const spared =
+          next?.type === 'relic' && next.cause === i && next.side === side && r.fighters[side].relics.some((x) => x.id === next.relic && x.trigger?.type === 'lethal')
+        if (s.hp[side] !== Math.max(spared ? 1 : 0, prev.hp[side] + delta)) flag('PV inexpliqués', r, i, `${b.type} côté ${side} : ${prev.hp[side]} → ${s.hp[side]}, attendu ${delta}`)
         if (s.hp[side] < 0 || s.hp[side] > r.fighters[side].maxHp) flag('PV hors bornes', r, i, `${s.hp[side]}`)
         const ids = s.statuses[side].map((x) => x.id)
         if (new Set(ids).size !== ids.length) flag('statut en double', r, i, ids.join(','))
@@ -568,7 +579,13 @@ export function createAudit() {
       }
       // Usure (2026-10-21, une seule étape) : chaque décompte et chaque extinction annoncés se lisent dans l'état
       if (b.type === 'statusAge') {
-        if (b.changes.length === 0 && b.expired.length === 0) flag('usure vide', r, i, '')
+        if (b.changes.length === 0 && b.expired.length === 0 && !b.worn?.length) flag('usure vide', r, i, '')
+        // Charges usées (2026-10-27, M1) : à la fin du tour seulement, un statut qui s'use, une charge, lue dans l'état
+        for (const w of b.worn ?? []) {
+          if (b.phase !== 'turnEnd' || !STATUSES[w.status].wearsOff || w.to !== w.from - 1) flag('usure de charge fausse', r, i, `${w.status} ${w.from}→${w.to}`)
+          if ((find(s.statuses[b.side], w.status)?.stacks ?? 0) !== w.to || (find(prev.statuses[b.side], w.status)?.stacks ?? 0) !== w.from) flag('usure de charge : état faux', r, i, w.status)
+          else see(w.to === 0 ? 'critique assuré usé jusqu’au bout' : 'critique assuré usé d’une charge')
+        }
         for (const c of b.changes)
           if (find(s.statuses[b.side], c.status)?.turns !== c.to || c.to !== c.from - 1) flag('usure : décompte faux', r, i, `${c.status} ${c.from}→${c.to}`)
         for (const id of b.expired) if (find(s.statuses[b.side], id)) flag('usure : statut éteint encore présent', r, i, id)
@@ -701,7 +718,7 @@ export function createAudit() {
           if (shattered !== (a.shatteredBy !== undefined)) flag('garde brisée : coup faux', r, i, `${a.shatteredBy}`)
           let expected = afterArmor
           for (const st of prev.statuses[def]) if (STATUSES[st.id].shield && !shattered) expected -= Math.min(st.stacks, expected - 1)
-          // Dégâts finaux (Aura mélodieuse, Fausse note, 0.41.0) : après les boucliers, au moins 1
+          // Dégâts finaux (Fausse note, 0.41.0) : après les boucliers, au moins 1
           for (const st of prev.statuses[att]) {
             const modify = STATUSES[st.id].modifyFinal
             if (modify) expected = Math.max(1, Math.round(modify(expected, st)))
@@ -776,14 +793,22 @@ export function createAudit() {
         // Pile : ce coup ×N, la pièce rend encore N − 1 fois les PV qu'il a retirés (phase 5 bis, ×3 depuis la 0.107.0 ; son
         // intensité, Pile ou face aiguisée, monte N en 0.110.0). Dé pipé (phase 8, second lot) : sans pièce imposée, une
         // charge du lanceur fait tomber pile et monte N de son bonus et de son intensité ; la charge part
-        const loaded = b.forced ? undefined : prev.statuses[b.side].find((x) => STATUSES[x.id].loadsCoin !== undefined)
+        const loaded = b.forced || toss?.multiplier === undefined ? undefined : prev.statuses[b.side].find((x) => STATUSES[x.id].loadsCoin !== undefined)
         if (loaded) {
           if (!b.heads || b.loadedBy !== loaded.id) flag('dé pipé ignoré', r, i, `${b.heads} ${b.loadedBy}`)
           else if ((find(s.statuses[b.side], loaded.id)?.stacks ?? 0) !== loaded.stacks - 1) flag('dé pipé non consommé', r, i, '')
           else see('pièce pipée')
         } else if (b.loadedBy) flag('pièce pipée sans dé pipé', r, i, b.loadedBy)
         const more = (find(prev.statuses[b.side], b.status)?.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0)
-        if (b.heads ? strike?.type !== 'attack' || !toss || dmg !== strike.attack.dealt * (toss.multiplier + more - 1) : dmg !== 0) flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
+        if (toss?.heads) {
+          // Pièce d'effet (2026-10-27) : pile, ses statuts tels que déclarés (son rang la fait tomber plus souvent sur pile),
+          // sans dégâts ; face, rien
+          const wanted = toss.heads.flatMap((e) => (e.type === 'applyStatus' ? [`${e.status}:${e.stacks}`] : []))
+          const got = b.effects.flatMap((e) => (e.type === 'applyStatus' ? [`${e.status}:${e.stacks}`] : []))
+          if (dmg !== 0 || (b.heads ? JSON.stringify(got) !== JSON.stringify(wanted) : b.effects.length > 0)) flag('pièce d’effet fausse', r, i, `${b.heads} ${got.join(' ')}`)
+          else see(b.heads ? 'pièce d’effet sur pile' : 'pièce d’effet sur face')
+        } else if (b.heads ? strike?.type !== 'attack' || !toss || dmg !== strike.attack.dealt * (toss.multiplier + more - 1) : dmg !== 0)
+          flag('pièce : dégâts faux', r, i, `${b.heads} ${dmg}`)
         if (!strike || strike.turn !== b.turn) flag('pièce sans le coup qui la lance', r, i, '')
         else see('pièce lancée aussitôt')
         // Pile qui touche : un coup qui touche de ses dégâts (mêmes contrôles qu'une attaque qui touche)
@@ -939,8 +964,7 @@ export function createAudit() {
    * se recompte depuis l'initiative (les tours alternent ; l'ouverture, tour 0, revient à celui qui ne commence pas).
    */
   function auditCauses(r: CombatResult) {
-    const last = r.initiative[r.initiative.length - 1]
-    const first: Side = last[0] > last[1] ? 0 : 1
+    const first: Side = firstSide(r)
     /** Moments d'un coup : ses réactions et compétences viennent d'un coup (ou d'une pièce qui touche) */
     const strikeMoments: Trigger[] = ['hit', 'crit', 'hurt', 'missed', 'dodge']
     const actionTypes: Beat['type'][] = ['attack', 'flurry', 'skip', 'coin', 'roll']
@@ -986,8 +1010,7 @@ export function createAudit() {
    * reliques de seuil (après un passage sous le seuil, aucun de manqué), reliques de coup (sur leur moment).
    */
   function auditRelics(r: CombatResult) {
-    const last = r.initiative[r.initiative.length - 1]
-    const first: Side = last[0] > last[1] ? 0 : 1
+    const first: Side = firstSide(r)
     const owner = (t: number): Side => (t % 2 === 1 ? first : first === 0 ? 1 : 0)
     // Tours entamés par un camp au tour global `t` : le premier joue les tours impairs, l'autre les pairs
     const ownTurns = (side: Side, t: number) => (side === first ? Math.ceil(t / 2) : Math.floor(t / 2))
@@ -1018,7 +1041,14 @@ export function createAudit() {
           if (b.type === 'relic' && b.uses !== n + 1) flag('relique : compte faux', r, i, `${b.uses} au lieu de ${n + 1}`)
           // Le statut posé (reliques de source, 2026-10-25) : sur la cible que la relique déclare, et présent après la pose
           if (b.type !== 'relic') return
-          for (const e of b.effects) {
+          for (const [k, e] of b.effects.entries()) {
+            // Dégâts contre l'armure (Clous de pavois, 2026-10-27, M4) : moins l'armure effective de la cible, au moins 1
+            const asked = relic.effects?.[k]
+            if (e.type === 'damage' && asked?.type === 'damage' && asked.armored) {
+              const armor = effectiveStats(r.fighters[e.target], (i ? r.beats[i - 1].state : b.state).statuses[e.target]).armor
+              if (!e.armored || e.amount !== Math.max(1, asked.amount - armor) * (asked.hits ?? 1)) flag('relique : dégâts contre l’armure faux', r, i, `${relic.id} : ${e.amount}, armure ${armor}`)
+              else see(armor > 0 ? 'dégâts renvoyés contre l’armure' : 'dégâts contre l’armure, sans armure')
+            }
             if (e.type !== 'applyStatus') continue
             const declared = relic.effects?.find((x) => x.type === 'applyStatus' && x.status === e.status)
             // Un bonus volé (Sceau de vol, lot 3) va à l'adversaire du porteur
@@ -1036,6 +1066,36 @@ export function createAudit() {
         const t = relic.trigger
         if (!t) {
           if (fires.length) flag('relique passive déclenchée', r, fires[0], relic.id)
+          continue
+        }
+        // Sursis (2026-10-27, R1) : il part juste après l'étape (sa cause) qui aurait fait tomber son porteur, et le laisse à
+        // 1 PV ; prêt, il ne laisse jamais tomber son porteur
+        if (t.type === 'lethal') {
+          for (const i of fires) {
+            const cause = r.beats[i].cause
+            const by = cause !== undefined ? r.beats[cause] : undefined
+            const before = cause ? r.beats[cause - 1].state.hp[side] : f.maxHp
+            const loss = !by
+              ? 0
+              : by.type === 'attack' && by.attack.attacker !== side
+                ? by.attack.dealt
+                : beatEffects(by).reduce((n, e) => n + (e.type === 'damage' && e.target === side ? e.amount : 0), 0)
+            if (!by || cause !== i - 1 || by.state.hp[side] !== 1 || loss < before) flag('sursis hors d’un coup fatal', r, i, `${before} PV, perte ${loss}`)
+            else see('sursis')
+          }
+          const fell = r.beats.findIndex((b) => b.state.hp[side] === 0)
+          if (fell >= 0 && fires.filter((i) => i < fell).length < (relic.charges ?? 1)) flag('sursis manqué', r, fell, relic.id)
+          continue
+        }
+        // Initiative (2026-10-27, R3) : seule de son espèce dans le combat, elle part à l'étape n° 0 et son porteur commence ;
+        // si l'adversaire en porte une aussi, aucune ne part et le jet a lieu
+        if (t.type === 'initiative') {
+          const rival = r.fighters[side === 0 ? 1 : 0].relics.some((x) => x.trigger?.type === 'initiative')
+          const mine = f.relics.find((x) => x.trigger?.type === 'initiative') === relic
+          const wanted = !rival && mine
+          if (wanted !== (fires.length === 1 && fires[0] === 0) || fires.length > 1) flag('initiative : relique mal déclenchée', r, fires[0] ?? 0, relic.id)
+          else if (wanted && (first !== side || r.initiative.length > 0 || r.initiativeRelic?.relic !== relic.id)) flag('initiative : jet ou premier tour faux', r, 0, relic.id)
+          else see(wanted ? 'initiative prise' : 'initiative disputée')
           continue
         }
         if (t.type === 'turn') {

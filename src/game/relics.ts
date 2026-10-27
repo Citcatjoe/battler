@@ -38,6 +38,16 @@ export type RelicTrigger =
    * réarme s'ils remontent au-dessus. L'effet, lui, reste sur le porteur (règle 7 de docs/RELIQUES.md).
    */
   | { type: 'hpBelow'; ratio: number; who?: Target }
+  /**
+   * Sursis (retour du 2026-10-27, R1) : quand une perte de PV devrait le faire tomber (coup, dégâts directs, Poison…),
+   * il reste à 1 PV. Sans effet ni condition ; une charge (`charges: 1`). Son étape suit celle de la perte.
+   */
+  | { type: 'lethal' }
+  /**
+   * Initiative (retour du 2026-10-27, R3) : avant le jet d'initiative, le porteur commence et le jet n'a pas lieu ; si
+   * les deux camps en portent une, aucune ne part et le jet revient. Sans effet, sans limite (une fois par combat).
+   */
+  | { type: 'initiative' }
 
 /** Stats de base ajoutées à plat par une relique (0,05 d'esquive = 5 points de pourcentage). */
 export type RelicStats = Partial<CharacterStats>
@@ -53,6 +63,11 @@ export interface Relic {
   rollBonus?: number
   /** Le bonus de coup ne vaut que pour un coup dont le dé fait cette face (Fer à quatre clous : sur un 4), coup brut compris */
   onFace?: number
+  /**
+   * Chance de pile (retour du 2026-10-27, R4) : ajoutée aux 50 % de chacune de ses pièces (0,25 : 75 % de pile). Une
+   * caractéristique : toujours active, sans étape.
+   */
+  headsChance?: number
   /** Coup, tour ou seuil : le moment où elle se déclenche, et ses effets (du point de vue du porteur) */
   trigger?: RelicTrigger
   effects?: readonly Effect[]
@@ -83,9 +98,9 @@ export const RELIC_KINDS: Record<RelicKind, { label: string }> = {
 }
 
 export function relicKind(r: Relic): RelicKind {
-  if (r.stats) return 'stat'
-  if (r.trigger?.type === 'turn') return 'turn'
-  if (r.trigger?.type === 'hpBelow') return 'threshold'
+  if (r.stats || r.headsChance !== undefined) return 'stat'
+  if (r.trigger?.type === 'turn' || r.trigger?.type === 'initiative') return 'turn'
+  if (r.trigger?.type === 'hpBelow' || r.trigger?.type === 'lethal') return 'threshold'
   return 'strike'
 }
 
@@ -300,10 +315,12 @@ export const RELICS: readonly Relic[] = [
   {
     id: 'bonesetter-salve',
     name: 'Onguent du rebouteux',
-    flavor: 'Un pot de terre bouché de cire, cinq creux de doigts dans la graisse jaune. Chaque coup reçu en appelle une noix.',
+    flavor: 'Un pot de terre bouché de cire, deux creux de doigts dans la graisse jaune. Chaque gros coup reçu en appelle une bonne noix.',
     trigger: { type: 'strike', on: 'hurt' },
-    charges: 5,
-    effects: [{ type: 'heal', amount: 1 }],
+    // Retour du 2026-10-27 (M11, « 5 PV sur un combat, c'est peanuts ») : +3 PV, 2x (+13,3 points, 200 combats par duel) au
+    // lieu de +1 PV, 5x (+11,1) : des soins qu'on voit. +4 PV, 2x valait +17,0, hors de la bande de 5 à 15
+    charges: 2,
+    effects: [{ type: 'heal', amount: 3 }],
   },
   {
     id: 'vigil-candle',
@@ -332,7 +349,8 @@ export const RELICS: readonly Relic[] = [
     name: 'Clous de pavois',
     flavor: 'Un éclat de pavois peint, trois gros clous forgés encore plantés. Quand le bouclier cède, ses pointes restent.',
     trigger: { type: 'strike', on: 'shieldBroken' },
-    effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike' }],
+    // Retour de l'utilisateur du 2026-10-27 (M4) : ses 3 dégâts se heurtent à l'armure de l'attaquant (au moins 1)
+    effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike', armored: true }],
   },
   {
     id: 'talion-gauntlet',
@@ -371,15 +389,6 @@ export const RELICS: readonly Relic[] = [
     effects: [{ type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent' }],
   },
   {
-    // Calage : sans limite, +14,1 (Morgrut +17,4) ; 2x, +12,9 ; recharge 3, +11,6 ; 1x, +8,9
-    id: 'fair-coin',
-    name: 'Pièce de foire',
-    flavor: 'Un jeton de foire en laiton, une tête de bouffon frappée dessus, sur un cordon rouge et jaune. Le coup parfait tente sa chance.',
-    trigger: { type: 'strike', on: 'naturalMax' },
-    cooldown: 3,
-    effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
-  },
-  {
     // Calage : 1 charge, +8,9 ; 2 charges, +17,3
     id: 'spiked-bracer',
     name: 'Brassard à pointes',
@@ -387,6 +396,30 @@ export const RELICS: readonly Relic[] = [
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'riposte', stacks: 1 }],
+  },
+  /*
+   * Retour du 2026-10-27 (docs/RELIQUES.md § 17) : les idées de l'utilisateur. La Pièce de foire (une relique qui lançait
+   * une pièce sur un 6) est retirée : les pièces sont des compétences de la Fortune (M10). Restent des reliques qui
+   * servent ces pièces (Pièce trouée, Pièce lestée), une qui épargne un coup fatal et une qui prend l'initiative.
+   */
+  {
+    id: 'reprieve-medal',
+    name: 'Médaille de sursis',
+    flavor: 'Une médaille de bronze sur un ruban délavé, entaillée en plein centre par la lame qu’elle a arrêtée. Une fois, pas deux.',
+    trigger: { type: 'lethal' },
+    charges: 1,
+  },
+  {
+    id: 'vanguard-horn',
+    name: 'Cor d’avant-garde',
+    flavor: 'Un cor de corne cerclé de laiton, l’embouchure mâchée, pendu à une lanière. Qui sonne le premier frappe le premier.',
+    trigger: { type: 'initiative' },
+  },
+  {
+    id: 'weighted-coin',
+    name: 'Pièce lestée',
+    flavor: 'Une pièce d’argent rognée, un grain de plomb serti côté face. Elle retombe toujours un peu du même côté.',
+    headsChance: 0.25,
   },
 ]
 
@@ -413,13 +446,15 @@ const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`)
 
 /**
  * Une stat ajoutée, en clair : « +2 armure », « +6 % d'esquive ». Une esquive négative n'esquive jamais. L'attaque se dit
- * une fois, « +1 à l'attaque », pour son minimum et son maximum (`validateRelics` les veut égaux).
+ * une fois, « +1 à l'attaque », pour son minimum et son maximum (`validateRelics` les veut égaux). L'armure se dit avec ce
+ * qu'elle fait (retour du 2026-10-27, M12 : « 1 d'armure à chaque tour ? ») : une stat permanente, qui retire des points à
+ * chaque coup reçu, à ne pas confondre avec l'armure temporaire, un bouclier qui s'use.
  */
 const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   maxHp: (v) => `${signed(v)} PV max`,
   attackMin: (v) => `${signed(v)} à l'attaque`,
   attackMax: () => '',
-  armor: (v) => `${signed(v)} armure`,
+  armor: (v) => `${signed(v)} armure (${signed(-v)} dégât${Math.abs(v) > 1 ? 's' : ''} par coup reçu)`,
   dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive`,
   critChance: (v) => `${signed(Math.round(v * 100))} % de critique`,
   critMultiplier: (v) => `${signed(v).replace('.', ',')} au multiplicateur de critique`,
@@ -435,13 +470,13 @@ const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
 function effectText(e: Effect, attacker = false): string {
   switch (e.type) {
     case 'damage':
+      // Contre l'armure (Clous de pavois, 2026-10-27, M4) : ce ne sont plus des dégâts directs
+      if (e.armored && e.target === 'opponent') return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts contre l'armure de ${attacker ? "l'attaquant" : "l'adversaire"}`
       return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? (attacker ? " à l'attaquant" : '') : ' à soi-même'}`
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus': {
       const def = STATUSES[e.status]
-      // Une pièce se lance (Pièce de foire) : son pari, en clair
-      if (def.coinToss) return `lance une pièce (pile, ce coup ×${def.coinToss.multiplier})`
       // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence
       if (e.target === 'opponent') return `${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)} à l'adversaire`
       // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
@@ -471,7 +506,8 @@ const STRIKE_MOMENT: Record<StrikeTrigger, string> = {
   healed: 'à chaque soin reçu',
   shieldBroken: 'quand son armure temporaire est vidée',
   reflected: 'quand il renvoie des dégâts',
-  heads: 'sur pile',
+  // Retour du 2026-10-27 : la phrase de l'utilisateur (« les lancers de pièce gagnants octroient +2 coups de chance »)
+  heads: 'à chaque lancer de pièce gagnant',
 }
 
 /** Les adversaires qui portent ce statut, en un mot quand il existe (« +2 dégâts aux adversaires empoisonnés »). */
@@ -508,6 +544,10 @@ function momentOf(r: Relic): string {
         return `quand ${t.who === 'opponent' ? "les PV de l'adversaire passent" : 'ses PV passent'} sous ${Math.round(t.ratio * 100)} %`
       case 'strike':
         return STRIKE_MOMENT[t.on]
+      case 'lethal':
+        return 'quand il devrait tomber'
+      case 'initiative':
+        return "sans jet d'initiative"
     }
   })()
   return [head, ...(r.when ?? []).map((c) => conditionText(c, r))].filter(Boolean).join(' ')
@@ -539,7 +579,10 @@ export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
+    r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile` : '',
     r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
+    // Sursis et initiative : leur effet est leur règle, sans effet de compétence
+    t?.type === 'lethal' ? 'reste à 1 PV' : t?.type === 'initiative' ? 'joue le premier tour' : '',
     ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge' || t.on === 'shieldBroken'))),
   ]
     .filter(Boolean)
@@ -565,15 +608,21 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     ids.add(r.id)
     if (!/^[a-z]+(-[a-z]+)*$/.test(r.id)) at('identifiant en kebab-case attendu')
     if (!r.name || !r.flavor) at('nom et phrase d’ambiance requis')
-    // Un seul type par relique : des stats, un bonus de coup, ou un déclencheur et ses effets
-    const families = [r.stats !== undefined, r.rollBonus !== undefined, r.trigger !== undefined].filter(Boolean).length
-    if (families !== 1) at('une relique a un seul type : stats, bonus de coup ou déclencheur')
+    // Un seul type par relique : des stats, une chance de pile, un bonus de coup, ou un déclencheur et ses effets
+    const families = [r.stats !== undefined, r.headsChance !== undefined, r.rollBonus !== undefined, r.trigger !== undefined].filter(Boolean).length
+    if (families !== 1) at('une relique a un seul type : stats, chance de pile, bonus de coup ou déclencheur')
+    if (r.headsChance !== undefined && !(r.headsChance > 0 && r.headsChance <= 0.5)) at('chance de pile : entre 0 et 0,5 (au plus 100 % de pile)')
     if (r.stats && Object.keys(r.stats).length === 0) at('stats vides')
     // L'attaque s'écrit à plat sur toute sa fourchette : autant au minimum qu'au maximum
     if ((r.stats?.attackMin ?? 0) !== (r.stats?.attackMax ?? 0)) at("l'attaque se change autant au minimum qu'au maximum")
     if (r.rollBonus !== undefined && (!Number.isInteger(r.rollBonus) || r.rollBonus === 0)) at('bonus de coup entier et non nul')
     if (r.onFace !== undefined && (r.rollBonus === undefined || !Number.isInteger(r.onFace) || r.onFace < 1)) at('face : un entier ≥ 1, avec un bonus de coup')
-    if (r.trigger && !r.effects?.length) at('un déclencheur sans effet')
+    // Sursis et initiative : leur règle est leur effet ; le sursis part une fois (une charge), l'initiative une fois par nature
+    const bare = r.trigger?.type === 'lethal' || r.trigger?.type === 'initiative'
+    if (r.trigger && !bare && !r.effects?.length) at('un déclencheur sans effet')
+    if (bare && (r.effects?.length || r.when || r.scene)) at('sursis et initiative : sans effet, condition ni scène')
+    if (r.trigger?.type === 'lethal' && r.charges !== 1) at('sursis : une charge')
+    if (r.trigger?.type === 'initiative' && (r.charges !== undefined || r.cooldown !== undefined)) at('initiative : sans limite')
     if (!r.trigger && (r.effects || r.charges !== undefined || r.cooldown !== undefined)) at('effets, charges et recharge demandent un déclencheur')
     // Des conditions : sur un déclencheur, ou sur un bonus de coup (lues au coup qui touche, avant le critique)
     if (r.when && !r.trigger && r.rollBonus === undefined) at('des conditions demandent un déclencheur ou un bonus de coup')
@@ -605,6 +654,8 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     }
     for (const e of r.effects ?? []) {
       if (e.type === 'applyStatus' && !STATUSES[e.status]) at(`statut inconnu : ${e.status}`)
+      // Retour du 2026-10-27 (M10) : une pièce est une compétence de la Fortune, jamais une relique
+      if (e.type === 'applyStatus' && STATUSES[e.status]?.coinToss) at(`une relique ne lance pas de pièce : ${e.status}`)
       if (e.type === 'release') at('une relique ne relâche pas de jauges')
       // Règle 7 (décision de l'utilisateur) : une relique agit sur son porteur, jamais de malus sur l'adversaire.
       // Vers l'adversaire, seuls les dégâts directs ; un statut posé est un bonus du porteur. Exception (reliques de

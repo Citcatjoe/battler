@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { footDrop, type Character } from '../../game/character'
 import { skillCatalog } from '../../game/catalog'
+import { ForgedDie } from '../ForgedDie'
 import { emptyRecord, ratios, useHistory, type CharacterRecord } from '../../game/history'
 import { RULES, type RuleId } from '../../game/rules'
 import { CHARACTERS } from '../../game/roster'
@@ -9,7 +10,7 @@ import { StatSheet } from '../StatSheet'
 import { Icon, StatusIcon } from '../Icon'
 import { Tabs } from '../Tabs'
 import { STATUSES } from '../../game/statuses'
-import { CharacterLink, formName, SkillSummary } from './CodexBits'
+import { CharacterLink, SkillMedal, skillLink, triggerShort } from './CodexBits'
 import type { CompendiumNav } from './sections'
 
 interface Props {
@@ -23,10 +24,13 @@ export type SheetTab = 'sheet' | 'performance'
 
 /**
  * Fiche d'un combattant, dans le compendium : sa grande figure au centre ; à droite, deux onglets.
- * - « Fiche » : ce qui le définit (devise, histoire, forces, caractéristiques, compétences en résumé, qui mènent
- *   à l'index des compétences et aux statuts qu'elles posent) ;
+ * - « Fiche » : ce qui le définit (devise, histoire, forces, caractéristiques, compétences de départ en liens vers leur
+ *   fiche) ;
  * - « Performances » : le résumé de ce qu'il a fait, lu dans le même historique que l'écran Statistiques
  *   (aucun second calcul), avec un lien vers cet écran.
+ * Au-dessus des onglets, toujours visible : son dé de départ (le composant du dé forgé), une face par compétence, le
+ * détail de chacune dans l'infobulle de sa face (retour du 2026-10-27). Seules ses compétences de départ sont citées :
+ * ce qu'il peut apprendre ensuite reste à découvrir.
  */
 export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props) {
   const history = useHistory()
@@ -34,9 +38,10 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
   const [tab, setTab] = useState<SheetTab>(initialTab)
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0]
   const record = history.characters[character.id] ?? emptyRecord()
+  // Ses compétences de départ, celles de ses faces (pas celles qu'il pourrait graver ensuite, `outside`)
   const skills = skillCatalog()
     .flatMap((f) => f.skills)
-    .filter((s) => s.owners.includes(character))
+    .filter((s) => s.owners.includes(character) && !s.outside)
 
   return (
     <div className="grid h-full min-h-0 gap-6" style={{ gridTemplateColumns: `${FIGURE_COLUMN}px 1fr` }}>
@@ -44,12 +49,20 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
       <div aria-hidden />
 
       <div className="codex-panel flex min-h-0 flex-col gap-3 px-6 pt-4 pb-5">
-        <div>
-          <p className="codex-label">
-            {character.race} · {character.archetype}
-          </p>
-          <h2 className="font-display text-[44px] font-extrabold leading-tight text-amber-200">{character.name}</h2>
-          <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="codex-label">
+              {character.race} · {character.archetype}
+            </p>
+            <h2 className="font-display text-[44px] font-extrabold leading-tight text-amber-200">{character.name}</h2>
+            <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <button type="button" className="codex-label codex-link" onClick={() => nav.go({ section: 'rules', id: skillRule(character) })}>
+              {RULES[skillRule(character)].title} →
+            </button>
+            <ForgedDie character={character} size="md" tooltip="below" align="right" />
+          </div>
         </div>
 
         <Tabs
@@ -93,15 +106,22 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
             </div>
 
             <section>
-              <div className="flex items-baseline justify-between gap-4 border-b border-line-2 pb-1">
-                <h3 className="codex-label">Compétences de {character.name}</h3>
-                <button type="button" className="codex-link text-[14px]" onClick={() => nav.go({ section: 'rules', id: skillRule(character) })}>
-                  {RULES[skillRule(character)].title} →
-                </button>
+              <h3 className="codex-label border-b border-line-2 pb-1">Compétences de départ</h3>
+              {skills.length === 0 && <p className="py-2.5 font-body text-[15px] text-ink-3">Aucune compétence. Ses six faces sont nues, chaque jet porte son coup de base.</p>}
+              <div className="grid grid-cols-2 gap-x-6">
+                {skills.map((s) => (
+                  <button
+                    key={s.event.id}
+                    type="button"
+                    className="flex items-center gap-3 border-b border-line-1 py-2 text-left"
+                    onClick={() => nav.go(skillLink(s.event))}
+                  >
+                    <SkillMedal event={s.event} size={34} />
+                    <span className="codex-link min-w-0 flex-1 truncate font-display text-[17px] font-bold">{s.event.name}</span>
+                    <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
+                  </button>
+                ))}
               </div>
-              {skills.map((s) => (
-                <SkillSummary key={s.event.id} event={s.event} triggers={s.triggers} form={formName(character, s.event)} nav={nav} />
-              ))}
             </section>
 
             {/* Les règles de chaque forme (druide) : ce que la forme fait de lui, au-delà de ses compétences. Elles

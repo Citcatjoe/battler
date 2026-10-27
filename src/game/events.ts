@@ -88,8 +88,10 @@ export type Effect =
    * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
    * d'affichage, `hits` fois `amount` appliqués en une seule perte ; l'écran en fait autant d'impacts.
    * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur famille (DT ou non) et leur teinte ; sans effet sur la règle.
+   * `armored` (2026-10-27, M4, Clous de pavois) : ils se heurtent à l'armure de leur cible, comme un coup (étape 7 de la
+   * chaîne) : moins son armure effective, au moins 1 par impact ; ni esquive, ni critique, ni armure temporaire.
    */
-  | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource }
+  | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource; armored?: boolean }
   /**
    * Pose un statut. `fromHit` (Pourfendre, 0.107.0) : des charges en plus, la part `fromHit` des PV que le coup de ce jet
    * a retirés, arrondie au-dessus (une compétence qui modifie son coup part s'il touche) ; `stacks` s'y ajoute (0 permis).
@@ -286,6 +288,8 @@ export function describeEffect(effect: Effect, grafted = false): string {
     case 'damage': {
       const noun = effect.hits ? HIT_NOUNS[effect.source] : undefined
       if (noun && effect.hits) return `${foe ? "l'adversaire" : 'il'} perd ${effect.amount * effect.hits} PV, en ${SMALL_NUMBERS[effect.hits] ?? effect.hits} ${noun}`
+      // Contre l'armure (Clous de pavois, 2026-10-27) : ce ne sont plus des dégâts directs
+      if (effect.armored) return `${effect.amount} ${effect.amount > 1 ? 'dégâts' : 'dégât'} contre l'armure ${foe ? "de l'adversaire" : 'du porteur'}`
       return `${effect.hits ? `${effect.hits} × ` : ''}${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${foe ? " à l'adversaire" : ' à soi-même'}`
     }
     case 'applyStatus': {

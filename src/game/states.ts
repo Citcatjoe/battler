@@ -86,7 +86,7 @@ export const STATES: Record<StateId, StateDef> = {
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
   bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
   burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
-  rot: { name: 'Pourriture', polarity: 'negative', summary: "Il perd des PV à chacun de ses tours, jusqu'à ce qu'on le purifie.", counter: 'status' },
+  rot: { name: 'Pourriture', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
   lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
   breach: { name: 'Brèche', polarity: 'negative', summary: 'Son armure est réduite.', counter: 'status' },
   vulnerable: { name: 'Vulnérable', polarity: 'negative', summary: 'Il subit plus de dégâts à chaque coup.', counter: 'status' },
@@ -165,7 +165,6 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // valeur, `badge`), dans la barre de compétences, et ne se relaie pas dans la zone d'état (0.79.7)
   powerAura: aura(),
   wildAura: aura(),
-  melodiousAura: aura(),
   precisionAura: aura(),
   holyAura: aura(),
   immunityAura: aura(),

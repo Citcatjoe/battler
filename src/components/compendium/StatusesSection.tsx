@@ -1,10 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { sheetStatuses, statusHome, statusLinks, type StatusEntry } from '../../game/catalog'
+import { sheetStatuses, statusHome, type StatusEntry } from '../../game/catalog'
 import type { CharacterEvent, Target } from '../../game/events'
 import { RULES } from '../../game/rules'
 import { POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
-import { RelicSeal } from '../RelicSeal'
-import { CodexBox, Line, RelicSource, RuleLink, skillLine, SkillMedal, StatusMedal, useFocusRef } from './CodexBits'
+import { CodexBox, Line, RelicSource, RuleLink, skillLine, skillLink, SkillMedal, StatusMedal, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type CompendiumTarget, type SectionProps } from './sections'
 
 type KindFilter = Polarity | 'all'
@@ -16,7 +15,8 @@ const KINDS: Polarity[] = ['positive', 'negative']
  * Section « Statuts » : le vocabulaire commun, les bonus et malus de la zone d'état, réunis dans un seul index
  * (polarité dite par la couleur et par le mot), chacun sous l'emblème de son état. Une aura ou un mécanisme
  * appartient à sa compétence, une règle de forme à son personnage : ils sont décrits là (0.98.0). À droite, le
- * détail du statut choisi : effet, consommation, cumul, qui le pose, interactions. Seuls les statuts mis en jeu
+ * détail du statut choisi : effet, consommation, cumul, qui le pose ; ni ses interactions ni ce qui le retire (au joueur
+ * de les découvrir, 2026-10-27). Seuls les statuts mis en jeu
  * (compétence ou relique) y figurent ; les statuts « à venir » restent dans docs/STATUTS.md.
  */
 export function StatusesSection({ nav, focus, filter }: SectionProps) {
@@ -86,7 +86,7 @@ interface Poser {
 function cite(id: StatusId, size: number): { medal: ReactNode; to: CompendiumTarget; skill: boolean } {
   const home = statusHome(id)
   return home?.kind === 'skill'
-    ? { medal: <SkillMedal event={home.event} size={size} />, to: { section: 'skills', id: home.event.id }, skill: true }
+    ? { medal: <SkillMedal event={home.event} size={size} />, to: skillLink(home.event), skill: true }
     : { medal: <StatusMedal id={id} size={size} />, to: { section: 'statuses', id }, skill: false }
 }
 
@@ -97,7 +97,6 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
     if (s.kind === 'skill' && !posers.some((p) => p.event.id === s.event.id)) posers.push({ event: s.event, target: s.target })
   const byStatus = entry.sources.flatMap((s) => (s.kind === 'status' ? [s.status] : []))
   const byRelic = entry.sources.flatMap((s) => (s.kind === 'relic' ? [{ relic: s.relic, target: s.target }] : []))
-  const links = statusLinks(entry.id)
 
   return (
     <article className="codex-panel fade-in scroll-panel flex min-h-0 flex-col gap-4 overflow-y-auto p-6">
@@ -151,7 +150,7 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
           <div key={p.event.id} className="flex items-center gap-3 border-b border-line-1 py-2.5">
             <SkillMedal event={p.event} size={40} />
             <div className="min-w-0 flex-1">
-              <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go({ section: 'skills', id: p.event.id })}>
+              <button type="button" className="codex-link font-display text-[17px] font-bold" onClick={() => nav.go(skillLink(p.event))}>
                 {p.event.name}
               </button>
               <p className="font-body text-[14px] text-ink-3">
@@ -179,34 +178,6 @@ function StatusDetail({ entry, nav }: { entry: StatusEntry; nav: CompendiumNav }
           )
         })}
       </section>
-
-      {links.length > 0 && (
-        <section>
-          <h3 className="codex-label mb-1 border-b border-line-2 pb-1">Interactions</h3>
-          {links.map((l) => {
-            const cited = l.status && cite(l.status, 32)
-            const to: CompendiumTarget | undefined = cited
-              ? cited.to
-              : l.relic
-                ? { section: 'relics', id: l.relic.id }
-                : l.skill && { section: 'skills', id: l.skill.event.id }
-            return (
-              <div key={l.text} className="flex items-center gap-3 border-b border-line-1 py-2">
-                {cited && cited.medal}
-                {l.skill && <SkillMedal event={l.skill.event} size={32} />}
-                {l.relic && <RelicSeal relic={l.relic} size={40} />}
-                {to ? (
-                  <button type="button" className="codex-link text-left font-body text-[15px]" onClick={() => nav.go(to)}>
-                    {l.text}
-                  </button>
-                ) : (
-                  <p className="font-body text-[15px] text-ink-2">{l.text}</p>
-                )}
-              </div>
-            )
-          })}
-        </section>
-      )}
 
       {/* Le pied de fiche mène à la règle de vie du statut (Durée), jamais à « Durée » pour un statut qui n'en a pas */}
       <button

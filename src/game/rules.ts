@@ -119,7 +119,7 @@ export const RULES: Record<RuleId, Rule> = {
   'final-damage': {
     group: 'damage',
     title: 'Dégâts finaux',
-    text: "Les dégâts finaux de l'attaquant (Aura mélodieuse, Fausse note) s'additionnent, puis s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; le coup garde au moins 1 dégât.",
+    text: "Les dégâts finaux de l'attaquant (Fausse note) s'additionnent, puis s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; le coup garde au moins 1 dégât.",
   },
   'direct-damage': {
     group: 'damage',

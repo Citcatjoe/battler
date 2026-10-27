@@ -48,7 +48,7 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
 
   it('une aura sur son porteur se lit sur son anneau, pas dans la zone d’état (0.79.7)', () => {
     // Modification permanente, de l'identité : rien dans la zone d'état
-    for (const id of ['powerAura', 'wildAura', 'melodiousAura', 'precisionAura', 'holyAura', 'immunityAura', 'bearMight'] as const)
+    for (const id of ['powerAura', 'wildAura', 'precisionAura', 'holyAura', 'immunityAura', 'bearMight'] as const)
       expect(trayStates([{ id, stacks: 2 }], []), id).toEqual([])
     // Le Poison qu'une aura pose chez l'adversaire est un malus comme un autre, chez lui
     expect(trayStates([{ id: 'poison', stacks: 2 }], [{ id: 'frostAura', stacks: 1 }]).map((s) => s.id)).toEqual(['poison'])
@@ -64,9 +64,9 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     const gorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: skill('power-aura') }])
     expect(auraIdsOf(gorak)).toEqual(['powerAura'])
     expect(gorak.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['power-aura'])
-    // L'Ouverture de la barde pose aussi son aura ; le Duo, qui pose aussi son dé de plus, garde son sceau (2026-10-25)
+    // La barde n'a plus d'aura (l'Aura mélodieuse quitte le jeu, 2026-10-27) ; son Duo garde son sceau
     const fanchon = createCharacter('fanchon')
-    expect(fanchon.events.filter((e) => auraOfSkill(e) === 'melodiousAura').map((e) => e.id)).toEqual(['overture'])
+    expect(auraIdsOf(fanchon)).toEqual([])
     expect(auraOfSkill(fanchon.events.find((e) => e.id === 'duo')!)).toBeUndefined()
     // L'Aura d'immunité purge aussi ses malus : elle se fond quand même dans son anneau, sans second sceau
     const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])

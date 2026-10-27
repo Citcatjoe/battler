@@ -290,17 +290,68 @@ describe('audit de résolution : phase 8, lot 3, les malus de famille', () => {
 })
 
 describe('audit de résolution : les reliques de source (2026-10-25)', () => {
-  it('aucune anomalie pour le Dard, le Briquet, la Pièce de foire et le Brassard chez tout le roster, seuls puis avec les reliques qu’ils ouvrent', () => {
+  it('aucune anomalie pour le Dard, le Briquet et le Brassard chez tout le roster, seuls puis avec les reliques qu’ils ouvrent', () => {
     const { audit, problems, seen } = createAudit()
-    const opened: Record<string, string> = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'fair-coin': 'holed-coin', 'spiked-bracer': 'talion-gauntlet' }
+    const opened: Record<string, string> = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'spiked-bracer': 'talion-gauntlet' }
     let n = 0
     for (const [source, consumer] of Object.entries(opened))
       for (const relics of [[source], [source, consumer]])
         for (const a of CHARACTER_IDS)
           for (const b of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 16000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['relique : affliction à l’adversaire', 'relique de coup', 'relique de tour', 'relique : heads', 'relique : reflected', 'bonus de relique à conditions'])
+    for (const k of ['relique : affliction à l’adversaire', 'relique de coup', 'relique de tour', 'relique : reflected', 'bonus de relique à conditions'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : retour du 2026-10-27 (pièces de la Fortune, sursis, initiative, chance de pile)', () => {
+  it('aucune anomalie pour les pièces gravées (rangs I et II, avec la Pièce trouée et la Pièce lestée), la Médaille de sursis et le Cor d’avant-garde', () => {
+    const { audit, problems, seen } = createAudit()
+    let n = 0
+    for (const id of ['lucky-coin', 'cursed-coin'])
+      for (const host of ['naraxes', 'fanchon', 'gorak'])
+        for (const rank of [0, 1]) {
+          const steps: ForgeStep[] = [{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === id)! }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
+          for (const b of CHARACTER_IDS)
+            for (let k = 0; k < 2; k++)
+              audit(simulateCombat([createCharacter(host).withForge(steps).withRelics(['holed-coin', 'weighted-coin'].map(getRelic)), createCharacter(b)], { seed: 27000 + n++ }))
+        }
+    for (const relics of [['reprieve-medal'], ['vanguard-horn']])
+      for (const a of CHARACTER_IDS)
+        for (const b of CHARACTER_IDS) {
+          audit(simulateCombat([createCharacter(a).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 27000 + n++ }))
+          audit(simulateCombat([createCharacter(b), createCharacter(a).withRelics(relics.map(getRelic))], { seed: 27000 + n++ }))
+        }
+    // Les deux camps portent le Cor : le jet revient
+    for (const a of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics([getRelic('vanguard-horn')]), createCharacter('gorak').withRelics([getRelic('vanguard-horn')])], { seed: 27000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['pièce d’effet sur pile', 'pièce d’effet sur face', 'relique : heads', 'sursis', 'initiative prise', 'initiative disputée'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : retour du 2026-10-27, règles du moteur (usure du critique, Riposte esquivée, Clous contre l’armure)', () => {
+  it('aucune anomalie quand le Critique assuré s’use, quand la Riposte manque une esquive assurée, et pour les Clous contre l’armure', () => {
+    const { audit, problems, seen } = createAudit()
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    let n = 0
+    // Œil de faucon (et aiguisé) et Rancune : des critiques qui attendent ; Esquive améliorée contre la Riposte d'Aldric
+    const elaria = [createCharacter('elaria'), createCharacter('elaria').withForge([{ op: 'sharpen', face: 1 }])]
+    const grudge = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: skill('grudge') }])
+    for (const a of [...elaria, grudge])
+      for (const b of CHARACTER_IDS)
+        for (let k = 0; k < 6; k++) {
+          audit(simulateCombat([a, createCharacter(b)], { seed: 28000 + n++ }))
+          audit(simulateCombat([createCharacter(b), a], { seed: 28000 + n++ }))
+        }
+    // Clous de pavois chez Brokk (Peau de pierre), contre un attaquant armé (Aura d'immunité gravée : +1 armure)
+    const nails = createCharacter('brokk').withRelics([getRelic('pavise-nails')])
+    const armored = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
+    for (const b of [...CHARACTER_IDS.map(createCharacter), armored])
+      for (let k = 0; k < 8; k++) audit(simulateCombat([nails, b], { seed: 28000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['riposte esquivée', 'riposte', 'dégâts renvoyés contre l’armure', 'dégâts contre l’armure, sans armure']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    expect((seen['critique assuré usé d’une charge'] ?? 0) + (seen['critique assuré usé jusqu’au bout'] ?? 0)).toBeGreaterThan(0)
   })
 })
 

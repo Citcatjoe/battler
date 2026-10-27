@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { statusLinks } from './catalog'
 import { describeSkill, TRIGGERS } from './events'
 import { FORGE_OPS, rankText, sharpen } from './forge'
 import { describeRelic, RELICS } from './relics'
@@ -43,6 +42,13 @@ function scan(texts: Record<string, string>, also: [RegExp, string][] = []): str
 /** « lumière », « magie » : une couleur de dégâts n'est pas une règle ; seule la règle « Couleurs des dégâts » les nomme (les noms propres, Foudre, Larme de givre, restent). */
 const DAMAGE_WORDS: [RegExp, string][] = [[/\b(lumière|magie)\b/i, 'couleur de dégâts']]
 
+/**
+ * Ni purge ni interaction dans une description (retour de l'utilisateur du 2026-10-27, C3) : au joueur de découvrir ce qui
+ * retire un statut ou ce qui réagit à quoi. Seules les règles communes (section Règles) parlent de purification.
+ */
+const NO_INTERACTION: [RegExp, string][] = [[/purifi|purge|peut être retirée?\b/i, 'purification ou interaction']]
+const DESCRIPTION_RULES = [...DAMAGE_WORDS, ...NO_INTERACTION]
+
 const SAMPLES: Omit<Status, 'id'>[] = [{ stacks: 1 }, { stacks: 2 }, { stacks: 3, turns: 2 }, { stacks: 6 }, { stacks: 2, power: 1 }]
 
 describe('style de rédaction du compendium (passe du 2026-10-25)', () => {
@@ -64,7 +70,7 @@ describe('style de rédaction du compendium (passe du 2026-10-25)', () => {
         expect(tags.map((t) => t.label).join(' '), skill.id).not.toMatch(/^si |\bsi l|fois max/)
       }
     }
-    expect(scan(texts, DAMAGE_WORDS)).toEqual([])
+    expect(scan(texts, DESCRIPTION_RULES)).toEqual([])
   })
 
   it('chaque statut : son résumé, ses phrases à toutes les charges, son badge, son intensité, sa fiche', () => {
@@ -84,10 +90,9 @@ describe('style de rédaction du compendium (passe du 2026-10-25)', () => {
       if (def.power) for (const n of [1, 2]) texts[`${id} · intensité ${n}`] = def.power(n)
       const sections = statusRuleSections(id)
       ;[...sections.effect, ...sections.consumption].forEach((l, k) => (texts[`${id} · fiche ${k}`] = l.text))
-      statusLinks(id).forEach((l, k) => (texts[`${id} · lien ${k}`] = l.text))
     }
     for (const [id, state] of Object.entries(STATES)) texts[`état ${id}`] = state.summary
-    expect(scan(texts, DAMAGE_WORDS)).toEqual([])
+    expect(scan(texts, DESCRIPTION_RULES)).toEqual([])
   })
 
   it('chaque relique, chaque règle, chaque déclencheur et chaque opération de forge', () => {
@@ -95,7 +100,7 @@ describe('style de rédaction du compendium (passe du 2026-10-25)', () => {
     for (const r of RELICS) texts[r.id] = describeRelic(r).text
     for (const [id, t] of Object.entries(TRIGGERS)) texts[`déclencheur ${id}`] = t.label
     for (const [id, op] of Object.entries(FORGE_OPS)) texts[`forge ${id}`] = op.summary
-    expect(scan(texts, DAMAGE_WORDS)).toEqual([])
+    expect(scan(texts, DESCRIPTION_RULES)).toEqual([])
     // Les règles sont le livre de référence : la règle « Couleurs des dégâts » nomme les couleurs, les autres non
     const rules = Object.fromEntries(Object.entries(RULES).map(([id, r]) => [`règle ${id}`, r.text]))
     expect(scan(rules)).toEqual([])

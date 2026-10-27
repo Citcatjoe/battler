@@ -4,34 +4,41 @@ import { DIE_FACES } from '../game/events'
 import {
   ACT_FIGHTS,
   ACT_LENGTH,
-  autoHeritage,
   BOSS,
   campaignCharacter,
   championOf,
   dangerOf,
-  drawChampions,
   drawHeritage,
   heritableGains,
   isBossNode,
+  loadHeritageOn,
   opponentOf,
+  runTriggers,
+  saveHeritageOn,
   secondSkillOf,
   type CampaignRun,
   type Encounter,
   type HeritageItem,
 } from '../game/campaign'
+import { SIDE_STYLE } from '../game/combat'
 import { REWARDS, type PendingReward } from '../game/offers'
 import type { Character } from '../game/character'
 import { rollFace } from '../game/events'
 import { stepLabel } from '../game/forge'
 import { getRelic } from '../game/relics'
-import { createCharacter } from '../game/roster'
+import { CHARACTERS } from '../game/roster'
 import { randomSeed, seededRng } from '../game/rng'
+import { sfx } from '../game/sound'
+import { DieBuild } from './DieBuild'
 import { Fighter } from './Fighter'
 import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
-import { BackLink, Button, Glyph } from './kit'
+import { BackLink, Button, Glyph, SquareButton } from './kit'
+import { PortraitTile } from './Portrait'
 import { MiniPortrait } from './RecordBits'
 import { RelicCard, RelicRow } from './RelicSeal'
 import { SkillSeal } from './SkillSeal'
+import { StatSheet } from './StatSheet'
+import { Switch } from './Switch'
 
 /*
  * La campagne (0.88.0, docs/CAMPAGNE.md) : le choix du champion et de son héritage, la carte de l'acte (le champion, son
@@ -75,41 +82,124 @@ function Header({ kicker, title, sub }: { kicker: string; title: string; sub?: s
 
 /* ---------- Choix du champion et de son héritage ---------- */
 
+/**
+ * Le choix du champion (retour du 2026-10-27, docs/ref/campagne-champion.png) : tous les personnages en portraits, le
+ * champion choisi en grand (illustration, fiche de l'affrontement, ligne de lore en citation) et son héritage, optionnel
+ * par un interrupteur mémorisé par champion (`loadHeritageOn`). Héritage actif et disponible : « Commencer » ouvre le
+ * choix de l'amélioration (`HeritagePick`) ; sinon la partie part sans.
+ */
 function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart' | 'onMenu'>) {
   const [seed] = useState(randomSeed)
-  const champions = useMemo(() => drawChampions(seededRng(seed)).map(createCharacter), [seed])
-  const [picked, setPicked] = useState<Character | null>(null)
-  if (picked && heritage[picked.id]?.length)
-    return <HeritagePick champion={picked} items={heritage[picked.id]} seed={seed} onBack={() => setPicked(null)} onStart={(item) => onStart(picked.id, seed, item)} />
+  const [champion, setChampion] = useState<Character>(CHARACTERS[0])
+  const [heritageOn, setHeritageOn] = useState(loadHeritageOn)
+  const [picking, setPicking] = useState(false)
+  const items = heritage[champion.id] ?? []
+  const withHeritage = items.length > 0 && heritageOn[champion.id] !== false
+  if (picking && withHeritage)
+    return <HeritagePick champion={champion} items={items} seed={seed} onBack={() => setPicking(false)} onStart={(item) => onStart(champion.id, seed, item)} />
+  const choose = (c: Character) => {
+    if (c.id === champion.id) return
+    sfx.click()
+    setChampion(c)
+  }
+  const toggleHeritage = () => {
+    sfx.click()
+    saveHeritageOn(champion.id, !withHeritage)
+    setHeritageOn({ ...heritageOn, [champion.id]: !withHeritage })
+  }
   return (
     <Backdrop>
-      <Header kicker="Campagne" title="Choisissez votre champion" sub={`Il mène seul les ${ACT_LENGTH} combats de l'acte, jusqu'au boss. Une défaite met fin à la partie.`} />
-      <div className="relative flex flex-1 items-end justify-center gap-10 px-10 pb-6">
-        {champions.map((c) => {
-          const legacy = heritage[c.id]?.length ?? 0
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className="encounter-card"
-              onClick={() => (legacy ? setPicked(c) : onStart(c.id, seed))}
-              aria-label={`Choisir ${c.name}`}
-            >
-              <div className="flex h-[380px] w-full justify-center">
-                <Fighter character={c} side={0} anchor="body" />
-              </div>
-              <h2 className="font-display text-4xl font-extrabold text-ink-1">{c.name}</h2>
-              <p className="font-body text-lg text-ink-2">
-                {c.race} · {c.archetype} · d{DIE_FACES}
-              </p>
-              <StartSkills character={c} />
-              <p className="min-h-6 font-body text-[15px] font-bold text-gold-300">{legacy ? `Héritage : ${legacy} amélioration${legacy > 1 ? 's' : ''} de sa dernière partie` : ''}</p>
-            </button>
-          )
-        })}
+      <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-side-a/10 to-transparent" />
+      <BackLink onClick={onMenu} className="absolute left-10 top-[36px] z-30">
+        Menu
+      </BackLink>
+      <header className="absolute inset-x-0 top-[26px] flex flex-col items-center gap-2 text-center">
+        <p className="text-sm font-bold uppercase tracking-[0.5em] text-gold-300">Campagne</p>
+        <h1 className="font-display text-[40px] font-extrabold leading-tight text-amber-100">Choisissez votre champion</h1>
+        <p className="font-body text-lg text-ink-2">Il mène seul les {ACT_LENGTH} combats de l'acte, jusqu'au boss. Une défaite met fin à la partie.</p>
+      </header>
+
+      {/* Tous les combattants, sans nom (le sélecteur du duel) ; « Au hasard » termine la rangée */}
+      <div className="matchup-picker absolute left-1/2 top-[146px] z-20 flex max-w-[1000px] -translate-x-1/2 items-center gap-2">
+        <ul className="matchup-picker-row" aria-label="Champions">
+          {CHARACTERS.map((c) => (
+            <li key={c.id} className="shrink-0">
+              <PortraitTile
+                character={c}
+                side={0}
+                state={c.id === champion.id ? 'selected' : 'idle'}
+                selection="a"
+                onClick={() => choose(c)}
+                title={c.name}
+                aria-label={c.name}
+                className="matchup-picker-tile"
+              />
+            </li>
+          ))}
+        </ul>
+        {/* « Au hasard » : un autre champion que celui montré (hasard d'interface, aucune règle) */}
+        <SquareButton
+          icon="hasard"
+          label="Un champion au hasard"
+          onClick={() => {
+            const others = CHARACTERS.filter((c) => c.id !== champion.id)
+            choose(others[Math.floor(Math.random() * others.length)])
+          }}
+          className="shrink-0"
+        />
       </div>
-      <div className="relative flex justify-center pb-8">
-        <BackLink onClick={onMenu}>Menu</BackLink>
+
+      {/* L'illustration, au sol, le regard vers le centre (le traitement de l'affrontement) */}
+      <div key={champion.id} className="slide-in-left pointer-events-none absolute bottom-[117px] left-[80px] top-[270px] w-[440px]">
+        <Fighter character={champion} side={0} anchor="body" />
+      </div>
+
+      {/* La fiche de l'affrontement en duel : nom, race · classe, stats, dé de combat */}
+      <section className="absolute left-[578px] top-[276px] z-20 w-[378px]" aria-label="Le champion">
+        <h2 className="matchup-name text-side-a-hi">{champion.name}</h2>
+        <p className="matchup-race mb-[12px] font-body text-[15px] leading-5 text-ink-2">
+          {champion.race} · {champion.archetype}
+        </p>
+        <div className="matchup-panel fighter-panel side-a flex h-[339px] flex-col px-[18px]">
+          <StatSheet character={champion} barClass={SIDE_STYLE[0].bar} trackClass={SIDE_STYLE[0].track} className="mt-[13px] h-[160px] shrink-0 justify-around" />
+          <div className="matchup-rule mt-[12px]" />
+          <div className="mt-[10px]">
+            <DieBuild key={champion.id} character={champion} />
+          </div>
+        </div>
+      </section>
+
+      {/* La ligne de lore en citation, puis l'héritage. Sous l'héritage, la place du futur choix d'aura (V3, vague 2) */}
+      <div className="absolute left-[1000px] top-[356px] z-20 flex w-[356px] flex-col gap-8">
+        <figure className="flex gap-3">
+          <span aria-hidden className="font-display text-[56px] leading-[0.8] text-[#b07a3f]">«</span>
+          <blockquote className="flex flex-col gap-5">
+            <p className="font-body text-[20px] italic leading-snug text-ink-1">{champion.definition.lore.background}</p>
+            <span aria-hidden className="h-px w-14 bg-gold-500/70" />
+          </blockquote>
+        </figure>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={withHeritage}
+          disabled={items.length === 0}
+          onClick={toggleHeritage}
+          className="flex flex-col gap-2 rounded-(--r-xs) border border-line-2 bg-surface-1/80 px-4 py-4 text-left transition-colors enabled:hover:bg-surface-3 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-200"
+        >
+          <span className="flex items-center gap-4 font-body text-[16px] font-bold text-ink-1">
+            Activer l'héritage
+            <Switch on={withHeritage} />
+          </span>
+          <span className="font-body text-[14px] text-ink-3">
+            {items.length ? 'Récupère un objet de la dernière partie perdue de ce champion.' : 'Aucune partie précédente pour ce champion.'}
+          </span>
+        </button>
+      </div>
+
+      <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 justify-center">
+        <Button variant="primary" size="xl" icon="combattre" onClick={() => (withHeritage ? setPicking(true) : onStart(champion.id, seed))} className="w-[560px]">
+          Commencer la campagne
+        </Button>
       </div>
     </Backdrop>
   )
@@ -125,17 +215,17 @@ function HeritageCard({ item, champion, selected, mark, onSelect }: { item: Heri
   )
 }
 
-/** L'héritage (§ 8) : une amélioration de sa dernière partie, parmi trois au plus ; le champion a déjà choisi. */
-function HeritagePick({ champion, items, seed, onBack, onStart }: { champion: Character; items: HeritageItem[]; seed: number; onBack: () => void; onStart: (item?: HeritageItem) => void }) {
-  const { offer, auto } = useMemo(() => {
-    const rng = seededRng(hashSeed(`campagne:${seed}:heritage`))
-    const offer = drawHeritage(items, rng)
-    return { offer, auto: autoHeritage(offer, rng) }
-  }, [items, seed])
-  const [picked, setPicked] = useState(auto)
+/**
+ * L'héritage (§ 8) : une amélioration de sa dernière partie, parmi trois au plus. Rien n'est choisi d'avance (retour du
+ * 2026-10-27, U4 : la carte présélectionnée « Choix d'Elaria », une relique, partait dès qu'on lançait sans avoir
+ * cliqué la carte voulue, un sort) : « Commencer » attend une carte, et seule la carte choisie porte une marque.
+ */
+export function HeritagePick({ champion, items, seed, onBack, onStart }: { champion: Character; items: HeritageItem[]; seed: number; onBack: () => void; onStart: (item: HeritageItem) => void }) {
+  const offer = useMemo(() => drawHeritage(items, seededRng(hashSeed(`campagne:${seed}:heritage`))), [items, seed])
+  const [picked, setPicked] = useState<HeritageItem>()
   return (
     <Backdrop>
-      <Header kicker="Héritage" title={`${champion.name} reprend une amélioration`} sub={`Une seule, parmi celles de sa dernière partie : ${champion.name} a fait son choix, cliquez sur une autre carte pour décider à sa place.`} />
+      <Header kicker="Héritage" title={`${champion.name} reprend une amélioration`} sub="Une seule, parmi celles de sa dernière partie : choisissez sa carte." />
       <div className="relative flex flex-1 items-center justify-center gap-8">
         {offer.map((item) => (
           <HeritageCard
@@ -143,14 +233,14 @@ function HeritagePick({ champion, items, seed, onBack, onStart }: { champion: Ch
             item={item}
             champion={champion}
             selected={picked === item}
-            mark={item === auto ? `Choix de ${champion.name}` : picked === item ? 'Votre choix' : undefined}
+            mark={picked === item ? 'Votre choix' : undefined}
             onSelect={() => setPicked(item)}
           />
         ))}
       </div>
       <div className="relative flex items-center justify-center gap-6 pb-10">
-        <BackLink onClick={onBack}>Champions</BackLink>
-        <Button variant="primary" size="xl" icon="combattre" onClick={() => onStart(picked)} className="w-96">
+        <BackLink onClick={onBack}>Champion</BackLink>
+        <Button variant="primary" size="xl" icon="combattre" disabled={!picked} onClick={() => picked && onStart(picked)} className="w-96">
           Commencer
         </Button>
       </div>
@@ -415,6 +505,7 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
   const champion = championOf(run)
   const won = run.outcome === 'won'
   const legacy = heritableGains(run)
+  const triggers = runTriggers(run)
   return (
     <div className="champion-screen fade-in relative flex h-full overflow-hidden">
       {won && <div className="champion-rays pointer-events-none absolute -left-[10%] top-[-30%] h-[160%] w-[70%]" />}
@@ -432,9 +523,18 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
             {champion.name} · {run.wins} victoire{run.wins > 1 ? 's' : ''} sur {ACT_LENGTH} · d{DIE_FACES}
           </p>
         </header>
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Son dé</span>
-          <ForgedDie character={champion} size="sm" tooltip="below" />
+        {/* Combien de fois chaque face est tombée et chaque relique a agi, sur toute la partie (lu dans les combats enregistrés) */}
+        <div className="flex items-start gap-10">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Son dé · faces tombées</span>
+            <ForgedDie character={champion} size="sm" tooltip="below" counts={triggers.faces} />
+          </div>
+          {champion.relics.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Reliques · déclenchements</span>
+              <RelicRow relics={champion.relics} size={40} tooltip="below" counts={triggers.relics} />
+            </div>
+          )}
         </div>
         <div className="codex-divider" />
         <section aria-label="Parcours">

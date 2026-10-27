@@ -4,9 +4,10 @@ import { rollFace } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { validOnOrigin, withForgeStep, type ForgeStep } from './forge'
 import { drawReward, REWARDS, type PendingReward } from './offers'
-import { getRelic } from './relics'
+import { getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
+import { sumTriggers, triggerCounts, type TriggerCounts } from './stats'
 
 /*
  * Campagne (0.88.0, prototype de docs/CAMPAGNE.md ; acte resserré en 0.89.0, allongé en 0.104.0) : un champion tiré
@@ -32,9 +33,6 @@ export const ACT_FIGHTS = 10
 
 /** Nœuds d'un acte : les combats normaux, puis le boss. */
 export const ACT_LENGTH = ACT_FIGHTS + 1
-
-/** Champions proposés au départ d'une campagne. */
-export const CHAMPION_CHOICES = 3
 
 /** Adversaires proposés à chaque nœud de combat normal. */
 export const ENCOUNTER_CHOICES = 2
@@ -133,6 +131,8 @@ export interface FightRecord {
   turns: number
   hpLeft: number
   seed?: number
+  /** Déclenchements du champion (reliques, faces du dé), pour l'écran de fin ; absents d'une partie d'avant 0.121 */
+  triggers?: TriggerCounts
 }
 
 export interface CampaignRun {
@@ -174,9 +174,6 @@ export function opponentOf(encounter: Encounter): Character {
 
 /** Le nœud en cours (0 à `ACT_FIGHTS`) ; le dernier est le boss. */
 export const isBossNode = (run: CampaignRun) => run.wins === ACT_FIGHTS
-
-/** Les champions proposés au départ : trois personnages différents, au hasard. */
-export const drawChampions = (rng: Rng) => shuffle(rng, CHARACTER_IDS).slice(0, CHAMPION_CHOICES)
 
 /** Commence une partie : le champion, et son héritage s'il en a choisi un. */
 export function startRun(championId: string, seed: number, heritage?: HeritageItem): CampaignRun {
@@ -330,6 +327,7 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
     turns: result.turns,
     hpLeft: last ? last.state.hp[0] : result.fighters[0].maxHp,
     ...(result.seed !== undefined && { seed: result.seed }),
+    triggers: triggerCounts(result, 0),
   }
   const next: CampaignRun = { ...run, fights: [...run.fights, fight], encounters: undefined }
   if (!won) return { ...next, outcome: 'lost' }
@@ -338,6 +336,9 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
   return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng) }
 }
+
+/** Déclenchements du champion sur toute la partie (écran de fin) : la somme de ses combats. */
+export const runTriggers = (run: CampaignRun) => sumTriggers(run.fights.flatMap((f) => (f.triggers ? [f.triggers] : [])))
 
 /** Le choix du champion pour la récompense en attente, comme un gain (rien si l'offre était vide). */
 export function rewardChoice(reward: PendingReward): HeritageItem | undefined {
@@ -372,9 +373,6 @@ export function heritableGains(run: CampaignRun): HeritageItem[] {
 /** Les héritages proposés au départ d'une partie : trois au plus, tirés parmi ceux du personnage. */
 export const drawHeritage = (items: readonly HeritageItem[], rng: Rng) => shuffle(rng, items).slice(0, HERITAGE_CHOICES)
 
-/** Le choix du champion parmi les héritages proposés, quand personne ne choisit pour lui. */
-export const autoHeritage = (offer: readonly HeritageItem[], rng: Rng) => (offer.length ? pick(rng, offer) : undefined)
-
 /* ---------- Sauvegarde ---------- */
 
 /**
@@ -401,6 +399,9 @@ export function loadRun(): CampaignRun | null {
     championOf(run)
     run.encounters?.forEach(opponentBase)
     if (run.reward?.kind === 'forge' && run.reward.choice) withForgeStep(createCharacter(run.championId).definition, run.forge, run.reward.choice)
+    // Une relique retirée du jeu (offre en attente, héritage) fait oublier la partie, au lieu de faire planter l'écran
+    if (run.reward?.kind === 'relic') run.reward.offer.forEach(getRelic)
+    if (run.heritage?.kind === 'relic') getRelic(run.heritage.relic)
     return run
   } catch {
     return null
@@ -428,7 +429,7 @@ export function loadHeritage(): Record<string, HeritageItem[]> {
     return Object.fromEntries(
       Object.entries(saved)
         .filter(([id]) => CHARACTER_IDS.includes(id))
-        .map(([id, items]) => [id, items.filter((g) => g.kind === 'relic' || validOnOrigin(createCharacter(id).definition, g.step))]),
+        .map(([id, items]) => [id, items.filter((g) => (g.kind === 'relic' ? RELIC_IDS.includes(g.relic) : validOnOrigin(createCharacter(id).definition, g.step)))]),
     )
   } catch {
     return {}
@@ -446,5 +447,28 @@ export function recordHeritage(run: CampaignRun) {
     localStorage.setItem(HERITAGE_KEY, JSON.stringify({ ...loadHeritage(), [run.championId]: items }))
   } catch {
     /* stockage indisponible : pas d'héritage pour cette fois */
+  }
+}
+
+/**
+ * L'interrupteur « Activer l'héritage » de chaque champion (écran de choix, retour du 2026-10-27) : actif tant qu'on ne
+ * l'a pas coupé, mémorisé à chaque changement. Il ne touche pas au calcul de l'héritage : coupé, la partie part sans.
+ */
+const HERITAGE_ON_KEY = 'battler:campaign-heritage-on:v1'
+
+export function loadHeritageOn(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(HERITAGE_ON_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveHeritageOn(championId: string, on: boolean) {
+  try {
+    localStorage.setItem(HERITAGE_ON_KEY, JSON.stringify({ ...loadHeritageOn(), [championId]: on }))
+  } catch {
+    /* stockage indisponible : le choix vaut pour la session */
   }
 }

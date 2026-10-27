@@ -8,14 +8,14 @@ import { ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
-import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter } from '../game/campaign'
+import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type HeritageItem } from '../game/campaign'
 import type { PendingReward } from '../game/offers'
 import { Character } from '../game/character'
-import { CampaignScreen } from './CampaignScreen'
+import { CampaignScreen, HeritagePick } from './CampaignScreen'
 import { STATUS_IDS } from '../game/statuses'
 import { fxFloats, type Float, type FxSpec } from '../game/staging'
 import { attackSpecials, isSurcharge, relicSpecial, SPECIAL_SIGNS, SPECIAL_SOURCES, statusSpecial } from '../game/specials'
-import { isAura, STATUSES, type StatusId } from '../game/statuses'
+import { familyLabel, isAura, STATUSES, type StatusId } from '../game/statuses'
 import { EMOJI, testCharacter } from '../game/test-utils'
 import { allMatches, championRun, createTournament, fillSlots, matchFighters, matchKey, SLOTS, withResult } from '../game/tournament'
 import { BracketScreen } from './BracketScreen'
@@ -24,9 +24,9 @@ import { CheatPad } from './CheatPad'
 import { CharacterSheet } from './compendium/CharacterSheet'
 import { CompendiumScreen } from './compendium/CompendiumScreen'
 import { COMPENDIUM_SECTIONS } from './compendium/sections'
-import { SkillsSection } from './compendium/SkillsSection'
+import { compendiumSkills, SkillsSection, type SkillKind } from './compendium/SkillsSection'
 import { StatusesSection } from './compendium/StatusesSection'
-import { sheetStatuses, skillCatalog, statusCatalog } from '../game/catalog'
+import { sheetStatuses, statusCatalog } from '../game/catalog'
 import { EndScreen } from './EndScreen'
 import { Fighter } from './Fighter'
 import { FightScreen } from './FightScreen'
@@ -36,7 +36,7 @@ import { StatusTray, trayAfter } from './StatusTray'
 import { SkillBar } from './SkillBar'
 import { DieBuild, dieCells } from './DieBuild'
 import { offerTargets, type ForgeStep } from '../game/forge'
-import { STATES, STATUS_PLACE, trayStates } from '../game/states'
+import { auraOfSkill, STATES, STATUS_PLACE, trayStates } from '../game/states'
 import { skillIcon, STATE_ICON, statusIcon } from './Icon'
 import { RelicCard } from './RelicSeal'
 import { SeasonReport } from './CombatReport'
@@ -53,6 +53,12 @@ import { BetSummary, BetsResult, BettingDesk, Standings, type BetsOutcome } from
 import { createWallets, placeBet, placeBotBets, priceMatch, settleMatch, worthOf, type MatchOdds } from '../game/betting'
 
 const noop = () => {}
+const SKILL_KINDS: SkillKind[] = ['skills', 'auras']
+/** L'onglet d'une compétence du compendium : Auras ou Compétences. */
+const kindOf = (id: string): SkillKind => (compendiumSkills('auras').some((s) => s.event.id === id) ? 'auras' : 'skills')
+/** Les fiches de toutes les compétences et auras, chacune dans son onglet. */
+const skillPages = () =>
+  SKILL_KINDS.flatMap((kind) => compendiumSkills(kind).map((s) => renderToString(<SkillsSection kind={kind} nav={{ go: noop }} focus={s.event.id} filter="" />)))
 const fighters = [createCharacter('gorak'), createCharacter('brokk')] as [
   ReturnType<typeof createCharacter>,
   ReturnType<typeof createCharacter>,
@@ -427,16 +433,16 @@ describe('écrans', () => {
       render(<CharacterSheet characterId={id} nav={nav} />)
       render(<CharacterSheet characterId={id} nav={nav} initialTab="performance" />)
     }
-    // Chaque statut de la section Statuts et chaque compétence ont leur fiche détaillée
+    // Chaque statut de la section Statuts et chaque compétence ou aura ont leur fiche détaillée
     for (const e of sheetStatuses()) render(<StatusesSection nav={nav} focus={e.id} filter="" />)
-    for (const s of skillCatalog().flatMap((f) => f.skills)) render(<SkillsSection nav={nav} focus={s.event.id} filter="" />)
+    for (const kind of SKILL_KINDS) for (const s of compendiumSkills(kind)) render(<SkillsSection kind={kind} nav={nav} focus={s.event.id} filter="" />)
     render(<RecordsScreen onOpenCharacter={noop} onBack={noop} />)
   })
 
   it('les sections Compétences et Statuts ne nomment aucun porteur (ni personnage, ni race)', () => {
     const names = CHARACTER_IDS.map((id) => createCharacter(id).name)
     const pages = [
-      ...skillCatalog().flatMap((f) => f.skills).map((s) => renderToString(<SkillsSection nav={{ go: noop }} focus={s.event.id} filter="" />)),
+      ...skillPages(),
       ...sheetStatuses().map((e) => renderToString(<StatusesSection nav={{ go: noop }} focus={e.id} filter="" />)),
     ]
     for (const html of pages) for (const name of [...names, 'Orcs', 'Humains', 'Porteur']) expect(html).not.toContain(name)
@@ -468,14 +474,49 @@ describe('écrans', () => {
   })
 
   it('la fiche d’une compétence porte son aura ou son mécanisme', () => {
-    const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
-    // Aura de sainteté : sa vie, son plafond et ce qui la retire
+    const sheet = (id: string) => renderToString(<SkillsSection kind={kindOf(id)} nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
+    // Aura de sainteté : sa vie, son plafond et sa famille
     const holy = sheet('holy-aura')
-    for (const text of ["jusqu'à la fin du combat", '2 charges au plus', 'Peut être retirée par Purification']) expect(holy).toContain(text)
-    // Le Duo : le dé de plus qu'il pose, et l'autre compétence qui pose son aura
-    expect(sheet('duo')).toContain('Ouverture')
+    for (const text of ["jusqu'à la fin du combat", '2 charges au plus', 'Aura · Soin']) expect(holy).toContain(text)
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
+  })
+
+  it('compendium (retour du 2026-10-27) : deux onglets, Compétences et Auras ; chaque aura dit sa famille', () => {
+    const auras = compendiumSkills('auras').map((s) => s.event.id)
+    const skills = compendiumSkills('skills').map((s) => s.event.id)
+    // Classées selon le moteur : ce qui pose une aura sur son lanceur est une aura (Sève noire, Ivresse du sang) ; le Dé
+    // pipé, un mécanisme à charges, reste une compétence
+    expect(auras).toEqual(expect.arrayContaining(['black-sap', 'blood-frenzy', 'thorns']))
+    expect(skills).toEqual(expect.arrayContaining(['loaded-die', 'cleave']))
+    expect(auras.some((id) => skills.includes(id))).toBe(false)
+    const html = renderToString(<SkillsSection kind="auras" nav={{ go: noop }} filter="" />).replace(/&#x27;/g, "'")
+    expect(html).toContain("Une aura dure jusqu'à la fin du combat")
+    for (const s of compendiumSkills('auras')) expect(html, s.event.id).toContain(familyLabel(auraOfSkill(s.event)!))
+    // Plus de niveau Martiale / Adresse / Arcane
+    for (const kind of SKILL_KINDS) for (const word of ['Martiale', 'Adresse', 'Arcane']) expect(renderToString(<SkillsSection kind={kind} nav={{ go: noop }} filter="" />)).not.toContain(word)
+  })
+
+  it('compendium : ni interaction ni purification dans les fiches de compétence, d’aura et de statut', () => {
+    const pages = [...skillPages(), ...sheetStatuses().map((e) => renderToString(<StatusesSection nav={{ go: noop }} focus={e.id} filter="" />))]
+    // Le texte affiché seul (les noms d'icônes, purification.png, ne comptent pas) ; la compétence Purification garde son
+    // nom dans l'index, mais aucune fiche ne dit ce qui retire un statut
+    for (const html of pages) for (const word of ['Interactions', 'purifi', 'purge', 'Peut être retiré']) expect(html.replace(/<[^>]*>/g, '')).not.toContain(word)
+  })
+
+  it('fiche d’un combattant : son dé de départ toujours visible, seules ses compétences de départ citées', () => {
+    for (const id of CHARACTER_IDS) {
+      const character = createCharacter(id)
+      for (const tab of ['sheet', 'performance'] as const) {
+        const html = renderToString(<CharacterSheet characterId={id} nav={{ go: noop }} initialTab={tab} />).replace(/&#x27;/g, "'")
+        expect(html, `${id} ${tab}`).toContain(`Dé de ${character.name}`)
+      }
+      const sheet = renderToString(<CharacterSheet characterId={id} nav={{ go: noop }} />).replace(/&#x27;/g, "'")
+      const list = sheet.slice(sheet.indexOf('Compétences de départ'))
+      for (const e of character.events) expect(list, `${id} ${e.id}`).toContain(e.name)
+      // Ce qu'il pourrait graver ensuite (hors kit) n'est pas cité
+      for (const e of character.definition.reserve ?? []) if (!character.events.some((x) => x.name === e.name)) expect(list, `${id} ${e.id}`).not.toContain(`>${e.name}<`)
+    }
   })
 
   it('tournoi', () => {
@@ -735,5 +776,44 @@ describe('écrans', () => {
     const fight = renderToString(<FightScreen script={simulateCombat(pair, { seed: 3 })} arena={null} onEnd={noop} />)
     expect(fight).toContain('aria-label="Dé 6"')
     render(<MatchupScreen mode="campaign" fighters={pair} onPlay={noop} onSimulate={noop} onBack={noop} arena={RANDOM_ARENA} onArenaChange={noop} />)
+  })
+
+  it('campagne, choix du champion (retour du 2026-10-27) : tous les champions, sa ligne de lore, l’héritage par interrupteur', () => {
+    const props = { onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
+    const html = (heritage: Record<string, HeritageItem[]>) => renderToString(<CampaignScreen {...props} run={null} heritage={heritage} />)
+    const none = html({})
+    for (const id of CHARACTER_IDS) expect(none).toContain(`aria-label="${createCharacter(id).name}"`)
+    expect(none).toContain(createCharacter(CHARACTER_IDS[0]).definition.lore.background.slice(0, 30))
+    // Sans partie précédente : interrupteur coupé et grisé, et sa raison
+    expect(none).toMatch(/role="switch" aria-checked="false" disabled=""/)
+    expect(none).toContain('Aucune partie précédente pour ce champion.')
+    // Avec un héritage : interrupteur actif par défaut, une seule ligne d'explication, plus de note « N améliorations »
+    const some = html({ [CHARACTER_IDS[0]]: [{ kind: 'relic', relic: 'wolf-fang' }] })
+    expect(some).toMatch(/role="switch" aria-checked="true"/)
+    expect(some).toContain('Récupère un objet de la dernière partie perdue de ce champion.')
+    expect(some).not.toContain('amélioration')
+    expect(some).toContain('Commencer la campagne')
+  })
+
+  it('héritage (U4) : aucune carte choisie d’avance, « Commencer » attend le choix du joueur', () => {
+    const items: HeritageItem[] = [
+      { kind: 'forge', step: { op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'lucky-strike')! } },
+      { kind: 'relic', relic: 'wolf-fang' },
+      { kind: 'relic', relic: 'eagle-feather' },
+    ]
+    const html = renderToString(<HeritagePick champion={createCharacter('elaria')} items={items} seed={1} onBack={noop} onStart={noop} />)
+    expect(html).not.toContain('aria-pressed="true"')
+    expect(html).not.toContain('Choix d')
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*Commencer/)
+  })
+
+  it('écrans de victoire (U2) : déclenchements de chaque relique et de chaque face, lus dans les combats enregistrés', () => {
+    const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
+    const run = { ...startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' }), outcome: 'won' as const }
+    const fights = [{ opponentId: 'brokk', won: true, turns: 5, hpLeft: 10, triggers: { relics: { 'wolf-fang': 3 }, faces: [2, 0, 1, 0, 0, 4] } }]
+    const html = renderToString(<CampaignScreen {...props} run={{ ...run, fights }} />)
+    expect(html).toContain('Reliques · déclenchements')
+    expect(html.replace(/<!-- -->/g, '')).toContain('×3')
+    expect(html.replace(/<!-- -->/g, '')).toContain('×4')
   })
 })

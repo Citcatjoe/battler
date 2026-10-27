@@ -28,7 +28,9 @@ Ces règles reprennent des solutions éprouvées dans des jeux du même genre, a
 ```
 OUVERTURE
   Statuts de forme (0.73.0) : chaque personnage à formes commence avec ceux de sa première forme.
-  Initiative : 1d10 chacun, relance sur égalité. Le plus haut est le premier joueur actif.
+  Initiative : 1d10 chacun, relance sur égalité. Le plus haut est le premier joueur actif. Relique d'initiative
+  (Cor d'avant-garde, 2026-10-27) : si un seul camp en porte une, elle part avant tout (étape n° 0) et son porteur
+  commence, sans jet ; si les deux en portent une, aucune ne part et le jet a lieu.
   Fenêtre « combatStart » : gauche, puis droite.
 
 TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre le défenseur
@@ -37,7 +39,8 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
        de forme de l'ancienne forme partent, ceux de la nouvelle sont posés (0.73.0).
     1. Effets de début de tour des statuts de l'actif (onTurnStart) : bonus, puis malus. Un bonus peut
        viser l'adversaire : l'Aura glaciale (0.69.0) pose ici 1 Poison par charge sur lui, avant le coup
-       de l'actif ; l'immunité, l'opposition et la purge s'appliquent à ce Poison comme à tout autre. Le
+       de l'actif (ce Poison agit à la fin du prochain tour de sa victime, 2026-10-27) ; l'immunité,
+       l'opposition et la purge s'appliquent à ce Poison comme à tout autre. Le
        Ciel d'orage (phase 8, lot 3) le frappe ici : 1 PV par charge, en éclairs de dégâts directs
        (source `lightning`, de l'instant, comme la Foudre : ni esquive, ni critique, ni armure), avant
        le coup de l'actif ; un tick qui frappe l'adversaire n'est pas un statut qui ronge son porteur.
@@ -74,8 +77,13 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
          multiplicateur, ni compétence. Une compétence greffée ou qui remplace lit ses conditions au jet,
          sur l'état de ce moment (0.114.0 : la Curée sans Saignement chez l'adversaire, la Récolte et la
          Virulence sans Poison : le coup part seul) ; l'audit les relit au même moment.
-    Pièce (Pile ou face, relation « modifie ») : la compétence pose sa pièce quand le coup touche ; elle
-    part aussitôt, juste après les fenêtres de ce coup (étape coin, un rang de dé en mode triche). Pile :
+    Pièce (Pile ou face, relation « modifie ») : la compétence pose sa pièce quand le coup touche.
+    [2026-10-27 : deux pièces d'effet, Pièce porte-bonheur et Pièce maudite, au même geste : pile, leurs effets
+    (`coinToss.heads`, un bonus au lanceur ou un malus à l'adversaire), ni dégâts ni fenêtres de coup qui touche ;
+    face, rien. Chance de pile : 1/2, plus la Pièce lestée et le rang d'une pièce d'effet (1/6 par rang), au plus
+    5/6, en un seul tirage. Le Dé pipé ne pipe que Pile ou face. Sursis (Médaille de sursis) : une perte qui ferait
+    tomber son porteur le laisse à 1 PV, une fois ; son étape suit celle de la perte.]
+    La pièce part aussitôt, juste après les fenêtres de ce coup (étape coin, un rang de dé en mode triche). Pile :
     ce coup ×3 (0.107.0 ; ×2 avant), la pièce inflige encore deux fois les PV qu'il a retirés, en une
     perte, en coup qui compte comme un coup qui touche de ce montant (`headsTouches` : fenêtres « hit »
     du porteur et « hurt » de l'adversaire, sans esquive, armure ni critique) ; face : ce coup reste
@@ -108,10 +116,11 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     l'ordre de pose (une charge de l'Ivresse qui attendait, puis la Furie de ce jet) : une charge en
     attente ne retarde jamais une Furie. Une charge gagnée pendant ces coups attend le jet suivant.
     Le Duo (la barde, 2026-10-25, décision de l'utilisateur) : un seul d6, comme tout le monde. Sa
-    signature, sur le 1, se greffe : +1 Aura mélodieuse, puis une charge de Duo ; le coup de ce 1 part. À
-    sa prochaine action, le Duo est consommé comme Coup de chance : une rafale de 1 + charges jets
-    complets. Un 1 dans cette rafale pose un nouveau Duo, pour l'action d'après. Jusqu'à la 0.115.1,
-    la barde lançait deux dés à chaque action (`twinDice`, une rafale sans statut) : retiré.
+    signature, sur le 1, se greffe : trois charges de Duo (2026-10-27 ; jusqu'à la 0.120.0, +1 Aura
+    mélodieuse puis une charge) ; le coup de ce 1 part. À sa prochaine action, le Duo est consommé comme
+    Coup de chance : une rafale de 1 + charges jets complets (quatre). Un 1 dans cette rafale pose un
+    nouveau Duo, pour l'action d'après. Jusqu'à la 0.115.1, la barde lançait deux dés à chaque action
+    (`twinDice`, une rafale sans statut) : retiré.
     Pour CHAQUE COUP, entièrement résolu avant le suivant :
       ATTAQUE (chaîne de calcul, § 3), puis FENÊTRES DU COUP :
       bloodied (seuil) → la face du dé (naturalOne, naturalTwo, naturalThree, puis face:4…) → naturalMax (actif) :
@@ -122,21 +131,30 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
       boucliers : une armure temporaire qui a absorbé tout ce qui lui restait ; phase 8, second lot). Vol de vie
       réagit dans `hit` (actif), Riposte et jauges de Rétribution dans `hurt` (défenseur), à leur rang parmi ses
       statuts (ordre de pose ; une jauge encore vide passe après eux), puis les compétences, puis les reliques
-      (2026-10-21). L'Embrasement réagit dans `hit` (actif) si l'adversaire brûle à ce moment : il relâche sa
+      (2026-10-21). Riposte contre un attaquant qui porte une esquive assurée (`forcesDodge`, Esquive
+      améliorée ; 2026-10-27, M3) : elle le manque, comme un coup esquivé. Une charge de Riposte et une
+      charge d'esquive partent, aucun dégât, aucune fenêtre (ni `dodge` de l'attaquant, ni dégâts renvoyés :
+      pas de chaîne) ; l'étape `statusReaction` porte `dodgedBy`. L'esquive au tirage (la chance d'esquive)
+      ne compte pas : la Riposte ne tire rien. L'Embrasement réagit dans `hit` (actif) si l'adversaire brûle à ce moment : il relâche sa
       Brûlure (3 fois ses PV par tour × ses tours restants, d'un coup, `release` avec `from: 'opponent'`), qui
       s'éteint ; sans Brûlure, sa réaction ne part pas et la charge attend
       coup brut (Furie des vents, `plain`) : ses fenêtres du dé n'éveillent que les reliques (2026-10-23), ni statut ni compétence
       jet remplacé (`replaced`) : ni esquivé ni touché, seules les fenêtres du dé s'ouvrent
   Phase 3 · FIN DE TOUR (actif)
-    1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus
-    2. Durées « fin » de l'actif : −1 tour, expiration à 0 (une seule étape statusAge)
+    1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus. Le Poison agit ici
+       depuis le 2026-10-27 (M2, retour de l'utilisateur : « à la fin du tour de celui qui les subit ») :
+       la victime joue son action, puis perd ses PV ; au début du tour jusqu'à la 0.120.0
+    2. Durées « fin » de l'actif : −1 tour, expiration à 0 ; charges usées (`wearsOff`, le Critique
+       assuré, 2026-10-27, M1) : une charge part, sauf pour un statut posé ou renforcé pendant ce tour
+       (comme une durée, « pas de décompte le tour de la pose »). Une seule étape statusAge (`worn` : les
+       charges avant → après)
     3. Fenêtre « turnEnd » (actif)
 
 FIN : dès qu'un combattant tombe à 0 PV, quelle qu'en soit la cause. Au-delà de 1 000 tours,
       victoire aux PV.
 ```
 
-**Principe du « tour du porteur »** : les effets de tour et les durées d'un statut se règlent pendant le tour **de celui qui le porte**, pas pendant celui de celui qui l'a posé. Un poison posé par Ervald agit au début des tours de sa victime.
+**Principe du « tour du porteur »** : les effets de tour et les durées d'un statut se règlent pendant le tour **de celui qui le porte**, pas pendant celui de celui qui l'a posé. Un poison posé par Ervald agit à la fin des tours de sa victime (au début jusqu'à la 0.120.0).
 
 **Pas de décompte le tour de la pose** (0.25.0) : un statut posé ou renouvelé pendant un tour n'est pas décompté à la fin de ce même tour. Un statut d'« 1 tour » décompté en fin de tour (`expiresAt: 'turnEnd'`), posé pendant l'action du porteur, dure donc jusqu'à la fin de son **prochain** tour : c'est « pour le tour d'après » (Furie des vents). Un statut décompté au début (défaut) et posé pendant l'action dure jusqu'au début du prochain tour du porteur, donc pendant tout le tour de l'adversaire (Esquive améliorée, Épines).
 
@@ -162,7 +180,7 @@ Le « moment » n'est jamais décidé au cas par cas dans le moteur. Il est rép
 | **Statut** (neutre) | `statuses.ts`, `StatusDef` | **Quand agit-il** une fois posé, **et quand s'use-t-il** ? | crochets (continu dans la chaîne de calcul, `onTurnStart`, `onTurnEnd`, `reactions`, `skipsAction`), cumul, plafond, `expiresAt` |
 | **Moteur** | `combat.ts`, ce document | **Dans quel ordre**, quand plusieurs choses tombent au même moment ? | phases (§ 2), chaîne de calcul (§ 3), règles d'ordre (§ 5), application (§ 6) |
 
-**Règle : un statut = un comportement temporel.** Un statut agit toujours au même moment, quelle que soit la compétence qui le pose. Si l'on veut qu'il agisse à un autre moment, c'est **un autre statut** (le Poison agit en début de tour ; une perte de PV en fin de tour, c'est la Brûlure). La compétence, elle, choisit librement *quand* elle le pose. C'est ce qui garde les interactions prévisibles : un joueur qui connaît un statut sait quand il agira, chez tous les personnages.
+**Règle : un statut = un comportement temporel.** Un statut agit toujours au même moment, quelle que soit la compétence qui le pose. Si l'on veut qu'il agisse à un autre moment, c'est **un autre statut** (le Poison et la Brûlure agissent à la fin du tour, depuis le 2026-10-27 ; une perte de PV au début du tour, c'est la Pourriture). La compétence, elle, choisit librement *quand* elle le pose. C'est ce qui garde les interactions prévisibles : un joueur qui connaît un statut sait quand il agira, chez tous les personnages.
 
 Exemple avec l'Armure temporaire, selon la compétence qui l'invoque :
 
@@ -203,12 +221,14 @@ Les étapes sont toujours dans cet ordre. Les tirages (dé, valeur du coup de ba
 | 6 | **Plancher** | Le coup vaut au moins 1 | — |
 | 7 | **Armure** | Armure effective retirée, au moins 1 dégât | `modifyStats` (armure, ex. Brèche) |
 | 8 | **Boucliers** | Chaque bouclier absorbe ce qu'il peut sans descendre sous 1, et s'use d'autant (prévention). **Garde brisée** (`shatters`, lot 3) : aucun bouclier n'absorbe (`Attack.shatteredBy`) | `shield`, `shatters` |
-| 8 bis | **Dégâts finaux** | Statuts de l'attaquant, après tout le reste : leurs écarts s'additionnent, puis un seul plancher de 1 (0.110.0 ; avant, un plancher après chacun faisait dépendre le résultat de l'ordre de pose : un coup de 3 avec Fausse note et Aura mélodieuse faisait 1 ou 2, il fait 1). Ni l'armure ni l'intimidation ne les rognent | `modifyFinal` (Aura mélodieuse, Fausse note) |
+| 8 bis | **Dégâts finaux** | Statuts de l'attaquant, après tout le reste : leurs écarts s'additionnent, puis un seul plancher de 1 (0.110.0 ; avant, un plancher après chacun faisait dépendre le résultat de l'ordre de pose). Ni l'armure ni l'intimidation ne les rognent. L'Aura mélodieuse, l'autre statut de dégâts finaux, a quitté le jeu le 2026-10-27 | `modifyFinal` (Fausse note) |
 | 9 | **Application** | PV retirés, sans descendre sous 0. Les dégâts du coup sont comptés en entier, excès du coup fatal compris (overkill, depuis la 0.34.0) | — |
 | 9 bis | **Usure au coup** | Chaque statut `spentOnHurt` du défenseur touché perd une charge (Luciole, Garde brisée), juste après l'application ; un statut `spentOnHit` de l'attaquant qui touche disparaît (Fausse note, Ferveur). Juste avant, un coup qui touche un porteur de Garde brisée **brise** toutes ses armures temporaires, sans ouvrir sa fenêtre `shieldBroken` (elle dit « son armure a encaissé jusqu'au bout », ce qu'un bris n'est pas) | `spentOnHurt`, `spentOnHit`, `shatters` |
 | 10 | **Vol de vie (esquive)** | Un coup esquivé consomme une charge de Vol de vie (`drainsHit`) sans soin, au moment du coup. Sur un coup qui touche, le Vol de vie n'est pas une étape de la chaîne : c'est une réaction de la fenêtre `hit` (§ 5, règle 9), qui rend les PV retirés (plafonnés aux PV max) et use une charge. Un jet remplacé ne porte pas de coup : la charge reste. | `drainsHit` (Vol de vie) |
 
-Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après.
+Les charges consommées par le coup (critique assuré, bouclier) sont retirées juste après. Le critique assuré s'use aussi avec le temps : une charge à la fin de chaque tour de son porteur, sauf celui de sa pose (§ 2, phase 3).
+
+**Dégâts contre l'armure** (`armored`, 2026-10-27, M4, Clous de pavois) : un effet de dégâts peut se heurter à l'armure de sa cible, sans être un coup : son montant moins l'armure effective de la cible (étape 7, armure de relique et Brèche comprises), au moins 1 par impact ; ni esquive, ni critique, ni armure temporaire, ni fenêtre de coup. L'effet appliqué porte `armored` et `armorAbsorbed`.
 
 ### 3 bis. L'attaque et les trois relations (règles v2, phase 5 bis, décisions de l'utilisateur du 2026-10-23)
 
@@ -263,7 +283,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | --- | --- | --- | --- |
 | **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) ; une pose peut tirer ses charges du coup de ce jet (`fromHit`, Pourfendre) ou d'un statut, lu à cet instant (`fromStatus`, 0.114.0 : la Virulence ajoute deux fois le Poison que porte l'adversaire, son Poison triplé) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
 | **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable, Aura d'immunité (armure +1) | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
-| **Périodique** | Au début ou à la fin des tours du porteur | Poison, Régénération (début), Brûlure (fin) | `onTurnStart`, `onTurnEnd` |
+| **Périodique** | Au début ou à la fin des tours du porteur | Régénération, Pourriture (début), Poison et Brûlure (fin, le Poison depuis le 2026-10-27) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusAge` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
 | **Déclenché** | À un moment précis du combat, dans une fenêtre | événements des personnages ; Épines acérées et Saignement quand le porteur encaisse ; Pourfendre, sur un 1, seulement si son coup touche (relation « modifie », § 3 bis) ; Rancune quand son porteur encaisse (un Critique assuré, 0.114.0) ; Sentence quand son porteur regagne des PV (une perte pour l'adversaire, 0.114.0) ; phase 8, second lot : Rempart hérissé quand son armure temporaire est vidée (`shieldBroken`, des Épines acérées), Vindicte quand il renvoie des dégâts (`reflected`, de la Ferveur), Pièce trouée sur pile (`heads`) | `CharacterEvent` ; `reactions` d'un statut |
 | **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, jet remplacé par sa compétence (Furie des vents), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1, 2, 3 et 8 ; `relation: 'replace'`, `forcesDodge`, `wards`, `immunities` |

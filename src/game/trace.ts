@@ -1,5 +1,5 @@
 import type { Character } from './character'
-import { multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
+import { firstSide, multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
@@ -77,6 +77,8 @@ function effectLine(e: AppliedEffect, fighters: Pair<Character>, before: Snapsho
     case 'heal':
       return `soin de ${e.amount} PV sur ${name} (${hp})`
     case 'damage':
+      if (e.armored)
+        return `${e.amount} dégât${e.amount > 1 ? 's' : ''} à ${name}, contre son armure (−${e.armorAbsorbed ?? 0}), sans esquive ni bouclier (${hp})`
       return `${e.amount} dégât${e.amount > 1 ? 's' : ''} direct${e.amount > 1 ? 's' : ''} à ${name}, sans armure, esquive ni bouclier (${hp})`
     case 'applyStatus': {
       const r = e.result
@@ -126,7 +128,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
         `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(struck * a.critMultiplier) : struck) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
         `armure ${a.armor} → −${a.armorAbsorbed}`,
         ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
-        // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers
+        // Dégâts finaux (Fausse note) : après l'armure et les boucliers
         ...a.modifiers.filter((m) => m.final).map((m) => `${modifier(m)} (dégâts finaux)`),
         `dégâts ${a.damage}${a.floored ? ' (plancher : un coup qui touche inflige au moins 1)' : ''}`,
         a.dealt > before.hp[defSide] ? `retirés ${before.hp[defSide]}, dont ${a.dealt - before.hp[defSide]} d'excès (overkill, compté)` : `retirés ${a.dealt}`,
@@ -152,12 +154,15 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       // Jauges (Rétribution) : le coup est rangé, sans effet à appliquer
       const gauge = STATUSES[beat.status].fillsOnHurt ? after.statuses[beat.side].find((s) => s.id === beat.status) : undefined
       if (gauge) return [head, `    → coup rangé dans les jauges : ${(gauge.slots ?? []).join(' · ')} (${gauge.stacks} à relâcher)`]
+      // Riposte esquivée (2026-10-27) : l'attaquant l'évite par son esquive assurée, une charge de chaque statut part
+      if (beat.dodgedBy) return [head, `    → esquivée par ${fighters[other(beat.side)].name} (${label(beat.dodgedBy)}) : aucun dégât, une charge de chaque statut part`]
       return [head, ...effects(beat.effects)]
     }
     case 'statusAge':
       return [
         `usure sur ${fighters[beat.side].name} : ${[
           ...beat.changes.map((c) => `${label(c.status)} ${c.from} → ${c.to} tour${c.to > 1 ? 's' : ''}`),
+          ...(beat.worn ?? []).map((w) => `${label(w.status)} ${w.from} → ${w.to} charge${w.to > 1 ? 's' : ''} (s'use)`),
           ...beat.expired.map((id) => `${label(id)} s'éteint`),
         ].join(', ')}`,
       ]
@@ -180,7 +185,14 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       const relic = fighters[beat.side].relics.find((r) => r.id === beat.relic)
       const kind = relic ? `relique de ${RELIC_KINDS[relicKind(relic)].label.toLowerCase()}${relic.scene ? `, scène ${relic.scene}` : ''}` : 'relique inconnue'
       const left = relic?.charges !== undefined ? `, ${relic.charges - beat.uses} charge${relic.charges - beat.uses > 1 ? 's' : ''} restante${relic.charges - beat.uses > 1 ? 's' : ''}` : ''
-      return [`Relique « ${beat.name} » ${of(fighters[beat.side].name)} (${kind}, déclenchement n° ${beat.uses}${left})`, ...effects(beat.effects)]
+      // Sursis et initiative (2026-10-27) : leur règle est leur effet
+      const rule =
+        relic?.trigger?.type === 'lethal'
+          ? [`  → ${fighters[beat.side].name} aurait dû tomber : reste à 1 PV`]
+          : relic?.trigger?.type === 'initiative'
+            ? [`  → ${fighters[beat.side].name} joue le premier tour, sans jet d'initiative`]
+            : []
+      return [`Relique « ${beat.name} » ${of(fighters[beat.side].name)} (${kind}, déclenchement n° ${beat.uses}${left})`, ...rule, ...effects(beat.effects)]
     }
   }
 }
@@ -199,15 +211,16 @@ function fighterLine(c: Character, side: Side) {
 /** Trace structurée d'un combat (un bloc par tour). */
 export function traceCombat(result: CombatResult): CombatTrace {
   const { fighters, initiative, beats } = result
-  const last = initiative[initiative.length - 1]
-  const first: Side = last[0] > last[1] ? 0 : 1
+  const first: Side = firstSide(result)
   const activeAt = (turn: number): Side => (turn % 2 === 1 ? first : other(first))
   const seed = result.seed !== undefined ? ` · graine ${result.seed}` : ''
 
   const header = [
     fighterLine(fighters[0], 0),
     fighterLine(fighters[1], 1),
-    `Initiative (d10) : ${initiative.map((r) => `${r[0]}–${r[1]}`).join(', relance sur égalité, ')} → ${fighters[first].name} commence`,
+    result.initiativeRelic
+      ? `Initiative : sans jet, ${fighters[first].name} commence (relique ${result.initiativeRelic.relic})`
+      : `Initiative (d10) : ${initiative.map((r) => `${r[0]}–${r[1]}`).join(', relance sur égalité, ')} → ${fighters[first].name} commence`,
     ...(result.forcedRolls ? [`${FORCED_PREFIX}${formatForcedRolls(result.forcedRolls)}`] : []),
     // Reliques (tournoi) : `npm run logs` relit leurs identifiants pour rejouer le combat
     ...([0, 1] as const).flatMap((s) =>

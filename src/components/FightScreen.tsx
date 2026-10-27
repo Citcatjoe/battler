@@ -139,7 +139,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
         ? undefined
         : { key: strike.key, damage: strike.damage, crit: strike.crit, dodged: strike.dodged, landed: strike.landed }
       : blow && blow.to === side
-        ? { key: blow.key, damage: blow.damage, crit: blow.heavy, dodged: false, landed: blow.landed }
+        ? { key: blow.key, damage: blow.damage, crit: blow.heavy, dodged: !!blow.dodged, landed: blow.landed }
         : undefined
   const lungingSide = strike ? strike.attacker : blow?.lunge ? blow.from : null
   // Passage de main : le camp dont c'est le tour s'allume, l'autre se tamise (rien avant l'initiative ni après le K.O.)
@@ -246,6 +246,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               state={fighterState(side)}
               lunging={lungingSide === side}
               fastLunge={strike ? strike.fast : blow !== null}
+              lungeKey={lungingSide === side ? hitKey : undefined}
               received={receivedBy(side)}
               aura={aura?.source === side ? aura.key : undefined}
               floats={floats[side]}

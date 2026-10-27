@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import tournamentImg from '../assets/menu-tournament.jpg'
 import { createCharacter } from '../game/roster'
-import { champion, currentRound, readyMatches, ROUND_NAMES, ROUNDS, type MatchRef, type Tournament } from '../game/tournament'
+import { champion, currentRound, nextMatch, readyMatches, ROUND_NAMES, ROUNDS, type MatchRef, type Tournament } from '../game/tournament'
 import { humansOf, type Wallets } from '../game/betting'
 import { Bracket } from './Bracket'
 import { Fighter } from './Fighter'
@@ -34,8 +34,8 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
   const winner = winnerIdx === null ? null : tournament.entrants[winnerIdx]
   const ready = readyMatches(tournament).filter((m) => m.round === round)
   const doneCount = Object.keys(tournament.results).length
-  // Le prochain match, dans l'ordre de l'arbre : le grand bouton l'ouvre, comme « Affronter » sur sa carte
-  const next = ready[0]
+  // Le prochain match, dans l'ordre de jeu (`playOrder`) : le grand bouton l'ouvre, comme « Affronter » sur sa carte
+  const next = nextMatch(tournament)
   // Mises des joueurs sur ce tour (clés de pari `t-<tour>-<match>`, App.tsx) ; tournoi fini : sur la finale
   const placed = wallets ? humansWhoBet(wallets, `t-${round ?? ROUNDS - 1}-`).length : 0
 

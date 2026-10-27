@@ -537,6 +537,8 @@ const ysolde: CharacterDef = {
       // 0.107.0 (SORTS.md § 19) : une fois par combat ; un tour perdu à chaque 1 valait +22 points gravé (+20 à deux fois)
       limit: 1,
       effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
+      // Retour du 2026-10-27 (S10) : la Peur se voit, une ombre monte sous la cible (MISE_EN_SCENE.md M54)
+      scene: 'dread',
       rankAxis: { kind: 'limit', per: 1 },
     },
     {
@@ -653,6 +655,27 @@ const naraxes: CharacterDef = {
       nature: 'finesse',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'feint', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    // Retour du 2026-10-27 (M10, R2 ; docs/RELIQUES.md § 17) : les pièces sont des compétences de la Fortune. Même geste
+    // que Pile ou face (elle modifie son coup ; s'il touche, la pièce ; pile, un gros effet ; face, rien), une nature
+    // chacune : Pile ou face frappe, la Pièce porte-bonheur arme son lanceur, la Pièce maudite frappe l'adversaire d'un malus
+    {
+      id: 'lucky-coin',
+      name: 'Pièce porte-bonheur',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      relation: 'modify',
+      effects: [{ type: 'applyStatus', status: 'luckyCoin', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
+      id: 'cursed-coin',
+      name: 'Pièce maudite',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      relation: 'modify',
+      effects: [{ type: 'applyStatus', status: 'cursedCoin', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
   ],
@@ -919,7 +942,8 @@ const thaldrin: CharacterDef = {
   reserve: [
     // Phase 8, lot 3 (SORTS.md § 29) : le malus de Précision, l'éclair qui éblouit ; gravée +13,8 chez lui, +13,6 en
     // moyenne, rang II +3,8 (+10 % de coups ratés)
-    { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
+    // Retour du 2026-10-27 (S10) : un éclair blanc frappe la cible, l'arène blanchit, puis « Aveuglé » (MISE_EN_SCENE.md M54)
+    { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', scene: 'blindFlash', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
     { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }], rankAxis: { kind: 'stacks', per: 1 } },
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Feux follets (la Brûlure). Une charge qui attend son
@@ -986,8 +1010,10 @@ const thaldrin: CharacterDef = {
  * début, en dégâts finaux, après l'armure), et un gros coup qui multiplie un seul coup de base.
  * Phase 5 ter (2026-10-24, décision de l'utilisateur) : ses compétences passent sur les faces 1 et 2, comme les autres.
  * Le Duo (2026-10-25, piste D validée par l'utilisateur) : un seul d6, comme tout le monde. Son second dé vit dans sa
- * signature : sur le 1, +1 Aura mélodieuse et deux dés à sa prochaine action. Chaque gravure et chaque rang comptait sur
- * ses deux dés (gravures +17 en moyenne, rang II de l'aura +18,9). Kit et mesures : docs/PERSONNAGES.md.
+ * signature : sur le 1, deux dés à sa prochaine action. Chaque gravure et chaque rang comptait sur ses deux dés (gravures
+ * +17 en moyenne). Retour de l'utilisateur du 2026-10-27 (P7) : l'Aura mélodieuse quitte le jeu, Ouverture comprise (elle
+ * partait dès l'entrée en scène, sans face ni compétence visible) ; le Duo ne pose plus que le Duo. Kit et mesures :
+ * docs/PERSONNAGES.md.
  */
 const fanchon: CharacterDef = {
   id: 'fanchon',
@@ -995,8 +1021,7 @@ const fanchon: CharacterDef = {
   race: 'Humain',
   archetype: 'Saltimbanque',
   // Esquive de 12 à 6 % (0.46.0), puis 10 % : compensation de Siffloter et de la Fausse note, qui frappent désormais.
-  // Le Duo (2026-10-25) : attaque 1 à 3 → 4 à 6, critique 10 → 5 % (un dé au lieu de deux ; PV intacts). Sa chanson
-  // fait le reste : l'Aura mélodieuse s'ajoute après l'armure.
+  // Le Duo (2026-10-25) : attaque 1 à 3 → 4 à 6, critique 10 → 5 % (un dé au lieu de deux ; PV intacts).
   stats: { maxHp: 46, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.1, critChance: 0.05, critMultiplier: 2 },
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
@@ -1013,16 +1038,17 @@ const fanchon: CharacterDef = {
     tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle lance deux dés et frappe deux fois ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : deux dés au tour suivant', 'Aura dès son entrée en scène', 'Soliste : ce coup ×3'],
+    strengths: ['Duo : quatre dés au tour suivant', 'Soliste : ce coup ×3', 'Frappe fort pour une saltimbanque (4 à 6)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
-  // Signature (le Duo, 2026-10-25) : sur la face 1, sa chanson et son second dé ; l'Ouverture n'est pas une face, elle reste
+  // Signature (le Duo, 2026-10-25) : sur la face 1, son second dé
   signature: 'duo',
   // Répertoire : le Chant (Aura de puissance, Esquive améliorée, Aura de précision), la Fortune (Pile ou face, Dé pipé).
   // Le Duo (2026-10-25) : l'Aura de puissance remplace Coup de chance, la mécanique même du Duo (un seul de leurs
   // statuts part par action). Gravée chez elle : +13,7 points (Coup de chance +18,0) ; construite 56 % contre 57 %,
   // saison 57 % contre 58 %, à égalité dans le bruit
-  repertoire: ['power-aura', 'coin-flip', 'loaded-die', 'evasion', 'precision-aura', 'feint', 'jinx'],
+  // Retour du 2026-10-27 : les deux pièces nouvelles de la Fortune (Pièce porte-bonheur, Pièce maudite)
+  repertoire: ['power-aura', 'coin-flip', 'loaded-die', 'evasion', 'precision-aura', 'feint', 'jinx', 'lucky-coin', 'cursed-coin'],
   // Hors kit (phase 5 ter) : ses autres chansons, gravables, réécrites pour une face (elles valaient un double, un jet
   // sur 36) : Siffloter 3 → 2 charges, Fausse note 2 → 1, Crescendo ×4 à la place des deux coups → ce coup ×2. 0.107.0 :
   // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible. Revue des compétences
@@ -1051,19 +1077,16 @@ const fanchon: CharacterDef = {
     },
   ],
   events: [
-    { id: 'overture', name: 'Ouverture', nature: 'arcane', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'melodiousAura', stacks: 1 }] },
-    // Le Duo (2026-10-25) : l'aura du 1 (1 charge depuis la phase 5 ter), puis un dé de plus à sa prochaine action, joué en
-    // entier (la mécanique de Coup de chance). Un rang va à l'aura, son premier effet : +7,8 points au rang II (le second
-    // dé seul, aiguisé, valait +14,6 ; FanchonLab, série 29)
+    // Le Duo (2026-10-25) : des dés de plus à sa prochaine action, joués en entier (la mécanique de Coup de chance). Jusqu'à
+    // la 0.120.0, il posait d'abord +1 Aura mélodieuse, et un seul dé de plus. Retour du 2026-10-27 (P7) : l'aura quitte le
+    // jeu, le Duo la compense par ses charges, 1 → 3 (quatre dés à l'action suivante). Mesuré (winRate, 300 combats par
+    // duel) : sans l'aura, Duo 1 18,5 %, Duo 2 36,9 %, Duo 3 49,4 % ; rang II (4 charges) 56,3 %. Son rang : un dé de plus
     {
       id: 'duo',
       name: 'Duo',
       nature: 'arcane',
       trigger: 'naturalOne',
-      effects: [
-        { type: 'applyStatus', status: 'melodiousAura', stacks: 1 },
-        { type: 'applyStatus', status: 'duo', stacks: 1 },
-      ],
+      effects: [{ type: 'applyStatus', status: 'duo', stacks: 3 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
     // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il

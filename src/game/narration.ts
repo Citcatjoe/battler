@@ -131,6 +131,8 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
       if (e.wanted !== undefined && e.amount === 0) return `${name} ne regagne pas les ${plural(e.wanted, 'PV')} : soin empêché`
       return e.amount > 0 ? `${name} regagne ${plural(e.amount, 'PV')}` : `${name} est déjà au maximum de ses PV`
     case 'damage':
+      // Contre l'armure (Clous de pavois) : ce que l'armure a retenu
+      if (e.armored) return `${name} perd ${plural(e.amount, 'PV')}${e.armorAbsorbed ? ` (armure −${e.armorAbsorbed})` : ''}`
       // Dégâts directs (poison, effets) : le dire, sinon on croit que l'armure a été oubliée.
       return `${name} perd ${plural(e.amount, 'PV')} (dégâts directs, l'armure ne compte pas)`
     case 'applyStatus': {
@@ -170,7 +172,7 @@ const armorDetail = (attack: Attack) => {
     ...attack.modifiers.filter((m) => !m.final).map(modifierText),
     attack.armorAbsorbed > 0 && `armure −${attack.armorAbsorbed}`,
     ...attack.shields.map((s) => `${lowerFirst(statusLabel(s.status))} −${s.absorbed}`),
-    // Dégâts finaux (Aura mélodieuse, Fausse note), après l'armure et les boucliers
+    // Dégâts finaux (Fausse note), après l'armure et les boucliers
     ...attack.modifiers.filter((m) => m.final).map(modifierText),
   ]
   return parts
@@ -308,11 +310,15 @@ export function coinLog(turn: number, side: Side, heads: boolean, effects: Appli
 
 /**
  * Usure d'une phase : « Poison sur Brokk : encore 2 tours. » puis « Brûlure se dissipe sur Brokk. » (2026-10-21 : une
- * seule étape `statusAge` pour les décomptes et les extinctions)
+ * seule étape `statusAge` pour les décomptes et les extinctions). `worn` (2026-10-27) : les charges usées à la fin du
+ * tour (Critique assuré), « Critique assuré sur Elaria : encore 1 charge » ; à 0, il se dissipe.
  */
-export function statusAgeLog(side: Side, changes: DurationChange[], expired: StatusId[], fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+export function statusAgeLog(side: Side, changes: DurationChange[], expired: StatusId[], fighters: Pair<Character>, worn: DurationChange[] = []): Omit<LogEntry, 'id'> {
   const name = fighters[side].name
-  const counted = changes.map((c) => `${statusLabel(c.status)} sur ${name} : encore ${plural(c.to, 'tour')}`).join(', ')
+  const counted = [
+    ...changes.map((c) => `${statusLabel(c.status)} sur ${name} : encore ${plural(c.to, 'tour')}`),
+    ...worn.filter((w) => w.to > 0).map((w) => `${statusLabel(w.status)} sur ${name} : encore ${plural(w.to, 'charge')}`),
+  ].join(', ')
   const gone = expired.length ? `${expired.map(statusLabel).join(', ')} se dissipe${expired.length > 1 ? 'nt' : ''} sur ${name}` : ''
   return { kind: 'status', side, text: `${[counted, gone].filter(Boolean).join('. ')}.` }
 }

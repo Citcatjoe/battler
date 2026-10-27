@@ -112,6 +112,18 @@ body {
   58% { transform: translateX(calc(var(--dir) * 78%)) rotate(calc(var(--dir) * 5deg)); }
   100% { transform: translateX(0) rotate(0); }
 }
+/* Le même élan sous un autre nom : un coup qui en suit un autre sans que l'élan s'arrête (les coups d'une Rétribution,
+   une série de coups de compétence) bascule de l'un à l'autre, ce qui relance l'animation (Fighter, `useRestart`). */
+.lunge.lunge-alt {
+  animation-name: lunge-alt;
+}
+@keyframes lunge-alt {
+  0% { transform: translateX(0) rotate(0); }
+  22% { transform: translateX(calc(var(--dir) * -8%)) rotate(calc(var(--dir) * -4deg)); }
+  42% { transform: translateX(calc(var(--dir) * 85%)) rotate(calc(var(--dir) * 7deg)); }
+  58% { transform: translateX(calc(var(--dir) * 78%)) rotate(calc(var(--dir) * 5deg)); }
+  100% { transform: translateX(0) rotate(0); }
+}
 
 /* ---------- Coup reçu ----------
    Un coup qui touche ne montre que la posture « coup encaissé » (docs/POSTURES.md). Seul un critique
@@ -1150,13 +1162,14 @@ body {
 }
 
 /* ---------- Perte de contrôle (0.120.0, POSTURES.md § 6) : ses deux images alternent ----------
-   La seconde est posée sur la première ; une seule est visible à la fois, sans fondu (deux images clés) : 180 ms
-   chacune, pour que le corps vacille d'avant en arrière. Boucle d'ambiance : figée par la pause comme le reste. */
+   La seconde est posée sur la première ; une seule est visible à la fois, sans fondu (deux images clés) : 360 ms
+   chacune (180 ms jusqu'au retour du 2026-10-27 : trop rapide), pour que le corps vacille d'avant en arrière.
+   Boucle d'ambiance : figée par la pause comme le reste. */
 .daze-frame-a {
-  animation: daze-frame-a 0.36s steps(1, end) infinite;
+  animation: daze-frame-a 0.72s steps(1, end) infinite;
 }
 .daze-frame-b {
-  animation: daze-frame-b 0.36s steps(1, end) infinite;
+  animation: daze-frame-b 0.72s steps(1, end) infinite;
 }
 @keyframes daze-frame-a {
   0% { opacity: 1; }
@@ -2814,4 +2827,40 @@ body {
   font: 700 22px/1 var(--font-display);
   font-variant-numeric: tabular-nums;
   text-shadow: 0 2px 0 #0a0806;
+}
+
+/* ---------- Sorts de malus (retour du 2026-10-27, S10 ; SceneEvent.tsx, MISE_EN_SCENE.md M54) ----------
+   La scène porte le malus : il tombe sur la cible à l'impact (SCENE_EVENTS). */
+/* Éclair aveuglant : l'éclair blanc a un halo doré, puis l'arène blanchit (pic à 20 % de sa vie, calé sur l'impact) */
+.scene-bolt-white {
+  filter: drop-shadow(0 0 22px rgba(255, 251, 235, 0.95)) drop-shadow(0 0 48px rgba(254, 240, 138, 0.6));
+}
+.scene-blind {
+  background: radial-gradient(ellipse at 50% 45%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 251, 235, 0.8) 40%, rgba(254, 249, 195, 0.45) 100%);
+  animation: scene-blind calc(var(--scene-length) / var(--speed)) ease-out both;
+  animation-delay: var(--scene-delay, 0ms);
+}
+@keyframes scene-blind {
+  0%, 17% { opacity: 0; }
+  20% { opacity: 0.9; }
+  35% { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+/* Peur : l'arène s'assombrit de violet, une ombre monte sous la cible (enveloppe à 40 % : 560 / 1400), puis se dissipe */
+.scene-dread-tint {
+  background: radial-gradient(ellipse at 50% 70%, rgba(46, 16, 101, 0.45) 0%, rgba(10, 4, 24, 0.8) 75%);
+  animation: scene-dark calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+.scene-dread-shadow {
+  border-radius: 50% 50% 45% 45%;
+  background: radial-gradient(ellipse at 50% 85%, rgba(24, 6, 48, 0.9) 0%, rgba(76, 29, 149, 0.55) 45%, transparent 72%);
+  filter: blur(10px);
+  transform-origin: bottom;
+  animation: scene-dread-shadow calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-dread-shadow {
+  0% { opacity: 0; transform: scaleY(0.15) scaleX(0.7); }
+  40% { opacity: 1; transform: scaleY(1) scaleX(1); }
+  70% { opacity: 0.85; transform: scaleY(1.05) scaleX(1.05); }
+  100% { opacity: 0; transform: scaleY(1.2) scaleX(1.1); }
 }

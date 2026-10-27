@@ -81,7 +81,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   // Ferveur (Encens de l'abbaye) : le prochain coup qui touche fait plus
   momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
-  // Une aura de coup (puissance, sauvage, mélodieuse, force de l'ours) vaut autant de fois qu'il y a de coups : elle
+  // Une aura de coup (puissance, sauvage, force de l'ours) vaut autant de fois qu'il y a de coups : elle
   // consomme les coups de plus (Furie, Coup de chance, Duo), revue des signatures du 2026-10-24
   powerAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   intimidationAura: { side: 'self' },
@@ -90,8 +90,11 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
-  // Une pièce au plus : deux producteurs se gênent (X2 ; Pièce de foire × Pile ou face −0,45)
+  // Une pièce au plus : deux producteurs se gênent (X2 ; mesuré avec la Pièce de foire, retirée le 2026-10-27, × Pile ou face −0,45)
   coinFlip: { side: 'self', produces: ['moment:hit', 'damage:instant', 'moment:heads'], hinders: ['slot:coinFlip'] },
+  // Les pièces d'effet (retour du 2026-10-27, R2) : pile, un bonus au lanceur ou un malus à l'adversaire ; pas de coup
+  luckyCoin: { side: 'self', produces: ['moment:heads', 'status:guaranteedCrit', 'moment:crit'] },
+  cursedCoin: { side: 'self', produces: ['moment:heads', 'status:stunned'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunityAura: { side: 'self' },
@@ -103,7 +106,6 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
-  melodiousAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   casting: { side: 'self' },
   bearMight: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   // 0.107.0 : elle écrit l'attaque (minimum et maximum), au lieu d'un bonus après le critique
@@ -231,6 +233,12 @@ export function relicHooks(r: Relic): Hooks {
     const on = triggerHook(r.trigger.on)
     if (on) h.consumes.push(on)
   }
+  // Pièce lestée (2026-10-27) : elle vit des pièces du porteur, et en fait tomber plus sur pile (la Pièce trouée y gagne)
+  if (r.headsChance) h.consumes.push('moment:heads')
+  if (r.headsChance) h.produces.push('moment:heads')
+  // Médaille de sursis : de la durée, comme des PV de plus ; Cor d'avant-garde : le premier coup du combat
+  if (r.trigger?.type === 'lethal') h.produces.push('stat:maxHp')
+  if (r.trigger?.type === 'initiative') h.produces.push('moment:hit')
   for (const c of r.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
   for (const effect of r.effects ?? []) addEffect(h, effect)
   return unique(h)
@@ -248,6 +256,7 @@ export function relicNeeds(r: Relic): Hook[] {
   for (const c of r.when ?? []) if (c.type === 'hasStatus' && c.who === 'opponent') needs.push(`status:${c.status}`)
   const on = r.trigger?.type === 'strike' ? triggerHook(r.trigger.on) : undefined
   if (on && RARE_MOMENTS.includes(on)) needs.push(on)
+  if (r.headsChance) needs.push('moment:heads')
   return needs
 }
 

@@ -42,6 +42,9 @@ export type StatusId =
   | 'holyAura'
   | 'decoctionAura'
   | 'coinFlip'
+  // Retour du 2026-10-27 (M10, R2) : les pièces de la Fortune, une par nature d'effet (docs/RELIQUES.md § 17)
+  | 'luckyCoin'
+  | 'cursedCoin'
   | 'luckyStrike'
   | 'immunityAura'
   | 'riposte'
@@ -51,7 +54,6 @@ export type StatusId =
   | 'rot'
   | 'whistling'
   | 'falseNote'
-  | 'melodiousAura'
   | 'bleed'
   | 'casting'
   | 'bearMight'
@@ -88,6 +90,25 @@ export type Polarity = 'positive' | 'negative'
  * pose X ») est de la famille de ce qu'il produit. Elle choisit le son de sa pose (docs/SONS.md, règle 4, 2026-10-25).
  */
 export type Family = 'power' | 'guard' | 'precision' | 'evasion' | 'tempo' | 'fortune' | 'affliction' | 'healing' | 'retaliation' | 'seals'
+
+const FAMILY_LABEL: Record<Family, string> = {
+  power: 'Puissance',
+  guard: 'Garde',
+  precision: 'Précision',
+  evasion: 'Esquive',
+  tempo: 'Tempo',
+  fortune: 'Fortune',
+  affliction: 'Affliction',
+  healing: 'Soin',
+  retaliation: 'Représailles',
+  seals: 'Sceaux',
+}
+
+/**
+ * Le nom affiché de la famille d'un statut (compendium, onglet Auras). Un seul point de bascule : quand les Maîtrises
+ * arriveront (docs/MAITRISES.md, vague 2), c'est ici que le libellé deviendra celui de la maîtrise.
+ */
+export const familyLabel = (id: StatusId) => FAMILY_LABEL[STATUSES[id].family]
 
 /** Un statut actif sur un combattant. */
 export interface Status {
@@ -145,6 +166,11 @@ export interface StatusDef {
     motion?: 'tremble' | 'fireflies'
     /** Couleur des dés supplémentaires qu'il donne (Coup de chance) */
     dieColor?: string
+    /**
+     * Une pièce (`coinToss`) : la teinte de ses deux faces peintes (`coin-pile`, `coin-face`), un filtre CSS ; sans elle,
+     * l'or de Pile ou face. Chaque pièce a la sienne, pour qu'on les distingue en l'air (retour du 2026-10-27, R2).
+     */
+    coin?: string
   }
 
   /* --- Règles. Chaque crochet est facultatif ; le moteur les appelle à un moment fixe. --- */
@@ -154,12 +180,18 @@ export interface StatusDef {
   /** Modifie les dégâts du porteur avant l'armure (le coup garde au moins 1) */
   modifyOutgoing?: (damage: number, s: Status) => number
   /**
-   * Modifie les dégâts FINAUX des coups du porteur : après l'armure et les boucliers, au moins 1 (Aura
-   * mélodieuse, Fausse note). Contrairement à `modifyOutgoing`, ni l'armure ni l'intimidation ne le rognent.
+   * Modifie les dégâts FINAUX des coups du porteur : après l'armure et les boucliers, au moins 1 (Fausse note).
+   * Contrairement à `modifyOutgoing`, ni l'armure ni l'intimidation ne le rognent.
    */
   modifyFinal?: (damage: number, s: Status) => number
   /** Le prochain coup qui touche est critique ; consomme une charge */
   forcesCrit?: boolean
+  /**
+   * S'use avec le temps (retour de l'utilisateur du 2026-10-27, M1 : Critique assuré) : une charge part à la fin de chacun
+   * des tours de son porteur, sauf celui où il a été posé ou renforcé (« pas de décompte le tour de la pose »), dans
+   * l'étape d'usure de la phase (`statusAge.worn`). Les charges qu'il ne dépense pas ne s'accumulent donc plus.
+   */
+  wearsOff?: boolean
   /** Le prochain coup reçu est esquivé à coup sûr ; consomme une charge par esquive */
   forcesDodge?: boolean
   /**
@@ -184,13 +216,15 @@ export interface StatusDef {
    */
   instantStrikes?: boolean
   /**
-   * Pile ou face (relation « modifie », règles v2) : le porteur lance aussitôt une pièce, juste après le coup qui a posé
-   * le statut. Pile, ce coup ×`multiplier` : l'adversaire perd encore `multiplier` − 1 fois les PV que le coup lui a
-   * retirés (un coup, en une perte) ; face, rien. Le statut est consommé. `headsTouches` : pile compte comme un coup qui touche
-   * de ce montant (fenêtres `hit` du porteur et `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit
-   * (Aura de décoction, Épines, Saignement, Vol de vie, Riposte, jauges de Rétribution).
+   * Une pièce (Fortune, relation « modifie ») : le porteur la lance aussitôt, juste après le coup qui a posé le statut ;
+   * face, rien ; le statut est consommé. Deux natures (retour du 2026-10-27, M10) :
+   * - `multiplier` (Pile ou face) : pile, ce coup ×`multiplier` ; l'adversaire perd encore `multiplier` − 1 fois les PV
+   *   que le coup lui a retirés (un coup, en une perte). `headsTouches` : pile compte comme un coup qui touche de ce
+   *   montant (fenêtres `hit` du porteur et `hurt` de l'adversaire) : tout ce qui réagit à un coup qui touche réagit ;
+   * - `heads` (les autres pièces) : pile, ces effets, du point de vue du lanceur (un bonus pour lui, un malus à
+   *   l'adversaire) ; son intensité (rangs d'aiguisage) la fait tomber plus souvent sur pile (`COIN_RANK_HEADS` par rang).
    */
-  coinToss?: { multiplier: number; headsTouches?: boolean }
+  coinToss?: { multiplier: number; headsTouches?: boolean; heads?: never } | { heads: readonly Effect[]; multiplier?: never; headsTouches?: never }
   /**
    * Dé pipé (phase 8, second lot) : la prochaine pièce du porteur tombe sur pile, et pile vaut ×N de plus (son intensité
    * en ajoute) ; une charge par pièce. La pièce se tire quand même (la suite du hasard reste celle d'un combat sans lui) ;
@@ -433,6 +467,21 @@ export const PRECISION_CRIT = 0.05
 export const COIN_HEADS = 3
 
 /**
+ * Pièce porte-bonheur (retour du 2026-10-27, R2) : critiques assurés sur pile. Gravée sur le 3, 200 combats par duel :
+ * 2 critiques, Naraxes +6,7 et Fanchon +7,8 (sous la bande de 8 à 20) ; 3 critiques, +9,2 et +12,8.
+ */
+export const LUCKY_COIN_CRITS = 3
+
+/**
+ * Une pièce d'effet aiguisée (2026-10-27) : chaque rang ajoute 1 chance sur 6 de faire pile (3 sur 6, puis 4, puis 5 au
+ * plus : `HEADS_CAP` du moteur). Le même nombre que la Pièce lestée, qui en ajoute aussi.
+ */
+export const COIN_RANK_HEADS = 1 / 6
+
+/** « Une pièce » ; aiguisée, sa chance de pile en sixièmes (« Une pièce, pile 4 fois sur 6 »). */
+const coinOdds = (s: Status) => (s.power ? `Une pièce, pile ${Math.min(5, 3 + s.power)} fois sur 6` : 'Une pièce')
+
+/**
  * Aura de sainteté : plafond de charges (0.42.0) et PV rendus par charge à chaque fin de tour. 3 charges de 2 PV jusqu'à
  * la 0.106.1 ; 2 charges (décision de l'utilisateur) de 1 PV depuis la 0.107.0 : le plafond seul la laissait à +23 points
  * gravée (on atteint rarement la troisième charge), 2 PV par charge en une seule charge la rendait non cumulable.
@@ -453,14 +502,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(251,191,36,0.85)' },
     polarity: 'positive',
     family: 'precision',
-    summary: 'Son prochain coup qui touche est critique, une charge par coup.',
+    summary: 'Son prochain coup qui touche est critique ; une charge par coup, et une de moins à la fin de chacun de ses tours.',
     describe: (s) => next(s.stacks, 'Son prochain coup qui touche est critique', 'Ses N prochains coups qui touchent sont critiques'),
     grafted: (s) => (s.stacks > 2 ? `Ce coup et les ${s.stacks - 1} suivants sont critiques` : s.stacks === 2 ? 'Ce coup et le suivant sont critiques' : 'Ce coup est critique'),
-    detail: () => "Un coup esquivé ne l'use pas : le critique attend le prochain coup qui touche.",
+    // Retour de l'utilisateur du 2026-10-27 (M1) : il s'use, une charge à la fin de chaque tour du porteur, sauf celui de
+    // sa pose ; sans usure, les critiques que la Rancune, la Feinte ou un coup esquivé laissaient en attente s'empilaient
+    detail: () => "Un coup esquivé ne l'use pas. Une charge part à la fin de chacun de ses tours, sauf celui où il l'a reçue.",
     plural: 'Critiques assurés',
     badge: (s) => `×${s.stacks}`,
     stacking: 'add',
     forcesCrit: true,
+    wearsOff: true,
   },
   bonusArmor: {
     name: 'Armure temporaire',
@@ -480,13 +532,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(74,222,128,0.75)' },
     polarity: 'negative',
     family: 'affliction',
-    summary: 'Au début de ses tours, perd 1 PV par charge, puis une charge part.',
+    // Retour de l'utilisateur du 2026-10-27 (M2) : ses dégâts tombent à la fin du tour de celui qui le subit (au début
+    // jusqu'à la 0.120.0, avant son action)
+    summary: 'À la fin de ses tours, perd 1 PV par charge, puis une charge part.',
     describe: (s) => {
       const list = countdown(s.stacks)
-      if (s.stacks === 1) return 'Perd 1 PV au début de son prochain tour'
+      if (s.stacks === 1) return 'Perd 1 PV à la fin de son prochain tour'
       return list
-        ? `Perd ${list} PV au début de ses tours (${triangle(s.stacks)} en tout)`
-        : `Perd ${s.stacks} PV au début de son prochain tour, puis 1 de moins à chaque tour (${triangle(s.stacks)} en tout)`
+        ? `Perd ${list} PV à la fin de ses tours (${triangle(s.stacks)} en tout)`
+        : `Perd ${s.stacks} PV à la fin de son prochain tour, puis 1 de moins à chaque tour (${triangle(s.stacks)} en tout)`
     },
     bears: 'est empoisonné',
     badge: (s) => String(s.stacks),
@@ -494,7 +548,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     counter: 'stacks',
     stacking: 'add',
     decays: true,
-    onTurnStart: (s) => [{ type: 'damage', amount: s.stacks, source: 'poison' }],
+    onTurnEnd: (s) => [{ type: 'damage', amount: s.stacks, source: 'poison' }],
     tickSound: 'fizz',
     opposes: 'regeneration',
   },
@@ -735,7 +789,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(220,38,38,0.85)' },
     polarity: 'positive',
     family: 'tempo',
-    summary: 'Deux coups de plus par charge, juste après le coup du jet.',
+    summary: `${COUNT_WORDS[QUARRY_STRIKES]} coups de plus par charge, juste après le coup du jet.`,
     describe: (s) => `${COUNT_WORDS[quarryStrikes(s)] ?? quarryStrikes(s)} coups de plus`,
     detail: () => 'Des coups de base bruts, juste après celui du jet, chacun son dé : leur face ne déclenche aucune compétence.',
     badge: (s) => `×${quarryStrikes(s)}`,
@@ -790,13 +844,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(167,139,250,0.85)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: `Sa prochaine pièce tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
+    summary: `Sa prochaine pièce de Pile ou face tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
     // Revue des compétences (T4) : le multiplicateur du coup, pas celui qui s'ajoute (« ×3 de plus » se lisait ×3 ou ×6)
     describe: (s) => {
       const blow = `ce coup ×${COIN_HEADS + LOADED_DIE_BONUS + (s.power ?? 0)}`
-      return next(s.stacks, `Sa prochaine pièce tombe sur pile : ${blow}`, `Ses N prochaines pièces tombent sur pile : chaque fois, ${blow}`)
+      return next(
+        s.stacks,
+        `Sa prochaine pièce de Pile ou face tombe sur pile : ${blow}`,
+        `Ses N prochaines pièces de Pile ou face tombent sur pile : chaque fois, ${blow}`,
+      )
     },
-    detail: () => 'Sans pièce, la charge attend.',
+    detail: () => 'Sans Pile ou face, la charge attend.',
     badge: (s) => `+×${LOADED_DIE_BONUS + (s.power ?? 0)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -828,8 +886,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(253,186,116,0.5)' },
     polarity: 'positive',
     family: 'power',
-    summary: `+${VENDETTA_MOMENTUM} Ferveur par charge chaque fois qu'il renvoie des dégâts.`,
-    describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur quand il renvoie des dégâts`,
+    summary: `+${VENDETTA_MOMENTUM} Ferveur par charge chaque fois que son porteur renvoie des dégâts.`,
+    describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur chaque fois que son porteur renvoie des dégâts`,
     badge: (s) => `+${VENDETTA_MOMENTUM * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -858,7 +916,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'fortune',
     summary: `Juste après son coup, une pièce : pile, ce coup ×${COIN_HEADS} ; face, rien.`,
     describe: (s) => `Une pièce : pile, ce coup ×${COIN_HEADS + (s.power ?? 0)} ; face, rien`,
-    detail: () => 'Pile compte comme un coup qui touche : tout ce qui réagit à un coup part.',
+    detail: () => 'Pile compte comme un coup qui touche.',
     badge: (s) => `×${COIN_HEADS + (s.power ?? 0)}`,
     stacking: 'refresh',
     mechanic: 'skill',
@@ -873,6 +931,40 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     coinToss: { multiplier: COIN_HEADS, headsTouches: true },
     // Aiguisée (0.110.0) : pile multiplie davantage
     power: (n) => `pile ×${n} de plus`,
+  },
+  /*
+   * Les pièces de la Fortune (retour du 2026-10-27, M10 et R2 ; docs/RELIQUES.md § 17) : même geste que Pile ou face
+   * (la pièce part juste après le coup qui touche ; pile, un gros effet ; face, rien), une nature d'effet chacune. Pile ou
+   * face frappe ; la Pièce porte-bonheur donne un bonus à son lanceur ; la Pièce maudite, un malus à l'adversaire.
+   */
+  luckyCoin: {
+    name: 'Pièce porte-bonheur',
+    look: { glow: 'rgba(52,211,153,0.85)', coin: 'hue-rotate(95deg) saturate(1.3)' },
+    polarity: 'positive',
+    family: 'fortune',
+    summary: `Juste après son coup, une pièce : pile, +${LUCKY_COIN_CRITS} critiques assurés ; face, rien.`,
+    describe: (s) => `${coinOdds(s)} : pile, +${LUCKY_COIN_CRITS} critiques assurés ; face, rien`,
+    badge: () => `+${LUCKY_COIN_CRITS}`,
+    stacking: 'refresh',
+    mechanic: 'skill',
+    maxStacks: 1,
+    coinToss: { heads: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: LUCKY_COIN_CRITS }] },
+    // Aiguisée : pile plus souvent (`COIN_RANK_HEADS`), comme toutes les pièces d'effet
+    power: (n) => `+${n} chance${n > 1 ? 's' : ''} sur 6 de faire pile`,
+  },
+  cursedCoin: {
+    name: 'Pièce maudite',
+    look: { glow: 'rgba(167,139,250,0.85)', coin: 'hue-rotate(230deg) saturate(0.9) brightness(0.85)' },
+    polarity: 'positive',
+    family: 'fortune',
+    summary: "Juste après son coup, une pièce : pile, l'adversaire perd sa prochaine action ; face, rien.",
+    describe: (s) => `${coinOdds(s)} : pile, l'adversaire perd sa prochaine action ; face, rien`,
+    badge: () => '×1',
+    stacking: 'refresh',
+    mechanic: 'skill',
+    maxStacks: 1,
+    coinToss: { heads: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }] },
+    power: (n) => `+${n} chance${n > 1 ? 's' : ''} sur 6 de faire pile`,
   },
   luckyStrike: {
     name: 'Coup de chance',
@@ -924,7 +1016,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'retaliation',
     summary: 'Garde les dégâts des trois derniers coups reçus ; sa compétence les renvoie.',
     describe: (s) => `Jauges : ${(s.slots ?? []).join(' · ') || 'vides'} (${s.stacks} PV gardé${s.stacks > 1 ? 's' : ''})`,
-    badge: (s) => String(s.stacks),
+    // Le compteur : le nombre de coups que sa compétence enverra, un par jauge remplie (retour du 2026-10-27, S1 ; les
+    // PV gardés jusque-là). Leur valeur se lit dans l'infobulle
+    badge: (s) => String((s.slots ?? []).filter((n) => n > 0).length),
     stacking: 'refresh',
     mechanic: 'skill',
     fillsOnHurt: { slots: 3 },
@@ -996,7 +1090,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'seals',
     summary: 'Aucun malus ne peut plus lui être posé, et +1 armure.',
     describe: (s) => `Aucun malus ne peut plus lui être posé, et +${charges(s)} armure`,
-    detail: () => "Les auras de l'adversaire agissent toujours, sans pouvoir lui poser de malus.",
     badge: () => '∞',
     stacking: 'refresh',
     maxStacks: 1,
@@ -1029,8 +1122,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(254,240,138,0.5)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS, 'PV')} par charge à l'adversaire, ${SENTENCE_CAP} charges au plus.`,
-    describe: (s) => `Chaque soin qu'il reçoit fait perdre ${plural(SENTENCE_LOSS * charges(s), 'PV')} à l'adversaire`,
+    summary: `Chaque soin que son porteur reçoit fait perdre ${plural(SENTENCE_LOSS, 'PV')} par charge à l'adversaire, ${SENTENCE_CAP} charges au plus.`,
+    describe: (s) => `Chaque soin que son porteur reçoit fait perdre ${plural(SENTENCE_LOSS * charges(s), 'PV')} à l'adversaire`,
     detail: () => 'En dégâts directs.',
     badge: (s) => `−${SENTENCE_LOSS * charges(s)}`,
     counter: 'stacks',
@@ -1047,7 +1140,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'affliction',
     summary: `Chaque coup qui touche pose ${DECOCTION_POISON} Poison par charge à l'adversaire.`,
     describe: (s) => `${DECOCTION_POISON * charges(s)} Poison à l'adversaire à chaque coup qui touche`,
-    detail: () => 'Pile compte comme un coup qui touche.',
     badge: (s) => `+${DECOCTION_POISON * charges(s)}`,
     stacking: 'add',
     // Poison qui s'estompe (0.36.4) : voir EQUILIBRAGE.md pour la valeur
@@ -1087,8 +1179,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Pourriture',
     polarity: 'negative',
     family: 'affliction',
-    summary: "Perd 1 PV par charge au début de chacun de ses tours ; seule une purification l'enlève.",
-    describe: (s) => `Perd ${plural(s.stacks, 'PV')} au début de chacun de ses tours, jusqu'à ce qu'on le purifie`,
+    summary: 'Perd 1 PV par charge au début de chacun de ses tours.',
+    describe: (s) => `Perd ${plural(s.stacks, 'PV')} au début de chacun de ses tours`,
     badge: (s) => String(s.stacks),
     stacking: 'add',
     onTurnStart: (s) => [{ type: 'damage', amount: s.stacks, source: 'rot' }],
@@ -1184,19 +1276,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // charges de plus ne gagnaient presque rien, la première rabat déjà souvent le coup à 1
     power: (n) => `+${plural(n, 'coup')}`,
   },
-  melodiousAura: {
-    name: 'Aura mélodieuse',
-    look: { aura: 'rgba(196,181,253,0.55)' },
-    polarity: 'positive',
-    family: 'power',
-    // 0.45.0 : textes sans le jargon « dégâts finaux » (note de l'utilisateur : description peu claire)
-    summary: '+1 dégât par charge à chacun de ses coups qui touchent.',
-    describe: (s) => `${damageText(s.stacks)} à chacun de ses coups qui touchent`,
-    detail: () => "Après l'armure et les boucliers.",
-    badge: (s) => `+${s.stacks}`,
-    stacking: 'add',
-    modifyFinal: (damage, s) => damage + s.stacks,
-  },
   // Le Duo (2026-10-25, piste D validée par l'utilisateur) : le second dé de la barde vit dans sa signature. La mécanique
   // de Coup de chance (un jet complet de plus par charge, toutes à sa prochaine action), sous son nom, son icône et sa couleur
   duo: {
@@ -1226,8 +1305,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(253,230,138,0.55)' },
     polarity: 'positive',
     family: 'guard',
-    summary: `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR} armure temporaire par charge.`,
-    describe: (s) => `Chaque soin qu'il reçoit lui donne +${FAITH_SHIELD_ARMOR * charges(s)} armure temporaire`,
+    summary: `Chaque soin que son porteur reçoit lui donne +${FAITH_SHIELD_ARMOR} armure temporaire par charge.`,
+    describe: (s) => `Chaque soin que son porteur reçoit lui donne +${FAITH_SHIELD_ARMOR * charges(s)} armure temporaire`,
     badge: (s) => `+${FAITH_SHIELD_ARMOR * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1265,13 +1344,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Garde brisée',
     polarity: 'negative',
     family: 'guard',
-    summary: 'Le prochain coup qu’il reçoit ×2, et ce coup brise son armure temporaire.',
-    describe: (s) => next(s.stacks, 'Le prochain coup qu’il reçoit ×2', 'Ses N prochains coups reçus ×2'),
+    summary: 'Son prochain coup reçu ×2 et brise son armure temporaire.',
+    describe: (s) =>
+      next(s.stacks, 'Son prochain coup reçu ×2 et brise son armure temporaire', 'Ses N prochains coups reçus ×2 et brisent son armure temporaire'),
     onFoe: (s) =>
       s.stacks > 1
         ? `Les ${s.stacks} prochains coups que reçoit l'adversaire ×2 et brisent son armure temporaire`
         : "Le prochain coup que reçoit l'adversaire ×2 et brise son armure temporaire",
-    detail: () => "Avant l'armure. Le coup ×2 n'est pas absorbé par l'armure temporaire : il la brise.",
     bears: 'a la garde brisée',
     plural: 'Gardes brisées',
     badge: (s) => `×${s.stacks}`,
@@ -1289,7 +1368,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     describe: (s) => next(s.stacks, 'Son prochain jet sur une compétence tombe à vide', 'Ses N prochains jets sur une compétence tombent à vide'),
     onFoe: (s) =>
       s.stacks > 1 ? `Les ${s.stacks} prochains jets de l'adversaire sur une compétence tombent à vide` : "Le prochain jet de l'adversaire sur une compétence tombe à vide",
-    detail: () => 'Ni la compétence ni le coup de base. Un jet sur une face nue ne l’use pas, un dé imposé non plus.',
+    detail: () => 'Ni la compétence ni le coup de base. Un jet sur une face nue ne l’use pas.',
     plural: 'Malchances',
     badge: (s) => `×${s.stacks}`,
     counter: 'stacks',
@@ -1303,7 +1382,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Ses critiques ratent.',
     describe: (s) => `Ses critiques ratent${s.power ? `, et +${Math.round(BLIND_MISS * 100 * s.power)} % de coups ratés` : ''}`,
     onFoe: (s) => `Les critiques de l'adversaire ratent${s.power ? `, et +${Math.round(BLIND_MISS * 100 * s.power)} % de coups ratés` : ''}, jusqu'à la fin du combat`,
-    detail: () => 'Un critique qu’il porterait, critique assuré compris, devient un coup raté ; le critique assuré part.',
     bears: 'est aveuglé',
     badge: () => '×0',
     stacking: 'refresh',
@@ -1318,7 +1396,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Ne regagne plus de PV.',
     describe: () => 'Ne regagne plus de PV',
     onFoe: () => "L'adversaire ne regagne plus de PV, jusqu'à la fin du combat",
-    detail: () => 'Ni soin, ni vol de vie, ni aura. Un soin empêché ne compte pas comme reçu.',
+    detail: () => 'Ni soin, ni vol de vie, ni aura.',
     badge: () => '0',
     stacking: 'refresh',
     maxStacks: 1,
@@ -1331,7 +1409,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Son prochain bonus va à l’adversaire.',
     describe: (s) => (s.stacks > 1 ? `Ses ${s.stacks} prochains bonus vont à l'adversaire` : "Son prochain bonus va à l'adversaire"),
     onFoe: (s) => (s.stacks > 1 ? `Vole les ${s.stacks} prochains bonus de l'adversaire` : "Vole le prochain bonus de l'adversaire"),
-    detail: () => 'Le prochain bonus qu’il se donne revient au lanceur à sa place, avec ses charges. Les mécanismes (jauges, pièce, rafale) ne se volent pas.',
+    detail: () => 'Le prochain bonus qu’il se donne revient au lanceur à sa place, avec ses charges.',
     plural: 'Sceaux de vol',
     badge: (s) => `×${s.stacks}`,
     counter: 'stacks',
@@ -1364,8 +1442,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(126,34,206,0.5)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: `Chaque soin qu'il reçoit donne ${BLACK_SAP_POISON} Poison par charge à l'adversaire.`,
-    describe: (s) => `Chaque soin qu'il reçoit donne ${BLACK_SAP_POISON * charges(s)} Poison à l'adversaire`,
+    summary: `Chaque soin que son porteur reçoit inflige ${BLACK_SAP_POISON} Poison par charge à l'adversaire.`,
+    describe: (s) => `Chaque soin que son porteur reçoit inflige ${BLACK_SAP_POISON * charges(s)} Poison à l'adversaire`,
     badge: (s) => `+${BLACK_SAP_POISON * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1377,8 +1455,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(185,28,28,0.5)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: `L'adversaire saigne de ${BLOOD_DEBT_BLEED} par charge quand il renvoie des dégâts.`,
-    describe: (s) => `L'adversaire saigne de ${BLOOD_DEBT_BLEED * charges(s)} quand il renvoie des dégâts`,
+    summary: `L'adversaire saigne de ${BLOOD_DEBT_BLEED} par charge chaque fois que son porteur renvoie des dégâts.`,
+    describe: (s) => `L'adversaire saigne de ${BLOOD_DEBT_BLEED * charges(s)} chaque fois que son porteur renvoie des dégâts`,
     detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
     badge: (s) => `+${BLOOD_DEBT_BLEED * charges(s)}`,
     counter: 'stacks',
@@ -1507,7 +1585,7 @@ export interface RuleLine {
  *   écrites une seule fois au lieu d'être répétées sur chaque statut. Absent pour un mécanisme (`mechanic`) :
  *   il ne se pose pas comme un statut ;
  * - `lifetime` : la règle de vie qui le concerne, « Durée » s'il peut avoir une durée, « Auras » pour une aura.
- * L'opposition à un autre statut n'est pas ici : c'est une interaction (catalog.ts, `statusLinks`).
+ * Ni l'opposition à un autre statut ni ce qui le retire : des interactions, que le compendium ne montre pas (2026-10-27).
  */
 export interface StatusRuleSections {
   effect: RuleLine[]
@@ -1526,7 +1604,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.drainsHit)
     say(
       effect,
-      'Le prochain coup du porteur qui touche (pile comprise) lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre ; un jet remplacé (sans coup) la laisse en place.',
+      'Le prochain coup du porteur qui touche lui rend les PV réellement retirés ; une charge par coup. Un coup esquivé consomme la charge sans rien rendre.',
     )
   if (def.extraStrikes && def.instantStrikes)
     say(
@@ -1549,12 +1627,14 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
           : "Consommé en entier au début de l'action.",
     )
   }
-  if (def.coinToss)
+  if (def.coinToss?.multiplier !== undefined)
     say(
       effect,
-      `Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, ce coup ×${def.coinToss.multiplier}, l'adversaire perd encore ${def.coinToss.multiplier - 1} fois les PV qu'il lui a retirés, en dégâts directs${def.coinToss.headsTouches ? ' qui comptent comme un coup qui touche (tout ce qui réagit quand il touche ou quand l’adversaire encaisse un coup part)' : ''} ; face, rien. Le statut est consommé.`,
+      `Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, ce coup ×${def.coinToss.multiplier}, l'adversaire perd encore ${def.coinToss.multiplier - 1} fois les PV qu'il lui a retirés, en dégâts directs${def.coinToss.headsTouches ? ' qui comptent comme un coup qui touche' : ''} ; face, rien. Le statut est consommé.`,
       'direct-damage',
     )
+  else if (def.coinToss)
+    say(effect, 'Le porteur lance aussitôt une pièce, juste après le coup qui a posé le statut : pile, son effet tombe aussitôt ; face, rien. Le statut est consommé.')
   if (def.forcesCrit) say(effect, 'Force le critique du prochain coup qui touche ; une charge par coup. Une esquive ne la consomme pas.', 'crit')
   if (def.shield) say(effect, "Absorbe autant de points que de charges, après l'armure, sans faire descendre un coup sous 1 dégât.", 'shields')
   if (def.onTurnStart) say(effect, 'Agit au début de chaque tour du porteur, avant son action.', 'phases')
@@ -1588,23 +1668,23 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.immune)
     say(
       effect,
-      `Aucun ${def.immune === 'negative' ? 'malus' : 'bonus'} ne peut être posé sur le porteur ; l'immunité ne s'use pas. Ceux déjà là, et les auras de l'adversaire, agissent toujours.`,
+      `Aucun ${def.immune === 'negative' ? 'malus' : 'bonus'} ne peut être posé sur le porteur ; l'immunité ne s'use pas.`,
       'application',
     )
   if (def.mechanic === 'form')
-    say(consumption, "Règle de forme : présente tant que le porteur a cette forme, retirée quand il en change. Ni bonus ni malus : aucune purge ne l'enlève, rien ne la bloque.", 'forms')
+    say(consumption, 'Règle de forme : présente tant que le porteur a cette forme, retirée quand il en change. Ni bonus ni malus.', 'forms')
   if (def.mechanic === 'skill')
-    say(consumption, "Mécanisme de sa compétence : ni bonus ni malus. Aucune purge ne l'enlève, rien ne le bloque.", 'polarity')
+    say(consumption, 'Mécanisme de sa compétence : ni bonus ni malus.', 'polarity')
   if (def.reflectsHit)
     say(
       effect,
-      `Le prochain coup qui touche le porteur (pile comprise) renvoie à l'attaquant ${Math.round(def.reflectsHit * 100)} % des PV retirés, arrondis au-dessus, en dégâts directs ; une charge par coup.`,
+      `Le prochain coup qui touche le porteur renvoie à l'attaquant ${Math.round(def.reflectsHit * 100)} % des PV retirés, arrondis au-dessus, en dégâts directs ; une charge par coup.`,
       'direct-damage',
     )
   if (def.fillsOnHurt)
     say(
       effect,
-      `Chaque coup qui touche le porteur (pile comprise) range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges, la plus ancienne cédant sa place ; les dégâts directs ne comptent pas. La compétence du porteur les relâche d'un coup.`,
+      `Chaque coup qui touche le porteur range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges, la plus ancienne cédant sa place ; les dégâts directs ne comptent pas. La compétence du porteur les relâche d'un coup.`,
       'direct-damage',
     )
   if (def.wards)
@@ -1614,18 +1694,19 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
       'application',
     )
   if (def.decays) say(consumption, "S'estompe : perd une charge chaque fois qu'il agit, et disparaît à 0.")
+  if (def.wearsOff) say(consumption, 'S’use : perd une charge à la fin de chaque tour du porteur, sauf celui où il a été posé ou renforcé.', 'phases')
   if (def.spentOnHit) say(consumption, 'Disparaît, toutes charges comprises, dès que le prochain coup du porteur touche ; un coup esquivé ne le consomme pas.')
   if (def.spentOnHurt) say(consumption, 'Perd une charge chaque fois qu’un coup touche le porteur.')
-  if (def.shatters) say(effect, "Le coup qui touche le porteur n'est absorbé par aucune armure temporaire : il les brise toutes.", 'shields')
+  if (def.shatters) say(effect, 'Ce coup brise toute son armure temporaire, qui n’en absorbe rien.', 'shields')
   if (def.jinxesRoll)
     say(effect, 'Le prochain jet du porteur qui porterait une compétence tombe à vide : le dé est lancé, mais ni la compétence ni le coup de base ne partent ; une charge par jet.', 'die')
-  if (def.blinds) say(effect, 'Chaque critique du porteur, tiré ou assuré, devient un coup raté ; le critique assuré part.', 'crit')
-  if (def.modifyHealing) say(effect, 'Le porteur ne regagne plus de PV : un soin empêché ne compte pas comme reçu.')
-  if (def.stealsBonus) say(effect, "Le prochain bonus que le porteur se pose va à l'adversaire, avec ses charges ; une charge par vol. Les mécanismes ne se volent pas.", 'application')
+  if (def.blinds) say(effect, 'Chaque critique du porteur, tiré ou assuré, devient un coup raté.', 'crit')
+  if (def.modifyHealing) say(effect, 'Le porteur ne regagne plus de PV.')
+  if (def.stealsBonus) say(effect, "Le prochain bonus que le porteur se pose va à l'adversaire, avec ses charges ; une charge par vol.", 'application')
   if (def.turnsFromStacks) say(consumption, 'Une seule valeur : il dure autant de tours que de charges.', 'duration')
   else if (def.expiresAt === 'turnEnd') say(consumption, 'Sa durée se décompte à la fin des tours du porteur.', 'duration')
   else if (def.expiresAt === 'turnStart') say(consumption, 'Sa durée se décompte au début des tours du porteur, avant son action.', 'duration')
-  if (isAura(id)) say(consumption, "Aura : sans durée, jusqu'à la fin du combat ; une purification peut la retirer, avec toutes ses charges.", 'auras')
+  if (isAura(id)) say(consumption, "Aura : sans durée, jusqu'à la fin du combat.", 'auras')
   return {
     effect,
     consumption,

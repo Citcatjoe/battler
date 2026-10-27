@@ -53,7 +53,14 @@ const BOLT_SPOTS = [
 const boltStyle = (at: number): CSSProperties =>
   ({ '--scene-length': `${BOLT_LIFE}ms`, animationDelay: `calc(${at - BOLT_PEAK}ms / var(--speed))` }) as CSSProperties
 
-function Bolt({ seed, at, dx, bottom }: { seed: number; at: number; dx: number; bottom: string }) {
+/** Teintes d'un éclair : bleu (la Foudre) ou blanc (l'Éclair aveuglant) — halo, branches, cœur */
+const BOLT_TONES = {
+  blue: { halo: '#38bdf8', fork: '#7dd3fc', core: '#bae6fd' },
+  white: { halo: '#fef9c3', fork: '#ffffff', core: '#fffbeb' },
+}
+
+function Bolt({ seed, at, dx, bottom, tone = 'blue' }: { seed: number; at: number; dx: number; bottom: string; tone?: keyof typeof BOLT_TONES }) {
+  const colors = BOLT_TONES[tone]
   const rand = jitter(seed)
   const main = boltPath(rand, BOLT_W / 2 + (rand() - 0.5) * 60, BOLT_W / 2, 0, BOLT_H, 14, 70)
   // Deux branches qui partent du tronc et s'éteignent dans le vide
@@ -65,7 +72,7 @@ function Bolt({ seed, at, dx, bottom }: { seed: number; at: number; dx: number; 
   return (
     <div
       aria-hidden
-      className="scene-bolt pointer-events-none absolute left-1/2 z-[20] -translate-x-1/2"
+      className={`scene-bolt ${tone === 'white' ? 'scene-bolt-white' : ''} pointer-events-none absolute left-1/2 z-[20] -translate-x-1/2`}
       style={{ width: BOLT_W, height: BOLT_H, bottom, marginLeft: dx, ...style }}
     >
       <svg viewBox={`0 0 ${BOLT_W} ${BOLT_H}`} width={BOLT_W} height={BOLT_H} className="overflow-visible">
@@ -75,11 +82,11 @@ function Bolt({ seed, at, dx, bottom }: { seed: number; at: number; dx: number; 
           </filter>
         </defs>
         <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d={main.d} stroke="#38bdf8" strokeWidth={22} opacity={0.55} filter={`url(#bolt-glow-${seed})`} />
+          <path d={main.d} stroke={colors.halo} strokeWidth={22} opacity={0.55} filter={`url(#bolt-glow-${seed})`} />
           {forks.map((d) => (
-            <path key={d} d={d} stroke="#7dd3fc" strokeWidth={5} opacity={0.7} />
+            <path key={d} d={d} stroke={colors.fork} strokeWidth={5} opacity={0.7} />
           ))}
-          <path d={main.d} stroke="#bae6fd" strokeWidth={8} />
+          <path d={main.d} stroke={colors.core} strokeWidth={8} />
           <path d={main.d} stroke="#ffffff" strokeWidth={3} />
           {forks.map((d) => (
             <path key={`core-${d}`} d={d} stroke="#ffffff" strokeWidth={1.5} />
@@ -473,12 +480,60 @@ function StoneBackdrop() {
   )
 }
 
+/* ---------- Sorts de malus (retour du 2026-10-27, S10) ----------
+ * La scène porte le malus (MISE_EN_SCENE.md M54) : il tombe sur la cible à l'impact, sans signal ni coup.
+ */
+
+/** Éclair aveuglant : un éclair blanc sur la cible, à l'impact */
+function BlindBolt({ scene }: { scene: SceneFx }) {
+  const at = SCENE_EVENTS.blindFlash.impacts[0]
+  return <Bolt seed={scene.key * 7 + 1} at={at} dx={0} bottom="40%" tone="white" />
+}
+
+/** Vie de l'éblouissement (ms à ×1) ; il culmine à 20 % (keyframes `scene-blind`) */
+const BLIND_LIFE = 790
+const BLIND_PEAK = 0.2
+
+/** L'arène blanchit d'un coup à l'impact, aveuglante, puis la lumière retombe lentement */
+function BlindBackdrop() {
+  const at = SCENE_EVENTS.blindFlash.impacts[0]
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div className="scene-blind absolute inset-0 z-[35]" style={strikeStyle(at, BLIND_LIFE, BLIND_PEAK)} />
+    </div>
+  )
+}
+
+/** Peur : l'arène s'assombrit de violet pendant toute la scène */
+function DreadBackdrop() {
+  const { length } = SCENE_EVENTS.dread
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div className="scene-dread-tint absolute inset-0" style={{ '--scene-length': `${length}ms` } as CSSProperties} />
+    </div>
+  )
+}
+
+/** Une ombre monte sous la cible et l'enveloppe à l'impact (40 % de la scène : keyframes `scene-dread-shadow`), puis se dissipe */
+function DreadShadow() {
+  const { length } = SCENE_EVENTS.dread
+  return (
+    <div
+      aria-hidden
+      className="scene-dread-shadow pointer-events-none absolute bottom-[-4%] left-1/2 z-[20] h-[85%] w-[110%] -translate-x-1/2"
+      style={{ '--scene-length': `${length}ms` } as CSSProperties}
+    />
+  )
+}
+
 const SCENE_VIEWS: Record<SceneEventId, SceneView> = {
   lightning: { Backdrop: LightningBackdrop, OnTarget: LightningBolts },
   emberRain: { Backdrop: EmberBackdrop, OnTarget: EmberMeteors },
   gale: { Backdrop: GaleBackdrop, OnTarget: GaleGusts },
   hoarfrost: { Backdrop: FrostBackdrop, OnTarget: FrostShell },
   stoneWall: { Backdrop: StoneBackdrop, OnTarget: StoneWall },
+  blindFlash: { Backdrop: BlindBackdrop, OnTarget: BlindBolt },
+  dread: { Backdrop: DreadBackdrop, OnTarget: DreadShadow },
 }
 
 /** Partie de l'événement sur toute l'arène (à placer après le décor, avant les combattants). */

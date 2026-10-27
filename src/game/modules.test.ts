@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { skillCatalog, statusCatalog, statusLinks } from './catalog'
+import { skillCatalog, statusCatalog } from './catalog'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
 import { cueOf, FAMILY_CUES } from './cues'
@@ -9,7 +9,7 @@ import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, st
 import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { offerTargets } from './forge'
-import { computeStats } from './stats'
+import { computeStats, triggerCounts } from './stats'
 import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
 import { Character, figureHeight } from './character'
 import { EMOJI, testCharacter } from './test-utils'
@@ -34,6 +34,7 @@ import {
   recordHeritage,
   referenceChampions,
   rewardChoice,
+  runTriggers,
   startRun,
   withFightResult,
   withReward,
@@ -50,6 +51,8 @@ import {
   fillSlots,
   matchFighters,
   matchKey,
+  nextMatch,
+  playOrder,
   readyMatches,
   relicsOf,
   ROUNDS,
@@ -58,7 +61,7 @@ import {
   withResult,
   type Tournament,
 } from './tournament'
-import { OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
+import { getRelic, OFFER_SIZE, RELIC_IDS, RELICS } from './relics'
 import { eventHooks, linkBetween, relicHooks, skillNeeds, validateHooks } from './hooks'
 
 const duel = (a: string, b: string, seed: number) =>
@@ -117,7 +120,7 @@ describe('catalogue des compétences', () => {
       for (const e of [...c.events, ...(c.definition.reserve ?? [])])
         for (const effect of e.effects.filter((x) => x.target === 'opponent'))
           expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
-    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toBe("L'adversaire perd 3, 2 puis 1 PV au début de ses tours (6 en tout).")
+    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toBe("L'adversaire perd 3, 2 puis 1 PV à la fin de ses tours (6 en tout).")
   })
 })
 
@@ -164,23 +167,6 @@ describe('catalogue des statuts', () => {
     for (const entry of catalog)
       for (const s of entry.sources)
         if (s.kind === 'skill' || s.kind === 'release') expect(describeSkill(s.event).posed.map((p) => p.status), `${s.event.id} → ${entry.id}`).toContain(entry.id)
-  })
-  it('interactions : déclarées d’un côté, montrées des deux', () => {
-    const texts = (id: StatusId) => statusLinks(id).map((l) => l.status)
-    // Opposition (déclarée sur le Poison seulement) ; la Régénération n'a plus de porteur depuis la 0.73.0 : un
-    // personnage de test la met en jeu
-    const healer = testCharacter('healer', {}, [{ id: 'mend', name: 'mend', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'regeneration', stacks: 2, turns: 3 }] }])
-    const withHealer = (id: StatusId) => statusLinks(id, [...CHARACTERS, healer]).map((l) => l.status)
-    expect(withHealer('poison')).toContain('regeneration')
-    expect(withHealer('regeneration')).toContain('poison')
-    // Un statut de forme ne se purge pas : aucune purge n'est citée (la Purification d'Ysolde vise les bonus)
-    expect(statusLinks('casting').some((l) => l.skill)).toBe(false)
-    expect(statusLinks('wildAura').some((l) => l.skill?.event.id === 'purification')).toBe(true)
-    // Immunité : chaque malus en jeu renvoie à l'aura qui le bloque
-    expect(texts('fear')).toContain('immunityAura')
-    // Purge par une relique (Chapelet de l'ermite) ; un mécanisme (jauges de Rétribution) ne se purge pas
-    expect(statusLinks('poison').some((l) => l.relic?.id === 'hermit-beads')).toBe(true)
-    expect(statusLinks('retribution').some((l) => l.skill || l.relic)).toBe(false)
   })
   it('bord en pointillés : seuls les états qui font perdre des PV à leur porteur à chaque tour (0.52.1)', async () => {
     const { hurtsEachTurn } = await import('./statuses')
@@ -379,7 +365,7 @@ describe('narration', () => {
     ]
     // La chance et la limite au bout de la ligne, sans pastille (passe compendium, 2026-10-25)
     expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects, chance: 0.25, limit: 2 })).toBe(
-      "+2 PV. 2 dégâts directs à l'adversaire. L'adversaire perd 1 PV au début de son prochain tour. Retire tous ses malus, 25\u00a0% de chances, 2x. · dégâts directs · se cumule",
+      "+2 PV. 2 dégâts directs à l'adversaire. L'adversaire perd 1 PV à la fin de son prochain tour. Retire tous ses malus, 25\u00a0% de chances, 2x. · dégâts directs · se cumule",
     )
   })
   it('raconte un combat entier sans trou', () => {
@@ -424,6 +410,20 @@ describe('tournoi', () => {
     expect(labels.some((l) => / (I|II|III)$/.test(l))).toBe(true)
   })
 
+  it('« Combat suivant » : tour par tour, et dans un tour des extrémités de chaque moitié vers le centre', () => {
+    expect(playOrder(0).map((m) => m.index)).toEqual([0, 3, 1, 2, 4, 7, 5, 6])
+    expect(playOrder(1).map((m) => m.index)).toEqual([0, 1, 2, 3])
+    expect(playOrder(ROUNDS - 1).map((m) => m.index)).toEqual([0])
+    const rng = seededRng(7)
+    let t: Tournament = createTournament(slots(rng), (id) => createCharacter(id).name)
+    const played: string[] = []
+    for (let ref = nextMatch(t); ref; ref = nextMatch(t)) {
+      played.push(matchKey(ref))
+      t = withResult(t, ref, simulateCombat(matchFighters(t, ref), { rng }), rng)
+    }
+    expect(played).toEqual([...Array(ROUNDS).keys()].flatMap((r) => playOrder(r).map(matchKey)))
+  })
+
   it('se joue jusqu’au champion, sans incohérence', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const rng = seededRng(seed)
@@ -462,6 +462,8 @@ describe('tournoi', () => {
       // fatal compris) ≥ ce que chaque adversaire avait à perdre (les effets ont longtemps manqué aux infligés).
       let lost = 0
       let owed = 0
+      // Médaille de sursis (2026-10-27) : le coup fatal qu'elle arrête est compté en entier, mais il ne retire pas tous ses PV
+      let spared = false
       for (const ref of allMatches()) {
         const r = t.results[matchKey(ref)]
         const i = r.players!.indexOf(champion(t)!)
@@ -469,8 +471,10 @@ describe('tournoi', () => {
         const pair = matchFighters(t, ref)
         lost += pair[i].maxHp + r.stats![i].healed - r.hpLeft
         owed += pair[1 - i].maxHp + r.stats![1 - i].healed
+        if (r.triggers?.[i].relics['reprieve-medal']) spared = true
       }
-      expect(champ.totals.damageTaken).toBe(lost)
+      if (spared) expect(champ.totals.damageTaken).toBeGreaterThanOrEqual(lost)
+      else expect(champ.totals.damageTaken).toBe(lost)
       expect(champ.totals.damage).toBeGreaterThanOrEqual(owed)
     }
   })
@@ -735,10 +739,11 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Coups (null) : Rétribution et la Foudre du druide sonnent avec leurs dégâts
     const expected: Record<string, string | null> = {}
     const family = (cue: string | null, ids: string[]) => ids.forEach((id) => (expected[id] = cue))
-    // Le Duo (2026-10-25) : l'aura qu'il pose passe avant le dé de plus (§ 4.2). Les trois auras de la revue des compétences
-    // (Bouclier de foi, Pas de côté, Plaie ouverte) : une aura, son son se déduit de sa nature ; l'Aura d'épines aussi
-    // depuis la revue X1 (0.118.1)
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'duo', 'overture', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
+    // Le Duo (2026-10-27) : il ne pose plus d'aura (l'Aura mélodieuse quitte le jeu) ; son dé de plus, un bonus du Tempo,
+    // sonne Bonus gagné. Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte) : une
+    // aura, son son se déduit de sa nature ; l'Aura d'épines aussi depuis la revue X1 (0.118.1)
+    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
+    family('buff', ['duo'])
     // Un bonus ou un malus posé sonne sa famille (règle 4 étendue, 2026-10-25 ; Bonus gagné et Malus reçu avant)
     family('precisionUp', ['hawk-eye', 'grudge'])
     family('evasionUp', ['evasion'])
@@ -757,8 +762,9 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('sealDown', ['seal-theft'])
     family('heal', ['harvest'])
     // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
-    // face, l'Embrasement et le Dé pipé posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'loaded-die'])
+    // face, l'Embrasement et le Dé pipé posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
+    // Les pièces de la Fortune (2026-10-27) : comme Pile ou face, seule leur pièce sonne (un son pour toutes les pièces, S8)
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'loaded-die', 'lucky-coin', 'cursed-coin'])
     // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak (il fait saigner), ou Ervald pour
     // l'Aura de puissance et les consommatrices du Poison (il empoisonne)
     const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
@@ -956,8 +962,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       if (!signature) expect(onFaces, c.id).toEqual([])
       else expect(onFaces, c.id).toEqual([`${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
     }
-    // Ce qui n'est pas une face reste : l'Ouverture de Fanchon
-    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['overture', 'duo', 'soloist'])
+    // Plus rien hors des faces depuis le retrait de l'Ouverture de Fanchon (2026-10-27) : ses compétences sont sur son dé
+    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['duo', 'soloist'])
     for (const c of CHARACTERS) {
       const kit = c.events.map((e) => e.id)
       const reserve = (c.definition.reserve ?? []).filter((e) => ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
@@ -1076,16 +1082,22 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(offerableRelics({ championId: 'fanchon', forge: [], relics: [] })).not.toContain('holed-coin')
     expect(offerableSkills(coin, [skill('loaded-die')]).map((s) => s.id)).toEqual(['loaded-die'])
     expect(offerableRelics(coin)).toContain('holed-coin')
+    // 2026-10-27 : toute pièce gravée (la Pièce porte-bonheur aussi) ouvre la Pièce trouée et la Pièce lestée ; sans pièce, ni
+    // l'une ni l'autre
+    const lucky = { championId: 'fanchon', forge: [{ op: 'engrave' as const, face: 3, skill: skill('lucky-coin') }], relics: [] }
+    for (const id of ['holed-coin', 'weighted-coin']) {
+      expect(offerableRelics({ championId: 'fanchon', forge: [], relics: [] }), id).not.toContain(id)
+      expect(offerableRelics(lucky), id).toContain(id)
+    }
     // Les reliques de source (2026-10-25) : offertes à tous dès le départ, elles ouvrent les reliques qui lisent leur ressource
+    // (la Pièce de foire, source de la pièce, retirée le 2026-10-27 : les pièces sont des compétences de la Fortune)
     for (const id of CHARACTER_IDS)
-      for (const source of ['wasp-sting', 'tinder-box', 'fair-coin', 'spiked-bracer']) expect(offerableRelics({ championId: id, forge: [], relics: [] }), id).toContain(source)
-    const opened = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'fair-coin': 'holed-coin', 'spiked-bracer': 'talion-gauntlet' }
+      for (const source of ['wasp-sting', 'tinder-box', 'spiked-bracer']) expect(offerableRelics({ championId: id, forge: [], relics: [] }), id).toContain(source)
+    const opened = { 'wasp-sting': 'venom-vial', 'tinder-box': 'forge-bellows', 'spiked-bracer': 'talion-gauntlet' }
     for (const [source, consumer] of Object.entries(opened)) {
       expect(offerableRelics({ championId: 'elaria', forge: [], relics: [] })).not.toContain(consumer)
       expect(offerableRelics({ championId: 'elaria', forge: [], relics: [source] }), source).toContain(consumer)
     }
-    // La Pièce de foire ouvre le Dé pipé à Fanchon sans graver Pile ou face
-    expect(offerableSkills({ championId: 'fanchon', forge: [], relics: ['fair-coin'] }, [skill('loaded-die')]).map((s) => s.id)).toEqual(['loaded-die'])
     // Le producteur d'abord : un répertoire peut porter une consommatrice hors de portée au départ, mais l'offre n'en sort pas
     for (const id of CHARACTER_IDS) {
       const run = { championId: id, forge: [], relics: [] }
@@ -1125,6 +1137,18 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(end).toMatchObject({ outcome: 'won', wins: ACT_LENGTH, fights: { length: ACT_LENGTH } })
     expect(end.fights[ACT_FIGHTS]).toMatchObject({ opponentId: BOSS.id, boss: true, won: true })
     expect(end.reward).toBeUndefined()
+  })
+
+  it('écran de fin (U2) : les déclenchements de chaque relique et de chaque face, lus dans la chronologie et cumulés', () => {
+    const champion = createCharacter('gorak').withRelics(['split-knucklebone', 'eagle-feather', 'hollow-die'].map(getRelic))
+    const result = simulateCombat([champion, createCharacter('brokk')], { seed: 11 })
+    const counts = triggerCounts(result, 0)
+    const relicBeats = result.beats.filter((b) => b.type === 'relic' && b.side === 0).length
+    expect(Object.values(counts.relics).reduce((s, n) => s + n, 0)).toBe(relicBeats)
+    expect(counts.faces.reduce((s, n) => s + n, 0)).toBe(attacksOf(result).filter((a) => a.attacker === 0).length)
+    const run = withFightResult(withFightResult(startRun('gorak', 3), encounter, won), encounter, won)
+    const total = (faces: number[]) => faces.reduce((s, n) => s + n, 0)
+    expect(total(runTriggers(run).faces)).toBe(total(run.fights[0].triggers!.faces) + total(run.fights[1].triggers!.faces))
   })
 
   it('le champion de référence reçoit les récompenses déjà gagnées au nœud : aucune au premier, toutes au boss', () => {

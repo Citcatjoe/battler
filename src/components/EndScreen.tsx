@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { Character } from '../game/character'
 import { stepKey, type ForgeOffer, type ForgeStep } from '../game/forge'
-import type { Relic } from '../game/relics'
+import { getRelic, type Relic } from '../game/relics'
 import { of } from '../game/narration'
 import { attacksOf, other, percent, SIDE_STYLE, SIDES, type CombatResult, type Side } from '../game/combat'
 import { computeStats, type FighterStats } from '../game/stats'
@@ -482,7 +482,12 @@ function StatsTable({ result, stats, initialTab }: { result: CombatResult; stats
                 <td className="px-4 py-2 text-stone-300">Jets d'initiative</td>
                 {SIDES.map((s) => (
                   <td key={s} className="px-4 py-1 text-right font-mono tabular-nums text-stone-200">
-                    {result.initiative.map((r) => r[s]).join(' → ')}
+                    {/* Une relique d'initiative a décidé : aucun jet, son nom du côté qui commence */}
+                    {result.initiativeRelic
+                      ? result.initiativeRelic.side === s
+                        ? getRelic(result.initiativeRelic.relic).name
+                        : '–'
+                      : result.initiative.map((r) => r[s]).join(' → ')}
                   </td>
                 ))}
               </tr>

@@ -12,7 +12,7 @@
  *    Un effet `damage` en plusieurs coups (`hits`) fait tomber un coup par impact.
  */
 
-export type SceneEventId = 'lightning' | 'emberRain' | 'gale' | 'hoarfrost' | 'stoneWall'
+export type SceneEventId = 'lightning' | 'emberRain' | 'gale' | 'hoarfrost' | 'stoneWall' | 'blindFlash' | 'dread'
 
 export interface SceneTiming {
   /**
@@ -50,6 +50,12 @@ export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   hoarfrost: { impacts: [760], length: 1650, aim: 'self' },
   // Géode fendue : l'arène tremble, des colonnes de roche jaillissent autour du porteur (le bouclier)
   stoneWall: { impacts: [380], length: 1350, aim: 'self', quake: true },
+  // Sorts de malus (retour du 2026-10-27, S10 : « plus de magie, l'Éclair aveuglant devrait se voir ») : la scène porte le
+  // malus, qui tombe sur la cible à son impact (MISE_EN_SCENE.md M54), sans coup.
+  // Éclair aveuglant : un éclair blanc frappe la cible et l'arène blanchit, aveuglante, puis la lumière retombe
+  blindFlash: { impacts: [360], length: 1150 },
+  // Peur : l'arène s'assombrit de violet, une ombre monte sous la cible et l'enveloppe, puis se dissipe
+  dread: { impacts: [560], length: 1400 },
 }
 
 /** Le camp visé par un événement lancé par `source` (l'adversaire, ou le lanceur lui-même). */

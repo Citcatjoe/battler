@@ -1,16 +1,16 @@
 import type { Character } from './character'
-import { deName, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
+import type { CharacterEvent, Effect, Target, Trigger } from './events'
 import type { RuleId } from './rules'
 import { RELICS, type Relic } from './relics'
 import { CHARACTERS } from './roster'
 import { STATUS_PLACE } from './states'
-import { POLARITY_STYLE, STATUS_IDS, STATUSES, statusRuleSections, type Polarity, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
-import { typeset } from './typography'
+import { STATUS_IDS, STATUSES, statusRuleSections, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
 
 /*
  * Catalogue : vues de lecture sur les registres (roster, statuts), pour le compendium et la
- * documentation. Rien n'est saisi ici : tout est déduit des données du jeu, y compris les liens
- * croisés (qui pose un statut, ce qui l'empêche, ce qu'il renforce).
+ * documentation. Rien n'est saisi ici : tout est déduit des données du jeu, y compris qui pose un statut. Les
+ * interactions entre statuts, compétences et reliques ne sont pas montrées : au joueur de les découvrir (retour du
+ * 2026-10-27).
  */
 
 /**
@@ -27,14 +27,6 @@ export type StatusSource =
   | { kind: 'release'; character: Character; event: CharacterEvent }
   | { kind: 'form'; character: Character; form: string }
   | { kind: 'relic'; relic: Relic; target: Target }
-
-/** Une interaction d'un statut, avec ce vers quoi elle mène (un autre statut, une compétence ou une relique). */
-export interface StatusLink {
-  text: string
-  status?: StatusId
-  skill?: { event: CharacterEvent; character: Character }
-  relic?: Relic
-}
 
 export interface StatusEntry {
   id: StatusId
@@ -131,7 +123,7 @@ export type StatusHome =
 
 /**
  * La demeure d'un statut (`StatusHome`). Pour une aura ou un mécanisme, la compétence qui le pose ou le relâche,
- * celle de même nom d'abord (l'Aura mélodieuse, que l'Ouverture pose aussi). Rien pour un statut propre à une
+ * celle de même nom d'abord. Rien pour un statut propre à une
  * compétence qui n'est pas en jeu.
  */
 export function statusHome(id: StatusId, characters: readonly Character[] = CHARACTERS): StatusHome | undefined {
@@ -142,44 +134,6 @@ export function statusHome(id: StatusId, characters: readonly Character[] = CHAR
   if (skill) return { kind: 'skill', event: skill.event, character: skill.character }
   const form = sources.find((s) => s.kind === 'form')
   return form?.kind === 'form' ? { kind: 'form', character: form.character, form: form.form } : undefined
-}
-
-const polarityWord = (p: Polarity) => POLARITY_STYLE[p].label.toLowerCase()
-
-/**
- * Interactions d'un statut avec les autres, déduites du code, dans les deux sens : opposition, immunité et
- * garde, statut qu'il pose, purge par une compétence. Seuls les statuts et
- * compétences en jeu sont cités. Les cas d'ordre de résolution (Vol de vie, puis Riposte, puis Épines…) ne se
- * déduisent pas : ils restent dans docs/RESOLUTION.md (voir docs/AUDIT_COMPENDIUM.md).
- */
-export function statusLinks(id: StatusId, characters: readonly Character[] = CHARACTERS): StatusLink[] {
-  const def = STATUSES[id]
-  const inGame = new Set(statusCatalog(characters).filter((e) => e.inGame).map((e) => e.id))
-  const skills = skillsOf(characters)
-  const links: StatusLink[] = []
-  // Opposition : déclarée d'un côté, vraie des deux
-  for (const other of STATUS_IDS)
-    if ((def.opposes === other || STATUSES[other].opposes === id) && inGame.has(other))
-      links.push({ text: `S'oppose à ${STATUSES[other].name} : leurs charges s'annulent une à une.`, status: other })
-  // Immunité et garde : ce que ce statut bloque, ou ce qui le bloque
-  if (def.immune) links.push({ text: `Bloque la pose de tous les ${polarityWord(def.immune)}.` })
-  if (def.wards?.polarity) links.push({ text: `Bloque la pose des ${polarityWord(def.wards.polarity)}, une charge par blocage.` })
-  for (const other of STATUS_IDS) {
-    if (def.mechanic) break
-    if (other === id || !inGame.has(other)) continue
-    const o = STATUSES[other]
-    if (o.immune === def.polarity || o.wards?.polarity === def.polarity || o.wards?.statuses?.includes(id))
-      links.push({ text: `Ne peut pas être posé sur un porteur ${deName(o.name)}.`, status: other })
-  }
-  // Statuts qu'il pose
-  for (const posed of posedByStatus(id)) links.push({ text: `Pose ${STATUSES[posed].name}.`, status: posed })
-  // Purges : les compétences et reliques qui retirent les statuts de sa polarité (sauf un mécanisme, qui ne se purge pas).
-  // Une aura se lit dans la fiche de sa compétence, au féminin (« l'aura peut être retirée »)
-  const purges = (effects: readonly Effect[]) => !def.mechanic && effects.some((e) => e.type === 'cleanse' && e.polarity === def.polarity)
-  const removed = STATUS_PLACE[id].place === 'aura' ? 'Peut être retirée' : 'Peut être retiré'
-  for (const { character, event } of skills) if (purges(event.effects)) links.push({ text: `${removed} par ${event.name}.`, skill: { event, character } })
-  for (const relic of RELICS) if (purges(relic.effects ?? [])) links.push({ text: `${removed} par la relique ${relic.name}.`, relic })
-  return links.map((l) => ({ ...l, text: typeset(l.text) }))
 }
 
 /** Une compétence et les personnages qui la possèdent. */

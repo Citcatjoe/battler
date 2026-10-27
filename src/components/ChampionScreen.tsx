@@ -68,19 +68,20 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
             {final && <> · {final.hpLeft} PV restants en finale</>}
             {run.entrant.seasonRank && <> · {run.entrant.seasonRank === 1 ? '1er' : `${run.entrant.seasonRank}e`} de la saison</>}
           </p>
-          {/* Les reliques gagnées en chemin, et son dé forgé pendant la saison : le profil qui l'a mené au titre */}
-          {run.relics.length > 0 && (
-            <div className="mt-3 flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Reliques</span>
-              <RelicRow relics={run.relics.map(getRelic)} size={56} tooltip="below" />
+          {/* Les reliques gagnées en chemin et son dé (forgé pendant la saison) : le profil qui l'a mené au titre, avec
+              combien de fois chaque relique a agi et chaque face est tombée sur tout le tournoi (championRun) */}
+          <div className="mt-3 flex items-start gap-10">
+            {run.relics.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Reliques · déclenchements</span>
+                <RelicRow relics={run.relics.map(getRelic)} size={48} tooltip="below" counts={run.triggers.relics} />
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <span className="shrink-0 text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Son dé · faces tombées</span>
+              <ForgedDie character={character.withForge(run.entrant.build?.forge ?? [])} size="sm" tooltip="below" counts={run.triggers.faces} />
             </div>
-          )}
-          {run.entrant.build && run.entrant.build.forge.length > 0 && (
-            <div className="mt-3 flex items-center gap-3">
-              <span className="shrink-0 text-xs font-bold uppercase tracking-[0.25em] text-stone-500">Son dé</span>
-              <ForgedDie character={character.withForge(run.entrant.build.forge)} size="sm" tooltip="below" />
-            </div>
-          )}
+          </div>
         </header>
 
         {wallets && (

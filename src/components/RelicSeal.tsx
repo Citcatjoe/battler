@@ -104,6 +104,7 @@ export function RelicRow({
   uses,
   pulse,
   side,
+  counts,
 }: {
   relics: readonly Relic[]
   size?: number
@@ -118,6 +119,8 @@ export function RelicRow({
    * (`data-signal` « camp:relic:id », celui que pose la mise en scène, staging.ts ; SignalLayer)
    */
   side?: 0 | 1
+  /** Écrans de fin : déclenchements de chaque relique sur toute la partie, sous son sceau */
+  counts?: Readonly<Record<string, number>>
 }) {
   const tip = useTipLayer()
   if (relics.length === 0) return null
@@ -136,6 +139,7 @@ export function RelicRow({
           >
             <RelicSeal relic={r} size={size} charges={left} spent={left === 0} pulse={pulse?.relics.includes(r.id) ? pulse.key : undefined} />
             {!tip && <RelicTooltip relic={r} placement={tooltip} align={align} left={left} />}
+            {counts && <span className="mt-1 block text-center font-mono text-[15px] font-bold tabular-nums text-ink-1">×{counts[r.id] ?? 0}</span>}
           </li>
         )
       })}

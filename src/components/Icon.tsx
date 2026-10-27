@@ -153,6 +153,10 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   holyAura: 'holy-aura',
   decoctionAura: 'decoction-aura',
   coinFlip: 'coin-flip',
+  // Retour du 2026-10-27 : en attendant leurs icônes peintes (brief dans docs/RELIQUES.md § 17), les deux faces de la
+  // pièce de Pile ou face
+  luckyCoin: 'coin-pile',
+  cursedCoin: 'coin-face',
   luckyStrike: 'lucky-strike',
   retribution: 'retribution',
   riposte: 'riposte',
@@ -165,7 +169,6 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   // Barde (0.41.0) : une icône pour la compétence et son statut, comme les auras
   whistling: 'whistle',
   falseNote: 'false-note',
-  melodiousAura: 'melodious-aura',
   bleed: 'bleed',
   // Druide : l'empreinte d'ours brûlée (planche v8) va à l'Aura sauvage
   casting: 'casting',
@@ -260,7 +263,6 @@ export const SKILL_ICON: Partial<Record<string, IconName>> = {
   firefly: 'fireflies',
   whistle: 'whistle',
   'false-note': 'false-note',
-  overture: 'melodious-aura',
   crescendo: 'crescendo',
   soloist: 'soloist',
 }

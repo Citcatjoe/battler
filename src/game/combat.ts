@@ -5,6 +5,7 @@ import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
   BLIND_MISS,
+  COIN_RANK_HEADS,
   consumeStatus,
   isMechanic,
   removeStatuses,
@@ -83,6 +84,12 @@ export type AppliedEffect =
       source: DamageSource
       /** Le détail par coup, dont la somme vaut `amount` (jauges d'une relâche, coups de `hits`) ; l'écran en fait autant de coups */
       parts?: number[]
+      /**
+       * Dégâts qui se heurtent à l'armure (`armored`, Clous de pavois, 2026-10-27) ; `armorAbsorbed` : ce que l'armure de la
+       * cible en a retenu, s'il y en a
+       */
+      armored?: true
+      armorAbsorbed?: number
     }
   /**
    * `stacks` : charges demandées ; `result` : ce qui s'est réellement passé (posé, annulé, bloqué). `stolenBy` : le bonus
@@ -223,18 +230,22 @@ export type Beat = BeatFields & BeatBody
 export type BeatBody =
   | { type: 'attack'; attack: Attack }
   | { type: 'event'; event: TriggeredEvent }
-  /** Effet de tour d'un statut (ex. poison au début, brûlure à la fin) */
+  /** Effet de tour d'un statut (ex. brûlure et poison à la fin du tour, pourriture au début) */
   | { type: 'statusTick'; phase: TurnPhase; side: Side; status: StatusId; effects: AppliedEffect[] }
   /**
    * Usure de la phase (2026-10-21 : une seule étape au lieu de `statusDuration` et `statusExpire`) : `changes`, les
-   * durées décomptées (un tour de moins) ; `expired`, les statuts éteints (charges épuisées ou durée écoulée).
+   * durées décomptées (un tour de moins) ; `expired`, les statuts éteints (charges épuisées ou durée écoulée) ; `worn`
+   * (2026-10-27, M1), les charges qu'un statut qui s'use (`wearsOff`, Critique assuré) perd à la fin du tour, avant → après
+   * (à 0, il est aussi dans `expired`).
    */
-  | { type: 'statusAge'; phase: TurnPhase; side: Side; changes: DurationChange[]; expired: StatusId[] }
+  | { type: 'statusAge'; phase: TurnPhase; side: Side; changes: DurationChange[]; expired: StatusId[]; worn?: DurationChange[] }
   /**
    * Réaction d'un statut à un moment du combat (ex. Épines quand le porteur encaisse, Vol de vie quand il touche).
-   * Sans effet pour une jauge qui se remplit (Rétribution) : l'état de l'étape montre les jauges.
+   * Sans effet pour une jauge qui se remplit (Rétribution) : l'état de l'étape montre les jauges. `dodgedBy`
+   * (2026-10-27, M3) : la Riposte manque l'attaquant, qui l'esquive par ce statut (Esquive améliorée) : aucun effet, une
+   * charge de Riposte et une charge d'esquive parties.
    */
-  | { type: 'statusReaction'; side: Side; status: StatusId; trigger: Trigger; effects: AppliedEffect[] }
+  | { type: 'statusReaction'; side: Side; status: StatusId; trigger: Trigger; effects: AppliedEffect[]; dodgedBy?: StatusId }
   /** Action perdue à cause d'un statut de contrôle (ex. Étourdi) */
   | { type: 'skip'; side: Side; status: StatusId }
   /** Changement de forme (druide), au tout début de son tour : `form` est l'index de la nouvelle forme */
@@ -264,8 +275,13 @@ export type BeatBody =
 
 export interface CombatResult {
   fighters: Pair<Character>
-  /** Tous les jets d'initiative, relances comprises */
+  /** Tous les jets d'initiative, relances comprises ; vide quand une relique d'initiative a décidé (`initiativeRelic`) */
   initiative: Pair<number>[]
+  /**
+   * Relique d'initiative (retour du 2026-10-27, R3) : son porteur commence sans jet. Absent si personne n'en porte, ou si
+   * les deux en portent une (le jet revient).
+   */
+  initiativeRelic?: { side: Side; relic: string }
   beats: Beat[]
   /** Nombre de tours entamés */
   turns: number
@@ -280,6 +296,13 @@ export interface CombatResult {
   seed?: number
   /** Dés imposés par l'observateur (mode triche), par rang de dé : voir `SimulateOptions.forcedRolls` */
   forcedRolls?: Readonly<Record<number, number>>
+}
+
+/** Le camp qui joue le premier tour : celui d'une relique d'initiative, sinon le vainqueur du dernier jet d'initiative. */
+export function firstSide(r: Pick<CombatResult, 'initiative' | 'initiativeRelic'>): Side {
+  if (r.initiativeRelic) return r.initiativeRelic.side
+  const [a, b] = r.initiative[r.initiative.length - 1]
+  return a > b ? 0 : 1
 }
 
 /* ---------- Lecture d'un résultat ---------- */
@@ -339,6 +362,31 @@ export function finalState(result: CombatResult): Snapshot {
 
 const clamp = (v: number, min: number, max = Infinity) => Math.min(max, Math.max(min, v))
 
+/**
+ * Répartit `amount` entre des jauges (`weights`, dans leur ordre) pour l'écran : un coup par jauge (retour du
+ * 2026-10-27, S1). Le montant entier d'une relâche garde ses jauges telles quelles ; une part (la moitié de la
+ * Rétribution) en donne au moins 1 à chacune tant qu'il suffit (les plus grosses d'abord), puis le reste au prorata, au
+ * plus fort reste. La somme vaut toujours `amount` ; aucune règle n'en dépend.
+ */
+export function splitAmong(amount: number, weights: readonly number[]): number[] {
+  const total = weights.reduce((a, b) => a + b, 0)
+  if (amount <= 0 || weights.length === 0) return []
+  if (amount === total) return [...weights]
+  const n = Math.min(weights.length, amount)
+  // Les `n` plus grosses jauges, dans leur ordre
+  const kept = weights.map((w, i) => ({ w, i })).sort((a, b) => b.w - a.w || a.i - b.i).slice(0, n).sort((a, b) => a.i - b.i)
+  const sum = kept.reduce((a, k) => a + k.w, 0)
+  const rest = amount - n
+  const exact = kept.map((k) => (rest * k.w) / sum)
+  const parts = exact.map((x) => 1 + Math.floor(x))
+  let left = amount - parts.reduce((a, b) => a + b, 0)
+  for (const j of exact.map((x, j) => ({ f: x - Math.floor(x), j })).sort((a, b) => b.f - a.f || a.j - b.j)) {
+    if (left-- <= 0) break
+    parts[j.j]++
+  }
+  return parts
+}
+
 /** Stats de combat du porteur, une fois appliqués les modificateurs de ses statuts. */
 export function effectiveStats(character: Character, statuses: readonly Status[]): CombatStats {
   const { maxHp: _maxHp, ...base } = character.stats
@@ -363,6 +411,9 @@ export function effectiveStats(character: Character, statuses: readonly Status[]
 function forceRoll(drawn: number, faces: number, forced: number | undefined) {
   return forced === undefined ? drawn : Math.min(faces, Math.max(1, Math.round(forced)))
 }
+
+/** Plafond de la chance de pile d'une pièce (retour du 2026-10-27, R4) : 5 sur 6, jamais une pile assurée sans Dé pipé. */
+export const HEADS_CAP = 5 / 6
 
 /** Le jet d'un coup, déjà tiré par le moteur : sa face, et ce que sa compétence fait du coup de base. */
 export interface StrikeRoll {
@@ -482,7 +533,7 @@ export function resolveAttack(
     raw - def.armor < 1 ||
     (damage === 1 &&
       defenderStatuses.some((s) => STATUSES[s.id].shield && s.stacks > (shields.find((x) => x.status === s.id)?.absorbed ?? 0)))
-  // Dégâts finaux (Aura mélodieuse, Fausse note) : après l'armure et les boucliers, additionnés, puis un seul plancher
+  // Dégâts finaux (Fausse note) : après l'armure et les boucliers, additionnés, puis un seul plancher
   // de 1 (le résultat ne dépend pas de l'ordre de pose)
   const shielded = damage
   const finals: Attack['modifiers'] = []
@@ -626,12 +677,17 @@ export function simulateCombat(
   let dieRank = 0
   const nextForced = () => cheats?.[dieRank++]
   const rng: Rng = injected ?? (seed !== undefined ? seededRng(seed) : defaultRng)
+  // Relique d'initiative (retour du 2026-10-27, R3) : avant le jet, son porteur commence et le jet n'a pas lieu ; si les
+  // deux camps en portent une, aucune ne part et le jet revient
+  const heralds = SIDES.flatMap((s) => fighters[s].relics.filter((r) => r.trigger?.type === 'initiative').slice(0, 1).map((relic) => ({ side: s, relic })))
+  const herald = heralds.length === 1 ? heralds[0] : undefined
   const initiative: Pair<number>[] = []
-  let roll: Pair<number>
-  do {
-    roll = [rollDie(rng, INITIATIVE_DIE), rollDie(rng, INITIATIVE_DIE)]
-    initiative.push(roll)
-  } while (roll[0] === roll[1])
+  let roll: Pair<number> = herald?.side === 0 ? [1, 0] : [0, 1]
+  if (!herald)
+    do {
+      roll = [rollDie(rng, INITIATIVE_DIE), rollDie(rng, INITIATIVE_DIE)]
+      initiative.push(roll)
+    } while (roll[0] === roll[1])
 
   // Statuts de forme (0.73.0, druide) : ceux de la forme du moment, posés et retirés par le moteur seul
   const formStatuses = (f: Character, form: number): Status[] => (f.forms?.[form].statuses ?? []).map((id) => ({ id, stacks: 1 }))
@@ -722,6 +778,7 @@ export function simulateCombat(
   const end = (winner: Side, endedBy: CombatResult['endedBy']): CombatResult => ({
     fighters,
     initiative,
+    ...(herald && { initiativeRelic: { side: herald.side, relic: herald.relic.id } }),
     beats,
     turns: turn,
     winner,
@@ -731,6 +788,23 @@ export function simulateCombat(
     ...(seed !== undefined && !injected ? { seed } : {}),
     ...(cheats && { forcedRolls: { ...cheats } }),
   })
+
+  /** Sursis en attente d'annonce (retour du 2026-10-27, R1) : la relique qui vient de garder ce camp à 1 PV */
+  const spared: Pair<Relic | undefined> = [undefined, undefined]
+  /**
+   * Une perte de PV, bornée à 0. Une relique de sursis prête (Médaille de sursis) garde son porteur à 1 PV au lieu de
+   * le faire tomber, et s'use ; son étape suit celle de la perte (`checkThresholds`). Les dégâts comptés ne changent pas.
+   */
+  function loseHp(side: Side, amount: number) {
+    const s = states[side]
+    s.hp = Math.max(0, s.hp - amount)
+    if (s.hp > 0 || amount <= 0) return
+    const medal = fighters[side].relics.find((r) => r.trigger?.type === 'lethal' && (s.relicUses[r.id] ?? 0) < (r.charges ?? 1))
+    if (!medal) return
+    s.relicUses[medal.id] = (s.relicUses[medal.id] ?? 0) + 1
+    s.hp = 1
+    spared[side] = medal
+  }
 
   /**
    * Un soin remonte les PV de `side` : les reliques de seuil qui lisent ses PV (les siennes, ou un Trophée adverse)
@@ -761,12 +835,23 @@ export function simulateCombat(
         return { type: 'heal', target, amount, ...(kept !== effect.amount && { wanted: effect.amount }) }
       }
       case 'damage': {
-        // Montant compté en entier (overkill compris) ; les PV s'arrêtent à 0. En `hits` coups : tous comptés
-        const each = clamp(effect.amount, 0)
+        // Montant compté en entier (overkill compris) ; les PV s'arrêtent à 0. En `hits` coups : tous comptés. Contre
+        // l'armure (`armored`, Clous de pavois) : chaque impact perd l'armure effective de la cible, au moins 1
+        const wanted = clamp(effect.amount, 0)
+        const armor = effect.armored ? effectiveStats(fighters[target], state.statuses).armor : 0
+        const each = effect.armored && wanted > 0 ? Math.max(1, wanted - armor) : wanted
         const hits = effect.hits ?? 1
         const amount = each * hits
-        state.hp = Math.max(0, state.hp - amount)
-        return { type: 'damage', target, amount, source: effect.source, ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }) }
+        loseHp(target, amount)
+        return {
+          type: 'damage',
+          target,
+          amount,
+          source: effect.source,
+          ...(hits > 1 && { parts: Array.from({ length: hits }, () => each) }),
+          ...(effect.armored && { armored: true as const }),
+          ...(each < wanted && { armorAbsorbed: (wanted - each) * hits }),
+        }
       }
       case 'applyStatus': {
         // Sceau de vol (lot 3) : un bonus que le lanceur se pose, hors mécanisme, va à l'adversaire (une charge par vol) ;
@@ -809,12 +894,13 @@ export function simulateCombat(
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
         // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
         const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
-        state.hp = Math.max(0, state.hp - amount)
+        loseHp(target, amount)
         // Ses propres jauges, relâchées sur l'adversaire : des dégâts renvoyés (le moment `reflected`)
         if (effect.from !== 'opponent' && target !== owner && amount > 0) reflected[owner] = true
-        // Les jauges, une par impact, quand elles partent en entier (pas en part ni sous le minimum)
-        const parts = held?.slots?.filter((n) => n > 0)
-        return { type: 'damage', target, amount, source: effect.source, ...(amount === stored && parts && parts.length > 1 && { parts }) }
+        // Les jauges, une par impact (retour du 2026-10-27, S1) : en entier, chacune la sienne ; en part (Rétribution),
+        // le montant réparti entre elles (`splitAmong`). Rien ne change aux PV : l'écran en fait autant de coups
+        const parts = splitAmong(amount, held?.slots?.filter((n) => n > 0) ?? [])
+        return { type: 'damage', target, amount, source: effect.source, ...(parts.length > 1 && { parts }) }
       }
       case 'cleanse': {
         // Les mécanismes (statuts de forme, mécanismes de compétence : `mechanic`) ne se purgent pas
@@ -905,6 +991,15 @@ export function simulateCombat(
       if (!react) continue
       // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte : sans lui, la réaction ne part pas
       if (react.length > 0 && react.every((e) => e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status))) continue
+      // Riposte contre un attaquant sous esquive assurée (2026-10-27, M3) : elle le manque, comme un coup esquivé. Une charge
+      // de chaque statut part, sans effet ni fenêtre (pas de chaîne : ni `dodge` de l'attaquant, ni dégâts renvoyés)
+      const evade = def.reflectsHit && trigger === 'hurt' ? states[other(side)].statuses.find((s) => STATUSES[s.id].forcesDodge) : undefined
+      if (evade) {
+        states[side].statuses = consumeStatus(states[side].statuses, id, 1)
+        states[other(side)].statuses = consumeStatus(states[other(side)].statuses, evade.id, 1)
+        push({ type: 'statusReaction', side, status: id, trigger, effects: [], dodgedBy: evade.id }, cause)
+        continue
+      }
       const effects = applyEffects(side, react)
       // Riposte : la part du coup rendue à l'attaquant, des dégâts renvoyés (le moment `reflected`)
       if (def.reflectsHit && trigger === 'hurt' && effects.some((e) => e.type === 'damage' && e.target !== side && e.amount > 0)) reflected[side] = true
@@ -1019,6 +1114,13 @@ export function simulateCombat(
    */
   function checkThresholds(cause: number): Side | undefined {
     const order: Side[] = [owner, other(owner)]
+    // Sursis (R1) : la relique s'annonce juste après l'étape qui aurait fait tomber son porteur, avant tout le reste
+    for (const side of order) {
+      const medal = spared[side]
+      if (!medal) continue
+      spared[side] = undefined
+      push({ type: 'relic', side, relic: medal.id, name: medal.name, effects: [], uses: states[side].relicUses[medal.id] }, cause)
+    }
     // Les passages se lisent sur les PV du changement vérifié (0.85.0) et sont tous marqués avant qu'aucun ne parte
     // (0.110.0) : chacun a ce changement pour cause, pas la relique partie avant lui ; une relique qui soigne (Larme de
     // givre) n'efface pas le passage d'une autre (Trophée adverse, même coup). Une relique dont l'effet serait nul
@@ -1121,11 +1223,21 @@ export function simulateCombat(
         : []
     })
     states[side].statuses = kept
-    // Une seule étape pour l'usure de la phase : durées décomptées et statuts éteints (épuisés ou expirés). Sa cause :
-    // l'effet du premier statut concerné qui a agi dans cette phase (son « −2 » et son compteur vont ensemble)
-    const gone = [...faded, ...expired]
-    if (changes.length || gone.length)
-      push({ type: 'statusAge', phase, side, changes, expired: gone }, [...changes.map((c) => c.status), ...gone].map((s) => ticks.get(s)).find((t) => t !== undefined))
+    // S'user (2026-10-27, M1, Critique assuré) : une charge part à la fin du tour du porteur, sauf s'il l'a reçu ou vu
+    // renforcé pendant ce tour
+    const worn: DurationChange[] = []
+    if (phase === 'turnEnd')
+      for (const s of states[side].statuses)
+        if (STATUSES[s.id].wearsOff && !states[side].fresh.has(s.id)) worn.push({ status: s.id, from: s.stacks, to: s.stacks - 1 })
+    for (const w of worn) states[side].statuses = consumeStatus(states[side].statuses, w.status, 1)
+    // Une seule étape pour l'usure de la phase : durées décomptées, charges usées et statuts éteints (épuisés ou expirés).
+    // Sa cause : l'effet du premier statut concerné qui a agi dans cette phase (son « −2 » et son compteur vont ensemble)
+    const gone = [...faded, ...expired, ...worn.filter((w) => w.to === 0).map((w) => w.status)]
+    if (changes.length || gone.length || worn.length)
+      push(
+        { type: 'statusAge', phase, side, changes, expired: gone, ...(worn.length > 0 && { worn }) },
+        [...changes.map((c) => c.status), ...gone].map((s) => ticks.get(s)).find((t) => t !== undefined),
+      )
     return undefined
   }
 
@@ -1238,7 +1350,7 @@ export function simulateCombat(
     // Luciole : chaque coup qui touche le porteur lui retire une charge (`spentOnHurt`)
     if (touched) for (const s of def.statuses.filter((x) => STATUSES[x.id].spentOnHurt)) def.statuses = consumeStatus(def.statuses, s.id, 1)
     const dealt = outcome.damage
-    def.hp = Math.max(0, def.hp - dealt)
+    loseHp(defender, dealt)
     const hit = push({ type: 'attack', attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) } }, cause)
     lastStrike = hit
     if (def.hp === 0) return defender
@@ -1280,17 +1392,27 @@ export function simulateCombat(
     // État de référence de la pièce (un coup à part entière, règle 9) : les statuts au moment où elle part
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     states[side].statuses = states[side].statuses.filter((s) => s.id !== coin.id)
+    const toss = STATUSES[coin.id].coinToss!
     const forced = nextForced()
-    const drawn = forceRoll(rollDie(rng, 2), 2, forced) === 1
+    // Pile = 1 sur un d2 ; une Pièce lestée (R4, 2026-10-27) ajoute sa chance de pile, une pièce d'effet aiguisée 1 chance
+    // sur 6 par rang (`COIN_RANK_HEADS`), le tout plafonné à 5 sur 6 (`HEADS_CAP` ; la chance de pile des auras de la Chance,
+    // vague 2 des Maîtrises, s'ajoutera à cette même somme). Un seul tirage dans tous les cas : la suite du hasard ne change
+    // pas (sans relique ni rang, le tirage est celui du d2)
+    const ranked = toss.multiplier === undefined ? (coin.power ?? 0) * COIN_RANK_HEADS : 0
+    const bias = fighters[side].relics.reduce((p, r) => p + (r.headsChance ?? 0), ranked)
+    const drawn = forceRoll(rng() < Math.min(HEADS_CAP, 0.5 + bias) ? 1 : 2, 2, forced) === 1
     // Dé pipé (phase 8, second lot) : la pièce se tire quand même, puis tombe sur pile, une charge par pièce ; une pièce
-    // imposée par l'observateur (mode triche) garde sa valeur et laisse la charge
-    const loaded = forced === undefined ? states[side].statuses.find((s) => STATUSES[s.id].loadsCoin !== undefined) : undefined
+    // imposée par l'observateur (mode triche) garde sa valeur et laisse la charge. Il ne pipe que la pièce qui frappe
+    // (Pile ou face) : sur une autre pièce, sa charge attend (2026-10-27)
+    const loaded =
+      forced === undefined && toss.multiplier !== undefined ? states[side].statuses.find((s) => STATUSES[s.id].loadsCoin !== undefined) : undefined
     if (loaded) states[side].statuses = consumeStatus(states[side].statuses, loaded.id, 1)
     const heads = drawn || loaded !== undefined
-    const toss = STATUSES[coin.id].coinToss!
     // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile ; un Dé pipé aussi, sur la pièce qu'il pipe
-    const extra = dealt * (toss.multiplier + (coin.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0) - 1)
-    const effects = heads ? applyEffects(side, [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }]) : []
+    const extra =
+      toss.multiplier !== undefined ? dealt * (toss.multiplier + (coin.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0) - 1) : 0
+    const onHeads: readonly Effect[] = toss.multiplier !== undefined ? [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }] : toss.heads
+    const effects = heads ? applyEffects(side, onHeads) : []
     const id = push(
       { type: 'coin', side, status: coin.id, heads, effects, ...(loaded && { loadedBy: loaded.id }), ...(forced !== undefined && { forced: true as const }) },
       posedBy[side][coin.id] ?? after,
@@ -1358,6 +1480,12 @@ export function simulateCombat(
     return undefined
   }
 
+  // La relique d'initiative s'annonce avant tout (étape n° 0, à l'ouverture) : sans effet, son porteur joue le premier tour
+  if (herald) {
+    const s = states[herald.side]
+    s.relicUses[herald.relic.id] = 1
+    push({ type: 'relic', side: herald.side, relic: herald.relic.id, name: herald.relic.name, effects: [], uses: 1 })
+  }
   let down = fireAll([
     [0, 'combatStart'],
     [1, 'combatStart'],

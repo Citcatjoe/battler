@@ -346,6 +346,12 @@ Ce que ça implique :
 - l'héritage ne s'accumule pas : on ne garde qu'une amélioration, et seulement ce qui a été **gagné** pendant la partie ; un objet hérité ne se transmet pas à nouveau, sinon une même relique suivrait le personnage indéfiniment (confirmé) ;
 - la mémoire est **par personnage** : la sauvegarde (§ 13) garde, pour chacun, les gains de sa dernière partie qui a rapporté quelque chose.
 
+**Retour du 2026-10-27 : l'héritage devient optionnel, le choix devient explicite.**
+- **Écran de choix du champion refait** (références : [ref/campagne-champion.png](ref/campagne-champion.png), [ref/campagne-champion-heritage-indisponible.png](ref/campagne-champion-heritage-indisponible.png), prompt `prompts/prompt début de campagne/prompt-ecran-campagne.md`) : **tous les personnages** en portraits (le sélecteur du duel ; le tirage de trois champions, `drawChampions`, est retiré), « Au hasard » en bouton carré, l'illustration au sol, la fiche de l'affrontement (stats, dé de combat `DieBuild`) à la couleur du camp, la ligne de lore en citation (`lore.background` du personnage : le champ existait déjà pour les dix), puis le bloc héritage. Plus de bloc « Compétences de départ » ni de note « N améliorations » : le dé montre les compétences, l'interrupteur dit l'héritage.
+- **Interrupteur « Activer l'héritage »** (`Switch` du jeu) : « Récupère un objet de la dernière partie perdue de ce champion. » ; sans partie précédente, grisé, « Aucune partie précédente pour ce champion. ». **Actif par défaut, mémorisé par champion** (`loadHeritageOn` / `saveHeritageOn`, clé `battler:campaign-heritage-on:v1`). Actif et disponible : « Commencer la campagne » ouvre le choix de l'amélioration (parmi trois au plus, inchangé) ; coupé : la partie part sans héritage. Le calcul de l'héritage ne change pas.
+- **Place réservée sous l'héritage pour le choix d'aura** (V3, vague 2), rien d'affiché.
+- **U4, Elaria : un sort choisi, une relique reçue.** Reproduit sur la trace : la partie du 2026-10-26 à 23 h 50 commence avec la Plume d'aigle, sans gravure, alors que sa partie précédente laissait Coup de chance (gravure, face 3), Pièce de foire et Plume d'aigle. Avec la même offre, l'écran pré-sélectionnait la carte « Choix d'Elaria », la Plume d'aigle ; un clic sur la gravure était bien pris (vérifié dans Firefox, souris réelle) : la relique partait donc quand on lançait sans que le clic sur le sort ait compté. **Correction** : plus de carte choisie d'avance ni de marque « Choix de… » (`autoHeritage` retiré) ; « Commencer » reste grisé tant que le joueur n'a pas choisi, et seule sa carte porte « Votre choix ». La carte de l'acte rappelle l'héritage reçu. Au passage, un héritage dont la relique n'existe plus (relique retirée du jeu) est écarté au chargement au lieu de faire planter l'écran.
+
 ---
 
 ## 9. Levier immédiat : le bilan des reliques sur l'écran de victoire
@@ -362,7 +368,7 @@ Ce que ça implique :
 - par simulation : « avec elle 64 %, sans elle 51 % » (chiffres pour l'exemple), environ 0,1 s, comme une cote ;
 - rejouer « ce combat-ci, sans elle » à l'identique demande de séparer les suites de hasard ([TODO.md](TODO.md) § 16).
 
-Aujourd'hui, rien de tout ça n'est affiché : `stats.ts` ne compte pas les reliques.
+**Livré (retour du 2026-10-27)** : l'écran de fin de campagne et l'écran du champion de tournoi montrent, sous chaque relique, **son nombre de déclenchements** et, sous chaque face du dé, **combien de fois elle est tombée**, sur toute la partie ou tout le tournoi. Les chiffres sont lus dans la chronologie au moment où le combat est enregistré (`triggerCounts`, `stats.ts` : les étapes `relic` du porteur, et le dé de chacun de ses coups, coups bruts et jets à vide compris), gardés avec le combat (`FightRecord.triggers`, `MatchResult.triggers`) et additionnés (`runTriggers`, `championRun`). Une partie ou un tournoi d'avant ce changement montre des zéros. Ce qu'ils ont fait (PV, dégâts ajoutés) reste à faire.
 
 ---
 

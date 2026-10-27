@@ -5,17 +5,18 @@ import { sheetStatuses } from '../../game/catalog'
 import { CharactersBackdrop, CharactersSection } from './CharactersSection'
 import { RelicsSection } from './RelicsSection'
 import { RulesSection } from './RulesSection'
-import { SkillsSection } from './SkillsSection'
+import { compendiumSkills, SkillsSection } from './SkillsSection'
 import { StatusesSection } from './StatusesSection'
 
 /*
  * Sections du compendium : le savoir du jeu, ce qui ne change pas d'un combat à l'autre (les résultats sont dans
  * l'écran Statistiques). Une donnée, une maison : chaque information est décrite dans une seule section, et
  * apparaît ailleurs en résumé avec un lien vers elle (`CompendiumNav.go`).
- * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent.
+ * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent. Les compétences
+ * et les auras ont chacune leur onglet (retour du 2026-10-27) ; un onglet Maîtrises viendra s'ajouter (docs/MAITRISES.md).
  */
 
-export type CompendiumSectionId = 'characters' | 'skills' | 'statuses' | 'relics' | 'rules'
+export type CompendiumSectionId = 'characters' | 'skills' | 'auras' | 'statuses' | 'relics' | 'rules'
 
 /** Où mène un lien du compendium : une section, et l'élément à montrer (personnage, compétence, statut, relique, règle). */
 export interface CompendiumTarget {
@@ -59,7 +60,20 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
     render: (props) => <CharactersSection {...props} />,
     backdrop: (props) => <CharactersBackdrop {...props} />,
   },
-  { id: 'skills', label: 'Compétences', placeholder: 'Filtrer les compétences…', render: (props) => <SkillsSection {...props} /> },
+  {
+    id: 'skills',
+    label: 'Compétences',
+    count: compendiumSkills('skills').length,
+    placeholder: 'Filtrer les compétences…',
+    render: (props) => <SkillsSection kind="skills" {...props} />,
+  },
+  {
+    id: 'auras',
+    label: 'Auras',
+    count: compendiumSkills('auras').length,
+    placeholder: 'Filtrer les auras…',
+    render: (props) => <SkillsSection kind="auras" {...props} />,
+  },
   {
     id: 'statuses',
     label: 'Statuts',

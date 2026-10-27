@@ -44,6 +44,7 @@ export function ForgedDie({
   selected,
   onPick,
   preview,
+  counts,
 }: {
   character: Character
   size?: keyof typeof TILE
@@ -56,6 +57,8 @@ export function ForgedDie({
   onPick?: (face: number) => void
   /** L'opération en cours de choix, sur une face visée : son infobulle montre ce que la face deviendrait (avant → après) */
   preview?: (face: number) => ForgeStep | undefined
+  /** Écrans de fin : combien de fois chaque face est tombée (`counts[0]` : la face 1), sous sa tuile */
+  counts?: readonly number[]
 }) {
   const faces = forgedFaces(character.definition, character.forge)
   return (
@@ -92,6 +95,7 @@ export function ForgedDie({
             ) : (
               <ForgeFaceTooltip face={f} next={next} placement={tooltip} align={align} />
             )}
+            {counts && <span className="mt-1 block text-center font-mono text-[15px] font-bold tabular-nums text-ink-1">×{counts[f.face - 1] ?? 0}</span>}
           </li>
         )
       })}
