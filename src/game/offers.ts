@@ -2,17 +2,20 @@ import type { Character } from './character'
 import type { CharacterEvent } from './events'
 import { autoForge, drawForgeOffer, forgedFaces, type ForgeOffer, type ForgeStep } from './forge'
 import { buildHooks, echoOf, eventHooks, relicHooks, relicNeeds, skillNeeds, STATUS_HOOKS, type Hook } from './hooks'
+import { characterPool, masteryOfSkill } from './masteries'
 import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
 import type { Rng } from './rng'
-import { CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf } from './roster'
+import { createCharacter } from './roster'
 
 /*
  * Les offres de construction, communes à la campagne et à la saison du tournoi (0.115.0 : une seule voie, déplacée de
  * campaign.ts) : ce qu'un personnage vanilla peut recevoir, relique ou forge du dé, et comment l'offre se tire.
  * - l'ordre des récompenses d'un acte (`REWARDS`) ;
- * - le répertoire de chaque personnage (`REPERTOIRES`), la limite de faces de compétence (`MAX_SKILL_FACES`) ;
+ * - la réserve de chaque personnage (celles de ses deux maîtrises moins son dé, `characterPool`, docs/MAITRISES.md
+ *   § 6.1), la limite de faces de compétence (`MAX_SKILL_FACES`) ;
  * - l'offre pertinente (`offerableRelics`, `offerableSkills` : rien dont la condition ne peut pas arriver) ;
- * - l'offre orientée (`drawReward` : la première carte au poids de son écho avec le build, `ECHO_WEIGHT`).
+ * - l'offre orientée (`drawReward` : la première carte au poids de son écho avec le build, `ECHO_WEIGHT` ; Graver
+ *   propose une compétence de chacune de ses deux maîtrises, § 6.2).
  * Chaque mode garde son rythme (quand une récompense tombe) et son stockage ; l'offre, elle, est la même.
  */
 
@@ -34,19 +37,12 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
 export const MAX_SKILL_FACES = 5
 
 /**
- * Ce que chaque personnage peut graver : les compétences de sa fiche hors de son dé (`reserve`, elles ne sont pas
- * perdues, docs/CAMPAGNE.md § 7.3), puis son répertoire (`repertoireOf`).
+ * Ce qu'un personnage a construit : son id (le « champion » qui se construit), l'aura de départ sur son 1 (campagne ;
+ * l'aura par défaut sans elle, le tournoi), son journal de forge, ses reliques.
  */
-export const REPERTOIRES: Record<string, readonly CharacterEvent[]> = Object.fromEntries(
-  CHARACTERS.map((c) => {
-    const left = ENGRAVABLE_SKILLS.filter((e) => (c.definition.reserve ?? []).some((x) => x.id === e.id))
-    return [c.id, [...left, ...repertoireOf(c.id)]]
-  }),
-)
-
-/** Ce qu'un personnage a construit : son id (le « champion » qui se construit), son journal de forge, ses reliques. */
 export interface BuildState {
   championId: string
+  aura?: string
   forge: ForgeStep[]
   relics: string[]
 }
@@ -56,8 +52,8 @@ export type PendingReward =
   | { kind: 'relic'; offer: string[]; /** choix par défaut (au hasard dans l'offre), modifiable */ choice?: string }
   | { kind: 'forge'; offer: ForgeOffer[]; choice?: ForgeStep }
 
-/** Le personnage vanilla (`createCharacter`), son dé forgé, ses reliques. */
-const builtCharacter = (b: BuildState): Character => createCharacter(b.championId).withForge(b.forge).withRelics(b.relics.map(getRelic))
+/** Le personnage vanilla parti de son aura (`createCharacter`), son dé forgé, ses reliques. */
+const builtCharacter = (b: BuildState): Character => createCharacter(b.championId, { aura: b.aura }).withForge(b.forge).withRelics(b.relics.map(getRelic))
 
 /** Poids d'une brique dans l'offre orientée : 1, plus `ECHO_WEIGHT` par accroche qui la relie au build (docs/PROGRESSION.md § 13.2). */
 export const ECHO_WEIGHT = 2
@@ -105,14 +101,15 @@ export function offerableSkills(b: BuildState, skills: readonly CharacterEvent[]
 
 /**
  * Une récompense de construction, la même en campagne (joueur et champion de référence) et en saison (offre orientée,
- * règles v2, phase 2) :
- * - forge : Graver est toujours proposée quand une face peut la recevoir, sa compétence tirée dans le **répertoire** du
- *   personnage (`REPERTOIRES`), parmi celles dont le besoin est déjà dans son build (`offerableSkills`), au poids de son écho
- *   avec le build ; quand le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une compétence. Le
- *   répertoire (cinq compétences au moins) ne s'épuise pas en quatre forges ;
+ * règles v2, phase 2 ; maîtrises, docs/MAITRISES.md § 6) :
+ * - forge : Graver est toujours proposée quand une face peut la recevoir. Elle propose une compétence de chacune de ses
+ *   deux maîtrises (une seule si l'autre n'a plus rien d'offrable), tirées dans sa réserve (`characterPool`), parmi celles
+ *   dont le besoin est déjà dans son build (`offerableSkills`, le producteur d'abord), chacune au poids de son écho avec
+ *   le build dans sa maîtrise ; quand le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une
+ *   compétence. La réserve (huit compétences au moins) ne s'épuise pas en quatre forges ;
  * - relique : parmi celles dont la condition peut arriver avec son build (`offerableRelics`), la première carte au poids de son écho,
  *   les deux autres libres.
- * Le choix par défaut reste au hasard dans l'offre.
+ * Le choix par défaut reste au hasard dans l'offre (pour Graver, une maîtrise sur deux).
  */
 export function drawReward(b: BuildState, kind: RewardKind, rng: Rng): PendingReward {
   const build = buildHooks(builtCharacter(b))
@@ -121,13 +118,17 @@ export function drawReward(b: BuildState, kind: RewardKind, rng: Rng): PendingRe
     const choice = autoPick(offer, rng)
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
-  const def = createCharacter(b.championId).definition
+  const def = createCharacter(b.championId, { aura: b.aura }).definition
   const full = forgedFaces(def, b.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
   const left = offerableSkills(
     b,
-    REPERTOIRES[b.championId].filter((s) => !b.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),
+    characterPool(def).filter((s) => !b.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),
   )
-  const offer = drawForgeOffer(def, b.forge, rng, left, (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build), full)
+  const offer = drawForgeOffer(def, b.forge, rng, left, {
+    focus: (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build),
+    noNewSkill: full,
+    groupOf: (s) => masteryOfSkill(s.id),
+  })
   const choice = autoForge(def, b.forge, offer, rng)
   return { kind: 'forge', offer, ...(choice && { choice }) }
 }

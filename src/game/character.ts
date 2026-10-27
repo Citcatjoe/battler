@@ -1,7 +1,9 @@
 import type { SinglePoseId } from './poses'
-import type { CharacterEvent } from './events'
+import { faceTrigger, rollFace, type CharacterEvent } from './events'
 import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
+import { skillById } from './skills'
+import type { MasteryId } from './masteries'
 import type { StatusId } from './statuses'
 
 export interface CharacterStats {
@@ -115,25 +117,23 @@ export interface CharacterDef {
   stats: CharacterStats
   look: CharacterLook
   lore: CharacterLore
-  /** Capacités déclenchées en combat */
+  /** Capacités déclenchées en combat ; pour un personnage du roster, son dé vanilla (une aura sur le 1, sa signature sur le 2) */
   events: readonly CharacterEvent[]
   /**
-   * Signature (règles v2, docs/PROGRESSION.md § 7.2) : l'id de sa compétence emblème, la seule qu'il garde au départ
-   * d'une campagne, une fois, sur la face 1 (0.111.0). Sans signature (Morgrut, le combattant nu), il y part avec son kit
-   * entier.
+   * Ses deux maîtrises (retour du 2026-10-27, V1 ; docs/MAITRISES.md § 3) : les grandes familles de sorts qu'il joue. Les
+   * compétences de son dé en viennent, et sa réserve de campagne est la leur (`characterPool`, masteries.ts).
+   */
+  masteries: readonly [MasteryId, MasteryId]
+  /**
+   * Ses auras de départ (docs/MAITRISES.md § 5) : celles de ses maîtrises qu'il peut porter sur le 1, choisies au début
+   * d'une campagne (`createCharacter(id, { aura })`) ; la première est celle de son dé vanilla (tournoi, duel).
+   */
+  startAuras?: readonly string[]
+  /**
+   * Signature : l'id de sa compétence de personnage, fixe sur la face 2 de son dé (Maîtrises, 2026-10-27 ; elle était sur le
+   * 1 de la 0.111.0 à la 0.120.0). Sans signature (Morgrut), sa face 2 est nue.
    */
   signature?: string
-  /**
-   * Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : les compétences gravables d'autres personnages qu'il peut
-   * apprendre par la forge, en campagne ; deux fils de synergie, écrits pour lui. Sans effet sur le combat.
-   */
-  repertoire?: readonly string[]
-  /**
-   * Compétences hors kit (règles v2, phase 5, docs/PROGRESSION.md § 7.3) : celles qui ont quitté son kit au passage au
-   * d6. Elles restent à lui (compendium), se gravent par la forge et entrent en tête de son répertoire de campagne. Hors
-   * du dé : le déclencheur qu'elles gardent ne sert qu'à leur texte ; une gravure le remplace par sa face.
-   */
-  reserve?: readonly CharacterEvent[]
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
   /**
@@ -225,6 +225,17 @@ export class Character {
   /** Même personnage, avec ce journal de forge (il remplace le précédent). */
   withForge(forge: readonly ForgeStep[]) {
     return new Character({ ...this.#def, forge })
+  }
+
+  /**
+   * Même personnage, une autre de ses auras de départ sur le 1 de son dé (le choix du départ de campagne, docs/MAITRISES.md
+   * § 5) ; la forme de sa face 1 (le druide) reste. Une aura hors de ses `startAuras` est une erreur.
+   */
+  withStartAura(skillId: string) {
+    if (!this.#def.startAuras?.includes(skillId)) throw new Error(`${this.id} : ${skillId} n'est pas une de ses auras de départ`)
+    const first = this.#def.events.find((e) => rollFace(e.trigger) === 1)
+    const aura: CharacterEvent = { ...skillById(skillId), trigger: faceTrigger(1), ...(first?.form && { form: first.form }) }
+    return new Character({ ...this.#def, events: [aura, ...this.#def.events.filter((e) => rollFace(e.trigger) !== 1)] })
   }
 
   /** Sa définition, avant forge et reliques : la forge se rejoue dessus (forge.ts). */

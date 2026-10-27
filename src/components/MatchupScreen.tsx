@@ -2,10 +2,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ARENAS, getArena, RANDOM_ARENA, resolveArena, type Arena, type ArenaChoice } from '../game/arenas'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type Pair, type Side } from '../game/combat'
+import { MASTERIES } from '../game/masteries'
 import type { Relic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
 import { sfx } from '../game/sound'
 import { Fighter } from './Fighter'
+import { MasteryIcon } from './Icon'
 import { PortraitTile } from './Portrait'
 import { RelicSeal, RelicTooltip } from './RelicSeal'
 import { DieBuild } from './DieBuild'
@@ -44,7 +46,7 @@ const CARD_GAP = 89
 const CARD_OUTER = 800 - CARD_GAP - CARD_WIDTH
 
 /**
- * Hauteurs d'une fiche selon le contexte (px de scène) : haut de la fiche, zone du nom (deux lignes, race · archétype),
+ * Hauteurs d'une fiche selon le contexte (px de scène) : haut de la fiche, zone du nom (deux lignes, puis ses deux maîtrises),
  * panneau (stats, dé, et reliques hors duel), centre du sceau VS. Le duel (96 px de nom, sans reliques) remonte et
  * raccourcit ses fiches pour laisser la place au sélecteur de combattants.
  */
@@ -78,7 +80,7 @@ const MASK_FADE = 16
  * Masque du calque d'une illustration, en coordonnées de scène (règle n° 7 du brief : jamais sous le nom) : union de deux
  * couches, opaque sous le haut du panneau (derrière son voile) et opaque côté écran jusqu'au bord extérieur de la fiche.
  * L'illustration disparaît donc dans le seul rectangle « au-delà du bord de la fiche et au-dessus du panneau » : la
- * zone du nom, l'écusson, race · archétype et ce qui est au-dessus. Miroir pour le camp droit. Générique : aucune toile
+ * zone du nom, l'écusson, ses maîtrises et ce qui est au-dessus. Miroir pour le camp droit. Générique : aucune toile
  * large (l'ogre) ne demande de réglage propre.
  */
 const fighterMask = (side: Side, panelTop: number) =>
@@ -410,8 +412,15 @@ function MatchupCard({
         {rank !== null && <RankBadge rank={rank} />}
         <div className="relative min-w-0 flex-1">
           <FighterName name={character.name} className={style.accent} align={outer} />
-          <p className="matchup-race truncate font-body text-[15px] leading-5 text-ink-2">
-            {character.race} · {character.archetype}
+          {/* Ses deux maîtrises avec leurs emblèmes (U5, docs/MAITRISES.md § 12) ; race et archétype restent au compendium */}
+          <p className={`matchup-race flex items-center gap-2 font-body text-[15px] font-bold leading-5 text-ink-1 ${side === 1 ? 'justify-end' : ''}`} aria-label="Maîtrises">
+            {character.definition.masteries.map((id, k) => (
+              <span key={id} className="flex items-center gap-1.5">
+                {k > 0 && <span className="mr-0.5 font-normal text-ink-3">·</span>}
+                <MasteryIcon id={id} name={MASTERIES[id].name} className="h-6 w-6 text-[13px]" />
+                {MASTERIES[id].name}
+              </span>
+            ))}
           </p>
         </div>
       </div>

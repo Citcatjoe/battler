@@ -21,6 +21,7 @@ import type { Character } from '../src/game/character'
 import type { CombatResult, Side } from '../src/game/combat'
 import { describeEvent, rollFace, type CharacterEvent } from '../src/game/events'
 import { offerTargets, rankText, type ForgeStep } from '../src/game/forge'
+import { characterPool } from '../src/game/masteries'
 import { CHARACTERS, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { STATUSES, type StatusDef } from '../src/game/statuses'
 import pkg from '../package.json' with { type: 'json' }
@@ -229,7 +230,7 @@ function engraveTable(skills: readonly CharacterEvent[], perPair: number): strin
     const mean = hosts.reduce((t, h) => t + h.value, 0) / hosts.length
     const [low, high] = [...hosts].sort((a, b) => a.value - b.value).filter((_, k, all) => k === 0 || k === all.length - 1)
     const flag = mean < T.engraveMin ? 'hors bande (faible)' : mean > T.engraveMax ? 'hors bande (forte)' : ''
-    const owners = CHARACTERS.filter((c) => [...c.events, ...(c.definition.reserve ?? [])].some((x) => x.id === skill.id))
+    const owners = CHARACTERS.filter((c) => [...c.events, ...characterPool(c.definition)].some((x) => x.id === skill.id))
       .map((c) => `${c.name}${c.events.some((x) => x.id === skill.id) ? '' : ' (hors kit)'}`)
       .join(', ')
     const extremes = [low, high ?? low].map((h) => `${h.host.name} ${pts(h.value)}`).join(' | ')
@@ -315,7 +316,7 @@ it('audit des compétences', () => {
   const roster = only?.length ? CHARACTERS.filter((c) => only.includes(c.id)) : CHARACTERS
   const picked = list('SKILLS_ENGRAVE')
   const engravable = ENGRAVABLE_SKILLS.filter((e) =>
-    picked?.length ? picked.includes(e.id) : roster.some((c) => [...c.events, ...(c.definition.reserve ?? [])].some((x) => x.id === e.id)),
+    picked?.length ? picked.includes(e.id) : roster.some((c) => [...c.events, ...characterPool(c.definition)].some((x) => x.id === e.id)),
   )
 
   const parts = part ? [part] : ['kit', 'engrave', 'rank']

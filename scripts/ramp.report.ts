@@ -209,7 +209,7 @@ function offersOf(id: string) {
           for (const x of r.offer) seen.add(`relic:${x}`)
           if (r.choice) got.add(`relic:${r.choice}`)
         } else {
-          for (const o of r.offer) if (o.op === 'engrave') seen.add(`engrave:${o.skill.id}`)
+          for (const o of r.offer) if (o.op === 'engrave') for (const x of o.skills) seen.add(`engrave:${x.id}`)
           if (r.choice?.op === 'engrave') got.add(`engrave:${r.choice.skill.id}`)
         }
       }
@@ -268,7 +268,7 @@ it('montée en puissance et porteur réel', async () => {
 
   const rows = CHARACTER_IDS.map((id, c) => {
     const ms = measures.filter((m) => m.c === c)
-    const others = CHARACTER_IDS.filter((o) => o !== id).map(createCharacter)
+    const others = CHARACTER_IDS.filter((o) => o !== id).map((o) => createCharacter(o))
     const vanilla = duel(createCharacter(id), others).rate
     const at10 = ms.map((m) => m.relative[RANKS]).sort((x, y) => x - y)
     const avg = mean(at10)

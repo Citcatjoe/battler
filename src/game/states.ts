@@ -7,6 +7,7 @@ import {
   STATUS_IDS,
   STATUSES,
   statusCounter,
+  STONE_FIST,
   WHISTLE_HEAL,
   type Polarity,
   type Status,
@@ -182,7 +183,7 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // Sentence (0.114.0) : elle agit sur l'adversaire à chaque soin du porteur, en dégâts directs ; rien de durable à relayer
   sentence: aura(),
   // Phase 8, second lot : deux auras d'identité (le Rempart hérissé pose des Épines, la Vindicte de la Ferveur, qui
-  // s'affichent d'eux-mêmes) ; l'Embrasement et le Dé pipé sont des mécanismes (leur place découle de `mechanic`)
+  // s'affichent d'eux-mêmes) ; l'Embrasement est un mécanisme (sa place découle de `mechanic`)
   bristlingRampart: aura(),
   vendetta: aura(),
   // Revue des compétences (I1, I3, I4) : trois auras d'identité. Le Bouclier de foi et la Plaie ouverte posent de vrais
@@ -207,6 +208,16 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   bloodDebt: aura(),
   stormSky: aura(),
   bloodFrenzy: aura(),
+  // Les Maîtrises, vague 2 (2026-10-27) : le Dé pipé devient une aura (sa chance de pile se lit sur son anneau) ; cinq auras
+  // d'identité, qui posent de vrais statuts (Coup de chance, Peur, Ferveur) ou frappent et soignent d'elles-mêmes ; le Poing
+  // de pierre, la Puissance du vocabulaire tant que l'armure tient
+  loadedDie: aura(),
+  luckyStreak: aura(),
+  dread: aura(),
+  rancor: aura(),
+  stormField: aura(),
+  ballad: aura(),
+  stoneFist: tray('power', () => STONE_FIST),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

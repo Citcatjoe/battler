@@ -52,7 +52,6 @@ export type IconName =
   | 'rot-aura'
   | 'whistle'
   | 'false-note'
-  | 'melodious-aura'
   | 'crescendo'
   | 'soloist'
   // Planche v8 (2026-10-20) : Saignement et ses sources, Aura glaciale, relais du druide
@@ -126,6 +125,30 @@ export type IconName =
   | 'storm-sky'
   | 'blood-frenzy'
   | 'stunning-blow'
+  // Retour du 2026-10-27 : les pièces de la Chance, et les briques nouvelles des Maîtrises (vague 2)
+  | 'lucky-coin'
+  | 'cursed-coin'
+  | 'lucky-streak'
+  | 'dread'
+  | 'rancor'
+  | 'storm-field'
+  | 'ballad'
+  | 'prayer'
+  | 'wither'
+  | 'assault'
+  | 'stone-fist'
+  // Les emblèmes des onze maîtrises (docs/MAITRISES.md § 3)
+  | 'mastery-fury'
+  | 'mastery-blood'
+  | 'mastery-hunt'
+  | 'mastery-bulwark'
+  | 'mastery-retaliation'
+  | 'mastery-poison'
+  | 'mastery-chance'
+  | 'mastery-light'
+  | 'mastery-shadow'
+  | 'mastery-storm'
+  | 'mastery-song'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -153,10 +176,9 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   holyAura: 'holy-aura',
   decoctionAura: 'decoction-aura',
   coinFlip: 'coin-flip',
-  // Retour du 2026-10-27 : en attendant leurs icônes peintes (brief dans docs/RELIQUES.md § 17), les deux faces de la
-  // pièce de Pile ou face
-  luckyCoin: 'coin-pile',
-  cursedCoin: 'coin-face',
+  // Retour du 2026-10-27 (R2) : la compétence et son statut partagent l'icône
+  luckyCoin: 'lucky-coin',
+  cursedCoin: 'cursed-coin',
   luckyStrike: 'lucky-strike',
   retribution: 'retribution',
   riposte: 'riposte',
@@ -202,6 +224,13 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   stormSky: 'storm-sky',
   bloodFrenzy: 'blood-frenzy',
   bloodFrenzyStrike: 'blood-frenzy',
+  // Les Maîtrises, vague 2 (2026-10-27) : la compétence et son statut partagent l'icône ; le Poing de pierre a la sienne
+  luckyStreak: 'lucky-streak',
+  dread: 'dread',
+  rancor: 'rancor',
+  stormField: 'storm-field',
+  ballad: 'ballad',
+  stoneFist: 'stone-fist',
 }
 
 /**
@@ -329,6 +358,20 @@ export function RelicIcon({ id, name, className }: { id: string; name: string; c
   if (URLS[`../assets/icons/${id}.png`]) return <Icon name={id as IconName} className={className} />
   return (
     <span aria-hidden className={`relic-initial flex items-center justify-center font-display font-extrabold leading-none ${className}`}>
+      {name[0]}
+    </span>
+  )
+}
+
+/**
+ * Emblème peint d'une maîtrise (`src/assets/icons/mastery-<id>.png`, docs/MAITRISES.md § 3), sinon son initiale en
+ * or dans un rond neutre, à la même taille : un emblème pas encore peint ne laisse ni trou ni plantage.
+ */
+export function MasteryIcon({ id, name, className }: { id: string; name: string; className: string }) {
+  const url = URLS[`../assets/icons/mastery-${id}.png`]
+  if (url) return <img src={url} alt="" aria-hidden draggable={false} className={`inline-block shrink-0 select-none object-contain ${className}`} />
+  return (
+    <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-full border border-gold-500/60 bg-surface-2 font-display font-extrabold leading-none text-gold-300 ${className}`}>
       {name[0]}
     </span>
   )

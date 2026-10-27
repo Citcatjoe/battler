@@ -87,17 +87,20 @@ import bardVictoryImg from '../assets/bard-victory.png'
 import bardDazedAImg from '../assets/bard-dazed-a.png'
 import bardDazedBImg from '../assets/bard-dazed-b.png'
 import { Character, type CharacterDef } from './character'
-import { isRollTrigger, type CharacterEvent, type RankAxis } from './events'
+import { faceTrigger, isRollTrigger, rollFace, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
+import { characterPool, masteryOfSkill } from './masteries'
+import { MASTERY_SKILLS, skillById } from './skills'
+import { auraOfSkill } from './states'
 import { STATUSES } from './statuses'
 
 /**
- * Foudre du druide (0.76.0, demande de l'utilisateur) : des éclairs de dégâts directs, jamais critiques. 2 chacun
- * jusqu'à la 0.105.0 ; 1 depuis la 0.106.0 (phase 5 bis) : la Foudre se greffe sur son coup de base. Trois éclairs jusqu'à
- * la revue des compétences (O3, docs/REVUE_COMPETENCES.md), quatre depuis : la plus faible brique de kit du jeu.
+ * Le dé de départ d'un personnage (Maîtrises, docs/MAITRISES.md § 5.1) : son aura de départ sur le 1, sa compétence de
+ * personnage (signature) sur le 2, quatre faces nues. `form` : les sorts du druide, sous sa forme humaine.
  */
-const THUNDERBOLT = 1
-const THUNDERBOLT_HITS = 4
+function startDie(aura: string, signature?: string, form?: string): CharacterEvent[] {
+  return [aura, signature].flatMap((id, k) => (id ? [{ ...skillById(id), trigger: faceTrigger(k + 1), ...(form && { form }) }] : []))
+}
 
 /*
  * Archétypes par race :
@@ -141,91 +144,15 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', 'Pourfendre : la plaie suit le coup'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', 'Ivresse du sang : chaque critique, deux coups de plus'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
-  // Signature (règles v2, décision de l'utilisateur) : la Furie des vents, sur la face 1
+  // Maîtrises (retour du 2026-10-27, docs/MAITRISES.md § 5 et § 7) : sur le 1, son aura de départ (l'Ivresse du sang par
+  // défaut), sur le 2 sa signature, la Furie des vents ; Pourfendre quitte son dé pour la réserve du Sang
+  masteries: ['fury', 'blood'],
+  startAuras: ['blood-frenzy', 'wild-aura', 'open-wound'],
   signature: 'wind-fury',
-  // Répertoire (règles v2, phase 2, docs/PROGRESSION.md § 7) : le Sang (Épines acérées, Vol de vie, Plaie ouverte), la Furie
-  // (Œil de faucon, Aura de précision). La Plaie ouverte (revue des compétences, I4) : ses critiques nourrissent sa Curée
-  repertoire: ['thorns', 'life-steal', 'open-wound', 'hawk-eye', 'precision-aura'],
-  reserve: [
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Soin, la plaie qui ne se referme pas. La perte de 4 PV porte la gravure
-    // (l'arrêt des soins seul : +1,9, deux soigneurs sur neuf) ; gravée +14,0 chez lui, +14,1 en moyenne, rang II +5,4
-    {
-      id: 'hemorrhage',
-      name: 'Hémorragie',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [
-        { type: 'damage', amount: 4, target: 'opponent', source: 'bleed' },
-        { type: 'applyStatus', status: 'hemorrhage', stacks: 1, target: 'opponent' },
-      ],
-      rankAxis: { kind: 'amount', per: 2 },
-    },
-    {
-      id: 'power-aura',
-      name: 'Aura de puissance',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }],
-      // Axes de rang (E1, 0.110.0, SORTS.md § 20 ; entiers depuis la 0.111.0). Une aura non cumulable aiguisée vaut un
-      // cran de plus (son intensité) ; une aura cumulable, une charge de plus, ou une intensité. Cumulable à 3 charges depuis
-      // la revue des auras (A4) : son rang reste une intensité, +1 par coup
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, premier lot (0.114.0, SORTS.md) : le pont du Sang vers la Furie. Greffée, elle part si l'adversaire saigne :
-      // des coups de base bruts juste après le coup de base de son jet, deux jusqu'à la revue des compétences (O1), trois
-      // depuis (Gorak construit +5,8 → +7,4). Gravée : Brokk +10,4, Gorak +7,0. Rang : une charge de plus, trois coups
-      // (« un coup » par rang ne valait que +1,5 à +1,9)
-      id: 'quarry',
-      name: 'Curée',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
-      effects: [{ type: 'applyStatus', status: 'quarry', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de critiques de sa Furie, une aura. Chaque critique : deux coups
-      // de base bruts juste après ; chaque pose de plus et chaque rang : +5 % de critique. Gravée : Gorak +11,8, rang II +3,9
-      id: 'blood-frenzy',
-      name: 'Ivresse du sang',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'bloodFrenzy', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      // Phase 5 bis : elle remplace le coup de sa face par deux coups de base bruts, tout de suite
-      id: 'wind-fury',
-      name: 'Furie des vents',
-      nature: 'martial',
-      trigger: 'naturalOne',
-      relation: 'replace',
-      effects: [{ type: 'applyStatus', status: 'windFury', stacks: 1 }],
-      // Un coup de plus par rafale : +9,8 points gravée, au-dessus de la bande (0.111.0, signalé ; une charge de plus
-      // doublait la rafale : +15 ; le demi-rang de la 0.110.0, +7,9, est retiré)
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Phase 5 bis : elle modifie
-      // son coup de base ; un coup doit toucher pour poser un malus physique. La plaie coule au coup suivant (RESOLUTION
-      // § 5, règle 9). 0.107.0 (SORTS.md § 19) : Saignement égal à la moitié des PV que ce coup retire, arrondie au-dessus,
-      // au lieu de 2 : la plaie lit le coup.
-      id: 'cleave',
-      name: 'Pourfendre',
-      nature: 'martial',
-      trigger: 'naturalTwo',
-      relation: 'modify',
-      effects: [{ type: 'applyStatus', status: 'bleed', stacks: 0, fromHit: 0.5, target: 'opponent' }],
-      // +2 Saignement par rang depuis la revue des compétences (R1) : +1 laissait le rang II à +2,4 chez Gorak construit
-      rankAxis: { kind: 'stacks', per: 2 },
-    },
-  ],
+  events: startDie('blood-frenzy', 'wind-fury'),
 }
 
 const elaria: CharacterDef = {
@@ -239,7 +166,10 @@ const elaria: CharacterDef = {
   // quitte le kit. 53 PV (50 avant). Mesuré : 50,2 %.
   // Phase 5 bis : 22 % d'esquive (26 avant) et 15 % de critique (17) : ses compétences, désormais gratuites, la portaient
   // trop haut (Esquive améliorée et Œil de faucon greffés sur un coup).
-  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.22, critChance: 0.15, critMultiplier: 2.4 },
+  // Maîtrises, réglage de la vague 2 (2026-10-27, docs/MAITRISES.md § 8, P6) : critique ×2,4 → ×2,2 et 15 → 17 % (plus
+  // souvent, moins lourd). Ses critiques assurés (Feinte, Œil de faucon) font de la Contrepoids de plomb et de la Plume
+  // d'aigle ses meilleures reliques : construite 60,6 → 57,7 % (`npm run ramp`), vanilla 51,9 → 47,0 % (400 par duel)
+  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.22, critChance: 0.17, critMultiplier: 2.2 },
   // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
@@ -257,46 +187,14 @@ const elaria: CharacterDef = {
     tagline: 'Un souffle, une flèche.',
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
-    strengths: ['Meilleure esquive (22 %)', 'Critiques dévastateurs (×2,4)', 'Œil de faucon : son 1 est critique'],
+    strengths: ['Meilleure esquive (22 %)', 'Critiques fréquents (17 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
     weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
+  // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la Chasse
+  masteries: ['hunt', 'blood'],
+  startAuras: ['feint', 'precision-aura', 'open-wound', 'thorns', 'sidestep'],
   signature: 'hawk-eye',
-  // Répertoire : la Chasse (Furie des vents, Pourfendre, Curée), la Fuite (Coup de chance, Riposte) ; le Coup de massue
-  // (phase 8, lot 3 : la Feinte, sa consommatrice d'esquive, attend la décision de l'utilisateur, elle est la plus construite)
-  repertoire: ['wind-fury', 'cleave', 'quarry', 'lucky-strike', 'riposte', 'stunning-blow'],
-  reserve: [
-    {
-      id: 'precision-aura',
-      name: 'Aura de précision',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'hawk-eye',
-      name: 'Œil de faucon',
-      nature: 'finesse',
-      trigger: 'naturalOne',
-      // Phase 5 bis : greffé, le Critique assuré rend critique le coup de base de ce jet même
-      effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      id: 'evasion',
-      name: 'Esquive améliorée',
-      nature: 'finesse',
-      trigger: 'naturalTwo',
-      // Sans durée depuis la 0.36.5 : elle attend le prochain coup reçu. Avec une durée d'un tour, elle
-      // s'éteignait sans servir une fois sur trois (coup adverse sans frappe ou tour perdu), comme la Riposte avant la 0.32.0.
-      effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
-      // Son rang (0.117.1, non cumulable) : +2 dégâts à ses coups tant qu'elle attend l'esquive, +3,3 points gravée (+1 :
-      // +1,8, sous la bande). Avant : une esquive de plus (+9,6 en 0.111.0), que « une charge au plus » ne permet plus
-      rankAxis: { kind: 'power', per: 2 },
-    },
-  ],
+  events: startDie('feint', 'hawk-eye'),
 }
 
 const brokk: CharacterDef = {
@@ -328,57 +226,14 @@ const brokk: CharacterDef = {
     tagline: 'Ce qui passe la porte passe par moi.',
     background:
       "Gardien héréditaire de la grande porte de Durnhold, Brokk n'a jamais reculé d'un pas. Il encaisse plus que quiconque, et chaque faux pas le rend plus dur encore.",
-    strengths: ['Attaque lourde', 'Peau de pierre cumulable', 'Critiques lourds (×2,2)'],
+    strengths: ['Attaque lourde', 'Peau de pierre : son armure frappe aussi', 'Critiques lourds (×2,2)'],
     weaknesses: ['Critiques peu fréquents (10 %)', 'Esquive faible', 'Lent à prendre l’avantage'],
   },
-  // Signature (décision de l'utilisateur) : Épines acérées, sur la face 1
-  signature: 'thorns',
-  // Répertoire : le Rempart (Aura d'immunité, Rétribution, Rancune, Coup de massue), les Représailles (Riposte, Pourfendre,
-  // Curée, Vindicte, Dette de sang)
-  repertoire: ['immunity-aura', 'retribution', 'grudge', 'riposte', 'cleave', 'quarry', 'vendetta', 'blood-debt', 'stunning-blow', 'guard-break'],
-  reserve: [
-    {
-      id: 'intimidation-aura',
-      name: "Aura d'intimidation",
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'intimidationAura', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa Peau de pierre, le pont du Rempart vers les Épines
-      // (FAMILLES § 7, « un bouclier consommé donne des Épines »). Une aura : +2 Épines acérées par charge à chaque armure
-      // temporaire vidée (gravée : +8,1 ; « +3 Épines, 1x » valait +8,8, mais son rang n'ajoutait que +0,7). Revue des
-      // auras (A3) : +2 armure temporaire avec elles, la boucle qui nourrit sa ressource (Brokk +7,8 → +11,7, 0,39 armure
-      // vidée par combat avant). Son rang : +2 Épines et +2 armure ; il était de +6 Épines (calage de campagne, série 28)
-      id: 'bristling-rampart',
-      name: 'Rempart hérissé',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'bristlingRampart', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'thorns',
-      name: "Aura d'épines",
-      nature: 'martial',
-      trigger: 'naturalOne',
-      effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
-      // Une charge de plus qui agit sans se poser : chaque coup encaissé fait saigner d'une charge de plus (+8,8 points
-      // gravée, au-dessus de la bande, 0.111.0 ; à demi en 0.110.0 : +6,1)
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'stoneskin',
-      name: 'Peau de pierre',
-      nature: 'martial',
-      trigger: 'naturalTwo',
-      effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 6 }],
-      rankAxis: { kind: 'stacks', per: 2 },
-    },
-  ],
+  // Maîtrises : le Rempart et le Sang (Q1) ; l'Aura d'épines sur le 1 par défaut, la Peau de pierre (et son Poing) sur le 2
+  masteries: ['bulwark', 'blood'],
+  startAuras: ['thorns', 'intimidation-aura', 'immunity-aura', 'bristling-rampart', 'open-wound'],
+  signature: 'stoneskin',
+  events: startDie('thorns', 'stoneskin'),
 }
 
 const ervald: CharacterDef = {
@@ -409,91 +264,12 @@ const ervald: CharacterDef = {
     strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (24 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
-  signature: 'frost-aura',
-  // Répertoire : le Poison (Aura de décoction, Feux follets, Embrasement, Attiser), le Drain (Pourfendre, Peur)
-  repertoire: ['decoction-aura', 'firefly', 'conflagration', 'stoke', 'cleave', 'fear'],
-  reserve: [
-    {
-      id: 'grave-breath',
-      name: 'Souffle de la tombe',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      // Poison 3 : 3, 2 puis 1 PV, les 6 PV de l'ancien poison 2 pendant 3 tours (0.36.4)
-      effects: [{ type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    // Phase 8, premier lot (0.114.0, SORTS.md) : les consommateurs de son Poison. Le pont vers le Drain (Récolte) et
-    // l'amplificateur du fil Poison (Virulence). Revue des compétences (P1, P2) : elles mouraient sur leur condition et leur
-    // montant (Ervald construit +5,3 et +5,2)
-    {
-      // +14 PV si l'adversaire est empoisonné (7 avant la revue), rang +6 (+4 avant)
-      id: 'harvest',
-      name: 'Récolte',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
-      effects: [{ type: 'heal', amount: 14 }],
-      rankAxis: { kind: 'amount', per: 6 },
-    },
-    {
-      // Le Poison de l'adversaire triplé (`fromStatus`, deux fois ses charges en plus, lues quand elle part), puis +2. Sans
-      // condition depuis la revue (P1) : elle part à chaque fois (0,51 → 1,23 fois par combat), et pose elle-même son Poison
-      // sur un adversaire sain. Son rang ajoute 1 Poison à plat (3 avant la revue : sans condition, +3 sortait de la bande)
-      id: 'virulence',
-      name: 'Virulence',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 2 } }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Revue des compétences (I4) : la seconde consommatrice de critiques (Précision → Saignement), une aura. Réservée aux
-      // critiques fréquents : gravée, Ervald +10,3, Elaria +12,5, ailleurs +0,9 à +6,3. Son rang : +3 Saignement
-      id: 'open-wound',
-      name: 'Plaie ouverte',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'openWound', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la seconde consommatrice de soins, son Drain vers le Poison, une aura. Gravée :
-      // Ervald +8,9 ; rang II +2,6, sous la bande (ses soins sont rares, comme pour la Récolte)
-      id: 'black-sap',
-      name: 'Sève noire',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'blackSap', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'frost-aura',
-      name: 'Aura glaciale',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
-      effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }],
-      // +1 Poison par tour : +10,2 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi en 0.110.0 : +7,5)
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'life-steal',
-      name: 'Vol de vie',
-      nature: 'arcane',
-      trigger: 'naturalTwo',
-      // 0.107.0 (SORTS.md § 19) : 1 charge au lieu de 2 (plafond 2 gardé) ; deux coups drainés à chaque 1 le mettaient à
-      // +21 points gravé et +23,6 dans le kit d'Ervald. Revue des compétences (P3) : +2 PV par coup drainé dès le rang I
-      // (l'intensité posée), +4 par rang ; la plus faible compétence de kit après la Foudre (+5,9 dans les builds d'Ervald)
-      effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1, power: 2 }],
-      rankAxis: { kind: 'power', per: 4 },
-    },
-  ],
+  // Maîtrises : dé inchangé, l'Aura glaciale sur le 1 par défaut, le Vol de vie sur le 2
+  masteries: ['poison', 'shadow'],
+  startAuras: ['frost-aura', 'decoction-aura', 'dread', 'rot-aura', 'black-sap'],
+  signature: 'life-steal',
+  events: startDie('frost-aura', 'life-steal'),
 }
-
-/** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0 ; 6 depuis 0.115.1). */
-const PURIFICATION_LIGHT = 6
 
 const ysolde: CharacterDef = {
   id: 'ysolde',
@@ -524,67 +300,11 @@ const ysolde: CharacterDef = {
     strengths: ['Purification : retire un bonus, sinon blesse', 'Se soigne chaque tour (sainteté)', 'Combats longs'],
     weaknesses: ['Compétences sur un jet sur trois seulement', 'Peu de critiques (10 %)', 'Esquive faible'],
   },
-  signature: 'holy-aura',
-  // Répertoire : la Lumière (Aura d'immunité, Rétribution), le Contrôle (Peau de pierre, Vol de vie, Coup de massue)
-  // Phase 8, lot 3 : deux malus de la Lumière, Éclair aveuglant (Précision) et Confiscation (Sceaux)
-  repertoire: ['immunity-aura', 'retribution', 'stoneskin', 'life-steal', 'stunning-blow', 'blinding', 'seal-theft'],
-  reserve: [
-    {
-      id: 'fear',
-      name: 'Peur',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      // 0.107.0 (SORTS.md § 19) : une fois par combat ; un tour perdu à chaque 1 valait +22 points gravé (+20 à deux fois)
-      limit: 1,
-      effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }],
-      // Retour du 2026-10-27 (S10) : la Peur se voit, une ombre monte sous la cible (MISE_EN_SCENE.md M54)
-      scene: 'dread',
-      rankAxis: { kind: 'limit', per: 1 },
-    },
-    {
-      // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). Revue des auras
-      // (A1) : 3 PV par charge (1 avant), Ysolde +7,9 → +15,9 ; son rang, +3 par soin
-      id: 'sentence',
-      name: 'Sentence',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'sentence', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Revue des compétences (I1, retenue avec la Sentence) : l'autre consommatrice de ses soins, Soin → Garde, une aura.
-      // Gravée : Ysolde +16,1 (ailleurs +0,5 à +4,1) ; à la place de la Sentence dans ses builds, 37,0 → 43,9 %
-      id: 'faith-shield',
-      name: 'Bouclier de foi',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'faithShield', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'holy-aura',
-      name: 'Aura de sainteté',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      effects: [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }],
-      // Plafonnée à 2 charges : son intensité, +1 PV par tour (+8,1 points gravée, au bord de la bande, 0.111.0)
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'purification',
-      name: 'Purification',
-      nature: 'arcane',
-      trigger: 'naturalTwo',
-      // 0.42.0 : quand l'adversaire n'a aucun bonus à retirer, la lumière le blesse (dégâts directs) au lieu
-      // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
-      // 0.69.0 à 0.112.0 : elle retirait aussi son propre dernier malus ; retiré en 0.113.0 (décision de l'utilisateur :
-      // « l'effet sur soi doit être retiré ») : un bonus en face, ou 6 dégâts s'il n'en a pas. Son rang aiguise ces dégâts.
-      effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' } }],
-      rankAxis: { kind: 'amount', per: 3 },
-    },
-  ],
+  // Maîtrises : dé inchangé, l'Aura de sainteté sur le 1 par défaut, la Purification sur le 2
+  masteries: ['light', 'storm'],
+  startAuras: ['holy-aura', 'storm-sky', 'storm-field'],
+  signature: 'purification',
+  events: startDie('holy-aura', 'purification'),
 }
 
 const naraxes: CharacterDef = {
@@ -616,92 +336,11 @@ const naraxes: CharacterDef = {
     strengths: ['Bonne esquive (20 %)', 'Pile ou face : pile, son coup ×3', 'Lames empoisonnées (décoction)'],
     weaknesses: ['Peu de PV', 'Hasard à double tranchant', 'Aucune armure'],
   },
-  // Signature : Pile ou face jusqu'à la 0.106.1 (l'identité plutôt que la valeur) ; l'Aura de décoction depuis la 0.107.0
-  // (décision de l'utilisateur, SORTS.md § 19) : en campagne, elle partait sans ce qui la fait gagner
-  signature: 'decoction-aura',
-  // Répertoire : la Fortune (Œil de faucon, Esquive améliorée, Pas de côté), le Poison (Souffle de la tombe, Aura glaciale,
-  // Virulence). Le Pas de côté (revue des compétences, I3) : l'esquive permanente de la voleuse qui esquive déjà (20 %)
-  repertoire: ['hawk-eye', 'evasion', 'sidestep', 'grave-breath', 'frost-aura', 'virulence'],
-  reserve: [
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Fortune, le mauvais œil de la voleuse ; gravée +15,7 chez elle, +18,2
-    // en moyenne, rang II +4,6
-    { id: 'jinx', name: 'Malchance', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'jinx', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
-    {
-      id: 'lucky-strike',
-      name: 'Coup de chance',
-      nature: 'finesse',
-      trigger: 'naturalOne',
-      // 0.107.0 (SORTS.md § 19) : il se greffe (le coup de ce jet part) ; il remplaçait le coup depuis la phase 5 bis. Le dé
-      // qu'il donne, à l'action suivante, est un jet complet
-      effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa pièce (la Fortune). Une charge qui attend sa prochaine
-      // pièce : pile, et pile vaut ×3 de plus (ce coup ×6 ; ×5 jusqu'à la revue des compétences, O2). Gravée : +9,8 à ×5
-      // (pile seule, sans bonus : +5,1)
-      id: 'loaded-die',
-      name: 'Dé pipé',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'loadedDie', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de ses esquives, qui nourrit sa ressource (+5 % d'esquive par
-      // charge) ; chaque esquive, un critique assuré. Gravée : Naraxes +11,2, rang II +3,8
-      id: 'feint',
-      name: 'Feinte',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'feint', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    // Retour du 2026-10-27 (M10, R2 ; docs/RELIQUES.md § 17) : les pièces sont des compétences de la Fortune. Même geste
-    // que Pile ou face (elle modifie son coup ; s'il touche, la pièce ; pile, un gros effet ; face, rien), une nature
-    // chacune : Pile ou face frappe, la Pièce porte-bonheur arme son lanceur, la Pièce maudite frappe l'adversaire d'un malus
-    {
-      id: 'lucky-coin',
-      name: 'Pièce porte-bonheur',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      relation: 'modify',
-      effects: [{ type: 'applyStatus', status: 'luckyCoin', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'cursed-coin',
-      name: 'Pièce maudite',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      relation: 'modify',
-      effects: [{ type: 'applyStatus', status: 'cursedCoin', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'decoction-aura',
-      name: 'Aura de décoction',
-      nature: 'finesse',
-      trigger: 'naturalOne',
-      effects: [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }],
-      // +1 Poison par coup qui touche : +9,9 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi : +7,4)
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      id: 'coin-flip',
-      name: 'Pile ou face',
-      nature: 'finesse',
-      trigger: 'naturalTwo',
-      // Phase 5 bis (décision de l'utilisateur) : elle modifie son coup ; s'il touche, la pièce : pile, ce coup ×2 (×3 depuis
-      // la 0.107.0, `COIN_HEADS`)
-      relation: 'modify',
-      effects: [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }],
-      // Pile ×2 de plus par rang depuis la revue des compétences (R2) : ×1 laissait le rang II à +2,3 chez Naraxes construite
-      rankAxis: { kind: 'power', per: 2 },
-    },
-  ],
+  // Maîtrises : dé inchangé, l'Aura de décoction sur le 1 par défaut (sa signature de la 0.107.0), Pile ou face sur le 2
+  masteries: ['chance', 'poison'],
+  startAuras: ['decoction-aura', 'frost-aura', 'lucky-streak'],
+  signature: 'coin-flip',
+  events: startDie('decoction-aura', 'coin-flip'),
 }
 
 /*
@@ -718,7 +357,9 @@ const aldric: CharacterDef = {
   // 50,1 % contre les neuf autres (52,7 % avec les siennes).
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Rétribution sur le 1, Riposte sur le 2 ; l'Aura d'immunité quitte le
   // kit. Mesuré : 50,2 % (53,9 % avant).
-  stats: { maxHp: 54, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
+  // Maîtrises (docs/MAITRISES.md § 5.2) : la Riposte quitte son dé ; sans compensation, chaque aura de départ le laissait de
+  // 41 à 45 %. Attaque 4 à 6 → 5 à 6, PV intacts : de 51 à 56 % selon l'aura (série 72 du laboratoire)
+  stats: { maxHp: 54, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
   // Nouveau modèle et postures (atelier des postures, 2026-10-20) : épée basse, plus rien au-dessus de la
   // tête que la hampe de la bannière. La taille se règle sur le corps (tête-pieds, 77 % de la toile) et non
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
@@ -735,72 +376,14 @@ const aldric: CharacterDef = {
     tagline: 'Chaque coup reçu est une dette.',
     background:
       "Champion de l'ordre du Sceau ardent, Aldric porte la bannière dans les pires mêlées. Il encaisse sans broncher, tient le compte des coups reçus et rend la justice d'un seul revers.",
-    strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Riposte : punit qui le frappe'],
+    strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Vindicte : chaque renvoi nourrit son coup'],
     weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure'],
   },
+  // Maîtrises : la Vindicte sur le 1 par défaut, la Rétribution sur le 2 ; la Riposte quitte son dé pour les Représailles
+  masteries: ['retaliation', 'shadow'],
+  startAuras: ['vendetta', 'rancor', 'dread', 'blood-debt', 'rot-aura'],
   signature: 'retribution',
-  // Répertoire : la Lumière (Purification, Vol de vie), l'Ombre du serment brisé (Peur, Souffle de la tombe, Rancune) ; la
-  // Sève noire (phase 8, lot 3), le pont de son Vol de vie vers le Poison du Souffle ; l'Hémorragie (lot 3), la malédiction
-  // du serment brisé qui refuse la guérison
-  repertoire: ['purification', 'life-steal', 'fear', 'grave-breath', 'grudge', 'black-sap', 'hemorrhage'],
-  reserve: [
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Sceaux, le paladin confisque ; gravée +9,3 chez lui, +10,0 en moyenne,
-    // rang II +3,1 (au bord bas de la bande)
-    { id: 'seal-theft', name: 'Confiscation', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'sealTheft', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
-    {
-      id: 'immunity-aura',
-      name: "Aura d'immunité",
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [
-        { type: 'cleanse', polarity: 'negative' },
-        { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
-      ],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Représailles, les dégâts qu'il renvoie (Riposte,
-      // Rétribution). Une aura : +6 Ferveur par charge à chaque renvoi depuis la revue des auras (A2 ; +3 avant, Aldric
-      // +9,0 → +12,9 gravée ; +9 valait +15,4, plus risqué)
-      id: 'vendetta',
-      name: 'Vindicte',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : la seconde consommatrice des renvois, ses Représailles vers le Sang, une aura.
-      // Gravée : Aldric +12,1, rang II +4,0
-      id: 'blood-debt',
-      name: 'Dette de sang',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'bloodDebt', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'retribution',
-      name: 'Rétribution',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      // 0.107.0 (SORTS.md § 19, choisi au laboratoire, série 16) : la moitié des jauges, arrondie au-dessous (au-dessus,
-      // elle restait à +20,8 gravée, hors de la bande) ; un coup à chaque jet remplissait ses trois jauges à chaque tour
-      // adverse (+38 points dans son kit, +28 gravée)
-      effects: [{ type: 'release', status: 'retribution', min: 1, share: 0.5, target: 'opponent', source: 'strike' }],
-      rankAxis: { kind: 'share', per: 25 },
-    },
-    {
-      id: 'riposte',
-      name: 'Riposte',
-      nature: 'martial',
-      trigger: 'naturalTwo',
-      effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
-      rankAxis: { kind: 'power', per: 2 },
-    },
-  ],
+  events: startDie('vendetta', 'retribution'),
 }
 
 const morgrut: CharacterDef = {
@@ -814,7 +397,9 @@ const morgrut: CharacterDef = {
   // sont nues, la forge les remplit.
   // 59 PV (63 avant) : la plus forte attaque (7 à 9) frappe à chaque jet ; sans compétence ni critique, les PV sont
   // son seul autre levier.
-  stats: { maxHp: 59, attackMin: 7, attackMax: 9, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
+  // Maîtrises (Q2, défaut adopté) : une aura sur le 1 comme tout le monde, l'Aura de puissance, et sa face 2 nue. Attaque
+  // 7 à 9 → 6 à 8 : avec la Puissance à 7 à 9, il passait 65,1 % (série 73)
+  stats: { maxHp: 59, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
   // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
   // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
   // massue du coup encaissé et du K.O. descend sous les pieds
@@ -833,47 +418,13 @@ const morgrut: CharacterDef = {
     tagline: 'Taper. Taper encore. Taper plus fort.',
     background:
       "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Les dés, il ne les regarde même pas : il tape.",
-    strengths: ['La plus forte attaque (7 à 9)', 'Beaucoup de PV', 'Frappe fort à chaque jet'],
-    weaknesses: ['Aucune compétence', 'Six faces nues', 'Ni esquive ni critique'],
+    strengths: ['La plus forte attaque (6 à 8)', 'Beaucoup de PV', 'Aura de puissance : chaque coup plus lourd'],
+    weaknesses: ['Une seule compétence', 'Cinq faces nues', 'Ni esquive ni critique'],
   },
-  // Répertoire : la Colère (Aura de puissance, Pourfendre, Curée), la Masse (Peau de pierre, Aura d'intimidation, Rempart hérissé)
-  repertoire: ['power-aura', 'cleave', 'quarry', 'stoneskin', 'intimidation-aura', 'bristling-rampart'],
-  // Hors kit (phase 8, premier lot, 0.114.0, SORTS.md) : la Rancune, sa Masse (il encaisse, et son critique sur 7 à 9 est
-  // le plus lourd : +19,8 gravée, au bord de la bande ; +14,2 en moyenne sur le roster)
-  reserve: [
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Garde, l'ogre fracasse la garde ; il ne critique pas, ce coup ×2 est son
-    // critique. Gravée +18,6 chez lui, +14,5 en moyenne, rang II +5,8
-    {
-      id: 'guard-break',
-      name: 'Brise-garde',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      relation: 'modify',
-      effects: [{ type: 'applyStatus', status: 'guardBreak', stacks: 1, target: 'opponent' }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      id: 'grudge',
-      name: 'Rancune',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'grudge', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : sa Masse, le premier porteur d'Étourdi. Il modifie son coup (un malus physique
-      // demande un coup qui touche), une fois par combat ; son rang, une fois de plus. Gravé : Morgrut +15,3, rang II +5,3
-      id: 'stunning-blow',
-      name: 'Coup de massue',
-      nature: 'martial',
-      trigger: 'naturalThree',
-      relation: 'modify',
-      limit: 1,
-      effects: [{ type: 'applyStatus', status: 'stunned', stacks: 1, target: 'opponent' }],
-      rankAxis: { kind: 'limit', per: 1 },
-    },
-  ],
-  events: [],
+  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, aucune signature
+  masteries: ['fury', 'bulwark'],
+  startAuras: ['power-aura'],
+  events: startDie('power-aura'),
 }
 
 const thaldrin: CharacterDef = {
@@ -929,78 +480,17 @@ const thaldrin: CharacterDef = {
     tagline: 'La forêt a deux visages.',
     background:
       "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
-    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', 'Foudre : quatre éclairs'],
+    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', "Ciel d'orage : la foudre à chaque tour"],
     weaknesses: ['Aucun soin ni armure', 'Ses sorts, sous forme d’homme seulement', 'Forme imposée à chaque tour'],
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
   // aussi, d'un petit coup de base. Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe et ses deux auras.
-  // Signature (2026-10-24, décision de l'utilisateur, PROGRESSION.md § 13.3) : les Feux follets, sur la face 1
+  // Maîtrises : le Ciel d'orage sur le 1 par défaut, les Feux follets sur le 2 (sa signature, décision de l'utilisateur du
+  // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour l'Orage
+  masteries: ['storm', 'poison'],
+  startAuras: ['storm-sky', 'storm-field', 'decoction-aura', 'frost-aura'],
   signature: 'firefly',
-  // Répertoire : l'Orage et le Feu en dégâts qui durent (Souffle de la tombe, Aura de décoction), la Bête (Aura de puissance,
-  // Épines acérées, Coup de massue)
-  repertoire: ['grave-breath', 'decoction-aura', 'power-aura', 'thorns', 'stunning-blow'],
-  reserve: [
-    // Phase 8, lot 3 (SORTS.md § 29) : le malus de Précision, l'éclair qui éblouit ; gravée +13,8 chez lui, +13,6 en
-    // moyenne, rang II +3,8 (+10 % de coups ratés)
-    // Retour du 2026-10-27 (S10) : un éclair blanc frappe la cible, l'arène blanchit, puis « Aveuglé » (MISE_EN_SCENE.md M54)
-    { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', scene: 'blindFlash', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
-    { id: 'wild-aura', name: 'Aura sauvage', nature: 'martial', trigger: 'naturalThree', form: 'human', effects: [{ type: 'applyStatus', status: 'wildAura', stacks: 1 }], rankAxis: { kind: 'stacks', per: 1 } },
-    {
-      // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Feux follets (la Brûlure). Une charge qui attend son
-      // prochain coup qui touche un adversaire qui brûle : trois fois sa Brûlure restante, d'un coup (gravée : +8,6 ; au jet,
-      // sans attente, elle ne partait que 0,15 fois par combat : +2,2 à ×2)
-      id: 'conflagration',
-      name: 'Embrasement',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'conflagration', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : son Feu, l'amplificateur de la Brûlure. +2 à la Brûlure de l'adversaire, qui
-      // repart (une Brûlure se remplace) ; sans Brûlure, 2. Gravé : Thaldrin +11,7, rang II +5,5 (+1 de plus)
-      id: 'stoke',
-      name: 'Attiser',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent', fromStatus: { status: 'burn', who: 'opponent', factor: 1 } }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    {
-      // Phase 8, lot 3 (SORTS.md § 28) : son Orage, une aura qui frappe l'adversaire au début de chacun de ses tours, un éclair
-      // de dégâts directs par charge ; gravée, elle agit sous ses deux formes. Gravée : Thaldrin +10,5, rang II +4,7
-      id: 'storm-sky',
-      name: "Ciel d'orage",
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'stormSky', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-  ],
-  events: [
-    {
-      id: 'firefly',
-      name: 'Feux follets',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      form: 'human',
-      effects: [{ type: 'applyStatus', status: 'burn', stacks: 3, target: 'opponent' }],
-      // +2 Brûlure par rang depuis la revue des compétences (R3) : +1 laissait le rang II à +3,4 chez Thaldrin construit
-      rankAxis: { kind: 'stacks', per: 2 },
-    },
-    {
-      id: 'thunderbolt',
-      name: 'Foudre',
-      nature: 'arcane',
-      trigger: 'naturalTwo',
-      form: 'human',
-      scene: 'lightning',
-      effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent', source: 'lightning' }],
-      // +1 par éclair : +8,7 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi en 0.110.0 : +6,5 ; +2 par
-      // éclair avant la 0.110.0 : +15,1)
-      rankAxis: { kind: 'amount', per: 1 },
-    },
-  ],
+  events: startDie('storm-sky', 'firefly', 'human'),
 }
 
 /*
@@ -1038,62 +528,15 @@ const fanchon: CharacterDef = {
     tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle lance deux dés et frappe deux fois ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : quatre dés au tour suivant', 'Soliste : ce coup ×3', 'Frappe fort pour une saltimbanque (4 à 6)'],
+    strengths: ['Duo : quatre dés au tour suivant', 'Ballade : chaque coup la soigne', 'Frappe fort pour une saltimbanque (4 à 6)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
-  // Signature (le Duo, 2026-10-25) : sur la face 1, son second dé
+  // Maîtrises (P7) : le Chant et la Chance ; la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité, les dés de plus) ;
+  // le Soliste quitte son dé pour le Chant. Ses stats ne bougent pas : Ballade / Duo 50,4 % (série 70)
+  masteries: ['song', 'chance'],
+  startAuras: ['ballad', 'lucky-streak'],
   signature: 'duo',
-  // Répertoire : le Chant (Aura de puissance, Esquive améliorée, Aura de précision), la Fortune (Pile ou face, Dé pipé).
-  // Le Duo (2026-10-25) : l'Aura de puissance remplace Coup de chance, la mécanique même du Duo (un seul de leurs
-  // statuts part par action). Gravée chez elle : +13,7 points (Coup de chance +18,0) ; construite 56 % contre 57 %,
-  // saison 57 % contre 58 %, à égalité dans le bruit
-  // Retour du 2026-10-27 : les deux pièces nouvelles de la Fortune (Pièce porte-bonheur, Pièce maudite)
-  repertoire: ['power-aura', 'coin-flip', 'loaded-die', 'evasion', 'precision-aura', 'feint', 'jinx', 'lucky-coin', 'cursed-coin'],
-  // Hors kit (phase 5 ter) : ses autres chansons, gravables, réécrites pour une face (elles valaient un double, un jet
-  // sur 36) : Siffloter 3 → 2 charges, Fausse note 2 → 1, Crescendo ×4 à la place des deux coups → ce coup ×2. 0.107.0 :
-  // Crescendo monte (×1 de plus à chaque fois qu'il touche), il n'est plus un Soliste plus faible. Revue des compétences
-  // (P5, P4) : Siffloter rend 3 PV par tour (2 avant) ; la Fausse note vaut deux coups à −4 (un coup à −5 avant), son
-  // intensité de départ (1) les compte. Le Pas de côté (I3) : la saltimbanque qui esquive d'un pas de danse
-  reserve: [
-    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
-    {
-      id: 'false-note',
-      name: 'Fausse note',
-      nature: 'arcane',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, power: 1, target: 'opponent' }],
-      rankAxis: { kind: 'power', per: 1 },
-    },
-    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
-    // Revue des compétences (I3) : la première esquive permanente, une aura cumulable (+8 % par charge ; gravée +8,2, de
-    // Fanchon +6,4 à Ervald +10,0). Son rang : une charge de plus
-    {
-      id: 'sidestep',
-      name: 'Pas de côté',
-      nature: 'finesse',
-      trigger: 'naturalThree',
-      effects: [{ type: 'applyStatus', status: 'sidestep', stacks: 1 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-  ],
-  events: [
-    // Le Duo (2026-10-25) : des dés de plus à sa prochaine action, joués en entier (la mécanique de Coup de chance). Jusqu'à
-    // la 0.120.0, il posait d'abord +1 Aura mélodieuse, et un seul dé de plus. Retour du 2026-10-27 (P7) : l'aura quitte le
-    // jeu, le Duo la compense par ses charges, 1 → 3 (quatre dés à l'action suivante). Mesuré (winRate, 300 combats par
-    // duel) : sans l'aura, Duo 1 18,5 %, Duo 2 36,9 %, Duo 3 49,4 % ; rang II (4 charges) 56,3 %. Son rang : un dé de plus
-    {
-      id: 'duo',
-      name: 'Duo',
-      nature: 'arcane',
-      trigger: 'naturalOne',
-      effects: [{ type: 'applyStatus', status: 'duo', stacks: 3 }],
-      rankAxis: { kind: 'stacks', per: 1 },
-    },
-    // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il
-    // modifie son coup de base, ce coup ×3. 0.107.0 (SORTS.md § 19) : le solo, une fois par combat (un solo qui touche) ;
-    // à chaque 2, il valait +23 points gravé ; Crescendo, lui, monte à chaque fois
-    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
-  ],
+  events: startDie('ballad', 'duo'),
 }
 
 /** Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
@@ -1116,29 +559,24 @@ export const CHARACTERS: readonly Character[] = ROSTER.map((def) => new Characte
 export const CHARACTER_IDS: readonly string[] = CHARACTERS.map((c) => c.id)
 
 /**
- * Toutes les compétences du roster, une fois chacune : celles des kits, puis celles hors kit (`reserve`, règles v2). Une
- * compétence imprimée sur plusieurs faces (la Foudre du druide) n'y est qu'une fois.
+ * Toutes les compétences du jeu, une fois chacune : le catalogue des maîtrises (skills.ts), dans l'ordre du compendium.
  */
-export const ALL_SKILLS: readonly CharacterEvent[] = ROSTER.flatMap((c) => [...c.events, ...(c.reserve ?? [])]).filter(
-  (e, k, all) => all.findIndex((x) => x.id === e.id) === k,
-)
+export const ALL_SKILLS: readonly CharacterEvent[] = Object.values(MASTERY_SKILLS).flat()
 
 /**
- * Les compétences qu'on peut graver sur un dé forgé (forge.ts, Graver) : celles du dé simple de tout le roster, kits et
- * compétences hors kit, avec un effet. La forge en tire une ; elle ne la grave jamais sur son propre propriétaire.
+ * Les compétences qu'on peut graver sur un dé forgé (forge.ts, Graver) : celles du catalogue qui se posent sur une face,
+ * avec un effet. La campagne en tire dans la réserve des maîtrises du champion (`characterPool`).
  */
 export const ENGRAVABLE_SKILLS: readonly CharacterEvent[] = ALL_SKILLS.filter(isEngravable)
 
-/** Le répertoire d'un personnage (règles v2, phase 2) : les compétences gravables qu'il peut apprendre, dans l'ordre de sa fiche. */
-export function repertoireOf(id: string): CharacterEvent[] {
-  const ids = ROSTER.find((d) => d.id === id)?.repertoire ?? []
-  return ids.map((skill) => ENGRAVABLE_SKILLS.find((e) => e.id === skill)!)
-}
-
-export function createCharacter(id: string): Character {
+/**
+ * Un personnage du roster. Son dé vanilla porte la première de ses auras de départ ; `aura` en pose une autre sur le 1
+ * (le choix du départ de campagne, docs/MAITRISES.md § 5) : une aura hors de ses `startAuras` est une erreur.
+ */
+export function createCharacter(id: string, options: { aura?: string } = {}): Character {
   const character = CHARACTERS.find((c) => c.id === id)
   if (!character) throw new Error(`Personnage inconnu : ${id}`)
-  return character
+  return options.aura === undefined || options.aura === character.definition.startAuras?.[0] ? character : character.withStartAura(options.aura)
 }
 
 /**
@@ -1176,8 +614,9 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
     for (const f of d.forms ?? [])
       for (const id of f.statuses ?? [])
         if (STATUSES[id]?.mechanic !== 'form') problems.push(`${at} forme ${f.id} : ${id} n'est pas un statut de forme (mechanic: 'form')`)
-    // Toutes ses compétences, celles du kit et celles hors kit (`reserve`) : les mêmes contrôles (revue 0.110.0)
-    const skills = [...d.events, ...(d.reserve ?? [])]
+    // Toutes ses compétences, celles de son dé et celles de sa réserve (ses deux maîtrises) : les mêmes contrôles (revue
+    // 0.110.0) ; chaque brique du catalogue appartient à la réserve d'au moins un personnage
+    const skills = [...d.events, ...characterPool(d)]
     for (const id of Object.keys(STATUSES) as (keyof typeof STATUSES)[])
       if (STATUSES[id].mechanic === 'form' && skills.some((e) => e.effects.some((x) => x.type === 'applyStatus' && x.status === id)))
         problems.push(`${at} ${id} est un statut de forme : seul le moteur le pose`)
@@ -1232,7 +671,6 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
           problems.push(`${at} ${e.id} : ${f.status} dure autant de tours que de charges, sans durée en plus`)
       }
     }
-    for (const e of d.reserve ?? []) if (seen.has(e.id)) problems.push(`${at} ${e.id} : à la fois dans le kit et hors kit`)
     // Axe de rang (E1, 0.110.0) : toute compétence du dé en déclare un, qui a prise sur elle et grandit sans plafond
     for (const e of skills) {
       const axis = e.rankAxis
@@ -1259,13 +697,21 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       // se compte en points de pourcentage
       if (!Number.isInteger(axis.per) || axis.per < 1) problems.push(`${at} ${e.id} : axe de rang, un gain entier ≥ 1 par rang`)
     }
-    // Répertoire (règles v2) : des compétences gravables d'autres personnages (de tout le roster), sans doublon
-    const others = ENGRAVABLE_SKILLS.filter((e) => ![...d.events, ...(d.reserve ?? [])].some((own) => own.id === e.id)).map((e) => e.id)
-    for (const id of d.repertoire ?? []) if (!others.includes(id)) problems.push(`${at} répertoire : ${id} n'est pas une compétence gravable d'un autre personnage`)
-    if (new Set(d.repertoire).size !== (d.repertoire ?? []).length) problems.push(`${at} répertoire : doublon`)
-    // La signature, une compétence du dé : sur la face 1 du personnage vanilla (0.113.0, le même dans tous les modes ; le
-    // dé vanilla entier est figé par un test du roster, modules.test.ts)
-    if (d.signature && !d.events.some((e) => e.id === d.signature && isRollTrigger(e.trigger))) problems.push(`${at} signature : ${d.signature} n'est pas une de ses compétences du dé`)
+    // Les Maîtrises (docs/MAITRISES.md § 5 et § 11.1) : le 1 du dé vanilla porte sa première aura de départ ; chaque aura de
+    // départ est une aura d'une de ses maîtrises ; la signature est sur le 2 et appartient à une de ses maîtrises
+    const onFace = (face: number) => d.events.filter((e) => rollFace(e.trigger) === face).map((e) => e.id)
+    const starts = d.startAuras ?? []
+    if (starts.length === 0) problems.push(`${at} aucune aura de départ`)
+    if (new Set(starts).size !== starts.length) problems.push(`${at} aura de départ en double`)
+    if (starts.length > 0 && onFace(1).join() !== starts[0]) problems.push(`${at} le 1 du dé vanilla porte ${onFace(1).join() || 'rien'}, pas ${starts[0]}`)
+    for (const id of starts) {
+      const m = masteryOfSkill(id)
+      if (!m || !d.masteries.includes(m)) problems.push(`${at} aura de départ ${id} hors de ses maîtrises`)
+      else if (!auraOfSkill(skillById(id))) problems.push(`${at} aura de départ ${id} : pas une aura`)
+    }
+    if (d.signature && onFace(2).join() !== d.signature) problems.push(`${at} signature : ${d.signature} n'est pas sur le 2`)
+    if (!d.signature && onFace(2).length > 0) problems.push(`${at} une compétence sur le 2 sans signature`)
+    if (d.events.some((e) => (rollFace(e.trigger) ?? 0) > 2)) problems.push(`${at} les faces 3 à 6 du dé vanilla sont nues`)
   }
   return problems
 }

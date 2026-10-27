@@ -15,8 +15,20 @@ import { autoForge, drawForgeOffer, withForgeStep, type ForgeStep } from './forg
 import { getRelic, RELICS, type Relic } from './relics'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
+import { rollFace } from './events'
 
 const { audit, problems, seen } = createAudit()
+
+/**
+ * `host` avec la compétence `id` au rang `rank` (0 : rang I) : gravée sur le 3, après `before` ; ou, si son dé de départ la
+ * porte déjà (Maîtrises, 2026-10-27 : la Vindicte d'Aldric, la Feinte d'Elaria, l'Ivresse de Gorak…), aiguisée sur sa face.
+ */
+function withSkill(host: string, id: string, rank: number, before: ForgeStep[] = []): Character {
+  const own = createCharacter(host).events.find((e) => e.id === id)
+  const face = own ? rollFace(own.trigger)! : 3
+  const engrave: ForgeStep[] = own ? [] : [{ op: 'engrave', face, skill: ENGRAVABLE_SKILLS.find((e) => e.id === id)! }]
+  return createCharacter(host).withForge([...before, ...engrave, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face }))])
+}
 
 /** Relique de coup sur un moment (aucune du registre n'en a encore) : quand il encaisse, recharge de 2 tours. */
 const RETORT: Relic = { id: 'retort', name: 'Riposte de test', flavor: 'Test.', trigger: { type: 'strike', on: 'hurt' }, cooldown: 2, effects: [{ type: 'damage', amount: 2, target: 'opponent', source: 'strike' }] }
@@ -42,13 +54,21 @@ describe('audit de résolution', () => {
             audit(simulateCombat([fighters[0].withRelics(KITS[n % KITS.length]), fighters[1].withRelics(KITS[(n >> 2) % KITS.length])], { seed: 7000 + n }))
           n++
         }
+    // Les mécaniques que les dés de départ ne portent plus d'office depuis les Maîtrises (le Soliste, la Riposte, la Foudre,
+    // Pourfendre, l'Esquive améliorée) : gravées sur le 3 de leur ancien porteur
+    for (const [host, id] of [['fanchon', 'soloist'], ['aldric', 'riposte'], ['thaldrin', 'thunderbolt'], ['gorak', 'cleave'], ['elaria', 'evasion']])
+      for (const b of CHARACTER_IDS)
+        for (let k = 0; k < (id === 'riposte' ? 24 : 4); k++) {
+          const c = withSkill(host, id, 0)
+          audit(simulateCombat(k % 2 ? [c, createCharacter(b)] : [createCharacter(b), c], { seed: 7000 + n++ }))
+        }
     const report = [...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)
     expect(report).toEqual([])
     // L'audit a bien rencontré chaque mécanique que le roster peut produire. Pile + Vol de vie n'arrive pas
     // (Naraxes n'a pas de Vol de vie) : combat.test.ts le prouve par des combats construits. L'esquive imposée ne laisse
     // plus aucune charge (Esquive améliorée non cumulable, 0.117.1). Plus de purge de ses propres malus dans le roster
     // depuis la 0.113.0 (la Purification ne vise plus que l'adversaire ; l'Aura d'immunité est hors kit)
-    for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base', 'coup de base multiplié', 'duo : la rafale suit l’action après le 1', 'cause : jet greffé', 'esquive imposée', 'esquive imposée, plus aucune charge', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', "dégâts de l'instant", 'dégâts temporaires', 'charges tirées du coup', 'relâche en part', 'compétence épuisée'])
+    for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base', 'coup de base multiplié', 'duo : la rafale suit l’action du Duo', 'cause : jet greffé', 'esquive imposée', 'esquive imposée, plus aucune charge', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', "dégâts de l'instant", 'dégâts temporaires', 'charges tirées du coup', 'relâche en part', 'compétence épuisée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
     // 0.110.0 : la Furie part juste après le jet qui la pose (RESOLUTION § 2)
     expect(seen['furie juste après son jet'] ?? 0).toBeGreaterThan(0)
@@ -181,9 +201,8 @@ describe('audit de résolution : phase 8, second lot', () => {
     for (const [id, list] of Object.entries(hosts))
       for (const [host, before, relics] of list)
         for (const rank of [0, 1]) {
-          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
           for (const b of CHARACTER_IDS)
-            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 15000 + n++ }))
+            for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before).withRelics(relics.map(getRelic)), createCharacter(b)], { seed: 15000 + n++ }))
         }
     // Les quatre reliques chez leurs producteurs, seules puis avec la consommatrice de la même ressource
     const relicHosts: Record<string, readonly [string, string][]> = {
@@ -194,9 +213,9 @@ describe('audit de résolution : phase 8, second lot', () => {
     }
     for (const [id, list] of Object.entries(relicHosts))
       for (const [host, partner] of list)
-        for (const steps of [[], [{ op: 'engrave' as const, face: 3, skill: skill(partner) }]])
+        for (const paired of [false, true])
           for (const b of CHARACTER_IDS)
-            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps).withRelics([getRelic(id)]), createCharacter(b)], { seed: 15000 + n++ }))
+            for (let k = 0; k < 3; k++) audit(simulateCombat([(paired ? withSkill(host, partner, 0) : createCharacter(host)).withRelics([getRelic(id)]), createCharacter(b)], { seed: 15000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['embrasement', 'pièce pipée', 'rempart hérissé', 'vindicte', 'relique : shieldBroken', 'relique : reflected', 'relique : heads', 'bonus de relique à conditions'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
@@ -223,9 +242,8 @@ describe('audit de résolution : revue des auras et des compétences (docs/REVUE
     for (const [id, list] of Object.entries(hosts))
       for (const [host, before] of list)
         for (const rank of [0, 1]) {
-          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
           for (const b of CHARACTER_IDS)
-            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 18000 + n++ }))
+            for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 18000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['bouclier de foi', 'plaie ouverte', 'rempart hérissé', 'sentence', 'fausse note aiguisée', 'charges tirées d’un statut']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
@@ -252,9 +270,8 @@ describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
     for (const [id, list] of Object.entries(hosts))
       for (const [host, before] of list)
         for (const rank of [0, 1]) {
-          const steps: ForgeStep[] = [...before, { op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
           for (const b of CHARACTER_IDS)
-            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 19000 + n++ }))
+            for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 19000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['feinte', 'sève noire', 'dette de sang', 'statut qui repart', 'ciel d’orage', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
@@ -279,9 +296,8 @@ describe('audit de résolution : phase 8, lot 3, les malus de famille', () => {
     for (const [id, list] of Object.entries(hosts))
       for (const host of list)
         for (const rank of [0, 1]) {
-          const steps: ForgeStep[] = [{ op: 'engrave', face: 3, skill: skill(id) }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
           for (const b of CHARACTER_IDS)
-            for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(host).withForge(steps), createCharacter(b)], { seed: 20000 + n++ }))
+            for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank), createCharacter(b)], { seed: 20000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['garde brisée', 'garde brisée : armure brisée', 'malchance', 'aveuglé', 'hémorragie', 'sceau de vol'])
@@ -336,18 +352,20 @@ describe('audit de résolution : retour du 2026-10-27, règles du moteur (usure 
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     let n = 0
     // Œil de faucon (et aiguisé) et Rancune : des critiques qui attendent ; Esquive améliorée contre la Riposte d'Aldric
-    const elaria = [createCharacter('elaria'), createCharacter('elaria').withForge([{ op: 'sharpen', face: 1 }])]
+    const elaria = [withSkill('elaria', 'evasion', 0), withSkill('elaria', 'evasion', 1)]
     const grudge = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: skill('grudge') }])
+    // La Riposte d'Aldric a quitté son dé (Maîtrises) : gravée sur son 3
+    const foe = (b: string) => (b === 'aldric' ? withSkill('aldric', 'riposte', 0) : createCharacter(b))
     for (const a of [...elaria, grudge])
       for (const b of CHARACTER_IDS)
         for (let k = 0; k < 6; k++) {
-          audit(simulateCombat([a, createCharacter(b)], { seed: 28000 + n++ }))
-          audit(simulateCombat([createCharacter(b), a], { seed: 28000 + n++ }))
+          audit(simulateCombat([a, foe(b)], { seed: 28000 + n++ }))
+          audit(simulateCombat([foe(b), a], { seed: 28000 + n++ }))
         }
     // Clous de pavois chez Brokk (Peau de pierre), contre un attaquant armé (Aura d'immunité gravée : +1 armure)
     const nails = createCharacter('brokk').withRelics([getRelic('pavise-nails')])
     const armored = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
-    for (const b of [...CHARACTER_IDS.map(createCharacter), armored])
+    for (const b of [...CHARACTER_IDS.map((id) => createCharacter(id)), armored])
       for (let k = 0; k < 8; k++) audit(simulateCombat([nails, b], { seed: 28000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['riposte esquivée', 'riposte', 'dégâts renvoyés contre l’armure', 'dégâts contre l’armure, sans armure']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
@@ -380,6 +398,41 @@ describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     // Crescendo (hors kit, 0.107.0) : seule une gravure le joue, son coup qui monte. Une Furie aiguisée (0.110.0) ajoute
     // un coup à sa rafale ; elle ne pose plus deux charges (la Furie à plusieurs charges ne vient plus d'un dé forgé)
-    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'duo : la rafale suit l’action après le 1', 'attaque trempée', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'duo : la rafale suit l’action du Duo', 'attaque trempée', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
+  it('aucune anomalie pour chaque aura de départ de chaque personnage, ni pour les briques nouvelles gravées chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    let n = 0
+    // Chaque dé de départ (l'aura choisie sur le 1), contre tout le roster, de chaque côté
+    for (const a of CHARACTER_IDS)
+      for (const aura of createCharacter(a).definition.startAuras ?? [])
+        for (const b of CHARACTER_IDS) {
+          audit(simulateCombat([createCharacter(a, { aura }), createCharacter(b)], { seed: 29000 + n++ }))
+          audit(simulateCombat([createCharacter(b), createCharacter(a, { aura })], { seed: 29000 + n++ }))
+        }
+    // Les briques nouvelles chez les porteurs de leur maîtrise (docs/MAITRISES.md § 4)
+    const hosts: Record<string, readonly string[]> = {
+      'lucky-streak': ['naraxes', 'fanchon'],
+      dread: ['ervald', 'aldric'],
+      'rot-aura': ['ervald', 'aldric'],
+      rancor: ['aldric'],
+      'storm-field': ['ysolde', 'thaldrin'],
+      ballad: ['fanchon'],
+      prayer: ['ysolde'],
+      wither: ['ervald', 'aldric'],
+      assault: ['gorak', 'morgrut'],
+      'loaded-die': ['naraxes', 'fanchon'],
+      'open-wound': ['gorak', 'brokk'],
+    }
+    for (const [id, list] of Object.entries(hosts))
+      for (const host of list)
+        for (const rank of [0, 1])
+          for (const b of CHARACTER_IDS) audit(simulateCombat([withSkill(host, id, rank), createCharacter(b)], { seed: 29000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['luckyStreak', 'dread', 'rotAura', 'rancor', 'stormField', 'ballad', 'stoneFist'].map((s) => `maîtrises : ${s}`).concat(['poing de pierre', 'pièce pipée', 'plaie ouverte']))
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

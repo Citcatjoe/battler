@@ -6,6 +6,7 @@ import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
   BLIND_MISS,
   COIN_RANK_HEADS,
+  charges,
   consumeStatus,
   isMechanic,
   removeStatuses,
@@ -264,9 +265,9 @@ export type BeatBody =
   | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true; jinxedBy?: StatusId }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
-   * deux fois, en coup), face, rien. Le statut est consommé. `loadedBy` : le statut qui l'a fait tomber sur pile (Dé pipé)
+   * deux fois, en coup), face, rien. Le statut est consommé.
    */
-  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; loadedBy?: StatusId; forced?: true }
+  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
   /**
    * Une relique du porteur se déclenche (docs/RELIQUES.md) : sur un moment du coup, au début d'un de ses tours,
    * ou quand ses PV passent sous son seuil. `uses` : ses déclenchements dans ce combat, celui-ci compris.
@@ -412,7 +413,7 @@ function forceRoll(drawn: number, faces: number, forced: number | undefined) {
   return forced === undefined ? drawn : Math.min(faces, Math.max(1, Math.round(forced)))
 }
 
-/** Plafond de la chance de pile d'une pièce (retour du 2026-10-27, R4) : 5 sur 6, jamais une pile assurée sans Dé pipé. */
+/** Plafond de la chance de pile d'une pièce (retour du 2026-10-27, R4) : 5 sur 6, jamais une pile assurée. */
 export const HEADS_CAP = 5 / 6
 
 /** Le jet d'un coup, déjà tiré par le moteur : sa face, et ce que sa compétence fait du coup de base. */
@@ -499,9 +500,11 @@ export function resolveAttack(
   let raw = crit ? Math.round(value * att.critMultiplier) : value
   // Dégâts sortants (statuts de l'attaquant), puis entrants (statuts du défenseur), dans l'ordre de pose.
   const modifiers: AttackModifier[] = []
+  // Poing de pierre (`whileShielded`) : il n'agit que si l'attaquant a une armure temporaire
+  const armored = attackerStatuses.some((s) => STATUSES[s.id].shield)
   for (const s of attackerStatuses) {
     const modify = STATUSES[s.id].modifyOutgoing
-    if (!modify) continue
+    if (!modify || (STATUSES[s.id].whileShielded && !armored)) continue
     const next = modify(raw, s)
     if (next !== raw) modifiers.push({ status: s.id, by: 'attacker', delta: next - raw })
     raw = next
@@ -1345,8 +1348,9 @@ export function simulateCombat(
     // porte pas de coup : la charge reste). Sur un coup qui touche, il réagit dans la fenêtre `hit`.
     const drain = outcome.dodged ? att.statuses.find((s) => STATUSES[s.id].drainsHit) : undefined
     if (drain) att.statuses = consumeStatus(att.statuses, drain.id, 1)
-    // Garde brisée : le coup qui touche brise toute l'armure temporaire du défenseur, sans ouvrir sa fenêtre `shieldBroken`
-    if (touched && outcome.shatteredBy) def.statuses = def.statuses.filter((s) => !STATUSES[s.id].shield)
+    // Garde brisée : le coup qui touche brise toute l'armure temporaire du défenseur, sans ouvrir sa fenêtre `shieldBroken` ;
+    // ce qui ne tient que par elle (Poing de pierre, `whileShielded`) part avec elle
+    if (touched && outcome.shatteredBy) def.statuses = def.statuses.filter((s) => !STATUSES[s.id].shield && !STATUSES[s.id].whileShielded)
     // Luciole : chaque coup qui touche le porteur lui retire une charge (`spentOnHurt`)
     if (touched) for (const s of def.statuses.filter((x) => STATUSES[x.id].spentOnHurt)) def.statuses = consumeStatus(def.statuses, s.id, 1)
     const dealt = outcome.damage
@@ -1394,29 +1398,19 @@ export function simulateCombat(
     states[side].statuses = states[side].statuses.filter((s) => s.id !== coin.id)
     const toss = STATUSES[coin.id].coinToss!
     const forced = nextForced()
-    // Pile = 1 sur un d2 ; une Pièce lestée (R4, 2026-10-27) ajoute sa chance de pile, une pièce d'effet aiguisée 1 chance
-    // sur 6 par rang (`COIN_RANK_HEADS`), le tout plafonné à 5 sur 6 (`HEADS_CAP` ; la chance de pile des auras de la Chance,
-    // vague 2 des Maîtrises, s'ajoutera à cette même somme). Un seul tirage dans tous les cas : la suite du hasard ne change
-    // pas (sans relique ni rang, le tirage est celui du d2)
+    // Pile = 1 sur un d2 ; une Pièce lestée (R4, 2026-10-27) et un Dé pipé (Maîtrises, M9 : `StatusDef.headsChance` par
+    // charge) ajoutent leur chance de pile, une pièce d'effet aiguisée 1 chance sur 6 par rang (`COIN_RANK_HEADS`), le tout
+    // plafonné à 5 sur 6 (`HEADS_CAP`). Un seul tirage dans tous les cas : la suite du hasard ne change pas (sans relique,
+    // aura ni rang, le tirage est celui du d2)
     const ranked = toss.multiplier === undefined ? (coin.power ?? 0) * COIN_RANK_HEADS : 0
-    const bias = fighters[side].relics.reduce((p, r) => p + (r.headsChance ?? 0), ranked)
-    const drawn = forceRoll(rng() < Math.min(HEADS_CAP, 0.5 + bias) ? 1 : 2, 2, forced) === 1
-    // Dé pipé (phase 8, second lot) : la pièce se tire quand même, puis tombe sur pile, une charge par pièce ; une pièce
-    // imposée par l'observateur (mode triche) garde sa valeur et laisse la charge. Il ne pipe que la pièce qui frappe
-    // (Pile ou face) : sur une autre pièce, sa charge attend (2026-10-27)
-    const loaded =
-      forced === undefined && toss.multiplier !== undefined ? states[side].statuses.find((s) => STATUSES[s.id].loadsCoin !== undefined) : undefined
-    if (loaded) states[side].statuses = consumeStatus(states[side].statuses, loaded.id, 1)
-    const heads = drawn || loaded !== undefined
-    // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile ; un Dé pipé aussi, sur la pièce qu'il pipe
-    const extra =
-      toss.multiplier !== undefined ? dealt * (toss.multiplier + (coin.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0) - 1) : 0
+    const fromStatuses = base[side].reduce((p, s) => p + (STATUSES[s.id].headsChance ?? 0) * charges(s), ranked)
+    const bias = fighters[side].relics.reduce((p, r) => p + (r.headsChance ?? 0), fromStatuses)
+    const heads = forceRoll(rng() < Math.min(HEADS_CAP, 0.5 + bias) ? 1 : 2, 2, forced) === 1
+    // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
+    const extra = toss.multiplier !== undefined ? dealt * (toss.multiplier + (coin.power ?? 0) - 1) : 0
     const onHeads: readonly Effect[] = toss.multiplier !== undefined ? [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }] : toss.heads
     const effects = heads ? applyEffects(side, onHeads) : []
-    const id = push(
-      { type: 'coin', side, status: coin.id, heads, effects, ...(loaded && { loadedBy: loaded.id }), ...(forced !== undefined && { forced: true as const }) },
-      posedBy[side][coin.id] ?? after,
-    )
+    const id = push({ type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) }, posedBy[side][coin.id] ?? after)
     return withinStrike(base, () => {
       const down = fallen() ?? checkThresholds(id)
       if (down !== undefined || !heads) return down

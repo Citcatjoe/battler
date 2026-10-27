@@ -16,7 +16,8 @@ import { autoForge, drawForgeOffer, validOnOrigin, withForgeStep, type ForgeStep
 import { STOLEN_BADGE } from './narration'
 import { RELICS } from './relics'
 import { seededRng, shuffle, type Rng } from './rng'
-import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, repertoireOf } from './roster'
+import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
+import { characterPool } from './masteries'
 import { childrenOf, stage, type Cue, type Moment } from './staging'
 import { signalTargets } from './states'
 import { STATUSES, type Status } from './statuses'
@@ -58,9 +59,9 @@ for (const x of CHARACTER_IDS)
       const result = simulateCombat([a.fighter, b.fighter], { seed })
       corpus.push({ name: `${a.text} contre ${b.text}, graine ${seed}`, result, moments: stage(result) })
     }
-// Chaque compétence du répertoire ou de la réserve d'un personnage gravée chez lui, contre chacun, une graine par duel
+// Chaque compétence de la réserve d'un personnage (ses deux maîtrises) gravée chez lui, contre chacun, une graine par duel
 for (const host of CHARACTERS)
-  for (const skill of [...(host.definition.reserve ?? []), ...repertoireOf(host.id)])
+  for (const skill of characterPool(host.definition))
     for (const y of CHARACTER_IDS) {
       const seed = corpus.length
       const rng = seededRng(seed * 7919)
@@ -68,6 +69,14 @@ for (const host of CHARACTERS)
       const result = simulateCombat([a.fighter, b.fighter], { seed })
       corpus.push({ name: `${a.text} contre ${b.text}, graine ${seed}`, result, moments: stage(result) })
     }
+// L'armure brisée, rare : le Brise-garde gravé chez l'ogre, contre la Peau de pierre du nain, de chaque côté
+for (const seed of SEEDS) {
+  const breaker = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'guard-break')! }])
+  for (const pair of [[breaker, createCharacter('brokk')], [createCharacter('brokk'), breaker]] as const) {
+    const result = simulateCombat([...pair], { seed })
+    corpus.push({ name: `${pair[0].id} contre ${pair[1].id} (Brise-garde), graine ${seed}`, result, moments: stage(result) })
+  }
+}
 
 /** Une cue sur l'horloge du combat : l'instant du moment, plus le début de son moment. */
 interface Timed {

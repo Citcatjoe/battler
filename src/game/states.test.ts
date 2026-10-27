@@ -60,17 +60,17 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
   })
 
   it('une compétence qui pose une aura se fond dans son anneau', () => {
-    // Hors kit depuis le d6 (0.105.0) : l'Aura de puissance gravée sur le 3 de Gorak
+    // Gorak, l'Ivresse du sang sur le 1 (Maîtrises) et l'Aura de puissance gravée sur le 3 : deux anneaux
     const gorak = createCharacter('gorak').withForge([{ op: 'engrave', face: 3, skill: skill('power-aura') }])
-    expect(auraIdsOf(gorak)).toEqual(['powerAura'])
-    expect(gorak.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['power-aura'])
-    // La barde n'a plus d'aura (l'Aura mélodieuse quitte le jeu, 2026-10-27) ; son Duo garde son sceau
+    expect(auraIdsOf(gorak)).toEqual(['bloodFrenzy', 'powerAura'])
+    expect(gorak.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['blood-frenzy', 'power-aura'])
+    // La barde : la Ballade sur le 1 (Maîtrises) ; son Duo garde son sceau
     const fanchon = createCharacter('fanchon')
-    expect(auraIdsOf(fanchon)).toEqual([])
+    expect(auraIdsOf(fanchon)).toEqual(['ballad'])
     expect(auraOfSkill(fanchon.events.find((e) => e.id === 'duo')!)).toBeUndefined()
     // L'Aura d'immunité purge aussi ses malus : elle se fond quand même dans son anneau, sans second sceau
     const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
-    expect(aldric.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['immunity-aura'])
+    expect(aldric.events.filter((e) => auraOfSkill(e)).map((e) => e.id)).toEqual(['vendetta', 'immunity-aura'])
     // Chaque personnage en jeu a au plus deux auras à montrer
     for (const def of ROSTER) expect(auraIdsOf(createCharacter(def.id)).length, def.id).toBeLessThanOrEqual(2)
   })
@@ -79,7 +79,8 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     const elaria = createCharacter('elaria')
     // Le Souffle de la tombe, hors kit depuis le d6, regravé sur le 3 d'Ervald
     const ervald = createCharacter('ervald').withForge([{ op: 'engrave', face: 3, skill: skill('grave-breath') }])
-    expect(originsOf('guaranteedCrit', elaria, ervald)).toEqual(['Œil de faucon (Elaria)'])
+    // L'Œil de faucon, et la Feinte de son 1 (Maîtrises) qui en donne un à chaque esquive
+    expect(originsOf('guaranteedCrit', elaria, ervald)).toEqual(['Œil de faucon (Elaria)', 'Feinte (Elaria)'])
     // Le poison d'Elaria peut venir du Souffle de la tombe ou de l'Aura glaciale d'Ervald
     expect(originsOf('poison', elaria, ervald)).toEqual(['Souffle de la tombe (Ervald)', 'Aura glaciale (Ervald)'])
   })

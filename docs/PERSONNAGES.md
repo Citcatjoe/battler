@@ -176,6 +176,78 @@ Valeur de chaque compétence (`scripts/skills.report.ts`, 200 combats par duel, 
 
 De 45,5 % (Ervald) à 55,3 % (Thaldrin) ; pire duel Elaria contre Morgrut, 61,9 % (Naraxes contre Ysolde 62,3 → 59 %) ; Ysolde contre Fanchon 61 %, son pire duel Naraxes 41 %. Aucun duel au-delà de 65/35.
 
+## Les Maîtrises (2026-10-27, tranches A à C livrées)
+
+**Demande de l'utilisateur** (retour du 2026-10-27, V1 à V5) : chaque personnage joue sur deux maîtrises, de grandes familles de sorts par thème ; une aura sur le 1 de son dé, choisie au début d'une campagne parmi ses **auras de départ** (`startAuras`, la première est celle du tournoi) ; sa compétence de personnage (`signature`) est fixe sur le 2 ; les faces 3 à 6 sont nues. Conception, mesures et plan : [MAITRISES.md](MAITRISES.md).
+
+**Compensations de stats** (tranche C, sans toucher aux PV) : **Aldric** attaque 4 à 6 → **5 à 6** (il perd la Riposte de son dé : sans elle, chaque aura le laissait de 41 à 45 %) ; **Morgrut** attaque 7 à 9 → **6 à 8** (l'Aura de puissance sur son 1 le menait à 65 %). **Fanchon** : la **Ballade** (chaque coup qui touche lui rend 1 PV par charge) sur le 1, le **Duo** sur le 2 (trois charges : quatre dés à l'action suivante) ; l'Aura mélodieuse quitte le jeu.
+
+Roster livré, `BALANCE_N=800 npm run balance` (`logs/balance/2026-10-27-11-32-35_v0.120.0.md`, 800 combats par duel, ± 1,2) ; départs : chaque aura de départ contre le roster livré, 400 combats par duel (MAITRISES § 5.2) :
+
+| Personnage | Maîtrises | Dé vanilla (1 / 2) | Taux (balance) | Auras de départ (taux du départ) |
+| --- | --- | --- | --- | --- |
+| Gorak | Fureur, Sang | Ivresse du sang / Furie des vents | 49,3 % | **Ivresse 49,5** ; Aura sauvage 49,7 ; Plaie ouverte 47,4 |
+| Elaria | Chasse, Sang | Feinte / Œil de faucon | 51,6 % | **Feinte 51,9** ; Précision 54,7 ; Plaie ouverte 48,0 ; Épines 47,7 ; Pas de côté 44,4 |
+| Brokk | Rempart, Sang | Aura d'épines / Peau de pierre (Poing de pierre +1) | 52,5 % | **Épines 52,0** ; Intimidation 49,6 ; Immunité 48,0 ; Rempart hérissé 49,5 ; Plaie ouverte 49,3 |
+| Ervald | Poison, Ombre | Aura glaciale / Vol de vie | 44,4 % | **Glaciale 44,5** ; Décoction 46,6 ; Effroi 48,9 ; Pourriture 48,3 ; Sève noire 42,4 |
+| Ysolde | Lumière, Orage | Aura de sainteté / Purification | 44,2 % | **Sainteté 43,8** ; Ciel d'orage 42,7 ; Champ d'orage 42,6 |
+| Naraxes | Chance, Poison | Aura de décoction / Pile ou face | 50,2 % | **Décoction 50,1** ; Glaciale 47,6 ; Veine 46,4 (Dé pipé retiré : 41,4) |
+| Aldric | Représailles, Ombre | Vindicte / Rétribution, attaque 5 à 6 | 54,1 % | **Vindicte 54,8** ; Rancœur 56,8 ; Effroi 56,0 ; Dette de sang 54,0 ; Pourriture 54,6 |
+| Morgrut | Fureur, Rempart | Aura de puissance / nu, attaque 6 à 8 | 49,0 % | **Puissance 49,2** (Immunité 39,4 et Intimidation 40,3 retirées) |
+| Thaldrin | Orage, Poison | Ciel d'orage / Feux follets | 55,2 % | **Ciel d'orage 54,7** ; Champ d'orage 54,8 ; Décoction 54,7 ; Glaciale 53,7 |
+| Fanchon | Chant, Chance | Ballade / Duo | 49,7 % | **Ballade 49,6** ; Veine 43,7 |
+
+Pire duel : Aldric contre Ysolde, 62,6 % (sous 65). Tout le roster tient 42 à 58 % : aucun levier appliqué. **À surveiller** : Ervald et Ysolde (44 %), et leurs départs au ras de 42 % ; à relever par leurs compétences, pas par les PV.
+
+### Le réglage de la vague 2 (2026-10-27, agent Tuning)
+
+**Constats** après les tranches A à E : à 10 récompenses (`npm run ramp`), Elaria construite 60,7 % et Fanchon 62,3 %, au-dessus de la cible de 58 % ; écart entre le premier et le dernier, 25,7 points ; en vanilla, Ervald 44,4 % et Ysolde 44,2 %, bas mais dans la tolérance. L'utilisateur trouvait Elaria « souvent un peu trop forte », le Soliste « un peu fort », le Duo amélioré « un peu cheat mais marrant ».
+
+**Méthode** : un script jetable (supprimé) rejouait la mesure de `npm run ramp` à 10 récompenses (mêmes 48 builds, mêmes graines, 60 combats par duel ; la base retrouvait 60,6 et 62,1 %), sous une variante, avec le taux vanilla contre le roster nu (400 combats par duel), et l'ablation de chaque pas de forge de Fanchon.
+
+**Les causes** :
+- **Elaria** : ses reliques valent +44,0 points en tout (de +28 à +40 pour les autres), surtout la **Contrepoids de plomb** (+16,1, de +1,5 à +9,7 ailleurs) et la **Plume d'aigle** (+18,2, de +5,7 à +12,6 ailleurs). Une bonne part de ses critiques sont assurés (Œil de faucon, Feinte) : le −4 % de critique de la Contrepoids ne lui coûte presque rien, et son ×2,4 devient ×3,4 ; la Plume l'envoie esquiver, et chaque esquive de la Feinte lui rend un critique assuré. Son multiplicateur ×2,4 grossit tout cela.
+- **Fanchon** : la **Copie du Duo** vaut **+27,1 points** (15 builds sur 48 ; les autres copies, de +6 à +16), le Duo aiguisé +6,6. Copier le Duo double sa fréquence : c'est structurel, aucune valeur du Duo ne le corrige (ablation des pas de forge, ci-dessous).
+- **Ervald et Ysolde** : leurs dés vanilla sont les plus faibles du roster ; le Vol de vie (+11,2 dans ses builds) et la Purification (+10,8) étaient les compétences de kit les plus basses après celles de Thaldrin.
+
+**Les essais** (à 10 récompenses / vanilla, en %) :
+
+| Variante | Elaria | Fanchon | Ervald | Ysolde |
+| --- | --- | --- | --- | --- |
+| Base | 60,6 / 51,9 | 62,1 / 49,6 | 41,2 / 44,5 | 36,4 / 43,8 |
+| Critique d'Elaria ×2,3 | 59,5 / 49,1 | | | |
+| ×2,2 | 57,2 / 45,6 | | | |
+| ×2,1 | 55,8 / 41,9 | | | |
+| **×2,2 et 17 %** (retenu) | **57,7 / 47,0** | | | |
+| ×2,2 et 18 % ; et 19 % | 58,1 / 47,8 ; 58,5 / 48,6 | | | |
+| ×2,2 compensé : Feinte 8 % ; esquive 25 % ; 56 PV ; attaque 4 à 6 | 60,4 / 49,8 ; 59,9 / 50,2 ; 60,1 / 50,7 ; 62,6 / 56,2 | | | |
+| Duo plafonné à 3 charges ; à 4 ; à 6 | | 58,9 / 49,0 ; 61,2 / 49,2 ; 62,0 / 49,6 | | |
+| Duo non cumulable (une pose remplace la précédente) | | 60,8 / 49,0 | | |
+| Duo à 2 charges ; non cumulable à 4 | | 53,8 / 37,4 ; 66,1 / 58,1 | | |
+| Soliste ×2 | | 61,3 / 49,6 | | |
+| Vol de vie +3 ; **+4** (retenu) | | | 42,1 / 45,8 ; **43,0 / 47,3** | |
+| Purification **8** (retenu) ; 9 | | | | **37,7 / 47,6** ; 38,3 / 49,1 |
+
+Lecture : chaque compensation d'Elaria par ses stats rend à la construite plus de la moitié de ce qu'elle rend au vanilla, comme le multiplicateur lui en retire ; seule la chance de critique favorise le vanilla (+1,4 contre +0,5 de 15 à 17 %), car ses builds vivent de critiques assurés. Fanchon : sous les trois Duo, la Copie du Duo vaut encore +24,8 à +27,4 ; le plafond à 3 ne gagne que parce que le Duo aiguisé n'y vaut plus rien (+6,6 → 0,0).
+
+**Les réglages** :
+- **Elaria** : critique **15 % ×2,4 → 17 % ×2,2** (stats secondaires, le levier de [MAITRISES.md](MAITRISES.md) § 8, avant les PV) : elle « vise » plus souvent et frappe moins lourd. Fiche : « Critiques fréquents (17 %, ×2,2) ».
+- **Ervald** : le **Vol de vie** rend **+4 PV** par coup drainé (+2 avant ; rang +4 inchangé : +8, +12…).
+- **Ysolde** : la **Purification** inflige **8 dégâts** sans bonus à retirer (6 avant ; rang +3 inchangé).
+- **Fanchon : aucun réglage.** L'option demandée par le parent, « Duo plafonné à 3, son rang relève le plafond », revient à une pose qui ne dépasse pas ses charges : c'est le Duo non cumulable mesuré (60,8 %, Duo aiguisé +7,3) ; relever le plafond à 5 au rang II ne peut que la rapprocher de la base. Aucune ne passe sous ~59 % en gardant le Duo aiguisé sensible ; le plafond à 3 seul y arrive (58,9 %) en éteignant le rang du Duo, ce qui ferme une possibilité (et `validateRoster` refuse un axe de charges sur un statut plafonné). La Copie n'est pas touchée (règle de l'utilisateur). En saison, Fanchon est à 55 %. Le **Soliste** reste à ×3 : gravé chez elle, +10,6 nu et +7,6 dans ses builds (`scripts/skills.report.ts`, `logs/skills/2026-10-27-11-59-13_v0.120.0.md` : +17,2 en moyenne des dix hôtes, mais il n'est offert qu'à elle) ; à ×2, +3,6 dans ses builds, sous la bande. Le « un peu fort » de l'utilisateur datait du Soliste sur son dé (P7 l'en a sorti).
+- **Thaldrin** (campagne) : aucun réglage, ce n'est pas un défaut ; voir [CAMPAGNE.md](CAMPAGNE.md) § 18.3.
+
+**Mesures finales**, avant → après (une fois chacune) :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| `BALANCE_N=800 npm run balance` | `logs/balance/2026-10-27-11-32-35_v0.120.0.md` : 44,2 (Ysolde) à 55,2 % (Thaldrin) ; Elaria 51,6, Ervald 44,4, Ysolde 44,2, Fanchon 49,7 ; pire duel Aldric–Ysolde 62,6 % | `logs/balance/2026-10-27-12-11-48_v0.120.0.md` : **46,0 (Elaria) à 54,9 % (Thaldrin)** ; Gorak 49,0, Brokk 52,4, Ervald **47,5**, Ysolde **48,1**, Naraxes 49,9, Aldric 53,7, Morgrut 48,6, Fanchon 49,9 ; pire duel 59 % (Brokk et Thaldrin contre Elaria) |
+| `npm run ramp`, à 10 récompenses | `logs/ramp/2026-10-27-11-37-35_v0.120.0.md` : Fanchon 62,3, Elaria 60,7, Gorak 57,4, Brokk 53,1, Aldric 52,1, Naraxes 49,7, Morgrut 44,2, Thaldrin 43,6, Ervald 40,3, Ysolde 36,6 ; écart 25,7 points | `logs/ramp/2026-10-27-12-11-12_v0.120.0.md` : Fanchon 62,2, **Elaria 57,4**, Gorak 57,3, Brokk 53,0, Aldric 52,4, Naraxes 49,5, Morgrut 43,9, **Ervald 43,3**, Thaldrin 43,3, **Ysolde 37,7** ; écart **24,5 points** |
+| `npm run season` | `logs/season/2026-10-27-11-38_saison.md` : 41 à 58 %, écart-type 6,3 ; Elaria 58 % | `logs/season/2026-10-27-12-11_saison.md` : **42 à 59 %, écart-type 5,7** ; Elaria 53, Aldric 59, Gorak 58, Fanchon 55, Ervald 44, Ysolde 43, Thaldrin 42 % |
+| `npm run campaign` (12 parties par aura) | `logs/campaign/2026-10-27-11-44_campagne_12.md` : boss atteint 16 %, acte gagné 9 % | `logs/campaign/2026-10-27-12-17_campagne_12.md` : boss atteint 15 %, acte gagné 9 % ; Ervald (Glaciale) 3,5 → 4,2 victoires ; Thaldrin toujours 0 % de boss sur ce jeu de graines (§ 18.3 de CAMPAGNE.md) |
+
+Ce que les chiffres disent encore : la **Plume d'aigle** chez Elaria passe à **+20,5** (au-dessus de la bande des reliques, +18,2 avant : 17 % de critique la déclenchent plus souvent) et la Contrepoids à +18,7 ; Elaria vanilla passe de la moyenne (51,6 %) au bas du confort (46,0 %), un choix assumé contre son excès construit. Fanchon reste la plus forte construite (62,2 %).
+
 ## Les consommatrices de la phase 8 (0.114.0)
 
 Premier lot de compétences qui consomment une ressource du jeu ([SORTS.md](SORTS.md) § 22). Aucune n'est sur un dé vanilla : chacune est **hors kit** chez un personnage (gravable par lui en campagne, au compendium sous son nom) et entre dans le **répertoire** des autres qui produisent sa ressource. Le tournoi ne change pas (empreinte de `balance.test.ts` inchangée) ; en tournoi et en saison, la forge peut les graver comme toute compétence gravable.
@@ -419,6 +491,7 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 - **Stats** (0.43.0, celles de Sylwen) : PV 50, d8, armure 0, esquive 26 %, critique 17 % ×2,4. Jusqu'à la 0.42.0 : PV 48, esquive 33 %, critique 22 % ×2.
 - **Comment elle gagne** : un tiers des coups adverses passent dans le vide, et ses critiques fréquents rattrapent son petit dé.
 - **Comment elle perd** : quand l'esquive ne passe pas, ses PV fondent. Contre Ervald (armure 1, poison), son pire duel (44 %), ses petits coups sont rognés et ses PV bas fondent sous le poison.
+- **Maîtrises, vague 2 (2026-10-27)** : critique **17 % ×2,2** (15 % ×2,4 avant) : construite 60,7 → 57,4 % (`npm run ramp`), vanilla 51,6 → 46,0 % (800 par duel). Causes et essais : « Le réglage de la vague 2 », plus haut.
 - **Mesures** : 51,7 % de victoires (0.26.0). Elle bat les orcs (56 % et 54 %). Duel le plus dur : Brokk (45 %).
 - **Décisions** :
   - Elle a les PV les plus bas parce qu'elle a la meilleure défense active. Le hasard de l'esquive crée de la variance : ses combats sont les plus imprévisibles.
@@ -553,6 +626,7 @@ La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 
 - **Comment il gagne** : il encaisse, et chaque jet raté ronge l'adversaire au fil des tours. Contre les elfes, peu nombreux en PV et sans armure, le poison pèse lourd (54 % contre Elaria). Le vol de vie le fait durer encore.
 - **Comment il perd** : ses propres coups sont faibles (4,4 dégâts par coup, comme Brokk). Et chaque 2 est un coup perdu, rattrapé seulement si le coup suivant touche. Les adversaires au d10 qui raccourcissent le combat (Grimbald, Caldrec) le gênent le plus.
 - **Mesures** : 48,8 % de victoires (0.26.0), environ 22 tours par combat. Il bat Sylwen (56 %), mais perd contre les orcs (45 % et 41 %), dont la puissance l'emporte sur son usure.
+- **Maîtrises, vague 2 (2026-10-27)** : le **Vol de vie** rend **+4 PV** par coup drainé (+2) : vanilla 44,4 → 47,5 %, construit 40,3 → 43,3 % ; sa valeur nette en vanilla, +19,8 points.
 - **Décisions** :
   - Il réutilise le statut Poison du registre, sans aucune règle nouvelle dans le moteur. Ajouter la race a seulement demandé des données.
   - Il a une armure légère (1). C'est la seule armure passive du roster depuis que les nains l'ont perdue (0.24.1).
@@ -622,6 +696,7 @@ La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 
 - **Comment elle gagne** : elle tient, se soigne, terrifie et purifie. Les combats s'allongent en sa faveur.
 - **Comment elle perd** : ses coups sont les plus faibles du roster (5,2 dégâts par coup). Sans son aura, elle ne peut presque rien.
 - **Mesures** : 51,0 % de victoires (0.30.0), environ 39 tours par combat, les plus longs du roster.
+- **Maîtrises, vague 2 (2026-10-27)** : la **Purification** inflige **8 dégâts** sans bonus à retirer (6) : vanilla 44,2 → 48,1 %, construite 36,6 → 37,7 % (la plus basse du roster, à reprendre par ses builds) ; sa valeur nette en vanilla, +21,9 points.
 - **À surveiller** : elle écrase Brokk (72 %, voir « Questions ouvertes » dans EQUILIBRAGE.md). Sans son aura de sainteté, elle ne gagne que **0,7 %** de ses combats contre lui : l'intimidation ramène ses petits coups à 1 dégât, et seul le soin la fait gagner.
 
 ### Bérengère · Inquisitrice (variante d'Ysolde) · retiré en 0.43.0
@@ -934,6 +1009,7 @@ Elle n'a pas de jet raté : 0 % de jets sans dégâts, contre 20 à 43 % pour le
 
 - **Stats** : PV 46, d6, attaque 4 à 6 (DP), armure 0, esquive 10 %, critique 5 % ×2 (le Duo, 2026-10-25).
 - **Mesures** : 47,4 % (le Duo, 800 combats par duel). Duels de 42 à 54 %.
+- **Maîtrises, vague 2 (2026-10-27)** : aucun réglage. Construite 62,2 % : la Copie du Duo (+27,1) en est la cause, structurelle ; ni plafond, ni Duo non cumulable, ni Soliste ×2 ne la ramènent sous ~59 % sans éteindre le Duo aiguisé. Détail : « Le réglage de la vague 2 », plus haut.
 
 ### Mélisande · Ménestrelle · retiré en 0.43.0
 
@@ -970,20 +1046,20 @@ Pire duel : Elaria contre Morgrut, 61,9 %. La matrice ci-dessous date encore de 
 
 ## Matrice des duels
 
-Taux de victoire de la ligne contre la colonne. Revue des auras et des compétences (2026-10-25 : Vol de vie +2 PV, Foudre à quatre éclairs), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/2026-10-25-14-00-49_v0.117.1_apres-revue.md` ; avant : `…13-56-24_v0.117.1_avant-revue.md`). Pire duel : Elaria contre Morgrut, 61,9 % (inchangé).
+Taux de victoire de la ligne contre la colonne. Les Maîtrises, après le réglage de la vague 2 (2026-10-27 : Elaria 17 % ×2,2, Vol de vie +4, Purification 8), 800 combats par duel (`BALANCE_N=800 npm run balance`, `logs/balance/2026-10-27-12-11-48_v0.120.0.md` ; avant : `logs/balance/2026-10-27-11-32-35_v0.120.0.md`). Pires duels : Brokk et Thaldrin contre Elaria, 59 % (Aldric contre Ysolde, 62,6 % avant).
 
 | | Gorak | Elaria | Brokk | Ervald | Ysolde | Naraxes | Aldric | Morgrut | Thaldrin | Fanchon | **Global** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Gorak** | — | 49 % | 55 % | 55 % | 53 % | 48 % | 55 % | 59 % | 45 % | 52 % | **52,2 %** |
-| **Elaria** | 51 % | — | 45 % | 46 % | 47 % | 53 % | 48 % | 62 % | 46 % | 55 % | **50,3 %** |
-| **Brokk** | 46 % | 56 % | — | 50 % | 52 % | 46 % | 49 % | 46 % | 42 % | 51 % | **48,4 %** |
-| **Ervald** | 45 % | 54 % | 51 % | — | 53 % | 43 % | 53 % | 55 % | 45 % | 49 % | **49,7 %** |
-| **Ysolde** | 47 % | 53 % | 48 % | 47 % | — | 41 % | 44 % | 47 % | 42 % | 46 % | **46,0 %** |
-| **Naraxes** | 52 % | 47 % | 55 % | 57 % | 59 % | — | 49 % | 60 % | 46 % | 55 % | **53,2 %** |
-| **Aldric** | 45 % | 52 % | 51 % | 47 % | 56 % | 52 % | — | 56 % | 49 % | 59 % | **51,7 %** |
-| **Morgrut** | 42 % | 38 % | 54 % | 45 % | 53 % | 40 % | 44 % | — | 40 % | 54 % | **45,6 %** |
-| **Thaldrin** | 55 % | 54 % | 58 % | 56 % | 59 % | 54 % | 51 % | 60 % | — | 58 % | **55,9 %** |
-| **Fanchon** | 48 % | 45 % | 49 % | 51 % | 54 % | 45 % | 42 % | 46 % | 42 % | — | **46,9 %** |
+| **Gorak** | — | 48 % | 48 % | 56 % | 53 % | 47 % | 51 % | 49 % | 45 % | 46 % | **49,0 %** |
+| **Elaria** | 53 % | — | 41 % | 45 % | 44 % | 50 % | 43 % | 49 % | 41 % | 49 % | **46,0 %** |
+| **Brokk** | 52 % | 59 % | — | 54 % | 58 % | 55 % | 50 % | 48 % | 45 % | 51 % | **52,4 %** |
+| **Ervald** | 44 % | 55 % | 46 % | — | 52 % | 46 % | 46 % | 52 % | 44 % | 44 % | **47,5 %** |
+| **Ysolde** | 47 % | 56 % | 42 % | 48 % | — | 47 % | 42 % | 49 % | 45 % | 56 % | **48,1 %** |
+| **Naraxes** | 54 % | 50 % | 45 % | 55 % | 54 % | — | 45 % | 52 % | 43 % | 52 % | **49,9 %** |
+| **Aldric** | 49 % | 57 % | 50 % | 55 % | 58 % | 55 % | — | 56 % | 52 % | 51 % | **53,7 %** |
+| **Morgrut** | 51 % | 52 % | 52 % | 48 % | 51 % | 49 % | 44 % | — | 45 % | 47 % | **48,6 %** |
+| **Thaldrin** | 55 % | 59 % | 55 % | 56 % | 55 % | 57 % | 48 % | 55 % | — | 55 % | **54,9 %** |
+| **Fanchon** | 54 % | 51 % | 49 % | 56 % | 44 % | 48 % | 50 % | 53 % | 46 % | — | **49,9 %** |
 
 À refaire après tout changement de stats, d'événement ou de règle. Le test `balance.test.ts` vérifie le global ; cette matrice sert à repérer les duels déséquilibrés.
 

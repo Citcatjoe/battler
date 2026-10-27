@@ -24,23 +24,29 @@ import {
   opponentOf,
   HP_FLOOR,
   OPPONENT_LAG,
-  secondSkillOf,
   tuneHp,
   championOf,
   heritableGains,
+  heritageFor,
   isBossNode,
+  loadCampaignChoices,
   loadHeritage,
   loadRun,
   recordHeritage,
   referenceChampions,
   rewardChoice,
   runTriggers,
+  saveCampaignChoice,
+  saveRun,
+  startAurasOf,
   startRun,
   withFightResult,
   withReward,
   type Encounter,
 } from './campaign'
-import { drawReward, MAX_SKILL_FACES, offerableRelics, offerableSkills, REPERTOIRES, REWARDS } from './offers'
+import { characterPool, masteryOfSkill, poolOf } from './masteries'
+import { skillById } from './skills'
+import { drawReward, MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
 import { STATUS_IDS, statusCounter, type StatusId } from './statuses'
 import {
   allMatches,
@@ -88,28 +94,30 @@ describe('arènes', () => {
 })
 
 describe('catalogue des compétences', () => {
-  it('liste chaque compétence une fois, par race, avec tous ses possesseurs', () => {
-    const families = skillCatalog()
-    expect(families.map((f) => f.race)).toEqual([...new Set(CHARACTERS.map((c) => c.race))])
-    const skills = families.flatMap((f) => f.skills)
+  it('liste chaque compétence une fois, avec ceux qui la portent ou à qui sa maîtrise l’offre', () => {
+    const skills = skillCatalog()
     expect(new Set(skills.map((s) => s.event.id)).size).toBe(skills.length)
-    // Chaque compétence de chaque personnage est retrouvée, avec lui parmi ses possesseurs
+    // Chaque compétence de chaque dé de départ est retrouvée, avec lui parmi ses porteurs, jamais hors kit
     for (const c of CHARACTERS)
-      for (const e of c.events) expect(skills.find((s) => s.events.some((x) => x.id === e.id))!.owners).toContain(c)
-    // Une ligne par compétence, avec ses déclencheurs (la Foudre du druide, sur le 2 de son dé vanilla depuis la 0.113.0)
-    expect(skills.find((s) => s.event.id === 'thunderbolt')!.triggers).toEqual(['naturalTwo'])
-    // Les faces nues ne sont pas des compétences : l'ogre n'en a aucune sur son dé ; sa Rancune est hors kit (0.114.0), le
-    // Brise-garde et le Coup de massue aussi (phase 8, lot 3)
-    expect(skills.filter((s) => s.owners.some((c) => c.id === 'morgrut')).map((s) => [s.event.id, s.outside])).toEqual([['guard-break', true], ['grudge', true], ['stunning-blow', true]])
-    // Hors kit (règles v2, d6) : listée chez son personnage, sans face
-    expect(skills.find((s) => s.event.id === 'power-aura')).toMatchObject({ outside: true, triggers: [], owners: [createCharacter('gorak')] })
-    // Un personnage par famille (0.43.0) : chaque compétence a un seul possesseur
-    for (const s of skills) expect(s.owners).toHaveLength(1)
-    expect(skills.find((s) => s.event.id === 'wind-fury')!.owners.map((c) => c.id)).toEqual(['gorak'])
+      for (const e of c.events) {
+        const entry = skills.find((s) => s.events.some((x) => x.id === e.id))!
+        expect(entry.owners, `${c.id} ${e.id}`).toContain(c)
+        expect(entry.outside, `${c.id} ${e.id}`).toBeUndefined()
+      }
+    expect(skills.find((s) => s.event.id === 'wind-fury')).toMatchObject({ triggers: ['naturalTwo'], owners: [createCharacter('gorak')] })
+    // Chaque brique gravable d'une réserve y est, avec tous ceux à qui sa maîtrise l'offre (V5) : la Foudre, hors de tout
+    // dé depuis les Maîtrises, s'offre à Thaldrin et à Ysolde (Orage)
+    for (const c of CHARACTERS) for (const e of characterPool(c.definition)) expect(skills.some((s) => s.event.id === e.id), `${c.id} ${e.id}`).toBe(true)
+    expect(skills.find((s) => s.event.id === 'thunderbolt')).toMatchObject({ outside: true, triggers: [] })
+    expect(skills.find((s) => s.event.id === 'thunderbolt')!.owners.map((c) => c.id).sort()).toEqual(['thaldrin', 'ysolde'])
+    // Morgrut : l'Aura de puissance sur son 1, le reste de ses deux maîtrises (Fureur, Rempart) hors kit
+    const morgrut = skills.filter((s) => s.owners.some((c) => c.id === 'morgrut'))
+    expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura'])
+    expect(morgrut.filter((s) => s.outside).map((s) => s.event.id)).toEqual(expect.arrayContaining(['guard-break', 'grudge', 'stunning-blow']))
   })
 
   it('chaque compétence déclare sa nature (couleur de sa carte)', () => {
-    const skills = skillCatalog().flatMap((f) => f.skills)
+    const skills = skillCatalog()
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
     expect(skills.find((s) => s.event.id === 'cleave')!.event.nature).toBe('martial')
   })
@@ -117,10 +125,10 @@ describe('catalogue des compétences', () => {
   it('un effet subi par l’adversaire le nomme dans le texte de la compétence (retour du 2026-10-21)', () => {
     // « Perd 3 PV au début de son prochain tour » (Souffle de la tombe) se lisait comme une perte du lanceur
     for (const c of CHARACTERS)
-      for (const e of [...c.events, ...(c.definition.reserve ?? [])])
+      for (const e of [...c.events, ...characterPool(c.definition)])
         for (const effect of e.effects.filter((x) => x.target === 'opponent'))
           expect(describeSkill({ ...e, effects: [effect] }).text, `${c.id} · ${e.id}`).toContain('adversaire')
-    expect(describeSkill(createCharacter('ervald').definition.reserve!.find((e) => e.id === 'grave-breath')!).text).toBe("L'adversaire perd 3, 2 puis 1 PV à la fin de ses tours (6 en tout).")
+    expect(describeSkill(skillById('grave-breath')).text).toBe("L'adversaire perd 3, 2 puis 1 PV à la fin de ses tours (6 en tout).")
   })
 })
 
@@ -133,9 +141,20 @@ describe('catalogue des statuts', () => {
         .find((e) => e.id === id)!
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
-    // Poison : posé par Ervald (Souffle de la tombe, Virulence), par trois auras (effet de tour, réactions ; la Sève noire,
-    // phase 8, lot 3), et par le Dard de guêpe
-    expect(who('poison')).toEqual(['relique:wasp-sting', 'skill:ervald', 'skill:ervald', 'statut:blackSap', 'statut:decoctionAura', 'statut:frostAura'])
+    // Poison : posé par le Souffle de la tombe et la Virulence, de la réserve Poison que partagent Ervald, Naraxes et
+    // Thaldrin (V5), par trois auras (effet de tour, réactions ; la Sève noire), et par le Dard de guêpe
+    expect(who('poison')).toEqual([
+      'relique:wasp-sting',
+      'skill:ervald',
+      'skill:ervald',
+      'skill:naraxes',
+      'skill:naraxes',
+      'skill:thaldrin',
+      'skill:thaldrin',
+      'statut:blackSap',
+      'statut:decoctionAura',
+      'statut:frostAura',
+    ])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
     // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche ; elle était absente du compendium
@@ -144,8 +163,9 @@ describe('catalogue des statuts', () => {
     expect(who('casting')).toEqual(['form:thaldrin'])
     expect(who('bearMight')).toEqual(['form:thaldrin'])
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
-    // Le Rempart hérissé (phase 8, second lot) en pose à chaque armure temporaire vidée
-    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'statut:bristlingRampart'])
+    // Le Rempart hérissé (phase 8, second lot) en pose à chaque armure temporaire vidée ; l'Aura d'épines, du Sang, sur le
+    // 1 de Brokk et dans la réserve de Gorak et d'Elaria
+    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'skill:elaria', 'skill:gorak', 'statut:bristlingRampart'])
     // La Rancune (0.114.0) en pose un à chaque coup encaissé, la Feinte (phase 8, lot 3) à chaque esquive
     expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'statut:feint', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
@@ -278,7 +298,8 @@ describe('accroches (règles v2, phase 1)', () => {
   })
 
   it('une compétence hérite des accroches du statut qu’elle pose : Pourfendre fait saigner quand il touche', () => {
-    const cleave = eventHooks(events.find((e) => e.id === 'cleave')!)
+    // Pourfendre a quitté le dé de Gorak (maîtrises) : gravé sur le 2
+    const cleave = eventHooks({ ...skillById('cleave'), trigger: faceTrigger(2) })
     expect(cleave.produces).toEqual(expect.arrayContaining(['status:bleed', 'damage:temporal']))
     expect(cleave.consumes).toEqual(expect.arrayContaining(['face:2', 'moment:hit']))
   })
@@ -743,6 +764,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // sonne Bonus gagné. Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte) : une
     // aura, son son se déduit de sa nature ; l'Aura d'épines aussi depuis la revue X1 (0.118.1)
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
+    // Les auras des maîtrises (2026-10-27), le Dé pipé devenu aura compris : une aura, son son se déduit de sa nature
+    family('auraGain', ['ballad', 'dread', 'lucky-streak', 'rancor', 'storm-field', 'rot-aura', 'loaded-die'])
     family('buff', ['duo'])
     // Un bonus ou un malus posé sonne sa famille (règle 4 étendue, 2026-10-25 ; Bonus gagné et Malus reçu avant)
     family('precisionUp', ['hawk-eye', 'grudge'])
@@ -753,22 +776,23 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('retaliationUp', ['riposte'])
     family('afflictionDown', ['grave-breath', 'firefly', 'cleave', 'virulence', 'stoke'])
     family('tempoDown', ['fear', 'stunning-blow'])
-    family('powerDown', ['false-note'])
+    family('powerDown', ['false-note', 'wither'])
     // Les malus de famille du lot 3 (2026-10-25) : chacun le son de malus de sa famille
     family('guardDown', ['guard-break'])
     family('fortuneDown', ['jinx'])
     family('precisionDown', ['blinding'])
     family('healingDown', ['hemorrhage'])
     family('sealDown', ['seal-theft'])
-    family('heal', ['harvest'])
-    // Crescendo et Soliste (barde) : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
-    // face, l'Embrasement et le Dé pipé posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
+    family('heal', ['harvest', 'prayer'])
+    // Crescendo, Soliste et l'Assaut : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
+    // face et l'Embrasement posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
     // Les pièces de la Fortune (2026-10-27) : comme Pile ou face, seule leur pièce sonne (un son pour toutes les pièces, S8)
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'loaded-die', 'lucky-coin', 'cursed-coin'])
-    // Les compétences hors kit (d6) se jouent gravées sur le 3 d'un porteur : Gorak (il fait saigner), ou Ervald pour
-    // l'Aura de puissance et les consommatrices du Poison (il empoisonne)
-    const carriers = CHARACTERS.flatMap((c) => c.definition.reserve ?? []).map((skill) =>
-      createCharacter(['power-aura', 'harvest', 'virulence'].includes(skill.id) ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }]),
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'assault', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'lucky-coin', 'cursed-coin'])
+    // Les compétences hors des dés de départ (les réserves des maîtrises) se jouent gravées sur le 3 d'un porteur : Gorak
+    // parti de la Plaie ouverte (il fait saigner : la Curée part), ou Ervald pour l'Aura de puissance et les consommatrices
+    // du Poison (il empoisonne)
+    const carriers = ENGRAVABLE_SKILLS.filter((s) => !CHARACTERS.some((c) => c.events.some((e) => e.id === s.id))).map((skill) =>
+      (['power-aura', 'harvest', 'virulence'].includes(skill.id) ? createCharacter('ervald') : createCharacter('gorak', { aura: skill.id === 'open-wound' ? undefined : 'open-wound' })).withForge([{ op: 'engrave', face: 3, skill }]),
     )
     const seen: Record<string, Set<string | null>> = {}
     for (const a of [...CHARACTERS, ...carriers])
@@ -937,7 +961,9 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   })
 
   it('le boss est un personnage valide, à son dé forgé', () => {
-    expect(validateRoster([BOSS])).toEqual([])
+    // Le boss n'est pas un personnage du roster : ni aura de départ, ni compétence de personnage, ses trois techniques
+    // sur le 1, le 2 et le 3 (§ 18.4) ; le reste des règles du roster vaut pour lui
+    expect(validateRoster([BOSS]).filter((p) => !/aura de départ|sans signature|dé vanilla/.test(p))).toEqual([])
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 5: 2, 6: 2 })
   })
 
@@ -953,42 +979,50 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('le dé vanilla (0.113.0) : la signature sur le 1, la seconde compétence sur le 2, quatre faces nues ; le reste de ses compétences entre dans son répertoire de campagne', () => {
-    for (const c of CHARACTERS) {
-      const signature = c.definition.signature
-      const second = secondSkillOf(c.definition)
-      const onFaces = c.events.filter((e) => rollFace(e.trigger) !== undefined).map((e) => `${e.id}@${e.trigger}`)
-      // Sans signature (Morgrut, le combattant nu) : six faces nues
-      if (!signature) expect(onFaces, c.id).toEqual([])
-      else expect(onFaces, c.id).toEqual([`${signature}@${faceTrigger(1)}`, `${second?.id}@${faceTrigger(2)}`])
+  it('le dé vanilla (maîtrises, MAITRISES § 5 et § 7) : l’aura de départ sur le 1, la compétence du personnage sur le 2, quatre faces nues ; ses maîtrises font sa réserve', () => {
+    const dice: Record<string, string[]> = {
+      gorak: ['blood-frenzy', 'wind-fury'],
+      elaria: ['feint', 'hawk-eye'],
+      brokk: ['thorns', 'stoneskin'],
+      ervald: ['frost-aura', 'life-steal'],
+      ysolde: ['holy-aura', 'purification'],
+      naraxes: ['decoction-aura', 'coin-flip'],
+      aldric: ['vendetta', 'retribution'],
+      morgrut: ['power-aura'],
+      thaldrin: ['storm-sky', 'firefly'],
+      fanchon: ['ballad', 'duo'],
     }
-    // Plus rien hors des faces depuis le retrait de l'Ouverture de Fanchon (2026-10-27) : ses compétences sont sur son dé
-    expect(createCharacter('fanchon').events.map((e) => e.id)).toEqual(['duo', 'soloist'])
+    for (const c of CHARACTERS) {
+      const onFaces = c.events.filter((e) => rollFace(e.trigger) !== undefined).map((e) => `${e.id}@${rollFace(e.trigger)}`)
+      expect(onFaces, c.id).toEqual(dice[c.id].map((id, k) => `${id}@${k + 1}`))
+      expect(c.definition.startAuras?.[0], c.id).toBe(dice[c.id][0])
+      expect(c.definition.signature, c.id).toBe(dice[c.id][1])
+      // Plus rien hors des faces
+      expect(c.events.every((e) => rollFace(e.trigger) !== undefined), c.id).toBe(true)
+    }
     for (const c of CHARACTERS) {
       const kit = c.events.map((e) => e.id)
-      const reserve = (c.definition.reserve ?? []).filter((e) => ENGRAVABLE_SKILLS.some((x) => x.id === e.id)).map((e) => e.id)
-      // Pas de gravure en double : ni la signature ni la seconde dans le répertoire de campagne
-      expect(REPERTOIRES[c.id].map((e) => e.id), c.id).toEqual([...reserve, ...(c.definition.repertoire ?? [])])
-      expect(REPERTOIRES[c.id].some((e) => kit.includes(e.id)), c.id).toBe(false)
+      // Pas de gravure en double : rien de son dé dans sa réserve de campagne, celle de ses deux maîtrises
+      expect(characterPool(c.definition).some((e) => kit.includes(e.id)), c.id).toBe(false)
+      expect(characterPool(c.definition).map((e) => e.id), c.id).toEqual(c.definition.masteries.flatMap(poolOf).map((e) => e.id).filter((id) => !kit.includes(id)))
     }
-    // Seul Morgrut part sans signature
-    expect(CHARACTERS.filter((c) => !c.definition.signature).map((c) => c.id)).toEqual(['morgrut'])
-    // Gorak : la Furie des vents sur le 1, Pourfendre sur le 2 ; le 3 à 6 sont des faces nues qui se gravent
+    // Gorak : l'Ivresse du sang sur le 1, la Furie des vents sur le 2 ; le 3 à 6 sont des faces nues qui se gravent
     const gorak = championOf(startRun('gorak', 1))
-    expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['wind-fury@naturalOne', 'cleave@naturalTwo'])
-    expect(offerTargets(gorak.definition, [], { op: 'engrave', skill: REPERTOIRES.gorak[0] })).toEqual([3, 4, 5, 6])
+    expect(gorak.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['blood-frenzy@naturalOne', 'wind-fury@naturalTwo'])
+    expect(offerTargets(gorak.definition, [], { op: 'engrave', skills: [characterPool(gorak.definition)[0]] })).toEqual([3, 4, 5, 6])
   })
 
-  it('Thaldrin (0.113.0) : un Feu follet sur le 1, une Foudre sur le 2, en forme humaine, attaque 5 à 6 ; des gravures jusqu’à la limite', () => {
+  it('Thaldrin : un Ciel d’orage sur le 1, un Feu follet sur le 2, en forme humaine ; des gravures jusqu’à la limite', () => {
     const thaldrin = createCharacter('thaldrin')
-    expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}@${e.form}`)).toEqual(['firefly@naturalOne@human', 'thunderbolt@naturalTwo@human'])
+    expect(thaldrin.events.map((e) => `${e.id}@${e.trigger}`)).toEqual(['storm-sky@naturalOne', 'firefly@naturalTwo'])
     expect(thaldrin.forms?.map((f) => f.statuses)).toEqual([['casting'], ['bearMight']])
-    expect(REPERTOIRES.thaldrin.map((e) => e.id)).not.toContain('thunderbolt')
+    // La Foudre a quitté son dé pour la réserve de l'Orage
+    expect(characterPool(thaldrin.definition).map((e) => e.id)).toContain('thunderbolt')
     expect([thaldrin.baseStats.attackMin, thaldrin.baseStats.attackMax]).toEqual([5, 6])
     // Les quatre faces nues se gravent
-    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skill: REPERTOIRES.thaldrin[0] })).toEqual([3, 4, 5, 6])
-    // La limite compte des faces : le Feu follet, la Foudre et les gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
-    const engraved = REPERTOIRES.thaldrin.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
+    expect(offerTargets(thaldrin.definition, [], { op: 'engrave', skills: [characterPool(thaldrin.definition)[0]] })).toEqual([3, 4, 5, 6])
+    // La limite compte des faces : le Ciel d'orage, le Feu follet et les gravures font `MAX_SKILL_FACES`, ni Graver ni Copier ensuite
+    const engraved = characterPool(thaldrin.definition).slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
       const under = drawReward({ championId: 'thaldrin', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
       const full = drawReward({ championId: 'thaldrin', forge: engraved, relics: [] }, 'forge', seededRng(k))
@@ -998,24 +1032,38 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('offre orientée (règles v2, phase 2) : Graver est toujours proposée quand une face peut la recevoir, avec une compétence du répertoire de campagne', () => {
+  it('offre orientée (maîtrises, MAITRISES § 6) : Graver est toujours proposée quand une face peut la recevoir, une compétence de chaque maîtrise qui en a une offrable', () => {
     for (const id of CHARACTER_IDS) {
-      const own = REPERTOIRES[id].map((e) => e.id)
       const def = createCharacter(id).definition
-      for (let k = 0; k < 20; k++) {
-        const reward = drawReward({ championId: id, forge: [], relics: [] }, 'forge', seededRng(k))
+      const own = characterPool(def).map((e) => e.id)
+      const run = { championId: id, forge: [], relics: [] }
+      // Les maîtrises qui ont une compétence offrable (le producteur d'abord) : autant de compétences sur la carte
+      const offerable = new Set(offerableSkills(run, characterPool(def)).map((s) => masteryOfSkill(s.id)))
+      const picked = new Set<string | undefined>()
+      for (let k = 0; k < 40; k++) {
+        const reward = drawReward(run, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')
         const engrave = reward.offer.find((o) => o.op === 'engrave')
-        const room = offerTargets(def, [], { op: 'engrave', skill: REPERTOIRES[id][0] }).length > 0
+        const room = offerTargets(def, [], { op: 'engrave', skills: [characterPool(def)[0]] }).length > 0
         expect(!!engrave, `${id} graine ${k}`).toBe(room)
-        if (engrave?.op === 'engrave') expect(own).toContain(engrave.skill.id)
+        if (engrave?.op !== 'engrave') continue
+        for (const s of engrave.skills) expect(own).toContain(s.id)
+        // Une par maîtrise, dans l'ordre de ses maîtrises
+        expect(engrave.skills.map((s) => masteryOfSkill(s.id)), `${id} graine ${k}`).toEqual(def.masteries.filter((m) => offerable.has(m)))
+        // Le choix du champion : l'une d'elles, au hasard
+        if (reward.choice?.op === 'engrave') {
+          expect(engrave.skills.map((s) => s.id)).toContain(reward.choice.skill.id)
+          picked.add(masteryOfSkill(reward.choice.skill.id))
+        }
       }
+      // Le pilote automatique grave dans ses deux maîtrises (quand les deux ont une offrable)
+      expect(picked.size, id).toBe(offerable.size)
     }
   })
 
   it('`MAX_SKILL_FACES` faces de compétence au plus : la limite atteinte, plus de Graver ni de Copier ; Dorer, Aiguiser et Tremper restent', () => {
     // La signature, la seconde compétence et les gravures : `MAX_SKILL_FACES` faces de compétence, la limite
-    const engraved = REPERTOIRES.gorak.slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
+    const engraved = characterPool(createCharacter('gorak').definition).slice(0, MAX_SKILL_FACES - 2).map((skill, i) => ({ op: 'engrave' as const, face: 3 + i, skill }))
     for (let k = 0; k < 20; k++) {
       const under = drawReward({ championId: 'gorak', forge: engraved.slice(0, -1), relics: [] }, 'forge', seededRng(k))
       const full = drawReward({ championId: 'gorak', forge: engraved, relics: [] }, 'forge', seededRng(k))
@@ -1098,15 +1146,15 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       expect(offerableRelics({ championId: 'elaria', forge: [], relics: [] })).not.toContain(consumer)
       expect(offerableRelics({ championId: 'elaria', forge: [], relics: [source] }), source).toContain(consumer)
     }
-    // Le producteur d'abord : un répertoire peut porter une consommatrice hors de portée au départ, mais l'offre n'en sort pas
+    // Le producteur d'abord : une réserve peut porter une consommatrice hors de portée au départ, mais l'offre n'en sort pas
     for (const id of CHARACTER_IDS) {
       const run = { championId: id, forge: [], relics: [] }
-      const reach = offerableSkills(run, REPERTOIRES[id]).map((s) => s.id)
+      const reach = offerableSkills(run, characterPool(createCharacter(id).definition)).map((s) => s.id)
       expect(reach.length, id).toBeGreaterThan(0)
       for (let k = 0; k < 20; k++) {
         const reward = drawReward(run, 'forge', seededRng(k))
         if (reward.kind !== 'forge') throw new Error('forge attendue')
-        for (const o of reward.offer) if (o.op === 'engrave') expect(reach, `${id}, graine ${k}`).toContain(o.skill.id)
+        for (const o of reward.offer) if (o.op === 'engrave') for (const s of o.skills) expect(reach, `${id}, graine ${k}`).toContain(s.id)
       }
     }
   })
@@ -1233,7 +1281,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('partie enregistrée (0.111.0, 0.112.0) : une forge qui ne vaut plus sur le dé de campagne, au champion ou chez un adversaire proposé, fait oublier la partie', () => {
+  it('partie enregistrée (v5, maîtrises) : une forge qui ne vaut plus sur le dé de campagne, au champion ou chez un adversaire proposé, fait oublier la partie', () => {
     const stored = new Map<string, string>()
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => stored.get(k) ?? null,
@@ -1242,15 +1290,106 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     })
     try {
       const run = startRun('gorak', 2)
-      const save = (r: unknown) => stored.set('battler:campaign:v4', JSON.stringify(r))
+      const save = (r: unknown) => stored.set('battler:campaign:v5', JSON.stringify(r))
       save({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'gild', face: 6 }], relics: [], chance: 0.5 }] })
-      expect(loadRun()).not.toBeNull()
-      // Une gravure sur le 2 de Gorak (nu en 0.111.0) : Pourfendre y est depuis la 0.112.0
+      expect(loadRun()).toEqual({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'gild', face: 6 }], relics: [], chance: 0.5 }] })
+      // Une gravure sur le 2 de Gorak : sa compétence de personnage y est
       save({ ...run, forge: [{ op: 'engrave', face: 2, skill: fear }] })
       expect(loadRun()).toBeNull()
-      // Graver le 1 de Brokk, où sont maintenant ses Épines
+      // Graver le 1 de Brokk, où est son aura de départ
       save({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'engrave', face: 1, skill: fear }], relics: [], chance: 0.5 }] })
       expect(loadRun()).toBeNull()
+      // Une aura qui n'est plus une aura de départ : la partie repart de l'aura par défaut
+      save({ ...run, aura: 'fear' })
+      expect(loadRun()?.aura).toBe(startAurasOf('gorak')[0])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('partie v4 (d’avant les maîtrises) relue : l’aura par défaut, ce qui ne vaut plus sur le nouveau dé retiré, l’offre de Graver à une compétence gardée', () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => stored.get(k) ?? null,
+      setItem: (k: string, v: string) => void stored.set(k, v),
+      removeItem: (k: string) => void stored.delete(k),
+    })
+    try {
+      const def = createCharacter('gorak').definition
+      const [kept, onDie] = [characterPool(def)[0], def.events[1]]
+      const gild = { op: 'gild' as const, face: 6 }
+      const lost = { op: 'engrave' as const, face: 2, skill: fear }
+      const engraved = { op: 'engrave' as const, face: 4, skill: fear }
+      const { aura: _aura, ...v5 } = startRun('gorak', 3)
+      stored.set(
+        'battler:campaign:v4',
+        JSON.stringify({
+          ...v5,
+          version: 4,
+          wins: 3,
+          forge: [lost, gild, engraved],
+          gains: [{ kind: 'forge', step: lost }, { kind: 'forge', step: gild }, { kind: 'relic', relic: 'wolf-fang' }],
+          relics: ['wolf-fang'],
+          encounters: [{ characterId: 'brokk', maxHp: 40, forge: [], relics: [], chance: 0.5 }],
+          // Graver à une compétence (`skill`) ; une autre offre de Graver vise une compétence aujourd'hui sur son dé
+          reward: { kind: 'forge', offer: [{ op: 'engrave', skill: kept }, { op: 'temper' }], choice: { op: 'engrave', face: 3, skill: kept } },
+        }),
+      )
+      const run = loadRun()!
+      expect(run).toMatchObject({ version: 5, aura: startAurasOf('gorak')[0], wins: 3, forge: [gild, engraved], relics: ['wolf-fang'] })
+      expect(run.gains).toEqual([{ kind: 'forge', step: gild }, { kind: 'relic', relic: 'wolf-fang' }])
+      // Les rencontres se recalculent sur les nouveaux dés
+      expect(run.encounters).toBeUndefined()
+      expect(run.reward).toEqual({ kind: 'forge', offer: [{ op: 'engrave', skills: [kept] }, { op: 'temper' }], choice: { op: 'engrave', face: 3, skill: kept } })
+      // Une offre de Graver dont la compétence est maintenant sur son dé disparaît, et le choix qui la visait
+      stored.set('battler:campaign:v4', JSON.stringify({ ...v5, version: 4, reward: { kind: 'forge', offer: [{ op: 'engrave', skill: onDie }, { op: 'temper' }], choice: { op: 'engrave', face: 3, skill: onDie } } }))
+      expect(loadRun()?.reward).toEqual({ kind: 'forge', offer: [{ op: 'temper' }] })
+      // Enregistrée en v5, la partie ne revient plus de l'ancienne clé
+      saveRun(run)
+      expect(stored.has('battler:campaign:v4')).toBe(false)
+      expect(loadRun()).toEqual(run)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('aura de départ (MAITRISES § 5, § 11) : la partie part de l’aura choisie, le champion de référence aussi ; l’héritage se revérifie sur son dé', () => {
+    for (const id of CHARACTER_IDS) {
+      const auras = startAurasOf(id)
+      expect(auras.length, id).toBeGreaterThan(0)
+      for (const aura of auras) {
+        const run = startRun(id, 5, undefined, aura)
+        expect(run.aura).toBe(aura)
+        expect(championOf(run).events.find((e) => e.trigger === 'naturalOne')?.id, `${id} ${aura}`).toBe(aura)
+        for (const ref of referenceChampions(id, 1, 5, aura)) expect(ref.events.find((e) => e.trigger === 'naturalOne')?.id).toBe(aura)
+      }
+    }
+    expect(() => startRun('gorak', 5, undefined, 'fear')).toThrow()
+    // Une gravure de l'aura par défaut : impossible sur son dé (elle y est déjà), possible sur celui d'une autre aura
+    const id = CHARACTER_IDS.find((c) => startAurasOf(c).length > 1)!
+    const [first, second] = startAurasOf(id)
+    const item = { kind: 'forge' as const, step: { op: 'engrave' as const, face: 3, skill: skillById(first) } }
+    expect(heritageFor(id, first, [item])).toEqual([])
+    expect(heritageFor(id, second, [item])).toEqual([item])
+    expect(startRun(id, 5, item, second).forge).toEqual([item.step])
+    const stored = new Map<string, string>([['battler:campaign-heritage:v1', JSON.stringify({ [id]: [item] })]])
+    vi.stubGlobal('localStorage', { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) })
+    try {
+      // Gardé : il vaut sur le dé d'une de ses auras de départ
+      expect(loadHeritage()[id]).toEqual([item])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('choix de l’écran de campagne : l’aura mémorisée par champion, fusionnée avec l’héritage', () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', { getItem: (k: string) => stored.get(k) ?? null, setItem: (k: string, v: string) => void stored.set(k, v) })
+    try {
+      saveCampaignChoice('elaria', { heritage: false })
+      saveCampaignChoice('elaria', { aura: 'x' })
+      saveCampaignChoice('gorak', { aura: 'y' })
+      expect(loadCampaignChoices()).toEqual({ elaria: { heritage: false, aura: 'x' }, gorak: { heritage: true, aura: 'y' } })
     } finally {
       vi.unstubAllGlobals()
     }

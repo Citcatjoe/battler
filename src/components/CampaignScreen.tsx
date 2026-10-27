@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { hashSeed } from '../game/analysis'
-import { DIE_FACES } from '../game/events'
+import { describeSkill, DIE_FACES } from '../game/events'
 import {
   ACT_FIGHTS,
   ACT_LENGTH,
@@ -9,13 +9,15 @@ import {
   championOf,
   dangerOf,
   drawHeritage,
+  heritageFor,
   heritableGains,
   isBossNode,
-  loadHeritageOn,
+  loadCampaignChoices,
   opponentOf,
   runTriggers,
-  saveHeritageOn,
-  secondSkillOf,
+  saveCampaignChoice,
+  startAurasOf,
+  type CampaignChoice,
   type CampaignRun,
   type Encounter,
   type HeritageItem,
@@ -25,8 +27,10 @@ import { REWARDS, type PendingReward } from '../game/offers'
 import type { Character } from '../game/character'
 import { rollFace } from '../game/events'
 import { stepLabel } from '../game/forge'
+import { MASTERIES, masteryOfSkill } from '../game/masteries'
 import { getRelic } from '../game/relics'
-import { CHARACTERS } from '../game/roster'
+import { CHARACTERS, createCharacter } from '../game/roster'
+import { skillById } from '../game/skills'
 import { randomSeed, seededRng } from '../game/rng'
 import { sfx } from '../game/sound'
 import { DieBuild } from './DieBuild'
@@ -34,8 +38,10 @@ import { Fighter } from './Fighter'
 import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
 import { BackLink, Button, Glyph, SquareButton } from './kit'
 import { PortraitTile } from './Portrait'
+import { MasteryIcon } from './Icon'
 import { MiniPortrait } from './RecordBits'
 import { RelicCard, RelicRow } from './RelicSeal'
+import { SkillTooltip } from './SkillDice'
 import { SkillSeal } from './SkillSeal'
 import { StatSheet } from './StatSheet'
 import { Switch } from './Switch'
@@ -50,7 +56,7 @@ interface Props {
   run: CampaignRun | null
   /** Les héritages de chaque personnage (campaign.ts, `loadHeritage`) */
   heritage: Readonly<Record<string, HeritageItem[]>>
-  onStart: (championId: string, seed: number, heritage?: HeritageItem) => void
+  onStart: (championId: string, seed: number, heritage?: HeritageItem, aura?: string) => void
   onFight: (encounter: Encounter) => void
   onReward: (gain: HeritageItem | undefined) => void
   onAbandon: () => void
@@ -84,28 +90,35 @@ function Header({ kicker, title, sub }: { kicker: string; title: string; sub?: s
 
 /**
  * Le choix du champion (retour du 2026-10-27, docs/ref/campagne-champion.png) : tous les personnages en portraits, le
- * champion choisi en grand (illustration, fiche de l'affrontement, ligne de lore en citation) et son héritage, optionnel
- * par un interrupteur mémorisé par champion (`loadHeritageOn`). Héritage actif et disponible : « Commencer » ouvre le
- * choix de l'amélioration (`HeritagePick`) ; sinon la partie part sans.
+ * champion choisi en grand (illustration, fiche de l'affrontement, ligne de lore en citation), son aura de départ (une
+ * tuile par aura de ses deux maîtrises, docs/MAITRISES.md § 5 et § 12 ; le dé de la fiche la montre sur son 1) et son
+ * héritage, optionnel par un interrupteur. Aura et héritage sont mémorisés par champion (`loadCampaignChoices`).
+ * Héritage actif et disponible sur le dé de cette aura (`heritageFor`) : « Commencer » ouvre le choix de l'amélioration
+ * (`HeritagePick`) ; sinon la partie part sans.
  */
 function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart' | 'onMenu'>) {
   const [seed] = useState(randomSeed)
   const [champion, setChampion] = useState<Character>(CHARACTERS[0])
-  const [heritageOn, setHeritageOn] = useState(loadHeritageOn)
+  const [choices, setChoices] = useState(loadCampaignChoices)
   const [picking, setPicking] = useState(false)
-  const items = heritage[champion.id] ?? []
-  const withHeritage = items.length > 0 && heritageOn[champion.id] !== false
+  // L'aura mémorisée, si elle est toujours une de ses auras de départ ; sinon la première (celle du tournoi)
+  const auras = startAurasOf(champion.id)
+  const remembered = choices[champion.id]?.aura
+  const aura = remembered && auras.includes(remembered) ? remembered : auras[0]
+  const shown = useMemo(() => createCharacter(champion.id, { aura }), [champion.id, aura])
+  const items = heritageFor(champion.id, aura, heritage[champion.id] ?? [])
+  const withHeritage = items.length > 0 && choices[champion.id]?.heritage !== false
   if (picking && withHeritage)
-    return <HeritagePick champion={champion} items={items} seed={seed} onBack={() => setPicking(false)} onStart={(item) => onStart(champion.id, seed, item)} />
+    return <HeritagePick champion={shown} items={items} seed={seed} onBack={() => setPicking(false)} onStart={(item) => onStart(champion.id, seed, item, aura)} />
   const choose = (c: Character) => {
     if (c.id === champion.id) return
     sfx.click()
     setChampion(c)
   }
-  const toggleHeritage = () => {
+  const remember = (choice: Partial<CampaignChoice>) => {
     sfx.click()
-    saveHeritageOn(champion.id, !withHeritage)
-    setHeritageOn({ ...heritageOn, [champion.id]: !withHeritage })
+    saveCampaignChoice(champion.id, choice)
+    setChoices({ ...choices, [champion.id]: { ...(choices[champion.id] ?? { heritage: true }), ...choice } })
   }
   return (
     <Backdrop>
@@ -161,15 +174,19 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
           {champion.race} · {champion.archetype}
         </p>
         <div className="matchup-panel fighter-panel side-a flex h-[339px] flex-col px-[18px]">
-          <StatSheet character={champion} barClass={SIDE_STYLE[0].bar} trackClass={SIDE_STYLE[0].track} className="mt-[13px] h-[160px] shrink-0 justify-around" />
+          <StatSheet character={shown} barClass={SIDE_STYLE[0].bar} trackClass={SIDE_STYLE[0].track} className="mt-[13px] h-[160px] shrink-0 justify-around" />
           <div className="matchup-rule mt-[12px]" />
           <div className="mt-[10px]">
-            <DieBuild key={champion.id} character={champion} />
+            <DieBuild key={`${champion.id}:${aura}`} character={shown} />
           </div>
         </div>
       </section>
 
-      {/* La ligne de lore en citation, puis l'héritage. Sous l'héritage, la place du futur choix d'aura (V3, vague 2) */}
+      {/* L'aura de départ (maîtrises V3, docs/MAITRISES.md § 5 et § 12) : une tuile de contenu par aura de ses deux
+          maîtrises, la choisie au cadre du camp ; le 1 du dé de la fiche la montre ; mémorisée par champion */}
+      <StartAuraRow auras={auras} chosen={aura} onChoose={(a) => a !== aura && remember({ aura: a })} />
+
+      {/* La ligne de lore en citation, puis l'héritage */}
       <div className="absolute left-[1000px] top-[356px] z-20 flex w-[356px] flex-col gap-8">
         <figure className="flex gap-3">
           <span aria-hidden className="font-display text-[56px] leading-[0.8] text-[#b07a3f]">«</span>
@@ -183,7 +200,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
           role="switch"
           aria-checked={withHeritage}
           disabled={items.length === 0}
-          onClick={toggleHeritage}
+          onClick={() => remember({ heritage: !withHeritage })}
           className="flex flex-col gap-2 rounded-(--r-xs) border border-line-2 bg-surface-1/80 px-4 py-4 text-left transition-colors enabled:hover:bg-surface-3 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-200"
         >
           <span className="flex items-center gap-4 font-body text-[16px] font-bold text-ink-1">
@@ -197,11 +214,49 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
       </div>
 
       <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 justify-center">
-        <Button variant="primary" size="xl" icon="combattre" onClick={() => (withHeritage ? setPicking(true) : onStart(champion.id, seed))} className="w-[560px]">
+        <Button variant="primary" size="xl" icon="combattre" onClick={() => (withHeritage ? setPicking(true) : onStart(champion.id, seed, undefined, aura))} className="w-[560px]">
           Commencer la campagne
         </Button>
       </div>
     </Backdrop>
+  )
+}
+
+/**
+ * La rangée « Aura de départ » : l'icône peinte de chaque aura (son sceau), son nom et l'emblème de sa maîtrise ; la
+ * ligne d'effet de l'aura choisie à côté du titre, celle des autres au survol. Des tuiles de contenu, pas des boutons de
+ * commande : « Commencer la campagne » reste le bouton du kit.
+ */
+function StartAuraRow({ auras, chosen, onChoose }: { auras: readonly string[]; chosen: string; onChoose: (aura: string) => void }) {
+  const line = describeSkill(skillById(chosen)).text
+  return (
+    <div className="absolute left-[578px] top-[690px] z-30 flex w-[778px] flex-col gap-1.5" aria-label="Aura de départ">
+      <p className="flex items-baseline gap-3 truncate">
+        <span className="shrink-0 text-xs font-bold uppercase tracking-[0.25em] text-gold-300">Aura de départ</span>
+        <span className="truncate font-body text-[15px] text-ink-2">{line}</span>
+      </p>
+      <ul className="flex gap-2">
+        {auras.map((id) => {
+          const skill = skillById(id)
+          const mastery = masteryOfSkill(id)
+          return (
+            <li key={id} className="group relative min-w-0 flex-1 hover:z-[70]">
+              <button type="button" className="aura-tile" aria-pressed={id === chosen} onClick={() => onChoose(id)}>
+                <span className="relative shrink-0">
+                  <SkillSeal id={id} size={40} />
+                  {mastery && <MasteryIcon id={mastery} name={MASTERIES[mastery].name} className="absolute -bottom-1 -right-1.5 h-5 w-5 text-[11px]" />}
+                </span>
+                <span className="flex min-w-0 flex-col text-left">
+                  <span className="line-clamp-2 font-body text-[15px] font-bold leading-[1.15] text-ink-1">{skill.name}</span>
+                  {mastery && <span className="truncate font-body text-[11px] font-bold uppercase tracking-[0.12em] text-gold-300">{MASTERIES[mastery].name}</span>}
+                </span>
+              </button>
+              {id !== chosen && <SkillTooltip event={skill} face={1} placement="above" align="center" />}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -284,15 +339,14 @@ function ActTrack({ run }: { run: CampaignRun }) {
 }
 
 /**
- * Les compétences de départ du champion (règles v2) : la signature (0.104.0) et la seconde compétence (0.112.0), chacune
- * avec les faces qui la portent (le 1 et le 2 au départ, une copie en ajoute une). Rien pour Morgrut, parti de six
- * faces nues.
+ * Le départ du champion (maîtrises, docs/MAITRISES.md § 5) : l'aura de départ choisie, sur le 1, et sa compétence de
+ * personnage, sur le 2, chacune avec les faces qui la portent (une copie en ajoute une).
  */
-function StartSkills({ character }: { character: Character }) {
+function StartSkills({ character, aura }: { character: Character; aura: string }) {
   return (
     <>
-      <StartSkillLine character={character} id={character.definition.signature} label="Signature" />
-      <StartSkillLine character={character} id={secondSkillOf(character.definition)?.id} label="Seconde compétence" />
+      <StartSkillLine character={character} id={aura} label="Aura de départ" />
+      <StartSkillLine character={character} id={character.definition.signature} label="Compétence" />
     </>
   )
 }
@@ -325,7 +379,7 @@ function ChampionPanel({ champion, run }: { champion: Character; run: CampaignRu
         <p className="font-body text-lg text-ink-2">
           {champion.race} · {champion.archetype} · {champion.maxHp} PV
         </p>
-        <StartSkills character={champion} />
+        <StartSkills character={champion} aura={run.aura} />
       </div>
       <div className="relative z-10 flex flex-col gap-2">
         <span className="text-xs font-bold uppercase tracking-[0.25em] text-ink-3">Son dé · d{DIE_FACES}</span>

@@ -257,6 +257,7 @@ const NEW_AURAS = {
   vein: auraSkill('lab-vein', 'Veine', LAB_VEIN),
   dread: auraSkill('lab-dread', 'Effroi', LAB_DREAD),
   critRot: auraSkill('lab-crit-rot', 'Pourriture au critique', LAB_CRIT_ROT),
+  rot: auraSkill('lab-rot', 'Aura de pourriture', 'rotAura'),
   rancor: auraSkill('lab-rancor', 'Rancœur', LAB_RANCOR),
   stormField: auraSkill('lab-storm-field', "Champ d'orage", LAB_STORM_FIELD),
   aegis: auraSkill('lab-aegis', 'Écu vengeur', LAB_AEGIS),

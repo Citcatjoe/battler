@@ -43,18 +43,21 @@ export const ALIGN = {
 
 /**
  * Infobulle d'une compétence (sceau de la zone de compétences du combat, dé forgé, fiche d'affrontement). `face` : la
- * face du dé qui la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `notes` : ce
- * que la forge a fait de la face (gravée), en pied.
+ * face du dé qui la déclenche ; absente pour une compétence hors dé (l'Ouverture : « début du combat »). `badge` :
+ * remplace la pastille de face quand la compétence n'est sur aucun dé (une maîtrise au compendium : « Aura »). `notes` :
+ * ce que la forge a fait de la face (gravée), en pied.
  */
 export function SkillTooltip({
   event,
   face,
+  badge,
   placement,
   align,
   notes = [],
 }: {
   event: CharacterEvent
   face?: number
+  badge?: string
   placement: 'above' | 'below'
   align: 'left' | 'center' | 'right'
   notes?: readonly string[]
@@ -75,7 +78,7 @@ export function SkillTooltip({
           {event.name}
         </span>
         <span className="shrink-0 rounded-(--r-xs) border border-arcane/60 bg-arcane/15 px-1.5 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-wider text-arcane">
-          {face === undefined ? triggerText(event.trigger).short : `Dé ${face}`}
+          {badge ?? (face === undefined ? triggerText(event.trigger).short : `Dé ${face}`)}
         </span>
       </div>
       {tags.length > 0 && <p className="mt-0.5 font-body text-[13px] font-medium text-arcane">{tags.map((t) => t.label).join(' · ')}</p>}

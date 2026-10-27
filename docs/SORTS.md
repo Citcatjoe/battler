@@ -1539,3 +1539,12 @@ Mesures au registre : `SKILLS_N=400 SKILLS_ENGRAVE=guard-break,jinx,blinding,hem
 
 **Consommatrices possibles** (non mesurées, pour un lot suivant) : une Représaille de Brokk qui renvoie plus contre une garde brisée ; chez Naraxes, « +1 coup de chance quand un jet de l'adversaire tombe à vide » ; la Curée de Gorak qui lirait aussi l'Hémorragie ; une Vindicte d'Aldric qui compterait un vol comme un renvoi.
 
+## 30. Les Maîtrises : dés de départ et briques nouvelles (laboratoire, séries 70 à 75, 2026-10-27)
+
+Essais de la conception des Maîtrises ([MAITRISES.md](MAITRISES.md), retour de l'utilisateur du 2026-10-27, V1 à V5, P1 à P11, M9, R5). Rien n'est livré au jeu ; résultats et décisions : MAITRISES.md § 4, § 5.2, § 9, § 10 et § 15 (rapports, limites).
+
+- **Série 70** (dés de départ : une aura sur le 1, la compétence du personnage sur le 2, quatre faces nues) : chaque aura de départ mesurée contre le roster nu. Exemples : Gorak Ivresse du sang / Furie 50,8 %, Elaria Feinte / Œil 52,2 %, Aldric sans compensation de 41 à 45 %.
+- **Série 71** (briques nouvelles gravées sur le 3) : Prière +17,7 (Ysolde), Effroi +12,1 (Ervald), Flétrissure +11,5 (Ervald), Assaut +14,8 (Gorak) et +20,6 (Morgrut, au bord), Champ d'orage +11,8 (Ysolde), Plaie ouverte refaite +13,0 (Gorak, registre +6,4) ; écartés : Coup de bouclier +0,6, Écu vengeur +7,3.
+- **Séries 72 à 74** (compensations) : Aldric à l'attaque 5 à 6 (départs de 51 à 56 %), Brokk et le Poing de pierre (+1 : 54,9 % ; +2 : 58,4 %, trop), Fanchon (Ballade / Duo 50,4 %), Morgrut avec une aura (attaque 6 à 8 : Puissance 49,5 %), Dé pipé en aura (borne haute +5,9, 5 sur 6 : +7,9) ; écartée : Bonne étoile (+1,5).
+- **Série 75** (R5, l'aura de la face 1 posée au premier tour) : +14,9 à +25,5 ; avec la face 1 rendue nue, +2,5 à +7,0.
+

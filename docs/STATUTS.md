@@ -276,3 +276,20 @@ Régénération et Poison s'opposent. Vulnérable, Étourdi et Garde sacrée ill
 - **Critique assuré s'use** (M1, « doit destack à chaque tour, sinon c'est trop fort ») : une charge part à la fin de chaque tour de son porteur (`StatusDef.wearsOff`), sauf le tour où il a été posé ou renforcé, comme une durée (« pas de décompte le tour de la pose »). Le critique d'Œil de faucon posé sur son jet et esquivé attend donc encore un tour ; une Rancune ou une Feinte, posées pendant le tour adverse, servent au tour suivant du porteur puis s'usent. L'usure tombe dans l'étape `statusAge` de fin de tour (`worn`, charges avant → après). Un coup esquivé ne l'use toujours pas.
 - **Poison en fin de tour** (M2, « à la fin du tour de celui qui les subit ») : `onTurnEnd` au lieu de `onTurnStart` ; la victime joue son action, puis perd ses PV et une charge. Il s'estompe comme avant (3, 2, 1). L'Aura glaciale le pose toujours au début du tour de son porteur.
 - **Riposte contre une esquive assurée** (M3, « la riposte doit manquer un adversaire sous esquive ») : un attaquant qui porte un statut d'esquive assurée (`forcesDodge` : Esquive améliorée, le seul) esquive la Riposte, comme un coup : une charge de Riposte et une charge d'esquive partent, aucun dégât, ni fenêtre `dodge`, ni dégâts renvoyés (`reflected`). La chance d'esquive au tirage (et le Pas de côté) ne joue pas : la Riposte ne tire aucun dé. Choix de l'agent : l'esquive est consommée (« comme un coup esquivé ») ; l'autre lecture, la Riposte qui manque sans user l'esquive, reste possible sur demande.
+
+## Les Maîtrises (2026-10-27) : statuts nouveaux et refaits
+
+Briques de la tranche B ([MAITRISES.md](MAITRISES.md) § 4 et § 4 bis, mesures au registre). Toutes sont des auras permanentes cumulables (`stacking: 'add'`), sur soi ; « aiguisé » : une charge de plus (`power`), sauf mention. Ces lignes remplacent, pour le Dé pipé, la Plaie ouverte et l'Aura de pourriture, celles du catalogue plus haut (gardées pour l'historique).
+
+| Statut | Effet | Moteur | Mesure (gravée ; rang II) |
+| --- | --- | --- | --- |
+| Veine (`luckyStreak`, nouveau) | chaque 6 au dé lui donne un jet de plus à sa prochaine action, par charge | réaction au jet | +8,6 ; +3,5 |
+| Effroi (`dread`, nouveau) | chacun de ses critiques fait perdre sa prochaine action à l'adversaire ; chaque charge de plus, +5 % de critique (`DREAD_CRIT`) | `reactions.crit` | +8,8 (Morgrut +2,9, Elaria +16,4) ; +4,0 |
+| Rancœur (`rancor`, nouveau) | chaque coup reçu lui donne +1 Ferveur par charge | `reactions.hurt` | +9,3 ; +5,0 |
+| Champ d'orage (`stormField`, nouveau) | chaque coup reçu foudroie l'attaquant : 1 PV par charge | `reactions.hurt` | +9,8 ; +5,3 |
+| Ballade (`ballad`, nouveau) | chaque coup qui touche lui rend 1 PV par charge (remplace l'Aura mélodieuse sur le 1 de Fanchon) | `reactions.hit` | +11,3 ; +6,0 |
+| Poing de pierre (`stoneFist`, nouveau) | tant que son armure temporaire tient, ses coups font +1 (`STONE_FIST`, `StatusDef.whileShielded`) ; part quand l'armure est vidée (`shieldBroken`) ou brisée (Garde brisée). Posé par la Peau de pierre | dégâts sortants | Peau de pierre +17,9 ; +3,5 |
+| Plaie ouverte (`openWound`, refaite) | chaque coup qui touche pose 1 Saignement par charge (`OPEN_WOUND_BLEED = 1`) ; avant : 3 au critique | `reactions.hit` | +10,6 ; +8,8 (bord haut, dans la marge) |
+| Dé pipé (`loadedDie`, refait) | aura : +25 % de chances de faire pile à toutes ses pièces par charge (`StatusDef.headsChance`, `LOADED_DIE_HEADS`), sous le plafond de 5 sur 6 (`HEADS_CAP`) ; `loadsCoin` et `Beat.coin.loadedBy` retirés | `tossCoin` | +0,8 (Naraxes +3,4) ; +0,0 : hors bande, il ne vaut que par les pièces ; retiré des départs de Naraxes |
+| Aura de pourriture (`rotAura`, refaite) | chacun de ses critiques pose 2 Pourriture par charge à l'adversaire (`ROT_AURA_ROT`) ; avant : chaque coup qui touche. Aiguisée : +2 Pourriture par critique | `reactions.crit` | 1 → 2 par charge : +4,5 → +7,0 (Ervald +13,2, Elaria +14,7) ; +2,0 → +2,3 |
+| Affaibli (`weakened`, registre) | porté par la Flétrissure (Affaibli 2 pendant 3 tours) | — | Flétrissure +9,1 ; +4,3 |

@@ -33,12 +33,15 @@ src/
     hooks.ts             accroches (règles v2, phase 1, PROGRESSION.md § 8) : ce que chaque brique produit, consomme et gêne ;
                          STATUS_HOOKS (déclarées par statut), eventHooks et relicHooks (déduites), linkBetween, validateHooks, kitSeeds
     forge.ts             forge du dé (0.88.0, CAMPAGNE.md § 4) : journal d'opérations (ForgeStep), rejoué sur la définition d'origine
-                         (forgeState, forgedEvents, forgedFaces), offre et choix automatique (drawForgeOffer, autoForge), validité
-    campaign.ts          campagne (0.88.0) : partie (CampaignRun), boss, réglage des rencontres sur le champion de référence
-                         (referenceChampions, tuneHp, encountersFor), champion (championOf, secondSkillOf, drawBuild), héritage, sauvegarde
+                         (forgeState, forgedEvents, forgedFaces), offre (drawForgeOffer : Graver à une compétence par maîtrise,
+                         `groupOf`) et choix automatique (autoForge, isOffered), validité
+    campaign.ts          campagne (0.88.0) : partie v5 (CampaignRun, son aura de départ ; une partie v4 relue), boss, réglage des
+                         rencontres sur le champion de référence parti de la même aura (referenceChampions, tuneHp, encountersFor),
+                         champion (championOf, startAurasOf, drawBuild), héritage (heritageFor), sauvegarde, choix de l'écran
     offers.ts            offre commune à la campagne, à la saison et à l'arbre (0.115.0) : ordre d'un acte (REWARDS, RewardKind),
-                         MAX_SKILL_FACES, répertoires (REPERTOIRES), BuildState, offre pertinente « le producteur d'abord » (reachOf,
-                         offerableRelics, offerableSkills), écho (ECHO_WEIGHT), tirage d'une récompense (drawReward, PendingReward)
+                         MAX_SKILL_FACES, BuildState (et son aura), réserve des deux maîtrises (characterPool, masteries.ts), offre
+                         pertinente « le producteur d'abord » (reachOf, offerableRelics, offerableSkills), écho (ECHO_WEIGHT),
+                         tirage d'une récompense (drawReward, PendingReward)
     typography.ts        typeset (0.115.0) : espaces insécables devant « : ; ! ? % » et dans les guillemets, appliqué aux registres
                          et aux sorties de describeSkill, describeRelic, rankText ; contrôlé par wording.test.ts
     roster.ts            ROSTER, CHARACTERS, FAMILIES, createCharacter, validateRoster
@@ -112,9 +115,11 @@ src/
                          aucune règle : tout vient de report.ts
     compendium/          CompendiumScreen (onglets, filtre par section), registre des sections (sections.tsx),
                          CharactersSection (index et fond : le combattant en grand derrière l'écran) + CharacterSheet
-                         (Fiche, Performances ; dé de départ en tête, ForgedDie), SkillsSection (deux onglets, Compétences et
-                         Auras : `kind`, compendiumSkills, auras rangées par famille, familyLabel), StatusesSection, RelicsSection, RulesSection,
-                         CodexBits (sceaux : octogone d'une compétence, pièce d'un état ; pastilles de statut et de règle, encadrés, skillLink : l'onglet d'une compétence)
+                         (Fiche, Performances ; ses deux maîtrises sous son nom ; dé de départ en tête, ForgedDie), MasteriesSection
+                         (onglet Maîtrises : une tuile par maîtrise, ses auras puis ses compétences ; holdersOf), SkillsSection (deux
+                         onglets, Compétences et Auras : `kind`, compendiumSkills, auras rangées par maîtrise), StatusesSection,
+                         RelicsSection, RulesSection, CodexBits (sceaux : octogone d'une compétence, pièce d'un état ; MasteryName, la
+                         maîtrise en petit ; pastilles de statut et de règle, encadrés, skillLink : l'onglet d'une compétence)
   dev/                   pages de développement (serveur de dev seulement) : KitReference.tsx (`?kit`), les contrôles du kit
                          disposés comme docs/ui-kit/reference.html, pour comparer leur capture à reference.png ;
                          MatchupReference.tsx (`?matchup=<cas>`), l'écran d'affrontement sur les cas des références
@@ -278,7 +283,7 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | `wards` | bloque la pose de statuts (une polarité ou une liste) ; une charge par blocage |
 | `opposes` | statut contraire, réciproque (test) : charges annulées une à une |
 
-La durée est portée par l'instance : `turns` (facultatif) correspond au nombre de tours du porteur avant expiration, jamais décomptée à la fin du tour où le statut a été posé (`FighterState.fresh`) ; sans `turns`, le statut dure jusqu'à épuisement de ses charges. La zone d'état (`StatusTray`, avec le nombre choisi par `statusCounter`), les auras au sol, le journal, les badges et le compendium suivent automatiquement : `statusRuleSections` traduit les crochets en phrases (Effet, Consommation) et renvoie le cumul et le plafond aux règles communes (`rules.ts`), `statusCatalog` (`catalog.ts`) indique qui le met en jeu (compétence, relâche, ou autre statut par ses crochets). Ses interactions (opposition, blocage, purge) ne sont écrites nulle part à l'écran : au joueur de les découvrir (STATUTS.md, règle 9). Depuis la 0.79.0, il faut aussi lui donner **sa place** dans `STATUS_PLACE` (`states.ts`, le type l'exige) : `tray` et l'état générique qu'il alimente (un état existant de `STATES` de préférence : c'est le vocabulaire commun ; sa part du total si l'état en compte un), `aura` et ses relais (l'état qu'elle fait apparaître chez son porteur ou chez l'adversaire), `form` ou `skill`. Une compétence qui pose une aura sur son lanceur (`auraOfSkill`) va d'elle-même dans l'onglet Auras du compendium, sous la famille de son statut (`familyLabel`). L'en-tête (`SkillBar`), la zone d'état (`StatusTray`) et le signal d'activation (`SignalLayer`) suivent. Un état nouveau s'ajoute à `STATES`, avec son icône dans `STATE_ICON` (`Icon.tsx`). Enfin, on ajoute le statut au catalogue de `docs/STATUTS.md`.
+La durée est portée par l'instance : `turns` (facultatif) correspond au nombre de tours du porteur avant expiration, jamais décomptée à la fin du tour où le statut a été posé (`FighterState.fresh`) ; sans `turns`, le statut dure jusqu'à épuisement de ses charges. La zone d'état (`StatusTray`, avec le nombre choisi par `statusCounter`), les auras au sol, le journal, les badges et le compendium suivent automatiquement : `statusRuleSections` traduit les crochets en phrases (Effet, Consommation) et renvoie le cumul et le plafond aux règles communes (`rules.ts`), `statusCatalog` (`catalog.ts`) indique qui le met en jeu (compétence, relâche, ou autre statut par ses crochets). Ses interactions (opposition, blocage, purge) ne sont écrites nulle part à l'écran : au joueur de les découvrir (STATUTS.md, règle 9). Depuis la 0.79.0, il faut aussi lui donner **sa place** dans `STATUS_PLACE` (`states.ts`, le type l'exige) : `tray` et l'état générique qu'il alimente (un état existant de `STATES` de préférence : c'est le vocabulaire commun ; sa part du total si l'état en compte un), `aura` et ses relais (l'état qu'elle fait apparaître chez son porteur ou chez l'adversaire), `form` ou `skill`. Une compétence qui pose une aura sur son lanceur (`auraOfSkill`) va d'elle-même dans l'onglet Auras du compendium, sous sa maîtrise (`masteryOfSkill`, son rangement dans `MASTERY_SKILLS`) ; la famille du statut (`StatusDef.family`) ne choisit que le son et ne s'affiche pas. L'en-tête (`SkillBar`), la zone d'état (`StatusTray`) et le signal d'activation (`SignalLayer`) suivent. Un état nouveau s'ajoute à `STATES`, avec son icône dans `STATE_ICON` (`Icon.tsx`). Enfin, on ajoute le statut au catalogue de `docs/STATUTS.md`.
 
 S'il faut un **nouveau type de crochet** (ex. renvoi de dégâts), on l'ajoute à `StatusDef` et on l'appelle à un endroit précis de `simulateCombat` ou de `resolveAttack`, puis on le teste dans `combat.test.ts`.
 

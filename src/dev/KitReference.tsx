@@ -51,6 +51,7 @@ const VCR_SPEEDS = [
 ]
 const TABS = [
   { id: 'characters', label: 'Combattants', hint: 10 },
+  { id: 'masteries', label: 'Maîtrises', hint: 11 },
   { id: 'skills', label: 'Compétences' },
   { id: 'auras', label: 'Auras' },
   { id: 'statuses', label: 'Statuts', hint: 28 },

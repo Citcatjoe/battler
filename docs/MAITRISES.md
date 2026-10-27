@@ -1,0 +1,500 @@
+# Les Maîtrises
+
+_Conception (vague 1) demandée par l'utilisateur le 2026-10-27 ([retour du 27 octobre](../prompts/Retour%20du%2027%20octobre.md), points V1 à V5, P1 à P11, M9 et R5). Les mesures de conception sont celles des séries 70 à 75 du laboratoire (`scripts/lab/ideas.ts`), sur la branche `regles-v2` en 0.120.0 (§ 15). **Vague 2 : les tranches A (registre), B (briques) et C (dés de départ) sont codées** ; leurs mesures au registre remplacent les estimations (§ 4 bis, § 5.2, § 14)._
+
+## 0. En bref
+
+- **Une maîtrise est une grande famille de sorts, par thème, lisible par le joueur** : Fureur, Sang, Chasse, Rempart, Représailles, Poison, Chance, Lumière, Ombre, Orage, Chant (onze). Elle remplace, côté joueur, les mots « famille » et « répertoire ». Les dix familles de statuts de [FAMILLES.md](FAMILLES.md) restent une donnée technique (le son d'une pose, `family`), jamais affichée comme maîtrise.
+- **Chaque personnage joue sur deux maîtrises** (V1) ; une maîtrise est partagée par un à trois personnages, qui tirent ses auras et ses compétences dans **la même réserve** (V5 : Naraxes, Ervald et Thaldrin pour le Poison).
+- **Chaque compétence et chaque aura appartient à une seule maîtrise** (V2) ; une aura s'offre en cours de partie comme toute compétence, par Graver.
+- **Le dé de départ** (V4) : **une aura sur le 1, choisie** au début de la campagne parmi celles de ses deux maîtrises (V3), et **sur le 2 sa compétence de personnage, fixe** (Furie des vents pour Gorak, Pile ou face pour Naraxes). Quatre faces nues. Le tournoi joue l'aura par défaut. Chaque aura proposée au départ est mesurée dans la tolérance (42 à 58 %).
+- **L'offre ne verrouille rien** (V3) : Graver propose **deux compétences, une de chaque maîtrise**, au lieu d'une ; la règle « le producteur d'abord » reste.
+- **Cinq dés vanilla changent** (Gorak, Elaria, Aldric, Thaldrin, Fanchon), deux se retouchent (Brokk : Poing de pierre ; Morgrut : une aura, question Q2), trois ne bougent pas (Ervald, Ysolde, Naraxes).
+- **M9** : Dé pipé devient une aura (Chance) ; Plaie ouverte est refaite (« 1 Saignement à chaque coup qui touche », +13 à +14 gravée au lieu de +6 à +13) ; Ivresse du sang et Sève noire sont déjà des auras, gardées, rangées en Fureur et en Poison.
+- **R5** (poser les auras d'entrée) : mesurée **+15 à +26 points**, elle deviendrait obligatoire ; ne pas la livrer telle quelle (§ 10).
+
+## 1. La demande et ce qui est tranché
+
+| Point | La demande (résumé de la parole de l'utilisateur) | Ce qui est tranché ici |
+| --- | --- | --- |
+| V1 | Le mot Maîtrise : de grandes familles de sorts par thème ; deux par personnage ; plusieurs combinaisons, autant de personnages possibles | Onze maîtrises (§ 3), deux par personnage ; 55 paires possibles, dix prises |
+| V2 | Les auras appartiennent à une maîtrise et s'offrent à ceux qui la jouent | Chaque aura est rangée dans une maîtrise (§ 4) et s'offre par Graver (§ 6) |
+| V3 | Au début de la campagne, choisir une aura parmi celles de ses deux maîtrises, sans orientation drastique des offres | Le choix au départ (§ 5), Graver à deux cartes, une par maîtrise (§ 6.2) |
+| V4 | Une aura par personnage dans les faces de base, toujours sur le 1, associée à une face 2 (fixe ou au choix) | Face 2 **fixe** : la compétence du personnage (§ 5.1, justification) |
+| V5 | Deux personnages qui partagent une maîtrise tirent de la même réserve | La réserve appartient à la maîtrise, pas au personnage (§ 6.1) |
+
+## 2. Vocabulaire et règles de rangement
+
+1. **Maîtrise** : un thème que le joueur reconnaît en une phrase (« il fait saigner », « il joue aux pièces »), avec son emblème peint. C'est le seul mot montré au joueur pour ce niveau ; « famille » et « répertoire » disparaissent de l'écran.
+2. **Une maîtrise tient une boucle** : au moins un producteur de sa ressource, ses consommateurs, et des généralistes. Une consommatrice appartient à la maîtrise qui produit sa ressource (Dette de sang vit des renvois : Représailles, pas Sang), sinon elle serait offerte à des personnages qui n'ont jamais sa ressource.
+3. **Une brique, une maîtrise.** Pas de double appartenance : la réserve d'une maîtrise est une liste, la même pour tous ses porteurs.
+4. **Taille** : au moins deux auras (le choix du départ) et cinq briques par maîtrise ; au moins huit briques gravables par personnage (ses deux réserves moins son dé), pour que quatre forges ne l'épuisent pas (règle actuelle de `offers.ts`). Exception assumée : le Chant n'a qu'une aura (§ 4, à écrire).
+5. **La famille de statut reste** (`StatusDef.family`) : elle choisit le son ([SONS.md](SONS.md) § 4.2) et sert aux règles de rangement de [FAMILLES.md](FAMILLES.md). Elle n'est plus affichée comme une maîtrise. Dans le compendium (vague 1, agent Compendium), le libellé d'une aura passe par un seul point, `familyLabel` (`statuses.ts`) : en vague 2, il devient le nom de sa maîtrise.
+
+## 3. Les onze maîtrises
+
+| Id (code) | Maîtrise | La question du joueur | Familles de statuts couvertes | Ressource (la boucle) | Personnages | Emblème à peindre (à demander) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fury` | **Fureur** | Frappe-t-il plus fort, plus souvent ? | Puissance, Tempo, Garde (malus) | les coups (rafales, gros coups) | Gorak, Morgrut | un poing serré sur un manche de hache |
+| `blood` | **Sang** | L'adversaire saigne-t-il ? | Affliction (Saignement), Tempo, Soin (malus) | le Saignement | Gorak, Elaria, Brokk | une goutte de sang sur une lame |
+| `hunt` | **Chasse** | Va-t-il viser juste, ou esquiver ? | Précision, Esquive | les critiques et les esquives | Elaria | un œil de rapace traversé d'une flèche |
+| `bulwark` | **Rempart** | Encaisse-t-il, puis le rend-il ? | Garde, Sceaux, Précision | l'armure temporaire, les coups encaissés | Brokk, Morgrut | un écu clouté |
+| `retaliation` | **Représailles** | Le frapper se paie-t-il ? | Représailles, Puissance, Affliction | les dégâts renvoyés | Aldric | deux lames croisées, pointes retournées |
+| `poison` | **Poison** | Perd-il des PV à chaque tour ? | Affliction (Poison), Soin | le Poison | Naraxes, Ervald, Thaldrin | une fiole verte fumante |
+| `chance` | **Chance** | Que vont donner le dé et la pièce ? | Fortune, Précision, Tempo (malus) | les pièces et les jets | Naraxes, Fanchon | une pièce dressée contre un dé |
+| `light` | **Lumière** | Se soigne-t-il, et le fait-il payer ? | Soin, Garde, Sceaux, Affliction | les soins | Ysolde | un soleil rayonnant |
+| `shadow` | **Ombre** | L'adversaire est-il maudit ? | Tempo (malus), Soin, Sceaux (malus), Puissance (malus) | les malus posés | Aldric, Ervald | un crâne sous un croissant noir |
+| `storm` | **Orage** | La foudre et le feu tombent-ils ? | Affliction (Brûlure, dégâts directs), Précision (malus) | la Brûlure, les éclairs | Thaldrin, Ysolde | un éclair qui fend un nuage |
+| `song` | **Chant** | La chanson porte-t-elle ses coups ? | Tempo, Puissance, Soin | les dés de plus, les gros coups | Fanchon | un luth à la corde vibrante |
+
+**Les paires** : Gorak Fureur et Sang ; Elaria Chasse et Sang ; Brokk Rempart et Sang ; Morgrut Fureur et Rempart ; Aldric Représailles et Ombre ; Ervald Poison et Ombre ; Naraxes Chance et Poison ; Thaldrin Orage et Poison ; Ysolde Lumière et Orage ; Fanchon Chant et Chance. Aucune paire ne se répète. Huit maîtrises sur onze sont partagées ; Chasse, Représailles, Lumière et Chant attendent leur second porteur (un personnage futur).
+
+## 4. Les réserves
+
+Valeurs de conception : points de victoire gravée sur le 3 nu de l'hôte (kit vanilla d'aujourd'hui, contre le roster nu, 400 combats par duel, marge ± 1 à 1,3 point ; bande d'une gravure : 8 à 20). « Registre » : la compétence existe ; « refaite » : même id, même nom, même icône, règle nouvelle ; « nouvelle » : à coder (vague 2). Les chiffres sans source sont ceux de [REVUE_COMPETENCES.md](REVUE_COMPETENCES.md) et du rapport `npm run ramp` du 2026-10-25. **Toutes les briques « nouvelles » et « refaites » sont livrées (tranche B)** ; leur mesure au registre est au § 4 bis, elle fait foi.
+
+### Fureur (Gorak, Morgrut)
+
+| Brique | Genre | Texte (effet d'abord) | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Ivresse du sang | aura | Chacun de ses critiques lui donne deux coups de plus. | registre (réserve de Gorak) | dé de départ de Gorak 50,8 % |
+| Aura de puissance | aura | +2 dégâts à chacun de ses coups. | registre | gravée +17,9 ; départ de Gorak 57,6 % |
+| Aura sauvage | aura | +1 à l'attaque. | registre (Thaldrin, sous forme humaine) ; la forme quitte la compétence | gravée chez Gorak +13,0 ; départ 50,9 % |
+| Furie des vents | compétence | Deux coups au lieu d'un. | registre (signature de Gorak) | face 2 de Gorak |
+| Coup de massue | compétence | S'il touche, l'adversaire perd sa prochaine action, 1x. | registre | — |
+| Brise-garde | compétence | S'il touche, le prochain coup que reçoit l'adversaire ×2. | registre | — |
+| Assaut | compétence | Ce coup ×2. | **nouvelle** | gravée Gorak +14,8, Morgrut +20,6 (au bord haut : à surveiller chez Morgrut) |
+
+### Sang (Gorak, Elaria, Brokk)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Aura d'épines | aura | 1 Saignement à l'attaquant à chaque coup reçu. | registre (signature de Brokk) | départ de Brokk 49,8 % (aujourd'hui), Elaria 48,1 % |
+| Plaie ouverte | aura | 1 Saignement à l'adversaire à chaque coup qui touche. | **refaite** (M9, § 9) | gravée Gorak +13,0, Elaria +14,3 (registre : +6,4 et +12,6) |
+| Pourfendre | compétence | L'adversaire saigne de la moitié des dégâts de ce coup, s'il touche. | registre | — |
+| Curée | compétence | Trois coups de plus si l'adversaire saigne. | registre | Brokk construit +16,5 |
+| Hémorragie | compétence | 4 dégâts directs ; l'adversaire ne regagne plus de PV. | registre (réserve de Gorak) | — |
+
+La Plaie ouverte refaite est **le producteur constant** qui manquait au Sang : la Curée ne partait que 0,23 fois par combat chez Gorak, faute de Saignement.
+
+### Chasse (Elaria)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Feinte | aura | +5 % d'esquive. Chaque esquive lui donne un critique assuré. | registre | départ d'Elaria 52,2 % |
+| Aura de précision | aura | +5 % de critique et +1 au multiplicateur de critique. | registre | départ 55,2 % ; Elaria construite +18,8 |
+| Pas de côté | aura | +8 % d'esquive. | registre | départ 46,0 % |
+| Œil de faucon | compétence | Ce coup est critique. | registre (signature d'Elaria) | face 2 d'Elaria |
+| Esquive améliorée | compétence | Esquive à coup sûr le prochain coup reçu. | registre (quitte son dé) | — |
+
+La Chasse est la plus mince en compétences (deux) : une ou deux à écrire, sans boucle multiplicative de plus (Elaria construite est déjà la plus forte, § 8).
+
+### Rempart (Brokk, Morgrut)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Aura d'intimidation | aura | −1 dégât à chaque coup de l'adversaire. | registre | départ de Brokk 54,4 % (avec le Poing) |
+| Rempart hérissé | aura | +2 Aura d'épines et +2 armure temporaire quand son armure temporaire est vidée. | registre | départ 51,7 % (avec le Poing) |
+| Aura d'immunité | aura | Aucun malus ne peut plus lui être posé, et +1 armure. | registre (quitte Ysolde et Aldric) | départ 52,8 % (avec le Poing) ; elle bloque le Poison des auras : le contre du Poison |
+| Peau de pierre | compétence | +6 armure temporaire ; tant qu'elle tient, ses coups font +1. | **retouchée** (le Poing de pierre, P4) | départ de Brokk 49,8 → 54,9 % |
+| Rancune | compétence | Son prochain coup reçu lui donne un critique assuré. | registre | Morgrut construit +20,5 |
+
+Essayés et écartés : **Coup de bouclier** (l'armure temporaire relâchée en dégâts : +0,6, elle n'est presque jamais là quand le 3 tombe, et la relâcher retire la défense) ; **Écu vengeur** (aura, 4 PV à l'adversaire quand l'armure temporaire est vidée : gravée +7,3, au départ 38,8 %, elle remplace mal les Épines) ; Poing de pierre à +2 (départs 58,4 et 59,1 % : trop).
+
+### Représailles (Aldric)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Vindicte | aura | +6 Ferveur quand il renvoie des dégâts. | registre | départ d'Aldric 53,8 % (attaque 5 à 6) |
+| Dette de sang | aura | L'adversaire saigne de 3 quand il renvoie des dégâts. | registre | départ 52,9 % |
+| Rancœur | aura | Chaque coup reçu lui donne +1 Ferveur. | **nouvelle** | gravée Aldric +9,5 ; départ 56,0 % |
+| Rétribution | compétence | L'adversaire perd la moitié des dégâts des trois derniers coups reçus. | registre (signature d'Aldric) | face 2 d'Aldric |
+| Riposte | compétence | Ses 2 prochains coups reçus renvoient chacun la moitié de leurs dégâts. | registre (quitte son dé) | — |
+
+### Poison (Naraxes, Ervald, Thaldrin)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Aura de décoction | aura | 1 Poison à l'adversaire à chaque coup qui touche. | registre (signature de Naraxes) | départs Naraxes 49,8 %, Ervald 49,5 %, Thaldrin 55,5 % |
+| Aura glaciale | aura | 1 Poison à l'adversaire au début de chacun de ses tours. | registre (signature d'Ervald) | départs Ervald 47,7 %, Naraxes 47,1 %, Thaldrin 54,7 % |
+| Sève noire | aura | Chaque soin que son porteur reçoit inflige 4 Poison à l'adversaire. | registre (M9 : déjà une aura) | départ d'Ervald 44,7 % |
+| Souffle de la tombe | compétence | L'adversaire perd 3, 2 puis 1 PV au début de ses tours. | registre | Ervald construit +14,5 |
+| Virulence | compétence | Triple le Poison de l'adversaire, puis +2. | registre | Ervald +17,5 |
+| Récolte | compétence | +14 PV si l'adversaire est empoisonné. | registre | Ervald +11,9 |
+
+### Chance (Naraxes, Fanchon)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Dé pipé | aura | +25 % de chances de faire pile à ses pièces. | **refaite** (M9) | borne haute, portée d'office : gravée +5,9 (5 sur 6 : +7,9) ; départ de Naraxes 43,7 % (5 sur 6 : 45,8 %) |
+| Veine | aura | Chaque 6 au dé lui donne un jet de plus à sa prochaine action. | **nouvelle** | gravée Naraxes +8,5 ; départs Naraxes 46,5 %, Fanchon 44,4 % |
+| Pile ou face | compétence | S'il touche, une pièce : pile, ce coup ×3 ; face, rien. | registre (signature de Naraxes) | face 2 de Naraxes |
+| Pièce porte-bonheur, Pièce maudite | compétences | pièces d'effet (pile : critiques assurés ; pile : l'adversaire perd sa prochaine action) | **en cours** (agent CoinsRelics, M10 et R2) | `local://r27-CoinsRelics.md` |
+| Coup de chance | compétence | Un jet de plus à sa prochaine action. | registre (quitte le répertoire d'Elaria) | Naraxes construite +13,6 |
+| Malchance | compétence | Le prochain jet de l'adversaire sur une compétence tombe à vide. | registre | — |
+
+Écartée : **Bonne étoile** (aura, chaque pile +1 dégât à ses coups jusqu'à la fin du combat) : gravée +1,5, départ 38,9 %. Les pièces sont rares au départ (une face sur six) : toute aura qui les consomme est faible tant que la maîtrise n'a qu'une pièce ; elle grandit avec les pièces de CoinsRelics. D'où une aura qui lit le dé (Veine) à côté du Dé pipé.
+
+### Lumière (Ysolde)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Aura de sainteté | aura | +1 PV à la fin de chacun de ses tours. | registre (signature d'Ysolde) | départ 46,4 % (aujourd'hui) |
+| Sentence | aura | Chaque soin qu'il reçoit fait perdre 3 PV à l'adversaire. | registre | Ysolde construite +18,0 |
+| Bouclier de foi | aura | Chaque soin qu'il reçoit lui donne +2 armure temporaire. | registre | Ysolde +16,2 |
+| Purification | compétence | Retire son dernier bonus à l'adversaire, sinon 6 dégâts directs. | registre (face 2 d'Ysolde) | — |
+| Prière | compétence | +6 PV. | **nouvelle** (P9) | gravée Ysolde +17,7, Gorak +14,2 |
+
+### Ombre (Aldric, Ervald)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Effroi | aura | Chacun de ses critiques fait perdre sa prochaine action à l'adversaire. | **nouvelle** | gravée Ervald +12,1, Aldric +6,7 ; départs Ervald 48,2 %, Aldric 53,1 % |
+| Aura de pourriture | aura | Ses critiques posent 2 Pourriture par charge à l'adversaire. | **refaite**, livrée (1 → 2 par charge, § 4 bis) | départs livrés : Ervald 48,3 %, Aldric 54,6 % |
+| Vol de vie | compétence | Ce coup lui rend les PV qu'il retire, +2. | registre (face 2 d'Ervald) | — |
+| Peur | compétence | L'adversaire perd sa prochaine action, 1x. | registre | — |
+| Confiscation | compétence | Vole le prochain bonus de l'adversaire. | registre | — |
+| Flétrissure | compétence | L'adversaire fait −2 dégâts à chacun de ses coups pendant 3 tours. | **nouvelle** (statut Affaibli, déjà au registre) | gravée Ervald +11,5, Aldric +8,2 |
+
+La Pourriture « à chaque coup qui touche » (le statut du registre, sans porteur) : départ d'Ervald 64,5 % (pire duel 70,8 % contre Brokk), trop forte ; la version « critique » est retenue.
+
+### Orage (Thaldrin, Ysolde)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Ciel d'orage | aura | Au début de chacun de ses tours, l'adversaire perd 1 PV. | registre | départs Thaldrin 55,6 %, Ysolde 45,0 % |
+| Champ d'orage | aura | Chaque coup reçu foudroie l'attaquant : 1 PV. | **nouvelle** | gravée Ysolde +11,8, Thaldrin +10,7 ; départs 55,8 % et 44,7 % |
+| Feux follets | compétence | L'adversaire perd 3 PV à la fin de ses 3 prochains tours. | registre (signature de Thaldrin) | face 2 de Thaldrin |
+| Foudre | compétence | L'adversaire perd 4 PV, en quatre éclairs. | registre (quitte son dé) | — |
+| Embrasement, Attiser | compétences | consommatrices de la Brûlure | registre | Thaldrin +10,6 et +8,2 |
+| Éclair aveuglant | compétence | Les critiques de l'adversaire ratent. | registre | Ysolde +15,9 |
+
+### Chant (Fanchon)
+
+| Brique | Genre | Texte | État | Mesure |
+| --- | --- | --- | --- | --- |
+| Ballade | aura | Chaque coup qui touche lui rend 1 PV. | **nouvelle** (P9) | gravée Fanchon +12,4 ; départ 50,4 % (à 2 PV : 62,4 %, trop) |
+| Duo | compétence | des dés de plus à sa prochaine action (trois depuis le 2026-10-27, agent EngineFixes) | registre (signature de Fanchon) | face 2 de Fanchon |
+| Soliste | compétence | Ce coup ×3, 1x. | registre (quitte son dé) | — |
+| Crescendo, Siffloter, Fausse note | compétences | ses chansons | registre | — |
+
+Une seconde aura du Chant reste à écrire : aucune n'a tenu la bande (Ballade à 2 PV : 62,4 %).
+
+## 4 bis. Les briques livrées, mesurées au registre (2026-10-27)
+
+`scripts/skills.report.ts` (`SKILLS_PART=engrave` puis `rank`, `SKILLS_ENGRAVE=` les douze briques), 200 combats par duel, sur les dix hôtes du roster livré (dés de départ de la tranche C). Gravée : la brique sur le 3 nu, moyenne des dix hôtes (bande 8 à 20). Rang II : rang I → II sur la même face (bande +3 à +8). Rapports : `logs/skills/2026-10-27-11-34-28_v0.120.0.md` (gravées), `…11-35-34…` (rangs), `…11-36-20…` (Aura de pourriture réglée).
+
+| Brique | Gravée (moyenne ; de … à …) | Rang II (I → II ; II → III) | Lecture |
+| --- | --- | --- | --- |
+| Peau de pierre (Poing de pierre) | +17,9 (Aldric +14,8 ; Ysolde +22,4) | +3,5 ; +2,7 | dans les bandes |
+| Assaut | +14,1 (Fanchon +9,7 ; Ysolde +18,0) | +8,6 ; +4,8 | rang au bord haut, dans la marge (± 1) : laissé |
+| Prière | +13,6 (Aldric +12,4 ; Ysolde +16,7) | +4,6 ; +3,2 | dans les bandes |
+| Ballade | +11,3 (Aldric +9,9 ; Ysolde +13,4) | +6,0 ; +4,6 | dans les bandes |
+| Plaie ouverte (refaite) | +10,6 (Aldric +8,1 ; Ysolde +12,3) | +8,8 ; +3,8 | rang au bord haut, dans la marge : laissé |
+| Champ d'orage | +9,8 (Fanchon +6,8 ; Ysolde +12,4) | +5,3 ; +4,4 | dans les bandes |
+| Rancœur | +9,3 (Fanchon +6,4 ; Ysolde +12,0) | +5,0 ; +4,2 | dans les bandes |
+| Flétrissure | +9,1 (Gorak +7,3 ; Ysolde +11,6) | +4,3 ; +3,3 | dans les bandes |
+| Effroi | +8,8 (Morgrut +2,9 ; Elaria +16,4) | +4,0 ; +3,6 | dans les bandes ; vit du critique (Morgrut n'en fait presque pas) |
+| Veine | +8,6 (Aldric +6,9 ; Ysolde +10,6) | +3,5 ; +1,8 | dans les bandes |
+| Aura de pourriture (au critique) | **1 → 2 Pourriture par charge** : +4,5 → +7,0 (Morgrut +0,7 ; Elaria +14,7) | +2,0 → +2,3 ; +1,3 | réglée ; reste sous la bande en moyenne, car elle vit du critique : Ervald +13,2 et Elaria +14,7 la tiennent, Morgrut et Fanchon non |
+| Dé pipé (aura) | +0,8 (Naraxes +3,4 ; les autres +0,0 à +0,8) | +0,0 ; +0,0 | **hors bande, non réglé** : un amplificateur de pièces ne vaut rien sans pièces, et la seule Pile ou face de Naraxes (une face sur six) ne lui donne que +3,4. Aucune valeur ne l'y mettrait (le plafond de 5 sur 6 bornait déjà la conception à +7,9) ; il grandit avec les pièces gravées. Retiré des auras de départ de Naraxes (§ 5.2) |
+
+Réglage livré : `ROT_AURA_ROT = 2` (`statuses.ts`), le texte suit (« 2 Pourriture par charge »). Le Dé pipé reste à 25 % par charge : à reprendre quand la maîtrise aura plusieurs pièces (CoinsRelics), ou avec une règle qui ne dépende pas d'elles.
+
+## 5. Le dé de départ (V4)
+
+### 5.1 La règle : l'aura sur le 1, au choix ; la face 2, fixe
+
+- **Face 1 : une aura**, choisie en début de campagne parmi les **auras de départ** du personnage (§ 5.2) ; en tournoi et en duel, la première de la liste (le dé vanilla).
+- **Face 2 : sa compétence de personnage**, fixe (`signature`). **Pourquoi fixe** : (1) un personnage est un personnage précis (principe 8 de [INTENTION.md](INTENTION.md)) : Gorak sans Furie des vents, Naraxes sans Pile ou face ne sont plus eux ; (2) l'aura porte déjà la personnalisation : un second choix multiplierait les départs à mesurer (auras × faces 2) et à équilibrer, pour une liberté que la forge donne déjà ensuite (Graver, Copier, Refondre) ; (3) la face 2 travaille avec les auras des deux maîtrises (Pile ou face touche, donc nourrit aussi la Décoction).
+- **Les auras de départ** d'un personnage : celles de ses deux maîtrises dont la ressource est déjà dans son dé de départ (le producteur d'abord : Vindicte a la Rétribution d'Aldric ; la Sentence n'a aucun soin chez Ysolde sans Sainteté, elle n'est pas proposée) **et** dont le départ mesuré tient la tolérance (42 à 58 %, aucun duel au-delà de 65/35). La liste est une donnée du personnage (`startAuras`), figée par un test.
+
+### 5.2 Les départs mesurés
+
+Dé de départ contre le roster nu d'aujourd'hui, 400 combats par duel (3 600 par départ ; marge d'un taux ± 1,6 point, d'un écart apparié ± 1 à 2). En gras, l'aura par défaut (tournoi).
+
+| Personnage | Maîtrises | Face 2 | Dé vanilla aujourd'hui | Auras de départ proposées (taux) | Écartées au départ |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Fureur, Sang | Furie des vents | Furie / Pourfendre 52,8 % | **Ivresse du sang 50,8** ; Aura sauvage 50,9 ; Plaie ouverte 49,1 | Plaie ouverte du registre 42,9 ; Aura de puissance 57,6 (son duel contre Ysolde à 66,0 % : à revoir après le `npm run balance` de la tranche C) |
+| Elaria | Chasse, Sang | Œil de faucon | Œil / Esquive améliorée 49,9 % | **Feinte 52,2** ; Aura de précision 55,2 ; Plaie ouverte 49,2 ; Aura d'épines 48,1 ; Pas de côté 46,0 | (Ivresse du sang 58,8 : en Fureur, hors de ses maîtrises) |
+| Brokk | Rempart, Sang | Peau de pierre (et Poing +1) | Épines / Peau 49,8 % | **Aura d'épines 54,9** ; Intimidation 54,4 ; Immunité 52,8 ; Rempart hérissé 51,7 ; Plaie ouverte 51,5 | Écu vengeur 38,8 |
+| Morgrut | Fureur, Rempart | aucune | nu 46,7 % | (Q2) attaque 7 à 9 → 6 à 8 : **Aura de puissance 49,5** ; Immunité 43,6 ; Intimidation 42,5 | Aura sauvage 40,8 ; à 7 à 9 : Puissance 65,1, Intimidation 61,6 |
+| Aldric | Représailles, Ombre | Rétribution | Rétribution / Riposte 51,4 % | attaque 4 à 6 → 5 à 6 : **Vindicte 53,8** ; Rancœur 56,0 ; Effroi 53,1 ; Dette de sang 52,9 ; Pourriture 51,0 | à 4 à 6 : de 41,1 à 45,0 |
+| Ervald | Poison, Ombre | Vol de vie | Glaciale / Vol de vie 47,7 % | **Aura glaciale 47,7** ; Décoction 49,5 ; Effroi 48,2 ; Pourriture 45,4 ; Sève noire 44,7 | — |
+| Ysolde | Lumière, Orage | Purification | Sainteté / Purification 46,4 % | **Aura de sainteté 46,4** ; Ciel d'orage 45,0 ; Champ d'orage 44,7 | Sentence, Bouclier de foi (aucun soin sans Sainteté) |
+| Naraxes | Chance, Poison | Pile ou face | Décoction / Pile 49,8 % | **Aura de décoction 49,8** ; Aura glaciale 47,1 ; Veine 46,5 ; Dé pipé 43,7 (borne haute) | Bonne étoile 38,9 ; Sève noire (aucun soin) |
+| Thaldrin | Orage, Poison | Feux follets | Feux follets / Foudre 56,3 % | **Ciel d'orage 55,6** ; Champ d'orage 55,8 ; Décoction 55,5 ; Glaciale 54,7 | Sève noire (aucun soin) |
+| Fanchon | Chant, Chance | Duo (3 charges) | Duo / Soliste 49,3 % | **Ballade 50,4** ; Veine 44,4 | Dé pipé (aucune pièce) ; Ballade à 2 PV 62,4 |
+
+Lecture :
+- **Le choix pèse sans casser** : l'écart entre la meilleure et la moins bonne aura de départ d'un personnage va de 1,7 point (Ysolde) à 8,9 (Elaria). La moins bonne reste dans la tolérance. En campagne, l'écart compte moins : les rencontres se règlent sur un champion de référence **parti de la même aura** (§ 11.3).
+- **Thaldrin** reste en haut (55,6 %), comme aujourd'hui (56,3 %) : sa montée est la plus faible du roster (−12,3 points à 10 récompenses) ; on ne le baisse pas avant la mesure de la montée (vague 2). Variante gardée : Ciel d'orage et Foudre sur le 2 (51,0 %), si l'on préfère ses éclairs à sa signature (décision de l'utilisateur du 2026-10-24 : les Feux follets).
+- **Aldric** perd la Riposte de son dé : sans compensation, chaque aura le laisse de 41 à 45 %. L'attaque 4 à 6 → 5 à 6 (un point de plus au minimum) le remet de 51 à 56 %, PV intacts.
+- **Brokk** gagne 5 points au départ par le Poing de pierre (P4 : « début très mou »).
+
+**Livré (tranche C, 2026-10-27) : les départs mesurés sur le registre.** Chaque aura de départ sur le 1 du dé livré, contre le roster livré (dés vanilla de la tranche C), 400 combats par duel (3 600 par départ ; ± 1,6 point). Script jetable sur `winRate` (`analysis.ts`), retiré après la mesure. En gras, l'aura par défaut. Tolérance 42 à 58 %.
+
+| Personnage | Auras de départ livrées (taux) | Retirées de `startAuras` (taux) |
+| --- | --- | --- |
+| Gorak | **Ivresse du sang 49,5** ; Aura sauvage 49,7 ; Plaie ouverte 47,4 | — |
+| Elaria | **Feinte 51,9** ; Aura de précision 54,7 ; Plaie ouverte 48,0 ; Aura d'épines 47,7 ; Pas de côté 44,4 | — |
+| Brokk | **Aura d'épines 52,0** ; Intimidation 49,6 ; Immunité 48,0 ; Rempart hérissé 49,5 ; Plaie ouverte 49,3 | — |
+| Morgrut | **Aura de puissance 49,2** | Aura d'immunité 39,4 ; Aura d'intimidation 40,3 |
+| Aldric | **Vindicte 54,8** ; Rancœur 56,8 ; Effroi 56,0 ; Dette de sang 54,0 ; Aura de pourriture 54,6 (51,9 à 1 Pourriture) | — |
+| Ervald | **Aura glaciale 44,5** ; Décoction 46,6 ; Effroi 48,9 ; Aura de pourriture 48,3 (42,7 à 1 Pourriture) ; Sève noire 42,4 | — |
+| Ysolde | **Aura de sainteté 43,8** ; Ciel d'orage 42,7 ; Champ d'orage 42,6 | — |
+| Naraxes | **Aura de décoction 50,1** ; Aura glaciale 47,6 ; Veine 46,4 | Dé pipé 41,4 |
+| Thaldrin | **Ciel d'orage 54,7** ; Champ d'orage 54,8 ; Décoction 54,7 ; Glaciale 53,7 | — |
+| Fanchon | **Ballade 49,6** ; Veine 43,7 | — |
+
+- **Morgrut** n'a plus qu'une aura de départ : l'Immunité et l'Intimidation le laissent à 39-40 % (à l'attaque 6 à 8, la conception les donnait à 42-44 %, contre le roster d'avant). Elles restent dans sa réserve (gravure). Pour lui rendre un choix : une aura de la Fureur ou du Rempart à mesurer, sans toucher ses PV.
+- **Naraxes** perd le Dé pipé au départ (41,4 %, § 4 bis).
+- **Ysolde** (42,6 à 43,8 %) et **Ervald** (42,4 à 48,9 %) tiennent la tolérance au ras du bas : leurs dés vanilla sont les plus faibles du `npm run balance` (44,2 et 44,4 %). À relever par leurs compétences avant d'ajouter une aura de départ.
+
+### 5.3 Le tournoi et le duel
+
+Le tournoi joue le dé vanilla : l'aura par défaut. Sur l'écran d'affrontement, le dé montre l'aura sur le 1 comme aujourd'hui (aucun choix d'aura en tournoi : le tournoi est le laboratoire du dé vanilla, règle de l'utilisateur du 2026-10-25, « un seul modèle »). Un choix d'aura en duel est possible plus tard, comme le pavé de triche ; il n'est pas prévu.
+
+## 6. L'offre en cours de partie (V3, V5)
+
+### 6.1 La réserve d'un personnage
+
+Sa réserve est **la réunion des réserves de ses deux maîtrises**, moins les briques déjà sur son dé de départ. Deux personnages qui partagent une maîtrise ont la même liste pour elle (V5). La règle « le producteur d'abord » (`offerableSkills`, `skillNeeds`) ne change pas : une consommatrice n'arrive qu'une fois sa ressource dans le build, et une aura de la maîtrise s'offre comme toute compétence.
+
+| Personnage | Réserve (gravables) | Ce qui part de son répertoire d'aujourd'hui | Ce qui arrive |
+| --- | --- | --- | --- |
+| Gorak | 10 | Œil de faucon, Aura de précision, Vol de vie | Aura sauvage, Coup de massue, Brise-garde, Assaut ; Pourfendre quitte son dé pour sa réserve |
+| Elaria | 8 | Furie des vents, Coup de chance, Riposte, Coup de massue | Feinte, Pas de côté, Aura d'épines, Plaie ouverte, Hémorragie ; Esquive améliorée quitte son dé pour sa réserve |
+| Brokk | 8 | Rétribution, Riposte, Vindicte, Dette de sang, Coup de massue, Brise-garde | Plaie ouverte, Hémorragie |
+| Morgrut | 11 | Pourfendre, Curée | Ivresse (jamais offerte : il ne critique pas), Furie des vents, Coup de massue, Aura sauvage, Immunité, Assaut |
+| Aldric | 9 | Purification, Souffle de la tombe, Rancune, Sève noire, Hémorragie, Immunité | Riposte (de son dé), Dette de sang, Rancœur, Effroi, Pourriture, Flétrissure |
+| Ervald | 10 | Feux follets, Embrasement, Attiser, Pourfendre, Plaie ouverte | Effroi, Pourriture, Flétrissure, Confiscation, Sève noire (déjà) |
+| Naraxes | 11 | Œil de faucon, Esquive améliorée, Pas de côté, Feinte | Sève noire, Récolte, Veine, les pièces |
+| Thaldrin | 11 | Aura de puissance, Aura d'épines, Coup de massue, Aura sauvage | Aura glaciale, Virulence, Récolte, Sève noire, Champ d'orage, Foudre (de son dé) |
+| Ysolde | 10 | Aura d'immunité, Rétribution, Peau de pierre, Vol de vie, Coup de massue, Confiscation, Peur | Feux follets, Foudre, Ciel et Champ d'orage, Embrasement, Attiser, Prière |
+| Fanchon | 11 | Aura de puissance, Esquive améliorée, Aura de précision, Feinte, Pas de côté | Soliste (de son dé), Veine, Coup de chance, les pièces |
+
+### 6.2 Graver à deux cartes, une par maîtrise
+
+Aujourd'hui, une forge propose trois opérations différentes, dont au plus un Graver, avec **une** compétence tirée au poids de son écho avec le build (`drawForgeOffer`, `ECHO_WEIGHT`). L'écho penche vers la maîtrise de l'aura de départ (une aura de Chance fait écho aux pièces) : laissé seul, il orienterait la partie (V3 : « sans orientation drastique »).
+
+**Décision proposée** : la carte Graver propose **deux compétences, une de chaque maîtrise** (quand les deux en ont une offrable), chacune tirée au poids de son écho **dans sa maîtrise** ; s'il n'y en a qu'une offrable, une seule. Le joueur voit à chaque forge les deux directions et choisit : « aura de Chance puis tout Chance », ou « contrebalancer par du Poison ». Le choix par défaut (pilote automatique, champion de référence) reste au hasard entre les deux : la distribution des builds de référence ne change presque pas (une maîtrise sur deux, à parts égales). Aucune pondération de plus : la carte double suffit à ne pas verrouiller, et l'écho garde « le producteur d'abord ».
+
+Repli plus simple (si l'utilisateur ne veut pas toucher l'écran de forge) : une seule compétence, la maîtrise tirée à pile ou face, puis la compétence à l'écho dans cette maîtrise.
+
+Les reliques ne changent pas (offre par besoins, `offerableRelics`).
+
+## 7. Ce que deviennent les signatures, les kits et les réserves d'aujourd'hui
+
+| Personnage | Dé d'aujourd'hui (1 / 2) | Dé vanilla proposé (1 / 2) | Ce qui quitte le dé |
+| --- | --- | --- | --- |
+| Gorak | Furie des vents / Pourfendre | Ivresse du sang / Furie des vents | Pourfendre (Sang) |
+| Elaria | Œil de faucon / Esquive améliorée | Feinte / Œil de faucon | Esquive améliorée (Chasse) |
+| Brokk | Aura d'épines / Peau de pierre | Aura d'épines / Peau de pierre (+ Poing de pierre) | — |
+| Morgrut | nu | Aura de puissance / nu (Q2) | — |
+| Aldric | Rétribution / Riposte | Vindicte / Rétribution, attaque 5 à 6 | Riposte (Représailles) |
+| Ervald | Aura glaciale / Vol de vie | inchangé | — |
+| Ysolde | Aura de sainteté / Purification | inchangé | — |
+| Naraxes | Aura de décoction / Pile ou face | inchangé | — |
+| Thaldrin | Feux follets / Foudre | Ciel d'orage / Feux follets | Foudre (Orage) |
+| Fanchon | Duo / Soliste | Ballade / Duo | Soliste (Chant) |
+
+- **`signature`** change de sens : c'était la compétence du 1, c'est la compétence du personnage sur le 2. Celles d'aujourd'hui qui sont des auras (Épines, Glaciale, Sainteté, Décoction) deviennent l'aura par défaut sur le 1 ; leur face 2 devient la signature.
+- **`repertoire` disparaît** : la réserve vient des maîtrises. **`reserve`** n'a plus de sens de jeu (« ses compétences hors du dé ») : les définitions des compétences partent dans un catalogue commun (§ 11.1).
+- **Le compendium** (C6) ne liste plus que le dé de départ ; la fiche d'un personnage nomme ses deux maîtrises (§ 12).
+
+## 8. Les personnages (P1 à P11)
+
+**P1. Gorak : de la profondeur.** Deux plans lisibles, un par maîtrise. *Rafale* (Fureur) : Ivresse du sang sur le 1 (chaque critique, deux coups), Furie des vents sur le 2, puis Assaut (+14,8 gravé), Aura de puissance (+17,9), Brise-garde. *Saignement* (Sang) : Plaie ouverte refaite (+13,0 chez lui, le Saignement à chaque coup), qui nourrit la Curée (aujourd'hui 0,23 fois par combat, faute de Saignement) et Pourfendre. Sa réserve passe de 5 à 10 briques. Départ : 52,8 → 50,8 %.
+
+**P2. Aldric : l'Ombre assez profonde ?** Aujourd'hui, son « Ombre du serment brisé » tenait en trois briques (Peur, Souffle de la tombe, Rancune), dont deux d'autres thèmes. L'Ombre proposée en a six : Effroi et Aura de pourriture (auras, ses départs 53,1 et 51,0 %), Flétrissure (+8,2 gravée chez lui), Peur, Confiscation, Vol de vie. Représailles lui garde la Riposte, la Vindicte, la Dette de sang et la Rancœur (+9,5). Sa ressemblance avec Gorak (« multi-frappe ») venait de la Rétribution relâchée en plusieurs coups (S1, agent StagingFixes) ; ses deux maîtrises n'ont aucune rafale. La compensation (attaque 5 à 6) est au § 5.2.
+
+**P3. Naraxes : une seconde maîtrise aussi sympa.** Le Poison : trois auras (Décoction, Glaciale, Sève noire) et trois compétences (Souffle, Virulence +13,0 chez elle, Récolte), partagés avec Ervald et Thaldrin. Sa Chance garde ce qui a plu (pièces, Pile ou face, Coup de chance, reliques de pièce) et y ajoute Veine et le Dé pipé en aura. Elle perd l'Œil de faucon et ses esquives (Chasse).
+
+**P4. Brokk : un début mou, une armure contrée par le Poison, un jeu ennuyeux.**
+- *Le début* : la Peau de pierre gagne « tant qu'elle tient, ses coups font +1 » (le Poing de pierre) : son départ passe de 49,8 à 54,9 % (à +2 : 58,4 %, trop). L'armure se voit enfin en dégâts, à chaque coup qu'elle protège : c'est « retourner l'armure sous forme de dégâts », la piste de l'utilisateur.
+- *Une autre maîtrise* : Sang au lieu de Représailles. Ses Épines y vivent déjà ; la Curée (+16,5 chez lui construit, sa meilleure gravure), Pourfendre, la Plaie ouverte et l'Hémorragie lui donnent de quoi frapper, et le Rempart hérissé relie ses deux maîtrises (armure vidée → Épines → Saignement → Curée). Question Q1.
+- *Le Poison* : l'Aura d'immunité passe en Rempart ; elle bloque le Poison des auras adverses (règle A5) : le contre lisible du build armure.
+- *« Pas de chance abusé »* : la courbe de la campagne vise 78 % puis 86 % puis 90 % aux trois premiers combats, pour tous les champions (le réglage se fait sur le champion de référence du même personnage) : **40 % des parties s'arrêtent avant le 4e combat** (1 − 0,78 × 0,86 × 0,90). Trois départs perdus tôt sur trois parties, c'est 6 % de malchance, pas un défaut propre à Brokk. Si l'on veut moins de défaites précoces, c'est la courbe (`NORMAL_TARGETS`) : question Q8.
+
+**P5. Thaldrin : aussi bien en tout Poison ?** Ses deux maîtrises sont l'Orage et le Poison : un départ Décoction (55,5 %) ou Glaciale (54,7 %) est aussi fort que l'Orage (55,6 %), et la réserve Poison (Virulence, Récolte, Souffle, Sève noire) est celle d'Ervald et de Naraxes. La Bête n'est pas une maîtrise : c'est sa forme (Force de l'ours). Ses gravures en forme d'ours (M8) relèvent de l'agent EngineFixes ; sa montée (la plus faible du roster) en dépend.
+
+**P6. Elaria : des maîtrises claires, trop forte construite (62,4 %).** Chasse et Sang : « elle vise, elle esquive, et sa proie saigne ». Ce qui la rend trop forte : ses stats (22 % d'esquive, 15 % de critique ×2,4) multiplient tout ce qui touche au critique, et sa réserve d'aujourd'hui lui offrait le Coup de chance (pris dans 27 builds sur 48, +14,9) et la Furie des vents. Les deux quittent sa réserve ; elle garde l'Aura de précision (+18,8, 16 builds). Son départ par défaut (Feinte) passe de 49,9 à 52,2 %. La montée n'est pas mesurable sans le code (les réserves vivent dans `src/`) : **mesure de la vague 2** (`npm run ramp`), cible 58 % au plus construite. Levier suivant si elle reste au-dessus : son multiplicateur de critique 2,4 → 2,2 (une stat secondaire, avant les PV), à mesurer au laboratoire puis à la montée. L'Ivresse du sang est rangée en Fureur, hors de ses maîtrises : chez elle, au départ, 58,8 % (+8,9) et des fins serrées qui tombent de 43 à 35 %.
+
+**P6, réglé (vague 2, 2026-10-27)** : critique **17 % ×2,2** (le levier ci-dessus, avec +2 points de chance de critique, qui favorisent son vanilla : ses builds vivent de critiques assurés). Construite 60,7 → **57,4 %**, vanilla 51,6 → 46,0 % (§ 17).
+
+**P7. Fanchon : le rework sur un d6.** Ce qui a rendu Fanchon « le bordel » : son second dé vivait dans une compétence du 1 qui posait aussi une aura cachée (Aura mélodieuse, retirée par EngineFixes, qui a donné au Duo trois charges : 49,3 % vanilla). Le rework, dans le cadre des maîtrises :
+- **Chant et Chance** : la saltimbanque chante et joue aux dés (Veine, pièces, Coup de chance).
+- **Le dé** : une aura sur le 1 (Ballade, « chaque coup qui touche lui rend 1 PV », par défaut, 50,4 % ; ou Veine, 44,4 %), le **Duo sur le 2** (sa compétence de personnage, son identité : les dés de plus). Le Duo s'enchaîne mieux sur le 2 qu'il ne s'enchaînait sur le 1 avec l'aura.
+- **Le Soliste** quitte le dé pour la réserve du Chant (« un peu fort » : il ne part plus qu'une fois gravé, à mesurer gravé en vague 2).
+- **Ses stats ne bougent pas** (46 PV, attaque 4 à 6) : avec le Duo à trois charges, la Ballade suffit. (Avec des stats « au niveau du roster », 50 PV et attaque 5 à 6, elle passait à 64,8 % : trop.)
+- **Le texte du Duo** : la lecture « deux dés à sa prochaine action » est jugée longue ; proposition pour l'agent Compendium : « Trois dés de plus au tour suivant. » (au nombre de charges).
+
+**P8. Ervald : un peu faible.** Vanilla 47,7 %, construit 45,8 % (le plus de gravures sous la bande : 51 %, Plaie ouverte +5,4 prise dans 10 builds). Ses maîtrises, Poison et Ombre, lui retirent ses briques faibles hors thème (Plaie ouverte, Feux follets, Embrasement, Attiser, Pourfendre) et lui donnent l'Effroi (+12,1 gravé chez lui, la meilleure brique nouvelle à son hôte) et la Flétrissure (+11,5). Son départ peut passer par la Décoction (49,5 %). À mesurer construit en vague 2.
+
+**P9. Plus de soin.** Cinq maîtrises soignent : Lumière (Sainteté, Prière +17,7 gravée chez Ysolde, Sentence et Bouclier de foi qui vivent des soins), Chant (Ballade, Siffloter), Ombre (Vol de vie), Poison (Récolte), et la Sève noire qui fait payer les soins. Pistes de reliques (agent CoinsRelics, vague 2 ; l'Onguent du rebouteux est repris en M11) : une **gourde** (« +2 PV à la fin de chacun de ses tours sous la moitié de ses PV », Seuil) ; un **baume** (« chaque soin reçu +1 », qui lit les soins de toutes les maîtrises). À mesurer (`npm run relics`).
+
+**P10. Une face qui en déclenche une autre.** L'idée « votre face 6 déclenche votre face 2 » fait partir deux compétences si la 6 en porte déjà une. Trois réponses, par ordre de préférence :
+1. **Elle existe en forge** : Copier une face (une copie vaut +9,0 à +11,4 chez les porteurs construits, `npm run ramp`). Rien à ajouter.
+2. **Veine** (aura de Chance) : chaque 6 au dé donne un jet de plus, sans dédoubler une compétence (§ 4).
+3. **En relique, sur une face nue seulement** : « Sa face 6, si elle est nue, joue sa face 2. » Jamais deux compétences d'un jet ; une face gravée ensuite éteint la relique (à dire au survol). Valeur attendue : celle d'une copie (+9 à +11), dans la bande des reliques. À mesurer avant de la proposer.
+
+**P11. La progression entre les parties.** Piste reliée aux maîtrises (TODO § 20, « débloquer des briques qui font boule de neige ; au début presque impossible de finir ») :
+- **Des rangs de maîtrise** (Apprenti, Compagnon, Maître), gagnés par les victoires de campagne de tout champion qui la joue ; comme les réserves sont partagées, gagner avec Naraxes en Poison fait progresser le Poison d'Ervald et de Thaldrin : une raison d'essayer les autres.
+- **Ce qu'un rang débloque** : au rang Apprenti, les producteurs et les généralistes de la maîtrise et une aura de départ ; chaque rang ajoute une ou deux consommatrices ou amplificatrices (Virulence, Curée, Sentence…) et une aura de départ.
+- **La difficulté** : le champion de référence de la campagne (celui qui règle les PV des rencontres) garde la réserve Apprenti ; les déblocages rendent donc le joueur réellement plus fort que la courbe, ce que demande la piste (si la référence suivait les déblocages, la courbe les annulerait, [CAMPAGNE.md](CAMPAGNE.md) § 6.3).
+- **Stockage** : `battler:masteries:v1` (par maîtrise, ses victoires). Rien de mesuré : à mesurer (`npm run campaign` avec la réserve Apprenti seule, puis entière) après la vague 2. Proposition par défaut : **plus tard**, après la vague 2.
+
+## 9. M9 : Dé pipé, Plaie ouverte, Ivresse du sang, Sève noire
+
+Esprit : ne pas fermer de possibilité, on remplace plutôt qu'on ampute. Les ids, noms et icônes restent (l'héritage et les forges enregistrées gardent leurs gravures).
+
+| Brique | Décision | Pourquoi | Mesure |
+| --- | --- | --- | --- |
+| **Dé pipé** | **Devient une aura de Chance** : « +25 % de chances de faire pile à ses pièces » (par charge, plafond des pièces 5 sur 6). La même brique moteur que la Pièce lestée (`headsChance`, agent CoinsRelics), lue aussi sur les statuts | Un dé pipé l'est en permanence : c'est la lecture de l'utilisateur ; il grandit avec chaque pièce de la maîtrise | Avec une seule pièce, plus faible que la compétence d'aujourd'hui : borne haute +5,9 (5 sur 6 : +7,9) contre +11,9 ; départ 43,7 %. Question Q4 |
+| **Plaie ouverte** | **Refaite** : « 1 Saignement à l'adversaire à chaque coup qui touche » (Sang) | La version critique ne se voyait pas (un Saignement posé sur un critique, qui coule au coup suivant) et dépendait du critique : « ni envie ni confiance ». La nouvelle agit à chaque coup, se lit, et nourrit la Curée | Gravée Gorak +6,4 → +13,0, Elaria +12,6 → +14,3 ; départs 49,1 % (Gorak), 49,2 % (Elaria), 51,5 % (Brokk) |
+| **Ivresse du sang** | **Gardée, aura de Fureur** (règle inchangée) | C'est déjà une aura (`look.aura`) ; la confusion venait de son rangement avec les compétences : l'onglet Auras (C1, agent Compendium) et le nom de sa maîtrise la règlent | Aura par défaut de Gorak : 50,8 % ; chez Elaria 58,8 % (d'où la Fureur, hors de ses maîtrises) |
+| **Sève noire** | **Gardée, aura de Poison** | C'est déjà une aura ; son texte est repris (C4 : « Chaque soin que son porteur reçoit inflige 4 Poison à l'adversaire. », fait par l'agent Compendium) | Départ d'Ervald 44,7 % (le Vol de vie la nourrit) |
+
+## 10. R5 : une relique qui pose les auras d'entrée
+
+**Mesure** (série 75, 400 combats par duel) : une relique qui pose l'aura de sa face 1 au premier tour vaut **+14,9 à +25,5 points** sur le kit d'aujourd'hui (Brokk +25,5, Naraxes +18,6, Ervald +18,3, Ysolde +14,9) et +12 à +15 sur les dés de départ proposés (Aldric, Gorak). L'aura posée d'office, puis reposée par la face 1 (une charge de plus pour les auras cumulables), vaut plus qu'une gravure : avec une aura sur le 1 de chaque personnage, **elle deviendrait obligatoire**.
+
+**Variante avec un prix** (pièce maîtresse, [PROGRESSION.md](PROGRESSION.md) P5) : l'aura part au premier tour, et la face 1 devient nue : **+2,5 à +7,0** (Ervald +2,5, Ysolde +4,3, Naraxes +4,5, Brokk +7,0), et une face libre à graver.
+
+**Recommandation** : ne pas la livrer telle quelle ; si on la veut, sous sa forme avec prix. L'agent CoinsRelics l'a notée en idée ([RELIQUES.md](RELIQUES.md) § 17).
+
+## 11. Le modèle de données (vague 2)
+
+### 11.1 Les fichiers
+
+- **`src/game/masteries.ts`** (nouveau) :
+  ```ts
+  export type MasteryId = 'fury' | 'blood' | 'hunt' | 'bulwark' | 'retaliation' | 'poison' | 'chance' | 'light' | 'shadow' | 'storm' | 'song'
+  export interface Mastery {
+    id: MasteryId
+    name: string            // « Fureur »
+    question: string        // « Frappe-t-il plus fort, plus souvent ? »
+    summary: string         // une phrase, pour le compendium
+    icon: string            // emblème peint, src/assets/icons/mastery-<id>.png (§ 12)
+    skills: readonly string[] // ids : ses auras et ses compétences, dans l'ordre du compendium
+  }
+  export const MASTERIES: Record<MasteryId, Mastery>
+  export const MASTERY_IDS: readonly MasteryId[]
+  export function masteryOfSkill(skillId: string): MasteryId | undefined
+  export function poolOf(id: MasteryId): CharacterEvent[]     // ses compétences gravables
+  export function validateMasteries(): string[]
+  ```
+- **`src/game/skills.ts`** (nouveau) : le catalogue des définitions de compétences, sorties des `events` et `reserve` de `roster.ts` (un déplacement, à résultats identiques) ; `ALL_SKILLS` et `ENGRAVABLE_SKILLS` en dérivent. Le roster pose ses deux faces par id (`onFace(SKILLS['wind-fury'], 2)`).
+- **`roster.ts`**, `CharacterDef` :
+  - `masteries: readonly [MasteryId, MasteryId]` (remplace `repertoire`) ;
+  - `startAuras: readonly string[]` : les auras de départ (§ 5.2), la première sur le 1 du dé vanilla ;
+  - `signature?: string` : la compétence du 2 (aucune pour Morgrut) ;
+  - `reserve` disparaît (catalogue).
+  - `validateRoster` : deux maîtrises distinctes ; le 1 du dé vanilla est `startAuras[0]` ; chaque aura de départ appartient à une de ses maîtrises et est une aura (`auraOfSkill`) ; la signature est sur le 2 et appartient à une de ses maîtrises.
+- **`character.ts`** : `Character.withStartAura(skillId)` (le dé vanilla, l'aura choisie sur le 1 ; refusée hors de `startAuras`) ; `createCharacter(id, { aura })`.
+- **`offers.ts`** : `REPERTOIRES` → `poolOf(championId)` (ses deux réserves moins son dé) ; `drawReward` : Graver à deux compétences (§ 6.2).
+- **`forge.ts`** : `ForgeOffer` de Graver porte `skills: CharacterEvent[]` (une ou deux) ; le pas choisi reste `{ op: 'engrave', face, skill }` : **le journal de forge, l'héritage et les parties enregistrées ne changent pas de forme**.
+- **`statuses.ts`** : `familyLabel` → le nom de la maîtrise de la compétence qui pose l'aura ; `StatusDef.family` reste (son). Nouveaux statuts : Veine, Effroi, Rancœur, Champ d'orage, Ballade, Poing de pierre ; `headsChance` sur un statut (Dé pipé), additionné à celui des reliques dans `tossCoin`.
+
+### 11.2 Les migrations
+
+| Donnée | Clé | Ce qui change | Migration |
+| --- | --- | --- | --- |
+| Historique des combats | `battler:history:v1` | rien (il ne garde ni dé ni kit) | aucune ; rétrocompatible |
+| Partie en cours | `battler:campaign:v4` | `aura: string` (l'aura de départ) | **v5** ; une partie v4 se lit : `aura` = l'aura par défaut, et les pas de forge qui ne valent plus sur le nouveau dé (un aiguisage du 1 ou du 2 d'un dé qui a changé : Gorak, Elaria, Aldric, Thaldrin, Fanchon) sont retirés (`validOnOrigin`), le reste est gardé |
+| Héritage | `battler:campaign-heritage:v1` | rien de nouveau | `loadHeritage` écarte déjà les pas de forge qui ne valent plus (`validOnOrigin`) ; il vérifie sur le dé **de l'aura choisie** ; une gravure d'une compétence d'une autre maîtrise reste héritable (elle a été gagnée) |
+| Choix de l'écran de campagne | `battler:campaign-choices:v1` = `{ [championId]: { heritage: boolean; aura?: string } }` (livrée par l'agent Screens avec U3 : `CampaignChoice`, `loadCampaignChoices`, `saveCampaignChoice`, qui fusionne) | `aura` s'ajoute, mémorisée par champion | aucune (champ facultatif) ; une aura mémorisée qui n'est plus dans `startAuras` retombe sur la première |
+| Combats signalés, traces | `logs/combats/` | le dé vanilla de cinq personnages change | `npm run logs` rejoue chaque trace avec le roster d'aujourd'hui : les traces d'avant la vague 2 de ces cinq personnages sont écartées avec leur raison (comme la barde à deux dés, 0.116.0) |
+
+### 11.3 La campagne
+
+- `startRun(championId, seed, heritage?, aura?)` ; `championOf(run)` pose l'aura du run.
+- Le **champion de référence** (`drawBuild`, `referenceChampions`, `tuneHp`) part **de la même aura** que le joueur : la courbe nominale reste celle du personnage avec ce départ, et un départ plus faible ne rend pas la partie plus dure (la clé de graine des rencontres inclut l'aura).
+- La saison du tournoi (`season.ts`) part du dé vanilla.
+
+## 12. L'interface (vague 2)
+
+- **Compendium, onglet Maîtrises** : une tuile par maîtrise (emblème, nom, question, les portraits de ceux qui la jouent), ouverte sur ses auras puis ses compétences (icône, nom, une ligne d'effet ; détail au survol). Dans l'onglet Auras et l'onglet Compétences (C1, C2), chaque brique nomme sa maîtrise (son emblème en petit) au lieu de sa famille de statut. La règle « Auras » dit : une par personnage sur le 1 de son dé, choisie au début d'une campagne ; les autres s'obtiennent en gravant. La fiche d'un personnage (C6) nomme ses deux maîtrises sous son nom.
+- **Écran d'affrontement** (U5, agent Screens) : sous le nom, « Chasse · Sang » avec les deux emblèmes, à la place de « Elfe · Rôdeuse » (race et classe restent dans la fiche du compendium).
+- **Livré (tranches F et G, agent MasteriesUI)** :
+  - compendium : onglet **Maîtrises** entre Combattants et Compétences (`MasteriesSection.tsx`) : onze tuiles à gauche (emblème, nom, question, portraits des porteurs), la maîtrise ouverte à droite (emblème, question, phrase, « La jouent » en liens vers les fiches, puis les encadrés « Auras » et « Compétences » : sceau, nom en lien vers sa fiche, une ligne d'effet, l'infobulle de la compétence au survol, pastille « Aura » ou « Compétence » au lieu d'une face) ;
+  - onglets Compétences et Auras : chaque brique nomme sa maîtrise avec son petit emblème (`MasteryName`) ; les auras sont rangées par maîtrise, dans l'ordre du registre ; la fiche porte « Aura · Lumière » ou « Compétence · Sang », en lien vers l'onglet Maîtrises. Le filtre cherche aussi la maîtrise. `familyLabel` et ses libellés de famille sont retirés de `statuses.ts` : la famille d'un statut ne s'affiche plus nulle part ;
+  - texte de l'onglet Auras : « Chaque combattant en porte une sur le 1 de son dé, choisie parmi celles de ses deux maîtrises au début d'une campagne ; les autres s'obtiennent en gravant. » ;
+  - fiche d'un combattant : ses deux maîtrises sous son nom (liens), race et archétype gardés au-dessus ; le filtre des combattants cherche aussi les maîtrises ;
+  - écran d'affrontement : la ligne « race · archétype » devient ses deux maîtrises, emblème (24 px) et nom ;
+  - emblème : `MasteryIcon` (`Icon.tsx`) lit `mastery-<id>.png`, sinon l'initiale dorée dans un rond (aucun trou si un emblème manque) ; `SkillTooltip` reçoit `badge` (la pastille à la place de la face).
+- **Écran de choix du champion de campagne** (U3, place prévue par Screens) : sous le dé de la fiche, une rangée « Aura de départ » : une tuile par aura de départ (icône peinte de l'aura, son nom, l'emblème de sa maîtrise en coin ; survol : son texte). La tuile choisie a le cadre à la couleur du camp ; le 1 du dé montre l'aura choisie. Choix mémorisé par champion (§ 11.2). Tuiles de contenu (comme les cartes de relique), pas des boutons de commande : le « Commencer » reste le bouton primaire du kit.
+- **Écran de forge** : la carte Graver montre deux compétences côte à côte (chacune avec l'emblème de sa maîtrise) ; choisir l'une choisit la carte.
+- **Images** (planches peintes et livrées le 2026-10-27 dans `src/assets/icons/`, consignes en anglais pour le gabarit de [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7) : les onze emblèmes de maîtrise, un type d'icône à part (un emblème héraldique simple, plat, de face, sans cadre, silhouette épaisse, une couleur maîtresse par maîtrise, toutes différentes), fichiers `mastery-fury`, `mastery-blood`, `mastery-hunt`, `mastery-bulwark`, `mastery-retaliation`, `mastery-poison`, `mastery-chance`, `mastery-light`, `mastery-shadow`, `mastery-storm`, `mastery-song` ; les icônes des briques nouvelles, grammaire des compétences, **ids fixés** (ce sont aussi les ids des compétences à coder) : `lucky-streak` (Veine), `dread` (Effroi), `rancor` (Rancœur), `storm-field` (Champ d'orage), `ballad` (Ballade), `prayer` (Prière), `wither` (Flétrissure), `assault` (Assaut), `stone-fist` (Poing de pierre, statut `stoneFist` posé par la Peau de pierre), avec les deux pièces de CoinsRelics `lucky-coin` et `cursed-coin`. Le glob d'`Icon.tsx` les prend ; le nom entre dans `IconName` avec la brique qui le porte (tranches B, F, G). Jamais d'emoji : la brique n'entre au jeu qu'avec son icône.
+- **Son** : rien de nouveau à décider, le son se déduit de l'effet ([SONS.md](SONS.md)) ; non vérifiable par l'agent.
+
+## 13. Questions à l'utilisateur
+
+Chacune a un choix par défaut, qui permet d'avancer. **Le parent a retenu tous les défauts le 2026-10-27** (Q1 à Q10), dont Brokk en Rempart et Sang, Morgrut avec l'Aura de puissance et l'attaque 6 à 8, le Dé pipé en aura et les noms du § 3.
+
+| # | Question | Par défaut |
+| --- | --- | --- |
+| **Q1** (à toi) | Brokk : sa seconde maîtrise devient le **Sang** (Épines, Curée, Pourfendre, Plaie ouverte), au lieu des Représailles (Riposte, Rétribution) ? | Sang |
+| **Q2** (à toi) | Morgrut : une aura sur le 1 comme tout le monde (Aura de puissance, attaque 7 à 9 → 6 à 8 : 49,5 %), sans compétence de personnage sur le 2 ; ou il reste le combattant nu ? | une aura sur le 1, face 2 nue |
+| Q3 | La face 2 fixe (la compétence du personnage), et non au choix ? | fixe |
+| **Q4** (à toi) | Dé pipé en aura (« +25 % de chances de faire pile ») : plus faible que la compétence d'aujourd'hui tant qu'on n'a qu'une pièce (borne +5,9 contre +11,9), il grandit avec chaque pièce. On le passe en aura ? | oui, en aura |
+| Q5 | Graver à deux cartes (une par maîtrise), plutôt qu'une carte à la maîtrise tirée à pile ou face ? | deux cartes |
+| Q6 | L'aura par défaut de Gorak : Ivresse du sang (50,8 %), plutôt que l'Aura de puissance (57,6 %, un duel à 66 % contre Ysolde) ? | Ivresse du sang |
+| **Q7** (à toi) | Les onze noms et emblèmes du § 3, et les icônes des briques nouvelles du § 12 : les peins-tu ? | à peindre ; noms du § 3 |
+| Q8 | La courbe des premiers combats (78, 86, 90 %) fait perdre 40 % des parties avant le 4e combat : on la garde ? | gardée |
+| Q9 | La progression entre les parties par rangs de maîtrise (§ 8, P11) : après la vague 2 ? | après |
+| Q10 | R5 : pas de relique d'entrée, sauf en pièce maîtresse avec prix ? | pas de relique |
+
+## 14. Le plan de la vague 2
+
+Tranches à confier chacune à un agent ; « dépend de » donne le seul ordre imposé. Chaque tranche : ses tests ciblés et `npx tsc --noEmit -p .` ; l'empreinte `balance.test.ts` n'est mise à jour qu'une fois, à l'intégration (tranche H).
+
+| Tranche | Fichiers | Contrat (ce qu'elle expose) | Tests | Mesures | Dépend de |
+| --- | --- | --- | --- | --- | --- |
+| **État au 2026-10-27** | A, B et C **livrées** (agent MasteriesCore, mesures MasteriesMeasure) | — | verts : combat, audit, staging, states, wording, timing | A : empreinte identique ; B : § 4 bis (Aura de pourriture réglée, Dé pipé hors bande) ; C : `BALANCE_N=800` (`logs/balance/2026-10-27-11-32-35_v0.120.0.md`) : de 44,2 (Ysolde) à 55,2 % (Thaldrin), pire duel Aldric–Ysolde 62,6 % ; départs au § 5.2 | — |
+| **A. Registre et catalogue** | `masteries.ts` (nouveau), `skills.ts` (nouveau), `roster.ts` (définitions déplacées, `masteries` sur chaque fiche ; `repertoire` et `reserve` gardés le temps de la tranche C) | `MASTERIES`, `MasteryId`, `masteryOfSkill`, `poolOf`, `SKILLS` ; `ALL_SKILLS`, `ENGRAVABLE_SKILLS` inchangés | `validateMasteries` : chaque gravable dans une maîtrise et une seule ; deux maîtrises distinctes par personnage ; V5 (Naraxes et Ervald, même réserve Poison) | empreinte **identique** (aucune règle ne change) | — |
+| **B. Briques nouvelles et refaites** | `statuses.ts`, `skills.ts`, `combat.ts` (Dé pipé : `headsChance` d'un statut dans `tossCoin`), `hooks.ts` (accroches), `rules.ts` si une règle du compendium change | Veine, Effroi, Rancœur, Champ d'orage, Ballade, Prière, Flétrissure, Assaut, Poing de pierre (sur Peau de pierre), Plaie ouverte refaite, Dé pipé aura, Aura de pourriture au critique, Aura sauvage sans forme | une mécanique, un test dans `combat.test.ts` ; contrôle dans `audit.test.ts` pour `headsChance` d'un statut et le Poing qui part à l'armure vidée ; `wording.test.ts` | `scripts/skills.report.ts` (gravées, rangs) pour chaque brique : bande 8 à 20, rang 3 à 8 | A (catalogue) ; icônes (Q7) avant d'entrer au jeu |
+| **C. Dés de départ** | `roster.ts` (`startAuras`, `signature` sur le 2, les dés du § 7, Aldric 5 à 6, Morgrut selon Q2), `character.ts` (`withStartAura`), `validateRoster`, `modules.test.ts` (dé vanilla figé) | `CharacterDef.masteries`, `startAuras`, `signature` ; `createCharacter(id, { aura })` ; `repertoire` et `reserve` retirés | dé vanilla de chacun ; chaque aura de départ est une aura de ses maîtrises | `BALANCE_N=800 npm run balance` (roster 42 à 58 %, aucun duel au-delà de 65/35) ; chaque aura de départ au laboratoire (série 70 à rejouer sur le registre) | A, B |
+| **D. Offres** | `offers.ts`, `forge.ts`, l'écran de forge (agent des écrans) | `poolOf(championId)` ; `ForgeOffer` Graver `skills` (une ou deux) ; `autoForge` au hasard entre elles | Graver : une compétence par maîtrise quand les deux en ont ; le producteur d'abord ; une forge enregistrée se relit | `npm run ramp` (Elaria ≤ 58 % construite, écart premier − dernier, pentes), `npm run season` | A, C |
+| **E. Campagne** | `campaign.ts` (run v5, `aura`, migration v4, référence partie de la même aura, héritage vérifié sur ce dé), `CampaignScreen.tsx` (rangée Aura de départ, mémorisée par champion) | `startRun(…, aura)`, `CampaignRun.aura`, clé des choix par champion | lecture d'une partie v4 ; héritage valide sur l'aura choisie ; le champion de référence porte l'aura | `npm run campaign` (boss atteint, acte gagné, chance avant combat, par aura de départ) | C ; U3 livré (agent Screens) |
+| **F. Compendium** | `src/components/compendium/*`, `familyLabel` | onglet Maîtrises ; libellé de maîtrise sur chaque brique ; fiche : ses deux maîtrises | `screens.test.tsx` (onglet présent, aucune interaction ni purification citée) | une ou deux captures (Firefox sans interface) | A ; emblèmes (Q7) |
+| **G. Affrontement** | l'écran d'affrontement (U5) | les deux maîtrises sous le nom, avec leurs emblèmes | test d'écran | une capture | A ; emblèmes |
+| **H. Intégration et documents** | `package.json`, `CHANGELOG.md`, `docs/FEATURES.md`, `docs/ETAT.md`, `docs/PERSONNAGES.md`, ce document, `docs/README.md` | — | `npm run check`, `npx vite build`, empreinte `balance.test.ts` mise à jour une fois (`npx vitest run -u`), notée au CHANGELOG | balance, ramp, campaign, season, une fois chacun, avant → après | toutes |
+
+## 15. Les mesures : méthode, rapports, limites
+
+- **Outil** : le laboratoire (`npx vitest run --config vitest.balance.config.ts scripts/lab.report.ts --silent=false`, `LAB_SERIES`, `LAB_N=400`) ; idées dans `scripts/lab/ideas.ts`, séries 70 à 75 (statuts d'essai construits avec les crochets existants ; rien n'est livré au jeu).
+- **Rapports** (`logs/lab/`) : série 70 `2026-10-27-10-48-35_v0.120.0.md` (sa ligne « Pourriture (coup) » est fausse, une aura d'essai manquante : reprise dans `…11-02-00…`) ; 71 `…10-48-02…` ; 72 `…10-47-57…` ; 73 `…10-47-17…` ; 74 `…10-50-25…` ; 75 `…10-52-02…` et 75 bis `…10-52-34…`. Les rapports de 10 h 39 et 10 h 44 sont **périmés** : ils ont tourné pendant que Fanchon était à 18,7 % (avant le Duo à trois charges), ce qui gonflait chaque taux d'environ 3 points.
+- **Ce que mesure un départ** : un personnage modifié contre le roster nu d'aujourd'hui (ses adversaires gardent leur dé actuel). Quand cinq dés changent ensemble, le roster entier bouge : la vérité est le `npm run balance` de la tranche C.
+- **Le code bougeait** : les mesures ont tourné pendant les retouches des agents EngineFixes (Poison en fin de tour, Critique assuré qui s'use, Riposte qui manque l'esquive, Clous de pavois, Duo à trois charges) et CoinsRelics (pièces, Pièce lestée, Sursis, initiative). Les écarts appariés (même graine, même code) tiennent ; les taux absolus sont à reprendre après l'intégration.
+- **Pas mesuré** : la montée construite (Elaria, Ervald, Brokk, Thaldrin) avec les nouvelles réserves, Graver à deux cartes, la progression entre les parties, la relique « face 6 joue la 2 » ; tout ce qui est rendu (rien n'a été vu à l'écran) et le son.
+
+## 16. Livré : offres et campagne (tranches D et E, 2026-10-27)
+
+**D. Offres** (`offers.ts`, `forge.ts`, `ForgedDie.tsx`, la même voie en campagne et en saison) :
+- la réserve d'un personnage est `characterPool` (ses deux maîtrises moins son dé, masteries.ts) ; `REPERTOIRES` est retiré ;
+- `ForgeOffer` de Graver porte `skills` (une ou deux) ; `drawForgeOffer(base, steps, rng, pool, { focus, noNewSkill, groupOf })` tire une compétence par groupe (la maîtrise, `masteryOfSkill`), à l'écho dans son groupe, parmi les offrables (le producteur d'abord, inchangé) ; `stepOf(offer, face, to, skill)` ; `autoForge` tire l'opération, puis l'une des compétences au hasard (aucun tirage de plus quand Graver n'en a qu'une) ; `isOffered` vérifie un choix (saison, partie relue). Le pas choisi garde une compétence : journal, héritage et traces ne changent pas de forme ;
+- l'écran de forge : la carte Graver à deux compétences s'élargit (520 px) et les montre côte à côte, chacune avec son sceau, son nom, l'emblème et le nom de sa maîtrise (`MasteryIcon`) et sa ligne ; choisir l'une choisit la carte (« Votre choix » si l'on prend l'autre que celle du combattant). Une carte Graver à une compétence nomme aussi sa maîtrise. Capture vue (Firefox, Gorak, Aura sauvage / Pourfendre) ;
+- tests : `modules.test.ts` (une compétence par maîtrise offrable, dans l'ordre de ses maîtrises ; le producteur d'abord ; le pilote automatique grave dans les deux), `season.test.ts` (chaque compétence de la carte se choisit en saison).
+
+**E. Campagne** (`campaign.ts`, `CampaignScreen.tsx`, `App.tsx`) : partie v5 (`aura`), lecture d'une partie v4, champion de référence parti de la même aura, héritage gardé s'il vaut sur le dé d'une de ses auras et trié au départ sur celui de l'aura choisie (`heritageFor`), rangée « Aura de départ » sur l'écran de choix du champion, mémorisée par champion ; sur la carte de l'acte, le départ se lit « Aura de départ » puis « Compétence ». Détail : [CAMPAGNE.md](CAMPAGNE.md) § 18.2. Capture vue (Elaria, Aura de précision mémorisée). `secondSkillOf` est retiré (la face 2 est la `signature`).
+
+**Mesures** (une fois chacune, roster de la tranche C) :
+- `npm run ramp` (`logs/ramp/2026-10-27-11-37-35_v0.120.0.md`, 48 builds, 60 combats par duel), à 10 récompenses, 0.118.1 → maintenant : **Elaria 62,4 → 60,7 %, au-dessus de la cible de 58** ; Fanchon 52,0 → 62,3 (pente +8,2), Gorak 50,8 → 57,4, Brokk 46,0 → 53,1, Aldric 55,6 → 52,1, Naraxes 56,8 → 49,7, Morgrut 45,0 → 44,2, Thaldrin 44,0 → 43,6, Ervald 45,8 → 40,3, Ysolde 41,7 → 36,6 ; écart premier − dernier 20,7 → 25,7 points ; pentes négatives 6 → 5 (Thaldrin −10,3, Ervald −5,8, Ysolde −4,6, Morgrut −4,5, Aldric −4,2). Le levier du § 8 (critique d'Elaria ×2,4 → ×2,2) n'est **pas appliqué** : il touche `roster.ts` et demande une balance et une montée de plus ; Fanchon (62,3 %) est désormais au-dessus d'Elaria ;
+- `npm run season` (`logs/season/2026-10-27-11-38_saison.md`) : taux de saison 34–65 %, écart-type 8,6 → **41–58 %, écart-type 6,3** ; paires liées par build 4,82 → 3,85, gravures par build 1,27 → 1,28 ;
+- `npm run campaign` : [CAMPAGNE.md](CAMPAGNE.md) § 18.3, « Les maîtrises » (boss atteint 13 → 16 %, acte gagné 7 → 9 % ; tous les départs de Thaldrin à 0 %).
+
+## 17. Le réglage de la vague 2 (2026-10-27, agent Tuning)
+
+Causes, essais et décisions : [PERSONNAGES.md](PERSONNAGES.md), « Le réglage de la vague 2 ». En bref :
+- **Elaria** : son excès construit vient de ses reliques de critique (Contrepoids de plomb +16,1, Plume d'aigle +18,2 chez elle), que ses critiques assurés (Œil de faucon, Feinte) rendent gratuites ; **critique 15 % ×2,4 → 17 % ×2,2**.
+- **Ervald** : **Vol de vie +2 → +4 PV** par coup drainé. **Ysolde** : **Purification 6 → 8 dégâts** sans bonus à retirer.
+- **Fanchon : rien.** La Copie du Duo (+27,1, 15 builds sur 48) porte son excès ; elle est structurelle (copier double la fréquence du Duo). Duo plafonné à 3 : 58,9 % construite, mais le Duo aiguisé n'y vaut plus rien ; plafond relevé par le rang (équivalent : Duo non cumulable) : 60,8 %, Duo aiguisé +7,3 ; Soliste ×2 : 61,3 %. Aucune option ne tient ~59 % en gardant le rang du Duo sensible ; la Copie n'est pas touchée. Le Soliste reste ×3 (+7,6 dans ses builds, +10,6 gravé nu).
+- **Thaldrin en campagne** : aucun défaut ; ses quatre départs partagent les graines de partie et de combat, et ce jeu de douze graines lui est défavorable (sur trois autres : 83-86 % estimés, 79-89 % gagnés ; [CAMPAGNE.md](CAMPAGNE.md) § 18.3).
+
+**Mesures finales** (une fois chacune), avant → après :
+- `BALANCE_N=800 npm run balance` (`logs/balance/2026-10-27-12-11-48_v0.120.0.md`) : 44,2–55,2 % → **46,0 % (Elaria) – 54,9 % (Thaldrin)** ; Ervald 44,4 → 47,5, Ysolde 44,2 → 48,1, Elaria 51,6 → 46,0, Fanchon 49,7 → 49,9 ; pire duel 62,6 → 59 % ;
+- `npm run ramp` (`logs/ramp/2026-10-27-12-11-12_v0.120.0.md`), à 10 récompenses : Elaria 60,7 → **57,4**, Fanchon 62,3 → 62,2, Gorak 57,4 → 57,3, Ervald 40,3 → 43,3, Ysolde 36,6 → 37,7, Thaldrin 43,6 → 43,3 ; écart premier − dernier 25,7 → **24,5 points** ; Plume d'aigle chez Elaria +18,2 → +20,5 (au-dessus de la bande des reliques) ;
+- `npm run season` (`logs/season/2026-10-27-12-11_saison.md`) : 41–58 %, écart-type 6,3 → **42–59 %, 5,7** ; Elaria 58 → 53 % ;
+- `npm run campaign` (`logs/campaign/2026-10-27-12-17_campagne_12.md`) : boss atteint 16 → 15 %, acte gagné 9 → 9 %.

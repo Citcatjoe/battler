@@ -27,6 +27,7 @@ import {
   STORM_SKY_LOSS,
   VENDETTA_MOMENTUM,
   type Status,
+  type StatusId,
 } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
@@ -417,9 +418,11 @@ export function createAudit() {
       if (b.type === 'statusReaction' && b.status === 'openWound') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'openWound') : undefined
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
-        const crit = cause?.type === 'attack' && cause.attack.attacker === b.side && cause.attack.crit && !cause.attack.dodged && !cause.attack.replaced
+        // Refaite avec les Maîtrises (M9) : à chaque coup qui touche (une pile qui touche comprise)
+        const touched =
+          (cause?.type === 'attack' && cause.attack.attacker === b.side && !cause.attack.dodged && !cause.attack.replaced) || (cause?.type === 'coin' && cause.side === b.side && cause.heads)
         const wound = b.effects[0]
-        if (b.trigger !== 'crit' || !crit || !held) flag('plaie ouverte hors d’un critique', r, i, `${b.trigger} ${cause?.type}`)
+        if (b.trigger !== 'hit' || !touched || !held) flag('plaie ouverte hors d’un coup qui touche', r, i, `${b.trigger} ${cause?.type}`)
         else if (b.effects.length !== 1 || wound?.type !== 'applyStatus' || wound.status !== 'bleed' || wound.target !== 1 - b.side || wound.stacks !== OPEN_WOUND_BLEED * charges(held))
           flag('plaie ouverte : saignement faux', r, i, JSON.stringify(b.effects))
         else see('plaie ouverte')
@@ -454,7 +457,8 @@ export function createAudit() {
         const dodged = cause?.type === 'attack' && cause.attack.attacker === 1 - b.side && cause.attack.dodged && !cause.attack.blindedBy
         const crit = b.effects[0]
         if (b.trigger !== 'dodge' || !dodged || !held) flag('feinte hors d’une esquive', r, i, `${b.trigger} ${cause?.type}`)
-        else if (b.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== b.side || crit.stacks !== 1)
+        // Un Sceau de vol (Confiscation) détourne le critique vers l'adversaire (`stolenBy`)
+        else if (b.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== (crit.stolenBy ? 1 - b.side : b.side) || crit.stacks !== 1)
           flag('feinte : critique faux', r, i, JSON.stringify(b.effects))
         else see('feinte')
       }
@@ -515,7 +519,29 @@ export function createAudit() {
         if (find(prev.statuses[side], 'faithShield') && beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0) && !diedAfter(i) && !reactedTo(i, side, 'faithShield'))
           flag('bouclier de foi non déclenché', r, i, `${b.type} côté ${side}`)
         const crit = b.type === 'attack' && b.attack.attacker === side && b.attack.crit && !b.attack.dodged && !b.attack.replaced
-        if (crit && find(prev.statuses[side], 'openWound') && !diedAfter(i) && !reactedTo(i, side, 'openWound')) flag('plaie ouverte non déclenchée', r, i, `côté ${side}`)
+        // Un jet tombé à vide (Malchance) ne porte pas de coup
+        const touch = b.type === 'attack' && b.attack.attacker === side && !b.attack.dodged && !b.attack.replaced && !b.attack.jinxed
+        const hurt = b.type === 'attack' && b.attack.attacker === 1 - side && !b.attack.dodged && !b.attack.replaced && !b.attack.jinxed
+        // L'état du début du coup (règle 9) : un statut posé par la compétence greffée de ce jet ne réagit qu'au coup suivant
+        let rolled = -1
+        if (b.type === 'attack' && b.attack.preset) for (let j = i - 1; j >= 0 && rolled < 0; j--) if (r.beats[j].type === 'roll') rolled = j
+        const base = rolled >= 0 ? stateBefore(rolled) : prev
+        if (touch && find(base.statuses[side], 'openWound') && !diedAfter(i) && !reactedTo(i, side, 'openWound')) flag('plaie ouverte non déclenchée', r, i, `côté ${side}`)
+        // Les Maîtrises, vague 2 (2026-10-27) : chaque aura nouvelle réagit à son moment ; le Poing de pierre part avec l'armure
+        const reacts: [boolean, StatusId][] = [
+          [crit, 'dread'],
+          [crit, 'rotAura'],
+          [touch, 'ballad'],
+          [hurt, 'rancor'],
+          [hurt, 'stormField'],
+          [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed, 'luckyStreak'],
+          [opensMoment(r, i, side, 'shieldBroken'), 'stoneFist'],
+        ]
+        for (const [when, status] of reacts)
+          if (when && find(base.statuses[side], status) && find(prev.statuses[side], status) && !diedAfter(i)) {
+            if (!reactedTo(i, side, status)) flag(`${STATUSES[status].name} : réaction manquée`, r, i, `côté ${side}`)
+            else see(`maîtrises : ${status}`)
+          }
         if (crit && find(prev.statuses[side], 'bloodFrenzy') && !diedAfter(i) && !reactedTo(i, side, 'bloodFrenzy')) flag('ivresse du sang non déclenchée', r, i, `côté ${side}`)
         const dodged = b.type === 'attack' && b.attack.attacker === 1 - side && b.attack.dodged && !b.attack.blindedBy && !b.attack.replaced
         if (dodged && find(prev.statuses[side], 'feint') && !diedAfter(i) && !reactedTo(i, side, 'feint')) flag('feinte non déclenchée', r, i, `côté ${side}`)
@@ -707,7 +733,10 @@ export function createAudit() {
           else if (gild) see('face dorée')
           const value = a.value * (a.multiplier ?? 1) + bonus + gild
           let raw = a.crit ? Math.round(value * a.critMultiplier) : value
-          for (const st of prev.statuses[att]) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
+          // Poing de pierre (Maîtrises, P4) : il n'agit que si l'attaquant a une armure temporaire
+          const armored = prev.statuses[att].some((st) => STATUSES[st.id].shield)
+          for (const st of prev.statuses[att]) if (!STATUSES[st.id].whileShielded || armored) raw = STATUSES[st.id].modifyOutgoing?.(raw, st) ?? raw
+          if (find(prev.statuses[att], 'stoneFist')) see(armored ? 'poing de pierre' : 'poing de pierre sans armure')
           for (const st of prev.statuses[def]) raw = STATUSES[st.id].modifyIncoming?.(raw, st) ?? raw
           raw = Math.max(1, Math.round(raw))
           if (raw !== a.raw) flag('dégâts bruts faux', r, i, `${a.raw} vs ${raw}`)
@@ -791,15 +820,10 @@ export function createAudit() {
         const dmg = b.effects.reduce((t, e) => t + (e.type === 'damage' && e.target !== b.side ? e.amount : 0), 0)
         const strike = r.beats.slice(0, i).reverse().find((x) => x.type === 'attack')
         // Pile : ce coup ×N, la pièce rend encore N − 1 fois les PV qu'il a retirés (phase 5 bis, ×3 depuis la 0.107.0 ; son
-        // intensité, Pile ou face aiguisée, monte N en 0.110.0). Dé pipé (phase 8, second lot) : sans pièce imposée, une
-        // charge du lanceur fait tomber pile et monte N de son bonus et de son intensité ; la charge part
-        const loaded = b.forced || toss?.multiplier === undefined ? undefined : prev.statuses[b.side].find((x) => STATUSES[x.id].loadsCoin !== undefined)
-        if (loaded) {
-          if (!b.heads || b.loadedBy !== loaded.id) flag('dé pipé ignoré', r, i, `${b.heads} ${b.loadedBy}`)
-          else if ((find(s.statuses[b.side], loaded.id)?.stacks ?? 0) !== loaded.stacks - 1) flag('dé pipé non consommé', r, i, '')
-          else see('pièce pipée')
-        } else if (b.loadedBy) flag('pièce pipée sans dé pipé', r, i, b.loadedBy)
-        const more = (find(prev.statuses[b.side], b.status)?.power ?? 0) + (loaded ? STATUSES[loaded.id].loadsCoin! + (loaded.power ?? 0) : 0)
+        // intensité, Pile ou face aiguisée, monte N en 0.110.0). Dé pipé (une aura depuis les Maîtrises, M9) : il ne change
+        // que la chance de pile, contrôlée par la fréquence (audit.test.ts)
+        if (prev.statuses[b.side].some((x) => STATUSES[x.id].headsChance)) see('pièce pipée')
+        const more = find(prev.statuses[b.side], b.status)?.power ?? 0
         if (toss?.heads) {
           // Pièce d'effet (2026-10-27) : pile, ses statuts tels que déclarés (son rang la fait tomber plus souvent sur pile),
           // sans dégâts ; face, rien
@@ -833,7 +857,7 @@ export function createAudit() {
         if (b.side !== active(b.turn)) flag('Furie hors de son tour', r, i, '')
         const def = STATUSES[b.status]
         // Jets de plus (Coup de chance, Duo) : le jet de l'action, plus un par charge, toutes dépensées à cette action. Le
-        // Duo est posé par un 1 d'une action passée : sa rafale suit l'action après le 1 (2026-10-25)
+        // Duo est posé par sa face d'une action passée : sa rafale suit l'action qui l'a posé (2026-10-25)
         if (!def.instantStrikes && def.strikeCharges === 'all') {
           const held = find(prev.statuses[b.side], b.status)?.stacks ?? 0
           if (!held || b.strikes !== 1 + def.extraStrikes! * held || find(s.statuses[b.side], b.status)) flag('jets de plus : charges mal dépensées', r, i, `${held} charges, ${b.strikes} jets`)
@@ -842,8 +866,8 @@ export function createAudit() {
               .slice(0, i)
               .reverse()
               .find((x) => x.type === 'event' && x.event.effects.some((e) => e.type === 'applyStatus' && e.status === 'duo' && e.target === b.side))
-            if (!posed || posed.turn >= b.turn) flag('Duo : rafale sans un 1 avant elle', r, i, `${posed?.turn}`)
-            else see('duo : la rafale suit l’action après le 1')
+            if (!posed || posed.turn >= b.turn) flag('Duo : rafale sans un Duo avant elle', r, i, `${posed?.turn}`)
+            else see('duo : la rafale suit l’action du Duo')
           }
         }
         // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le jet qui l'a déclenchée (un jet remplacé) ;

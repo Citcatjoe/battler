@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
+import { MASTERY_IDS } from '../../game/masteries'
 import { RELICS } from '../../game/relics'
 import { CHARACTERS } from '../../game/roster'
 import { sheetStatuses } from '../../game/catalog'
 import { CharactersBackdrop, CharactersSection } from './CharactersSection'
+import { MasteriesSection } from './MasteriesSection'
 import { RelicsSection } from './RelicsSection'
 import { RulesSection } from './RulesSection'
 import { compendiumSkills, SkillsSection } from './SkillsSection'
@@ -13,10 +15,10 @@ import { StatusesSection } from './StatusesSection'
  * l'écran Statistiques). Une donnée, une maison : chaque information est décrite dans une seule section, et
  * apparaît ailleurs en résumé avec un lien vers elle (`CompendiumNav.go`).
  * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent. Les compétences
- * et les auras ont chacune leur onglet (retour du 2026-10-27) ; un onglet Maîtrises viendra s'ajouter (docs/MAITRISES.md).
+ * et les auras ont chacune leur onglet (retour du 2026-10-27) ; les Maîtrises, le leur (docs/MAITRISES.md § 12).
  */
 
-export type CompendiumSectionId = 'characters' | 'skills' | 'auras' | 'statuses' | 'relics' | 'rules'
+export type CompendiumSectionId = 'characters' | 'masteries' | 'skills' | 'auras' | 'statuses' | 'relics' | 'rules'
 
 /** Où mène un lien du compendium : une section, et l'élément à montrer (personnage, compétence, statut, relique, règle). */
 export interface CompendiumTarget {
@@ -59,6 +61,13 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
     placeholder: 'Filtrer les combattants…',
     render: (props) => <CharactersSection {...props} />,
     backdrop: (props) => <CharactersBackdrop {...props} />,
+  },
+  {
+    id: 'masteries',
+    label: 'Maîtrises',
+    count: MASTERY_IDS.length,
+    placeholder: 'Filtrer les maîtrises…',
+    render: (props) => <MasteriesSection {...props} />,
   },
   {
     id: 'skills',

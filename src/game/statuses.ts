@@ -82,33 +82,22 @@ export type StatusId =
   | 'stormSky'
   | 'bloodFrenzy'
   | 'bloodFrenzyStrike'
+  // Les Maîtrises, vague 2 (retour du 2026-10-27, docs/MAITRISES.md § 4) : les auras nouvelles et le Poing de pierre
+  | 'luckyStreak'
+  | 'dread'
+  | 'rancor'
+  | 'stormField'
+  | 'ballad'
+  | 'stoneFist'
 
 export type Polarity = 'positive' | 'negative'
 
 /**
  * La famille d'un statut (docs/FAMILLES.md § 2) : celle de son effet principal ; un convertisseur (« quand il touche,
  * pose X ») est de la famille de ce qu'il produit. Elle choisit le son de sa pose (docs/SONS.md, règle 4, 2026-10-25).
+ * Une donnée technique, jamais montrée : le joueur lit la maîtrise d'une compétence (`masteryOfSkill`, masteries.ts).
  */
 export type Family = 'power' | 'guard' | 'precision' | 'evasion' | 'tempo' | 'fortune' | 'affliction' | 'healing' | 'retaliation' | 'seals'
-
-const FAMILY_LABEL: Record<Family, string> = {
-  power: 'Puissance',
-  guard: 'Garde',
-  precision: 'Précision',
-  evasion: 'Esquive',
-  tempo: 'Tempo',
-  fortune: 'Fortune',
-  affliction: 'Affliction',
-  healing: 'Soin',
-  retaliation: 'Représailles',
-  seals: 'Sceaux',
-}
-
-/**
- * Le nom affiché de la famille d'un statut (compendium, onglet Auras). Un seul point de bascule : quand les Maîtrises
- * arriveront (docs/MAITRISES.md, vague 2), c'est ici que le libellé deviendra celui de la maîtrise.
- */
-export const familyLabel = (id: StatusId) => FAMILY_LABEL[STATUSES[id].family]
 
 /** Un statut actif sur un combattant. */
 export interface Status {
@@ -226,11 +215,15 @@ export interface StatusDef {
    */
   coinToss?: { multiplier: number; headsTouches?: boolean; heads?: never } | { heads: readonly Effect[]; multiplier?: never; headsTouches?: never }
   /**
-   * Dé pipé (phase 8, second lot) : la prochaine pièce du porteur tombe sur pile, et pile vaut ×N de plus (son intensité
-   * en ajoute) ; une charge par pièce. La pièce se tire quand même (la suite du hasard reste celle d'un combat sans lui) ;
-   * une pièce imposée par l'observateur (mode triche) garde sa valeur et laisse la charge.
+   * Chance de pile (Dé pipé en aura, Maîtrises, 2026-10-27, M9) : chaque charge ajoute cette chance de faire pile à
+   * toutes les pièces du porteur, comme la Pièce lestée (`Relic.headsChance`) ; la somme reste sous `HEADS_CAP` (moteur).
    */
-  loadsCoin?: number
+  headsChance?: number
+  /**
+   * Poing de pierre (Maîtrises, 2026-10-27, P4) : n'agit que tant que son porteur a une armure temporaire (`shield`) ;
+   * il part quand elle est vidée (sa réaction `shieldBroken`) ou brisée (Garde brisée).
+   */
+  whileShielded?: true
   /**
    * S'estompe : chaque fois qu'il agit (`onTurnStart`, `onTurnEnd` ou une réaction), le statut perd une
    * charge, et disparaît à 0. Une seule valeur dit à la fois sa force et ce qu'il lui reste (poison 3 : 3,
@@ -380,25 +373,37 @@ const SENTENCE_CAP = 2
 
 /*
  * Phase 8, second lot (docs/SORTS.md § 23) : les valeurs mesurées au laboratoire (séries 24 à 26, 400 combats par duel).
- * Embrasement : la Brûlure relâchée ×3 (son rang : ×1 de plus). Dé pipé : pile ×3 de plus sur la pièce qu'il pipe, ce
- * coup ×6 (son rang : ×1 de plus ; ×2 de plus jusqu'à la revue des compétences, O2). Rempart hérissé : Épines acérées et
+ * Embrasement : la Brûlure relâchée ×3 (son rang : ×1 de plus). Rempart hérissé : Épines acérées et
  * armure temporaire par charge, à chaque armure temporaire vidée (l'armure depuis la revue des auras, A3 : la boucle qui
  * nourrit sa ressource). Vindicte : Ferveur par charge, à chaque renvoi (6 depuis la revue des auras, A2 ; 3 avant).
  */
 export const CONFLAGRATION_TIMES = 3
-export const LOADED_DIE_BONUS = 3
 export const RAMPART_THORNS = 2
 export const RAMPART_ARMOR = 2
 export const VENDETTA_MOMENTUM = 6
 
 /**
- * Revue des auras et des compétences (docs/REVUE_COMPETENCES.md, I1, I3, I4) : trois auras nouvelles. Bouclier de foi :
- * armure temporaire par charge à chaque soin reçu. Pas de côté : esquive par charge. Plaie ouverte : Saignement posé à
- * l'adversaire par charge, à chaque critique du porteur.
+ * Revue des auras et des compétences (docs/REVUE_COMPETENCES.md, I1, I3) : Bouclier de foi : armure temporaire par charge à
+ * chaque soin reçu. Pas de côté : esquive par charge. Plaie ouverte, refaite avec les Maîtrises (M9, 2026-10-27) :
+ * Saignement posé à l'adversaire par charge, à chaque coup qui touche (3 par critique avant : gravée Gorak +6,4 → +13,0,
+ * Elaria +12,6 → +14,3, série 71 du laboratoire).
  */
 export const FAITH_SHIELD_ARMOR = 2
 export const SIDESTEP_DODGE = 0.08
-export const OPEN_WOUND_BLEED = 3
+export const OPEN_WOUND_BLEED = 1
+
+/**
+ * Les Maîtrises, vague 2 (docs/MAITRISES.md § 4, séries 70 à 73 du laboratoire) : Dé pipé, chance de pile par charge
+ * (« +25 % de chances de faire pile ») ; Effroi, critique par charge de plus ; Poing de pierre, dégâts par coup tant que
+ * l'armure temporaire tient (à +2, les départs de Brokk passaient 58 %).
+ */
+export const LOADED_DIE_HEADS = 0.25
+export const DREAD_CRIT = 0.05
+/** Aura de pourriture : Pourriture posée par critique et par charge (1 jusqu'à la mesure du 2026-10-27 : gravée +4,5, rang +2,0) */
+export const ROT_AURA_ROT = 2
+export const STONE_FIST = 1
+/** Effroi : la première pose fait peur ; chaque charge de plus, et chaque rang, du critique (comme l'Ivresse du sang). */
+const dreadCrit = (s: Status) => DREAD_CRIT * (s.stacks - 1 + (s.power ?? 0))
 
 /**
  * Phase 8, lot 3 (docs/SORTS.md § 28, séries 60 à 69, 400 combats par duel) : les fils minces. Feinte : esquive par
@@ -699,7 +704,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'healing',
     summary: 'Son prochain coup qui touche lui rend les PV qu’il retire, une charge par coup.',
-    // Le rang I rend déjà +2 PV (revue des compétences, P3) : l'intensité posée par la compétence, que ses rangs grossissent
+    // Le rang I rend déjà des PV de plus (revue des compétences, P3 : +2 ; +4 depuis les Maîtrises) : l'intensité posée par la compétence, que ses rangs grossissent
     describe: (s) => {
       const more = s.power ? `, +${s.power}` : ''
       return next(s.stacks, `Son prochain coup qui touche lui rend les PV qu'il retire${more}`, `Ses N prochains coups qui touchent lui rendent les PV qu'ils retirent${more}`)
@@ -839,28 +844,22 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     reactions: { hit: (s) => [{ type: 'release', status: 'burn', from: 'opponent', min: 0, share: CONFLAGRATION_TIMES + (s.power ?? 0), target: 'opponent', source: 'burn' }] },
     power: (n) => `+${n} fois la Brûlure`,
   },
+  // Les Maîtrises (M9, décision de l'utilisateur, 2026-10-27) : une aura de la Chance, « un dé pipé l'est en permanence ».
+  // Elle sert toutes ses pièces et grandit avec elles. Jusqu'à la 0.120.0 : un mécanisme de compétence, sa prochaine pièce
+  // de Pile ou face tombait sur pile, ce coup ×6 (gravée +11,9 ; en aura, borne haute +5,9 avec la seule Pile ou face)
   loadedDie: {
     name: 'Dé pipé',
-    look: { glow: 'rgba(167,139,250,0.85)' },
+    look: { aura: 'rgba(167,139,250,0.5)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: `Sa prochaine pièce de Pile ou face tombe sur pile, et pile vaut ×${LOADED_DIE_BONUS} de plus : ce coup ×${COIN_HEADS + LOADED_DIE_BONUS}.`,
-    // Revue des compétences (T4) : le multiplicateur du coup, pas celui qui s'ajoute (« ×3 de plus » se lisait ×3 ou ×6)
-    describe: (s) => {
-      const blow = `ce coup ×${COIN_HEADS + LOADED_DIE_BONUS + (s.power ?? 0)}`
-      return next(
-        s.stacks,
-        `Sa prochaine pièce de Pile ou face tombe sur pile : ${blow}`,
-        `Ses N prochaines pièces de Pile ou face tombent sur pile : chaque fois, ${blow}`,
-      )
-    },
-    detail: () => 'Sans Pile ou face, la charge attend.',
-    badge: (s) => `+×${LOADED_DIE_BONUS + (s.power ?? 0)}`,
+    summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces, par charge.`,
+    describe: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces`,
+    detail: () => 'Toutes ses pièces ; jamais plus de 5 chances sur 6 de faire pile.',
+    badge: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} %`,
     counter: 'stacks',
     stacking: 'add',
-    mechanic: 'skill',
-    loadsCoin: LOADED_DIE_BONUS,
-    power: (n) => `pile ×${n} de plus`,
+    headsChance: LOADED_DIE_HEADS,
+    power: (n) => `+${Math.round(LOADED_DIE_HEADS * 100 * n)} % de chances de faire pile`,
   },
   bristlingRampart: {
     name: 'Rempart hérissé',
@@ -1164,16 +1163,21 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     modifyIncoming: (damage) => damage + 2,
     spentOnHurt: true,
   },
+  // Les Maîtrises (2026-10-27, Ombre) : l'aura reçoit un porteur, au critique. « À chaque coup qui touche », le départ
+  // d'Ervald montait à 64,5 % (pire duel 70,8 %) ; au critique, 45,4 % (Ervald) et 51,0 % (Aldric), série 70. À 1
+  // Pourriture par charge, gravée +4,5 et rang +2,0 (sous les bandes) : 2 par charge
   rotAura: {
     name: 'Aura de pourriture',
     look: { aura: 'rgba(124,90,140,0.6)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: "Chaque coup qui touche pose 1 Pourriture par charge à l'adversaire.",
-    describe: (s) => `${s.stacks} Pourriture à l'adversaire à chaque coup qui touche`,
-    badge: (s) => `+${s.stacks}`,
+    summary: `Chacun de ses critiques pose ${ROT_AURA_ROT} Pourriture par charge à l'adversaire.`,
+    describe: (s) => `Chacun de ses critiques pose ${ROT_AURA_ROT * charges(s)} Pourriture à l'adversaire`,
+    badge: (s) => `+${ROT_AURA_ROT * charges(s)}`,
+    counter: 'stacks',
     stacking: 'add',
-    reactions: { hit: (s) => [{ type: 'applyStatus', status: 'rot', stacks: s.stacks, target: 'opponent' }] },
+    reactions: { crit: (s) => [{ type: 'applyStatus', status: 'rot', stacks: ROT_AURA_ROT * charges(s), target: 'opponent' }] },
+    power: (n) => `+${ROT_AURA_ROT * n} Pourriture par critique`,
   },
   rot: {
     name: 'Pourriture',
@@ -1330,14 +1334,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(220,38,38,0.5)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: `Chacun de ses critiques fait saigner l'adversaire de ${OPEN_WOUND_BLEED} par charge.`,
-    describe: (s) => `Ses critiques font saigner l'adversaire de ${OPEN_WOUND_BLEED * charges(s)}`,
+    summary: `Chaque coup qui touche pose ${OPEN_WOUND_BLEED} Saignement par charge à l'adversaire.`,
+    describe: (s) => `${OPEN_WOUND_BLEED * charges(s)} Saignement à l'adversaire à chaque coup qui touche`,
     detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
     badge: (s) => `+${OPEN_WOUND_BLEED * charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
-    reactions: { crit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * charges(s), target: 'opponent' }] },
-    power: (n) => `+${OPEN_WOUND_BLEED * n} Saignement par critique`,
+    reactions: { hit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * charges(s), target: 'opponent' }] },
+    power: (n) => `+${OPEN_WOUND_BLEED * n} Saignement par coup qui touche`,
   },
   // Phase 8, lot 3 (docs/SORTS.md § 29) : les malus de famille manquants, Garde, Fortune, Précision, Soin, Sceaux
   guardBreak: {
@@ -1513,6 +1517,102 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     mechanic: 'skill',
     extraStrikes: 1,
     instantStrikes: true,
+  },
+
+  /*
+   * Les Maîtrises, vague 2 (retour du 2026-10-27, docs/MAITRISES.md § 4) : cinq auras nouvelles, une par maîtrise qui en
+   * manquait, et le Poing de pierre de Brokk (P4). Mesures (laboratoire, séries 70 à 73, 400 combats par duel) : gravées,
+   * Veine +8,5 (Naraxes), Effroi +12,1 (Ervald), Rancœur +9,5 (Aldric), Champ d'orage +11,8 (Ysolde), Ballade +12,4
+   * (Fanchon) ; la Peau de pierre et son Poing, départ de Brokk 49,8 → 54,9 %.
+   */
+  luckyStreak: {
+    name: 'Veine',
+    look: { aura: 'rgba(56,189,248,0.5)' },
+    polarity: 'positive',
+    family: 'fortune',
+    summary: 'Chaque 6 au dé lui donne un jet de plus à sa prochaine action, par charge.',
+    describe: (s) => (charges(s) > 1 ? `Chaque 6 au dé lui donne ${charges(s)} jets de plus à sa prochaine action` : 'Chaque 6 au dé lui donne un jet de plus à sa prochaine action'),
+    detail: () => 'Un jet complet : son dé, sa compétence, son coup.',
+    badge: (s) => `+${charges(s)}d6`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { naturalMax: (s) => [{ type: 'applyStatus', status: 'luckyStrike', stacks: charges(s) }] },
+    power: (n) => `+${plural(n, 'jet')} par 6`,
+  },
+  dread: {
+    name: 'Effroi',
+    look: { aura: 'rgba(120,113,108,0.55)' },
+    polarity: 'positive',
+    family: 'tempo',
+    summary: `Chacun de ses critiques fait perdre sa prochaine action à l'adversaire ; chaque charge de plus, +${Math.round(DREAD_CRIT * 100)} % de critique.`,
+    describe: (s) => {
+      const crit = Math.round(dreadCrit(s) * 100)
+      return `Chacun de ses critiques fait perdre sa prochaine action à l'adversaire${crit > 0 ? `, et +${crit} % de critique` : ''}`
+    },
+    detail: () => 'La Peur : une action perdue au plus à la fois. Chaque nouvelle pose : +5 % de critique.',
+    badge: () => '×1',
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + dreadCrit(s) }),
+    reactions: { crit: () => [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }] },
+    power: (n) => `+${Math.round(DREAD_CRIT * 100 * n)} % de critique`,
+  },
+  rancor: {
+    name: 'Rancœur',
+    look: { aura: 'rgba(234,88,12,0.5)' },
+    polarity: 'positive',
+    family: 'power',
+    summary: 'Chaque coup reçu lui donne +1 Ferveur par charge.',
+    describe: (s) => `Chaque coup reçu lui donne +${charges(s)} Ferveur`,
+    detail: () => 'La Ferveur part sur son prochain coup qui touche.',
+    badge: (s) => `+${charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'momentum', stacks: charges(s) }] },
+    power: (n) => `+${n} Ferveur par coup reçu`,
+  },
+  stormField: {
+    name: "Champ d'orage",
+    look: { aura: 'rgba(250,204,21,0.5)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: "Chaque coup reçu foudroie l'attaquant : 1 PV par charge.",
+    describe: (s) => `Chaque coup reçu foudroie l'attaquant : ${plural(charges(s), 'PV')}`,
+    detail: () => 'En dégâts directs.',
+    badge: (s) => `−${charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { hurt: (s) => [{ type: 'damage', amount: charges(s), target: 'opponent', source: 'lightning' }] },
+    power: (n) => `+${plural(n, 'PV')} par coup reçu`,
+  },
+  ballad: {
+    name: 'Ballade',
+    look: { aura: 'rgba(244,114,182,0.5)' },
+    polarity: 'positive',
+    family: 'healing',
+    summary: 'Chaque coup qui touche lui rend 1 PV par charge.',
+    describe: (s) => `Chaque coup qui touche lui rend ${plural(charges(s), 'PV')}`,
+    badge: (s) => `+${charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { hit: (s) => [{ type: 'heal', amount: charges(s) }] },
+    power: (n) => `+${plural(n, 'PV')} par coup qui touche`,
+  },
+  stoneFist: {
+    name: 'Poing de pierre',
+    look: { glow: 'rgba(220,38,38,0.8)' },
+    polarity: 'positive',
+    family: 'power',
+    summary: `Tant que son armure temporaire tient, ses coups font +${STONE_FIST}.`,
+    describe: () => `Tant que son armure temporaire tient, ses coups font ${damageText(STONE_FIST)}`,
+    detail: () => "Avant l'armure de l'adversaire ; il part quand son armure temporaire est vidée.",
+    badge: () => `+${STONE_FIST}`,
+    stacking: 'refresh',
+    maxStacks: 1,
+    modifyOutgoing: (damage) => damage + STONE_FIST,
+    whileShielded: true,
+    reactions: { shieldBroken: () => [] },
+    spentOnReaction: true,
   },
 }
 

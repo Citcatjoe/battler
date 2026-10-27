@@ -1,8 +1,8 @@
 import { hashSeed } from './analysis'
 import { Character, type CharacterDef } from './character'
-import { rollFace } from './events'
+import type { CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
-import { validOnOrigin, withForgeStep, type ForgeStep } from './forge'
+import { isOffered, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { drawReward, REWARDS, type PendingReward } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
@@ -65,6 +65,8 @@ export const BOSS: CharacterDef = {
   name: 'Le Colosse',
   race: 'Ogre',
   archetype: 'Champion de l’arène',
+  // Ses techniques volées viennent du Rempart et du Sang (exigé par la fiche ; le boss ne grave pas)
+  masteries: ['bulwark', 'blood'],
   // Règles v2, phase 5 bis (0.106.0) : une attaque lourde, ses trois techniques sur le 1, le 2 et le 3 (Peau de pierre
   // et l'Aura d'intimidation se greffent sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées
   stats: { maxHp: 70, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
@@ -91,17 +93,14 @@ export const BOSS: CharacterDef = {
 /** Un adversaire de campagne par son id : un personnage du roster, à son dé vanilla, ou le boss. */
 export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character(BOSS) : createCharacter(id))
 
-/* ---------- Le champion : le personnage vanilla ---------- */
-
-/**
- * La seconde compétence d'un personnage (0.112.0, décision de l'utilisateur) : l'autre compétence du dé que sa
- * signature, sur la face 2 de son dé vanilla. La Foudre pour Thaldrin, le Soliste pour Fanchon ; aucune pour Morgrut.
+/*
+ * ---------- Le champion : le personnage vanilla ----------
  *
  * Un seul modèle (0.113.0, règle de l'utilisateur) : un champion de campagne part du personnage du roster tel quel
- * (`createCharacter`), le même qu'en tournoi ; seules les règles du mode (forge, reliques, répertoire, limite de faces)
- * le font évoluer.
+ * (`createCharacter`), le même qu'en tournoi, à l'aura de départ près (maîtrises : l'aura choisie sur le 1, sa
+ * compétence de personnage sur le 2, docs/MAITRISES.md § 5) ; seules les règles du mode (forge, reliques, réserve de
+ * ses maîtrises, limite de faces) le font évoluer.
  */
-export const secondSkillOf = (def: CharacterDef) => def.events.find((e) => e.id !== def.signature && rollFace(e.trigger) !== undefined)
 
 /* ---------- La partie ---------- */
 
@@ -136,10 +135,12 @@ export interface FightRecord {
 }
 
 export interface CampaignRun {
-  version: 4
+  version: 5
   /** Graine de la partie : rencontres, réglages, offres et choix par défaut en dérivent */
   seed: number
   championId: string
+  /** L'aura de départ choisie (maîtrises, docs/MAITRISES.md § 5) : sur le 1 de son dé, l'une de ses `startAuras` */
+  aura: string
   /** L'héritage choisi au départ (il n'entre pas dans les gains : il ne se transmet pas à nouveau) */
   heritage?: HeritageItem
   forge: ForgeStep[]
@@ -156,9 +157,12 @@ export interface CampaignRun {
   outcome?: 'won' | 'lost'
 }
 
-/** Le champion tel qu'il est maintenant : le personnage vanilla (`createCharacter`), son dé forgé, ses reliques. */
-export function championOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'>): Character {
-  return createCharacter(run.championId).withForge(run.forge).withRelics(run.relics.map(getRelic))
+/** Le dé de départ d'un champion parti de l'aura `aura` (l'aura par défaut sans elle) : la base de sa forge. */
+const startDef = (championId: string, aura?: string) => createCharacter(championId, { aura }).definition
+
+/** Le champion tel qu'il est maintenant : le personnage vanilla, parti de son aura (`createCharacter`), son dé forgé, ses reliques. */
+export function championOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'relics'> & { aura?: string }): Character {
+  return createCharacter(run.championId, { aura: run.aura }).withForge(run.forge).withRelics(run.relics.map(getRelic))
 }
 
 /** Un adversaire avant le réglage de ses PV : le boss, ou le personnage vanilla et sa construction. */
@@ -175,13 +179,27 @@ export function opponentOf(encounter: Encounter): Character {
 /** Le nœud en cours (0 à `ACT_FIGHTS`) ; le dernier est le boss. */
 export const isBossNode = (run: CampaignRun) => run.wins === ACT_FIGHTS
 
-/** Commence une partie : le champion, et son héritage s'il en a choisi un. */
-export function startRun(championId: string, seed: number, heritage?: HeritageItem): CampaignRun {
-  const def = createCharacter(championId).definition
+/** Les auras de départ d'un champion (la première : l'aura par défaut, celle du tournoi). */
+export const startAurasOf = (championId: string): readonly string[] => rosterDef(championId).startAuras ?? []
+
+/**
+ * Les héritages d'un champion qui valent sur le dé de l'aura choisie (docs/MAITRISES.md § 11.2) : une gravure de l'aura
+ * qui est déjà sur son 1, ou un aiguisage d'une aura qui ne s'aiguise pas, est écarté.
+ */
+export function heritageFor(championId: string, aura: string, items: readonly HeritageItem[]): HeritageItem[] {
+  const def = startDef(championId, aura)
+  return items.filter((g) => g.kind === 'relic' || validOnOrigin(def, g.step))
+}
+
+/** Commence une partie : le champion, son aura de départ (l'aura par défaut sans elle), et son héritage s'il en a choisi un. */
+export function startRun(championId: string, seed: number, heritage?: HeritageItem, aura = startAurasOf(championId)[0]): CampaignRun {
+  if (!startAurasOf(championId).includes(aura)) throw new Error(`${aura} n'est pas une aura de départ de ${championId}`)
+  const def = startDef(championId, aura)
   return {
-    version: 4,
+    version: 5,
     seed,
     championId,
+    aura,
     ...(heritage && { heritage }),
     forge: heritage?.kind === 'forge' ? withForgeStep(def, [], heritage.step) : [],
     relics: heritage?.kind === 'relic' ? [heritage.relic] : [],
@@ -210,15 +228,15 @@ export const OPPONENT_LAG = 3
 
 /**
  * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
- * par défaut dans l'offre (le choix automatique du tournoi). Le champion de référence et les adversaires sont construits
- * ainsi.
+ * par défaut dans l'offre (le choix automatique du tournoi), sur le dé de l'aura `aura` (l'aura par défaut sans elle).
+ * Le champion de référence et les adversaires sont construits ainsi.
  */
-export function drawBuild(championId: string, node: number, rng: Rng): Pick<CampaignRun, 'forge' | 'relics'> {
-  const def = createCharacter(championId).definition
+export function drawBuild(championId: string, node: number, rng: Rng, aura?: string): Pick<CampaignRun, 'forge' | 'relics'> {
+  const def = startDef(championId, aura)
   let forge: ForgeStep[] = []
   const relics: string[] = []
   for (const kind of REWARDS.slice(0, node)) {
-    const reward = drawReward({ championId, forge, relics }, kind, rng)
+    const reward = drawReward({ championId, aura, forge, relics }, kind, rng)
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
   }
@@ -226,13 +244,14 @@ export function drawBuild(championId: string, node: number, rng: Rng): Pick<Camp
 }
 
 /**
- * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu (son départ), qui
- * reçoivent aux mêmes moments que le joueur ses récompenses (`drawBuild`). Sans héritage : la courbe nominale ne connaît
- * pas la puissance permanente (§ 8).
+ * Le champion de référence au nœud `node` : `REFERENCE_VARIANTS` versions du personnage nu, **parti de la même aura**
+ * que le joueur (docs/MAITRISES.md § 11.3 : un départ plus faible ne rend pas la partie plus dure), qui reçoivent aux
+ * mêmes moments que le joueur ses récompenses (`drawBuild`). Sans héritage : la courbe nominale ne connaît pas la
+ * puissance permanente (§ 8). La graine de chaque version inclut l'aura.
  */
-export function referenceChampions(championId: string, node: number, seed: number): Character[] {
+export function referenceChampions(championId: string, node: number, seed: number, aura = startAurasOf(championId)[0]): Character[] {
   return Array.from({ length: REFERENCE_VARIANTS }, (_, v) =>
-    championOf({ championId, ...drawBuild(championId, node, seededRng(hashSeed(`campagne:${seed}:reference:${v}`))) }),
+    championOf({ championId, aura, ...drawBuild(championId, node, seededRng(hashSeed(`campagne:${seed}:${aura}:reference:${v}`)), aura) }),
   )
 }
 
@@ -292,7 +311,7 @@ export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) =>
 export function encountersFor(run: CampaignRun): Encounter[] {
   const node = run.wins
   const rng = seededRng(hashSeed(`campagne:${run.seed}:noeud:${node}`))
-  const references = referenceChampions(run.championId, node, run.seed)
+  const references = referenceChampions(run.championId, node, run.seed, run.aura)
   const champion = championOf(run)
   const boss = isBossNode(run)
   const last = run.fights[run.fights.length - 1]?.opponentId
@@ -349,7 +368,7 @@ export function rewardChoice(reward: PendingReward): HeritageItem | undefined {
 /** Applique la récompense choisie (une relique, ou une opération de forge) et l'ajoute aux gains de la partie. */
 export function withReward(run: CampaignRun, gain: HeritageItem | undefined): CampaignRun {
   if (!gain) return { ...run, reward: undefined }
-  const def = createCharacter(run.championId).definition
+  const def = startDef(run.championId, run.aura)
   return {
     ...run,
     forge: gain.kind === 'forge' ? withForgeStep(def, run.forge, gain.step) : run.forge,
@@ -363,10 +382,12 @@ export function withReward(run: CampaignRun, gain: HeritageItem | undefined): Ca
 
 /**
  * Ce qu'une partie laisse en héritage : ses reliques gagnées, et ses opérations de forge qui valent seules sur le dé
- * d'origine (une gravure, une dorure, une copie, une refonte, une compétence d'origine aiguisée).
+ * d'origine de son aura (une gravure, une dorure, une copie, une compétence d'origine aiguisée). Une gravure d'une
+ * compétence d'une autre maîtrise reste héritable : elle a été gagnée. Au départ suivant, `heritageFor` la revérifie sur
+ * le dé de l'aura alors choisie.
  */
 export function heritableGains(run: CampaignRun): HeritageItem[] {
-  const def = createCharacter(run.championId).definition
+  const def = startDef(run.championId, run.aura)
   return run.gains.filter((g) => g.kind === 'relic' || validOnOrigin(def, g.step))
 }
 
@@ -376,29 +397,91 @@ export const drawHeritage = (items: readonly HeritageItem[], rng: Rng) => shuffl
 /* ---------- Sauvegarde ---------- */
 
 /**
- * Partie en cours ; v4 (0.105.0) : le d6 imprimé et les adversaires construits (une partie v3 est oubliée ; v3 en
- * 0.104.0 : la signature seule et dix combats ; v2 depuis 0.89.0). Une partie v4 d'avant la 0.112.0 se charge avec le
- * nouveau départ, sauf si sa forge a gravé, doré ou copié sur la face 2 (la seconde compétence y est), ou gravé la
- * seconde compétence ailleurs : `loadRun` l'oublie. Une partie de la 0.112.0 se charge telle quelle : son départ de
- * campagne est devenu le personnage vanilla (0.113.0), le même dé.
+ * Partie en cours ; v5 (maîtrises, docs/MAITRISES.md § 11.2) : l'aura de départ (`aura`). Une partie v4 (0.105.0 : le
+ * d6 imprimé et les adversaires construits) se relit (`fromSaved`) : l'aura par défaut, et ce qui ne vaut plus sur le
+ * nouveau dé de départ (cinq dés vanilla ont changé) est retiré ; le reste est gardé. Une partie v3 ou plus ancienne est
+ * oubliée.
  */
-const RUN_KEY = 'battler:campaign:v4'
+const RUN_KEY = 'battler:campaign:v5'
+const RUN_KEY_V4 = 'battler:campaign:v4'
 const HERITAGE_KEY = 'battler:campaign-heritage:v1'
+
+/** Une offre de forge enregistrée avant les maîtrises : Graver portait une seule compétence (`skill`). */
+type SavedForgeOffer = ForgeOffer | { op: 'engrave'; skill: CharacterEvent }
+
+/** Une partie enregistrée : v5, ou v4 (sans aura, ses offres de Graver à une compétence). */
+type SavedRun =
+  | CampaignRun
+  | (Omit<CampaignRun, 'version' | 'aura' | 'reward'> & {
+      version: 4
+      reward?: { kind: 'relic'; offer: string[]; choice?: string } | { kind: 'forge'; offer: SavedForgeOffer[]; choice?: ForgeStep }
+    })
+
+/** Le journal de forge rejoué sur un dé, sans les opérations qui n'y valent plus (une à une, dans l'ordre). */
+function keptSteps(def: CharacterDef, steps: readonly ForgeStep[]): ForgeStep[] {
+  let kept: ForgeStep[] = []
+  for (const step of steps) {
+    try {
+      kept = withForgeStep(def, kept, step)
+    } catch {
+      /* ne vaut plus sur ce dé : retirée */
+    }
+  }
+  return kept
+}
+
+/**
+ * Relit une partie enregistrée. Une partie v5 dont l'aura est toujours une aura de départ se relit telle quelle ; une
+ * partie v4, ou dont l'aura n'est plus proposée, part de l'aura par défaut : sa forge, ses gains et son héritage gardent
+ * ce qui vaut encore sur ce dé (un aiguisage du 1 ou du 2 d'un dé qui a changé est retiré), l'offre en attente garde ses
+ * opérations encore jouables (le choix du champion, s'il vaut encore), et les rencontres du nœud se recalculent.
+ */
+function fromSaved(saved: SavedRun): CampaignRun {
+  if (saved.version === 5 && startAurasOf(saved.championId).includes(saved.aura)) return saved
+  const aura = startAurasOf(saved.championId)[0]
+  const def = startDef(saved.championId, aura)
+  const forge = keptSteps(def, saved.forge)
+  const kept = new Set(forge.map(stepKey))
+  const valid = (step: ForgeStep) => kept.has(stepKey(step))
+  const { reward: old, encounters: _encounters, heritage, ...rest } = saved
+  let reward: PendingReward | undefined
+  if (old?.kind === 'relic') reward = old
+  if (old?.kind === 'forge') {
+    const taken = new Set([...def.events, ...forge.flatMap((s) => (s.op === 'engrave' ? [s.skill] : []))].map((e) => e.id))
+    const offer = old.offer.flatMap((o): ForgeOffer[] => {
+      if (o.op !== 'engrave') return [o]
+      const skills = ('skill' in o ? [o.skill] : o.skills).filter((s) => !taken.has(s.id))
+      return skills.length ? [{ op: 'engrave', skills }] : []
+    })
+    const choice = old.choice && isOffered(offer, old.choice) && keptSteps(def, [...forge, old.choice]).length > forge.length ? old.choice : undefined
+    reward = { kind: 'forge', offer, ...(choice && { choice }) }
+  }
+  return {
+    ...rest,
+    version: 5,
+    aura,
+    ...(heritage && (heritage.kind === 'relic' || valid(heritage.step)) && { heritage }),
+    forge,
+    gains: saved.gains.filter((g) => g.kind === 'relic' || valid(g.step)),
+    ...(reward && { reward }),
+  }
+}
 
 /**
  * La partie en cours enregistrée, ou null (aucune, ou illisible : règles changées depuis). Le champion, les adversaires
- * proposés et la forge choisie en attente se reconstruisent : une forge qui ne vaut plus sur le dé de campagne (0.111.0 :
- * la signature passée sur la face 1) fait oublier la partie, au lieu de faire planter l'écran.
+ * proposés et la forge choisie en attente se reconstruisent : ce qui ne se reconstruit plus fait oublier la partie, au
+ * lieu de faire planter l'écran.
  */
 export function loadRun(): CampaignRun | null {
   try {
-    const raw = localStorage.getItem(RUN_KEY)
+    const raw = localStorage.getItem(RUN_KEY) ?? localStorage.getItem(RUN_KEY_V4)
     if (!raw) return null
-    const run = JSON.parse(raw) as CampaignRun
-    if (run.version !== 4) return null
+    const saved = JSON.parse(raw) as SavedRun
+    if (saved.version !== 4 && saved.version !== 5) return null
+    const run = fromSaved(saved)
     championOf(run)
     run.encounters?.forEach(opponentBase)
-    if (run.reward?.kind === 'forge' && run.reward.choice) withForgeStep(createCharacter(run.championId).definition, run.forge, run.reward.choice)
+    if (run.reward?.kind === 'forge' && run.reward.choice) withForgeStep(startDef(run.championId, run.aura), run.forge, run.reward.choice)
     // Une relique retirée du jeu (offre en attente, héritage) fait oublier la partie, au lieu de faire planter l'écran
     if (run.reward?.kind === 'relic') run.reward.offer.forEach(getRelic)
     if (run.heritage?.kind === 'relic') getRelic(run.heritage.relic)
@@ -410,6 +493,8 @@ export function loadRun(): CampaignRun | null {
 
 export function saveRun(run: CampaignRun | null) {
   try {
+    // La partie v4 relue est désormais en v5 : l'ancienne clé ne doit plus la faire revenir
+    localStorage.removeItem(RUN_KEY_V4)
     if (run) localStorage.setItem(RUN_KEY, JSON.stringify(run))
     else localStorage.removeItem(RUN_KEY)
   } catch {
@@ -419,8 +504,9 @@ export function saveRun(run: CampaignRun | null) {
 
 /**
  * Les héritages de chaque personnage : les gains de sa dernière partie qui a rapporté quelque chose. Une opération de
- * forge qui ne vaut plus sur le dé vanilla (une compétence d'origine aiguisée, que la signature seule a quittée, en
- * 0.104.0) est écartée.
+ * forge qui ne vaut plus sur aucun de ses dés de départ (une compétence d'origine aiguisée qui a quitté le dé) est
+ * écartée ; celle qui ne vaut que sur le dé d'une autre aura reste, et `heritageFor` la trie au départ, sur le dé de
+ * l'aura choisie (docs/MAITRISES.md § 11.2).
  */
 export function loadHeritage(): Record<string, HeritageItem[]> {
   try {
@@ -429,7 +515,10 @@ export function loadHeritage(): Record<string, HeritageItem[]> {
     return Object.fromEntries(
       Object.entries(saved)
         .filter(([id]) => CHARACTER_IDS.includes(id))
-        .map(([id, items]) => [id, items.filter((g) => (g.kind === 'relic' ? RELIC_IDS.includes(g.relic) : validOnOrigin(createCharacter(id).definition, g.step)))]),
+        .map(([id, items]) => {
+          const dice = startAurasOf(id).map((aura) => startDef(id, aura))
+          return [id, items.filter((g) => (g.kind === 'relic' ? RELIC_IDS.includes(g.relic) : dice.some((def) => validOnOrigin(def, g.step))))]
+        }),
     )
   } catch {
     return {}
@@ -451,23 +540,32 @@ export function recordHeritage(run: CampaignRun) {
 }
 
 /**
- * L'interrupteur « Activer l'héritage » de chaque champion (écran de choix, retour du 2026-10-27) : actif tant qu'on ne
- * l'a pas coupé, mémorisé à chaque changement. Il ne touche pas au calcul de l'héritage : coupé, la partie part sans.
+ * Les choix de départ mémorisés par champion (écran de choix, retour du 2026-10-27) : l'interrupteur « Activer
+ * l'héritage » (actif tant qu'on ne l'a pas coupé ; il ne touche pas au calcul de l'héritage : coupé, la partie part
+ * sans), et l'aura de départ (`aura`, maîtrises V3, docs/MAITRISES.md § 11.2 : absente, ou qui n'est plus une de ses
+ * `startAuras`, l'écran retombe sur la première).
  */
-const HERITAGE_ON_KEY = 'battler:campaign-heritage-on:v1'
+export interface CampaignChoice {
+  heritage: boolean
+  aura?: string
+}
 
-export function loadHeritageOn(): Record<string, boolean> {
+const CHOICES_KEY = 'battler:campaign-choices:v1'
+
+export function loadCampaignChoices(): Record<string, CampaignChoice> {
   try {
-    const raw = localStorage.getItem(HERITAGE_ON_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+    const raw = localStorage.getItem(CHOICES_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, CampaignChoice>) : {}
   } catch {
     return {}
   }
 }
 
-export function saveHeritageOn(championId: string, on: boolean) {
+/** Mémorise les choix d'un champion (fusionnés avec ceux déjà enregistrés pour lui). */
+export function saveCampaignChoice(championId: string, choice: Partial<CampaignChoice>) {
+  const all = loadCampaignChoices()
   try {
-    localStorage.setItem(HERITAGE_ON_KEY, JSON.stringify({ ...loadHeritageOn(), [championId]: on }))
+    localStorage.setItem(CHOICES_KEY, JSON.stringify({ ...all, [championId]: { ...(all[championId] ?? { heritage: true }), ...choice } }))
   } catch {
     /* stockage indisponible : le choix vaut pour la session */
   }

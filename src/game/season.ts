@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
-import { withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
+import { isOffered, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { drawReward, REWARDS, type RewardKind } from './offers'
 import { getRelic } from './relics'
 import { seededRng } from './rng'
@@ -311,9 +311,7 @@ export function chooseSeasonReward(t: Tournament, number: number, side: Side, ch
     if (typeof choice !== 'string' || !current.offer.includes(choice)) throw new Error(`Relique non proposée au match de saison ${number}`)
     reward = { ...current, chosen: choice }
   } else {
-    const offered =
-      typeof choice !== 'string' && current.offer.some((o) => o.op === choice.op && (o.op !== 'engrave' || (choice.op === 'engrave' && choice.skill.id === o.skill.id)))
-    if (!offered) throw new Error(`Opération non proposée au match de saison ${number}`)
+    if (typeof choice === 'string' || !isOffered(current.offer, choice)) throw new Error(`Opération non proposée au match de saison ${number}`)
     // La face doit être de celles que l'opération peut viser sur son dé de ce jour-là (erreur sinon)
     withForgeStep(createCharacter(season.entrants[entrant].characterId).definition, buildOf(season, entrant, f.day).forge, choice)
     reward = { ...current, chosen: choice }

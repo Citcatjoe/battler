@@ -22,7 +22,8 @@ import { withForgeStep, type ForgeStep } from '../src/game/forge'
 import { buildLinks } from '../src/game/hooks'
 import { getRelic } from '../src/game/relics'
 import { pick, seededRng } from '../src/game/rng'
-import { ALL_SKILLS, CHARACTER_IDS, createCharacter, repertoireOf } from '../src/game/roster'
+import { masteryOfSkill } from '../src/game/masteries'
+import { ALL_SKILLS, CHARACTER_IDS, createCharacter } from '../src/game/roster'
 import pkg from '../package.json' with { type: 'json' }
 
 const RUNS = Number(process.env.CAMPAIGN_RUNS ?? 12)
@@ -68,17 +69,18 @@ function lotBricks(reward: PendingReward): { offered: string[]; taken?: string }
   if (reward.kind === 'relic') {
     return { offered: reward.offer.filter((id) => LOT_RELICS.includes(id)), taken: reward.choice && LOT_RELICS.includes(reward.choice) ? reward.choice : undefined }
   }
-  const offered = reward.offer.flatMap((o) => (o.op === 'engrave' && o.skill.id in LOT_SKILLS ? [o.skill.id] : []))
+  const offered = reward.offer.flatMap((o) => (o.op === 'engrave' ? o.skills.flatMap((s) => (s.id in LOT_SKILLS ? [s.id] : [])) : []))
   const step = reward.choice
   return { offered, taken: step?.op === 'engrave' && step.skill.id in LOT_SKILLS ? step.skill.id : undefined }
 }
 
 /**
  * Un acte complet tiré comme le champion de référence (`drawBuild` de campaign.ts, mêmes graines que
- * `referenceChampions`), avec ses offres : la mesure de l'offre seule.
+ * `referenceChampions`, l'aura par défaut), avec ses offres : la mesure de l'offre seule.
  */
 function actBuild(championId: string, seed: number, v: number) {
-  const rng = seededRng(hashSeed(`campagne:${seed}:reference:${v}`))
+  const aura = createCharacter(championId).definition.startAuras[0]
+  const rng = seededRng(hashSeed(`campagne:${seed}:${aura}:reference:${v}`))
   const def = createCharacter(championId).definition
   let forge: ForgeStep[] = []
   const relics: string[] = []
@@ -102,12 +104,13 @@ it('mesure de la campagne (pilote automatique)', () => {
   const boss = { fights: 0, turns: 0 }
   // Les briques des lots dans les parties : offres où elles figurent, et prises par le choix par défaut
   const inRuns = Object.fromEntries(LOT_BRICKS.map((b) => [b, { offered: 0, taken: 0 }]))
-  for (const id of CHARACTER_IDS) {
+  // Chaque champion, parti de chacune de ses auras de départ (docs/MAITRISES.md § 5) : `RUNS` parties par aura
+  for (const [id, aura] of CHARACTER_IDS.flatMap((id) => createCharacter(id).definition.startAuras.map((a) => [id, a] as const))) {
     // Chance avant combat aux nœuds 1-2 (le plancher des PV y retient la courbe) et 3-10 ; adversaires normaux au plancher
     const tally = { depth: 0, boss: 0, won: 0, chance: 0, fights: 0, turns: 0, early: [0, 0], late: [0, 0], floor: 0, normals: 0, normalWins: 0 }
     for (let k = 0; k < RUNS; k++) {
-      const rng = seededRng(hashSeed(`mesure:${id}:${k}${SEEDS}`))
-      let run: CampaignRun = startRun(id, hashSeed(`partie:${id}:${k}${SEEDS}`))
+      const rng = seededRng(hashSeed(`mesure:${id}:${aura}:${k}${SEEDS}`))
+      let run: CampaignRun = startRun(id, hashSeed(`partie:${id}:${k}${SEEDS}`), undefined, aura)
       while (!run.outcome) {
         const encounters = encountersFor(run)
         for (const e of encounters.filter((x) => !x.boss)) {
@@ -137,7 +140,7 @@ it('mesure de la campagne (pilote automatique)', () => {
           boss.turns += result.turns
         } else {
           // Le même champion nu : le personnage vanilla, sans forge ni relique
-          const naked = simulateCombat([createCharacter(id), opponent], { seed })
+          const naked = simulateCombat([createCharacter(id, { aura }), opponent], { seed })
           const node = nodes[run.wins]
           const hp = encounter.maxHp / createCharacter(encounter.characterId).baseStats.maxHp
           node.fights++
@@ -161,9 +164,9 @@ it('mesure de la campagne (pilote automatique)', () => {
       if (run.outcome === 'won') tally.won++
     }
     all = { runs: all.runs + RUNS, boss: all.boss + tally.boss, won: all.won + tally.won }
-    const start = createCharacter(id).events.map((e) => e.name).join(', ') || 'six faces nues'
+    const start = createCharacter(id, { aura }).events.map((e) => e.name).join(', ') || 'six faces nues'
     rows.push(
-      `| ${createCharacter(id).name} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${pct(tally.early[0] / tally.early[1])} | ${pct(tally.late[0] / tally.late[1])} | ${pct((tally.early[0] + tally.late[0]) / tally.normals)} → ${pct(tally.normalWins / tally.normals)} | ${pct(tally.floor / tally.normals)} | ${perFighter(tally.turns, tally.fights)} |`,
+      `| ${createCharacter(id).name} | ${ALL_SKILLS.find((e) => e.id === aura)?.name ?? aura} | ${start} | ${(tally.depth / RUNS).toFixed(1)} | ${pct(tally.boss / RUNS)} | ${pct(tally.won / RUNS)} | ${pct(tally.chance / tally.fights)} | ${pct(tally.early[0] / tally.early[1])} | ${pct(tally.late[0] / tally.late[1])} | ${pct((tally.early[0] + tally.late[0]) / tally.normals)} → ${pct(tally.normalWins / tally.normals)} | ${pct(tally.floor / tally.normals)} | ${perFighter(tally.turns, tally.fights)} |`,
     )
   }
   // Les builds d'un acte complet (`REWARDS`), tirés comme le champion de référence : sans combat, ils ne
@@ -176,7 +179,8 @@ it('mesure de la campagne (pilote automatique)', () => {
     const acts = actsOf[c]
     const all = acts.map((a) => a.champion)
     const engraved = all.map((ch) => ch.forge.flatMap((f) => (f.op === 'engrave' ? [f.skill.id] : [])))
-    const own = new Set(repertoireOf(id).map((e) => e.id))
+    // Les gravures de sa première maîtrise (V3 : l'offre ne verrouille rien, une compétence de chaque maîtrise)
+    const first = createCharacter(id).definition.masteries[0]
     const flat = engraved.flat()
     const links = all.map(buildLinks)
     const lots = acts.map((a) => a.rewards.map(lotBricks))
@@ -192,7 +196,7 @@ it('mesure de la campagne (pilote automatique)', () => {
     const rate = mean(rates)
     const spread = Math.sqrt(mean(rates.map((r) => (r - rate) ** 2)))
     return {
-      line: `| ${createCharacter(id).name} | ${all.length} | ${mean(engraved.map((e) => e.length)).toFixed(2).replace('.', ',')} | ${flat.length ? pct(flat.filter((s) => own.has(s)).length / flat.length) : '—'} | ${new Set(flat).size} | ${mean(links.map((l) => l.linked)).toFixed(2).replace('.', ',')} | ${pct(mean(links.map((l) => l.linked / Math.max(1, l.pairs))))} | ${pct(rate)} ± ${Math.round(spread * 100)} | ${pct(lotOffered / acts.length)} | ${pct(lotTaken.filter((n) => n > 0).length / acts.length)} | ${mean(lotTaken).toFixed(2).replace('.', ',')} |`,
+      line: `| ${createCharacter(id).name} | ${all.length} | ${mean(engraved.map((e) => e.length)).toFixed(2).replace('.', ',')} | ${flat.length ? pct(flat.filter((s) => masteryOfSkill(s) === first).length / flat.length) : '—'} | ${new Set(flat).size} | ${mean(links.map((l) => l.linked)).toFixed(2).replace('.', ',')} | ${pct(mean(links.map((l) => l.linked / Math.max(1, l.pairs))))} | ${pct(rate)} ± ${Math.round(spread * 100)} | ${pct(lotOffered / acts.length)} | ${pct(lotTaken.filter((n) => n > 0).length / acts.length)} | ${mean(lotTaken).toFixed(2).replace('.', ',')} |`,
       linked: mean(links.map((l) => l.linked)),
     }
   })
@@ -208,12 +212,12 @@ it('mesure de la campagne (pilote automatique)', () => {
     `# Campagne · règles ${pkg.version} · ${RUNS} parties par champion, pilote automatique`,
     '',
     `Courbe nominale : ${NORMAL_TARGETS.map(pct).join(', ')} aux combats normaux, ${pct(BOSS_TARGET)} contre le boss. Attendu pour le champion de référence : boss atteint ${pct(expected)}, acte gagné ${pct(expected * BOSS_TARGET)}.`,
-    `Départ : le personnage vanilla, celui du tournoi (la signature sur le 1, la seconde compétence sur le 2) ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(HP_FLOOR)} de ses PV de base ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion.`,
+    `Départ : le personnage vanilla parti de chacune de ses auras de départ (l'aura sur le 1, sa compétence sur le 2 ; docs/MAITRISES.md § 5), le champion de référence parti de la même aura ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(HP_FLOOR)} de ses PV de base ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion.`,
     `Mesuré, tous champions : boss atteint ${pct(all.boss / all.runs)}, acte gagné ${pct(all.won / all.runs)} (${all.runs} parties).`,
     `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %.`,
     '',
-    '| Champion | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Chance aux nœuds 1-2 | Chance aux nœuds 3-10 | Combats normaux : chance estimée → gagnés | Adversaires au plancher des PV | Tours par combattant |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Champion | Aura de départ | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Chance moyenne avant combat | Chance aux nœuds 1-2 | Chance aux nœuds 3-10 | Combats normaux : chance estimée → gagnés | Adversaires au plancher des PV | Tours par combattant |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
     '',
     '## Le build se voit-il ? (par nœud, tous champions)',
@@ -230,9 +234,9 @@ it('mesure de la campagne (pilote automatique)', () => {
     '',
     '## Les builds d’un acte complet (offre et choix par défaut, sans combat)',
     '',
-    `${REWARDS.length} récompenses, tirées comme pour le champion de référence, 120 builds par champion. Diversité : compétences gravées distinctes. « D'autres personnages » : part des gravures prises à son répertoire (le reste vient des compétences hors de son dé, \`reserve\`). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build. Briques des lots : les ${LOT_BRICKS.length} briques de la phase 8 (les trois lots) ; part des actes où l'une au moins est offerte, où l'une au moins est prise, et briques prises par acte.`,
+    `${REWARDS.length} récompenses, tirées comme pour le champion de référence (aura par défaut), 120 builds par champion. Diversité : compétences gravées distinctes. « Première maîtrise » : part des gravures prises à sa première maîtrise (le reste vient de la seconde ; Graver propose une compétence de chacune, le choix par défaut au hasard). Cohérence : paires de briques du build (compétences, gravures, reliques) qui se nourrissent selon leurs accroches (hooks.ts). Moyenne, tous champions : ${(builds.reduce((s, b) => s + b.linked, 0) / builds.length).toFixed(2).replace('.', ',')} paires liées par build. Briques des lots : les ${LOT_BRICKS.length} briques de la phase 8 (les trois lots) ; part des actes où l'une au moins est offerte, où l'une au moins est prise, et briques prises par acte.`,
     '',
-    `| Champion | Builds | Gravures par build | D'autres personnages | Compétences gravées distinctes | Paires liées par build | Part des paires liées | Construit contre construits (24 tirages, ${BUILD_N} combats par duel ; ± écart-type d'un build à l'autre) | Une brique des lots offerte | Une brique des lots prise | Briques des lots par build |`,
+    `| Champion | Builds | Gravures par build | Première maîtrise | Compétences gravées distinctes | Paires liées par build | Part des paires liées | Construit contre construits (24 tirages, ${BUILD_N} combats par duel ; ± écart-type d'un build à l'autre) | Une brique des lots offerte | Une brique des lots prise | Briques des lots par build |`,
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...builds.map((b) => b.line),
     '',

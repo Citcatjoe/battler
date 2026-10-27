@@ -102,7 +102,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   retribution: { side: 'self', consumes: ['moment:hurt'] },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
   firefly: { side: 'opponent', produces: ['moment:hit', 'damage:instant'] },
-  rotAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:rot', 'damage:temporal'] },
+  // Les Maîtrises (2026-10-27) : l'Aura de pourriture pose sa Pourriture au critique
+  rotAura: { side: 'self', consumes: ['moment:crit'], produces: ['status:rot', 'damage:temporal'] },
   rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
@@ -116,19 +117,19 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   sentence: { side: 'self', consumes: ['moment:heal'], produces: ['damage:instant'] },
   grudge: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:crit'] },
   // Phase 8, second lot : l'Embrasement lit la Brûlure au coup qui touche et la retire (une brique qui la lit aussi en voit
-  // moins) ; le Dé pipé lit la pièce et fait tomber pile ; le Rempart hérissé vit des armures vidées (et en redonne une,
-  // revue des auras, A3), la Vindicte des renvois
+  // moins) ; le Rempart hérissé vit des armures vidées (et en redonne une, revue des auras, A3), la Vindicte des renvois.
+  // Le Dé pipé, une aura depuis les Maîtrises (M9) : comme la Pièce lestée, il vit des pièces et en fait tomber plus sur pile
   conflagration: { side: 'self', consumes: ['moment:hit', 'status:burn'], hinders: ['status:burn'], produces: ['damage:temporal'] },
-  loadedDie: { side: 'self', consumes: ['status:coinFlip'], produces: ['moment:heads', 'damage:instant'] },
+  loadedDie: { side: 'self', consumes: ['moment:heads'], produces: ['moment:heads'] },
   bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal', 'status:bonusArmor', 'moment:shieldBreak'] },
   vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
   // Le Duo (barde) : le dé de plus de Coup de chance, sous son nom
   duo: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
-  // Revue des compétences (I1, I3, I4) : le Bouclier de foi vit des soins et donne de l'armure temporaire (qui se vide) ; le
-  // Pas de côté fait esquiver ; la Plaie ouverte vit des critiques et fait saigner
+  // Revue des compétences (I1, I3) : le Bouclier de foi vit des soins et donne de l'armure temporaire (qui se vide) ; le
+  // Pas de côté fait esquiver ; la Plaie ouverte, refaite avec les Maîtrises (M9), fait saigner à chaque coup qui touche
   faithShield: { side: 'self', consumes: ['moment:heal'], produces: ['status:bonusArmor', 'moment:shieldBreak'] },
   sidestep: { side: 'self', produces: ['moment:dodge'] },
-  openWound: { side: 'self', consumes: ['moment:crit'], produces: ['status:bleed', 'damage:temporal'] },
+  openWound: { side: 'self', consumes: ['moment:hit'], produces: ['status:bleed', 'damage:temporal'] },
   // Phase 8, lot 3 : les malus de famille ; Garde brisée part sur un coup qui touche (relation « modifie ») et le double
   guardBreak: { side: 'opponent', consumes: ['moment:hit'], produces: ['damage:instant'] },
   jinx: { side: 'opponent' },
@@ -144,6 +145,15 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   stormSky: { side: 'self', produces: ['damage:instant'] },
   bloodFrenzy: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'status:bloodFrenzyStrike', 'moment:hit', 'damage:instant'] },
   bloodFrenzyStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  // Les Maîtrises, vague 2 (2026-10-27) : la Veine vit des 6 et donne un jet complet ; l'Effroi vit des critiques et fait
+  // perdre une action (et fait critiquer, chaque pose de plus) ; la Rancœur et le Champ d'orage vivent des coups reçus ; la
+  // Ballade des coups qui touchent ; le Poing de pierre, posé avec l'armure temporaire, frappe plus fort tant qu'elle tient
+  luckyStreak: { side: 'self', consumes: ['face:max'], produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
+  dread: { side: 'self', consumes: ['moment:crit'], produces: ['status:fear', 'moment:crit'] },
+  rancor: { side: 'self', consumes: ['moment:hurt'], produces: ['status:momentum', 'damage:instant'] },
+  stormField: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant'] },
+  ballad: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
+  stoneFist: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */

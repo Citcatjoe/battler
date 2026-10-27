@@ -2649,6 +2649,44 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+/* Graver à deux compétences (maîtrises, docs/MAITRISES.md § 6.2) : la carte s'élargit, une moitié par compétence ; la
+   carte se choisit par l'une d'elles. Le cadre doré de la carte choisie, et celui de la moitié retenue. */
+.relic-card-split { width: 520px; padding-top: 22px; }
+.relic-card-split:hover { transform: none; border-color: var(--line-2); }
+.relic-card-split[data-selected] {
+  border-color: var(--gold-300);
+  box-shadow: 0 0 0 2px var(--gold-300), 0 0 34px rgba(221, 169, 74, 0.45), 0 10px 30px rgba(0, 0, 0, 0.5);
+  transform: translateY(-6px);
+}
+.forge-card-half {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: var(--r-xs, 2px);
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, 0.18);
+  transition: border-color 160ms, background-color 160ms;
+}
+.forge-card-half:hover { border-color: var(--gold-500); background: rgba(221, 169, 74, 0.06); }
+.forge-card-half[aria-pressed='true'] { border-color: var(--gold-300); background: rgba(221, 169, 74, 0.1); box-shadow: inset 0 0 0 1px var(--gold-300); }
+/* Aura de départ (choix du champion de campagne, docs/MAITRISES.md § 12) : une tuile de contenu par aura, la choisie au
+   cadre du camp (bleu du champion) */
+.aura-tile {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-xs, 2px);
+  border: 1px solid var(--line-2);
+  background: rgba(12, 10, 9, 0.75);
+  transition: border-color 160ms, background-color 160ms, box-shadow 160ms;
+}
+.aura-tile:hover { border-color: var(--gold-500); }
+.aura-tile[aria-pressed='true'] { border-color: var(--side-a); background: rgba(67, 180, 238, 0.12); box-shadow: 0 0 0 1px var(--side-a), 0 0 18px rgba(67, 180, 238, 0.35); }
 
 /* ---------- Dé forgé (campagne, ForgedDie.tsx, docs/CAMPAGNE.md § 4) ----------
    Une tuile par face, lisible de loin : le chiffre, ou le sceau de sa compétence (liseré de sa nature) ; une gravure a

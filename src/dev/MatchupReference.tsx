@@ -115,7 +115,7 @@ function buildCases(): Record<string, Case> {
       mode: 'season',
       fighters: [
         forged(createCharacter('thaldrin'), [{ op: 'sharpen', face: 1 }]).withRelics(relics(2, 4)),
-        forged(createCharacter('morgrut'), [{ op: 'engrave', face: 1 }, { op: 'gild', face: 4 }, { op: 'copy', face: 1 }]).withRelics(
+        forged(createCharacter('morgrut'), [{ op: 'engrave', face: 3 }, { op: 'gild', face: 4 }, { op: 'copy', face: 3 }]).withRelics(
           relics(6),
         ),
       ],

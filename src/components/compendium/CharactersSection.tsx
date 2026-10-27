@@ -1,3 +1,4 @@
+import { MASTERIES } from '../../game/masteries'
 import { CHARACTERS } from '../../game/roster'
 import { Portrait } from '../Portrait'
 import { CharacterFigure, CharacterSheet, FIGURE_COLUMN } from './CharacterSheet'
@@ -26,7 +27,7 @@ export function CharactersBackdrop({ focus }: SectionProps) {
  */
 export function CharactersSection({ nav, focus, filter }: SectionProps) {
   const selected = selectedOf(focus)
-  const shown = CHARACTERS.filter((c) => matches(filter, c.name, c.race, c.archetype))
+  const shown = CHARACTERS.filter((c) => matches(filter, c.name, c.race, c.archetype, ...c.definition.masteries.map((id) => MASTERIES[id].name)))
   return (
     <div className="grid h-full min-h-0 gap-6" style={{ gridTemplateColumns: `${INDEX_WIDTH}px 1fr` }}>
       <nav aria-label="Combattants" className="codex-panel scroll-panel min-h-0 overflow-y-auto">

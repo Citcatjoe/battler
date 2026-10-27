@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { simulateCombat } from './combat'
 import { EPITHETS, uniqueNames } from './epithets'
 import { copyDestinations, forgedFaces, offerTargets, stepKey, stepOf } from './forge'
-import { MAX_SKILL_FACES, offerableRelics, offerableSkills, REPERTOIRES, REWARDS } from './offers'
+import { MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
+import { characterPool } from './masteries'
 import { EMOJI } from './test-utils'
 import { getRelic, RELICS } from './relics'
 import { seededRng } from './rng'
@@ -171,16 +172,17 @@ describe('saison', () => {
         expect(count).toBe(Math.min(f.day, 10))
         const reward = r.rewards?.[side] ?? undefined
         expect(reward?.kind).toBe(f.day < 10 ? season.rewards[f.day] : undefined)
-        // L'offre de la campagne (offers.ts) : reliques à sa portée qu'il n'a pas, gravures de son répertoire à sa portée
+        // L'offre de la campagne (offers.ts) : reliques à sa portée qu'il n'a pas, gravures de ses maîtrises à sa portée
         const championId = season.entrants[i].characterId
         if (reward?.kind === 'relic') {
           const pool = offerableRelics({ championId, ...before })
           for (const id of reward.offer) expect(pool, `${championId} ${id}`).toContain(id)
           expect(reward.offer.some((id) => before.relics.includes(id))).toBe(false)
         }
-        if (reward?.kind === 'forge')
-          for (const o of reward.offer)
-            if (o.op === 'engrave') expect(offerableSkills({ championId, ...before }, REPERTOIRES[championId]).map((s) => s.id)).toContain(o.skill.id)
+        if (reward?.kind === 'forge') {
+          const reach = offerableSkills({ championId, ...before }, characterPool(createCharacter(championId).definition)).map((s) => s.id)
+          for (const o of reward.offer) if (o.op === 'engrave') for (const s of o.skills) expect(reach).toContain(s.id)
+        }
         // Chacun combat avec ce qu'il a reçu aux journées précédentes
         const fighter = seasonFighters(season, f.number)[side]
         expect(fighter.relics.map((x) => x.id)).toEqual(before.relics)
@@ -273,9 +275,12 @@ describe('saison', () => {
     const def = createCharacter(seasonOf(t).entrants[smith].characterId).definition
     for (const offer of forged.offer) {
       const face = offerTargets(def, [], offer).at(-1)
-      const step = stepOf(offer, face, offer.op === 'copy' && face !== undefined ? copyDestinations(def, [], face).at(-1) : undefined)
-      t = chooseSeasonReward(t, f0.number, 0, step)
-      expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([stepKey(step)])
+      // Graver : chacune de ses compétences (une par maîtrise) se choisit
+      for (const skill of offer.op === 'engrave' ? offer.skills : [undefined]) {
+        const step = stepOf(offer, face, offer.op === 'copy' && face !== undefined ? copyDestinations(def, [], face).at(-1) : undefined, skill)
+        t = chooseSeasonReward(t, f0.number, 0, step)
+        expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([stepKey(step)])
+      }
     }
     const targeted = forged.offer.find((o) => o.op !== 'temper')!
     expect(() => chooseSeasonReward(t, f0.number, 0, stepOf(targeted, 999, 999))).toThrow()

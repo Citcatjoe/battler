@@ -733,9 +733,9 @@ export default function App() {
         <CampaignScreen
           run={campaignRun}
           heritage={heritage}
-          onStart={(championId, seed, item) => {
+          onStart={(championId, seed, item, aura) => {
             sfx.click()
-            setCampaignRun(startRun(championId, seed, item))
+            setCampaignRun(startRun(championId, seed, item, aura))
           }}
           onFight={openEncounter}
           onReward={(gain) => {

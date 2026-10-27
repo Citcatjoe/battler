@@ -14,7 +14,7 @@ import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from '.
 import { SCENE_EVENTS } from './scenes'
 import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import { isAura, type Status } from './statuses'
-import { testCharacter } from './test-utils'
+import { onOldDie, testCharacter } from './test-utils'
 import { effectBadge, STOLEN_BADGE } from './narration'
 import { signalTargets, STATES } from './states'
 import { STATUSES } from './statuses'
@@ -36,12 +36,23 @@ for (const x of CHARACTER_IDS)
       const result = simulateCombat(fighters, { seed })
       corpus.push({ result, moments: stage(result) })
     }
-// Les compétences hors kit (d6, 0.105.0 : la Peur, Coup de chance…) se jouent gravées sur le 3 d'un porteur : Gorak, ou
-// Ervald pour l'Aura de puissance et Coup de chance (la rafale de Gorak tomberait dans le même moment que sa Furie)
-for (const skill of CHARACTERS.flatMap((c) => c.definition.reserve ?? []))
+// Le même roster sur ses dés de la 0.120.0 (`onOldDie`) : les mécaniques que les dés de départ ne portent plus d'office depuis
+// les Maîtrises (Pourfendre, la Riposte, la Foudre, le Soliste, l'Esquive améliorée) restent mises en scène
+for (const x of CHARACTER_IDS)
+  for (const y of CHARACTER_IDS)
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const relics = (k: number) => (seed % 2 === 0 ? [RELICS[(seed * 3 + k) % RELICS.length]] : [])
+      const result = simulateCombat([onOldDie(x).withRelics(relics(0)), onOldDie(y).withRelics(relics(5))], { seed })
+      corpus.push({ result, moments: stage(result) })
+    }
+// Les compétences des réserves (Maîtrises : la Peur, Coup de chance…) se jouent gravées sur le 3 d'un porteur : Gorak, ou
+// Ervald pour l'Aura de puissance, Coup de chance (la rafale de Gorak tomberait dans le même moment que sa Furie) et ce que
+// porte déjà le dé de Gorak
+for (const skill of ENGRAVABLE_SKILLS)
   for (const y of CHARACTER_IDS)
     for (const seed of [1, 2]) {
-      const carrier = createCharacter(['power-aura', 'lucky-strike'].includes(skill.id) ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }])
+      const onGorak = createCharacter('gorak').events.some((e) => e.id === skill.id)
+      const carrier = createCharacter(onGorak || ['power-aura', 'lucky-strike'].includes(skill.id) ? 'ervald' : 'gorak').withForge([{ op: 'engrave', face: 3, skill }])
       const result = simulateCombat([carrier, createCharacter(y)], { seed })
       corpus.push({ result, moments: stage(result) })
     }
@@ -215,7 +226,12 @@ describe('mise en scène', () => {
   it("la plaie qui coule tombe sur l'impact du coup qui la fait couler : son label à l'impact, ses PV un battement après ; fatale après une réaction de son porteur, à son rang (M43)", () => {
     let flows = 0
     let late = 0
-    for (const { result, moments } of corpus)
+    // Le cas rare (une plaie fatale après une réaction du blessé, sa Riposte ou ses Épines) : Pourfendre contre Aldric et
+    // Brokk, sur leurs dés de la 0.120.0
+    const duels = Array.from({ length: 40 }, (_, k) => k + 1).flatMap((seed) =>
+      ['aldric', 'brokk'].flatMap((foe) => [simulateCombat([onOldDie('gorak'), onOldDie(foe)], { seed }), simulateCombat([onOldDie(foe), onOldDie('gorak')], { seed })]).map((result) => ({ result, moments: stage(result) })),
+    )
+    for (const { result, moments } of [...corpus, ...duels])
       for (const beat of result.beats) {
         if (beat.type !== 'statusReaction' || beat.status !== 'bleed' || beat.cause === undefined) continue
         const hit = result.beats[beat.cause]
@@ -757,6 +773,9 @@ describe('mise en scène', () => {
           // Une étape portée par le coup (poison résisté) tombe à son impact, avec le son et les labels du coup : seul
           // son propre label y est interdit
           const atImpact = m.cues.some((c) => c.at === when && (c.channel === 'strike' || c.channel === 'blow'))
+          // Deux reliques d'une rafale (le Duo de la barde) atterrissent au même instant : le son de la première n'est pas le
+          // sien
+          if (beat.type === 'relic' && m.cues.some((c) => c.at === when && c.channel === 'relicUse' && c.uses !== beat.uses)) continue
           const name = beat.type === 'statusReaction' ? STATUSES[beat.status].name : beat.type === 'relic' ? beat.name : undefined
           const busy = m.cues.filter((c) =>
             c.at !== when
@@ -921,8 +940,11 @@ describe('mise en scène', () => {
         expect(at(m, 'signal', depart).some((c) => c.channel === 'signal' && c.signal.side === relic.side && c.signal.from === relicSignal(relic.relic))).toBe(true)
         expect(at(m, 'relicPulse', depart).some((c) => c.channel === 'relicPulse' && c.relics.includes(relic.relic))).toBe(true)
         // Le même label encore à l'écran (deux Dards de guêpe sur les dés d'une rafale, joués à leur atterrissage) reste,
-        // sans nouvelle apparition (M9)
-        expect(m.cues.some((c) => c.channel === 'special' && c.special.source === 'relic' && c.at <= depart && depart - c.at < T.LABEL_READ), `${relic.relic}, étape ${relic.id}`).toBe(true)
+        // sans nouvelle apparition (M9) : posé avant le départ, et aucun effacement ne l'a retiré depuis (une rafale de la
+        // barde, ses réactions comprises, peut le garder plus longtemps que `LABEL_READ`)
+        const label = m.cues.filter((c) => c.channel === 'special' && c.special.source === 'relic' && c.at <= depart).at(-1)
+        const cleared = label && m.cues.some((c) => c.channel === 'specialsClear' && c.at > label.at && c.at <= depart && (!c.labels || (label.channel === 'special' && c.labels.includes(label.special.label))))
+        expect(!!label && !cleared, `${relic.relic}, étape ${relic.id}`).toBe(true)
         // Le statut n'apparaît qu'à l'arrivée du signal
         const shown = at(m, 'statuses', use.at).at(-1)
         for (const e of relic.effects)
@@ -1131,12 +1153,12 @@ describe('mise en scène : phase 8, premier lot (0.114.0)', () => {
 
 describe('mise en scène : phase 8, second lot', () => {
   const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
-  /** Un personnage du roster, la compétence gravée sur son 3 ; des combats à graine contre chacun */
+  /** Un personnage du roster (sur son dé de la 0.120.0, `onOldDie`), la compétence gravée sur son 3 ; des combats à graine contre chacun */
   const fights = (id: string, engrave: string | null, relics: string[] = []) =>
     CHARACTER_IDS.flatMap((y) =>
       [1, 2, 3].map((seed) => {
-        const c = createCharacter(id).withForge(engrave ? [{ op: 'engrave', face: 3, skill: skill(engrave) }] : []).withRelics(relics.map((r) => RELICS.find((x) => x.id === r)!))
-        const result = simulateCombat([c, createCharacter(y)], { seed })
+        const c = onOldDie(id).withForge(engrave ? [{ op: 'engrave', face: 3, skill: skill(engrave) }] : []).withRelics(relics.map((r) => RELICS.find((x) => x.id === r)!))
+        const result = simulateCombat([c, onOldDie(y)], { seed })
         return { result, moments: stage(result) }
       }),
     )
@@ -1159,25 +1181,6 @@ describe('mise en scène : phase 8, second lot', () => {
         fired++
       }
     expect(fired).toBeGreaterThan(3)
-  })
-
-  it('le Dé pipé reste dans la zone d’état jusqu’à ce que la pièce retombe, et part avec son label (M26)', () => {
-    let loaded = 0
-    for (const { result, moments } of fights('naraxes', 'loaded-die'))
-      for (const coin of result.beats) {
-        if (coin.type !== 'coin' || !coin.loadedBy) continue
-        const m = momentOf(moments, coin.id)
-        const toss = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinToss')!
-        const landed = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinLand')!
-        const charges = (list: readonly Status[]) => list.find((s) => s.id === coin.loadedBy)?.stacks ?? 0
-        const shown = (c: Cue) => (c.channel === 'statuses' ? charges(c.statuses[coin.side]) : undefined)
-        const statuses = m.cues.filter((c) => c.channel === 'statuses' && c.at >= toss.at && c.at <= landed.at)
-        expect(statuses.filter((c) => c.at < landed.at).map(shown)).toEqual([charges(result.beats[coin.id - 1].state.statuses[coin.side])])
-        expect(shown(statuses.at(-1)!)).toBe(charges(coin.state.statuses[coin.side]))
-        expect(at(m, 'special', landed.at).map((c) => c.channel === 'special' && c.special.label)).toContain(STATUSES[coin.loadedBy].name)
-        loaded++
-      }
-    expect(loaded).toBeGreaterThan(3)
   })
 
   it('Vindicte : son anneau répond au renvoi au milieu de la lecture de son dernier coup (M41)', () => {
@@ -1215,11 +1218,11 @@ describe('mise en scène : phase 8, second lot', () => {
 
 describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', () => {
   const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
-  /** Un personnage du roster, la compétence gravée sur son 3 ; des combats à graine contre chacun */
+  /** Un personnage du roster (sur son dé de la 0.120.0, `onOldDie`), la compétence gravée sur son 3 ; des combats à graine contre chacun */
   const fights = (id: string, engrave: string, seeds = [1, 2, 3]) =>
     CHARACTER_IDS.flatMap((y) =>
       seeds.map((seed) => {
-        const result = simulateCombat([createCharacter(id).withForge([{ op: 'engrave', face: 3, skill: skill(engrave) }]), createCharacter(y)], { seed })
+        const result = simulateCombat([onOldDie(id).withForge([{ op: 'engrave', face: 3, skill: skill(engrave) }]), onOldDie(y)], { seed })
         return { result, moments: stage(result) }
       }),
     )

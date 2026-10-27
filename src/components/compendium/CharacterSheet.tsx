@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { footDrop, type Character } from '../../game/character'
 import { skillCatalog } from '../../game/catalog'
 import { ForgedDie } from '../ForgedDie'
@@ -10,7 +10,7 @@ import { StatSheet } from '../StatSheet'
 import { Icon, StatusIcon } from '../Icon'
 import { Tabs } from '../Tabs'
 import { STATUSES } from '../../game/statuses'
-import { CharacterLink, SkillMedal, skillLink, triggerShort } from './CodexBits'
+import { CharacterLink, MasteryName, SkillMedal, skillLink, triggerShort } from './CodexBits'
 import type { CompendiumNav } from './sections'
 
 interface Props {
@@ -39,9 +39,7 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
   const character = CHARACTERS.find((c) => c.id === characterId) ?? CHARACTERS[0]
   const record = history.characters[character.id] ?? emptyRecord()
   // Ses compétences de départ, celles de ses faces (pas celles qu'il pourrait graver ensuite, `outside`)
-  const skills = skillCatalog()
-    .flatMap((f) => f.skills)
-    .filter((s) => s.owners.includes(character) && !s.outside)
+  const skills = skillCatalog().filter((s) => s.owners.includes(character) && !s.outside)
 
   return (
     <div className="grid h-full min-h-0 gap-6" style={{ gridTemplateColumns: `${FIGURE_COLUMN}px 1fr` }}>
@@ -55,6 +53,17 @@ export function CharacterSheet({ characterId, nav, initialTab = 'sheet' }: Props
               {character.race} · {character.archetype}
             </p>
             <h2 className="font-display text-[44px] font-extrabold leading-tight text-amber-200">{character.name}</h2>
+            {/* Ses deux maîtrises sous son nom (docs/MAITRISES.md § 12), en liens vers leur onglet */}
+            <p className="mb-1 flex items-center gap-2 font-display text-[19px] font-bold text-ink-1" aria-label="Maîtrises">
+              {character.definition.masteries.map((id, k) => (
+                <Fragment key={id}>
+                  {k > 0 && <span className="text-ink-3">·</span>}
+                  <button type="button" className="codex-link" onClick={() => nav.go({ section: 'masteries', id })}>
+                    <MasteryName id={id} />
+                  </button>
+                </Fragment>
+              ))}
+            </p>
             <p className="font-display text-lg italic text-amber-200/80">« {character.lore.tagline} »</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">

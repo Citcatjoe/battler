@@ -2,6 +2,7 @@ import type { Character } from './character'
 import type { CharacterEvent, Effect, Target, Trigger } from './events'
 import type { RuleId } from './rules'
 import { RELICS, type Relic } from './relics'
+import { characterPool } from './masteries'
 import { CHARACTERS } from './roster'
 import { STATUS_PLACE } from './states'
 import { STATUS_IDS, STATUSES, statusRuleSections, type StatusDef, type StatusId, type StatusRuleSections } from './statuses'
@@ -53,12 +54,12 @@ const posedByStatus = (id: StatusId) =>
   [...new Set(hookEffects(id).flatMap((e) => (e.type === 'applyStatus' ? [e.status] : [])))]
 
 /**
- * Toutes les compétences du roster, avec leur porteur : celles de son kit, puis celles hors kit (règles v2, `reserve`),
- * une fois chacune (la Foudre du druide est sur trois faces).
+ * Toutes les compétences du jeu, avec leur porteur : celles de son dé, puis celles de sa réserve (ses deux maîtrises,
+ * `characterPool`), une fois chacune par porteur.
  */
 const skillsOf = (characters: readonly Character[]) =>
   characters.flatMap((character) =>
-    [...character.events, ...(character.definition.reserve ?? [])]
+    [...character.events, ...characterPool(character.definition)]
       .filter((e, k, all) => all.findIndex((x) => x.id === e.id) === k)
       .map((event) => ({ character, event })),
   )
@@ -139,6 +140,10 @@ export function statusHome(id: StatusId, characters: readonly Character[] = CHAR
 /** Une compétence et les personnages qui la possèdent. */
 export interface SkillEntry {
   event: CharacterEvent
+  /**
+   * Ceux qui la portent sur leur dé de départ ; pour une compétence hors kit, ceux dont la réserve l'offre (ses deux
+   * maîtrises, `characterPool`).
+   */
   owners: Character[]
   /**
    * Déclencheurs de la ligne : une compétence identique sur plusieurs faces du même porteur (la Foudre du druide,
@@ -147,14 +152,8 @@ export interface SkillEntry {
   triggers: Trigger[]
   /** Les compétences réunies sur cette ligne (une seule, sauf faces identiques) */
   events: CharacterEvent[]
-  /** Hors kit (règles v2, `reserve`) : elle n'est sur aucune face d'origine, elle se grave par la forge */
+  /** Hors kit : elle n'est sur aucun dé de départ, elle se grave par la forge */
   outside?: true
-}
-
-/** Les compétences d'une race, dans l'ordre du roster. */
-export interface SkillFamily {
-  race: string
-  skills: SkillEntry[]
 }
 
 /** Deux compétences identiques à leur déclencheur près (même nom, mêmes effets, même forme). */
@@ -162,16 +161,15 @@ const sameSkill = (a: CharacterEvent, b: CharacterEvent) =>
   a.name === b.name && a.form === b.form && JSON.stringify(a.effects) === JSON.stringify(b.effects)
 
 /**
- * Toutes les compétences, regroupées par race. Une compétence partagée par plusieurs personnages
- * n'apparaît qu'une fois, avec tous ses possesseurs ; les faces identiques d'un même porteur sont réunies.
+ * Toutes les compétences du jeu, une ligne chacune, dans l'ordre du roster : d'abord celles des dés de départ (une
+ * compétence partagée par plusieurs dés a tous ses porteurs ; les faces identiques d'un même porteur sont réunies),
+ * puis celles qu'on ne trouve que dans les réserves des maîtrises, hors kit, avec tous ceux à qui elles s'offrent (V5).
  */
-export function skillCatalog(characters: readonly Character[] = CHARACTERS): SkillFamily[] {
-  const families: SkillFamily[] = []
-  for (const character of characters) {
-    let family = families.find((f) => f.race === character.race)
-    if (!family) families.push((family = { race: character.race, skills: [] }))
+export function skillCatalog(characters: readonly Character[] = CHARACTERS): SkillEntry[] {
+  const skills: SkillEntry[] = []
+  for (const character of characters)
     for (const event of character.events) {
-      const shared = family.skills.find((s) => s.event.id === event.id)
+      const shared = skills.find((s) => s.event.id === event.id)
       // La même compétence sur une autre face du même porteur (la Foudre du druide) : une ligne, tous ses déclencheurs
       if (shared?.owners.includes(character)) {
         shared.triggers.push(event.trigger)
@@ -182,14 +180,17 @@ export function skillCatalog(characters: readonly Character[] = CHARACTERS): Ski
         shared.owners.push(character)
         continue
       }
-      const twin = family.skills.find((s) => s.owners.includes(character) && sameSkill(s.event, event))
+      const twin = skills.find((s) => s.owners.includes(character) && sameSkill(s.event, event))
       if (twin) {
         twin.triggers.push(event.trigger)
         twin.events.push(event)
-      } else family.skills.push({ event, owners: [character], triggers: [event.trigger], events: [event] })
+      } else skills.push({ event, owners: [character], triggers: [event.trigger], events: [event] })
     }
-    for (const event of character.definition.reserve ?? [])
-      if (!family.skills.some((s) => s.event.id === event.id)) family.skills.push({ event, owners: [character], triggers: [], events: [event], outside: true })
-  }
-  return families
+  for (const character of characters)
+    for (const event of characterPool(character.definition)) {
+      const listed = skills.find((s) => s.event.id === event.id)
+      if (!listed) skills.push({ event, owners: [character], triggers: [], events: [event], outside: true })
+      else if (listed.outside && !listed.owners.includes(character)) listed.owners.push(character)
+    }
+  return skills
 }

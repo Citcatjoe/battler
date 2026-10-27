@@ -2,11 +2,12 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { statusHome } from '../../game/catalog'
 import type { Character } from '../../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill, triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
+import { MASTERIES, type MasteryId } from '../../game/masteries'
 import type { Relic } from '../../game/relics'
 import { RULES, type RuleId } from '../../game/rules'
 import { auraOfSkill, STATUS_PLACE } from '../../game/states'
 import { POLARITY_STYLE, STATUSES, type Polarity, type RuleLine, type StatusId } from '../../game/statuses'
-import { Icon, skillIcon, StatusIcon } from '../Icon'
+import { Icon, MasteryIcon, skillIcon, StatusIcon } from '../Icon'
 import { RelicSeal } from '../RelicSeal'
 import type { CompendiumNav, CompendiumTarget } from './sections'
 
@@ -52,6 +53,17 @@ export function SkillMedal({ event, size }: { event: CharacterEvent; size: numbe
   return (
     <span className="skill-seal codex-skill-seal" data-nature={natureOf(event)} style={{ width: size, height: size }}>
       <Icon name={skillIcon(event)} className="h-[80%] w-[80%]" />
+    </span>
+  )
+}
+
+/** Une maîtrise en petit : son emblème à la taille du texte, puis son nom (index et fiches des compétences). */
+export function MasteryName({ id, className = '' }: { id: MasteryId; className?: string }) {
+  const { name } = MASTERIES[id]
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      <MasteryIcon id={id} name={name} className="h-[1.4em] w-[1.4em] text-[0.8em]" />
+      {name}
     </span>
   )
 }

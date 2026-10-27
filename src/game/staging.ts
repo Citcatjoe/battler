@@ -1646,9 +1646,6 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const after: Consequences = beat.heads ? consequencesOf(beat) : { rides: [], quiet: [], reactions: [] }
         const shown = { ...IDLE_DICE, owner: beat.side }
         const base = hp
-        // Le Dé pipé qui a fait tomber pile reste dans la zone d'état jusqu'à ce que la pièce retombe : sa charge part
-        // avec le résultat qu'elle décide, avec son label (M26)
-        const loaded = beat.loadedBy
         // Une pièce qui pose un statut sur pile (bonus pour soi ou malus à l'adversaire, sans coup) : ses statuts
         // attendent l'arrivée de leur signal, comme ceux d'une compétence (M19) ; jusque-là, la zone d'état les montre
         // comme avant la pièce
@@ -1666,14 +1663,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           }) as Pair<Status[]>
         }
         shownEarly.add(beat.id)
-        if (loaded || posed.length > 0) {
-          const keep = prior[beat.side].findIndex((s) => s.id === loaded)
-          // Le Dé pipé : sa charge d'avant la pièce, à sa place, remplacée si une charge reste, remise sinon
-          const next = coinState().map((list, side) => {
-            if (side !== beat.side || keep < 0) return list
-            const rest = list.filter((s) => s.id !== loaded)
-            return [...rest.slice(0, keep), prior[side][keep], ...rest.slice(keep)]
-          }) as Pair<Status[]>
+        if (posed.length > 0) {
+          const next = coinState()
           shownStatuses = JSON.stringify(next)
           emit({ channel: 'statuses', statuses: next })
           showDaze(next)
@@ -1690,13 +1681,6 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // Le résultat tombe d'un bloc : la pièce, le « ding » de la réussite et le texte flottant
         if (beat.heads) sound('coinWin')
         showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
-        if (loaded) {
-          const next = coinState()
-          shownStatuses = JSON.stringify(next)
-          emit({ channel: 'statuses', statuses: next })
-          showDaze(next)
-          addSpecial({ label: STATUSES[loaded].name, source: 'skill', sign: 'plus' })
-        }
         for (const relic of onHeads) {
           snapped.add(relic.id)
           stageBeat(relic)

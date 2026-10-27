@@ -1,48 +1,50 @@
 import { skillCatalog, statusHome, statusSources, type SkillEntry } from '../../game/catalog'
 import { describeSkill, triggerText, type CharacterEvent } from '../../game/events'
+import { MASTERIES, MASTERY_IDS, masteryOfSkill } from '../../game/masteries'
 import { RULES, type RuleId } from '../../game/rules'
 import { auraOfSkill, STATUS_PLACE } from '../../game/states'
-import { familyLabel, STATUSES, statusRuleSections, type StatusId } from '../../game/statuses'
+import { STATUSES, statusRuleSections, type StatusId } from '../../game/statuses'
 import { NBSP, typeset } from '../../game/typography'
-import { CodexBox, formName, Line, RelicSource, RuleLink, SkillMedal, skillLink, StatusChip, triggerShort, useFocusRef } from './CodexBits'
+import { CodexBox, formName, Line, MasteryName, RelicSource, RuleLink, SkillMedal, skillLink, StatusChip, triggerShort, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
 
 /** Les deux onglets qui se partagent les compétences : celles qui posent une aura sur leur lanceur, et les autres. */
 export type SkillKind = 'skills' | 'auras'
 
-/** Les compétences d'un onglet, par ordre alphabétique (une compétence partagée n'a qu'une ligne). */
+/** Les compétences d'un onglet, par ordre alphabétique (une ligne par compétence, `skillCatalog`). */
 export function compendiumSkills(kind: SkillKind): SkillEntry[] {
-  const entries = skillCatalog()
-    .flatMap((f) => f.skills)
-    .filter((s, k, all) => all.findIndex((x) => x.event.id === s.event.id) === k)
-  return entries.filter((s) => (auraOfSkill(s.event) !== undefined) === (kind === 'auras')).sort((a, b) => a.event.name.localeCompare(b.event.name, 'fr'))
+  return skillCatalog()
+    .filter((s) => (auraOfSkill(s.event) !== undefined) === (kind === 'auras'))
+    .sort((a, b) => a.event.name.localeCompare(b.event.name, 'fr'))
 }
 
-/** La famille d'une aura : celle du statut qu'elle pose (`familyLabel`, la future Maîtrise). */
-const auraFamily = (event: CharacterEvent) => familyLabel(auraOfSkill(event)!)
-
-/** Ce qu'est une aura et comment on l'obtient : l'en-tête de l'onglet Auras. */
+/** Ce qu'est une aura et comment on l'obtient : l'en-tête de l'onglet Auras (docs/MAITRISES.md § 5 et § 12). */
 const AURA_INTRO = typeset(
-  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Un combattant en porte sur ses faces de départ ; en campagne, la forge en grave d'autres sur son dé.",
+  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Chaque combattant en porte une sur le 1 de son dé, choisie parmi celles de ses deux maîtrises au début d'une campagne ; les autres s'obtiennent en gravant.",
 )
 
 /**
  * Sections « Compétences » et « Auras » (retour du 2026-10-27) : deux onglets, une seule mise en page. À gauche
- * l'index (les compétences par ordre alphabétique ; les auras rangées par famille, sous un court texte qui dit ce
- * qu'elles sont), à droite le détail de celle choisie. Une compétence se décrit pour elle-même, jamais par ses porteurs
- * (0.98.1), ni par ses interactions avec les autres (au joueur de les découvrir) : sa description (`describeSkill`), les
- * états qu'elle pose, et ce qui lui appartient, son aura ou son mécanisme.
+ * l'index (les compétences par ordre alphabétique ; les auras rangées par maîtrise, sous un court texte qui dit ce
+ * qu'elles sont), à droite le détail de celle choisie. Chaque brique nomme sa maîtrise, avec son petit emblème. Une
+ * compétence se décrit pour elle-même, jamais par ses porteurs (0.98.1), ni par ses interactions avec les autres (au
+ * joueur de les découvrir) : sa description (`describeSkill`), les états qu'elle pose, et ce qui lui appartient, son aura
+ * ou son mécanisme.
  */
 export function SkillsSection({ kind, nav, focus, filter }: SectionProps & { kind: SkillKind }) {
   const focusRef = useFocusRef<HTMLButtonElement>(focus)
   const all = compendiumSkills(kind)
-  const shown = all.filter((s) =>
-    matches(filter, s.event.name, describeSkill(s.event).text, ...describeSkill(s.event).posed.map((p) => STATUSES[p.status].name), kind === 'auras' ? auraFamily(s.event) : undefined),
-  )
+  const shown = all.filter((s) => {
+    const mastery = masteryOfSkill(s.event.id)
+    return matches(filter, s.event.name, describeSkill(s.event).text, ...describeSkill(s.event).posed.map((p) => STATUSES[p.status].name), mastery && MASTERIES[mastery].name)
+  })
+  // Les auras par maîtrise, dans l'ordre du registre (celui de l'onglet Maîtrises) ; une aura hors catalogue, à la fin
   const groups =
     kind === 'auras'
-      ? [...new Set(shown.map((s) => auraFamily(s.event)))].sort((a, b) => a.localeCompare(b, 'fr')).map((family) => ({ title: family, skills: shown.filter((s) => auraFamily(s.event) === family) }))
-      : [{ title: undefined, skills: shown }]
+      ? [...MASTERY_IDS, undefined]
+          .map((m) => ({ mastery: m, skills: shown.filter((s) => masteryOfSkill(s.event.id) === m) }))
+          .filter((g) => g.skills.length > 0)
+      : [{ mastery: undefined, skills: shown }]
   const selected = all.find((s) => s.events.some((e) => e.id === focus)) ?? shown[0] ?? all[0]
 
   return (
@@ -59,29 +61,37 @@ export function SkillsSection({ kind, nav, focus, filter }: SectionProps & { kin
         <nav aria-label={kind === 'auras' ? 'Auras' : 'Compétences'} className="codex-panel scroll-panel min-h-0 overflow-y-auto">
           {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">{kind === 'auras' ? 'Aucune aura ne correspond.' : 'Aucune compétence ne correspond.'}</p>}
           {groups.map((group) => (
-            <section key={group.title ?? 'all'}>
-              {group.title && (
-                <h3 className="codex-label bg-surface-2/70 px-4 py-1.5 text-gold-300!">
-                  {group.title} · {group.skills.length}
+            <section key={group.mastery ?? 'all'}>
+              {group.mastery && (
+                <h3 className="codex-label flex items-center bg-surface-2/70 px-4 py-1.5 text-gold-300!">
+                  <MasteryName id={group.mastery} />
+                  &nbsp;· {group.skills.length}
                 </h3>
               )}
-              {group.skills.map((s) => (
-                <button
-                  key={s.event.id}
-                  type="button"
-                  ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
-                  aria-current={s === selected}
-                  onClick={() => nav.go(skillLink(s.event))}
-                  className="codex-row w-full"
-                >
-                  <SkillMedal event={s.event} size={40} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
-                    <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
-                  </span>
-                  <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
-                </button>
-              ))}
+              {group.skills.map((s) => {
+                const mastery = masteryOfSkill(s.event.id)
+                return (
+                  <button
+                    key={s.event.id}
+                    type="button"
+                    ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
+                    aria-current={s === selected}
+                    onClick={() => nav.go(skillLink(s.event))}
+                    className="codex-row w-full"
+                  >
+                    <SkillMedal event={s.event} size={40} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2.5">
+                        <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
+                        {/* Sa maîtrise ; dans l'onglet Auras, l'en-tête du groupe la dit déjà */}
+                        {kind === 'skills' && mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
+                      </span>
+                      <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
+                    </span>
+                    <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
+                  </button>
+                )
+              })}
             </section>
           ))}
         </nav>
@@ -117,11 +127,7 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-4xl font-extrabold text-amber-100">{event.name}</h2>
-            {aura && (
-              <span className="rounded-(--r-xs) border border-line-2 px-2 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-[0.2em] text-ink-1">
-                {`Aura · ${familyLabel(aura)}`}
-              </span>
-            )}
+            <MasteryBadge event={event} aura={aura !== undefined} nav={nav} />
           </div>
           <p className="mt-1 font-body text-[17px] leading-snug text-ink-2">
             {triggers.length === 0 ? 'Hors kit : sur aucune face d’origine, elle se grave par la forge' : triggers.length === 1 ? triggerText(triggers[0]).label : `Sur ${triggerShort(triggers)}`}
@@ -166,6 +172,19 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
         Déclencheurs, faces et relations au coup : règles communes à toutes les compétences →
       </button>
     </article>
+  )
+}
+
+/** « Aura · Lumière » ou « Compétence · Sang » en tête de la fiche : la maîtrise, en lien vers son onglet. */
+function MasteryBadge({ event, aura, nav }: { event: CharacterEvent; aura: boolean; nav: CompendiumNav }) {
+  const id = masteryOfSkill(event.id)
+  const kind = aura ? 'Aura' : 'Compétence'
+  const style = 'rounded-(--r-xs) border border-line-2 px-2 py-px font-body text-[13px] font-bold uppercase leading-tight tracking-[0.2em] text-ink-1'
+  if (!id) return aura ? <span className={style}>{kind}</span> : null
+  return (
+    <button type="button" className={`${style} inline-flex items-center gap-1.5 hover:border-gold-500 hover:text-gold-200`} onClick={() => nav.go({ section: 'masteries', id })}>
+      {kind} · <MasteryName id={id} />
+    </button>
   )
 }
 

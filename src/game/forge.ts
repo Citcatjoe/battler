@@ -51,8 +51,12 @@ export const FORGE_OPS: Record<ForgeOpKind, { name: string; summary: string; tar
   temper: { name: 'Tremper l’arme', summary: `+${TEMPER_BONUS} à l'attaque.`, targeted: false },
 }
 
-/** Une opération proposée, avant le choix de sa face. Graver porte la compétence à graver. */
-export type ForgeOffer = { op: 'engrave'; skill: CharacterEvent } | { op: Exclude<ForgeOpKind, 'engrave'> }
+/**
+ * Une opération proposée, avant le choix de sa face. Graver porte les compétences à graver, une ou deux (une par
+ * maîtrise du personnage, docs/MAITRISES.md § 6.2) : le joueur en choisit une, l'opération choisie n'en garde qu'une
+ * (`ForgeStep`), si bien que le journal de forge ne change pas de forme.
+ */
+export type ForgeOffer = { op: 'engrave'; skills: CharacterEvent[] } | { op: Exclude<ForgeOpKind, 'engrave'> }
 
 /**
  * Une opération appliquée : celles qui visent une face portent sa face. Copier une face porte sa face d'origine
@@ -349,52 +353,77 @@ function offerValid(base: ForgeBase, state: ForgeState, op: ForgeOpKind, pool: r
   return targetsIn(base, state, op).length > 0
 }
 
-/**
- * L'offre d'une forge : `FORGE_OFFER_SIZE` opérations jouables, différentes, tirées au hasard.
- * `focus` (offre orientée, règles v2, docs/PROGRESSION.md § 13.2) : Graver est toujours proposée quand elle le peut, et
- * sa compétence se tire au poids que `focus` lui donne (l'écho avec le build) au lieu de parts égales.
- * `noNewSkill` (la campagne, quand le dé porte déjà toutes ses faces de compétence) : ni Graver, ni Copier une face.
- */
+/** Ce qui oriente l'offre d'une forge (règles v2, docs/PROGRESSION.md § 13.2 ; maîtrises, docs/MAITRISES.md § 6.2). */
+export interface ForgeOfferOptions {
+  /** L'offre orientée : Graver est toujours proposée quand elle le peut, et ses compétences se tirent au poids que
+   * `focus` leur donne (l'écho avec le build) au lieu de parts égales */
+  focus?: (skill: CharacterEvent) => number
+  /** La campagne, quand le dé porte déjà toutes ses faces de compétence : ni Graver, ni Copier une face */
+  noNewSkill?: boolean
+  /** Le groupe d'une compétence (sa maîtrise) : Graver propose une compétence de chaque groupe qui en a une gravable,
+   * dans l'ordre où le groupe apparaît dans `pool` ; sans groupes, une seule compétence */
+  groupOf?: (skill: CharacterEvent) => string | undefined
+}
+
+/** L'offre d'une forge : `FORGE_OFFER_SIZE` opérations jouables, différentes, tirées au hasard (`ForgeOfferOptions`). */
 export function drawForgeOffer(
   base: ForgeBase,
   steps: readonly ForgeStep[],
   rng: Rng,
   pool: readonly CharacterEvent[],
-  focus?: (skill: CharacterEvent) => number,
-  noNewSkill = false,
+  { focus, noNewSkill = false, groupOf }: ForgeOfferOptions = {},
 ): ForgeOffer[] {
   const state = forgeState(base, steps)
   const kinds = shuffle(rng, Object.keys(FORGE_OPS) as ForgeOpKind[]).filter((op) => offerValid(base, state, op, pool, noNewSkill))
   const chosen = focus ? [...kinds.filter((op) => op === 'engrave'), ...kinds.filter((op) => op !== 'engrave')] : kinds
   const skills = engravable(base, state, pool)
+  // Les groupes (maîtrises) dans l'ordre où ils apparaissent dans la réserve ; sans `groupOf`, un seul
+  const groups = new Map<string | undefined, CharacterEvent[]>()
+  for (const s of skills) {
+    const key = groupOf?.(s)
+    groups.set(key, [...(groups.get(key) ?? []), s])
+  }
   return chosen.slice(0, FORGE_OFFER_SIZE).map((op): ForgeOffer => {
-    if (op === 'engrave') return { op, skill: focus ? pickWeighted(rng, skills, focus) : pick(rng, skills) }
+    if (op === 'engrave') return { op, skills: [...groups.values()].map((g) => (focus ? pickWeighted(rng, g, focus) : pick(rng, g))) }
     return { op }
   })
 }
 
-/** L'opération d'une offre sur une face (ignorée sans face) ; Copier une face prend aussi sa destination (`to`). */
-export function stepOf(offer: ForgeOffer, face?: number, to?: number): ForgeStep {
+/**
+ * L'opération d'une offre sur une face (ignorée sans face) ; Copier une face prend aussi sa destination (`to`), Graver
+ * la compétence choisie parmi celles de l'offre (`skill`, la première par défaut).
+ */
+export function stepOf(offer: ForgeOffer, face?: number, to?: number, skill?: CharacterEvent): ForgeStep {
   if (offer.op === 'temper') return { op: 'temper' }
   if (face === undefined) throw new Error(`${FORGE_OPS[offer.op].name} : une face est requise`)
   if (offer.op === 'copy') {
     if (to === undefined) throw new Error('Copier une face : une destination est requise')
     return { op: 'copy', face, to }
   }
-  return offer.op === 'engrave' ? { op: 'engrave', face, skill: offer.skill } : { op: offer.op, face }
+  if (offer.op !== 'engrave') return { op: offer.op, face }
+  const engraved = skill ?? offer.skills[0]
+  if (!offer.skills.some((s) => s.id === engraved.id)) throw new Error(`Graver : ${engraved.name} n'est pas proposée`)
+  return { op: 'engrave', face, skill: engraved }
 }
+
+/** Une opération est-elle de celles que l'offre propose (pour Graver, l'une de ses compétences) ? */
+export const isOffered = (offer: readonly ForgeOffer[], step: ForgeStep) =>
+  offer.some((o) => o.op === step.op && (o.op !== 'engrave' || (step.op === 'engrave' && o.skills.some((s) => s.id === step.skill.id))))
 
 /**
  * Le choix du combattant quand personne ne choisit pour lui (champion de référence, adversaire construit, choix par
- * défaut de l'écran) : une offre au hasard, puis une face au hasard parmi celles qu'elle peut viser ; une copie se pose
- * sur la plus petite face libre (la règle d'avant le choix de la destination, 0.111.0).
+ * défaut de l'écran) : une offre au hasard, pour Graver une de ses compétences au hasard (une maîtrise sur deux), puis
+ * une face au hasard parmi celles qu'elle peut viser ; une copie se pose sur la plus petite face libre (la règle d'avant
+ * le choix de la destination, 0.111.0).
  */
 export function autoForge(base: ForgeBase, steps: readonly ForgeStep[], offer: readonly ForgeOffer[], rng: Rng): ForgeStep | undefined {
   if (offer.length === 0) return undefined
   const chosen = pick(rng, offer)
+  // Une seule compétence : aucun tirage de plus (le hasard des offres sans maîtrises ne bouge pas)
+  const skill = chosen.op === 'engrave' && chosen.skills.length > 1 ? pick(rng, chosen.skills) : undefined
   const targets = offerTargets(base, steps, chosen)
   const face = targets.length ? pick(rng, targets) : undefined
-  return stepOf(chosen, face, chosen.op === 'copy' && face !== undefined ? copyDestinations(base, steps, face)[0] : undefined)
+  return stepOf(chosen, face, chosen.op === 'copy' && face !== undefined ? copyDestinations(base, steps, face)[0] : undefined, skill)
 }
 
 /** Le journal avec une opération de plus, vérifiée (erreur si elle est impossible). */
@@ -428,7 +457,7 @@ export function stepKey(step: ForgeStep): string {
 export function stepLabel(step: ForgeStep | ForgeOffer): string {
   const name = FORGE_OPS[step.op].name
   const where = 'face' in step ? ` le ${step.face}` : ''
-  if (step.op === 'engrave') return `${name} ${step.skill.name}${'face' in step ? ` sur${where}` : ''}`
+  if (step.op === 'engrave') return 'skill' in step ? `${name} ${step.skill.name}${where && ` sur${where}`}` : `${name} ${step.skills.map((s) => s.name).join(' ou ')}`
   if (step.op === 'copy' && 'face' in step) return `Copier${where}${step.to !== undefined ? ` sur le ${step.to}` : ''}`
   return `${name}${where}`
 }
