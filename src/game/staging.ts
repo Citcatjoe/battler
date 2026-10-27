@@ -175,6 +175,11 @@ export interface SkillSignal {
   polarity: Polarity
   /** Un bonus volé (Sceau de vol, lot 3) : son icône file du volé vers le voleur, à la place de la lueur */
   icon?: StatusId
+  /**
+   * Un bonus pris sur l'adversaire (Larcin, quatrième retour du 2026-10-27) : l'icône part de la zone d'état du volé, où le
+   * bonus était, et non du sceau du lanceur (qui est le voleur)
+   */
+  fromTray?: Side
 }
 
 /** Relique qui agit : son sceau s'illumine dans l'en-tête de son camp (RelicSeals). */
@@ -865,10 +870,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (o.lead !== 0) hold('LEAD')
     // Le signal file vers la zone d'état où un état apparaît ; de l'anneau d'une aura qui n'en pose pas, vers la cible
     // de ses dégâts directs, qui tombent à son arrivée (M19 bis). Un bonus volé file toujours vers le voleur, aura
-    // comprise, son icône à la place de la lueur, en rouge : une confiscation
+    // comprise, son icône à la place de la lueur, en rouge : une confiscation. Un bonus pris (Larcin) part de la zone
+    // d'état du volé, où il était, vers le voleur, qui est le lanceur (M50)
     const ringed = o.ring && hits.length > 0 ? { to: [hits[0].target], polarity: 'negative' as const } : undefined
     const targets = signalTargets(effects) ?? ringed
-    const theft = stolen.length > 0 ? { to: [...new Set([...(targets?.to ?? []), stolen[0].target])], polarity: 'negative' as const, icon: stolen[0].status } : undefined
+    const taken = stolen.length > 0 && stolen[0].target === source
+    const theft =
+      stolen.length > 0
+        ? taken
+          ? { to: [stolen[0].target], polarity: 'negative' as const, icon: stolen[0].status, fromTray: other(stolen[0].target) }
+          : { to: [...new Set([...(targets?.to ?? []), stolen[0].target])], polarity: 'negative' as const, icon: stolen[0].status }
+        : undefined
     const aim = o.signal !== undefined && source !== null ? (theft ?? targets) : undefined
     // Une relique s'annonce (sceau et label) au départ de son signal, ses effets tombent à son arrivée (M23)
     const early = !!aim && !!o.relic
@@ -880,6 +892,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       emit({ channel: 'signal', signal: { side: source!, from: o.signal!, ...aim } })
       if (early) announce()
       hold('SIGNAL')
+    }
+    // Un titre n'a qu'une place, au-dessus de son combattant (M31) : il attend qu'un texte qui l'occupe encore l'ait quittée
+    // (la Flamme votive, qui répond au soin de la Dîme sur le même combattant, 2026-10-27)
+    if (source !== null && title) {
+      const busy = placed.filter((p) => p.side === source && p.lift && p.row === 0).map((p) => T.FLOAT_ROW - (t - p.at))
+      if (busy.length > 0) wait(Math.max(...busy), 'place du titre')
     }
     if (!early) o.onShow?.()
     const cue = o.cue !== undefined ? o.cue : cueOf(source, effects)

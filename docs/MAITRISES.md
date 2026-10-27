@@ -161,7 +161,7 @@ Mesure avec tout le lot posé (C1 à C4, puis C5 : Crescendo sur le 2 de Morgrut
 
 _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un état des lieux, pour que l'utilisateur propose le contenu qui manque. Gravée : points de victoire gagnés quand la brique est gravée sur le 3 nu (bande 8 à 20) ; « moy. » = moyenne des dix hôtes du roster (rapports `logs/skills/` du 2026-10-25 et du 2026-10-27), sinon la mesure connue chez un hôte, avec sa source dans `skills.ts`. Porteurs : ceux qui jouent la maîtrise ; « dé » : la brique est sur leur dé de départ._
 
-#### Fureur — Gorak, Morgrut (2 porteurs) · 3 auras, 6 compétences
+#### Fureur — Gorak, Morgrut (2 porteurs) · 4 auras, 6 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -174,8 +174,9 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Assaut | compétence | ce coup ×2 | gros coup | — | moy. +14,1 | — |
 | Soliste | compétence | ce coup ×3, 1x | gros coup | — | moy. +17,2 | — |
 | Crescendo | compétence | ce coup ×2, puis ×1 de plus à chaque fois qu'il touche | gros coup | ses propres touches | moy. +17,1 | Morgrut (2, C5) |
+| **Élan** (B8) | aura | +10 % de critique ; chaque gros coup (critique, ou coup ×2 et plus) : +3 Ferveur | critiques, Ferveur | gros coups | moy. +13,0 (Gorak +17,9, Morgrut +11,3) ; rang +7,0 | — |
 
-#### Sang — Gorak, Elaria, Brokk (3) · 3 auras, 3 compétences
+#### Sang — Gorak, Elaria, Brokk (3) · 4 auras, 5 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -185,8 +186,11 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Pourfendre | compétence | saignement de la moitié des dégâts du coup | Saignement | — | — (rang II : +2 Saignement) | — |
 | Curée | compétence | trois coups de plus si l'adversaire saigne | coups | Saignement (condition) | Brokk +10,4, Gorak +7,0 | — |
 | Hémorragie | compétence | 4 dégâts directs ; l'adversaire ne regagne plus de PV | malus de soin | — | moy. +14,1 | — |
+| **Sangsue** (B7) | aura | chaque coup qui touche lui rend 1 PV par charge de Saignement de l'adversaire | soins | Saignement (lit ses charges) | Brokk +17,9 ; Gorak +6,6 et Elaria +7,1 avec la Plaie ouverte (série 82) | — |
+| **Serment de sang** (B7) | compétence | il perd 3 PV ; l'adversaire prend 4 Saignement | Saignement | ses PV | moy. +16,1 (Brokk +18,9, Gorak +16,3, Elaria +17,6) ; rang +7,6 | — |
+| **Odeur du sang** (B7) | compétence | si l'adversaire saigne, ce coup est critique, +4 | critique, gros coup | Saignement (condition) | Brokk +16,4 ; Gorak +7,9 et Elaria +5,0 avec la Plaie ouverte (série 83) | — |
 
-#### Rempart — Brokk, Aldric, Morgrut (3) · 5 auras, 4 compétences
+#### Rempart — Brokk, Aldric, Morgrut (3) · 5 auras, 5 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -199,8 +203,9 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Rancune | compétence | son prochain coup reçu lui donne un critique assuré | critique assuré | coups reçus | Morgrut construit +20,5 | — |
 | Riposte | compétence | ses 2 prochains coups reçus renvoient la moitié de leurs dégâts | renvois | coups reçus | — | — |
 | Rétribution | compétence | la moitié des dégâts des trois derniers coups reçus | renvois | coups reçus (jauges) | signature | Aldric (2) |
+| **Onde de choc** (B8) | compétence | 2 PV de dégâts directs par coup reçu, des trois derniers (scène) | dégâts directs | coups reçus (jauges) | moy. +13,0 (Brokk +14,0, Aldric +12,3, Morgrut +13,1) ; rang +7,9 | — |
 
-#### Poison — Ervald, Naraxes, Thaldrin (3) · 3 auras, 3 compétences
+#### Poison — Ervald, Naraxes, Thaldrin (3) · 4 auras, 5 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -210,6 +215,9 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Souffle de la tombe | compétence | 3, 2 puis 1 PV à la fin de ses tours | Poison | — | Ervald construit +14,5 | — |
 | Virulence | compétence | triple le Poison de l'adversaire, puis +2 | Poison | Poison (amplifie) | Ervald +17,5 | — |
 | Récolte | compétence | +14 PV si l'adversaire est empoisonné | soins | Poison (condition) | Ervald +11,9 | — |
+| **Peau de crapaud** (B7) | aura | 1 Poison à l'attaquant à chaque coup reçu | Poison | coups reçus | moy. +13,9 (Ervald +19,0, Naraxes +16,0, Thaldrin +13,6) ; rang +11,0 (au-dessus) | — |
+| **Pièce vert-de-gris** (B7) | compétence | s'il touche, une pièce : pile, 5 Poison | Poison, pièce | — | moy. +13,3 (Ervald +16,4, Naraxes +14,6, Thaldrin +13,3) ; rang +6,1 | — |
+| **Morsure** (B7) | compétence | ce coup ×3 si l'adversaire est empoisonné | gros coup | Poison (condition) | Ervald +19,0, Naraxes +7,9, Thaldrin +3,9 (+6,4 avec l'Aura glaciale, série 83) | — |
 
 #### Chance — Elaria, Naraxes, Fanchon (3) · 4 auras, 6 compétences
 
@@ -226,7 +234,7 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Œil de faucon | compétence | ce coup est critique | critique | — | signature | Elaria (2) |
 | Esquive améliorée | compétence | esquive à coup sûr le prochain coup reçu | esquive | — | rang +3,3 | — |
 
-#### Lumière — Ysolde (1) · 4 auras, 3 compétences
+#### Lumière — Ysolde (1) · 4 auras, 5 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -237,27 +245,32 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Purification | compétence | retire son dernier bonus à l'adversaire, sinon 8 dégâts directs | dégâts directs | bonus adverses | signature | Ysolde (2) |
 | Prière | compétence | +6 PV | soins | — | moy. +13,6 | — |
 | Siffloter | compétence | +3 PV à la fin de ses 2 prochains tours | soins | — | moy. +13,5 | — |
+| **Dîme** (B7) | compétence | ses 2 prochains coups reçus lui rendent chacun 2 PV, pris à l'attaquant | soins, dégâts directs | coups reçus | moy. +16,8 (Ysolde +19,5) ; rang +6,3 | — |
+| **Flamme votive** (B7) | compétence | ses 2 prochains soins posent chacun Brûlure 3 | Brûlure | soins | Ysolde +18,6, Fanchon +12,9 (ailleurs +3 à +8,5, sans soin) ; rang +4,5 | — |
 
-#### Ombre — Ervald, Aldric (2) · 2 auras, 6 compétences
+#### Ombre — Ervald, Aldric (2) · 4 auras, 6 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
 | Effroi | aura | chacun de ses critiques : l'adversaire perd sa prochaine action | tours perdus | critiques | moy. +8,8 (Morgrut +2,9 ; Elaria +16,4) | — |
 | Aura de pourriture | aura | chacun de ses critiques : 2 Pourriture | Pourriture | critiques | moy. +7,0 (Morgrut +0,7 ; Elaria +14,7) — sous la bande | — |
+| **Emprise** (B8) | aura | ses coups font +1 par malus que porte l'adversaire | dégâts par coup | malus posés (tous) | Ervald +12,4 (Aldric +3,6 sans malus, Brokk +12,2) ; rang +4,7 | — |
+| **Larcin** (B8) | aura | +5 % d'esquive ; chaque esquive : il prend une charge du dernier bonus de l'attaquant | esquives, bonus | esquives, bonus adverses | moy. +12,7 (Ervald +14,2, Aldric +10,4) ; rang +6,5 (une charge par vol ; avant : +14,1, Ervald +16,3, Aldric +10,9, à 200 par duel) | — |
 | Vol de vie | compétence | ce coup lui rend les PV qu'il retire, +4 | soins | — | signature | Ervald (2) |
 | Peur | compétence | l'adversaire perd sa prochaine action, 1x | tour perdu | — | — | — |
-| Confiscation | compétence | vole le prochain bonus de l'adversaire | — | bonus adverses | moy. +10,0 | — |
+| Confiscation | compétence | vole le prochain bonus de l'adversaire (une charge ; il garde les autres) | — | bonus adverses | moy. +14,3 (Aldric +12,8) ; rang +6,3 (une charge par vol ; avant +16,0, rang +6,2) | — |
 | Malchance | compétence | le prochain jet de l'adversaire sur une compétence tombe à vide | malus | — | moy. +18,2 | — |
 | Flétrissure | compétence | −2 dégâts à chacun de ses coups, 3 tours | malus | — | moy. +9,1 | — |
 | Fausse note | compétence | ses 2 prochains coups qui touchent font −4 | malus | — | moy. +17,5 | — |
 
-#### Magie — Ysolde, Thaldrin, Fanchon (3) · 3 auras, 6 compétences
+#### Magie — Ysolde, Thaldrin, Fanchon (3) · 4 auras, 6 compétences
 
 | Brique | Genre | Effet | Produit | Consomme | Gravée connue | Sur un dé |
 | --- | --- | --- | --- | --- | --- | --- |
 | Ciel d'orage | aura | au début de chacun de ses tours, l'adversaire perd 1 PV | dégâts directs | — | moy. +11,0 | Thaldrin (1) |
 | Champ d'orage | aura | chaque coup reçu foudroie l'attaquant : 1 PV | dégâts directs | coups reçus | moy. +9,8 | — |
 | Ballade | aura | chaque coup qui touche lui rend 1 PV | soins | — | moy. +11,3 | Fanchon (1) |
+| **Surtension** (B8) | aura | chacun de ses éclairs fait +1 | dégâts directs | éclairs (Foudre, Ciel d'orage, Champ d'orage) | Thaldrin +12,8 (sans éclair : +2,6 à +4,9) ; rang +4,0 | — |
 | Feux follets | compétence | 3 Brûlure | Brûlure | — | signature | Thaldrin (2) |
 | Foudre | compétence | 4 PV en quatre éclairs | dégâts directs | — | rang +8,7 | — |
 | Embrasement | compétence | si l'adversaire brûle, son prochain coup qui touche : trois fois sa Brûlure | dégâts | Brûlure | Thaldrin +10,6 (moy. +8,6) | — |
@@ -270,15 +283,15 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Maîtrise | Auras | Compétences | Total | Porteurs | Ressource propre (produite → consommée dans la maîtrise) |
 | --- | --- | --- | --- | --- | --- |
 | Chance | 4 | 6 | **10** | 3 | pièces → Dé pipé ; esquives → Feinte ; les 6 → Veine |
-| Rempart | 5 | 4 | 9 | 3 | renvois → Vindicte, Dette de sang ; armure vidée → Rempart hérissé ; coups reçus → Rancœur, Rancune |
-| Fureur | 3 | 6 | 9 | 2 | gros coups, critiques : **aucun consommateur dans la maîtrise** |
-| Magie | 3 | 6 | 9 | 3 | Brûlure → Embrasement, Attiser |
-| Ombre | **2** | 6 | 8 | 2 | malus posés : **aucun consommateur** ; ses deux auras vivent du critique, qu'elle ne produit pas |
-| Lumière | 4 | 3 | 7 | **1** | soins → Sentence, Bouclier de foi |
-| Sang | 3 | 3 | **6** | 3 | Saignement → Curée (une seule consommatrice) |
-| Poison | 3 | 3 | **6** | 3 | Poison → Virulence, Récolte ; soins → Sève noire |
+| Rempart | 5 | **5** | **10** | 3 | renvois → Vindicte, Dette de sang ; armure vidée → Rempart hérissé ; coups reçus → Rancœur, Rancune, **Onde de choc** |
+| Fureur | **4** | 6 | **10** | 2 | gros coups, critiques → **Élan** (qui fait critiquer : sa propre boucle) |
+| Magie | **4** | 6 | **10** | 3 | Brûlure → Embrasement, Attiser ; éclairs → **Surtension** |
+| Ombre | **4** | 6 | **10** | 2 | malus posés → **Emprise** ; esquives, bonus adverses → **Larcin** (hors critique) |
+| Lumière | 4 | **5** | 9 | **1** | soins → Sentence, Bouclier de foi, **Flamme votive** ; coups reçus → **Dîme** (qui soigne : elle nourrit les consommatrices de soins) |
+| Sang | **4** | **5** | 9 | 3 | Saignement → Curée, **Sangsue**, **Odeur du sang** ; producteurs sur jet : Pourfendre, **Serment de sang** |
+| Poison | **4** | **5** | 9 | 3 | Poison → Virulence, Récolte, **Morsure** ; soins → Sève noire ; producteurs : **Peau de crapaud** (coups reçus), **Pièce vert-de-gris** (sur jet) |
 
-64 briques (27 auras, 37 compétences), 8 en moyenne. Écart : de 6 (Sang, Poison) à 10 (Chance).
+64 briques (27 auras, 37 compétences), 8 en moyenne. Écart : de 6 (Sang, Poison) à 10 (Chance). _Depuis B7 et B8 (quatrième demande du 2026-10-27 : +6 auras, +7 compétences) : 77 briques, 9 au Sang, au Poison et à la Lumière, 10 aux cinq autres._
 
 **Déséquilibres constatés (chiffres ci-dessus et § B5) :**
 1. **Taille** : Sang et Poison (6) contre Chance (10). Pour « globalement égales en contenu », il manque environ deux briques au Sang et au Poison, une à la Lumière ; la Chance en a deux de trop (ou une sous-famille à part : esquive et critique, une 3e maîtrise plus tard).
@@ -303,18 +316,94 @@ _Réponse à l'utilisateur : combien d'auras et de compétences par maîtrise po
 
 **Cible** : environ 4 auras et 5 compétences par maîtrise, soit 9 à 10 briques ; chacune avec une **boucle interne** (un producteur et un consommateur de sa ressource dans la maîtrise) et **un lien vers une autre maîtrise** (une ressource qu'elle produit pour une autre, ou qu'elle lit chez une autre).
 
-| Maîtrise | Aujourd'hui (auras / compétences) | À ajouter | Ce qu'il faut surtout |
-| --- | --- | --- | --- |
-| Chance | 4 / 6 | 0 | rien ; une pièce de plus nourrirait le Dé pipé |
-| Rempart | 5 / 4 | +1 compétence | une consommatrice de l'armure temporaire ou des coups encaissés, qui frappe |
-| Fureur | 3 / 6 | +1 aura | une aura qui consomme ses gros coups ou ses critiques (sa boucle) |
-| Magie | 3 / 6 | +1 aura | une aura de feu ou de foudre qui lit la Brûlure ou les dégâts directs |
-| Ombre | 2 / 6 | +2 auras | une aura qui lit ses malus posés (hors critique) ; une seconde qui gêne sans critique |
-| Lumière | 4 / 3 | +2 compétences | une qui fait payer l'adversaire ; une qui consomme les soins |
-| Sang | 3 / 3 | +1 aura, +2 compétences | une seconde consommatrice du Saignement ; un producteur sur jet |
-| Poison | 3 / 3 | +1 aura, +2 compétences | un producteur sur jet ; une consommatrice du Poison qui frappe |
+| Maîtrise | Aujourd'hui (auras / compétences) | À ajouter | Ce qu'il faut surtout | Après la quatrième demande (B7, B8) |
+| --- | --- | --- | --- | --- |
+| Chance | 4 / 6 | 0 | rien ; une pièce de plus nourrirait le Dé pipé | 4 / 6 (la Pièce vert-de-gris, du Poison, est une pièce de plus pour le Dé pipé) |
+| Rempart | 5 / 4 | +1 compétence | une consommatrice de l'armure temporaire ou des coups encaissés, qui frappe | 5 / 5 : Onde de choc |
+| Fureur | 3 / 6 | +1 aura | une aura qui consomme ses gros coups ou ses critiques (sa boucle) | 4 / 6 : Élan |
+| Magie | 3 / 6 | +1 aura | une aura de feu ou de foudre qui lit la Brûlure ou les dégâts directs | 4 / 6 : Surtension |
+| Ombre | 2 / 6 | +2 auras | une aura qui lit ses malus posés (hors critique) ; une seconde qui gêne sans critique | 4 / 6 : Emprise, Larcin |
+| Lumière | 4 / 3 | +2 compétences | une qui fait payer l'adversaire ; une qui consomme les soins | 4 / 5 : Dîme, Flamme votive |
+| Sang | 3 / 3 | +1 aura, +2 compétences | une seconde consommatrice du Saignement ; un producteur sur jet | 4 / 5 : Sangsue ; Serment de sang, Odeur du sang |
+| Poison | 3 / 3 | +1 aura, +2 compétences | un producteur sur jet ; une consommatrice du Poison qui frappe | 4 / 5 : Peau de crapaud ; Pièce vert-de-gris, Morsure |
 
 **Total : 6 auras et 7 compétences** (13 briques), ce qui porte chaque maîtrise à 9 (Lumière, Sang, Poison) ou 10 briques (les cinq autres), 77 en tout. Les maîtrises à 6 compétences (Chance, Fureur, Magie, Ombre) n'en reçoivent pas : elles dépassent déjà la cible.
+
+**État des lieux après le lot** (registre `MASTERY_SKILLS`, compté le 2026-10-27 après le réglage) : **33 auras et 44 compétences, 77 briques**, toutes gravables ; Fureur 4 / 6, Sang 4 / 5, Rempart 5 / 5, Poison 4 / 5, Chance 4 / 6, Lumière 4 / 5, Ombre 4 / 6, Magie 4 / 6. Chaque ligne du tableau des besoins est servie ; plus aucune maîtrise sous 9 briques ni sous 4 auras.
+
+**Les départs après le lot** (script jetable, 400 combats par duel, graines du balance, `createCharacter(id, { aura })` contre le roster vanilla) : **63 départs, 7 hors de 42 à 58** (5 sous, 2 au-dessus ; 8 sur 55 après le Tuning C5) : Gorak Aura de puissance 59,1 (meilleur duel Ervald 66,0), Elaria Ivresse du sang 63,3 (Gorak 68,0) au-dessus ; Elaria Veine 39,8, Fanchon Ciel d'orage 38,7, Champ d'orage 38,5, Feinte 40,2, Veine 40,8 au-dessous. Les nouvelles auras de départ : Élan (Gorak 46,1, Morgrut 47,5), Peau de crapaud (Ervald 53,2, Naraxes 48,7, Thaldrin 55,4), Larcin (Ervald 48,6, Aldric 53,6) ; Morgrut Rancœur 44,3 (41,9 avant l'agent Specials) rentre dans la bande. **Duels au-delà de 65/35 au départ : 20** (22 avant le réglage : les deux du Larcin contre Fanchon sont réglés), tous chez des départs d'avant le lot : 5 au-dessus, Gorak Puissance–Ervald 66,0, Elaria Ivresse du sang contre Gorak, Ervald, Morgrut (67,0 à 68,0), Brokk Rempart hérissé–Elaria 67,0 ; 15 au-dessous (31,8 à 34,8), Ysolde Aura d'immunité, Brokk Rancœur et Aura d'intimidation contre Morgrut, Brokk Intimidation contre Fanchon, Elaria Veine (Brokk, Thaldrin) et Pas de côté (Ysolde), et huit de Fanchon (Ciel d'orage, Champ d'orage, Feinte, Veine) contre Brokk, Ysolde, Thaldrin.
+
+### B7. Le contenu du soin : Sang, Poison, Lumière (quatrième demande du 2026-10-27)
+
+_Proposition 3 de l'utilisateur, « des choses qui tournent autour du soin », servie surtout en Lumière (une compétence qui fait payer l'adversaire, une qui consomme les soins) et en lien entre maîtrises. Chaque brique : un effet, deux au plus liés, mesurée au laboratoire (séries 80 à 84, `scripts/lab/content-a.ts`) avant d'être codée, puis gravée sur le 3 nu (`scripts/skills.report.ts`, 400 combats par duel) et aiguisée (rang II). « Construit » : la consommatrice mesurée avec son producteur sur le 4 nu (la Plaie ouverte de Gorak et d'Elaria, l'Aura glaciale de Thaldrin), la règle « le producteur d'abord » ne l'offrant pas sans lui._
+
+| Brique | Maîtrise | Le besoin | Sa boucle (produit → consomme) | Le lien | L'idée |
+| --- | --- | --- | --- | --- | --- |
+| **Dîme** | Lumière | qui fait payer l'adversaire | coups reçus → soins (et dégâts directs) | elle soigne : elle nourrit la Sentence, le Bouclier de foi, la Flamme votive, et la Sève noire (Poison) | l'impôt de la sainte : chaque coup qui la frappe lui rend 2 PV, pris à l'attaquant |
+| **Flamme votive** | Lumière | qui consomme les soins | soins → Brûlure | Lumière → Magie : sa Brûlure nourrit l'Embrasement et Attiser | le cierge : ses deux prochains soins allument chacun une Brûlure 3 |
+| **Sangsue** (aura) | Sang | une seconde consommatrice du Saignement | Saignement → soins | Sang → soins (Sentence, Bouclier de foi, Sève noire, Flamme votive) | elle boit la plaie : chaque coup qui touche lui rend 1 PV par charge de Saignement |
+| **Serment de sang** | Sang | un producteur sur jet | ses PV → Saignement | il perd des PV : il passe plus vite sous la moitié (reliques de seuil) | le pacte : il paie 3 PV, l'adversaire saigne de 4, sans coup à toucher |
+| **Odeur du sang** | Sang | une consommatrice de plus, qui frappe | Saignement → critique | Sang → critiques (Ivresse du sang, Effroi, Aura de pourriture) | le prédateur flaire la plaie : si l'adversaire saigne, ce coup est critique, +4 |
+| **Peau de crapaud** (aura) | Poison | l'aura | coups reçus → Poison | le Poison défensif, l'Aura d'épines du Poison | qui la touche s'empoisonne : 1 Poison à l'attaquant par coup reçu |
+| **Pièce vert-de-gris** | Poison | un producteur sur jet | → Poison, pile | Poison → Chance : une pièce, que lit le Dé pipé | la pièce du Poison : s'il touche, une pièce ; pile, 5 Poison |
+| **Morsure** | Poison | une consommatrice du Poison qui frappe | Poison → gros coup | Poison → Fureur (un gros coup, ×3) | le croc : ce coup ×3 si l'adversaire est empoisonné |
+
+**Moteur** : une seule brique nouvelle, `StatusRead` (`fromStatus` sur un soin ou des dégâts, comme sur une pose : la Sangsue lit le Saignement ; [RESOLUTION.md](RESOLUTION.md) § 4). Une réaction qui ne vaudrait que ce qu'elle lit ne part pas sans lui (la Sangsue sans Saignement, comme l'Embrasement sans Brûlure). Tout le reste vient des briques existantes (réactions `hurt`, `hit`, `healed`, pièce d'effet, `hitMultiplier` à condition, Critique assuré aiguisé). L'audit relit le multiplicateur d'une compétence qui modifie son coup sous condition (la Morsure), sur l'état du jet.
+
+**Essayés et écartés** (laboratoire) : Dîme 3 × 2 (+19,1, puis 3 × 3 : +25,0) ; Flamme votive « +1 à sa Brûlure » (+5,3) puis « +2 » (+19,4) ; Sangsue ×2 (Brokk +21,8) ; Saigner à blanc (relâcher tout le Saignement, ×1 à ×3 : +0 à +13, rare à l'écran, une perte avancée plutôt qu'ajoutée), Rouvrir (2 PV par charge : Brokk +6,4) ; Agonie (dégâts par charge de Poison ×1 à ×4, relâche ×1 à ×3 : Naraxes +0,8 à +2,8) ; Serment −2 / 5 et −3 / 6 (+20 à +22), 4 Saignement sans prix (+18,8 à +21,6). Premier essai de la Dîme : un malus posé sur l'adversaire (« ses 2 prochains coups qui touchent lui coûtent 2 PV ») ; la perte de l'attaquant et le soin du lanceur, dans la fenêtre de son coup, ne se mettaient pas en scène dans l'ordre : la même règle, vue du lanceur, en fait un bonus (+16,8, comme avant).
+
+**Gravées** (400 combats par duel, `logs/skills/`) et **rang II** :
+
+| Brique | Gravée, moyenne des 10 hôtes | Chez ses porteurs | Rang II | Bande |
+| --- | --- | --- | --- | --- |
+| Dîme | +16,8 | Ysolde +19,5 | +6,3 | oui |
+| Serment de sang | +16,1 | Gorak +16,3, Elaria +17,6, Brokk +18,9 | +7,6 | oui |
+| Peau de crapaud | +13,9 | Ervald +19,0, Naraxes +16,0, Thaldrin +13,6 | **+11,0** | gravée oui ; rang au-dessus (comme Épines +8,8, Décoction +9,9, Glaciale +10,2 : un Poison de plus par coup reçu double l'aura) |
+| Pièce vert-de-gris | +13,3 | Ervald +16,4, Naraxes +14,6, Thaldrin +13,3 | +6,1 | oui |
+| Flamme votive | +6,8 | Ysolde +18,6 (Fanchon +12,9, sa Ballade) | +4,5 | oui chez son porteur ; sans soin, rien (le producteur d'abord ne l'offre qu'avec un soin) |
+| Sangsue | +5,2 | Brokk +17,9 ; construits Gorak +6,6, Elaria +7,1 | +4,1 | Brokk oui ; Gorak, Elaria sous la bande, comme la Curée (Gorak +7,0) : la Plaie ouverte ne laisse qu'une charge de Saignement |
+| Odeur du sang | +4,9 | Brokk +16,4 ; construits Gorak +7,9, Elaria +5,0 | +3,8 | Brokk oui ; Gorak au bord, Elaria sous la bande (ses critiques sont déjà nombreux) |
+| Morsure | +5,5 | Ervald +19,0, Naraxes +7,9 ; Thaldrin +6,4 avec l'Aura glaciale | +4,0 | Ervald oui ; Naraxes au bord ; Thaldrin sous la bande |
+
+**Aura de départ** : la Peau de crapaud (aucun besoin) s'ajoute aux départs des trois porteurs du Poison (`startAurasFor`) ; la Sangsue attend le Saignement, qu'aucun dé de départ du Sang ne produit hors de l'Aura d'épines qu'elle remplacerait sur le 1. Départs (série 84, 400 par duel, ± 0,9) : Ervald 53,2 %, Naraxes 48,8 %, Thaldrin 59,1 % (pire duel Fanchon 64,3 %). **Relu au réglage** (le vrai départ : le dé vanilla, le 1 seul changé, `createCharacter(id, { aura })`, 400 par duel, graines du balance ; la série 84 mettait quatre faces nues) : **Ervald 53,2 %, Naraxes 48,7 %, Thaldrin 55,4 %** (meilleur duel Gorak 62,3) : les trois dans la bande.
+
+**Le réglage** (quatrième demande, [STATUTS.md](STATUTS.md) « le réglage ») : le **rang de la Peau de crapaud (+11,0) reste à décider** : un Poison par coup reçu s'efface au tour de l'attaquant, deux s'accumulent ; aucun pas entier plus petit sur sa valeur ni sur son axe, et « 1x par tour » (crochet temporaire, retiré) ne touche pas le rang (+10,9 ; gravée +13,9 → +12,8 ; départs −2,3 à −3,2). Comme l'Aura de décoction, l'Aura glaciale et l'Aura d'épines. **Sangsue, Odeur du sang, Morsure : pas de réglage** (le producteur d'abord), confirmé par les porteurs construits de `npm run ramp` (10 récompenses, 48 builds, `logs/ramp/2026-10-27-21-03-06_v0.126.0.md`) : Sangsue Brokk +18,9 ± 6,2 (n 5), Gorak +5,7 (n 1) ; Odeur du sang Brokk +8,3 ± 3,8 (n 3), Gorak +9,3 (n 1), Elaria +3,3 (n 1) ; Morsure Ervald +11,9 ± 3,4 (n 9), Naraxes +8,1 ± 1,6 (n 9), Thaldrin +10,0 (n 1). Dans la bande là où leur producteur est dans le build ; chez les porteurs qui produisent peu, l'offre les tend rarement (18 ou 19 actes sur 120, 2 à 6 prises ; 50 à 84 actes chez Brokk, Ervald, Naraxes).
+
+**Besoins après B7** : Lumière 4 / 5, Sang 4 / 5, Poison 4 / 5 (9 briques chacune) : les trois lignes du tableau ci-dessus sont servies.
+
+### B8. Le contenu des maîtrises : Fureur, Magie, Ombre, Rempart (quatrième demande du 2026-10-27)
+
+_Les propositions 1 (« une magie ou un coup lié à une onde de choc, avec un effet visuel ») et 2 (« du vol de statut positif, avec le transfert visuel ») de l'utilisateur, placées là où elles servent un besoin. Chaque brique : un effet, deux au plus liés ; mesurée au laboratoire (séries 85 à 92, `scripts/lab/content-b.ts`, 200 combats par duel) avant d'être codée, puis gravée sur le 3 nu (`scripts/skills.report.ts`, 200 par duel, rapports `logs/skills/2026-10-27-20-32-31`, `…20-33-15`, `…20-34-51`, `…20-35-00`) et au départ (script jetable, 400 par duel, mêmes graines que `npm run balance`)._
+
+| Brique | Maîtrise | Le besoin | Sa boucle (produit → consomme) | Le lien | L'idée |
+| --- | --- | --- | --- | --- | --- |
+| **Élan** (aura) | Fureur | une aura qui consomme ses gros coups ou ses critiques | elle fait critiquer (+10 %) → chaque gros coup lui donne +3 Ferveur | ses gros coups (Assaut, Soliste, Crescendo) et ses critiques nourrissent aussi l'Ivresse du sang (Sang), l'Effroi et l'Aura de pourriture (Ombre) | l'élan du guerrier : le gros coup en appelle un autre |
+| **Surtension** (aura) | Magie | une aura de foudre qui lit les dégâts directs | éclairs → éclairs plus forts | elle renforce le Ciel d'orage, le Champ d'orage, la Foudre (tous de la Magie) ; la relique de foudre d'un build aussi | le paratonnerre : chacun de ses éclairs fait +1 |
+| **Emprise** (aura) | Ombre | une aura qui lit ses malus posés (hors critique) | malus posés → coups plus forts | elle lit **tous** les malus : Poison, Saignement, Brûlure, Peur, Flétrissure ; chaque maîtrise qui afflige la nourrit | la main d'ombre qui serre : +1 à ses coups par malus que porte l'adversaire |
+| **Larcin** (aura) | Ombre | une seconde aura qui gêne sans critique ; la proposition 2 | esquive → bonus pris | elle prend ce que les autres maîtrises posent (auras, Ferveur, armure temporaire, Duo, Vol de vie) | le pickpocket : à chaque esquive, il prend une charge du dernier bonus de l'attaquant, qui vole d'un camp à l'autre |
+| **Onde de choc** | Rempart | une consommatrice des coups encaissés qui frappe ; la proposition 1 | coups reçus (trois jauges) → dégâts directs | elle vit des coups qu'il encaisse, comme la Rancœur et la Rétribution : la Peau de pierre et l'Aura d'intimidation le font tenir pour frapper ; ce n'est pas un renvoi (ni Vindicte, ni Dette de sang), ni de la foudre (pas de Surtension) | le bouclier frappe le sol : 2 PV par coup encaissé, des trois derniers, en une onde qui roule jusqu'à l'adversaire |
+
+**Larcin, Confiscation et Purification** : la Confiscation (Sceau de vol) attend le **prochain** bonus que l'adversaire se pose et le détourne ; la Purification **détruit** son dernier bonus (et blesse) ; le Larcin **prend** un bonus déjà porté, à chaque esquive, et le garde. **Un vol prend une charge** (règle commune des vols, réglage de la quatrième demande) : la Confiscation détourne une charge de la pose, le Larcin une charge du bonus porté ; le volé garde les autres, la dernière emporte le bonus entier (intensité comprise). Même transfert visuel (M50) : l'icône vole, mais du bonus de l'adversaire vers le voleur (de la zone d'état du volé, M50 étendue).
+
+**Moteur** (quatrième demande, [RESOLUTION.md](RESOLUTION.md)) : le déclencheur `heavy` (« gros coup » : un critique, ou un coup ×2 et plus, après la fenêtre du critique) ; `cleanse.steal` (une charge de ce que la purge vise passe au porteur, marquée volée ; `cleanse.stolen`) ; `AppliedEffect.kept` (les charges d'une pose confisquée que le lanceur garde) ; `modifyOutgoing` lit les statuts du défenseur (l'Emprise compte ses malus) ; `modifyDirect` (les dégâts directs du porteur, par impact et selon leur source : la Surtension ne lit que la foudre) ; `release.per` (des jauges comptées, `per` PV par jauge). Accroches : `moment:heavy` (un critique en est un), `damage:lightning`, `malus` (tout statut négatif posé).
+
+**Mesures** (gravée : moyenne des dix hôtes ; « chez ses porteurs » : ceux de la maîtrise ; rang : I → II) :
+
+| Brique | Laboratoire (gravée) | Gravée, moyenne | Chez ses porteurs | Rang II | Bande |
+| --- | --- | --- | --- | --- | --- |
+| Élan | +3 Ferveur seule : Gorak +2,6, Morgrut +1,6 ; +10 % de critique et +3 Ferveur : +15,7, +7,7 | +13,0 | Gorak +17,9, Morgrut +11,3 | +7,0 | oui |
+| Surtension | +1 par impact, tous dégâts directs : Thaldrin +9,3, Ysolde +1,1 ; +2 : +14,1 ; ×2 : +7,4 | +4,6 | Thaldrin +12,8 ; sans éclair (Ysolde, Fanchon) +3,0 à +4,9 | +4,0 | oui chez qui fait des éclairs (le producteur d'abord ne l'offre qu'à lui) |
+| Emprise | +1 par malus : Ervald +9,1 ; +2 : +15,1 | +5,6 | Ervald +12,4 ; Aldric +3,6 (sans malus) | +4,7 | oui chez qui pose des malus |
+| Larcin | +10 % : Ervald +18,1 ; +5 % : +12,6, Aldric +7,6 ; esquive seule : +6,0, +3,4 ; au coup reçu : +21,7 | +14,1 → **+12,7** (une charge par vol, 400 par duel) | Ervald +16,3 → +14,2, Aldric +10,9 → +10,4 ; construits (ramp, 10 récompenses) Ervald +13,1 ± 2,0, Aldric +13,5 ± 3,6 | +6,5 → +6,5 | oui |
+| Onde de choc | 2 par coup reçu : Brokk +10,6, Morgrut +9,2 ; 3 : +15,4, +13,6 | +13,0 | Brokk +14,0, Aldric +12,3, Morgrut +13,1 | +7,9 | oui |
+
+**Départs** (les auras de départ se déduisent, `startAurasFor`) : l'Élan chez Gorak 46,1 % (pire Thaldrin 41,5) et Morgrut 47,5 % (pire Aldric 38,3) ; le Larcin chez Ervald 53,4 % (meilleur Fanchon 66,5) et Aldric 56,4 % (meilleur **Fanchon 69,0**) ; la Surtension et l'Emprise ne sont l'aura de départ de personne (aucun dé de départ ne fait d'éclair hors du 1, ni ne pose de malus hors du 1). **Écarté** : la Surtension sur tous les dégâts directs faisait d'elle une aura de départ d'Ysolde (sa Purification), à **35,6 %**.
+
+**Réglé** (le levier recommandé, une règle pour tous les vols) : **un vol prend une charge**. Le Larcin au départ : Ervald 53,4 → **48,6 %** (contre Fanchon 66,5 → 52,3 ; meilleur duel Gorak 57,8), Aldric 56,4 → **53,6 %** (contre Fanchon 69,0 → **60,0**). Le Duo n'est pas touché (B10). La Confiscation suit la même règle : gravée +16,0 → +14,3 en moyenne (Aldric +13,9 → +12,8), rang II +6,2 → +6,3. **Morgrut à l'Élan** : 47,5 %, pire duel Aldric 38,3 %, inchangé (le dé vanilla d'Aldric ne vole rien) ; dans la tolérance (aucun duel au-delà de 65/35), noté.
+
+**Essayés et écartés** (laboratoire) : la Rage (+1 durable à ses coups par gros coup : Gorak +3,1) ; l'Élan à un coup brut par gros coup (+4,7, puis +10 % de critique : +17,0, deux coups : +7,5) ; la Fournaise (+2 ou +3 contre un adversaire qui brûle, +1 par Brûlure : Thaldrin +2,1 à +2,6) ; l'Emprise à +2 (+15,1, trop fort chez Brokk) ; le Larcin au coup reçu ou au coup qui touche (+21,7, +21,8) ; l'Onde de choc à cinq jauges (sans effet : un statut d'essai n'est pas rempli par le moteur), à 3 et 4 PV par jauge (au-dessus de la bande).
+
+**Besoins après B8** : Fureur 4 / 6, Magie 4 / 6, Ombre 4 / 6, Rempart 5 / 5 : les quatre lignes du tableau des besoins sont servies.
 
 
 ## 0. En bref

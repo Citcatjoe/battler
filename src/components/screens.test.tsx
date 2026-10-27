@@ -285,7 +285,7 @@ describe('écrans', () => {
     expect(run).toContain('bt-badge')
   })
 
-  it('affrontement de campagne : l’arène de l’adversaire, chez lui, à la place du sélecteur ; le boss garde le sélecteur', () => {
+  it('affrontement de campagne : l’arène de l’adversaire, chez lui, à la place du sélecteur ; sans elle, le sélecteur', () => {
     const pair = [createCharacter('gorak'), createCharacter('ysolde')] as const
     const home = HOME_ARENAS.ysolde!
     const html = (arena?: typeof home) =>
@@ -294,9 +294,9 @@ describe('écrans', () => {
     for (const text of [home.name, home.region, home.image]) expect(away).toContain(text)
     expect(away).not.toContain('Arène suivante')
     expect(away).not.toContain(ARENAS[2].image)
-    const boss = html(undefined)
-    expect(boss).toContain('Arène suivante')
-    expect(boss).toContain(ARENAS[2].image)
+    const elsewhere = html(undefined)
+    expect(elsewhere).toContain('Arène suivante')
+    expect(elsewhere).toContain(ARENAS[2].image)
   })
 
   it('comparaison des stats : le meilleur de chaque ligne surligné à la couleur de son camp, rien à égalité', () => {
@@ -347,7 +347,8 @@ describe('écrans', () => {
     // pas de Pile ou face ni de Furie
     // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé. La Garde brisée (lot 3) y
     // entre : elle double le coup qui la consomme (label « Garde brisée ×2 » sous le dé du défenseur)
-    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte'].sort())
+    // La Dîme (2026-10-27) y entre comme la Riposte : elle réagit au coup qui touche son porteur
+    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte', 'tithe'].sort())
     for (const id of STATUS_IDS) {
       const def = STATUSES[id]
       if (def.coinToss || def.extraStrikes || isAura(id)) expect(isSurcharge(id), def.name).toBe(false)

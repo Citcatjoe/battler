@@ -32,6 +32,35 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.127.0] — 2026-10-27
+
+Quatrième demande de l'utilisateur, après la 0.125.0 : le contenu des maîtrises (« trouver quelque chose d'original à chaque fois, mais qui réponde au besoin » ; « ne surcharge pas les créations : elles ne doivent pas avoir 3 effets »), Morgrut, la Plume d'aigle ([PROGRESSION.md](docs/PROGRESSION.md) § 1.24).
+
+### Ajouté
+- **Treize briques** (6 auras, 7 compétences ; 64 → 77 briques), une par besoin de la table « Besoins de contenu par maîtrise », chacune d'un effet (deux au plus, liés), avec texte, son déduit, mise en scène, audit et icône peinte :
+  - **Fureur** : **Élan** (aura) : +10 % de critique ; chacun de ses gros coups lui donne +3 Ferveur.
+  - **Magie** : **Surtension** (aura) : chacun de ses éclairs fait +1.
+  - **Ombre** : **Emprise** (aura) : ses coups font +1 par malus que porte l'adversaire ; **Larcin** (aura) : +5 % d'esquive, chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant.
+  - **Rempart** : **Onde de choc** (3 jauges) : l'adversaire perd 2 PV par coup reçu, des trois derniers.
+  - **Lumière** : **Dîme** : ses 2 prochains coups reçus lui rendent chacun 2 PV, pris à l'attaquant ; **Flamme votive** : ses 2 prochains soins posent chacun Brûlure 3.
+  - **Sang** : **Sangsue** (aura) : chaque coup qui touche lui rend 1 PV par charge de Saignement adverse ; **Serment de sang** : il perd 3 PV, l'adversaire prend 4 Saignement ; **Odeur du sang** : si l'adversaire saigne, ce coup est critique, +4.
+  - **Poison** : **Peau de crapaud** (aura, de départ de ses trois porteurs) : chaque coup reçu donne 1 Poison à l'attaquant ; **Pièce vert-de-gris** : s'il touche, une pièce, pile : 5 Poison ; **Morsure** (modifie) : ce coup ×3 si l'adversaire est empoisonné.
+- **Propositions de l'utilisateur** : l'onde de choc devient l'**Onde de choc** du Rempart, avec sa **scène** (`shockwave`, M56 : l'écu abattu, les anneaux d'onde, le coup sur l'impact) ; le vol de statut positif devient le **Larcin** de l'Ombre, avec le **transfert visuel** (l'icône vole de la zone d'état du volé vers le voleur, M50 étendue, son Sceaux −) ; le soin nourrit la Lumière (Dîme, Flamme votive) et le Sang (Sangsue).
+- **Moteur** : déclencheur `heavy` (critique ou coup ×2 et plus qui touche, accroche `moment:heavy`) ; `cleanse.steal` (le bonus retiré passe chez le porteur) ; `modifyOutgoing(damage, s, foe)` à trois arguments (statuts du défenseur) ; `StatusDef.modifyDirect` et `directDamage` (dégâts directs modifiés, foudre seule pour la Surtension) ; `release.per` (jauges comptées, axe de forge `amount`) ; `fromStatus` sur `heal` et `damage` (`StatusRead` : une réaction qui ne vaut que ce qu'elle lit ne part pas sans le statut). Contrôles d'audit pour chaque brique.
+- **Icônes v29** (Artlist, GPT Image 2.5, 160 crédits, version damier) : les treize briques et la Plume d'aigle repeinte ; icônes provisoires retirées.
+
+### Modifié
+- **Morgrut** (« il ne fait presque rien, mais ses coups sont plus forts ») : attaque 5 à 7 → **6 à 8** (la plus lourde du roster), PV 59 → **52**, **quatre faces de compétence au plus** (`CharacterDef.skillFaces`, lu par l'offre) ; fiche refaite. Départs 41,9-54,8 → 44,3-55,3 % ; construit 40,5 → 44,7 %.
+- **Plume d'aigle** : recharge 2 → **4 tours** (« quatre barbes arrachées ») ; chez Elaria construite +24,7 → +17,9 ; `npm run relics` +11,4 en moyenne.
+- **Un vol prend une charge** (Larcin et Confiscation) : le volé garde les autres ; la dernière charge emporte le bonus entier. Larcin contre Fanchon 66,5 → 52,3 % (Ervald) et 69,0 → 60,0 % (Aldric) ; Confiscation gravée +16,0 → +14,3. Journal « se fait prendre une charge de… », texte « −1 Duo ».
+- `timing.test.ts` : corpus de l'armure brisée élargi (Brise-garde chez Morgrut et Gorak, 24 combats).
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour, changement voulu (Morgrut 6-8 et 52 PV, quatre faces ; nouvelles briques dans les offres ; un vol prend une charge). Mesuré : roster de 46,8 % (Ervald) à 54,9 % (Morgrut), pire duel Morgrut–Brokk 64 % ; construits de 43,4 % (Thaldrin) à 62,6 % (Fanchon), écart 19,2 ; départs hors de 42-58 % : 7 sur 63 ; saison 38-63 %, σ 8,2 ; campagne : boss 18 %, acte 10 %. `npm run check` : 528 tests.
+
+## [0.126.0] — 2026-10-27
+
+### Ajouté
+- **Campagne : l'arène du boss.** La Loge-du-Colosse, Grand Cirque (`arena-colossus-box.jpg`, `HOME_ARENAS.colossus`) : les murs de l'arène couverts des trophées des champions brisés, en rangs qui mènent à son trône de boucliers, un crochet vide au bout du dernier rang, à l'aube froide. La rencontre du boss montre son arène à la place du sélecteur, comme celle des dix personnages : en campagne, plus aucun combat ne tire son arène.
+
 ## [0.125.0] — 2026-10-27
 
 Troisième retour de l'utilisateur sur la 0.122.0 (« là, on tune ») : des règles pour tous, un réglage complet, des docs allégées, aucune compétence inventée ([PROGRESSION.md](docs/PROGRESSION.md) § 1.23).

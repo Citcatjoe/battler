@@ -54,6 +54,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.121.0 | **Les Maîtrises** (§ 1.21, [MAITRISES.md](MAITRISES.md)) : deux par personnage, la réserve d'une maîtrise partagée par ceux qui la jouent ; le dé de départ porte une aura au choix sur le 1 et la signature sur le 2 ; Graver propose une compétence par maîtrise ; onze briques nouvelles ou refaites ; Critique assuré qui s'use, Poison en fin de tour ; Fanchon sans Aura mélodieuse (Ballade, Duo à 3 charges) ; pièces en compétences, trois reliques ; compendium par maîtrise. Roster de 46,0 à 54,9 % ; construits : écart 24,5 points, Fanchon 62,2 %, Ysolde 37,7 % |
 | 0.122.0 | **Huit maîtrises** (§ 1.22) : Chant, Chasse et Représailles fondus dans les autres, Orage devenu Magie ; deux par personnage ; les auras de départ suivent une règle commune (celles de ses deux maîtrises que son dé nourrit) ; en tournoi et en saison, l'aura de départ est tirée au hasard ; le Critique assuré n'a plus qu'une charge, perdue si la frappe est esquivée ou ratée ; plus d'onglet Auras ni de porteurs au compendium ; reliques recolorées. Roster de 45,2 à 54,7 %, pire duel 60,8 % ; six auras de départ sous 42 % |
 | 0.125.0 | **Troisième retour** (§ 1.23) : la Riposte et la Rétribution sont des coups ; l'aura de départ arrive au plus tard au 3e tour ; Purification +5 quand elle retire un bonus ; Dé pipé +5 % de critique et +5 % d'esquive par charge ; +2 PV max par récompense ; Crescendo sur la face 2 de Morgrut ; plafonds d'esquive (75 %) et de jets de plus (12) ; docs allégées. Roster de 47,0 à 54,0 %, pire duel 62,7 % ; construits de 40,5 à 62,7 % |
+| 0.127.0 | **Quatrième demande** (§ 1.24) : treize briques (Élan, Surtension, Emprise, Larcin, Onde de choc ; Dîme, Flamme votive, Sangsue, Serment de sang, Odeur du sang, Peau de crapaud, Pièce vert-de-gris, Morsure), 77 en tout ; scène de l'Onde de choc, vol visuel du Larcin ; un vol prend une charge ; Morgrut 6 à 8, 52 PV, quatre faces de compétence ; Plume d'aigle recharge 4. Roster de 46,8 à 54,9 %, pire duel 64 % ; construits de 43,4 à 62,6 % |
 
 ### Le combat, en une page
 
@@ -479,6 +480,30 @@ Le même jour, l'utilisateur a rendu un second retour sur la 0.121.0 (B1 à B19)
 | C8 | Combien d'auras et de compétences par maîtrise | Réponse : environ 4 auras et 5 compétences (9 à 10 briques), une boucle interne et un lien vers une autre maîtrise ; il manque 6 auras et 7 compétences ; l'utilisateur propose, l'agent juge | MAITRISES « Besoins de contenu par maîtrise » |
 
 **Décisions** : Dé pipé gardé en aura à +5 % / +5 % (au bord bas de la bande, ne pas le réduire) ; Aura de puissance inchangée (+1/+2/+3 tenait l'équilibre mais doublait l'Aura sauvage, doublon refusé par l'utilisateur en 0.107.0) et compensation de Morgrut par son attaque ; Plume d'aigle recharge 3 non livrée (l'icône dessine la recharge 2) ; Duo en l'état. **À décider** : Gorak à l'Aura de puissance 59,2 %, Elaria à l'Ivresse du sang 63,7 %, Plume d'aigle +24,7 chez Elaria, Morgrut construit 40,5 % et 32,7 % en saison ([TODO.md](TODO.md) § 20).
+
+### 1.24 Quatrième demande du 2026-10-27 (après la 0.125.0 ; livrée en 0.127.0)
+
+« Fais des tests, essaie de trouver quelque chose d'original à chaque fois, mais qui réponde au besoin, de manière à remplir les catégories […] ne surcharge pas les créations : elles ne doivent pas avoir 3 effets. » « Morgrut doit être un perso spécial : il ne fait presque rien, mais ses coups sont plus forts. » « Fais ce qu'il faut pour la Plume d'aigle. » Principes tenus : synergies d'abord, une règle pour tous (Morgrut est une identité, pas une exception de règle).
+
+| Maîtrise | Besoin | Brique | Gravée chez ses porteurs (rang II) |
+| --- | --- | --- | --- |
+| Rempart | une compétence qui consomme les coups encaissés et frappe | Onde de choc | Brokk +14,0, Aldric +12,3, Morgrut +13,1 (+7,9) |
+| Fureur | une aura qui consomme ses gros coups ou critiques | Élan | Gorak +17,9, Morgrut +11,3 (+7,0) |
+| Magie | une aura de foudre qui lit les dégâts directs | Surtension | Thaldrin +12,8 (+4,0) |
+| Ombre | une aura qui lit ses malus | Emprise | Ervald +12,4 (+4,7) |
+| Ombre | une aura qui gêne sans critique | Larcin | Ervald +16,3, Aldric +10,9 (+6,5) |
+| Lumière | une compétence qui fait payer l'adversaire | Dîme | Ysolde +19,5 (+6,3) |
+| Lumière | une compétence qui consomme les soins | Flamme votive | Ysolde +18,6 (+4,5) |
+| Sang | une seconde aura, consommatrice du Saignement | Sangsue | Brokk +17,9 (+4,1) |
+| Sang | un producteur sur jet | Serment de sang | Gorak +16,3, Elaria +17,6, Brokk +18,9 (+7,6) |
+| Sang | une consommatrice qui frappe | Odeur du sang | Brokk +16,4 (+3,8) |
+| Poison | une aura | Peau de crapaud | Ervald +19,0, Naraxes +16,0, Thaldrin +13,6 (+11,0) |
+| Poison | un producteur sur jet | Pièce vert-de-gris | Ervald +16,4, Naraxes +14,6, Thaldrin +13,3 (+6,1) |
+| Poison | une consommatrice qui frappe | Morsure | Ervald +19,0, Naraxes +7,9 (+4,0) |
+
+**Propositions de l'utilisateur** : (1) l'onde de choc : l'Onde de choc du Rempart, avec sa scène (M56) ; (2) le vol de statut positif : le Larcin de l'Ombre, avec le transfert visuel de l'icône (M50 étendue) ; (3) le soin : Dîme et Flamme votive (Lumière), Sangsue (Sang).
+
+**Décisions de l'agent** : un vol prend une charge (Larcin et Confiscation ; Larcin contre Fanchon 69,0 → 60,0 %) ; Morgrut 6 à 8, 52 PV, quatre faces de compétence (seule forme qui relève le construit sans sortir le nu de la bande : 40,5 → 44,7 %) ; Plume d'aigle recharge 4 (Elaria construite +24,7 → +17,9), icône repeinte ; Surtension sur la foudre seule (sur tous les dégâts directs, la Purification d'Ysolde tombait à 35,6 %). **À décider** : le rang II des quatre auras de Poison et d'épines (Peau de crapaud +11,0, Aura de décoction, Aura glaciale, Aura d'épines), au-dessus de la bande sans pas entier plus petit ([TODO.md](TODO.md) § 20).
 
 ---
 

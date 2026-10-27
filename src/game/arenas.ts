@@ -17,6 +17,7 @@ import titheBarnImg from '../assets/arena-tithe-barn.jpg'
 import sunflowersImg from '../assets/arena-sunflowers.jpg'
 import splitOakImg from '../assets/arena-split-oak.jpg'
 import stageImg from '../assets/arena-stage.jpg'
+import colossusBoxImg from '../assets/arena-colossus-box.jpg'
 import { defaultRng, pick, type Rng } from './rng'
 
 /*
@@ -119,9 +120,9 @@ export const TRAINING_ARENA: Arena = {
 }
 
 /**
- * Arènes de campagne, par personnage : on affronte chaque adversaire chez lui (docs/STYLE_BIBLE.md § 5.7). Chacune
- * n'apparaît que contre son personnage, en campagne ; jamais au choix, jamais au hasard, ni en duel, ni en tournoi, ni en
- * saison. Le boss n'en a pas encore : sa rencontre garde le sélecteur d'arène.
+ * Arènes de campagne, par adversaire : on affronte chacun chez lui (docs/STYLE_BIBLE.md § 5.7), le boss (`BOSS.id`)
+ * compris. Chacune n'apparaît que contre son adversaire, en campagne ; jamais au choix, jamais au hasard, ni en duel, ni
+ * en tournoi, ni en saison.
  */
 export const HOME_ARENAS: Readonly<Partial<Record<string, Arena>>> = {
   gorak: { id: 'red-pits', name: 'Les Fosses-Rouges', region: 'Kar-Dush', image: redPitsImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.8)' },
@@ -135,6 +136,8 @@ export const HOME_ARENAS: Readonly<Partial<Record<string, Arena>>> = {
   morgrut: { id: 'sunflowers', name: 'Les Grands-Soleils', region: 'Moulin de Brévanne', image: sunflowersImg, focus: '50% 70%', filter: 'brightness(0.65) saturate(0.85)' },
   thaldrin: { id: 'split-oak', name: 'Le Chêne-Fendu', region: 'Lande de Garance', image: splitOakImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.85)' },
   fanchon: { id: 'stage', name: 'Les Tréteaux', region: 'Foire de Clairbourg', image: stageImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.85)' },
+  // Le boss : sa loge au pied des gradins, les trophées des champions brisés aux murs
+  colossus: { id: 'colossus-box', name: 'La Loge-du-Colosse', region: 'Grand Cirque', image: colossusBoxImg, focus: '50% 70%', filter: 'brightness(0.75) saturate(0.9)' },
 }
 
 /** Choix « au hasard » : l'arène est tirée au moment de lancer le combat. */

@@ -808,7 +808,7 @@ En campagne, on affronte chaque adversaire chez lui (demande de l'utilisateur) :
 | Gorak | Les Fosses-Rouges, Kar-Dush | Les fosses sont les carrières d'argile d'une ville de briquetiers, fours allumés | Terre cuite, suie, os, vert-de-gris | Premier jet, écrit avant la section 5.2 bis ; intégré tel quel |
 | Brokk | La Porte-Seule, Durnhold | La grande porte toujours debout, seule dans un alpage, un sentier de moutons en fait le tour | Paille, sauge, ardoise, rouille | Premier jet, écrit avant la section 5.2 bis ; intégré tel quel |
 | Aldric | La Grange-aux-Dîmes, commanderie du Sceau ardent | La grange où l'ordre scelle chaque dette de cire rouge | Cire rouge, parchemin, chêne, fer | Premier jet, écrit avant la section 5.2 bis (baigné de lumière chaude) ; intégré tel quel |
-| Le Colosse | La Loge-du-Colosse, Grand Cirque | Le pied de sa loge, mur de trophées des champions brisés, un crochet vide | Sang de bœuf, noir, or terni, os | Pas généré : la rencontre du boss garde le sélecteur d'arène |
+| Le Colosse | La Loge-du-Colosse, Grand Cirque | Les murs de l'arène couverts des trophées des champions brisés, en rangs vers son trône de boucliers ; un crochet vide | Bleu acier, ardoise, sang de bœuf, or terni, os | Écrit avec la section 5.2 bis (aube froide, « No orange ») ; intégré en 0.126.0 (`arena-colossus-box.jpg`) |
 
 ---
 
@@ -1042,7 +1042,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 97 | `butcher-hook` | Croc de boucher (relique de coup, v14) | Croc à viande de fer au manche de corne, pointe noircie d'une goutte de sang séché, ficelle |
 | 98 | `abbey-incense` | Encens de l'abbaye (relique de coup, v14) | Pain de résine ambrée enveloppé de lin, une seule braise ; pas d'encensoir (déjà l'icône de l'Aura de décoction) |
 | 99 | `dented-shield` | Écu cabossé (relique de coup, v14) | Bosse de fer d'un vieil écu (umbo), exactement six creux (le seuil de 6), lanière passée dans un rivet |
-| 100 | `eagle-feather` | Plume d'aigle (relique de coup, v14) | Rémige d'aigle liée d'un fil rouge à un anneau de cuivre, deux barbes arrachées |
+| 100 | `eagle-feather` | Plume d'aigle (relique de coup, v14 ; **repeinte en v29**, quatrième demande du 2026-10-27 : recharge 2 → 4 tours) | Rémige d'aigle bleu de cobalt, liée d'un fil rouge à un anneau de cuivre, **quatre** barbes arrachées au bord (la recharge de 4 tours ; deux jusqu'en v28) |
 | 101 | `quilted-gambison` | Gambison matelassé (relique de caractéristique, v16) | Gambison plié, matelassure piquée, col lacé, une pièce recousue ; pas de mailles (c'est la Cotte) |
 | 102 | `bonesetter-salve` | Onguent du rebouteux (relique de coup, v16 ; **repeinte en v25**, 0.121.0) | Pot de terre cuite, **deux** creux de doigts dans l'onguent (les deux charges depuis la 0.121.0 ; cinq en v16), ficelle nouée au col |
 | 103 | `vigil-candle` | Chandelle de veille (relique de tour, v16) | Chandelle de suif aux trois anneaux gravés (l'intervalle de 3 tours), dans un bougeoir de fer à anneau ; ni sablier ni clepsydre |
@@ -1103,6 +1103,19 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 158 | `mastery-shadow` | Emblème de l'Ombre (v27) | Crâne sous un croissant de lune noir, violet-noir |
 | 159 | `mastery-magic` | Emblème de la Magie (v27, `mastery-storm` renommé en 0.122.0 : l'Orage devient la Magie) | Éclair qui fend une nuée, cyan électrique |
 | 160 | ~~`mastery-song`~~ | Emblème du Chant (v27) ; **retiré en 0.122.0** (maîtrise répartie entre Magie, Fureur, Lumière et Ombre), fichier à la corbeille | Luth à une corde qui vibre, magenta |
+| 161 | `onrush` | Élan (aura, Fureur, v29) | Hache en plein élan, sa traînée qui se plie en chevron, étincelles de critique ; accent corail, halo d'aura |
+| 162 | `overcharge` | Surtension (aura, Magie, v29) | Paratonnerre de cuivre frappé par un éclair dédoublé ; accent indigo électrique, halo d'aura |
+| 163 | `grip` | Emprise (aura, Ombre, v29) | Main d'ombre qui serre trois entraves gravées de malédictions ; accent jade, halo d'aura |
+| 164 | `pilfer` | Larcin (aura, Ombre, v29) | Main gantée qui sort d'une cape et cueille une gemme dans un halo étranger ; accent magenta, halo d'aura |
+| 165 | `shockwave` | Onde de choc (compétence et mécanisme, Rempart, v29) | Écu clouté abattu sur les dalles, anneaux d'onde, trois bosses (ses trois jauges) ; accent ocre |
+| 166 | `tithe` | Dîme (compétence, statut `tithe` et état `tithed`, Lumière, v29) | Plat de dîme en étain sur une marche, pièces de cuivre, un fil de lumière tiré d'un gantelet ; accent cuivre |
+| 167 | `votive-flame` | Flamme votive (compétence, statut `votiveFlame` et état `votive`, Lumière, v29) | Cierge dans un godet de verre cobalt, flamme saphir, gouttes de soin changées en étincelles ; accent saphir |
+| 168 | `leech` | Sangsue (aura, Sang, v29) | Sangsue noire et lie-de-vin enroulée sur une lame ébréchée, une goutte qui devient un cœur ; halo d'aura |
+| 169 | `blood-oath` | Serment de sang (compétence, Sang, v29) | Paume entaillée d'une dague, le sang qui coule sur un parchemin de serment noué d'un cordon rouge ; sang de bœuf et or terni |
+| 170 | `blood-scent` | Odeur du sang (compétence, Sang, v29) | Museau de loup gris qui flaire trois gouttes de sang sur la pierre, une étincelle de critique à la dernière ; gris acier |
+| 171 | `toad-skin` | Peau de crapaud (aura, Poison, v29) | Rondache couverte d'une peau de crapaud verruqueuse orange et noire, le venin qui perle et goutte du bord ; mandarine, halo d'aura |
+| 172 | `verdigris-coin` | Pièce vert-de-gris (compétence et statut `verdigrisCoin`, Poison, v29) | Pièce de bronze croûtée de vert-de-gris, un serpent frappé, une coulure de poison ; sarcelle |
+| 173 | `venom-bite` | Morsure (compétence, Poison, v29) | Chélicères d'araignée-loup plantées dans un brassard de cuir, deux jets de venin violet ; pas de serpent (c'est la Virulence) |
 
 `thorns` (n° 17) a été refaite en v8 : la même ronce, ses épines mouillées de sang (Épines acérées).
 
@@ -1341,6 +1354,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v29 | 2026-10-27 | 100, 161 à 173 | La quatrième demande : les treize briques du contenu des maîtrises et du soin (Élan, Surtension, Emprise, Larcin, Onde de choc ; Dîme, Flamme votive, Sangsue, Serment de sang, Odeur du sang, Peau de crapaud, Pièce vert-de-gris, Morsure), et la Plume d'aigle repeinte à quatre barbes arrachées (recharge 4 tours). Artlist, GPT Image 2.5, 160 crédits, 14 icônes ; **la version damier retenue**. Les icônes provisoires (`sentence`, `burn`, `lifesteal`, `decoction-aura`, `cursed-coin`, `virulence`) sont retirées de ces briques ; `tithed` et `votive` empruntent l'icône de leur compétence. Planche de contrôle regardée (128 px) ; non vues dans un écran du jeu. |
 | v28 | 2026-10-27 | reliques d'avant la 0.121.0 | **Recoloration** (B14, demande de l'utilisateur : des reliques plus colorées, comme les nouvelles, couleurs plus intenses et variées). Artlist, GPT Image 2.5, 320 crédits ; deux planches 4×4 en image-à-image, depuis une mosaïque des anciennes icônes, la planche v25 en cible de couleur ; **la version A retenue** : 29 icônes repeintes (`caged-ember` prise dans la version B, restée rouge). `venom-vial` gardée telle quelle (déjà verte). Mêmes identifiants, mêmes motifs. Emblèmes : `mastery-storm` renommé `mastery-magic`, `mastery-hunt`, `mastery-retaliation` et `mastery-song` retirés (0.122.0, huit maîtrises). Non vues dans un écran du jeu. |
 | v27 | 2026-10-27 | 150 à 160 | Les onze emblèmes de maîtrise (grammaire nouvelle, ci-dessus). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions générées, **la version B retenue**. Découpe par `scripts/slice-icons.py`. Vus dans le compendium (onglet Maîtrises) et à l'affrontement (captures Firefox). |
 | v26 | 2026-10-27 | 139 à 149 | Onze compétences et statuts des Maîtrises (Veine, Effroi, Rancœur, Champ d'orage, Ballade, Prière, Flétrissure, Assaut, Poing de pierre, Pièce porte-bonheur, Pièce maudite). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions : **la version A retenue**, sauf `lucky-streak` découpée de la version B sur fond noir. Les pièces remplacent leurs remplaçants temporaires (`coin-pile`, `coin-face`). |

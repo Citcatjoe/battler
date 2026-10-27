@@ -33,8 +33,9 @@ export const FAMILY_CUES: Record<Family, Record<Polarity, Cue>> = {
  * Le son d'une compétence ou d'un statut qui agit : un seul, le premier qui correspond à ce qu'il
  * a réellement produit. Les dégâts sonnent avec leurs coups ; rien d'autre (effet bloqué, statut déjà à
  * son plafond, mécanisme de compétence posé : son sceau le montre, ce qu'il déclenche a ses sons) : `null`.
- * Un malus ou un bonus posé sonne sa famille (le premier posé, s'il y en a plusieurs). Un bonus volé (`stolenBy`, le Sceau
- * de vol) sonne d'abord le vol : la famille et la polarité du statut qui l'a pris, chez le lanceur qui le perd. Un soin
+ * Un malus ou un bonus posé sonne sa famille (le premier posé, s'il y en a plusieurs). Un bonus volé (`stolenBy` : le Sceau
+ * de vol, ou un bonus pris sur l'adversaire, le Larcin) sonne d'abord le vol : la perte, dans la famille du statut qui l'a
+ * pris (Sceaux −), qu'il soit un malus posé au volé ou un bonus de son voleur. Un soin
  * empêché (`wanted`, l'Hémorragie, lot 3) sonne le malus de Soin : le soin qui flanche.
  * La règle ne connaît aucun nom de compétence ni de statut : seulement l'aura, la polarité, la famille et le type d'effet.
  */
@@ -44,7 +45,7 @@ export function cueOf(source: Side | null, effects: readonly AppliedEffect[]): C
   )
   const removed = effects.flatMap((e) => (e.type === 'cleanse' ? e.removed : []))
   const thief = posed.find((e) => e.stolenBy !== undefined)?.stolenBy
-  if (thief) return FAMILY_CUES[STATUSES[thief].family][STATUSES[thief].polarity]
+  if (thief) return FAMILY_CUES[STATUSES[thief].family].negative
   if (posed.some((e) => isAura(e.status))) return 'auraGain'
   if (removed.some(isAura)) return 'auraLoss'
   const malus = posed.find((e) => STATUSES[e.status].polarity === 'negative')

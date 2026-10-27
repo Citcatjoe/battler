@@ -26,6 +26,7 @@ export type NamedTrigger =
   | 'naturalMax'
   | 'hit'
   | 'crit'
+  | 'heavy'
   | 'missed'
   | 'dodge'
   | 'hurt'
@@ -59,6 +60,9 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   naturalMax: { label: 'Sur un 6 au dé (jet maximal)', short: 'dé max.' },
   hit: { label: 'Quand il touche', short: 'touche' },
   crit: { label: 'Quand il porte un critique', short: 'critique' },
+  // Retour du 2026-10-27 (quatrième, contenu des maîtrises) : le gros coup de la Fureur, un critique ou un coup ×2 et plus
+  // qui touche (Assaut, Soliste, Crescendo), juste après la fenêtre du critique
+  heavy: { label: 'Quand il porte un gros coup (critique, ou coup ×2 et plus)', short: 'gros coup' },
   missed: { label: 'Quand son coup est esquivé', short: 'esquivé' },
   dodge: { label: 'Quand il esquive', short: 'esquive' },
   hurt: { label: 'Quand il reçoit un coup', short: 'coup reçu' },
@@ -84,8 +88,19 @@ export function triggerText(t: Trigger): { label: string; short: string } {
 /** Cible d'un effet, relative au porteur de l'événement. */
 export type Target = 'self' | 'opponent'
 
+/**
+ * Une valeur lue sur un statut (Virulence, 0.114.0 ; Sangsue, Agonie, 2026-10-27) : `factor` fois les charges de `status`
+ * que porte `who` (relatif au porteur), lues quand l'effet part. Elle s'ajoute à la valeur de l'effet (0 permis).
+ */
+export interface StatusRead {
+  status: StatusId
+  who: Target
+  factor: number
+}
+
 export type Effect =
-  | { type: 'heal'; amount: number; target?: Target }
+  /** Soin. `fromStatus` (Sangsue, 2026-10-27) : des PV en plus, lus sur un statut (`StatusRead`) */
+  | { type: 'heal'; amount: number; target?: Target; fromStatus?: StatusRead }
   /**
    * Dégâts directs : ignorent l'armure, l'esquive et les boucliers, et ne sont jamais critiques. Ce ne sont pas
    * des coups : rien de ce qui réagit à un coup (touche, encaisse) ne part. `hits` (0.76.0, Foudre) : une donnée
@@ -93,8 +108,9 @@ export type Effect =
    * `source` : ce que sont ces dégâts dans l'histoire (damage.ts), d'où leur famille (DT ou non) et leur teinte ; sans effet sur la règle.
    * `armored` (2026-10-27, M4, Clous de pavois) : ils se heurtent à l'armure de leur cible, comme un coup (étape 7 de la
    * chaîne) : moins son armure effective, au moins 1 par impact ; ni esquive, ni critique, ni armure temporaire.
+   * `fromStatus` (Agonie, 2026-10-27) : des PV en plus, lus sur un statut (`StatusRead`).
    */
-  | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource; armored?: boolean }
+  | { type: 'damage'; amount: number; hits?: number; target?: Target; source: DamageSource; armored?: boolean; fromStatus?: StatusRead }
   /**
    * Pose un statut. `fromHit` (Pourfendre, 0.107.0) : des charges en plus, la part `fromHit` des PV que le coup de ce jet
    * a retirés, arrondie au-dessus (une compétence qui modifie son coup part s'il touche) ; `stacks` s'y ajoute (0 permis).
@@ -110,7 +126,7 @@ export type Effect =
       turns?: number
       target?: Target
       fromHit?: number
-      fromStatus?: { status: StatusId; who: Target; factor: number }
+      fromStatus?: StatusRead
       power?: number
     }
   /**
@@ -119,6 +135,9 @@ export type Effect =
    * `orElse` : effet joué à la place quand il n'y a rien à retirer (Purification, 0.42.0 : la lumière blesse au
    * lieu de tomber à vide). `andThen` : effet joué après une purge qui a retiré quelque chose (Purification,
    * 2026-10-27 : elle blesse aussi quand elle retire un bonus) ; le moteur le range juste après la purge.
+   * `steal` (Larcin, quatrième retour du 2026-10-27) : un vol, qui ne prend qu'une charge de chaque statut visé (règle
+   * commune des vols) ; elle passe au porteur de l'effet, avec sa durée (la dernière avec l'intensité), selon ses règles de
+   * pose ; chaque bonus repris est marqué volé par ce statut (`stolenBy`).
    */
   | {
       type: 'cleanse'
@@ -127,15 +146,17 @@ export type Effect =
       count?: number
       orElse?: Exclude<Effect, { type: 'cleanse' }>
       andThen?: Exclude<Effect, { type: 'cleanse' }>
+      steal?: StatusId
     }
   /**
    * Relâche un statut d'un coup, puis le retire. Le sien (défaut, Rétribution) : la somme de ses jauges en dégâts directs
    * à l'adversaire, ou sa part `share` arrondie au-dessous (0.107.0 : la moitié), au moins `min` ; le porteur ne remplit ses
    * jauges que s'il a cet effet. Celui de l'adversaire (`from: 'opponent'`, Embrasement, phase 8) : tout ce qu'il lui
    * ferait encore perdre (`StatusDef.releases`, la Brûlure : ses PV par tour × ses tours), ×`share`. `source` : comme
-   * `damage`.
+   * `damage`. `per` (Onde de choc, quatrième retour du 2026-10-27) : ses jauges se comptent, `per` PV par jauge remplie, en
+   * une perte de dégâts directs (pas de renvoi).
    */
-  | { type: 'release'; status: StatusId; min: number; share?: number; from?: Target; target?: Target; source: DamageSource }
+  | { type: 'release'; status: StatusId; min: number; share?: number; per?: number; from?: Target; target?: Target; source: DamageSource }
 
 /**
  * Condition à remplir pour qu'un événement se déclenche, évaluée au moment du déclencheur.
@@ -293,14 +314,20 @@ export const HIT_NOUNS: Partial<Record<DamageSource, string>> = { lightning: 'é
  */
 export function describeEffect(effect: Effect, grafted = false): string {
   const foe = effect.target === 'opponent'
+  // Sangsue, Agonie : une valeur lue sur un statut (« par charge de Poison de l'adversaire »)
+  const per = (from: StatusRead) => `par charge ${deName(STATUSES[from.status].name)} ${from.who === 'opponent' ? "de l'adversaire" : 'du porteur'}`
   switch (effect.type) {
     case 'heal':
+      if (effect.fromStatus) return `+${effect.fromStatus.factor} PV ${per(effect.fromStatus)}${effect.amount ? `, puis +${effect.amount}` : ''}${foe ? " à l'adversaire" : ''}`
       return `+${effect.amount} PV${foe ? " à l'adversaire" : ''}`
     case 'damage': {
       const noun = effect.hits ? HIT_NOUNS[effect.source] : undefined
       if (noun && effect.hits) return `${foe ? "l'adversaire" : 'il'} perd ${effect.amount * effect.hits} PV, en ${SMALL_NUMBERS[effect.hits] ?? effect.hits} ${noun}`
+      if (effect.fromStatus) return `${foe ? "l'adversaire" : 'il'} perd ${effect.fromStatus.factor} PV ${per(effect.fromStatus)}${effect.amount ? `, puis ${effect.amount} de plus` : ''}`
       // Contre l'armure (Clous de pavois, 2026-10-27) : ce ne sont plus des dégâts directs
       if (effect.armored) return `${effect.amount} ${effect.amount > 1 ? 'dégâts' : 'dégât'} contre l'armure ${foe ? "de l'adversaire" : 'du porteur'}`
+      // Serment de sang (2026-10-27) : le prix qu'il paie lui-même, en PV
+      if (!foe && !effect.hits) return `il perd ${effect.amount} PV`
       return `${effect.hits ? `${effect.hits} × ` : ''}${effect.amount} ${effect.amount > 1 ? 'dégâts directs' : 'dégât direct'}${foe ? " à l'adversaire" : ' à soi-même'}`
     }
     case 'applyStatus': {
@@ -332,6 +359,9 @@ export function describeEffect(effect: Effect, grafted = false): string {
         const times = effect.share === undefined || effect.share === 1 ? '' : `${TIMES[effect.share] ?? pct(effect.share)} `
         return `l'adversaire perd ${times}sa ${def.name} restante, d'un coup`
       }
+      // Onde de choc : ses jauges comptées, `per` PV par coup encaissé
+      if (effect.per !== undefined)
+        return `${foe ? "l'adversaire" : 'il'} perd ${effect.per} PV par coup reçu, des ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} derniers`
       // Rétribution : ses jauges, les dégâts de ses derniers coups reçus
       const share = shareOf(effect.share ?? 1, 'tous les')
       return `${foe ? "l'adversaire" : 'il'} perd ${share} dégâts des ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} derniers coups reçus`
@@ -343,6 +373,8 @@ export function describeEffect(effect: Effect, grafted = false): string {
       const bare = (e: Effect) => describeEffect(e).replace(foe ? / à l'adversaire$/ : /$^/, '')
       const andThen = effect.andThen ? `, avec ${bare(effect.andThen)}` : ''
       const orElse = effect.orElse ? `${andThen ? ' ;' : ','} sinon ${bare(effect.orElse)}` : ''
+      // Larcin : une charge du bonus retiré passe au porteur
+      if (effect.steal) return `prend une charge de ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
       return `retire ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
     }
   }
@@ -365,6 +397,7 @@ function effectDetail(effect: Effect): string | undefined {
       return effect.fromHit !== undefined ? `Arrondi au-dessus.${detail ? ` ${detail}` : ''}` : detail
     }
     case 'release':
+      if (effect.per !== undefined) return 'En dégâts directs ; les jauges se vident.'
       return effect.from === 'opponent'
         ? `Puis la ${STATUSES[effect.status].name} s'éteint.`
         : `Arrondi au-dessous, au moins ${effect.min} ; les jauges se vident.`
@@ -451,9 +484,11 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
       return effect.type === 'applyStatus' && effect.fromHit !== undefined ? `${text}, s'il touche` : `s'il touche, ${lowerFirst(text)}`
     }),
   ].filter(Boolean)
-  // Virulence : la condition sur le statut qu'elle multiplie va de soi (tripler zéro ne fait rien)
+  // Virulence : la condition sur le statut qu'elle multiplie va de soi (tripler zéro ne fait rien) ; l'Onde de choc, celle
+  // sur les jauges qu'elle relâche (aucun coup encaissé, rien à compter)
   const multiplied = (c: Condition) =>
-    c.type === 'hasStatus' && e.effects.some((x) => x.type === 'applyStatus' && x.fromStatus?.status === c.status && x.fromStatus.who === c.who)
+    c.type === 'hasStatus' &&
+    e.effects.some((x) => (x.type === 'applyStatus' && x.fromStatus?.status === c.status && x.fromStatus.who === c.who) || (x.type === 'release' && x.status === c.status && c.who === 'self'))
   const clauses = (e.when ?? []).filter((c) => !multiplied(c)).map(conditionClause)
   const limits = [e.chance !== undefined && e.chance < 1 ? `${Math.round(e.chance * 100)} % de chances` : '', e.limit !== undefined ? `${e.limit}x` : ''].filter(Boolean)
   // La condition suit une phrase seule (« Deux coups de plus si l'adversaire saigne ») ; devant plusieurs, elle ouvre la première

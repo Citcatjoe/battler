@@ -6,6 +6,7 @@
  */
 import type { CharacterEvent } from './events'
 import type { MasteryId } from './masteries'
+import { SHOCKWAVE_PER } from './statuses'
 
 /**
  * Foudre du druide (0.76.0, demande de l'utilisateur) : des éclairs de dégâts directs, jamais critiques. 2 chacun
@@ -54,6 +55,9 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'precisionAura', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
+    // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : la boucle de la Fureur, une aura
+    // qui fait critiquer et change chaque gros coup (critique, coup ×2 et plus) en Ferveur. Série 90 : Gorak +15,7, Morgrut +7,7
+    { id: 'onrush', name: 'Élan', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'onrush', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       // Phase 5 bis : elle remplace le coup de sa face par deux coups de base bruts, tout de suite
       id: 'wind-fury',
@@ -130,6 +134,18 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       rankAxis: { kind: 'power', per: 1 },
     },
     {
+      // Quatrième demande du 2026-10-27 (le contenu du soin) : la seconde consommatrice du Saignement, le pont du Sang vers
+      // les soins (Sentence, Bouclier de foi, Sève noire). Chaque coup qui touche lui rend 1 PV par charge de Saignement de
+      // l'adversaire, lue avant que la plaie coule. Gravée : Brokk +14,6 (ses Épines), Gorak +6,5 et Elaria +7,1 avec la
+      // Plaie ouverte ; ×2 : Brokk +21,8 (série 82). Son rang : 1 PV de plus par charge de Saignement
+      id: 'leech',
+      name: 'Sangsue',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'leech', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
       // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Phase 5 bis : elle modifie
       // son coup de base ; un coup doit toucher pour poser un malus physique. La plaie coule au coup suivant (RESOLUTION
       // § 5, règle 9). 0.107.0 (SORTS.md § 19) : Saignement égal à la moitié des PV que ce coup retire, arrondie au-dessus,
@@ -168,6 +184,33 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
         { type: 'applyStatus', status: 'hemorrhage', stacks: 1, target: 'opponent' },
       ],
       rankAxis: { kind: 'amount', per: 2 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : le producteur sur jet, sans coup à toucher, au prix de son propre sang. Gravé
+      // (série 81) : −3 PV et 4 Saignement, Gorak +12,5, Elaria +12,8, Brokk +15,7 (4 Saignement sans prix : +18,8 à
+      // +21,6, hors bande). Son rang : 1 Saignement de plus
+      id: 'blood-oath',
+      name: 'Serment de sang',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'damage', amount: 3, source: 'bleed' },
+        { type: 'applyStatus', status: 'bleed', stacks: 4, target: 'opponent' },
+      ],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : le Saignement lu par un critique (Sang → critiques, que lisent l'Ivresse du sang,
+      // l'Effroi, la Pourriture). Greffée : ce coup est critique, +4, si l'adversaire saigne ; sinon sa face est nue. Gravée
+      // (série 83) : Gorak +7,8 et Elaria +5,0 avec la Plaie ouverte, Brokk +12,0 ; les relâches du Saignement (×2, ×3)
+      // et les dégâts par charge restaient sous la bande hors de Brokk (séries 81, 82). Son rang : +3 au critique
+      id: 'blood-scent',
+      name: 'Odeur du sang',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
+      effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1, power: 4 }],
+      rankAxis: { kind: 'power', per: 3 },
     },
   ],
   bulwark: [
@@ -255,6 +298,20 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'riposte', stacks: 2 }],
       rankAxis: { kind: 'power', per: 2 },
     },
+    {
+      // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises », proposition 1 de l'utilisateur) :
+      // la consommatrice des coups encaissés qui frappe. Ses jauges comptent les trois derniers coups reçus ; elle les relâche
+      // en une onde de choc, 2 PV de dégâts directs par coup compté (série 89 : Brokk +10,6, Morgrut +9,2 ; 3 PV : +15,4).
+      // Sans coup encaissé, sa face reste nue. Elle se voit : le sol se fend et l'onde roule vers l'adversaire (scène)
+      id: 'shockwave',
+      name: 'Onde de choc',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      when: [{ type: 'hasStatus', who: 'self', status: 'shockwave' }],
+      scene: 'shockwave',
+      effects: [{ type: 'release', status: 'shockwave', min: 0, per: SHOCKWAVE_PER, target: 'opponent', source: 'strike' }],
+      rankAxis: { kind: 'amount', per: 1 },
+    },
   ],
   poison: [
     {
@@ -284,6 +341,17 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'blackSap', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : l'aura défensive du Poison, qui empoisonne qui la frappe. Gravée (série 80) :
+      // Ervald +16,0, Naraxes +11,4, Thaldrin +10,6 ; au départ (série 81) : Ervald 53,4 %, Naraxes 49,1 %, Thaldrin 58,1 %
+      // (au bord). Son rang : 1 Poison de plus par coup reçu
+      id: 'toad-skin',
+      name: 'Peau de crapaud',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'toadSkin', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
     {
@@ -318,6 +386,33 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
       effects: [{ type: 'heal', amount: 14 }],
       rankAxis: { kind: 'amount', per: 6 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : le producteur sur jet, la pièce du Poison (Poison → Chance : elle nourrit le Dé pipé).
+      // Même geste que les pièces de la Chance : s'il touche, une pièce ; pile, 5 Poison. Gravée (série 80) : Ervald +13,4,
+      // Naraxes +10,1, Thaldrin +10,7 (6 Poison : +11,3 à +15,0). Son rang : pile plus souvent
+      id: 'verdigris-coin',
+      name: 'Pièce vert-de-gris',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      relation: 'modify',
+      effects: [{ type: 'applyStatus', status: 'verdigrisCoin', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : la consommatrice du Poison qui frappe, par condition (comme la Curée). Gravée (série
+      // 83) : ×3, Ervald +16,1, Naraxes +3,9, Thaldrin +6,4 avec l'Aura glaciale (×2 : +8,7, +2,7, +4,2). Les dégâts par
+      // charge de Poison (×4 : +10,1, +2,8, +4,2) et la relâche (×3 : +8,6, +2,3, +3,1) valaient moins (série 82). Un gros
+      // coup : ce que lit la Fureur. Son rang : ×1 de plus
+      id: 'venom-bite',
+      name: 'Morsure',
+      nature: 'finesse',
+      trigger: 'naturalThree',
+      relation: 'modify',
+      hitMultiplier: 3,
+      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
+      effects: [],
+      rankAxis: { kind: 'multiplier', per: 1 },
     },
   ],
   chance: [
@@ -487,12 +582,41 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Les Maîtrises (P9, 2026-10-27) : le soin franc de la Lumière. Gravée : Ysolde +17,7, Gorak +14,2 (série 71)
     { id: 'prayer', name: 'Prière', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'heal', amount: 6 }], rankAxis: { kind: 'amount', per: 3 } },
     { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
+    {
+      // Quatrième demande du 2026-10-27 (le contenu du soin) : la Lumière fait payer l'adversaire. Ses 2 prochains coups reçus
+      // lui rendent chacun 2 PV, pris à l'attaquant : un soin (Sentence, Bouclier de foi, Flamme votive). Gravée sur Ysolde
+      // (séries 80, 81) : 2 × 2, +15,6 ; 3 × 1, +11,2 ; 3 × 2, +19,1 (son rang II). Son rang : un coup de plus
+      id: 'tithe',
+      name: 'Dîme',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'tithe', stacks: 2 }],
+      rankAxis: { kind: 'stacks', per: 1 },
+    },
+    {
+      // Quatrième demande du 2026-10-27 : la consommatrice de soins en compétence, le pont de la Lumière vers la Magie
+      // (Brûlure : Embrasement, Attiser). Ses 2 prochains soins posent chacun Brûlure 3. Gravée sur Ysolde (séries 80 à 82) :
+      // 2 × Brûlure 3, +14,4 ; 2 × Brûlure 4 (son rang II), +18,3 ; « +1 à sa Brûlure » par soin, +5,3. Son rang : Brûlure +1
+      id: 'votive-flame',
+      name: 'Flamme votive',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [{ type: 'applyStatus', status: 'votiveFlame', stacks: 2 }],
+      rankAxis: { kind: 'power', per: 1 },
+    },
   ],
   shadow: [
     // Les Maîtrises (2026-10-27) : les deux auras de l'Ombre, au critique. Effroi gravé : Ervald +12,1, Aldric +6,7 ; Aura de
     // pourriture (le statut attendait un porteur) : départs Ervald 45,4 %, Aldric 51,0 % (séries 70 et 71)
     { id: 'dread', name: 'Effroi', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'dread', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     { id: 'rot-aura', name: 'Aura de pourriture', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rotAura', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : deux auras de l'Ombre hors du
+    // critique. L'Emprise lit ses malus posés (et ceux des autres maîtrises : Poison, Saignement, Brûlure) ; série 87 :
+    // Ervald +9,1. Le Larcin gêne sans critique : il esquive et prend une charge du dernier bonus de l'attaquant, l'icône
+    // volant d'un camp à l'autre (proposition 2 de l'utilisateur) ; série 88 : Ervald +12,6, Aldric +7,6. Une charge par vol
+    // (règle commune des vols) : gravé Ervald +16,3 → +14,2, Aldric +10,9 → +10,4 ; départ contre Fanchon 66,5 → 52,3 %
+    { id: 'grip', name: 'Emprise', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'grip', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'pilfer', name: 'Larcin', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'life-steal',
       name: 'Vol de vie',
@@ -518,7 +642,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       rankAxis: { kind: 'limit', per: 1 },
     },
     // Phase 8, lot 3 (SORTS.md § 29) : le malus de Sceaux, le paladin confisque ; gravée +9,3 chez lui, +10,0 en moyenne,
-    // rang II +3,1 (au bord bas de la bande)
+    // rang II +3,1 (au bord bas de la bande). Une charge par vol (règle commune des vols, quatrième demande du 2026-10-27,
+    // comme le Larcin) : gravée +16,0 → +14,3 en moyenne (Aldric +13,9 → +12,8), rang II +6,2 → +6,3 (400 par duel)
     { id: 'seal-theft', name: 'Confiscation', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'sealTheft', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
     // Phase 8, lot 3 (SORTS.md § 29) : le malus de Fortune, le mauvais œil de la voleuse ; gravée +15,7 chez elle, +18,2
     // en moyenne, rang II +4,6
@@ -550,6 +675,9 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant (la Magie depuis B1), la chanson qui soigne à chaque coup. Gravée chez Fanchon +12,4 (à 2 PV,
     // son départ passait 62,4 % : trop)
     { id: 'ballad', name: 'Ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : l'aura de foudre qui lit les dégâts
+    // directs, chaque impact +1 (Foudre, Ciel d'orage, Champ d'orage ; la Purification, la Sentence). Série 86 : Thaldrin +9,3
+    { id: 'overcharge', name: 'Surtension', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'overcharge', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'firefly',
       name: 'Feux follets',

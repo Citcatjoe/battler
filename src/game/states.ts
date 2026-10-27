@@ -54,6 +54,9 @@ export type StateId =
   | 'blinded'
   | 'noHealing'
   | 'bonusStolen'
+  // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme et la Flamme votive
+  | 'tithed'
+  | 'votive'
 
 export interface StateDef {
   /** Nom générique, le même quel que soit le personnage qui l'a posé */
@@ -102,6 +105,8 @@ export const STATES: Record<StateId, StateDef> = {
   blinded: { name: 'Aveuglé', polarity: 'negative', summary: 'Ses critiques ratent.', counter: 'none' },
   noHealing: { name: 'Hémorragie', polarity: 'negative', summary: 'Il ne regagne plus de PV.', counter: 'none' },
   bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
+  tithed: { name: 'Dîme', polarity: 'positive', summary: 'Ses prochains coups reçus lui rendent des PV, pris à l’attaquant.', counter: 'status' },
+  votive: { name: 'Flamme votive', polarity: 'positive', summary: 'Ses prochains soins brûlent l’adversaire.', counter: 'status' },
 }
 
 // Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % »
@@ -219,6 +224,18 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   stormField: aura(),
   ballad: aura(),
   stoneFist: tray('power', () => STONE_FIST),
+  // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : quatre auras d'identité, qui se lisent sur leur anneau ;
+  // la Ferveur de l'Élan et le bonus pris par le Larcin s'affichent d'eux-mêmes
+  onrush: aura(),
+  overcharge: aura(),
+  grip: aura(),
+  pilfer: aura(),
+  // Quatrième demande du 2026-10-27 : la Dîme et la Flamme votive comptent leurs charges ; la Sangsue et la Peau de
+  // crapaud, deux auras d'identité, soignent et posent de vrais statuts (Poison), qui s'affichent d'eux-mêmes
+  tithe: tray('tithed'),
+  votiveFlame: tray('votive'),
+  leech: aura(),
+  toadSkin: aura(),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */

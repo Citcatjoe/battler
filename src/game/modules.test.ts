@@ -94,8 +94,8 @@ describe('arènes', () => {
     expect(resolveArena(ARENAS[1].id)).toBe(ARENAS[1])
     expect(getArena('inconnue')).toBe(ARENAS[0])
   })
-  it('chaque personnage a son arène de campagne, qui reste hors du choix et du hasard', () => {
-    const homes = CHARACTER_IDS.map((id) => HOME_ARENAS[id])
+  it('chaque adversaire de campagne, boss compris, a son arène, qui reste hors du choix et du hasard', () => {
+    const homes = [...CHARACTER_IDS, BOSS.id].map((id) => HOME_ARENAS[id])
     for (const a of homes) expect(a && a.name && a.region && a.image && a.focus && a.filter).toBeTruthy()
     const ids = homes.map((a) => a!.id)
     expect(new Set(ids).size).toBe(ids.length)
@@ -157,7 +157,8 @@ describe('catalogue des statuts', () => {
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
     // Poison : posé par le Souffle de la tombe et la Virulence, de la réserve Poison que partagent Ervald, Naraxes et
-    // Thaldrin (V5), par trois auras (effet de tour, réactions ; la Sève noire), et par le Dard de guêpe
+    // Thaldrin (V5), par quatre auras (effet de tour, réactions ; la Sève noire, la Peau de crapaud depuis le 2026-10-27),
+    // et par le Dard de guêpe
     expect(who('poison')).toEqual([
       'relique:wasp-sting',
       'skill:ervald',
@@ -169,6 +170,7 @@ describe('catalogue des statuts', () => {
       'statut:blackSap',
       'statut:decoctionAura',
       'statut:frostAura',
+      'statut:toadSkin',
     ])
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
@@ -183,7 +185,8 @@ describe('catalogue des statuts', () => {
     // 1 de Brokk et dans la réserve de Gorak et d'Elaria
     expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'skill:elaria', 'skill:gorak', 'statut:bristlingRampart'])
     // La Rancune (0.114.0) en pose un à chaque coup encaissé, la Feinte (phase 8, lot 3) à chaque esquive
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:elaria', 'skill:fanchon', 'skill:naraxes', 'statut:feint', 'statut:grudge'])
+    // L'Odeur du sang (Sang, 2026-10-27) en pose un sur son jet, dans la réserve de Gorak, d'Elaria et de Brokk
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:brokk', 'skill:elaria', 'skill:elaria', 'skill:fanchon', 'skill:gorak', 'skill:naraxes', 'statut:feint', 'statut:grudge'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -809,7 +812,19 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
     // Les auras des maîtrises (2026-10-27), le Dé pipé devenu aura compris : une aura, son son se déduit de sa nature
     family('auraGain', ['ballad', 'dread', 'lucky-streak', 'rancor', 'storm-field', 'rot-aura', 'loaded-die'])
+    // Le contenu des maîtrises (quatrième demande du 2026-10-27) : quatre auras ; l'Onde de choc sonne avec son coup
+    family('auraGain', ['onrush', 'overcharge', 'grip', 'pilfer'])
+    family(null, ['shockwave'])
     family('buff', ['duo'])
+    // Le contenu du soin (quatrième demande du 2026-10-27) : deux auras ; la Dîme, un bonus du Soin ; le Serment de sang, un
+    // malus d'Affliction (le Saignement) ; l'Odeur du sang, un critique assuré ; la Flamme votive, un bonus d'Affliction
+    // (Bonus gagné) ; la Pièce vert-de-gris et la Morsure sonnent avec leur pièce et leur coup
+    family('auraGain', ['leech', 'toad-skin'])
+    family('healingUp', ['tithe'])
+    family('afflictionDown', ['blood-oath'])
+    family('precisionUp', ['blood-scent'])
+    family('buff', ['votive-flame'])
+    family(null, ['verdigris-coin', 'venom-bite'])
     // Un bonus ou un malus posé sonne sa famille (règle 4 étendue, 2026-10-25 ; Bonus gagné et Malus reçu avant)
     family('precisionUp', ['hawk-eye', 'grudge'])
     family('evasionUp', ['evasion'])
@@ -833,9 +848,9 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'assault', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'lucky-coin', 'cursed-coin'])
     // Les compétences hors des dés de départ (les réserves des maîtrises) se jouent gravées sur le 3 d'un porteur : Gorak
     // parti de la Plaie ouverte (il fait saigner : la Curée part), ou Ervald pour l'Aura de puissance et les consommatrices
-    // du Poison (il empoisonne)
+    // du Poison (il empoisonne), Morsure comprise
     const carriers = ENGRAVABLE_SKILLS.filter((s) => !CHARACTERS.some((c) => c.events.some((e) => e.id === s.id))).map((skill) =>
-      (['power-aura', 'harvest', 'virulence'].includes(skill.id) ? createCharacter('ervald') : createCharacter('gorak', { aura: skill.id === 'open-wound' ? undefined : 'open-wound' })).withForge([{ op: 'engrave', face: 3, skill }]),
+      (['power-aura', 'harvest', 'virulence', 'venom-bite'].includes(skill.id) ? createCharacter('ervald') : createCharacter('gorak', { aura: skill.id === 'open-wound' ? undefined : 'open-wound' })).withForge([{ op: 'engrave', face: 3, skill }]),
     )
     const seen: Record<string, Set<string | null>> = {}
     for (const a of [...CHARACTERS, ...carriers])

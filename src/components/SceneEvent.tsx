@@ -526,6 +526,64 @@ function DreadShadow() {
   )
 }
 
+/* ---------- Onde de choc (quatrième demande du 2026-10-27, proposition 1 de l'utilisateur, MISE_EN_SCENE.md M56) ----------
+ * Le porteur frappe le sol : une fissure ocre court sous l'arène de lui vers l'adversaire, une onde de poussière roule au
+ * ras du sol et l'atteint à l'impact (41 % de la scène, keyframes `scene-shock-*`) ; là, un anneau éclate sous ses pieds,
+ * des éclats de dalle sautent. L'arène tremble à l'impact (`quake`).
+ */
+
+/** La fissure et l'onde qui roulent du lanceur vers sa cible, sous un voile de poussière ocre */
+function ShockBackdrop({ scene }: { scene: SceneFx }) {
+  const { length } = SCENE_EVENTS.shockwave
+  const dir = dirOf(scene)
+  const rand = jitter(scene.key * 31 + 5)
+  // La fissure : des pieds du lanceur à ceux de la cible, en zigzag au ras du sol
+  const points = ['M0 0']
+  for (let x = 0; x < 1120; ) {
+    x += 40 + rand() * 50
+    points.push(`L${Math.min(1120, x).toFixed(0)} ${((rand() - 0.5) * 22).toFixed(1)}`)
+  }
+  const crack = points.join(' ')
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0" style={{ '--scene-length': `${length}ms`, '--dir': dir } as CSSProperties}>
+      <div className="scene-shock-tint absolute inset-0" />
+      <svg
+        viewBox="0 -20 1120 40"
+        width={1120}
+        height={40}
+        className="absolute bottom-[9%] left-1/2 -ml-[560px] overflow-visible"
+        style={{ transform: dir < 0 ? 'scaleX(-1)' : undefined }}
+      >
+        <g className="scene-shock-crack" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d={crack} stroke="#d97706" strokeWidth={10} strokeOpacity={0.5} pathLength={1} />
+          <path d={crack} stroke="#1c1008" strokeWidth={4} pathLength={1} />
+        </g>
+      </svg>
+      <div className="scene-shock-wave absolute bottom-[6%]" />
+    </div>
+  )
+}
+
+/** À l'impact : un anneau éclate sous les pieds de la cible, la poussière monte, des éclats de dalle sautent */
+function ShockBurst({ scene }: { scene: SceneFx }) {
+  const { length } = SCENE_EVENTS.shockwave
+  const debris = sow(scene.key * 31 + 6, 10, (r) => ({ x: (r() - 0.5) * 360, up: 120 + r() * 160, size: 9 + r() * 12, spin: (r() - 0.5) * 540 }))
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-[20] h-full" style={{ '--scene-length': `${length}ms` } as CSSProperties}>
+      <div className="scene-shock-ring absolute bottom-[-30px] left-1/2" />
+      <div className="scene-shock-ring scene-shock-ring-late absolute bottom-[-30px] left-1/2" />
+      {debris.map((d, k) => (
+        <div
+          key={k}
+          className="scene-shock-debris absolute bottom-0 left-1/2"
+          style={{ width: d.size, height: d.size * 0.8, '--x': `${d.x}px`, '--up': `${-d.up}px`, '--spin': `${d.spin}deg` } as CSSProperties}
+        />
+      ))}
+      <div className="scene-shock-dust absolute bottom-[-40px] left-1/2" />
+    </div>
+  )
+}
+
 const SCENE_VIEWS: Record<SceneEventId, SceneView> = {
   lightning: { Backdrop: LightningBackdrop, OnTarget: LightningBolts },
   emberRain: { Backdrop: EmberBackdrop, OnTarget: EmberMeteors },
@@ -534,6 +592,7 @@ const SCENE_VIEWS: Record<SceneEventId, SceneView> = {
   stoneWall: { Backdrop: StoneBackdrop, OnTarget: StoneWall },
   blindFlash: { Backdrop: BlindBackdrop, OnTarget: BlindBolt },
   dread: { Backdrop: DreadBackdrop, OnTarget: DreadShadow },
+  shockwave: { Backdrop: ShockBackdrop, OnTarget: ShockBurst },
 }
 
 /** Partie de l'événement sur toute l'arène (à placer après le décor, avant les combattants). */

@@ -1642,3 +1642,50 @@ describe('l’aura de départ au 3e tour (retour du 2026-10-27, C2)', () => {
     expect(seen).toBeGreaterThan(30)
   })
 })
+
+describe('mise en scène : le contenu des maîtrises (quatrième demande du 2026-10-27)', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const badge = (c: Cue, side: number, text: string) => c.channel === 'float' && c.side === side && c.float.kind === 'badge' && c.float.badge.text === text
+
+  it('Onde de choc : la scène part, son coup de dégâts directs tombe sur son impact, sur l’adversaire (M56)', () => {
+    let waves = 0
+    for (const seed of [1, 2, 3]) {
+      const a = testCharacter('a', { maxHp: 400 }).withForge([{ op: 'engrave', face: 3, skill: skill('shockwave') }])
+      const result = simulateCombat([a, testCharacter('b', { maxHp: 400, dodgeChance: 0 })], { seed, forcedRolls: everyDie(3) })
+      const moments = stage(result)
+      for (const beat of result.beats) {
+        if (beat.type !== 'event' || beat.event.eventId !== 'shockwave') continue
+        const m = momentOf(moments, beat.id)
+        const scene = m.cues.find((c) => c.channel === 'scene')!
+        expect(scene.channel === 'scene' && scene.scene).toMatchObject({ id: 'shockwave', source: beat.event.side, target: 1 - beat.event.side })
+        const landed = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed && c.blow.to === 1 - beat.event.side && c.at > scene.at)!
+        expect(landed.at - scene.at).toBe(SCENE_EVENTS.shockwave.impacts[0])
+        waves++
+      }
+    }
+    expect(waves).toBeGreaterThan(3)
+  })
+
+  it('Larcin : à une esquive, l’icône du bonus pris part de la zone d’état du volé vers le voleur ; à son arrivée, « Volé » sur le volé, le bonus chez le voleur, Sceaux − (M50)', () => {
+    let taken = 0
+    const power: CharacterEvent = { id: 'power', name: 'power', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }] }
+    const pilfer: CharacterEvent = { id: 'with-pilfer', name: 'with-pilfer', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }] }
+    for (const seed of [1, 2, 3, 4]) {
+      const result = simulateCombat([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [pilfer]), testCharacter('b', { maxHp: 400 }, [power])], { seed })
+      const moments = stage(result)
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'pilfer') continue
+        const got = beat.effects.find((e) => e.type === 'applyStatus' && e.stolenBy === 'pilfer' && e.result.kind === 'applied' && e.result.stacks > 0)
+        if (got?.type !== 'applyStatus') continue
+        const m = momentOf(moments, beat.id)
+        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.icon !== undefined)!
+        expect(signal.channel === 'signal' && signal.signal).toMatchObject({ side: beat.side, to: [beat.side], fromTray: 1 - beat.side, icon: got.status, polarity: 'negative' })
+        const arrival = signal.at + T.SIGNAL
+        expect(at(m, 'float', arrival).some((c) => badge(c, 1 - beat.side, STOLEN_BADGE.text))).toBe(true)
+        expect(at(m, 'sound', arrival).some((c) => c.channel === 'sound' && c.cue === 'sealDown')).toBe(true)
+        taken++
+      }
+    }
+    expect(taken).toBeGreaterThan(3)
+  })
+})

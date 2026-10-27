@@ -127,6 +127,21 @@ export type IconName =
   | 'wither'
   | 'assault'
   | 'stone-fist'
+  // Quatrième demande du 2026-10-27 (le contenu du soin) : Lumière, Sang, Poison
+  | 'tithe'
+  | 'votive-flame'
+  | 'leech'
+  | 'blood-oath'
+  | 'blood-scent'
+  | 'toad-skin'
+  | 'verdigris-coin'
+  | 'venom-bite'
+  // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : Fureur, Magie, Ombre, Rempart
+  | 'onrush'
+  | 'overcharge'
+  | 'grip'
+  | 'pilfer'
+  | 'shockwave'
   // Les emblèmes des huit maîtrises (docs/MAITRISES.md « Huit maîtrises » ; la Magie reprend l'emblème de l'Orage en attendant le sien)
   | 'mastery-fury'
   | 'mastery-blood'
@@ -218,6 +233,18 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   stormField: 'storm-field',
   ballad: 'ballad',
   stoneFist: 'stone-fist',
+  // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : la compétence et son statut partagent l'icône
+  onrush: 'onrush',
+  overcharge: 'overcharge',
+  grip: 'grip',
+  pilfer: 'pilfer',
+  shockwave: 'shockwave',
+  // Quatrième demande du 2026-10-27 (le contenu du soin) : la compétence et son statut partagent l'icône
+  tithe: 'tithe',
+  votiveFlame: 'votive-flame',
+  leech: 'leech',
+  toadSkin: 'toad-skin',
+  verdigrisCoin: 'verdigris-coin',
 }
 
 /**
@@ -254,6 +281,9 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   blinded: 'blinding',
   noHealing: 'hemorrhage',
   bonusStolen: 'seal-theft',
+  // Quatrième demande du 2026-10-27 : pas d'emblème d'état peint ; l'icône de la compétence en tient lieu
+  tithed: 'tithe',
+  votive: 'votive-flame',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

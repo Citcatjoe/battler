@@ -203,8 +203,9 @@ describe('saison', () => {
       expect(new Set(build.relics).size).toBe(6)
       expect(buildOf(season, i)).toEqual(build)
       // Forgé sur son dé de départ : l'aura tirée sur le 1 (B7)
-      const faces = forgedFaces(createCharacter(e.characterId, { aura: e.aura }).definition, build.forge)
-      expect(faces.filter((f) => f.origin.length > 0 || f.engraved).length).toBeLessThanOrEqual(MAX_SKILL_FACES)
+      const def = createCharacter(e.characterId, { aura: e.aura }).definition
+      const faces = forgedFaces(def, build.forge)
+      expect(faces.filter((f) => f.origin.length > 0 || f.engraved).length).toBeLessThanOrEqual(def.skillFaces ?? MAX_SKILL_FACES)
     })
     // Rejouer un match avec sa graine notée redonne le même vainqueur, avec la même construction
     const replay = simulateCombat(seasonFighters(season, 150), { seed: season.results[150].seed })

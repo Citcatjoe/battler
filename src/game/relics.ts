@@ -295,9 +295,12 @@ export const RELICS: readonly Relic[] = [
   {
     id: 'eagle-feather',
     name: 'Plume d’aigle',
-    flavor: 'Une rémige d’aigle liée d’un fil rouge à un anneau de cuivre, deux barbes arrachées. Après le coup juste, il est déjà ailleurs.',
+    flavor: 'Une rémige d’aigle liée d’un fil rouge à un anneau de cuivre, quatre barbes arrachées. Après le coup juste, il est déjà ailleurs.',
     trigger: { type: 'strike', on: 'crit' },
-    cooldown: 2,
+    // Quatrième demande du 2026-10-27 (« fais ce qu'il faut pour la Plume d'aigle ») : recharge 2 → 4. Chez Elaria
+    // construite +24,7 → +18,1 (plafond d'une relique 20), moyenne contre le roster nu +13,1 → +11,8 (recharge 3 :
+    // +20,7 et +12,3 ; 2 charges : +18,6 et +12,8 ; 1 charge : +10,7 et +10,3). Mesures : docs/RELIQUES.md § 13
+    cooldown: 4,
     effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
   },
   /*

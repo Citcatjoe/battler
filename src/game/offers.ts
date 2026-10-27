@@ -32,7 +32,8 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge
  * 0.104.0 à la 0.111.0, pour garder deux faces de coup). Cinq depuis la 0.112.0 : le départ prend deux faces, et chaque
  * face porte le coup de base depuis la 0.106.0 ; à quatre, il restait deux gravures (1,07 par build d'un acte, contre
  * 1,27 à cinq, docs/CAMPAGNE.md § 18.3). La limite atteinte, ni Graver ni Copier une face ne sont proposées. Elle compte
- * des faces, pas des compétences : une gravure ou une copie en prend une.
+ * des faces, pas des compétences : une gravure ou une copie en prend une. Un personnage peut en déclarer moins
+ * (`CharacterDef.skillFaces`, une identité : Morgrut, quatre, « il ne fait presque rien, mais ses coups sont plus forts »).
  */
 export const MAX_SKILL_FACES = 5
 
@@ -108,7 +109,7 @@ export function drawReward(b: BuildState, kind: RewardKind, rng: Rng): PendingRe
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
   const def = createCharacter(b.championId, { aura: b.aura }).definition
-  const full = forgedFaces(def, b.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= MAX_SKILL_FACES
+  const full = forgedFaces(def, b.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= (def.skillFaces ?? MAX_SKILL_FACES)
   const left = offerableSkills(
     b,
     characterPool(def).filter((s) => !b.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),

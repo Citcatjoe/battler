@@ -92,9 +92,11 @@ function effectLine(e: AppliedEffect, fighters: Pair<Character>, before: Snapsho
       const cancel = r.cancelled ? ` ; opposition avec ${label(r.cancelled.status)} : −${r.cancelled.stacks} de part et d'autre` : ''
       if (r.kind === 'cancelled') return `${label(e.status)} (${asked}) sur ${name} : entièrement annulé${cancel}`
       if (atCap(e)) return `${label(e.status)} (${asked}) sur ${name} : déjà au plafond, rien ne change`
-      return `${label(e.status)} (${asked}) sur ${name} : posé, ${r.stacks} charge${r.stacks > 1 ? 's' : ''} retenue${r.stacks > 1 ? 's' : ''}${cancel}`
+      // Un vol prend une charge (quatrième demande du 2026-10-27) : le lanceur détroussé garde les autres (`kept`)
+      return `${label(e.status)} (${asked}) sur ${name} : posé, ${r.stacks} charge${r.stacks > 1 ? 's' : ''} retenue${r.stacks > 1 ? 's' : ''}${cancel}${e.kept ? ` ; volé, le lanceur en garde ${e.kept}` : ''}`
     }
     case 'cleanse':
+      if (e.stolen && e.removed.length) return `vol sur ${name} : prend une charge de ${e.removed.map(label).join(', ')}`
       return e.removed.length ? `purge sur ${name} : retire ${e.removed.map(label).join(', ')}` : `purge sur ${name} : rien à retirer`
     case 'rebound':
       return `${label(e.status)} relâchée : ${e.parts.length} renvoi${e.parts.length > 1 ? 's' : ''} sur ${name} (${e.parts.join(' · ')}), chacun un coup à part, ci-dessous`

@@ -142,6 +142,8 @@ export interface CharacterDef {
    * 1 de la 0.111.0 à la 0.120.0). Sans signature (Morgrut), sa face 2 est nue.
    */
   signature?: string
+  /** Faces de compétence au plus sur son dé (`MAX_SKILL_FACES` par défaut) : une identité (Morgrut), pas une exception de règle */
+  skillFaces?: number
   /** Statuts qui ne peuvent pas lui être posés (ex. un mort-vivant insensible au poison) */
   immunities?: readonly StatusId[]
   /**

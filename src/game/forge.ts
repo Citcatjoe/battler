@@ -217,7 +217,7 @@ export const rankLabel = (rank: number) => ROMAN[rank + 1] ?? String(rank + 1)
 /**
  * Un effet aiguisé : `gain` de plus sur l'axe de la compétence (0.110.0). Les charges et l'intensité vont au statut posé,
  * le montant aux dégâts et aux soins (le repli d'une purge compris), la part à une relâche (`gain` en points de
- * pourcentage).
+ * pourcentage), le montant par jauge à une relâche comptée (Onde de choc, `per`).
  */
 function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Effect {
   switch (effect.type) {
@@ -228,6 +228,7 @@ function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Ef
     case 'damage':
       return kind === 'amount' ? { ...effect, amount: effect.amount + gain } : effect
     case 'release':
+      if (kind === 'amount' && effect.per !== undefined) return { ...effect, per: effect.per + gain }
       return kind === 'share' ? { ...effect, share: (effect.share ?? 1) + gain / 100 } : effect
     case 'cleanse': {
       // Le repli d'une purge (Purification : sa lumière) gagne le montant

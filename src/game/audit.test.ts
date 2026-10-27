@@ -476,3 +476,61 @@ describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
+
+describe('audit de résolution : le contenu du soin (quatrième demande du 2026-10-27)', () => {
+  it('aucune anomalie pour les huit briques gravées chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    // Les consommatrices du Saignement chez Gorak et Elaria : leur producteur (Plaie ouverte) d'abord, sur le 4
+    const wound: ForgeStep[] = [{ op: 'engrave', face: 4, skill: skill('open-wound') }]
+    const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
+      tithe: [['ysolde', []]],
+      'votive-flame': [['ysolde', []]],
+      leech: [['brokk', []], ['gorak', wound]],
+      'blood-oath': [['gorak', []], ['elaria', []]],
+      'blood-scent': [['brokk', []], ['elaria', wound]],
+      'toad-skin': [['ervald', []], ['thaldrin', []]],
+      'verdigris-coin': [['naraxes', []], ['ervald', []]],
+      'venom-bite': [['ervald', []], ['naraxes', []]],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const [host, before] of list)
+        for (const rank of [0, 1])
+          for (const b of CHARACTER_IDS) {
+            audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 31000 + n++ }))
+            audit(simulateCombat([createCharacter(b), withSkill(host, id, rank, before)], { seed: 31000 + n++ }))
+          }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['dîme', 'flamme votive', 'sangsue', 'peau de crapaud', 'pièce d’effet sur pile', 'compétence qui modifie son coup', 'compétence à condition fausse : face nue'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : le contenu des maîtrises (quatrième demande du 2026-10-27)', () => {
+  it('aucune anomalie pour l’Élan, la Surtension, l’Emprise, le Larcin et l’Onde de choc gravés chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+    // L'Emprise chez Aldric : un producteur de malus (Flétrissure) d'abord, sur le 4 ; la Surtension avec la Foudre
+    const wither: ForgeStep[] = [{ op: 'engrave', face: 4, skill: skill('wither') }]
+    const bolt: ForgeStep[] = [{ op: 'engrave', face: 4, skill: skill('thunderbolt') }]
+    const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
+      onrush: [['gorak', []], ['morgrut', []]],
+      overcharge: [['thaldrin', []], ['ysolde', bolt]],
+      grip: [['ervald', []], ['aldric', wither]],
+      pilfer: [['ervald', []], ['aldric', []]],
+      shockwave: [['brokk', []], ['aldric', []], ['morgrut', []]],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const [host, before] of list)
+        for (const rank of [0, 1])
+          for (const b of CHARACTER_IDS) {
+            audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 33000 + n++ }))
+            audit(simulateCombat([createCharacter(b), withSkill(host, id, rank, before)], { seed: 33000 + n++ }))
+          }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['élan', 'maîtrises : onrush', 'larcin : bonus pris', 'maîtrises : pilfer', 'onde de choc', 'coups multiples', 'ciel d’orage'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})

@@ -1550,3 +1550,14 @@ Essais de la conception des Maîtrises ([MAITRISES.md](MAITRISES.md), retour de 
 - **Séries 72 à 74** (compensations) : Aldric à l'attaque 5 à 6 (départs de 51 à 56 %), Brokk et le Poing de pierre (+1 : 54,9 % ; +2 : 58,4 %, trop), Fanchon (Ballade / Duo 50,4 %), Morgrut avec une aura (attaque 6 à 8 : Puissance 49,5 %), Dé pipé en aura (borne haute +5,9, 5 sur 6 : +7,9) ; écartée : Bonne étoile (+1,5).
 - **Série 75** (R5, l'aura de la face 1 posée au premier tour) : +14,9 à +25,5 ; avec la face 1 rendue nue, +2,5 à +7,0.
 
+## 31. Le contenu du soin : Sang, Poison, Lumière (laboratoire, séries 80 à 84, 2026-10-27)
+
+Quatrième demande de l'utilisateur (proposition 3, « des choses qui tournent autour du soin »). Idées dans `scripts/lab/content-a.ts` (séries 80 à 84, 200 combats par duel ; 400 pour la 84), décisions et mesures au registre : [MAITRISES.md](MAITRISES.md) § B7. Rapports : `logs/lab/2026-10-27-19-19-57`, `19-24-10`, `19-26-30`, `19-27-48`, `20-36-17`.
+- **Série 80** (premières versions, gravées sur le 3 nu de leurs porteurs) : Dîme 3 × 2 +19,1 (3 × 3 +25,0) ; Flamme votive « +1 à sa Brûlure » +5,3, « Brûlure 2 » +11,1 ; Sangsue +0 à +0,4 sans Saignement, Brokk +14,6 ; Serment de sang −2 / 5 et −3 / 6 +20 à +22 ; Peau de crapaud +10,6 à +16,0 ; Pièce vert-de-gris (5 Poison) +10,1 à +13,4 ; Agonie (PV par charge de Poison) +0 à +5,5.
+- **Série 81** (réglages, et consommatrices avec leur producteur sur le 4 : Pourfendre, Souffle de la tombe) : Dîme 2 × 2 +15,6 ; Flamme votive 2 × Brûlure 3 +14,4 ; Serment −3 / 4 +12,5 à +15,7 ; Saigner à blanc, Rouvrir, Agonie : sous la bande ou rares ; Peau de crapaud au départ Ervald 53,4 %, Naraxes 49,1 %, Thaldrin 58,1 %.
+- **Série 82** (consommatrices dans le build réel : Plaie ouverte sur le 4 de Gorak et d'Elaria, Brokk et ses Épines, Aura glaciale sur le 4 de Thaldrin) : Sangsue Gorak +6,6, Elaria +7,1, Brokk +14,6 (×2 : +9,5, +10,5, +21,8) ; relâches ×2 et ×3 : +2 à +13 ; Agonie ×4 Ervald +10,1, Naraxes +2,8.
+- **Série 83** (consommatrices qui frappent) : Odeur du sang (critique assuré, +2 ou +4) Gorak +7,9, Elaria +5,0, Brokk +12,0 ; Morsure ×3 Ervald +16,1, Naraxes +3,9, Thaldrin +14,1 (sans producteur sur son dé : sa Glaciale sur le 4).
+- **Série 84** (Peau de crapaud du registre, aura de départ) : Ervald 53,2 %, Naraxes 48,8 %, Thaldrin 59,1 % (au-dessus).
+
+Leçon : une consommatrice qui **relâche** une affliction (Saigner à blanc, l'Agonie en relâche) ne fait qu'avancer une perte déjà due (+0 à +3) ; elle ne vaut qu'en multipliant (comme l'Embrasement ×3), et reste rare à l'écran. Celles qui **lisent** la ressource par une condition et frappent (Odeur du sang, Morsure) ou soignent (Sangsue) valent par la fréquence de la ressource chez leur porteur : fortes chez qui la produit en continu (Brokk, Ervald), sous la bande ailleurs.
+

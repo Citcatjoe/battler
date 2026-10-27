@@ -113,6 +113,8 @@ export function effectBadge(e: AppliedEffect): Badge {
       // Bonus retiré par l'adversaire : « Aura de puissance dissipée » ; malus retirés : « Purifié » ; rien à retirer :
       // « Rien à purifier » (2026-10-21 : « Purifié » laissait croire qu'un malus était parti). Un statut perdu tombe.
       if (!e.removed.length) return { text: 'Rien à purifier', tone: 'neutral', rises: true }
+      // Un vol (Larcin) ne prend qu'une charge : le volé peut garder le bonus, rien n'est dissipé (l'arrivée dit « Volé »)
+      if (e.stolen) return { text: e.removed.map((id) => `−1 ${STATUSES[id].name}`).join(', '), tone: 'negative', rises: false }
       if (STATUSES[e.removed[0]].polarity === 'positive')
         return {
           text: `${e.removed.map((id) => STATUSES[id].name).join(', ')} dissipé${e.removed.length > 1 ? 's' : ''}`,
@@ -151,13 +153,15 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
       if (r.kind === 'cancelled') return `${cancel} sur ${name}`
       if (atCap(e)) return `${name} a déjà ${statusLabel(e.status)} au maximum : rien ne change`
       const status = { id: e.status, stacks: r.stacks, turns: e.turns }
-      // Un bonus volé (Sceau de vol, lot 3) : le voleur le prend à sa place
-      const gets = `${name} ${e.stolenBy ? 'vole' : 'reçoit'} ${statusLabel(e.status)} (${lowerFirst(def.describe(status))})`
+      // Un bonus volé (Sceau de vol, lot 3) : le voleur en prend une charge à sa place, le lanceur garde les autres (`kept`)
+      const gets = `${name} ${e.stolenBy ? 'vole' : 'reçoit'} ${statusLabel(e.status)} (${lowerFirst(def.describe(status))})${e.kept ? `, l'adversaire en garde ${e.kept}` : ''}`
       return cancel ? `${cancel}, puis ${gets}` : gets
     }
     case 'cleanse':
       if (!e.removed.length) return `${name} n'avait rien à purifier`
-      // Un malus retiré libère ; un bonus retiré (Purification de l'adversaire) est perdu, toutes charges comprises
+      // Un malus retiré libère ; un bonus retiré (Purification de l'adversaire) est perdu, toutes charges comprises ; un vol
+      // (Larcin) n'en prend qu'une
+      if (e.stolen) return `${name} se fait prendre une charge de ${e.removed.map(statusLabel).join(', ')}`
       return STATUSES[e.removed[0]].polarity === 'negative'
         ? `${name} se libère de ${e.removed.map(statusLabel).join(', ')}`
         : `${name} perd ${e.removed.map(statusLabel).join(', ')}, toutes charges comprises`

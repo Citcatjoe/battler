@@ -231,7 +231,7 @@ La forge est une donnée du personnage, comme ses reliques (`forge.ts`, règles 
 1. Préparer l'image (16:9, sol dégagé en bas au centre, voir `docs/STYLE_BIBLE.md`), la ranger dans `src/assets/arena-<lieu>.jpg`.
 2. Ajouter une entrée dans `ARENAS` (`arenas.ts`) : `id`, `name`, `image`, `focus` (`object-position` qui place le sol sous les pieds) et `filter` (assombrir davantage un décor très lumineux).
 3. L'écran d'affrontement la propose automatiquement, ainsi que le tirage « Au hasard ».
-4. **Arène de campagne** (0.123.0) : une entrée dans `HOME_ARENAS`, sous l'id du personnage, au lieu d'`ARENAS`. Elle n'apparaît que contre lui, en campagne : `App.tsx` la passe à `MatchupScreen` (`home`), qui la montre à la place du sélecteur, et le combat la prend. Décor du lieu du personnage : `docs/STYLE_BIBLE.md` § 5.7.
+4. **Arène de campagne** (0.123.0) : une entrée dans `HOME_ARENAS`, sous l'id du personnage (ou du boss, `BOSS.id`), au lieu d'`ARENAS`. Elle n'apparaît que contre lui, en campagne : `App.tsx` la passe à `MatchupScreen` (`home`), qui la montre à la place du sélecteur, et le combat la prend. Décor du lieu du personnage : `docs/STYLE_BIBLE.md` § 5.7.
 
 ### Ajouter un événement à un personnage
 Ajouter une entrée `{ id, name, trigger, effects, chance?, limit?, when?, relation?, hitMultiplier?, buildsUp? }` dans son `events`. Aucun autre fichier à toucher. `relation` (0.106.0, `HitRelation`, `relationOf` dans `events.ts` ; déclencheurs du dé seulement) dit ce que la compétence fait du coup de base de son jet ([RESOLUTION.md](RESOLUTION.md) § 3 bis) :
@@ -266,8 +266,9 @@ Ajouter une entrée dans `STATUSES` (`statuses.ts`) et son id dans `StatusId`. C
 | Crochet | Effet |
 | --- | --- |
 | `modifyStats` | modifie les stats effectives du porteur (armure, esquive, critique…) |
-| `modifyOutgoing` | modifie les dégâts du porteur avant l'armure |
+| `modifyOutgoing` | modifie les dégâts du porteur avant l'armure ; reçoit aussi les statuts du défenseur (Emprise : +1 par malus) |
 | `modifyFinal` | modifie les dégâts finaux du porteur, après l'armure et les boucliers, au moins 1 (Fausse note ; l'Aura mélodieuse jusqu'à la 0.121.0) |
+| `modifyDirect` | modifie chaque impact des dégâts directs que le porteur inflige à l'adversaire, selon leur source (Surtension : la foudre, quatrième demande du 2026-10-27) ; lu par le moteur et l'audit (`directDamage`) |
 | `whileShielded` | son bonus ne vaut que tant que le porteur a de l'armure temporaire ; part au `shieldBroken` (Poing de pierre, 0.121.0) |
 | `headsChance` | chance de pile en plus pour toutes les pièces du porteur, additive, plafond 5/6 (Dé pipé, 0.121.0 ; la relique Pièce lestée a son `Relic.headsChance`) |
 | `coinToss.heads` | pièce d'effet : sur pile, ces effets, ni dégâts ni fenêtres de coup (Pièce porte-bonheur, Pièce maudite) |
@@ -317,7 +318,7 @@ Présentation seule (0.73.0) : un sort ou un coup spécial à grand spectacle, j
 5. Tests : sa mécanique dans `combat.test.ts`, son contrôle dans `audit.test.ts` (l'audit des Maîtrises joue chaque brique aux rangs I et II), sa valeur gravée par `scripts/skills.report.ts` (bande de 8 à 20 points).
 
 ### Ajouter un type d'effet
-Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test. Un effet qui fait des dégâts déclare sa `source` (`damage.ts`), et ses accroches se déduisent dans `addEffect` (`hooks.ts`). Option `damage.armored` (0.121.0, Clous de pavois) : le montant moins l'armure effective de la cible, au moins 1 par impact.
+Étendre `Effect` (`events.ts`) et `AppliedEffect` (`combat.ts`), puis traiter le nouveau cas dans `applyEffect`, `describeEffect`, `effectText` et `effectBadge`. TypeScript signale chaque `switch` oublié. Ajouter aussi un test. Un effet qui fait des dégâts déclare sa `source` (`damage.ts`), et ses accroches se déduisent dans `addEffect` (`hooks.ts`). Option `damage.armored` (0.121.0, Clous de pavois) : le montant moins l'armure effective de la cible, au moins 1 par impact. Option `fromStatus` (`StatusRead`) sur une pose, un soin ou des dégâts (Virulence 0.114.0 ; Sangsue 2026-10-27) : `factor` fois les charges d'un statut, lues quand l'effet part (`readStatus`, `combat.ts`), ajoutées à sa valeur ; ses accroches (`eventHooks`, `skillNeeds`) et sa validation (`validateRoster`) suivent.
 
 ### Ajouter un label de la zone de surcharge
 Présentation seule (2026-10-21) ; ce qui entre dans la zone, l'ordre et le point de vue : [RESOLUTION.md](RESOLUTION.md) § 11. Le registre unique `specials.ts` construit chaque label (`attackSpecials` pour ce qui se lit dans un `Attack`, `reactionSpecial` pour une étape de réaction, `relicSpecial` pour une relique qui se déclenche, `statusSpecial` dessous) : sa source donne sa couleur (`SPECIAL_SOURCES`, [design-system.md](design-system.md) § 3.1), son signe, vu de l'attaquant, donne son son (`SPECIAL_SIGNS`, [SONS.md](SONS.md) § 4.4). `staging.ts` ne fait que poser le label avec `addSpecial(spec)` à l'instant où il s'applique (une cue `special`, et la cue `sound` de son signe) : jamais de libellé, de couleur, de signe ni de son au point d'appel. Un statut est une surcharge par sa mécanique (`isSurcharge`) : rien à déclarer pour un nouveau statut de ces familles. Une nouvelle surcharge lisible dans `Attack` s'ajoute à `attackSpecials`, à sa place dans l'ordre du livre de règles ; une nouvelle source s'ajoute à `SPECIAL_SOURCES`, avec sa ligne dans design-system.md.

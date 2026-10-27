@@ -12,7 +12,7 @@
  *    Un effet `damage` en plusieurs coups (`hits`) fait tomber un coup par impact.
  */
 
-export type SceneEventId = 'lightning' | 'emberRain' | 'gale' | 'hoarfrost' | 'stoneWall' | 'blindFlash' | 'dread'
+export type SceneEventId = 'lightning' | 'emberRain' | 'gale' | 'hoarfrost' | 'stoneWall' | 'blindFlash' | 'dread' | 'shockwave'
 
 export interface SceneTiming {
   /**
@@ -56,6 +56,9 @@ export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   blindFlash: { impacts: [360], length: 1150 },
   // Peur : l'arène s'assombrit de violet, une ombre monte sous la cible et l'enveloppe, puis se dissipe
   dread: { impacts: [560], length: 1400 },
+  // Onde de choc (quatrième demande du 2026-10-27, proposition 1 de l'utilisateur) : le porteur frappe le sol, le sol se
+  // fend devant lui, une onde roule jusqu'à l'adversaire et le soulève à l'impact ; l'arène tremble (MISE_EN_SCENE.md M56)
+  shockwave: { impacts: [620], length: 1500, quake: true },
 }
 
 /** Le camp visé par un événement lancé par `source` (l'adversaire, ou le lanceur lui-même). */

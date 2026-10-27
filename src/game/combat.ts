@@ -1,6 +1,6 @@
 import type { Character } from './character'
 import type { DamageSource } from './damage'
-import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type Trigger } from './events'
+import { DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Effect, type HitRelation, type StatusRead, type Trigger } from './events'
 import type { Relic } from './relics'
 import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
@@ -8,6 +8,7 @@ import {
   COIN_RANK_HEADS,
   charges,
   consumeStatus,
+  directDamage,
   isAura,
   isMechanic,
   removeStatuses,
@@ -116,10 +117,12 @@ export type AppliedEffect =
     }
   /**
    * `stacks` : charges demandées ; `result` : ce qui s'est réellement passé (posé, annulé, bloqué). `stolenBy` : le bonus
-   * que le lanceur se posait est allé à l'adversaire, pris par ce statut du lanceur (Sceau de vol, `stealsBonus`)
+   * que le lanceur se posait est allé à l'adversaire, pris par ce statut du lanceur (Sceau de vol, `stealsBonus`) ; un vol
+   * prend une charge (quatrième demande du 2026-10-27) : `kept`, les charges de la pose que le lanceur garde
    */
-  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId }
-  | { type: 'cleanse'; target: Side; removed: StatusId[] }
+  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId; kept?: number }
+  /** `stolen` : une purge de vol (Larcin), qui ne retire qu'une charge de chaque statut visé (quatrième demande du 2026-10-27) */
+  | { type: 'cleanse'; target: Side; removed: StatusId[]; stolen?: true }
   /**
    * Jauges relâchées en renvois (Rétribution, retour du 2026-10-27, C1) : `parts`, la valeur de chaque coup sans dé qui
    * part (une jauge chacun) ; leurs PV retirés sont dans les étapes de ces coups (`statusReaction` à `strike`), qui suivent
@@ -550,7 +553,7 @@ export function resolveAttack(
   for (const s of attackerStatuses) {
     const modify = STATUSES[s.id].modifyOutgoing
     if (!modify || (STATUSES[s.id].whileShielded && !armored)) continue
-    const next = modify(raw, s)
+    const next = modify(raw, s, defenderStatuses)
     if (next !== raw) modifiers.push({ status: s.id, by: 'attacker', delta: next - raw })
     raw = next
   }
@@ -896,24 +899,32 @@ export function simulateCombat(
       }
   }
 
+  /** Une valeur lue sur un statut (`StatusRead`, Virulence, Sangsue, Agonie) : `factor` fois ses charges chez qui le porte, maintenant. */
+  function readStatus(owner: Side, from: StatusRead | undefined): number {
+    return from ? from.factor * stacksOf(states[from.who === 'opponent' ? other(owner) : owner].statuses, from.status) : 0
+  }
+
   /** Applique un effet à partir du porteur `owner` ; renvoie ce qui a réellement changé. */
   function applyEffect(owner: Side, effect: Effect): AppliedEffect {
     const target = effect.target === 'opponent' ? other(owner) : owner
     const state = states[target]
     switch (effect.type) {
       case 'heal': {
-        // Hémorragie (`modifyHealing`) : le soin passe par les filtres des statuts du soigné, puis le plafond de PV
-        const kept = healingOf(effect.amount, state.statuses)
+        // Hémorragie (`modifyHealing`) : le soin passe par les filtres des statuts du soigné, puis le plafond de PV.
+        // Sangsue (`fromStatus`) : des PV en plus, lus sur un statut
+        const asked = effect.amount + readStatus(owner, effect.fromStatus)
+        const kept = healingOf(asked, state.statuses)
         const amount = clamp(Math.min(kept, fighters[target].maxHp - state.hp), 0)
         state.hp += amount
         rearmThresholds(target)
         if (amount > 0) healed[target] = true
-        return { type: 'heal', target, amount, ...(kept !== effect.amount && { wanted: effect.amount }) }
+        return { type: 'heal', target, amount, ...(kept !== asked && { wanted: asked }) }
       }
       case 'damage': {
         // Montant compté en entier (overkill compris) ; les PV s'arrêtent à 0. En `hits` coups : tous comptés. Contre
-        // l'armure (`armored`, Clous de pavois) : chaque impact perd l'armure effective de la cible, au moins 1
-        const wanted = clamp(effect.amount, 0)
+        // l'armure (`armored`, Clous de pavois) : chaque impact perd l'armure effective de la cible, au moins 1. Agonie
+        // (`fromStatus`) : des PV en plus, lus sur un statut
+        const wanted = directImpact(owner, target, clamp(effect.amount + readStatus(owner, effect.fromStatus), 0), effect.source)
         const armor = effect.armored ? effectiveStats(fighters[target], state.statuses).armor : 0
         const each = effect.armored && wanted > 0 ? Math.max(1, wanted - armor) : wanted
         const hits = effect.hits ?? 1
@@ -930,23 +941,40 @@ export function simulateCombat(
         }
       }
       case 'applyStatus': {
-        // Sceau de vol (lot 3) : un bonus que le lanceur se pose, hors mécanisme, va à l'adversaire (une charge par vol) ;
-        // ce sont les règles de la pose chez l'adversaire qui s'appliquent (plafond, immunité, opposition, garde)
+        // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus ;
+        // Virulence (`fromStatus`) : `factor` fois les charges d'un statut, lues maintenant chez son porteur
+        const fromHit = effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0
+        const fromStatus = readStatus(owner, effect.fromStatus)
+        const status = statusOfEffect(effect, fromHit + fromStatus)
+        // Sceau de vol (lot 3) : un bonus que le lanceur se pose, hors mécanisme, va à l'adversaire (une charge de Sceau par
+        // vol) ; ce sont les règles de la pose chez l'adversaire qui s'appliquent (plafond, immunité, opposition, garde). Un
+        // vol prend une charge (règle commune des vols, quatrième demande du 2026-10-27, comme le Larcin) : le lanceur garde
+        // les autres (`kept`), et l'intensité ; la dernière charge l'emporte avec elle
         const thief =
           target === owner && STATUSES[effect.status].polarity === 'positive' && !isMechanic(effect.status)
             ? state.statuses.find((s) => STATUSES[s.id].stealsBonus)
             : undefined
         if (thief) {
           state.statuses = consumeStatus(state.statuses, thief.id, 1)
-          const stolen = applyEffect(owner, { ...effect, target: 'opponent' })
-          return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id } : stolen
+          const kept = status.stacks - 1
+          const stolen = applyEffect(owner, {
+            type: 'applyStatus',
+            status: effect.status,
+            stacks: Math.min(1, status.stacks),
+            target: 'opponent',
+            ...(effect.turns !== undefined && { turns: effect.turns }),
+            ...(kept <= 0 && status.power !== undefined && { power: status.power }),
+          })
+          if (kept > 0) {
+            const own = resolveApplication(state.statuses, { ...status, stacks: kept }, fighters[target].immunities)
+            state.statuses = own.list
+            if (own.outcome.kind === 'applied') {
+              state.fresh.add(effect.status)
+              posedBy[target][effect.status] = beats.length
+            }
+          }
+          return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id, ...(kept > 0 && { kept }) } : stolen
         }
-        // Pourfendre (`fromHit`) : des charges de plus, la part des PV que le coup de ce jet a retirés, arrondie au-dessus ;
-        // Virulence (`fromStatus`) : `factor` fois les charges d'un statut, lues maintenant chez son porteur
-        const fromHit = effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0
-        const from = effect.fromStatus
-        const fromStatus = from ? from.factor * stacksOf(states[from.who === 'opponent' ? other(owner) : owner].statuses, from.status) : 0
-        const status = statusOfEffect(effect, fromHit + fromStatus)
         const { stacks, turns } = status
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
         state.statuses = list
@@ -968,6 +996,13 @@ export function simulateCombat(
         const releases = STATUSES[effect.status].releases
         const stored = held ? (releases ? releases(held) : held.stacks) : 0
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
+        // Onde de choc (`per`) : ses jauges se comptent, `per` PV chacune, en une perte de dégâts directs
+        if (effect.per !== undefined) {
+          const count = held?.slots?.filter((n) => n > 0).length ?? 0
+          const amount = directImpact(owner, target, clamp(Math.max(effect.min, effect.per * count), 0), effect.source)
+          loseHp(target, amount)
+          return { type: 'damage', target, amount, source: effect.source }
+        }
         // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
         const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
         // Les jauges, une par coup (retour du 2026-10-27, S1) : en entier, chacune la sienne ; en part (Rétribution), le
@@ -980,6 +1015,11 @@ export function simulateCombat(
           pendingRebounds.push({ side: owner, status: effect.status, parts })
           return { type: 'rebound', target, status: effect.status, parts }
         }
+        if (target !== owner) {
+          const direct = directImpact(owner, target, amount, effect.source)
+          loseHp(target, direct)
+          return { type: 'damage', target, amount: direct, source: effect.source, ...(parts.length > 1 && direct === amount && { parts }) }
+        }
         loseHp(target, amount)
         return { type: 'damage', target, amount, source: effect.source, ...(parts.length > 1 && { parts }) }
       }
@@ -990,11 +1030,22 @@ export function simulateCombat(
         const removed = effect.count === undefined ? matching : matching.slice(-effect.count)
         // Rien à retirer : l'effet de repli joue à la place (il garde la même cible de référence, le porteur)
         if (removed.length === 0 && effect.orElse) return applyEffect(owner, effect.orElse)
-        state.statuses =
-          effect.count === undefined ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
-        return { type: 'cleanse', target, removed }
+        // Un vol (`steal`, Larcin) ne prend qu'une charge du bonus visé (quatrième demande du 2026-10-27) : le volé garde les autres
+        if (effect.steal) state.statuses = removed.reduce((list, id) => consumeStatus(list, id, 1), state.statuses)
+        else
+          state.statuses =
+            effect.count === undefined ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
+        return { type: 'cleanse', target, removed, ...(effect.steal && { stolen: true as const }) }
       }
     }
+  }
+
+  /**
+   * Surtension (`modifyDirect`, quatrième retour du 2026-10-27) : un impact de dégâts directs que `owner` inflige à son
+   * adversaire passe par les filtres de ses statuts ; ceux qu'il s'inflige ne changent pas
+   */
+  function directImpact(owner: Side, target: Side, amount: number, source: DamageSource): number {
+    return target === owner ? amount : directDamage(states[owner].statuses, amount, source)
   }
 
   /** Une relique dont tous les effets seraient nuls ne part pas et ne s'use pas (Dent de loup au plafond du Vol de vie) */
@@ -1009,9 +1060,24 @@ export function simulateCombat(
   function applyEffects(owner: Side, effects: readonly Effect[]) {
     const applied: AppliedEffect[] = []
     for (const effect of effects) {
+      // Larcin (`steal`) : ce que la purge retire, lu avant elle, passe au porteur de l'effet : une charge, avec sa durée ;
+      // la dernière emporte aussi l'intensité (une aura aiguisée change de camp entière)
+      const held = effect.type === 'cleanse' && effect.steal ? states[effect.target === 'opponent' ? other(owner) : owner].statuses : []
       const done = applyEffect(owner, effect)
       applied.push(done)
       if (fallen() !== undefined) break
+      if (effect.type === 'cleanse' && effect.steal && done.type === 'cleanse')
+        for (const s of held.filter((x) => done.removed.includes(x.id))) {
+          const last = s.stacks <= 1
+          const taken = applyEffect(owner, {
+            type: 'applyStatus',
+            status: s.id,
+            stacks: Math.min(1, s.stacks),
+            ...(s.turns !== undefined && { turns: s.turns }),
+            ...(last && s.power !== undefined && { power: s.power }),
+          })
+          applied.push(taken.type === 'applyStatus' && !taken.stolenBy ? { ...taken, stolenBy: effect.steal } : taken)
+        }
       if (effect.type === 'cleanse' && effect.andThen && done.type === 'cleanse' && done.removed.length > 0) {
         applied.push(applyEffect(owner, effect.andThen))
         if (fallen() !== undefined) break
@@ -1086,8 +1152,16 @@ export function simulateCombat(
       }
       const react = reactionTo(status, trigger)
       if (!react) continue
-      // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte : sans lui, la réaction ne part pas
-      if (react.length > 0 && react.every((e) => e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status))) continue
+      // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte ; un soin ou des dégâts qui ne
+      // valent que ce qu'ils lisent sur un statut (Sangsue, 2026-10-27) attendent qu'il soit là ; un Larcin (`cleanse.steal`)
+      // attend un bonus à prendre : sans eux, la réaction ne part pas
+      const idle = (e: Effect) =>
+        (e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status)) ||
+        ((e.type === 'heal' || e.type === 'damage') && e.fromStatus !== undefined && e.amount + readStatus(side, e.fromStatus) <= 0) ||
+        (e.type === 'cleanse' &&
+          e.steal !== undefined &&
+          !states[e.target === 'opponent' ? other(side) : side].statuses.some((s) => STATUSES[s.id].polarity === e.polarity && !isMechanic(s.id)))
+      if (react.length > 0 && react.every(idle)) continue
       const effects = applyEffects(side, react)
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie : le statut agit avec ses charges, puis en perd une dans la même étape
@@ -1470,7 +1544,16 @@ export function simulateCombat(
     const defender = other(attacker)
     if (outcome.dodged) return [[attacker, 'missed'], ...(outcome.blindedBy ? [] : [[defender, 'dodge'] as [Side, Trigger]])]
     if (!touched) return []
-    return [[attacker, 'hit'], ...(outcome.crit ? [[attacker, 'crit'] as [Side, Trigger]] : []), [defender, 'hurt'], ...(emptied ? [[defender, 'shieldBroken'] as [Side, Trigger]] : [])]
+    // Gros coup (quatrième retour du 2026-10-27) : un critique, ou un coup ×2 et plus (Assaut, Soliste, Crescendo), juste
+    // après la fenêtre du critique
+    const heavy = outcome.crit || (outcome.multiplier ?? 1) >= 2
+    return [
+      [attacker, 'hit'],
+      ...(outcome.crit ? [[attacker, 'crit'] as [Side, Trigger]] : []),
+      ...(heavy ? [[attacker, 'heavy'] as [Side, Trigger]] : []),
+      [defender, 'hurt'],
+      ...(emptied ? [[defender, 'shieldBroken'] as [Side, Trigger]] : []),
+    ]
   }
 
   /**

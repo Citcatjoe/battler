@@ -2913,3 +2913,84 @@ body {
   70% { opacity: 0.85; transform: scaleY(1.05) scaleX(1.05); }
   100% { opacity: 0; transform: scaleY(1.2) scaleX(1.1); }
 }
+/* Onde de choc (quatrième demande du 2026-10-27, M56) : voile de poussière ocre ; la fissure et l'onde courent du lanceur
+   (--dir : +1 vers la droite) jusqu'à la cible, qu'elles atteignent à l'impact (41 % : 620 / 1500) ; là, l'anneau éclate */
+.scene-shock-tint {
+  background: radial-gradient(ellipse at 50% 100%, rgba(180, 110, 30, 0.28) 0%, rgba(30, 20, 10, 0.6) 72%);
+  animation: scene-dark calc(var(--scene-length) / var(--speed)) ease-in-out both;
+}
+.scene-shock-crack path {
+  stroke-dasharray: 1;
+  animation: scene-shock-crack calc(var(--scene-length) / var(--speed)) ease-in both;
+}
+@keyframes scene-shock-crack {
+  0% { opacity: 0; stroke-dashoffset: 1; }
+  6% { opacity: 1; stroke-dashoffset: 1; }
+  41% { stroke-dashoffset: 0; }
+  80% { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 0; }
+}
+.scene-shock-wave {
+  width: 360px;
+  height: 230px;
+  margin-left: -180px;
+  border-radius: 50% 50% 8% 8%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 237, 213, 1) 0%, rgba(245, 158, 11, 0.85) 22%, rgba(146, 86, 24, 0.55) 45%, transparent 70%);
+  filter: blur(4px);
+  transform-origin: 50% 100%;
+  animation: scene-shock-wave calc(var(--scene-length) / var(--speed)) cubic-bezier(0.5, 0, 0.9, 0.6) both;
+}
+@keyframes scene-shock-wave {
+  0% { left: calc(50% - var(--dir) * 28%); opacity: 0; transform: scale(0.4, 0.3); }
+  8% { left: calc(50% - var(--dir) * 26%); opacity: 1; transform: scale(0.8, 0.7); }
+  41% { left: calc(50% + var(--dir) * 28%); opacity: 1; transform: scale(1.25, 1.2); }
+  56% { left: calc(50% + var(--dir) * 30%); opacity: 0; transform: scale(1.6, 0.6); }
+  100% { left: calc(50% + var(--dir) * 30%); opacity: 0; transform: scale(1.6, 0.6); }
+}
+.scene-shock-ring {
+  width: 420px;
+  height: 110px;
+  margin-left: -210px;
+  border-radius: 9999px;
+  border: 9px solid rgba(255, 237, 213, 0.95);
+  box-shadow: 0 0 26px rgba(245, 158, 11, 0.95), inset 0 0 20px rgba(245, 158, 11, 0.8);
+  animation: scene-shock-ring calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+.scene-shock-ring-late {
+  animation-delay: calc(110ms / var(--speed));
+  border-width: 3px;
+}
+@keyframes scene-shock-ring {
+  0%, 39% { opacity: 0; transform: scale(0.2); }
+  41% { opacity: 1; transform: scale(0.5); }
+  68% { opacity: 0; transform: scale(1.9); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+.scene-shock-debris {
+  margin-left: -8px;
+  border-radius: 30%;
+  border: 2px solid #1c1917;
+  background: #a8a29e;
+  animation: scene-shock-debris calc(var(--scene-length) / var(--speed)) linear both;
+}
+@keyframes scene-shock-debris {
+  0%, 40% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  42% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  62% { transform: translate(calc(var(--x) * 0.7), var(--up)) rotate(calc(var(--spin) * 0.5)); }
+  86% { opacity: 1; transform: translate(var(--x), 0) rotate(var(--spin)); }
+  100% { opacity: 0; transform: translate(var(--x), 0) rotate(var(--spin)); }
+}
+.scene-shock-dust {
+  margin-left: -300px;
+  width: 600px;
+  height: 240px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse, rgba(214, 170, 110, 0.9) 0%, rgba(150, 110, 66, 0.45) 45%, transparent 72%);
+  filter: blur(6px);
+  animation: scene-shock-dust calc(var(--scene-length) / var(--speed)) ease-out both;
+}
+@keyframes scene-shock-dust {
+  0%, 39% { opacity: 0; transform: scale(0.4); }
+  44% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: translateY(-50px) scale(1.4, 1.9); }
+}

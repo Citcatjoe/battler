@@ -2,7 +2,7 @@ import type { Character, CharacterStats } from './character'
 import { damageKind, type DamageKind } from './damage'
 import { rollFace, type CharacterEvent, type Effect, type Target, type Trigger } from './events'
 import type { Relic } from './relics'
-import type { StatusId } from './statuses'
+import { STATUSES, type StatusId } from './statuses'
 
 /*
  * Accroches (règles v2, phase 1, docs/PROGRESSION.md § 8 et P1) : ce que chaque brique PRODUIT et CONSOMME, dans un
@@ -24,9 +24,9 @@ import type { StatusId } from './statuses'
 /**
  * Les moments d'un combat, du point de vue de la brique : il touche, il encaisse, il critique, il esquive, il est esquivé, il
  * se soigne ; depuis le second lot de la phase 8 : son armure temporaire est vidée, il renvoie des dégâts, sa pièce tombe
- * sur pile.
+ * sur pile ; depuis le quatrième retour du 2026-10-27 : il porte un gros coup (un critique, ou un coup ×2 et plus).
  */
-export type Moment = 'hit' | 'hurt' | 'crit' | 'dodge' | 'missed' | 'heal' | 'shieldBreak' | 'reflect' | 'heads'
+export type Moment = 'hit' | 'hurt' | 'crit' | 'heavy' | 'dodge' | 'missed' | 'heal' | 'shieldBreak' | 'reflect' | 'heads'
 
 export type Hook =
   /** Un statut et ses charges (Poison sur l'adversaire, Esquive améliorée sur soi) */
@@ -34,6 +34,10 @@ export type Hook =
   | `moment:${Moment}`
   /** Des dégâts infligés de cette famille (de l'instant : coup, dégâts directs ; temporaires : DT) */
   | `damage:${DamageKind}`
+  /** Des éclairs : des dégâts directs de foudre sur l'adversaire (Foudre, Ciel d'orage, Champ d'orage), ce que lit la Surtension */
+  | 'damage:lightning'
+  /** Un malus posé sur l'adversaire, quel qu'il soit : ce que lit l'Emprise (quatrième retour du 2026-10-27) */
+  | 'malus'
   /** Une face du dé qui tombe (« face:4 »), la face maximale */
   | `face:${number}`
   | 'face:max'
@@ -143,7 +147,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   feint: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge', 'status:guaranteedCrit', 'moment:crit'] },
   blackSap: { side: 'self', consumes: ['moment:heal'], produces: ['status:poison', 'damage:temporal'] },
   bloodDebt: { side: 'self', consumes: ['moment:reflect'], produces: ['status:bleed', 'damage:temporal'] },
-  stormSky: { side: 'self', produces: ['damage:instant'] },
+  stormSky: { side: 'self', produces: ['damage:instant', 'damage:lightning'] },
   bloodFrenzy: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'status:bloodFrenzyStrike', 'moment:hit', 'damage:instant'] },
   bloodFrenzyStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   // Les Maîtrises, vague 2 (2026-10-27) : la Veine vit des 6 et donne un jet complet ; l'Effroi vit des critiques et fait
@@ -152,9 +156,26 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   luckyStreak: { side: 'self', consumes: ['face:max'], produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   dread: { side: 'self', consumes: ['moment:crit'], produces: ['status:fear', 'moment:crit'] },
   rancor: { side: 'self', consumes: ['moment:hurt'], produces: ['status:momentum', 'damage:instant'] },
-  stormField: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant'] },
+  stormField: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant', 'damage:lightning'] },
   ballad: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
   stoneFist: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
+  // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : l'Élan vit des gros coups, fait critiquer (donc des gros
+  // coups) et donne de la Ferveur ; la Surtension vit des éclairs ; l'Emprise des malus de l'adversaire ; le Larcin
+  // des esquives (et en donne) ; l'Onde de choc, des jauges, des coups encaissés
+  onrush: { side: 'self', consumes: ['moment:heavy'], produces: ['moment:crit', 'status:momentum', 'damage:instant'] },
+  overcharge: { side: 'self', consumes: ['damage:lightning'], produces: ['damage:instant', 'damage:lightning'] },
+  grip: { side: 'self', consumes: ['malus'], produces: ['damage:instant'] },
+  pilfer: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge'] },
+  shockwave: { side: 'self', consumes: ['moment:hurt'] },
+  // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme, posée sur l'adversaire, part quand il frappe le lanceur
+  // (ses coups reçus) et le soigne ; la Flamme votive vit de ses soins et pose une Brûlure (qui remplace l'ancienne) ; la
+  // Sangsue lit le Saignement de l'adversaire à chaque coup qui touche et soigne ; la Peau de crapaud vit des coups reçus ;
+  // la Pièce vert-de-gris, une pièce d'effet du Poison
+  tithe: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:heal', 'damage:instant'] },
+  votiveFlame: { side: 'self', consumes: ['moment:heal'], produces: ['status:burn', 'damage:temporal'], hinders: ['slot:burn'] },
+  leech: { side: 'self', consumes: ['moment:hit', 'status:bleed'], produces: ['moment:heal'] },
+  toadSkin: { side: 'self', consumes: ['moment:hurt'], produces: ['status:poison', 'damage:temporal'] },
+  verdigrisCoin: { side: 'self', produces: ['moment:heads', 'status:poison', 'damage:temporal'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -166,7 +187,7 @@ function triggerHook(t: Trigger): Hook | undefined {
   if (t === 'heads') return 'moment:heads'
   const face = rollFace(t)
   if (face !== undefined) return `face:${face}`
-  return t === 'hit' || t === 'hurt' || t === 'crit' || t === 'dodge' || t === 'missed' ? `moment:${t}` : undefined
+  return t === 'hit' || t === 'hurt' || t === 'crit' || t === 'heavy' || t === 'dodge' || t === 'missed' ? `moment:${t}` : undefined
 }
 
 function addEffect(into: Hooks, e: Effect) {
@@ -179,16 +200,17 @@ function addEffect(into: Hooks, e: Effect) {
       break
     }
     case 'damage':
-      into.produces.push(`damage:${damageKind(e.source)}`)
+      into.produces.push(`damage:${damageKind(e.source)}`, ...(e.target === 'opponent' && e.source === 'lightning' ? (['damage:lightning'] as const) : []))
       break
     case 'release':
       into.produces.push(`damage:${damageKind(e.source)}`)
       // Ses jauges relâchées : des dégâts renvoyés. Le statut de l'adversaire relâché (Embrasement) : elle le lit, et le
-      // retire (une brique qui le lit aussi en voit moins)
+      // retire (une brique qui le lit aussi en voit moins). Ses jauges comptées (Onde de choc, `per`) : les coups reçus
       if (e.from === 'opponent') {
         into.consumes.push(`status:${e.status}`)
         into.hinders.push(`status:${e.status}`)
-      } else into.produces.push('moment:reflect')
+      } else if (e.per !== undefined) into.consumes.push(...(STATUS_HOOKS[e.status].consumes ?? []))
+      else into.produces.push('moment:reflect')
       break
     case 'heal':
       into.produces.push('moment:heal')
@@ -200,7 +222,20 @@ function addEffect(into: Hooks, e: Effect) {
   }
 }
 
-const unique = (h: Hooks): Hooks => ({ produces: [...new Set(h.produces)], consumes: [...new Set(h.consumes)], hinders: [...new Set(h.hinders)] })
+/**
+ * Ce qu'une production entraîne d'elle-même : un critique est un gros coup (le déclencheur `heavy` part avec chaque
+ * critique) ; un statut négatif posé est un malus (l'Emprise les compte tous). Lu par `unique` et par `reachOf`.
+ */
+function derived(produces: Iterable<Hook>): Hook[] {
+  const out: Hook[] = []
+  for (const h of produces) {
+    if (h === 'moment:crit') out.push('moment:heavy')
+    if (h.startsWith('status:') && STATUSES[h.slice('status:'.length) as StatusId]?.polarity === 'negative') out.push('malus')
+  }
+  return out
+}
+
+const unique = (h: Hooks): Hooks => ({ produces: [...new Set([...h.produces, ...derived(h.produces)])], consumes: [...new Set(h.consumes)], hinders: [...new Set(h.hinders)] })
 
 /** Les accroches d'une compétence, déduites de son déclencheur, de ses conditions et de ses effets. */
 export function eventHooks(e: CharacterEvent): Hooks {
@@ -208,10 +243,10 @@ export function eventHooks(e: CharacterEvent): Hooks {
   const on = triggerHook(e.trigger)
   if (on) h.consumes.push(on)
   for (const c of e.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
-  // Virulence : elle lit les charges d'un statut
-  for (const x of e.effects) if (x.type === 'applyStatus' && x.fromStatus) h.consumes.push(`status:${x.fromStatus.status}`)
+  // Virulence, Agonie : elle lit les charges d'un statut
+  for (const x of e.effects) if ((x.type === 'applyStatus' || x.type === 'heal' || x.type === 'damage') && x.fromStatus) h.consumes.push(`status:${x.fromStatus.status}`)
   // Crescendo, Soliste : ce coup ×N, un gros coup qui touche
-  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:instant')
+  if (e.hitMultiplier) h.produces.push('moment:hit', 'damage:instant', ...(e.hitMultiplier >= 2 ? (['moment:heavy'] as const) : []))
   for (const effect of e.effects) addEffect(h, effect)
   // Attiser (lot 3, X2) : une pose qui lit le même statut chez sa cible et s'y ajoute ne l'écrase jamais d'une plus faible ;
   // elle ne gêne pas sa place unique
@@ -272,8 +307,11 @@ export function relicNeeds(r: Relic): Hook[] {
   return needs
 }
 
-/** Les moments qu'un combat ne donne pas à coup sûr : un soin, une esquive, un critique, une armure vidée, un renvoi, une pile. */
-const RARE_MOMENTS: readonly Hook[] = ['moment:heal', 'moment:dodge', 'moment:crit', 'moment:shieldBreak', 'moment:reflect', 'moment:heads']
+/**
+ * Les moments qu'un combat ne donne pas à coup sûr : un soin, une esquive, un critique, une armure vidée, un renvoi, une pile ;
+ * et deux ressources qu'un dé ne donne pas d'office : des éclairs, un malus posé (quatrième retour du 2026-10-27).
+ */
+const RARE_MOMENTS: readonly Hook[] = ['moment:heal', 'moment:dodge', 'moment:crit', 'moment:heavy', 'moment:shieldBreak', 'moment:reflect', 'moment:heads', 'damage:lightning', 'malus']
 
 /**
  * Ce qu'une compétence attend pour servir (0.114.0, la règle de l'offre pertinente des reliques étendue aux compétences) :
@@ -286,8 +324,8 @@ export function skillNeeds(e: CharacterEvent): Hook[] {
   const needs: Hook[] = []
   for (const c of e.when ?? []) if (c.type === 'hasStatus' && c.who === 'opponent') needs.push(`status:${c.status}`)
   for (const x of e.effects) {
+    if ((x.type === 'applyStatus' || x.type === 'heal' || x.type === 'damage') && x.fromStatus?.who === 'opponent') needs.push(`status:${x.fromStatus.status}`)
     if (x.type !== 'applyStatus') continue
-    if (x.fromStatus?.who === 'opponent') needs.push(`status:${x.fromStatus.status}`)
     for (const h of STATUS_HOOKS[x.status].consumes ?? []) if (RARE_MOMENTS.includes(h) || h.startsWith('status:')) needs.push(h)
   }
   return [...new Set(needs)]
@@ -313,6 +351,7 @@ export function reachOf(c: {
   }
   if (c.stats.dodgeChance > 0) reach.add('moment:dodge')
   if (c.stats.critChance > 0) reach.add('moment:crit')
+  for (const h of derived(reach)) reach.add(h)
   return reach
 }
 

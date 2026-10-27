@@ -137,7 +137,8 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
         statuts et reliques, et seulement les compétences qui modifient (si le coup touche) ou qui
         remplacent (jet remplacé) ; une compétence greffée est déjà partie avec le jet
       coup esquivé : missed (actif) → dodge (défenseur)
-      coup touché : hit → crit (actif) → hurt → shieldBroken (défenseur, seulement si ce coup a vidé un de ses
+      coup touché : hit → crit (actif) → heavy (actif, « gros coup » : un critique, ou un coup ×2 et plus, quatrième demande du
+      2026-10-27 : l'Élan) → hurt → shieldBroken (défenseur, seulement si ce coup a vidé un de ses
       boucliers : une armure temporaire qui a absorbé tout ce qui lui restait ; phase 8, second lot). Vol de vie
       réagit dans `hit` (actif), Riposte et jauges de Rétribution dans `hurt` (défenseur), à leur rang parmi ses
       statuts (ordre de pose ; une jauge encore vide passe après eux), puis les compétences, puis les reliques
@@ -147,6 +148,14 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
       s'éteint ; sans Brûlure, sa réaction ne part pas et la charge attend
       coup brut (Furie des vents, `plain`) : ses fenêtres du dé n'éveillent que les reliques (2026-10-23), ni statut ni compétence
       jet remplacé (`replaced`) : ni esquivé ni touché, seules les fenêtres du dé s'ouvrent
+      quatrième demande du 2026-10-27 : le Larcin réagit dans `dodge` (défenseur) en prenant une charge du dernier bonus de
+      l'attaquant (`cleanse` avec `steal` : une charge retirée à l'attaquant, qui garde les autres ; posée chez lui avec sa
+      durée, la dernière avec l'intensité, selon ses propres règles de pose, marquée volée : règle commune des vols, § 6) ;
+      sans bonus à prendre, sa réaction ne part pas. L'Onde de choc relâche ses jauges comptées
+      (`release.per` : `per` PV par jauge remplie, en une perte de dégâts directs, pas un renvoi). Les dégâts directs que le
+      porteur inflige à l'adversaire passent, impact par impact, par ses filtres `modifyDirect` selon leur source (la
+      Surtension : +1 à chaque éclair) ; l'Emprise (`modifyOutgoing`, qui lit les statuts du défenseur au début du coup)
+      ajoute +1 par malus qu'il porte
   Phase 3 · FIN DE TOUR (actif)
     1. Effets de fin de tour des statuts de l'actif (onTurnEnd) : bonus, puis malus. Le Poison agit ici
        depuis le 2026-10-27 (M2, retour de l'utilisateur : « à la fin du tour de celui qui les subit ») :
@@ -303,7 +312,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 
 | Famille | Quand | Exemples | Mise en œuvre |
 | --- | --- | --- | --- |
-| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) ; une pose peut tirer ses charges du coup de ce jet (`fromHit`, Pourfendre) ou d'un statut, lu à cet instant (`fromStatus`, 0.114.0 : la Virulence ajoute deux fois le Poison que porte l'adversaire, son Poison triplé) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
+| **Instantané** | Au moment où l'événement se déclenche | soin, dégâts directs (Foudre du druide, 0.73.0 ; en 0.76.0, 3 coups de 2 : `hits` d'un effet `damage`, comptés ensemble dans la même étape, détail dans `parts`, jamais critiques, sans armure, esquive ni bouclier), pose d'un statut, purge (avec un effet de repli s'il n'y a rien à retirer : `orElse`, 0.42.0) ; une pose peut tirer ses charges du coup de ce jet (`fromHit`, Pourfendre) ou d'un statut, lu à cet instant (`fromStatus`, 0.114.0 : la Virulence ajoute deux fois le Poison que porte l'adversaire, son Poison triplé) ; un soin ou des dégâts aussi (`StatusRead`, 2026-10-27 : la Sangsue rend 1 PV par charge de Saignement de l'adversaire, lue au coup avant que la plaie coule ; une réaction qui ne vaudrait que ce qu'elle lit, sans le statut, ne part pas) | `Effect` (`heal`, `damage`, `applyStatus`, `cleanse`) |
 | **Continu** | Tant que le statut est présent, à chaque calcul | Brèche (armure), Affaibli, Vulnérable, Aura d'immunité (armure +1) | `modifyStats`, `modifyOutgoing`, `modifyIncoming`, `modifyFinal` |
 | **Périodique** | Au début ou à la fin des tours du porteur | Régénération, Pourriture (début), Poison et Brûlure (fin, le Poison depuis le 2026-10-27) | `onTurnStart`, `onTurnEnd` |
 | **Qui s'estompe** | Perd une charge chaque fois qu'il agit, au même instant que son effet ; disparaît à 0 (étape `statusAge` de la phase, ou dans l'étape même de la réaction). Pas de durée en tours (refusée par `validateRoster`) | Poison (0.36.4) : 3, 2, 1 par tour ; Saignement (0.68.0) : 2, 1 par coup reçu | `decays` (sur `onTurnStart`, `onTurnEnd` ou une réaction) |
@@ -337,6 +346,8 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 ## 6. Poser un statut : application et opposition
 
 **Avant les quatre règles ci-dessous, le Sceau de vol** (phase 8, lot 3, `stealsBonus`) : un bonus qu'un combattant se pose lui-même (compétence, réaction, relique ; jamais un mécanisme) alors qu'il porte le Sceau de vol va à son adversaire : une charge du Sceau part, et la pose se rejoue sur l'adversaire, avec ses quatre règles à lui (immunité, garde, opposition, cumul). L'étape garde la trace du vol (`AppliedEffect.stolenBy`) ; la pose compte au voleur (`fresh`, `posedBy`).
+
+**Un vol prend une charge** (règle commune des vols, quatrième demande du 2026-10-27) : la Confiscation ne détourne qu'une charge de la pose (le lanceur garde les autres et l'intensité, `AppliedEffect.kept`, qui passent par ses quatre règles à lui) ; le Larcin ne prend qu'une charge du bonus porté (le volé garde les autres ; `cleanse.stolen`). La dernière charge emporte le bonus entier, intensité comprise. Mesure : le Larcin prenait tout le Duo de Fanchon (3 charges), départs d'Ervald et d'Aldric à 66,5 et 69,0 % contre elle ; avec une charge, 52,3 et 60,0 %.
 
 Quand un effet pose un statut, quatre règles s'appliquent **dans cet ordre** :
 

@@ -178,6 +178,38 @@ OUTPUT: landscape 1536x1024, wider than tall.
 
 C'est le prompt de référence : [STYLE_BIBLE.md](STYLE_BIBLE.md) § 5.3.
 
+### Le Colosse (boss) : La Loge-du-Colosse, Grand Cirque
+
+```text
+A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: the arena walls as tall clean curved planes, the tiers as bold horizontal bands, shields as flat discs, weapons as crisp straight silhouettes, ribbon-like clouds. Flat colors with subtle dry-brush texture, crisp edges, an ominous, grand and oppressive epic mood. Original location, not based on any existing film, book or game.
+
+SCENE: the floor of the Great Circus at dawn, the domain of the Colossus, a giant ogre champion who has ruled this arena for longer than its stands have stood. No one has ever seen him fall. From every champion he broke, he kept a trophy, and he hung them all on the walls of his arena. The stands are empty; the place belongs to him alone.
+
+THE TROPHY WALLS (the dominant pattern of the image): the high inner walls of the arena curve away on both sides toward the back, entirely covered with trophies of fallen champions hung on iron hooks in long, regular rows, hundreds of them: dented helmets, broken swords, split shields painted with forgotten crests, a cracked bow, a lute with snapped strings, a pointed wizard's hat, a mace with a sun emblem. The rows converge in strong perspective toward the throne. At the very end of the lowest row, nearest the throne, one single empty hook, waiting.
+
+CENTER, THE THRONE (the focal shape): at the far end of the arena, at the foot of the empty stands, a colossal throne ten times human size, built from hundreds of stacked shields of beaten champions, crude and massive. Planted in the sand beside it, his giant cleaver, twice the height of a man, its blade gilded with gold. At the foot of the throne, a large bronze bowl overflowing with gold coins: the bribes of those who paid him to lose. Two long dark oxblood banners hang from the stands on each side of the throne.
+
+LEFT FRAME: the left trophy wall rises from behind the fighting ground to beyond the top edge of the image, dark and heavy. At its foot, behind the fighting ground: a giant iron chain anchored in the wall with a huge open collar, a massive stone bench sized for a giant, a rat sniffing a fallen gauntlet.
+
+RIGHT FRAME: the right trophy wall rises the same way, to beyond the top edge. At its foot, behind the fighting ground: a rack of oversized weapons, a huge round whetstone on a wooden frame, a cold iron brazier, unlit. Two vultures perched on the top of the wall.
+
+FIGHTING GROUND AND CAMERA: the camera stands at human eye level, a few meters from where two fighters will stand, slightly low so the throne and walls feel colossal. A wide, flat, empty floor of raked dark sand runs without interruption from the very bottom edge of the image up to the foot of the walls and the throne, across the whole width. Nothing at all in the bottom third of the image, corners included: no rock, no weapon, no object, so the fighters' feet will clearly stand on the ground. At the bottom edge, the ground is seen at the scale of a standing person, neither a close-up nor far away. Only on the back edges of the arena floor: deep giant footprints, broken spear shafts, a lost helmet hinting at past fights.
+
+DISTANCE (center): above the throne, the curved empty tiers of the opposite stands, the top of the arena rim with a few tattered pennants, and above it a pale cold dawn sky with flat ribbon clouds.
+
+DEPTH: three clearly separated planes, each in its own flat value: the dark trophy walls framing the sides, the mid-value throne and stands, the pale dawn sky.
+
+LIGHT AND SHADOW: strong chiaroscuro, a dark image with a bright heart. The brightest part of the image is the pale cold dawn sky above the rim, behind the throne, which stands out as a heavy dark silhouette. Cold grey-blue light falls into the arena from above and lays a pale flat strip on the sand toward the middle of the fighting ground. The trophy walls are in deep blue shadow, dark but still readable, the rows of trophies visible. The only warm notes are small flat glints of gold on the cleaver and the coins. Light is painted as flat bright shapes, never as a glow.
+
+COLOR: dawn. Limited palette: steel blue-grey, deep slate shadow, oxblood red, tarnished gold, bone white, dark sand umber. No orange.
+
+COMPOSITION: one-point perspective toward the throne, the vanishing point at its base, strict symmetry, horizon at about 45% of the height. The converging rows of trophies give a strong rhythm and lead the eye to the throne. The center of the fighting ground stays calm and low-contrast.
+
+AVOID: orange or warm light, sunset, red cast over the whole image, torches lit, fire, foreground objects, anything in the bottom third of the image, blood, gore, bodies, skeletons, skulls, bloom, glow, light rays, lens flare, sparkles, particles, floating embers, dust motes, haze effects, rim light, gradients, glossy reflections, HDR look, hyper-detailed textures, photorealism, 3D render look, people, crowd, monsters, text, letters, logo, watermark.
+
+OUTPUT: landscape 1536x1024, wider than tall.
+```
+
 ## Écrans clés (écrits avant le § 5.2 bis)
 
 Zones de l'écran, mesurées sur la scène de 1600×900 (le 3:2 recadré en 16:9 perd environ 8 % en haut et en bas) :

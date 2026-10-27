@@ -133,7 +133,7 @@ flowchart LR
 | Croc de boucher | +2 dégâts aux adversaires qui saignent | Si l'adversaire porte Saignement : +2 dégâts à ce coup |
 | Encens de l'abbaye | +1 ferveur à chaque soin reçu | Quand il regagne des PV : +1 Ferveur |
 | Écu cabossé | +2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire |
-| Plume d'aigle | +1 esquive améliorée lors d'un coup critique, recharge 2 tours | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours |
+| Plume d'aigle | +1 esquive améliorée lors d'un coup critique, recharge 4 tours (2 jusqu'à la quatrième demande du 2026-10-27) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours |
 
 La Fiole de venin (et tout bonus de coup à conditions) vaut au coup de base comme aux coups bruts de la Furie des vents, le coup qui remplace le jet (vérifié en 0.111.0 : le moteur l'appliquait déjà ; test de `combat.test.ts`).
 
@@ -518,7 +518,7 @@ Les accroches se déduisent des données (`relicHooks`) : la condition `hasStatu
 | Croc de boucher (`butcher-hook`) | Si l'adversaire porte Saignement : +2 dégâts à ce coup | `status:bleed` | Brokk (Épines), Gorak (Pourfendre) | +2,0 | Brokk **+10,7**, Gorak **+9,7** ; les autres 0 | 0,4 |
 | Encens de l'abbaye (`abbey-incense`) | Quand il regagne des PV : +1 Ferveur | `moment:heal` | Ysolde (Aura de sainteté), Ervald (Vol de vie) | +1,1 | Ysolde **+8,4**, Ervald +2,5 ; les autres 0 | 0,5 |
 | Écu cabossé (`dented-shield`) | Quand il encaisse un coup de 6 PV ou plus : +2 Armure temporaire | `moment:hurt` | Aldric, Brokk (les coups encaissés) | **+15,5** | Aldric +12,1, Brokk +15,5 ; d'Elaria +11,8 à Thaldrin +19,5 | 2,9 |
-| Plume d'aigle (`eagle-feather`) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours | `moment:crit` | Elaria (Œil de faucon) | +10,2 | Elaria **+16,9** ; Ervald +17,1, Fanchon +15,1, Morgrut 0 (aucun critique) | 0,7 |
+| Plume d'aigle (`eagle-feather`) | Quand il porte un critique : +1 Esquive améliorée · recharge 2 tours (4 depuis la quatrième demande du 2026-10-27, plus bas) | `moment:crit` | Elaria (Œil de faucon) | +10,2 | Elaria **+16,9** ; Ervald +17,1, Fanchon +15,1, Morgrut 0 (aucun critique) | 0,7 |
 
 Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-10-24-10-58-56_v0.108.0.md`). Remesurée après les corrections du moteur de la 0.110.0 (`logs/relics/2026-10-24-17-03-44_v0.109.1.md`, même roster, mêmes graines) : les cinq lignes sont identiques au dixième près (Fiole chez Naraxes : 53,8 → 55,8 %, +2,0).
 
@@ -527,6 +527,18 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-1
 - **Naraxes nourrit peu la Fiole** (+2,0, remesuré en 0.110.0) : son Aura de décoction pose 1 Poison par coup qui touche (et un de plus sur pile, qui compte comme un coup qui touche), qui agit et s'estompe au début du tour suivant de l'adversaire. Il en reste parfois au coup suivant (la revue de la 0.109.0 compte 292 bonus sur 400 combats, 0,73 par combat, aucun en rafale), mais le gain reste faible : il n'a plus Coup de chance, et la lecture d'avant (« seul un second jet dans la même action le nourrit ») est périmée. Ervald, lui, pose son Poison au début de son tour, avant son coup.
 - **L'Écu cabossé est fort partout** (+15,5, au-dessus de 15, sous 20) : tout le monde encaisse des coups de 6. Il ne grandit pas avec une ressource (Aldric +12,1, sous la moyenne). Valeur de la proposition gardée (dans la tolérance de 20) ; repli mesuré, à décider : **6 PV ou plus, +1 Armure temporaire : +8,9** (de +7,1 à +10,9) ; **7 PV ou plus, +2 : +9,4** (de +6,6 à +12,3).
 - **La Plume d'aigle** est le second consommateur des critiques : Elaria +16,9, Ervald +17,1, Morgrut 0 (un porteur sans critique n'en tire rien).
+- **Quatrième demande du 2026-10-27, recharge 2 → 4** (« fais ce qu'il faut pour la Plume d'aigle » ; elle valait **+24,7 chez Elaria construite**, `npm run ramp`, au-dessus du plafond de 20 d'une relique : ses critiques assurés, Œil de faucon et Feinte, la déclenchent presque à chaque fois). Mesures d'un script jetable (supprimé) : apport moyen contre le roster nu (200 combats par duel, méthode de `npm run relics`) et chez Elaria construite (ses 17 builds de `npm run ramp` qui la portent, 60 combats par duel, retrouvés à 0,0 près) :
+
+  | Plume d'aigle | Moyenne | Elaria (roster nu) | Elaria construite |
+  | --- | --- | --- | --- |
+  | recharge 2 (avant) | +13,1 | +30,1 | **+24,7** |
+  | recharge 3 | +12,3 | +26,1 | +20,7 |
+  | **recharge 4** (retenue) | **+11,8** | +23,4 | **+18,1** |
+  | recharge 5 | +11,2 | +20,1 | +15,8 |
+  | 2 charges par combat | +12,8 | +25,9 | +18,6 |
+  | 1 charge par combat | +10,3 | +14,3 | +10,7 |
+
+  La recharge 3 restait au-dessus de 20 ; la recharge 4 garde la règle et l'icône (une barbe arrachée par tour de recharge) et passe sous le plafond avec une marge. Après la livraison : `npm run relics` (`logs/relics/2026-10-27-19-20-34_v0.126.0.md`, 400 par duel) **+11,4** en moyenne (Morgrut +4,1 à Elaria +22,5 ; Ervald +18,1) ; `npm run ramp` (`logs/ramp/2026-10-27-19-25-30_v0.126.0.md`) chez ses porteurs construits **+10,8** en moyenne, **Elaria +18,2** (± 1,5, 17 builds ; +24,7 avant), Aldric +12,9, Ervald +12,0, Naraxes +11,3, Gorak +10,7, Thaldrin +9,8, Brokk +9,3, Morgrut +8,6, Fanchon +7,7, Ysolde +7,6. Elaria construite 57,3 → 54,9 %. Contre le roster nu, chez Elaria, elle reste au-dessus de 20 (+22,5) : le plafond se lit chez le porteur construit.
 
 **Réglage fait (choix de l'agent).** La **Fiole de venin** était proposée « contre un adversaire qui porte **3 Poison ou plus** ». Mesurée ainsi : **+0,2** (Ervald +1,5, Naraxes +0,2, les autres 0, 0,1 déclenchement par combat) : le Poison s'estompe d'une charge par tour, aucun personnage n'en tient trois. Variantes (même mesure) : 2 Poison ou plus, +2 : Ervald +2,8 ; 2 ou plus, +3 : Ervald +3,4 ; **1 ou plus, +2 : Ervald +13,7** (retenu) ; 1 ou plus, +3 : Ervald +16,8. L'idée reste (elle consomme le Poison, le palier passe de 3 à 1) ; le palier à charges reste possible (`hasStatus` avec `stacks`, testé), pour un Poison qui tiendrait (Souffle de la tombe gravé, deux Auras glaciales).
 
@@ -547,7 +559,7 @@ Mesure : `npm run relics`, 400 combats par duel, 2026-10-24 (`logs/relics/2026-1
 - Croc de boucher : un croc à viande de fer au manche de corne, la pointe noircie d'une seule goutte de sang séché, pendu à une ficelle.
 - Encens de l'abbaye : un pain de résine ambrée enveloppé de lin, **une** braise (+1). Pas l'encensoir d'abord proposé : l'encensoir est déjà l'icône de l'Aura de décoction.
 - Écu cabossé : la **bosse de fer** d'un vieil écu (l'umbo), arrachée à son bois, **six** creux profonds sur le dôme (le seuil de 6), une lanière passée dans un rivet. Pas l'écu entier : l'écu est déjà l'icône de l'Armure temporaire.
-- Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours).
+- Plume d'aigle : une rémige d'aigle liée d'un fil rouge à un anneau de cuivre, **deux** barbes arrachées (la recharge de 2 tours). **À repeindre** avec **quatre** barbes arrachées (recharge de 4 tours depuis la quatrième demande du 2026-10-27), même plume bleu cobalt, même cadrage ; d'ici là, l'icône aux deux barbes reste en place.
 
 **Icônes** : peintes en 0.109.1 (planche v14, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 : `venom-vial`, `butcher-hook`, `abbey-incense`, `dented-shield`, `eagle-feather`) ; l'Écu redessiné une fois pour montrer exactement six creux. La Ferveur n'a pas besoin d'icône propre : un statut montre l'emblème de son état (règle de la 0.96.2), et la zone d'état comme le compendium montrent celui de la Puissance, qu'elle alimente.
 

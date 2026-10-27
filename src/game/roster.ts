@@ -419,7 +419,12 @@ const morgrut: CharacterDef = {
   // Crescendo (Fureur) : « Taper. Taper encore. Taper plus fort. », ce coup ×2, puis ×3, ×4 à chaque fois. Des six
   // candidates mesurées, la meilleure montée construite (33,1 → 50,1 % à 10 récompenses, sans compensation) ; sa force
   // nue (69,4 %) se compense par l'attaque, 6 à 8 → 5 à 7 (PV intacts). Mesures : docs/PERSONNAGES.md, Morgrut
-  stats: { maxHp: 59, attackMin: 5, attackMax: 7, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
+  // Quatrième demande du 2026-10-27 (« il ne fait presque rien, mais ses coups sont plus forts ») : quatre faces de
+  // compétence au plus (`skillFaces`, cinq pour les autres), la plus lourde attaque du roster, 5 à 7 → 6 à 8, et 59 → 52 PV,
+  // le seul levier qui baisse sa force nue plus que sa force construite (les +2 PV par récompense pèsent plus sur peu de
+  // PV). Vanilla 54,8 → 55,3 ; départs 41,9-54,8 → 44,3-55,3 ; construit 40,5 → 43,9 (face 2 nue : 41 au mieux, pour
+  // 66 % nu). Mesures : docs/PERSONNAGES.md, « La quatrième demande »
+  stats: { maxHp: 52, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
   // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
   // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
   // massue du coup encaissé et du K.O. descend sous les pieds
@@ -438,12 +443,14 @@ const morgrut: CharacterDef = {
     tagline: 'Taper. Taper encore. Taper plus fort.',
     background:
       "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Les dés, il ne les regarde même pas : il tape.",
-    strengths: ['Une attaque lourde (5 à 7)', 'Beaucoup de PV', 'Crescendo : chaque fois plus fort'],
-    weaknesses: ['Ni esquive ni critique', 'Aucune armure', 'Rien pour se soigner'],
+    strengths: ['La plus lourde attaque (6 à 8)', 'Crescendo : chaque fois plus fort'],
+    weaknesses: ['Quatre faces de compétence au plus', 'Ni esquive ni critique', 'Aucune armure ni soin'],
   },
-  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, le Crescendo sur le 2 (C5)
+  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, le Crescendo sur le 2 (C5) ; deux
+  // gravures au plus ensuite (quatrième demande)
   masteries: ['fury', 'bulwark'],
   signature: 'crescendo',
+  skillFaces: 4,
   events: startDie('power-aura', 'crescendo'),
 }
 
@@ -671,13 +678,23 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       }
       for (const f of e.effects) {
         // Pourfendre (`fromHit`), Virulence (`fromStatus`) : leurs charges viennent du coup ou d'un statut, celles de la
-        // définition s'y ajoutent (0 permis) ; Pourfendre, sur une compétence qui modifie son coup (elle part s'il touche)
-        const amount = f.type === 'applyStatus' ? f.stacks + (f.fromHit === undefined && f.fromStatus === undefined ? 0 : 1) : f.type === 'cleanse' ? 1 : f.type === 'release' ? f.min : f.amount
+        // définition s'y ajoutent (0 permis) ; Pourfendre, sur une compétence qui modifie son coup (elle part s'il touche).
+        // Onde de choc (`release.per`) : sa valeur est le montant par jauge. Un soin ou des dégâts lus sur un statut
+        // (`fromStatus`, Sangsue, 2026-10-27) : leur montant s'y ajoute (0 permis)
+        const read = f.type === 'applyStatus' || f.type === 'heal' || f.type === 'damage' ? f.fromStatus : undefined
+        const amount =
+          f.type === 'applyStatus'
+            ? f.stacks + (f.fromHit === undefined && read === undefined ? 0 : 1)
+            : f.type === 'cleanse'
+              ? 1
+              : f.type === 'release'
+                ? (f.per ?? f.min)
+                : f.amount + (read === undefined ? 0 : 1)
         if (!Number.isInteger(amount) || amount < 1)
           problems.push(`${at} ${e.id} : effet ${f.type} sans valeur entière ≥ 1`)
         if (f.type === 'applyStatus' && f.fromHit !== undefined && (!(f.fromHit > 0 && f.fromHit <= 1) || e.relation !== 'modify' || !onDie))
           problems.push(`${at} ${e.id} : fromHit dans ]0, 1], sur une compétence du dé qui modifie son coup`)
-        if (f.type === 'applyStatus' && f.fromStatus !== undefined && (!Number.isInteger(f.fromStatus.factor) || f.fromStatus.factor < 1))
+        if (read !== undefined && (!Number.isInteger(read.factor) || read.factor < 1))
           problems.push(`${at} ${e.id} : fromStatus, un facteur entier ≥ 1`)
         if (f.type === 'release' && f.share !== undefined && !(f.share > 0 && f.share <= 1)) problems.push(`${at} ${e.id} : share dans ]0, 1]`)
         if (f.type === 'applyStatus' && f.turns !== undefined && (!Number.isInteger(f.turns) || f.turns < 1))
@@ -704,7 +721,7 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
         // Des charges en plus : sur un statut sans plafond (au plafond, un rang ne gagnerait plus rien)
         stacks: posed !== undefined && STATUSES[posed.status].maxStacks === undefined,
         power: posed !== undefined && STATUSES[posed.status].power !== undefined,
-        amount: e.effects.some((x) => x.type === 'damage' || x.type === 'heal' || (x.type === 'cleanse' && (x.orElse?.type === 'damage' || x.orElse?.type === 'heal'))),
+        amount: e.effects.some((x) => x.type === 'damage' || x.type === 'heal' || (x.type === 'release' && x.per !== undefined) || (x.type === 'cleanse' && (x.orElse?.type === 'damage' || x.orElse?.type === 'heal'))),
         multiplier: e.hitMultiplier !== undefined,
         limit: e.limit !== undefined,
         share: e.effects.some((x) => x.type === 'release' && x.share !== undefined),

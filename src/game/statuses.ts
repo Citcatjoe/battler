@@ -1,4 +1,5 @@
 import type { CharacterStats } from './character'
+import type { DamageSource } from './damage'
 import { triggerText, type Effect, type Trigger } from './events'
 import type { RuleId } from './rules'
 import { typeset } from './typography'
@@ -89,6 +90,18 @@ export type StatusId =
   | 'stormField'
   | 'ballad'
   | 'stoneFist'
+  // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : Fureur, Magie, Ombre, Rempart
+  | 'onrush'
+  | 'overcharge'
+  | 'grip'
+  | 'pilfer'
+  | 'shockwave'
+  // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu du soin ») : Lumière, Sang, Poison
+  | 'tithe'
+  | 'votiveFlame'
+  | 'leech'
+  | 'toadSkin'
+  | 'verdigrisCoin'
 
 export type Polarity = 'positive' | 'negative'
 
@@ -166,13 +179,22 @@ export interface StatusDef {
 
   /** Modifie les stats effectives du porteur (bornées ensuite par le moteur) */
   modifyStats?: (stats: CombatStats, s: Status) => CombatStats
-  /** Modifie les dégâts du porteur avant l'armure (le coup garde au moins 1) */
-  modifyOutgoing?: (damage: number, s: Status) => number
+  /**
+   * Modifie les dégâts du porteur avant l'armure (le coup garde au moins 1). `foe` : les statuts du défenseur au moment du
+   * coup (Emprise, quatrième retour du 2026-10-27 : elle compte ses malus)
+   */
+  modifyOutgoing?: (damage: number, s: Status, foe: readonly Status[]) => number
   /**
    * Modifie les dégâts FINAUX des coups du porteur : après l'armure et les boucliers, au moins 1 (Fausse note).
    * Contrairement à `modifyOutgoing`, ni l'armure ni l'intimidation ne le rognent.
    */
   modifyFinal?: (damage: number, s: Status) => number
+  /**
+   * Surtension (quatrième retour du 2026-10-27) : chaque impact des dégâts directs que le porteur inflige à l'adversaire (un
+   * effet `damage` de ses compétences, de ses statuts, de ses reliques ; une relâche) passe par ce filtre, avant la perte ;
+   * `source` dit ce qu'ils sont (la Surtension ne lit que la foudre)
+   */
+  modifyDirect?: (amount: number, s: Status, source: DamageSource) => number
   /**
    * Le prochain coup du porteur est critique (retour de l'utilisateur du 2026-10-27, B8) : la charge part avec ce coup,
    * qu'il touche ou qu'il soit esquivé ou raté (Aveuglé). Un jet sans coup (remplacé, tombé à vide) la garde.
@@ -340,14 +362,24 @@ export interface StatusDef {
   /** Hémorragie (lot 3) : chaque soin que reçoit le porteur passe par ce filtre (montant voulu → montant gardé) */
   modifyHealing?: (amount: number, s: Status) => number
   /**
-   * Sceau de vol (lot 3) : le prochain bonus que le porteur se pose (hors mécanisme) va à l'adversaire, avec ses charges,
-   * selon les règles de pose de l'adversaire ; une charge par vol
+   * Sceau de vol (lot 3) : le prochain bonus que le porteur se pose (hors mécanisme) va à l'adversaire, selon les règles
+   * de pose de l'adversaire ; une charge de Sceau par vol. Un vol prend une charge du bonus (règle commune des vols,
+   * quatrième demande du 2026-10-27, comme le Larcin) : le porteur garde les autres
    */
   stealsBonus?: true
 }
 
 /** Les charges qui agissent : les charges, plus l'intensité (une aura aiguisée compte autant de charges de plus, 0.110.0). */
 export const charges = (s: Status) => s.stacks + (s.power ?? 0)
+
+/**
+ * Un impact de dégâts directs infligé à l'adversaire par le porteur de `statuses`, après leurs filtres `modifyDirect`
+ * (Surtension, quatrième retour du 2026-10-27, la foudre seule) ; un impact nul reste nul. Le moteur et l'audit le lisent ici.
+ */
+export function directDamage(statuses: readonly Status[], amount: number, source: DamageSource): number {
+  if (amount <= 0) return amount
+  return statuses.reduce((n, s) => STATUSES[s.id].modifyDirect?.(n, s, source) ?? n, amount)
+}
 
 /** Coups de base d'une rafale de Furie des vents, par charge (son intensité en ajoute, 0.110.0). */
 const WIND_FURY_STRIKES = 2
@@ -423,6 +455,37 @@ export const BLOOD_FRENZY_STRIKES = 2
 export const BLOOD_FRENZY_CRIT = 0.05
 /** Ivresse du sang : la première pose donne les coups ; chaque charge de plus, et chaque rang, du critique. */
 const frenzyCrit = (s: Status) => BLOOD_FRENZY_CRIT * (s.stacks - 1 + (s.power ?? 0))
+
+/**
+ * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises », séries 85 à 92 du laboratoire, gravées
+ * sur le 3 nu). Élan : critique par charge, et Ferveur par gros coup (Gorak +15,7, Morgrut +7,7 ; la Ferveur seule, +2,6 et
+ * +1,6 : les gros coups sont trop rares sans la chance de critique). Surtension : dégâts directs en plus par impact et par
+ * charge, la foudre seule (Thaldrin +9,3 ; +2 : +14,1 ; tous ses dégâts directs, la Purification comprise : départ d'Ysolde 35,6 %). Emprise : dégâts par malus de l'adversaire et par charge (Ervald +9,1 ; +2 : +15,1).
+ * Larcin : esquive par charge (Ervald +12,6, Aldric +7,6 ; +10 % : +18,1 et +11,7 ; au coup reçu : +21,7, trop). Onde de
+ * choc : PV par coup encaissé, ses jauges (3 jauges : Brokk +10,6, Morgrut +9,2 ; 3 PV : +15,4 et +13,6).
+ */
+export const ONRUSH_CRIT = 0.1
+export const ONRUSH_FERVOR = 3
+export const OVERCHARGE = 1
+export const GRIP = 1
+export const PILFER_DODGE = 0.05
+export const SHOCKWAVE_PER = 2
+export const SHOCKWAVE_SLOTS = 3
+/** Emprise : les malus que porte l'adversaire, un par statut (ses charges ne comptent pas), mécanismes exclus */
+export const malusCount = (foe: readonly Status[]) => foe.filter((x) => STATUSES[x.id].polarity === 'negative' && !isMechanic(x.id)).length
+
+/**
+ * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu du soin », séries 80 à 83 du laboratoire, gravées sur
+ * le 3 nu). Dîme : PV que chaque coup de l'adversaire lui coûte et rend au lanceur (2 charges ; 3 × 2 : +19,1, trop).
+ * Flamme votive : Brûlure posée à chaque soin (2 charges ; 3 × Brûlure 2 : +11,1, 2 × Brûlure 3 : +14,4). Sangsue : PV
+ * rendus par charge de Saignement de l'adversaire, à chaque coup qui touche (×2 : Brokk +21,8, trop). Peau de crapaud :
+ * Poison à l'attaquant par coup reçu. Pièce vert-de-gris : Poison sur pile (6 : +12,9 en moyenne ; 5 : +11,4).
+ */
+export const TITHE_PV = 2
+export const VOTIVE_BURN = 3
+export const LEECH_HEAL = 1
+export const TOAD_POISON = 1
+export const VERDIGRIS_POISON = 5
 
 /** Un nombre en toutes lettres, en tête de phrase (au-delà, en chiffres). */
 const COUNT_WORDS = ['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six']
@@ -1425,7 +1488,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Son prochain bonus va à l’adversaire.',
     describe: (s) => (s.stacks > 1 ? `Ses ${s.stacks} prochains bonus vont à l'adversaire` : "Son prochain bonus va à l'adversaire"),
     onFoe: (s) => (s.stacks > 1 ? `Vole les ${s.stacks} prochains bonus de l'adversaire` : "Vole le prochain bonus de l'adversaire"),
-    detail: () => 'Le prochain bonus qu’il se donne revient au lanceur à sa place, avec ses charges.',
+    detail: () => 'Une charge du prochain bonus qu’il se donne revient au lanceur à sa place ; il garde les autres.',
     plural: 'Sceaux de vol',
     badge: (s) => `×${s.stacks}`,
     counter: 'stacks',
@@ -1626,6 +1689,172 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     reactions: { shieldBroken: () => [] },
     spentOnReaction: true,
   },
+  /*
+   * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : l'Élan fait critiquer et change
+   * chaque gros coup en Ferveur (la boucle de la Fureur) ; la Surtension renforce chaque dégât direct (Magie, et la Lumière,
+   * le Sang, le Rempart qui en font) ; l'Emprise frappe d'autant plus fort que l'adversaire porte de malus (tous, d'où qu'ils
+   * viennent) ; le Larcin esquive et prend une charge du dernier bonus de l'attaquant ; l'Onde de choc compte les coups encaissés.
+   */
+  onrush: {
+    name: 'Élan',
+    look: { aura: 'rgba(251,113,133,0.5)' },
+    polarity: 'positive',
+    family: 'power',
+    summary: `+${Math.round(ONRUSH_CRIT * 100)} % de critique par charge ; chacun de ses gros coups lui donne +${ONRUSH_FERVOR} Ferveur.`,
+    describe: (s) => `+${Math.round(ONRUSH_CRIT * 100 * charges(s))} % de critique. Chacun de ses gros coups lui donne +${ONRUSH_FERVOR} Ferveur`,
+    detail: () => 'Un gros coup : un critique, ou un coup ×2 et plus (Assaut, Soliste, Crescendo). La Ferveur part sur son prochain coup qui touche.',
+    badge: (s) => `+${Math.round(ONRUSH_CRIT * 100 * charges(s))} %`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + ONRUSH_CRIT * charges(s) }),
+    reactions: { heavy: () => [{ type: 'applyStatus', status: 'momentum', stacks: ONRUSH_FERVOR }] },
+    power: (n) => `+${Math.round(ONRUSH_CRIT * 100 * n)} % de critique`,
+  },
+  overcharge: {
+    name: 'Surtension',
+    look: { aura: 'rgba(129,140,248,0.55)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `Chacun de ses éclairs fait +${OVERCHARGE} par charge.`,
+    describe: (s) => `Chacun de ses éclairs fait +${OVERCHARGE * charges(s)}`,
+    detail: () => "Ses dégâts directs de foudre sur l'adversaire, d'où qu'ils viennent : chaque éclair de la Foudre, du Ciel d'orage, du Champ d'orage.",
+    badge: (s) => `+${OVERCHARGE * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyDirect: (amount, s, source) => (source === 'lightning' ? amount + OVERCHARGE * charges(s) : amount),
+    power: (n) => `+${OVERCHARGE * n} par éclair`,
+  },
+  grip: {
+    name: 'Emprise',
+    look: { aura: 'rgba(52,211,153,0.45)' },
+    polarity: 'positive',
+    family: 'power',
+    summary: `Ses coups font +${GRIP} par malus que porte l'adversaire, par charge.`,
+    describe: (s) => `Ses coups font +${GRIP * charges(s)} par malus que porte l'adversaire`,
+    detail: () => "Avant l'armure. Chaque malus compte une fois, quelles que soient ses charges : Poison, Saignement, Brûlure, Peur…",
+    badge: (s) => `+${GRIP * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyOutgoing: (damage, s, foe) => damage + GRIP * charges(s) * malusCount(foe),
+    power: (n) => `+${GRIP * n} par malus`,
+  },
+  pilfer: {
+    name: 'Larcin',
+    look: { aura: 'rgba(217,70,239,0.45)' },
+    polarity: 'positive',
+    family: 'seals',
+    summary: `+${Math.round(PILFER_DODGE * 100)} % d'esquive par charge ; chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant.`,
+    describe: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant`,
+    // Un vol prend une charge (règle commune des vols, quatrième demande du 2026-10-27) : prendre tout le Duo de Fanchon
+    // (3 charges) mettait Ervald à 66,5 % et Aldric à 69,0 % contre elle, au départ
+    detail: () => "Une charge, avec sa durée ; la dernière emporte le bonus entier, aura comprise. Un mécanisme ne se prend pas.",
+    badge: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} %`,
+    counter: 'stacks',
+    stacking: 'add',
+    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + PILFER_DODGE * charges(s) }),
+    reactions: { dodge: () => [{ type: 'cleanse', polarity: 'positive', target: 'opponent', count: 1, steal: 'pilfer' }] },
+    power: (n) => `+${Math.round(PILFER_DODGE * 100 * n)} % d'esquive`,
+  },
+  // L'Onde de choc compte les coups qu'il encaisse : des jauges, comme la Rétribution, dont sa compétence lit le nombre
+  shockwave: {
+    name: 'Onde de choc',
+    polarity: 'positive',
+    family: 'retaliation',
+    summary: `Compte les coups qu'il encaisse, ${SHOCKWAVE_SLOTS} au plus ; sa compétence les relâche en onde de choc.`,
+    describe: (s) => {
+      const n = (s.slots ?? []).filter((x) => x > 0).length
+      return n > 1 ? `${n} coups encaissés, ${SHOCKWAVE_PER * n} PV d'onde de choc` : n === 1 ? `1 coup encaissé, ${SHOCKWAVE_PER} PV d'onde de choc` : 'Aucun coup encaissé'
+    },
+    badge: (s) => String((s.slots ?? []).filter((n) => n > 0).length),
+    stacking: 'refresh',
+    mechanic: 'skill',
+    fillsOnHurt: { slots: SHOCKWAVE_SLOTS },
+  },
+  /*
+   * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu du soin ») : la Dîme fait payer l'adversaire en
+   * soignant le lanceur ; la Flamme votive change ses soins en Brûlure (Lumière → Magie) ; la Sangsue boit le Saignement
+   * (Sang → soins) ; la Peau de crapaud empoisonne qui la frappe ; la Pièce vert-de-gris, la pièce du Poison (Poison → Chance).
+   */
+  // La Dîme est un bonus du lanceur (un malus posé sur l'adversaire, d'abord : la perte de l'adversaire et le soin du
+  // lanceur, dans la fenêtre de son coup, ne se mettaient pas en scène dans l'ordre) ; même règle, vue de l'autre côté
+  tithe: {
+    name: 'Dîme',
+    look: { glow: 'rgba(234,179,8,0.85)' },
+    polarity: 'positive',
+    family: 'healing',
+    summary: `Chacun de ses prochains coups reçus lui rend ${TITHE_PV} PV, pris à l'attaquant.`,
+    describe: (s) => next(s.stacks, `Son prochain coup reçu lui rend ${TITHE_PV} PV, pris à l'attaquant`, `Ses N prochains coups reçus lui rendent chacun ${TITHE_PV} PV, pris à l'attaquant`),
+    detail: () => "L'attaquant les perd en dégâts directs, après son coup ; les PV rendus comptent comme un soin.",
+    badge: () => `+${TITHE_PV}`,
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    reactions: {
+      hurt: () => [
+        { type: 'damage', amount: TITHE_PV, target: 'opponent', source: 'holy' },
+        { type: 'heal', amount: TITHE_PV },
+      ],
+    },
+  },
+  votiveFlame: {
+    name: 'Flamme votive',
+    look: { glow: 'rgba(96,165,250,0.85)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `Chacun de ses prochains soins brûle l'adversaire : Brûlure ${VOTIVE_BURN}.`,
+    describe: (s) => {
+      const burn = VOTIVE_BURN + (s.power ?? 0)
+      return next(s.stacks, `Son prochain soin brûle l'adversaire : Brûlure ${burn}`, `Ses N prochains soins brûlent l'adversaire : Brûlure ${burn} chacun`)
+    },
+    detail: (s) => `Brûlure ${VOTIVE_BURN + (s.power ?? 0)} : ${VOTIVE_BURN + (s.power ?? 0)} PV à la fin de ses ${VOTIVE_BURN + (s.power ?? 0)} prochains tours ; une nouvelle Brûlure remplace l'ancienne.`,
+    badge: (s) => String(VOTIVE_BURN + (s.power ?? 0)),
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    reactions: { healed: (s) => [{ type: 'applyStatus', status: 'burn', stacks: VOTIVE_BURN + (s.power ?? 0), target: 'opponent' }] },
+    power: (n) => `Brûlure +${n}`,
+  },
+  leech: {
+    name: 'Sangsue',
+    look: { aura: 'rgba(136,19,55,0.5)' },
+    polarity: 'positive',
+    family: 'healing',
+    summary: `Chaque coup qui touche lui rend ${LEECH_HEAL} PV par charge de Saignement de l'adversaire.`,
+    describe: (s) => `Chaque coup qui touche lui rend ${plural(LEECH_HEAL * charges(s), 'PV')} par charge de Saignement de l'adversaire`,
+    detail: () => 'Lu au coup, avant que la plaie coule ; sans Saignement, rien.',
+    badge: (s) => `+${LEECH_HEAL * charges(s)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { hit: (s) => [{ type: 'heal', amount: 0, fromStatus: { status: 'bleed', who: 'opponent', factor: LEECH_HEAL * charges(s) } }] },
+    power: (n) => `+${plural(LEECH_HEAL * n, 'PV')} par charge de Saignement`,
+  },
+  toadSkin: {
+    name: 'Peau de crapaud',
+    look: { aura: 'rgba(251,146,60,0.5)' },
+    polarity: 'positive',
+    family: 'affliction',
+    summary: `Chaque coup reçu empoisonne l'attaquant, ${TOAD_POISON} Poison par charge.`,
+    describe: (s) => `${TOAD_POISON * charges(s)} Poison à l'attaquant à chaque coup reçu`,
+    badge: (s) => String(TOAD_POISON * charges(s)),
+    counter: 'stacks',
+    stacking: 'add',
+    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'poison', stacks: TOAD_POISON * charges(s), target: 'opponent' }] },
+    power: (n) => `+${TOAD_POISON * n} Poison par coup reçu`,
+  },
+  verdigrisCoin: {
+    name: 'Pièce vert-de-gris',
+    look: { glow: 'rgba(45,212,191,0.85)', coin: 'hue-rotate(120deg) saturate(0.8) brightness(0.9)' },
+    polarity: 'positive',
+    family: 'fortune',
+    summary: `Juste après son coup, une pièce : pile, ${VERDIGRIS_POISON} Poison à l'adversaire ; face, rien.`,
+    describe: (s) => `${coinOdds(s)} : pile, ${VERDIGRIS_POISON} Poison à l'adversaire ; face, rien`,
+    badge: () => String(VERDIGRIS_POISON),
+    stacking: 'refresh',
+    mechanic: 'skill',
+    maxStacks: 1,
+    coinToss: { heads: [{ type: 'applyStatus', status: 'poison', stacks: VERDIGRIS_POISON, target: 'opponent' }] },
+    power: (n) => `+${n} chance${n > 1 ? 's' : ''} sur 6 de faire pile`,
+  },
 }
 
 // Typographie française (passe compendium, 2026-10-25) : les textes du registre s'écrivent avec des espaces simples, la
@@ -1813,7 +2042,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     say(effect, 'Le prochain jet du porteur qui porterait une compétence tombe à vide : le dé est lancé, mais ni la compétence ni le coup de base ne partent ; une charge par jet.', 'die')
   if (def.blinds) say(effect, 'Chaque critique du porteur, tiré ou assuré, devient un coup raté.', 'crit')
   if (def.modifyHealing) say(effect, 'Le porteur ne regagne plus de PV.')
-  if (def.stealsBonus) say(effect, "Le prochain bonus que le porteur se pose va à l'adversaire, avec ses charges ; une charge par vol.", 'application')
+  if (def.stealsBonus) say(effect, "Une charge du prochain bonus que le porteur se pose va à l'adversaire, il garde les autres ; une charge de Sceau par vol.", 'application')
   if (def.turnsFromStacks) say(consumption, 'Une seule valeur : il dure autant de tours que de charges.', 'duration')
   else if (def.expiresAt === 'turnEnd') say(consumption, 'Sa durée se décompte à la fin des tours du porteur.', 'duration')
   else if (def.expiresAt === 'turnStart') say(consumption, 'Sa durée se décompte au début des tours du porteur, avant son action.', 'duration')

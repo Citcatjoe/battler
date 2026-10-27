@@ -112,7 +112,7 @@ Un coup de compétence qui relâche des jauges en entier joue un Coup par jauge,
 
 Une compétence joue **un seul son**, le premier de cette liste qui correspond à ce qu'elle a réellement produit :
 
-0. un bonus volé (le Sceau de vol, lot 3 : le bonus que le lanceur se posait part chez l'adversaire, `stolenBy`) → **le son de la famille du voleur** (Sceaux −), même quand c'est une aura : ce qu'on entend, c'est la confiscation (2026-10-25) ;
+0. un bonus volé (le Sceau de vol, lot 3 : le bonus que le lanceur se posait part chez l'adversaire, `stolenBy` ; le Larcin, quatrième demande du 2026-10-27 : le bonus de l'attaquant passe au voleur) → **le son de perte de la famille du voleur** (Sceaux −), même quand c'est une aura, et même quand le voleur est un bonus (le Larcin) : ce qu'on entend, c'est la confiscation (2026-10-25) ;
 1. une aura posée → **Aura gagnée** ;
 2. une aura retirée (purification) → **Aura perdue** ;
 3. un malus posé, sur l'adversaire ou sur soi → **le son de malus de sa famille** (§ 3 ; Malus reçu pour une famille qui n'en a pas) ;
@@ -279,18 +279,18 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Puissance − | Fausse note |
 | Garde + | Peau de pierre ; le Bouclier de foi qui donne son armure |
 | Garde − | Brise-garde (lot 3) ; Brèche, Vulnérable (sans porteur aujourd'hui) |
-| Précision + | Œil de faucon, Rancune ; la Rancune qui donne son Critique assuré ; les reliques qui posent un Critique assuré (Clepsydre du siège, Trophée du chasseur, Cloche d'ouverture) |
+| Précision + | Œil de faucon, Rancune, Odeur du sang (2026-10-27) ; la Rancune qui donne son Critique assuré ; les reliques qui posent un Critique assuré (Clepsydre du siège, Trophée du chasseur, Cloche d'ouverture) |
 | Précision − | Aveuglé (Éclair aveuglant, lot 3) |
 | Esquive + | Esquive améliorée ; une relique qui la pose (Dé creux) |
 | Esquive − | Luciole (sans porteur aujourd'hui) |
 | Tempo − | Peur ; Étourdi (sans porteur aujourd'hui) |
 | Fortune + | Coup de chance |
 | Fortune − | Malchance (lot 3) |
-| Affliction − | Souffle de la tombe, Feux follets, Pourfendre (après son coup, s'il touche), Virulence ; l'Aura de décoction qui empoisonne, un battement après le coup qui touche ; l'Aura d'épines qui fait saigner l'attaquant ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur ; la Plaie ouverte qui fait saigner ; le Dard de guêpe et le Briquet d'amadou |
-| Soin + | Vol de vie, Siffloter ; la Dent de loup (Vol de vie) |
+| Affliction − | Souffle de la tombe, Feux follets, Pourfendre (après son coup, s'il touche), Virulence, Serment de sang (2026-10-27) ; l'Aura de décoction qui empoisonne, un battement après le coup qui touche ; l'Aura d'épines qui fait saigner l'attaquant ; l'Aura glaciale qui pose son Poison au début de chaque tour de son porteur ; la Plaie ouverte qui fait saigner ; la Peau de crapaud qui empoisonne l'attaquant ; la Flamme votive qui allume sa Brûlure ; le Dard de guêpe et le Briquet d'amadou |
+| Soin + | Vol de vie, Siffloter, Dîme (2026-10-27) ; la Dent de loup (Vol de vie) |
 | Soin − | Hémorragie (lot 3), à sa pose ; puis chaque soin qu'elle empêche, avec son « 0 » barré |
 | Représailles + | Riposte ; le Brassard à pointes |
-| Sceaux − | Sceau de vol (Confiscation, lot 3 : le bonus confisqué, posé chez le voleur) |
+| Sceaux − | Sceau de vol (Confiscation, lot 3 : le bonus confisqué, posé chez le voleur) ; Larcin (quatrième demande du 2026-10-27 : le bonus pris à l'attaquant) |
 | Dissipation | une purification qui retire un bonus ou un malus autre qu'une aura |
 | Tour perdu | le tour sauté d'un combattant apeuré (Peur) ou étourdi (Coup de massue, lot 3) ; le jet tombé à vide d'un combattant malchanceux (Malchance, lot 3 : il ne peut pas agir, `MISE_EN_SCENE.md` M46) |
 | Ronge | Pourriture et Brûlure qui agissent sur leur porteur ; le Saignement qui coule quand un coup touche son porteur (0.68.0) |
@@ -359,6 +359,9 @@ Le son de la pose d'un statut est celui de la compétence qui le pose (§ 9.2), 
 | Hémorragie (lot 3) | le porteur reçoit un soin | Soin − (le soin empêché), à l'instant du soin ; jamais le Soin |
 | Garde brisée (lot 3) | le porteur est touché | aucun son propre : le Coup, et le ding du label « Garde brisée » ; l'armure qui vole en éclats est muette |
 | Sceau de vol (lot 3) | le porteur se pose un bonus | Sceaux − (règle 0 du § 4.2), à l'arrivée de l'icône chez le voleur |
+| Larcin (quatrième demande du 2026-10-27) | son porteur esquive un attaquant qui porte un bonus | Sceaux − (règle 0 du § 4.2), à l'arrivée de l'icône chez le voleur |
+| Élan, Surtension, Emprise, Larcin (posés) | une aura | Aura gagnée ; la Ferveur de l'Élan, Puissance + |
+| Onde de choc (quatrième demande du 2026-10-27) | son 3, des coups encaissés | aucun son de compétence : son coup sonne le Coup à l'impact de sa scène, l'arène tremble |
 | Feinte (lot 3) | le porteur esquive | Précision + (Critique assuré posé), à l'arrivée du signal de son anneau |
 | Sève noire, Dette de sang (lot 3) | le porteur regagne des PV ; l'adversaire renvoie des dégâts | Affliction − (Poison, Saignement posés), à l'arrivée du signal de son anneau (`MISE_EN_SCENE.md` M41) |
 | Ciel d'orage (lot 3) | début du tour du porteur | Coup, un par éclair (sa perte de PV, en coup sans élan, comme la Sentence) ; aucun Ronge |

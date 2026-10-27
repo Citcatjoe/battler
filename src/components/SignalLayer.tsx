@@ -35,16 +35,19 @@ export function SignalLayer({ signal, root }: { signal: SkillSignal | null; root
       const r = node.getBoundingClientRect()
       return { x: (r.left + r.width / 2 - box.left) / scale, y: (r.top + r.height / 2 - box.top) / scale }
     }
-    const from = el.querySelector(`[data-signal~="${signal.side}:${CSS.escape(signal.from)}"]`)
+    // Un bonus pris (Larcin) part de la zone d'état du volé ; sinon, du sceau ou de l'anneau du lanceur
+    const from =
+      signal.fromTray !== undefined ? el.querySelector(`[data-tray="${signal.fromTray}"]`) : el.querySelector(`[data-signal~="${signal.side}:${CSS.escape(signal.from)}"]`)
     if (!from) return
     const a = center(from)
     const next = signal.to.flatMap((to, k) => {
       const tray = el.querySelector(`[data-tray="${to}"]`)
       if (!tray) return []
       const b = center(tray)
-      // Une courbe qui file d'abord à l'horizontale sous l'en-tête, puis plonge vers la zone d'état
-      const cx = a.x + (b.x - a.x) * 0.8
-      const cy = a.y + (b.y - a.y) * 0.15
+      // Une courbe qui file d'abord à l'horizontale sous l'en-tête, puis plonge vers la zone d'état ; d'une zone d'état à
+      // l'autre (Larcin), un arc qui passe au-dessus des combattants
+      const cx = signal.fromTray !== undefined ? (a.x + b.x) / 2 : a.x + (b.x - a.x) * 0.8
+      const cy = signal.fromTray !== undefined ? Math.min(a.y, b.y) - 220 : a.y + (b.y - a.y) * 0.15
       return [
         {
           key: `${signal.key}-${k}`,

@@ -69,14 +69,17 @@ for (const host of CHARACTERS)
       const result = simulateCombat([a.fighter, b.fighter], { seed })
       corpus.push({ name: `${a.text} contre ${b.text}, graine ${seed}`, result, moments: stage(result) })
     }
-// L'armure brisée, rare : le Brise-garde gravé chez l'ogre, contre la Peau de pierre du nain, de chaque côté
-for (const seed of SEEDS) {
-  const breaker = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'guard-break')! }])
-  for (const pair of [[breaker, createCharacter('brokk')], [createCharacter('brokk'), breaker]] as const) {
-    const result = simulateCombat([...pair], { seed })
-    corpus.push({ name: `${pair[0].id} contre ${pair[1].id} (Brise-garde), graine ${seed}`, result, moments: stage(result) })
+// L'armure brisée, rare : le Brise-garde gravé chez ses deux porteurs de la Fureur (l'ogre, l'orc), contre la Peau de
+// pierre du nain, de chaque côté. Quatrième demande du 2026-10-27 : l'ogre seul ne la montrait plus que trois fois (ses
+// stats ont changé), le seuil de quatre cas reste
+for (const seed of SEEDS)
+  for (const host of ['morgrut', 'gorak']) {
+    const breaker = createCharacter(host).withForge([{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'guard-break')! }])
+    for (const pair of [[breaker, createCharacter('brokk')], [createCharacter('brokk'), breaker]] as const) {
+      const result = simulateCombat([...pair], { seed })
+      corpus.push({ name: `${pair[0].id} contre ${pair[1].id} (Brise-garde), graine ${seed}`, result, moments: stage(result) })
+    }
   }
-}
 
 /** Une cue sur l'horloge du combat : l'instant du moment, plus le début de son moment. */
 interface Timed {
@@ -299,11 +302,12 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
       if (cues.some((y) => y.cue.channel === 'sound' && y.cue.cue === 'heal' && y.at >= x.at && y.at <= x.at + T.RIDE_CUE)) flag('un soin empêché qui sonne le Soin', x.at)
     }
 
-    // 13. Le bonus volé (Sceau de vol) : son icône file du volé vers le voleur ; à son arrivée, « Volé » sur le volé
+    // 13. Le bonus volé (Sceau de vol) : son icône file du volé vers le voleur ; à son arrivée, « Volé » sur le volé. Un
+    // bonus pris (Larcin) part de la zone d'état du volé (`fromTray`)
     for (const s of cues) {
       if (s.cue.channel !== 'signal' || !s.cue.signal.icon) continue
       count('bonus volé')
-      const victim = s.cue.signal.side
+      const victim = s.cue.signal.fromTray ?? s.cue.signal.side
       const arrival = s.at + T.SIGNAL
       if (!cues.some((x) => x.at === arrival && x.cue.channel === 'float' && x.cue.side === victim && x.cue.float.kind === 'badge' && x.cue.float.badge.text === STOLEN_BADGE.text))
         flag('un bonus volé sans « Volé » sur le volé', arrival)
