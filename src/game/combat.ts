@@ -8,6 +8,7 @@ import {
   COIN_RANK_HEADS,
   charges,
   consumeStatus,
+  isAura,
   isMechanic,
   removeStatuses,
   resolveApplication,
@@ -33,6 +34,7 @@ import {
  *   Chaque tour, pour le joueur actif (l'attaquant) :
  *     Phase 1 · Début de tour : effets `onTurnStart` (bonus, puis malus) → durées « début »
  *               → fenêtre « turnStart »
+ *               → au 3e tour de son porteur, l'aura de départ absente se pose d'office (déclencheur `auraDue`)
  *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un jet, ou plusieurs (Coup de chance, Duo),
  *               et des coups instantanés (Furie des vents). Un jet : le d6 désigne une face ; sa compétence se
  *               greffe (étape roll, la compétence, puis le coup de base), modifie le coup (il part, elle suit s'il
@@ -44,6 +46,8 @@ import {
  *                 (défenseur, si ce coup a vidé un de ses boucliers). Pile : heads (lanceur), puis hit et hurt si pile touche.
  *                 Vol de vie (`hit`), Riposte et jauges (`hurt`) y réagissent comme toute réaction. Seuls les statuts
  *                 présents au début du coup réagissent dans ses fenêtres (`strikeBase`, règle 9).
+ *                 Renvois (C1) : la Riposte et chaque jauge relâchée de la Rétribution sont des coups sans dé (`rebound`),
+ *                 résolus par la même chaîne, avec leurs fenêtres sans face ; aucun renvoi ne répond à un renvoi.
  *     Phase 3 · Fin de tour : effets `onTurnEnd` (bonus, puis malus) → durées « fin » → fenêtre « turnEnd »
  *   Dans une fenêtre, pour chaque camp concerné : réactions de ses statuts (ordre de pose), puis
  *   événements de son personnage (ordre de définition). Les effets ainsi produits ne déclenchent
@@ -66,6 +70,24 @@ export const INITIATIVE_DIE = 10
 
 /** Garde-fou si des stats rendaient le K.O. impossible (ex. 100 % d'esquive). */
 export const MAX_TURNS = 1000
+
+/**
+ * Jets de plus à une action, au plus (Coup de chance, Duo ; retour du 2026-10-27). Sans borne, la Veine à 6 charges ou
+ * plus (chaque 6 donne autant de jets à l'action suivante, qui font 6 à leur tour) faisait croître les jets d'action en
+ * action sans fin dans un long combat : `npm run ramp`, Fanchon (Veine gravée) contre une Elaria qui esquivait tout, 1 600
+ * jets au tour 47, puis un plantage. Douze : au-dessus de ce que le jeu produit d'ordinaire (le Duo de Fanchon, quatre 2
+ * dans une rafale : 13 jets), assez bas pour borner la boucle.
+ */
+export const MAX_EXTRA_JETS = 12
+
+/**
+ * Plafond d'esquive (troisième retour du 2026-10-27, C5) : les statuts ne portent pas la chance d'esquive au-delà de 75 %,
+ * règle pour tous. Sans plafond, le Pas de côté gravé et copié montait à 100 % : des combats bloqués jusqu'à `MAX_TURNS`
+ * (38 sur 259 200 combats construits à 10 récompenses, `npm run ramp`). À 60 comme à 75 % : plus aucun, et aucune force
+ * construite ne bouge de plus de 0,1 point ; 75 % retient le plus haut des deux. Une esquive de fiche plus haute (un
+ * personnage de test) reste la sienne : seuls les bonus sont bornés.
+ */
+export const MAX_DODGE = 0.75
 
 /** État des deux combattants à un instant du combat. */
 export interface Snapshot {
@@ -98,6 +120,11 @@ export type AppliedEffect =
    */
   | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId }
   | { type: 'cleanse'; target: Side; removed: StatusId[] }
+  /**
+   * Jauges relâchées en renvois (Rétribution, retour du 2026-10-27, C1) : `parts`, la valeur de chaque coup sans dé qui
+   * part (une jauge chacun) ; leurs PV retirés sont dans les étapes de ces coups (`statusReaction` à `strike`), qui suivent
+   */
+  | { type: 'rebound'; target: Side; status: StatusId; parts: number[] }
 
 export interface Attack {
   attacker: Side
@@ -136,6 +163,11 @@ export interface Attack {
    * lisent son dé, comme pour un coup brut
    */
   jinxed?: true
+  /**
+   * Renvoi (retour du 2026-10-27, C1) : un coup sans dé, d'une valeur fixée (`value`), porté par une réaction
+   * (`statusReaction.strike`). Ni face ni dorure ; les reliques de coup sans face le lisent (R4)
+   */
+  rebound?: true
   /** Coup raté par un critique de l'attaquant aveuglé (Aveuglé, `StatusDef.blinds`) : le statut ; `dodged` est vrai */
   blindedBy?: StatusId
   /** Coup qui brise l'armure temporaire du défenseur (Garde brisée, `StatusDef.shatters`) : aucun bouclier n'absorbe */
@@ -243,11 +275,11 @@ export type BeatBody =
   | { type: 'statusAge'; phase: TurnPhase; side: Side; changes: DurationChange[]; expired: StatusId[] }
   /**
    * Réaction d'un statut à un moment du combat (ex. Épines quand le porteur encaisse, Vol de vie quand il touche).
-   * Sans effet pour une jauge qui se remplit (Rétribution) : l'état de l'étape montre les jauges. `dodgedBy`
-   * (2026-10-27, M3) : la Riposte manque l'attaquant, qui l'esquive par ce statut (Esquive améliorée) : aucun effet, une
-   * charge de Riposte et une charge d'esquive parties.
+   * Sans effet pour une jauge qui se remplit (Rétribution) : l'état de l'étape montre les jauges. `strike` (retour du
+   * 2026-10-27, C1) : un renvoi, coup sans dé (Riposte, chaque jauge relâchée d'une Rétribution), résolu par la chaîne du
+   * coup (esquive, critique, armure, boucliers) ; `effects` porte ses PV retirés, rien s'il est esquivé.
    */
-  | { type: 'statusReaction'; side: Side; status: StatusId; trigger: Trigger; effects: AppliedEffect[]; dodgedBy?: StatusId }
+  | { type: 'statusReaction'; side: Side; status: StatusId; trigger: Trigger; effects: AppliedEffect[]; strike?: Attack }
   /** Action perdue à cause d'un statut de contrôle (ex. Étourdi) */
   | { type: 'skip'; side: Side; status: StatusId }
   /** Changement de forme (druide), au tout début de son tour : `form` est l'index de la nouvelle forme */
@@ -398,7 +430,7 @@ export function effectiveStats(character: Character, statuses: readonly Status[]
     attackMin,
     attackMax: Math.round(clamp(modified.attackMax, attackMin)),
     armor: clamp(modified.armor, 0),
-    dodgeChance: clamp(modified.dodgeChance, 0, 1),
+    dodgeChance: clamp(modified.dodgeChance, 0, Math.max(base.dodgeChance, MAX_DODGE)),
     critChance: clamp(modified.critChance, 0, 1),
     critMultiplier: clamp(modified.critMultiplier, 1),
   }
@@ -431,7 +463,15 @@ export interface StrikeRoll {
   multiplier?: number
   /** Jet tombé à vide (Malchance) : aucun coup */
   jinxed?: boolean
+  /**
+   * Renvoi (C1) : la valeur du coup, fixée, sans dé ni tirage dans l'attaque ; `roll` vaut 0 (aucune face : ni relique
+   * de face ni dorure)
+   */
+  fixed?: number
 }
+
+/** Un coup résolu par `resolveAttack`, avant d'être appliqué : sans son auteur ni ses dégâts comptés */
+export type StrikeOutcome = Omit<Attack, 'attacker' | 'dealt' | 'plain'>
 
 /**
  * Résout un coup de base sans modifier l'état : sa valeur est tirée dans l'attaque, le défenseur tente d'esquiver,
@@ -449,7 +489,7 @@ export function resolveAttack(
   defenderStatuses: readonly Status[],
   strike: StrikeRoll,
   holds: (c: Condition) => boolean,
-): Omit<Attack, 'attacker' | 'dealt' | 'plain'> {
+): StrikeOutcome {
   const att = effectiveStats(attacker, attackerStatuses)
   const def = effectiveStats(defender, defenderStatuses)
   const { roll } = strike
@@ -459,6 +499,7 @@ export function resolveAttack(
     ...(strike.multiplier !== undefined && { multiplier: strike.multiplier }),
     ...(strike.forced && { forced: true as const }),
     ...(strike.preset && { preset: true as const }),
+    ...(strike.fixed !== undefined && { rebound: true as const }),
     critMultiplier: att.critMultiplier,
     shields: [] as Attack['shields'],
     armor: def.armor,
@@ -470,8 +511,10 @@ export function resolveAttack(
   const nothing = { crit: false, critForced: false, raw: 0, damage: 0, armorAbsorbed: 0, shieldAbsorbed: 0 }
   if (strike.replaced) return { ...base, ...nothing, value: 0, dodged: false, replaced: true }
   if (strike.jinxed) return { ...base, ...nothing, value: 0, dodged: false, jinxed: true }
-  // Le coup de base : sa valeur tirée dans l'attaque (aucun tirage pour une attaque fixe), qu'il touche ou soit esquivé
-  const drawn = att.attackMax > att.attackMin ? att.attackMin - 1 + rollDie(rng, att.attackMax - att.attackMin + 1) : att.attackMin
+  // Le coup de base : sa valeur tirée dans l'attaque (aucun tirage pour une attaque fixe, ni pour un renvoi), qu'il touche
+  // ou soit esquivé
+  const drawn =
+    strike.fixed !== undefined ? strike.fixed : att.attackMax > att.attackMin ? att.attackMin - 1 + rollDie(rng, att.attackMax - att.attackMin + 1) : att.attackMin
   // Critique assuré (B8, 2026-10-27) : la prochaine frappe le porte, qu'elle touche ou non ; un coup esquivé le perd
   const critBy = attackerStatuses.find((s) => STATUSES[s.id].forcesCrit)?.id
   const critForced = critBy !== undefined
@@ -655,6 +698,23 @@ interface FighterState {
   relicReady: Record<string, number>
   /** Reliques de seuil déjà déclenchées sous leur seuil : elles se réarment quand les PV remontent au-dessus */
   relicBelow: Set<string>
+  /** Aura de départ : son rendez-vous du 3e tour est passé (posée d'office, ou déjà là), une fois par combat */
+  auraDue: boolean
+}
+
+/** Le tour de son porteur où l'aura de départ se pose d'office si elle n'est pas là (docs/RESOLUTION.md, phase 1) */
+export const AURA_DUE_TURN = 3
+
+/**
+ * L'aura de départ d'un combattant : la compétence de la face 1 de son dé, si c'est une aura (elle ne pose qu'une aura
+ * sur son lanceur) et s'il a des auras de départ (un personnage du roster, vanilla ou à l'aura choisie).
+ */
+export function startAuraOf(f: Character): { event: CharacterEvent; status: StatusId } | undefined {
+  if (!f.definition.startAuras?.length) return undefined
+  const event = f.events.find((e) => e.trigger === faceTrigger(1))
+  if (!event || event.effects.length === 0) return undefined
+  const posed = event.effects.map((e) => (e.type === 'applyStatus' && (e.target ?? 'self') === 'self' && isAura(e.status) ? e.status : undefined))
+  return posed.every((s) => s !== undefined) ? { event, status: posed[0]! } : undefined
 }
 
 export interface SimulateOptions {
@@ -708,6 +768,7 @@ export function simulateCombat(
       relicUses: {},
       relicReady: {},
       relicBelow: new Set(),
+      auraDue: false,
     }),
   ) as Pair<FighterState>
   const beats: Beat[] = []
@@ -735,7 +796,7 @@ export function simulateCombat(
    * un coup brut ou un jet remplacé. Les réactions d'un coup qui touche en ont besoin (Vol de vie, Riposte, jauges), et
    * les compétences de la face, qui n'y partent que si elles modifient un coup qui touche ou remplacent le jet.
    */
-  let strike: { touched: boolean; dealt: number; plain: boolean; replaced: boolean } | null = null
+  let strike: { touched: boolean; dealt: number; plain: boolean; replaced: boolean; rebound: boolean } | null = null
   /**
    * Camps qui ont regagné des PV depuis la dernière vérification d'état (`checkThresholds`) : elle leur ouvre la fenêtre
    * `healed` (Encens de l'abbaye), une fois, avec pour cause l'étape qui les a soignés.
@@ -747,6 +808,8 @@ export function simulateCombat(
    * avec pour cause l'étape qui a renvoyé, comme le soin reçu.
    */
   const reflected: Pair<boolean> = [false, false]
+  /** Jauges relâchées en renvois (C1) par l'effet qui vient de s'appliquer : leurs coups partent après son étape (`releaseRebounds`) */
+  const pendingRebounds: { side: Side; status: StatusId; parts: number[] }[] = []
   /** Les conditions d'une relique de coup, vues depuis chaque camp (`resolveAttack`) */
   const holds: Pair<(c: Condition) => boolean> = [(c) => conditionMet(0, c), (c) => conditionMet(1, c)]
   /**
@@ -756,22 +819,30 @@ export function simulateCombat(
    * coup : seuils, faces du dé, esquivé ou touché, et celles de la pièce qui tombe sur pile.
    */
   let strikeBase: Pair<Status[]> | null = null
-  /** Résout `run` avec `base` pour état de référence du coup. */
+  /**
+   * Résout `run` avec `base` pour état de référence du coup. Un renvoi (C1) est un coup à part, résolu dans une fenêtre
+   * d'un autre coup : à sa fin, l'état de référence de ce coup revient.
+   */
   const withinStrike = <T,>(base: Pair<Status[]>, run: () => T): T => {
+    const outer = strikeBase
     strikeBase = base
     try {
       return run()
     } finally {
-      strikeBase = null
+      strikeBase = outer
     }
   }
-  /** Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce) ; `plain` : coup brut (Furie des vents). */
-  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number, plain = false, replaced = false) => {
-    strike = { touched, dealt, plain, replaced }
+  /**
+   * Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce) ; `plain` : coup brut (Furie des vents) ;
+   * `rebound` : un renvoi, auquel aucun renvoi ne répond (R1). Le coup qui l'entoure reprend à sa fin.
+   */
+  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number, plain = false, replaced = false, rebound = false) => {
+    const outer = strike
+    strike = { touched, dealt, plain, replaced, rebound }
     try {
       return fireAll(list, cause)
     } finally {
-      strike = null
+      strike = outer
     }
   }
 
@@ -899,12 +970,17 @@ export function simulateCombat(
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
         // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
         const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
+        // Les jauges, une par coup (retour du 2026-10-27, S1) : en entier, chacune la sienne ; en part (Rétribution), le
+        // montant réparti entre elles (`splitAmong`)
+        const split = splitAmong(amount, held?.slots?.filter((n) => n > 0) ?? [])
+        const parts = split.length > 0 ? split : amount > 0 ? [amount] : []
+        // Ses propres jauges, relâchées sur l'adversaire : des renvois (C1), un coup sans dé par jauge, qui partent juste
+        // après l'étape qui les relâche (`releaseRebounds`)
+        if (effect.from !== 'opponent' && target !== owner) {
+          pendingRebounds.push({ side: owner, status: effect.status, parts })
+          return { type: 'rebound', target, status: effect.status, parts }
+        }
         loseHp(target, amount)
-        // Ses propres jauges, relâchées sur l'adversaire : des dégâts renvoyés (le moment `reflected`)
-        if (effect.from !== 'opponent' && target !== owner && amount > 0) reflected[owner] = true
-        // Les jauges, une par impact (retour du 2026-10-27, S1) : en entier, chacune la sienne ; en part (Rétribution),
-        // le montant réparti entre elles (`splitAmong`). Rien ne change aux PV : l'écran en fait autant de coups
-        const parts = splitAmong(amount, held?.slots?.filter((n) => n > 0) ?? [])
         return { type: 'damage', target, amount, source: effect.source, ...(parts.length > 1 && { parts }) }
       }
       case 'cleanse': {
@@ -926,29 +1002,35 @@ export function simulateCombat(
     return relicIsInert(relic, side, { hp: [states[0].hp, states[1].hp], statuses: [states[0].statuses, states[1].statuses] }, fighters)
   }
 
-  /** Applique des effets dans l'ordre et s'arrête au premier K.O. (vérification d'état). */
+  /**
+   * Applique des effets dans l'ordre et s'arrête au premier K.O. (vérification d'état). Une purge qui a retiré quelque
+   * chose joue ensuite sa suite (`andThen`, Purification : sa lumière), rangée juste après elle dans les effets appliqués.
+   */
   function applyEffects(owner: Side, effects: readonly Effect[]) {
     const applied: AppliedEffect[] = []
     for (const effect of effects) {
-      applied.push(applyEffect(owner, effect))
+      const done = applyEffect(owner, effect)
+      applied.push(done)
       if (fallen() !== undefined) break
+      if (effect.type === 'cleanse' && effect.andThen && done.type === 'cleanse' && done.removed.length > 0) {
+        applied.push(applyEffect(owner, effect.andThen))
+        if (fallen() !== undefined) break
+      }
     }
     return applied
   }
 
   /**
    * Ce qu'un statut fait dans une fenêtre : sa réaction déclarée (`reactions`), ou sa réaction à un coup qui touche
-   * (Vol de vie sur `hit` : les PV retirés lui reviennent ; Riposte sur `hurt` : une part renvoyée), son intensité en plus
-   * (rangs d'aiguisage, 0.110.0). Undefined : rien.
+   * (Vol de vie sur `hit` : les PV retirés lui reviennent), son intensité en plus (rangs d'aiguisage, 0.110.0).
+   * Undefined : rien. La Riposte, elle, est un renvoi (`rebound`).
    */
   function reactionTo(status: Status, trigger: Trigger): Effect[] | undefined {
     const def = STATUSES[status.id]
     const declared = def.reactions?.[trigger]
     if (declared) return declared(status)
     if (!strike?.touched) return undefined
-    const more = status.power ?? 0
-    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt + more }]
-    if (trigger === 'hurt' && def.reflectsHit) return [{ type: 'damage', amount: Math.round(strike.dealt * def.reflectsHit) + more, target: 'opponent', source: 'strike' }]
+    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt + (status.power ?? 0) }]
     return undefined
   }
 
@@ -992,27 +1074,26 @@ export function simulateCombat(
       const was = strikeBase?.[side].find((s) => s.id === id)
       if (strikeBase && !was) continue
       const status = now && was && was.stacks < now.stacks ? { ...now, stacks: was.stacks } : now
-      const react = status && reactionTo(status, trigger)
+      if (!status) continue
+      // Riposte (C1) : un renvoi, coup sans dé d'une part des PV que ce coup a retirés, résolu comme un coup (esquive,
+      // critique, armure…) ; une charge part. Aucun renvoi ne répond à un renvoi (R1) : la charge attend
+      if (def.reflectsHit && trigger === 'hurt') {
+        if (!strike?.touched || strike.rebound) continue
+        states[side].statuses = consumeStatus(states[side].statuses, id, 1)
+        const down = rebound(side, id, trigger, Math.round(strike.dealt * def.reflectsHit) + (status.power ?? 0), cause, false)
+        if (down !== undefined) return down
+        continue
+      }
+      const react = reactionTo(status, trigger)
       if (!react) continue
       // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte : sans lui, la réaction ne part pas
       if (react.length > 0 && react.every((e) => e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status))) continue
-      // Riposte contre un attaquant sous esquive assurée (2026-10-27, M3) : elle le manque, comme un coup esquivé. Une charge
-      // de chaque statut part, sans effet ni fenêtre (pas de chaîne : ni `dodge` de l'attaquant, ni dégâts renvoyés)
-      const evade = def.reflectsHit && trigger === 'hurt' ? states[other(side)].statuses.find((s) => STATUSES[s.id].forcesDodge) : undefined
-      if (evade) {
-        states[side].statuses = consumeStatus(states[side].statuses, id, 1)
-        states[other(side)].statuses = consumeStatus(states[other(side)].statuses, evade.id, 1)
-        push({ type: 'statusReaction', side, status: id, trigger, effects: [], dodgedBy: evade.id }, cause)
-        continue
-      }
       const effects = applyEffects(side, react)
-      // Riposte : la part du coup rendue à l'attaquant, des dégâts renvoyés (le moment `reflected`)
-      if (def.reflectsHit && trigger === 'hurt' && effects.some((e) => e.type === 'damage' && e.target !== side && e.amount > 0)) reflected[side] = true
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
-      // Saignement, Vol de vie, Riposte : le statut agit avec ses charges, puis en perd une dans la même étape
-      else if (def.decays || def.drainsHit || def.reflectsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
+      // Saignement, Vol de vie : le statut agit avec ses charges, puis en perd une dans la même étape
+      else if (def.decays || def.drainsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
       const beat = push({ type: 'statusReaction', side, status: id, trigger, effects }, cause)
-      const down = fallen() ?? checkThresholds(beat)
+      const down = fallen() ?? checkThresholds(beat) ?? releaseRebounds(beat)
       if (down !== undefined) return down
     }
     for (const event of relicsOnly ? [] : fighters[side].events) {
@@ -1068,7 +1149,7 @@ export function simulateCombat(
     states[side].fired[event.id] = (states[side].fired[event.id] ?? 0) + 1
     const effects = applyEffects(side, event.effects)
     const id = push({ type: 'event', event: { side, eventId: event.id, name: event.name, trigger, effects } }, cause)
-    return fallen() ?? checkThresholds(id)
+    return fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
   }
 
   /**
@@ -1108,7 +1189,7 @@ export function simulateCombat(
     if (relic.cooldown) s.relicReady[relic.id] = s.turnsTaken + relic.cooldown
     const effects = applyEffects(side, relic.effects ?? [])
     const id = push({ type: 'relic', side, relic: relic.id, name: relic.name, effects, uses: uses + 1 }, cause)
-    return fallen() ?? checkThresholds(id)
+    return fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
   }
 
   /**
@@ -1211,7 +1292,7 @@ export function simulateCombat(
       }
       const id = push({ type: 'statusTick', phase, side, status: status.id, effects })
       ticks.set(status.id, id)
-      const down = fallen() ?? checkThresholds(id)
+      const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
       if (down !== undefined) return down
     }
     // Un statut posé pendant ce tour n'est pas décompté à sa fin : « 1 tour » dure jusqu'au prochain.
@@ -1319,11 +1400,39 @@ export function simulateCombat(
    */
   function strikeOnce(attacker: Side, jetRoll: StrikeRoll, plain = false, cause?: number): Side | undefined {
     const defender = other(attacker)
-    const att = states[attacker]
-    const def = states[defender]
     // État de référence du coup : les statuts de ce moment, après une compétence greffée (règle 9)
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
-    const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], att.statuses, def.statuses, jetRoll, holds[attacker])
+    const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], states[attacker].statuses, states[defender].statuses, jetRoll, holds[attacker])
+    const { touched, emptied } = landStrike(attacker, outcome)
+    const dealt = outcome.damage
+    const hit = push({ type: 'attack', attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) } }, cause)
+    lastStrike = hit
+    if (states[defender].hp === 0) return defender
+
+    // Fenêtres du coup : seuils, faces du dé (reliques seules pour un coup brut), puis esquivé ou touché. Vol de vie,
+    // Riposte et jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »).
+    // Seuls les statuts déjà là au début du coup y réagissent (`strikeBase`).
+    const fell = withinStrike(base, () => {
+      const down = checkThresholds(hit)
+      if (down !== undefined) return down
+      const faces: [Side, Trigger][] = [faceTrigger(outcome.roll), ...(outcome.roll === DIE_FACES ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
+      // Un jet tombé à vide : ses fenêtres du dé n'éveillent que les reliques, comme un coup brut
+      return fireStrike([...faces, ...strikeWindows(attacker, outcome, touched, emptied)], touched, dealt, hit, plain || !!outcome.jinxed, outcome.replaced)
+    })
+    if (fell !== undefined) return fell
+    // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
+    return tossCoin(attacker, hit, dealt)
+  }
+
+  /**
+   * Ce qu'un coup résolu change à l'état, au moment du coup, coup de base comme renvoi (C1 : une seule voie) : les
+   * charges qu'il dépense (critique assuré, esquive assurée, boucliers, Fausse note, Vol de vie esquivé, Luciole),
+   * l'armure temporaire qu'il brise, les PV perdus. `emptied` : un bouclier du défenseur a absorbé tout ce qui lui restait.
+   */
+  function landStrike(attacker: Side, outcome: StrikeOutcome): { touched: boolean; emptied: boolean } {
+    const defender = other(attacker)
+    const att = states[attacker]
+    const def = states[defender]
     const touched = !outcome.dodged && !outcome.replaced && !outcome.jinxed
     if (outcome.critBy) att.statuses = consumeStatus(att.statuses, outcome.critBy, 1)
     if (outcome.dodgeBy) def.statuses = consumeStatus(def.statuses, outcome.dodgeBy, 1)
@@ -1348,33 +1457,64 @@ export function simulateCombat(
     if (touched && outcome.shatteredBy) def.statuses = def.statuses.filter((s) => !STATUSES[s.id].shield && !STATUSES[s.id].whileShielded)
     // Luciole : chaque coup qui touche le porteur lui retire une charge (`spentOnHurt`)
     if (touched) for (const s of def.statuses.filter((x) => STATUSES[x.id].spentOnHurt)) def.statuses = consumeStatus(def.statuses, s.id, 1)
-    const dealt = outcome.damage
-    loseHp(defender, dealt)
-    const hit = push({ type: 'attack', attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) } }, cause)
-    lastStrike = hit
-    if (def.hp === 0) return defender
+    loseHp(defender, outcome.damage)
+    return { touched, emptied }
+  }
 
-    // Fenêtres du coup : seuils, faces du dé (reliques seules pour un coup brut), puis esquivé ou touché. Vol de vie,
-    // Riposte et jauges y réagissent comme toute réaction (2026-10-21 : une seule règle pour « un coup qui touche »).
-    // Seuls les statuts déjà là au début du coup y réagissent (`strikeBase`).
-    const fell = withinStrike(base, () => {
-      const down = checkThresholds(hit)
-      if (down !== undefined) return down
-      const hitTriggers: [Side, Trigger][] = [faceTrigger(outcome.roll), ...(outcome.roll === DIE_FACES ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
-      // Un coup raté d'aveuglé (lot 3) n'ouvre que `missed` : l'esquive est un geste du défenseur
-      if (outcome.dodged) hitTriggers.push([attacker, 'missed'], ...(outcome.blindedBy ? [] : [[defender, 'dodge'] as [Side, Trigger]]))
-      else if (touched) {
-        hitTriggers.push([attacker, 'hit'])
-        if (outcome.crit) hitTriggers.push([attacker, 'crit'])
-        hitTriggers.push([defender, 'hurt'])
-        if (emptied) hitTriggers.push([defender, 'shieldBroken'])
+  /**
+   * Les fenêtres d'un coup résolu, après celles de sa face : esquivé, `missed` (actif) puis `dodge` (défenseur ; un coup
+   * raté d'aveuglé n'ouvre que `missed`, l'esquive est un geste du défenseur) ; touché, `hit`, `crit`, `hurt`, puis
+   * `shieldBroken` s'il a vidé un bouclier.
+   */
+  function strikeWindows(attacker: Side, outcome: StrikeOutcome, touched: boolean, emptied: boolean): [Side, Trigger][] {
+    const defender = other(attacker)
+    if (outcome.dodged) return [[attacker, 'missed'], ...(outcome.blindedBy ? [] : [[defender, 'dodge'] as [Side, Trigger]])]
+    if (!touched) return []
+    return [[attacker, 'hit'], ...(outcome.crit ? [[attacker, 'crit'] as [Side, Trigger]] : []), [defender, 'hurt'], ...(emptied ? [[defender, 'shieldBroken'] as [Side, Trigger]] : [])]
+  }
+
+  /**
+   * Un renvoi (retour du 2026-10-27, C1, RESOLUTION § 9) : un coup sans dé de `side`, d'une valeur fixée, porté par la
+   * réaction de son statut `status` (la Riposte, une jauge de la Rétribution). Il est résolu et appliqué comme un coup de
+   * base (`resolveAttack`, `landStrike`) : esquive, critique (le Critique assuré s'y dépense, R2), reliques de coup sans
+   * face (R4), modificateurs, armure, boucliers ; puis ses fenêtres, sans face, où aucun renvoi ne lui répond (R1).
+   * `returned` : ce renvoi ferme une série (la Riposte seule, le dernier coup d'une Rétribution) et ouvre le moment
+   * `reflected` si lui ou un coup d'avant de la série (`returned` vrai) a retiré des PV, juste après son étape ; undefined
+   * pour un coup au milieu de la série. Renvoie le perdant s'il y a K.O.
+   */
+  function rebound(side: Side, status: StatusId, trigger: Trigger, value: number, cause: number | undefined, returned: boolean | undefined): Side | undefined {
+    const target = other(side)
+    const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
+    const outcome = resolveAttack(rng, fighters[side], fighters[target], states[side].statuses, states[target].statuses, { roll: 0, fixed: value }, holds[side])
+    const { touched, emptied } = landStrike(side, outcome)
+    const dealt = outcome.damage
+    if (returned !== undefined && (returned || (touched && dealt > 0))) reflected[side] = true
+    const effects: AppliedEffect[] = touched ? [{ type: 'damage', target, amount: dealt, source: 'strike' }] : []
+    const beat = push({ type: 'statusReaction', side, status, trigger, effects, strike: { attacker: side, ...outcome, dealt } }, cause)
+    if (states[target].hp === 0) return target
+    return withinStrike(base, () => checkThresholds(beat) ?? fireStrike(strikeWindows(side, outcome, touched, emptied), touched, dealt, beat, false, false, true))
+  }
+
+  /**
+   * Les jauges relâchées par l'étape `cause` (Rétribution) : un renvoi par jauge, chacun un coup à part (R3), dans
+   * l'ordre des jauges ; le moment `reflected` une fois, après le dernier, si l'un d'eux a retiré des PV. Un renvoi ne
+   * déclenche pas de renvoi (R1) : relâchées pendant un renvoi, les jauges partent sans coup.
+   */
+  function releaseRebounds(cause: number): Side | undefined {
+    const b = beats[cause]
+    const trigger: Trigger =
+      b.type === 'event' ? b.event.trigger : b.type === 'statusReaction' ? b.trigger : b.type === 'statusTick' ? b.phase : b.type === 'coin' ? 'heads' : 'hit'
+    while (pendingRebounds.length > 0) {
+      const { side, status, parts } = pendingRebounds.shift()!
+      if (strike?.rebound) continue
+      const from = beats.length
+      for (const [k, value] of parts.entries()) {
+        const landed = beats.slice(from).some((x) => x.type === 'statusReaction' && x.cause === cause && !!x.strike && x.effects.length > 0)
+        const down = rebound(side, status, trigger, value, cause, k === parts.length - 1 ? landed : undefined)
+        if (down !== undefined) return down
       }
-      // Un jet tombé à vide : ses fenêtres du dé n'éveillent que les reliques, comme un coup brut
-      return fireStrike(hitTriggers, touched, dealt, hit, plain || !!outcome.jinxed, outcome.replaced)
-    })
-    if (fell !== undefined) return fell
-    // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
-    return tossCoin(attacker, hit, dealt)
+    }
+    return undefined
   }
 
   /**
@@ -1407,7 +1547,7 @@ export function simulateCombat(
     const effects = heads ? applyEffects(side, onHeads) : []
     const id = push({ type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) }, posedBy[side][coin.id] ?? after)
     return withinStrike(base, () => {
-      const down = fallen() ?? checkThresholds(id)
+      const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
       if (down !== undefined || !heads) return down
       // Pile (phase 8, second lot) : la fenêtre `heads` du lanceur, puis, si pile touche, celles d'un coup qui touche
       const windows: [Side, Trigger][] = [[side, 'heads']]
@@ -1450,14 +1590,15 @@ export function simulateCombat(
    * L'action : un jet, plus ceux d'un statut de coups supplémentaires non instantané (Coup de chance, Duo, consommé au
    * début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action ; un seul de ces statuts
    * par action, l'autre attend la suivante). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base.
-   * Plusieurs jets font une rafale (étape flurry), cause de chacun.
+   * Plusieurs jets font une rafale (étape flurry), cause de chacun. Au plus `MAX_EXTRA_JETS` jets de plus par action ;
+   * les charges au-delà partent avec les autres.
    */
   function action(attacker: Side): Side | undefined {
     const att = states[attacker]
     const flurry = att.statuses.find((s) => STATUSES[s.id].extraStrikes && !STATUSES[s.id].instantStrikes)
     if (!flurry) return jet(attacker)
     const def = STATUSES[flurry.id]
-    const jets = 1 + def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1)
+    const jets = 1 + Math.min(MAX_EXTRA_JETS, def.extraStrikes! * (def.strikeCharges === 'all' ? flurry.stacks : 1))
     // Charges en réserve (`strikeCharges: 'one'`) : une seule est dépensée, les autres attendent
     att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
     // Tous les jets d'une rafale, celui de l'action compris, ont la rafale pour cause
@@ -1504,6 +1645,17 @@ export function simulateCombat(
     phase = 'turnStart'
     down = statusPhase(attacker, 'turnStart') ?? fire(attacker, 'turnStart')
     if (down !== undefined) return end(other(down), 'ko')
+    // L'aura de départ au rendez-vous (2026-10-27, AURAS.md § 2) : au début de son 3e tour, après ses statuts et ses
+    // reliques de tour, avant son action, si sa compétence de la face 1 n'a pas posé son aura (ou qu'on la lui a
+    // retirée), elle part comme sur un 1. Une fois par combat ; sous l'autre forme (le druide), au tour suivant
+    const due = att.auraDue || att.turnsTaken < AURA_DUE_TURN ? undefined : startAuraOf(fighters[attacker])
+    if (due && inForm(attacker, due.event)) {
+      att.auraDue = true
+      if (!att.statuses.some((s) => s.id === due.status)) {
+        down = fireEvent(attacker, due.event, 'auraDue')
+        if (down !== undefined) return end(other(down), 'ko')
+      }
+    }
 
     // Phase 2 · Action : un statut de contrôle fait perdre l'action, sinon ses jets (chacun suivi des coups instantanés
     // qu'il a posés : Furie des vents)

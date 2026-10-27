@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import campaignImg from '../assets/menu-campaign.jpg'
 import { hashSeed } from '../game/analysis'
 import { describeSkill, DIE_FACES } from '../game/events'
 import {
@@ -34,6 +35,7 @@ import { skillById } from '../game/skills'
 import { randomSeed, seededRng } from '../game/rng'
 import { sfx } from '../game/sound'
 import { DieBuild } from './DieBuild'
+import { VictoryBackdrop } from './ChampionScreen'
 import { Fighter } from './Fighter'
 import { ForgeCard, ForgeChoice, ForgedDie, useForgeChoice } from './ForgedDie'
 import { BackLink, Button, Glyph, SquareButton } from './kit'
@@ -122,6 +124,14 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
   }
   return (
     <Backdrop>
+      {/* Le vestiaire sous les gradins : la sortie vers l'arène tombe derrière le champion, à contre-jour */}
+      <img
+        src={campaignImg}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-[50%_60%] opacity-60"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_22%_55%,rgba(12,10,9,0.15)_0%,rgba(12,10,9,0.6)_50%,rgba(12,10,9,0.85)_100%)]" />
       <div className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-side-a/10 to-transparent" />
       <BackLink onClick={onMenu} className="absolute left-10 top-[36px] z-30">
         Menu
@@ -562,9 +572,8 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
   const triggers = runTriggers(run)
   return (
     <div className="champion-screen fade-in relative flex h-full overflow-hidden">
-      {won && <div className="champion-rays pointer-events-none absolute -left-[10%] top-[-30%] h-[160%] w-[70%]" />}
+      {won && <VictoryBackdrop x={280} />}
       <div className="relative flex w-[560px] shrink-0 flex-col items-center justify-end pb-10">
-        {won && <div className="champion-pedestal absolute bottom-[52px] h-[60px] w-[420px] rounded-[50%]" />}
         <div className="relative h-[600px]">
           <Fighter character={champion} side={0} state={won ? 'victory' : 'ko'} />
         </div>

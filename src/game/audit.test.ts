@@ -72,6 +72,8 @@ describe('audit de résolution', () => {
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
     // 0.110.0 : la Furie part juste après le jet qui la pose (RESOLUTION § 2)
     expect(seen['furie juste après son jet'] ?? 0).toBeGreaterThan(0)
+    // L'aura de départ au rendez-vous (2026-10-27, C2) : posée d'office au début du 3e tour, contrôlée à chaque combat
+    expect(seen["aura de départ posée d'office"] ?? 0).toBeGreaterThan(0)
   })
 })
 
@@ -104,7 +106,24 @@ describe('audit de résolution : les reliques de durée (phase 7)', () => {
       for (const a of CHARACTER_IDS)
         for (const b of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics([getRelic(relic)]), createCharacter(b)], { seed: 12000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['relique de caractéristique', 'relique de coup', 'relique de tour', 'bouclier']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['relique de caractéristique', 'relique de coup', 'relique de tour', 'bouclier', 'PV de récompense']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : le plafond d’esquive (troisième retour du 2026-10-27, C5)', () => {
+  it('aucune anomalie quand le Pas de côté, gravé, copié et aiguisé, porterait l’esquive au-delà de 75 % ; le plafond est vu', () => {
+    const { audit, problems, seen } = createAudit()
+    const step = ENGRAVABLE_SKILLS.find((e) => e.id === 'sidestep')!
+    const elaria = createCharacter('elaria').withForge([
+      { op: 'engrave', face: 3, skill: step },
+      { op: 'copy', face: 3, to: 4 },
+      { op: 'sharpen', face: 3 },
+    ])
+    let n = 0
+    for (const b of CHARACTER_IDS)
+      for (let k = 0; k < 4; k++) audit(simulateCombat(k % 2 ? [elaria, createCharacter(b)] : [createCharacter(b), elaria], { seed: 13000 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    expect(seen['esquive au plafond'] ?? 0).toBeGreaterThan(0)
   })
 })
 
@@ -369,6 +388,28 @@ describe('audit de résolution : retour du 2026-10-27, règles du moteur (critiq
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['riposte esquivée', 'riposte', 'dégâts renvoyés contre l’armure', 'dégâts contre l’armure, sans armure']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
     for (const k of ['critique assuré', 'critique assuré perdu sur une esquive']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : retour du 2026-10-27 (C1), la Riposte et la Rétribution sont des coups', () => {
+  it('aucune anomalie pour les renvois : esquivés, critiques, contre l’armure, la Rétribution coup par coup, aucun renvoi de renvoi', () => {
+    const { audit, problems, seen } = createAudit()
+    // Aldric (Rétribution sur son dé) avec la Riposte gravée, aux rangs I et II, contre tout le roster et contre lui-même ;
+    // des reliques de coup (la Fiole de venin, le Croc de boucher), de moment (Écu cabossé, Conque des vents) et d'armure
+    // (la Cotte de mercenaire)
+    const aldric = [withSkill('aldric', 'riposte', 0), withSkill('aldric', 'riposte', 1)]
+    const kits = [[], ['venom-vial', 'butcher-hook'], ['dented-shield', 'wind-conch', 'mercenary-mail']].map((ids) => ids.map(getRelic))
+    let n = 0
+    for (const a of aldric)
+      for (const b of [...CHARACTER_IDS.map((id) => createCharacter(id)), ...aldric])
+        for (let k = 0; k < 12; k++) {
+          const kit = kits[k % kits.length]
+          audit(simulateCombat([a.withRelics(kit), b.withRelics(kits[(k + 1) % kits.length])], { seed: 31000 + n++ }))
+          audit(simulateCombat([b, a.withRelics(kit)], { seed: 31000 + n++ }))
+        }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['riposte', 'riposte esquivée', 'renvoi critique', 'renvoi esquivé', 'renvoi contre l’armure', 'jauges relâchées : coups à part', 'riposte muette sur un renvoi', 'relâche en part'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 

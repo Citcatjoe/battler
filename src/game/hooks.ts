@@ -120,7 +120,8 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   // moins) ; le Rempart hérissé vit des armures vidées (et en redonne une, revue des auras, A3), la Vindicte des renvois.
   // Le Dé pipé, une aura depuis les Maîtrises (M9) : comme la Pièce lestée, il vit des pièces et en fait tomber plus sur pile
   conflagration: { side: 'self', consumes: ['moment:hit', 'status:burn'], hinders: ['status:burn'], produces: ['damage:temporal'] },
-  loadedDie: { side: 'self', consumes: ['moment:heads'], produces: ['moment:heads'] },
+  // Depuis le 2026-10-27 (AURAS.md § 3), il fait aussi critiquer et esquiver ; il attend toujours une pièce pour s'offrir
+  loadedDie: { side: 'self', consumes: ['moment:heads'], produces: ['moment:heads', 'moment:crit', 'moment:dodge'] },
   bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal', 'status:bonusArmor', 'moment:shieldBreak'] },
   vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
   // Le Duo (barde) : le dé de plus de Coup de chance, sous son nom
@@ -194,6 +195,7 @@ function addEffect(into: Hooks, e: Effect) {
       break
     case 'cleanse':
       if (e.orElse) addEffect(into, e.orElse)
+      if (e.andThen) addEffect(into, e.andThen)
       break
   }
 }

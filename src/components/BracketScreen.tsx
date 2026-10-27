@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import tournamentImg from '../assets/menu-tournament.jpg'
+import seasonImg from '../assets/menu-season.jpg'
 import { createCharacter } from '../game/roster'
 import { champion, currentRound, nextMatch, readyMatches, ROUND_NAMES, ROUNDS, type MatchRef, type Tournament } from '../game/tournament'
 import { humansOf, type Wallets } from '../game/betting'
@@ -58,13 +58,13 @@ export function BracketScreen({ tournament, onPlay, onSimulate, onChampion, onNe
 
   return (
     <div className="fade-in relative isolate h-full">
-      {/* Même décor que la configuration : la porte de l'arène, très assombrie (refonte 0.47.0) */}
+      {/* L'arène vue du ciel, combats en cours (menu-season.jpg, même décor que la saison), assombrie sous l'arbre */}
       <img
-        src={tournamentImg}
+        src={seasonImg}
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
-        style={{ filter: 'brightness(0.2) saturate(0.7)' }}
+        style={{ filter: 'brightness(0.35) saturate(0.8)' }}
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
 

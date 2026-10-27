@@ -18,6 +18,9 @@ const THUNDERBOLT_HITS = 4
 /** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0 ; 6 en 0.115.1 ; 8 depuis les Maîtrises). */
 const PURIFICATION_LIGHT = 8
 
+/** Dégâts directs de la Purification quand elle retire un bonus (2026-10-27, avec l'aura de départ au 3e tour, AURAS.md § 2.4). */
+const PURIFICATION_STRIP = 5
+
 /**
  * Les compétences de chaque maîtrise : ses auras d'abord, puis ses compétences, dans l'ordre du compendium. Second retour
  * du 2026-10-27 (B1) : onze → huit maîtrises, aucune compétence nouvelle. La Chasse (finesse : critiques et esquives)
@@ -466,8 +469,19 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // de tomber à vide (54 % des déclenchements avant). Contre un adversaire à bonus (Brokk), rien ne change.
       // 0.69.0 à 0.112.0 : elle retirait aussi son propre dernier malus ; retiré en 0.113.0 (décision de l'utilisateur :
       // « l'effet sur soi doit être retiré ») : un bonus en face, sinon sa lumière. Son rang aiguise ces dégâts. Maîtrises
-      // (vague 2, 2026-10-27) : 6 → 8 dégâts, Ysolde vanilla 43,8 → 47,6 % (400 par duel), construite 36,4 → 37,7 %
-      effects: [{ type: 'cleanse', polarity: 'positive', count: 1, target: 'opponent', orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' } }],
+      // (vague 2, 2026-10-27) : 6 → 8 dégâts, Ysolde vanilla 43,8 → 47,6 % (400 par duel), construite 36,4 → 37,7 %.
+      // L'aura de départ au 3e tour (2026-10-27, AURAS.md § 2.4) : ses adversaires portent leur aura bien plus souvent, elle
+      // blessait moins ; elle blesse aussi de 5 quand elle retire un bonus (sa lumière de repli, seule, s'aiguise)
+      effects: [
+        {
+          type: 'cleanse',
+          polarity: 'positive',
+          count: 1,
+          target: 'opponent',
+          andThen: { type: 'damage', amount: PURIFICATION_STRIP, target: 'opponent', source: 'holy' },
+          orElse: { type: 'damage', amount: PURIFICATION_LIGHT, target: 'opponent', source: 'holy' },
+        },
+      ],
       rankAxis: { kind: 'amount', per: 3 },
     },
     // Les Maîtrises (P9, 2026-10-27) : le soin franc de la Lumière. Gravée : Ysolde +17,7, Gorak +14,2 (série 71)

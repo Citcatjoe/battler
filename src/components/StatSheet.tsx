@@ -46,7 +46,10 @@ function shownStat(character: Character, l: StatLine): ShownStat {
   const v = character.stats[l.key]
   const base = character.baseStats[l.key]
   const relicHint = v !== base ? `${l.format(base)} sans ses reliques` : undefined
-  const plain: ShownStat = { text: l.format(v), bar: v, hint: relicHint, score: v }
+  // Les PV de récompense (+2 par relique et par étape de forge) : comptés dans les PV affichés, dits dans l'infobulle
+  const rewardHint = l.key === 'maxHp' && character.rewardHp > 0 ? `dont +${character.rewardHp} gagnés par ses récompenses` : undefined
+  const hint = [relicHint, rewardHint].filter(Boolean).join(', ') || undefined
+  const plain: ShownStat = { text: l.format(v), bar: v, hint, score: v }
   if (l.key === 'attackMin') {
     const { attackMin: low, attackMax: high } = character.stats
     const avg = (low + high) / 2

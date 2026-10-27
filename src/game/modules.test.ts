@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { skillCatalog, statusCatalog } from './catalog'
-import { ARENAS, getArena, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
+import { ARENAS, getArena, HOME_ARENAS, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
 import { cueOf, FAMILY_CUES } from './cues'
 import { describeEffect, describeEvent, describeSkill, faceTrigger, rollFace, TRIGGERS, type Effect } from './events'
@@ -10,8 +10,9 @@ import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { offerTargets } from './forge'
 import { computeStats, triggerCounts } from './stats'
-import { POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
-import { Character, figureHeight } from './character'
+import { castsMagicAt, castsSpell, POSE_IDS, POSES, poseImage, poseImages, poseOf } from './poses'
+import { Character, figureHeight, REWARD_HP } from './character'
+import { DAMAGE_SOURCES } from './damage'
 import { EMOJI, testCharacter } from './test-utils'
 import { traceCombat, traceText } from './trace'
 import {
@@ -93,6 +94,17 @@ describe('arènes', () => {
     expect(resolveArena(ARENAS[1].id)).toBe(ARENAS[1])
     expect(getArena('inconnue')).toBe(ARENAS[0])
   })
+  it('chaque personnage a son arène de campagne, qui reste hors du choix et du hasard', () => {
+    const homes = CHARACTER_IDS.map((id) => HOME_ARENAS[id])
+    for (const a of homes) expect(a && a.name && a.region && a.image && a.focus && a.filter).toBeTruthy()
+    const ids = homes.map((a) => a!.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    const shared = [...ARENAS, TRAINING_ARENA]
+    for (const a of homes) expect(shared.some((s) => s.id === a!.id || s.image === a!.image)).toBe(false)
+    const rng = seededRng(11)
+    for (let i = 0; i < 300; i++) expect(ids).not.toContain(resolveArena(RANDOM_ARENA, rng).id)
+    for (const id of ids) expect(getArena(id)).toBe(ARENAS[0])
+  })
 })
 
 describe('catalogue des compétences', () => {
@@ -112,9 +124,10 @@ describe('catalogue des compétences', () => {
     for (const c of CHARACTERS) for (const e of characterPool(c.definition)) expect(skills.some((s) => s.event.id === e.id), `${c.id} ${e.id}`).toBe(true)
     expect(skills.find((s) => s.event.id === 'thunderbolt')).toMatchObject({ outside: true, triggers: [] })
     expect(skills.find((s) => s.event.id === 'thunderbolt')!.owners.map((c) => c.id).sort()).toEqual(['fanchon', 'thaldrin', 'ysolde'])
-    // Morgrut : l'Aura de puissance sur son 1, le reste de ses deux maîtrises (Fureur, Rempart) hors kit
+    // Morgrut : l'Aura de puissance sur son 1, le Crescendo sur son 2 (C5), le reste de ses deux maîtrises (Fureur, Rempart)
+    // hors kit
     const morgrut = skills.filter((s) => s.owners.some((c) => c.id === 'morgrut'))
-    expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura'])
+    expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura', 'crescendo'])
     expect(morgrut.filter((s) => s.outside).map((s) => s.event.id)).toEqual(expect.arrayContaining(['guard-break', 'grudge', 'stunning-blow']))
   })
 
@@ -671,7 +684,7 @@ describe('aucun emoji dans les textes du jeu', () => {
             case 'statusTick':
               return [statusTickLog(beat.side, beat.status, beat.effects, r.fighters).text]
             case 'statusReaction':
-              return [statusReactionLog(beat.side, beat.status, beat.effects, r.fighters).text]
+              return [statusReactionLog(beat.side, beat.status, beat.effects, r.fighters, beat.strike).text]
             case 'coin':
               return [coinLog(beat.turn, beat.side, beat.heads, beat.effects, r.fighters).text]
             case 'statusAge':
@@ -890,7 +903,31 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(poseOf({ dazed: true, received: { landed: false, dodged: true } })).toBe('dodge')
     expect(poseOf({ dazed: true, lunging: true })).toBe('attack')
     expect(poseOf({ dazed: true, state: 'ko' })).toBe('ko')
-    expect(POSE_IDS).toEqual(['idle', 'attack', 'dodge', 'hurt', 'ko', 'victory', 'dazed'])
+    // L'incantation : ses coups partent en incantation ; un coup encaissé, une esquive passent devant ; elle passe devant
+    // la perte de contrôle
+    expect(poseOf({ casting: true })).toBe('cast')
+    expect(poseOf({ casting: true, lunging: true })).toBe('cast')
+    expect(poseOf({ casting: true, received: { landed: true, dodged: false } })).toBe('hurt')
+    expect(poseOf({ casting: true, dazed: true })).toBe('cast')
+    expect(poseOf({ casting: true, state: 'victory' })).toBe('victory')
+    expect(POSE_IDS).toEqual(['idle', 'attack', 'dodge', 'hurt', 'ko', 'victory', 'dazed', 'cast'])
+  })
+
+  it('incantation : un sort offensif blesse par la magie, ou entrave sans dégâts physiques quand il est arcane (M55)', () => {
+    const casts = (id: string) => castsSpell(skillById(id)!)
+    // Dégâts magiques (Foudre, Lumière), malus arcanes (Peur, Souffle de la tombe, Malchance), purge et lumière (Purification)
+    for (const id of ['thunderbolt', 'purification', 'fear', 'grave-breath', 'jinx', 'blinding']) expect(casts(id), id).toBe(true)
+    // Des coups (la Rétribution, arcane mais physique), des entraves martiales, des sorts sur soi
+    for (const id of ['retribution', 'stunning-blow', 'hemorrhage', 'cleave', 'prayer', 'holy-aura', 'storm-sky']) expect(casts(id), id).toBe(false)
+    // Toute compétence du jeu qui blesse l'adversaire par une source magique fait incanter son lanceur
+    const all = [...ENGRAVABLE_SKILLS, ...CHARACTERS.flatMap((c) => c.events)]
+    for (const e of all)
+      if (e.effects.some((x) => (x.type === 'damage' || x.type === 'release') && x.target === 'opponent' && DAMAGE_SOURCES[x.source].magical))
+        expect(castsSpell(e), e.id).toBe(true)
+    // Le tick d'une aura qui foudroie l'adversaire incante ; le poison qui ronge son porteur, non
+    expect(castsMagicAt(0, [{ type: 'damage', target: 1, amount: 2, source: 'lightning' }])).toBe(true)
+    expect(castsMagicAt(0, [{ type: 'damage', target: 0, amount: 2, source: 'burn' }])).toBe(false)
+    expect(castsMagicAt(0, [{ type: 'damage', target: 1, amount: 2, source: 'strike' }])).toBe(false)
   })
 
   it("retombe sur l'image de garde quand une posture manque", () => {
@@ -932,10 +969,10 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
   })
 
-  it('tous les personnages, et les deux formes du druide, ont les cinq postures communes et leurs deux images de perte de contrôle', () => {
+  it('tous les personnages, et les deux formes du druide, ont les cinq postures communes, leurs deux images de perte de contrôle et leur incantation', () => {
     const looks = CHARACTERS.flatMap((c) => (c.forms ?? [null]).map((_, f) => [`${c.id}:${f}`, c.lookFor(f)] as const))
     for (const [id, look] of looks) {
-      expect(Object.keys(look.poses ?? {}).sort(), id).toEqual(['attack', 'dazed', 'dodge', 'hurt', 'ko', 'victory'])
+      expect(Object.keys(look.poses ?? {}).sort(), id).toEqual(['attack', 'cast', 'dazed', 'dodge', 'hurt', 'ko', 'victory'])
       expect(new Set(look.poses?.dazed).size, id).toBe(2)
     }
     // L'ours a ses propres postures, pas celles du druide
@@ -971,7 +1008,8 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual(['thorns', 'stoneskin'])
       expect(opponent.forge).toEqual(build.forge)
       expect(opponent.relics.map((r) => r.id)).toEqual(build.relics)
-      expect(opponent.maxHp).toBe(33)
+      // Ses PV réglés, plus ceux de ses récompenses
+      expect(opponent.baseStats.maxHp).toBe(33 + opponent.rewardHp)
     }
   })
 
@@ -988,6 +1026,22 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     const strong = testCharacter('b', { maxHp: 40, attackMin: 9, attackMax: 9 })
     expect(tuneHp(weak, strong, 0.9, 'plancher', HP_FLOOR)).toBe(Math.ceil(40 * HP_FLOOR))
     expect(tuneHp(weak, strong, 0.9, 'plancher')).toBe(10)
+  })
+
+  it('PV de récompense (C4) : +REWARD_HP PV max par relique et par étape de forge, pour tous, sur la fiche et en combat', () => {
+    const gorak = createCharacter('gorak')
+    const built = gorak.withForge([{ op: 'gild', face: 5 }, { op: 'temper' }]).withRelics([getRelic('wolf-fang')])
+    expect(built.rewardHp).toBe(3 * REWARD_HP)
+    expect(built.maxHp).toBe(gorak.maxHp + 3 * REWARD_HP)
+    expect(built.baseStats.maxHp).toBe(gorak.baseStats.maxHp + 3 * REWARD_HP)
+    // Le combat part de ces PV
+    expect(simulateCombat([built, createCharacter('brokk')], { seed: 1 }).fighters[0].maxHp).toBe(built.maxHp)
+    // Le réglage d'un adversaire de campagne porte sur ses PV d'origine : ses récompenses s'y rajoutent
+    const run = { ...startRun('gorak', 8), wins: 5 }
+    for (const e of encountersFor(run)) {
+      const o = opponentOf(e)
+      expect(o.maxHp, e.characterId).toBe(e.maxHp + o.rewardHp + (o.maxHp - o.baseStats.maxHp))
+    }
   })
 
   it('le boss est un personnage valide, à son dé forgé', () => {
@@ -1018,7 +1072,7 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       ysolde: ['holy-aura', 'purification'],
       naraxes: ['decoction-aura', 'coin-flip'],
       aldric: ['vendetta', 'retribution'],
-      morgrut: ['power-aura'],
+      morgrut: ['power-aura', 'crescendo'],
       thaldrin: ['storm-sky', 'firefly'],
       fanchon: ['ballad', 'duo'],
     }

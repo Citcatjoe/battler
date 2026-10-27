@@ -1,7 +1,10 @@
+import menuCampaignImg from './assets/menu-campaign.jpg'
 import menuDuelImg from './assets/menu-duel.jpg'
+import menuSeasonImg from './assets/menu-season.jpg'
 import menuTournamentImg from './assets/menu-tournament.jpg'
+import menuVictoryImg from './assets/menu-victory.jpg'
 import { ICON_URLS } from './components/Icon'
-import { ARENAS, TRAINING_ARENA } from './game/arenas'
+import { ARENAS, HOME_ARENAS, TRAINING_ARENA } from './game/arenas'
 import { poseImages } from './game/poses'
 import { CHARACTERS } from './game/roster'
 import { AUDIO_URLS, prefetchAudio } from './game/sound'
@@ -34,8 +37,9 @@ const FONTS = [
 /** Les images affichées : combattants (chaque forme, chaque posture), arènes, fonds des menus, icônes peintes */
 function imageUrls(): string[] {
   const fighters = CHARACTERS.flatMap((c) => (c.forms ?? [null]).flatMap((_, f) => poseImages(c.lookFor(f))))
-  const arenas = [...ARENAS, TRAINING_ARENA].map((a) => a.image)
-  return [...new Set([...fighters, ...arenas, menuDuelImg, menuTournamentImg, ...ICON_URLS])]
+  const arenas = [...ARENAS, TRAINING_ARENA, ...Object.values(HOME_ARENAS)].flatMap((a) => (a ? [a.image] : []))
+  const menus = [menuDuelImg, menuTournamentImg, menuCampaignImg, menuSeasonImg, menuVictoryImg]
+  return [...new Set([...fighters, ...arenas, ...menus, ...ICON_URLS])]
 }
 
 function loadImage(url: string) {

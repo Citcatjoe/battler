@@ -7,6 +7,16 @@ import skyHandImg from '../assets/arena-sky-hand.jpg'
 import swampImg from '../assets/arena-swamp.jpg'
 import terraceImg from '../assets/arena-terrace.jpg'
 import trainingImg from '../assets/arena-training.jpg'
+import redPitsImg from '../assets/arena-red-pits.jpg'
+import archersPassImg from '../assets/arena-archers-pass.jpg'
+import loneGateImg from '../assets/arena-lone-gate.jpg'
+import spearFieldImg from '../assets/arena-spear-field.jpg'
+import judgmentNaveImg from '../assets/arena-judgment-nave.jpg'
+import greenhouseImg from '../assets/arena-greenhouse.jpg'
+import titheBarnImg from '../assets/arena-tithe-barn.jpg'
+import sunflowersImg from '../assets/arena-sunflowers.jpg'
+import splitOakImg from '../assets/arena-split-oak.jpg'
+import stageImg from '../assets/arena-stage.jpg'
 import { defaultRng, pick, type Rng } from './rng'
 
 /*
@@ -106,6 +116,25 @@ export const TRAINING_ARENA: Arena = {
   image: trainingImg,
   focus: '50% 70%',
   filter: 'brightness(0.8) saturate(0.9)',
+}
+
+/**
+ * Arènes de campagne, par personnage : on affronte chaque adversaire chez lui (docs/STYLE_BIBLE.md § 5.7). Chacune
+ * n'apparaît que contre son personnage, en campagne ; jamais au choix, jamais au hasard, ni en duel, ni en tournoi, ni en
+ * saison. Le boss n'en a pas encore : sa rencontre garde le sélecteur d'arène.
+ */
+export const HOME_ARENAS: Readonly<Partial<Record<string, Arena>>> = {
+  gorak: { id: 'red-pits', name: 'Les Fosses-Rouges', region: 'Kar-Dush', image: redPitsImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.8)' },
+  elaria: { id: 'archers-pass', name: 'La Passe-des-Archères', region: 'Marches de Lithmeren', image: archersPassImg, focus: '50% 70%', filter: 'brightness(0.75) saturate(0.9)' },
+  brokk: { id: 'lone-gate', name: 'La Porte-Seule', region: 'Durnhold', image: loneGateImg, focus: '50% 70%', filter: 'brightness(0.6) saturate(0.85)' },
+  ervald: { id: 'spear-field', name: 'Le Champ-des-Lances', region: 'Ostremort', image: spearFieldImg, focus: '50% 70%', filter: 'brightness(0.8) saturate(0.9)' },
+  // Nef blanche en plein midi : la plus claire, la plus assombrie
+  ysolde: { id: 'judgment-nave', name: 'Le Fléau', region: "Sanctuaire d'Aurelhaven", image: judgmentNaveImg, focus: '50% 70%', filter: 'brightness(0.55) saturate(0.9)' },
+  naraxes: { id: 'greenhouse', name: 'La Serre-Gagnée', region: 'Sszeth', image: greenhouseImg, focus: '50% 70%', filter: 'brightness(0.65) saturate(0.85)' },
+  aldric: { id: 'tithe-barn', name: 'La Grange-aux-Dîmes', region: 'Commanderie du Sceau ardent', image: titheBarnImg, focus: '50% 70%', filter: 'brightness(0.65) saturate(0.8)' },
+  morgrut: { id: 'sunflowers', name: 'Les Grands-Soleils', region: 'Moulin de Brévanne', image: sunflowersImg, focus: '50% 70%', filter: 'brightness(0.65) saturate(0.85)' },
+  thaldrin: { id: 'split-oak', name: 'Le Chêne-Fendu', region: 'Lande de Garance', image: splitOakImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.85)' },
+  fanchon: { id: 'stage', name: 'Les Tréteaux', region: 'Foire de Clairbourg', image: stageImg, focus: '50% 70%', filter: 'brightness(0.7) saturate(0.85)' },
 }
 
 /** Choix « au hasard » : l'arène est tirée au moment de lancer le combat. */

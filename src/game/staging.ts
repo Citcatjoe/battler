@@ -49,6 +49,7 @@ import { SCENE_EVENTS, sceneTarget, type SceneEventId } from './scenes'
 import { signalTargets, STATES, STATUS_PLACE } from './states'
 import { attackSpecials, reactionSpecial, relicSpecial, SPECIAL_SIGNS, type SpecialBadge, type SpecialSign, type SpecialSpec } from './specials'
 import { isMechanic, STATUSES, type Polarity, type Status, type StatusId } from './statuses'
+import { castsMagicAt, castsSpell } from './poses'
 import type { sfx } from './sound'
 import * as T from './timing'
 
@@ -218,6 +219,11 @@ export type CueBody =
    * Étourdi), puis pendant le tour qu'il perd, jusqu'au passage de main
    */
   | { channel: 'daze'; side: Side; on: boolean }
+  /**
+   * Incantation (M55) : `side` lance un sort offensif (`castsSpell`, poses.ts) ; il garde sa posture d'incantation de son
+   * départ à la fin de sa lecture, coups et scène compris
+   */
+  | { channel: 'cast'; side: Side; on: boolean }
   /** Numéro du tour et camp dont c'est le tour (null : avant l'initiative, après le K.O.) */
   | { channel: 'turn'; turn: number; active: Side | null }
   | { channel: 'winner'; side: Side }
@@ -373,7 +379,8 @@ export interface FxSpec {
  */
 export function fxFloats(fx: FxSpec, side: Side, struck = false): DistributiveOmit<Float, 'key'>[] {
   const isSource = fx.source === side
-  const mine = fx.effects.filter((e) => e.target === side && !(e.type === 'applyStatus' && isMechanic(e.status)))
+  // Des jauges relâchées (C1) : leurs coups suivent, chacun avec son chiffre
+  const mine = fx.effects.filter((e) => e.target === side && e.type !== 'rebound' && !(e.type === 'applyStatus' && isMechanic(e.status)))
   const echoes = isSource && fx.title ? mine.filter((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && !atCap(e)) : []
   const subtitle = [...new Set(echoes.flatMap((e) => (e.type === 'applyStatus' ? [STATUSES[e.status].name] : [])))]
     .filter((name) => name !== fx.title)
@@ -538,6 +545,15 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   let dazed: Pair<boolean> = [false, false]
   let lostTurn: Side | null = null
   let onScreen: Pair<Status[]> = [[], []]
+  /**
+   * Incantations en cours, par camp (M55) : un sort peut en déclencher un autre du même lanceur pendant sa lecture ; la
+   * posture ne part qu'avec le dernier
+   */
+  const spells: Pair<number> = [0, 0]
+  const castFor = (side: Side, on: boolean) => {
+    spells[side] += on ? 1 : -1
+    if (spells[side] === (on ? 1 : 0)) emit({ channel: 'cast', side, on })
+  }
   /**
    * Le sursis (la Médaille de sursis, R1) : un combattant ne tombe à 0 PV à l'écran qu'à l'étape de son K.O. (la première
    * où le moteur le met à 0) ; avant elle, une perte qui l'aurait fait tomber le laisse à 1 PV. `staged` : l'étape en
@@ -1008,8 +1024,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     for (const next of children[hit.id]) {
       // Déjà jouée avant le coup : une relique du dé (M40)
       if (rides.includes(next) || next === flow || absorbed.has(next.id)) continue
-      // Une jauge qui se remplit n'a rien à jouer ; une Riposte esquivée (`dodgedBy`) est une réaction comme une autre
-      if (next.type === 'statusReaction' && next.effects.length === 0 && !next.dodgedBy) quiet.push(next)
+      // Une jauge qui se remplit n'a rien à jouer ; un renvoi esquivé (C1) est une réaction comme une autre
+      if (next.type === 'statusReaction' && next.effects.length === 0 && !next.strike) quiet.push(next)
       else if (next.type === 'statusReaction' || next.type === 'relic' || (next.type === 'event' && rollFace(next.event.trigger) === undefined))
         reactions.push(next)
     }
@@ -1431,6 +1447,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         // Un sort à scène qui ne frappe pas (l'Éclair aveuglant, la Peur : M54, 2026-10-27) : la scène part, son statut
         // tombe à son impact, sans signal (la scène le porte, comme une relique à scène) ; refusé (M25), rien ne part
         const spell = !!timing && !effects.some((e) => e.type === 'damage')
+        // Un sort offensif (M55) : le lanceur incante dès son départ, scène comprise, jusqu'à la fin de sa lecture
+        const casting = !still && !!def && castsSpell(def)
+        if (casting) castFor(beat.event.side, true)
         if (def?.scene && !(spell && still)) emit({ channel: 'scene', scene: { id: def.scene, source: beat.event.side, target: sceneTarget(def.scene, beat.event.side) } })
         if (spell && !still) wait(timing!.impacts[0], 'rythme de la scène')
         const base = hp
@@ -1440,6 +1459,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           '',
           effects,
           () => {
+            // Sans dé, le sceau de la face 1 s'allume quand l'aura de départ se pose d'office
+            if (beat.event.trigger === 'auraDue') pulse(beat.event.side, 1)
             settle(beat, base)
             showStatuses(beat.id)
             log(eventLog(beat.event, fighters))
@@ -1453,10 +1474,17 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             ...(!spell && { signal: beat.event.eventId }),
             counted: countedOf(beat),
             reactions: answersOf(beat),
+            // L'aura de départ posée d'office au 3e tour (2026-10-27) : son élan habituel, son sceau qui s'allume, et un
+            // texte sur le porteur qui dit pourquoi elle part sans dé (pas si elle est volée : le « Volé » le dit)
+            ...(beat.event.trigger === 'auraDue' &&
+              effects.some((e) => e.type === 'applyStatus' && e.target === beat.event.side && e.stolenBy === undefined && e.result.kind === 'applied') && {
+                notes: [{ target: beat.event.side, text: 'Aura éveillée', tone: 'positive' as const, rises: true }],
+              }),
             // Compétence déclenchée par un coup de rafale : la rafale garde son rythme (M17 bis), une scène le sien (M24)
             ...(brisk.has(beat.id) && { brisk: true as const }),
           },
         )
+        if (casting) castFor(beat.event.side, false)
         break
       }
       case 'statusTick': {
@@ -1470,6 +1498,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const harms = beat.effects.some((e) => e.type === 'damage' && e.target === beat.side)
         const strikes = beat.effects.some((e) => e.type === 'damage' && e.target !== beat.side)
         const base = hp
+        // Une aura qui foudroie l'adversaire au début du tour de son porteur (Ciel d'orage) : il incante (M55)
+        const casting = castsMagicAt(beat.side, beat.effects)
+        if (casting) castFor(beat.side, true)
         showEffects(
           outward ? beat.side : null,
           outward && !fromRing ? STATUSES[beat.status].name : '',
@@ -1485,24 +1516,30 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             reactions: answersOf(beat),
           },
         )
+        if (casting) castFor(beat.side, false)
         break
       }
       case 'statusReaction': {
-        // La Riposte esquivée (M53, 2026-10-27) : son porteur part en élan, l'attaquant esquive (« ESQUIVE ! », le son de
-        // l'Esquive), sans chiffre ; la charge de Riposte et celle de l'esquive partent à cet instant. Au milieu de la
-        // lecture du coup, comme toute réaction (M17)
-        if (beat.dodgedBy) {
+        // Un renvoi esquivé (C1 ; M53 pour l'esquive assurée) : son porteur part en élan, la cible esquive (« ESQUIVE ! »,
+        // le son de l'Esquive), sans chiffre ; les charges qu'il dépense partent à cet instant. Au milieu de la lecture du
+        // coup, comme toute réaction (M17)
+        if (beat.strike?.dodged) {
           const missed: Blow = { key: key++, from: beat.side, to: other(beat.side), damage: 0, source: 'strike', heavy: false, lunge: true, landed: false, dodged: true }
           if (strike) setStrike(null)
           setAura(beat.side)
+          for (const s of attackSpecials(beat.strike).roll) addSpecial(s)
           setBlow(missed)
           hold('BLOW_WIND')
           sound('dodge')
           settle(beat)
           showStatuses(beat.id)
           setBlow({ ...missed, landed: true })
-          log(statusReactionLog(beat.side, beat.status, beat.effects, fighters))
-          hold(brisk.has(beat.id) ? 'VOLLEY_STRIKE_HOLD' : 'BLOW_LAST_HOLD')
+          log(statusReactionLog(beat.side, beat.status, beat.effects, fighters, beat.strike))
+          // Ce que l'esquive déclenche (la Feinte) part au milieu de sa lecture, comme pour un coup esquivé (M41)
+          const after = consequencesOf(beat)
+          land(after)
+          if (after.reactions.length > 0 && !brisk.has(beat.id)) react(after.reactions, 'REACTION_LEAD')
+          else hold(brisk.has(beat.id) ? 'VOLLEY_STRIKE_HOLD' : 'BLOW_LAST_HOLD')
           setBlow(null)
           setAura(null)
           break
@@ -1515,7 +1552,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         }
         // Riposte, Épines, Vol de vie, Saignement : une réaction au coup en cours, vue de l'attaquant (le maître du tour)
         const def = STATUSES[beat.status]
-        const reflects = def.reflectsHit !== undefined
+        // Un renvoi (C1) part en élan, comme un coup ; critique, il s'annonce avant l'élan (labels du critique sous le dé)
+        // et tombe avec le son du critique ; ses boucliers et modificateurs qui s'usent tombent à l'impact
+        const rebound = beat.strike
+        // Ce qu'un renvoi entraîne (Vol de vie, Épines, jauges, la Vindicte) se joue comme pour un coup : les jauges à
+        // l'impact, les réactions au milieu de la lecture de son coup (M41)
+        const after = rebound ? consequencesOf(beat) : undefined
+        if (rebound) for (const s of [...attackSpecials(rebound).crit, ...attackSpecials(rebound).impact]) addSpecial(s)
         const harms = beat.effects.some((e) => e.type === 'damage' && e.target !== beat.side)
         const wound = beat.effects.reduce((n, e) => n + (e.type === 'damage' && e.target === beat.side ? e.amount : 0), 0)
         // Rien n'a changé (Saignement des Épines résisté par une immunité, plafond) : ni label ni son (M25)
@@ -1529,6 +1572,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const named = wound === 0 && !still && !special && !ring && !mechanic
         const seal = mechanic ? posingFace(beat.side, beat.status) : undefined
         const base = hp
+        // Une aura qui blesse l'adversaire par la magie en réponse (la Sentence, à chaque soin) : il incante (M55)
+        const casting = castsMagicAt(beat.side, beat.effects)
+        if (casting) castFor(beat.side, true)
         showEffects(
           wound > 0 || still ? null : beat.side,
           named ? def.name : '',
@@ -1536,13 +1582,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           () => {
             settle(beat, base)
             showStatuses(beat.id)
-            log(statusReactionLog(beat.side, beat.status, beat.effects, fighters))
+            log(statusReactionLog(beat.side, beat.status, beat.effects, fighters, beat.strike))
+            if (after) land(after)
           },
           {
             // Un renvoi de dégâts n'est qu'un coup, même gros ; le vol de vie, un soin (empêché par l'Hémorragie : son
             // malus de Soin, lot 3) ; la plaie, le Ronge
             ...(harms
-              ? { blows: reflects ? 'lunge' : 'reaction', cue: null, impact: () => 'hit' }
+              ? { blows: rebound ? 'lunge' : 'reaction', cue: null, impact: () => (rebound?.crit ? 'crit' : 'hit') }
               : def.drainsHit
                 ? { cue: cueOf(beat.side, beat.effects) ?? 'heal' }
                 : wound > 0
@@ -1554,13 +1601,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             // Sentence frappe à chaque soin, M19 bis). Sauf une réaction au coup encaissé dans une rafale (l'Aura d'épines,
             // une aura depuis 0.118.1) : elle répond à chaque impact, et le vol du signal casserait le rythme (M17 bis)
             ...(ring && !(brisk.has(beat.id) && def.reactions?.hurt) && { signal: beat.status, ring: true }),
-            reactions: answersOf(beat),
+            reactions: after ? after.reactions : answersOf(beat),
             // Réaction au coup : elle part au milieu de sa lecture, sans attente de plus (M17)
             ...(snapped.has(beat.id) && { lead: 0 }),
             // Réaction à un coup de rafale : elle ne s'attarde pas, la rafale garde son rythme (M17 bis)
             ...(brisk.has(beat.id) && { brisk: true }),
           } as ShowOpts,
         )
+        if (casting) castFor(beat.side, false)
         break
       }
       case 'skip':

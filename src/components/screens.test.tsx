@@ -4,7 +4,7 @@
  */
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { ARENAS, RANDOM_ARENA } from '../game/arenas'
+import { ARENAS, HOME_ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
@@ -285,6 +285,20 @@ describe('écrans', () => {
     expect(run).toContain('bt-badge')
   })
 
+  it('affrontement de campagne : l’arène de l’adversaire, chez lui, à la place du sélecteur ; le boss garde le sélecteur', () => {
+    const pair = [createCharacter('gorak'), createCharacter('ysolde')] as const
+    const home = HOME_ARENAS.ysolde!
+    const html = (arena?: typeof home) =>
+      renderToString(<MatchupScreen mode="campaign" fighters={[...pair]} arena={ARENAS[2].id} onArenaChange={noop} home={arena} onPlay={noop} onSimulate={noop} onBack={noop} />).replace(/&#x27;/g, "'")
+    const away = html(home)
+    for (const text of [home.name, home.region, home.image]) expect(away).toContain(text)
+    expect(away).not.toContain('Arène suivante')
+    expect(away).not.toContain(ARENAS[2].image)
+    const boss = html(undefined)
+    expect(boss).toContain('Arène suivante')
+    expect(boss).toContain(ARENAS[2].image)
+  })
+
   it('comparaison des stats : le meilleur de chaque ligne surligné à la couleur de son camp, rien à égalité', () => {
     const base = createCharacter('gorak')
     const strong = base.adjusted({ stats: { maxHp: base.stats.maxHp + 10 } })
@@ -432,6 +446,19 @@ describe('écrans', () => {
     const hurt = renderToString(<Fighter character={naraxes} side={1} dazed received={{ key: 1, damage: 3, crit: false, dodged: false, landed: true }} />)
     expect(hurt).toContain(naraxes.look.poses!.hurt!)
     expect(hurt).not.toContain('daze-frame')
+  })
+
+  it("incantation : l'image d'incantation, sa toile rehaussée affichée d'autant plus haute, et l'élan d'un sort (M55)", () => {
+    const ysolde = createCharacter('ysolde')
+    const { scale, poseRoom } = ysolde.look
+    const html = renderToString(<Fighter character={ysolde} side={0} casting />)
+    expect(html).toContain(ysolde.look.poses!.cast!)
+    expect(html).toContain(`height:${scale * (1 + poseRoom!.cast!) * 100}%`)
+    // Ses coups partent en incantation, d'un pas au lieu d'un bond ; sans sort, l'élan et l'image d'un coup
+    expect(renderToString(<Fighter character={ysolde} side={0} casting lunging />)).toMatch(/lunge[^"]*lunge-cast/)
+    const blow = renderToString(<Fighter character={ysolde} side={0} lunging />)
+    expect(blow).toContain(ysolde.look.poses!.attack!)
+    expect(blow).not.toContain('lunge-cast')
   })
 
   it('une toile avec du vide sous les pieds est redescendue (voleuse)', () => {

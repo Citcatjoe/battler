@@ -107,6 +107,8 @@ interface Props {
   /** Cadre du combat : une arène précise ou « au hasard » */
   arena: ArenaChoice
   onArenaChange: (arena: ArenaChoice) => void
+  /** Campagne : l'arène de l'adversaire, chez lui (`homeArena`) ; elle remplace le choix et son sélecteur */
+  home?: Arena
   /** Paris entre deux observateurs (docs/PARIS.md) ; absent : pas de guichet */
   betting?: {
     wallets: Wallets
@@ -131,6 +133,7 @@ export function MatchupScreen({
   title = mode === 'duel' ? 'Duel' : 'Affrontement',
   arena,
   onArenaChange,
+  home,
   betting,
   ranks,
 }: Props) {
@@ -143,7 +146,7 @@ export function MatchupScreen({
   // « Au hasard » : l'arène est tirée à l'ouverture de l'écran, montrée en fond, et c'est elle que le combat prend.
   // Décor seulement, aucune règle : le hasard de l'interface suffit (`resolveArena`).
   const [drawn] = useState(() => resolveArena(RANDOM_ARENA))
-  const shown = arena === RANDOM_ARENA ? drawn : getArena(arena)
+  const shown = home ?? (arena === RANDOM_ARENA ? drawn : getArena(arena))
   const names: Pair<string> = [fighters[0].name, fighters[1].name]
   // Fracas quand le « VS » s'abat ; le délai est annulé si l'écran est démonté entre-temps.
   useEffect(() => {
@@ -169,7 +172,7 @@ export function MatchupScreen({
 
       <header className="absolute inset-x-0 top-[26px] flex flex-col items-center gap-[14px]">
         <p className="text-sm font-bold uppercase leading-5 tracking-[0.5em] text-stone-500">{title}</p>
-        <ArenaSlider value={arena} onChange={onArenaChange} />
+        {home ? <HomeArenaLabel arena={home} /> : <ArenaSlider value={arena} onChange={onArenaChange} />}
       </header>
       {/* Retour au contexte d'origine, en haut à gauche (le son est en haut à droite) */}
       <BackLink onClick={onBack} className="absolute left-10 top-[36px] z-30">
@@ -374,6 +377,17 @@ function ArenaSlider({ value, onChange }: { value: ArenaChoice; onChange: (arena
         ›
       </button>
     </div>
+  )
+}
+
+/** L'arène imposée d'une rencontre de campagne, à la place du sélecteur : son lieu-dit et sa région, sans flèches. */
+function HomeArenaLabel({ arena }: { arena: Arena }) {
+  return (
+    <p className="flex h-[36px] items-baseline justify-center gap-4" aria-label="Arène">
+      <span className="matchup-arena-label">Arène</span>
+      <span className="matchup-arena-name">{arena.name}</span>
+      <span className="matchup-arena-index">{arena.region}</span>
+    </p>
   )
 }
 

@@ -1,4 +1,8 @@
 import type { CharacterLook } from './character'
+import type { AppliedEffect } from './combat'
+import { DAMAGE_SOURCES } from './damage'
+import { DEFAULT_SKILL_NATURE, type CharacterEvent, type Effect } from './events'
+import { STATUSES } from './statuses'
 
 /*
  * Postures d'un combattant (docs/POSTURES.md) : une image par moment du combat, pour l'immersion.
@@ -13,7 +17,7 @@ import type { CharacterLook } from './character'
  * 2026-10-19) : les moments que tout combattant vit. Jamais une posture propre à une capacité : la
  * compétence garde son animation (nom de la compétence) sur l'image de garde.
  */
-export type PoseId = 'idle' | 'attack' | 'dodge' | 'hurt' | 'ko' | 'victory' | 'dazed'
+export type PoseId = 'idle' | 'attack' | 'dodge' | 'hurt' | 'ko' | 'victory' | 'dazed' | 'cast'
 
 export const POSES: Record<PoseId, { name: string; when: string; prompt: string }> = {
   idle: {
@@ -53,6 +57,12 @@ export const POSES: Record<PoseId, { name: string; when: string; prompt: string 
     when: "tant qu'il porte un statut qui lui fait perdre son action (Peur, Étourdi), jusqu'à la fin du tour perdu",
     prompt: 'dazed and wobbling, two frames leaning far forward then far backward, feet planted, head lolling, weapon hanging loose',
   },
+  // 2026-10-27 (demande de l'utilisateur) : un sort offensif, lancé par le personnage (docs/POSTURES.md § 7)
+  cast: {
+    name: 'Incantation',
+    when: "quand il lance un sort offensif (`castsSpell`) : de son départ à la fin de sa lecture, et pendant l'élan de ses coups",
+    prompt: 'casting an offensive spell: one arm raised to the sky to call a higher power, the other reaching toward the enemy, a small glow on the hand or weapon that channels it',
+  },
 }
 
 export const POSE_IDS = Object.keys(POSES) as PoseId[]
@@ -65,18 +75,67 @@ export interface PoseMoment {
   received?: { landed: boolean; dodged: boolean }
   /** Il a perdu le contrôle (cue `daze` de la mise en scène) */
   dazed?: boolean
+  /** Il lance un sort offensif (cue `cast` de la mise en scène) : ses coups partent aussi en incantation */
+  casting?: boolean
 }
 
-/** La posture du moment, par ordre de priorité : fin du combat, élan, esquive, coup encaissé, perte de contrôle, garde. */
+/**
+ * La posture du moment, par ordre de priorité : fin du combat, élan (en incantation s'il lance un sort), esquive, coup
+ * encaissé, incantation, perte de contrôle, garde.
+ */
 export function poseOf(m: PoseMoment): PoseId {
   if (m.state === 'ko') return 'ko'
   if (m.state === 'victory') return 'victory'
-  if (m.lunging) return 'attack'
+  if (m.lunging) return m.casting ? 'cast' : 'attack'
   if (m.received?.dodged) return 'dodge'
   if (m.received?.landed) return 'hurt'
+  if (m.casting) return 'cast'
   if (m.dazed) return 'dazed'
   return 'idle'
 }
+
+/**
+ * Le mal qu'un effet fait à l'adversaire du lanceur : aucun, des dégâts magiques ou physiques (selon leur source), ou une
+ * entrave sans dégâts (un malus, une purge de ses bonus).
+ */
+function harmOf(e: Effect): 'none' | 'magical' | 'physical' | 'hex' {
+  if (e.target !== 'opponent') return 'none'
+  switch (e.type) {
+    case 'damage':
+    case 'release':
+      return DAMAGE_SOURCES[e.source].magical ? 'magical' : 'physical'
+    case 'applyStatus':
+      return STATUSES[e.status].polarity === 'negative' ? 'hex' : 'none'
+    case 'cleanse': {
+      // La Purification : elle retire son bonus, puis sa lumière blesse (`andThen`, `orElse`)
+      const after = [e.andThen, e.orElse].flatMap((x) => (x ? [harmOf({ ...x, target: x.target ?? 'opponent' })] : []))
+      return after.find((h) => h === 'magical' || h === 'physical') ?? (e.polarity === 'positive' ? 'hex' : 'none')
+    }
+    case 'heal':
+      return 'none'
+  }
+}
+
+/**
+ * Un sort offensif (2026-10-27, docs/POSTURES.md § 7) : une compétence qui blesse l'adversaire par la magie (une source
+ * magique : Lumière, Foudre, Feu, Brûlure…, `DAMAGE_SOURCES.magical`), ou, sans dégâts physiques, une compétence arcane
+ * qui l'entrave (un malus, une purge de ses bonus : la Peur, le Souffle de la tombe). Son lanceur prend sa posture
+ * d'incantation. Des dégâts physiques restent des coups, même d'une compétence arcane (la Rétribution) ; une compétence
+ * martiale ou d'adresse qui entrave reste un coup (le Coup de massue) ; un sort qui ne vise que soi (une aura, un soin)
+ * n'est pas offensif. Présentation seule : aucune règle ne le lit.
+ */
+export function castsSpell(event: Pick<CharacterEvent, 'nature' | 'effects'>): boolean {
+  const harms = event.effects.map(harmOf)
+  if (harms.includes('magical')) return true
+  return !harms.includes('physical') && (event.nature ?? DEFAULT_SKILL_NATURE) === 'arcane' && harms.includes('hex')
+}
+
+/**
+ * Ce que le statut d'un combattant fait de lui-même (une aura qui agit au début de son tour, qui réagit) : des dégâts
+ * magiques sur son adversaire (le Ciel d'orage, la Sentence). Il incante alors, comme pour un sort qu'il lance.
+ */
+export const castsMagicAt = (side: number, effects: readonly AppliedEffect[]) =>
+  effects.some((e) => e.type === 'damage' && e.target !== side && e.amount > 0 && DAMAGE_SOURCES[e.source].magical)
 
 /** Les postures à une image (la perte de contrôle en a deux, qui alternent : `poses.dazed`). */
 export type SinglePoseId = Exclude<PoseId, 'idle' | 'dazed'>

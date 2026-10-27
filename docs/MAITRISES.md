@@ -2,6 +2,8 @@
 
 _Conception (vague 1) demandée par l'utilisateur le 2026-10-27 ([retour du 27 octobre](../prompts/Retour%20du%2027%20octobre.md), points V1 à V5, P1 à P11, M9 et R5). Les mesures de conception sont celles des séries 70 à 75 du laboratoire (`scripts/lab/ideas.ts`), sur la branche `regles-v2` en 0.120.0 (§ 15). **Vague 2 : les tranches A (registre), B (briques) et C (dés de départ) sont codées** ; leurs mesures au registre remplacent les estimations (§ 4 bis, § 5.2, § 14)._
 
+**Principe de l'utilisateur, « synergies d'abord »** (troisième retour du 2026-10-27) : « Le dernier build était vraiment réussi : la sensation de progression, celle de choix même avec un contenu réduit, des synergies maîtrise / compétence / relique sympa. C'était la bonne piste : poursuis-la, et donne toujours de l'effort à la création de synergies, ressource produite, puis consommation, collaboration entre maîtrises. » Toute maîtrise, réserve ou brique se juge d'abord à ce qu'elle produit et consomme, et aux liens qu'elle ouvre avec les autres maîtrises.
+
 ## Huit maîtrises (second retour du 2026-10-27, B1 à B6)
 
 _Ce qui suit fait foi ; les § 0 à 17 décrivent la conception et la vague 2 à onze maîtrises (l'historique, les mesures d'avant). Aucune compétence nouvelle dans ce lot (principe de l'utilisateur) : on déplace l'existant, on mesure, on fait l'état des lieux._
@@ -36,7 +38,7 @@ Les nouvelles phrases : **Fureur** « Des rafales, des critiques et de gros coup
 | Ysolde | Lumière, Orage → **Lumière, Magie** | Aura de sainteté / Purification | Lumière |
 | Naraxes | Chance, Poison | Aura de décoction / Pile ou face | Chance |
 | Aldric | Représailles, Ombre → **Rempart, Ombre** | Vindicte / Rétribution | Rempart |
-| Morgrut | Fureur, Rempart | Aura de puissance / — | — |
+| Morgrut | Fureur, Rempart | Aura de puissance / **Crescendo** (troisième retour du 2026-10-27, C5 ; nue avant) | Fureur |
 | Thaldrin | Orage, Poison → **Magie, Poison** | Ciel d'orage / Feux follets | Magie |
 | Fanchon | Chant, Chance → **Magie, Chance** | Ballade / Duo | Magie |
 
@@ -121,6 +123,40 @@ Mesure avec la règle (2026-10-27, moteur du jour avec les chantiers parallèles
 - **Naraxes** : Dé pipé 41,2 (vivant : sa Pile ou face le nourrit ; proposition d'AuraDesign : +5 % de critique et d'esquive par charge, 49,1).
 - **Bord bas** : Fanchon Pas de côté 42,2, Champ d'orage 42,5. **Haut** : Aldric Aura d'intimidation 57,6 (pire duel 66,0), Rancœur 56,3, Effroi 56,0 ; Gorak Aura de puissance 55,3.
 
+#### Les départs après le Tuning (troisième retour du 2026-10-27, C5)
+
+Mesure avec tout le lot posé (C1 à C4, puis C5 : Crescendo sur le 2 de Morgrut et son attaque 5 à 7, plafond d'esquive à 75 %, Pas de côté à 12 %, Elaria 24 % d'esquive, Ervald 28 % de critique) ; 400 combats par duel contre le roster nu, mêmes graines que `npm run balance` (script jetable, supprimé). « Avant » : le même arbre sans C5. La règle des départs (le producteur d'abord) ne change pas la liste de Morgrut : le Crescendo ne produit rien qu'une aura de ses maîtrises attende, ses quatre départs restent.
+
+| Personnage | Aura de départ | Avant | Après | Pire duel | Meilleur duel |
+| --- | --- | --- | --- | --- | --- |
+| Gorak | Ivresse du sang (défaut) | 49,9 | 49,1 | Naraxes 44,3 | Ervald 56,8 |
+| Gorak | Aura de puissance | **60,3** | **59,2** | Aldric 55,5 | Ervald 66,0 |
+| Gorak | Aura sauvage ; de précision ; d'épines ; Plaie ouverte | 50,1 ; 52,5 ; 48,9 ; 47,7 | 49,1 ; 51,5 ; 48,1 ; 46,6 | | |
+| Elaria | Feinte (défaut) | 44,9 | 47,9 | Ysolde 38,5 | Gorak 55,3 |
+| Elaria | Veine | **37,0** | **39,4** | Brokk 32,8 | Fanchon 45,0 |
+| Elaria | Pas de côté | **34,0** | 45,2 | Ysolde 32,5 | Gorak 56,0 |
+| Elaria | Ivresse du sang | **62,0** | **63,7** | Brokk 60,0 | Morgrut 70,8 |
+| Elaria | Aura d'épines ; Plaie ouverte | 43,7 ; 44,1 | 45,8 ; 47,1 | | |
+| Brokk | Épines (défaut) ; Intimidation ; Rempart hérissé ; Rancœur ; Ivresse ; Plaie ouverte | 53,1 ; 44,4 ; 55,1 ; 44,0 ; 45,9 ; 47,3 | 52,6 ; 43,8 ; 54,7 (Elaria 67,0) ; 43,9 ; 45,2 ; 46,7 | | |
+| Ervald | Glaciale (défaut) ; Décoction ; Sève noire ; Effroi ; Pourriture | 44,9 ; 48,5 ; 44,6 ; 50,9 ; 52,3 | 46,2 ; 49,2 ; 45,7 ; 55,8 ; 56,1 | | |
+| Ysolde | Sainteté (défaut) ; Immunité ; Ciel d'orage ; Champ d'orage ; Ballade | 51,0 ; 46,5 ; 48,7 ; 49,3 ; 50,8 | 49,6 ; 45,4 ; 47,8 ; 48,4 ; 49,3 | | |
+| Naraxes | Décoction (défaut) ; Dé pipé ; Feinte ; Veine ; Glaciale | 50,6 ; 48,4 ; 52,8 ; 45,0 ; 45,5 | 49,6 ; 47,4 ; 52,2 ; 44,1 ; 44,7 | | |
+| Naraxes | Pas de côté | 42,9 | 49,9 | Brokk 38,0 | Gorak 61,0 |
+| Aldric | Vindicte (défaut) ; Intimidation ; Rancœur ; Dette de sang ; Effroi ; Pourriture | 52,2 ; 53,4 ; 53,3 ; 51,0 ; 57,1 ; 55,6 | 51,4 ; 52,3 ; 52,6 ; 50,2 ; 56,1 ; 54,5 | | |
+| Morgrut | Aura de puissance (défaut) | 51,8 | 54,8 | Aldric 47,3 | Ervald 64,5 |
+| Morgrut | Aura sauvage | **39,3** | 46,3 | Elaria 40,0 | Ervald 55,0 |
+| Morgrut | Aura d'intimidation | **37,3** | 43,1 | Thaldrin 38,0 | Gorak 47,0 |
+| Morgrut | Rancœur | **37,1** | **41,9** | Thaldrin 36,3 | Fanchon 47,8 |
+| Thaldrin | Ciel d'orage (défaut) ; Champ d'orage ; Ballade ; Décoction ; Glaciale | 52,9 ; 53,9 ; 50,4 ; 53,7 ; 51,1 | 51,4 ; 52,4 ; 49,1 ; 52,4 ; 49,7 | | |
+| Fanchon | Ballade (défaut) | 48,7 | 47,4 | Ysolde 40,5 | Ervald 56,3 |
+| Fanchon | Ciel d'orage ; Champ d'orage ; Feinte ; Veine | **39,8 ; 39,4 ; 41,1 ; 41,9** | **38,7 ; 38,4 ; 40,3 ; 41,0** | Ysolde 33,5 à 34,8 | Ervald, Gorak 44 à 50 |
+| Fanchon | Pas de côté | **39,2** | 44,4 | Ysolde 35,8 | Gorak 53,0 |
+
+**Lecture.** 55 départs ; hors bande : **12 → 8** (sous 42 : 10 → 6 ; au-dessus de 58 : 2 → 2).
+- **Relevés** : les trois départs de Morgrut (sa face 2), le Pas de côté (Elaria 34,0 → 45,2, Naraxes 42,9 → 49,9, Fanchon 39,2 → 44,4 : sa valeur, 8 → 12 %, sous le plafond d'esquive), la Feinte et les autres départs d'Elaria (son esquive, 22 → 24 %), ceux d'Ervald (son critique, 24 → 28 %).
+- **Restent sous 42** : Morgrut Rancœur 41,9 (dans la marge de ± 1,6) ; Elaria Veine 39,4 ; Fanchon Ciel d'orage 38,7, Champ d'orage 38,4, Feinte 40,3, Veine 41,0. **Aucun levier simple** pour Fanchon : sa Ballade porte ses coups (chaque coup la soigne, et le Duo multiplie les coups), les autres auras la laissent à 38-41 % ; ses stats relèvent ces départs (esquive 10 → 14 % : 42,6 à 45,7) mais montent aussi sa force construite, déjà la plus haute (63,4 → 66,1 %), et l'attaque n'y fait rien (4 à 5 : 63,6 construite, ses départs à 35-39). La Veine (Elaria 39,4, Naraxes 44,1, Fanchon 41,0) : relever sa valeur (un jet par 6 et par charge) toucherait la boucle des jets de plus que borne `MAX_EXTRA_JETS` ; à proposer à l'utilisateur, pas à régler ici.
+- **Au-dessus de 58** : Elaria **Ivresse du sang 63,7** (pire duel 70,8 contre Morgrut) : l'Ivresse vit des critiques, et Œil de faucon lui en assure un sur chaque 2 ; Gorak **Aura de puissance 59,2** (66,0 contre Ervald), déjà 60,3 avant. Les deux sont des auras de défaut ailleurs (Gorak, Morgrut) : les régler toucherait leurs dés vanilla. L'Aura de puissance à +1, +2, +3 (au lieu de +2, +3, +4) ramenait Gorak à 47,1 %, mais elle devenait l'égale de l'Aura sauvage (+1 à l'attaque par charge, avant le critique, sans plafond), un doublon que l'utilisateur a refusé en 0.107.0 ; à +2 sans cumul, ses nouvelles poses ne font rien (A4). Non livré : à décider avec l'utilisateur.
+
 ### B6. État des compétences par maîtrise
 
 _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un état des lieux, pour que l'utilisateur propose le contenu qui manque. Gravée : points de victoire gagnés quand la brique est gravée sur le 3 nu (bande 8 à 20) ; « moy. » = moyenne des dix hôtes du roster (rapports `logs/skills/` du 2026-10-25 et du 2026-10-27), sinon la mesure connue chez un hôte, avec sa source dans `skills.ts`. Porteurs : ceux qui jouent la maîtrise ; « dé » : la brique est sur leur dé de départ._
@@ -137,7 +173,7 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Brise-garde | compétence | s'il touche, le prochain coup reçu ×2 et brise l'armure temporaire | — | l'armure temporaire adverse | moy. +14,5 | — |
 | Assaut | compétence | ce coup ×2 | gros coup | — | moy. +14,1 | — |
 | Soliste | compétence | ce coup ×3, 1x | gros coup | — | moy. +17,2 | — |
-| Crescendo | compétence | ce coup ×2, puis ×1 de plus à chaque fois qu'il touche | gros coup | ses propres touches | moy. +17,1 | — |
+| Crescendo | compétence | ce coup ×2, puis ×1 de plus à chaque fois qu'il touche | gros coup | ses propres touches | moy. +17,1 | Morgrut (2, C5) |
 
 #### Sang — Gorak, Elaria, Brokk (3) · 3 auras, 3 compétences
 
@@ -182,7 +218,7 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 | Dé pipé | aura | +25 % de chances de faire pile à ses pièces | pile | pièces | moy. +0,8 (Naraxes +3,4) — hors bande | — |
 | Feinte | aura | +5 % d'esquive ; chaque esquive, un critique assuré | esquives, critiques | esquives | moy. +10,6 (Gorak +8,2 ; Elaria +18,3) | Elaria (1) |
 | Veine | aura | chaque 6 au dé : un jet de plus à sa prochaine action | jets | les 6 au dé | moy. +8,6 | — |
-| Pas de côté | aura | +8 % d'esquive | esquives | — | moy. +8,2 | — |
+| Pas de côté | aura | +12 % d'esquive (+8 jusqu'au C5), sous le plafond d'esquive de 75 % | esquives | — | moy. +8,2 (à 8 %) | — |
 | Pile ou face | compétence | s'il touche, une pièce : pile, ce coup ×3 | pièce, gros coup | — | signature | Naraxes (2) |
 | Pièce porte-bonheur | compétence | s'il touche, une pièce : pile, critique assuré +4 | pièce, critique | — | non mesurée au registre | — |
 | Pièce maudite | compétence | s'il touche, une pièce : pile, l'adversaire perd sa prochaine action | pièce, tour perdu | — | non mesurée au registre | — |
@@ -260,6 +296,25 @@ _Après la fusion en huit maîtrises (B1). Aucune compétence nouvelle : un éta
 - Ombre : une aura qui lit ses malus (ressource propre), pour tenir deux auras hors critique.
 - Fureur : un consommateur de ses gros coups ou de ses critiques, dans la maîtrise.
 - Chance : rien à ajouter ; une pièce de plus donnerait de la valeur au Dé pipé.
+
+#### Besoins de contenu par maîtrise (troisième retour du 2026-10-27, C8)
+
+_Réponse à l'utilisateur : combien d'auras et de compétences par maîtrise pour l'équilibre. Comptes de la synthèse ci-dessus (vérifiés : inchangés par le troisième retour, le Crescendo était déjà une brique de Fureur). L'utilisateur propose le contenu ; l'agent juge chaque proposition (tel quel, modifié, ou base d'une version qui respecte les règles, le moteur, le spectacle, l'équilibre et le plaisir), selon le principe « synergies d'abord » : ressource produite, puis consommée, et collaboration entre maîtrises._
+
+**Cible** : environ 4 auras et 5 compétences par maîtrise, soit 9 à 10 briques ; chacune avec une **boucle interne** (un producteur et un consommateur de sa ressource dans la maîtrise) et **un lien vers une autre maîtrise** (une ressource qu'elle produit pour une autre, ou qu'elle lit chez une autre).
+
+| Maîtrise | Aujourd'hui (auras / compétences) | À ajouter | Ce qu'il faut surtout |
+| --- | --- | --- | --- |
+| Chance | 4 / 6 | 0 | rien ; une pièce de plus nourrirait le Dé pipé |
+| Rempart | 5 / 4 | +1 compétence | une consommatrice de l'armure temporaire ou des coups encaissés, qui frappe |
+| Fureur | 3 / 6 | +1 aura | une aura qui consomme ses gros coups ou ses critiques (sa boucle) |
+| Magie | 3 / 6 | +1 aura | une aura de feu ou de foudre qui lit la Brûlure ou les dégâts directs |
+| Ombre | 2 / 6 | +2 auras | une aura qui lit ses malus posés (hors critique) ; une seconde qui gêne sans critique |
+| Lumière | 4 / 3 | +2 compétences | une qui fait payer l'adversaire ; une qui consomme les soins |
+| Sang | 3 / 3 | +1 aura, +2 compétences | une seconde consommatrice du Saignement ; un producteur sur jet |
+| Poison | 3 / 3 | +1 aura, +2 compétences | un producteur sur jet ; une consommatrice du Poison qui frappe |
+
+**Total : 6 auras et 7 compétences** (13 briques), ce qui porte chaque maîtrise à 9 (Lumière, Sang, Poison) ou 10 briques (les cinq autres), 77 en tout. Les maîtrises à 6 compétences (Chance, Fureur, Magie, Ombre) n'en reçoivent pas : elles dépassent déjà la cible.
 
 
 ## 0. En bref

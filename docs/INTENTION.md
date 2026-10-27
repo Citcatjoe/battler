@@ -47,6 +47,7 @@ Le projet sert aussi de terrain d'essai : on ajoute des mécaniques une par une 
 9. **Le jeu des parieurs ne touche jamais au combat.** Ses cotes viennent de combats simulés sur d'autres graines que le vrai combat, et elles restent cachées jusqu'au règlement : on parie à l'intuition.
 10. **Un jeu vidéo, pas une page web.** Grandes formes, tuiles, pièces, menus superposés, lisibles de loin ; pas de formulaire ni de tableau de réglages.
 11. **Un jeu qu'on regarde, et qu'on peut animer** (décision de l'utilisateur, 2026-10-18). Battler reste un spectacle à résolution automatique. Les observateurs peuvent y ajouter des jeux à eux, comme les paris (0.37.0), qui ne touchent jamais au combat, puis des variables qui pèsent sur l'issue (reliques, édits de tournoi), tirées au sort ou imposées, pour voir naître des métas. Pistes : [ETUDE_AUTOBATTLER.md](ETUDE_AUTOBATTLER.md), [FAMILLES.md](FAMILLES.md), [SORTS.md](SORTS.md).
+12. **Synergies d'abord** (principe de l'utilisateur, troisième retour du 2026-10-27) : « Le dernier build était vraiment réussi : la sensation de progression, celle de choix même avec un contenu réduit, des synergies maîtrise / compétence / relique sympa. C'était la bonne piste : poursuis-la, et donne toujours de l'effort à la création de synergies, ressource produite, puis consommation, collaboration entre maîtrises. » Chaque contenu nouveau se pense en boucle : une ressource produite, puis consommée, et des liens entre maîtrises ([MAITRISES.md](MAITRISES.md)).
 
 ## Grandes lignes
 

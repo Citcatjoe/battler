@@ -19,6 +19,7 @@ import { effectBadge, STOLEN_BADGE } from './narration'
 import { signalTargets, STATES } from './states'
 import { STATUSES } from './statuses'
 import * as T from './timing'
+import { castsMagicAt, castsSpell } from './poses'
 import { applyCue, initialView } from './useCombat'
 
 interface Case {
@@ -344,6 +345,43 @@ describe('mise en scène', () => {
     }
     expect(lost).toBeGreaterThan(10)
     expect(recovered).toBeGreaterThan(10)
+  })
+
+  it('incantation : un sort offensif fait incanter son lanceur de son départ à la fin de sa lecture, rien d’autre (M55)', () => {
+    let cast = 0
+    let magic = 0
+    for (const { result, moments } of corpus) {
+      let view = initialView(result.fighters)
+      for (const m of moments) {
+        const beats = m.beats.map((id) => result.beats[id])
+        // Qui peut incanter dans ce moment : le lanceur d'un sort offensif, le porteur d'une aura qui blesse par la magie
+        const casters = new Set(
+          beats.flatMap((b) => {
+            if (b.type === 'event') {
+              const def = result.fighters[b.event.side].events.find((e) => e.id === b.event.eventId)
+              return def && castsSpell(def) ? [b.event.side] : []
+            }
+            return (b.type === 'statusTick' || b.type === 'statusReaction') && castsMagicAt(b.side, b.effects) ? [b.side] : []
+          }),
+        )
+        for (const c of m.cues) {
+          view = applyCue(view, c, c.at)
+          if (c.channel !== 'cast' || !c.on) continue
+          expect(casters.has(c.side), 'une incantation sans sort offensif').toBe(true)
+          cast++
+        }
+        // L'incantation ne survit pas à son moment
+        expect(view.casting, 'incantation encore en cours à la fin du moment').toEqual([false, false])
+        // Un sort qui blesse par la magie (la Foudre, la Purification qui blesse) incante toujours
+        for (const b of beats)
+          if (b.type === 'event' && b.event.effects.some((e) => e.type === 'damage' && e.target !== b.event.side && e.amount > 0 && DAMAGE_SOURCES[e.source].magical)) {
+            expect(m.cues.some((c) => c.channel === 'cast' && c.side === b.event.side && c.on)).toBe(true)
+            magic++
+          }
+      }
+    }
+    expect(cast).toBeGreaterThan(20)
+    expect(magic).toBeGreaterThan(10)
   })
 
   it('rafales : les dés roulent ensemble (à plat pour la Furie instantanée), un coup rapide par dé', () => {
@@ -826,8 +864,8 @@ describe('mise en scène', () => {
         // Son journal tombe à l'impact ; ni son nom ni Bonus gagné (M39)
         expect(at(m, 'log', impact).some((c) => c.channel === 'log' && c.entry.text.startsWith(`Compétence · ${skill.event.name}`))).toBe(true)
         expect(m.cues.some((c) => c.channel === 'float' && ((c.float.kind === 'badge' && c.float.badge.text === skill.event.name) || (c.float.kind === 'title' && c.float.text === skill.event.name)))).toBe(false)
-        // Un coup sans réaction : la pièce part au terme de sa lecture et de son repos
-        const reacted = children[hit.id].some((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.side !== hit.attack.attacker && b.effects.length > 0))
+        // Un coup sans réaction : la pièce part au terme de sa lecture et de son repos (un renvoi esquivé, C1, est une réaction)
+        const reacted = children[hit.id].some((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.side !== hit.attack.attacker && (b.effects.length > 0 || !!b.strike)))
         if (reacted) continue
         const toss = m.cues.find((c) => c.channel === 'dice' && c.dice.coin && c.dice.coin.heads === undefined)!
         expect(toss.at - impact).toBe(T.STRIKE_HOLD + T.STRIKE_REST)
@@ -1326,7 +1364,8 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
     for (const { result, moments } of [...fights('aldric', 'seal-theft'), ...fights('ysolde', 'seal-theft')])
       for (const beat of result.beats) {
         if (beat.type !== 'event') continue
-        const taken = beat.event.effects.find((e) => e.type === 'applyStatus' && e.stolenBy !== undefined && e.result.kind === 'applied')
+        // Un bonus volé que le voleur avait déjà à son plafond ne change rien : rien ne part (M25)
+        const taken = beat.event.effects.find((e) => e.type === 'applyStatus' && e.stolenBy !== undefined && e.result.kind === 'applied' && e.result.stacks > 0)
         if (taken?.type !== 'applyStatus') continue
         const m = momentOf(moments, beat.id)
         const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.side === beat.event.side && c.signal.from === beat.event.eventId)!
@@ -1382,8 +1421,10 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
       for (const beat of result.beats) {
         if (beat.type !== 'statusReaction' || beat.status !== 'feint') continue
         const m = momentOf(moments, beat.id)
-        const impact = impacts(m, result.beats).get(beat.cause!)!
         const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'feint')!
+        // Un renvoi esquivé (C1) : son impact, l'instant où son coup tombe à côté
+        const impact =
+          impacts(m, result.beats).get(beat.cause!) ?? m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.blow.dodged && c.blow.from === 1 - beat.side && c.at < signal.at).at(-1)!.at
         expect([T.REACTION_LEAD, T.VOLLEY_REACTION_LEAD]).toContain(signal.at - impact)
         const arrival = signal.at + T.SIGNAL
         expect(at(m, 'float', arrival).some((c) => badge(c, beat.side, STATUSES.guaranteedCrit.name))).toBe(true)
@@ -1478,8 +1519,10 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
         if (burst.type !== 'flurry' || burst.status !== 'bloodFrenzyStrike') continue
         const posed = result.beats[burst.cause!]
         const crit = posed.cause !== undefined ? result.beats[posed.cause] : undefined
-        // Une charge posée en rafale attend le prochain jet (RESOLUTION § 2) : ici, le critique d'un coup seul
+        // Une charge posée en rafale attend le prochain jet (RESOLUTION § 2) : ici, le critique d'un coup seul, sans réaction du
+        // défenseur entre le coup et la rafale (Épines : sa réaction a sa propre lecture)
         if (crit?.type !== 'attack' || !momentOf(moments, crit.id).beats.includes(burst.id) || moments.some((m) => m.beats.includes(crit.id) && m.beats.some((id) => result.beats[id].type === 'flurry' && id < crit.id))) continue
+        if (result.beats.some((b) => b.cause === crit.id && b.type === 'statusReaction' && b.side !== burst.side && b.effects.length > 0)) continue
         const m = momentOf(moments, burst.id)
         const impact = impacts(m, result.beats).get(crit.id)!
         expect(at(m, 'skillPulse', impact).some((c) => c.channel === 'skillPulse' && c.side === burst.side && c.face === 3)).toBe(true)
@@ -1574,5 +1617,28 @@ describe('sorts à scène (retour du 2026-10-27, S10, M54)', () => {
           }
         }
     expect(seen).toBeGreaterThan(5)
+  })
+})
+
+describe('l’aura de départ au 3e tour (retour du 2026-10-27, C2)', () => {
+  it('sa pose d’office est un moment à elle, au début du tour : élan, « Aura éveillée » sur le porteur avec le son de l’aura, son sceau, puis la ligne du journal', () => {
+    let seen = 0
+    for (const { result, moments } of corpus)
+      for (const beat of result.beats) {
+        // Une aura volée (Sceau de vol) se lit par son « Volé », comme sur un 1
+        if (beat.type !== 'event' || beat.event.trigger !== 'auraDue' || beat.event.effects.some((e) => e.type === 'applyStatus' && e.stolenBy !== undefined)) continue
+        const m = momentOf(moments, beat.id)
+        // Rien de l'action du tour dans ce moment : le rendez-vous se lit seul, avant le jet
+        expect(m.beats.every((id) => result.beats[id].phase !== 'action')).toBe(true)
+        const note = m.cues.find((c) => c.channel === 'float' && c.side === beat.event.side && c.float.kind === 'badge' && c.float.badge.text === 'Aura éveillée')!
+        expect(note).toBeDefined()
+        // Après l'élan habituel d'une compétence (LEAD) : on la voit arriver
+        expect(note.at).toBeGreaterThanOrEqual(T.LEAD)
+        expect(at(m, 'sound', note.at).some((c) => c.channel === 'sound' && c.cue === 'auraGain')).toBe(true)
+        expect(at(m, 'skillPulse', note.at).some((c) => c.channel === 'skillPulse' && c.side === beat.event.side && c.face === 1)).toBe(true)
+        expect(m.cues.some((c) => c.channel === 'log' && c.entry.text.includes("son aura s'éveille"))).toBe(true)
+        seen++
+      }
+    expect(seen).toBeGreaterThan(30)
   })
 })

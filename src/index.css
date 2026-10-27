@@ -124,6 +124,28 @@ body {
   58% { transform: translateX(calc(var(--dir) * 78%)) rotate(calc(var(--dir) * 5deg)); }
   100% { transform: translateX(0) rotate(0); }
 }
+/* L'élan d'un sort (M55, docs/POSTURES.md § 7) : le lanceur ne bondit pas sur sa cible, il se ramasse puis pousse son
+   pouvoir vers elle d'un pas ; même durée et même instant d'impact (42 %) que l'élan d'un coup. */
+.lunge.lunge-cast {
+  animation-name: lunge-cast;
+}
+.lunge.lunge-cast.lunge-alt {
+  animation-name: lunge-cast-alt;
+}
+@keyframes lunge-cast {
+  0% { transform: translateX(0) rotate(0); }
+  22% { transform: translateX(calc(var(--dir) * -6%)) rotate(calc(var(--dir) * -3deg)); }
+  42% { transform: translateX(calc(var(--dir) * 14%)) rotate(calc(var(--dir) * 3deg)); }
+  58% { transform: translateX(calc(var(--dir) * 12%)) rotate(calc(var(--dir) * 2deg)); }
+  100% { transform: translateX(0) rotate(0); }
+}
+@keyframes lunge-cast-alt {
+  0% { transform: translateX(0) rotate(0); }
+  22% { transform: translateX(calc(var(--dir) * -6%)) rotate(calc(var(--dir) * -3deg)); }
+  42% { transform: translateX(calc(var(--dir) * 14%)) rotate(calc(var(--dir) * 3deg)); }
+  58% { transform: translateX(calc(var(--dir) * 12%)) rotate(calc(var(--dir) * 2deg)); }
+  100% { transform: translateX(0) rotate(0); }
+}
 
 /* ---------- Coup reçu ----------
    Un coup qui touche ne montre que la posture « coup encaissé » (docs/POSTURES.md). Seul un critique
@@ -1878,17 +1900,6 @@ body {
 
 /* ---------- Écran du champion ---------- */
 .champion-screen { background: radial-gradient(ellipse at 30% 60%, #2a2118 0%, #0c0a09 70%); }
-.champion-rays {
-  background: conic-gradient(from 160deg at 50% 0%, transparent 0deg, rgba(253, 230, 138, 0.14) 8deg, transparent 16deg, rgba(253, 230, 138, 0.1) 26deg, transparent 34deg, rgba(253, 230, 138, 0.12) 44deg, transparent 52deg);
-  filter: blur(6px);
-  transform-origin: 50% 0;
-  animation: champion-rays 9s ease-in-out infinite alternate;
-}
-@keyframes champion-rays { from { transform: rotate(-4deg); opacity: 0.7; } to { transform: rotate(4deg); opacity: 1; } }
-.champion-pedestal {
-  background: radial-gradient(ellipse at 50% 50%, rgba(251, 191, 36, 0.55) 0%, rgba(251, 191, 36, 0.12) 50%, transparent 72%);
-  box-shadow: 0 0 60px rgba(245, 158, 11, 0.35);
-}
 .champion-name {
   background: linear-gradient(180deg, #fff7d6 0%, #fde68a 35%, #f2bf4f 60%, #b7791f 100%);
   -webkit-background-clip: text;

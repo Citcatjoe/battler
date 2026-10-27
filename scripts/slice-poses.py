@@ -42,6 +42,10 @@ Exemple (deux planches de 1536×1024, deux cases chacune, la garde en première 
   que la garde existante, même hauteur. Le jeu centre chaque image sur la colonne du combattant et lui donne la
   hauteur de la toile : la figure reste exactement au même endroit, et une posture qui sortirait de la toile (la
   queue de Naraxes qui vacille) n'est pas coupée. Les autres postures ne changent pas.
+- `--rehausser` (avec `--reference`) : une posture qui dépasserait du haut de la toile (bras ou arme levés de
+  l'incantation) a une toile plus haute d'autant, rehaussée vers le haut seulement : mêmes pieds, même taille. Le script
+  donne la part de la toile ajoutée, à reporter dans `look.poseRoom` (`roster.ts`) : le jeu affiche alors cette image
+  d'autant plus haute, le bas sur le même sol.
 - `--avant=<px>` : pour un personnage très large (l'ours à quatre pattes), allonge la toile à l'arrière de
   deux fois <px> : le jeu centrant la toile, la silhouette s'affiche <px> (en pixels de la toile) plus près
   de l'adversaire, et son arrière ne sort plus de l'écran. Suppose un personnage qui regarde à droite.
@@ -249,9 +253,10 @@ def feet_shift(ref: Image.Image, placed: Image.Image, band: float = 0.08, reach:
     return max(range(-reach, reach + 1), key=lambda dx: ((pose[:, reach - dx : reach - dx + width] & guard).sum(), -abs(dx)))
 
 
-def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path, feet_only: bool = False, sol: set[str] | None = None):
+def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path, feet_only: bool = False, sol: set[str] | None = None, raise_top: bool = False):
     """Postures nouvelles calées sur une garde déjà découpée, sur sa toile. `feet_only` (`--pieds`) : chaque posture
-    sur les pieds de la garde existante ; `sol` (`--sol`) : les postures dont le point le plus bas va sur son sol."""
+    sur les pieds de la garde existante ; `sol` (`--sol`) : les postures dont le point le plus bas va sur son sol ;
+    `raise_top` (`--rehausser`) : la toile d'une posture qui dépasserait du haut grandit vers le haut d'autant."""
     rb = bbox(ref)
     ref_h = rb[3] - rb[1]
     ref_feet = (foot_x(ref) if feet_only else (rb[0] + rb[2]) / 2, rb[3])
@@ -275,9 +280,15 @@ def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path, fe
                 # Le milieu de la bande basse dégrossit ; les pieds se posent ensuite sur ceux de la garde
                 dx = feet_shift(ref, canvas)
                 if dx:
-                    canvas = Image.new('RGBA', ref.size)
-                    canvas.alpha_composite(resized, (at[0] + dx, at[1]))
+                    at = (at[0] + dx, at[1])
                     print(f'{pose:8} pieds sur ceux de la garde ({dx:+d} px)')
+            # Bras ou arme levés plus haut que la toile (l'incantation) : sa toile grandit vers le haut d'autant, pieds et
+            # taille inchangés ; le jeu l'affiche d'autant plus haute (`look.poseRoom`), le bas sur le même sol
+            room = max(0, MARGIN - (at[1] + bbox(resized)[1])) if raise_top else 0
+            canvas = Image.new('RGBA', (ref.width, ref.height + room))
+            canvas.alpha_composite(resized, (at[0], at[1] + room))
+            if room:
+                print(f'{pose:8} toile rehaussée de {room} px : poseRoom {pose} = {room / ref.height:.3f}')
             # Ce qui sort de la toile est coupé : le signaler
             full = np.asarray(resized.getchannel('A')) > SOLID
             kept = np.asarray(canvas.getchannel('A')) > SOLID
@@ -288,10 +299,11 @@ def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path, fe
             print(f'{pose:8} → {path} ({canvas.width}×{canvas.height}){warn}')
     # Planche de contrôle : la garde existante et les nouvelles postures, même ligne de sol
     imgs = [ref] + [Image.open(target / f'{name}-{p}.png') for s in sheets for p in s if p != 'idle']
-    board = Image.new('RGBA', (ref.width * len(imgs), ref.height), (28, 25, 23, 255))
+    tall = max(img.height for img in imgs)
+    board = Image.new('RGBA', (ref.width * len(imgs), tall), (28, 25, 23, 255))
     for i, img in enumerate(imgs):
-        board.alpha_composite(img, (i * ref.width, 0))
-    ImageDraw.Draw(board).line([(0, rb[3]), (board.width, rb[3])], fill=(217, 160, 80, 255), width=2)
+        board.alpha_composite(img, (i * ref.width, tall - img.height))
+    ImageDraw.Draw(board).line([(0, tall - ref.height + rb[3]), (board.width, tall - ref.height + rb[3])], fill=(217, 160, 80, 255), width=2)
     control = ROOT / f'logs/poses-{name}.png'
     control.parent.mkdir(parents=True, exist_ok=True)
     board.convert('RGB').save(control)
@@ -318,7 +330,7 @@ def main():
             wide = Image.new('RGBA', (ref.width + 2 * pad, ref.height))
             wide.alpha_composite(ref, (pad, 0))
             ref = wide
-        add_to_reference(name, sheets, ref, target, '--pieds' in flags, poses)
+        add_to_reference(name, sheets, ref, target, '--pieds' in flags, poses, '--rehausser' in flags)
         return
 
     # Règle : la garde de la première planche. Chaque planche est mise à son échelle et calée sur ses pieds.

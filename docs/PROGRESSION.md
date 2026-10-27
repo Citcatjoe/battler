@@ -23,7 +23,7 @@ Documents liés : [CAMPAGNE.md](CAMPAGNE.md) (forge, campagne, décisions), [REL
 - **Le plan** (§ 18) : neuf phases, plus l'étape 6a et la phase 5 bis (l'attaque de base, ajoutée le 2026-10-23), des étiquettes et de la mesure (sans changer un combat) jusqu'aux lots de contenu, chacune avec sa preuve et ce qu'on décide à sa fin.
 - **État des lieux au 2026-10-25** (§ 0 bis) : où en est le jeu après les versions 0.105.0 à 0.119.0, ce qui a été vu, mesuré, et ce qui reste ouvert.
 
-## 0 bis. État des lieux (2026-10-27, version 0.122.0)
+## 0 bis. État des lieux (2026-10-27, version 0.125.0)
 
 _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.108.0, tenu à jour jusqu'à la 0.122.0). Depuis la 0.104.x, l'utilisateur a joué trois campagnes le 2026-10-24 (retours livrés en 0.111.0, § 1.11), puis une campagne avec chaque personnage sur la 0.120.0 le 2026-10-27 (retour traité en 0.121.0, § 1.21 : les Maîtrises), puis a rendu un second retour le même jour sur la 0.121.0 (traité en 0.122.0, § 1.22 : huit maîtrises, règles pour tous). Il n'a pas encore joué la 0.122.0._
 
@@ -53,6 +53,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.120.0 | La perte de contrôle : deux images par personnage qui alternent tant qu'il porte la Peur ou l'Étourdi ; aucune règle changée |
 | 0.121.0 | **Les Maîtrises** (§ 1.21, [MAITRISES.md](MAITRISES.md)) : deux par personnage, la réserve d'une maîtrise partagée par ceux qui la jouent ; le dé de départ porte une aura au choix sur le 1 et la signature sur le 2 ; Graver propose une compétence par maîtrise ; onze briques nouvelles ou refaites ; Critique assuré qui s'use, Poison en fin de tour ; Fanchon sans Aura mélodieuse (Ballade, Duo à 3 charges) ; pièces en compétences, trois reliques ; compendium par maîtrise. Roster de 46,0 à 54,9 % ; construits : écart 24,5 points, Fanchon 62,2 %, Ysolde 37,7 % |
 | 0.122.0 | **Huit maîtrises** (§ 1.22) : Chant, Chasse et Représailles fondus dans les autres, Orage devenu Magie ; deux par personnage ; les auras de départ suivent une règle commune (celles de ses deux maîtrises que son dé nourrit) ; en tournoi et en saison, l'aura de départ est tirée au hasard ; le Critique assuré n'a plus qu'une charge, perdue si la frappe est esquivée ou ratée ; plus d'onglet Auras ni de porteurs au compendium ; reliques recolorées. Roster de 45,2 à 54,7 %, pire duel 60,8 % ; six auras de départ sous 42 % |
+| 0.125.0 | **Troisième retour** (§ 1.23) : la Riposte et la Rétribution sont des coups ; l'aura de départ arrive au plus tard au 3e tour ; Purification +5 quand elle retire un bonus ; Dé pipé +5 % de critique et +5 % d'esquive par charge ; +2 PV max par récompense ; Crescendo sur la face 2 de Morgrut ; plafonds d'esquive (75 %) et de jets de plus (12) ; docs allégées. Roster de 47,0 à 54,0 %, pire duel 62,7 % ; construits de 40,5 à 62,7 % |
 
 ### Le combat, en une page
 
@@ -461,6 +462,23 @@ Le même jour, l'utilisateur a rendu un second retour sur la 0.121.0 (B1 à B19)
 | B19 | Vérifier, mesurer, documenter, faire le ménage | `npm run check` 481 tests, `npx vite build`, balance à 400 combats par duel, empreinte mise à jour une fois ; docs et commentaires obsolètes retirés | ETAT ; CHANGELOG |
 
 **Ensemble** (0.121.0 → 0.122.0, `BALANCE_N=400`) : roster de 45,2 % (Elaria) à 54,7 % (Aldric), pire duel Aldric contre Elaria 60,8 %. Questions ouvertes : [TODO.md](TODO.md) § 20 et [ETAT.md](ETAT.md) limites connues.
+
+### 1.23 Troisième retour du 2026-10-27 (après la 0.122.0 ; livré en 0.125.0)
+
+« Le dernier build était vraiment réussi : la sensation de progression, celle de choix même avec un contenu réduit, des synergies maîtrise / compétence / relique sympa. C'était la bonne piste : poursuis-la, et donne toujours de l'effort à la création de synergies, ressource produite, puis consommation, collaboration entre maîtrises. » Principes tenus : une règle pour tous, aucune exception par personnage ; aucune compétence inventée (ce lot règle, il ne crée pas de contenu) ; « synergies d'abord » ([INTENTION.md](INTENTION.md) principe 12).
+
+| Point | Demande | Traité | Où |
+| --- | --- | --- | --- |
+| C1 | Riposte et Rétribution deviennent des coups (option A de B9) | Livré : un renvoi est un coup sans dé d'une valeur fixée (esquive, critique, armure, boucliers, Vol de vie, reliques de coup sans face) ; R1 un renvoi ne déclenche pas d'autre renvoi ; R2 il dépense le Critique assuré ; R3 la Rétribution donne un coup par jauge ; R4 les reliques « contre empoisonné, saigne, brûle » s'y appliquent. Roster à ±0,6 ; Aldric contre Elaria 60,8 → 55 %. Correctif exposé : au plus 12 jets de plus par action (`MAX_EXTRA_JETS`, la Veine à 6 charges plantait `npm run ramp`) | RESOLUTION § 3 ter et § 9 ; FEATURES § 1 |
+| C2 | Aura de départ au plus tard au 3e tour ; Purification +5 quand elle retire un bonus | Livré : `AURA_DUE_TURN = 3`, déclencheur `auraDue`, journal « son aura s'éveille » ; un 1 la pose plus tôt ; Purification 5 dégâts directs après un bonus retiré, 8 sans bonus. Valeurs nettes : Purification +22,1 → +28,2 ; Aura de puissance +24,4 → +35,6 | AURAS § 2 ; RESOLUTION § 2 ; FEATURES § 1 et § 3 |
+| C3 | Dé pipé : aura ou relique ? | Gardé en aura de Chance (la Pièce lestée est déjà la relique de pile : soit compétence, soit relique) : +25 % de pile, +5 % de critique, +5 % d'esquive par charge ; gravé +7,8 en moyenne, départ de Naraxes 49,0 % | AURAS § 3 ; STATUTS |
+| C4 | +2 PV max par récompense, partout | Livré : `REWARD_HP = 2` par forge ou relique, campagne, tournoi et saison ; adversaires de campagne réglés depuis leurs PV d'origine. Construits : 5,8 → 7,3 actions par combattant ; campagne boss atteint 16 → 17 %, acte gagné 9 → 10 % | CAMPAGNE § 18.2 ; [etudes/LONGUEUR_COMBATS.md](etudes/LONGUEUR_COMBATS.md) ; FEATURES § 1 |
+| C5 | Une compétence sur la face 2 de Morgrut, puis équilibrage complet | Livré : **Crescendo** (Fureur ; construit 33,1 → 50,1 à compensation nulle, la meilleure montée des candidates), attaque 6 à 8 → 5 à 7 ; plafond d'esquive 75 % (0 combat à `MAX_TURNS`, 38 avant) ; Pas de côté 8 → 12 % ; Elaria esquive 22 → 24 % ; Ervald critique 24 → 28 %. Roster 47,0-54,0 %, pire duel Morgrut–Brokk 62,7 % ; construits 40,5-62,7 % (écart 30,3 → 22,2) ; départs hors bande 12 → 8 ; saison 32-64 %, σ 8,5 ; campagne boss 17 %, acte 11 % | PERSONNAGES « Le réglage du troisième retour » ; MAITRISES § B5 |
+| C6 | Docs allégées | Livré : FEATURES sans historique (−30 %), ETAT réduit à l'état présent (−93 %), checklist de `CLAUDE.md` allégée et renvoi au gabarit de retour ; principe « synergies d'abord » | CLAUDE.md ; INTENTION principe 12 ; README |
+| C7 | Plusieurs dés bonus | Idée pour le prochain ajout de contenu | TODO § 20 ; AURAS § 5 |
+| C8 | Combien d'auras et de compétences par maîtrise | Réponse : environ 4 auras et 5 compétences (9 à 10 briques), une boucle interne et un lien vers une autre maîtrise ; il manque 6 auras et 7 compétences ; l'utilisateur propose, l'agent juge | MAITRISES « Besoins de contenu par maîtrise » |
+
+**Décisions** : Dé pipé gardé en aura à +5 % / +5 % (au bord bas de la bande, ne pas le réduire) ; Aura de puissance inchangée (+1/+2/+3 tenait l'équilibre mais doublait l'Aura sauvage, doublon refusé par l'utilisateur en 0.107.0) et compensation de Morgrut par son attaque ; Plume d'aigle recharge 3 non livrée (l'icône dessine la recharge 2) ; Duo en l'état. **À décider** : Gorak à l'Aura de puissance 59,2 %, Elaria à l'Ivresse du sang 63,7 %, Plume d'aigle +24,7 chez Elaria, Morgrut construit 40,5 % et 32,7 % en saison ([TODO.md](TODO.md) § 20).
 
 ---
 

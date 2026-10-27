@@ -75,7 +75,7 @@ import {
   type Wallets,
 } from './game/betting'
 import type { BetsOutcome } from './components/Betting'
-import { RANDOM_ARENA, type Arena, type ArenaChoice } from './game/arenas'
+import { HOME_ARENAS, RANDOM_ARENA, type Arena, type ArenaChoice } from './game/arenas'
 import { TournamentIntroScreen } from './components/TournamentIntroScreen'
 import { HomeScreen } from './components/HomeScreen'
 import { DUEL_BETTING, MatchupScreen, type MatchupMode } from './components/MatchupScreen'
@@ -467,6 +467,8 @@ export default function App() {
           // Les deux modes passent par le même moteur : jouer ne fait qu'animer le résultat.
           arena={arenaChoice}
           onArenaChange={setArenaChoice}
+          // Campagne : on affronte l'adversaire chez lui (jamais en duel, en tournoi ni en saison)
+          home={activeEncounter ? HOME_ARENAS[activeEncounter.characterId] : undefined}
           onPlay={(arena) => {
             sfx.click()
             setScreen({ name: 'fight', script: runCombat(fighters, seasonSeed()), arena })

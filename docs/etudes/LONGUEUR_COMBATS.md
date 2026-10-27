@@ -4,6 +4,8 @@ La question de l'utilisateur (second retour du 2026-10-27) : « Certains builds 
 
 Étude seulement : rien n'a changé dans `src/`. Le cadre déjà décidé est [PROGRESSION.md](../PROGRESSION.md) § 12 : la durée vient du contenu, pas d'un calcul qui force une cible ; repli prévu, « chaque récompense obtenue donne aussi quelques PV (un endurcissement) », à n'essayer que si la mesure montre des combats trop courts. Cette étude fait cette mesure.
 
+**Livré (retour du 2026-10-27, C4) : l'endurcissement, +2 PV max par récompense** (`REWARD_HP`, `Character.rewardHp` : une relique ou une étape de forge, chez tout personnage construit, en tournoi, saison et campagne ; règle et cas de la campagne : [CAMPAGNE.md](../CAMPAGNE.md) § 18.2). Mesuré sur l'arbre 0.124.0, sans → avec : `npm run ramp`, combats entre builds à 10 récompenses, **5,8 → 7,3 actions par combattant** en moyenne (7,0 entre personnages nus : le build complet retrouve le rythme du nu, comme l'essai le prévoyait) ; mais l'écart de force relative à 10 récompenses s'élargit, **17,1 → 30,3 points** (Fanchon 57,9 → 63,4 %, Morgrut 40,7 → 33,1 %) : les PV profitent davantage aux builds qui tiennent, à reprendre à l'équilibrage (C5). `npm run campaign` : boss atteint 16 → 17 %, acte gagné 9 → 10 %, tours par combattant au nœud 10 5,3 → 6,6.
+
 ## 1. Réponse courte
 
 - **Le constat se vérifie, et il est rare** : construits (10 récompenses), 6 % des combats se finissent en 3 actions ou moins par combattant (0 % entre personnages nus), et 15 % contiennent un coup qui retire 40 % des PV max ou plus (1 % entre nus). La durée moyenne baisse de 7,4 à 6,1 actions par combattant entre le roster nu et les builds complets.

@@ -537,11 +537,11 @@ Une arène peut être **n'importe quel lieu** du monde : une forêt, des égouts
 | --- | --- |
 | Format | **Paysage 1536×1024 (3:2), toujours**, même pour une arche de l'accueil (le jeu la recadre). L'écrire en **première phrase** du prompt (_« A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. »_), puis en dernière ligne (_« OUTPUT: landscape 1536x1024, wider than tall. »_) : ChatGPT ignore souvent une consigne de format donnée seulement à la fin |
 | Style | Gouache graphique (section 5.1), pour tous les décors. Ni pour les personnages, ni pour les icônes |
-| Lumière | Clair-obscur : côtés dans l'ombre, une seule zone très lumineuse au loin, sol de combat en demi-teinte (section 5.2) |
-| Composition | Côtés vivants, centre calme, **rien dans le tiers inférieur** (section 5.2) |
-| Prompt | Complet, prêt à coller ; aucune image de référence |
+| Lumière | Clair-obscur : côtés dans l'ombre, une seule zone très lumineuse au loin, sol de combat en demi-teinte (section 5.2). **Lumière froide nommée, jamais un bain orange** ; ombres sombres mais lisibles (section 5.2 bis) |
+| Composition | **Une idée maîtresse monumentale**, des cadres sombres jusqu'au bord haut, moins d'objets mais plus gros (section 5.2 bis). Centre calme, **rien dans le tiers inférieur** (section 5.2) |
+| Prompt | Complet, prêt à coller ; aucune image de référence. On part du prompt de référence (section 5.3) |
 | Dépôt | L'utilisateur dépose les PNG à la racine, nommés selon leur rôle : `arena <lieu>.png` pour une arène tirée au hasard, le nom de l'écran sinon (`home.png`, `duel.png`, `tournoi.png`…). `training.png` est le décor réservé au combat test (jamais une arène ailleurs) |
-| Traitement | Agrandissement ×4 par IA (Real-ESRGAN, modèle `realesrgan-x4plus`, binaire macOS `realesrgan-ncnn-vulkan` téléchargé dans le scratchpad), réduction Lanczos à **2400×1600** (arches : 1800×1200), JPG qualité 82 progressif : de 0,5 à 1,2 Mo par image. Le 3:2 est gardé : le cadrage se règle dans le code (`focus` des arènes, `object-position` ou `preserveAspectRatio` des écrans) |
+| Traitement | Agrandissement ×4 par IA (Real-ESRGAN, modèle `realesrgan-x4plus`, binaire `realesrgan-ncnn-vulkan` téléchargé dans un dossier temporaire : version Ubuntu de la release v0.2.5.0 de Real-ESRGAN sur GitHub, version macOS avant), réduction Lanczos à **2400×1600** (arches : 1800×1200), JPG qualité 82 progressif : de 0,5 à 1,2 Mo par image. Le 3:2 est gardé : le cadrage se règle dans le code (`focus` des arènes, `object-position` ou `preserveAspectRatio` des écrans) |
 | Rangement | `src/assets/arena-<lieu>.jpg`, `menu-<écran>.jpg`, `arch-<mode>.jpg` ; source à la corbeille (`gio trash`) |
 | Nom d'arène | Un **lieu-dit** (`name`) et le lieu qui l'entoure (`region`), comme sur une carte : « Les Pierres-Couchées, bois de Vaumorin ». Des noms qu'on croirait trouver sur une carte d'état-major, pas des titres épiques (« Marais du Chagrin ») |
 
@@ -567,7 +567,7 @@ Choisi le 2026-10-20, pour **tous les décors** : arènes et fonds d'écran (acc
 
 Un décor sobre n'est pas un décor vide : une clairière avec une seule arche ennuie. Les règles :
 
-- **Les côtés racontent quelque chose.** Chaque côté a quatre ou cinq éléments simples : une structure (arche, pilier, mur), un objet abandonné (charrette, râtelier, puits), une trace de vie (autel, offrandes, bannière) et un **petit animal caché** (chouette dans un tronc, renard dans les buissons, corbeau sur un mât). Les animaux sont permis, pas les monstres ni les personnes.
+- **Les côtés racontent quelque chose.** Chaque côté a trois ou quatre éléments simples, au pied de son grand cadre (section 5.2 bis) : une structure (arche, pilier, mur), un objet abandonné (charrette, râtelier, puits), une trace de vie (autel, offrandes, bannière) et un **petit animal caché** (chouette dans un tronc, renard dans les buissons, corbeau sur un mât). Les animaux sont permis, pas les monstres ni les personnes.
 - **Le lointain vit.** Un repère fort (château, pont, ville), plus deux ou trois signes de vie : un hameau qui fume, un vol d'oiseaux, une route.
 - **Le sol garde la mémoire des duels**, sur ses bords seulement : pierres à demi enterrées, piquets et cordes, traces de pas, un gant tombé.
 - **Le centre reste calme** et peu contrasté : l'interface et les impacts s'y affichent.
@@ -576,39 +576,51 @@ Un décor sobre n'est pas un décor vide : une clairière avec une seule arche e
 - **Ombre devant, lumière au loin** (retour de l'utilisateur sur la première série, 2026-10-20). Les images réussies ont beaucoup d'écart entre ombre et lumière : l'accueil (terrasse au crépuscule) et le tournoi. Le modèle à suivre est la terrasse : les côtés sont sombres, avec une seule zone lumineuse au loin, au centre, qui attire l'œil. Le sol de combat est en demi-teinte, plus sombre vers le bas, pour que les combattants ressortent. Les décors clairs partout (carrière en plein midi, désert de sel qui ressemblait à une banquise) écrasent la profondeur, et les personnages s'y confondent avec le fond. Le lac aux lanternes et la cour naine sont à la limite. Le spectacle se joue au premier plan.
 - **Si l'image devient trop chargée**, on retire un ou deux éléments des côtés. On ne touche pas au style.
 
+### 5.2 bis Une idée monumentale, pas un inventaire (2026-10-27)
+
+Constat de l'utilisateur sur la série des décors de campagne (section 5.7) : des compositions « fantastiques » quand le décor porte une grande idée (Fanchon, Thaldrin, Morgrut, Naraxes), « quelconques » sinon (premier jet d'Ysolde, d'Ervald et d'Elaria). Les jets ratés étaient des **inventaires** : de petits objets alignés de chaque côté, tous à la même échelle, rien de grand, la moitié de l'image en sol vide, et un couchant orange qui noyait les détails. Réécrits avec les règles ci-dessous, ils ont été jugés « bien meilleurs », avec des « compositions superbes ».
+
+1. **Une idée maîtresse, qui se dit en une phrase et occupe l'image.** La toile peinte déchirée sur la vraie foire (Fanchon), le chêne fendu moitié vert moitié brûlé (Thaldrin), la sainte-juge qui tient le fléau d'une balance dont les plateaux pendent de part et d'autre (Ysolde), les rangs de lances-tombes qui fuient vers un mausolée ouvert de l'intérieur (Ervald), deux archères colossales dont les flèches se croisent sur la lune (Elaria). Elle a son paragraphe, en tête, et le prompt la nomme (`CENTER, THE JUDGE (the dominant shape of the image)`, `THE RANKS (the dominant pattern of the image)`).
+2. **Des cadres monumentaux.** Les bords gauche et droit portent de grandes silhouettes sombres (colonnes, if, statues, falaises) qui montent de derrière le sol de combat jusqu'au-delà du bord haut. Paragraphes `LEFT FRAME` et `RIGHT FRAME`.
+3. **Un écart d'échelle écrit.** La forme maîtresse fait « ten times » ou « twenty times human size » ; la caméra est un peu basse (« slightly low so the statues feel colossal »).
+4. **Moins d'objets, plus gros.** Trois ou quatre éléments au pied de chaque cadre, dont un petit animal. Le récit des côtés (section 5.2) reste, mais il sert l'idée.
+5. **Une géométrie nommée.** Symétrie stricte, ou perspective à un point de fuite placé sur la forme maîtresse ; une ligne forte (le fléau horizontal, le V des flèches, les rangs qui convergent) mène l'œil à la zone lumineuse. Horizon à environ 45 % de la hauteur.
+6. **Une lumière froide nommée, jamais un bain orange.** Midi blanc tombant d'un oculus, lune, aube pâle. Les ombres sont « deep blue shadow, dark but still readable » : sombres, mais on y lit les détails. Les notes chaudes se comptent (« two or three tiny candle points »). COLOR finit par « No orange. » et AVOID contient `orange or red light, warm color cast over the whole image, sunset`. Un couchant reste possible (Morgrut, Thaldrin), mais seulement comme une bande au loin, pas comme une lumière qui baigne toute l'image.
+7. **Surprendre sans perdre le lien** (décor d'un personnage) : partir de son lore et de sa personnalité ([PERSONNAGES.md](PERSONNAGES.md)), écarter le cliché de sa race (elfe et forêt, orc et désert, homme-lézard et marais) en l'écrivant dans AVOID, et en garder une trace s'il relie (le marais vu par la vitre de la serre de Naraxes). Si l'utilisateur demande le cliché (« plus religieux, c'est ok », « oriente plus cimetière »), on le prend : la surprise passe alors par l'idée maîtresse.
+
 ### 5.3 Prompt de référence
 
-Clairière en ruines, dans le style et la composition retenus. Pour une autre arène, on garde tels quels le premier paragraphe (style), FIGHTING GROUND AND CAMERA (en changeant seulement la matière du sol), DEPTH, COMPOSITION, AVOID et OUTPUT. On réécrit SCENE, LEFT SIDE, RIGHT SIDE, DISTANCE, LIGHT AND SHADOW et COLOR. Puis on donne à l'utilisateur le prompt **entier**.
+La Passe-des-Archères, décor d'Elaria (2026-10-27, second jet), qui applique la section 5.2 bis ; il remplace la clairière en ruines du 2026-10-20 (`arena-glade.jpg`), un inventaire écrit avant ces règles. Pour un autre décor, on garde tels quels le premier paragraphe (style ; on adapte seulement la liste des formes au lieu), FIGHTING GROUND AND CAMERA (en changeant la matière du sol et ce qui borde son fond), DEPTH, AVOID (on y ajoute le cliché écarté) et OUTPUT. On réécrit SCENE, LEFT FRAME, RIGHT FRAME, DISTANCE, LIGHT AND SHADOW, COLOR et COMPOSITION, et l'on donne à la forme maîtresse son propre paragraphe quand elle n'est pas dans les cadres (`CENTER, THE JUDGE`, `THE RANKS`). Puis on donne à l'utilisateur le prompt **entier**. Les autres prompts complets validés sont dans [prompts-decors.md](prompts-decors.md).
 
 ```text
-A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: pines as tall triangles, rounded bushes, ribbon-like clouds, hills in clean curves, stones as simple blocks. Flat colors with subtle dry-brush texture, crisp edges, a playful yet epic mood. Original location, not based on any existing film, book or game.
+A wide landscape image, 3:2 aspect ratio (1536x1024), wider than tall. A stylized fantasy background painted in matte gouache, with a strong graphic design sense, like a mid-century illustrated storybook or a stylized animated film. Shapes are simplified and geometric: cliffs as tall clean planes, statues as bold simplified figures, bows as sweeping clean curves, hills as flat layered bands, ribbon-like clouds. Flat colors with subtle dry-brush texture, crisp edges, a cold, proud and breathtaking epic mood. Original location, not based on any existing film, book or game.
 
-SCENE: a forest clearing used as a dueling ground, among the ruins of an old stone sanctuary. The place feels lived-in and full of small stories that reward a second look.
+SCENE: the border pass of Lithmeren, a narrow gorge where the elven marches end. On both sides of the gorge, two colossal statues of elven huntresses are carved directly into the cliffs, twenty times human size, kneeling, hooded, their carved capes torn into long strips. Each draws a long crescent-shaped bow upward toward the center: their two giant arrows cross high above the gorge, both aimed at the full moon rising between them. At their feet, a stone watch terrace where the border scouts stand guard.
 
-LEFT SIDE (standing at the back edge of the clearing, behind the fighting ground): a broken stone arch covered with ivy; at its foot, an abandoned wooden cart with a broken wheel and a few sacks. A tall pine with an owl peeking from a hollow in its trunk. A small stone shrine with candles and flowers left as offerings. A fox half hidden in the bushes, watching the clearing.
+LEFT FRAME, THE FIRST ARCHER: the left statue fills the left side of the image from behind the fighting ground to beyond the top edge, the sweep of its bow arcing over the top-left. Fine silver lines inlaid in the stone of its bow and hood. At its foot, behind the fighting ground: a slender watch post with a lantern of cold white light, a rack of long bows, a hooded falcon on a perch.
 
-RIGHT SIDE (standing at the back edge of the clearing, behind the fighting ground): a single standing pillar with a carved face worn by time; a wooden pole with a torn red banner and a raven perched on top. An old weapon rack with two dented shields and a spear. A stone well with a wooden bucket. A fallen statue head lying in the grass, covered with moss.
+RIGHT FRAME, THE SECOND ARCHER: the right statue mirrors the first, filling the right side to beyond the top edge, its bow arcing over the top-right. At its foot, behind the fighting ground: three round straw targets with arrows clustered tightly in the center, except one single arrow far off on the edge; a thin wine-red pennant on a pole; a white hare hiding at the base of the statue.
 
-FIGHTING GROUND AND CAMERA: the camera stands at human eye level, a few meters from where two fighters will stand. A wide, flat, empty clearing of bare earth and short grass runs without interruption from the very bottom edge of the image up to the foot of the side elements, across the whole width. Nothing at all in the bottom third of the image, corners included: no stump, no rock, no tall grass, no object, so the fighters' feet will clearly stand on the ground. At the bottom edge, the ground is seen at the scale of a standing person, neither a close-up nor far away. Only on the back edges of the clearing: a ring of half-buried stones, a few wooden stakes with rope, footprints and a dropped glove hinting at past duels.
+FIGHTING GROUND AND CAMERA: the camera stands at human eye level, a few meters from where two fighters will stand, slightly low so the statues feel colossal. A wide, flat, empty terrace of pale stone slabs runs without interruption from the very bottom edge of the image up to the feet of the statues and the side elements, across the whole width. Nothing at all in the bottom third of the image, corners included: no stump, no rock, no object, so the fighters' feet will clearly stand on the ground. At the bottom edge, the ground is seen at the scale of a standing person, neither a close-up nor far away. Only on the back edge of the terrace: a low parapet, a few spent grey-feathered arrows, a dropped archer's glove hinting at past duels.
 
-DISTANCE (center): a river valley with an old stone bridge, a small hamlet with chimney smoke drawn as a curl, a ruined castle on a hill, a flight of birds, then a simple mountain silhouette.
+DISTANCE (center): between the two statues, through the gorge, the moonlit marches below: layered hills as flat bands, a river shining like a silver ribbon, a line of tiny watchtowers each with one small light, a flight of birds, and the huge full moon low in the sky, exactly where the two arrows point.
 
-DEPTH: three clearly separated planes, each in its own flat value: darker structures on the sides, mid-value trees and ruins, pale and very simplified distance.
+DEPTH: three clearly separated planes, each in its own flat value: the two dark colossal statues framing the sides, the mid-value gorge walls, the pale and luminous moon and marches.
 
-LIGHT AND SHADOW: strong chiaroscuro, a rather dark image with a bright heart. The left and right sides are in deep shadow, dark silhouettes with only a few small warm lights. One luminous area of interest far away in the center, the brightest part of the image: the sunlit valley and castle. The fighting ground is in soft half-light, darker toward the bottom edge, with a pool of warm light reaching its middle. Light is painted as flat bright shapes, never as a glow.
+LIGHT AND SHADOW: strong chiaroscuro, a dark image with a bright heart. The brightest part of the image is the full moon and the sky around it between the statues. Cold moonlight catches the inner faces of the statues and their bows as flat pale planes, giving them volume, while their outer sides fall into deep blue shadow, dark but still readable. The terrace is in soft half-light, darker toward the bottom edge, with a pool of pale moonlight reaching its middle. Light is painted as flat bright shapes, never as a glow.
 
-COLOR: late afternoon. Limited palette: deep green, olive, warm ochre, grey-blue stone, brick red, pale sky blue.
+COLOR: night. Limited palette: midnight blue, silver-white, cold teal shadow, pale moon cream, a single touch of wine red. No orange.
 
-COMPOSITION: straight-on, human eye level, horizon at about 40% of the height. The center is calm and low-contrast; the interest lives on the sides and in the distance.
+COMPOSITION: strict symmetry, straight-on, horizon at about 45% of the height. The two statues and their bows form a huge frame, and the crossing arrows form a bold V that leads the eye to the moon. The center of the terrace stays calm and low-contrast.
 
-AVOID: foreground objects, anything in the bottom third of the image, bloom, glow, light rays, lens flare, sparkles, particles, floating embers, dust motes, haze effects, rim light, gradients, glossy reflections, HDR look, hyper-detailed textures, photorealism, 3D render look, people, monsters, text, logo, watermark.
+AVOID: forest, trees in the foreground, orange or warm light, red cast, foreground objects, anything in the bottom third of the image, bloom, glow, moon halo, light rays, lens flare, sparkles, stars as glitter, particles, floating embers, dust motes, haze effects, rim light, gradients, glossy reflections, HDR look, hyper-detailed textures, photorealism, 3D render look, people, monsters, text, letters, logo, watermark.
 
 OUTPUT: landscape 1536x1024, wider than tall.
 ```
 
 ### 5.4 Varier les arènes
 
-Chaque arène joue sur six axes. **Une nouvelle arène doit changer au moins trois axes** par rapport à toutes celles qui existent, et sa **palette dominante doit être nouvelle** : c'est elle qui se remarque le plus une fois le fond assombri par le jeu.
+Chaque arène joue sur sept axes. **Une nouvelle arène doit changer au moins trois axes** par rapport à toutes celles qui existent, et sa **palette dominante doit être nouvelle** : c'est elle qui se remarque le plus une fois le fond assombri par le jeu. Son **idée maîtresse** aussi (section 5.2 bis).
 
 | Axe | Possibilités |
 | --- | --- |
@@ -618,6 +630,7 @@ Chaque arène joue sur six axes. **Une nouvelle arène doit changer au moins tro
 | Météo | Clair, brume, pluie, neige, vent de sable : dessinés en formes simples (flocons, traits de pluie, bandes de brume en aplat), jamais en particules |
 | Source de lumière | Soleil, lune, torches, braseros, forges, cristaux, magie, puits de lumière |
 | Palette dominante | Vert et or, gris acier et orange, bleu nuit et ambre, turquoise et vert, ocre et rouge, violet et argent… |
+| Idée maîtresse (section 5.2 bis) | Statue ou figure colossale, rangs qui convergent, arbre ou monument fendu, décor dans le décor, objet géant (balance, arc, porte seule)… Jamais deux fois la même |
 
 **Garde-fous pour les lieux sombres** (égouts, cimetière, caverne, nuit) : l'image peut être sombre, mais jamais sans lumière. Il faut une zone lumineuse franche au centre ou au fond, et une flaque de lumière sur le sol de combat. Le jeu assombrit encore le fond (`brightness 0.45`) : pour un décor déjà sombre, c'est l'intégration qui allège le filtre (`filter` dans `ARENAS`), pas le prompt qui éclaircit l'image. L'ambiance peut être inquiétante, mais pas horrifique : ni cadavres, ni sang, ni créatures.
 
@@ -767,7 +780,7 @@ Première série en gouache graphique, intégrée le 2026-10-20. Elle remplace l
 
 | Fichier | Nom en jeu | Lieu | Palette | Remarques |
 | --- | --- | --- | --- | --- |
-| `arena-glade.jpg` | Les Pierres-Couchées, bois de Vaumorin | Clairière en ruines, fin d'après-midi | Vert, ocre, pierre | Prompt de référence (5.3), première version encore claire : le plus assombri en jeu |
+| `arena-glade.jpg` | Les Pierres-Couchées, bois de Vaumorin | Clairière en ruines, fin d'après-midi | Vert, ocre, pierre | Premier prompt de référence (2026-10-20, remplacé en 5.3 le 2026-10-27), première version encore claire : le plus assombri en jeu |
 | `arena-dwarf-city.jpg` | La Cour-des-Enclumes, Durnhold | Cour d'une cité naine, porte sur la vallée enneigée | Gris acier, laiton, orange | Limite en luminosité, bon contraste ombre et lumière |
 | `arena-lantern-lake.jpg` | Les Mille-Feux, lac Sorelle | Ponton de fête sur un lac, nuit | Indigo, vermillon, or | Limite en luminosité |
 | `arena-mushroom-vale.jpg` | Les Chapeaux-Fols, val Brunelle | Vallée de champignons lumineux, pénombre | Violet, magenta, turquoise, or | Couleurs très saturées : désaturé en jeu |
@@ -779,11 +792,31 @@ Première série en gouache graphique, intégrée le 2026-10-20. Elle remplace l
 
 Ajouter une ligne à chaque nouvelle arène. Avant de choisir la suivante, regarder ce tableau pour changer au moins trois axes et la palette.
 
+### 5.7 Décors de campagne : l'adversaire chez lui (2026-10-27)
+
+En campagne, on affronte chaque adversaire chez lui (demande de l'utilisateur) : un décor par personnage du roster, plus le Colosse, qui suit les règles d'une arène (sol dégagé, tiers bas vide) et la section 5.2 bis. Le lieu part du lore (`lore` dans `roster.ts`, [PERSONNAGES.md](PERSONNAGES.md)) et écarte le cliché de la race, sauf demande contraire. Générés par l'utilisateur et intégrés le 2026-10-27 (0.123.0) : `HOME_ARENAS` dans `arenas.ts`, fichiers `arena-<lieu>.jpg` ; l'écran d'affrontement de campagne montre l'arène de l'adversaire à la place du sélecteur. Prompts complets des décors retenus : [prompts-decors.md](prompts-decors.md).
+
+| Personnage | Lieu-dit | Idée maîtresse | Palette | Jugement de l'utilisateur |
+| --- | --- | --- | --- | --- |
+| Fanchon | Les Tréteaux, foire de Clairbourg | La scène d'un théâtre ambulant, toile peinte déchirée sur la vraie foire | Bleu paon, magenta, crème, bois miel | « Fantastique » |
+| Thaldrin | Le Chêne-Fendu, lande de Garance | Un chêne titanesque fendu par la foudre, moitié vert, moitié brûlé, sur une lande d'orage | Ardoise, charbon, mousse, miel, braise | « Fantastique » |
+| Morgrut | Les Grands-Soleils, moulin de Brévanne | Le champ de tournesols d'un ogre heureux, épouvantail en armures, moulin aux ailes cassées | Or tournesol, sienne, olive, prune, turquoise | « Fantastique » |
+| Naraxes | La Serre-Gagnée, Sszeth | Une serre de luxe gagnée aux dés : damier, plantes vénéneuses, partie abandonnée ; le marais seulement derrière la vitre | Chartreuse, laque noire, or, bordeaux | « Fantastique » |
+| Ysolde | Le Fléau, sanctuaire d'Aurelhaven | Une sainte-juge colossale au masque de soleil tient une balance : une plume à gauche, des chaînes brisées à droite | Ivoire, citron pâle, cobalt, ombre ardoise | Second jet (le premier, cour méditerranéenne au couchant, était « quelconque ») : bien meilleur |
+| Ervald | Le Champ-des-Lances, Ostremort | Cimetière militaire : soldats enterrés debout sous leur lance et leur casque, en rangs, vers un mausolée ouvert de l'intérieur | Bleu-noir, violet, argent froid, os | Second jet (le premier, siège figé dans le givre, était « quelconque ») : bien meilleur |
+| Elaria | La Passe-des-Archères, marches de Lithmeren | Deux archères colossales taillées dans la gorge, leurs flèches croisées sur la lune | Bleu nuit, argent, sarcelle, vin | Second jet (le premier, observatoire lunaire, était « quelconque ») : bien meilleur ; prompt de référence (5.3) |
+| Gorak | Les Fosses-Rouges, Kar-Dush | Les fosses sont les carrières d'argile d'une ville de briquetiers, fours allumés | Terre cuite, suie, os, vert-de-gris | Premier jet, écrit avant la section 5.2 bis ; intégré tel quel |
+| Brokk | La Porte-Seule, Durnhold | La grande porte toujours debout, seule dans un alpage, un sentier de moutons en fait le tour | Paille, sauge, ardoise, rouille | Premier jet, écrit avant la section 5.2 bis ; intégré tel quel |
+| Aldric | La Grange-aux-Dîmes, commanderie du Sceau ardent | La grange où l'ordre scelle chaque dette de cire rouge | Cire rouge, parchemin, chêne, fer | Premier jet, écrit avant la section 5.2 bis (baigné de lumière chaude) ; intégré tel quel |
+| Le Colosse | La Loge-du-Colosse, Grand Cirque | Le pied de sa loge, mur de trophées des champions brisés, un crochet vide | Sang de bœuf, noir, or terni, os | Pas généré : la rencontre du boss garde le sélecteur d'arène |
+
 ---
 
 ## 6. Gabarit : fond d'écran de menu
 
 > **Style :** les fonds de menu suivent le style des décors (gouache graphique, section 5.1), le clair-obscur et le format paysage (section 5, « En bref »). Depuis la 0.63.0, tous les fonds sont en gouache : la sélection affiche `menu-duel.jpg` (même image que l'arche du duel), qui remplace le portail de l'ancien style (`menu-portal.jpg`, retiré). Le prompt du portail ci-dessous est de l'ancien style : on en garde les zones de l'écran, pas le rendu.
+
+> **Écrans clés (2026-10-27, 0.123.0)** : `menu-campaign.jpg` au choix du champion en campagne (le vestiaire sous les gradins, sortie lumineuse derrière le champion à 20 % de la largeur) ; `menu-season.jpg` sous l'arbre et la saison (l'arène vue du ciel, combats en cours ; la présentation et la configuration du tournoi gardent `menu-tournament.jpg`) ; `menu-victory.jpg` aux deux victoires finales, écran du champion et campagne gagnée (la salle du trésor : `VictoryBackdrop` cale le dessus de l'estrade, à 22,5 % de la largeur et 68 % de la hauteur de l'image, sous les pieds du vainqueur ; elle remplace le rai de lumière et le socle en CSS). Prompts complets, zones de l'écran comprises : [prompts-decors.md](prompts-decors.md). Un fond de menu suit aussi la section 5.2 bis (idée maîtresse, lumière froide, ombres lisibles), mais garde ses zones calmes sous l'interface.
 
 L'écran de sélection (`StartScreen.tsx`, retiré en 0.100.0 ; ce fond reste celui de l'accueil) affichait un fond illustré, assombri en CSS (`brightness(0.6)`), avec un vignettage et un dégradé en bas. Ses contraintes diffèrent de celles d'une arène :
 
@@ -1356,7 +1389,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
    - référence de style : composer les icônes voisines déjà intégrées en une planche (les PNG de 128 px agrandis dans une grille sur fond transparent), la téléverser, puis la joindre à la génération ;
    - le prompt est le même que pour ChatGPT (gabarit de la section 7) ; découpe et contrôle inchangés (`slice-icons.py`, une planche de contrôle par planche générée) ;
    - aucune source déposée à la racine : les planches restent dans le dossier temporaire de la session.
-   - **postures d'un personnage** (0.120.0, perte de contrôle) : même modèle, en 16:9 et sortie 2K, fond opaque gris ; la référence est la planche à remplir elle-même (la garde dans le tiers gauche, le reste vide), méthode et prompt dans [POSTURES.md](POSTURES.md) § 6.1.
+   - **postures d'un personnage** (0.120.0, perte de contrôle ; 0.124.0, incantation) : même modèle, sortie 2K, fond opaque gris ; la référence est la planche à remplir elle-même (la garde dans sa case, le reste vide), méthode et prompts dans [POSTURES.md](POSTURES.md) § 6.1 et § 7.1.
 
 ## 9. Check-list avant d'intégrer une image
 

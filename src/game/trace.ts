@@ -1,5 +1,5 @@
 import type { Character } from './character'
-import { firstSide, multiplier, percent, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
+import { firstSide, multiplier, percent, type AppliedEffect, type Attack, type Beat, type CombatResult, type Pair, type Side, type Snapshot } from './combat'
 import { DIE_FACES, triggerText, type CharacterEvent, type Trigger } from './events'
 import { stepKey, type ForgeStep } from './forge'
 import { atCap, of } from './narration'
@@ -68,7 +68,7 @@ function phaseOf(beat: Beat, fighters: Pair<Character>): string {
 
 function triggerPhase(trigger: Trigger) {
   if (trigger === 'combatStart') return 'ouverture'
-  if (trigger === 'turnStart') return 'début'
+  if (trigger === 'turnStart' || trigger === 'auraDue') return 'début'
   if (trigger === 'turnEnd') return 'fin'
   return 'action'
 }
@@ -96,7 +96,43 @@ function effectLine(e: AppliedEffect, fighters: Pair<Character>, before: Snapsho
     }
     case 'cleanse':
       return e.removed.length ? `purge sur ${name} : retire ${e.removed.map(label).join(', ')}` : `purge sur ${name} : rien à retirer`
+    case 'rebound':
+      return `${label(e.status)} relâchée : ${e.parts.length} renvoi${e.parts.length > 1 ? 's' : ''} sur ${name} (${e.parts.join(' · ')}), chacun un coup à part, ci-dessous`
   }
+}
+
+/**
+ * La résolution d'un coup, après son en-tête : sa valeur (`base`), puis esquive, ou reliques, critique, modificateurs,
+ * armure, boucliers, dégâts. Un coup de base et un renvoi (C1) se lisent de même.
+ */
+function strikeSteps(a: Attack, base: string, fighters: Pair<Character>, before: Snapshot, after: Snapshot): string {
+  const att = fighters[a.attacker]
+  const defSide = other(a.attacker)
+  const def = fighters[defSide]
+  const modifier = (m: (typeof a.modifiers)[number]) =>
+    `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
+  const early = a.modifiers.filter((m) => !m.final)
+  if (a.dodged)
+    return `${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}${a.critBy ? ` · ${label(a.critBy)} perdu` : ''}, aucun dégât`
+  const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
+  const struck = a.value * (a.multiplier ?? 1) + bonus
+  const steps = [
+    base,
+    // Reliques de coup (Fer à quatre clous), puis face dorée (forge du dé) : avant le critique
+    ...(a.relicBonus ?? []).map((b) => `relique ${b.name} +${b.amount}`),
+    ...(a.gild ? [`face dorée +${a.gild}`] : []),
+    a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
+    // Auras et statuts qui changent la force du coup, avec leur porteur
+    ...early.map(modifier),
+    `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(struck * a.critMultiplier) : struck) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
+    `armure ${a.armor} → −${a.armorAbsorbed}`,
+    ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
+    // Dégâts finaux (Fausse note) : après l'armure et les boucliers
+    ...a.modifiers.filter((m) => m.final).map((m) => `${modifier(m)} (dégâts finaux)`),
+    `dégâts ${a.damage}${a.floored ? ' (plancher : un coup qui touche inflige au moins 1)' : ''}`,
+    a.dealt > before.hp[defSide] ? `retirés ${before.hp[defSide]}, dont ${a.dealt - before.hp[defSide]} d'excès (overkill, compté)` : `retirés ${a.dealt}`,
+  ]
+  return `${steps.join(' · ')} (${def.name} ${before.hp[defSide]} → ${after.hp[defSide]} PV)`
 }
 
 function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): string[] {
@@ -107,37 +143,12 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     case 'attack': {
       const a = beat.attack
       const att = fighters[a.attacker]
-      const defSide = other(a.attacker)
-      const def = fighters[defSide]
-      const head = `${att.name} attaque ${def.name} : dé ${a.roll}${a.roll === DIE_FACES ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé déjà tiré)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}`
-      const modifier = (m: (typeof a.modifiers)[number]) =>
-        `${label(m.status)} ${of(m.by === 'attacker' ? att.name : def.name)} ${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)}`
-      const early = a.modifiers.filter((m) => !m.final)
+      const head = `${att.name} attaque ${fighters[other(a.attacker)].name} : dé ${a.roll}${a.roll === DIE_FACES ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé déjà tiré)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}`
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
       // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7) »), ×N par Crescendo ou Soliste ; un
       // type d'attaque unique depuis le 2026-10-24 (« DP », « DM Lumière » avant)
       const base = `coup de base ${a.value} (${att.stats.attackMin} à ${att.stats.attackMax})${a.multiplier ? ` ×${a.multiplier}` : ''}`
-      if (a.dodged)
-        return [`${head} · ${base} · esquivé par ${def.name}${a.dodgeForced ? ' (esquive imposée par un statut, sans tirage)' : ''}${a.critBy ? ` · ${label(a.critBy)} perdu` : ''}, aucun dégât`]
-      const bonus = (a.relicBonus ?? []).reduce((t, b) => t + b.amount, 0) + (a.gild ?? 0)
-      const struck = a.value * (a.multiplier ?? 1) + bonus
-      const steps = [
-        base,
-        // Reliques de coup (Fer à quatre clous), puis face dorée (forge du dé) : avant le critique
-        ...(a.relicBonus ?? []).map((b) => `relique ${b.name} +${b.amount}`),
-        ...(a.gild ? [`face dorée +${a.gild}`] : []),
-        a.crit ? `critique ${multiplier(a.critMultiplier)}${a.critForced ? ' (imposé par un statut)' : ''}` : 'pas de critique',
-        // Auras et statuts qui changent la force du coup, avec leur porteur
-        ...early.map(modifier),
-        `avant armure ${a.raw}${a.raw > (a.crit ? Math.round(struck * a.critMultiplier) : struck) + early.reduce((t, m) => t + m.delta, 0) ? ' (plancher : un coup vaut au moins 1)' : ''}`,
-        `armure ${a.armor} → −${a.armorAbsorbed}`,
-        ...a.shields.map((s) => `${label(s.status)} −${s.absorbed}`),
-        // Dégâts finaux (Fausse note) : après l'armure et les boucliers
-        ...a.modifiers.filter((m) => m.final).map((m) => `${modifier(m)} (dégâts finaux)`),
-        `dégâts ${a.damage}${a.floored ? ' (plancher : un coup qui touche inflige au moins 1)' : ''}`,
-        a.dealt > before.hp[defSide] ? `retirés ${before.hp[defSide]}, dont ${a.dealt - before.hp[defSide]} d'excès (overkill, compté)` : `retirés ${a.dealt}`,
-      ]
-      return [`${head} · ${steps.join(' · ')} (${def.name} ${before.hp[defSide]} → ${after.hp[defSide]} PV)`]
+      return [`${head} · ${strikeSteps(a, base, fighters, before, after)}`]
     }
     case 'event': {
       const e = beat.event
@@ -155,11 +166,11 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       ]
     case 'statusReaction': {
       const head = `${label(beat.status)} ${of(fighters[beat.side].name)} réagit (${triggerText(beat.trigger).label.toLowerCase()})`
+      // Un renvoi (C1 : Riposte, jauge de Rétribution) : un coup sans dé, résolu comme un coup
+      if (beat.strike) return [`${head} : renvoi sur ${fighters[other(beat.side)].name}, coup sans dé · ${strikeSteps(beat.strike, `valeur ${beat.strike.value}`, fighters, before, after)}`]
       // Jauges (Rétribution) : le coup est rangé, sans effet à appliquer
       const gauge = STATUSES[beat.status].fillsOnHurt ? after.statuses[beat.side].find((s) => s.id === beat.status) : undefined
       if (gauge) return [head, `    → coup rangé dans les jauges : ${(gauge.slots ?? []).join(' · ')} (${gauge.stacks} à relâcher)`]
-      // Riposte esquivée (2026-10-27) : l'attaquant l'évite par son esquive assurée, une charge de chaque statut part
-      if (beat.dodgedBy) return [head, `    → esquivée par ${fighters[other(beat.side)].name} (${label(beat.dodgedBy)}) : aucun dégât, une charge de chaque statut part`]
       return [head, ...effects(beat.effects)]
     }
     case 'statusAge':

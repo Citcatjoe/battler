@@ -266,8 +266,8 @@ export interface StatusDef {
    */
   mechanic?: 'form' | 'skill'
   /**
-   * Riposte : réagit dans la fenêtre `hurt` du porteur, à chaque coup qui le touche (pile comprise), en renvoyant
-   * cette part des PV retirés (dégâts directs, arrondis) à l'attaquant ; une charge par réaction
+   * Riposte : réagit dans la fenêtre `hurt` du porteur, à chaque coup qui le touche (pile comprise, pas un renvoi), en
+   * renvoyant à l'attaquant un coup sans dé de cette part des PV retirés (arrondie, C1) ; une charge par réaction
    */
   reflectsHit?: number
   /**
@@ -386,7 +386,12 @@ export const VENDETTA_MOMENTUM = 6
  * Elaria +12,6 → +14,3, série 71 du laboratoire).
  */
 export const FAITH_SHIELD_ARMOR = 2
-export const SIDESTEP_DODGE = 0.08
+/**
+ * Pas de côté : 8 → 12 % par charge (troisième retour du 2026-10-27, C5), avec le plafond d'esquive (`MAX_DODGE`, 75 %)
+ * qui borne sa montée : départs Elaria 34,0 → 42,3 %, Naraxes 42,9 → 51,0, Fanchon 39,2 → 45,0 (400 combats par duel) ;
+ * forces construites inchangées à 0,5 point près.
+ */
+export const SIDESTEP_DODGE = 0.12
 export const OPEN_WOUND_BLEED = 1
 
 /**
@@ -395,6 +400,8 @@ export const OPEN_WOUND_BLEED = 1
  * l'armure temporaire tient (à +2, les départs de Brokk passaient 58 %).
  */
 export const LOADED_DIE_HEADS = 0.25
+/** Dé pipé (2026-10-27, AURAS.md § 3) : la chance penche de son côté partout, du critique et de l'esquive par charge */
+export const LOADED_DIE_EDGE = 0.05
 export const DREAD_CRIT = 0.05
 /** Aura de pourriture : Pourriture posée par critique et par charge (1 jusqu'à la mesure du 2026-10-27 : gravée +4,5, rang +2,0) */
 export const ROT_AURA_ROT = 2
@@ -855,14 +862,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(167,139,250,0.5)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces, par charge.`,
-    describe: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces`,
+    summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces, +${Math.round(LOADED_DIE_EDGE * 100)} % de critique et +${Math.round(LOADED_DIE_EDGE * 100)} % d'esquive, par charge.`,
+    describe: (s) =>
+      `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces, +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % de critique et +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % d'esquive`,
     detail: () => 'Toutes ses pièces ; jamais plus de 5 chances sur 6 de faire pile.',
     badge: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} %`,
     counter: 'stacks',
     stacking: 'add',
     headsChance: LOADED_DIE_HEADS,
-    power: (n) => `+${Math.round(LOADED_DIE_HEADS * 100 * n)} % de chances de faire pile`,
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + LOADED_DIE_EDGE * charges(s), dodgeChance: stats.dodgeChance + LOADED_DIE_EDGE * charges(s) }),
+    power: (n) => `+${Math.round(LOADED_DIE_HEADS * 100 * n)} % de chances de faire pile, +${Math.round(LOADED_DIE_EDGE * 100 * n)} % de critique et d'esquive`,
   },
   bristlingRampart: {
     name: 'Rempart hérissé',
@@ -1002,7 +1011,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
         `Ses N prochains coups reçus renvoient chacun la moitié de leurs dégâts${more} à l'attaquant`,
       )
     },
-    detail: () => 'Arrondie au-dessus, en dégâts directs.',
+    detail: () => 'Arrondie au-dessus. Un coup sans dé : il s’esquive, critique et se heurte à l’armure ; aucun renvoi n’y répond.',
     badge: () => '50 %',
     // 0.50.0 : deux charges par Riposte (deux coups renvoyés), comme le Vol de vie
     counter: 'stacks',
@@ -1781,14 +1790,14 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   if (def.reflectsHit)
     say(
       effect,
-      `Le prochain coup qui touche le porteur renvoie à l'attaquant ${Math.round(def.reflectsHit * 100)} % des PV retirés, arrondis au-dessus, en dégâts directs ; une charge par coup.`,
-      'direct-damage',
+      `Le prochain coup qui touche le porteur lui fait renvoyer à l'attaquant un coup de ${Math.round(def.reflectsHit * 100)} % des PV retirés, arrondis au-dessus : un coup sans dé, qui s'esquive, critique et se heurte à l'armure, sans renvoi en retour ; une charge par coup.`,
+      'base-hit',
     )
   if (def.fillsOnHurt)
     say(
       effect,
-      `Chaque coup qui touche le porteur range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges, la plus ancienne cédant sa place ; les dégâts directs ne comptent pas. La compétence du porteur les relâche d'un coup.`,
-      'direct-damage',
+      `Chaque coup qui touche le porteur range ses dégâts dans une des ${def.fillsOnHurt.slots} jauges, la plus ancienne cédant sa place ; les dégâts directs ne comptent pas. La compétence du porteur les relâche : un coup sans dé par jauge, chacun esquivé, critique ou arrêté par l'armure à part.`,
+      'base-hit',
     )
   if (def.wards)
     say(

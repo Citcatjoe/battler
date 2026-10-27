@@ -32,6 +32,56 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.125.0] — 2026-10-27
+
+Troisième retour de l'utilisateur sur la 0.122.0 (« là, on tune ») : des règles pour tous, un réglage complet, des docs allégées, aucune compétence inventée ([PROGRESSION.md](docs/PROGRESSION.md) § 1.23).
+
+### Ajouté
+- **L'aura de départ arrive au plus tard au 3e tour** de son porteur (`AURA_DUE_TURN`, déclencheur `auraDue`) : au début de ce tour, après ses statuts et avant son action, l'aura de sa face 1 se pose d'office si aucun 1 ne l'a posée ; un 1 la pose plus tôt et chaque 1 ajoute une charge aux auras cumulables. Journal « son aura s'éveille », sceau de la face 1 allumé, « Aura éveillée » sur le porteur ; contrôle d'audit ([AURAS.md](docs/AURAS.md) § 2, [RESOLUTION.md](docs/RESOLUTION.md) § 2).
+- **+2 PV max par récompense** (`REWARD_HP`) : chaque opération de forge et chaque relique, en campagne, en tournoi et en saison ; l'infobulle des PV dit « dont +N gagnés par ses récompenses ». En campagne, les PV réglés d'un adversaire partent de ses PV d'origine ; une partie v5 se relit telle quelle. Contrôle d'audit « PV de récompense ».
+- **Morgrut : le Crescendo sur la face 2** (Fureur, « Crescendo : chaque fois plus fort ») ; fiche mise à jour.
+- **Plafond d'esquive** : les statuts ne portent pas l'esquive au-delà de 75 % (`MAX_DODGE`) ; une esquive de fiche plus haute reste la sienne. Contrôle d'audit.
+- [MAITRISES.md](docs/MAITRISES.md) « Besoins de contenu par maîtrise » : environ 4 auras et 5 compétences par maîtrise, 6 auras et 7 compétences à proposer par l'utilisateur.
+
+### Modifié
+- **La Riposte et la Rétribution sont des coups** ([RESOLUTION.md](docs/RESOLUTION.md) § 3 ter et § 9) : un renvoi est un coup sans dé d'une valeur fixée, qui passe par l'esquive, le critique (il dépense le Critique assuré), l'armure, les boucliers, le Vol de vie et les reliques de coup sans face ; un renvoi ne déclenche pas d'autre renvoi ; la Rétribution donne un coup par jauge.
+- **Purification** : 5 dégâts directs de Lumière quand elle retire un bonus (`PURIFICATION_STRIP`) ; 8 sans bonus, inchangé.
+- **Dé pipé** : +5 % de critique et +5 % d'esquive par charge, en plus de +25 % de pile (`LOADED_DIE_EDGE`).
+- **Morgrut** : attaque 6 à 8 → 5 à 7 (PV 59 inchangés). **Pas de côté** : +8 → +12 % d'esquive par charge. **Elaria** : esquive 22 → 24 %. **Ervald** : critique 24 → 28 %.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour, changement voulu (renvois, aura au 3e tour, Purification, Dé pipé, PV de récompense, plafonds, Morgrut, Pas de côté, Elaria, Ervald). Mesuré (`BALANCE_N=800 npm run balance`) : roster de 47,0 % (Ervald) à 54,0 % (Morgrut), pire duel Morgrut–Brokk 62,7 % ; construits à 10 récompenses (`npm run ramp`) de 40,5 % (Morgrut) à 62,7 % (Fanchon), écart 30,3 → 22,2 points ; départs d'aura hors de 42-58 % : 12 → 8 ; saison 32-64 %, σ 8,5 ; campagne : boss atteint 17 %, acte gagné 11 %.
+- **Docs restructurées** : le CHANGELOG est la seule chronique ; `docs/FEATURES.md` ne garde que les règles en vigueur (tableaux d'historique retirés, −30 %) ; `docs/ETAT.md` réduit à l'état présent (−93 %) ; checklist de livraison de `CLAUDE.md` allégée, renvoi au gabarit de retour (`docs/etudes/RETOURS.md` § 6, `prompts/GABARIT_RETOUR.md`) ; principe « synergies d'abord » ([INTENTION.md](docs/INTENTION.md) principe 12).
+
+### Corrigé
+- **Au plus 12 jets de plus par action** (`MAX_EXTRA_JETS`) : la Veine à 6 charges ou plus rendait le Coup de chance sans fin et faisait planter `npm run ramp` ; les charges au-delà partent avec les autres.
+- Le Pas de côté gravé deux fois ne monte plus l'esquive à 100 % (plafond d'esquive) : plus aucun combat arrêté à `MAX_TURNS` dans `npm run ramp` (38 avant).
+
+## [0.124.0] — 2026-10-27
+
+Demande de l'utilisateur : une posture d'incantation pour chaque personnage, jouée quand il lance un sort offensif, avec une vraie distinction entre dégâts magiques et physiques ([POSTURES.md](docs/POSTURES.md) § 7, [MISE_EN_SCENE.md](docs/MISE_EN_SCENE.md) M55).
+
+### Ajouté
+- **Posture d'incantation** (`poses.cast`, `'Incantation'`) : onze images (dix personnages et l'ours du druide, `src/assets/<nom>-cast.png`), chacune d'après le lore et les maîtrises du personnage, générées par Artlist (GPT Image 2.5) à partir de sa garde. Le lanceur la prend le temps de son action, avec un petit pas en avant (`.lunge-cast`) au lieu de la fente du coup.
+- **Ce qui est un sort offensif** (`castsSpell`, `poses.ts`) : une compétence qui inflige des dégâts magiques, ou qui, sans dégâts physiques, est de nature arcane et nuit à l'adversaire (Peur, Malchance, Éclair aveuglant…). Un statut ou une réaction qui inflige des dégâts magiques (`castsMagicAt`) la fait aussi prendre à son porteur. Rétribution, Coup étourdissant, Hémorragie, les prières et les auras ne la déclenchent pas.
+- **Dégâts magiques ou physiques** : chaque source de dégâts dit son type (`DAMAGE_SOURCES[…].magical` ; coup, poison et saignement physiques ; Lumière, foudre, feu, vent, brûlure et pourriture magiques).
+- Cue `cast` de la mise en scène (`staging.ts`, `View.casting`), règle M55 et son contrôle (`staging.test.ts`) ; libellé « incante » dans le magnétoscope.
+- `look.poseRoom` : la part de hauteur qu'une posture ajoute au-dessus de la toile de la garde (bras ou arme levés), pour que l'image ne soit pas rognée ni le personnage rapetissé ; `slice-poses.py --rehausser` la mesure et l'écrit.
+
+### Modifié
+- Chargement : 11 Mo d'images en plus.
+
+## [0.123.0] — 2026-10-27
+
+Les fonds d'écran demandés par l'utilisateur, générés d'après les prompts de `docs/prompts-decors.md` et la nouvelle méthode des décors ([STYLE_BIBLE.md](docs/STYLE_BIBLE.md) § 5.2 bis).
+
+### Ajouté
+- **Campagne : on affronte chaque adversaire chez lui.** Dix arènes, une par personnage (`HOME_ARENAS`, `arenas.ts`), qui n'apparaissent que contre ce personnage en campagne : les Fosses-Rouges (Gorak), la Passe-des-Archères (Elaria), la Porte-Seule (Brokk), le Champ-des-Lances (Ervald), le Fléau (Ysolde), la Serre-Gagnée (Naraxes), la Grange-aux-Dîmes (Aldric), les Grands-Soleils (Morgrut), le Chêne-Fendu (Thaldrin), les Tréteaux (Fanchon). L'écran d'affrontement montre l'arène imposée à la place du sélecteur ; le boss, sans arène à lui, garde le sélecteur. Duel, tournoi et saison ne changent pas : jamais au choix, jamais au hasard.
+- **Choix du champion en campagne** : le vestiaire sous les gradins (`menu-campaign.jpg`), la sortie vers l'arène derrière le champion.
+- **Arbre du tournoi et saison** : l'arène vue du ciel, combats en cours (`menu-season.jpg`), à la place de la porte du colisée (qui reste sur la présentation et la configuration du tournoi).
+- **Victoire finale** (tournoi gagné, boss de campagne terrassé) : la salle du trésor (`menu-victory.jpg`, `VictoryBackdrop`), calée pour que le vainqueur se tienne sur son estrade, sous la couronne suspendue.
+
+### Retiré
+- Le rai de lumière animé et le socle lumineux des écrans de victoire (`.champion-rays`, `.champion-pedestal`) : l'estrade et la colonne de lumière sont dans l'image.
+
 ## [0.122.0] — 2026-10-27
 
 Le second retour de l'utilisateur du 2026-10-27, après la 0.121.0 (B1 à B19) : « tu dois être le garant des règles » (une règle vaut pour tous, aucune exception par personnage) et aucune compétence nouvelle inventée (on déplace, on renomme, on fait l'état des lieux ; l'utilisateur proposera). Tableau point par point dans [PROGRESSION.md](docs/PROGRESSION.md) § 1.22. Règles changées voulues (Critique assuré à une charge, huit maîtrises, auras de départ) : l'empreinte de non-régression (`balance.test.ts`) est mise à jour une fois.

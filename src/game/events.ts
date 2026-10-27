@@ -19,6 +19,7 @@ export type NamedTrigger =
   | 'combatStart'
   | 'turnStart'
   | 'turnEnd'
+  | 'auraDue'
   | 'naturalOne'
   | 'naturalTwo'
   | 'naturalThree'
@@ -50,6 +51,8 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   combatStart: { label: 'Au début du combat', short: 'début du combat' },
   turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
   turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
+  // L'aura de départ au rendez-vous (2026-10-27) : réservé au moteur, aucune compétence ne le déclare
+  auraDue: { label: 'Au début de son 3e tour, son aura de départ absente', short: 'aura due' },
   naturalOne: { label: 'Sur un 1 au dé', short: 'dé 1' },
   naturalTwo: { label: 'Sur un 2 au dé', short: 'dé 2' },
   naturalThree: { label: 'Sur un 3 au dé', short: 'dé 3' },
@@ -114,9 +117,17 @@ export type Effect =
    * Retire des statuts d'une polarité, avec toutes leurs charges : tous, ou seulement les `count` derniers
    * apparus (un statut renforcé garde son rang). Les mécanismes de compétence et de forme ne se retirent pas.
    * `orElse` : effet joué à la place quand il n'y a rien à retirer (Purification, 0.42.0 : la lumière blesse au
-   * lieu de tomber à vide).
+   * lieu de tomber à vide). `andThen` : effet joué après une purge qui a retiré quelque chose (Purification,
+   * 2026-10-27 : elle blesse aussi quand elle retire un bonus) ; le moteur le range juste après la purge.
    */
-  | { type: 'cleanse'; polarity: Polarity; target?: Target; count?: number; orElse?: Exclude<Effect, { type: 'cleanse' }> }
+  | {
+      type: 'cleanse'
+      polarity: Polarity
+      target?: Target
+      count?: number
+      orElse?: Exclude<Effect, { type: 'cleanse' }>
+      andThen?: Exclude<Effect, { type: 'cleanse' }>
+    }
   /**
    * Relâche un statut d'un coup, puis le retire. Le sien (défaut, Rétribution) : la somme de ses jauges en dégâts directs
    * à l'adversaire, ou sa part `share` arrondie au-dessous (0.107.0 : la moitié), au moins `min` ; le porteur ne remplit ses
@@ -328,9 +339,11 @@ export function describeEffect(effect: Effect, grafted = false): string {
     case 'cleanse': {
       const kind = effect.polarity === 'negative' ? 'malus' : 'bonus'
       const what = effect.count === undefined ? `tous ${foe ? 'les' : 'ses'} ${kind}` : effect.count === 1 ? `son dernier ${kind}` : `ses ${effect.count} derniers ${kind}`
-      // Le repli vise l'adversaire comme la purge : il n'est pas répété (« sinon 5 dégâts directs »)
-      const orElse = effect.orElse ? `, sinon ${describeEffect(effect.orElse).replace(foe ? / à l'adversaire$/ : /$^/, '')}` : ''
-      return `retire ${what}${foe ? " à l'adversaire" : ''}${orElse}`
+      // Le repli et la suite visent l'adversaire comme la purge : il n'est pas répété (« sinon 5 dégâts directs »)
+      const bare = (e: Effect) => describeEffect(e).replace(foe ? / à l'adversaire$/ : /$^/, '')
+      const andThen = effect.andThen ? `, avec ${bare(effect.andThen)}` : ''
+      const orElse = effect.orElse ? `${andThen ? ' ;' : ','} sinon ${bare(effect.orElse)}` : ''
+      return `retire ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
     }
   }
 }

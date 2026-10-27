@@ -4,6 +4,8 @@
 
 Aucun document existant ni aucun fichier de code n'a été modifié : ce document mesure et propose. Les mesures viennent de `wc`, `git log --numstat`, `git show` et d'un script de comparaison de textes, sur le dépôt à la 0.121.0.
 
+**Suite donnée (troisième retour du 2026-10-27, C6)** : **O1, O2 et O6 sont livrés**. `ETAT.md` ne dit plus que l'état présent, `FEATURES.md` ne garde que les règles en vigueur (les tableaux « version → changement » sont retirés, sans archive : le CHANGELOG et git les portent), et la checklist de `CLAUDE.md` fait du CHANGELOG la seule chronique (FEATURES : la règle en vigueur ; ETAT : l'état présent) avec un renvoi au gabarit des retours ([RETOURS.md](RETOURS.md) § 6). Numéros de section gardés (O10). Les autres leviers restent des propositions.
+
 ## 0. En bref
 
 - **Oui, c'est faisable, et peu coûteux.** Le temps perdu ne vient pas surtout de la taille des documents (l'agent les lit par morceaux, avec `grep` et des plages de lignes), mais de **ce qu'il faut réécrire à chaque livraison**.

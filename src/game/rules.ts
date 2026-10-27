@@ -88,13 +88,13 @@ export const RULES: Record<RuleId, Rule> = {
   'base-hit': {
     group: 'dice',
     title: 'Coup de base',
-    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), la même sorte de coup pour tous. C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche.",
+    text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), la même sorte de coup pour tous. C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Un renvoi (la Riposte, chaque jauge relâchée de la Rétribution) est aussi un coup, sans dé, d'une valeur fixée : il s'esquive, critique (il dépense un Critique assuré), lit les reliques de coup sans face, se heurte à l'armure et aux boucliers, et réveille ce qui réagit à un coup ; aucun renvoi ne répond à un renvoi.",
     see: ['damage-types'],
   },
   dodge: {
     group: 'dodge',
     title: 'Esquive',
-    text: "Le défenseur tente d'esquiver (sa chance d'esquive), sauf s'il porte une esquive imposée (Esquive améliorée) : elle réussit sans tirage, même contre une esquive nulle, puis disparaît. Un coup esquivé ne fait aucun dégât, ne peut pas être critique et ne déclenche rien de ce qui demande de toucher ; il use pourtant une charge de Vol de vie de l'attaquant, sans rien rendre.",
+    text: "Le défenseur tente d'esquiver (sa chance d'esquive), sauf s'il porte une esquive imposée (Esquive améliorée) : elle réussit sans tirage, même contre une esquive nulle, puis disparaît. Un coup esquivé ne fait aucun dégât, ne peut pas être critique et ne déclenche rien de ce qui demande de toucher ; il use pourtant une charge de Vol de vie de l'attaquant, sans rien rendre. Les bonus ne portent pas la chance d'esquive au-delà de 75 %.",
   },
   crit: {
     group: 'crit',
@@ -124,7 +124,7 @@ export const RULES: Record<RuleId, Rule> = {
   'direct-damage': {
     group: 'damage',
     title: 'Dégâts directs',
-    text: "Les dégâts directs (poison, saignement, brûlure, foudre, riposte, rétribution, purification…) ignorent l'armure, l'esquive, les boucliers et les bonus de dégâts, et ne sont jamais critiques. Ce ne sont pas des coups, même quand l'écran en montre plusieurs impacts (les trois éclairs de la Foudre) : rien de ce qui réagit à un coup ne part. Seule exception : pile, à Pile ou face, compte comme un coup qui touche.",
+    text: "Les dégâts directs (poison, saignement, brûlure, foudre, purification…) ignorent l'armure, l'esquive, les boucliers et les bonus de dégâts, et ne sont jamais critiques. Ce ne sont pas des coups, même quand l'écran en montre plusieurs impacts (les trois éclairs de la Foudre) : rien de ce qui réagit à un coup ne part. Seule exception : pile, à Pile ou face, compte comme un coup qui touche. La Riposte et la Rétribution, elles, sont des coups (Coup de base).",
   },
   'damage-types': {
     group: 'damage',
@@ -169,7 +169,7 @@ export const RULES: Record<RuleId, Rule> = {
   auras: {
     group: 'statuses',
     title: 'Auras',
-    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet.",
+    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet. L'aura de départ, celle du 1 de son dé, arrive au plus tard au début de son 3e tour : si elle n'est pas là, elle se pose d'elle-même, une fois par combat. Un 1 la pose plus tôt, et chaque 1 ajoute une charge à une aura cumulable.",
   },
   'stacking-add': {
     group: 'statuses',

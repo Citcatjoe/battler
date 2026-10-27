@@ -120,6 +120,9 @@ export function effectBadge(e: AppliedEffect): Badge {
           rises: false,
         }
       return { text: 'Purifié', tone: 'neutral', rises: false }
+    case 'rebound':
+      // Les jauges relâchées (C1) : leurs coups suivent, chacun avec son chiffre ; l'écran ne montre pas ce badge
+      return { text: plural(e.parts.length, 'renvoi'), tone: 'neutral', rises: false }
   }
 }
 
@@ -158,6 +161,8 @@ export function effectText(e: AppliedEffect, fighters: Pair<Character>): string 
       return STATUSES[e.removed[0]].polarity === 'negative'
         ? `${name} se libère de ${e.removed.map(statusLabel).join(', ')}`
         : `${name} perd ${e.removed.map(statusLabel).join(', ')}, toutes charges comprises`
+    case 'rebound':
+      return `${plural(e.parts.length, 'renvoi')} sur ${name} (${e.parts.join(' · ')})`
   }
 }
 
@@ -233,7 +238,9 @@ export function attackLog(
 
 export function eventLog(event: TriggeredEvent, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   const effects = event.effects.map((e) => effectText(e, fighters)).join(', ')
-  return { kind: 'event', side: event.side, text: effects ? `Compétence · ${event.name} ! ${effects}.` : `Compétence · ${event.name} !` }
+  // L'aura de départ posée d'office au 3e tour (2026-10-27) : le journal dit le rendez-vous avant la compétence
+  const due = event.trigger === 'auraDue' ? `Début du 3e tour ${of(fighters[event.side].name)} : son aura s'éveille. ` : ''
+  return { kind: 'event', side: event.side, text: effects ? `${due}Compétence · ${event.name} ! ${effects}.` : `${due}Compétence · ${event.name} !` }
 }
 
 /** Une relique se déclenche : « Relique · Osselet fendu ! Brokk perd 3 PV. » */
@@ -257,18 +264,30 @@ export function statusTickLog(
   }
 }
 
-/** Réaction d'un statut (ex. Épines) */
+/**
+ * Réaction d'un statut (ex. Épines). Un renvoi (C1 : Riposte, jauge de Rétribution, `strike`) se raconte comme un coup :
+ * esquivé, critique, ce que l'armure et les boucliers ont retenu
+ */
 export function statusReactionLog(
   side: Side,
   status: StatusId,
   effects: AppliedEffect[],
   fighters: Pair<Character>,
+  strike?: Attack,
 ): Omit<LogEntry, 'id'> {
-  return {
-    kind: 'status',
-    side,
-    text: `${statusLabel(status)} ${of(fighters[side].name)} · ${effects.map((e) => effectText(e, fighters)).join(', ')}.`,
-  }
+  const head = `${statusLabel(status)} ${of(fighters[side].name)}`
+  if (!strike) return { kind: 'status', side, text: `${head} · ${effects.map((e) => effectText(e, fighters)).join(', ')}.` }
+  const target = fighters[side === 0 ? 1 : 0].name
+  if (strike.blindedBy) return { kind: 'dodge', side, text: `${head} · son ${strike.critForced ? 'critique assuré' : 'critique'} (${strike.value}) rate ${target} !` }
+  if (strike.dodged)
+    return {
+      kind: 'dodge',
+      side,
+      text: `${head} · ${target} esquive le renvoi (${strike.value})${strike.dodgeForced ? ' à coup sûr' : ''}${strike.critForced ? ' : le critique assuré est perdu' : ''} !`,
+    }
+  const crit = strike.crit ? `${strike.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ` : ''
+  const value = strike.crit ? `${strike.value} ${multiplier(strike.critMultiplier)}` : String(strike.value)
+  return { kind: strike.crit ? 'crit' : 'status', side, text: `${head} · ${crit}renvoi de ${value} : ${target} perd ${plural(strike.damage, 'PV')}${armorDetail(strike)}.` }
 }
 
 /** Action perdue (ex. Étourdi) */

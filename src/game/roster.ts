@@ -6,6 +6,7 @@ import orcVictoryImg from '../assets/orc-victory.png'
 import orcHurtImg from '../assets/orc-hurt.png'
 import orcDazedAImg from '../assets/orc-dazed-a.png'
 import orcDazedBImg from '../assets/orc-dazed-b.png'
+import orcCastImg from '../assets/orc-cast.png'
 import elfIdleImg from '../assets/elf-idle.png'
 import elfAttackImg from '../assets/elf-attack.png'
 import elfDodgeImg from '../assets/elf-dodge.png'
@@ -14,6 +15,7 @@ import elfKoImg from '../assets/elf-ko.png'
 import elfVictoryImg from '../assets/elf-victory.png'
 import elfDazedAImg from '../assets/elf-dazed-a.png'
 import elfDazedBImg from '../assets/elf-dazed-b.png'
+import elfCastImg from '../assets/elf-cast.png'
 import dwarfIdleImg from '../assets/dwarf-idle.png'
 import dwarfAttackImg from '../assets/dwarf-attack.png'
 import dwarfDodgeImg from '../assets/dwarf-dodge.png'
@@ -22,6 +24,7 @@ import dwarfKoImg from '../assets/dwarf-ko.png'
 import dwarfVictoryImg from '../assets/dwarf-victory.png'
 import dwarfDazedAImg from '../assets/dwarf-dazed-a.png'
 import dwarfDazedBImg from '../assets/dwarf-dazed-b.png'
+import dwarfCastImg from '../assets/dwarf-cast.png'
 import undeadIdleImg from '../assets/undead-idle.png'
 import undeadAttackImg from '../assets/undead-attack.png'
 import undeadDodgeImg from '../assets/undead-dodge.png'
@@ -30,6 +33,7 @@ import undeadKoImg from '../assets/undead-ko.png'
 import undeadVictoryImg from '../assets/undead-victory.png'
 import undeadDazedAImg from '../assets/undead-dazed-a.png'
 import undeadDazedBImg from '../assets/undead-dazed-b.png'
+import undeadCastImg from '../assets/undead-cast.png'
 import humanIdleImg from '../assets/human-idle.png'
 import humanAttackImg from '../assets/human-attack.png'
 import humanDodgeImg from '../assets/human-dodge.png'
@@ -38,6 +42,7 @@ import humanKoImg from '../assets/human-ko.png'
 import humanVictoryImg from '../assets/human-victory.png'
 import humanDazedAImg from '../assets/human-dazed-a.png'
 import humanDazedBImg from '../assets/human-dazed-b.png'
+import humanCastImg from '../assets/human-cast.png'
 import lizardIdleImg from '../assets/lizardman-idle.png'
 import lizardAttackImg from '../assets/lizardman-attack.png'
 import lizardDodgeImg from '../assets/lizardman-dodge.png'
@@ -46,6 +51,7 @@ import lizardKoImg from '../assets/lizardman-ko.png'
 import lizardVictoryImg from '../assets/lizardman-victory.png'
 import lizardDazedAImg from '../assets/lizardman-dazed-a.png'
 import lizardDazedBImg from '../assets/lizardman-dazed-b.png'
+import lizardCastImg from '../assets/lizardman-cast.png'
 import paladinIdleImg from '../assets/paladin-idle.png'
 import paladinAttackImg from '../assets/paladin-attack.png'
 import paladinDodgeImg from '../assets/paladin-dodge.png'
@@ -54,6 +60,7 @@ import paladinKoImg from '../assets/paladin-ko.png'
 import paladinVictoryImg from '../assets/paladin-victory.png'
 import paladinDazedAImg from '../assets/paladin-dazed-a.png'
 import paladinDazedBImg from '../assets/paladin-dazed-b.png'
+import paladinCastImg from '../assets/paladin-cast.png'
 import ogreIdleImg from '../assets/ogre-idle.png'
 import ogreAttackImg from '../assets/ogre-attack.png'
 import ogreDodgeImg from '../assets/ogre-dodge.png'
@@ -62,6 +69,7 @@ import ogreKoImg from '../assets/ogre-ko.png'
 import ogreVictoryImg from '../assets/ogre-victory.png'
 import ogreDazedAImg from '../assets/ogre-dazed-a.png'
 import ogreDazedBImg from '../assets/ogre-dazed-b.png'
+import ogreCastImg from '../assets/ogre-cast.png'
 import druidIdleImg from '../assets/druid-idle.png'
 import druidAttackImg from '../assets/druid-attack.png'
 import druidDodgeImg from '../assets/druid-dodge.png'
@@ -70,6 +78,7 @@ import druidKoImg from '../assets/druid-ko.png'
 import druidVictoryImg from '../assets/druid-victory.png'
 import druidDazedAImg from '../assets/druid-dazed-a.png'
 import druidDazedBImg from '../assets/druid-dazed-b.png'
+import druidCastImg from '../assets/druid-cast.png'
 import bearIdleImg from '../assets/druid-bear-idle.png'
 import bearAttackImg from '../assets/druid-bear-attack.png'
 import bearDodgeImg from '../assets/druid-bear-dodge.png'
@@ -78,6 +87,7 @@ import bearKoImg from '../assets/druid-bear-ko.png'
 import bearVictoryImg from '../assets/druid-bear-victory.png'
 import bearDazedAImg from '../assets/druid-bear-dazed-a.png'
 import bearDazedBImg from '../assets/druid-bear-dazed-b.png'
+import bearCastImg from '../assets/druid-bear-cast.png'
 import bardIdleImg from '../assets/bard-idle.png'
 import bardAttackImg from '../assets/bard-attack.png'
 import bardDodgeImg from '../assets/bard-dodge.png'
@@ -86,6 +96,7 @@ import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
 import bardDazedAImg from '../assets/bard-dazed-a.png'
 import bardDazedBImg from '../assets/bard-dazed-b.png'
+import bardCastImg from '../assets/bard-cast.png'
 import { Character, type CharacterDef } from './character'
 import { faceTrigger, isRollTrigger, rollFace, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
@@ -134,7 +145,8 @@ const gorak: CharacterDef = {
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
     image: orcIdleImg,
-    poses: { attack: orcAttackImg, dodge: orcDodgeImg, hurt: orcHurtImg, ko: orcKoImg, victory: orcVictoryImg, dazed: [orcDazedAImg, orcDazedBImg] },
+    poses: { attack: orcAttackImg, dodge: orcDodgeImg, hurt: orcHurtImg, ko: orcKoImg, victory: orcVictoryImg, dazed: [orcDazedAImg, orcDazedBImg], cast: orcCastImg },
+    poseRoom: { cast: 0.147 },
     facing: 'right',
     scale: 1.18,
     headroom: 0.13,
@@ -168,12 +180,15 @@ const elaria: CharacterDef = {
   // Maîtrises, réglage de la vague 2 (2026-10-27, docs/MAITRISES.md § 8, P6) : critique ×2,4 → ×2,2 et 15 → 17 % (plus
   // souvent, moins lourd). Ses critiques assurés (Feinte, Œil de faucon) font de la Contrepoids de plomb et de la Plume
   // d'aigle ses meilleures reliques : construite 60,6 → 57,7 % (`npm run ramp`), vanilla 51,9 → 47,0 % (400 par duel)
-  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.22, critChance: 0.17, critMultiplier: 2.2 },
+  // Troisième retour du 2026-10-27 (C5) : esquive 22 → 24 % (vanilla 44,8 → 48,2 %, pire duel Ysolde contre elle 64,8 →
+  // 61,5 % ; 400 combats par duel). Mesures : docs/PERSONNAGES.md, Elaria
+  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.24, critChance: 0.17, critMultiplier: 2.2 },
   // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
     image: elfIdleImg,
-    poses: { attack: elfAttackImg, dodge: elfDodgeImg, hurt: elfHurtImg, ko: elfKoImg, victory: elfVictoryImg, dazed: [elfDazedAImg, elfDazedBImg] },
+    poses: { attack: elfAttackImg, dodge: elfDodgeImg, hurt: elfHurtImg, ko: elfKoImg, victory: elfVictoryImg, dazed: [elfDazedAImg, elfDazedBImg], cast: elfCastImg },
+    poseRoom: { cast: 0.088 },
     facing: 'right',
     scale: 1.25,
     headroom: 0.22,
@@ -186,7 +201,7 @@ const elaria: CharacterDef = {
     tagline: 'Un souffle, une flèche.',
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
-    strengths: ['Meilleure esquive (22 %)', 'Critiques fréquents (17 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
+    strengths: ['Meilleure esquive (24 %)', 'Critiques fréquents (17 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
     weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
   // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la réserve.
@@ -213,7 +228,8 @@ const brokk: CharacterDef = {
   // toile), le reste compte dans `headroom` (comme Aldric). La hache du K.O. descend sous les pieds
   look: {
     image: dwarfIdleImg,
-    poses: { attack: dwarfAttackImg, dodge: dwarfDodgeImg, hurt: dwarfHurtImg, ko: dwarfKoImg, victory: dwarfVictoryImg, dazed: [dwarfDazedAImg, dwarfDazedBImg] },
+    poses: { attack: dwarfAttackImg, dodge: dwarfDodgeImg, hurt: dwarfHurtImg, ko: dwarfKoImg, victory: dwarfVictoryImg, dazed: [dwarfDazedAImg, dwarfDazedBImg], cast: dwarfCastImg },
+    poseRoom: { cast: 0.149 },
     facing: 'right',
     scale: 1.14,
     headroom: 0.23,
@@ -243,12 +259,14 @@ const ervald: CharacterDef = {
   // 48,8 % contre les neuf autres (46,7 % avec les siennes).
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Vol de vie sur le 1, Aura glaciale sur le 2 ; le Souffle de la tombe
   // quitte le kit. Mesuré : 50,2 % (53,9 % avant). Un seul modèle (0.113.0) : Aura glaciale sur le 1, Vol de vie sur le 2.
-  stats: { maxHp: 56, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.24, critMultiplier: 2 },
+  // Troisième retour du 2026-10-27 (C5) : critique 24 → 28 % (vanilla 44,1 → 46,7 %, construit 43,1 → 45,0 % ; ses
+  // auras de départ au critique, Effroi et Pourriture, restent sous 58 %)
+  stats: { maxHp: 56, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.28, critMultiplier: 2 },
   // Postures (atelier des postures, 2026-10-20) : la garde occupe 83,4 % de la toile ; la même hauteur
   // à l'écran qu'avant (0,98 × 0,99 de l'ancienne image) donne scale 0,97 / 0,834 = 1,16
   look: {
     image: undeadIdleImg,
-    poses: { attack: undeadAttackImg, dodge: undeadDodgeImg, hurt: undeadHurtImg, ko: undeadKoImg, victory: undeadVictoryImg, dazed: [undeadDazedAImg, undeadDazedBImg] },
+    poses: { attack: undeadAttackImg, dodge: undeadDodgeImg, hurt: undeadHurtImg, ko: undeadKoImg, victory: undeadVictoryImg, dazed: [undeadDazedAImg, undeadDazedBImg], cast: undeadCastImg },
     facing: 'right',
     scale: 1.16,
     headroom: 0.15, // part vide au-dessus de la tête (l'épée levée de la victoire)
@@ -259,7 +277,7 @@ const ervald: CharacterDef = {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (24 %)'],
+    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (28 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   // Maîtrises : dé inchangé, l'Aura glaciale sur le 1 par défaut, le Vol de vie sur le 2
@@ -283,7 +301,8 @@ const ysolde: CharacterDef = {
   // se règle sur le corps (tête-pieds, 74 % de la toile), le reste compte dans `headroom` (comme Aldric)
   look: {
     image: humanIdleImg,
-    poses: { attack: humanAttackImg, dodge: humanDodgeImg, hurt: humanHurtImg, ko: humanKoImg, victory: humanVictoryImg, dazed: [humanDazedAImg, humanDazedBImg] },
+    poses: { attack: humanAttackImg, dodge: humanDodgeImg, hurt: humanHurtImg, ko: humanKoImg, victory: humanVictoryImg, dazed: [humanDazedAImg, humanDazedBImg], cast: humanCastImg },
+    poseRoom: { cast: 0.124 },
     facing: 'right',
     scale: 1.25,
     headroom: 0.245,
@@ -316,7 +335,8 @@ const naraxes: CharacterDef = {
   // au-dessus de la tête (dague levée de l'attaque) : scale 1,10 pour sa taille 0,97.
   look: {
     image: lizardIdleImg,
-    poses: { attack: lizardAttackImg, dodge: lizardDodgeImg, hurt: lizardHurtImg, ko: lizardKoImg, victory: lizardVictoryImg, dazed: [lizardDazedAImg, lizardDazedBImg] },
+    poses: { attack: lizardAttackImg, dodge: lizardDodgeImg, hurt: lizardHurtImg, ko: lizardKoImg, victory: lizardVictoryImg, dazed: [lizardDazedAImg, lizardDazedBImg], cast: lizardCastImg },
+    poseRoom: { cast: 0.043 },
     facing: 'right',
     scale: 1.1,
     headroom: 0.14,
@@ -360,7 +380,8 @@ const aldric: CharacterDef = {
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
   look: {
     image: paladinIdleImg,
-    poses: { attack: paladinAttackImg, dodge: paladinDodgeImg, hurt: paladinHurtImg, ko: paladinKoImg, victory: paladinVictoryImg, dazed: [paladinDazedAImg, paladinDazedBImg] },
+    poses: { attack: paladinAttackImg, dodge: paladinDodgeImg, hurt: paladinHurtImg, ko: paladinKoImg, victory: paladinVictoryImg, dazed: [paladinDazedAImg, paladinDazedBImg], cast: paladinCastImg },
+    poseRoom: { cast: 0.154 },
     facing: 'right',
     scale: 1.24,
     headroom: 0.21,
@@ -394,13 +415,17 @@ const morgrut: CharacterDef = {
   // son seul autre levier.
   // Maîtrises (Q2, défaut adopté) : une aura sur le 1 comme tout le monde, l'Aura de puissance, et sa face 2 nue. Attaque
   // 7 à 9 → 6 à 8 : avec la Puissance à 7 à 9, il passait 65,1 % (série 73)
-  stats: { maxHp: 59, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
+  // Troisième retour du 2026-10-27 (C5, demande de l'utilisateur) : une compétence sur le 2, prise dans ses maîtrises, le
+  // Crescendo (Fureur) : « Taper. Taper encore. Taper plus fort. », ce coup ×2, puis ×3, ×4 à chaque fois. Des six
+  // candidates mesurées, la meilleure montée construite (33,1 → 50,1 % à 10 récompenses, sans compensation) ; sa force
+  // nue (69,4 %) se compense par l'attaque, 6 à 8 → 5 à 7 (PV intacts). Mesures : docs/PERSONNAGES.md, Morgrut
+  stats: { maxHp: 59, attackMin: 5, attackMax: 7, armor: 0, dodgeChance: 0, critChance: 0, critMultiplier: 2 },
   // Postures (atelier des postures, 2026-10-20). La garde (casque compris) occupe 70,3 % de la toile, que
   // la massue levée de la victoire rend haute : même taille à l'écran qu'avant (1,13 d'un humain). La
   // massue du coup encaissé et du K.O. descend sous les pieds
   look: {
     image: ogreIdleImg,
-    poses: { attack: ogreAttackImg, dodge: ogreDodgeImg, hurt: ogreHurtImg, ko: ogreKoImg, victory: ogreVictoryImg, dazed: [ogreDazedAImg, ogreDazedBImg] },
+    poses: { attack: ogreAttackImg, dodge: ogreDodgeImg, hurt: ogreHurtImg, ko: ogreKoImg, victory: ogreVictoryImg, dazed: [ogreDazedAImg, ogreDazedBImg], cast: ogreCastImg },
     facing: 'right',
     scale: 1.48,
     headroom: 0.22,
@@ -413,12 +438,13 @@ const morgrut: CharacterDef = {
     tagline: 'Taper. Taper encore. Taper plus fort.',
     background:
       "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Les dés, il ne les regarde même pas : il tape.",
-    strengths: ['La plus forte attaque (6 à 8)', 'Beaucoup de PV', 'Aura de puissance : chaque coup plus lourd'],
-    weaknesses: ['Une seule compétence', 'Cinq faces nues', 'Ni esquive ni critique'],
+    strengths: ['Une attaque lourde (5 à 7)', 'Beaucoup de PV', 'Crescendo : chaque fois plus fort'],
+    weaknesses: ['Ni esquive ni critique', 'Aucune armure', 'Rien pour se soigner'],
   },
-  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, aucune signature
+  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, le Crescendo sur le 2 (C5)
   masteries: ['fury', 'bulwark'],
-  events: startDie('power-aura'),
+  signature: 'crescendo',
+  events: startDie('power-aura', 'crescendo'),
 }
 
 const thaldrin: CharacterDef = {
@@ -439,7 +465,8 @@ const thaldrin: CharacterDef = {
   // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
   look: {
     image: druidIdleImg,
-    poses: { attack: druidAttackImg, dodge: druidDodgeImg, hurt: druidHurtImg, ko: druidKoImg, victory: druidVictoryImg, dazed: [druidDazedAImg, druidDazedBImg] },
+    poses: { attack: druidAttackImg, dodge: druidDodgeImg, hurt: druidHurtImg, ko: druidKoImg, victory: druidVictoryImg, dazed: [druidDazedAImg, druidDazedBImg], cast: druidCastImg },
+    poseRoom: { cast: 0.08 },
     facing: 'right',
     scale: 1.1,
     headroom: 0.155,
@@ -462,7 +489,8 @@ const thaldrin: CharacterDef = {
       statuses: ['bearMight'],
       look: {
         image: bearIdleImg,
-        poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg, dazed: [bearDazedAImg, bearDazedBImg] },
+        poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg, dazed: [bearDazedAImg, bearDazedBImg], cast: bearCastImg },
+        poseRoom: { cast: 0.113 },
         scale: 0.98,
         headroom: 0.088,
         bodyInset: { left: 0.22, right: 0.024 },
@@ -509,7 +537,8 @@ const fanchon: CharacterDef = {
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
-    poses: { attack: bardAttackImg, dodge: bardDodgeImg, hurt: bardHurtImg, ko: bardKoImg, victory: bardVictoryImg, dazed: [bardDazedAImg, bardDazedBImg] },
+    poses: { attack: bardAttackImg, dodge: bardDodgeImg, hurt: bardHurtImg, ko: bardKoImg, victory: bardVictoryImg, dazed: [bardDazedAImg, bardDazedBImg], cast: bardCastImg },
+    poseRoom: { cast: 0.227 },
     facing: 'right',
     scale: 0.97,
     headroom: 0.03,

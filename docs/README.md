@@ -7,10 +7,10 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | | Document | Contenu |
 | --- | --- | --- |
 | **Vision et suivi** | [INTENTION.md](INTENTION.md) | **Fiche produit** (un auto-battler roguelike à regarder et à parier : deux terrains de jeu, deux buts), principes de conception, grandes lignes. À lire en premier |
-| | [ETAT.md](ETAT.md) | Où on en est : ce qui fonctionne, vérifications, limites, **chantiers en cours** |
+| | [ETAT.md](ETAT.md) | L'état **présent** : en bref, état par système, limites, **chantiers en cours** ; aucun historique |
 | | [TODO.md](TODO.md) | Liste des chantiers demandés, à cocher au fil des livraisons |
-| | [../CHANGELOG.md](../CHANGELOG.md) | Ce qui a changé, version par version |
-| **Le jeu** | [FEATURES.md](FEATURES.md) | Les règles et les écrans : combat, roster, événements et statuts, écrans, arènes, son, statistiques, tournoi, compendium |
+| | [../CHANGELOG.md](../CHANGELOG.md) | Ce qui a changé, version par version : la **seule chronique** du projet |
+| **Le jeu** | [FEATURES.md](FEATURES.md) | Les règles en vigueur et les écrans : combat, roster, événements et statuts, écrans, arènes, son, statistiques, tournoi, compendium, paris, campagne ; aucun historique |
 | | [PERSONNAGES.md](PERSONNAGES.md) | Le roster : philosophie de chaque race et de chaque personnage, décisions, mesures, matrice des duels |
 | | [STATUTS.md](STATUTS.md) | Les bonus et malus : vocabulaire, conditions, catalogue, règles de design, chantier |
 | | [EQUILIBRAGE.md](EQUILIBRAGE.md) | L'équilibrage par simulation : objectifs, outils (`npm run balance`), méthode, leviers par ordre de préférence, pièges, journal des équilibrages |
@@ -37,6 +37,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | **Technique** | [ARCHITECTURE.md](ARCHITECTURE.md) | Organisation du code, moteur, registres, tests, marches à suivre pour étendre le jeu |
 | | [EN_LIGNE.md](EN_LIGNE.md) | Plan de mise en ligne (2026-10-26, rien de codé) : partager le jeu entre amis, connexion Google (Firebase Auth) et historique lié au compte sur le VPS (API Node, SQLite), synchronisation locale d'abord, décisions à prendre, étapes, et ce qui vient après (salons de paris, classements) |
 | **Direction artistique** | [STYLE_BIBLE.md](STYLE_BIBLE.md) | Style visuel, contraintes des images, prompts de génération |
+| | [prompts-decors.md](prompts-decors.md) | Prompts complets des décors du 2026-10-27 : les décors de campagne retenus (l'adversaire chez lui) et les trois écrans clés (vestiaire, arène vue du ciel, salle du trésor), avec leurs zones d'écran |
 | | [design-system.md](design-system.md) | Tokens (couleurs, formes, polices) et composants de l'interface |
 | | [ui-kit/README.md](ui-kit/README.md) | **Source de vérité des contrôles** : boutons, onglets, barre de lecture, glyphes de commande (`battler-ui-kit.css`, `BattlerIcon.jsx`, page et capture de référence). On copie, on ne réinterprète pas |
 
@@ -46,7 +47,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | --- | --- |
 | livre n'importe quelle évolution | `package.json` (version), `CHANGELOG.md`, `ETAT.md` |
 | change la vision, le genre ou les buts du projet | `INTENTION.md` § Fiche produit, puis le résumé de `CLAUDE.md` |
-| change une règle ou un écran | la section concernée de `FEATURES.md` (règle et ligne d'historique) |
+| change une règle ou un écran | la règle en vigueur dans la section concernée de `FEATURES.md` (pas de ligne d'historique : le CHANGELOG raconte) |
 | ajoute ou modifie un personnage, ses stats ou son événement | `PERSONNAGES.md` (fiche, décisions, mesures, matrice) |
 | fait une grosse mise à jour du gameplay | `npm run balance`, puis `EQUILIBRAGE.md` (journal) et `PERSONNAGES.md` (mesures) |
 | ajoute ou modifie un statut, une condition ou un déclencheur | `STATUTS.md` (catalogue, vocabulaire, chantier) et `FEATURES.md` § 3 |

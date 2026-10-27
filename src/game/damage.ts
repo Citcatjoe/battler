@@ -8,6 +8,10 @@
  * type unique ») : plus de dégâts physiques ni magiques (DP, DM) ; le coup de base de tout personnage est un coup
  * (`strike`), le « coup blanc ». Restent deux familles : l'instant (un coup, des dégâts directs) et le temporaire (DT,
  * un statut qui ronge tour après tour), qui garde la couleur de son statut.
+ *
+ * Magique ou physique (2026-10-27, demande de l'utilisateur, docs/POSTURES.md § 7) : chaque source dit aussi si ce qu'elle
+ * blesse est un sort (`magical`). Aucune règle ne le lit non plus : un sort offensif fait prendre à son lanceur sa posture
+ * d'incantation (`castsSpell`, poses.ts), là où un coup garde l'élan de l'attaque.
  */
 
 /** Les deux familles : un dégât de l'instant (coup, dégâts directs), ou temporaire (DT, un statut qui ronge). */
@@ -33,25 +37,26 @@ export const DAMAGE_TONES: Record<DamageTone, { label: string }> = {
   poison: { label: 'vert acide' },
 }
 
-/** Le registre des sources : leur famille, leur nom, et la teinte de leur chiffre à l'écran (M37). */
-export const DAMAGE_SOURCES: Record<DamageSource, { kind: DamageKind; name: string; tone: DamageTone }> = {
+/** Le registre des sources : leur famille, leur nom, la teinte de leur chiffre à l'écran (M37), et sort ou non. */
+export const DAMAGE_SOURCES: Record<DamageSource, { kind: DamageKind; name: string; tone: DamageTone; magical: boolean }> = {
   // Le coup blanc (2026-10-24) : le coup de base de tous, et Pile ou face, la Riposte, la relâche de la Rétribution
-  strike: { kind: 'instant', name: 'Coup', tone: 'hit' },
+  strike: { kind: 'instant', name: 'Coup', tone: 'hit', magical: false },
   // La Purification d'Ysolde : un blanc cerclé d'or, loin de l'ambre du critique et de l'or pâle d'un bonus gagné
-  holy: { kind: 'instant', name: 'Lumière', tone: 'light' },
+  holy: { kind: 'instant', name: 'Lumière', tone: 'light', magical: true },
   // La Foudre du druide : le cyan de l'orage
-  lightning: { kind: 'instant', name: 'Foudre', tone: 'storm' },
+  lightning: { kind: 'instant', name: 'Foudre', tone: 'storm', magical: true },
   // Le feu magique du jeu est mauve depuis les Feux follets (2026-10-23, utilisateur) : la Braise captive le rejoint
-  fire: { kind: 'instant', name: 'Feu', tone: 'arcane' },
+  fire: { kind: 'instant', name: 'Feu', tone: 'arcane', magical: true },
   // Les lames d'air de la Conque des vents : un gris d'acier
-  wind: { kind: 'instant', name: 'Vent', tone: 'air' },
-  poison: { kind: 'temporal', name: 'Poison', tone: 'poison' },
+  wind: { kind: 'instant', name: 'Vent', tone: 'air', magical: true },
+  // Le venin des lames et des crocs : une plaie du corps, pas un sort (le Souffle de la tombe, arcane, l'est par sa nature)
+  poison: { kind: 'temporal', name: 'Poison', tone: 'poison', magical: false },
   // Le sang reste rouge : la plaie se lit par son label sous le dé et son petit « −N »
-  bleed: { kind: 'temporal', name: 'Saignement', tone: 'damage' },
+  bleed: { kind: 'temporal', name: 'Saignement', tone: 'damage', magical: false },
   // Les Feux follets du druide (compétence arcane) : une brûlure magique, en mauve (2026-10-23, utilisateur)
-  burn: { kind: 'temporal', name: 'Brûlure', tone: 'arcane' },
+  burn: { kind: 'temporal', name: 'Brûlure', tone: 'arcane', magical: true },
   // La couleur de l'Aura de pourriture qui la pose
-  rot: { kind: 'temporal', name: 'Pourriture', tone: 'arcane' },
+  rot: { kind: 'temporal', name: 'Pourriture', tone: 'arcane', magical: true },
 }
 
 export const DAMAGE_SOURCE_IDS = Object.keys(DAMAGE_SOURCES) as DamageSource[]

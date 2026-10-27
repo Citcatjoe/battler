@@ -73,6 +73,12 @@ export interface CharacterLook {
    * qui alternent ; leur toile peut être plus large que la garde, à hauteur et centre égaux (`slice-poses.py --elargir`).
    */
   poses?: Partial<Record<SinglePoseId, string>> & { dazed?: readonly [string, string] }
+  /**
+   * Toile d'une posture rehaussée (2026-10-27, `slice-poses.py --rehausser`) : la part de la hauteur de la toile ajoutée
+   * au-dessus pour cette posture (l'incantation, bras ou arme levés plus haut que tout). Le jeu l'affiche d'autant plus
+   * haute, le bas sur le même sol : pieds et taille du personnage ne bougent pas.
+   */
+  poseRoom?: Partial<Record<SinglePoseId, number>>
 }
 
 /** Hauteur du personnage (des pieds au sommet de la tête), en part du conteneur d'un combattant. */
@@ -155,6 +161,9 @@ export interface CharacterDef {
   forge?: readonly ForgeStep[]
 }
 
+/** PV max gagnés par récompense obtenue (une relique, une étape de forge), pour tous : allonge les combats construits (docs/etudes/LONGUEUR_COMBATS.md). */
+export const REWARD_HP = 2
+
 /**
  * Un personnage jouable : identité, caractéristiques de base et événements.
  * Pure donnée, immuable : les jets et les règles vivent dans le moteur (`combat.ts`).
@@ -166,8 +175,10 @@ export class Character {
   readonly archetype: string
   /** Stats de combat : celles du personnage (forge comprise), plus celles de ses reliques */
   readonly stats: Readonly<CharacterStats>
-  /** Stats du personnage seul, forge comprise (Tremper l'arme), sans ses reliques */
+  /** Stats du personnage seul, forge comprise (Tremper l'arme) et PV de ses récompenses (`rewardHp`), sans les stats de ses reliques */
   readonly baseStats: Readonly<CharacterStats>
+  /** PV max gagnés par ses récompenses : `REWARD_HP` par étape de forge et par relique (docs/CAMPAGNE.md) */
+  readonly rewardHp: number
   readonly look: Readonly<CharacterLook>
   readonly lore: CharacterLore
   /** Compétences : celles d'origine, plus celles de sa forge (gravées, aiguisées) */
@@ -190,8 +201,14 @@ export class Character {
     this.forge = def.forge ?? []
     const forged = this.forge.length > 0 ? forgeState(def, this.forge) : undefined
     const temper = forged?.temper ?? 0
-    this.baseStats = Object.freeze({ ...def.stats, attackMin: def.stats.attackMin + temper, attackMax: def.stats.attackMax + temper })
     this.relics = def.relics ?? []
+    this.rewardHp = REWARD_HP * (this.forge.length + this.relics.length)
+    this.baseStats = Object.freeze({
+      ...def.stats,
+      maxHp: def.stats.maxHp + this.rewardHp,
+      attackMin: def.stats.attackMin + temper,
+      attackMax: def.stats.attackMax + temper,
+    })
     this.stats = Object.freeze(withRelicStats(this.baseStats, this.relics))
     this.look = Object.freeze({ ...def.look })
     this.lore = def.lore
@@ -205,9 +222,10 @@ export class Character {
   lookFor(form = 0): Readonly<CharacterLook> {
     const f = this.forms?.[form]
     if (!f?.look) return this.look
-    // Une forme qui change d'image ne reprend pas les postures de la forme de base
+    // Une forme qui change d'image ne reprend pas les postures de la forme de base (ni leurs toiles rehaussées)
     const poses = f.look.image ? f.look.poses : (f.look.poses ?? this.look.poses)
-    return { ...this.look, ...f.look, tint: this.look.tint, poses }
+    const poseRoom = f.look.image ? f.look.poseRoom : (f.look.poseRoom ?? this.look.poseRoom)
+    return { ...this.look, ...f.look, tint: this.look.tint, poses, poseRoom }
   }
 
   get maxHp() {

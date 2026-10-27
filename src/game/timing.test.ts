@@ -218,7 +218,8 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
       }
 
       // 3. La charge d'un statut que le coup use (critique assuré, bouclier, modificateur) ne baisse pas entre son dé et
-      // son impact
+      // son impact. Depuis la dernière fois qu'elle s'est montrée entière : un renvoi entre le dé et le coup (C1, la
+      // Rétribution greffée) a pu l'user, puis une réaction la rendre (la Ferveur de la Vindicte)
       const was = beats[beat.id - 1]?.state.statuses
       const shown = dice[since].x
       if (!was) return
@@ -228,7 +229,9 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
           if (after !== undefined && after >= s.stacks) continue
           if (stacks(before[index(shown)].statuses[side], s.id) !== s.stacks) continue
           count('charge usée par un coup')
-          const early = cues.find((x) => x.at >= shown.at && x.at < impact.at && x.cue.channel === 'statuses' && stacks(x.cue.statuses[side], s.id) === after)
+          const whole = cues.filter((x) => x.at >= shown.at && x.at < impact.at && x.cue.channel === 'statuses' && stacks(x.cue.statuses[side], s.id) === s.stacks).at(-1)
+          const from = whole?.at ?? shown.at
+          const early = cues.find((x) => x.at >= from && x.at < impact.at && x.cue.channel === 'statuses' && stacks(x.cue.statuses[side], s.id) === after)
           if (early) flag("la charge d'un statut baisse avant l'impact", early.at, `${s.id} ${s.stacks} → ${after ?? 0}, impact à ${impact.at}`)
         }
     })

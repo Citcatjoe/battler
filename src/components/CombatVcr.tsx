@@ -41,6 +41,7 @@ const CHANNEL: Record<Exclude<Cue['channel'], 'sound'>, string> = {
   scene: 'scène',
   form: 'forme',
   daze: 'vacille',
+  cast: 'incante',
   turn: 'tour',
   winner: 'victoire',
 }

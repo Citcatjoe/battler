@@ -11,6 +11,7 @@ _Fonctionnalité ajoutée en 0.40.0. But : **tester si changer l'image du combat
 - **L'écran choisit la posture** d'après ce qu'il rejoue déjà : l'élan, l'esquive, le coup reçu, la fin du combat. Le moteur de règles n'est pas touché : c'est de la présentation pure.
 - **Une posture absente retombe sur la garde.** Un personnage sans postures s'affiche exactement comme avant.
 - **La perte de contrôle** (0.120.0, demande de l'utilisateur, § 6) : un sixième moment commun à tous, joué par **deux images** qui alternent vite, tant qu'il porte la Peur ou l'Étourdi et pendant son tour perdu. Chaque personnage vacille à sa façon, d'après sa personnalité.
+- **L'incantation** (2026-10-27, demande de l'utilisateur, § 7) : un septième moment commun à tous, une image, quand il lance un **sort offensif** (des dégâts magiques, ou une entrave arcane comme la Peur). Le bras levé vers le ciel ou tendu vers l'ennemi, d'après le lore de chacun ; même ceux qui n'ont pas de sort au départ en ont une, la forge pouvant leur en graver.
 - **Toutes les postures d'un personnage partagent la même toile** : mêmes dimensions, même ligne de sol, même échelle. Changer d'image ne fait donc pas sauter le personnage. C'est le rôle de `scripts/slice-poses.py`. Seule exception (0.120.0) : la toile des deux images de perte de contrôle peut être **plus large** que la garde, à hauteur et centre égaux (`--elargir`, § 6) ; le jeu centre chaque image et lui donne la hauteur de la toile, la figure ne bouge donc pas.
 - **Une forme animale bouge comme un animal** (règle de l'utilisateur, 2026-10-20) : l'ours du druide se tient, attaque, encaisse, esquive, tombe et triomphe comme une bête, à quatre pattes. Jamais debout comme un homme, jamais un coup de poing, jamais à genou. Les mêmes cinq moments, joués par un quadrupède : charge au galop gueule ouverte, sursaut en arrière sur ses quatre pattes, bond de côté, couché sur le flanc, rugissement campé sur ses pattes. Il lui faut donc une **nouvelle garde à quatre pattes**, tirée de l'ancienne (bois, amulette, tatouages). Un quadrupède est plus long que haut : ses planches empilent **deux cases en paysage de 1024×768** dans une image en portrait 1024×1536, la garde en haut, soit cinq planches (découpe `1x2:idle,<posture>`). **Ses prompts n'ont pas un mot d'anatomie humaine** : un premier jet reprenait le bloc STYLE des humanoïdes (épaules, mains, visage) et le bloc de mouvement (bras, « fighting-game »), et un coup de griffe d'une patte avant : ChatGPT en tirait une attaque d'homme, même avec la garde à quatre pattes jointe. L'attaque passe donc par la gueule et la masse, jamais par une patte levée, et la garde à quatre pattes se joint à chaque planche. À l'intégration, son `scale` et sa largeur à l'écran seront à régler sur la nouvelle silhouette.
 
@@ -29,8 +30,9 @@ Registre : `src/game/poses.ts` (`POSES`).
 | `ko` | K.O. | à la fin du combat, s'il a perdu | le grisé, en fondu sur le filtre de l'image ; sans posture K.O., la bascule en plus (`.ko`) |
 | `victory` | Victoire | à la fin du combat s'il a gagné, sur l'écran de fin et sur l'écran du champion | le léger balancement (`.victory`) |
 | `dazed` | Perte de contrôle | tant qu'un statut lui fait perdre son action (Peur, Étourdi), puis pendant son tour perdu, jusqu'au passage de main (cue `daze`, [MISE_EN_SCENE.md](MISE_EN_SCENE.md) M51) | **deux images** (`poses.dazed`) qui alternent toutes les 360 ms (`.daze-frame-a`, `.daze-frame-b`, sans fondu ; 180 ms jusqu'au 2026-10-27) ; elles remplacent le tremblement de la Peur |
+| `cast` | Incantation | quand il lance un sort offensif (`castsSpell`, cue `cast`, [MISE_EN_SCENE.md](MISE_EN_SCENE.md) M55) : de son départ à la fin de sa lecture ; aussi le temps de l'effet d'une aura qui blesse l'adversaire par la magie (Ciel d'orage, Sentence) | les coups du sort partent de cette image, d'un pas au lieu d'un bond (`.lunge-cast`, même durée et même impact que `.lunge`) ; une toile rehaussée s'affiche d'autant plus haute (`look.poseRoom`) |
 
-**Priorité**, quand deux moments se chevauchent (`poseOf`) : K.O. et victoire, puis attaque, puis esquive, puis coup encaissé, puis perte de contrôle, puis garde. Un coup encaissé ou une Riposte interrompent donc la perte de contrôle, qui reprend ensuite.
+**Priorité**, quand deux moments se chevauchent (`poseOf`) : K.O. et victoire, puis élan (en incantation s'il lance un sort, en attaque sinon), puis esquive, puis coup encaissé, puis incantation, puis perte de contrôle, puis garde. Un coup encaissé ou une Riposte interrompent donc la perte de contrôle et l'incantation, qui reprennent ensuite.
 
 **Changement d'image** : instantané, comme une image clé d'animation. Les postures sont préchargées dès que le combattant s'affiche, pour éviter un clignotement au premier élan.
 
@@ -40,13 +42,14 @@ Registre : `src/game/poses.ts` (`POSES`).
 
 | Fichier | Rôle |
 | --- | --- |
-| `src/game/poses.ts` | le registre `POSES` (nom, moment, ligne de prompt), `poseOf` (la posture du moment), `poseImage` (l'image, ou la garde par défaut ; la première image de la perte de contrôle), `poseImages` (préchargement, les deux images de la perte de contrôle comprises) |
-| `src/game/character.ts` | `CharacterLook.poses?: { attack?, dodge?, hurt?, ko?, victory?, dazed?: [a, b] }`. `lookFor(form)` : une forme qui change d'image (l'ours) ne reprend pas les postures de la forme de base |
-| `src/game/staging.ts` | la cue `daze` (M51) : la perte de contrôle commence quand un statut `skipsAction` apparaît dans la zone d'état, et finit au passage de main qui suit son tour perdu. Le moteur n'en sait rien |
+| `src/game/poses.ts` | le registre `POSES` (nom, moment, ligne de prompt), `poseOf` (la posture du moment), `poseImage` (l'image, ou la garde par défaut ; la première image de la perte de contrôle), `poseImages` (préchargement, les deux images de la perte de contrôle comprises), `castsSpell` (une compétence est-elle un sort offensif) et `castsMagicAt` (l'effet d'un statut blesse-t-il l'adversaire par la magie) |
+| `src/game/damage.ts` | `DAMAGE_SOURCES.magical` : chaque source de dégâts dit si elle est magique (Lumière, Foudre, Feu, Vent, Brûlure, Pourriture) ou physique (Coup, Poison, Saignement) ; aucune règle ne le lit |
+| `src/game/character.ts` | `CharacterLook.poses?: { attack?, dodge?, hurt?, ko?, victory?, cast?, dazed?: [a, b] }`, `poseRoom?: { cast? }` (part de la toile ajoutée au-dessus d'une posture rehaussée). `lookFor(form)` : une forme qui change d'image (l'ours) ne reprend pas les postures de la forme de base, ni leurs toiles rehaussées |
+| `src/game/staging.ts` | la cue `daze` (M51) : la perte de contrôle commence quand un statut `skipsAction` apparaît dans la zone d'état, et finit au passage de main qui suit son tour perdu ; la cue `cast` (M55, `castFor`) : de l'incantation, du départ d'un sort offensif à la fin de sa lecture. Le moteur n'en sait rien |
 | `src/components/Fighter.tsx` | calcule la posture, change l'image affichée, précharge, choisit `.knockback` (critique reçu) et `.ko` (K.O. sans posture). Toutes les images sont à leur largeur naturelle, centrées sur les pieds ; `anchor="inside"` fait déborder une image large vers le centre de l'écran plutôt que hors de l'écran (affrontement, fin de combat). **Deux règles de Firefox** : le filtre (ombre, contour d'aura, grisé du K.O.) est sur une enveloppe exactement à la taille de l'image, jamais sur un conteneur plus petit qu'elle (la colonne du combattant), qui couperait ce qui déborde ; le retournement (`scaleX(-1)`) est sur l'image, sous ce filtre, jamais au-dessus : un filtre dans un repère retourné est coupé au bord de l'écran, du mauvais côté (0.77.x : l'ours à droite, dont la toile déborde de l'écran de 63 px, perdait son museau et ses pattes avant ; vu seulement dans un Firefox à l'écran, pas dans les captures sans interface) |
 | `src/components/MatchupScreen.tsx`, `EndScreen.tsx` | les menus, les panneaux et le sceau « VS » passent au-dessus des combattants (`relative z-20`) : une arme levée passe derrière, jamais devant |
-| `src/index.css` | `.knockback` : le recul d'un critique ; `.ko` : la bascule d'un K.O. sans posture ; `.daze-frame-a`, `.daze-frame-b` : l'alternance des deux images de perte de contrôle |
-| `scripts/slice-poses.py` | découpe les planches, aligne les postures sur la garde, les recadre ensemble ; `--reference`, `--pieds`, `--sol` et `--elargir` pour ajouter des postures à un personnage déjà découpé (§ 6) |
+| `src/index.css` | `.knockback` : le recul d'un critique ; `.ko` : la bascule d'un K.O. sans posture ; `.daze-frame-a`, `.daze-frame-b` : l'alternance des deux images de perte de contrôle ; `.lunge-cast` : l'élan d'un sort, d'un pas |
+| `scripts/slice-poses.py` | découpe les planches, aligne les postures sur la garde, les recadre ensemble ; `--reference`, `--pieds`, `--sol`, `--elargir` et `--rehausser` pour ajouter des postures à un personnage déjà découpé (§ 6, § 7) |
 | `scripts/cutout-character.py` | `CUTOUT_KEEP_CANVAS=1` : détourer sans recadrer (utilisé par `slice-poses.py`) |
 
 Dans `roster.ts`, l'orc :
@@ -64,7 +67,7 @@ look: {
 
 La garde est **`<nom>-idle.png`** : la garde recadrée avec les postures, sur leur toile. Les variantes (Murzug pour Gorak) héritent des postures de leur original, teinte comprise. Pour un personnage à formes, chaque forme a ses propres `poses` dans son `look`.
 
-Tests : `modules.test.ts` (priorités, retour à la garde, formes, postures de Gorak et Murzug, deux images de perte de contrôle par apparence, textes sans emoji), `screens.test.tsx` (chaque moment se rend ; les deux images alternent sans tremblement) et `staging.test.ts` (M51).
+Tests : `modules.test.ts` (priorités, retour à la garde, formes, postures de Gorak et Murzug, deux images de perte de contrôle et l'incantation par apparence, sorts offensifs, textes sans emoji), `screens.test.tsx` (chaque moment se rend ; les deux images alternent sans tremblement ; l'incantation, sa toile rehaussée et l'élan d'un sort) et `staging.test.ts` (M51, M55).
 
 ---
 
@@ -309,3 +312,70 @@ OUTPUT: keep the plain flat uniform medium grey background (#808080) everywhere,
 Exemple de lignes (Brokk) : `MIDDLE PANEL — Brokk, the stubborn dwarf who never retreats, rocks like a weighted toy that will not fall: he ROCKS BACKWARD toward the left on his heels, the whole stocky body tilted far back, eyes crossed, mouth agape in his beard, the great axe slipping back over his shoulder, braids and beard swinging.` et `RIGHT PANEL — Brokk ROCKS FORWARD toward the right, top-heavy, torso pitched far forward, the head of his great axe thudded onto the ground in front of him and both hands clinging to the haft to stay up, eyes crossed and dazed, beard and braids swinging forward. His boots never leave their spot.` Pour l'ours, le même gabarit en trois rangées empilées (`TOP`, `MIDDLE`, `BOTTOM PANEL`), sans un mot d'anatomie humaine (§ 0) : « on all four paws, never stands up like a man ».
 
 **Un nouveau personnage** : ses deux images de perte de contrôle, avec ce gabarit et deux lignes tirées de sa personnalité ; dans `look.poses`, `dazed: [a, b]`. Sans elles, il tremble sous la Peur comme avant.
+
+---
+
+## 7. L'incantation (2026-10-27)
+
+**Demande de l'utilisateur** : « une image "incant" jouée quand le personnage effectue une action offensive de type magique. Peu de personnages envoient des sorts magiques offensifs qui font des dégâts directs, je pense à Thaldrin, Ysolde ; prévoir le coup ne peut qu'ouvrir des portes. S'assurer d'une distinction en dégâts magiques et physiques pour chaque compétence qui fait des dégâts directs, et pour tout ce qui est identifié comme attaque magique, jouer l'incantation. La posture : un personnage disposant d'un pouvoir magique et le dirigeant vers un adversaire pour lui faire du mal, les bras vers le ciel pour invoquer une puissance supérieure ou vers son ennemi pour le menacer ; cohérente avec le modèle, un sceptre ou une arme en main peut servir le lore et l'identité. Des sorts comme la Peur pourraient aussi déclencher cette animation. »
+
+**Magique ou physique** : chaque source de dégâts le dit (`DAMAGE_SOURCES.magical`, `damage.ts`) ; aucune règle de combat ne le lit.
+
+| Source | Nature | Où on la voit |
+| --- | --- | --- |
+| Coup (`strike`) | physique | coup de base, Pile ou face, Riposte, Rétribution |
+| Saignement (`bleed`) | physique | Saignement, Hémorragie |
+| Poison (`poison`) | physique (le venin des lames) | Poison ; un sort arcane qui empoisonne reste un sort par sa nature |
+| Lumière (`holy`) | magique | Purification, Sentence |
+| Foudre (`lightning`) | magique | Foudre, Ciel d'orage |
+| Feu (`fire`), Vent (`wind`) | magique | reliques (Braise captive, Conque des vents) : une relique n'incante pas |
+| Brûlure (`burn`), Pourriture (`rot`) | magique | Feux follets, Embrasement, Aura de pourriture |
+
+**Un sort offensif** (`castsSpell`, poses.ts) : une compétence qui blesse l'adversaire par une source magique, ou, sans dégâts physiques, une compétence arcane qui l'entrave (un malus, une purge de ses bonus). Relevé du registre à la livraison : **incantent** la Foudre, la Purification, la Peur, les Feux follets, Attiser, la Malchance, l'Éclair aveuglant, la Confiscation, la Flétrissure, la Fausse note, la Virulence, le Souffle de la tombe ; **restent des coups** la Rétribution (arcane mais physique : des coups), l'Hémorragie, le Coup de massue, Pourfendre, le Brise-garde ; **ne sont pas offensifs** les auras et les sorts sur soi (Prière, Aura de sainteté, Ciel d'orage posé). Une aura qui blesse ensuite l'adversaire par la magie (le Ciel d'orage au début du tour, la Sentence à chaque soin) fait incanter son porteur le temps de son effet (`castsMagicAt`). Une compétence ajoutée au registre entre d'elle-même dans l'une ou l'autre case.
+
+**Les images de chacun**, d'après son lore et ses maîtrises :
+
+| Personnage | Incantation (`-cast`) |
+| --- | --- |
+| Gorak (Fureur, Sang) | chant de guerre du sang : le couperet levé au ciel d'une main, l'autre tendue griffes ouvertes vers l'ennemi, une lueur pourpre sur la lame et le poing |
+| Naraxes (Chance, Poison) | maléfice sournois : une dague levée, l'autre main lancée vers l'ennemi d'une volute de venin vert, sourire insolent |
+| Fanchon (Magie, Chance) | sa chanson devient un sort : le luth brandi par le manche comme un sceptre, l'autre bras lancé vers l'ennemi, quelques notes magenta qui s'en échappent |
+| Ervald (Poison, Ombre) | ordre nécromantique : l'épée pointée vers l'ennemi, la main ouverte à côté, une brume violette spectrale |
+| Ysolde (Lumière, Magie) | elle rend son jugement : la masse solaire levée au ciel, la paume tendue vers l'ennemi où la lumière s'amasse, le halo qui flamboie |
+| Aldric (Rempart, Ombre) | le fanatique perce enfin : l'épée de feu dressée au ciel, le gantelet tendu vers l'ennemi, le regard brûlant |
+| Elaria (Chance, Sang) | malédiction de lune : l'arc levé au ciel, deux doigts pointés vers l'ennemi, une lueur argentée |
+| Brokk (Rempart, Sang) | serment des runes : la hache levée à deux mains, ses runes rougeoyant comme des braises, il rugit au ciel |
+| Morgrut (Fureur, Rempart) | il imite un sorcier, maladroit : la massue au ciel, les doigts qui s'agitent vers l'ennemi, la langue tirée, le papillon qui luit |
+| Thaldrin, forme humaine (Magie, Poison) | il appelle l'orage : le bâton levé, son cristal vert flamboyant, l'autre main crépitant de magie |
+| Thaldrin, forme d'ours | il rugit vers le ciel, campé sur ses quatre pattes, ses runes et ses bois verts embrasés (§ 0 : en animal) |
+
+### 7.1 Production (agent, Artlist)
+
+- **Générateur** : GPT Image 2.5 en image à image, par Artlist, qualité haute, sortie 2K, fond opaque, deux versions par planche (280 crédits la paire ; 11 planches, une relancée après un échec, 3 080 crédits). La meilleure version gardée.
+- **Référence = la planche à remplir** : la garde actuelle recadrée sur sa silhouette, sur le gris `#808080`, dans la **moitié gauche** d'une toile 3:2 (1536×1024 ; garde haute de 74 % au plus, pour laisser monter les bras), la moitié droite vide. L'ours : toile 2:3 (1024×1536), deux rangées, la garde en haut.
+- **Découpe** : `python scripts/slice-poses.py <nom> <planche>:2x1:idle,cast --fond --contours --reference=src/assets/<nom>-idle.png --pieds --sol --rehausser [--elargir=<px>]` (l'ours : `1x2`, sans `--contours`). **`--rehausser`** (nouveau) : les bras levés dépassaient le haut de la toile de huit personnages ; plutôt que de les réduire (jusqu'à 19 % pour Fanchon), la toile de l'incantation grandit vers le haut, et `look.poseRoom.cast` dit de combien : Fanchon 0,227, Aldric 0,154, Brokk 0,149, Gorak 0,147, Ysolde 0,124, l'ours 0,113, Elaria 0,088, Thaldrin 0,080, Naraxes 0,043 ; Ervald et Morgrut tiennent dans la leur. `--elargir` : Naraxes 242 px (son bras tendu), Gorak 104, Morgrut 16.
+- **Sources** : `logs/atelier/sources/<personnage>/cast.png` ; planches de contrôle `logs/poses-<nom>.png` (la garde et l'incantation, alignées par le bas).
+- **Vérifié** : chaque incantation en superposition sur la garde (mêmes pieds) ; rendue par `Fighter` dans Firefox sans interface, `casting` vrai, onze apparences, côté gauche et côté droit retourné, toiles rehaussées comprises. **Pas vu** : un sort dans un vrai combat à l'écran (la Purification d'Ysolde, les Feux follets de Thaldrin sont dans leur kit).
+
+Le prompt d'une planche (la ligne `RIGHT PANEL` change par personnage, d'après le tableau ci-dessus) :
+
+```text
+EDIT THIS IMAGE: it is a character sheet with two equal tall panels side by side (left half, right half). The LEFT panel already contains the character in their guard pose. Keep the left panel EXACTLY as it is.
+Paint the SAME character once more, in the RIGHT panel: the INCANTATION pose, played in the game when this character casts an offensive spell at an enemy standing off to the right.
+
+CHARACTER: exactly the same character as in the left panel: same face, body, proportions, outfit, colors, weapon and every detail, same painted fantasy illustration style, same rendering, same soft frontal lighting. Only the pose, the facial expression and a little magic change.
+
+RIGHT PANEL — INCANTATION: <la posture du personnage>
+
+INTENT: a character wielding magical power and directing it at an enemy to harm them: one arm raised to the sky to call upon a higher power, or reaching toward the enemy on the right to threaten them. Strong, readable from far away on a TV, a dramatic silhouette, the whole body committed to the spell, the action parallel to the picture plane (no weapon or hand pointing at the viewer).
+MAGIC: only a small, contained glow on the hand, weapon or focus that channels the spell, in the character's own colors, close to the body; no beams, no large particles, no effects far from the figure.
+FEET: both feet on the ground, on the same ground line as the guard; never airborne.
+
+CONSISTENCY: the character is the SAME SIZE in both panels (same scale, same camera distance and height), same ground line, same three-quarter view facing RIGHT. Full body, nothing cropped: raised arms and weapons stay inside the panel, with room above. No part of the figure crosses into the left panel; leave clear grey space between the two figures.
+
+OUTPUT: keep the plain flat uniform medium grey background (#808080) everywhere, no gradient, no ground, no shadow, no scenery, no text, no panel borders, no symbols.
+```
+
+Exemple de ligne (Ysolde) : `Ysolde, the serene sun priestess, pronounces judgment: her holy sunburst mace raised high toward the sky in one hand, her other hand extended toward the enemy, palm open, a warm golden sunlight gathering in her palm and on the mace head, her halo blazing, stern serene face.` L'ours : le même gabarit en deux rangées (`TOP`, `BOTTOM PANEL`), « It is an ANIMAL: it stays on all four paws ».
+
+**Un nouveau personnage** : son incantation, avec ce gabarit et une ligne tirée de son lore ; dans `look.poses`, `cast`, et `look.poseRoom.cast` si sa toile a été rehaussée. Sans elle, il lance ses sorts depuis sa garde.

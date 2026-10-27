@@ -485,7 +485,7 @@ function effectText(e: Effect, attacker = false): string {
     case 'cleanse': {
       const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
       const what = e.count === undefined ? `tous ses ${kind}` : e.count === 1 ? `son dernier ${kind}` : `ses ${e.count} derniers ${kind}`
-      return `retire ${what}${e.orElse ? ` (sinon ${effectText(e.orElse)})` : ''}`
+      return `retire ${what}${e.andThen ? `, avec ${effectText(e.andThen)}` : ''}${e.orElse ? ` (sinon ${effectText(e.orElse)})` : ''}`
     }
     case 'release':
       return `relâche ${lowerFirst(STATUSES[e.status].name)}`

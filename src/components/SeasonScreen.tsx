@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import tournamentImg from '../assets/menu-tournament.jpg'
+import seasonImg from '../assets/menu-season.jpg'
 import { rollFace, type CharacterEvent } from '../game/events'
 import { getRelic } from '../game/relics'
 import { CHARACTERS } from '../game/roster'
@@ -148,13 +148,13 @@ export function SeasonScreen({ season, running, onPlay, onSimulateDay, onSimulat
 
   return (
     <TipLayer className="fade-in relative isolate h-full">
-      {/* Même décor que l'arbre : la porte de l'arène, très assombrie */}
+      {/* Même décor que l'arbre : l'arène vue du ciel, combats en cours, assombrie sous le classement */}
       <img
-        src={tournamentImg}
+        src={seasonImg}
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover"
-        style={{ filter: 'brightness(0.2) saturate(0.7)' }}
+        style={{ filter: 'brightness(0.35) saturate(0.8)' }}
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_55%,transparent_20%,rgba(14,11,9,0.85)_100%)]" />
 

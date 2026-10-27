@@ -274,7 +274,8 @@ function winShare(champions: readonly Character[], opponent: Character, fights: 
  * boss ; `HP_FLOOR` pour un adversaire normal) et le triple.
  */
 export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string, floor = 1 / 4): number {
-  const base = opponent.baseStats.maxHp
+  // Ses PV d'origine, sans ceux de ses récompenses : `adjusted` règle la définition, les récompenses s'y rajoutent
+  const base = opponent.baseStats.maxHp - opponent.rewardHp
   const share = (hp: number) => winShare(references, opponent.adjusted({ stats: { maxHp: hp } }), REFERENCE_FIGHTS, key)
   let lo = Math.max(1, Math.ceil(base * floor))
   let hi = base * 3

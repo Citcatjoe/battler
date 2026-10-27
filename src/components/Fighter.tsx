@@ -40,6 +40,8 @@ interface Props {
   form?: number
   /** Perte de contrôle (cue `daze`, M51) : ses deux images de perte de contrôle alternent */
   dazed?: boolean
+  /** Incantation (cue `cast`, M55) : il lance un sort offensif ; ses coups partent aussi en incantation */
+  casting?: boolean
   className?: string
   /**
    * Ancrage d'une image plus large que sa colonne : `center` (défaut) centre la toile sur la colonne ;
@@ -120,6 +122,7 @@ export function Fighter({
   statuses = [],
   form = 0,
   dazed = false,
+  casting = false,
   className = '',
   anchor = 'center',
 }: Props) {
@@ -153,8 +156,8 @@ export function Fighter({
   const scale = figureHeight(look)
   const at = (pct: number) => ({ top: `${(1 - scale) * 100 + scale * pct}%` })
 
-  // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, perte de contrôle, K.O., victoire
-  const pose = poseOf({ state, lunging, received, dazed })
+  // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, incantation, perte de contrôle, K.O., victoire
+  const pose = poseOf({ state, lunging, received, dazed, casting })
   // Perte de contrôle : ses deux images alternent (`.daze-frame-a`, `.daze-frame-b`) ; elles remplacent le tremblement
   // de la Peur, qui reste aux personnages sans ces images
   const wobbling = pose === 'dazed' && look.poses?.dazed !== undefined
@@ -194,7 +197,9 @@ export function Fighter({
     <div className={`pointer-events-none relative aspect-[636/1062] h-full ${lunging ? 'z-20' : 'z-10'} ${className}`} style={style}>
       {/* ombre au sol */}
       <div className="absolute bottom-[1%] left-1/2 h-[5%] w-[80%] -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
-      <div className={`relative h-full ${lunging ? `lunge${fastLunge ? ' lunge-fast' : ''}${lungeAlt ? ' lunge-alt' : ''}` : ''}`}>
+      <div
+        className={`relative h-full ${lunging ? `lunge${fastLunge ? ' lunge-fast' : ''}${lungeAlt ? ' lunge-alt' : ''}${pose === 'cast' ? ' lunge-cast' : ''}` : ''}`}
+      >
         {/* Aura de personnage : halo qui pulse, cercle au sol et particules qui montent ; elle suit l'élan.
             Un combattant vaincu perd son aura : elle s'éteint en fondu (`char-aura-out`) */}
         {looks.aura && (
@@ -222,6 +227,9 @@ export function Fighter({
               if (!shown && !leaving) return null
               const fLook = character.lookFor(f)
               const frames = shown && pose === 'dazed' ? fLook.poses?.dazed : undefined
+              // Une toile rehaussée (l'incantation, bras levés plus haut que tout) : l'image est d'autant plus haute, le bas
+              // sur le même sol, et le personnage garde sa taille
+              const room = shown && pose !== 'idle' && pose !== 'dazed' && fLook.poses?.[pose] ? (fLook.poseRoom?.[pose] ?? 0) : 0
               return (
                 // Enveloppe exactement à la taille de l'image : elle porte la position, le filtre (ombre, aura,
                 // grisé), l'opacité et les fondus. Le retournement est sur l'image, sous le filtre : dans Firefox,
@@ -235,7 +243,7 @@ export function Fighter({
                     anchor === 'inside' ? (side === 0 ? 'left-0' : 'right-0') : 'left-1/2 -translate-x-1/2'
                   } ${morph.key > 0 ? (shown ? 'form-in' : 'form-out') : ''}`}
                   style={{
-                    height: `${fLook.scale * 100}%`,
+                    height: `${fLook.scale * (1 + room) * 100}%`,
                     // Toile avec du vide sous les pieds (voleuse) : redescendue pour toucher le sol
                     bottom: fLook.footroom ? `${-footDrop(fLook) * 100}%` : undefined,
                     transform: insetShift(fLook, flipOf(f)) || undefined,

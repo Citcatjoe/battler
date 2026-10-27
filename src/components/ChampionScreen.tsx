@@ -1,3 +1,4 @@
+import victoryImg from '../assets/menu-victory.jpg'
 import type { ChampionRun } from '../game/tournament'
 import { entrantCharacter, ROUND_NAMES } from '../game/tournament'
 import { createCharacter } from '../game/roster'
@@ -22,9 +23,40 @@ interface Props {
 
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)} %` : '—')
 
+/*
+ * La salle du trésor (menu-victory.jpg, docs/STYLE_BIBLE.md § 6) : son estrade vide, sous la couronne suspendue, reçoit
+ * le vainqueur. L'image est calée pour que le centre du dessus de l'estrade (22,5 % de sa largeur, 68 % de sa hauteur)
+ * tombe sous ses pieds, d'où une image plus large que la scène, décalée.
+ */
+const VICTORY_WIDTH = 1860
+const DAIS = { x: 0.225, y: 0.68 }
+/** Hauteur des pieds du vainqueur sur la scène (colonne du champion, ancrée en bas avec `pb-10`) */
+const VICTORY_FEET = 835
+
+/** Fond des écrans de victoire finale (tournoi gagné, boss de campagne terrassé) ; `x` : axe du vainqueur sur la scène. */
+export function VictoryBackdrop({ x }: { x: number }) {
+  return (
+    <>
+      <img
+        src={victoryImg}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute max-w-none select-none"
+        style={{
+          width: VICTORY_WIDTH,
+          left: x - DAIS.x * VICTORY_WIDTH,
+          top: VICTORY_FEET - DAIS.y * (VICTORY_WIDTH / 1.5),
+        }}
+      />
+      {/* La moitié droite porte le texte : on l'éteint, la salle reste lisible côté vainqueur */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.1)_0%,rgba(12,10,9,0.35)_32%,rgba(12,10,9,0.82)_55%,rgba(12,10,9,0.9)_100%)]" />
+    </>
+  )
+}
+
 /**
- * Sacre du tournoi : le champion en grand, dans un rai de lumière dorée, son parcours (quatre
- * victoires) et le bilan cumulé de son tournoi (dégâts, critiques, soins, compétences…).
+ * Sacre du tournoi : le champion en grand sur l'estrade de la salle du trésor, son parcours (quatre victoires) et le
+ * bilan cumulé de son tournoi (dégâts, critiques, soins, compétences…).
  */
 export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallets }: Props) {
   // Son dé de départ (l'aura tirée sur le 1), que sa construction de saison a forgé
@@ -44,12 +76,9 @@ export function ChampionScreen({ run, onBracket, onNewTournament, onMenu, wallet
   ]
   return (
     <div className="champion-screen fade-in relative flex h-full overflow-hidden">
-      {/* Rai de lumière et poussière dorée derrière le champion */}
-      <div className="champion-rays pointer-events-none absolute -left-[10%] top-[-30%] h-[160%] w-[70%]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_28%_70%,rgba(251,191,36,0.22)_0%,transparent_55%)]" />
+      <VictoryBackdrop x={300} />
 
       <div className="relative flex w-[600px] shrink-0 flex-col items-center justify-end pb-10">
-        <div className="champion-pedestal absolute bottom-[52px] h-[60px] w-[420px] rounded-[50%]" />
         <div className="relative h-[640px]">
           <Fighter character={character} side={0} state="victory" />
         </div>

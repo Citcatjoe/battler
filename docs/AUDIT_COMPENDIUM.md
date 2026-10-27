@@ -244,7 +244,7 @@ Il n'existe **aucun champ « interactions »**. Une partie est déjà lisible da
 - `docs/FEATURES.md` § 3, ligne de l'Aura glaciale ;
 - `docs/PERSONNAGES.md:241` ;
 - commentaires de `statuses.ts:504-506`.
-- Le crochet `stoppedByImmunity` / `onOpponentTurnStart` a été retiré en 0.69.0 (FEATURES, historique). Il n'en reste aucune trace dans le code.
+- Le crochet `stoppedByImmunity` / `onOpponentTurnStart` a été retiré en 0.69.0 (CHANGELOG, 0.69.0). Il n'en reste aucune trace dans le code.
 
 **Proposition, la plus simple :**
 1. **Dériver automatiquement** une fonction `statusLinks(id)` (dans `catalog.ts`, à côté de `statusSources`), qui renvoie :

@@ -10,7 +10,8 @@ Repères de l'utilisateur, à respecter partout :
 - **un jeu vidéo, pas une page web** : grandes formes, tuiles, menus superposés, lisible sur une télévision ;
 - **un personnage est un personnage précis**, pas une race ;
 - **mesurer avant de proposer** (simulation, valeur nette, avant → après), et proposer avec la compensation ;
-- **les cotes des paris restent cachées** jusqu'au règlement.
+- **les cotes des paris restent cachées** jusqu'au règlement ;
+- **synergies d'abord** : donner toujours de l'effort à la création de synergies (ressource produite, puis consommée, collaboration entre maîtrises) ; voir `docs/INTENTION.md`.
 
 ## Avant de travailler
 
@@ -35,10 +36,12 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 ## À chaque évolution livrée
 
 1. Monter la version dans `package.json` : mineure pour une fonctionnalité, correctif pour une correction ou un réglage.
-2. Ajouter une entrée datée dans `CHANGELOG.md` (Ajouté / Modifié / Corrigé / Retiré).
-3. Mettre à jour la section concernée de `docs/FEATURES.md` (règles et ligne d'historique).
-4. Mettre à jour `docs/ETAT.md` (date, version, tableau, limites).
+2. Ajouter une entrée datée dans `CHANGELOG.md` (Ajouté / Modifié / Corrigé / Retiré) : c'est la **seule chronique** du projet.
+3. Mettre à jour la règle en vigueur dans la section concernée de `docs/FEATURES.md` (pas de ligne d'historique).
+4. Mettre à jour `docs/ETAT.md` : l'état présent seulement (date, version, en bref, état par système, limites, chantiers).
 5. Toucher `docs/INTENTION.md` ou `docs/ARCHITECTURE.md` seulement si les principes ou la structure changent.
+
+Un retour de l'utilisateur se rédige et se livre avec le gabarit : `docs/etudes/RETOURS.md` § 6 et `prompts/GABARIT_RETOUR.md`.
 
 ## Règles du projet
 

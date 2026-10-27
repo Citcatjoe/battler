@@ -2,6 +2,8 @@
 
 _Étude du 2026-10-27 (second retour de l'utilisateur, points B11, B12 et B13), sur la branche `regles-v2` en 0.121.0. **Rien n'est livré au jeu** : ce sont des propositions mesurées, à trancher par l'utilisateur. Laboratoire : séries 76 à 78 de `scripts/lab/ideas.ts` (§ 6). Le contexte des auras de départ est dans [MAITRISES.md](MAITRISES.md) § 5 et § 10._
 
+> **Livré le 2026-10-27 (troisième retour, C2 et C3)** : la règle du 3e tour (§ 2.6) avec la Purification à +5 quand elle retire un bonus, et le Dé pipé « pile, critique et esquive » (§ 3.3). Règle : [RESOLUTION.md](RESOLUTION.md) § 2, phase 1, étape 4 ; mesures de la livraison : § 2.7 et § 3.4. La lisibilité n'a pas pris le statut d'attente du § 2.6 : la pose d'office est une étape à elle au début du tour (élan, « Aura éveillée » sur le porteur, son de l'aura, ligne du journal).
+
 ## 0. En bref
 
 - **Le constat** : l'aura de départ, sur le 1, n'est là qu'au tiers de ses actions (38,5 %), et **ne vient jamais dans 27,8 % des combats** (Thaldrin : 50,3 %, son 1 ne compte qu'en forme humaine). Un personnage sur quatre combats joue sans son identité.
@@ -136,6 +138,14 @@ La règle divise sa valeur par deux et la ramène dans la bande d'une relique (5
 
 **Pour la livrer** (une fois décidée) : la règle dans [RESOLUTION.md](RESOLUTION.md) (phase de début de tour, son ordre avec les reliques de tour, dont le Chapelet de l'ermite et la Chandelle de veille au tour 3), puis le moteur (`combat.ts`), son test dans `combat.test.ts`, son contrôle dans `audit.test.ts` (« aura de départ absente après le début de son 3e tour »), [STATUTS.md](STATUTS.md) si un statut d'attente est créé, la mise en scène et le compendium ; enfin `npm run balance` (l'empreinte bouge : changement voulu), `npm run ramp`, `npm run campaign`.
 
+### 2.7 La livraison (2026-10-27, C2)
+
+- **Moteur** : `combat.ts`, au début du tour, après les statuts et la fenêtre `turnStart` (reliques de tour comprises), avant l'action : `startAuraOf` (la compétence de la face 1, si elle ne pose qu'une aura sur son lanceur et que le personnage a des auras de départ) part avec le déclencheur `auraDue` si son aura n'est pas là, au 3e tour de son porteur (`AURA_DUE_TURN`), une fois par combat. Le druide : sous sa forme où le 1 ne vaut pas, le rendez-vous attend son tour suivant. Un personnage de test (sans `startAuras`) n'a pas de rendez-vous.
+- **Purification** : un effet `andThen` sur la purge (`events.ts`), joué juste après une purge qui a retiré quelque chose : 5 dégâts directs de Lumière (`PURIFICATION_STRIP`) ; 8 sans bonus (`orElse`, inchangé). Son rang n'aiguise que la lumière de repli (+3), comme avant.
+- **Écran** : l'étape se montre comme une compétence (élan, sceau qui s'allume, son de l'aura déduit de l'effet), avec « Aura éveillée » sur le porteur ; le journal : « Début du 3e tour d'Ysolde : son aura s'éveille. Compétence · … » ; la trace : « (au début de son 3e tour, son aura de départ absente) ». Rien vu ni entendu (aucun navigateur) : à juger en jeu.
+- **Contrôles** : `combat.test.ts` (la pose, une fois, au 3e tour, avant l'action ; l'aura là à la première action du 3e tour ; un 1 plus tôt ; journal et trace ; Purification), `audit.ts` (« aura de départ absente après le début de son 3e tour », pose d'office mal placée), `staging.test.ts` (le moment de la pose).
+- **Mesure** (0.122.0 sans le lot C1 ni la récompense de PV, mesurée sur une copie de travail à part, `BALANCE_N=400 npm run balance`, 400 combats par duel, ± 1,6 point ; avant `logs/balance/2026-10-27-16-44-07_v0.122.0.md`, après, avec C2 et C3 : `…16-47-24…`) : roster 45,2 – 54,7 → **44,2 – 53,4 %** ; pire duel 60,8 % (Aldric contre Elaria) → **64,7 %** (Ysolde contre Elaria, sous 65/35) ; combats 0,4 à 1,0 tour plus courts (Gorak 14,1 → 13,1, Ysolde 15,2 → 15,0). **Ysolde 48,3 → 51,1 %** (Purification +22,1 → +28,2 points, Aura de sainteté +12,2 → +17,9) ; Morgrut 48,9 → 51,7 % (Aura de puissance +24,4 → +35,6) ; en bas, Elaria 45,2 → 44,2 % et Ervald 47,4 → 44,9 %, dans la tolérance. Les auras du 1 sortent 1,2 à 1,4 fois par combat → 1,8 à 2,3 (le 1 plus la pose d'office) ; Thaldrin, Ciel d'orage 0,63 → 1,44.
+
 ## 3. B12 : le Dé pipé à double effet
 
 ### 3.1 Le constat
@@ -166,6 +176,19 @@ Marges : ± 1,0 à 1,4 point. Pire duel de la recommandée, gravée chez Naraxes
 **Risque** : le critique se cumule avec les reliques de critique d'Elaria (Plume d'aigle, déjà au-dessus de la bande chez elle, [MAITRISES.md](MAITRISES.md) § 17), qui joue la Chance depuis B1 : à surveiller au `npm run ramp`.
 
 **Autre proposition, non mesurée** (elle demande un crochet du moteur qui n'existe pas) : un dé pipé l'est sur le dé lui-même, « +1 chance sur 6 que son dé fasse 6 ». Il nourrirait tout ce qui lit le 6 (la Veine, le Dard de guêpe et le Briquet d'amadou, les faces gravées) ; mais il pèse sur le dé entier, donc sur chaque face gravée, et se lit mal à l'écran (un 6 de plus ne se remarque pas). Gardée pour plus tard.
+
+### 3.4 La livraison (2026-10-27, C3)
+
+Livré tel que recommandé : `LOADED_DIE_EDGE = 0.05`, critique et esquive par charge (`modifyStats`), rang compris (une charge de plus). Il attend toujours une pièce pour s'offrir et pour être une aura de départ (`hooks.ts` : il consomme `moment:heads`, produit aussi `moment:crit` et `moment:dodge`) : il reste au départ de Naraxes seul. Mesures après C2 (0.122.0 sans C1, 400 combats par duel) :
+
+| Mesure | Résultat | Bande |
+| --- | --- | --- |
+| Gravé sur le 3 (`SKILLS_ENGRAVE=loaded-die SKILLS_PART=engrave`, dix hôtes) | **+7,8** en moyenne, de +6,6 (Fanchon, Aldric) à +10,0 (Gorak) ; Naraxes +9,3 | 8 à 20 : au bord bas |
+| Départ de Naraxes (Dé pipé sur le 1, contre le roster) | **49,0 %** (dé vanilla 50,7 %) | 42 à 58 : dedans |
+| Départ de Fanchon (essai : sans pièce, ce n'est pas une de ses auras de départ) | 41,1 % (dé vanilla 48,5 %) | sans objet |
+| Départ d'Elaria (même essai) | 33,7 % | sans objet |
+
+**Gardé à +5 % / +5 %** : la réduction à +3 % / +3 % était prévue pour un Dé pipé trop fort ; il est au bord bas de la bande des gravures, et la réduire l'en sortirait. Signalé pour le réglage (C5) : au besoin, le relever plutôt que le réduire.
 
 ## 4. Ce qui n'est pas mesuré (B11 et B12)
 
