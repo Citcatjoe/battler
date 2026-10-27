@@ -824,7 +824,13 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(poseOf({ lunging: true, received: { landed: true, dodged: false } })).toBe('attack')
     expect(poseOf({ state: 'ko', lunging: true })).toBe('ko')
     expect(poseOf({ state: 'victory' })).toBe('victory')
-    expect(POSE_IDS).toEqual(['idle', 'attack', 'dodge', 'hurt', 'ko', 'victory'])
+    // Perte de contrôle : sous tout ce qui lui arrive (il esquive, encaisse, riposte), au-dessus de la garde
+    expect(poseOf({ dazed: true })).toBe('dazed')
+    expect(poseOf({ dazed: true, received: { landed: true, dodged: false } })).toBe('hurt')
+    expect(poseOf({ dazed: true, received: { landed: false, dodged: true } })).toBe('dodge')
+    expect(poseOf({ dazed: true, lunging: true })).toBe('attack')
+    expect(poseOf({ dazed: true, state: 'ko' })).toBe('ko')
+    expect(POSE_IDS).toEqual(['idle', 'attack', 'dodge', 'hurt', 'ko', 'victory', 'dazed'])
   })
 
   it("retombe sur l'image de garde quand une posture manque", () => {
@@ -833,6 +839,11 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(poseImage(look, 'dodge')).toBe('garde.png')
     expect(poseImage({ image: 'garde.png' }, 'ko')).toBe('garde.png')
     expect(poseImages(look)).toEqual(['garde.png', 'attaque.png'])
+    // La perte de contrôle : sa première image (la seconde passe par-dessus), ou la garde ; les deux se préchargent
+    expect(poseImage(look, 'dazed')).toBe('garde.png')
+    const dazed = { image: 'garde.png', poses: { dazed: ['avant.png', 'arriere.png'] as const } }
+    expect(poseImage(dazed, 'dazed')).toBe('avant.png')
+    expect(poseImages(dazed)).toEqual(['garde.png', 'avant.png', 'arriere.png'])
   })
 
   it("une forme qui change d'image ne reprend pas les postures de la forme de base", () => {
@@ -861,12 +872,16 @@ describe('postures (docs/POSTURES.md)', () => {
     expect(h('morgrut') / h('brokk')).toBeLessThan(1.5)
   })
 
-  it('tous les personnages, et les deux formes du druide, ont les cinq postures communes', () => {
+  it('tous les personnages, et les deux formes du druide, ont les cinq postures communes et leurs deux images de perte de contrôle', () => {
     const looks = CHARACTERS.flatMap((c) => (c.forms ?? [null]).map((_, f) => [`${c.id}:${f}`, c.lookFor(f)] as const))
-    for (const [id, look] of looks) expect(Object.keys(look.poses ?? {}).sort(), id).toEqual(['attack', 'dodge', 'hurt', 'ko', 'victory'])
+    for (const [id, look] of looks) {
+      expect(Object.keys(look.poses ?? {}).sort(), id).toEqual(['attack', 'dazed', 'dodge', 'hurt', 'ko', 'victory'])
+      expect(new Set(look.poses?.dazed).size, id).toBe(2)
+    }
     // L'ours a ses propres postures, pas celles du druide
     const thaldrin = createCharacter('thaldrin')
     expect(thaldrin.lookFor(1).poses?.attack).not.toBe(thaldrin.lookFor(0).poses?.attack)
+    expect(thaldrin.lookFor(1).poses?.dazed).not.toEqual(thaldrin.lookFor(0).poses?.dazed)
   })
 
   it('chaque posture a un nom, un moment et un prompt, sans emoji', () => {

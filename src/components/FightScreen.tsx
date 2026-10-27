@@ -54,7 +54,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   // Magnétoscope (outil de développement : `battler.vcr()` ou la touche V), jamais en combat test
   const vcrOpen = useVcrOpen() && !test
   const rootRef = useRef<HTMLDivElement>(null)
-  const { hp, statuses, forms, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved, vcr } =
+  const { hp, statuses, forms, dazed, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved, vcr } =
     useCombat(script, onEnd, { test: test !== undefined, vcr: vcrOpen ? rootRef : undefined })
 
   // Zones d'état : les états génériques de chacun, ses statuts et les auras de l'adversaire qui agissent sur lui
@@ -251,6 +251,7 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               floats={floats[side]}
               statuses={statuses[side]}
               form={forms[side]}
+              dazed={dazed[side]}
             />
             {scene?.target === side && <SceneOnTarget scene={scene} />}
             {/* Zone d'état : au-dessus de la tête (qui dépend de la taille du personnage). Elle passe devant le

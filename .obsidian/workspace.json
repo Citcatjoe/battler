@@ -4,17 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "55375499b364a8e2",
+        "id": "fdb72a0efaecba0f",
         "type": "tabs",
         "children": [
           {
-            "id": "83859142b74745cb",
+            "id": "122195161bed4dd7",
             "type": "leaf",
             "state": {
-              "type": "graph",
+              "type": "empty",
               "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Vue graphique"
+              "icon": "lucide-file",
+              "title": "Nouvel onglet"
             }
           }
         ]
@@ -184,20 +184,24 @@
       "bases:Créer une nouvelle base": false
     }
   },
-  "active": "83859142b74745cb",
+  "active": "122195161bed4dd7",
   "lastOpenFiles": [
+    "prompts/Retour du 27 octobre.md",
+    "prompts/prompt début de campagne/prompt-ecran-campagne.md",
+    "prompts/prompt début de campagne/campagne-champion.png",
+    "prompts/prompt début de campagne/campagne-champion-heritage-indisponible.png",
+    "prompts/prompt début de campagne",
+    "logs/combats/2026-10-27_09-13-25_elaria-vs-ysolde_graine-2324087087.txt",
+    "logs/combats/2026-10-27_09-13-16_ysolde-vs-elaria_graine-3160293358.txt",
+    "logs/combats/2026-10-27_09-13-16_elaria-vs-gorak_graine-4282963066.txt",
+    "logs/combats/2026-10-27_09-13-14_aldric-vs-elaria_graine-2727455965.txt",
+    "logs/combats/2026-10-27_09-13-14_ysolde-vs-naraxes_graine-1278787856.txt",
+    "logs/combats/2026-10-27_09-13-14_gorak-vs-fanchon_graine-862721298.txt",
+    "logs/combats/2026-10-27_09-13-14_elaria-vs-naraxes_graine-310296435.txt",
+    "logs/combats/2026-10-27_09-13-13_elaria-vs-morgrut_graine-1318418906.txt",
+    "logs/combats/2026-10-27_09-13-13_naraxes-vs-aldric_graine-1672465226.txt",
     "logs/season/2026-10-25-11-57_saison.md",
     "logs/campaign/2026-10-25-11-57_campagne_apres-esquive_30.md",
-    "logs/tmp-ramp/steps-p1-ervald.json",
-    "logs/tmp-ramp/steps-p1-elaria.json",
-    "logs/tmp-ramp/steps-p1-ysolde.json",
-    "logs/tmp-ramp/steps-p1-aldric.json",
-    "logs/tmp-ramp/p1-brokk.json",
-    "logs/tmp-ramp/p1-ervald.json",
-    "logs/tmp-ramp/p1-elaria.json",
-    "logs/tmp-ramp/p1-ysolde.json",
-    "logs/tmp-ramp/p1-thaldrin.json",
-    "logs/tmp-ramp/p1-aldric.json",
     "logs/balance/2026-10-25-11-45-48_v0.117.0.md",
     "logs/relics/2026-10-25-11-45-30_v0.117.0.md",
     "logs/skills/2026-10-25-11-45-18_v0.117.0.md",
@@ -217,8 +221,6 @@
     "dist/assets/waiting-B4AcmNk1.png",
     "dist/assets/undead-victory-A8zQAOoJ.png",
     "dist/assets/undead-ko-Dcl9OJ7l.png",
-    "dist/assets/undead-idle-xVsRAIn0.png",
-    "dist/assets/undead-hurt-CTqLzkLo.png",
     "logs/balance/2026-10-23-23-05-11_v0.105.0.md",
     "logs/lab/2026-10-23-23-04-37_v0.105.0.md",
     "logs/campaign/2026-10-23-22-48_campagne.md",
@@ -229,8 +231,6 @@
     "logs/balance/2026-10-23-22-18-30_v0.105.0.md",
     "logs/relics/2026-10-23-21-35-11_v0.104.1.md",
     "logs/campaign/2026-10-23-21-35_campagne.md",
-    "logs/relics/2026-10-23-21-32-59_v0.104.1.md",
-    "logs/balance/2026-10-23-21-23-01_v0.104.1.md",
-    "logs/balance/2026-10-23-21-22-19_v0.104.1.md"
+    "logs/relics/2026-10-23-21-32-59_v0.104.1.md"
   ]
 }

@@ -274,6 +274,8 @@ Sept compétences qui donnent une seconde consommatrice aux ressources qui n'en 
 
 Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il se bat**, **pistes** (idées non mesurées). Trois motifs reviennent et peuvent servir à de futurs personnages : **la foule** (Gorak et Fanchon jouent pour le public), **le hasard** (Naraxes le cherche, Morgrut le subit) et **le temps** (Brokk, Ervald et Ysolde gagnent quand le combat dure).
 
+**La perte de contrôle se joue d'après la personnalité** (0.120.0, demande de l'utilisateur : « varie les postures en fonction des persos, qu'ils n'aient pas tous la même animation ») : sous la Peur ou l'Étourdi, chacun vacille à sa façon, en deux images. Gorak refuse de tomber devant la foule, Fanchon se pâme en comédienne, Ervald bascule raide comme un pantin, Ysolde perd sa sérénité, Brokk oscille comme un culbuto sans quitter ses bottes, Morgrut louche sur son papillon, l'ours se balance sur ses quatre pattes. Les deux images de chacun : [POSTURES.md](POSTURES.md) § 6.
+
 ---
 
 ## Principes du roster
@@ -992,4 +994,4 @@ Taux de victoire de la ligne contre la colonne. Revue des auras et des compéten
 - [ ] La fiche courte est écrite dans `roster.ts` (`lore`), et sa section ajoutée ici : fantasy, stats, comment il gagne et perd, mesures, décisions.
 - [ ] La matrice des duels est remesurée (`npm run balance`), avec un global entre 42 et 58 %, aucun duel au-delà de 65/35, selon la méthode d'[EQUILIBRAGE.md](EQUILIBRAGE.md).
 - [ ] L'image respecte `docs/STYLE_BIBLE.md`. Sur fond uni, elle se détoure avec `scripts/cutout-character.py`.
-- [ ] Facultatif : ses cinq postures communes (attaque, esquive, coup encaissé, K.O., victoire), générées en planches avec la garde en première case et découpées par `scripts/slice-poses.py` ([POSTURES.md](POSTURES.md)).
+- [ ] Facultatif : ses cinq postures communes (attaque, esquive, coup encaissé, K.O., victoire), générées en planches avec la garde en première case et découpées par `scripts/slice-poses.py`, et ses deux images de perte de contrôle, tirées de sa personnalité ([POSTURES.md](POSTURES.md) § 6).

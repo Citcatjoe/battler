@@ -33,6 +33,8 @@ interface Props {
   statuses?: readonly Status[]
   /** Forme en cours (druide) : index dans `character.forms` ; un changement joue la métamorphose */
   form?: number
+  /** Perte de contrôle (cue `daze`, M51) : ses deux images de perte de contrôle alternent */
+  dazed?: boolean
   className?: string
   /**
    * Ancrage d'une image plus large que sa colonne : `center` (défaut) centre la toile sur la colonne ;
@@ -101,6 +103,7 @@ export function Fighter({
   floats = [],
   statuses = [],
   form = 0,
+  dazed = false,
   className = '',
   anchor = 'center',
 }: Props) {
@@ -133,8 +136,11 @@ export function Fighter({
   const scale = figureHeight(look)
   const at = (pct: number) => ({ top: `${(1 - scale) * 100 + scale * pct}%` })
 
-  // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, K.O., victoire
-  const pose = poseOf({ state, lunging, received })
+  // Posture du moment (docs/POSTURES.md) : élan, esquive, coup encaissé, perte de contrôle, K.O., victoire
+  const pose = poseOf({ state, lunging, received, dazed })
+  // Perte de contrôle : ses deux images alternent (`.daze-frame-a`, `.daze-frame-b`) ; elles remplacent le tremblement
+  // de la Peur, qui reste aux personnages sans ces images
+  const wobbling = pose === 'dazed' && look.poses?.dazed !== undefined
   // Sans posture de K.O., l'image bascule (`.ko`) ; avec, la chute est dans l'image. Le grisé passe par le
   // filtre de l'enveloppe de l'image (plus bas), jamais par un conteneur plus petit qu'elle : dans Firefox, un
   // filtre sur un parent coupe l'image qui déborde de la colonne du combattant
@@ -190,7 +196,7 @@ export function Fighter({
         <div className={`relative h-full ${reaction}`}>
           {/* La Peur fait trembler ce conteneur, pas l'image : l'image est centrée sur ses pieds par sa propriété
               `translate`, qu'une animation sur elle écrasait (le combattant sautait d'une demi-largeur) */}
-          <div className={`relative h-full ${looks.tremble ? 'status-tremble' : ''}`}>
+          <div className={`relative h-full ${looks.tremble && !wobbling ? 'status-tremble' : ''}`}>
           <div className={`relative h-full ${state === 'ko' ? koClass : state === 'victory' ? 'victory' : ''}`}>
             {/* Une silhouette par forme (une seule sans formes) : fondu de l'ancienne vers la nouvelle */}
             {(character.forms ?? [null]).map((_, f) => {
@@ -198,6 +204,7 @@ export function Fighter({
               const leaving = morph.key > 0 && f === morph.prev && !shown
               if (!shown && !leaving) return null
               const fLook = character.lookFor(f)
+              const frames = shown && pose === 'dazed' ? fLook.poses?.dazed : undefined
               return (
                 // Enveloppe exactement à la taille de l'image : elle porte la position, le filtre (ombre, aura,
                 // grisé), l'opacité et les fondus. Le retournement est sur l'image, sous le filtre : dans Firefox,
@@ -226,9 +233,18 @@ export function Fighter({
                     src={shown ? poseImage(fLook, pose) : fLook.image}
                     alt={shown ? character.name : ''}
                     draggable={false}
-                    className="block h-full w-auto max-w-none select-none"
+                    className={`block h-full w-auto max-w-none select-none ${frames ? 'daze-frame-a' : ''}`}
                     style={flipOf(f) ? { transform: 'scaleX(-1)' } : undefined}
                   />
+                  {frames && (
+                    <img
+                      src={frames[1]}
+                      alt=""
+                      draggable={false}
+                      className="daze-frame-b absolute inset-0 block h-full w-full max-w-none select-none"
+                      style={flipOf(f) ? { transform: 'scaleX(-1)' } : undefined}
+                    />
+                  )}
                 </div>
               )
             })}

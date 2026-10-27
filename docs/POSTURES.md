@@ -10,7 +10,8 @@ _Fonctionnalité ajoutée en 0.40.0. But : **tester si changer l'image du combat
 - **Seulement des postures communes à tous les personnages** (règle de l'utilisateur, 2026-10-19) : des moments que tout combattant vit, comme attaquer, esquiver, tomber ou gagner. Jamais une posture propre à une capacité (une Furie, un sort de prêtresse, une forme du druide) : les capacités restent portées par leurs animations et leurs textes. Une nouvelle posture n'entre dans le registre que si elle vaut pour tout le roster.
 - **L'écran choisit la posture** d'après ce qu'il rejoue déjà : l'élan, l'esquive, le coup reçu, la fin du combat. Le moteur de règles n'est pas touché : c'est de la présentation pure.
 - **Une posture absente retombe sur la garde.** Un personnage sans postures s'affiche exactement comme avant.
-- **Toutes les postures d'un personnage partagent la même toile** : mêmes dimensions, même ligne de sol, même échelle. Changer d'image ne fait donc pas sauter le personnage. C'est le rôle de `scripts/slice-poses.py`.
+- **La perte de contrôle** (0.120.0, demande de l'utilisateur, § 6) : un sixième moment commun à tous, joué par **deux images** qui alternent vite, tant qu'il porte la Peur ou l'Étourdi et pendant son tour perdu. Chaque personnage vacille à sa façon, d'après sa personnalité.
+- **Toutes les postures d'un personnage partagent la même toile** : mêmes dimensions, même ligne de sol, même échelle. Changer d'image ne fait donc pas sauter le personnage. C'est le rôle de `scripts/slice-poses.py`. Seule exception (0.120.0) : la toile des deux images de perte de contrôle peut être **plus large** que la garde, à hauteur et centre égaux (`--elargir`, § 6) ; le jeu centre chaque image et lui donne la hauteur de la toile, la figure ne bouge donc pas.
 - **Une forme animale bouge comme un animal** (règle de l'utilisateur, 2026-10-20) : l'ours du druide se tient, attaque, encaisse, esquive, tombe et triomphe comme une bête, à quatre pattes. Jamais debout comme un homme, jamais un coup de poing, jamais à genou. Les mêmes cinq moments, joués par un quadrupède : charge au galop gueule ouverte, sursaut en arrière sur ses quatre pattes, bond de côté, couché sur le flanc, rugissement campé sur ses pattes. Il lui faut donc une **nouvelle garde à quatre pattes**, tirée de l'ancienne (bois, amulette, tatouages). Un quadrupède est plus long que haut : ses planches empilent **deux cases en paysage de 1024×768** dans une image en portrait 1024×1536, la garde en haut, soit cinq planches (découpe `1x2:idle,<posture>`). **Ses prompts n'ont pas un mot d'anatomie humaine** : un premier jet reprenait le bloc STYLE des humanoïdes (épaules, mains, visage) et le bloc de mouvement (bras, « fighting-game »), et un coup de griffe d'une patte avant : ChatGPT en tirait une attaque d'homme, même avec la garde à quatre pattes jointe. L'attaque passe donc par la gueule et la masse, jamais par une patte levée, et la garde à quatre pattes se joint à chaque planche. À l'intégration, son `scale` et sa largeur à l'écran seront à régler sur la nouvelle silhouette.
 
 ---
@@ -21,14 +22,15 @@ Registre : `src/game/poses.ts` (`POSES`).
 
 | Posture (`PoseId`) | Nom | Quand | Ce que fait l'animation par-dessus |
 | --- | --- | --- | --- |
-| `idle` | Garde | au repos, et quand il déclenche une compétence. C'est `look.image` | tremblement de la Peur, translucidité de l'esquive imposée |
+| `idle` | Garde | au repos, et quand il déclenche une compétence. C'est `look.image` | tremblement de la Peur (sans images de perte de contrôle), translucidité de l'esquive imposée |
 | `attack` | Attaque | pendant l'élan d'une attaque (`lunging`) | l'élan (`.lunge`) : recul, bond vers l'adversaire, retour |
 | `dodge` | Esquive | quand il esquive (`received.dodged`), synchronisée avec l'élan adverse | le saut de côté (`.dodge`) |
 | `hurt` | Coup encaissé | quand un coup le touche (`received.landed`, non esquivé), jusqu'au moment suivant | rien pour un coup ordinaire : la posture seule. Un critique repousse en plus le combattant puis le ramène (`.knockback`, 0.68.3, demande de l'utilisateur) |
 | `ko` | K.O. | à la fin du combat, s'il a perdu | le grisé, en fondu sur le filtre de l'image ; sans posture K.O., la bascule en plus (`.ko`) |
 | `victory` | Victoire | à la fin du combat s'il a gagné, sur l'écran de fin et sur l'écran du champion | le léger balancement (`.victory`) |
+| `dazed` | Perte de contrôle | tant qu'un statut lui fait perdre son action (Peur, Étourdi), puis pendant son tour perdu, jusqu'au passage de main (cue `daze`, [MISE_EN_SCENE.md](MISE_EN_SCENE.md) M51) | **deux images** (`poses.dazed`) qui alternent toutes les 180 ms (`.daze-frame-a`, `.daze-frame-b`, sans fondu) ; elles remplacent le tremblement de la Peur |
 
-**Priorité**, quand deux moments se chevauchent (`poseOf`) : K.O. et victoire, puis attaque, puis esquive, puis coup encaissé, puis garde.
+**Priorité**, quand deux moments se chevauchent (`poseOf`) : K.O. et victoire, puis attaque, puis esquive, puis coup encaissé, puis perte de contrôle, puis garde. Un coup encaissé ou une Riposte interrompent donc la perte de contrôle, qui reprend ensuite.
 
 **Changement d'image** : instantané, comme une image clé d'animation. Les postures sont préchargées dès que le combattant s'affiche, pour éviter un clignotement au premier élan.
 
@@ -38,12 +40,13 @@ Registre : `src/game/poses.ts` (`POSES`).
 
 | Fichier | Rôle |
 | --- | --- |
-| `src/game/poses.ts` | le registre `POSES` (nom, moment, ligne de prompt), `poseOf` (la posture du moment), `poseImage` (l'image, ou la garde par défaut), `poseImages` (préchargement) |
-| `src/game/character.ts` | `CharacterLook.poses?: { attack?, dodge?, hurt?, ko?, victory? }`. `lookFor(form)` : une forme qui change d'image (l'ours) ne reprend pas les postures de la forme de base |
+| `src/game/poses.ts` | le registre `POSES` (nom, moment, ligne de prompt), `poseOf` (la posture du moment), `poseImage` (l'image, ou la garde par défaut ; la première image de la perte de contrôle), `poseImages` (préchargement, les deux images de la perte de contrôle comprises) |
+| `src/game/character.ts` | `CharacterLook.poses?: { attack?, dodge?, hurt?, ko?, victory?, dazed?: [a, b] }`. `lookFor(form)` : une forme qui change d'image (l'ours) ne reprend pas les postures de la forme de base |
+| `src/game/staging.ts` | la cue `daze` (M51) : la perte de contrôle commence quand un statut `skipsAction` apparaît dans la zone d'état, et finit au passage de main qui suit son tour perdu. Le moteur n'en sait rien |
 | `src/components/Fighter.tsx` | calcule la posture, change l'image affichée, précharge, choisit `.knockback` (critique reçu) et `.ko` (K.O. sans posture). Toutes les images sont à leur largeur naturelle, centrées sur les pieds ; `anchor="inside"` fait déborder une image large vers le centre de l'écran plutôt que hors de l'écran (affrontement, fin de combat). **Deux règles de Firefox** : le filtre (ombre, contour d'aura, grisé du K.O.) est sur une enveloppe exactement à la taille de l'image, jamais sur un conteneur plus petit qu'elle (la colonne du combattant), qui couperait ce qui déborde ; le retournement (`scaleX(-1)`) est sur l'image, sous ce filtre, jamais au-dessus : un filtre dans un repère retourné est coupé au bord de l'écran, du mauvais côté (0.77.x : l'ours à droite, dont la toile déborde de l'écran de 63 px, perdait son museau et ses pattes avant ; vu seulement dans un Firefox à l'écran, pas dans les captures sans interface) |
 | `src/components/MatchupScreen.tsx`, `EndScreen.tsx` | les menus, les panneaux et le sceau « VS » passent au-dessus des combattants (`relative z-20`) : une arme levée passe derrière, jamais devant |
-| `src/index.css` | `.knockback` : le recul d'un critique ; `.ko` : la bascule d'un K.O. sans posture |
-| `scripts/slice-poses.py` | découpe les planches, aligne les postures sur la garde, les recadre ensemble |
+| `src/index.css` | `.knockback` : le recul d'un critique ; `.ko` : la bascule d'un K.O. sans posture ; `.daze-frame-a`, `.daze-frame-b` : l'alternance des deux images de perte de contrôle |
+| `scripts/slice-poses.py` | découpe les planches, aligne les postures sur la garde, les recadre ensemble ; `--reference`, `--pieds`, `--sol` et `--elargir` pour ajouter des postures à un personnage déjà découpé (§ 6) |
 | `scripts/cutout-character.py` | `CUTOUT_KEEP_CANVAS=1` : détourer sans recadrer (utilisé par `slice-poses.py`) |
 
 Dans `roster.ts`, l'orc :
@@ -61,7 +64,7 @@ look: {
 
 La garde est **`<nom>-idle.png`** : la garde recadrée avec les postures, sur leur toile. Les variantes (Murzug pour Gorak) héritent des postures de leur original, teinte comprise. Pour un personnage à formes, chaque forme a ses propres `poses` dans son `look`.
 
-Tests : `modules.test.ts` (priorités, retour à la garde, formes, postures de Gorak et Murzug, textes sans emoji) et `screens.test.tsx` (chaque moment se rend).
+Tests : `modules.test.ts` (priorités, retour à la garde, formes, postures de Gorak et Murzug, deux images de perte de contrôle par apparence, textes sans emoji), `screens.test.tsx` (chaque moment se rend ; les deux images alternent sans tremblement) et `staging.test.ts` (M51).
 
 ---
 
@@ -250,3 +253,59 @@ python scripts/slice-poses.py orc a.png:2x1:idle,attack c.png:2x1:idle,dodge e.p
 - **Sur l'écran de fin**, la victoire de l'orc (couperet levé) passe derrière le début du texte (« Orc · Brute »), qui reste au premier plan mais se lit moins bien. Même chose pour le corps de Morgrut sous « Ogre · Cogneur », dont les pieds touchent aussi le haut de la carte « PV restants ».
 - **Le druide vainqueur apparaît en forme humaine sur l'écran de fin**, même s'il a gagné en ours : l'écran ne reçoit pas la forme, et l'ours à quatre pattes ne tiendrait pas dans son cadre en hauteur. Sa victoire d'ours se voit en combat.
 - **La cohérence du dessin** d'une planche à l'autre dépend du générateur : la garde jointe et le rappel « same character » limitent la dérive, sans la supprimer. Une planche ratée se régénère seule, avec sa garde.
+
+---
+
+## 6. La perte de contrôle (0.120.0)
+
+**Demande de l'utilisateur** (2026-10-26) : « un duo de frames par personnage, joué quand le perso perd le contrôle de son tour (Peur et Coup de massue). Quand il est sous l'effet du statut en question, jouer la boucle des 2 frames à faible intervalle, pour donner l'illusion d'étourdissement. Le perso penché en avant et/ou en arrière de manière visible, forcer le trait ; varier les postures selon les personnages, qu'ils n'aient pas tous la même animation, s'inspirer de leur personnalité. »
+
+**Règle** : un moment commun à tous, comme les cinq autres (§ 0). Il dépend du **contrôle** (`skipsAction` au registre des statuts), pas d'une compétence : un statut de contrôle de plus le déclenche sans rien ajouter. Il commence quand le statut apparaît dans sa zone d'état, et finit au passage de main qui suit le tour qu'il perd (« Tour perdu ») : la charge part avec ce texte, il reprend ses esprits avec la main ([MISE_EN_SCENE.md](MISE_EN_SCENE.md) M51). Les deux images alternent toutes les **180 ms**, sans fondu ; la pause du combat les fige. Le tremblement de la Peur s'efface sous elles.
+
+**Les deux images de chacun**, d'après sa personnalité ([PERSONNAGES.md](PERSONNAGES.md)) ; elles penchent en sens opposés, les pieds plantés au même endroit, pour que la boucle se lise comme un vacillement :
+
+| Personnage | Image A (`-dazed-a`) | Image B (`-dazed-b`) |
+| --- | --- | --- |
+| Gorak (orc, le champion des fosses) | il pique du nez vers l'avant, mâchoire pendante, le couperet traîne | il part en arrière sur les talons, tête renversée, un bras jeté pour l'équilibre : fier, il refuse de tomber |
+| Naraxes (lézarde, la joueuse) | elle chancelle en arrière en S, langue fourchue pendante, queue dressée en balancier | elle bascule en avant, une griffe sur la tempe, la queue balaie le sol |
+| Fanchon (barde, l'artiste de foire) | elle se pâme en arrière en comédienne, le dos de la main au front, le luth qui glisse | elle trébuche en avant, chapeau sur l'œil, sourire de travers, le bras qui mouline |
+| Ervald (mort-vivant, le devoir) | pantin aux fils coupés : il bascule raide en arrière, d'un bloc, tête sur l'épaule | il s'effondre en avant sur son épée plantée comme une béquille, tête pendante |
+| Ysolde (prêtresse, la juge) | elle perd sa sérénité : penchée loin en arrière, la main à la tempe, la masse qui pend, le halo de travers | courbée en avant, appuyée sur sa masse comme sur une canne |
+| Aldric (paladin, le créancier) | rejeté en arrière par le choc, l'épée basse, le gantelet qui cherche l'équilibre | cassé en avant sur la garde de son épée plantée, la tête qui secoue |
+| Elaria (elfe, la chasseresse) | élégante même sonnée : penchée en arrière, la main à la tempe, l'arc tenu mollement | pliée en avant à la taille, l'arc qui pend vers le sol |
+| Brokk (nain, le roc) | un culbuto qui ne tombe pas : il oscille en arrière sur ses talons, yeux qui louchent, la hache qui glisse sur l'épaule | il oscille en avant, la hache plantée devant lui, accroché au manche ; ses bottes ne bougent pas |
+| Morgrut (ogre, le gros distrait) | il bascule en arrière, ventre en avant, langue pendante, yeux qui roulent, un papillon au-dessus de la tête | il penche en avant en louchant sur le papillon, sourire bête, la main qui gratte son casque |
+| Thaldrin, forme humaine | il bascule en arrière, tête aux bois qui pend, le bâton qui glisse, sa magie verte qui s'éteint en fumerolle | penché en avant sur son bâton, tête basse, genoux qui plient |
+| Thaldrin, forme d'ours (§ 0 : en animal) | il se rejette sur son arrière-train, pattes avant raides, tête levée, langue pendante | il plonge sur ses pattes avant écartées, tête basse au ras du sol |
+
+### 6.1 Production (agent, Artlist)
+
+- **Générateur** : GPT Image 2.5 en image à image, par Artlist, qualité haute, sortie 2K, fond opaque, deux versions par planche (280 crédits la paire ; 11 planches, 3 080 crédits). La meilleure des deux est gardée, planche entière (les deux images d'une même planche se répondent).
+- **Référence = la planche à remplir** : la garde actuelle (`<nom>-idle.png`) recadrée sur sa silhouette, posée sur le gris `#808080` dans le **tiers gauche** d'une toile 16:9 (1820×1024 ; garde haute de 82 % au plus, pieds à 96,5 %), les deux autres tiers vides. Le générateur garde la mise en page, l'échelle et la ligne de sol. L'ours : toile 9:16 (1024×1820), trois rangées, la garde dans celle du haut.
+- **Découpe** : `python scripts/slice-poses.py <nom> <planche>:3x1:idle,dazed-a,dazed-b --fond --contours --reference=src/assets/<nom>-idle.png --pieds --sol` (l'ours : `1x3`, sans `--contours`). `--pieds` pose chaque image sur les pieds de la garde existante : le générateur décale souvent la figure dans sa case (jusqu'à 105 px de toile pour l'ours, 100 pour Gorak), ce qui faisait faire un pas de côté à chaque alternance. `--elargir` : Gorak 40 px, Naraxes 44 px (le dos de Gorak et la queue de Naraxes sortaient de la toile). L'image A de l'ours, cabrée, dépassait le haut de sa toile de 16 px : réduite de 3 % autour de ses pattes, à la main.
+- **Sources** : `logs/atelier/sources/<personnage>/dazed.png` (dont `gorak/`, `naraxes/`, `fanchon/`, créés pour l'occasion). Planches de contrôle : `logs/poses-<nom>.png` (la garde et les deux images ; elles remplacent les planches de contrôle des cinq premières postures).
+- **Vérifié** : chaque paire en superposition sur la garde (mêmes pieds, sens opposés), puis rendue par `Fighter` dans Firefox sans interface, les deux images figées l'une après l'autre (onze apparences, côté gauche et côté droit retourné). **Pas vu** : la boucle dans un vrai combat (il faut la Peur ou le Coup de massue, hors kit : gravés en campagne, ou par la forge en tournoi et en saison).
+
+Le prompt d'une planche (les deux lignes `MIDDLE PANEL` et `RIGHT PANEL` changent par personnage, d'après le tableau ci-dessus) :
+
+```text
+EDIT THIS IMAGE: it is a character sheet with three equal tall panels side by side (left third, middle third, right third). The LEFT panel already contains the character in their guard pose. Keep the left panel EXACTLY as it is.
+Paint the SAME character twice more, in the MIDDLE panel and in the RIGHT panel: two frames of a "dazed / lost control" animation loop. The game alternates these two frames very fast while the character is stunned or terrified and loses their turn, so the body must visibly rock back and forth between them.
+
+CHARACTER: exactly the same character as in the left panel: same face, body, proportions, outfit, colors, weapon and every detail, same painted fantasy illustration style, same rendering, same soft frontal lighting. Only the pose and the facial expression change.
+
+THE TWO DAZED FRAMES:
+MIDDLE PANEL — <image A>
+RIGHT PANEL — <image B>
+
+AMPLITUDE: push it hard, exaggerated and readable from far away on a TV, like a fighting-game stun animation: the torso is clearly tilted (at least 20 to 25 degrees from vertical), the lean is obvious in the silhouette, the head lolls, the weapon hangs loose and heavy. The two frames lean in OPPOSITE directions so the loop reads as a wobble.
+FEET: in both dazed frames the feet stay planted in the same place, on the same spot of the ground as the guard, so that only the body above the feet sways; knees may buckle. Never airborne, never fallen, never kneeling on the ground.
+
+CONSISTENCY: the character is the SAME SIZE in all three panels (same scale, same camera distance and height), all figures stand on the SAME ground line as the guard in the left panel, same three-quarter view facing RIGHT. Full body in each panel, nothing cropped, no part of one figure touching or crossing into another panel; leave clear grey space between the three figures.
+
+OUTPUT: keep the plain flat uniform medium grey background (#808080) everywhere, no gradient, no ground, no shadow, no scenery, no text, no panel borders, no stars, no spirals, no symbols, no motion lines, no visual effects added around the head.
+```
+
+Exemple de lignes (Brokk) : `MIDDLE PANEL — Brokk, the stubborn dwarf who never retreats, rocks like a weighted toy that will not fall: he ROCKS BACKWARD toward the left on his heels, the whole stocky body tilted far back, eyes crossed, mouth agape in his beard, the great axe slipping back over his shoulder, braids and beard swinging.` et `RIGHT PANEL — Brokk ROCKS FORWARD toward the right, top-heavy, torso pitched far forward, the head of his great axe thudded onto the ground in front of him and both hands clinging to the haft to stay up, eyes crossed and dazed, beard and braids swinging forward. His boots never leave their spot.` Pour l'ours, le même gabarit en trois rangées empilées (`TOP`, `MIDDLE`, `BOTTOM PANEL`), sans un mot d'anatomie humaine (§ 0) : « on all four paws, never stands up like a man ».
+
+**Un nouveau personnage** : ses deux images de perte de contrôle, avec ce gabarit et deux lignes tirées de sa personnalité ; dans `look.poses`, `dazed: [a, b]`. Sans elles, il tremble sous la Peur comme avant.

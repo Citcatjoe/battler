@@ -4,66 +4,88 @@ import orcDodgeImg from '../assets/orc-dodge.png'
 import orcKoImg from '../assets/orc-ko.png'
 import orcVictoryImg from '../assets/orc-victory.png'
 import orcHurtImg from '../assets/orc-hurt.png'
+import orcDazedAImg from '../assets/orc-dazed-a.png'
+import orcDazedBImg from '../assets/orc-dazed-b.png'
 import elfIdleImg from '../assets/elf-idle.png'
 import elfAttackImg from '../assets/elf-attack.png'
 import elfDodgeImg from '../assets/elf-dodge.png'
 import elfHurtImg from '../assets/elf-hurt.png'
 import elfKoImg from '../assets/elf-ko.png'
 import elfVictoryImg from '../assets/elf-victory.png'
+import elfDazedAImg from '../assets/elf-dazed-a.png'
+import elfDazedBImg from '../assets/elf-dazed-b.png'
 import dwarfIdleImg from '../assets/dwarf-idle.png'
 import dwarfAttackImg from '../assets/dwarf-attack.png'
 import dwarfDodgeImg from '../assets/dwarf-dodge.png'
 import dwarfHurtImg from '../assets/dwarf-hurt.png'
 import dwarfKoImg from '../assets/dwarf-ko.png'
 import dwarfVictoryImg from '../assets/dwarf-victory.png'
+import dwarfDazedAImg from '../assets/dwarf-dazed-a.png'
+import dwarfDazedBImg from '../assets/dwarf-dazed-b.png'
 import undeadIdleImg from '../assets/undead-idle.png'
 import undeadAttackImg from '../assets/undead-attack.png'
 import undeadDodgeImg from '../assets/undead-dodge.png'
 import undeadHurtImg from '../assets/undead-hurt.png'
 import undeadKoImg from '../assets/undead-ko.png'
 import undeadVictoryImg from '../assets/undead-victory.png'
+import undeadDazedAImg from '../assets/undead-dazed-a.png'
+import undeadDazedBImg from '../assets/undead-dazed-b.png'
 import humanIdleImg from '../assets/human-idle.png'
 import humanAttackImg from '../assets/human-attack.png'
 import humanDodgeImg from '../assets/human-dodge.png'
 import humanHurtImg from '../assets/human-hurt.png'
 import humanKoImg from '../assets/human-ko.png'
 import humanVictoryImg from '../assets/human-victory.png'
+import humanDazedAImg from '../assets/human-dazed-a.png'
+import humanDazedBImg from '../assets/human-dazed-b.png'
 import lizardIdleImg from '../assets/lizardman-idle.png'
 import lizardAttackImg from '../assets/lizardman-attack.png'
 import lizardDodgeImg from '../assets/lizardman-dodge.png'
 import lizardHurtImg from '../assets/lizardman-hurt.png'
 import lizardKoImg from '../assets/lizardman-ko.png'
 import lizardVictoryImg from '../assets/lizardman-victory.png'
+import lizardDazedAImg from '../assets/lizardman-dazed-a.png'
+import lizardDazedBImg from '../assets/lizardman-dazed-b.png'
 import paladinIdleImg from '../assets/paladin-idle.png'
 import paladinAttackImg from '../assets/paladin-attack.png'
 import paladinDodgeImg from '../assets/paladin-dodge.png'
 import paladinHurtImg from '../assets/paladin-hurt.png'
 import paladinKoImg from '../assets/paladin-ko.png'
 import paladinVictoryImg from '../assets/paladin-victory.png'
+import paladinDazedAImg from '../assets/paladin-dazed-a.png'
+import paladinDazedBImg from '../assets/paladin-dazed-b.png'
 import ogreIdleImg from '../assets/ogre-idle.png'
 import ogreAttackImg from '../assets/ogre-attack.png'
 import ogreDodgeImg from '../assets/ogre-dodge.png'
 import ogreHurtImg from '../assets/ogre-hurt.png'
 import ogreKoImg from '../assets/ogre-ko.png'
 import ogreVictoryImg from '../assets/ogre-victory.png'
+import ogreDazedAImg from '../assets/ogre-dazed-a.png'
+import ogreDazedBImg from '../assets/ogre-dazed-b.png'
 import druidIdleImg from '../assets/druid-idle.png'
 import druidAttackImg from '../assets/druid-attack.png'
 import druidDodgeImg from '../assets/druid-dodge.png'
 import druidHurtImg from '../assets/druid-hurt.png'
 import druidKoImg from '../assets/druid-ko.png'
 import druidVictoryImg from '../assets/druid-victory.png'
+import druidDazedAImg from '../assets/druid-dazed-a.png'
+import druidDazedBImg from '../assets/druid-dazed-b.png'
 import bearIdleImg from '../assets/druid-bear-idle.png'
 import bearAttackImg from '../assets/druid-bear-attack.png'
 import bearDodgeImg from '../assets/druid-bear-dodge.png'
 import bearHurtImg from '../assets/druid-bear-hurt.png'
 import bearKoImg from '../assets/druid-bear-ko.png'
 import bearVictoryImg from '../assets/druid-bear-victory.png'
+import bearDazedAImg from '../assets/druid-bear-dazed-a.png'
+import bearDazedBImg from '../assets/druid-bear-dazed-b.png'
 import bardIdleImg from '../assets/bard-idle.png'
 import bardAttackImg from '../assets/bard-attack.png'
 import bardDodgeImg from '../assets/bard-dodge.png'
 import bardHurtImg from '../assets/bard-hurt.png'
 import bardKoImg from '../assets/bard-ko.png'
 import bardVictoryImg from '../assets/bard-victory.png'
+import bardDazedAImg from '../assets/bard-dazed-a.png'
+import bardDazedBImg from '../assets/bard-dazed-b.png'
 import { Character, type CharacterDef } from './character'
 import { isRollTrigger, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
@@ -109,7 +131,7 @@ const gorak: CharacterDef = {
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
     image: orcIdleImg,
-    poses: { attack: orcAttackImg, dodge: orcDodgeImg, hurt: orcHurtImg, ko: orcKoImg, victory: orcVictoryImg },
+    poses: { attack: orcAttackImg, dodge: orcDodgeImg, hurt: orcHurtImg, ko: orcKoImg, victory: orcVictoryImg, dazed: [orcDazedAImg, orcDazedBImg] },
     facing: 'right',
     scale: 1.18,
     headroom: 0.13,
@@ -222,7 +244,7 @@ const elaria: CharacterDef = {
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
     image: elfIdleImg,
-    poses: { attack: elfAttackImg, dodge: elfDodgeImg, hurt: elfHurtImg, ko: elfKoImg, victory: elfVictoryImg },
+    poses: { attack: elfAttackImg, dodge: elfDodgeImg, hurt: elfHurtImg, ko: elfKoImg, victory: elfVictoryImg, dazed: [elfDazedAImg, elfDazedBImg] },
     facing: 'right',
     scale: 1.25,
     headroom: 0.22,
@@ -294,7 +316,7 @@ const brokk: CharacterDef = {
   // toile), le reste compte dans `headroom` (comme Aldric). La hache du K.O. descend sous les pieds
   look: {
     image: dwarfIdleImg,
-    poses: { attack: dwarfAttackImg, dodge: dwarfDodgeImg, hurt: dwarfHurtImg, ko: dwarfKoImg, victory: dwarfVictoryImg },
+    poses: { attack: dwarfAttackImg, dodge: dwarfDodgeImg, hurt: dwarfHurtImg, ko: dwarfKoImg, victory: dwarfVictoryImg, dazed: [dwarfDazedAImg, dwarfDazedBImg] },
     facing: 'right',
     scale: 1.14,
     headroom: 0.23,
@@ -373,7 +395,7 @@ const ervald: CharacterDef = {
   // à l'écran qu'avant (0,98 × 0,99 de l'ancienne image) donne scale 0,97 / 0,834 = 1,16
   look: {
     image: undeadIdleImg,
-    poses: { attack: undeadAttackImg, dodge: undeadDodgeImg, hurt: undeadHurtImg, ko: undeadKoImg, victory: undeadVictoryImg },
+    poses: { attack: undeadAttackImg, dodge: undeadDodgeImg, hurt: undeadHurtImg, ko: undeadKoImg, victory: undeadVictoryImg, dazed: [undeadDazedAImg, undeadDazedBImg] },
     facing: 'right',
     scale: 1.16,
     headroom: 0.15, // part vide au-dessus de la tête (l'épée levée de la victoire)
@@ -488,7 +510,7 @@ const ysolde: CharacterDef = {
   // se règle sur le corps (tête-pieds, 74 % de la toile), le reste compte dans `headroom` (comme Aldric)
   look: {
     image: humanIdleImg,
-    poses: { attack: humanAttackImg, dodge: humanDodgeImg, hurt: humanHurtImg, ko: humanKoImg, victory: humanVictoryImg },
+    poses: { attack: humanAttackImg, dodge: humanDodgeImg, hurt: humanHurtImg, ko: humanKoImg, victory: humanVictoryImg, dazed: [humanDazedAImg, humanDazedBImg] },
     facing: 'right',
     scale: 1.25,
     headroom: 0.245,
@@ -576,7 +598,7 @@ const naraxes: CharacterDef = {
   // au-dessus de la tête (dague levée de l'attaque) : scale 1,10 pour sa taille 0,97.
   look: {
     image: lizardIdleImg,
-    poses: { attack: lizardAttackImg, dodge: lizardDodgeImg, hurt: lizardHurtImg, ko: lizardKoImg, victory: lizardVictoryImg },
+    poses: { attack: lizardAttackImg, dodge: lizardDodgeImg, hurt: lizardHurtImg, ko: lizardKoImg, victory: lizardVictoryImg, dazed: [lizardDazedAImg, lizardDazedBImg] },
     facing: 'right',
     scale: 1.1,
     headroom: 0.14,
@@ -679,7 +701,7 @@ const aldric: CharacterDef = {
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
   look: {
     image: paladinIdleImg,
-    poses: { attack: paladinAttackImg, dodge: paladinDodgeImg, hurt: paladinHurtImg, ko: paladinKoImg, victory: paladinVictoryImg },
+    poses: { attack: paladinAttackImg, dodge: paladinDodgeImg, hurt: paladinHurtImg, ko: paladinKoImg, victory: paladinVictoryImg, dazed: [paladinDazedAImg, paladinDazedBImg] },
     facing: 'right',
     scale: 1.24,
     headroom: 0.21,
@@ -775,7 +797,7 @@ const morgrut: CharacterDef = {
   // massue du coup encaissé et du K.O. descend sous les pieds
   look: {
     image: ogreIdleImg,
-    poses: { attack: ogreAttackImg, dodge: ogreDodgeImg, hurt: ogreHurtImg, ko: ogreKoImg, victory: ogreVictoryImg },
+    poses: { attack: ogreAttackImg, dodge: ogreDodgeImg, hurt: ogreHurtImg, ko: ogreKoImg, victory: ogreVictoryImg, dazed: [ogreDazedAImg, ogreDazedBImg] },
     facing: 'right',
     scale: 1.48,
     headroom: 0.22,
@@ -849,7 +871,7 @@ const thaldrin: CharacterDef = {
   // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
   look: {
     image: druidIdleImg,
-    poses: { attack: druidAttackImg, dodge: druidDodgeImg, hurt: druidHurtImg, ko: druidKoImg, victory: druidVictoryImg },
+    poses: { attack: druidAttackImg, dodge: druidDodgeImg, hurt: druidHurtImg, ko: druidKoImg, victory: druidVictoryImg, dazed: [druidDazedAImg, druidDazedBImg] },
     facing: 'right',
     scale: 1.1,
     headroom: 0.155,
@@ -872,7 +894,7 @@ const thaldrin: CharacterDef = {
       statuses: ['bearMight'],
       look: {
         image: bearIdleImg,
-        poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg },
+        poses: { attack: bearAttackImg, dodge: bearDodgeImg, hurt: bearHurtImg, ko: bearKoImg, victory: bearVictoryImg, dazed: [bearDazedAImg, bearDazedBImg] },
         scale: 0.98,
         headroom: 0.088,
         bodyInset: { left: 0.22, right: 0.024 },
@@ -979,7 +1001,7 @@ const fanchon: CharacterDef = {
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
-    poses: { attack: bardAttackImg, dodge: bardDodgeImg, hurt: bardHurtImg, ko: bardKoImg, victory: bardVictoryImg },
+    poses: { attack: bardAttackImg, dodge: bardDodgeImg, hurt: bardHurtImg, ko: bardKoImg, victory: bardVictoryImg, dazed: [bardDazedAImg, bardDazedBImg] },
     facing: 'right',
     scale: 0.97,
     headroom: 0.03,

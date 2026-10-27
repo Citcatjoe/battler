@@ -1325,6 +1325,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
    - référence de style : composer les icônes voisines déjà intégrées en une planche (les PNG de 128 px agrandis dans une grille sur fond transparent), la téléverser, puis la joindre à la génération ;
    - le prompt est le même que pour ChatGPT (gabarit de la section 7) ; découpe et contrôle inchangés (`slice-icons.py`, une planche de contrôle par planche générée) ;
    - aucune source déposée à la racine : les planches restent dans le dossier temporaire de la session.
+   - **postures d'un personnage** (0.120.0, perte de contrôle) : même modèle, en 16:9 et sortie 2K, fond opaque gris ; la référence est la planche à remplir elle-même (la garde dans le tiers gauche, le reste vide), méthode et prompt dans [POSTURES.md](POSTURES.md) § 6.1.
 
 ## 9. Check-list avant d'intégrer une image
 

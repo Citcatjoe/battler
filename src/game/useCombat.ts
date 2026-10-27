@@ -40,6 +40,8 @@ export interface View {
   statuses: Pair<Status[]>
   /** Forme de chaque combattant (druide) : index dans `Character.forms` */
   forms: Pair<number>
+  /** Perte de contrôle de chaque combattant (cue `daze`, M51) : il vacille */
+  dazed: Pair<boolean>
   dice: DiceState
   strike: Strike | null
   blow: Blow | null
@@ -65,6 +67,7 @@ export function initialView(fighters: Pair<Character>): View {
     // Statuts de forme (druide, 0.73.0) : présents dès l'entrée en scène
     statuses: [0, 1].map((side) => (fighters[side].forms?.[0].statuses ?? []).map((id) => ({ id, stacks: 1 }))) as Pair<Status[]>,
     forms: [0, 0],
+    dazed: [false, false],
     dice: IDLE_DICE,
     strike: null,
     blow: null,
@@ -125,6 +128,8 @@ export function applyCue(view: View, cue: Cue, now: number): View {
       return { ...view, seq, scene: { ...cue.scene, key: view.seq } }
     case 'form':
       return { ...view, forms: withSide(view.forms, cue.side, cue.form) }
+    case 'daze':
+      return { ...view, dazed: withSide(view.dazed, cue.side, cue.on) }
     case 'turn':
       return { ...view, turn: cue.turn, active: cue.active }
     case 'winner':

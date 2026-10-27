@@ -32,6 +32,21 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.120.0] — 2026-10-27
+
+La perte de contrôle, demandée par l'utilisateur avant d'aller dormir : « avec GPT Image depuis Artlist, génère pour chaque perso une posture "perte de contrôle", un duo de frames joué quand le perso perd le contrôle de son tour (Peur et Coup de massue) ; quand il est sous l'effet du statut, jouer la boucle des deux frames à faible intervalle pour donner l'illusion d'étourdissement ; le perso penché en avant et/ou en arrière de manière visible, force le trait ; varie les postures selon les persos, inspire-toi de leur personnalité ». Aucune règle de combat changée.
+
+### Ajouté
+- **Perte de contrôle** ([POSTURES.md](docs/POSTURES.md) § 6, [MISE_EN_SCENE.md](docs/MISE_EN_SCENE.md) M51) : sixième moment commun à tous (`PoseId` `dazed`), joué par **deux images** (`look.poses.dazed: [a, b]`) qui alternent toutes les 180 ms, sans fondu (`.daze-frame-a`, `.daze-frame-b`, figées par la pause). Il commence quand un statut qui fait perdre son action (`skipsAction` : Peur, Étourdi) apparaît dans la zone d'état, et finit au passage de main qui suit le tour perdu (nouvelle cue `daze` de `staging.ts`, `View.dazed` dans `useCombat`). Une esquive, un coup encaissé, une attaque, le K.O. et la victoire passent devant (`poseOf`). Sur ces images, le tremblement de la Peur s'efface.
+- **22 images** (`src/assets/<nom>-dazed-a.png`, `-dazed-b.png`), onze apparences, l'ours compris, chacune d'après sa personnalité : Gorak refuse de tomber, Naraxes chancelle en S, langue pendante, Fanchon se pâme en comédienne, Ervald bascule raide comme un pantin, Ysolde perd sa sérénité, Aldric s'appuie sur son épée plantée, Elaria reste élégante, Brokk oscille comme un culbuto, Morgrut louche sur son papillon, le druide s'accroche à son bâton, l'ours se balance sur ses quatre pattes. Générées avec Artlist (GPT Image 2.5 en image à image, 11 planches « garde, A, B » à partir de la garde de chacun, deux versions par planche, 3 080 crédits) ; sources dans `logs/atelier/sources/<personnage>/dazed.png`.
+- `scripts/slice-poses.py` : postures `dazed-a` et `dazed-b` ; avec `--reference`, `--pieds` (chaque posture posée sur les pieds de la garde existante, par le recouvrement de leurs bandes basses), `--sol` et `--elargir=<px>` (toile plus large, même hauteur et même centre : la queue de Naraxes, le dos de Gorak).
+- Magnétoscope : le canal `daze` (« vacille »).
+- Tests : la règle M51 rejouée par le lecteur sur tout le corpus (`staging.test.ts`), les priorités et les deux images de chaque apparence (`modules.test.ts`), l'alternance sans tremblement (`screens.test.tsx`).
+
+### Modifié
+- Peur : le porteur vacille au lieu de trembler ; il tremble encore s'il n'a pas d'images de perte de contrôle.
+- Poids du jeu : +17 Mo de PNG (76 Mo pour les combattants).
+
 ## [0.119.0] — 2026-10-25
 
 Phase 8, lot 3 ([PROGRESSION.md](docs/PROGRESSION.md) § 1.20), demandé par l'utilisateur : « prépare les malus manquants de certaines familles ; essaie de faire tout sauf le dernier (les reliques plus tard dans le plan) ; essaie de faire les points avant ; génère les familles de son avec ElevenLabs, les icônes avec Artlist ; essaie de faire des familles de son qui ne soient pas toutes les mêmes ». Livré en son absence : choix de l'agent et du parent à juger en jeu. Aucun kit vanilla touché.

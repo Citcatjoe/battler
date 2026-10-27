@@ -299,6 +299,37 @@ describe('mise en scène', () => {
     expect(skips).toBeGreaterThan(10)
   })
 
+  it('perte de contrôle : il vacille tant qu’un statut lui fait perdre son action, puis pendant son tour perdu, jusqu’au passage de main (M51)', () => {
+    const control = (list: readonly Status[]) => list.some((s) => STATUSES[s.id].skipsAction)
+    let lost = 0
+    let recovered = 0
+    for (const { result, moments } of corpus) {
+      let view = initialView(result.fighters)
+      // Le tour dont « Tour perdu » est tombé, par camp
+      const told: (number | null)[] = [null, null]
+      for (const m of moments) {
+        const skips = m.beats.map((id) => result.beats[id]).filter((b) => b.type === 'skip')
+        for (const at of [...new Set(m.cues.map((c) => c.at))]) {
+          const cues = m.cues.filter((c) => c.at === at)
+          const was = view.dazed
+          for (const c of cues) view = applyCue(view, c, at)
+          for (const side of [0, 1] as const) {
+            if (skips.some((b) => b.side === side) && cues.some((c) => c.channel === 'float' && c.side === side && c.float.kind === 'badge' && c.float.badge.text === STATES.lostTurn.name)) {
+              told[side] = m.turn
+              expect(view.dazed[side], 'il vacille quand son tour tombe').toBe(true)
+              lost++
+            }
+            if (control(view.statuses[side])) expect(view.dazed[side], 'un statut de contrôle à l’écran').toBe(true)
+            else if (view.dazed[side]) expect(told[side], 'il vacille sans contrôle, hors de son tour perdu').toBe(m.turn)
+            else if (was[side] && told[side] !== null && told[side] !== m.turn) recovered++
+          }
+        }
+      }
+    }
+    expect(lost).toBeGreaterThan(10)
+    expect(recovered).toBeGreaterThan(10)
+  })
+
   it('rafales : les dés roulent ensemble (à plat pour la Furie instantanée), un coup rapide par dé', () => {
     let instant = 0
     let rolled = 0

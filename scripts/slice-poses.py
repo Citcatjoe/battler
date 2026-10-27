@@ -8,7 +8,7 @@ Exemple (deux planches de 1536×1024, deux cases chacune, la garde en première 
 
 - Chaque planche est une grille de cases de même taille, lues de gauche à droite puis de haut en bas,
   dans l'ordre des postures (identifiants de `src/game/poses.ts` : idle, attack, hurt, dodge, cast,
-  ko, victory ; `-` pour une case à ignorer).
+  ko, victory, et les deux images de la perte de contrôle, dazed-a et dazed-b ; `-` pour une case à ignorer).
 - **Chaque planche contient la garde (idle)** : elle sert de règle. Toutes les planches sont remises à
   l'échelle de la garde de la première planche, et calées sur ses pieds (bas et centre de sa silhouette).
   Une planche générée à une autre taille ou un autre cadrage retombe ainsi au bon endroit.
@@ -31,7 +31,17 @@ Exemple (deux planches de 1536×1024, deux cases chacune, la garde en première 
 - `--sol` : pose chaque posture sur la ligne de sol de la garde (son point le plus bas sur celui de la garde).
   Le générateur place la figure de chaque case un peu plus haut ou plus bas que la garde de sa planche ;
   sans cela, une posture flotte ou s'enfonce. `--sol=ko,hurt` ne pose que ces postures. À éviter pour une
-  posture qui doit descendre sous les pieds (massue au sol, queue) ou décoller (saut).
+  posture qui doit descendre sous les pieds (massue au sol, queue) ou décoller (saut). Vaut aussi avec
+  `--reference`.
+- `--pieds` (avec `--reference`) : cale chaque posture sur les pieds de la garde existante, et non sur la
+  silhouette entière de la garde de sa planche : dégrossi par le milieu de la bande basse de la posture (6 % de sa
+  hauteur), puis le décalage qui recouvre le mieux les pieds de la garde (`feet_shift`). Pour une posture qui ne doit
+  pas bouger les pieds (la perte de contrôle : le corps vacille au-dessus des pieds plantés), quand le générateur
+  décale la figure dans sa case.
+- `--elargir=<px>` (avec `--reference`) : les nouvelles postures ont une toile plus large de <px> de chaque côté
+  que la garde existante, même hauteur. Le jeu centre chaque image sur la colonne du combattant et lui donne la
+  hauteur de la toile : la figure reste exactement au même endroit, et une posture qui sortirait de la toile (la
+  queue de Naraxes qui vacille) n'est pas coupée. Les autres postures ne changent pas.
 - `--avant=<px>` : pour un personnage très large (l'ours à quatre pattes), allonge la toile à l'arrière de
   deux fois <px> : le jeu centrant la toile, la silhouette s'affiche <px> (en pixels de la toile) plus près
   de l'adversaire, et son arrière ne sort plus de l'écran. Suppose un personnage qui regarde à droite.
@@ -48,7 +58,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-POSES = {'idle', 'attack', 'hurt', 'dodge', 'cast', 'ko', 'victory'}
+POSES = {'idle', 'attack', 'hurt', 'dodge', 'cast', 'ko', 'victory', 'dazed-a', 'dazed-b'}
 # Marge autour de l'union des silhouettes, en px
 MARGIN = 8
 # Alpha minimal d'un pixel de silhouette
@@ -57,6 +67,15 @@ SOLID = 24
 
 def bbox(img: Image.Image):
     return img.getchannel('A').point(lambda v: 255 if v > SOLID else 0).getbbox()
+
+
+def foot_x(img: Image.Image) -> float:
+    """Milieu des pieds : abscisse moyenne des pixels pleins de la bande basse de la silhouette (6 % de sa hauteur)."""
+    alpha = np.asarray(img.getchannel('A')) > SOLID
+    rows = np.nonzero(alpha.any(axis=1))[0]
+    top, bottom = rows[0], rows[-1]
+    band = alpha[bottom - max(1, int((bottom - top) * 0.06)) : bottom + 1]
+    return float(np.nonzero(band)[1].mean())
 
 
 def keep_figure(fig: Image.Image) -> Image.Image:
@@ -218,22 +237,47 @@ def read_sheet(spec: str, background: bool, contours: bool = False) -> dict[str,
     return figures
 
 
-def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path):
-    """Postures nouvelles calées sur une garde déjà découpée, sur sa toile."""
+def feet_shift(ref: Image.Image, placed: Image.Image, band: float = 0.08, reach: int = 160) -> int:
+    """Décalage horizontal qui pose le mieux les pieds de `placed` sur ceux de la garde `ref` (même toile) : le plus grand
+    recouvrement de leurs bandes basses (8 % de la hauteur de la garde, au-dessus de son sol). Deux pieds pèsent plus
+    qu'une arme qui touche le sol, dont la place change d'une posture à l'autre ; à égalité, le plus petit décalage."""
+    rb = bbox(ref)
+    top = rb[3] - int((rb[3] - rb[1]) * band)
+    guard = np.asarray(ref.getchannel('A'))[top : rb[3] + 1] > SOLID
+    pose = np.pad(np.asarray(placed.getchannel('A'))[top : rb[3] + 1] > SOLID, ((0, 0), (reach, reach)))
+    width = guard.shape[1]
+    return max(range(-reach, reach + 1), key=lambda dx: ((pose[:, reach - dx : reach - dx + width] & guard).sum(), -abs(dx)))
+
+
+def add_to_reference(name: str, sheets: list, ref: Image.Image, target: Path, feet_only: bool = False, sol: set[str] | None = None):
+    """Postures nouvelles calées sur une garde déjà découpée, sur sa toile. `feet_only` (`--pieds`) : chaque posture
+    sur les pieds de la garde existante ; `sol` (`--sol`) : les postures dont le point le plus bas va sur son sol."""
     rb = bbox(ref)
     ref_h = rb[3] - rb[1]
-    ref_feet = ((rb[0] + rb[2]) / 2, rb[3])
+    ref_feet = (foot_x(ref) if feet_only else (rb[0] + rb[2]) / 2, rb[3])
     for sheet in sheets:
         g = bbox(sheet['idle'])
         scale = ref_h / (g[3] - g[1])
-        feet = ((g[0] + g[2]) / 2 * scale, g[3] * scale)
         print(f"planche : garde {g[3] - g[1]} px ramenée à {ref_h} px (×{scale:.3f})")
         for pose, fig in sheet.items():
             if pose == 'idle':
                 continue
+            b = bbox(fig)
+            feet = (
+                (foot_x(fig) if feet_only else (g[0] + g[2]) / 2) * scale,
+                (b[3] if sol is not None and (not sol or pose in sol) else g[3]) * scale,
+            )
             resized = fig.resize((round(fig.width * scale), round(fig.height * scale)), Image.LANCZOS)
+            at = (round(ref_feet[0] - feet[0]), round(ref_feet[1] - feet[1]))
             canvas = Image.new('RGBA', ref.size)
-            canvas.alpha_composite(resized, (round(ref_feet[0] - feet[0]), round(ref_feet[1] - feet[1])))
+            canvas.alpha_composite(resized, at)
+            if feet_only:
+                # Le milieu de la bande basse dégrossit ; les pieds se posent ensuite sur ceux de la garde
+                dx = feet_shift(ref, canvas)
+                if dx:
+                    canvas = Image.new('RGBA', ref.size)
+                    canvas.alpha_composite(resized, (at[0] + dx, at[1]))
+                    print(f'{pose:8} pieds sur ceux de la garde ({dx:+d} px)')
             # Ce qui sort de la toile est coupé : le signaler
             full = np.asarray(resized.getchannel('A')) > SOLID
             kept = np.asarray(canvas.getchannel('A')) > SOLID
@@ -265,7 +309,16 @@ def main():
     sheets = [read_sheet(spec, '--fond' in flags, '--contours' in flags) for spec in specs]
     reference = next((Path(a.split('=', 1)[1]) for a in flags if a.startswith('--reference=')), None)
     if reference:
-        add_to_reference(name, sheets, Image.open(reference).convert('RGBA'), target)
+        sol = next((a for a in flags if a == '--sol' or a.startswith('--sol=')), None)
+        poses = None if sol is None else set(sol.split('=', 1)[1].split(',')) if '=' in sol else set()
+        ref = Image.open(reference).convert('RGBA')
+        # --elargir=<px> : la toile des nouvelles postures déborde de <px> de chaque côté, même centre, même hauteur
+        pad = next((int(a.split('=', 1)[1]) for a in flags if a.startswith('--elargir=')), 0)
+        if pad:
+            wide = Image.new('RGBA', (ref.width + 2 * pad, ref.height))
+            wide.alpha_composite(ref, (pad, 0))
+            ref = wide
+        add_to_reference(name, sheets, ref, target, '--pieds' in flags, poses)
         return
 
     # Règle : la garde de la première planche. Chaque planche est mise à son échelle et calée sur ses pieds.

@@ -1,4 +1,4 @@
-import type { PoseId } from './poses'
+import type { SinglePoseId } from './poses'
 import type { CharacterEvent } from './events'
 import { forgedEvents, forgeState, type ForgeState, type ForgeStep } from './forge'
 import { withRelicStats, type Relic } from './relics'
@@ -67,9 +67,10 @@ export interface CharacterLook {
   /**
    * Postures (docs/POSTURES.md) : une image par moment du combat, sur la MÊME toile que `image`
    * (mêmes dimensions, même ligne de sol, même échelle), pour qu'en changer ne fasse pas sauter le
-   * personnage. Une posture absente retombe sur `image`, la garde.
+   * personnage. Une posture absente retombe sur `image`, la garde. La perte de contrôle (`dazed`) a deux images
+   * qui alternent ; leur toile peut être plus large que la garde, à hauteur et centre égaux (`slice-poses.py --elargir`).
    */
-  poses?: Partial<Record<Exclude<PoseId, 'idle'>, string>>
+  poses?: Partial<Record<SinglePoseId, string>> & { dazed?: readonly [string, string] }
 }
 
 /** Hauteur du personnage (des pieds au sommet de la tête), en part du conteneur d'un combattant. */

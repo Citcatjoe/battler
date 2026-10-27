@@ -401,6 +401,18 @@ describe('écrans', () => {
     expect(html.match(/<img[^>]*status-tremble/), 'tremblement sur l’image').toBeNull()
   })
 
+  it('perte de contrôle : ses deux images alternent, à la place du tremblement de la Peur ; un coup reçu les interrompt', () => {
+    const naraxes = createCharacter('naraxes')
+    const [a, b] = naraxes.look.poses!.dazed!
+    const html = renderToString(<Fighter character={naraxes} side={1} statuses={[{ id: 'fear', stacks: 1 }]} dazed />)
+    expect(html).toMatch(new RegExp(`<img[^>]*src="${a}"[^>]*daze-frame-a`))
+    expect(html).toMatch(new RegExp(`<img[^>]*src="${b}"[^>]*daze-frame-b`))
+    expect(html).not.toContain('status-tremble')
+    const hurt = renderToString(<Fighter character={naraxes} side={1} dazed received={{ key: 1, damage: 3, crit: false, dodged: false, landed: true }} />)
+    expect(hurt).toContain(naraxes.look.poses!.hurt!)
+    expect(hurt).not.toContain('daze-frame')
+  })
+
   it('une toile avec du vide sous les pieds est redescendue (voleuse)', () => {
     const naraxes = createCharacter('naraxes')
     expect(naraxes.look.footroom).toBeGreaterThan(0)

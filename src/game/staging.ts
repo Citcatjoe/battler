@@ -207,6 +207,11 @@ export type CueBody =
   | { channel: 'signal'; signal: Omit<SkillSignal, 'key'> }
   | { channel: 'scene'; scene: Omit<SceneFx, 'key'> }
   | { channel: 'form'; side: Side; form: number }
+  /**
+   * Perte de contrôle (M51) : `side` vacille (`on`) tant qu'il porte un statut qui lui fait perdre son action (Peur,
+   * Étourdi), puis pendant le tour qu'il perd, jusqu'au passage de main
+   */
+  | { channel: 'daze'; side: Side; on: boolean }
   /** Numéro du tour et camp dont c'est le tour (null : avant l'initiative, après le K.O.) */
   | { channel: 'turn'; turn: number; active: Side | null }
   | { channel: 'winner'; side: Side }
@@ -523,6 +528,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /** Étapes dont les statuts sont montrés avant leurs PV (la pièce, qui consomme son statut en partant, M26) */
   const shownEarly = new Set<number>()
   let settledUpTo = -1
+  /** Perte de contrôle à l'écran (M51), et le camp dont le tour perdu se joue */
+  let dazed: Pair<boolean> = [false, false]
+  let lostTurn: Side | null = null
+  let onScreen: Pair<Status[]> = [[], []]
 
   const begin = (ids: number[], turn: number, owner: Side) => {
     moment = { beats: ids, turn, owner, cues: [], duration: 0, rolls: [], spans: [] }
@@ -711,6 +720,20 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     if (text === shownStatuses) return
     shownStatuses = text
     emit({ channel: 'statuses', statuses: next })
+    showDaze(next)
+  }
+  /**
+   * Il vacille tant qu'un statut à l'écran lui fait perdre son action, puis pendant son tour perdu (M51) : la charge
+   * part avec « Tour perdu », mais il ne reprend ses esprits qu'au passage de main.
+   */
+  const showDaze = (statuses: Pair<Status[]>) => {
+    onScreen = statuses
+    for (const side of [0, 1] as const) {
+      const on = side === lostTurn || statuses[side].some((s) => STATUSES[s.id].skipsAction)
+      if (on === dazed[side]) continue
+      dazed = side === 0 ? [on, dazed[1]] : [dazed[0], on]
+      emit({ channel: 'daze', side, on })
+    }
   }
 
   /**
@@ -1492,7 +1515,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           [],
           () => {
             settle(beat)
+            lostTurn = beat.side
             showStatuses(beat.id)
+            showDaze(onScreen)
             log(skipLog(beat.turn, beat.side, beat.status, fighters))
           },
           { cue: 'stun', notes: [{ target: beat.side, text: STATES.lostTurn.name, tone: STATES.lostTurn.polarity, rises: false }] },
@@ -1579,6 +1604,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           }) as Pair<Status[]>
           shownStatuses = JSON.stringify(next)
           emit({ channel: 'statuses', statuses: next })
+          showDaze(next)
         } else showStatuses(beat.id)
         // Dans une rafale, la pièce prend la place de ses dés le temps de son jet ; ils reviennent ensuite, à plat, pour
         // le coup suivant (M26, M27)
@@ -1755,6 +1781,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       active = root.owner
       setDice({ ...IDLE_DICE, owner: active })
       emit({ channel: 'turn', turn: root.turn, active })
+      // Le tour perdu est fini : il reprend ses esprits avec le passage de main (M51)
+      lostTurn = null
+      showDaze(onScreen)
       hold('HANDOVER')
     } else emit({ channel: 'turn', turn: root.turn, active })
     for (const id of ids) {
