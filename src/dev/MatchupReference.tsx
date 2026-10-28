@@ -3,7 +3,7 @@ import { ARENAS, RANDOM_ARENA, type ArenaChoice } from '../game/arenas'
 import { createWallets, priceMatch } from '../game/betting'
 import type { Character } from '../game/character'
 import type { Pair } from '../game/combat'
-import { offerTargets, withForgeStep, type ForgeStep } from '../game/forge'
+import { forgeState, isAuraSkill, offerTargets, type ForgeBase, type ForgeStep } from '../game/forge'
 import { relationOf } from '../game/events'
 import { RELICS } from '../game/relics'
 import { createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
@@ -22,10 +22,17 @@ import { Stage } from '../components/Stage'
  */
 
 /** Une opération de forge voulue ; la compétence d'une gravure est la première du roster qui convient. */
-type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'copy'; face: number } | { op: 'temper' }
+type Plan = { op: 'engrave'; face: number } | { op: 'sharpen'; face: number } | { op: 'gild'; face: number } | { op: 'copy'; face: number }
 
-/** Compétences à graver, celles qui gardent le coup d'abord */
-const POOL = [...ENGRAVABLE_SKILLS].sort((a, b) => Number(relationOf(a) === 'replace') - Number(relationOf(b) === 'replace'))
+/** Compétences à graver, celles qui gardent le coup d'abord ; jamais une aura (la partie n'en grave pas) */
+const POOL = [...ENGRAVABLE_SKILLS].filter((e) => !isAuraSkill(e)).sort((a, b) => Number(relationOf(a) === 'replace') - Number(relationOf(b) === 'replace'))
+
+/** Le journal avec une opération de plus, vérifiée par le journal (une dorure reste possible ici : le boss en porte). */
+function append(base: ForgeBase, steps: readonly ForgeStep[], step: ForgeStep): ForgeStep[] {
+  const next = [...steps, step]
+  forgeState(base, next)
+  return next
+}
 
 /**
  * Le personnage forgé selon le plan, chaque opération vérifiée par la forge. Une compétence qui ne gagne rien à un rang
@@ -38,7 +45,7 @@ function forged(character: Character, plan: readonly Plan[]): Character {
     if (p.op === 'engrave') {
       const next = POOL.map((skill) => {
         try {
-          return withForgeStep(base, steps, { op: 'engrave', face: p.face, skill })
+          return append(base, steps, { op: 'engrave', face: p.face, skill })
         } catch {
           return null
         }
@@ -49,8 +56,8 @@ function forged(character: Character, plan: readonly Plan[]): Character {
       const targets = offerTargets(base, steps, { op: 'sharpen' })
       const face = targets.includes(p.face) ? p.face : targets[0]
       if (face === undefined) throw new Error(`${character.name} : aucune face à aiguiser`)
-      steps = withForgeStep(base, steps, { op: 'sharpen', face })
-    } else steps = withForgeStep(base, steps, p)
+      steps = append(base, steps, { op: 'sharpen', face })
+    } else steps = append(base, steps, p)
   }
   return character.withForge(steps)
 }
@@ -78,7 +85,7 @@ function buildCases(): Record<string, Case> {
     mode: 'tournament',
     fighters: [
       forged(gorak, [{ op: 'engrave', face: 5 }, { op: 'sharpen', face: 2 }]).withRelics(relics(3)),
-      forged(ervald, [{ op: 'copy', face: 1 }, { op: 'engrave', face: 4 }])
+      forged(ervald, [{ op: 'copy', face: 2 }, { op: 'engrave', face: 4 }])
         .withName('Ervald le Revenu')
         .withRelics(relics(3, 3)),
     ],
@@ -89,7 +96,7 @@ function buildCases(): Record<string, Case> {
   const limit: Case = {
     mode: 'tournament',
     fighters: [
-      forged(gorak, [{ op: 'temper' }, { op: 'gild', face: 6 }]),
+      forged(gorak, [{ op: 'gild', face: 6 }]),
       forged(ervald, [
         { op: 'engrave', face: 3 },
         { op: 'engrave', face: 4 },

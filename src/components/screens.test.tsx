@@ -619,7 +619,7 @@ describe('écrans', () => {
     expect(box.match(EMOJI)?.[0]).toBeUndefined()
     // Avec la saison, reliques et forge : la règle de construction, une récompense par match aux dix premiers
     const seasonBox = renderToString(<TournamentOptions {...options} season={{ ...season, enabled: true }} onClose={noop} />)
-    expect(seasonBox).toContain('Une récompense à chacun des 10 premiers matchs de chaque combattant, gagné ou perdu (4 forges du dé et 6 reliques)')
+    expect(seasonBox).toContain('Une récompense à chacun des 10 premiers matchs de chaque combattant, gagné ou perdu (5 forges du dé et 5 reliques)')
     expect(setup).not.toContain('de la saison</span>')
     const setupOff = renderToString(
       <TournamentSetupScreen slots={Array(SLOTS).fill(null)} onChange={noop} onValidate={noop} onBack={noop} betting={{ ...betting, enabled: false }} onBettingChange={noop} relics={false} onRelicsChange={noop} forge={false} onForgeChange={noop} uniqueNames onUniqueNamesChange={noop} season={{ ...season, enabled: true }} onSeasonChange={noop} />,
@@ -830,9 +830,9 @@ describe('écrans', () => {
 
   it('campagne : chaque étape se rend, avec un dé forgé', () => {
     const props = { heritage: {}, onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
-    // Un champion qui a déjà forgé : une gravure sur le 6, une copie, une dorure, et le boss en face
+    // Un champion qui a déjà forgé : une gravure sur le 6, une copie, un aiguisage, et le boss en face
     let run = startRun('gorak', 5, { kind: 'relic', relic: 'wolf-fang' })
-    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 1 }, { op: 'gild', face: 4 }] }
+    run = { ...run, forge: [{ op: 'engrave', face: 6, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')! }, { op: 'copy', face: 2 }, { op: 'sharpen', face: 6 }] }
     const encounters: Encounter[] = [
       { characterId: 'brokk', maxHp: 44, forge: [{ op: 'gild', face: 6 }], relics: ['wolf-fang'], chance: 0.8 },
       { characterId: 'ysolde', maxHp: 61, forge: [], relics: [], chance: 0.4 },
@@ -842,7 +842,7 @@ describe('écrans', () => {
     render(<CampaignScreen {...props} run={run} />)
     render(<CampaignScreen {...props} run={{ ...run, encounters }} />)
     render(<CampaignScreen {...props} run={{ ...run, wins: ACT_FIGHTS, encounters: [{ characterId: BOSS.id, maxHp: 90, forge: [], relics: [], boss: true, chance: 0.45 }] }} />)
-    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'gild' }, { op: 'temper' }, { op: 'copy' }], choice: { op: 'gild', face: 5 } }
+    const forge: PendingReward = { kind: 'forge', offer: [{ op: 'sharpen' }, { op: 'copy' }], choice: { op: 'sharpen', face: 1 } }
     const relic: PendingReward = { kind: 'relic', offer: ['felt-boots', 'wolf-fang'], choice: 'felt-boots' }
     for (const reward of [forge, relic]) render(<CampaignScreen {...props} run={{ ...run, wins: 2, reward }} />)
     for (const outcome of ['won', 'lost'] as const) render(<CampaignScreen {...props} run={{ ...run, outcome, gains: [{ kind: 'relic', relic: 'felt-boots' }] }} />)
@@ -890,5 +890,44 @@ describe('écrans', () => {
     expect(html).toContain('Reliques · déclenchements')
     expect(html.replace(/<!-- -->/g, '')).toContain('×3')
     expect(html.replace(/<!-- -->/g, '')).toContain('×4')
+  })
+
+  it('Rétribution (retour du 2026-10-28, A4) : le compteur de son sceau dit le nombre de coups, jamais les dégâts gardés', () => {
+    const aldric = createCharacter('aldric')
+    // L'écran rend son texte sans les commentaires de React, et le compteur est seul dans sa pastille
+    const count = (statuses: Parameters<typeof SkillBar>[0]['statuses']) =>
+      renderToString(<SkillBar character={aldric} side={0} statuses={statuses} />)
+        .replace(/<!-- -->/g, '')
+        .match(/rounded-full border bg-stone-950[^>]*>([^<]*)</)?.[1]
+    // 15 PV gardés en trois jauges : la moitié (7) en trois coups
+    expect(count([{ id: 'retribution', stacks: 15, slots: [8, 5, 2] }])).toBe('3')
+    // 2 PV en deux jauges : la moitié (1) en un seul coup
+    expect(count([{ id: 'retribution', stacks: 2, slots: [1, 1] }])).toBe('1')
+    // Rien gardé : le coup minimal (1 PV), un coup
+    expect(count([])).toBe('1')
+  })
+
+  it('Thaldrin en ours (retour du 2026-10-28) : l’aura de sa face 1 reste sur la face 1', () => {
+    const thaldrin = createCharacter('thaldrin')
+    for (const form of [0, 1]) {
+      const bar = renderToString(<SkillBar character={thaldrin} side={0} form={form} statuses={[]} />)
+      const first = bar.split('<li ')[1]
+      expect(first, `forme ${form}`).toContain('skill-bar-aura')
+      expect(first, `forme ${form}`).toContain('0:stormSky')
+      // Une seule fois dans la barre : elle ne se déplace pas en fin de barre
+      expect(bar.match(/data-signal="0:stormSky/g), `forme ${form}`).toHaveLength(1)
+    }
+  })
+
+  it('Médaille de sursis (retour du 2026-10-28, A15) : le porteur figé est désaturé, teinté de pierre ; le K.O. l’emporte', () => {
+    const naraxes = createCharacter('naraxes')
+    const stone = renderToString(<Fighter character={naraxes} side={0} stone />)
+    expect(stone).toContain('data-stone="true"')
+    expect(stone).toContain('is-stone')
+    expect(stone).toMatch(/grayscale\(0\.85\) sepia\(0\.35\)/)
+    const idle = renderToString(<Fighter character={naraxes} side={0} />)
+    expect(idle).not.toContain('data-stone')
+    expect(idle).toMatch(/grayscale\(0\) sepia\(0\)/)
+    expect(renderToString(<Fighter character={naraxes} side={0} stone state="ko" />)).not.toContain('data-stone')
   })
 })

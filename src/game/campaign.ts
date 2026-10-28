@@ -2,8 +2,8 @@ import { hashSeed } from './analysis'
 import { Character, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
-import { isOffered, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { drawReward, REWARDS, type PendingReward } from './offers'
+import { isAuraSkill, isOffered, OFFERED_OPS, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
+import { drawReward, forgesLeftIn, REWARDS, type PendingReward } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
 import { seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
@@ -14,7 +14,8 @@ import { sumTriggers, triggerCounts, type TriggerCounts } from './stats'
  * parmi trois, parti de sa signature et d'une seconde compétence (0.112.0), mène un acte de onze nœuds, dix combats
  * normaux puis le boss. Les combats restent automatiques ; le joueur choisit son adversaire à chaque nœud (deux
  * propositions, avec leur bande de danger), et chaque combat normal gagné rapporte une récompense, une relique ou une
- * forge du dé (`REWARDS`, offers.ts) : six reliques et quatre forges dans l'acte. Une défaite met fin à la partie ; la victoire
+ * forge du dé (`REWARDS`, offers.ts) : cinq reliques et cinq forges dans l'acte (six et quatre jusqu'au 2026-10-28). Une
+ * défaite met fin à la partie ; la victoire
  * contre le boss aussi. Toute partie qui a rapporté quelque chose laisse un héritage au même personnage
  * (docs/CAMPAGNE.md § 8).
  *
@@ -27,7 +28,7 @@ import { sumTriggers, triggerCounts, type TriggerCounts } from './stats'
 
 /**
  * Combats normaux d'un acte, avant le boss (règles v2, décision de l'utilisateur, docs/PROGRESSION.md § 11.2 : dix
- * combats, quatre forges et six reliques ; cinq de 0.89.0 à 0.103.0).
+ * combats ; cinq de 0.89.0 à 0.103.0). Leurs récompenses : `REWARDS`, offers.ts.
  */
 export const ACT_FIGHTS = 10
 
@@ -214,6 +215,13 @@ export function startRun(championId: string, seed: number, heritage?: HeritageIt
 /** Champions de référence simulés par réglage, et combats par champion et par essai de PV. */
 const REFERENCE_VARIANTS = 12
 const REFERENCE_FIGHTS = 8
+/**
+ * Le boss (retour du 2026-10-28, A16) : ses PV se règlent avec cinq fois plus de combats par champion de référence (le
+ * bruit du réglage passe d'environ ±5 à ±2 points, soit ±20 à 50 PV de moins), jusqu'à cinq fois ses PV de base (le triple
+ * laissait beaucoup de champions au-dessus des 45 % visés). Un seul nœud paie ce calcul.
+ */
+const BOSS_REFERENCE_FIGHTS = 40
+export const BOSS_HP_CEILING = 5
 /** Combats simulés pour estimer la chance du champion réel (bande de danger). */
 const DANGER_FIGHTS = 160
 
@@ -222,9 +230,17 @@ const DANGER_FIGHTS = 160
  * adversaire normal n'a jamais moins des trois quarts de ses PV de base (25 % à 0.111.0, 63 % en moyenne), quitte à
  * passer sous la courbe ; et il est construit avec `OPPONENT_LAG` récompenses de retard sur le champion, pour que ses PV
  * restent proches de sa base (88 % en moyenne). Mesures : docs/CAMPAGNE.md § 18.3. Le boss garde son plancher du quart.
+ * Retour du 2026-10-28 (A13, premiers combats durs) : aux deux premiers nœuds, presque tous les adversaires étaient au
+ * plancher, plus forts que la courbe ; leur plancher descend à `EARLY_HP_FLOOR` (environ 30 PV au plus bas), la courbe
+ * ne change pas.
  */
 export const HP_FLOOR = 0.75
+export const EARLY_HP_FLOOR = 0.65
+export const EARLY_NODES = 2
 export const OPPONENT_LAG = 3
+
+/** Le plancher des PV d'un adversaire normal au nœud `node` (0 : le premier combat) */
+export const hpFloorAt = (node: number) => (node < EARLY_NODES ? EARLY_HP_FLOOR : HP_FLOOR)
 
 /**
  * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
@@ -235,8 +251,8 @@ export function drawBuild(championId: string, node: number, rng: Rng, aura?: str
   const def = startDef(championId, aura)
   let forge: ForgeStep[] = []
   const relics: string[] = []
-  for (const kind of REWARDS.slice(0, node)) {
-    const reward = drawReward({ championId, aura, forge, relics }, kind, rng)
+  for (const [index, kind] of REWARDS.slice(0, node).entries()) {
+    const reward = drawReward({ championId, aura, forge, relics }, kind, rng, forgesLeftIn(REWARDS, index))
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
   }
@@ -271,14 +287,15 @@ function winShare(champions: readonly Character[], opponent: Character, fights: 
 /**
  * Les PV qui mettent les champions de référence au plus près de `target` contre cet adversaire (dichotomie : plus il a
  * de PV, moins ils gagnent ; mêmes graines à chaque essai). Entre `floor` de ses PV d'origine (le quart par défaut, le
- * boss ; `HP_FLOOR` pour un adversaire normal) et le triple.
+ * boss ; `hpFloorAt` pour un adversaire normal) et `ceiling` fois (le triple ; `BOSS_HP_CEILING` pour le boss), `fights`
+ * combats par champion de référence et par essai.
  */
-export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string, floor = 1 / 4): number {
+export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string, floor = 1 / 4, ceiling = 3, fights = REFERENCE_FIGHTS): number {
   // Ses PV d'origine, sans ceux de ses récompenses : `adjusted` règle la définition, les récompenses s'y rajoutent
   const base = opponent.baseStats.maxHp - opponent.rewardHp
-  const share = (hp: number) => winShare(references, opponent.adjusted({ stats: { maxHp: hp } }), REFERENCE_FIGHTS, key)
+  const share = (hp: number) => winShare(references, opponent.adjusted({ stats: { maxHp: hp } }), fights, key)
   let lo = Math.max(1, Math.ceil(base * floor))
-  let hi = base * 3
+  let hi = base * ceiling
   let atLo = share(lo)
   let atHi = share(hi)
   if (atLo <= target) return lo
@@ -307,7 +324,7 @@ export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) =>
  * Les rencontres du nœud en cours : deux adversaires du roster (jamais le champion, jamais le dernier adversaire),
  * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) : son
  * départ, puis les récompenses du nœud, `OPPONENT_LAG` de moins que le champion (`drawBuild`, 0.112.0) ; ses PV le
- * règlent ensuite sur la courbe, jamais sous `HP_FLOOR` de sa base, puis il est estimé contre le champion réel.
+ * règlent ensuite sur la courbe, jamais sous `hpFloorAt` de sa base, puis il est estimé contre le champion réel.
  */
 export function encountersFor(run: CampaignRun): Encounter[] {
   const node = run.wins
@@ -321,7 +338,9 @@ export function encountersFor(run: CampaignRun): Encounter[] {
     const key = `campagne:${run.seed}:${node}:${id}`
     const build = boss ? { forge: [], relics: [] } : drawBuild(id, Math.max(0, node - OPPONENT_LAG), seededRng(hashSeed(`${key}:construction`)))
     const opponent = opponentBase({ characterId: id, ...build })
-    const maxHp = boss ? tuneHp(references, opponent, BOSS_TARGET, key) : tuneHp(references, opponent, NORMAL_TARGETS[node], key, HP_FLOOR)
+    const maxHp = boss
+      ? tuneHp(references, opponent, BOSS_TARGET, key, 1 / 4, BOSS_HP_CEILING, BOSS_REFERENCE_FIGHTS)
+      : tuneHp(references, opponent, NORMAL_TARGETS[node], key, hpFloorAt(node))
     const encounter: Encounter = { characterId: id, maxHp, ...build, ...(boss && { boss: true as const }), chance: 0 }
     return { ...encounter, chance: winShare([champion], opponentOf(encounter), DANGER_FIGHTS, `${key}:danger`) }
   })
@@ -354,7 +373,7 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   const wins = run.wins + 1
   if (encounter.boss) return { ...next, wins, outcome: 'won' }
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
-  return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng) }
+  return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng, forgesLeftIn(REWARDS, wins - 1)) }
 }
 
 /** Déclenchements du champion sur toute la partie (écran de fin) : la somme de ses combats. */
@@ -431,39 +450,62 @@ function keptSteps(def: CharacterDef, steps: readonly ForgeStep[]): ForgeStep[] 
   return kept
 }
 
+/** Les rencontres enregistrées se reconstruisent-elles toutes (une opération retirée du jeu, Tremper l'arme, ne se rejoue plus) ? */
+function replays(encounters: readonly Encounter[]) {
+  try {
+    encounters.forEach(opponentBase)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
- * Relit une partie enregistrée. Une partie v5 dont l'aura est toujours une aura de départ se relit telle quelle ; une
- * partie v4, ou dont l'aura n'est plus proposée, part de l'aura par défaut : sa forge, ses gains et son héritage gardent
- * ce qui vaut encore sur ce dé (un aiguisage du 1 ou du 2 d'un dé qui a changé est retiré), l'offre en attente garde ses
- * opérations encore jouables (le choix du champion, s'il vaut encore), et les rencontres du nœud se recalculent.
+ * Relit une partie enregistrée. Une partie v4, ou dont l'aura n'est plus proposée, part de l'aura par défaut. Dans tous
+ * les cas, sa forge, ses gains et son héritage gardent ce qui se joue encore en partie sur ce dé (`withForgeStep`, une à
+ * une : un aiguisage du 1 ou du 2 d'un dé qui a changé, et depuis le retour du 2026-10-28 une aura gravée ou copiée,
+ * une copie de la face 1, une dorure, une trempe, un rang III sont retirés), l'offre en attente garde ses opérations
+ * encore offertes (le choix du champion, s'il vaut encore), et les rencontres du nœud se recalculent si la forge a
+ * changé ou si elles ne se reconstruisent plus.
  */
 function fromSaved(saved: SavedRun): CampaignRun {
-  if (saved.version === 5 && startAurasOf(saved.championId).includes(saved.aura)) return saved
-  const aura = startAurasOf(saved.championId)[0]
+  const current = saved.version === 5 && startAurasOf(saved.championId).includes(saved.aura)
+  const aura = current ? saved.aura : startAurasOf(saved.championId)[0]
   const def = startDef(saved.championId, aura)
   const forge = keptSteps(def, saved.forge)
-  const kept = new Set(forge.map(stepKey))
-  const valid = (step: ForgeStep) => kept.has(stepKey(step))
-  const { reward: old, encounters: _encounters, heritage, ...rest } = saved
+  // Les opérations gardées, comptées : un gain ou l'héritage en consomme une (deux aiguisages du même 6, dont le second
+  // dépasse le rang II, ne laissent qu'un gain)
+  const left = new Map<string, number>()
+  for (const step of forge) left.set(stepKey(step), (left.get(stepKey(step)) ?? 0) + 1)
+  const valid = (step: ForgeStep) => {
+    const n = left.get(stepKey(step)) ?? 0
+    if (n > 0) left.set(stepKey(step), n - 1)
+    return n > 0
+  }
+  const { reward: old, encounters, heritage, ...rest } = saved
   let reward: PendingReward | undefined
   if (old?.kind === 'relic') reward = old
   if (old?.kind === 'forge') {
     const taken = new Set([...def.events, ...forge.flatMap((s) => (s.op === 'engrave' ? [s.skill] : []))].map((e) => e.id))
     const offer = old.offer.flatMap((o): ForgeOffer[] => {
+      if (!OFFERED_OPS.includes(o.op)) return []
       if (o.op !== 'engrave') return [o]
-      const skills = ('skill' in o ? [o.skill] : o.skills).filter((s) => !taken.has(s.id))
+      const skills = ('skill' in o ? [o.skill] : o.skills).filter((s) => !taken.has(s.id) && !isAuraSkill(s))
       return skills.length ? [{ op: 'engrave', skills }] : []
     })
     const choice = old.choice && isOffered(offer, old.choice) && keptSteps(def, [...forge, old.choice]).length > forge.length ? old.choice : undefined
     reward = { kind: 'forge', offer, ...(choice && { choice }) }
   }
+  const keepEncounters = current && forge.length === saved.forge.length && encounters && replays(encounters)
+  const keptHeritage = heritage && (heritage.kind === 'relic' || valid(heritage.step))
   return {
     ...rest,
     version: 5,
     aura,
-    ...(heritage && (heritage.kind === 'relic' || valid(heritage.step)) && { heritage }),
+    ...(keptHeritage && { heritage }),
     forge,
     gains: saved.gains.filter((g) => g.kind === 'relic' || valid(g.step)),
+    ...(keepEncounters && { encounters }),
     ...(reward && { reward }),
   }
 }

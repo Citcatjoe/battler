@@ -980,7 +980,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 19 | `wind-fury` | Furie des vents (orc) | Tourbillon de vent avec deux lames |
 | 20 | `evasion` | Esquive améliorée (elfe) | Plume prise dans une rafale |
 | 21 | `precision-aura` | Aura de précision (elfe) | Tête d'aigle dorée, halo or pâle |
-| 22 | `frost-aura` | Aura glaciale (Ervald, v8 ; remplace `poison-aura`, l'encensoir vert de l'ancienne Aura de poison) | Le même encensoir de bronze, givré, stalactites, brume bleu glacé, gouttes de poison prises dans la glace |
+| 22 | `frost-aura` | Aura de poison (Ervald ; Aura glaciale de la v8 au 2026-10-28, renommée : le fichier garde son nom ; **repeinte en v30**) | L'encensoir de bronze d'Ervald, sans givre, d'où monte une fumée vert toxique qui forme des gouttes ; halo vert toxique, distinct de l'Aura de décoction (givré, brume bleu glacé jusqu'en v29) |
 | 23 | `power-aura` | Aura de puissance (orc) | Gantelet serré, halo rouge orangé |
 | 24 | `intimidation-aura` | Aura d'intimidation (nain) | Masque de guerre cornu, yeux rouges |
 | 25 | `holy-aura` | Aura de sainteté (prêtresse) | Disque solaire doré, gemme bleue, halo ivoire |
@@ -1057,7 +1057,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 112 | `forge-bellows` | Soufflet de forge (relique, v19) | Petit soufflet à deux planchettes de chêne et cuir plissé, pendu à une lanière, trois clous de laiton (le +3), une lueur de braise au fond du bec |
 | 113 | `pavise-nails` | Clous de pavois (relique, v19) | Éclat de planche de pavois peint où restent plantés trois gros clous forgés (les 3 dégâts), un fil de fer tordu pour attache, reflet bleu-gris |
 | 114 | `talion-gauntlet` | Gantelet du talion (relique, v19) | Manchette de gantelet de fer rivetée, courroie de cuir bouclée, une seule pointe rabattue (le +1), lueur dorée dans les rivets |
-| 115 | `holed-coin` | Pièce trouée (relique, v19) | Vieille pièce de cuivre percée, sur un cordon de cuir noué, face « pile » frappée de deux petites étoiles (les deux jets), lueur violette dans le trou ; ni dé, ni la pièce de Pile ou face |
+| 115 | `holed-coin` | Trèfle de fer (relique, porte-bonheur ; Pièce trouée de la v19 au 2026-10-28, **repeinte en v30**) | Trèfle à quatre feuilles forgé dans le fer, feuilles émaillées vert émeraude, deux petites étoiles d'or gravées au cœur (les 2 coups de chance), pendu à un cordon rouge noué ; découpé, sans disque, ni pièce (jusqu'en v29 : pièce de cuivre percée sur un cordon) |
 | 116 | `duo` | Duo (compétence de la barde et son statut, v20, 2026-10-25) | Deux dés d'ivoire qui roulent côte à côte sur une portée de musique, dans un halo mauve de l'Aura mélodieuse |
 | 117 | `wasp-sting` | Dard de guêpe (relique de source, v21, 2026-10-25) | Dard de guêpe séché serti dans un capuchon de laiton, deux gouttes de venin (les 2 Poison) |
 | 118 | `tinder-box` | Briquet d'amadou (relique de source, v21) | Boîte à briquet de fer, son silex et son battant, deux braises dans l'amadou (les 2 Brûlure) |
@@ -1080,7 +1080,7 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 | 135 | `stunning-blow` | Coup de massue (compétence, v24) | Heaume cabossé et fendu, étoiles d'or de l'étourdissement, éclats de pierre |
 | 136 | `reprieve-medal` | Médaille de sursis (relique, v25, 2026-10-27) | Médaille d'argent bleuté sur un ruban de soie bleu roi délavé, une seule entaille en plein centre, arrêtée net, lueur blanche froide dans la fente |
 | 137 | `vanguard-horn` | Cor d'avant-garde (relique, v25) | Petit cor de corne ivoire cerclé de cuivre vert-de-gris, lanière de cuir rouge sang, une bague gravée |
-| 138 | `weighted-coin` | Pièce lestée (relique, v25) | Pièce d'argent rognée, grain de plomb serti sur une face, l'autre polie ; fil d'émail turquoise ; un quart du bord limé |
+| 138 | `weighted-coin` | Patte de lièvre (relique, porte-bonheur ; Pièce lestée de la v25 au 2026-10-28, **repeinte en v30**) | Patte de lièvre séchée, fourrure gris perle et blanc de neige, bague de laiton poli au poignet, ruban turquoise noué qui pend ; ni pièce, ni disque, ni dé (jusqu'en v29 : pièce d'argent rognée lestée de plomb) |
 | 139 | `lucky-streak` | Veine (aura, Chance, v26, 2026-10-27) | Dé de verre bleu ciel qui roule face 6, points d'or, l'ombre d'un second dé qui rebondit |
 | 140 | `dread` | Effroi (aura, Ombre, v26) | Crâne de corbeau noir au-dessus d'une étincelle de critique, brume grise des orbites |
 | 141 | `rancor` | Rancœur (aura, Représailles, v26) | Enclume de fer noir fendue frappée par une lame, étincelles qui montent en flamme cuivrée |
@@ -1354,6 +1354,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v30 | 2026-10-28 | 22, 115, 138 | Le retour du 2026-10-28 : les deux porte-bonheur (« pas des pièces ») et l'Aura de poison (A3). Artlist, GPT Image 2.5, 160 crédits ; planche 2×2, **la version A retenue** : `weighted-coin` repeinte en Patte de lièvre, `holed-coin` en Trèfle de fer, `frost-aura` en encensoir à fumée verte. Mêmes ids et noms de fichiers. Non vues dans un écran du jeu. |
 | v29 | 2026-10-27 | 100, 161 à 173 | La quatrième demande : les treize briques du contenu des maîtrises et du soin (Élan, Surtension, Emprise, Larcin, Onde de choc ; Dîme, Flamme votive, Sangsue, Serment de sang, Odeur du sang, Peau de crapaud, Pièce vert-de-gris, Morsure), et la Plume d'aigle repeinte à quatre barbes arrachées (recharge 4 tours). Artlist, GPT Image 2.5, 160 crédits, 14 icônes ; **la version damier retenue**. Les icônes provisoires (`sentence`, `burn`, `lifesteal`, `decoction-aura`, `cursed-coin`, `virulence`) sont retirées de ces briques ; `tithed` et `votive` empruntent l'icône de leur compétence. Planche de contrôle regardée (128 px) ; non vues dans un écran du jeu. |
 | v28 | 2026-10-27 | reliques d'avant la 0.121.0 | **Recoloration** (B14, demande de l'utilisateur : des reliques plus colorées, comme les nouvelles, couleurs plus intenses et variées). Artlist, GPT Image 2.5, 320 crédits ; deux planches 4×4 en image-à-image, depuis une mosaïque des anciennes icônes, la planche v25 en cible de couleur ; **la version A retenue** : 29 icônes repeintes (`caged-ember` prise dans la version B, restée rouge). `venom-vial` gardée telle quelle (déjà verte). Mêmes identifiants, mêmes motifs. Emblèmes : `mastery-storm` renommé `mastery-magic`, `mastery-hunt`, `mastery-retaliation` et `mastery-song` retirés (0.122.0, huit maîtrises). Non vues dans un écran du jeu. |
 | v27 | 2026-10-27 | 150 à 160 | Les onze emblèmes de maîtrise (grammaire nouvelle, ci-dessus). Artlist, GPT Image 2.5 ; planche 4×4 (cinq cases vides), deux versions générées, **la version B retenue**. Découpe par `scripts/slice-icons.py`. Vus dans le compendium (onglet Maîtrises) et à l'affrontement (captures Firefox). |

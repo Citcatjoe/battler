@@ -21,7 +21,9 @@ import {
   ONRUSH_FERVOR,
   CONFLAGRATION_TIMES,
   FAITH_SHIELD_ARMOR,
+  givesJets,
   isMechanic,
+  isStealable,
   OPEN_WOUND_BLEED,
   RAMPART_ARMOR,
   RAMPART_THORNS,
@@ -37,6 +39,23 @@ import {
 } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
+
+/**
+ * L'étape `j` a lieu pendant un dé de plus de `side` (retour du 2026-10-28, A7) : un jet de rafale de Coup de chance ou de
+ * Duo, après le dé de l'action (le premier jet de la rafale). Lu en remontant les causes jusqu'au jet.
+ */
+function inExtraJet(r: CombatResult, j: number, side: number): boolean {
+  for (let k: number | undefined = j; k !== undefined; k = r.beats[k].cause) {
+    const x = r.beats[k]
+    if (x.type !== 'attack' && x.type !== 'roll') continue
+    const opener = x.type === 'attack' && x.cause !== undefined && r.beats[x.cause].type === 'roll' ? x.cause : k
+    const v = r.beats[opener].cause
+    const volley = v !== undefined ? r.beats[v] : undefined
+    if (volley?.type !== 'flurry' || volley.side !== side || STATUSES[volley.status].instantStrikes) return false
+    return r.beats.slice(v! + 1, opener).some((y) => (y.type === 'roll' || y.type === 'attack') && y.cause === v)
+  }
+  return false
+}
 
 /** Le coup que porte une étape : une attaque, ou un renvoi (C1 : la Riposte, une jauge de la Rétribution) */
 const strikeIn = (b: Beat | undefined): Attack | undefined => (b?.type === 'attack' ? b.attack : b?.type === 'statusReaction' ? b.strike : undefined)
@@ -186,11 +205,14 @@ export function createAudit() {
       if (drained) {
         const was = before(drained)
         const heal = drained.effects[0]
-        // Aiguisé (0.110.0) : son intensité s'ajoute aux PV rendus
+        // Aiguisé (0.110.0) : son intensité s'ajoute aux PV rendus. Les PV que le coup a vraiment retirés, pas l'excès
+        // compté au-delà (un adversaire gardé à 1 PV par sursis ; 2026-10-28, A5)
         const more = find(was.statuses[striker], 'lifesteal')?.power ?? 0
+        const removed = stateBefore(i).hp[target] - s.hp[target]
+        if (removed < dealt) see('vol de vie : excès non rendu')
         // Hémorragie (lot 3) : le soin passe par les filtres du soigné (0 chez un porteur)
-        const wanted = healingOf(dealt + more, was.statuses[striker])
-        if (heal?.type !== 'heal' || heal.amount !== Math.min(wanted, r.fighters[striker].maxHp - was.hp[striker])) flag('vol de vie : montant faux', r, i, `${JSON.stringify(heal)} vs dealt ${dealt}`)
+        const wanted = healingOf(removed + more, was.statuses[striker])
+        if (heal?.type !== 'heal' || heal.amount !== Math.min(wanted, r.fighters[striker].maxHp - was.hp[striker])) flag('vol de vie : montant faux', r, i, `${JSON.stringify(heal)} vs retirés ${removed}`)
         if ((find(drained.state.statuses[striker], 'lifesteal')?.stacks ?? 0) !== (find(was.statuses[striker], 'lifesteal')?.stacks ?? 0) - 1) flag('vol de vie non consommé', r, i, '')
         see(coin ? 'pile : vol de vie' : 'vol de vie')
       }
@@ -230,7 +252,8 @@ export function createAudit() {
       if (grudged) {
         const was = before(grudged)
         const crit = grudged.effects[0]
-        if (grudged.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== target || crit.stacks !== 1)
+        // Un Sceau de vol (Confiscation) détourne le Critique assuré vers l'adversaire (`stolenBy`)
+        if (grudged.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== (crit.stolenBy ? 1 - target : target) || crit.stacks !== 1)
           flag('rancune : effet faux', r, i, JSON.stringify(grudged.effects))
         if ((find(grudged.state.statuses[target], 'grudge')?.stacks ?? 0) !== (find(was.statuses[target], 'grudge')?.stacks ?? 0) - 1) flag('rancune non estompée', r, i, '')
         see(coin ? 'pile : rancune' : 'rancune')
@@ -288,10 +311,11 @@ export function createAudit() {
         for (const e of beatEffects(b)) if (e.target === side) delta += e.type === 'heal' ? e.amount : e.type === 'damage' ? -e.amount : 0
         if (b.type === 'attack' && b.attack.attacker !== side) delta -= b.attack.dealt
         // Dégâts comptés en entier (overkill) : les PV, eux, s'arrêtent à 0 ; à 1 si une Médaille de sursis le garde (son
-        // étape suit celle-ci, 2026-10-27)
+        // étape suit celle-ci, 2026-10-27), ou s'il est figé par elle jusqu'à la fin du tour (`stone`, 2026-10-28, A15)
         const next = r.beats[i + 1]
         const spared =
-          next?.type === 'relic' && next.cause === i && next.side === side && r.fighters[side].relics.some((x) => x.id === next.relic && x.trigger?.type === 'lethal')
+          (next?.type === 'relic' && next.cause === i && next.side === side && r.fighters[side].relics.some((x) => x.id === next.relic && x.trigger?.type === 'lethal')) ||
+          !!s.stone?.[side]
         if (s.hp[side] !== Math.max(spared ? 1 : 0, prev.hp[side] + delta)) flag('PV inexpliqués', r, i, `${b.type} côté ${side} : ${prev.hp[side]} → ${s.hp[side]}, attendu ${delta}`)
         if (s.hp[side] < 0 || s.hp[side] > r.fighters[side].maxHp) flag('PV hors bornes', r, i, `${s.hp[side]}`)
         const ids = s.statuses[side].map((x) => x.id)
@@ -480,8 +504,8 @@ export function createAudit() {
         const held = find(prev.statuses[b.side], 'vendetta')
         const fervor = b.effects[0]
         if (b.trigger !== 'reflected' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'reflected')) flag('vindicte hors d’un renvoi', r, i, `${b.trigger}`)
-        // Un Sceau de vol (Confiscation) détourne une charge de la Ferveur vers l'adversaire (`stolenBy`), le reste gardé (`kept`)
-        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side) || fervor.stacks + (fervor.kept ?? 0) !== VENDETTA_MOMENTUM * charges(held))
+        // Un Sceau de vol (Confiscation) détourne la Ferveur vers l'adversaire, entière (`stolenBy`)
+        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side) || fervor.stacks !== VENDETTA_MOMENTUM * charges(held))
           flag('vindicte : ferveur fausse', r, i, JSON.stringify(b.effects))
         else see('vindicte')
       }
@@ -627,28 +651,26 @@ export function createAudit() {
         const blow = strikeIn(b.cause !== undefined ? r.beats[b.cause] : undefined)
         const fervor = b.effects[0]
         if (b.trigger !== 'heavy' || !blow || blow.attacker !== b.side || blow.dodged || !(blow.crit || (blow.multiplier ?? 1) >= 2)) flag('élan hors d’un gros coup', r, i, `${b.trigger}`)
-        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.stacks + (fervor.kept ?? 0) !== ONRUSH_FERVOR || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side))
+        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.stacks !== ONRUSH_FERVOR || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side))
           flag('élan : ferveur fausse', r, i, JSON.stringify(b.effects))
         else see('élan')
       }
-      // Larcin : à chaque esquive, une charge du dernier bonus de l'attaquant passe au porteur, marquée volée ; le volé garde
-      // les autres (règle commune des vols, quatrième demande du 2026-10-27) ; sans bonus à prendre (après le coup esquivé,
-      // qui a pu dépenser un Critique assuré), il ne part pas
+      // Larcin : à chaque esquive, le dernier bonus volable de l'attaquant (`isStealable` : ni aura ni mécanisme) passe au
+      // porteur, entier, marqué volé ; le volé n'en garde rien (un vrai vol, retour du 2026-10-28, A6) ; sans bonus à prendre
+      // (après le coup esquivé, qui a pu dépenser un Critique assuré), il ne part pas
       if (b.type === 'statusReaction' && b.status === 'pilfer') {
         const blow = strikeIn(b.cause !== undefined ? r.beats[b.cause] : undefined)
-        const bonuses = prev.statuses[1 - b.side].filter((x) => STATUSES[x.id].polarity === 'positive' && !isMechanic(x.id))
-        const last = bonuses.at(-1)
+        const last = prev.statuses[1 - b.side].filter((x) => isStealable(x.id)).at(-1)
         const [purge, taken] = b.effects
         if (b.trigger !== 'dodge' || !blow || blow.attacker !== 1 - b.side || !blow.dodged) flag('larcin hors d’une esquive', r, i, `${b.trigger}`)
         else if (purge?.type !== 'cleanse' || purge.target !== 1 - b.side || !last || purge.removed.length !== 1 || purge.removed[0] !== last.id)
           flag('larcin : bonus pris faux', r, i, JSON.stringify(b.effects))
-        else if (taken?.type !== 'applyStatus' || taken.status !== last.id || taken.target !== (taken.stolenBy === 'sealTheft' ? 1 - b.side : b.side) || !taken.stolenBy || taken.stacks !== Math.min(1, last.stacks))
+        else if (taken?.type !== 'applyStatus' || taken.status !== last.id || taken.target !== (taken.stolenBy === 'sealTheft' ? 1 - b.side : b.side) || !taken.stolenBy || taken.stacks !== last.stacks)
           flag('larcin : bonus non reçu', r, i, JSON.stringify(b.effects))
-        else if (taken.stolenBy !== 'sealTheft' && (find(s.statuses[1 - b.side], last.id)?.stacks ?? 0) !== last.stacks - 1)
-          flag('larcin : plus d’une charge prise', r, i, `${last.id} ×${last.stacks}`)
+        else if (taken.stolenBy !== 'sealTheft' && find(s.statuses[1 - b.side], last.id)) flag('larcin : le volé garde le bonus', r, i, `${last.id} ×${last.stacks}`)
         else {
           see('larcin : bonus pris')
-          if (last.stacks > 1) see('larcin : une charge prise, le reste laissé')
+          if (last.stacks > 1) see('larcin : bonus de plusieurs charges pris entier')
         }
       }
       // Une action perdue (Peur, Étourdi) : le porteur détenait le statut de contrôle, en perd une charge, et ne frappe pas
@@ -681,7 +703,8 @@ export function createAudit() {
           [touch, 'ballad'],
           [hurt, 'rancor'],
           [hurt, 'stormField'],
-          [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed, 'luckyStreak'],
+          // La Veine ne donne pas de jets sur un dé de plus (A7, 2026-10-28)
+          [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed && !inExtraJet(r, i, side), 'luckyStreak'],
           [opensMoment(r, i, side, 'shieldBroken'), 'stoneFist'],
           // Quatrième demande du 2026-10-27 : la Dîme et la Peau de crapaud à chaque coup reçu, la Sangsue (sur une plaie)
           [hurt, 'tithe'],
@@ -690,7 +713,7 @@ export function createAudit() {
           // Le contenu des maîtrises : l'Élan à chaque gros coup (critique, coup ×2 et plus), le Larcin à chaque esquive
           [touch && !!blow && (blow.crit || (blow.multiplier ?? 1) >= 2), 'onrush'],
           [
-            !!blow && blow.attacker === 1 - side && blow.dodged && !blow.blindedBy && !blow.replaced && s.statuses[1 - side].some((x) => STATUSES[x.id].polarity === 'positive' && !isMechanic(x.id)),
+            !!blow && blow.attacker === 1 - side && blow.dodged && !blow.blindedBy && !blow.replaced && s.statuses[1 - side].some((x) => isStealable(x.id)),
             'pilfer',
           ],
         ]
@@ -720,25 +743,24 @@ export function createAudit() {
         if (e.amount > 0) flag('hémorragie : soin reçu', r, i, `${e.amount} côté ${e.target}`)
         else if (e.wanted !== undefined) see('hémorragie')
       }
-      // Sceau de vol : chaque bonus que le porteur se pose (hors mécanisme), tant qu'il lui reste une charge, va à
-      // l'adversaire ; un vol ne prend qu'un bonus, au porteur d'une charge, et une charge de ce bonus (quatrième demande du
-      // 2026-10-27) : le lanceur garde les autres (`kept`)
+      // Sceau de vol : chaque bonus volable que le porteur se pose (`isStealable` : ni aura ni mécanisme), tant qu'il lui reste
+      // une charge, va à l'adversaire, entier : le lanceur n'en garde rien (un vrai vol, retour du 2026-10-28, A6)
       {
         const owner = b.type === 'event' ? b.event.side : 'side' in b ? b.side : undefined
         let left = owner === undefined ? 0 : (find(prev.statuses[owner], 'sealTheft')?.stacks ?? 0)
-        for (const e of owner === undefined ? [] : beatEffects(b)) {
+        const effects = owner === undefined ? [] : beatEffects(b)
+        for (const e of effects) {
           if (e.type !== 'applyStatus') continue
-          const stealable = STATUSES[e.status].polarity === 'positive' && !isMechanic(e.status)
           if (e.stolenBy !== undefined && e.stolenBy !== 'sealTheft') continue
           if (e.stolenBy !== undefined) {
-            if (left <= 0 || !stealable || e.target === owner) flag('sceau de vol : vol faux', r, i, `${e.status} vers ${e.target}, ${left} charge(s)`)
-            else if (e.stacks > 1 || (e.kept !== undefined && e.kept < 1)) flag('sceau de vol : plus d’une charge prise', r, i, `${e.status} ×${e.stacks}`)
-            else {
-              see('sceau de vol')
-              if (e.kept) see('sceau de vol : une charge prise, le reste gardé')
-            }
+            const posedToo = effects.some((x) => x !== e && x.type === 'applyStatus' && x.status === e.status && x.target === owner && x.result.kind === 'applied')
+            if (left <= 0 || !isStealable(e.status) || e.target === owner) flag('sceau de vol : vol faux', r, i, `${e.status} vers ${e.target}, ${left} charge(s)`)
+            else if (!posedToo && (find(s.statuses[owner!], e.status)?.stacks ?? 0) > (find(prev.statuses[owner!], e.status)?.stacks ?? 0))
+              flag('sceau de vol : le lanceur garde une part', r, i, `${e.status} ×${e.stacks}`)
+            else see('sceau de vol')
             left--
-          } else if (e.target === owner && stealable && left > 0) flag('sceau de vol : bonus gardé', r, i, `${e.status} côté ${owner}`)
+          } else if (e.target === owner && isStealable(e.status) && left > 0) flag('sceau de vol : bonus gardé', r, i, `${e.status} côté ${owner}`)
+          else if (e.target === owner && e.result.kind === 'applied' && STATUSES[e.status].polarity === 'positive' && left > 0) see('sceau de vol : une aura ou un mécanisme ne se volent pas')
         }
         // Une charge par vol : le porteur en garde autant qu'au début de l'étape, moins ses vols (sauf une purge)
         const held = owner === undefined ? 0 : (find(prev.statuses[owner], 'sealTheft')?.stacks ?? 0)
@@ -944,6 +966,10 @@ export function createAudit() {
         // l'étape d'avant) : une condition fausse laisse sa face nue (0.114.0, la Curée sans Saignement), comme une
         // compétence épuisée. Celle qui modifie le coup lit la sienne dans les fenêtres du coup
         const decided = rolled ? r.beats[b.cause!].state : prev
+        // Un dé de plus (A7, 2026-10-28 : un jet de rafale de Coup de chance ou de Duo, après le dé de l'action) ne lance pas
+        // une compétence qui ne donne que des jets de plus : sa face est nue
+        const extraJet = inExtraJet(r, i, att)
+        const onlyJets = (e: CharacterEvent) => e.effects.length > 0 && e.effects.every((x) => x.type === 'applyStatus' && x.target !== 'opponent' && givesJets(x.status))
         const faceReady = a.plain
           ? []
           : r.fighters[att].events.filter(
@@ -952,8 +978,10 @@ export function createAudit() {
                 inForm(att, e) &&
                 rollMatches(e.trigger, a.roll, DIE_FACES) &&
                 (e.limit === undefined || firedBefore(e.id) < e.limit) &&
+                !(extraJet && onlyJets(e)) &&
                 (relationOf(e) === 'modify' || !e.when || e.when.every((c) => holdsBefore(c, att, decided, r, b.turn))),
             )
+        if (extraJet && r.fighters[att].events.some((e) => isRollTrigger(e.trigger) && rollMatches(e.trigger, a.roll, DIE_FACES) && onlyJets(e))) see('dé de plus : face de jets nue')
         // Malchance (lot 3) : un jet tombé à vide ne porte aucune compétence de sa face
         const faceSkills = a.jinxed ? [] : faceReady
         const replaces = faceSkills.some((e) => relationOf(e) === 'replace')
@@ -961,16 +989,19 @@ export function createAudit() {
         if (a.replaced !== replaces) flag('jet remplacé incohérent', r, i, `roll ${a.roll}`)
         if (!a.jinxed && grafts !== rolled) flag('jet greffé incohérent', r, i, `roll ${a.roll}`)
         // Malchance : le jet tombé à vide suit son étape roll (`jinxedBy`), chez un porteur du statut qui en perd une charge, sur
-        // une face qui portait une compétence prête ; un jet non imposé sur une telle face, chez un porteur, tombe à vide
+        // une face qui portait une compétence prête ; un jet non imposé sur une telle face, chez un porteur, tombe à vide. Une
+        // compétence qui modifie le coup y compte si sa condition tient au jet (une Morsure contre un adversaire sain laisse
+        // la face nue, comme le moteur la lit)
+        const jinxable = faceReady.filter((e) => relationOf(e) !== 'modify' || !e.when || e.when.every((c) => holdsBefore(c, att, decided, r, b.turn)))
         const atRoll = rolled ? stateBefore(b.cause!) : prev
         const jinx = find(atRoll.statuses[att], 'jinx')
         if (a.jinxed) {
           const roll = rolled ? r.beats[b.cause!] : undefined
           const left = find(prev.statuses[att], 'jinx')?.stacks ?? 0
-          if (roll?.type !== 'roll' || roll.jinxedBy !== 'jinx' || !jinx || left !== jinx.stacks - 1 || faceReady.length === 0 || a.value !== 0 || a.damage !== 0)
+          if (roll?.type !== 'roll' || roll.jinxedBy !== 'jinx' || !jinx || left !== jinx.stacks - 1 || jinxable.length === 0 || a.value !== 0 || a.damage !== 0)
             flag('malchance : jet faux', r, i, `roll ${a.roll}`)
           else see('malchance')
-        } else if (jinx && !a.forced && !a.plain && faceReady.length > 0) flag('malchance non déclenchée', r, i, `roll ${a.roll}`)
+        } else if (jinx && !a.forced && !a.plain && jinxable.length > 0) flag('malchance non déclenchée', r, i, `roll ${a.roll}`)
         // Ce coup ×N (Crescendo, Soliste, phase 5 ter) : le produit des multiplicateurs des compétences de sa face qui le
         // modifient et dont la condition tient au jet (Morsure, 2026-10-27 : si l'adversaire est empoisonné) ; Crescendo
         // (`buildsUp`, 0.107.0) gagne ×1 par déclenchement déjà vu dans ce combat
@@ -1068,20 +1099,25 @@ export function createAudit() {
         // Duo est posé par sa face d'une action passée : sa rafale suit l'action qui l'a posé (2026-10-25)
         if (!def.instantStrikes && def.strikeCharges === 'all') {
           const held = find(prev.statuses[b.side], b.status)?.stacks ?? 0
-          // Au plus MAX_EXTRA_JETS jets de plus par action (retour du 2026-10-27) ; toutes les charges partent
+          // Au plus MAX_EXTRA_JETS jets de plus par action (retour du 2026-10-28, A7) ; toutes les charges partent
           if (!held || b.strikes !== 1 + Math.min(MAX_EXTRA_JETS, def.extraStrikes! * held) || find(s.statuses[b.side], b.status)) flag('jets de plus : charges mal dépensées', r, i, `${held} charges, ${b.strikes} jets`)
           else if (def.extraStrikes! * held > MAX_EXTRA_JETS) see('jets de plus au plafond')
+          // Un dé de plus ne donne jamais de dé de plus (A7) : à partir du deuxième jet de la rafale, rien ne donne de jets
+          // de plus à son lanceur (un bonus volé par un Larcin, si : c'est un vol, pas un jet)
+          const second = strikes[1]
+          if (second) {
+            const from = second.cause !== undefined && r.beats[second.cause].type === 'roll' ? second.cause : second.id
+            const after = r.beats.slice(from).filter((x) => x.turn === b.turn && x.phase === 'action')
+            const chained = after.some((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.target === b.side && givesJets(e.status) && !e.stolenBy))
+            if (chained) flag('un dé de plus donne des jets de plus', r, i, `${b.status} ×${b.strikes}`)
+            else see('dés de plus sans chaîne')
+          }
           if (b.status === 'duo') {
-            // Un Duo pris par un Larcin (quatrième retour du 2026-10-27) arrive par une réaction : toute étape qui le pose ; un
-            // Duo confisqué laisse au lanceur ses autres charges (`kept`, un vol prend une charge)
+            // Un Duo pris par un Larcin (quatrième retour du 2026-10-27) arrive par une réaction : toute étape qui le pose
             const posed = r.beats
               .slice(0, i)
               .reverse()
-              .find((x) =>
-                beatEffects(x).some(
-                  (e) => e.type === 'applyStatus' && e.status === 'duo' && (e.target === b.side ? e.result.kind === 'applied' : (e.kept ?? 0) > 0),
-                ),
-              )
+              .find((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.status === 'duo' && e.target === b.side && e.result.kind === 'applied'))
             if (!posed || posed.turn >= b.turn) flag('Duo : rafale sans un Duo avant elle', r, i, `${posed?.turn}`)
             else see('duo : la rafale suit l’action du Duo')
           }
@@ -1267,15 +1303,13 @@ export function createAudit() {
       // PV de récompense : REWARD_HP par relique et par étape de forge, sur les PV d'origine
       if (f.baseStats.maxHp !== f.definition.stats.maxHp + REWARD_HP * (f.forge.length + f.relics.length)) flag('PV de récompense faux', r, 0, f.id)
       else if (f.rewardHp) see('PV de récompense')
-      // Dé forgé (campagne) : les dorures sont celles du journal rejoué, la trempe s'ajoute à l'attaque ; une gravure part
-      // sur sa face
+      // Dé forgé (campagne) : les dorures sont celles du journal rejoué (le boss), l'attaque celle d'origine (Tremper
+      // l'arme retirée le 2026-10-28) ; une gravure part sur sa face
       if (f.forge.length) {
         see('dé forgé')
         const forged = forgeState(f.definition, f.forge)
         const { attackMin, attackMax } = f.definition.stats
-        if (f.baseStats.attackMin !== attackMin + forged.temper || f.baseStats.attackMax !== attackMax + forged.temper)
-          flag('forge : attaque trempée fausse', r, 0, `${f.baseStats.attackMin} à ${f.baseStats.attackMax}`)
-        else if (forged.temper) see('attaque trempée')
+        if (f.baseStats.attackMin !== attackMin || f.baseStats.attackMax !== attackMax) flag('forge : attaque fausse', r, 0, `${f.baseStats.attackMin} à ${f.baseStats.attackMax}`)
         if (JSON.stringify(f.gilded) !== JSON.stringify(Object.fromEntries(forged.gilded))) flag('forge : dorures fausses', r, 0, f.id)
         if (r.beats.some((b) => b.type === 'event' && b.event.side === side && b.event.trigger.startsWith('face:'))) see('compétence gravée au-delà du 3')
       }
@@ -1319,7 +1353,8 @@ export function createAudit() {
           continue
         }
         // Sursis (2026-10-27, R1) : il part juste après l'étape (sa cause) qui aurait fait tomber son porteur, et le laisse à
-        // 1 PV ; prêt, il ne laisse jamais tomber son porteur
+        // 1 PV ; prêt, il ne laisse jamais tomber son porteur. Figé (A15, 2026-10-28) : de sa cause à la fin du tour, chaque
+        // étape le montre figé (`stone`), à 1 PV au moins ; le tour suivant, plus rien
         if (t.type === 'lethal') {
           for (const i of fires) {
             const cause = r.beats[i].cause
@@ -1332,6 +1367,16 @@ export function createAudit() {
                 : beatEffects(by).reduce((n, e) => n + (e.type === 'damage' && e.target === side ? e.amount : 0), 0)
             if (!by || cause !== i - 1 || by.state.hp[side] !== 1 || loss < before) flag('sursis hors d’un coup fatal', r, i, `${before} PV, perte ${loss}`)
             else see('sursis')
+            if (cause === undefined) continue
+            const turn = r.beats[cause].turn
+            const rest = r.beats.slice(cause).filter((x) => x.turn === turn)
+            if (rest.some((x) => !x.state.stone?.[side] || x.state.hp[side] < 1)) flag('sursis : figé rompu avant la fin du tour', r, i, `tour ${turn}`)
+            else if (r.beats.some((x) => x.turn > turn && x.state.stone?.[side])) flag('sursis : figé au-delà de son tour', r, i, `tour ${turn}`)
+            else {
+              see('sursis : figé jusqu’à la fin du tour')
+              if (rest.some((x, k) => k > 0 && (beatEffects(x).some((e) => e.type === 'damage' && e.target === side && e.amount > 0) || (x.type === 'attack' && x.attack.attacker !== side && x.attack.dealt > 0))))
+                see('sursis : une perte de plus dans le tour, encaissée figé')
+            }
           }
           const fell = r.beats.findIndex((b) => b.state.hp[side] === 0)
           if (fell >= 0 && fires.filter((i) => i < fell).length < (relic.charges ?? 1)) flag('sursis manqué', r, fell, relic.id)
@@ -1440,6 +1485,8 @@ export function createAudit() {
               if (!opensMoment(r, j, side, on) || fires.some((f) => r.beats[f].cause === j)) return
               const after = [b, ...descendantsOf(r, j)]
               if (after.some((x) => x.state.hp.includes(0) || relicIsInert(relic, side, x.state, r.fighters))) return
+              // Une relique qui ne donne que des jets de plus ne part pas sur un dé de plus (A7, 2026-10-28)
+              if (relic.effects?.every((e) => e.type === 'applyStatus' && e.target !== 'opponent' && givesJets(e.status)) && inExtraJet(r, j, side)) return
               flag('relique de moment manquée', r, j, `${relic.id} sur ${on}`)
             })
           continue

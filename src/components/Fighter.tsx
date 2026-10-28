@@ -42,6 +42,8 @@ interface Props {
   dazed?: boolean
   /** Incantation (cue `cast`, M55) : il lance un sort offensif ; ses coups partent aussi en incantation */
   casting?: boolean
+  /** Figé (cue `stone`, Médaille de sursis) : il survit au tour qui devait le tuer, désaturé, teinté de pierre */
+  stone?: boolean
   className?: string
   /**
    * Ancrage d'une image plus large que sa colonne : `center` (défaut) centre la toile sur la colonne ;
@@ -123,6 +125,7 @@ export function Fighter({
   form = 0,
   dazed = false,
   casting = false,
+  stone = false,
   className = '',
   anchor = 'center',
 }: Props) {
@@ -181,9 +184,12 @@ export function Fighter({
   // Le grisé du K.O. ouvre toujours la liste (à 0 sinon) : le filtre passe en fondu de l'un à l'autre.
   // Au K.O., l'aura s'éteint : son contour devient transparent (même liste de filtres, donc même fondu)
   const ko = state === 'ko'
+  // Figé (Médaille de sursis, retour du 2026-10-28, A15) : désaturé, teinté de pierre (sépia pâli, plus terne), dans la
+  // même liste de filtres que le K.O. pour passer en fondu ; le K.O. l'emporte
+  const petrified = stone && !ko
   const filter = [
     character.look.tint,
-    `grayscale(${ko ? 1 : 0}) brightness(${ko ? 0.5 : 1})`,
+    `grayscale(${ko ? 1 : petrified ? 0.85 : 0}) sepia(${petrified ? 0.35 : 0}) brightness(${ko ? 0.5 : petrified ? 0.82 : 1}) contrast(${petrified ? 1.15 : 1})`,
     'drop-shadow(0 10px 20px rgba(0,0,0,0.6))',
     looks.aura &&
       (ko
@@ -194,7 +200,11 @@ export function Fighter({
     .join(' ')
 
   return (
-    <div className={`pointer-events-none relative aspect-[636/1062] h-full ${lunging ? 'z-20' : 'z-10'} ${className}`} style={style}>
+    <div
+      className={`pointer-events-none relative aspect-[636/1062] h-full ${lunging ? 'z-20' : 'z-10'} ${petrified ? 'is-stone' : ''} ${className}`}
+      style={style}
+      data-stone={petrified || undefined}
+    >
       {/* ombre au sol */}
       <div className="absolute bottom-[1%] left-1/2 h-[5%] w-[80%] -translate-x-1/2 rounded-[50%] bg-black/60 blur-md" />
       <div

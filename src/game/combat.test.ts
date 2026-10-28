@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { attacksOf, AURA_DUE_TURN, diceOf, dieAt, effectiveStats, finalState, firstSide, HEADS_CAP, MAX_DODGE, MAX_EXTRA_JETS, MAX_TURNS, rollsDie, simulateCombat, splitAmong, startAuraOf, type Beat, type CombatResult, type Pair, type Side } from './combat'
+import { attacksOf, AURA_DUE_TURN, beatEffects, diceOf, dieAt, effectiveStats, finalState, firstSide, HEADS_CAP, MAX_DODGE, MAX_EXTRA_JETS, MAX_TURNS, rollsDie, simulateCombat, splitAmong, startAuraOf, type Beat, type CombatResult, type Pair, type Side } from './combat'
 import { describeSkill, DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollFace, rollMatches, triggerText, type CharacterEvent } from './events'
 import { eventLog, of } from './narration'
-import { autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFaces, forgeState, GILD_BONUS, offerTargets, rankText, sharpen, stepKey, stepLabel, stepOf, TEMPER_BONUS, withForgeStep, writtenFace, type ForgeBase, type ForgeStep } from './forge'
+import { AURA_FACE, autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFaces, forgeState, GILD_BONUS, isAuraSkill, MAX_SHARPENS, OFFERED_OPS, offerTargets, rankText, sharpen, stepKey, stepLabel, stepOf, validOnOrigin, withForgeStep, writtenFace, type ForgeBase, type ForgeStep } from './forge'
 import { seededRng } from './rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, validateRoster } from './roster'
 import { aurasOf, characterPool, MASTERIES, MASTERY_IDS, masteryOfSkill, poolOf, validateMasteries } from './masteries'
 import { skillById } from './skills'
 import { computeStats } from './stats'
-import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, LUCKY_COIN_POWER, PRECISION_CRIT, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, isStealable, LUCKY_COIN_POWER, PRECISION_CRIT, STATUS_IDS, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { STATUS_PLACE } from './states'
 import { EMOJI, oldDie, onOldDie, testCharacter } from './test-utils'
 import { Character, REWARD_HP, type CharacterStats } from './character'
 import { describeRelic, getRelic, RELIC_IDS, relicKind, RELICS, validateRelics, type Relic } from './relics'
@@ -1482,14 +1483,15 @@ describe('prêtresse et voleuse (0.30.0)', () => {
           volleys++
           // Cumulable (0.50.0) : un d6 par charge, toutes à la fois
           const stacks = r.beats[r.beats.indexOf(f) - 1].state.statuses[f.side].find((x) => x.id === 'luckyStrike')!.stacks
-          const dice = Array<number>(1 + stacks).fill(DIE_FACES)
+          const dice = Array<number>(1 + Math.min(MAX_EXTRA_JETS, stacks)).fill(DIE_FACES)
           expect(f.faces).toEqual(dice)
           // Un coup par d6 ; les jets greffés ont leur étape `roll` pour cause, les autres la rafale
           const strikes = attacksOf(r).filter((x) => x.attacker === f.side && x.turn === f.turn)
           if (f.turn < r.turns) expect(strikes).toHaveLength(dice.length)
-          // Chaque d6 lit les faces du porteur : son 3 (Coup de chance) se greffe, son coup part
+          // Chaque d6 lit les faces du porteur : sur le dé de l'action, son 3 (Coup de chance) se greffe, son coup part ; sur
+          // un dé de plus, il ne donne pas de dé de plus (A7, 2026-10-28) : face nue, son coup part sans compétence
           for (const s of strikes) expect(s.replaced).toBe(false)
-          for (const s of strikes.filter((x) => x.roll === 3)) expect(s.preset).toBe(true)
+          strikes.filter((x) => x.roll === 3).forEach((x) => expect(!!x.preset, `jet n° ${strikes.indexOf(x)}`).toBe(strikes.indexOf(x) === 0))
         }
       }
     expect(volleys).toBeGreaterThan(0)
@@ -2135,10 +2137,11 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "2 poison à l'adversaire sur un 6",
       "2 brûlure à l'adversaire sur un 6",
       '+1 riposte au 1er tour',
-      // Retour du 2026-10-27 : la Pièce de foire retirée ; le sursis, l'initiative, la chance de pile
-      'Reste à 1 PV quand il devrait tomber, 1x',
+      // Retour du 2026-10-27 : la Pièce de foire retirée ; le sursis (tout le tour depuis le 2026-10-28, A15), l'initiative,
+      // la chance de pile
+      'Reste à 1 PV jusqu’à la fin du tour quand il devrait tomber, 1x',
       "Joue le premier tour sans jet d'initiative",
-      '+25 % de chances de faire pile',
+      '+25 % de chances de faire pile (5 sur 6 au plus)',
       ].map(typeset),
     )
     for (const line of lines) {
@@ -2323,8 +2326,9 @@ describe('causes des étapes (moteur v2, docs/MOTEUR_V2.md § 3)', () => {
       for (const b of ofType(r, 'event')) {
         if (b.event.eventId !== 'duo') continue
         expect(causeOf(r, b)).toMatchObject({ type: 'roll', roll: 2 })
-        // L'Aura mélodieuse quitte le jeu (retour de l'utilisateur du 2026-10-27, P7) : le Duo ne pose plus que ses dés, trois
-        expect(b.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: b.event.side, status: 'duo', stacks: 3 })])
+        // L'Aura mélodieuse quitte le jeu (retour de l'utilisateur du 2026-10-27, P7) : le Duo ne pose plus que ses dés, un
+        // seul depuis le retour du 2026-10-28 (A11 : trois jusque-là)
+        expect(b.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: b.event.side, status: 'duo', stacks: 1 })])
         duos++
       }
       for (const f of ofType(r, 'flurry')) {
@@ -2652,7 +2656,8 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(valid(ervald, [{ op: 'gild', face: 6 }, { op: 'engrave', face: 6, skill: skill('fear') }])).toBe(false)
     expect(valid(ervald, [{ op: 'gild', face: 6 }, { op: 'gild', face: 6 }])).toBe(false)
     expect(offerTargets(ervald, [{ op: 'gild', face: 6 }], { op: 'engrave', skills: [skill('fear')] })).not.toContain(6)
-    expect(offerTargets(ervald, [{ op: 'gild', face: 6 }], { op: 'gild' })).not.toContain(6)
+    // Dorer n'est plus offerte (retour du 2026-10-28, A8) : seul le boss porte des faces dorées
+    expect(offerTargets(ervald, [], { op: 'gild' })).toEqual([])
     // Aucune forge tirée au hasard ne met une compétence sur une face dorée (offre, auto-forge : adversaires, saison)
     for (const id of CHARACTER_IDS) {
       const c = createCharacter(id)
@@ -2713,14 +2718,15 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     const full = ops('morgrut', engraved('morgrut'))
     expect(full).not.toContain('engrave')
     expect(full).not.toContain('copy')
-    expect(full).toEqual(expect.arrayContaining(['gild', 'sharpen', 'temper']))
+    expect(full).toEqual(expect.arrayContaining(['sharpen']))
+    expect(full).not.toContain('gild')
     expect(ops('gorak', engraved('gorak'))).toContain('engrave')
   })
 
   it('Duo : la forge de la barde vise les faces nues, comme pour tous ; une face gravée ou dorée vaut pour chaque dé de sa rafale', () => {
     const fanchon = def('fanchon')
     expect(offerTargets(fanchon, [], { op: 'engrave', skills: [skill('fear')] })).toEqual([3, 4, 5, 6])
-    expect(offerTargets(fanchon, [], { op: 'gild' })).toEqual([3, 4, 5, 6])
+    expect(offerTargets(fanchon, [], { op: 'gild' })).toEqual([])
     expect(() => forgeState(fanchon, [{ op: 'gild', face: 1 }])).toThrow()
     const bard = createCharacter('fanchon').withForge([{ op: 'engrave', face: 6, skill: skill('grave-breath') }, { op: 'gild', face: 5 }])
     expect(bard.events.find((e) => e.id === 'grave-breath')!.trigger).toBe(faceTrigger(6))
@@ -2748,7 +2754,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(gilded).toBeGreaterThan(0)
   })
 
-  it('aiguiser (E1, 0.110.0) : chaque compétence monte sur son axe de rang (ses données), un rang à la fois, sans plafond', () => {
+  it('aiguiser (E1, 0.110.0) : chaque compétence monte sur son axe de rang (ses données), un rang à la fois ; rang II au plus en partie', () => {
     const sharp = (id: string, steps: ForgeStep[], skillId: string) => createCharacter(id).withForge(steps).events.find((e) => e.id === skillId)!
     const ranks = (face: number, n: number, before: ForgeStep[] = []): ForgeStep[] => [...before, ...Array.from({ length: n }, (): ForgeStep => ({ op: 'sharpen', face }))]
     // Toute compétence du dé déclare son axe, et toutes s'aiguisent : chaque face de compétence d'un kit est proposée
@@ -2757,10 +2763,13 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       const faces = [...new Set(c.events.flatMap((e) => rollFace(e.trigger) ?? []))].sort()
       expect(offerTargets(c.definition, [], { op: 'sharpen' }), c.id).toEqual(faces)
     }
-    // Charges (Pourfendre) : deux de plus par rang depuis la revue R1 ; pas de rang maximal (décision de l'utilisateur, 2026-10-23)
+    // Charges (Pourfendre) : deux de plus par rang depuis la revue R1 ; le journal n'a pas de rang maximal, la partie s'arrête
+    // au rang II (`MAX_SHARPENS`, retour du 2026-10-28, A8)
     expect(sharp('gorak', ranks(2, 1), 'cleave')).toMatchObject({ name: 'Pourfendre II', effects: [{ stacks: 2, fromHit: 0.5 }] })
     expect(sharp('gorak', ranks(2, 3), 'cleave')).toMatchObject({ name: 'Pourfendre IV', effects: [{ stacks: 6, fromHit: 0.5 }] })
-    expect(offerTargets(def('gorak'), ranks(2, 3), { op: 'sharpen' })).toContain(2)
+    expect(offerTargets(def('gorak'), [], { op: 'sharpen' })).toContain(2)
+    expect(offerTargets(def('gorak'), ranks(2, 1), { op: 'sharpen' })).not.toContain(2)
+    expect(() => withForgeStep(def('gorak'), ranks(2, 1), { op: 'sharpen', face: 2 })).toThrow()
     // Seules les compétences de la face aiguisée changent
     expect(createCharacter('gorak').withForge(ranks(2, 1)).events.filter((e) => e.id !== 'cleave')).toEqual(def('gorak').events.filter((e) => e.id !== 'cleave'))
     // Montant (Purification : sa lumière de repli, +3 par rang)
@@ -2772,7 +2781,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(sharp('naraxes', ranks(2, 1), 'coin-flip').effects[0]).toMatchObject({ stacks: 1, power: 2 })
     expect(def('ervald').events.find((e) => e.id === 'life-steal')!.effects[0]).toMatchObject({ stacks: 1, power: 4 })
     expect(sharp('ervald', ranks(2, 2), 'life-steal').effects[0]).toMatchObject({ stacks: 1, power: 12 })
-    expect(offerTargets(def('ervald'), ranks(2, 2), { op: 'sharpen' })).toContain(2)
+    expect(offerTargets(def('ervald'), ranks(2, 1), { op: 'sharpen' })).not.toContain(2)
     expect(sharp('aldric', ranks(2, 2), 'riposte').effects[0]).toMatchObject({ stacks: 2, power: 4 })
     expect(sharp('ysolde', ranks(1, 1), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 1 })
     expect(sharp('ysolde', ranks(1, 2), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 2 })
@@ -2882,7 +2891,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(cresc.find((b) => b.attack.attacker === 0)?.attack.multiplier).toBe(3)
   })
 
-  it('offre : des opérations différentes, toutes jouables ; le choix automatique est toujours valide', () => {
+  it('offre : des opérations différentes, toutes jouables en partie ; le choix automatique est toujours valide ; ni Dorer, ni Tremper, ni aura, ni rang III', () => {
     for (const id of CHARACTER_IDS) {
       const base = def(id)
       const rng = seededRng(id.length * 31)
@@ -2892,34 +2901,51 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
         expect(offer.length).toBeLessThanOrEqual(FORGE_OFFER_SIZE)
         expect(new Set(offer.map((o) => o.op)).size).toBe(offer.length)
         for (const o of offer) {
+          expect(OFFERED_OPS, `${id} ${o.op}`).toContain(o.op)
+          if (o.op === 'engrave') for (const s of o.skills) expect(isAuraSkill(s), `${id} ${s.id}`).toBe(false)
           const targets = offerTargets(base, steps, o)
-          if (o.op === 'temper') {
-            expect(targets).toEqual([])
-            expect(valid(base, [...steps, stepOf(o)]), `${id} ${o.op}`).toBe(true)
-          } else {
-            expect(targets.length, `${id} ${o.op}`).toBeGreaterThan(0)
-            for (const face of targets)
-              for (const to of o.op === 'copy' ? copyDestinations(base, steps, face) : [undefined])
-                expect(valid(base, [...steps, stepOf(o, face, to)]), `${id} ${o.op} ${face} ${to ?? ''}`).toBe(true)
-          }
+          expect(targets.length, `${id} ${o.op}`).toBeGreaterThan(0)
+          for (const face of targets)
+            for (const to of o.op === 'copy' ? copyDestinations(base, steps, face) : [undefined])
+              expect(() => withForgeStep(base, steps, stepOf(o, face, to)), `${id} ${o.op} ${face} ${to ?? ''}`).not.toThrow()
         }
         const step = autoForge(base, steps, offer, rng)
         if (!step) break
         steps = withForgeStep(base, steps, step)
-        // Tremper l'arme : +1 à l'attaque par trempe
-        const tempered = steps.filter((s) => s.op === 'temper').length
         const forged = createCharacter(id).withForge(steps)
-        expect(forged.baseStats).toMatchObject({ attackMin: base.stats.attackMin + tempered, attackMax: base.stats.attackMax + tempered })
+        expect(forged.baseStats).toMatchObject({ attackMin: base.stats.attackMin, attackMax: base.stats.attackMax })
+        expect(Math.max(0, ...forgeState(base, steps).ranks.values()), id).toBeLessThanOrEqual(MAX_SHARPENS)
         // Une gravure ou une copie n'écrase jamais une compétence d'origine
         for (const e of base.events) expect(forged.events.some((x) => x.id === e.id && x.trigger === e.trigger), `${id} ${e.id} ${e.trigger}`).toBe(true)
       }
       expect(steps.length).toBeGreaterThan(0)
     }
     expect(() => withForgeStep(def('gorak'), [], { op: 'gild', face: 1 })).toThrow()
+    expect(() => withForgeStep(def('gorak'), [], { op: 'gild', face: 5 })).toThrow()
+  })
+
+  it('une aura par personnage (retour du 2026-10-28, A2) : la partie ne grave ni ne copie une aura, ni la face 1 ; le journal le peut (tests, laboratoire)', () => {
+    // Le dé d'aujourd'hui (le roster) : l'Ivresse du sang sur son 1
+    const gorak = ROSTER.find((d) => d.id === 'gorak')!
+    const aura = ENGRAVABLE_SKILLS.find((e) => isAuraSkill(e) && !gorak.events.some((x) => x.id === e.id))!
+    const engrave: ForgeStep = { op: 'engrave', face: 3, skill: aura }
+    expect(valid(gorak, [engrave])).toBe(true)
+    expect(() => withForgeStep(gorak, [], engrave)).toThrow()
+    expect(validOnOrigin(gorak, engrave)).toBe(false)
+    // La face 1 (l'aura de départ) ne se copie pas ; une aura gravée par le journal non plus
+    const one = gorak.events.find((e) => rollFace(e.trigger) === AURA_FACE)!
+    expect(isAuraSkill(one)).toBe(true)
+    expect(offerTargets(gorak, [], { op: 'copy' })).not.toContain(AURA_FACE)
+    expect(copyDestinations(gorak, [], AURA_FACE)).toEqual([])
+    expect(() => withForgeStep(gorak, [], { op: 'copy', face: AURA_FACE, to: 3 })).toThrow()
+    expect(offerTargets(gorak, [engrave], { op: 'copy' })).not.toContain(3)
+    // Aiguiser l'aura du 1 reste permis (une compétence de son dé, rang II au plus)
+    expect(offerTargets(gorak, [], { op: 'sharpen' })).toContain(AURA_FACE)
+    expect(offerTargets(gorak, [{ op: 'sharpen', face: AURA_FACE }], { op: 'sharpen' })).not.toContain(AURA_FACE)
   })
 
   it('trace : l’en-tête de forge se relit et rejoue le combat à l’identique ; une copie d’avant la 0.111.0 (« copy 1 ») se relit encore', () => {
-    const left = createCharacter('gorak').withForge([{ op: 'engrave', face: 6, skill: skill('fear') }, { op: 'gild', face: 5 }, { op: 'temper' }, { op: 'sharpen', face: 1 }])
+    const left = createCharacter('gorak').withForge([{ op: 'engrave', face: 6, skill: skill('fear') }, { op: 'gild', face: 5 }, { op: 'sharpen', face: 1 }])
     const right = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: skill('cleave') }, { op: 'copy', face: 3, to: 5 }])
     const r = simulateCombat([left, right], { seed: 5 })
     const text = traceText(r)
@@ -3103,15 +3129,11 @@ describe('attaque de base (phase 5 bis)', () => {
     }
   })
 
-  it('Tremper l’arme : +1 à l’attaque (minimum et maximum) par trempe, cumulable ; le combat la lit', () => {
+  it('Tremper l’arme, retirée (retour du 2026-10-28, A8) : un journal qui trempe est refusé, comme Refondre', () => {
     const base = testCharacter('a', { maxHp: 80, attackMin: 3, attackMax: 5 })
-    expect(forgeState(base.definition, [{ op: 'temper' }, { op: 'temper' }]).temper).toBe(2 * TEMPER_BONUS)
-    expect(base.withForge([{ op: 'temper' }]).stats).toMatchObject({ attackMin: 4, attackMax: 6 })
-    const twice = base.withForge([{ op: 'temper' }, { op: 'temper' }])
-    expect(twice.stats).toMatchObject({ attackMin: 5, attackMax: 7 })
-    expect(offerTargets(base.definition, [], { op: 'temper' })).toEqual([])
-    const values = new Set(attacksOf(run([twice, testCharacter('b', { maxHp: 80 })])).filter((a) => a.attacker === 0).map((a) => a.value))
-    expect([...values].every((v) => v >= 5 && v <= 7)).toBe(true)
+    const temper = { op: 'temper' } as unknown as ForgeStep
+    expect(() => forgeState(base.definition, [temper])).toThrow()
+    expect(() => withForgeStep(base.definition, [], temper)).toThrow()
   })
 
   it('un type d’attaque unique (2026-10-24) : le coup de base ne porte ni type ni source, la trace ne dit ni DP ni DM', () => {
@@ -3136,7 +3158,9 @@ describe('attaque de base (phase 5 bis)', () => {
     expect(() => stepOf({ op: 'copy' }, 1)).toThrow()
     // Jamais sur une face de compétence ni sur une face dorée
     expect(() => forgeState(gorak, [{ op: 'copy', face: 1, to: 2 }])).toThrow()
-    expect(copyDestinations(gorak, [{ op: 'gild', face: 3 }], 1)).toEqual([4, 5, 6])
+    expect(copyDestinations(gorak, [{ op: 'gild', face: 3 }], 2)).toEqual([4, 5, 6])
+    // Une aura par personnage (retour du 2026-10-28, A2) : la face 1, celle de l'aura, ne se copie pas en partie
+    expect(copyDestinations(gorak, [], 1)).toEqual([])
     expect(() => forgeState(gorak, [{ op: 'gild', face: 3 }, { op: 'copy', face: 1, to: 3 }])).toThrow()
     // Une copie enregistrée avant la 0.111.0 (« copy 1 », sans destination) : la plus petite face libre, comme alors
     expect(copiedOn([{ op: 'copy', face: 2 }])).toEqual([[3, 'cleave']])
@@ -3151,8 +3175,8 @@ describe('attaque de base (phase 5 bis)', () => {
       const step = autoForge(gorak, [{ op: 'gild', face: 3 }], [{ op: 'copy' }], seededRng(seed))
       expect(step).toMatchObject({ op: 'copy', to: 4 })
     }
-    // Seules les faces de compétence se copient
-    expect(offerTargets(gorak, [], { op: 'copy' })).toEqual([1, 2])
+    // Seules les faces de compétence se copient, jamais la face 1 de l'aura (A2)
+    expect(offerTargets(gorak, [], { op: 'copy' })).toEqual([2])
     expect(() => forgeState(gorak, [{ op: 'copy', face: 4, to: 5 }])).toThrow()
     // Avec son rang ; deux faces au plus, puis elle n'est plus proposée
     const twice: ForgeStep[] = [{ op: 'sharpen', face: 2 }, { op: 'copy', face: 2 }]
@@ -3160,19 +3184,17 @@ describe('attaque de base (phase 5 bis)', () => {
       ['naturalTwo', 'Pourfendre II'],
       ['naturalThree', 'Pourfendre II'],
     ])
-    expect(offerTargets(gorak, twice, { op: 'copy' })).toEqual([1])
-    // Le druide (0.113.0) : ses deux sorts se copient sur ses faces nues
-    expect(offerTargets(createCharacter('thaldrin').definition, [], { op: 'copy' })).toEqual([1, 2])
-    // Une copie qui ne rapporte rien n'est pas proposée : une aura permanente non cumulable, seule, gravée sur le 3 ne se
-    // copie pas (l'Aura d'immunité sans sa purge) ; l'Aura de décoction, cumulable, se copie, comme l'Aura de puissance
-    // depuis la revue A4 (3 charges)
+    expect(offerTargets(gorak, twice, { op: 'copy' })).toEqual([])
+    // Le druide (0.113.0) : son sort du 2 se copie sur ses faces nues, pas son aura du 1
+    expect(offerTargets(createCharacter('thaldrin').definition, [], { op: 'copy' })).toEqual([2])
+    // Une aura gravée (au journal : tests, labo) ne se copie pas non plus en partie (A2), qu'elle soit plate ou cumulable
     const engrave = (skill: CharacterEvent): ForgeStep[] => [{ op: 'engrave', face: 3, skill }]
     const engraved = (id: string) => engrave(ENGRAVABLE_SKILLS.find((e) => e.id === id)!)
     const flat: CharacterEvent = { id: 'flat-aura', name: 'Aura plate', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'immunityAura', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } }
-    expect(offerTargets(gorak, engrave(flat), { op: 'copy' })).toEqual([1, 2])
+    expect(offerTargets(gorak, engrave(flat), { op: 'copy' })).toEqual([2])
     expect(() => forgeState(gorak, [...engrave(flat), { op: 'copy', face: 3 }])).toThrow()
-    expect(offerTargets(gorak, engraved('decoction-aura'), { op: 'copy' })).toEqual([1, 2, 3])
-    expect(offerTargets(gorak, engraved('power-aura'), { op: 'copy' })).toEqual([1, 2, 3])
+    expect(offerTargets(gorak, engraved('decoction-aura'), { op: 'copy' })).toEqual([2])
+    expect(offerTargets(gorak, engraved('power-aura'), { op: 'copy' })).toEqual([2])
   })
 
   it('ce coup ×N (Crescendo, Soliste, phase 5 ter) : une compétence qui modifie son coup multiplie sa valeur, avant le critique ; elle part s’il touche', () => {
@@ -3271,16 +3293,12 @@ describe('attaque de base (phase 5 bis)', () => {
     const solo = runOn(2, [fanchon, target()])
     expect(ofType(solo, 'flurry')).toHaveLength(0)
     expect(ofType(solo, 'event').filter((b) => b.event.eventId === 'soloist')).toHaveLength(1)
-    // Sur le 1 : chaque jet pose un Duo de trois charges (2026-10-27, P7), toutes partent à l'action suivante : 1 jet, puis
-    // 1 + 3 = 4, puis 1 + 3 × 4 = 13, puis 13 encore : au plus MAX_EXTRA_JETS jets de plus par action (2026-10-27)
+    // Sur le 1 : chaque jet pose un Duo d'une charge (retour du 2026-10-28, A11), qui part à l'action suivante ; un dé de
+    // plus ne donne jamais de dé de plus (A7) : 1 jet, puis 2 à chaque action qui suit un 1
     const duo = runOn(1, [fanchon, target()])
     const volleys = ofType(duo, 'flurry').filter((f) => f.side === 0)
     expect(volleys.length).toBeGreaterThan(3)
-    let jets = 1
-    for (const f of volleys) {
-      jets = 1 + Math.min(MAX_EXTRA_JETS, 3 * jets)
-      expect(f).toMatchObject({ status: 'duo', strikes: jets, faces: Array(jets).fill(DIE_FACES) })
-    }
+    for (const f of volleys) expect(f).toMatchObject({ status: 'duo', strikes: 2, faces: Array(2).fill(DIE_FACES) })
     // Un Duo par jet : chaque jet de la rafale est complet (son 1 fait partir la compétence, greffée)
     const rolls = ofType(duo, 'roll').filter((b) => b.side === 0)
     expect(ofType(duo, 'event').filter((b) => b.event.eventId === 'duo')).toHaveLength(rolls.length)
@@ -3440,8 +3458,8 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     expect(text('conflagration')).toBe("Si l'adversaire brûle, son prochain coup qui touche lui fait perdre trois fois sa Brûlure.")
     expect(text('conflagration', 1)).toBe("Si l'adversaire brûle, son prochain coup qui touche lui fait perdre quatre fois sa Brûlure.")
     // Le Dé pipé, une aura depuis les Maîtrises (M9) : sa chance de pile, du critique et de l'esquive (2026-10-27) ; son rang, une charge de plus
-    expect(text('loaded-die')).toBe(typeset("+25 % de chances de faire pile à ses pièces, +5 % de critique et +5 % d'esquive."))
-    expect(text('loaded-die', 1)).toBe(typeset("+50 % de chances de faire pile à ses pièces, +10 % de critique et +10 % d'esquive."))
+    expect(text('loaded-die')).toBe(typeset("+25 % de chances de faire pile à ses pièces (5 sur 6 au plus), +5 % de critique et +5 % d'esquive."))
+    expect(text('loaded-die', 1)).toBe(typeset("+50 % de chances de faire pile à ses pièces (5 sur 6 au plus), +10 % de critique et +10 % d'esquive."))
     expect(text('bristling-rampart')).toBe("+2 Aura d'épines et +2 armure temporaire quand son armure temporaire est vidée.")
     expect(text('bristling-rampart', 1)).toBe("+4 Aura d'épines et +4 armure temporaire quand son armure temporaire est vidée.")
     expect(text('vendetta')).toBe('+6 Ferveur chaque fois que son porteur renvoie des dégâts.')
@@ -3486,7 +3504,7 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     }
     expect(heads(1)).toBeCloseTo(0.75, 1)
     expect(heads(2)).toBeCloseTo(HEADS_CAP, 1)
-    expect(describeSkill(skill('loaded-die')).text).toBe(typeset("+25 % de chances de faire pile à ses pièces, +5 % de critique et +5 % d'esquive."))
+    expect(describeSkill(skill('loaded-die')).text).toBe(typeset("+25 % de chances de faire pile à ses pièces (5 sur 6 au plus), +5 % de critique et +5 % d'esquive."))
     // Mode triche : la pièce imposée (face) reste face
     const forced = runOn(2, [testCharacter('a', { maxHp: 400 }, [loaded(2), coin]), testCharacter('b', { maxHp: 400 })])
     expect(ofType(forced, 'coin').find((b) => b.side === 0)).toMatchObject({ heads: false, forced: true })
@@ -3704,7 +3722,7 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
     expect(rate(coins(thrower('lucky-coin', [getRelic('weighted-coin')], 2), 150))).toBeCloseTo(HEADS_CAP, 1)
     // Pile ou face (la pièce qui frappe) : la Pièce lestée la sert aussi
     expect(rate(coins(thrower('coin-flip', [getRelic('weighted-coin')]), 150))).toBeCloseTo(0.75, 1)
-    expect(describeRelic(getRelic('weighted-coin')).text).toBe(typeset('+25 % de chances de faire pile'))
+    expect(describeRelic(getRelic('weighted-coin')).text).toBe(typeset('+25 % de chances de faire pile (5 sur 6 au plus)'))
     expect(relicNeeds(getRelic('weighted-coin'))).toEqual(['moment:heads'])
   })
 
@@ -3731,7 +3749,7 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
       const bare = run([testCharacter('a', { maxHp: 20 }), brute], seed)
       expect(bare.beats.find((b) => b.type === 'attack' && b.attack.attacker === 1 && !b.attack.dodged)?.state.hp[0]).toBe(0)
     }
-    expect(describeRelic(getRelic('reprieve-medal')).text).toBe(typeset('Reste à 1 PV quand il devrait tomber, 1x'))
+    expect(describeRelic(getRelic('reprieve-medal')).text).toBe(typeset('Reste à 1 PV jusqu’à la fin du tour quand il devrait tomber, 1x'))
   })
 
   it('Médaille de sursis : aussi contre une perte qui n’est pas un coup (Poison)', () => {
@@ -3740,6 +3758,31 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
     const [medal] = relicBeats(r, 'reprieve-medal')
     expect(r.beats[medal.cause!]).toMatchObject({ type: 'statusTick', side: 0 })
     expect(r.beats[medal.cause!].state.hp[0]).toBe(1)
+  })
+
+  it('Médaille de sursis (A15, 2026-10-28) : figé jusqu’à la fin du tour, rien ne le fait descendre sous 1 PV ; le Vol de vie ne rend que les PV retirés', () => {
+    // Deux jets par action (un Coup de chance à chaque début de tour) et un Vol de vie : le second coup du tour frappe un porteur figé
+    const luck: CharacterEvent = { id: 'luck', name: 'luck', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }, { type: 'applyStatus', status: 'lifesteal', stacks: 2, power: 4 }] }
+    let figés = 0
+    for (let seed = 1; seed < 30; seed++) {
+      const r = run([testCharacter('a', { maxHp: 20, dodgeChance: 0 }).withRelics([getRelic('reprieve-medal')]), testCharacter('b', { maxHp: 400, attackMin: 30, attackMax: 30, dodgeChance: 0, critChance: 0 }, [luck])], seed)
+      const [medal] = relicBeats(r, 'reprieve-medal')
+      if (!medal) continue
+      const turn = r.beats[medal.cause!].turn
+      const rest = r.beats.filter((b) => b.id >= medal.cause! && b.turn === turn)
+      for (const b of rest) expect(b.state.stone?.[0], `étape ${b.id}`).toBe(true)
+      for (const b of rest) expect(b.state.hp[0]).toBeGreaterThanOrEqual(1)
+      expect(r.beats.filter((b) => b.turn > turn).every((b) => !b.state.stone)).toBe(true)
+      // Un coup de plus dans le tour : il ne retire rien, et le Vol de vie ne rend que son intensité
+      const later = rest.filter((b) => b.type === 'attack' && b.id > medal.id && b.attack.attacker === 1 && !b.attack.dodged)
+      for (const hit of later) {
+        expect(hit.state.hp[0]).toBe(1)
+        const drain = r.beats.find((x) => x.type === 'statusReaction' && x.status === 'lifesteal' && x.cause === hit.id)
+        if (drain?.type === 'statusReaction') expect(drain.effects[0]).toMatchObject({ type: 'heal', target: 1, amount: Math.min(4, 400 - r.beats[drain.id - 1].state.hp[1]) })
+        figés++
+      }
+    }
+    expect(figés).toBeGreaterThan(0)
   })
 
   it('Cor d’avant-garde : son porteur commence, sans jet d’initiative ; si les deux en portent un, le jet revient', () => {
@@ -4174,16 +4217,31 @@ describe('phase 8, lot 3 : les malus de famille (docs/SORTS.md § 29)', () => {
     ])
   })
 
-  it('Sceau de vol : le prochain bonus que l’adversaire se pose lui revient, une charge par vol ; un mécanisme ne se vole pas', () => {
-    const pose = ev(faceTrigger(3), [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }, { type: 'applyStatus', status: 'powerAura', stacks: 1 }], 'pose')
+  it('Sceau de vol : le prochain bonus volable que l’adversaire se pose lui revient, entier ; ni un mécanisme ni une aura ne se volent (A6)', () => {
+    const pose = ev(
+      faceTrigger(3),
+      [
+        { type: 'applyStatus', status: 'coinFlip', stacks: 1 },
+        { type: 'applyStatus', status: 'powerAura', stacks: 1 },
+        { type: 'applyStatus', status: 'momentum', stacks: 2 },
+      ],
+      'pose',
+    )
     const r = runOn(3, [curse('sealTheft'), testCharacter('b', { maxHp: 400 }, [pose])])
     const [first, second] = ofType(r, 'event').filter((b) => b.event.eventId === 'pose')
+    // Le mécanisme et l'aura restent au lanceur ; la Ferveur, un bonus de la zone des statuts, part entière
     expect(first.event.effects[0]).toMatchObject({ target: 1, status: 'coinFlip' })
     expect(first.event.effects[0]).not.toHaveProperty('stolenBy')
-    expect(first.event.effects[1]).toMatchObject({ target: 0, status: 'powerAura', stolenBy: 'sealTheft' })
-    expect(stacksOf(first.state.statuses[0], 'powerAura')).toBe(1)
+    expect(first.event.effects[1]).toMatchObject({ target: 1, status: 'powerAura' })
+    expect(first.event.effects[1]).not.toHaveProperty('stolenBy')
+    expect(first.event.effects[2]).toMatchObject({ target: 0, status: 'momentum', stacks: 2, stolenBy: 'sealTheft', result: { kind: 'applied', stacks: 2 } })
+    expect(stacksOf(first.state.statuses[0], 'momentum')).toBe(2)
+    expect(stacksOf(first.state.statuses[1], 'momentum')).toBe(0)
+    expect(stacksOf(first.state.statuses[1], 'powerAura')).toBe(1)
     expect(stacksOf(first.state.statuses[1], 'sealTheft')).toBe(0)
-    expect(second.event.effects[1]).toMatchObject({ target: 1, status: 'powerAura' })
+    expect(second.event.effects[2]).toMatchObject({ target: 1, status: 'momentum' })
+    // La règle se lit sur la définition : un bonus de la zone des statuts, jamais une aura ni un mécanisme
+    for (const id of STATUS_IDS) expect(isStealable(id), id).toBe(STATUSES[id].polarity === 'positive' && STATUS_PLACE[id].place === 'tray')
   })
 })
 
@@ -4280,21 +4338,21 @@ describe('retour de l’utilisateur du 2026-10-27 : règles du moteur (M1 à M8,
     expect(fires).toBe(Math.ceil(ownTurns / 2))
   })
 
-  it('P7 : l’Aura mélodieuse quitte le jeu ; le Duo ne pose que le Duo, trois charges (quatre dés), son rang lui ajoute un dé', () => {
+  it('P7 : l’Aura mélodieuse quitte le jeu ; le Duo ne pose que le Duo, une charge (deux dés, A11 du 2026-10-28), son rang lui ajoute un dé', () => {
     const fanchon = createCharacter('fanchon')
     // Maîtrises (2026-10-27) : la Ballade sur le 1, le Duo sur le 2
     expect(fanchon.events.map((e) => e.id)).toEqual(['ballad', 'duo'])
     expect(fanchon.events.some((e) => e.trigger === 'combatStart')).toBe(false)
     const sharpened = fanchon.withForge([{ op: 'sharpen', face: 2 }]).events.find((e) => e.id === 'duo')!
-    expect(sharpened.effects).toEqual([{ type: 'applyStatus', status: 'duo', stacks: 4 }])
+    expect(sharpened.effects).toEqual([{ type: 'applyStatus', status: 'duo', stacks: 2 }])
     // Rien n'est posé à l'entrée en scène
     for (let seed = 1; seed <= 10; seed++) {
       const r = run([fanchon, createCharacter('gorak')], seed)
       expect(r.beats.filter((b) => b.turn === 0)).toEqual([])
     }
-    // Au rang II, la première rafale du Duo compte cinq jets : celui de l'action, plus quatre
+    // Au rang II, le Duo pose deux charges : trois jets à l'action suivante
     const r = runOn(2, [fanchon.withForge([{ op: 'sharpen', face: 2 }]), testCharacter('d', { maxHp: 2000 })])
-    expect(ofType(r, 'flurry').find((f) => f.status === 'duo')!.strikes).toBe(5)
+    expect(ofType(r, 'flurry').find((f) => f.status === 'duo')!.strikes).toBe(3)
   })
 })
 
@@ -4920,7 +4978,7 @@ describe('quatrième demande du 2026-10-27 : le contenu des maîtrises (Fureur, 
     expect(text('onrush')).toBe(typeset("+10 % de critique. Chacun de ses gros coups lui donne +3 Ferveur."))
     expect(text('overcharge')).toBe('Chacun de ses éclairs fait +1.')
     expect(text('grip')).toBe("Ses coups font +1 par malus que porte l'adversaire.")
-    expect(text('pilfer')).toBe(typeset("+5 % d'esquive. Chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant."))
+    expect(text('pilfer')).toBe(typeset("+10 % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant."))
     expect(text('shockwave')).toBe("L'adversaire perd 2 PV par coup reçu, des trois derniers.")
     expect(text('shockwave', 1)).toBe("L'adversaire perd 3 PV par coup reçu, des trois derniers.")
     for (const id of ['onrush', 'overcharge', 'grip', 'pilfer', 'shockwave']) {
@@ -4985,49 +5043,63 @@ describe('quatrième demande du 2026-10-27 : le contenu des maîtrises (Fureur, 
     expect(seen).toBeGreaterThan(0)
   })
 
-  it('Larcin (`cleanse.steal`) : chaque esquive prend une charge du dernier bonus de l’attaquant, marquée volée ; rien à prendre, il ne part pas', () => {
-    const r = run([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [aura('pilfer')]), testCharacter('b', { maxHp: 400 }, [aura('powerAura')])])
+  it('Larcin (`cleanse.steal`) : chaque esquive vole le dernier bonus volable de l’attaquant, entier, marqué volé ; jamais une aura ; rien à prendre, il ne part pas', () => {
+    const held = ev('combatStart', [{ type: 'applyStatus', status: 'ward', stacks: 3 }, { type: 'applyStatus', status: 'powerAura', stacks: 1 }], 'held')
+    const r = run([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [aura('pilfer')]), testCharacter('b', { maxHp: 400 }, [held])])
     const thefts = reactions(r, 'pilfer')
-    expect(thefts.length).toBeGreaterThan(0)
-    const first = thefts[0]
-    expect(first.trigger).toBe('dodge')
-    expect(first.effects[0]).toMatchObject({ type: 'cleanse', target: 1, removed: ['powerAura'] })
-    expect(first.effects[1]).toMatchObject({ type: 'applyStatus', target: 0, status: 'powerAura', stacks: 1, stolenBy: 'pilfer' })
-    expect(stacksOf(first.state.statuses[0], 'powerAura')).toBe(1)
-    expect(stacksOf(first.state.statuses[1], 'powerAura')).toBe(0)
-    // Plus rien à prendre : il ne part plus (une seule Aura de puissance à prendre)
+    // Un seul vol : la Garde part entière ; l'Aura de puissance, une aura, reste à son porteur
     expect(thefts).toHaveLength(1)
-    expect(effectiveStats(createCharacter('morgrut'), [{ id: 'pilfer', stacks: 1 }]).dodgeChance).toBeCloseTo(0.05)
+    const [first] = thefts
+    expect(first.trigger).toBe('dodge')
+    expect(first.effects[0]).toMatchObject({ type: 'cleanse', target: 1, removed: ['ward'], stolen: true })
+    expect(first.effects[1]).toMatchObject({ type: 'applyStatus', target: 0, status: 'ward', stacks: 3, stolenBy: 'pilfer' })
+    expect(stacksOf(first.state.statuses[0], 'ward')).toBe(3)
+    expect(stacksOf(first.state.statuses[1], 'ward')).toBe(0)
+    expect(stacksOf(r.beats.at(-1)!.state.statuses[1], 'powerAura')).toBe(1)
+    expect(stacksOf(r.beats.at(-1)!.state.statuses[0], 'powerAura')).toBe(0)
+    // Une aura seule : rien à voler, il ne part jamais
+    const auraOnly = run([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [aura('pilfer')]), testCharacter('b', { maxHp: 400 }, [aura('powerAura')])])
+    expect(reactions(auraOnly, 'pilfer')).toEqual([])
+    // +10 % d'esquive par charge depuis le vrai vol (A6, 2026-10-28)
+    expect(effectiveStats(createCharacter('morgrut'), [{ id: 'pilfer', stacks: 1 }]).dodgeChance).toBeCloseTo(createCharacter('morgrut').stats.dodgeChance + 0.1)
   })
 
-  it('un vol prend une charge (règle commune des vols) : le Larcin laisse les autres au volé, la dernière emporte l’intensité', () => {
-    const stacked = ev('combatStart', [{ type: 'applyStatus', status: 'powerAura', stacks: 3 }], 'stacked')
-    const r = run([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [aura('pilfer')]), testCharacter('b', { maxHp: 400 }, [stacked])])
-    const thefts = reactions(r, 'pilfer')
-    expect(thefts).toHaveLength(3)
-    thefts.forEach((b, k) => {
-      expect(b.effects[0]).toMatchObject({ type: 'cleanse', target: 1, removed: ['powerAura'], stolen: true })
-      expect(b.effects[1]).toMatchObject({ type: 'applyStatus', target: 0, status: 'powerAura', stacks: 1, stolenBy: 'pilfer' })
-      expect(stacksOf(b.state.statuses[1], 'powerAura')).toBe(2 - k)
-      expect(stacksOf(b.state.statuses[0], 'powerAura')).toBe(k + 1)
-    })
-    // Une aura aiguisée à une charge change de camp entière, son intensité comprise
-    const sharp = ev('combatStart', [{ type: 'applyStatus', status: 'powerAura', stacks: 1, power: 2 }], 'sharp')
-    const one = run([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [aura('pilfer')]), testCharacter('b', { maxHp: 400 }, [sharp])])
-    const [theft] = reactions(one, 'pilfer')
-    expect(theft.state.statuses[0].find((s) => s.id === 'powerAura')).toMatchObject({ stacks: 1, power: 2 })
-    expect(stacksOf(theft.state.statuses[1], 'powerAura')).toBe(0)
-  })
-
-  it('un vol prend une charge (règle commune des vols) : la Confiscation détourne une charge du bonus posé, le lanceur garde les autres', () => {
+  it('un vrai vol (A6, 2026-10-28) : la Confiscation détourne le bonus posé entier, intensité comprise ; le lanceur n’en garde rien', () => {
     const seal = ev('combatStart', [{ type: 'applyStatus', status: 'sealTheft', stacks: 1, target: 'opponent' }], 'seal')
-    const pose = ev(faceTrigger(3), [{ type: 'applyStatus', status: 'momentum', stacks: 3 }], 'pose')
+    const pose = ev(faceTrigger(3), [{ type: 'applyStatus', status: 'lifesteal', stacks: 2, power: 4 }], 'pose')
     const r = runOn(3, [testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [seal]), testCharacter('b', { maxHp: 400 }, [pose])])
     const [first] = ofType(r, 'event').filter((b) => b.event.eventId === 'pose')
-    expect(first.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks: 1, stolenBy: 'sealTheft', kept: 2 })])
-    expect(stacksOf(first.state.statuses[0], 'momentum')).toBe(1)
-    expect(stacksOf(first.state.statuses[1], 'momentum')).toBe(2)
+    expect(first.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'lifesteal', stacks: 2, stolenBy: 'sealTheft' })])
+    expect(first.event.effects[0]).not.toHaveProperty('kept')
+    expect(first.state.statuses[0].find((s) => s.id === 'lifesteal')).toMatchObject({ stacks: 2, power: 4 })
+    expect(stacksOf(first.state.statuses[1], 'lifesteal')).toBe(0)
     expect(stacksOf(first.state.statuses[1], 'sealTheft')).toBe(0)
+  })
+
+  it('un dé de plus ne donne jamais de dé de plus (A7, 2026-10-28) : ni compétence ni réaction ; au plus trois dés de plus par action', () => {
+    // Chaque face pose un Duo (une charge) et la Veine réagit à chaque 6 : sans la règle, chaque rafale relançait la suivante
+    const allDuo = [1, 2, 3, 4, 5, 6].map((face): CharacterEvent => ({ ...skillById('duo'), id: `duo-${face}`, trigger: faceTrigger(face) }))
+    let volleys = 0
+    let muted = 0
+    for (let seed = 1; seed <= 6; seed++) {
+      const r = run([testCharacter('a', { maxHp: 2000 }, [...allDuo, aura('luckyStreak')]), testCharacter('b', { maxHp: 2000 })], seed)
+      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0)) {
+        expect(f.strikes).toBeLessThanOrEqual(1 + MAX_EXTRA_JETS)
+        // Le dé de l'action pose un Duo (son étape `roll`) ; les dés de plus, des coups sur une face nue
+        const jets = r.beats.filter((x) => x.cause === f.id && (x.type === 'roll' || x.type === 'attack'))
+        expect(jets[0]?.type).toBe('roll')
+        for (const jet of jets.slice(1)) {
+          expect(jet.type).toBe('attack')
+          muted++
+        }
+        // Rien après le premier jet de la rafale ne redonne de jets de plus à son lanceur, dans ce tour
+        const after = jets[1] ? r.beats.filter((x) => x.id >= jets[1].id && x.turn === f.turn) : []
+        expect(after.some((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.target === 0 && (e.status === 'duo' || e.status === 'luckyStrike')))).toBe(false)
+        volleys++
+      }
+    }
+    expect(volleys).toBeGreaterThan(20)
+    expect(muted).toBeGreaterThan(40)
   })
 
   it('Onde de choc (`release.per`) : 2 PV de dégâts directs par coup encaissé, des trois derniers, et ses jauges se vident ; sans coup encaissé, sa face est nue', () => {

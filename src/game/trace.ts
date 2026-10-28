@@ -92,11 +92,11 @@ function effectLine(e: AppliedEffect, fighters: Pair<Character>, before: Snapsho
       const cancel = r.cancelled ? ` ; opposition avec ${label(r.cancelled.status)} : −${r.cancelled.stacks} de part et d'autre` : ''
       if (r.kind === 'cancelled') return `${label(e.status)} (${asked}) sur ${name} : entièrement annulé${cancel}`
       if (atCap(e)) return `${label(e.status)} (${asked}) sur ${name} : déjà au plafond, rien ne change`
-      // Un vol prend une charge (quatrième demande du 2026-10-27) : le lanceur détroussé garde les autres (`kept`)
-      return `${label(e.status)} (${asked}) sur ${name} : posé, ${r.stacks} charge${r.stacks > 1 ? 's' : ''} retenue${r.stacks > 1 ? 's' : ''}${cancel}${e.kept ? ` ; volé, le lanceur en garde ${e.kept}` : ''}`
+      // Un bonus volé (Sceau de vol, Larcin) : il change de camp entier
+      return `${label(e.status)} (${asked}) sur ${name} : posé, ${r.stacks} charge${r.stacks > 1 ? 's' : ''} retenue${r.stacks > 1 ? 's' : ''}${cancel}${e.stolenBy ? ` ; volé (${label(e.stolenBy)})` : ''}`
     }
     case 'cleanse':
-      if (e.stolen && e.removed.length) return `vol sur ${name} : prend une charge de ${e.removed.map(label).join(', ')}`
+      if (e.stolen && e.removed.length) return `vol sur ${name} : prend ${e.removed.map(label).join(', ')}, entier`
       return e.removed.length ? `purge sur ${name} : retire ${e.removed.map(label).join(', ')}` : `purge sur ${name} : rien à retirer`
     case 'rebound':
       return `${label(e.status)} relâchée : ${e.parts.length} renvoi${e.parts.length > 1 ? 's' : ''} sur ${name} (${e.parts.join(' · ')}), chacun un coup à part, ci-dessous`
@@ -204,7 +204,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       // Sursis et initiative (2026-10-27) : leur règle est leur effet
       const rule =
         relic?.trigger?.type === 'lethal'
-          ? [`  → ${fighters[beat.side].name} aurait dû tomber : reste à 1 PV`]
+          ? [`  → ${fighters[beat.side].name} aurait dû tomber : reste à 1 PV, figé jusqu'à la fin du tour (rien ne le fait descendre sous 1 PV)`]
           : relic?.trigger?.type === 'initiative'
             ? [`  → ${fighters[beat.side].name} joue le premier tour, sans jet d'initiative`]
             : []
@@ -291,8 +291,9 @@ export function parseRelics(text: string): Pair<string[]> {
 }
 
 /**
- * En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; gild 4 ; copy 2 3 ; temper » (journal, dans
- * l'ordre). Une copie d'avant la 0.111.0 s'écrivait sans sa destination (« copy 2 ») : elle se relit telle quelle.
+ * En-tête de la forge d'un camp : « Forge (gauche, Gorak) : engrave 5 cleave ; sharpen 2 ; copy 2 3 » (journal, dans
+ * l'ordre). Une copie d'avant la 0.111.0 s'écrivait sans sa destination (« copy 2 ») : elle se relit telle quelle. Une
+ * trace d'avant le 2026-10-28 qui trempe l'arme (« temper », retirée) est illisible : `npm run logs` la met de côté.
  */
 export const FORGE_PREFIX = 'Forge ('
 
@@ -306,7 +307,6 @@ export function parseForge(text: string, skills: readonly CharacterEvent[]): Pai
       .split(' ; ')
       .map((token): ForgeStep => {
         const [op, face, arg] = token.split(' ')
-        if (op === 'temper') return { op }
         if (op === 'copy') return arg === undefined ? { op, face: Number(face) } : { op, face: Number(face), to: Number(arg) }
         if (op === 'gild' || op === 'sharpen') return { op, face: Number(face) }
         const skill = skills.find((e) => e.id === arg)

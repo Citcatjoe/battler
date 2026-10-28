@@ -11,7 +11,7 @@ import { matches, type CompendiumNav, type SectionProps } from './sections'
 
 /** Ce qu'est une aura et comment on l'obtient : en tête des auras de chaque maîtrise (docs/MAITRISES.md § 5 et § 12). */
 const AURA_INTRO = typeset(
-  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Chaque combattant en porte une sur le 1 de son dé, l'une des auras de ses deux maîtrises ; les autres s'obtiennent en gravant.",
+  "Une aura dure jusqu'à la fin du combat : posée quand sa face sort, elle se renforce à chaque nouvelle sortie, jusqu'à son plafond. Chaque combattant en porte une seule, sur le 1 de son dé : l'une des auras de ses deux maîtrises, choisie au départ. La forge n'en ajoute jamais.",
 )
 
 /**

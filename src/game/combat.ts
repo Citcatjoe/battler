@@ -9,8 +9,10 @@ import {
   charges,
   consumeStatus,
   directDamage,
+  givesJets,
   isAura,
   isMechanic,
+  isStealable,
   removeStatuses,
   resolveApplication,
   stacksOf,
@@ -73,13 +75,12 @@ export const INITIATIVE_DIE = 10
 export const MAX_TURNS = 1000
 
 /**
- * Jets de plus à une action, au plus (Coup de chance, Duo ; retour du 2026-10-27). Sans borne, la Veine à 6 charges ou
- * plus (chaque 6 donne autant de jets à l'action suivante, qui font 6 à leur tour) faisait croître les jets d'action en
- * action sans fin dans un long combat : `npm run ramp`, Fanchon (Veine gravée) contre une Elaria qui esquivait tout, 1 600
- * jets au tour 47, puis un plantage. Douze : au-dessus de ce que le jeu produit d'ordinaire (le Duo de Fanchon, quatre 2
- * dans une rafale : 13 jets), assez bas pour borner la boucle.
+ * Jets de plus à une action, au plus (Coup de chance, Duo ; retour du 2026-10-28, A7). Avec la règle « un dé de plus ne
+ * donne jamais de dé de plus » (`extraJet`), la boucle ne se nourrit plus d'elle-même (la Veine gravée faisait 1 600 jets
+ * au tour 47, le Duo de Fanchon 9 dés et plus) ; le plafond borne ce qu'une action reçoit de ses charges. Il remplace le
+ * plafond de 12 de la 0.125.0.
  */
-export const MAX_EXTRA_JETS = 12
+export const MAX_EXTRA_JETS = 3
 
 /**
  * Plafond d'esquive (troisième retour du 2026-10-27, C5) : les statuts ne portent pas la chance d'esquive au-delà de 75 %,
@@ -94,6 +95,11 @@ export const MAX_DODGE = 0.75
 export interface Snapshot {
   hp: Pair<number>
   statuses: Pair<Status[]>
+  /**
+   * Sursis (retour du 2026-10-28, A15) : le camp figé par sa Médaille de sursis, de l'étape qui aurait dû le faire tomber
+   * jusqu'à la fin du tour ; il ne descend pas sous 1 PV. Absent quand personne ne l'est.
+   */
+  stone?: Pair<boolean>
 }
 
 /** Effet réellement appliqué (un soin peut être réduit par le plafond de PV, etc.). */
@@ -117,11 +123,11 @@ export type AppliedEffect =
     }
   /**
    * `stacks` : charges demandées ; `result` : ce qui s'est réellement passé (posé, annulé, bloqué). `stolenBy` : le bonus
-   * que le lanceur se posait est allé à l'adversaire, pris par ce statut du lanceur (Sceau de vol, `stealsBonus`) ; un vol
-   * prend une charge (quatrième demande du 2026-10-27) : `kept`, les charges de la pose que le lanceur garde
+   * que le lanceur se posait est allé à l'adversaire, entier, pris par ce statut du lanceur (Sceau de vol, `stealsBonus`) ;
+   * ou le bonus pris par un Larcin, marqué par son statut
    */
-  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId; kept?: number }
-  /** `stolen` : une purge de vol (Larcin), qui ne retire qu'une charge de chaque statut visé (quatrième demande du 2026-10-27) */
+  | { type: 'applyStatus'; target: Side; status: StatusId; stacks: number; turns?: number; result: ApplicationOutcome; stolenBy?: StatusId }
+  /** `stolen` : une purge de vol (Larcin) ; le bonus retiré, entier, passe au voleur (retour du 2026-10-28, A6) */
   | { type: 'cleanse'; target: Side; removed: StatusId[]; stolen?: true }
   /**
    * Jauges relâchées en renvois (Rétribution, retour du 2026-10-27, C1) : `parts`, la valeur de chaque coup sans dé qui
@@ -424,6 +430,20 @@ export function splitAmong(amount: number, weights: readonly number[]): number[]
   return parts
 }
 
+/**
+ * Les coups d'une relâche en part ou en entier (Rétribution) : le montant, réparti entre les jauges remplies, un coup par
+ * jauge (`splitAmong`) ; sans jauge, un seul coup. Lu par le moteur et par l'écran (le compteur du sceau : le nombre de
+ * coups, retour du 2026-10-28, A4), pour qu'ils ne divergent jamais. L'Onde de choc (`per`) n'y passe pas.
+ */
+export function releaseParts(effect: Extract<Effect, { type: 'release' }>, held: Status | undefined): number[] {
+  const releases = STATUSES[effect.status].releases
+  const stored = held ? (releases ? releases(held) : held.stacks) : 0
+  // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
+  const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
+  const split = splitAmong(amount, held?.slots?.filter((n) => n > 0) ?? [])
+  return split.length > 0 ? split : amount > 0 ? [amount] : []
+}
+
 /** Stats de combat du porteur, une fois appliqués les modificateurs de ses statuts. */
 export function effectiveStats(character: Character, statuses: readonly Status[]): CombatStats {
   const { maxHp: _maxHp, ...base } = character.stats
@@ -667,7 +687,7 @@ function isNilEffect(effect: Effect, owner: Side, view: Snapshot, fighters: Pair
       return outcome.kind === 'applied' && outcome.stacks === 0 && !outcome.cancelled
     }
     case 'cleanse': {
-      const any = view.statuses[target].some((s) => STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id))
+      const any = view.statuses[target].some((s) => (effect.steal ? isStealable(s.id) : STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id)))
       return !any && (effect.orElse === undefined || isNilEffect(effect.orElse, owner, view, fighters))
     }
   }
@@ -795,11 +815,17 @@ export function simulateCombat(
     return id
   }
   /**
-   * Le coup en cours, pendant ses fenêtres (null hors d'un coup) : a-t-il touché, combien de PV a-t-il retirés, est-ce
+   * Le coup en cours, pendant ses fenêtres (null hors d'un coup) : a-t-il touché, combien de dégâts a-t-il faits (`dealt`,
+   * comptés en entier) et de PV a-t-il vraiment retirés (`removed`, A5 du 2026-10-28 : moins que `dealt` sur un sursis), est-ce
    * un coup brut ou un jet remplacé. Les réactions d'un coup qui touche en ont besoin (Vol de vie, Riposte, jauges), et
    * les compétences de la face, qui n'y partent que si elles modifient un coup qui touche ou remplacent le jet.
    */
-  let strike: { touched: boolean; dealt: number; plain: boolean; replaced: boolean; rebound: boolean } | null = null
+  let strike: { touched: boolean; dealt: number; removed: number; plain: boolean; replaced: boolean; rebound: boolean } | null = null
+  /**
+   * Le camp dont le jet en cours est un dé de plus (un jet de rafale après le dé de l'action ; retour du 2026-10-28, A7) :
+   * rien de ce jet ne lui donne de jets de plus (`givesJets`), ni compétence, ni réaction, ni relique (`chains`).
+   */
+  let extraJet: Side | undefined
   /**
    * Camps qui ont regagné des PV depuis la dernière vérification d'état (`checkThresholds`) : elle leur ouvre la fenêtre
    * `healed` (Encens de l'abbaye), une fois, avec pour cause l'étape qui les a soignés.
@@ -839,9 +865,9 @@ export function simulateCombat(
    * Fenêtres d'un coup (`hit`, `hurt`…) ; `cause` : le coup (ou la pièce) ; `plain` : coup brut (Furie des vents) ;
    * `rebound` : un renvoi, auquel aucun renvoi ne répond (R1). Le coup qui l'entoure reprend à sa fin.
    */
-  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, cause: number, plain = false, replaced = false, rebound = false) => {
+  const fireStrike = (list: [Side, Trigger][], touched: boolean, dealt: number, removed: number, cause: number, plain = false, replaced = false, rebound = false) => {
     const outer = strike
-    strike = { touched, dealt, plain, replaced, rebound }
+    strike = { touched, dealt, removed, plain, replaced, rebound }
     try {
       return fireAll(list, cause)
     } finally {
@@ -849,9 +875,15 @@ export function simulateCombat(
     }
   }
 
+  /**
+   * Sursis (retour du 2026-10-28, A15) : le tour où la Médaille de sursis a gardé ce camp. Jusqu'à la fin de ce tour, tout
+   * ce qui suit compris, il ne descend pas sous 1 PV : il est figé (`Snapshot.stone`).
+   */
+  const stone: Pair<number | undefined> = [undefined, undefined]
   const snapshot = (): Snapshot => ({
     hp: [states[0].hp, states[1].hp],
     statuses: [states[0].statuses, states[1].statuses],
+    ...(stone.includes(turn) && { stone: [stone[0] === turn, stone[1] === turn] as Pair<boolean> }),
   })
   const fallen = () => SIDES.find((s) => states[s].hp <= 0)
   const end = (winner: Side, endedBy: CombatResult['endedBy']): CombatResult => ({
@@ -872,17 +904,19 @@ export function simulateCombat(
   const spared: Pair<Relic | undefined> = [undefined, undefined]
   /**
    * Une perte de PV, bornée à 0. Une relique de sursis prête (Médaille de sursis) garde son porteur à 1 PV au lieu de
-   * le faire tomber, et s'use ; son étape suit celle de la perte (`checkThresholds`). Les dégâts comptés ne changent pas.
+   * le faire tomber, et s'use ; son étape suit celle de la perte (`checkThresholds`). Il est alors figé jusqu'à la fin du
+   * tour (A15) : aucune perte ne le fait descendre sous 1 PV. Les dégâts comptés ne changent pas.
    */
   function loseHp(side: Side, amount: number) {
     const s = states[side]
-    s.hp = Math.max(0, s.hp - amount)
+    s.hp = Math.max(stone[side] === turn ? Math.min(1, s.hp) : 0, s.hp - amount)
     if (s.hp > 0 || amount <= 0) return
     const medal = fighters[side].relics.find((r) => r.trigger?.type === 'lethal' && (s.relicUses[r.id] ?? 0) < (r.charges ?? 1))
     if (!medal) return
     s.relicUses[medal.id] = (s.relicUses[medal.id] ?? 0) + 1
     s.hp = 1
     spared[side] = medal
+    stone[side] = turn
   }
 
   /**
@@ -946,34 +980,22 @@ export function simulateCombat(
         const fromHit = effect.fromHit !== undefined && strike?.touched ? Math.ceil(strike.dealt * effect.fromHit) : 0
         const fromStatus = readStatus(owner, effect.fromStatus)
         const status = statusOfEffect(effect, fromHit + fromStatus)
-        // Sceau de vol (lot 3) : un bonus que le lanceur se pose, hors mécanisme, va à l'adversaire (une charge de Sceau par
-        // vol) ; ce sont les règles de la pose chez l'adversaire qui s'appliquent (plafond, immunité, opposition, garde). Un
-        // vol prend une charge (règle commune des vols, quatrième demande du 2026-10-27, comme le Larcin) : le lanceur garde
-        // les autres (`kept`), et l'intensité ; la dernière charge l'emporte avec elle
-        const thief =
-          target === owner && STATUSES[effect.status].polarity === 'positive' && !isMechanic(effect.status)
-            ? state.statuses.find((s) => STATUSES[s.id].stealsBonus)
-            : undefined
+        // Sceau de vol (lot 3) : un bonus volable que le lanceur se pose (`isStealable` : de la zone des statuts, jamais une
+        // aura ni un mécanisme ; A6 du 2026-10-28) va à l'adversaire, toutes ses charges et son intensité (un vrai vol : le
+        // lanceur n'en garde rien), une charge de Sceau par vol ; ce sont les règles de la pose chez l'adversaire qui
+        // s'appliquent (plafond, immunité, opposition, garde)
+        const thief = target === owner && isStealable(effect.status) ? state.statuses.find((s) => STATUSES[s.id].stealsBonus) : undefined
         if (thief) {
           state.statuses = consumeStatus(state.statuses, thief.id, 1)
-          const kept = status.stacks - 1
           const stolen = applyEffect(owner, {
             type: 'applyStatus',
             status: effect.status,
-            stacks: Math.min(1, status.stacks),
+            stacks: status.stacks,
             target: 'opponent',
             ...(effect.turns !== undefined && { turns: effect.turns }),
-            ...(kept <= 0 && status.power !== undefined && { power: status.power }),
+            ...(status.power !== undefined && { power: status.power }),
           })
-          if (kept > 0) {
-            const own = resolveApplication(state.statuses, { ...status, stacks: kept }, fighters[target].immunities)
-            state.statuses = own.list
-            if (own.outcome.kind === 'applied') {
-              state.fresh.add(effect.status)
-              posedBy[target][effect.status] = beats.length
-            }
-          }
-          return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id, ...(kept > 0 && { kept }) } : stolen
+          return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id } : stolen
         }
         const { stacks, turns } = status
         const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
@@ -993,8 +1015,6 @@ export function simulateCombat(
         // Le porteur de l'effet relâche son statut à jauges sur sa cible ; ou celui de l'adversaire (Embrasement : sa Brûlure)
         const holder = states[effect.from === 'opponent' ? other(owner) : owner]
         const held = holder.statuses.find((s) => s.id === effect.status)
-        const releases = STATUSES[effect.status].releases
-        const stored = held ? (releases ? releases(held) : held.stacks) : 0
         holder.statuses = holder.statuses.filter((s) => s.id !== effect.status)
         // Onde de choc (`per`) : ses jauges se comptent, `per` PV chacune, en une perte de dégâts directs
         if (effect.per !== undefined) {
@@ -1003,12 +1023,10 @@ export function simulateCombat(
           loseHp(target, amount)
           return { type: 'damage', target, amount, source: effect.source }
         }
-        // Compté en entier (overkill compris) ; les PV s'arrêtent à 0. En part (`share`, Rétribution 0.107.0) : arrondie au-dessous
-        const amount = clamp(Math.max(effect.min, Math.floor(stored * (effect.share ?? 1))), 0)
         // Les jauges, une par coup (retour du 2026-10-27, S1) : en entier, chacune la sienne ; en part (Rétribution), le
-        // montant réparti entre elles (`splitAmong`)
-        const split = splitAmong(amount, held?.slots?.filter((n) => n > 0) ?? [])
-        const parts = split.length > 0 ? split : amount > 0 ? [amount] : []
+        // montant réparti entre elles (`releaseParts`)
+        const parts = releaseParts(effect, held)
+        const amount = parts.reduce((a, b) => a + b, 0)
         // Ses propres jauges, relâchées sur l'adversaire : des renvois (C1), un coup sans dé par jauge, qui partent juste
         // après l'étape qui les relâche (`releaseRebounds`)
         if (effect.from !== 'opponent' && target !== owner) {
@@ -1024,17 +1042,17 @@ export function simulateCombat(
         return { type: 'damage', target, amount, source: effect.source, ...(parts.length > 1 && { parts }) }
       }
       case 'cleanse': {
-        // Les mécanismes (statuts de forme, mécanismes de compétence : `mechanic`) ne se purgent pas
-        const matching = state.statuses.filter((s) => STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id)).map((s) => s.id)
+        // Les mécanismes (statuts de forme, mécanismes de compétence : `mechanic`) ne se purgent pas ; un vol (`steal`,
+        // Larcin) ne vise que les bonus volables (`isStealable`, A6 du 2026-10-28 : ni aura ni mécanisme)
+        const matching = state.statuses.filter((s) => (effect.steal ? isStealable(s.id) : STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id))).map((s) => s.id)
         // `count` : seulement les derniers posés (ordre de la liste), toutes charges comprises
         const removed = effect.count === undefined ? matching : matching.slice(-effect.count)
         // Rien à retirer : l'effet de repli joue à la place (il garde la même cible de référence, le porteur)
         if (removed.length === 0 && effect.orElse) return applyEffect(owner, effect.orElse)
-        // Un vol (`steal`, Larcin) ne prend qu'une charge du bonus visé (quatrième demande du 2026-10-27) : le volé garde les autres
-        if (effect.steal) state.statuses = removed.reduce((list, id) => consumeStatus(list, id, 1), state.statuses)
-        else
-          state.statuses =
-            effect.count === undefined ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
+        // Une purge sans compte retire toute la polarité ; une purge comptée ou un vol (`steal`, Larcin : un vrai vol, A6 du
+        // 2026-10-28), les statuts visés, toutes charges comprises
+        state.statuses =
+          effect.count === undefined && !effect.steal ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
         return { type: 'cleanse', target, removed, ...(effect.steal && { stolen: true as const }) }
       }
     }
@@ -1050,8 +1068,19 @@ export function simulateCombat(
 
   /** Une relique dont tous les effets seraient nuls ne part pas et ne s'use pas (Dent de loup au plafond du Vol de vie) */
   function inert(side: Side, relic: Relic) {
-    return relicIsInert(relic, side, { hp: [states[0].hp, states[1].hp], statuses: [states[0].statuses, states[1].statuses] }, fighters)
+    return (
+      muted(side, relic.effects ?? []) ||
+      relicIsInert(relic, side, { hp: [states[0].hp, states[1].hp], statuses: [states[0].statuses, states[1].statuses] }, fighters)
+    )
   }
+
+  /**
+   * Un effet qu'un dé de plus ne donne pas (A7 du 2026-10-28, `extraJet`) : des jets de plus à qui lance ce dé, quelle
+   * qu'en soit la source (sa compétence, la réaction d'un de ses statuts, une de ses reliques)
+   */
+  const chains = (owner: Side, e: Effect) => extraJet === owner && e.type === 'applyStatus' && e.target !== 'opponent' && givesJets(e.status)
+  /** Des effets qui ne sont que des jets qu'un dé de plus ne donne pas : ce qui les porte ne part pas (sa face est nue) */
+  const muted = (owner: Side, effects: readonly Effect[]) => effects.length > 0 && effects.every((e) => chains(owner, e))
 
   /**
    * Applique des effets dans l'ordre et s'arrête au premier K.O. (vérification d'état). Une purge qui a retiré quelque
@@ -1060,21 +1089,21 @@ export function simulateCombat(
   function applyEffects(owner: Side, effects: readonly Effect[]) {
     const applied: AppliedEffect[] = []
     for (const effect of effects) {
-      // Larcin (`steal`) : ce que la purge retire, lu avant elle, passe au porteur de l'effet : une charge, avec sa durée ;
-      // la dernière emporte aussi l'intensité (une aura aiguisée change de camp entière)
+      if (chains(owner, effect)) continue
+      // Larcin (`steal`) : ce que la purge retire, lu avant elle, passe au porteur de l'effet, entier (charges, durée,
+      // intensité), selon ses règles de pose
       const held = effect.type === 'cleanse' && effect.steal ? states[effect.target === 'opponent' ? other(owner) : owner].statuses : []
       const done = applyEffect(owner, effect)
       applied.push(done)
       if (fallen() !== undefined) break
       if (effect.type === 'cleanse' && effect.steal && done.type === 'cleanse')
         for (const s of held.filter((x) => done.removed.includes(x.id))) {
-          const last = s.stacks <= 1
           const taken = applyEffect(owner, {
             type: 'applyStatus',
             status: s.id,
-            stacks: Math.min(1, s.stacks),
+            stacks: s.stacks,
             ...(s.turns !== undefined && { turns: s.turns }),
-            ...(last && s.power !== undefined && { power: s.power }),
+            ...(s.power !== undefined && { power: s.power }),
           })
           applied.push(taken.type === 'applyStatus' && !taken.stolenBy ? { ...taken, stolenBy: effect.steal } : taken)
         }
@@ -1088,15 +1117,16 @@ export function simulateCombat(
 
   /**
    * Ce qu'un statut fait dans une fenêtre : sa réaction déclarée (`reactions`), ou sa réaction à un coup qui touche
-   * (Vol de vie sur `hit` : les PV retirés lui reviennent), son intensité en plus (rangs d'aiguisage, 0.110.0).
-   * Undefined : rien. La Riposte, elle, est un renvoi (`rebound`).
+   * (Vol de vie sur `hit` : les PV que ce coup a vraiment retirés lui reviennent, pas l'excès compté au-delà, A5 du
+   * 2026-10-28), son intensité en plus (rangs d'aiguisage, 0.110.0). Undefined : rien. La Riposte, elle, est un renvoi
+   * (`rebound`).
    */
   function reactionTo(status: Status, trigger: Trigger): Effect[] | undefined {
     const def = STATUSES[status.id]
     const declared = def.reactions?.[trigger]
     if (declared) return declared(status)
     if (!strike?.touched) return undefined
-    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.dealt + (status.power ?? 0) }]
+    if (trigger === 'hit' && def.drainsHit) return [{ type: 'heal', amount: strike.removed + (status.power ?? 0) }]
     return undefined
   }
 
@@ -1154,13 +1184,13 @@ export function simulateCombat(
       if (!react) continue
       // Une relâche du statut de l'adversaire (Embrasement, phase 8) attend qu'il le porte ; un soin ou des dégâts qui ne
       // valent que ce qu'ils lisent sur un statut (Sangsue, 2026-10-27) attendent qu'il soit là ; un Larcin (`cleanse.steal`)
-      // attend un bonus à prendre : sans eux, la réaction ne part pas
+      // attend un bonus volable à prendre ; des jets de plus attendent un jet qui n'est pas un dé de plus (A7) : sans eux,
+      // la réaction ne part pas
       const idle = (e: Effect) =>
         (e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status)) ||
         ((e.type === 'heal' || e.type === 'damage') && e.fromStatus !== undefined && e.amount + readStatus(side, e.fromStatus) <= 0) ||
-        (e.type === 'cleanse' &&
-          e.steal !== undefined &&
-          !states[e.target === 'opponent' ? other(side) : side].statuses.some((s) => STATUSES[s.id].polarity === e.polarity && !isMechanic(s.id)))
+        (e.type === 'cleanse' && e.steal !== undefined && !states[e.target === 'opponent' ? other(side) : side].statuses.some((s) => isStealable(s.id))) ||
+        chains(side, e)
       if (react.length > 0 && react.every(idle)) continue
       const effects = applyEffects(side, react)
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
@@ -1244,6 +1274,8 @@ export function simulateCombat(
     if (!inForm(side, event)) return false
     if (event.limit !== undefined && (states[side].fired[event.id] ?? 0) >= event.limit) return false
     if (event.when && !event.when.every((c) => conditionMet(side, c))) return false
+    // Un dé de plus ne lance pas une compétence qui ne donne que des jets de plus (A7) : sa face est nue
+    if (muted(side, event.effects)) return false
     // Le tirage n'a lieu que pour les événements aléatoires : les autres ne consomment pas de hasard.
     return event.chance === undefined || chance(rng, event.chance)
   }
@@ -1407,7 +1439,8 @@ export function simulateCombat(
         isRollTrigger(e.trigger) &&
         rollMatches(e.trigger, roll, DIE_FACES) &&
         (e.limit === undefined || (states[side].fired[e.id] ?? 0) < e.limit) &&
-        (!e.when || e.when.every((c) => conditionMet(side, c))),
+        (!e.when || e.when.every((c) => conditionMet(side, c))) &&
+        !muted(side, e.effects),
     )
   }
 
@@ -1477,8 +1510,10 @@ export function simulateCombat(
     // État de référence du coup : les statuts de ce moment, après une compétence greffée (règle 9)
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     const outcome = resolveAttack(rng, fighters[attacker], fighters[defender], states[attacker].statuses, states[defender].statuses, jetRoll, holds[attacker])
+    const before = states[defender].hp
     const { touched, emptied } = landStrike(attacker, outcome)
     const dealt = outcome.damage
+    const removed = before - states[defender].hp
     const hit = push({ type: 'attack', attack: { attacker, ...outcome, dealt, ...(plain && { plain: true as const }) } }, cause)
     lastStrike = hit
     if (states[defender].hp === 0) return defender
@@ -1491,7 +1526,7 @@ export function simulateCombat(
       if (down !== undefined) return down
       const faces: [Side, Trigger][] = [faceTrigger(outcome.roll), ...(outcome.roll === DIE_FACES ? ['naturalMax' as const] : [])].map((t) => [attacker, t])
       // Un jet tombé à vide : ses fenêtres du dé n'éveillent que les reliques, comme un coup brut
-      return fireStrike([...faces, ...strikeWindows(attacker, outcome, touched, emptied)], touched, dealt, hit, plain || !!outcome.jinxed, outcome.replaced)
+      return fireStrike([...faces, ...strikeWindows(attacker, outcome, touched, emptied)], touched, dealt, removed, hit, plain || !!outcome.jinxed, outcome.replaced)
     })
     if (fell !== undefined) return fell
     // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
@@ -1569,13 +1604,15 @@ export function simulateCombat(
     const target = other(side)
     const base: Pair<Status[]> = [states[0].statuses, states[1].statuses]
     const outcome = resolveAttack(rng, fighters[side], fighters[target], states[side].statuses, states[target].statuses, { roll: 0, fixed: value }, holds[side])
+    const before = states[target].hp
     const { touched, emptied } = landStrike(side, outcome)
     const dealt = outcome.damage
+    const removed = before - states[target].hp
     if (returned !== undefined && (returned || (touched && dealt > 0))) reflected[side] = true
     const effects: AppliedEffect[] = touched ? [{ type: 'damage', target, amount: dealt, source: 'strike' }] : []
     const beat = push({ type: 'statusReaction', side, status, trigger, effects, strike: { attacker: side, ...outcome, dealt } }, cause)
     if (states[target].hp === 0) return target
-    return withinStrike(base, () => checkThresholds(beat) ?? fireStrike(strikeWindows(side, outcome, touched, emptied), touched, dealt, beat, false, false, true))
+    return withinStrike(base, () => checkThresholds(beat) ?? fireStrike(strikeWindows(side, outcome, touched, emptied), touched, dealt, removed, beat, false, false, true))
   }
 
   /**
@@ -1627,7 +1664,9 @@ export function simulateCombat(
     // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
     const extra = toss.multiplier !== undefined ? dealt * (toss.multiplier + (coin.power ?? 0) - 1) : 0
     const onHeads: readonly Effect[] = toss.multiplier !== undefined ? [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }] : toss.heads
+    const foeBefore = states[other(side)].hp
     const effects = heads ? applyEffects(side, onHeads) : []
+    const removed = foeBefore - states[other(side)].hp
     const id = push({ type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) }, posedBy[side][coin.id] ?? after)
     return withinStrike(base, () => {
       const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
@@ -1635,7 +1674,7 @@ export function simulateCombat(
       // Pile (phase 8, second lot) : la fenêtre `heads` du lanceur, puis, si pile touche, celles d'un coup qui touche
       const windows: [Side, Trigger][] = [[side, 'heads']]
       if (toss.headsTouches) windows.push([side, 'hit'], [other(side), 'hurt'])
-      return fireStrike(windows, !!toss.headsTouches, extra, id)
+      return fireStrike(windows, !!toss.headsTouches, extra, removed, id)
     })
   }
 
@@ -1674,7 +1713,8 @@ export function simulateCombat(
    * début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action ; un seul de ces statuts
    * par action, l'autre attend la suivante). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base.
    * Plusieurs jets font une rafale (étape flurry), cause de chacun. Au plus `MAX_EXTRA_JETS` jets de plus par action ;
-   * les charges au-delà partent avec les autres.
+   * les charges au-delà partent avec les autres. Le premier jet est le dé de l'action ; les suivants sont des dés de plus
+   * (`extraJet`, A7) : rien de ce qu'ils déclenchent ne donne de jets de plus.
    */
   function action(attacker: Side): Side | undefined {
     const att = states[attacker]
@@ -1686,9 +1726,14 @@ export function simulateCombat(
     att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
     // Tous les jets d'une rafale, celui de l'action compris, ont la rafale pour cause
     const volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
-    for (let k = 0; k < jets; k++) {
-      const down = jet(attacker, volley)
-      if (down !== undefined) return down
+    try {
+      for (let k = 0; k < jets; k++) {
+        extraJet = k > 0 ? attacker : undefined
+        const down = jet(attacker, volley)
+        if (down !== undefined) return down
+      }
+    } finally {
+      extraJet = undefined
     }
     return undefined
   }

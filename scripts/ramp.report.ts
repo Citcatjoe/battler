@@ -25,7 +25,7 @@ import { hashSeed } from '../src/game/analysis'
 import { Character, type CharacterDef } from '../src/game/character'
 import { rollFace } from '../src/game/events'
 import { forgeState, withForgeStep, type ForgeBase, type ForgeStep } from '../src/game/forge'
-import { drawReward, REWARDS, type PendingReward } from '../src/game/offers'
+import { drawReward, forgesLeftIn, REWARDS, type PendingReward } from '../src/game/offers'
 import { getRelic } from '../src/game/relics'
 import { seededRng } from '../src/game/rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter } from '../src/game/roster'
@@ -51,7 +51,7 @@ interface BuildState {
   relics: string[]
 }
 
-/** Une brique et sa valeur dans un build : `engrave:<id>`, `sharpen:<id>`, `copy:<id>`, `gild`, `temper`, `relic:<id>` */
+/** Une brique et sa valeur dans un build : `engrave:<id>`, `sharpen:<id>`, `copy:<id>`, `gild`, `relic:<id>` */
 interface Brick {
   key: string
   value: number
@@ -84,8 +84,8 @@ function actOf(id: string, seed: number, v: number): { states: BuildState[]; rew
   const relics: string[] = []
   const states: BuildState[] = [{ forge, relics: [] }]
   const rewards: PendingReward[] = []
-  for (const kind of REWARDS) {
-    const reward = drawReward({ championId: id, forge, relics }, kind, rng)
+  for (const [index, kind] of REWARDS.entries()) {
+    const reward = drawReward({ championId: id, forge, relics }, kind, rng, forgesLeftIn(REWARDS, index))
     rewards.push(reward)
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
@@ -129,7 +129,7 @@ function duel(me: Character, opps: readonly Character[]): { rate: number; turns:
 
 /** La brique d'un pas de forge, lue dans l'état d'avant ce pas */
 function brickOf(def: CharacterDef, before: readonly ForgeStep[], step: ForgeStep): string {
-  if (step.op === 'temper' || step.op === 'gild') return step.op
+  if (step.op === 'gild') return step.op
   if (step.op === 'engrave') return `engrave:${step.skill.id}`
   const state = forgeState(def, before)
   const origin = def.events.filter((e) => rollFace(e.trigger) === step.face)
@@ -220,13 +220,12 @@ function offersOf(id: string) {
   return { offered, taken }
 }
 
-const OP_LABEL: Record<string, string> = { engrave: 'Gravure', sharpen: 'Aiguisage', copy: 'Copie', relic: 'Relique', temper: 'Trempe', gild: 'Dorure' }
+const OP_LABEL: Record<string, string> = { engrave: 'Gravure', sharpen: 'Aiguisage', copy: 'Copie', relic: 'Relique', gild: 'Dorure' }
 const skillName = (id: string) => ALL_SKILLS.find((e) => e.id === id)?.name ?? id
 
 /** Le nom d'une brique (`engrave:cleave` : Pourfendre ; `sharpen:a+b` : les deux compétences de la face) */
 function brickName(key: string) {
   const [op, rest] = key.split(':')
-  if (op === 'temper') return 'Tremper l’arme'
   if (op === 'gild') return 'Dorer une face'
   if (op === 'relic') return getRelic(rest).name
   return rest.split('+').map(skillName).join(' et ')

@@ -40,7 +40,8 @@ export type RelicTrigger =
   | { type: 'hpBelow'; ratio: number; who?: Target }
   /**
    * Sursis (retour du 2026-10-27, R1) : quand une perte de PV devrait le faire tomber (coup, dégâts directs, Poison…),
-   * il reste à 1 PV. Sans effet ni condition ; une charge (`charges: 1`). Son étape suit celle de la perte.
+   * il reste à 1 PV, figé jusqu'à la fin du tour (retour du 2026-10-28, A15 : il survit à tout le tour, rien ne le fait
+   * descendre sous 1 PV). Sans effet ni condition ; une charge (`charges: 1`). Son étape suit celle de la perte.
    */
   | { type: 'lethal' }
   /**
@@ -363,9 +364,11 @@ export const RELICS: readonly Relic[] = [
     effects: [{ type: 'heal', amount: 1 }],
   },
   {
+    // Retour du 2026-10-28 : « Pièce trouée » devient un porte-bonheur (les pièces sont des compétences de la Fortune,
+    // jamais des reliques) ; même règle, id gardé (historique, sauvegardes)
     id: 'holed-coin',
-    name: 'Pièce trouée',
-    flavor: 'Une vieille pièce de cuivre percée, sur un cordon noué, deux étoiles frappées côté pile. Pile, la chance relance.',
+    name: 'Trèfle de fer',
+    flavor: 'Un trèfle à quatre feuilles forgé dans le fer, pendu à un cordon noué, deux étoiles gravées au cœur. Pile, la chance relance.',
     trigger: { type: 'strike', on: 'heads' },
     effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 2 }],
   },
@@ -403,7 +406,8 @@ export const RELICS: readonly Relic[] = [
   /*
    * Retour du 2026-10-27 (docs/RELIQUES.md § 17) : les idées de l'utilisateur. La Pièce de foire (une relique qui lançait
    * une pièce sur un 6) est retirée : les pièces sont des compétences de la Fortune (M10). Restent des reliques qui
-   * servent ces pièces (Pièce trouée, Pièce lestée), une qui épargne un coup fatal et une qui prend l'initiative.
+   * servent ces pièces (Trèfle de fer, Patte de lièvre : des porte-bonheur, 2026-10-28), une qui épargne un coup fatal et
+   * une qui prend l'initiative.
    */
   {
     id: 'reprieve-medal',
@@ -419,9 +423,10 @@ export const RELICS: readonly Relic[] = [
     trigger: { type: 'initiative' },
   },
   {
+    // Retour du 2026-10-28 : « Pièce lestée » devient un porte-bonheur ; même règle, id gardé
     id: 'weighted-coin',
-    name: 'Pièce lestée',
-    flavor: 'Une pièce d’argent rognée, un grain de plomb serti côté face. Elle retombe toujours un peu du même côté.',
+    name: 'Patte de lièvre',
+    flavor: 'Une patte de lièvre séchée, cerclée d’une bague de laiton, un ruban turquoise noué au poignet. Elle fait retomber la chance du bon côté.',
     headsChance: 0.25,
   },
 ]
@@ -582,10 +587,11 @@ export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
-    r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile` : '',
+    // Le plafond des pièces (`HEADS_CAP`, 5 sur 6) dit avec la chance : sans lui, « +25 % » laissait attendre pile à coup sûr
+    r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile (5 sur 6 au plus)` : '',
     r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
-    // Sursis et initiative : leur effet est leur règle, sans effet de compétence
-    t?.type === 'lethal' ? 'reste à 1 PV' : t?.type === 'initiative' ? 'joue le premier tour' : '',
+    // Sursis et initiative : leur effet est leur règle, sans effet de compétence. Le sursis tient tout le tour (A15)
+    t?.type === 'lethal' ? 'reste à 1 PV jusqu’à la fin du tour' : t?.type === 'initiative' ? 'joue le premier tour' : '',
     ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge' || t.on === 'shieldBroken'))),
   ]
     .filter(Boolean)

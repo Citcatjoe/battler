@@ -44,6 +44,8 @@ export interface View {
   dazed: Pair<boolean>
   /** Incantation de chaque combattant (cue `cast`, M55) : il lance un sort offensif */
   casting: Pair<boolean>
+  /** Figé (cue `stone`, Médaille de sursis, A15) : désaturé, teinté de pierre */
+  stone: Pair<boolean>
   dice: DiceState
   strike: Strike | null
   blow: Blow | null
@@ -71,6 +73,7 @@ export function initialView(fighters: Pair<Character>): View {
     forms: [0, 0],
     dazed: [false, false],
     casting: [false, false],
+    stone: [false, false],
     dice: IDLE_DICE,
     strike: null,
     blow: null,
@@ -133,6 +136,8 @@ export function applyCue(view: View, cue: Cue, now: number): View {
       return { ...view, forms: withSide(view.forms, cue.side, cue.form) }
     case 'daze':
       return { ...view, dazed: withSide(view.dazed, cue.side, cue.on) }
+    case 'stone':
+      return { ...view, stone: withSide(view.stone, cue.side, cue.on) }
     case 'cast':
       return { ...view, casting: withSide(view.casting, cue.side, cue.on) }
     case 'turn':

@@ -10,7 +10,7 @@ export interface CharacterStats {
   maxHp: number
   /**
    * L'attaque (règles v2, phase 5 bis, docs/RESOLUTION.md § 3 bis) : chaque coup de base tire sa valeur entre
-   * `attackMin` et `attackMax`, bornes comprises. Une relique ou « Tremper l'arme » ajoutent aux deux.
+   * `attackMin` et `attackMax`, bornes comprises. Une relique y ajoute aux deux.
    */
   attackMin: number
   attackMax: number
@@ -158,7 +158,7 @@ export interface CharacterDef {
   relics?: readonly Relic[]
   /**
    * Forge du dé (campagne, docs/CAMPAGNE.md § 4) : journal d'opérations, rejoué sur `stats` et `events` d'origine.
-   * Les gravures et les rangs s'ajoutent aux compétences, les dorures au coup de base, la trempe à l'attaque.
+   * Les gravures et les rangs s'ajoutent aux compétences, les dorures (le boss) au coup de base.
    */
   forge?: readonly ForgeStep[]
 }
@@ -175,9 +175,9 @@ export class Character {
   readonly name: string
   readonly race: string
   readonly archetype: string
-  /** Stats de combat : celles du personnage (forge comprise), plus celles de ses reliques */
+  /** Stats de combat : celles du personnage, plus celles de ses reliques */
   readonly stats: Readonly<CharacterStats>
-  /** Stats du personnage seul, forge comprise (Tremper l'arme) et PV de ses récompenses (`rewardHp`), sans les stats de ses reliques */
+  /** Stats du personnage seul et PV de ses récompenses (`rewardHp`), sans les stats de ses reliques */
   readonly baseStats: Readonly<CharacterStats>
   /** PV max gagnés par ses récompenses : `REWARD_HP` par étape de forge et par relique (docs/CAMPAGNE.md) */
   readonly rewardHp: number
@@ -202,15 +202,9 @@ export class Character {
     this.archetype = def.archetype
     this.forge = def.forge ?? []
     const forged = this.forge.length > 0 ? forgeState(def, this.forge) : undefined
-    const temper = forged?.temper ?? 0
     this.relics = def.relics ?? []
     this.rewardHp = REWARD_HP * (this.forge.length + this.relics.length)
-    this.baseStats = Object.freeze({
-      ...def.stats,
-      maxHp: def.stats.maxHp + this.rewardHp,
-      attackMin: def.stats.attackMin + temper,
-      attackMax: def.stats.attackMax + temper,
-    })
+    this.baseStats = Object.freeze({ ...def.stats, maxHp: def.stats.maxHp + this.rewardHp })
     this.stats = Object.freeze(withRelicStats(this.baseStats, this.relics))
     this.look = Object.freeze({ ...def.look })
     this.lore = def.lore

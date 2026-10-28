@@ -270,6 +270,20 @@ body {
   to { transform: translateY(-3%); }
 }
 
+/* ---------- Figé (Médaille de sursis, retour du 2026-10-28, A15) ----------
+   Le porteur survit au tour qui devait le tuer : il est figé, en pierre, jusqu'à la fin de ce tour. La teinte de pierre
+   passe par le filtre de l'image (Fighter.tsx, comme le grisé du K.O.) ; ici, ses mouvements s'arrêtent (tremblement,
+   alternance de la perte de contrôle) et son aura pâlit. */
+.is-stone .status-tremble,
+.is-stone .daze-frame-a,
+.is-stone .daze-frame-b {
+  animation-play-state: paused;
+}
+.is-stone .char-aura {
+  opacity: 0.3;
+  transition: opacity 300ms;
+}
+
 /* ---------- Dé ---------- */
 .die-rolling {
   animation: die-tumble 0.35s linear infinite;

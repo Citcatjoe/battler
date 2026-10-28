@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react'
+import { releaseParts } from '../game/combat'
 import type { Character } from '../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, faceTrigger, rollFace, triggerText, type CharacterEvent } from '../game/events'
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
@@ -19,7 +20,7 @@ interface Props {
   statuses: readonly Status[]
   /** Le dé de la face qui vient de sortir : le sceau de sa compétence s'allume */
   pulse?: SkillPulse
-  /** Une aura de ce camp qui agit (Aura glaciale, Aura de décoction) : son anneau s'allume */
+  /** Une aura de ce camp qui agit (Aura de poison, Aura de décoction) : son anneau s'allume */
   signal?: SkillSignal
   /** Les faces que montre le dé de ce camp pendant qu'il roule : le sceau de la face montrée s'allume brièvement */
   rolling?: readonly number[]
@@ -44,7 +45,13 @@ interface Props {
 export function SkillBar({ character, side, form = 0, statuses, pulse, signal, rolling, landed, align = 'left' }: Props) {
   const formId = character.forms?.[form].id
   const events = character.events.filter((e) => !e.form || e.form === formId)
-  const faces = Array.from({ length: DIE_FACES }, (_, k) => ({ face: k + 1, event: events.find((e) => e.trigger === faceTrigger(k + 1)) }))
+  // Une face que la forme en cours laisse nue garde l'aura qu'y pose l'autre forme (retour du 2026-10-28 : l'aura de
+  // Thaldrin reste sur le 1 en ours)
+  const faces = Array.from({ length: DIE_FACES }, (_, k) => {
+    const event = events.find((e) => e.trigger === faceTrigger(k + 1))
+    const auraId = event ? auraOfSkill(event) : character.events.map((e) => (e.trigger === faceTrigger(k + 1) ? auraOfSkill(e) : undefined)).find(Boolean)
+    return { face: k + 1, event, auraId }
+  })
   // Les compétences hors dé (au début du combat ; aucune depuis le départ de l'Ouverture, 2026-10-27) qui ne posent pas
   // d'aura ont aussi leur sceau
   const offDice = events.filter((e) => rollFace(e.trigger) === undefined && !auraOfSkill(e))
@@ -52,10 +59,7 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
   // que pose une face prend la place de sa première face, les autres suivent
   const auras = [...new Set([...auraIdsOf(character), ...statuses.filter((s) => STATUS_PLACE[s.id].place === 'aura').map((s) => s.id)])]
   const onFace = new Map<StatusId, number>()
-  for (const { face, event } of faces) {
-    const id = event && auraOfSkill(event)
-    if (id && !onFace.has(id)) onFace.set(id, face)
-  }
+  for (const { face, auraId } of faces) if (auraId && !onFace.has(auraId)) onFace.set(auraId, face)
   const formRules = statuses.filter((s) => STATUS_PLACE[s.id].place === 'form')
   const tip = align === 'right' ? 'right' : 'left'
   const aura = (id: StatusId) => (
@@ -63,9 +67,8 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
   )
   return (
     <ul className={`skill-bar flex items-start gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`} aria-label={`Compétences de ${character.name}`}>
-      {faces.map(({ face, event }) => {
-        const id = event && auraOfSkill(event)
-        if (id && onFace.get(id) === face) return aura(id)
+      {faces.map(({ face, event, auraId }) => {
+        if (auraId && onFace.get(auraId) === face) return aura(auraId)
         return (
           <Seal
             key={face}
@@ -101,13 +104,18 @@ function auraLit(id: StatusId, events: readonly CharacterEvent[], pulse?: SkillP
   return posing.some((e) => rollFace(e.trigger) === pulse.face) ? pulse.key : undefined
 }
 
-/** Jauges ou réserve d'une compétence, comptées sur son sceau (Rétribution : les dégâts stockés). */
+/**
+ * Compte d'une compétence à jauges, sur son sceau : **le nombre de coups** que sa relâche produira (Rétribution ; retour
+ * du 2026-10-28, A4, jamais les dégâts gardés, qui se lisent dans l'infobulle de la compétence). Lu dans le moteur
+ * (`releaseParts`) ; une compétence qui pose le statut sans le relâcher montre son `badge`.
+ */
 function sealCount(event: CharacterEvent, statuses: readonly Status[]): number | undefined {
   for (const effect of event.effects) {
     const id = effect.type === 'release' || effect.type === 'applyStatus' ? effect.status : undefined
     if (!id || !STATUS_PLACE[id].onSeal) continue
     const s = statuses.find((x) => x.id === id)
-    return s?.stacks ?? 0
+    if (effect.type === 'release') return releaseParts(effect, s).length
+    return s ? Number(STATUSES[id].badge(s)) || 0 : 0
   }
   return undefined
 }

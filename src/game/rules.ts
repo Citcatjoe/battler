@@ -159,7 +159,7 @@ export const RULES: Record<RuleId, Rule> = {
   polarity: {
     group: 'statuses',
     title: 'Bonus et malus',
-    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus posé » est le dernier apparu (un statut renforcé garde son rang, il ne redevient pas le dernier). Un vol (Confiscation, Larcin) ne prend qu'une charge du bonus : le volé garde les autres, et la dernière emporte le bonus entier. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
+    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus posé » est le dernier apparu (un statut renforcé garde son rang, il ne redevient pas le dernier). Un vol (Confiscation, Larcin) prend le bonus entier, charges, durée et intensité : le volé le perd. Seuls les bonus de la zone des statuts se volent, jamais une aura. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
   },
   duration: {
     group: 'statuses',

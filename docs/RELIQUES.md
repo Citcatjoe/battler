@@ -727,3 +727,19 @@ Variantes de pile mesurées (gravées sur le 3, Naraxes · Fanchon) : 1 critique
 **Contrôles.** `combat.test.ts` (« retour du 2026-10-27 ») : les pièces sont des compétences de la Fortune, jamais des reliques ; pile et face des deux pièces ; le rang et la Pièce lestée (taux de pile, plafond) ; le Dé pipé, une aura depuis les maîtrises (M9), sert aussi les pièces d'effet, en plus de la Pièce lestée, toujours sous 5 sur 6 (il y attendait avant M9) ; le sursis sur un coup et sur le Poison ; le Cor seul puis des deux côtés. Registre : pièce refusée sur une relique, sursis et initiative sans effet, chance de pile bornée. `audit.ts` : pièce d'effet (statuts posés, sans dégâts), sursis (cause, 1 PV, jamais manqué), initiative (étape n° 0, premier tour), PV expliqués avec le sursis ; `audit.test.ts` (« retour du 2026-10-27 »). `modules.test.ts` : toute pièce gravée ouvre la Pièce trouée et la Pièce lestée.
 
 **Non vu, non entendu** : aucune capture (teintes des pièces, sceaux des reliques nouvelles) ; aucun son écouté. La mise en scène des étapes nouvelles (pile d'une pièce d'effet, sursis, initiative sans dés) est chez l'agent de mise en scène.
+
+## 17 ter. Retour du 2026-10-28 : des porte-bonheur, pas des pièces
+
+**Demande** : « la relique +25 % de pile doit être présentée comme un **porte-bonheur**, pas une pièce » ; les pièces sont les compétences de la Fortune (M10), une relique ne doit pas en avoir l'air. Même logique pour la Pièce trouée, qui en était une aussi.
+
+| Avant | Après | Id (gardé : historique, sauvegardes) | Règle |
+| --- | --- | --- | --- |
+| Pièce lestée | **Patte de lièvre** | `weighted-coin` | inchangée : +25 % de chances de faire pile à ses pièces |
+| Pièce trouée | **Trèfle de fer** | `holed-coin` | inchangée : +2 coups de chance sur pile |
+
+Les noms des fichiers d'icônes ne changent pas (`weighted-coin.png`, `holed-coin.png`) ; leurs images sont **à repeindre** (planche de reliques, couleurs franches, STYLE_BIBLE § 7), le parent les peint :
+
+- **Patte de lièvre** (`weighted-coin`) : une patte de lièvre séchée, fourrure **gris perle et blanc de neige**, cerclée au poignet d'une bague de laiton poli, un **ruban turquoise** noué qui pend ; objet immobile, sans halo ; **aucune pièce, aucun disque, aucun dé**.
+- **Trèfle de fer** (`holed-coin`) : un trèfle à quatre feuilles forgé dans le fer, ses feuilles émaillées **vert émeraude** franc, deux petites étoiles d'or gravées au cœur (les deux coups de chance), pendu à un cordon **rouge** noué ; objet immobile, sans halo ; **aucune pièce, aucun disque percé**, distinct de la Pièce porte-bonheur (pièce émeraude au trèfle frappé : ici, le trèfle est seul, découpé, sans disque).
+
+**L'Aura de poison** (`frost-aura.png`, Ervald), renommée le même jour (« Aura glaciale → Aura de poison ») : l'icône givrée est aussi à repeindre, dans la planche des compétences (pas avec les reliques) : l'encensoir de bronze d'Ervald, sans givre, une **fumée vert toxique** qui s'en échappe et forme des gouttes, halo d'aura vert toxique ; distinct de l'Aura de décoction (dague trempée dans une fiole jaune-vert).

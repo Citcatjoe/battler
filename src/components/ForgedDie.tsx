@@ -3,10 +3,8 @@ import type { Character } from '../game/character'
 import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, type CharacterEvent } from '../game/events'
 import {
   FORGE_OPS,
-  TEMPER_BONUS,
   copyDestinations,
   forgedFaces,
-  forgeState,
   GILD_BONUS,
   offerTargets,
   rankLabel,
@@ -208,7 +206,7 @@ export interface ForgeChoiceState {
   select: (index: number, skill?: string) => void
   picked: ForgeOffer | undefined
   /** Faces cliquables sur le dé : celles que l'opération retenue peut viser ; pour une copie, ses origines et, une fois
-   * l'origine choisie, ses destinations (vide pour Tremper l'arme) */
+   * l'origine choisie, ses destinations */
   targets: number[]
   /** Faces retenues : la face visée ; pour une copie, son origine et sa destination */
   selected: number[]
@@ -243,7 +241,7 @@ export function useForgeChoice(character: Character, offer: readonly ForgeOffer[
   const aimed = picked ? offerTargets(base, forge, picked) : []
   const copying = picked?.op === 'copy'
   const destinations = copying && face !== undefined && aimed.includes(face) ? copyDestinations(base, forge, face) : []
-  const ready = !picked || !FORGE_OPS[picked.op].targeted || (face !== undefined && aimed.includes(face) && (!copying || (to !== undefined && destinations.includes(to))))
+  const ready = !picked || (face !== undefined && aimed.includes(face) && (!copying || (to !== undefined && destinations.includes(to))))
   const step = picked && ready ? stepOf(picked, face, to, skill) : undefined
   const prompt =
     !picked || aimed.length === 0
@@ -328,10 +326,10 @@ export function ForgeChoice({ character, choice }: { character: Character; choic
   )
 }
 
-/** Le signe d'une opération sans sceau, sur sa tuile : l'or de la dorure, le rang, la copie, la trempe. */
-const OP_TEXT: Record<Exclude<ForgeStep['op'], 'engrave'>, string> = { gild: `+${GILD_BONUS}`, sharpen: 'II', copy: '×2', temper: `+${TEMPER_BONUS}` }
+/** Le signe d'une opération sans sceau, sur sa tuile : l'or de la dorure (le boss), le rang, la copie. */
+const OP_TEXT: Record<Exclude<ForgeStep['op'], 'engrave'>, string> = { gild: `+${GILD_BONUS}`, sharpen: 'II', copy: '×2' }
 
-/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la copie, la trempe. */
+/** La tuile d'une opération déjà faite : le sceau gravé, l'or de la dorure, le rang, la copie. */
 function StepTile({ step, size }: { step: ForgeStep; size: number }) {
   const text = step.op === 'engrave' ? undefined : OP_TEXT[step.op]
   return (
@@ -358,9 +356,9 @@ function ForgeTooltip({ base, steps, index, placement }: { base: ForgeBase; step
   const after = steps.slice(0, index + 1)
   // La face que l'opération a changée : pour une copie, sa destination
   const written = writtenFace(base, steps.slice(0, index), step)
-  const face = written === undefined ? undefined : forgedFaces(base, after).find((f) => f.face === written)
+  const face = forgedFaces(base, after).find((f) => f.face === written)
   const skills = !face ? [] : step.op === 'engrave' ? (face.engraved ? [face.engraved] : []) : [...(face.engraved ? [face.engraved] : []), ...face.origin]
-  const badge = written !== undefined ? `Dé ${written}` : `Attaque +${forgeState(base, after).temper - forgeState(base, steps.slice(0, index)).temper}`
+  const badge = `Dé ${written}`
   const position = placement === 'floating' ? '' : 'pointer-events-none invisible absolute left-0 top-full z-[70] mt-3 opacity-0 transition-opacity duration-150 group-hover/forge:visible group-hover/forge:opacity-100'
   return (
     <div role="tooltip" className={`w-80 rounded-(--r-sm) border border-line-2 bg-surface-1/95 px-4 py-3 text-left shadow-(--shadow-2) ${position}`}>

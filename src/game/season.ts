@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
 import { isOffered, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { drawReward, REWARDS, type RewardKind } from './offers'
+import { drawReward, forgesLeftIn, REWARDS, type RewardKind } from './offers'
 import { getRelic } from './relics'
 import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
@@ -18,8 +18,9 @@ import { drawStartAuras, entrantAura, entrantCharacter, fighterKey, fillSlots, l
  *
  * Construction (0.92.0, demandes de l'utilisateur du 2026-10-22 ; rythme de la 0.115.0, choisi par l'agent sur mesure,
  * docs/FEATURES.md § 8) : avec les reliques ou la forge du dé, chaque participant reçoit une récompense à **chacun de ses
- * premiers matchs, gagné ou perdu**, dans l'ordre d'un acte de campagne (`REWARDS` : forge, relique, relique, forge…,
- * quatre forges et six reliques), offerte comme en campagne (offers.ts : offre pertinente, orientée par l'écho). Au
+ * premiers matchs, gagné ou perdu**, dans l'ordre d'un acte de campagne (`REWARDS` : forge, relique, forge, relique…,
+ * cinq forges et cinq reliques depuis le 2026-10-28), offerte comme en campagne (offers.ts : offre pertinente, orientée
+ * par l'écho ; le dé complet au dernier forgeage). Au
  * soir de la journée 10, tous portent un build d'acte complet ; il se fige alors jusqu'à la fin de la saison et dans
  * l'arbre, qui n'en donne plus. Ni pari pendant la saison.
  *
@@ -35,7 +36,7 @@ export const WIN_POINTS = 3
 
 /**
  * Les récompenses d'un participant, une par match dès son premier : l'ordre d'un acte de campagne (`REWARDS`), réduit
- * aux sortes activées. Dix avec les deux (quatre forges, six reliques), six reliques seules, quatre forges seules,
+ * aux sortes activées. Dix avec les deux (cinq forges, cinq reliques), cinq reliques seules, cinq forges seules,
  * aucune sans.
  */
 export function buildRewards({ relics, forge }: { relics: boolean; forge: boolean }): RewardKind[] {
@@ -256,10 +257,10 @@ function seasonReward(season: Season, number: number, side: Side): SeasonReward 
   const entrant = side === 0 ? f.home : f.away
   const build = buildOf(season, entrant, f.day)
   if (buildDone(season, build)) return null
-  const kind = season.rewards[build.relics.length + build.forge.length]
+  const index = build.relics.length + build.forge.length
   const rng = seededRng((seasonMatchSeed(season, number) ^ (side === 0 ? 0x72657764 : 0x70657264)) | 0)
   const e = season.entrants[entrant]
-  const drawn = drawReward({ championId: e.characterId, aura: entrantAura(e), ...build }, kind, rng)
+  const drawn = drawReward({ championId: e.characterId, aura: entrantAura(e), ...build }, season.rewards[index], rng, forgesLeftIn(season.rewards, index))
   if (drawn.kind === 'relic') return drawn.choice ? { kind: 'relic', offer: drawn.offer, chosen: drawn.choice } : null
   return drawn.choice ? { kind: 'forge', offer: drawn.offer, chosen: drawn.choice } : null
 }

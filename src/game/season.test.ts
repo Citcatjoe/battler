@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { simulateCombat } from './combat'
 import { EPITHETS, uniqueNames } from './epithets'
-import { copyDestinations, forgedFaces, offerTargets, stepKey, stepOf } from './forge'
+import { copyDestinations, forgedFaces, isAuraSkill, offerTargets, stepKey, stepOf } from './forge'
 import { MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
 import { characterPool } from './masteries'
 import { EMOJI } from './test-utils'
@@ -146,11 +146,11 @@ describe('saison', () => {
     expect(bracket.entrants.some((e) => eliminated.has(e.label))).toBe(false)
   })
 
-  it('construction : l’ordre d’un acte de campagne, réduit aux sortes activées (dix, six reliques, quatre forges, aucune)', () => {
+  it('construction : l’ordre d’un acte de campagne, réduit aux sortes activées (dix, cinq reliques, cinq forges, aucune)', () => {
     expect(buildRewards({ relics: true, forge: true })).toEqual([...REWARDS])
-    expect(buildRewards({ relics: true, forge: true })).toEqual(['forge', 'relic', 'relic', 'forge', 'relic', 'forge', 'relic', 'relic', 'forge', 'relic'])
-    expect(buildRewards({ relics: true, forge: false })).toEqual(Array(6).fill('relic'))
-    expect(buildRewards({ relics: false, forge: true })).toEqual(Array(4).fill('forge'))
+    expect(buildRewards({ relics: true, forge: true })).toEqual(['forge', 'relic', 'forge', 'relic', 'forge', 'relic', 'forge', 'relic', 'forge', 'relic'])
+    expect(buildRewards({ relics: true, forge: false })).toEqual(Array(5).fill('relic'))
+    expect(buildRewards({ relics: false, forge: true })).toEqual(Array(5).fill('forge'))
     expect(buildRewards({ relics: false, forge: false })).toEqual([])
   })
 
@@ -194,18 +194,20 @@ describe('saison', () => {
       })
       expect(!!r.rewards).toBe(f.day < 10)
     }
-    // Au soir de la journée 10, chacun porte un build d'acte (quatre forges, six reliques, toutes différentes), le même
-    // qu'en fin de saison ; jamais plus de `MAX_SKILL_FACES` faces de compétence
+    // Au soir de la journée 10, chacun porte un build d'acte (cinq forges, cinq reliques, toutes différentes), le même
+    // qu'en fin de saison ; son dé est complet (retour du 2026-10-28, A9) : `MAX_SKILL_FACES` faces de compétence, ou
+    // les siennes (Morgrut, quatre), et aucune aura gravée (A2)
     season.entrants.forEach((e, i) => {
       const build = buildOf(season, i, 10)
-      expect(build.forge).toHaveLength(4)
-      expect(build.relics).toHaveLength(6)
-      expect(new Set(build.relics).size).toBe(6)
+      expect(build.forge).toHaveLength(5)
+      expect(build.relics).toHaveLength(5)
+      expect(new Set(build.relics).size).toBe(5)
       expect(buildOf(season, i)).toEqual(build)
       // Forgé sur son dé de départ : l'aura tirée sur le 1 (B7)
       const def = createCharacter(e.characterId, { aura: e.aura }).definition
       const faces = forgedFaces(def, build.forge)
-      expect(faces.filter((f) => f.origin.length > 0 || f.engraved).length).toBeLessThanOrEqual(def.skillFaces ?? MAX_SKILL_FACES)
+      expect(faces.filter((f) => f.origin.length > 0 || f.engraved).length, e.label).toBe(def.skillFaces ?? MAX_SKILL_FACES)
+      expect(build.forge.some((s) => s.op === 'engrave' && isAuraSkill(s.skill)), e.label).toBe(false)
     })
     // Rejouer un match avec sa graine notée redonne le même vainqueur, avec la même construction
     const replay = simulateCombat(seasonFighters(season, 150), { seed: season.results[150].seed })
@@ -231,7 +233,7 @@ describe('saison', () => {
   })
 
   it('construction : un match attend que la construction de ses deux combattants soit connue ; figés, ils jouent dans l’ordre voulu', () => {
-    // Reliques seules : six, aux six premières journées
+    // Reliques seules : cinq, aux cinq premières journées
     let t = createSeasonTournament(participants(20), nameOf, { seed: 8 })
     const season = () => seasonOf(t)
     const f3 = seasonSchedule(20)[3][0]
@@ -240,11 +242,11 @@ describe('saison', () => {
     expect(() => simulateSeasonMatches(t, [f3.number])).toThrow()
     t = simulateSeasonMatches(t, [...pendingOfDay(season(), 0), ...pendingOfDay(season(), 1), ...pendingOfDay(season(), 2)])
     expect(seasonStatus(season(), f3.number)).toBe('ready')
-    // Journée par journée, jusqu'à ce que les deux combattants du match du retour aient leurs six reliques
+    // Journée par journée, jusqu'à ce que les deux combattants du match du retour aient leurs cinq reliques
     let day = 3
     while (seasonStatus(season(), late.number) === 'pending') t = simulateSeasonMatches(t, pendingOfDay(season(), day++))
-    expect(day).toBe(6)
-    for (const i of [late.home, late.away]) expect(buildOf(season(), i).relics).toHaveLength(6)
+    expect(day).toBe(5)
+    for (const i of [late.home, late.away]) expect(buildOf(season(), i).relics).toHaveLength(5)
     // Il se joue avant les journées qui le précèdent, sans récompense
     t = simulateSeasonMatches(t, [late.number])
     expect(season().results[late.number].rewards).toBeUndefined()
@@ -288,10 +290,10 @@ describe('saison', () => {
         expect(buildOf(seasonOf(t), smith).forge.map(stepKey)).toEqual([stepKey(step)])
       }
     }
-    const targeted = forged.offer.find((o) => o.op !== 'temper')!
-    expect(() => chooseSeasonReward(t, f0.number, 0, stepOf(targeted, 999, 999))).toThrow()
-    const missing = (['temper', 'gild', 'sharpen', 'copy'] as const).find((op) => !forged.offer.some((o) => o.op === op))!
-    expect(() => chooseSeasonReward(t, f0.number, 0, missing === 'temper' ? { op: missing } : { op: missing, face: 1 })).toThrow()
+    expect(() => chooseSeasonReward(t, f0.number, 0, stepOf(forged.offer[0], 999, 999))).toThrow()
+    // Dorer n'est plus offerte (retour du 2026-10-28, A8) : refusée, comme toute opération hors de l'offre
+    expect(forged.offer.some((o) => o.op === 'gild')).toBe(false)
+    expect(() => chooseSeasonReward(t, f0.number, 0, { op: 'gild', face: 3 })).toThrow()
 
     // Relique (journée 2, côté droit) : une autre de l'offre ; une relique non proposée est refusée
     t = simulateSeasonMatches(t, pendingOfDay(seasonOf(t), 1))

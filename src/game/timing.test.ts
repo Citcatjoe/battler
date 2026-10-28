@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 import { other, simulateCombat, type Beat, type CombatResult, type Side } from './combat'
 import type { Character } from './character'
 import { isRollTrigger, relationOf, type CharacterEvent } from './events'
-import { autoForge, drawForgeOffer, validOnOrigin, withForgeStep, type ForgeStep } from './forge'
+import { autoForge, drawForgeOffer, forgeState, withForgeStep, type ForgeStep } from './forge'
 import { STOLEN_BADGE } from './narration'
 import { RELICS } from './relics'
 import { seededRng, shuffle, type Rng } from './rng'
@@ -28,18 +28,27 @@ type Attack = Extract<Beat, { type: 'attack' }>
 
 /**
  * Une construction au hasard : jusqu'à six opérations de forge tirées comme en campagne, jusqu'à trois reliques.
- * `engraved` : une compétence gravée d'abord, sur le 3 ou la première face qui l'accepte.
+ * `engraved` : une compétence gravée d'abord, sur le 3 ou la première face qui l'accepte (par le journal : une aura s'y
+ * grave aussi, pour être mise en scène, même si la partie n'en grave plus depuis le 2026-10-28).
  */
 function randomBuild(id: string, rng: Rng, engraved?: CharacterEvent): { fighter: Character; text: string } {
   const base = createCharacter(id)
-  const first = engraved && [3, 1, 2, 4, 5, 6].map((face): ForgeStep => ({ op: 'engrave', face, skill: engraved })).find((s) => validOnOrigin(base.definition, s))
+  const replays = (s: ForgeStep) => {
+    try {
+      forgeState(base.definition, [s])
+      return true
+    } catch {
+      return false
+    }
+  }
+  const first = engraved && [3, 1, 2, 4, 5, 6].map((face): ForgeStep => ({ op: 'engrave', face, skill: engraved })).find(replays)
   let steps: ForgeStep[] = first ? [first] : []
   for (let k = Math.floor(rng() * 7); k > 0; k--) {
     const step = autoForge(base.definition, steps, drawForgeOffer(base.definition, steps, rng, ENGRAVABLE_SKILLS), rng)
     if (step) steps = withForgeStep(base.definition, steps, step)
   }
   const relics = shuffle(rng, RELICS).slice(0, Math.floor(rng() * 4))
-  const forged = steps.map((s) => (s.op === 'engrave' ? `${s.skill.id}@${s.face}` : 'face' in s ? `${s.op}@${s.face}` : s.op))
+  const forged = steps.map((s) => (s.op === 'engrave' ? `${s.skill.id}@${s.face}` : `${s.op}@${s.face}`))
   return { fighter: base.withForge(steps).withRelics(relics), text: `${id} [${[...forged, ...relics.map((r) => r.id)].join(', ')}]` }
 }
 
@@ -351,6 +360,9 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
       const def = result.fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
       if (!def || def.scene || relationOf(def) === 'modify' || !signalTargets(beat.event.effects)) continue
       if (JSON.stringify(beats[id - 1]?.state.statuses) === JSON.stringify(beat.state.statuses)) continue
+      // Un bonus volé que le voleur a déjà au plafond (Confiscation) : rien ne part (M25), seul le Sceau de vol s'use
+      const posed = beat.event.effects.filter((e) => e.type === 'applyStatus')
+      if (posed.length > 0 && posed.every((e) => e.type === 'applyStatus' && e.stolenBy && e.result.kind === 'applied' && e.result.stacks === 0)) continue
       count('compétence à signal')
       if (!cues.some((x) => x.cue.channel === 'signal' && x.cue.signal.from === beat.event.eventId)) flag('une compétence qui pose un état sans son signal', start, beat.event.eventId)
     }

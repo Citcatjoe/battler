@@ -438,7 +438,7 @@ describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     // Crescendo (hors kit, 0.107.0) : seule une gravure le joue, son coup qui monte. Une Furie aiguisée (0.110.0) ajoute
     // un coup à sa rafale ; elle ne pose plus deux charges (la Furie à plusieurs charges ne vient plus d'un dé forgé)
-    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'duo : la rafale suit l’action du Duo', 'attaque trempée', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'duo : la rafale suit l’action du Duo', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 

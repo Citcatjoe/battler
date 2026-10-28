@@ -9,8 +9,8 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { createAudit } from '../src/game/audit'
 import { simulateCombat, type CombatResult, type Pair } from '../src/game/combat'
-import { BOSS, campaignCharacter } from '../src/game/campaign'
-import { CHARACTER_IDS, ENGRAVABLE_SKILLS } from '../src/game/roster'
+import { BOSS, campaignCharacter, startAurasOf } from '../src/game/campaign'
+import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from '../src/game/roster'
 import { parseForcedRolls, parseForge, parseRelics, traceText } from '../src/game/trace'
 import { getRelic, RELIC_IDS } from '../src/game/relics'
 import type { ForgeStep } from '../src/game/forge'
@@ -73,16 +73,28 @@ it('rapport des combats joués', () => {
     const hp = text.split('\n').slice(1, 3).map((line) => Number(/\) : (\d+) PV/.exec(line)?.[1]))
     const fighter = (id: string, side: 0 | 1, name?: string) => {
       // Un seul modèle (0.113.0) : tout combattant part du personnage vanilla (le boss, de sa fiche), puis sa forge (écrite
-      // pour un champion de campagne) et ses reliques. Sans forge, sa ligne nomme ses compétences dans l'ordre de son dé ;
-      // une autre liste vient d'un kit de tournoi d'avant la 0.113.0 (Pourfendre sur le 1 de Gorak, la Foudre sur trois
-      // faces de Thaldrin…), qui ne se reconstruit plus
+      // pour un champion de campagne) et ses reliques. Sa ligne nomme ses compétences dans l'ordre de son dé ; une autre
+      // liste vient d'un kit de tournoi d'avant la 0.113.0 (Pourfendre sur le 1 de Gorak, la Foudre sur trois faces de
+      // Thaldrin…), qui ne se reconstruit plus
       const listed = /compétences : (.+)$/.exec(text.split('\n')[side + 1])?.[1]
-      const base = campaignCharacter(id)
-      const vanilla = base.events.map((e) => e.name).join(', ') || 'aucune'
-      if (forge[side].length === 0 && listed !== vanilla) throw new Error(`${base.name} : kit d'avant la 0.113.0 (${listed})`)
+      // L'aura de départ (maîtrises, 0.122.0) : choisie en campagne, tirée en tournoi et en saison, elle n'est pas écrite
+      // dans la trace ; c'est celle de ses `startAuras` dont le dé forgé redonne la liste de sa ligne (l'aura par défaut
+      // d'abord)
+      const starts = id === BOSS.id ? [campaignCharacter(id)] : [undefined, ...startAurasOf(id)].map((aura) => createCharacter(id, { aura }))
+      const forged = (c: Character) => {
+        try {
+          return c.withForge(forge[side])
+        } catch {
+          return undefined
+        }
+      }
+      const base = starts.find((c) => (forged(c)?.events.map((e) => e.name).join(', ') || 'aucune') === listed) ?? starts[0]
+      if (forge[side].length === 0 && base === starts[0] && listed !== (base.events.map((e) => e.name).join(', ') || 'aucune'))
+        throw new Error(`${base.name} : kit d'avant la 0.113.0 (${listed})`)
       const built = (name ? base.withName(name) : base).withForge(forge[side]).withRelics(relics[side].map(getRelic))
+      // Les PV réglés (campagne) : `adjusted` règle la définition, les PV des récompenses s'y rajoutent
       const delta = hp[side] - built.maxHp
-      return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp + delta } }) : built
+      return delta && Number.isFinite(delta) ? built.adjusted({ stats: { maxHp: built.baseStats.maxHp - built.rewardHp + delta } }) : built
     }
     let fighters: Pair<Character>
     try {

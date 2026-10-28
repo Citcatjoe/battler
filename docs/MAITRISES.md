@@ -49,7 +49,7 @@ Aucun dé vanilla ne change : les signatures et les auras du 1 restent ; le bala
 ### B3, B4. Compendium
 
 - **B3** : plus de porteurs dans l'onglet Maîtrises (ni portraits sur les tuiles, ni « La jouent » dans le panneau, ni recherche par nom de porteur). Les maîtrises restent sur la fiche du personnage et sur l'écran d'affrontement.
-- **B4** : l'onglet **Auras** est supprimé. L'onglet Compétences liste **toutes** les briques, auras comprises (64, par ordre alphabétique, chacune avec l'emblème de sa maîtrise) : chaque lien vers une compétence ou une aura (`skillLink`) mène à sa fiche. La règle courte des auras (« Une aura dure jusqu'à la fin du combat… l'une des auras de ses deux maîtrises ; les autres s'obtiennent en gravant », lien vers la règle « Auras ») passe en tête de l'encadré Auras de chaque maîtrise.
+- **B4** : l'onglet **Auras** est supprimé. L'onglet Compétences liste **toutes** les briques, auras comprises (64, par ordre alphabétique, chacune avec l'emblème de sa maîtrise) : chaque lien vers une compétence ou une aura (`skillLink`) mène à sa fiche. La règle courte des auras (« Une aura dure jusqu'à la fin du combat… l'une des auras de ses deux maîtrises ; les autres s'obtiennent en gravant », lien vers la règle « Auras ») passe en tête de l'encadré Auras de chaque maîtrise. Depuis le retour du 2026-10-28 (A2) : « …l'une des auras de ses deux maîtrises, choisie au départ. La forge n'en ajoute jamais. »
 
 ### B5. Les auras de départ : toutes celles de ses deux maîtrises
 
@@ -410,7 +410,7 @@ _Les propositions 1 (« une magie ou un coup lié à une onde de choc, avec un e
 
 - **Une maîtrise est une grande famille de sorts, par thème, lisible par le joueur** : Fureur, Sang, Rempart, Poison, Chance, Lumière, Ombre, Magie (**huit** depuis le second retour du 2026-10-27, section « Huit maîtrises » ci-dessus ; onze dans la conception : Chasse, Représailles, Orage et Chant en plus). Elle remplace, côté joueur, les mots « famille » et « répertoire ». Les dix familles de statuts de [FAMILLES.md](FAMILLES.md) restent une donnée technique (le son d'une pose, `family`), jamais affichée comme maîtrise.
 - **Chaque personnage joue sur deux maîtrises** (V1) ; une maîtrise est partagée par un à trois personnages, qui tirent ses auras et ses compétences dans **la même réserve** (V5 : Naraxes, Ervald et Thaldrin pour le Poison).
-- **Chaque compétence et chaque aura appartient à une seule maîtrise** (V2) ; une aura s'offre en cours de partie comme toute compétence, par Graver.
+- **Chaque compétence et chaque aura appartient à une seule maîtrise** (V2) ; une aura s'offrait en cours de partie comme toute compétence, par Graver, jusqu'au retour du 2026-10-28 (A2 : **une aura par personnage**, choisie au départ ; la forge n'en grave ni n'en copie plus, et la face 1 ne se copie pas : [CAMPAGNE.md](CAMPAGNE.md) § 18.5).
 - **Le dé de départ** (V4) : **une aura sur le 1, choisie** au début de la campagne parmi celles de ses deux maîtrises (V3), et **sur le 2 sa compétence de personnage, fixe** (Furie des vents pour Gorak, Pile ou face pour Naraxes). Quatre faces nues. Le duel joue l'aura par défaut ; le tournoi et la saison en tirent une au hasard (§ 5.3). Ses auras de départ : toutes celles de ses deux maîtrises que son dé de départ sert (B5, le producteur d'abord), mesurées sans exclusion par taux.
 - **L'offre ne verrouille rien** (V3) : Graver propose **deux compétences, une de chaque maîtrise**, au lieu d'une ; la règle « le producteur d'abord » reste.
 - **Cinq dés vanilla changent** (Gorak, Elaria, Aldric, Thaldrin, Fanchon), deux se retouchent (Brokk : Poing de pierre ; Morgrut : une aura, question Q2), trois ne bougent pas (Ervald, Ysolde, Naraxes).
@@ -422,7 +422,7 @@ _Les propositions 1 (« une magie ou un coup lié à une onde de choc, avec un e
 | Point | La demande (résumé de la parole de l'utilisateur) | Ce qui est tranché ici |
 | --- | --- | --- |
 | V1 | Le mot Maîtrise : de grandes familles de sorts par thème ; deux par personnage ; plusieurs combinaisons, autant de personnages possibles | Onze maîtrises (§ 3), deux par personnage ; 55 paires possibles, dix prises |
-| V2 | Les auras appartiennent à une maîtrise et s'offrent à ceux qui la jouent | Chaque aura est rangée dans une maîtrise (§ 4) et s'offre par Graver (§ 6) |
+| V2 | Les auras appartiennent à une maîtrise et s'offrent à ceux qui la jouent | Chaque aura est rangée dans une maîtrise (§ 4) et s'offrait par Graver (§ 6) ; depuis le 2026-10-28 (A2), elle s'offre au **choix du départ** seulement |
 | V3 | Au début de la campagne, choisir une aura parmi celles de ses deux maîtrises, sans orientation drastique des offres | Le choix au départ (§ 5), Graver à deux cartes, une par maîtrise (§ 6.2) |
 | V4 | Une aura par personnage dans les faces de base, toujours sur le 1, associée à une face 2 (fixe ou au choix) | Face 2 **fixe** : la compétence du personnage (§ 5.1, justification) |
 | V5 | Deux personnages qui partagent une maîtrise tirent de la même réserve | La réserve appartient à la maîtrise, pas au personnage (§ 6.1) |
@@ -578,7 +578,7 @@ La Pourriture « à chaque coup qui touche » (le statut du registre, sans porte
 | Brique | Genre | Texte | État | Mesure |
 | --- | --- | --- | --- | --- |
 | Ballade | aura | Chaque coup qui touche lui rend 1 PV. | **nouvelle** (P9) | gravée Fanchon +12,4 ; départ 50,4 % (à 2 PV : 62,4 %, trop) |
-| Duo | compétence | des dés de plus à sa prochaine action (trois depuis le 2026-10-27, agent EngineFixes) | registre (signature de Fanchon) | face 2 de Fanchon |
+| Duo | compétence | des dés de plus à sa prochaine action (trois depuis le 2026-10-27, agent EngineFixes ; **un** depuis le 2026-10-28, A11, agent TuningE : [PERSONNAGES.md](PERSONNAGES.md), Fanchon) | registre (signature de Fanchon) | face 2 de Fanchon |
 | Soliste | compétence | Ce coup ×3, 1x. | registre (quitte son dé) | — |
 | Crescendo, Siffloter, Fausse note | compétences | ses chansons | registre | — |
 
@@ -628,7 +628,7 @@ Dé de départ contre le roster nu d'aujourd'hui, 400 combats par duel (3 600 pa
 | Ysolde | Lumière, Orage | Purification | Sainteté / Purification 46,4 % | **Aura de sainteté 46,4** ; Ciel d'orage 45,0 ; Champ d'orage 44,7 | Sentence, Bouclier de foi (aucun soin sans Sainteté) |
 | Naraxes | Chance, Poison | Pile ou face | Décoction / Pile 49,8 % | **Aura de décoction 49,8** ; Aura glaciale 47,1 ; Veine 46,5 ; Dé pipé 43,7 (borne haute) | Bonne étoile 38,9 ; Sève noire (aucun soin) |
 | Thaldrin | Orage, Poison | Feux follets | Feux follets / Foudre 56,3 % | **Ciel d'orage 55,6** ; Champ d'orage 55,8 ; Décoction 55,5 ; Glaciale 54,7 | Sève noire (aucun soin) |
-| Fanchon | Chant, Chance | Duo (3 charges) | Duo / Soliste 49,3 % | **Ballade 50,4** ; Veine 44,4 | Dé pipé (aucune pièce) ; Ballade à 2 PV 62,4 |
+| Fanchon | Chant, Chance | Duo (3 charges ; **1** depuis le 2026-10-28) | Duo / Soliste 49,3 % | **Ballade 50,4** ; Veine 44,4 (2026-10-28, Duo à une charge, attaque 6 à 7, esquive et critique 15 % : **Ballade 50,7** ; Ciel d'orage 47,3 ; Champ d'orage 46,2 ; Feinte 51,1 ; Veine 44,4 ; Pas de côté 53,0) | Dé pipé (aucune pièce) ; Ballade à 2 PV 62,4 |
 
 Lecture :
 - **Le choix pèse sans casser** : l'écart entre la meilleure et la moins bonne aura de départ d'un personnage va de 1,7 point (Ysolde) à 8,9 (Elaria). La moins bonne reste dans la tolérance. En campagne, l'écart compte moins : les rencontres se règlent sur un champion de référence **parti de la même aura** (§ 11.3).
@@ -665,7 +665,7 @@ Mesure (`npm run season`, section « Aura de départ tirée », taux de saison p
 
 ### 6.1 La réserve d'un personnage
 
-Sa réserve est **la réunion des réserves de ses deux maîtrises**, moins les briques déjà sur son dé de départ. Deux personnages qui partagent une maîtrise ont la même liste pour elle (V5). La règle « le producteur d'abord » (`offerableSkills`, `skillNeeds`) ne change pas : une consommatrice n'arrive qu'une fois sa ressource dans le build, et une aura de la maîtrise s'offre comme toute compétence.
+Sa réserve est **la réunion des réserves de ses deux maîtrises**, moins les briques déjà sur son dé de départ. Deux personnages qui partagent une maîtrise ont la même liste pour elle (V5). La règle « le producteur d'abord » (`offerableSkills`, `skillNeeds`) ne change pas : une consommatrice n'arrive qu'une fois sa ressource dans le build. Une aura de la maîtrise s'offrait comme toute compétence jusqu'au retour du 2026-10-28 (A2, 0.128.0) : depuis, la réserve gravable ne contient **aucune aura** (`playable`, `isAuraSkill`), Copier ne vise ni la face 1 ni une aura.
 
 | Personnage | Réserve (gravables) | Ce qui part de son répertoire d'aujourd'hui | Ce qui arrive |
 | --- | --- | --- | --- |
@@ -811,7 +811,7 @@ Esprit : ne pas fermer de possibilité, on remplace plutôt qu'on ampute. Les id
 | --- | --- | --- | --- |
 | Historique des combats | `battler:history:v1` | rien (il ne garde ni dé ni kit) | aucune ; rétrocompatible |
 | Partie en cours | `battler:campaign:v4` | `aura: string` (l'aura de départ) | **v5** ; une partie v4 se lit : `aura` = l'aura par défaut, et les pas de forge qui ne valent plus sur le nouveau dé (un aiguisage du 1 ou du 2 d'un dé qui a changé : Gorak, Elaria, Aldric, Thaldrin, Fanchon) sont retirés (`validOnOrigin`), le reste est gardé |
-| Héritage | `battler:campaign-heritage:v1` | rien de nouveau | `loadHeritage` écarte déjà les pas de forge qui ne valent plus (`validOnOrigin`) ; il vérifie sur le dé **de l'aura choisie** ; une gravure d'une compétence d'une autre maîtrise reste héritable (elle a été gagnée) |
+| Héritage | `battler:campaign-heritage:v1` | rien de nouveau | `loadHeritage` écarte déjà les pas de forge qui ne valent plus (`validOnOrigin`) ; il vérifie sur le dé **de l'aura choisie** ; une gravure d'une compétence d'une autre maîtrise reste héritable (elle a été gagnée). Depuis 0.128.0 (A2, A8) : une aura gravée, une copie du 1, une dorure ou une trempe héritées sont écartées (`heritageFor`) |
 | Choix de l'écran de campagne | `battler:campaign-choices:v1` = `{ [championId]: { heritage: boolean; aura?: string } }` (livrée par l'agent Screens avec U3 : `CampaignChoice`, `loadCampaignChoices`, `saveCampaignChoice`, qui fusionne) | `aura` s'ajoute, mémorisée par champion | aucune (champ facultatif) ; une aura mémorisée qui n'est plus dans `startAuras` retombe sur la première |
 | Combats signalés, traces | `logs/combats/` | le dé vanilla de cinq personnages change | `npm run logs` rejoue chaque trace avec le roster d'aujourd'hui : les traces d'avant la vague 2 de ces cinq personnages sont écartées avec leur raison (comme la barde à deux dés, 0.116.0) |
 
@@ -823,12 +823,12 @@ Esprit : ne pas fermer de possibilité, on remplace plutôt qu'on ampute. Les id
 
 ## 12. L'interface (vague 2)
 
-- **Compendium, onglet Maîtrises** : une tuile par maîtrise (emblème, nom, question, les portraits de ceux qui la jouent), ouverte sur ses auras puis ses compétences (icône, nom, une ligne d'effet ; détail au survol). Dans l'onglet Auras et l'onglet Compétences (C1, C2), chaque brique nomme sa maîtrise (son emblème en petit) au lieu de sa famille de statut. La règle « Auras » dit : une par personnage sur le 1 de son dé, choisie au début d'une campagne ; les autres s'obtiennent en gravant. La fiche d'un personnage (C6) nomme ses deux maîtrises sous son nom. _Depuis B3 et B4 : plus de porteurs dans l'onglet Maîtrises, plus d'onglet Auras (toutes les fiches dans Compétences ; la règle courte des auras en tête de l'encadré Auras de chaque maîtrise)._
+- **Compendium, onglet Maîtrises** : une tuile par maîtrise (emblème, nom, question, les portraits de ceux qui la jouent), ouverte sur ses auras puis ses compétences (icône, nom, une ligne d'effet ; détail au survol). Dans l'onglet Auras et l'onglet Compétences (C1, C2), chaque brique nomme sa maîtrise (son emblème en petit) au lieu de sa famille de statut. La règle « Auras » disait : une par personnage sur le 1 de son dé, choisie au début d'une campagne ; les autres s'obtiennent en gravant (fausse depuis A2, 0.128.0 : la forge n'en ajoute jamais). La fiche d'un personnage (C6) nomme ses deux maîtrises sous son nom. _Depuis B3 et B4 : plus de porteurs dans l'onglet Maîtrises, plus d'onglet Auras (toutes les fiches dans Compétences ; la règle courte des auras en tête de l'encadré Auras de chaque maîtrise)._
 - **Écran d'affrontement** (U5, agent Screens) : sous le nom, « Chasse · Sang » avec les deux emblèmes, à la place de « Elfe · Rôdeuse » (race et classe restent dans la fiche du compendium).
 - **Livré (tranches F et G, agent MasteriesUI)** :
   - compendium : onglet **Maîtrises** entre Combattants et Compétences (`MasteriesSection.tsx`) : onze tuiles à gauche (emblème, nom, question, portraits des porteurs), la maîtrise ouverte à droite (emblème, question, phrase, « La jouent » en liens vers les fiches, puis les encadrés « Auras » et « Compétences » : sceau, nom en lien vers sa fiche, une ligne d'effet, l'infobulle de la compétence au survol, pastille « Aura » ou « Compétence » au lieu d'une face) ;
   - onglets Compétences et Auras : chaque brique nomme sa maîtrise avec son petit emblème (`MasteryName`) ; les auras sont rangées par maîtrise, dans l'ordre du registre ; la fiche porte « Aura · Lumière » ou « Compétence · Sang », en lien vers l'onglet Maîtrises. Le filtre cherche aussi la maîtrise. `familyLabel` et ses libellés de famille sont retirés de `statuses.ts` : la famille d'un statut ne s'affiche plus nulle part ;
-  - texte de l'onglet Auras : « Chaque combattant en porte une sur le 1 de son dé, choisie parmi celles de ses deux maîtrises au début d'une campagne ; les autres s'obtiennent en gravant. » ;
+  - texte de l'onglet Auras (tel que livré alors) : « Chaque combattant en porte une sur le 1 de son dé, choisie parmi celles de ses deux maîtrises au début d'une campagne ; les autres s'obtiennent en gravant. » Depuis A2 (0.128.0), la règle courte dit « choisie au départ. La forge n'en ajoute jamais. » ;
   - fiche d'un combattant : ses deux maîtrises sous son nom (liens), race et archétype gardés au-dessus ; le filtre des combattants cherche aussi les maîtrises ;
   - écran d'affrontement : la ligne « race · archétype » devient ses deux maîtrises, emblème (24 px) et nom ;
   - emblème : `MasteryIcon` (`Icon.tsx`) lit `mastery-<id>.png`, sinon l'initiale dorée dans un rond (aucun trou si un emblème manque) ; `SkillTooltip` reçoit `badge` (la pastille à la place de la face).

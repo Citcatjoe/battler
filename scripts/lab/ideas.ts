@@ -34,6 +34,7 @@ import { faceTrigger, rollFace, type CharacterEvent } from '../../src/game/event
 import { getRelic, type Relic } from '../../src/game/relics'
 import { ALL_SKILLS, CHARACTERS } from '../../src/game/roster'
 import { charges, STATUSES, type StatusDef, type StatusId } from '../../src/game/statuses'
+import { AURA_VISION } from './aura-vision'
 import { CONTENT_A } from './content-a'
 import { CONTENT_B } from './content-b'
 
@@ -629,4 +630,4 @@ const SERIES_78: LabIdea[] = LOADED_VARIANTS.flatMap(([key, e]) => [
   ...['naraxes', 'fanchon', 'elaria'].map((who) => s78(engrave(who, `pipe-${key}-${who}`, `${e.name}, gravé (${who})`, e))),
 ])
 
-export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B, ...SERIES_76, ...SERIES_77, ...SERIES_78, ...CONTENT_A, ...CONTENT_B]
+export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B, ...SERIES_76, ...SERIES_77, ...SERIES_78, ...CONTENT_A, ...CONTENT_B, ...AURA_VISION]

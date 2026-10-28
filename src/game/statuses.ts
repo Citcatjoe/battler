@@ -362,9 +362,8 @@ export interface StatusDef {
   /** Hémorragie (lot 3) : chaque soin que reçoit le porteur passe par ce filtre (montant voulu → montant gardé) */
   modifyHealing?: (amount: number, s: Status) => number
   /**
-   * Sceau de vol (lot 3) : le prochain bonus que le porteur se pose (hors mécanisme) va à l'adversaire, selon les règles
-   * de pose de l'adversaire ; une charge de Sceau par vol. Un vol prend une charge du bonus (règle commune des vols,
-   * quatrième demande du 2026-10-27, comme le Larcin) : le porteur garde les autres
+   * Sceau de vol (lot 3) : le prochain bonus volable que le porteur se pose (`isStealable`) va à l'adversaire, entier
+   * (retour du 2026-10-28, A6 : un vrai vol), selon les règles de pose de l'adversaire ; une charge de Sceau par vol
    */
   stealsBonus?: true
 }
@@ -468,7 +467,12 @@ export const ONRUSH_CRIT = 0.1
 export const ONRUSH_FERVOR = 3
 export const OVERCHARGE = 1
 export const GRIP = 1
-export const PILFER_DODGE = 0.05
+/**
+ * Larcin : +5 → +10 % d'esquive par charge (retour du 2026-10-28, A6). Le vrai vol ne prend plus d'aura : le Larcin au
+ * départ tombait à 37,9 % (Ervald, 48,6 en 0.127.0) et 46,4 % (Aldric) ; à +10 % : 47,9 et 52,7, gravé Ervald +15,4,
+ * Aldric +11,2 (400 par duel)
+ */
+export const PILFER_DODGE = 0.1
 export const SHOCKWAVE_PER = 2
 export const SHOCKWAVE_SLOTS = 3
 /** Emprise : les malus que porte l'adversaire, un par statut (ses charges ne comptent pas), mécanismes exclus */
@@ -925,9 +929,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(167,139,250,0.5)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces, +${Math.round(LOADED_DIE_EDGE * 100)} % de critique et +${Math.round(LOADED_DIE_EDGE * 100)} % d'esquive, par charge.`,
+    summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces (5 sur 6 au plus), +${Math.round(LOADED_DIE_EDGE * 100)} % de critique et +${Math.round(LOADED_DIE_EDGE * 100)} % d'esquive, par charge.`,
     describe: (s) =>
-      `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces, +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % de critique et +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % d'esquive`,
+      `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces (5 sur 6 au plus), +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % de critique et +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % d'esquive`,
     detail: () => 'Toutes ses pièces ; jamais plus de 5 chances sur 6 de faire pile.',
     badge: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} %`,
     counter: 'stacks',
@@ -1100,8 +1104,10 @@ export const STATUSES: Record<StatusId, StatusDef> = {
 
   /* Auras : bonus permanents (sans durée) posés sur un 3 au dé, pour le reste du combat. */
   frostAura: {
-    name: 'Aura glaciale',
-    look: { aura: 'rgba(147,197,253,0.6)' },
+    // Retour du 2026-10-28 (A3) : « Aura glaciale » redevient « Aura de poison » (id `frostAura` gardé : historique)
+    name: 'Aura de poison',
+    // Vert toxique (bleu glacé jusqu'au 2026-10-28, quand elle s'appelait l'Aura glaciale)
+    look: { aura: 'rgba(74,222,128,0.55)' },
     polarity: 'positive',
     family: 'affliction',
     summary: "1 Poison par charge à l'adversaire, au début de chacun de ses tours.",
@@ -1488,7 +1494,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     summary: 'Son prochain bonus va à l’adversaire.',
     describe: (s) => (s.stacks > 1 ? `Ses ${s.stacks} prochains bonus vont à l'adversaire` : "Son prochain bonus va à l'adversaire"),
     onFoe: (s) => (s.stacks > 1 ? `Vole les ${s.stacks} prochains bonus de l'adversaire` : "Vole le prochain bonus de l'adversaire"),
-    detail: () => 'Une charge du prochain bonus qu’il se donne revient au lanceur à sa place ; il garde les autres.',
+    detail: () => 'Le prochain bonus qu’il se donne revient au lanceur à sa place, entier. Une aura ne se vole pas.',
     plural: 'Sceaux de vol',
     badge: (s) => `×${s.stacks}`,
     counter: 'stacks',
@@ -1693,7 +1699,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
    * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : l'Élan fait critiquer et change
    * chaque gros coup en Ferveur (la boucle de la Fureur) ; la Surtension renforce chaque dégât direct (Magie, et la Lumière,
    * le Sang, le Rempart qui en font) ; l'Emprise frappe d'autant plus fort que l'adversaire porte de malus (tous, d'où qu'ils
-   * viennent) ; le Larcin esquive et prend une charge du dernier bonus de l'attaquant ; l'Onde de choc compte les coups encaissés.
+   * viennent) ; le Larcin esquive et vole le dernier bonus de l'attaquant ; l'Onde de choc compte les coups encaissés.
    */
   onrush: {
     name: 'Élan',
@@ -1743,11 +1749,11 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { aura: 'rgba(217,70,239,0.45)' },
     polarity: 'positive',
     family: 'seals',
-    summary: `+${Math.round(PILFER_DODGE * 100)} % d'esquive par charge ; chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant.`,
-    describe: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui fait prendre une charge du dernier bonus de l'attaquant`,
-    // Un vol prend une charge (règle commune des vols, quatrième demande du 2026-10-27) : prendre tout le Duo de Fanchon
-    // (3 charges) mettait Ervald à 66,5 % et Aldric à 69,0 % contre elle, au départ
-    detail: () => "Une charge, avec sa durée ; la dernière emporte le bonus entier, aura comprise. Un mécanisme ne se prend pas.",
+    summary: `+${Math.round(PILFER_DODGE * 100)} % d'esquive par charge ; chaque esquive lui fait voler le dernier bonus de l'attaquant.`,
+    describe: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant`,
+    // Un vrai vol (retour du 2026-10-28, A6) : le bonus entier change de camp, et seuls les bonus de la zone des statuts se
+    // volent (`isStealable`) ; une charge par vol (0.127.0) laissait le bonus au volé, comme une copie
+    detail: () => 'Le bonus entier, charges, durée et intensité. Ni une aura ni un mécanisme ne se volent.',
     badge: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} %`,
     counter: 'stacks',
     stacking: 'add',
@@ -2042,7 +2048,7 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
     say(effect, 'Le prochain jet du porteur qui porterait une compétence tombe à vide : le dé est lancé, mais ni la compétence ni le coup de base ne partent ; une charge par jet.', 'die')
   if (def.blinds) say(effect, 'Chaque critique du porteur, tiré ou assuré, devient un coup raté.', 'crit')
   if (def.modifyHealing) say(effect, 'Le porteur ne regagne plus de PV.')
-  if (def.stealsBonus) say(effect, "Une charge du prochain bonus que le porteur se pose va à l'adversaire, il garde les autres ; une charge de Sceau par vol.", 'application')
+  if (def.stealsBonus) say(effect, "Le prochain bonus que le porteur se pose va à l'adversaire, entier ; une aura ne se vole pas. Une charge de Sceau par vol.", 'application')
   if (def.turnsFromStacks) say(consumption, 'Une seule valeur : il dure autant de tours que de charges.', 'duration')
   else if (def.expiresAt === 'turnEnd') say(consumption, 'Sa durée se décompte à la fin des tours du porteur.', 'duration')
   else if (def.expiresAt === 'turnStart') say(consumption, 'Sa durée se décompte au début des tours du porteur, avant son action.', 'duration')
@@ -2158,6 +2164,15 @@ export function consumeStatus(list: readonly Status[], id: StatusId, amount: num
 
 /** Un mécanisme (`StatusDef.mechanic`) : règle de forme ou de compétence, ni bonus ni malus. */
 export const isMechanic = (id: StatusId) => STATUSES[id].mechanic !== undefined
+
+/**
+ * Un bonus qui se vole (Larcin, Confiscation ; retour du 2026-10-28, A6) : un bonus de la zone des statuts, lu sur sa
+ * définition. Jamais une aura (`look.aura`, l'identité, dans la zone des compétences) ni un mécanisme (`mechanic`).
+ */
+export const isStealable = (id: StatusId) => STATUSES[id].polarity === 'positive' && !isMechanic(id) && !isAura(id)
+
+/** Un statut de jets de plus à la prochaine action (Coup de chance, Duo) : des dés, pas des coups bruts instantanés */
+export const givesJets = (id: StatusId) => !!STATUSES[id].extraStrikes && !STATUSES[id].instantStrikes
 
 /** Retire les statuts d'une polarité, sauf les mécanismes (`mechanic`), qui ne se purgent pas. */
 export const removeStatuses = (list: readonly Status[], polarity: Polarity) =>

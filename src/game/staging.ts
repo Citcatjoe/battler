@@ -225,6 +225,11 @@ export type CueBody =
    */
   | { channel: 'daze'; side: Side; on: boolean }
   /**
+   * Figé (Médaille de sursis, retour du 2026-10-28, A15) : `side` survit au tour qui devait le tuer ; il reste figé, en
+   * pierre, du coup fatal à la fin de ce tour (`Snapshot.stone`, lu au rythme des statuts montrés)
+   */
+  | { channel: 'stone'; side: Side; on: boolean }
+  /**
    * Incantation (M55) : `side` lance un sort offensif (`castsSpell`, poses.ts) ; il garde sa posture d'incantation de son
    * départ à la fin de sa lecture, coups et scène compris
    */
@@ -549,6 +554,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /** Perte de contrôle à l'écran (M51), et le camp dont le tour perdu se joue */
   let dazed: Pair<boolean> = [false, false]
   let lostTurn: Side | null = null
+  /** Figé à l'écran (Médaille de sursis, M57) */
+  let stoned: Pair<boolean> = [false, false]
   let onScreen: Pair<Status[]> = [[], []]
   /**
    * Incantations en cours, par camp (M55) : un sort peut en déclencher un autre du même lanceur pendant sa lecture ; la
@@ -752,6 +759,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
    */
   const showStatuses = (id: number) => {
     shownState = Math.max(shownState, id)
+    // Figé (M57) : au rythme des statuts montrés, du coup sauvé par la Médaille de sursis à la fin de son tour
+    const stone = beats[shownState].state.stone
+    for (const side of [0, 1] as const) {
+      const on = stone?.[side] ?? false
+      if (on === stoned[side]) continue
+      stoned = side === 0 ? [on, stoned[1]] : [stoned[0], on]
+      emit({ channel: 'stone', side, on })
+    }
     const next = display(beats[shownState].state.statuses)
     const text = JSON.stringify(next)
     if (text === shownStatuses) return

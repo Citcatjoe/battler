@@ -135,9 +135,9 @@ export type Effect =
    * `orElse` : effet joué à la place quand il n'y a rien à retirer (Purification, 0.42.0 : la lumière blesse au
    * lieu de tomber à vide). `andThen` : effet joué après une purge qui a retiré quelque chose (Purification,
    * 2026-10-27 : elle blesse aussi quand elle retire un bonus) ; le moteur le range juste après la purge.
-   * `steal` (Larcin, quatrième retour du 2026-10-27) : un vol, qui ne prend qu'une charge de chaque statut visé (règle
-   * commune des vols) ; elle passe au porteur de l'effet, avec sa durée (la dernière avec l'intensité), selon ses règles de
-   * pose ; chaque bonus repris est marqué volé par ce statut (`stolenBy`).
+   * `steal` (Larcin, quatrième retour du 2026-10-27) : un vol, qui ne vise que les bonus volables (`isStealable` : de la
+   * zone des statuts, jamais une aura ; retour du 2026-10-28, A6) ; le bonus retiré passe entier au porteur de l'effet
+   * (charges, durée, intensité), selon ses règles de pose, marqué volé par ce statut (`stolenBy`).
    */
   | {
       type: 'cleanse'
@@ -373,8 +373,8 @@ export function describeEffect(effect: Effect, grafted = false): string {
       const bare = (e: Effect) => describeEffect(e).replace(foe ? / à l'adversaire$/ : /$^/, '')
       const andThen = effect.andThen ? `, avec ${bare(effect.andThen)}` : ''
       const orElse = effect.orElse ? `${andThen ? ' ;' : ','} sinon ${bare(effect.orElse)}` : ''
-      // Larcin : une charge du bonus retiré passe au porteur
-      if (effect.steal) return `prend une charge de ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
+      // Larcin : le bonus retiré passe au porteur
+      if (effect.steal) return `vole ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
       return `retire ${what}${foe ? " à l'adversaire" : ''}${andThen}${orElse}`
     }
   }

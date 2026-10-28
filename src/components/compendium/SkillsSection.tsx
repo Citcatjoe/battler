@@ -92,7 +92,13 @@ function SkillDetail({ entry, nav }: { entry: SkillEntry; nav: CompendiumNav }) 
             <MasteryBadge event={event} aura={aura !== undefined} nav={nav} />
           </div>
           <p className="mt-1 font-body text-[17px] leading-snug text-ink-2">
-            {triggers.length === 0 ? 'Hors kit : sur aucune face d’origine, elle se grave par la forge' : triggers.length === 1 ? triggerText(triggers[0]).label : `Sur ${triggerShort(triggers)}`}
+            {triggers.length === 0
+              ? aura !== undefined
+                ? 'Hors kit : une aura se choisit au départ, sur le 1 ; la forge n’en grave pas'
+                : 'Hors kit : sur aucune face d’origine, elle se grave par la forge'
+              : triggers.length === 1
+                ? triggerText(triggers[0]).label
+                : `Sur ${triggerShort(triggers)}`}
           </p>
         </div>
       </header>

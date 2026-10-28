@@ -32,6 +32,41 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.128.0] — 2026-10-28
+
+Retour de l'utilisateur du 2026-10-28, une campagne par personnage sur la 0.127.0 (A1 à A16, [PROGRESSION.md](docs/PROGRESSION.md) § 1.25). Les corrections claires sont livrées ; la refonte des auras (A1, A10, A12, A14) est proposée, non codée ([REFONTE_AURAS.md](docs/REFONTE_AURAS.md)).
+
+### Ajouté
+- **Médaille de sursis figée** (A15) : le porteur sauvé ne descend plus sous 1 PV **jusqu'à la fin du tour en cours**, tout ce qui suit compris (« Reste à 1 PV jusqu'à la fin du tour quand il devrait tomber, 1x »). Les beats l'exposent (`Snapshot.stone`) ; à l'écran, le combattant est **figé** (désaturé, teinte de pierre, sans tremblement, M57 de `MISE_EN_SCENE.md`), « figé » dans la barre de lecture et la trace.
+- **Le dé complet** (A9) : six faces de compétence au plus (`MAX_SKILL_FACES` 5 → 6) ; le calendrier d'un acte passe de 4 forges et 6 reliques à **5 forges et 5 reliques en alternance** ; quand les forges restantes égalent les faces à remplir, l'offre ne montre que Graver et Copier. Faces de compétence en fin d'acte 3,90 → 5,84, dés à leur plafond 0 → 100 % (Morgrut 4 sur 4).
+- **Plancher des premiers nœuds** (A13) : les PV des adversaires des **nœuds 1 et 2** descendent jusqu'à 65 % de leur base (`EARLY_HP_FLOOR`, `hpFloorAt`), 75 % ensuite ; courbe inchangée. Victoires nœud 1 / nœud 2 : 70 / 78 → 72 / 81 % ; atteignent le nœud 3 : 54 → 58 % (744 parties).
+- Labo de la refonte des auras : `scripts/lab/aura-vision.ts` (séries 100 à 110), rapports `logs/lab/2026-10-28-14-*`.
+
+### Modifié
+- **Une aura par personnage** (A2) : l'aura se choisit au départ ; **la forge n'en ajoute jamais** : Graver ne propose aucune aura, Copier ne vise ni la face 1 ni une aura (règle unique `playable`, lue par l'offre, l'auto-forge et les sauvegardes). Aiguiser l'aura du 1 reste permis. Les parties v4 et v5 sont triées pas par pas ; l'héritage écarte aura gravée, copie du 1, dorure et trempe. Aura ajoutée en cours d'acte : 63 % des actes → 0.
+- **Forge** (A8) : opérations offertes Graver, Aiguiser, Copier ; **rang II au plus** (`MAX_SHARPENS = 1`) ; **Dorer et Tremper ne s'offrent plus**. Tremper est retirée du code ; Dorer reste au journal pour les deux faces dorées du boss.
+- **Aura glaciale → Aura de poison** (A3), lueur vert toxique ; ids `frostAura` / `frost-aura` gardés (historique, forges, traces).
+- **Les vols volent** (A6, Larcin et Confiscation) : le bonus entier (charges, durée, intensité) passe au voleur, le volé le perd ; seul un bonus de la **zone des statuts** se vole (`isStealable` : ni aura, ni mécanisme). `AppliedEffect.kept` retiré. Compensation : esquive du **Larcin +5 → +10 %** (Ervald au départ 37,9 → 47,9 %).
+- **Dés de plus** (A7, pour tous) : un dé de plus ne donne jamais de dé de plus ; sur un jet de rafale, ni compétence, ni réaction (Veine), ni relique (Trèfle de fer) ne donne de jets ; une compétence qui ne donne que des jets ne part pas sur un dé de plus. Plafond `MAX_EXTRA_JETS` 12 → **3**. Dés par action au plus 13 → 4.
+- **Duo** (A11) : 3 → **1 charge** (rang II : 2 charges). Valeur nette chez Fanchon +39,8 → +17,4 ; gravé au ramp à 10 : Ysolde +40,9 → +23,1, Thaldrin +34,4 → +16,5.
+- **Fanchon** : attaque 4-6 → **6-7**, esquive 10 → **15 %**, critique 5 → **15 %**, PV inchangés. Vanilla 50,7 % (duels 45-56), construite 53,7 % au ramp à 10.
+- **Boss** (A16) : plafond de PV 3 → **5 fois** sa base (`BOSS_HP_CEILING`), **40 combats** par référence au réglage (`BOSS_REFERENCE_FIGHTS`, 8 avant). Boss battu une fois atteint 61 → 55 % (visé 45) ; auras dont le boss est au plafond 23/53 → 13/58 (toutes celles d'Ervald, 350 PV) ; réglage du nœud 0,07-0,4 → 0,4-2 s (Node).
+- **Porte-bonheur** : `weighted-coin` « Pièce lestée » → **Patte de lièvre**, `holed-coin` « Pièce trouée » → **Trèfle de fer** ; règles et ids inchangés.
+- **Vol de vie** (A5) : le soin lit les **PV vraiment retirés** (`strike.removed`), plus les dégâts comptés avec l'excès ; un coup normal ne change pas (49 cas des traces du 27 et du 28 vérifiés : PV retirés + intensité, plafond des PV max).
+- **Rétribution** (A4) : le sceau de la barre de compétences affiche **le nombre de coups** de la relâche (`releaseParts`), plus les PV gardés.
+- **Icônes v30** (Artlist, GPT Image 2.5, 160 crédits, planche 2×2, version A) : Patte de lièvre (`weighted-coin`), Trèfle de fer (`holed-coin`), Aura de poison (`frost-aura`, encensoir à fumée verte).
+- **Plafond de pile écrit** (Naraxes, « toujours face ») : le Dé pipé et la Patte de lièvre disent « (5 sur 6 au plus) » (`HEADS_CAP`). Pas de défaut du moteur : sur 1 350 combats de sa construction, pile 50,9 % à 0,50, 73,5-75,4 % à 0,75, 83,0-85,2 % à 5 sur 6 ; ses traces : 2 piles sur 8 à 75 % (environ 0,4 % de chances), et 47 % des pièces partent avant que le Dé pipé soit posé.
+- **Empreinte de non-régression** (`balance.test.ts`) mise à jour, changement voulu (vol entier sans aura, dés de plus sans chaîne et plafond 3, forge à 6 faces sans Dorer ni Tremper et rang II au plus, aucune aura ajoutée en cours de partie, Duo 1 charge, Fanchon 6-7 / 15 % / 15 %, plancher 65 % aux nœuds 1-2, boss jusqu'à 5 fois sa base). Mesuré : roster de 46,7 à 53,9 % (`BALANCE_N=800`), pire duel Morgrut–Brokk 64 % ; construits au ramp à 10 de 43,6 (Thaldrin) à 55,7 % (Aldric), écart 19,2 (0.127.0) → 12,1 ; saison 43-54 %, σ 3,7 ; campagne : boss atteint 19 %, acte gagné 10 %. `npm run check` : 535 tests.
+
+### Corrigé
+- **Thaldrin en ours** : l'aura de la face 1 reste sur la face 1 de la barre de compétences (une face que la forme en cours laisse nue garde l'aura de l'autre forme).
+- **Rejoueur `npm run logs`** (`scripts/logs.report.ts`) : il reconstruit l'aura de départ choisie (`startAuras`) et ne compte plus deux fois les PV réglés d'un adversaire. Les 96 combats joués en 0.127.0 se rejouent tous à l'identique, sans anomalie d'audit (38 étaient « joués avec d'autres règles », 9 écartés).
+- Audit : la Malchance lit la condition d'une compétence qui modifie le coup comme le moteur ; la Rancune accepte un Critique assuré détourné par une Confiscation.
+
+### Retiré
+- **Tremper** (code, journal de forge, `Character.baseStats`, contrôle d'audit) ; **Dorer** de l'offre.
+- **Les auras de l'offre de Graver et de Copier**, et la copie de la face 1.
+
 ## [0.127.0] — 2026-10-27
 
 Quatrième demande de l'utilisateur, après la 0.125.0 : le contenu des maîtrises (« trouver quelque chose d'original à chaque fois, mais qui réponde au besoin » ; « ne surcharge pas les créations : elles ne doivent pas avoir 3 effets »), Morgrut, la Plume d'aigle ([PROGRESSION.md](docs/PROGRESSION.md) § 1.24).

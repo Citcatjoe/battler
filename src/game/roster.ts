@@ -277,10 +277,10 @@ const ervald: CharacterDef = {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Vol de vie : son coup le soigne', 'Aura glaciale : un poison sans fin', 'Critiques fréquents (28 %)'],
+    strengths: ['Vol de vie : son coup le soigne', 'Aura de poison : un poison sans fin', 'Critiques fréquents (28 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
-  // Maîtrises : dé inchangé, l'Aura glaciale sur le 1 par défaut, le Vol de vie sur le 2
+  // Maîtrises : dé inchangé, l'Aura de poison sur le 1 par défaut, le Vol de vie sur le 2
   masteries: ['poison', 'shadow'],
   signature: 'life-steal',
   events: startDie('frost-aura', 'life-steal'),
@@ -540,7 +540,14 @@ const fanchon: CharacterDef = {
   archetype: 'Saltimbanque',
   // Esquive de 12 à 6 % (0.46.0), puis 10 % : compensation de Siffloter et de la Fausse note, qui frappent désormais.
   // Le Duo (2026-10-25) : attaque 1 à 3 → 4 à 6, critique 10 → 5 % (un dé au lieu de deux ; PV intacts).
-  stats: { maxHp: 46, attackMin: 4, attackMax: 6, armor: 0, dodgeChance: 0.1, critChance: 0.05, critMultiplier: 2 },
+  // Un dé de plus ne donne plus de dé de plus, au plus 3 par action (retour du 2026-10-28, A7) : le Duo ne s'enchaîne plus
+  // (Fanchon 46,9 → 36,8 %, 400 par duel) ; attaque 4 à 6 → 5 à 7, le levier essayé le plus juste (51,4 % ; construite
+  // 47,0 → 57,2 %, contre 72,7 avec la chaîne). Écartés : critique 20 % (46,9), esquive 18 % (44,2), PV 54 (49,7),
+  // Ballade à 2 PV (56,1, mais Ervald 65,3 contre elle).
+  // Le Duo à une charge (retour du 2026-10-28, A11) : Fanchon 51,4 → 25,9 % ; attaque 5 à 7 → 6 à 7, esquive 10 → 15 %,
+  // critique 5 → 15 % (50,7 %, 400 par duel ; l'attaque reste sous les 8 de Morgrut, la plus lourde du roster). Essayés :
+  // 6 à 7 seule (33,9), 7 (42,8), 6 à 7 et critique 20 % (49,7), 6 à 7 et esquive 25 % (54,3), 6 à 8 et critique 15 % (52,6)
+  stats: { maxHp: 46, attackMin: 6, attackMax: 7, armor: 0, dodgeChance: 0.15, critChance: 0.15, critMultiplier: 2 },
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
@@ -557,7 +564,7 @@ const fanchon: CharacterDef = {
     tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle lance deux dés et frappe deux fois ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : quatre dés au tour suivant', 'Ballade : chaque coup la soigne', 'Frappe fort pour une saltimbanque (4 à 6)'],
+    strengths: ['Duo : deux dés au tour suivant', 'Ballade : chaque coup la soigne', 'Frappe fort pour une saltimbanque (6 à 7)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
   // Maîtrises (P7) : la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité) ; le Soliste quitte son dé pour la

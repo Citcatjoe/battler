@@ -23,19 +23,23 @@ export type RewardKind = 'relic' | 'forge'
 
 /**
  * Les récompenses d'un acte de campagne, dans l'ordre retenu (docs/PROGRESSION.md § 11.2 ; une forge tôt, sur le dé de
- * départ) : quatre forges et six reliques. La saison du tournoi construit chacun au même rythme (season.ts).
+ * départ). Quatre forges et six reliques jusqu'au retour du 2026-10-28 (A9 : « le dé doit être complet en fin de
+ * construction ») ; depuis, cinq et cinq, en alternance : quatre faces à remplir (3 à 6), et une forge de plus pour un
+ * aiguisage. La saison du tournoi construit chacun au même rythme (season.ts). Mesures : docs/CAMPAGNE.md § 18.5.
  */
-export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'relic', 'forge', 'relic', 'forge', 'relic', 'relic', 'forge', 'relic']
+export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'forge', 'relic', 'forge', 'relic', 'forge', 'relic', 'forge', 'relic']
+
+/** Les forges d'un calendrier de récompenses à partir de la `index`-ième (comprise) : celles qui restent à recevoir. */
+export const forgesLeftIn = (calendar: readonly RewardKind[], index: number) => calendar.slice(index).filter((k) => k === 'forge').length
 
 /**
- * Faces de compétence au plus sur un dé construit, signature et seconde compétence comprises (§ 11.2 ; quatre de la
- * 0.104.0 à la 0.111.0, pour garder deux faces de coup). Cinq depuis la 0.112.0 : le départ prend deux faces, et chaque
- * face porte le coup de base depuis la 0.106.0 ; à quatre, il restait deux gravures (1,07 par build d'un acte, contre
- * 1,27 à cinq, docs/CAMPAGNE.md § 18.3). La limite atteinte, ni Graver ni Copier une face ne sont proposées. Elle compte
- * des faces, pas des compétences : une gravure ou une copie en prend une. Un personnage peut en déclarer moins
+ * Faces de compétence au plus sur un dé construit, aura et signature comprises : les six (retour de l'utilisateur du
+ * 2026-10-28, A9 : « le dé doit être complet en fin de construction » ; quatre de la 0.104.0 à la 0.111.0, cinq de la
+ * 0.112.0 à la 0.127.0). La limite atteinte, ni Graver ni Copier une face ne sont proposées. Elle compte des faces, pas
+ * des compétences : une gravure ou une copie en prend une. Un personnage peut en déclarer moins
  * (`CharacterDef.skillFaces`, une identité : Morgrut, quatre, « il ne fait presque rien, mais ses coups sont plus forts »).
  */
-export const MAX_SKILL_FACES = 5
+export const MAX_SKILL_FACES = 6
 
 /**
  * Ce qu'un personnage a construit : son id (le « champion » qui se construit), l'aura de départ sur son 1 (choisie en
@@ -93,15 +97,17 @@ export function offerableSkills(b: BuildState, skills: readonly CharacterEvent[]
  * Une récompense de construction, la même en campagne (joueur et champion de référence) et en saison (offre orientée,
  * règles v2, phase 2 ; maîtrises, docs/MAITRISES.md § 6) :
  * - forge : Graver est toujours proposée quand une face peut la recevoir. Elle propose une compétence de chacune de ses
- *   deux maîtrises (une seule si l'autre n'a plus rien d'offrable), tirées dans sa réserve (`characterPool`), parmi celles
- *   dont le besoin est déjà dans son build (`offerableSkills`, le producteur d'abord), chacune au poids de son écho avec
- *   le build dans sa maîtrise ; quand le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une
- *   compétence. La réserve (huit compétences au moins) ne s'épuise pas en quatre forges ;
+ *   deux maîtrises (une seule si l'autre n'a plus rien d'offrable), tirées dans sa réserve (`characterPool`, jamais une
+ *   aura : la sienne est choisie au départ, retour du 2026-10-28, A2), parmi celles dont le besoin est déjà dans son
+ *   build (`offerableSkills`, le producteur d'abord), chacune au poids de son écho avec le build dans sa maîtrise ; quand
+ *   le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une compétence. `forgesLeft`, les forges
+ *   qui restent au calendrier, celle-ci comprise (`forgesLeftIn`) : quand il en reste autant que de faces à remplir,
+ *   seulement Graver et Copier une face (A9 : le dé complet en fin de construction) ;
  * - relique : parmi celles dont la condition peut arriver avec son build (`offerableRelics`), la première carte au poids de son écho,
  *   les deux autres libres.
  * Le choix par défaut reste au hasard dans l'offre (pour Graver, une maîtrise sur deux).
  */
-export function drawReward(b: BuildState, kind: RewardKind, rng: Rng): PendingReward {
+export function drawReward(b: BuildState, kind: RewardKind, rng: Rng, forgesLeft?: number): PendingReward {
   const build = buildHooks(builtCharacter(b))
   if (kind === 'relic') {
     const offer = drawOffer(b.relics, rng, offerableRelics(b), (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
@@ -109,14 +115,15 @@ export function drawReward(b: BuildState, kind: RewardKind, rng: Rng): PendingRe
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
   const def = createCharacter(b.championId, { aura: b.aura }).definition
-  const full = forgedFaces(def, b.forge).filter((f) => f.origin.length > 0 || f.engraved).length >= (def.skillFaces ?? MAX_SKILL_FACES)
+  const empty = (def.skillFaces ?? MAX_SKILL_FACES) - forgedFaces(def, b.forge).filter((f) => f.origin.length > 0 || f.engraved).length
   const left = offerableSkills(
     b,
     characterPool(def).filter((s) => !b.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),
   )
   const offer = drawForgeOffer(def, b.forge, rng, left, {
     focus: (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build),
-    noNewSkill: full,
+    noNewSkill: empty <= 0,
+    fillOnly: forgesLeft !== undefined && empty >= forgesLeft,
     groupOf: (s) => masteryOfSkill(s.id),
   })
   const choice = autoForge(def, b.forge, offer, rng)

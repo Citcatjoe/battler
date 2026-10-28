@@ -325,7 +325,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     {
       id: 'frost-aura',
-      name: 'Aura glaciale',
+      name: 'Aura de poison',
       nature: 'arcane',
       trigger: 'naturalOne',
       // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
@@ -726,13 +726,16 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Le Duo (2026-10-25) : des dés de plus à sa prochaine action, joués en entier (la mécanique de Coup de chance). Jusqu'à
     // la 0.120.0, il posait d'abord +1 Aura mélodieuse, et un seul dé de plus. Retour du 2026-10-27 (P7) : l'aura quitte le
     // jeu, le Duo la compense par ses charges, 1 → 3 (quatre dés à l'action suivante). Mesuré (winRate, 300 combats par
-    // duel) : sans l'aura, Duo 1 18,5 %, Duo 2 36,9 %, Duo 3 49,4 % ; rang II (4 charges) 56,3 %. Son rang : un dé de plus
+    // duel) : sans l'aura, Duo 1 18,5 %, Duo 2 36,9 %, Duo 3 49,4 % ; rang II (4 charges) 56,3 %. Son rang : un dé de plus.
+    // Retour du 2026-10-28 (A11, « clairement trop fort ») : 3 → 1 charge. Sous le plafond de 3 dés de plus (A7), le rang II
+    // ne donnait plus rien (+1,7) ; gravé, il valait +40,9 chez Ysolde et +34,4 chez Thaldrin à 10 récompenses. Gravé contre
+    // le roster nu (200 par duel) : 3 charges +28 à +33, 2 charges +23 à +28, 1 charge +15 à +20 (rang II +10)
     {
       id: 'duo',
       name: 'Duo',
       nature: 'arcane',
       trigger: 'naturalOne',
-      effects: [{ type: 'applyStatus', status: 'duo', stacks: 3 }],
+      effects: [{ type: 'applyStatus', status: 'duo', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },
   ],

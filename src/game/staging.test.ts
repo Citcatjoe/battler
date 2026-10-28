@@ -1668,7 +1668,8 @@ describe('mise en scène : le contenu des maîtrises (quatrième demande du 2026
 
   it('Larcin : à une esquive, l’icône du bonus pris part de la zone d’état du volé vers le voleur ; à son arrivée, « Volé » sur le volé, le bonus chez le voleur, Sceaux − (M50)', () => {
     let taken = 0
-    const power: CharacterEvent = { id: 'power', name: 'power', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }] }
+    // Un bonus de la zone des statuts, volable (une aura ne se vole plus : retour du 2026-10-28, A6)
+    const power: CharacterEvent = { id: 'power', name: 'power', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'ward', stacks: 1 }] }
     const pilfer: CharacterEvent = { id: 'with-pilfer', name: 'with-pilfer', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }] }
     for (const seed of [1, 2, 3, 4]) {
       const result = simulateCombat([testCharacter('a', { maxHp: 400, dodgeChance: 0.5 }, [pilfer]), testCharacter('b', { maxHp: 400 }, [power])], { seed })
@@ -1687,5 +1688,35 @@ describe('mise en scène : le contenu des maîtrises (quatrième demande du 2026
       }
     }
     expect(taken).toBeGreaterThan(3)
+  })
+})
+
+describe('mise en scène : retour du 2026-10-28', () => {
+  it('le sursis figé : la Médaille de sursis fige son porteur du coup sauvé à la fin de ce tour, puis il reprend ses couleurs (M57)', () => {
+    const brute = testCharacter('b', { maxHp: 400, attackMin: 30, attackMax: 30 })
+    let seen = 0
+    for (let seed = 1; seed < 8; seed++) {
+      const result = simulateCombat([testCharacter('a', { maxHp: 20 }).withRelics(RELICS.filter((r) => r.id === 'reprieve-medal')), brute], { seed })
+      const medal = result.beats.find((b) => b.type === 'relic' && b.relic === 'reprieve-medal')
+      if (!medal) continue
+      seen++
+      const cues = stage(result).flatMap((m) => m.cues)
+      const stone = cues.filter((c): c is Extract<Cue, { channel: 'stone' }> => c.channel === 'stone')
+      // Figé une fois, lui seul, puis libéré avant son K.O. (le coup suivant l'achève, à un autre tour)
+      expect(stone.map((c) => [c.side, c.on]), `graine ${seed}`).toEqual([
+        [0, true],
+        [0, false],
+      ])
+      // Son état, rejoué : figé au coup sauvé, plus à la fin
+      let view = initialView(result.fighters)
+      let frozen = false
+      for (const c of cues) {
+        view = applyCue(view, c, 0)
+        frozen ||= view.stone[0]
+      }
+      expect(frozen).toBe(true)
+      expect(view.stone).toEqual([false, false])
+    }
+    expect(seen).toBeGreaterThan(3)
   })
 })
