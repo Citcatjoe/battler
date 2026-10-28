@@ -100,7 +100,7 @@ import bardCastImg from '../assets/bard-cast.png'
 import { Character, type CharacterDef } from './character'
 import { faceTrigger, isRollTrigger, rollFace, type CharacterEvent, type RankAxis } from './events'
 import { isEngravable } from './forge'
-import { characterPool, masteryOfSkill, startAurasFor } from './masteries'
+import { auraServed, characterPool, masteryOfSkill } from './masteries'
 import { MASTERY_SKILLS, skillById } from './skills'
 import { auraOfSkill } from './states'
 import { STATUSES } from './statuses'
@@ -162,6 +162,7 @@ const gorak: CharacterDef = {
   // Maîtrises (retour du 2026-10-27, docs/MAITRISES.md § 5 et § 7) : sur le 1, son aura de départ (l'Ivresse du sang par
   // défaut), sur le 2 sa signature, la Furie des vents ; Pourfendre quitte son dé pour la réserve du Sang
   masteries: ['fury', 'blood'],
+  auras: ['blood-frenzy', 'onrush'],
   signature: 'wind-fury',
   events: startDie('blood-frenzy', 'wind-fury'),
 }
@@ -207,6 +208,7 @@ const elaria: CharacterDef = {
   // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la réserve.
   // Second retour du 2026-10-27 (B2) : la Chasse fondue dans la Chance, ses deux écoles sont la Chance et le Sang
   masteries: ['chance', 'blood'],
+  auras: ['feint', 'open-wound'],
   signature: 'hawk-eye',
   events: startDie('feint', 'hawk-eye'),
 }
@@ -246,6 +248,7 @@ const brokk: CharacterDef = {
   },
   // Maîtrises : le Rempart et le Sang (Q1) ; l'Aura d'épines sur le 1 par défaut, la Peau de pierre (et son Poing) sur le 2
   masteries: ['bulwark', 'blood'],
+  auras: ['thorns', 'bastion'],
   signature: 'stoneskin',
   events: startDie('thorns', 'stoneskin'),
 }
@@ -282,6 +285,7 @@ const ervald: CharacterDef = {
   },
   // Maîtrises : dé inchangé, l'Aura de poison sur le 1 par défaut, le Vol de vie sur le 2
   masteries: ['poison', 'shadow'],
+  auras: ['frost-aura', 'dread'],
   signature: 'life-steal',
   events: startDie('frost-aura', 'life-steal'),
 }
@@ -318,6 +322,7 @@ const ysolde: CharacterDef = {
   },
   // Maîtrises : dé inchangé, l'Aura de sainteté sur le 1 par défaut, la Purification sur le 2
   masteries: ['light', 'magic'],
+  auras: ['holy-aura', 'judgement'],
   signature: 'purification',
   events: startDie('holy-aura', 'purification'),
 }
@@ -354,6 +359,7 @@ const naraxes: CharacterDef = {
   },
   // Maîtrises : dé inchangé, l'Aura de décoction sur le 1 par défaut (sa signature de la 0.107.0), Pile ou face sur le 2
   masteries: ['chance', 'poison'],
+  auras: ['decoction-aura', 'loaded-die'],
   signature: 'coin-flip',
   events: startDie('decoction-aura', 'coin-flip'),
 }
@@ -374,7 +380,10 @@ const aldric: CharacterDef = {
   // kit. Mesuré : 50,2 % (53,9 % avant).
   // Maîtrises (docs/MAITRISES.md § 5.2) : la Riposte quitte son dé ; sans compensation, chaque aura de départ le laissait de
   // 41 à 45 %. Attaque 4 à 6 → 5 à 6, PV intacts : de 51 à 56 % selon l'aura (série 72 du laboratoire)
-  stats: { maxHp: 54, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
+  // Mesure d'ensemble de la refonte des auras (tranche 8) : la Riposte pose une charge au lieu de deux (gravée +23,0 →
+  // +17,0) ; sans compensation, Vindicte 39,6 %, Larcin 44,4 ; attaque 5 à 6 → 5 à 7 : 46,8 et 52,2 (400 par duel).
+  // Écartés : 6 à 7 (53,9 et 60,2), critique 25 % (49,6 et 54,3), Vindicte +8 ou +10 Ferveur (41,8 et 43,6)
+  stats: { maxHp: 54, attackMin: 5, attackMax: 7, armor: 0, dodgeChance: 0.07, critChance: 0.17, critMultiplier: 2.5 },
   // Nouveau modèle et postures (atelier des postures, 2026-10-20) : épée basse, plus rien au-dessus de la
   // tête que la hampe de la bannière. La taille se règle sur le corps (tête-pieds, 77 % de la toile) et non
   // sur la hampe : le vide et la bannière au-dessus de la tête comptent dans `headroom`
@@ -392,14 +401,15 @@ const aldric: CharacterDef = {
     tagline: 'Chaque coup reçu est une dette.',
     background:
       "Champion de l'ordre du Sceau ardent, Aldric porte la bannière dans les pires mêlées. Il encaisse sans broncher, tient le compte des coups reçus et rend la justice d'un seul revers.",
-    strengths: ['Rétribution : rend les coups reçus', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Vindicte : chaque renvoi nourrit son coup'],
-    weaknesses: ['Esquive faible (7 %)', 'Rétribution dérisoire si on ne l’a pas frappé', 'Aucune armure'],
+    strengths: ['Riposte : rend le coup reçu, entier', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Vindicte : chaque renvoi nourrit son coup'],
+    weaknesses: ['Esquive faible (7 %)', 'Riposte dérisoire si on ne l’a pas frappé', 'Aucune armure'],
   },
-  // Maîtrises : la Vindicte sur le 1 par défaut, la Rétribution sur le 2 ; la Riposte quitte son dé pour la réserve. Second
-  // retour du 2026-10-27 (B2) : les Représailles fondues dans le Rempart (« encaisse-t-il, puis le rend-il ? »)
+  // Maîtrises : la Vindicte sur le 1 par défaut. Refonte des auras (2026-10-28, Q6, docs/REFONTE_AURAS.md § 5.6) : la
+  // Riposte, entière, sur le 2 ; la Rétribution passe dans la réserve du Rempart
   masteries: ['bulwark', 'shadow'],
-  signature: 'retribution',
-  events: startDie('vendetta', 'retribution'),
+  auras: ['vendetta', 'pilfer'],
+  signature: 'riposte',
+  events: startDie('vendetta', 'riposte'),
 }
 
 const morgrut: CharacterDef = {
@@ -443,15 +453,17 @@ const morgrut: CharacterDef = {
     tagline: 'Taper. Taper encore. Taper plus fort.',
     background:
       "Morgrut ne sait ni compter ni viser, mais personne n'a jamais encaissé deux fois sa massue. Les dés, il ne les regarde même pas : il tape.",
-    strengths: ['La plus lourde attaque (6 à 8)', 'Crescendo : chaque fois plus fort'],
+    strengths: ['La plus lourde attaque (6 à 8)', 'Assaut : ce coup ×2'],
     weaknesses: ['Quatre faces de compétence au plus', 'Ni esquive ni critique', 'Aucune armure ni soin'],
   },
-  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut, le Crescendo sur le 2 (C5) ; deux
-  // gravures au plus ensuite (quatrième demande)
+  // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut. Refonte des auras (2026-10-28, Q7,
+  // docs/REFONTE_AURAS.md § 5.7) : l'Assaut sur le 2 (il tape, plus fort), le Crescendo retourne dans la réserve de la
+  // Fureur ; deux gravures au plus ensuite (quatrième demande)
   masteries: ['fury', 'bulwark'],
-  signature: 'crescendo',
+  auras: ['power-aura', 'rancor'],
+  signature: 'assault',
   skillFaces: 4,
-  events: startDie('power-aura', 'crescendo'),
+  events: startDie('power-aura', 'assault'),
 }
 
 const thaldrin: CharacterDef = {
@@ -467,7 +479,10 @@ const thaldrin: CharacterDef = {
   // Un seul modèle (0.113.0, règle de l'utilisateur) : les Feux follets sur le 1, la Foudre sur le 2, quatre faces nues,
   // en tournoi comme en campagne. Attaque 3 à 4 → 5 à 6 (celle de sa campagne de la 0.112.0) : réglée pour un sort sur
   // chaque face humaine, elle laissait ce départ à 15,1 % contre le roster (docs/PERSONNAGES.md).
-  stats: { maxHp: 56, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.08, critMultiplier: 2 },
+  // Mesure d'ensemble de la refonte des auras (tranche 8) : construit à 10 récompenses, 40,9 % (`npm run ramp`, pente
+  // −13 points) ; critique 8 → 15 % (400 par duel) : départs Ciel d'orage 51,5 → 57,0 %, Brasier 47,0 → 53,0. Écartés :
+  // attaque 5 à 7 (Ciel 59,2), 6 à 7 (66,4)
+  stats: { maxHp: 56, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.08, critChance: 0.15, critMultiplier: 2 },
   // Postures (atelier des postures, 2026-10-20). La garde (bâton et bois compris) occupe 83,9 % de la toile,
   // que le bâton levé de la victoire rend haute : même taille à l'écran qu'avant (1,00 d'un humain)
   look: {
@@ -517,6 +532,7 @@ const thaldrin: CharacterDef = {
   // Maîtrises : le Ciel d'orage sur le 1 par défaut, les Feux follets sur le 2 (sa signature, décision de l'utilisateur du
   // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour la réserve. L'Orage est la Magie depuis B1
   masteries: ['magic', 'poison'],
+  auras: ['storm-sky', 'brasier'],
   signature: 'firefly',
   events: startDie('storm-sky', 'firefly', 'human'),
 }
@@ -547,7 +563,15 @@ const fanchon: CharacterDef = {
   // Le Duo à une charge (retour du 2026-10-28, A11) : Fanchon 51,4 → 25,9 % ; attaque 5 à 7 → 6 à 7, esquive 10 → 15 %,
   // critique 5 → 15 % (50,7 %, 400 par duel ; l'attaque reste sous les 8 de Morgrut, la plus lourde du roster). Essayés :
   // 6 à 7 seule (33,9), 7 (42,8), 6 à 7 et critique 20 % (49,7), 6 à 7 et esquive 25 % (54,3), 6 à 8 et critique 15 % (52,6)
-  stats: { maxHp: 46, attackMin: 6, attackMax: 7, armor: 0, dodgeChance: 0.15, critChance: 0.15, critMultiplier: 2 },
+  // Refonte des auras (2026-10-28, Q8) : le Duo, trois coups bruts de plus tout de suite ; à 6 à 7, Ballade 73,9 %, Veine
+  // 72,9 %. Attaque 6 à 7 → 4 à 6 (400 par duel) : Ballade 58,1, Veine 51,5, duels de 39 à 63 % ; écartés : 5 à 6 (63,9 et
+  // 61,7), 5 à 7 (69,4 et 68,7), 4 à 5 (50,3 et 40,7), 3 à 6 (50,2 et 41,1). Mesures : docs/PERSONNAGES.md, Fanchon
+  // Mesure d'ensemble (tranche 8) : le Duo, un coup de plus au lieu de trois (gravé chez les autres +29,4 → +16,2) ; à 4 à
+  // 6 : Ballade 29,9 %, Veine 31,2. Attaque 5 à 7 et esquive 15 → 18 % (400 par duel) : 51,6 et 53,1, duels de 39 à 60 % ;
+  // à 20 % : 53,3 et 54,3, mais construite 60,0 % (`npm run ramp`). Écartés : 5 à 7 seule (47,5 et 49,4 ; Elaria 66 contre
+  // elle), esquive 16 % (Elaria 65), 5 à 7 et critique 20 % (51,9 et 53,0 ; Ysolde 63), 5 à 6 et esquive 20 % (45,1 et
+  // 46,4), 6 à 7 (55,5 et 57,2 ; Ysolde et Ervald 65). Toujours sous les 6 à 8 de Morgrut
+  stats: { maxHp: 46, attackMin: 5, attackMax: 7, armor: 0, dodgeChance: 0.18, critChance: 0.15, critMultiplier: 2 },
   // Postures (session images, 0.41.0) : la garde occupe 94,7 % de la toile ; scale = 1,00 × 0,92 / 0,947
   look: {
     image: bardIdleImg,
@@ -561,28 +585,23 @@ const fanchon: CharacterDef = {
     portrait: { x: 60, y: 5, zoom: 3.2 },
   },
   lore: {
-    tagline: 'Deux dés, une chanson, aucune fausse note. Sauf chez vous.',
+    tagline: 'Une chanson, deux coups, aucune fausse note. Sauf chez vous.',
     background:
-      "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle lance deux dés et frappe deux fois ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : deux dés au tour suivant', 'Ballade : chaque coup la soigne', 'Frappe fort pour une saltimbanque (6 à 7)'],
+      "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle frappe deux fois d'affilée ; sa chanson porte ses coups, et son solo les fait trembler.",
+    strengths: ['Duo : un coup de plus, tout de suite', 'Ballade : chaque coup la soigne', 'Esquive (18 %) et critique (15 %)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
   // Maîtrises (P7) : la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité) ; le Soliste quitte son dé pour la
   // réserve. Ses stats ne bougent pas : Ballade / Duo 50,4 % (série 70). Second retour du 2026-10-27 (B2) : le Chant fondu,
   // ses sorts (Ballade, Duo) à la Magie, ses gros coups à la Fureur ; ses deux écoles sont la Magie et la Chance
   masteries: ['magic', 'chance'],
+  auras: ['ballad', 'lucky-streak'],
   signature: 'duo',
   events: startDie('ballad', 'duo'),
 }
 
-/**
- * Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. Leurs auras de
- * départ ne se listent pas : la règle les dérive de leur dé et de leurs deux maîtrises (`startAurasFor`, B5).
- */
-export const ROSTER: readonly CharacterDef[] = [gorak, elaria, brokk, ervald, ysolde, naraxes, aldric, morgrut, thaldrin, fanchon].map((def) => ({
-  ...def,
-  startAuras: startAurasFor(def),
-}))
+/** Personnages disponibles, un par famille, dans l'ordre d'affichage. Pour en ajouter un : une entrée ici. */
+export const ROSTER: readonly CharacterDef[] = [gorak, elaria, brokk, ervald, ysolde, naraxes, aldric, morgrut, thaldrin, fanchon]
 
 /** Les personnages instanciés une fois pour toutes (ils sont immuables). */
 export const CHARACTERS: readonly Character[] = ROSTER.map((def) => new Character(def))
@@ -601,13 +620,13 @@ export const ALL_SKILLS: readonly CharacterEvent[] = Object.values(MASTERY_SKILL
 export const ENGRAVABLE_SKILLS: readonly CharacterEvent[] = ALL_SKILLS.filter(isEngravable)
 
 /**
- * Un personnage du roster. Son dé vanilla porte la première de ses auras de départ ; `aura` en pose une autre sur le 1
- * (le choix du départ de campagne, docs/MAITRISES.md § 5) : une aura hors de ses `startAuras` est une erreur.
+ * Un personnage du roster. Son dé vanilla porte la première de ses deux auras ; `aura` y pose l'autre (le choix du départ
+ * de campagne, le tirage du tournoi et de la saison) : une aura hors de ses `auras` est une erreur.
  */
 export function createCharacter(id: string, options: { aura?: string } = {}): Character {
   const character = CHARACTERS.find((c) => c.id === id)
   if (!character) throw new Error(`Personnage inconnu : ${id}`)
-  return options.aura === undefined || options.aura === character.definition.startAuras?.[0] ? character : character.withStartAura(options.aura)
+  return options.aura === undefined || options.aura === character.definition.auras?.[0] ? character : character.withStartAura(options.aura)
 }
 
 /**
@@ -738,18 +757,19 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
       // se compte en points de pourcentage
       if (!Number.isInteger(axis.per) || axis.per < 1) problems.push(`${at} ${e.id} : axe de rang, un gain entier ≥ 1 par rang`)
     }
-    // Les Maîtrises (docs/MAITRISES.md § 5 et § 11.1) : le 1 du dé vanilla porte sa première aura de départ ; chaque aura de
-    // départ est une aura d'une de ses maîtrises ; la signature est sur le 2 et appartient à une de ses maîtrises
+    // Refonte des auras (docs/REFONTE_AURAS.md § 3, règle 1) : deux auras sur sa fiche, distinctes, chacune une aura d'une
+    // de ses maîtrises, servie par son dé de départ (le producteur d'abord) ; la première sur le 1 du dé vanilla. La
+    // signature est sur le 2 et appartient à une de ses maîtrises
     const onFace = (face: number) => d.events.filter((e) => rollFace(e.trigger) === face).map((e) => e.id)
-    const starts = d.startAuras ?? []
-    if (starts.length === 0) problems.push(`${at} aucune aura de départ`)
-    if (new Set(starts).size !== starts.length) problems.push(`${at} aura de départ en double`)
-    if (starts.length > 0 && onFace(1).join() !== starts[0]) problems.push(`${at} le 1 du dé vanilla porte ${onFace(1).join() || 'rien'}, pas ${starts[0]}`)
-    if (starts.join() !== startAurasFor(d).join()) problems.push(`${at} aura de départ hors de la règle (celles de ses maîtrises que son dé sert, le producteur d'abord) : ${startAurasFor(d).join(', ')} attendues`)
-    for (const id of starts) {
+    const auras: readonly string[] = d.auras ?? []
+    if (auras.length !== 2) problems.push(`${at} deux auras attendues sur sa fiche`)
+    if (new Set(auras).size !== auras.length) problems.push(`${at} aura en double`)
+    if (auras.length > 0 && onFace(1).join() !== auras[0]) problems.push(`${at} le 1 du dé vanilla porte ${onFace(1).join() || 'rien'}, pas ${auras[0]}`)
+    for (const id of auras) {
       const m = masteryOfSkill(id)
-      if (!m || !d.masteries.includes(m)) problems.push(`${at} aura de départ ${id} hors de ses maîtrises`)
-      else if (!auraOfSkill(skillById(id))) problems.push(`${at} aura de départ ${id} : pas une aura`)
+      if (!m || !d.masteries.includes(m)) problems.push(`${at} aura ${id} hors de ses maîtrises`)
+      else if (!auraOfSkill(skillById(id))) problems.push(`${at} aura ${id} : pas une aura`)
+      else if (!auraServed(d, id)) problems.push(`${at} aura ${id} : son dé de départ ne la sert pas (le producteur d'abord)`)
     }
     if (d.signature && onFace(2).join() !== d.signature) problems.push(`${at} signature : ${d.signature} n'est pas sur le 2`)
     if (!d.signature && onFace(2).length > 0) problems.push(`${at} une compétence sur le 2 sans signature`)

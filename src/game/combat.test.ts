@@ -8,7 +8,7 @@ import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS, ROSTER, 
 import { aurasOf, characterPool, MASTERIES, MASTERY_IDS, masteryOfSkill, poolOf, validateMasteries } from './masteries'
 import { skillById } from './skills'
 import { computeStats } from './stats'
-import { applyStatus, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, isStealable, LUCKY_COIN_POWER, PRECISION_CRIT, STATUS_IDS, STATUSES, stacksOf, WILD_AURA_ATTACK, type Status, type StatusId } from './statuses'
+import { AIM_CAP, applyStatus, BALLAD_NOTES, BASTION_ARMOR, BASTION_LOSS, BEAR_MIGHT, COIN_HEADS, DECOCTION_POISON, hurtsEachTurn, isStealable, JUDGEMENT_FAULTS, LUCKY_COIN_POWER, ONRUSH_FERVOR, OPEN_WOUND_BLEED, RANCOR_FERVOR, riseLevel, RISE_EVERY, STATUS_IDS, STATUSES, stacksOf, statusCounter, VEIN_STRIKES, type Status, type StatusId } from './statuses'
 import { STATUS_PLACE } from './states'
 import { EMOJI, oldDie, onOldDie, testCharacter } from './test-utils'
 import { Character, REWARD_HP, type CharacterStats } from './character'
@@ -1061,7 +1061,7 @@ describe('compétences du 2 au dé (0.25.0)', () => {
           type: 'applyStatus',
           status: 'bleed',
           target: a.attacker,
-          stacks: held.stacks,
+          stacks: riseLevel(held),
         })
         // Les épines restent pour les coups suivants du même tour
         expect(has(reaction!.state.statuses[defender], 'thorns')).toBe(true)
@@ -1120,38 +1120,49 @@ describe('auras du 3 au dé (0.26.0)', () => {
     effects: [{ type: 'applyStatus', status, stacks: 1 }],
   })
 
-  it('Aura glaciale (0.69.0) : au début du tour du porteur, 1 charge de Poison par charge ; une charge fige le poison', () => {
-    // a pose une charge d'aura et un Poison 3 au début du combat : chaque tour, b perd une charge de
-    // poison et l'aura la lui rend, donc il perd 3 PV à chacun de ses tours
-    const frost: CharacterEvent = {
-      id: 'start',
-      name: 'start',
-      trigger: 'combatStart',
-      effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }, { type: 'applyStatus', status: 'poison', stacks: 3, target: 'opponent' }],
-    }
-    const r = run([testCharacter('a', { maxHp: 60 }, [frost]), testCharacter('b', { maxHp: 60 })])
+  it('Aura de poison montante (refonte des auras, § 2) : au début du tour du porteur, Poison 1, 1, 2, 2, puis 3 ; un cran tous les deux tours', () => {
+    const frost: CharacterEvent = { id: 'start', name: 'start', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }] }
+    const r = run([testCharacter('a', { maxHp: 200 }, [frost]), testCharacter('b', { maxHp: 200 })])
     const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'frostAura')
-    expect(ticks.length).toBeGreaterThan(3)
+    expect(ticks.length).toBeGreaterThan(6)
+    // Le cran lu à chaque tour : 1, 1, 2, 2, 3, 3, 3… (une charge par tour, six au plus)
+    expect(ticks.map((t) => (t.effects[0].type === 'applyStatus' ? t.effects[0].stacks : 0)).slice(0, 7)).toEqual([1, 1, 2, 2, 3, 3, 3])
     for (const tick of ticks) {
-      // Son propre tour, avant son coup
+      // Son propre tour, avant son coup ; la charge gagnée dans l'étape de l'effet
       expect(tick).toMatchObject({ side: 0, phase: 'turnStart' })
-      expect(tick.effects).toEqual([expect.objectContaining({ type: 'applyStatus', status: 'poison', stacks: 1, target: 1 })])
+      const was = r.beats[tick.id - 1].state.statuses[0].find((s) => s.id === 'frostAura')!
+      expect(tick.state.statuses[0].find((s) => s.id === 'frostAura')!.stacks).toBe(Math.min(was.stacks + 1, 6))
       const strike = r.beats.slice(r.beats.indexOf(tick)).find((b) => b.type === 'attack')
       if (strike?.type === 'attack' && tick.state.hp[1] > 0) expect(strike).toMatchObject({ turn: tick.turn, attack: { attacker: 0 } })
     }
-    const poisoned = ofType(r, 'statusTick').filter((b) => b.status === 'poison')
-    expect(poisoned.length).toBeGreaterThan(3)
-    // 3, ou 4 si a joue le premier (l'aura ajoute sa charge avant le premier tour de b) ; puis plus rien ne bouge
-    const amount = poisoned[0].effects[0].type === 'damage' ? poisoned[0].effects[0].amount : 0
-    expect([3, 4]).toContain(amount)
-    for (const p of poisoned) expect(p.effects).toEqual([expect.objectContaining({ type: 'damage', amount, target: 1 })])
+    // Son icône dit le cran, pas les charges
+    expect(statusCounter({ id: 'frostAura', stacks: 5 })).toEqual({ value: 3, unit: 'stacks' })
+    expect(statusCounter({ id: 'frostAura', stacks: 2, power: 1 })).toEqual({ value: 2, unit: 'stacks' })
     // Permanente : jamais expirée
     expect(ofType(r, 'statusAge').some((b) => b.expired.includes('frostAura'))).toBe(false)
   })
 
-  it('Aura glaciale : un vrai Poison, que l’Aura d’immunité bloque et que la Régénération annule', () => {
+  it('la montée (Q3) : une nouvelle pose, l’aura déjà là, la fait monter d’un cran entier ; au plafond, rien de plus', () => {
+    let list = applyStatus([], { id: 'thorns', stacks: 1 })
+    expect(riseLevel(list[0])).toBe(1)
+    list = applyStatus(list, { id: 'thorns', stacks: 1 })
+    expect(list[0]).toEqual({ id: 'thorns', stacks: 1 + RISE_EVERY })
+    expect(riseLevel(list[0])).toBe(2)
+    list = applyStatus(list, { id: 'thorns', stacks: 1 })
+    expect(list[0].stacks).toBe(4)
+    expect(riseLevel(list[0])).toBe(2)
+    // Au combat : le 1 de chaque jet repose l'aura ; chaque pose monte d'un cran (Aura de poison : 1, 2, puis 3)
+    const r = runOn(1, [testCharacter('a', { maxHp: 200 }, [at('naturalOne', 'frostAura')]), testCharacter('b', { maxHp: 200 })])
+    const poses = ofType(r, 'event').filter((b) => b.event.side === 0 && b.event.effects.some((e) => e.type === 'applyStatus' && e.status === 'frostAura'))
+    expect(poses.length).toBeGreaterThan(3)
+    const levels = poses.map((b) => riseLevel(b.state.statuses[0].find((s) => s.id === 'frostAura')!))
+    expect(levels.slice(0, 3)).toEqual([1, 2, 3])
+    expect(Math.max(...levels)).toBe(3)
+  })
+
+  it('Aura glaciale : un vrai Poison, que l’Immunité bloque et que la Régénération annule', () => {
     const frost = at('combatStart', 'frostAura')
-    const immune = run([testCharacter('a', { maxHp: 60 }, [frost]), testCharacter('b', { maxHp: 60 }, [at('combatStart', 'immunityAura')])])
+    const immune = run([testCharacter('a', { maxHp: 60 }, [frost]), testCharacter('b', { maxHp: 60 }, [at('combatStart', 'immunity')])])
     const blocked = ofType(immune, 'statusTick').filter((b) => b.status === 'frostAura')
     expect(blocked.length).toBeGreaterThan(0)
     for (const b of blocked) expect(b.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked' } })
@@ -1162,54 +1173,28 @@ describe('auras du 3 au dé (0.26.0)', () => {
     expect(first.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'cancelled' } })
   })
 
-  it('Aura de puissance : cumulable à 3 charges depuis la revue A4, +2, +3 puis +4, avant l’armure', () => {
+  it('Aura de puissance (refonte des auras) : +2, puis +1 par gros coup et par nouvelle pose, jusqu’à +6, avant l’armure', () => {
     // Chaque dé fait 1 : l'aura se greffe et compte dès le coup du jet ; reposée à chaque jet, elle monte d'une charge
-    const r = runOn(1, [testCharacter('a', { maxHp: 80 }, [at('naturalOne', 'powerAura')]), testCharacter('b', { maxHp: 80, armor: 1 })])
+    const r = runOn(1, [testCharacter('a', { maxHp: 80 }, [at('naturalOne', 'powerAura')]), testCharacter('b', { maxHp: 120, armor: 1 })])
     const mine = attacksOf(r).filter((x) => x.attacker === 0)
-    expect(mine.length).toBeGreaterThan(3)
-    // 1 + 2, 1 + 3, puis 1 + 4 à chaque coup ; l'armure retire 1
-    mine.forEach((x, k) => expect(x).toMatchObject({ raw: 2 + Math.min(k + 1, 3), damage: 1 + Math.min(k + 1, 3) }))
-    expect(finalState(r).statuses[0].find((s) => s.id === 'powerAura')?.stacks).toBe(3)
+    expect(mine.length).toBeGreaterThan(5)
+    // 1 + 2, 1 + 3… puis 1 + 6 à chaque coup ; l'armure retire 1
+    mine.forEach((x, k) => expect(x).toMatchObject({ raw: 2 + Math.min(k + 1, 5), damage: 1 + Math.min(k + 1, 5) }))
+    expect(finalState(r).statuses[0].find((s) => s.id === 'powerAura')?.stacks).toBe(5)
     expect(describeSkill(ENGRAVABLE_SKILLS.find((e) => e.id === 'power-aura')!).text).toBe('+2 dégâts à chacun de ses coups.')
-  })
-
-  it("Aura d'intimidation : −1 par charge (0.107.0) sur les coups de l'adversaire, avant l'armure, cumulable, combinée à la puissance", () => {
-    const r = runOn(1, [
-      testCharacter('a', { maxHp: 80, attackMin: 6, attackMax: 6 }, [at('combatStart', 'powerAura')]),
-      testCharacter('b', { maxHp: 80 }, [at('combatStart', 'intimidationAura'), at('combatStart', 'intimidationAura', 'again')]),
-    ])
-    expect(finalState(r).statuses[1].find((s) => s.id === 'intimidationAura')?.stacks).toBe(2)
-    // Sortant puis entrant : 6 + 2 − 2 × 1
-    const mine = attacksOf(r).filter((x) => x.attacker === 0)
-    expect(mine.length).toBeGreaterThan(3)
-    for (const x of mine) expect(x).toMatchObject({ raw: 6, modifiers: [{ status: 'powerAura', delta: 2 }, { status: 'intimidationAura', delta: -2 }] })
-  })
-
-  it('Aura de précision : +1 au multiplicateur de critique et +5 % de critique par charge (0.107.0), cumulable', () => {
-    const r = run([
-      testCharacter('a', { maxHp: 80, critChance: 1, critMultiplier: 2 }, [
-        at('combatStart', 'precisionAura'),
-        at('combatStart', 'precisionAura', 'again'),
-      ]),
-      testCharacter('b', { maxHp: 80 }),
-    ])
-    for (const x of attacksOf(r).filter((y) => y.attacker === 0)) expect(x).toMatchObject({ crit: true, critMultiplier: 4, raw: 4 })
-    // Sans critique (l'ogre) : deux charges lui en donnent 10 %
-    const ogre = createCharacter('morgrut')
-    expect(effectiveStats(ogre, [{ id: 'precisionAura', stacks: 2 }])).toMatchObject({ critChance: 2 * PRECISION_CRIT, critMultiplier: ogre.stats.critMultiplier + 2 })
-  })
-
-  it('Aura sauvage : +1 à l’attaque par charge (0.107.0), minimum et maximum, avant le critique', () => {
-    const base = testCharacter('a', { maxHp: 80, attackMin: 3, attackMax: 4, critChance: 1, critMultiplier: 2 }, [at('combatStart', 'wildAura'), at('combatStart', 'wildAura', 'again')])
-    expect(effectiveStats(base, [{ id: 'wildAura', stacks: 2 }])).toMatchObject({ attackMin: 3 + 2 * WILD_AURA_ATTACK, attackMax: 4 + 2 * WILD_AURA_ATTACK })
-    const mine = attacksOf(run([base, testCharacter('b', { maxHp: 80 })])).filter((x) => x.attacker === 0)
-    expect(mine.length).toBeGreaterThan(3)
-    // La valeur du coup tirée dans l'attaque montée (5 ou 6), puis le critique la double : aucun bonus après le critique
-    for (const x of mine) expect(x.dodged || (x.value >= 5 && x.value <= 6 && x.raw === 2 * x.value && x.modifiers.length === 0)).toBe(true)
+    // Chaque gros coup (ici, chaque critique) : +1, sans reposer l'aura ; au plafond, plus de réaction
+    const heavy = run([testCharacter('a', { maxHp: 200, critChance: 1 }, [at('combatStart', 'powerAura')]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+    const grown = ofType(heavy, 'statusReaction').filter((b) => b.status === 'powerAura')
+    expect(grown.length).toBe(4)
+    for (const b of grown) {
+      expect(b).toMatchObject({ side: 0, trigger: 'heavy' })
+      expect(stacksOf(b.state.statuses[0], 'powerAura')).toBe(stacksOf(heavy.beats[b.id - 1].state.statuses[0], 'powerAura') + 1)
+    }
+    expect(finalState(heavy).statuses[0].find((s) => s.id === 'powerAura')?.stacks).toBe(5)
   })
 
   it('roster : une aura posée (Aura glaciale, de sainteté, de décoction) ne disparaît jamais', () => {
-    const auras: StatusId[] = ['frostAura', 'powerAura', 'intimidationAura', 'precisionAura', 'holyAura', 'decoctionAura', 'immunityAura', 'wildAura']
+    const auras: StatusId[] = ['frostAura', 'powerAura', 'holyAura', 'decoctionAura']
     let posed = 0
     for (const r of rosterCombats(5)) {
       posed += ofType(r, 'event').filter((b) => b.event.effects.some((e) => e.type === 'applyStatus' && auras.includes(e.status))).length
@@ -1262,37 +1247,35 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     if (second && second.event.effects[0].type === 'cleanse') expect(second.event.effects[0].removed).toEqual(['bonusArmor'])
   })
 
-  it('Aura de sainteté : +1 PV par charge à la fin de chaque tour du porteur, cumulable, 2 charges au plus (0.107.0)', () => {
-    const r = run([
-      testCharacter('a', { maxHp: 60 }, [at('naturalOne', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])]),
-      testCharacter('b', { maxHp: 60 }),
-    ])
+  it('Aura de sainteté montante (refonte des auras) : +1 puis +2 PV à la fin de chaque tour du porteur, un cran tous les deux tours', () => {
+    const r = run([testCharacter('a', { maxHp: 60 }, [at('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])]), testCharacter('b', { maxHp: 60 })])
     const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'holyAura')
-    expect(ticks.length).toBeGreaterThan(2)
+    expect(ticks.length).toBeGreaterThan(4)
+    const level = (t: Beat) => riseLevel(before(r, r.beats.indexOf(t)).statuses[0].find((s) => s.id === 'holyAura')!)
     for (const t of ticks) {
       expect(t).toMatchObject({ side: 0, phase: 'turnEnd' })
-      const stacks = before(r, r.beats.indexOf(t)).statuses[0].find((s) => s.id === 'holyAura')!.stacks
       const hp = before(r, r.beats.indexOf(t)).hp[0]
-      expect(stacks).toBeLessThanOrEqual(2)
-      expect(t.effects).toEqual([{ type: 'heal', target: 0, amount: Math.min(stacks, 60 - hp) }])
+      expect(before(r, r.beats.indexOf(t)).statuses[0].find((s) => s.id === 'holyAura')!.stacks).toBeLessThanOrEqual(4)
+      expect(t.effects).toEqual([{ type: 'heal', target: 0, amount: Math.min(level(t), 60 - hp) }])
     }
-    expect(ticks.some((t) => before(r, r.beats.indexOf(t)).statuses[0].find((s) => s.id === 'holyAura')!.stacks === 2)).toBe(true)
+    expect(ticks.map(level).slice(0, 5)).toEqual([1, 1, 2, 2, 2])
   })
 
-  it("Aura de décoction : chaque coup qui touche empoisonne la cible d'autant de charges que l'aura", () => {
-    const r = run([
-      testCharacter('a', { maxHp: 60 }, [at('combatStart', [{ type: 'applyStatus', status: 'decoctionAura', stacks: 2 }])]),
-      testCharacter('b', { maxHp: 60 }),
-    ])
+  it('Aura de décoction montante (refonte des auras) : chaque coup qui touche empoisonne la cible de son cran, 1, 1, 2, 2, puis 3', () => {
+    const r = run([testCharacter('a', { maxHp: 60 }, [at('combatStart', [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }])]), testCharacter('b', { maxHp: 200, dodgeChance: 0 })])
     const hits = r.beats.flatMap((b, i) => (b.type === 'attack' && b.attack.attacker === 0 && !b.attack.dodged ? [i] : []))
-    expect(hits.length).toBeGreaterThan(0)
+    expect(hits.length).toBeGreaterThan(5)
+    const posed: number[] = []
     for (const i of hits) {
       if (r.beats[i].state.hp[1] === 0) continue
       const reaction = r.beats[i + 1]
       expect(reaction.type === 'statusReaction' && reaction.status === 'decoctionAura').toBe(true)
-      if (reaction.type === 'statusReaction')
-        expect(reaction.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: 2 * DECOCTION_POISON, target: 1 })
+      const held = r.beats[i - 1].state.statuses[0].find((s) => s.id === 'decoctionAura')!
+      if (reaction.type !== 'statusReaction') continue
+      expect(reaction.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: DECOCTION_POISON * riseLevel(held), target: 1 })
+      posed.push(reaction.effects[0].type === 'applyStatus' ? reaction.effects[0].stacks : 0)
     }
+    expect(posed.slice(0, 6)).toEqual([1, 1, 2, 2, 3, 3])
   })
 
   it('Pile ou face (modifie, phase 5 bis) : la pièce part aussitôt, juste après le coup du 1 qui touche ; pile, ce coup ×3 (0.107.0) ; face, rien ; le statut est consommé', () => {
@@ -1402,12 +1385,6 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     expect(kept).toBeGreaterThan(10)
   })
 
-  it('Aura d’immunité (0.42.0) : tant qu’elle est là, l’armure du porteur gagne 1 ; une aura de la Lumière (B1)', () => {
-    const paladin = createCharacter('aldric')
-    expect(effectiveStats(paladin, [{ id: 'immunityAura', stacks: 1 }]).armor).toBe(paladin.stats.armor + 1)
-    expect(masteryOfSkill('immunity-aura')).toBe('light')
-  })
-
   it('Saignement dans le roster (règle 9) : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une', () => {
     let flows = 0
     for (const r of rosterCombats(4))
@@ -1456,17 +1433,18 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     expect(dodged).toBeGreaterThan(0)
   })
 
-  it('Aura de sainteté (0.42.0) : plafonnée, ses charges ne dépassent jamais le plafond', () => {
-    const cap = STATUSES.holyAura.maxStacks!
-    expect(cap).toBeGreaterThan(1)
+  it('Aura de sainteté (0.42.0, montante depuis la refonte des auras) : son cran ne dépasse jamais son plafond', () => {
+    const { every, cap } = STATUSES.holyAura.rises!
+    expect(cap).toBe(2)
     let capped = 0
     for (const r of rosterCombats(4))
       for (const b of r.beats)
         for (const side of [0, 1] as const) {
           const holy = b.state.statuses[side].find((s) => s.id === 'holyAura')
           if (!holy) continue
-          expect(holy.stacks).toBeLessThanOrEqual(cap)
-          if (holy.stacks === cap) capped++
+          expect(holy.stacks).toBeLessThanOrEqual(every * cap)
+          expect(riseLevel({ ...holy, power: undefined })).toBeLessThanOrEqual(cap)
+          if (holy.stacks === every * cap) capped++
         }
     expect(capped).toBeGreaterThan(0)
   })
@@ -1502,23 +1480,23 @@ describe('paladin (0.31.0)', () => {
   const ev = (trigger: CharacterEvent['trigger'], effects: CharacterEvent['effects'], id: string = trigger): CharacterEvent => ({ id, name: id, trigger, effects })
   const release = ev('naturalMax', [{ type: 'release', status: 'retribution', min: 1, target: 'opponent', source: 'strike' }], 'rel')
 
-  it("Aura d'immunité : purge les malus et bloque toute nouvelle pose, sans s'user", () => {
+  it("Immunité : bloque toute nouvelle pose, sans s'user", () => {
     const r = run([
       testCharacter('a', { maxHp: 40 }, [
         ev('combatStart', [
           { type: 'cleanse', polarity: 'negative' },
-          { type: 'applyStatus', status: 'immunityAura', stacks: 1 },
+          { type: 'applyStatus', status: 'immunity', stacks: 1 },
         ]),
       ]),
       testCharacter('b', { maxHp: 40 }, [ev('naturalOne', [{ type: 'applyStatus', status: 'poison', stacks: 2, turns: 3, target: 'opponent' }])]),
     ])
     const tries = ofType(r, 'event').filter((b) => b.event.side === 1)
     expect(tries.length).toBeGreaterThan(3)
-    for (const t of tries) expect(t.event.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked', by: 'immunityAura' } })
+    for (const t of tries) expect(t.event.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked', by: 'immunity' } })
     expect(r.beats.every((b) => !b.state.statuses[0].some((s) => STATUSES[s.id].polarity === 'negative'))).toBe(true)
   })
 
-  it('Riposte : le prochain coup encaissé renvoie la moitié des PV retirés, puis la charge disparaît', () => {
+  it('Riposte : le prochain coup encaissé renvoie tous les PV retirés (refonte des auras, Q6), puis la charge disparaît', () => {
     const r = run([
       testCharacter('a', { maxHp: 60 }, [ev('combatStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])]),
       testCharacter('b', { maxHp: 60, critChance: 1, critMultiplier: 7 }),
@@ -1526,7 +1504,7 @@ describe('paladin (0.31.0)', () => {
     const first = r.beats.findIndex((b) => b.type === 'attack' && b.attack.attacker === 1)
     const reaction = r.beats[first + 1]
     expect(reaction).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
-    if (reaction.type === 'statusReaction') expect(reaction.effects[0]).toMatchObject({ type: 'damage', target: 1, amount: Math.round(7 / 2) })
+    if (reaction.type === 'statusReaction') expect(reaction.effects[0]).toMatchObject({ type: 'damage', target: 1, amount: 7 })
     expect(ofType(r, 'statusReaction').filter((b) => b.status === 'riposte')).toHaveLength(1)
   })
 
@@ -1762,21 +1740,6 @@ describe('ogre et druide (0.35.0)', () => {
     expect(purges).toBeGreaterThan(10)
   })
 
-  it('Pourriture : posée par chaque critique sous Aura de pourriture (Maîtrises, 2026-10-27), elle ne s’estompe jamais', () => {
-    const aura = [{ id: 'r', name: 'r', trigger: 'combatStart' as const, effects: [{ type: 'applyStatus' as const, status: 'rotAura' as const, stacks: 2 }] }]
-    const r = run([testCharacter('a', { maxHp: 200, critChance: 1 }, aura), testCharacter('b', { maxHp: 200 })])
-    let last = 0
-    for (const b of r.beats) {
-      const rot = statusOn(b.state, 1, 'rot')?.stacks ?? 0
-      expect(rot).toBeGreaterThanOrEqual(last)
-      last = rot
-    }
-    expect(last).toBeGreaterThanOrEqual(4)
-    const ticks = ofType(r, 'statusTick').filter((t) => t.status === 'rot')
-    expect(ticks.length).toBeGreaterThan(0)
-    expect(ofType(r, 'statusAge').some((b) => b.expired.includes('rot'))).toBe(false)
-  })
-
   it("Armure temporaire (0.50.0) : la Peau de pierre du nain, qui se cumule", () => {
     const pose = (id: string, skill: string) => createCharacter(id).events.find((e) => e.id === skill)!.effects[0]
     expect(pose('brokk', 'stoneskin')).toMatchObject({ type: 'applyStatus', status: 'bonusArmor' })
@@ -1809,7 +1772,9 @@ describe('reliques (docs/RELIQUES.md)', () => {
     const sources = ['wasp-sting', 'tinder-box', 'spiked-bracer']
     // Retour du 2026-10-27 : le sursis (seuil), l'initiative (tour), la chance de pile (caractéristique)
     const r27 = ['reprieve-medal', 'vanguard-horn', 'weighted-coin']
-    const plain = RELICS.filter((r) => !r.scene && ![...consumers, ...durability, ...lot2, ...sources, ...r27].includes(r.id))
+    // Refonte des auras (2026-10-28) : trois auras sorties en reliques de tour
+    const r28 = ['blessed-phial', 'gaoler-chain', 'lightning-rod']
+    const plain = RELICS.filter((r) => !r.scene && ![...consumers, ...durability, ...lot2, ...sources, ...r27, ...r28].includes(r.id))
     expect(plain).toHaveLength(12)
     for (const kind of ['stat', 'strike', 'turn', 'threshold']) expect(plain.filter((r) => relicKind(r) === kind), kind).toHaveLength(3)
     expect(consumers.map((id) => relicKind(getRelic(id)))).toEqual(['strike', 'strike', 'strike', 'strike', 'strike'])
@@ -2131,8 +2096,8 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "3 dégâts contre l'armure de l'attaquant quand son armure temporaire est vidée",
       '+1 PV quand il renvoie des dégâts',
       // Le pluriel d'un statut qui se compte (passe compendium, 2026-10-25) ; « lancer de pièce gagnant », la phrase de
-      // l'utilisateur (2026-10-27)
-      '+2 coups de chance à chaque lancer de pièce gagnant',
+      // l'utilisateur (2026-10-27) ; sa recharge depuis la mesure d'ensemble de la refonte des auras
+      '+2 coups de chance à chaque lancer de pièce gagnant, recharge 3 tours',
       // Les reliques de source (2026-10-25)
       "2 poison à l'adversaire sur un 6",
       "2 brûlure à l'adversaire sur un 6",
@@ -2142,6 +2107,9 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       'Reste à 1 PV jusqu’à la fin du tour quand il devrait tomber, 1x',
       "Joue le premier tour sans jet d'initiative",
       '+25 % de chances de faire pile (5 sur 6 au plus)',
+      'Aucun malus ne peut lui être posé, ses 3 premiers tours',
+      "Ses coups font +1 par malus que porte l'adversaire, tout le combat",
+      'Chacun de ses éclairs fait +1, tout le combat',
       ].map(typeset),
     )
     for (const line of lines) {
@@ -2318,38 +2286,33 @@ describe('causes des étapes (moteur v2, docs/MOTEUR_V2.md § 3)', () => {
     expect(cuts).toBeGreaterThan(20)
   })
 
-  it('Duo (Fanchon, signature sur le 2 depuis les Maîtrises) : le Duo seul ; à sa prochaine action, une rafale de jets complets, un de plus par charge', () => {
+  it('Duo (Fanchon, signature sur le 2, refonte des auras) : un coup brut de plus (trois jusqu’à la mesure d’ensemble), tout de suite, juste après le coup du jet ; aucun ne relance rien', () => {
     let duos = 0
-    let actions = 0
-    let grafted = 0
+    let volleys = 0
     for (const r of rosterCombats(4)) {
       for (const b of ofType(r, 'event')) {
         if (b.event.eventId !== 'duo') continue
         expect(causeOf(r, b)).toMatchObject({ type: 'roll', roll: 2 })
-        // L'Aura mélodieuse quitte le jeu (retour de l'utilisateur du 2026-10-27, P7) : le Duo ne pose plus que ses dés, un
-        // seul depuis le retour du 2026-10-28 (A11 : trois jusque-là)
         expect(b.event.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: b.event.side, status: 'duo', stacks: 1 })])
         duos++
       }
       for (const f of ofType(r, 'flurry')) {
         if (f.status !== 'duo') continue
         expect(r.fighters[f.side].id).toBe('fanchon')
-        // Le Duo vient d'un 1 d'une action passée, et toutes ses charges partent ici
-        const held = stacksOf(r.beats[f.id - 1].state.statuses[f.side], 'duo')
-        expect(f.strikes).toBe(1 + held)
-        expect(stacksOf(f.state.statuses[f.side], 'duo')).toBe(0)
+        // La rafale suit, dans le même tour, le coup du jet qui l'a posé ; toutes ses charges partent
         const posed = ofType(r, 'event').filter((b) => b.id < f.id && b.event.eventId === 'duo' && b.event.side === f.side)
-        expect(posed.at(-1)!.turn).toBeLessThan(f.turn)
-        const strikes = r.beats.filter((b) => b.type === 'attack' && b.cause !== undefined && (b.cause === f.id || (r.beats[b.cause].type === 'roll' && r.beats[b.cause].cause === f.id)))
-        if (f.turn < r.turns) expect(strikes).toHaveLength(f.strikes)
-        grafted += strikes.filter((s) => s.cause !== f.id).length
-        actions++
+        expect(posed.at(-1)!.turn).toBe(f.turn)
+        expect(f.strikes).toBe(1)
+        expect(stacksOf(f.state.statuses[f.side], 'duo')).toBe(0)
+        // Des coups bruts : leur face ne déclenche rien (ni jet greffé, ni Duo)
+        const strikes = r.beats.filter((b) => b.type === 'attack' && b.cause === f.id)
+        if (f.turn < r.turns) expect(strikes).toHaveLength(1)
+        for (const s of strikes) if (s.type === 'attack') expect(s.attack.plain).toBe(true)
+        volleys++
       }
     }
     expect(duos).toBeGreaterThan(50)
-    expect(actions).toBeGreaterThan(30)
-    // Chaque jet est complet : un 1 ou un 2 de la rafale fait partir sa compétence
-    expect(grafted).toBeGreaterThan(5)
+    expect(volleys).toBeGreaterThan(30)
   })
 
   it('rafale : chaque coup a la rafale pour cause ; des coups instantanés ont pour cause ce qui a posé leur charge', () => {
@@ -2439,7 +2402,8 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
         if (stacksOf(coin.state.statuses[1], 'riposte') > 0) {
           const back = reactionTo(r, coin.id, 'riposte')
           expect(back?.trigger).toBe('hurt')
-          expect(back!.effects).toEqual([{ type: 'damage', target: 0, amount: 10, source: 'strike' }])
+          // La Riposte entière (refonte des auras, Q6) : tous les PV de la pièce, 20
+          expect(back!.effects).toEqual([{ type: 'damage', target: 0, amount: 20, source: 'strike' }])
           riposted++
         }
         const gauge = reactionTo(r, coin.id, 'retribution')
@@ -2502,22 +2466,22 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
   })
 
   it('pile (règle 9) : un statut posé pendant la pièce ne réagit pas à la pièce ; posé pendant le coup qui la lance, il y réagit', () => {
-    // Chaque fois que a touche (coup ou pile), il donne une Épine à b dans la fenêtre `hit` et prend une pièce
+    // Chaque fois que a touche (coup ou pile), il donne un Jugement à b dans la fenêtre `hit` et prend une pièce
     const spikes = ev('hit', [
-      { type: 'applyStatus', status: 'thorns', stacks: 1, target: 'opponent' },
+      { type: 'applyStatus', status: 'judgement', stacks: 1, target: 'opponent' },
       { type: 'applyStatus', status: 'coinFlip', stacks: 1 },
     ])
     let coins = 0
     for (let seed = 1; seed < 40; seed++) {
       const r = run([testCharacter('a', { maxHp: 400 }, [spikes]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })], seed)
       for (const coin of ofType(r, 'coin')) {
-        if (!coin.heads || coin.side !== 0 || r.beats.some((b) => b.cause === coin.id && b.state.hp.includes(0))) continue
-        // Les Épines du début de la pièce (celles du coup qui l'a lancée) répondent, sans celle que la pièce vient d'ajouter
-        const atStart = stacksOf(r.beats[coin.id - 1].state.statuses[1], 'thorns')
+        if (!coin.heads || coin.side !== 0 || coin.state.hp.includes(0) || r.beats.some((b) => b.cause === coin.id && b.state.hp.includes(0))) continue
+        // Le Jugement du début de la pièce (celui du coup qui l'a lancée) répond, sans la charge que la pièce vient d'ajouter
+        const atStart = stacksOf(r.beats[coin.id - 1].state.statuses[1], 'judgement')
         expect(atStart).toBeGreaterThan(0)
-        const back = reactionTo(r, coin.id, 'thorns')
-        expect(back?.effects[0]).toMatchObject({ type: 'applyStatus', status: 'bleed', stacks: atStart })
-        expect(stacksOf(back!.state.statuses[1], 'thorns')).toBe(atStart + 1)
+        const back = reactionTo(r, coin.id, 'judgement')
+        expect(back?.effects[0]).toMatchObject({ type: 'applyStatus', status: 'fault', stacks: atStart })
+        expect(stacksOf(back!.state.statuses[1], 'judgement')).toBe(atStart + 1)
         coins++
       }
     }
@@ -2526,8 +2490,10 @@ describe('audit de fidélité (2026-10-21) : une règle pour « un coup qui touc
 
   it('Purification ne retire pas la Rétribution : un mécanisme ne se purge pas', () => {
     let purges = 0
+    // La Rétribution, dans la réserve du Rempart depuis la refonte des auras : gravée sur le 3 d'Aldric
+    const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skillById('retribution') }])
     for (let seed = 1; seed < 120; seed++) {
-      const r = simulateCombat([createCharacter('ysolde'), createCharacter('aldric')], { seed })
+      const r = simulateCombat([createCharacter('ysolde'), aldric], { seed })
       for (const b of ofType(r, 'event')) {
         if (b.event.eventId !== 'purification' || b.state.hp.includes(0)) continue
         const had = r.beats[b.id - 1].state.statuses[1].find((s) => s.id === 'retribution')
@@ -2673,11 +2639,11 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(() => createCharacter('ervald').withForge([{ op: 'gild', face: 2 }])).toThrow()
   })
 
-  it('ogre : son Aura de puissance sur le 1, son Crescendo sur le 2 (C5), le reste nu ; une gravure sur le 3 (Pourfendre) frappe et pourfend', () => {
-    expect(def('morgrut').events.filter((e) => isRollTrigger(e.trigger)).map((e) => `${e.id}@${e.trigger}`)).toEqual(['power-aura@naturalOne', 'crescendo@naturalTwo'])
+  it('ogre : son Aura de puissance sur le 1, son Assaut sur le 2 (refonte des auras, Q7), le reste nu ; une gravure sur le 3 (Pourfendre) frappe et pourfend', () => {
+    expect(def('morgrut').events.filter((e) => isRollTrigger(e.trigger)).map((e) => `${e.id}@${e.trigger}`)).toEqual(['power-aura@naturalOne', 'assault@naturalTwo'])
     expect(() => createCharacter('morgrut').withForge([{ op: 'engrave', face: 2, skill: skill('cleave') }])).toThrow()
     const morgrut = createCharacter('morgrut').withForge([{ op: 'engrave', face: 3, skill: skill('cleave') }])
-    expect(morgrut.events.filter((e) => isRollTrigger(e.trigger)).map((e) => e.id)).toEqual(['power-aura', 'crescendo', 'cleave'])
+    expect(morgrut.events.filter((e) => isRollTrigger(e.trigger)).map((e) => e.id)).toEqual(['power-aura', 'assault', 'cleave'])
     expect(morgrut.events.find((e) => e.id === 'cleave')?.trigger).toBe('naturalThree')
     expect(forgedFaces(morgrut.definition, morgrut.forge)[2]).toMatchObject({ engraved: { id: 'cleave' } })
     let ones = 0
@@ -2711,7 +2677,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       expect(d.stats.attackMax, d.id).toBeLessThan(8)
       expect(d.skillFaces, d.id).toBeUndefined()
     }
-    // Son aura, son Crescendo et deux gravures : ni Graver ni Copier ensuite ; Gorak, au même point, grave encore
+    // Son aura, son Assaut et deux gravures : ni Graver ni Copier ensuite ; Gorak, au même point, grave encore
     const engraved = (id: string) => characterPool(real(id)).slice(0, 2).map((s, i) => ({ op: 'engrave' as const, face: 3 + i, skill: s }))
     const ops = (id: string, forge: ForgeStep[]) => Array.from({ length: 20 }, (_, k) => drawReward({ championId: id, forge, relics: [] }, 'forge', seededRng(k))).flatMap((r) => (r.kind === 'forge' ? r.offer.map((o) => o.op) : []))
     expect(ops('morgrut', engraved('morgrut').slice(0, 1))).toContain('engrave')
@@ -2723,34 +2689,30 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(ops('gorak', engraved('gorak'))).toContain('engrave')
   })
 
-  it('Duo : la forge de la barde vise les faces nues, comme pour tous ; une face gravée ou dorée vaut pour chaque dé de sa rafale', () => {
+  it('Duo : la forge de la barde vise les faces nues, comme pour tous ; dans sa rafale de coups bruts, une face gravée ne part pas, une face dorée frappe plus fort', () => {
     const fanchon = def('fanchon')
     expect(offerTargets(fanchon, [], { op: 'engrave', skills: [skill('fear')] })).toEqual([3, 4, 5, 6])
     expect(offerTargets(fanchon, [], { op: 'gild' })).toEqual([])
     expect(() => forgeState(fanchon, [{ op: 'gild', face: 1 }])).toThrow()
     const bard = createCharacter('fanchon').withForge([{ op: 'engrave', face: 6, skill: skill('grave-breath') }, { op: 'gild', face: 5 }])
     expect(bard.events.find((e) => e.id === 'grave-breath')!.trigger).toBe(faceTrigger(6))
-    // Une compétence qui modifie son coup le modifie aussi dans la rafale : chaque dé porte son coup
-    expect(relationOf(createCharacter('fanchon').withForge([{ op: 'engrave', face: 6, skill: skill('cleave') }]).events.find((e) => e.id === 'cleave')!)).toBe('modify')
     let sixes = 0
     let gilded = 0
-    for (let seed = 0; seed < 150; seed++) {
+    for (let seed = 0; seed < 300; seed++) {
       const r = simulateCombat([bard, createCharacter('morgrut')], { seed })
       for (const f of ofType(r, 'flurry').filter((x) => x.side === 0 && x.status === 'duo')) {
-        // Ses jets, dans l'ordre : un 6 lance le Souffle (greffé : étape roll, le Souffle, puis le coup), sur chacun des dés
-        const rolls = r.beats.filter((x) => x.type === 'roll' && x.cause === f.id)
-        const feared = rolls.filter((x) => x.type === 'roll' && x.roll === 6)
-        for (const roll of feared) {
-          expect(r.beats[roll.id + 1]).toMatchObject({ type: 'event', event: { eventId: 'grave-breath', trigger: faceTrigger(6) } })
+        // Un 6 de la rafale est un coup brut : le Souffle ne part pas (aucune boucle, A11)
+        for (const s of r.beats.filter((x) => x.type === 'attack' && x.cause === f.id && x.attack.roll === 6)) {
+          expect(r.beats.some((x) => x.type === 'event' && x.event.eventId === 'grave-breath' && x.cause === s.id)).toBe(false)
           sixes++
         }
       }
       for (const a of attacksOf(r).filter((x) => x.attacker === 0 && !x.dodged && !x.replaced)) {
         expect(a.gild ?? 0).toBe(a.roll === 5 ? GILD_BONUS : 0)
-        if (a.gild) gilded++
+        if (a.gild && a.plain) gilded++
       }
     }
-    expect(sixes).toBeGreaterThan(20)
+    expect(sixes).toBeGreaterThan(10)
     expect(gilded).toBeGreaterThan(0)
   })
 
@@ -2775,14 +2737,15 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     // Montant (Purification : sa lumière de repli, +3 par rang)
     const light = def('ysolde').events.find((e) => e.id === 'purification')!.effects[0]
     expect(sharp('ysolde', ranks(2, 1), 'purification').effects[0]).toMatchObject({ orElse: { amount: (light.type === 'cleanse' && light.orElse?.type === 'damage' ? light.orElse.amount : 0) + 3 } })
-    // Intensité (Pile ou face : pile ×2 de plus, revue R2 ; Vol de vie et Riposte : leur plafond de 2 charges ne bouge pas,
+    // Intensité (Pile ou face : pile ×1 de plus, ×2 de la revue R2 à la mesure d'ensemble de la refonte des auras ; Vol de
+    // vie et Riposte : leur plafond de 2 charges ne bouge pas, la Riposte en pose une depuis la mesure d'ensemble,
     // elles s'aiguisent encore au rang III ; le Vol de vie part de +4 PV (+2 avant les Maîtrises) et gagne +4 par rang, revue P3 ; Aura de sainteté :
     // +1 PV par tour par rang, au-delà de son plafond)
-    expect(sharp('naraxes', ranks(2, 1), 'coin-flip').effects[0]).toMatchObject({ stacks: 1, power: 2 })
+    expect(sharp('naraxes', ranks(2, 1), 'coin-flip').effects[0]).toMatchObject({ stacks: 1, power: 1 })
     expect(def('ervald').events.find((e) => e.id === 'life-steal')!.effects[0]).toMatchObject({ stacks: 1, power: 4 })
     expect(sharp('ervald', ranks(2, 2), 'life-steal').effects[0]).toMatchObject({ stacks: 1, power: 12 })
     expect(offerTargets(def('ervald'), ranks(2, 1), { op: 'sharpen' })).not.toContain(2)
-    expect(sharp('aldric', ranks(2, 2), 'riposte').effects[0]).toMatchObject({ stacks: 2, power: 4 })
+    expect(sharp('aldric', ranks(2, 2), 'riposte').effects[0]).toMatchObject({ stacks: 1, power: 4 })
     expect(sharp('ysolde', ranks(1, 1), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 1 })
     expect(sharp('ysolde', ranks(1, 2), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 2 })
     // Coup ×N (Crescendo, Soliste), limite par combat (Peur), part relâchée (Rétribution)
@@ -2853,17 +2816,19 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'evasion', stacks: 1 })
       expect(b.state.statuses[0].find((s) => s.id === 'evasion')).toEqual({ id: 'evasion', stacks: 1, power: 2 })
     }
-    // Aura glaciale II (intensité 1) : un Poison de plus à chaque tour
+    // Aura de poison II (intensité 1) : un cran de plus à chaque tour, au-delà du plafond
     const frost = runOn(1, [createCharacter('ervald').withForge([{ op: 'sharpen', face: 1 }]), foe])
     const ticks = ofType(frost, 'statusTick').filter((t) => t.side === 0 && t.status === 'frostAura')
     expect(ticks.length).toBeGreaterThan(3)
     for (const t of ticks) {
       const aura = frost.beats[t.id - 1].state.statuses[0].find((s) => s.id === 'frostAura')!
       expect(aura.power).toBe(1)
-      expect(t.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: aura.stacks + 1 })
+      expect(t.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: riseLevel({ ...aura, power: undefined }) + 1 })
     }
+    expect(ticks.some((t) => t.effects[0].type === 'applyStatus' && t.effects[0].stacks === 4)).toBe(true)
     // Pile ou face II (chaque pièce tombe sur pile, la pièce lisant 1 = pile : la compétence aiguisée de sa face 2, portée
-    // sur le 1) : ce coup ×5 (pile ×2 de plus par rang, revue R2), la pièce rend encore quatre fois les PV retirés
+    // sur le 1) : ce coup ×4 (pile ×1 de plus par rang : ×2 de la revue R2 à la mesure d'ensemble de la refonte des auras),
+    // la pièce rend encore trois fois les PV retirés
     const coin = createCharacter('naraxes').withForge([{ op: 'sharpen', face: 2 }]).events.find((e) => e.id === 'coin-flip')!
     const r = runOn(1, [testCharacter('a', { maxHp: 60 }, [{ ...coin, trigger: 'naturalOne' }]), foe])
     const coins = ofType(r, 'coin').filter((c) => c.side === 0)
@@ -2871,7 +2836,7 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     for (const c of coins) {
       const hit = r.beats.slice(0, c.id).reverse().find((b) => b.type === 'attack')!
       expect(c.heads).toBe(true)
-      expect(c.effects[0]).toMatchObject({ type: 'damage', amount: (hit.type === 'attack' ? hit.attack.dealt : 0) * (COIN_HEADS + 2 - 1) })
+      expect(c.effects[0]).toMatchObject({ type: 'damage', amount: (hit.type === 'attack' ? hit.attack.dealt : 0) * (COIN_HEADS + 1 - 1) })
     }
   })
 
@@ -3190,7 +3155,7 @@ describe('attaque de base (phase 5 bis)', () => {
     // Une aura gravée (au journal : tests, labo) ne se copie pas non plus en partie (A2), qu'elle soit plate ou cumulable
     const engrave = (skill: CharacterEvent): ForgeStep[] => [{ op: 'engrave', face: 3, skill }]
     const engraved = (id: string) => engrave(ENGRAVABLE_SKILLS.find((e) => e.id === id)!)
-    const flat: CharacterEvent = { id: 'flat-aura', name: 'Aura plate', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'immunityAura', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } }
+    const flat: CharacterEvent = { id: 'flat-aura', name: 'Aura plate', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } }
     expect(offerTargets(gorak, engrave(flat), { op: 'copy' })).toEqual([2])
     expect(() => forgeState(gorak, [...engrave(flat), { op: 'copy', face: 3 }])).toThrow()
     expect(offerTargets(gorak, engraved('decoction-aura'), { op: 'copy' })).toEqual([2])
@@ -3275,31 +3240,30 @@ describe('attaque de base (phase 5 bis)', () => {
 
   it('Peur bloquée par une immunité : elle use quand même sa seule fois (E4, décision du 2026-10-24)', () => {
     const fear: CharacterEvent = { id: 'scare', name: 'scare', trigger: 'naturalOne', limit: 1, effects: [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }] }
-    const shield: CharacterEvent = { id: 'shield', name: 'shield', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'immunityAura', stacks: 1 }] }
+    const shield: CharacterEvent = { id: 'shield', name: 'shield', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'immunity', stacks: 1 }] }
     const r = runOn(1, [testCharacter('a', { maxHp: 200 }, [fear]), testCharacter('b', { maxHp: 200 }, [shield])])
     const scares = ofType(r, 'event').filter((x) => x.event.eventId === 'scare')
     expect(scares).toHaveLength(1)
-    expect(scares[0].event.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked', by: 'immunityAura' } })
+    expect(scares[0].event.effects[0]).toMatchObject({ type: 'applyStatus', result: { kind: 'blocked', by: 'immunity' } })
     expect(ofType(r, 'skip')).toHaveLength(0)
     expect(ofType(r, 'attack').filter((x) => x.attack.attacker === 0).length).toBeGreaterThan(3)
   })
 
-  it('barde (le Duo) : un seul d6 ; sur le 2, Soliste une fois ; chaque 1 donne un dé de plus à sa prochaine action', () => {
+  it('barde (le Duo, dé de la 0.120.0 de ce bloc) : un seul d6 ; sur le 2, Soliste une fois ; chaque 1, un coup brut de plus, tout de suite', () => {
     const fanchon = createCharacter('fanchon')
     // Ses compétences sont sur ses faces, comme celles de tous (l'Ouverture, hors dé, a quitté le jeu le 2026-10-27)
     for (const e of [...fanchon.events, ...characterPool(fanchon.definition)]) expect(rollFace(e.trigger)).toBeDefined()
     const target = () => testCharacter('cible', { maxHp: 400, dodgeChance: 0.3 })
-    // Sur le 2 : un dé par action, aucune rafale ; Soliste une seule fois (0.107.0), puis sa face est nue
+    // Sur le 2 : aucune rafale ; Soliste une seule fois (0.107.0), puis sa face est nue
     const solo = runOn(2, [fanchon, target()])
     expect(ofType(solo, 'flurry')).toHaveLength(0)
     expect(ofType(solo, 'event').filter((b) => b.event.eventId === 'soloist')).toHaveLength(1)
-    // Sur le 1 : chaque jet pose un Duo d'une charge (retour du 2026-10-28, A11), qui part à l'action suivante ; un dé de
-    // plus ne donne jamais de dé de plus (A7) : 1 jet, puis 2 à chaque action qui suit un 1
+    // Sur le 1 : chaque jet pose un Duo, qui part aussitôt en un coup brut (refonte des auras, Q8 ; trois jusqu'à la
+    // mesure d'ensemble) ; un coup brut ne relance jamais de Duo : une rafale par jet
     const duo = runOn(1, [fanchon, target()])
     const volleys = ofType(duo, 'flurry').filter((f) => f.side === 0)
     expect(volleys.length).toBeGreaterThan(3)
-    for (const f of volleys) expect(f).toMatchObject({ status: 'duo', strikes: 2, faces: Array(2).fill(DIE_FACES) })
-    // Un Duo par jet : chaque jet de la rafale est complet (son 1 fait partir la compétence, greffée)
+    for (const f of volleys) expect(f).toMatchObject({ status: 'duo', strikes: 1, faces: [DIE_FACES] })
     const rolls = ofType(duo, 'roll').filter((b) => b.side === 0)
     expect(ofType(duo, 'event').filter((b) => b.event.eventId === 'duo')).toHaveLength(rolls.length)
   })
@@ -3326,14 +3290,14 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
     // Revue des compétences (P1) : sans condition, triple puis +2 ; rang +1
     expect(text('virulence')).toBe("Triple le Poison de l'adversaire, puis +2.")
     expect(text('virulence', 1)).toBe("Triple le Poison de l'adversaire, puis +3.")
-    // Revue des auras (A1) : 3 PV par soin, rang +3
-    expect(text('sentence')).toBe("Chaque soin que son porteur reçoit fait perdre 3 PV à l'adversaire.")
-    expect(text('sentence', 1)).toBe("Chaque soin que son porteur reçoit fait perdre 6 PV à l'adversaire.")
+    // Refonte des auras (2026-10-28) : une compétence à charges, 3 PV par soin, rang +1
+    expect(text('sentence')).toBe("Ses 3 prochains soins font perdre chacun 3 PV à l'adversaire.")
+    expect(text('sentence', 1)).toBe("Ses 3 prochains soins font perdre chacun 4 PV à l'adversaire.")
     expect(text('grudge')).toBe('Son prochain coup reçu lui donne un critique assuré.')
     expect(text('grudge', 1)).toBe('Ses 2 prochains coups reçus lui donnent chacun un critique assuré.')
     // Plus de pastille de condition : elle est dans la ligne
     for (const id of ['quarry', 'harvest', 'virulence']) expect(describeSkill(skill(id)).tags.map((t) => t.label).join(' ')).not.toMatch(/\bsi\b/)
-    expect(describeSkill(skill('sentence')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['aura permanente', typeset('Sentence : 2 charges au plus')]))
+    expect(describeSkill(skill('sentence')).tags.map((t) => t.label)).not.toContain('aura permanente')
   })
 
   it('Curée : si l’adversaire saigne, trois coups de base bruts par charge juste après le coup de base de son jet ; sinon, sa face est nue', () => {
@@ -3402,7 +3366,7 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
     expect(validateRoster([{ ...createCharacter('morgrut').definition, events: [half] }]).some((p) => p.includes('fromStatus'))).toBe(true)
   })
 
-  it('Sentence : chaque soin de son porteur coûte 3 PV par charge à l’adversaire (dégâts directs, revue A1), sans chaîne ; 2 charges au plus', () => {
+  it('Sentence (compétence à charges, refonte des auras) : ses 3 prochains soins coûtent 3 PV (+1 par rang) à l’adversaire, une charge chacun, sans chaîne', () => {
     const holy = ev('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])
     for (const rank of [0, 1]) {
       const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [holy]), 'sentence', rank), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
@@ -3410,15 +3374,17 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
       expect(reactions.length).toBeGreaterThan(5)
       for (const b of reactions) {
         const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'sentence')!
-        expect(held.stacks).toBeLessThanOrEqual(2)
         expect(b.trigger).toBe('healed')
-        expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: 3 * (held.stacks + rank), source: 'holy' }])
+        expect(b.effects).toEqual([{ type: 'damage', target: 1, amount: 3 + rank, source: 'holy' }])
+        expect(b.state.statuses[0].find((s) => s.id === 'sentence')?.stacks ?? 0).toBe(held.stacks - 1)
         // Sa cause : l'étape qui a soigné son porteur
         const cause = r.beats[b.cause!]
         expect(cause.type === 'statusTick' && cause.effects.some((e) => e.type === 'heal' && e.target === 0 && e.amount > 0)).toBe(true)
       }
-      expect(reactions.some((b) => r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'sentence')!.stacks === 2)).toBe(true)
     }
+    // Posée seule, sans soin : ses 3 charges attendent
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'sentence'), testCharacter('b', { maxHp: 400 })])
+    expect(ofType(dry, 'statusReaction').filter((b) => b.status === 'sentence')).toEqual([])
   })
 
   it('Rancune : chaque coup qui touche son porteur lui donne un Critique assuré, une charge par coup encaissé', () => {
@@ -3460,12 +3426,10 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     // Le Dé pipé, une aura depuis les Maîtrises (M9) : sa chance de pile, du critique et de l'esquive (2026-10-27) ; son rang, une charge de plus
     expect(text('loaded-die')).toBe(typeset("+25 % de chances de faire pile à ses pièces (5 sur 6 au plus), +5 % de critique et +5 % d'esquive."))
     expect(text('loaded-die', 1)).toBe(typeset("+50 % de chances de faire pile à ses pièces (5 sur 6 au plus), +10 % de critique et +10 % d'esquive."))
-    expect(text('bristling-rampart')).toBe("+2 Aura d'épines et +2 armure temporaire quand son armure temporaire est vidée.")
-    expect(text('bristling-rampart', 1)).toBe("+4 Aura d'épines et +4 armure temporaire quand son armure temporaire est vidée.")
     expect(text('vendetta')).toBe('+6 Ferveur chaque fois que son porteur renvoie des dégâts.')
     expect(text('vendetta', 1)).toBe('+12 Ferveur chaque fois que son porteur renvoie des dégâts.')
-    for (const id of ['bristling-rampart', 'vendetta']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
-    for (const id of ['conflagration', 'loaded-die', 'bristling-rampart', 'vendetta']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
+    expect(describeSkill(skill('vendetta')).tags.map((t) => t.label)).toContain('aura permanente')
+    for (const id of ['conflagration', 'loaded-die', 'vendetta']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
   })
 
   it('Embrasement : le coup qui touche un adversaire qui brûle relâche 3 fois sa Brûlure restante, l’éteint, et perd une charge ; sans Brûlure, la charge attend', () => {
@@ -3508,34 +3472,6 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     // Mode triche : la pièce imposée (face) reste face
     const forced = runOn(2, [testCharacter('a', { maxHp: 400 }, [loaded(2), coin]), testCharacter('b', { maxHp: 400 })])
     expect(ofType(forced, 'coin').find((b) => b.side === 0)).toMatchObject({ heads: false, forced: true })
-  })
-
-  it('armure vidée (`shieldBroken`) : le Rempart hérissé donne 2 Épines acérées et 2 armure temporaire par charge (revue A3) à chaque coup qui vide l’armure temporaire de son porteur, et seulement alors', () => {
-    const shield = ev('turnStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 1 }])
-    for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 2000 }, [shield]), 'bristling-rampart', rank), testCharacter('b', { maxHp: 2000, attackMin: 30, attackMax: 30 })])
-      const fired = reactions(r, 'bristlingRampart')
-      expect(fired.length).toBeGreaterThan(5)
-      for (const b of fired) {
-        expect(b).toMatchObject({ side: 0, trigger: 'shieldBroken' })
-        expect(emptied(r, b.cause!, 0)).toBe(true)
-        const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'bristlingRampart')!
-        expect(b.effects).toEqual([
-          expect.objectContaining({ type: 'applyStatus', target: 0, status: 'thorns', stacks: 2 * (held.stacks + rank) }),
-          expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bonusArmor', stacks: 2 * (held.stacks + rank) }),
-        ])
-        // L'armure qu'il redonne est là après le coup : la prochaine armure vidée
-        expect(stacksOf(b.state.statuses[0], 'bonusArmor')).toBeGreaterThanOrEqual(2 * (held.stacks + rank))
-      }
-      // Chaque coup qui vide son armure, quand le Rempart était là au début du coup, le fait réagir
-      for (const a of ofType(r, 'attack'))
-        if (emptied(r, a.id, 0) && r.beats[a.id - 1].state.statuses[0].some((s) => s.id === 'bristlingRampart') && a.state.hp.every((h) => h > 0))
-          expect(fired.some((b) => b.cause === a.id)).toBe(true)
-    }
-    // Une armure qui ne se vide pas : aucun Rempart
-    const thick = ev('combatStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 1000 }])
-    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [thick]), 'bristling-rampart'), testCharacter('b', { maxHp: 400, attackMin: 3, attackMax: 3 })])
-    expect(reactions(r, 'bristlingRampart')).toEqual([])
   })
 
   it('dégâts renvoyés (`reflected`) : la Vindicte donne 6 Ferveur par charge (revue A2) après chaque Riposte qui rend une part du coup, l’étape de la Riposte pour cause', () => {
@@ -3588,7 +3524,8 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
       expect(gauntlet.beats[b.cause!]).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
       expect(b.effects).toEqual([{ type: 'heal', target: 0, amount: 1 }])
     }
-    // Pièce trouée : +2 Coup de chance sur pile, la pièce pour cause ; jamais sur face
+    // Coccinelle d'émail (la Pièce trouée) : +2 Coup de chance sur pile, la pièce pour cause ; jamais sur face ; recharge
+    // de 2 de ses tours depuis la mesure d'ensemble de la refonte des auras
     const coin = ev('turnStart', [{ type: 'applyStatus', status: 'coinFlip', stacks: 1 }])
     const holed = run([testCharacter('a', { maxHp: 400 }, [coin]).withRelics([pick('holed-coin')]), testCharacter('b', { maxHp: 400 })])
     const heads = ofType(holed, 'coin').filter((b) => b.side === 0 && b.heads)
@@ -3597,13 +3534,21 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
       expect(holed.beats[b.cause!]).toMatchObject({ type: 'coin', side: 0, heads: true })
       expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'luckyStrike', stacks: 2 })])
     }
-    expect(relicBeats(holed, 'holed-coin').length).toBe(heads.filter((b) => b.state.hp.every((h) => h > 0)).length)
+    const cooldown = pick('holed-coin').cooldown!
+    const ownTurns = [...new Set(holed.beats.filter((b) => b.owner === 0 && b.turn > 0).map((b) => b.turn))]
+    const fired = relicBeats(holed, 'holed-coin').map((b) => ownTurns.indexOf(b.turn))
+    expect(fired.length).toBeGreaterThan(1)
+    for (let k = 1; k < fired.length; k++) expect(fired[k] - fired[k - 1]).toBeGreaterThanOrEqual(cooldown)
+    // Une pile sans elle tombe pendant sa recharge
+    for (const h of heads.filter((b) => b.state.hp.every((x) => x > 0))) {
+      const t = ownTurns.indexOf(h.turn)
+      if (!relicBeats(holed, 'holed-coin').some((b) => b.cause === h.id)) expect(fired.some((f) => f <= t && t - f < cooldown)).toBe(true)
+    }
   })
 
   it('offre pertinente : chacune ne vaut que chez qui produit sa ressource', () => {
     expect(skillNeeds(skill('conflagration'))).toEqual(['status:burn'])
     expect(skillNeeds(skill('loaded-die'))).toEqual(['moment:heads'])
-    expect(skillNeeds(skill('bristling-rampart'))).toEqual(['moment:shieldBreak'])
     expect(skillNeeds(skill('vendetta'))).toEqual(['moment:reflect'])
     expect(relicNeeds(getRelic('forge-bellows'))).toEqual(['status:burn'])
     expect(relicNeeds(getRelic('pavise-nails'))).toEqual(['moment:shieldBreak'])
@@ -3670,7 +3615,7 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
   const coins = (fighter: Character, n = 80) => Array.from({ length: n }, (_, k) => ofType(run([fighter, testCharacter('b', { maxHp: 400 })], k + 1), 'coin')).flat()
 
   it('les pièces sont des compétences gravables de la Fortune (Naraxes, Fanchon), jamais des reliques', () => {
-    for (const id of ['lucky-coin', 'cursed-coin']) {
+    for (const id of ['lucky-coin', 'cursed-coin', 'shield-coin', 'volley-coin', 'hex-coin']) {
       expect(relationOf(coinSkill(id)), id).toBe('modify')
       expect(masteryOfSkill(id), id).toBe('chance')
       for (const owner of ['naraxes', 'fanchon']) expect(characterPool(createCharacter(owner).definition).some((e) => e.id === id), `${owner} ${id}`).toBe(true)
@@ -3685,7 +3630,8 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
       expect(c).toMatchObject({ side: 0, status: 'luckyCoin' })
       if (c.heads) {
         expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
-        expect(c.state.statuses[0].find((s) => s.id === 'guaranteedCrit')).toMatchObject({ stacks: 1, power: LUCKY_COIN_POWER })
+        // Lancée par un critique (celui qu'une pile précédente a assuré), pile critique : l'intensité double (A14)
+        expect(c.state.statuses[0].find((s) => s.id === 'guaranteedCrit')).toMatchObject({ stacks: 1, power: LUCKY_COIN_POWER * (c.crit ? 2 : 1) })
       }
       else expect(c.effects).toEqual([])
       expect(stacksOf(c.state.statuses[0], 'luckyCoin')).toBe(0)
@@ -3731,6 +3677,56 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
     const loaded: CharacterEvent = { id: 'pipe', name: 'pipe', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'loadedDie', stacks: 1 }] }
     expect(rate(coins(thrower('cursed-coin', [], 0, [loaded]), 150))).toBeCloseTo(0.75, 1)
     expect(rate(coins(thrower('cursed-coin', [getRelic('weighted-coin')], 0, [loaded]), 150))).toBeCloseTo(HEADS_CAP, 1)
+  })
+
+  // Refonte des auras (tranche 6, docs/REFONTE_AURAS.md § 5.9) : trois pièces de plus, et la pile critique (A14)
+  it('Pièce de bouclier, de la rafale, ensorcelée : pile, +8 armure ; deux coups bruts tout de suite ; −4 aux coups de l’adversaire, 3 tours ; face, rien', () => {
+    for (const c of coins(thrower('shield-coin'))) {
+      if (!c.heads) expect(c.effects).toEqual([])
+      else expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bonusArmor', stacks: 8 })])
+    }
+    for (const c of coins(thrower('hex-coin'))) {
+      if (!c.heads) expect(c.effects).toEqual([])
+      else {
+        expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'weakened', stacks: 4 })])
+        expect(c.state.statuses[1].find((s) => s.id === 'weakened')).toMatchObject({ stacks: 4, turns: 3 })
+      }
+    }
+    let volleys = 0
+    for (let seed = 1; seed < 60; seed++) {
+      const r = run([thrower('volley-coin'), testCharacter('b', { maxHp: 400 })], seed)
+      for (const c of ofType(r, 'coin').filter((x) => x.heads)) {
+        expect(c.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'volleyStrike', stacks: 2 })])
+        const burst = ofType(r, 'flurry').find((f) => f.id > c.id && f.status === 'volleyStrike')
+        if (c.state.hp.every((h) => h > 0)) {
+          expect(burst).toMatchObject({ side: 0, strikes: 2 })
+          expect(ofType(r, 'attack').filter((a) => a.cause === burst!.id).every((a) => a.attack.plain)).toBe(true)
+          volleys++
+        }
+      }
+    }
+    expect(volleys).toBeGreaterThan(20)
+  })
+
+  it('pile critique (A14) : une pièce d’effet lancée par un critique double son effet de pile, sauf une action perdue ; pas Pile ou face', () => {
+    // Les piles d'une pièce sur le 1 d'un lanceur qui critique toujours (1) ou jamais (0)
+    const heads = (id: string, critChance: number) =>
+      Array.from({ length: 80 }, (_, k) => run([testCharacter('a', { maxHp: 400, critChance }, [{ ...coinSkill(id), trigger: 'naturalOne' }]), testCharacter('b', { maxHp: 400 })], k + 1)).flatMap((r) =>
+        ofType(r, 'coin').filter((c) => c.heads),
+      )
+    for (const c of heads('verdigris-coin', 1)) expect(c).toMatchObject({ crit: true, effects: [expect.objectContaining({ status: 'poison', stacks: 10 })] })
+    for (const c of heads('shield-coin', 1)) expect(c).toMatchObject({ crit: true, effects: [expect.objectContaining({ status: 'bonusArmor', stacks: 16 })] })
+    for (const c of heads('hex-coin', 1)) expect(c.state.statuses[1].find((s) => s.id === 'weakened')).toMatchObject({ stacks: 8, turns: 3 })
+    for (const c of heads('volley-coin', 1)) expect(c.effects).toEqual([expect.objectContaining({ status: 'volleyStrike', stacks: 4 })])
+    // Une intensité double (le critique assuré : +4 → +8), pas ses charges
+    for (const c of heads('lucky-coin', 1)) expect(c.state.statuses[0].find((s) => s.id === 'guaranteedCrit')).toMatchObject({ stacks: 1, power: LUCKY_COIN_POWER * 2 })
+    // Une action perdue ne se double pas (`noCritDouble`)
+    expect(STATUSES.stunned.noCritDouble).toBe(true)
+    for (const c of heads('cursed-coin', 1)) expect(c).toMatchObject({ crit: true, effects: [expect.objectContaining({ status: 'stunned', stacks: 1 })] })
+    // Sans critique, rien ne double ; Pile ou face multiplie déjà le coup critique : pas de pile critique
+    for (const c of heads('verdigris-coin', 0)) expect(c.crit).toBeUndefined()
+    for (const c of heads('coin-flip', 1)) expect(c.crit).toBeUndefined()
+    expect(heads('verdigris-coin', 1).length).toBeGreaterThan(20)
   })
 
   it('Médaille de sursis : le premier coup qui devrait tuer laisse son porteur à 1 PV (compté en entier), une fois', () => {
@@ -3819,16 +3815,13 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
 
   it('les textes : trois auras nouvelles et les retouches, au style de l’utilisateur (T1 à T7, A5, P3 à P5)', () => {
     expect(validateRoster()).toEqual([])
-    expect(text('faith-shield')).toBe('Chaque soin que son porteur reçoit lui donne +2 armure temporaire.')
-    expect(text('faith-shield', 1)).toBe('Chaque soin que son porteur reçoit lui donne +4 armure temporaire.')
-    expect(text('sidestep')).toBe(typeset("+12 % d'esquive."))
-    expect(text('sidestep', 1)).toBe(typeset("+24 % d'esquive."))
-    expect(text('open-wound')).toBe("1 Saignement à l'adversaire à chaque coup qui touche.")
-    expect(text('open-wound', 1)).toBe("2 Saignement à l'adversaire à chaque coup qui touche.")
-    for (const id of ['faith-shield', 'sidestep', 'open-wound']) {
-      expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
-      expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
-    }
+    expect(text('faith-shield')).toBe('Ses 3 prochains soins lui donnent chacun +3 armure temporaire.')
+    expect(text('faith-shield', 1)).toBe('Ses 3 prochains soins lui donnent chacun +4 armure temporaire.')
+    expect(text('open-wound')).toBe("4 Saignement à l'adversaire à chacun de ses critiques.")
+    expect(text('open-wound', 1)).toBe("8 Saignement à l'adversaire à chacun de ses critiques.")
+    expect(describeSkill(skill('open-wound')).tags.map((t) => t.label)).toContain('aura permanente')
+    expect(describeSkill(skill('faith-shield')).tags.map((t) => t.label)).not.toContain('aura permanente')
+    for (const id of ['faith-shield', 'open-wound']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
     // T1 : l'effet d'abord, la condition ensuite ; la pièce garde la sienne en tête
     expect(text('cleave')).toBe("L'adversaire saigne de la moitié des dégâts de ce coup, s'il touche.")
     expect(text('cleave', 1)).toBe("L'adversaire saigne de la moitié des dégâts de ce coup, +2, s'il touche.")
@@ -3836,10 +3829,8 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     // T2, T3, T7, A5
     expect(describeSkill(skill('evasion')).detail).toBe(typeset("Une seule à la fois : une nouvelle pose ne s'ajoute pas."))
     expect(text('thorns')).toBe("1 Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat.")
-    // Le Crescendo est sur le 2 de l'ogre depuis le C5 : lu au catalogue, au même déclencheur (le 3)
+    // Le Crescendo, dans la réserve de la Fureur depuis la refonte des auras (l'Assaut sur le 2 de l'ogre)
     expect(describeSkill(skill('crescendo')).text).toBe("Ce coup ×2, puis ×1 de plus à chaque fois qu'il touche.")
-    // Ce qu'elle fait aux auras de l'adversaire est une interaction : le compendium ne la dit plus (retour du 2026-10-27, C3)
-    expect(describeSkill(skill('immunity-aura')).detail).toBeUndefined()
     // P3, P4, P5
     expect(text('life-steal')).toBe("Ce coup lui rend les PV qu'il retire, +4.")
     expect(text('life-steal', 1)).toBe("Ce coup lui rend les PV qu'il retire, +8.")
@@ -3847,11 +3838,13 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     expect(text('false-note', 1)).toBe("Les 3 prochains coups de l'adversaire qui touchent font −4 dégâts.")
     expect(text('whistle')).toBe('+3 PV à la fin de ses 2 prochains tours (6 en tout).')
     // A4 : la pose qui monte se lit au détail, et sur l'anneau
-    expect(describeSkill(skill('power-aura')).detail).toBe(typeset("Après le critique, avant l'armure. Chaque nouvelle pose ajoute +1, jusqu'à +4."))
-    expect(describeSkill(skill('power-aura')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['se cumule', typeset('Aura de puissance : 3 charges au plus')]))
+    expect(describeSkill(skill('power-aura')).detail).toBe(
+      typeset("Après le critique, avant l'armure. Chaque gros coup (un critique, un coup ×2 et plus) et chaque nouvelle pose ajoutent +1, jusqu'à +6."),
+    )
+    expect(describeSkill(skill('power-aura')).tags.map((t) => t.label)).toEqual(expect.arrayContaining(['se cumule', typeset('Aura de puissance : 5 charges au plus')]))
   })
 
-  it('Bouclier de foi (I1) : chaque soin reçu donne 2 armure temporaire par charge, le soin pour cause, et seulement alors', () => {
+  it('Bouclier de foi (compétence à charges, refonte des auras) : ses 3 prochains soins donnent 3 armure temporaire (+1 par rang), le soin pour cause, une charge chacun', () => {
     const holy = ev('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])
     for (const rank of [0, 1]) {
       const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [holy]), 'faith-shield', rank), testCharacter('b', { maxHp: 400, attackMin: 6, attackMax: 6 })])
@@ -3860,7 +3853,8 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
       for (const b of fired) {
         const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'faithShield')!
         expect(b).toMatchObject({ side: 0, trigger: 'healed' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bonusArmor', stacks: 2 * (held.stacks + rank) })])
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bonusArmor', stacks: 3 + rank })])
+        expect(b.state.statuses[0].find((s) => s.id === 'faithShield')?.stacks ?? 0).toBe(held.stacks - 1)
         const cause = r.beats[b.cause!]
         expect(cause.type === 'statusTick' && cause.effects.some((e) => e.type === 'heal' && e.target === 0 && e.amount > 0)).toBe(true)
       }
@@ -3870,30 +3864,22 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     expect(reactions(dry, 'faithShield')).toEqual([])
   })
 
-  it('Pas de côté (I3) : +12 % d’esquive par charge (8 jusqu’au C5), cumulable', () => {
-    const base = createCharacter('fanchon')
-    expect(effectiveStats(base, [{ id: 'sidestep', stacks: 2 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.24)
-    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'sidestep'), testCharacter('b', { maxHp: 400 })])
-    const posed = ofType(r, 'event').filter((b) => b.event.eventId === 'sidestep')
-    expect(posed.length).toBeGreaterThan(3)
-    posed.forEach((b, k) => expect(stacksOf(b.state.statuses[0], 'sidestep')).toBe(k + 1))
-  })
-
-  it('Plaie ouverte, refaite avec les Maîtrises (M9) : chaque coup de son porteur qui touche fait saigner l’adversaire de 1 par charge ; un coup esquivé, rien', () => {
+  it('Plaie ouverte (refonte des auras) : chacun de ses critiques fait saigner l’adversaire de 4 par charge ; un coup qui touche sans critique, rien', () => {
     for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'open-wound', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 1 }), 'open-wound', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
       const fired = reactions(r, 'openWound')
       expect(fired.length).toBeGreaterThan(5)
       for (const b of fired) {
         const cause = r.beats[b.cause!]
-        expect(cause).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false } })
+        expect(cause).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false, crit: true } })
         const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'openWound')!
-        expect(b).toMatchObject({ side: 0, trigger: 'hit' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: held.stacks + rank })])
+        expect(b).toMatchObject({ side: 0, trigger: 'crit' })
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: OPEN_WOUND_BLEED * (held.stacks + rank) })])
       }
     }
-    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'open-wound'), testCharacter('b', { maxHp: 400, dodgeChance: 1 })])
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 0 }), 'open-wound'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
     expect(reactions(dry, 'openWound')).toEqual([])
+    expect(attacksOf(dry).filter((x) => x.attacker === 0 && !x.dodged).length).toBeGreaterThan(5)
   })
 
   it('Fausse note (P4) : les deux prochains coups adverses qui touchent font −4, puis elle s’éteint', () => {
@@ -3947,12 +3933,8 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
 
   it('les textes, au style de l’utilisateur, et leurs rangs', () => {
     expect(validateRoster()).toEqual([])
-    expect(text('feint')).toBe(typeset("+5 % d'esquive. Chaque esquive lui donne un critique assuré."))
-    expect(text('feint', 1)).toBe(typeset("+10 % d'esquive. Chaque esquive lui donne un critique assuré."))
-    expect(text('black-sap')).toBe("Chaque soin que son porteur reçoit inflige 4 Poison à l'adversaire.")
-    expect(text('black-sap', 1)).toBe("Chaque soin que son porteur reçoit inflige 8 Poison à l'adversaire.")
-    expect(text('blood-debt')).toBe("L'adversaire saigne de 3 chaque fois que son porteur renvoie des dégâts.")
-    expect(text('blood-debt', 1)).toBe("L'adversaire saigne de 6 chaque fois que son porteur renvoie des dégâts.")
+    expect(text('feint')).toBe(typeset("+5 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
+    expect(text('feint', 1)).toBe(typeset("+10 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
     expect(text('stoke')).toBe("+2 à la Brûlure de l'adversaire, qui repart.")
     expect(text('stoke', 1)).toBe("+3 à la Brûlure de l'adversaire, qui repart.")
     expect(describeSkill(skill('stoke')).detail).toBe(typeset("Une Brûlure de 3 à un tour de sa fin devient une Brûlure de 5, pour 5 tours ; sans Brûlure, l'adversaire brûle de 2."))
@@ -3962,54 +3944,39 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
     expect(text('blood-frenzy', 1)).toBe(typeset('Chacun de ses critiques lui donne deux coups de plus, et +5 % de critique.'))
     expect(text('stunning-blow')).toBe("S'il touche, l'adversaire perd sa prochaine action, 1x.")
     expect(text('stunning-blow', 1)).toBe("S'il touche, l'adversaire perd sa prochaine action, 2x.")
-    for (const id of ['feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
-    for (const id of ['feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']) {
+    for (const id of ['feint', 'storm-sky', 'blood-frenzy']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
+    for (const id of ['feint', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']) {
       expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
       expect(EMOJI.test(describeSkill(skill(id)).text), id).toBe(false)
     }
   })
 
-  it('Feinte : +5 % d’esquive par charge ; chaque esquive de son porteur lui donne un critique assuré', () => {
+  it('Visée (refonte des auras, Q5) : +5 % d’esquive par charge ; chaque esquive et chaque coup qui touche, la Mire +1 (+3 au plus), que son critique lâche entière', () => {
     const base = createCharacter('naraxes')
     expect(effectiveStats(base, [{ id: 'feint', stacks: 2 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
     expect(effectiveStats(base, [{ id: 'feint', stacks: 1, power: 1 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
-    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, dodgeChance: 0.4 }), 'feint'), testCharacter('b', { maxHp: 400 })])
-    const fired = reactions(r, 'feint')
-    expect(fired.length).toBeGreaterThan(5)
-    for (const b of fired) {
-      expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: true } })
-      expect(b).toMatchObject({ side: 0, trigger: 'dodge' })
-      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'guaranteedCrit', stacks: 1 })])
-    }
-  })
-
-  it('Sève noire : chaque soin reçu donne 4 Poison par charge à l’adversaire, le soin pour cause ; sans soin, rien', () => {
-    const holy = ev('combatStart', [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }])
-    for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [holy]), 'black-sap', rank), testCharacter('b', { maxHp: 400, attackMin: 6, attackMax: 6 })])
-      const fired = reactions(r, 'blackSap')
-      expect(fired.length).toBeGreaterThan(5)
-      for (const b of fired) {
-        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'blackSap')!
-        expect(b).toMatchObject({ side: 0, trigger: 'healed' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'poison', stacks: 4 * (held.stacks + rank) })])
+    expect(effectiveStats(base, [{ id: 'aim', stacks: 3 }]).critMultiplier).toBe(base.stats.critMultiplier + 3)
+    let released = 0
+    for (let seed = 1; seed < 20; seed++) {
+      const r = run([engraved(testCharacter('a', { maxHp: 400, dodgeChance: 0.4, critChance: 0.2 }), 'feint'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })], seed)
+      for (const b of reactions(r, 'feint')) {
+        const cause = r.beats[b.cause!]
+        if (b.trigger === 'dodge') expect(cause).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: true } })
+        else expect(b.trigger === 'hit' && cause.type === 'attack' && cause.attack.attacker === 0 && !cause.attack.dodged).toBe(true)
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'aim', stacks: 1 })])
+        expect(stacksOf(b.state.statuses[0], 'aim')).toBeLessThanOrEqual(AIM_CAP)
+      }
+      // Le critique la lâche : son multiplicateur l'a comptée, puis elle part
+      for (const b of reactions(r, 'aim')) {
+        const blow = r.beats[b.cause!]
+        const held = stacksOf(r.beats[b.cause! - 1].state.statuses[0], 'aim')
+        expect(b).toMatchObject({ side: 0, trigger: 'crit', effects: [] })
+        expect(blow.type === 'attack' && blow.attack.crit && blow.attack.critMultiplier).toBe(r.fighters[0].stats.critMultiplier + held)
+        expect(stacksOf(b.state.statuses[0], 'aim')).toBe(0)
+        released++
       }
     }
-    expect(reactions(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'black-sap'), testCharacter('b', { maxHp: 400 })]), 'blackSap')).toEqual([])
-  })
-
-  it('Dette de sang : chaque renvoi fait saigner l’adversaire de 3 par charge', () => {
-    const riposte = ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])
-    for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [riposte]), 'blood-debt', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
-      const fired = reactions(r, 'bloodDebt')
-      expect(fired.length).toBeGreaterThan(3)
-      for (const b of fired) {
-        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'bloodDebt')!
-        expect(b).toMatchObject({ side: 0, trigger: 'reflected' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: 3 * (held.stacks + rank) })])
-      }
-    }
+    expect(released).toBeGreaterThan(5)
   })
 
   it('Attiser : +2 à la Brûlure de l’adversaire, qui se remplace et repart ; sans Brûlure, 2', () => {
@@ -4036,7 +4003,8 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
       for (const t of ticks) {
         const held = r.beats[t.id - 1].state.statuses[0].find((s) => s.id === 'stormSky')!
         expect(t).toMatchObject({ side: 0, phase: 'turnStart' })
-        expect(t.effects).toEqual([expect.objectContaining({ type: 'damage', target: 1, amount: held.stacks + rank, source: 'lightning' })])
+        expect(t.effects).toEqual([expect.objectContaining({ type: 'damage', target: 1, amount: riseLevel(held), source: 'lightning' })])
+        expect(riseLevel(held)).toBe(Math.min(Math.ceil(held.stacks / 2), 2) + rank)
       }
     }
   })
@@ -4083,22 +4051,20 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
   })
 
   it('offre pertinente (le producteur d’abord) et X2 : Attiser ne gêne pas la place de la Brûlure', () => {
-    const needs = Object.fromEntries(['feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow'].map((id) => [id, skillNeeds(skill(id))]))
+    const needs = Object.fromEntries(['feint', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow'].map((id) => [id, skillNeeds(skill(id))]))
     expect(needs).toEqual({
       feint: ['moment:dodge'],
-      'black-sap': ['moment:heal'],
-      'blood-debt': ['moment:reflect'],
       stoke: ['status:burn'],
       'storm-sky': [],
       'blood-frenzy': ['moment:crit'],
       'stunning-blow': [],
     })
     const offered = (championId: string, forge: ForgeStep[], ids: string[]) => offerableSkills({ championId, forge, relics: [] }, ids.map(skill)).map((s) => s.id)
-    // Ervald : Attiser une fois ses Feux follets gravés ; Brokk : la Dette de sang une fois sa Riposte gravée
+    // Ervald : Attiser une fois ses Feux follets gravés ; Brokk : la Vindicte une fois sa Riposte gravée
     expect(offered('ervald', [], ['stoke'])).toEqual([])
     expect(offered('ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }], ['stoke'])).toEqual(['stoke'])
-    expect(offered('brokk', [], ['blood-debt'])).toEqual([])
-    expect(offered('brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }], ['blood-debt'])).toEqual(['blood-debt'])
+    expect(offered('brokk', [], ['vendetta'])).toEqual([])
+    expect(offered('brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }], ['vendetta'])).toEqual(['vendetta'])
     expect(offered('thaldrin', [], ['stoke', 'storm-sky', 'stunning-blow'])).toEqual(['stoke', 'storm-sky', 'stunning-blow'])
     // X2 : Attiser lit la Brûlure et s'y ajoute ; il ne gêne ni les Feux follets ni le Briquet
     expect(eventHooks(skill('stoke')).hinders).not.toContain('slot:burn')
@@ -4338,21 +4304,21 @@ describe('retour de l’utilisateur du 2026-10-27 : règles du moteur (M1 à M8,
     expect(fires).toBe(Math.ceil(ownTurns / 2))
   })
 
-  it('P7 : l’Aura mélodieuse quitte le jeu ; le Duo ne pose que le Duo, une charge (deux dés, A11 du 2026-10-28), son rang lui ajoute un dé', () => {
+  it('P7 : l’Aura mélodieuse quitte le jeu ; le Duo ne pose que le Duo, une charge (un coup brut depuis la mesure d’ensemble de la refonte des auras), son rang lui ajoute un coup', () => {
     const fanchon = createCharacter('fanchon')
     // Maîtrises (2026-10-27) : la Ballade sur le 1, le Duo sur le 2
     expect(fanchon.events.map((e) => e.id)).toEqual(['ballad', 'duo'])
     expect(fanchon.events.some((e) => e.trigger === 'combatStart')).toBe(false)
     const sharpened = fanchon.withForge([{ op: 'sharpen', face: 2 }]).events.find((e) => e.id === 'duo')!
-    expect(sharpened.effects).toEqual([{ type: 'applyStatus', status: 'duo', stacks: 2 }])
+    expect(sharpened.effects).toEqual([{ type: 'applyStatus', status: 'duo', stacks: 1, power: 1 }])
     // Rien n'est posé à l'entrée en scène
     for (let seed = 1; seed <= 10; seed++) {
       const r = run([fanchon, createCharacter('gorak')], seed)
       expect(r.beats.filter((b) => b.turn === 0)).toEqual([])
     }
-    // Au rang II, le Duo pose deux charges : trois jets à l'action suivante
+    // Au rang II, deux coups bruts de plus
     const r = runOn(2, [fanchon.withForge([{ op: 'sharpen', face: 2 }]), testCharacter('d', { maxHp: 2000 })])
-    expect(ofType(r, 'flurry').find((f) => f.status === 'duo')!.strikes).toBe(3)
+    expect(ofType(r, 'flurry').find((f) => f.status === 'duo')!.strikes).toBe(2)
   })
 })
 
@@ -4390,59 +4356,74 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
   const reactions = (r: CombatResult, status: StatusId) => ofType(r, 'statusReaction').filter((b) => b.status === status)
   const text = (id: string, rank = 0) => describeSkill(sharpen(skillById(id), rank)).text
 
-  it('dés de départ (§ 5) : une aura de ses maîtrises sur le 1, sa signature sur le 2, quatre faces nues ; une autre aura de départ au choix', () => {
+  it('refonte des auras (§ 3) : deux auras sur la fiche, de ses maîtrises, servies par son dé ; la première sur le 1, l’autre au choix', () => {
     expect(validateRoster()).toEqual([])
+    const pairs = Object.fromEntries(ROSTER.map((d) => [d.id, d.auras]))
+    expect(pairs).toEqual({
+      gorak: ['blood-frenzy', 'onrush'],
+      elaria: ['feint', 'open-wound'],
+      brokk: ['thorns', 'bastion'],
+      ervald: ['frost-aura', 'dread'],
+      ysolde: ['holy-aura', 'judgement'],
+      naraxes: ['decoction-aura', 'loaded-die'],
+      aldric: ['vendetta', 'pilfer'],
+      morgrut: ['power-aura', 'rancor'],
+      thaldrin: ['storm-sky', 'brasier'],
+      fanchon: ['ballad', 'lucky-streak'],
+    })
     for (const d of ROSTER) {
       const faces = d.events.map((e) => `${e.id}@${rollFace(e.trigger)}`)
-      // B5 : ses auras de départ, celles de ses deux maîtrises dont le besoin est servi par son dé de départ sans le 1 (le
-      // producteur d'abord, la règle de l'offre : `reachOf`, `skillNeeds`), l'aura de son dé vanilla d'abord
+      // Chacune servie par son dé de départ sans le 1 (le producteur d'abord, la règle de l'offre : `reachOf`, `skillNeeds`)
       const reach = reachOf({ ...d, events: d.events.filter((e) => rollFace(e.trigger) !== 1) })
-      for (const a of d.masteries.flatMap(aurasOf)) expect(d.startAuras!.includes(a.id), `${d.id} ${a.id}`).toBe(skillNeeds(a).every((h) => reach.has(h)))
-      expect(faces, d.id).toEqual([`${d.startAuras![0]}@1`, ...(d.signature ? [`${d.signature}@2`] : [])])
+      for (const a of d.auras!) expect(skillNeeds(skillById(a)).every((h) => reach.has(h)), `${d.id} ${a}`).toBe(true)
+      expect(faces, d.id).toEqual([`${d.auras![0]}@1`, ...(d.signature ? [`${d.signature}@2`] : [])])
       // L'aura par défaut (la première, celle du duel) donne le personnage du roster, tel quel ; le tournoi et la saison en tirent une au hasard
-      expect(createCharacter(d.id, { aura: d.startAuras![0] }), d.id).toBe(createCharacter(d.id))
-      for (const aura of d.startAuras!) {
+      expect(createCharacter(d.id, { aura: d.auras![0] }), d.id).toBe(createCharacter(d.id))
+      for (const aura of d.auras!) {
         const c = createCharacter(d.id, { aura })
         expect(c.events.find((e) => rollFace(e.trigger) === 1)?.id, `${d.id} ${aura}`).toBe(aura)
         expect(c.events.filter((e) => rollFace(e.trigger) !== 1)).toEqual(d.events.filter((e) => rollFace(e.trigger) !== 1))
       }
     }
-    // Les consommatrices sans producteur sur le dé de départ ne sont pas proposées ; avec, elles le sont
-    const starts = (id: string) => ROSTER.find((d) => d.id === id)!.startAuras!
-    expect(starts('ysolde')).not.toContain('sentence')
-    expect(starts('ysolde')).not.toContain('faith-shield')
-    expect(starts('brokk')).not.toContain('vendetta')
-    expect(starts('aldric')).toEqual(expect.arrayContaining(['vendetta', 'blood-debt']))
-    expect(starts('naraxes')).toContain('loaded-die')
-    expect(starts('elaria')).not.toContain('loaded-die')
-    expect(starts('morgrut')).not.toContain('bristling-rampart')
     // Le druide garde ses sorts sous forme humaine, l'aura choisie comprise
-    expect(createCharacter('thaldrin', { aura: 'storm-field' }).events.map((e) => e.form)).toEqual(['human', 'human'])
-    // Une aura hors de ses auras de départ est refusée
+    expect(createCharacter('thaldrin', { aura: 'brasier' }).events.map((e) => e.form)).toEqual(['human', 'human'])
+    // Une aura hors de sa fiche est refusée ; la fiche est vérifiée (deux auras, de ses maîtrises, des auras, servies)
     expect(() => createCharacter('gorak', { aura: 'holy-aura' })).toThrow()
     const gorak = ROSTER.find((d) => d.id === 'gorak')!
-    expect(validateRoster([{ ...gorak, startAuras: ['holy-aura'] }])).toEqual(expect.arrayContaining(['gorak : aura de départ holy-aura hors de ses maîtrises']))
-    expect(validateRoster([{ ...gorak, startAuras: ['wind-fury'] }])).toEqual(expect.arrayContaining(['gorak : aura de départ wind-fury : pas une aura']))
-    // Aldric (attaque 5 à 6) et Morgrut (6 à 8, puis 5 à 7 avec son Crescendo sur le 2, C5, puis 6 à 8 et 52 PV, quatre
-    // faces de compétence au plus : quatrième demande), la compensation de leur dé
-    expect([createCharacter('aldric').stats.attackMin, createCharacter('aldric').stats.attackMax]).toEqual([5, 6])
+    const brokk = ROSTER.find((d) => d.id === 'brokk')!
+    expect(validateRoster([{ ...gorak, auras: ['blood-frenzy', 'holy-aura'] }])).toEqual(['gorak : aura holy-aura hors de ses maîtrises'])
+    expect(validateRoster([{ ...gorak, auras: ['blood-frenzy', 'wind-fury'] }])).toEqual(['gorak : aura wind-fury : pas une aura'])
+    expect(validateRoster([{ ...gorak, auras: ['blood-frenzy', 'blood-frenzy'] }])).toEqual(['gorak : aura en double'])
+    expect(validateRoster([{ ...gorak, auras: ['onrush', 'blood-frenzy'] }])).toEqual(['gorak : le 1 du dé vanilla porte blood-frenzy, pas onrush'])
+    expect(validateRoster([{ ...gorak, auras: undefined }])).toEqual(['gorak : deux auras attendues sur sa fiche'])
+    // Le producteur d'abord : la Vindicte (renvois) n'est pas servie par le dé de Brokk
+    expect(validateRoster([{ ...brokk, auras: ['thorns', 'vendetta'] }])).toEqual(['brokk : aura vendetta : son dé de départ ne la sert pas (le producteur d\'abord)'])
+    // Aldric (attaque 5 à 7 depuis sa Riposte à une charge, mesure d'ensemble) et Morgrut (6 à 8, quatre faces de
+    // compétence au plus : quatrième demande ; l'Assaut sur le 2 depuis la refonte des auras, Q7), la compensation de leur
+    // dé ; Morgrut garde l'attaque la plus lourde du roster
+    expect([createCharacter('aldric').stats.attackMin, createCharacter('aldric').stats.attackMax]).toEqual([5, 7])
+    for (const c of CHARACTERS) if (c.id !== 'morgrut') expect(c.stats.attackMax, c.id).toBeLessThan(createCharacter('morgrut').stats.attackMax)
     expect([createCharacter('morgrut').stats.attackMin, createCharacter('morgrut').stats.attackMax]).toEqual([6, 8])
-    expect(createCharacter('morgrut').definition.signature).toBe('crescendo')
+    expect(createCharacter('morgrut').definition.signature).toBe('assault')
   })
 
-  it('Veine : chaque 6 au dé lui donne un jet de plus à sa prochaine action, par charge', () => {
+  it('Veine (refonte des auras) : chaque 6 au dé lui donne deux coups bruts de plus, tout de suite, par charge', () => {
     const r = runOn(6, [auraOn('luckyStreak'), testCharacter('b', { maxHp: 400 })])
     const fired = reactions(r, 'luckyStreak')
     expect(fired.length).toBeGreaterThan(5)
     for (const b of fired) {
-      expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, roll: 6 } })
-      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'luckyStrike', stacks: 1 })])
+      const cause = r.beats[b.cause!]
+      expect(cause.type === 'roll' ? cause.roll : cause.type === 'attack' && !cause.attack.plain ? cause.attack.roll : 0).toBe(6)
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'veinStrike', stacks: VEIN_STRIKES })])
+      // Tout de suite, dans la même action : deux coups bruts, qui ne relancent pas la Veine
+      const volley = ofType(r, 'flurry').find((f) => f.side === 0 && f.status === 'veinStrike' && f.id > b.id)!
+      expect(volley).toMatchObject({ turn: b.turn, strikes: VEIN_STRIKES })
     }
-    expect(ofType(r, 'flurry').some((f) => f.side === 0 && f.status === 'luckyStrike')).toBe(true)
+    expect(ofType(r, 'flurry').some((f) => f.status === 'luckyStrike')).toBe(false)
     // Sur un autre jet, rien
     expect(reactions(runOn(3, [auraOn('luckyStreak'), testCharacter('b', { maxHp: 400 })]), 'luckyStreak')).toEqual([])
-    expect(text('lucky-streak')).toBe('Chaque 6 au dé lui donne un jet de plus à sa prochaine action.')
-    expect(text('lucky-streak', 1)).toBe('Chaque 6 au dé lui donne 2 jets de plus à sa prochaine action.')
+    expect(text('lucky-streak')).toBe('Chaque 6 au dé lui donne 2 coups de plus, tout de suite.')
+    expect(text('lucky-streak', 1)).toBe('Chaque 6 au dé lui donne 4 coups de plus, tout de suite.')
   })
 
   it('Effroi : chacun de ses critiques fait perdre sa prochaine action à l’adversaire ; chaque charge de plus, +5 % de critique', () => {
@@ -4461,35 +4442,97 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     expect(text('dread')).toBe("Chacun de ses critiques fait perdre sa prochaine action à l'adversaire.")
   })
 
-  it('Rancœur : chaque coup reçu lui donne +1 Ferveur par charge ; Champ d’orage : chaque coup reçu foudroie l’attaquant, 1 PV par charge', () => {
+  it('Rancœur (refonte des auras) : chaque coup reçu lui donne +3 Ferveur, sans cumul', () => {
     for (const stacks of [1, 2]) {
       const rancor = run([auraOn('rancor', {}, stacks), testCharacter('b', { maxHp: 400 })])
       const fed = reactions(rancor, 'rancor')
       expect(fed.length).toBeGreaterThan(3)
       for (const b of fed) {
         expect(rancor.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: false } })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks })])
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks: RANCOR_FERVOR })])
       }
-      const field = run([auraOn('stormField', {}, stacks), testCharacter('b', { maxHp: 400 })])
-      const struck = reactions(field, 'stormField')
-      expect(struck.length).toBeGreaterThan(3)
-      for (const b of struck) expect(b.effects).toEqual([expect.objectContaining({ type: 'damage', target: 1, amount: stacks, source: 'lightning' })])
     }
-    expect(text('rancor')).toBe('Chaque coup reçu lui donne +1 Ferveur.')
-    expect(text('storm-field')).toBe(typeset("Chaque coup reçu foudroie l'attaquant : 1 PV."))
+    expect(text('rancor')).toBe('Chaque coup reçu lui donne +3 Ferveur.')
+    expect(text('rancor', 1)).toBe('Chaque coup reçu lui donne +4 Ferveur.')
   })
 
-  it('Ballade : chaque coup qui touche lui rend 1 PV par charge', () => {
+  it('Ballade (refonte des auras) : chaque coup qui touche lui rend 1 PV et joue une note ; à la 4e, le refrain, quatre notes de 1 sur l’adversaire', () => {
     // b frappe fort : a perd des PV, la Ballade en rend à chaque coup qui touche
-    const r = run([auraOn('ballad', { maxHp: 60 }), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+    const r = run([auraOn('ballad', { maxHp: 60 }), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4, dodgeChance: 0 })])
     const sung = reactions(r, 'ballad')
-    expect(sung.length).toBeGreaterThan(3)
+    expect(sung.length).toBeGreaterThan(8)
+    let refrains = 0
     for (const b of sung) {
       expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false } })
       expect(b.effects[0]).toMatchObject({ type: 'heal', target: 0 })
+      expect(b.effects[1]).toMatchObject({ type: 'applyStatus', target: 0, status: 'balladNote', stacks: 1 })
+      const notes = stacksOf(r.beats[b.id - 1].state.statuses[0], 'balladNote')
+      if (notes === BALLAD_NOTES - 1) {
+        // La 4e note : le refrain, dans la même étape ; les notes repartent de zéro
+        expect(b.effects[2]).toMatchObject({ type: 'damage', target: 1, amount: BALLAD_NOTES, parts: [1, 1, 1, 1], source: 'wind' })
+        expect(stacksOf(b.state.statuses[0], 'balladNote')).toBe(0)
+        refrains++
+      } else expect(stacksOf(b.state.statuses[0], 'balladNote')).toBe(notes + 1)
     }
-    expect(sung.some((b) => b.effects[0].type === 'heal' && b.effects[0].amount === 1)).toBe(true)
-    expect(text('ballad')).toBe('Chaque coup qui touche lui rend 1 PV.')
+    expect(refrains).toBeGreaterThan(1)
+    expect(text('ballad')).toBe(typeset('Chaque coup qui touche lui rend 1 PV et joue une note ; à la 4e, le refrain.'))
+  })
+
+  it('Bastion (refonte des auras) : son armure temporaire vidée, l’attaquant perd 3 PV et il regagne 2 d’armure temporaire', () => {
+    const armor = ev('combatStart', [{ type: 'applyStatus', status: 'bonusArmor', stacks: 3 }], 'armor')
+    const r = run([testCharacter('a', { maxHp: 400 }, [armor, ...auraOn('bastion').events]), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4, dodgeChance: 0 })])
+    const broken = reactions(r, 'bastion')
+    expect(broken.length).toBeGreaterThan(3)
+    for (const b of broken.filter((x) => x.state.hp[1] > 0)) {
+      expect(b).toMatchObject({ side: 0, trigger: 'shieldBroken' })
+      expect(b.effects).toEqual([
+        expect.objectContaining({ type: 'damage', target: 1, amount: BASTION_LOSS, source: 'strike' }),
+        expect.objectContaining({ type: 'applyStatus', target: 0, status: 'bonusArmor', stacks: BASTION_ARMOR }),
+      ])
+      expect(stacksOf(b.state.statuses[0], 'bonusArmor')).toBe(BASTION_ARMOR)
+    }
+    expect(text('bastion')).toBe("Chaque fois que son armure temporaire est vidée, l'attaquant perd 3 PV et il regagne +2 armure temporaire.")
+  })
+
+  it('Jugement (refonte des auras) : chaque coup qui la touche met une faute à l’attaquant ; à la 3e, il perd sa prochaine action et ses fautes partent', () => {
+    const r = run([auraOn('judgement'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+    const judged = reactions(r, 'judgement')
+    expect(judged.length).toBeGreaterThan(5)
+    let feared = 0
+    for (const b of judged) {
+      expect(r.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 1, dodged: false } })
+      expect(b.effects[0]).toMatchObject({ type: 'applyStatus', target: 1, status: 'fault', stacks: 1 })
+      const faults = stacksOf(r.beats[b.id - 1].state.statuses[1], 'fault')
+      if (faults === JUDGEMENT_FAULTS - 1) {
+        expect(b.effects[1]).toMatchObject({ type: 'applyStatus', target: 1, status: 'fear', stacks: 1 })
+        expect(stacksOf(b.state.statuses[1], 'fault')).toBe(0)
+        feared++
+      } else expect(stacksOf(b.state.statuses[1], 'fault')).toBe(faults + 1)
+    }
+    expect(feared).toBeGreaterThan(1)
+    // Chaque Peur coûte une action (la dernière peut tomber à la fin du combat)
+    expect(ofType(r, 'skip').filter((b) => b.side === 1 && b.status === 'fear').length).toBeGreaterThanOrEqual(feared - 1)
+    expect(text('judgement')).toBe(typeset("Chaque coup qui la touche met une faute à l'attaquant ; à la 3e, il perd sa prochaine action."))
+  })
+
+  it('Brasier (refonte des auras) : au début de chacun de ses tours, +1 à la Brûlure de l’adversaire, qui repart ; sans Brûlure, Brûlure 1', () => {
+    for (const start of [0, 3]) {
+      const fire = ev('combatStart', [{ type: 'applyStatus', status: 'brasier', stacks: 1 }, ...(start ? [{ type: 'applyStatus' as const, status: 'burn' as const, stacks: start, target: 'opponent' as const }] : [])], 'fire')
+      const r = run([testCharacter('a', { maxHp: 400 }, [fire]), testCharacter('b', { maxHp: 400 })])
+      const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'brasier')
+      expect(ticks.length).toBeGreaterThan(5)
+      for (const t of ticks) {
+        const read = stacksOf(r.beats[t.id - 1].state.statuses[1], 'burn')
+        expect(t).toMatchObject({ side: 0, phase: 'turnStart' })
+        expect(t.effects[0]).toMatchObject({ type: 'applyStatus', target: 1, status: 'burn', stacks: read + 1 })
+        expect(t.state.statuses[1].find((s) => s.id === 'burn')).toMatchObject({ stacks: read + 1, turns: read + 1 })
+      }
+      const posed = ticks.map((t) => (t.effects[0].type === 'applyStatus' ? t.effects[0].stacks : 0))
+      // Sans Brûlure, il allume (Brûlure 1, éteinte au tour de l'adversaire) ; sur une Brûlure qui dure, elle grossit d'un cran par tour
+      if (start === 0) expect(posed.every((n) => n === 1)).toBe(true)
+      else expect(posed.slice(0, 4)).toEqual([4, 5, 6, 7])
+    }
+    expect(text('brasier')).toBe("Au début de chacun de ses tours, +1 à la Brûlure de l'adversaire, qui repart.")
   })
 
   it('Prière (+6 PV), Flétrissure (−2 dégâts aux coups de l’adversaire, 3 tours), Assaut (ce coup ×2) : gravées sur le 3', () => {
@@ -4541,12 +4584,6 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     const firstHit = attacksOf(shattered).find((a) => a.attacker === 1 && !a.dodged)!
     expect(firstHit.shatteredBy).toBe('guardBreak')
     expect(finalState(shattered).statuses[0].some((s) => s.id === 'stoneFist')).toBe(false)
-  })
-
-  it('Aura sauvage : une aura de la Fureur, sans forme (elle agit gravée chez tous)', () => {
-    expect(skillById('wild-aura').form).toBeUndefined()
-    const r = runOn(3, [testCharacter('a', { maxHp: 400 }).withForge([{ op: 'engrave', face: 3, skill: skillById('wild-aura') }]), testCharacter('b', { maxHp: 400 })])
-    expect(stacksOf(finalState(r).statuses[0], 'wildAura')).toBeGreaterThan(1)
   })
 })
 
@@ -4633,7 +4670,7 @@ describe('retour du 2026-10-27 (C1) : la Riposte et la Rétribution sont des cou
     const all = rebounds(r, 'riposte')
     expect(all.length).toBeGreaterThan(5)
     for (const x of all) {
-      expect(x.strike).toMatchObject({ attacker: 0, rebound: true, roll: 0, value: 2, dodged: true, dodgeForced: false, damage: 0 })
+      expect(x.strike).toMatchObject({ attacker: 0, rebound: true, roll: 0, value: 4, dodged: true, dodgeForced: false, damage: 0 })
       expect(x.effects).toEqual([])
       expect(stacksOf(x.state.statuses[0], 'riposte')).toBe(stacksOf(r.beats[x.id - 1].state.statuses[0], 'riposte') - 1)
       expect(r.beats.some((b) => b.cause === x.id && b.type === 'event' && b.event.eventId === 'evade')).toBe(true)
@@ -4644,13 +4681,13 @@ describe('retour du 2026-10-27 (C1) : la Riposte et la Rétribution sont des cou
     const crit = rebounds(duel({ critChance: 1, critMultiplier: 3 }, {}), 'riposte')
     expect(crit.length).toBeGreaterThan(5)
     for (const x of crit) {
-      expect(x.strike).toMatchObject({ value: 2, crit: true, critForced: false, raw: 6, damage: 6, dealt: 6 })
-      expect(x.effects).toEqual([{ type: 'damage', target: 1, amount: 6, source: 'strike' }])
+      expect(x.strike).toMatchObject({ value: 4, crit: true, critForced: false, raw: 12, damage: 12, dealt: 12 })
+      expect(x.effects).toEqual([{ type: 'damage', target: 1, amount: 12, source: 'strike' }])
     }
     const armored = rebounds(duel({}, { armor: 1 }), 'riposte')
     expect(armored.length).toBeGreaterThan(5)
-    // b frappe 4 contre une armure 0 : la Riposte vaut 2, l'armure 1 de b en retient 1
-    for (const x of armored) expect(x.strike).toMatchObject({ value: 2, armor: 1, armorAbsorbed: 1, damage: 1 })
+    // b frappe 4 contre une armure 0 : la Riposte, entière depuis la refonte des auras, vaut 4, l'armure 1 de b en retient 1
+    for (const x of armored) expect(x.strike).toMatchObject({ value: 4, armor: 1, armorAbsorbed: 1, damage: 3 })
   })
 
   it('R2 : une Riposte dépense le Critique assuré, comme toute frappe', () => {
@@ -4692,7 +4729,7 @@ describe('retour du 2026-10-27 (C1) : la Riposte et la Rétribution sont des cou
     ])
     const all = rebounds(r, 'riposte').filter((x) => stacksOf(r.beats[x.id - 1].state.statuses[1], 'poison') > 0)
     expect(all.length).toBeGreaterThan(3)
-    for (const x of all) expect(x.strike).toMatchObject({ value: 2, relicBonus: [{ relic: 'venom-vial', name: getRelic('venom-vial').name, amount: 2 }], damage: 4 })
+    for (const x of all) expect(x.strike).toMatchObject({ value: 4, relicBonus: [{ relic: 'venom-vial', name: getRelic('venom-vial').name, amount: 2 }], damage: 6 })
   })
 
   it('R1 : un renvoi ne déclenche pas de renvoi ; la Riposte touchée par une Riposte garde sa charge', () => {
@@ -4738,15 +4775,15 @@ describe('retour du 2026-10-27 (C1) : la Riposte et la Rétribution sont des cou
 
   it('la trace lit un renvoi comme un coup', () => {
     const r = duel({ critChance: 1, critMultiplier: 3 }, { armor: 1 })
-    expect(traceText(r)).toContain('renvoi sur b, coup sans dé · valeur 2 · critique ×3')
+    expect(traceText(r)).toContain('renvoi sur b, coup sans dé · valeur 4 · critique ×3')
   })
 })
 
 describe('retour du 2026-10-27 : au plus douze jets de plus par action (MAX_EXTRA_JETS)', () => {
   it('la Veine à 12 charges contre un adversaire qui esquive tout : les jets d’une action ne croissent plus sans fin (`npm run ramp` plantait)', () => {
-    // Chaque 6 donne 12 jets à l'action suivante, qui font 6 à leur tour : sans borne, 28 000 jets au tour 45 ici, et dans
-    // `npm run ramp` (Fanchon, Veine gravée, contre Elaria au Pas de côté deux fois) 1 600 au tour 47, puis un plantage
-    const streak: CharacterEvent = { id: 'streak', name: 'streak', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'luckyStreak', stacks: 12 }] }
+    // Retour du 2026-10-27 : la Veine à 12 charges ; depuis la refonte des auras (la Veine en coups bruts), 12 Coups de
+    // chance à chaque début de tour
+    const streak: CharacterEvent = { id: 'streak', name: 'streak', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 12 }] }
     const r = run([testCharacter('a', { maxHp: 400 }, [streak]), testCharacter('b', { maxHp: 400, dodgeChance: 1 })])
     const volleys = ofType(r, 'flurry').filter((b) => b.status === 'luckyStrike')
     expect(volleys.length).toBeGreaterThan(20)
@@ -4760,24 +4797,25 @@ describe('retour du 2026-10-27 : au plus douze jets de plus par action (MAX_EXTR
 })
 
 describe('troisième retour du 2026-10-27 (C5) : plafond d’esquive (MAX_DODGE)', () => {
-  const sidestep = (stacks: number): CharacterEvent => ({ id: 'step', name: 'step', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'sidestep', stacks }] })
+  // Le Larcin (+10 % d'esquive par charge) : le Pas de côté, qui servait ici, est sorti avec la refonte des auras
+  const pilfer = (stacks: number): CharacterEvent => ({ id: 'step', name: 'step', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'pilfer', stacks }] })
 
   it('les statuts ne portent pas l’esquive au-delà de 75 % ; une esquive de fiche plus haute reste la sienne', () => {
     const fanchon = createCharacter('fanchon')
-    expect(effectiveStats(fanchon, [{ id: 'sidestep', stacks: 2 }]).dodgeChance).toBeCloseTo(fanchon.stats.dodgeChance + 0.24)
-    expect(effectiveStats(fanchon, [{ id: 'sidestep', stacks: 20 }]).dodgeChance).toBe(MAX_DODGE)
-    expect(effectiveStats(fanchon, [{ id: 'sidestep', stacks: 5 }, { id: 'loadedDie', stacks: 3 }]).dodgeChance).toBe(MAX_DODGE)
+    expect(effectiveStats(fanchon, [{ id: 'pilfer', stacks: 2 }]).dodgeChance).toBeCloseTo(fanchon.stats.dodgeChance + 0.2)
+    expect(effectiveStats(fanchon, [{ id: 'pilfer', stacks: 20 }]).dodgeChance).toBe(MAX_DODGE)
+    expect(effectiveStats(fanchon, [{ id: 'pilfer', stacks: 6 }, { id: 'loadedDie', stacks: 3 }]).dodgeChance).toBe(MAX_DODGE)
     // Un personnage de test qui esquive tout le garde ; un malus d'esquive s'applique toujours
     const dodger = testCharacter('t', { dodgeChance: 1 })
-    expect(effectiveStats(dodger, [{ id: 'sidestep', stacks: 3 }]).dodgeChance).toBe(1)
-    expect(effectiveStats(fanchon, [{ id: 'sidestep', stacks: 20 }, { id: 'firefly', stacks: 1 }]).dodgeChance).toBe(0)
+    expect(effectiveStats(dodger, [{ id: 'pilfer', stacks: 3 }]).dodgeChance).toBe(1)
+    expect(effectiveStats(fanchon, [{ id: 'pilfer', stacks: 20 }, { id: 'firefly', stacks: 1 }]).dodgeChance).toBe(0)
   })
 
-  it('vingt charges de Pas de côté : trois coups sur quatre esquivés, et le combat finit par un K.O. (il durait jusqu’à MAX_TURNS)', () => {
+  it('vingt charges de Larcin : trois coups sur quatre esquivés, et le combat finit par un K.O. (il durait jusqu’à MAX_TURNS)', () => {
     let dodged = 0
     let strikes = 0
     for (let seed = 1; seed <= 20; seed++) {
-      const r = run([testCharacter('a', { maxHp: 60 }, [sidestep(20)]), testCharacter('b', { maxHp: 60 })], seed)
+      const r = run([testCharacter('a', { maxHp: 60 }, [pilfer(20)]), testCharacter('b', { maxHp: 60 })], seed)
       expect(r.endedBy).toBe('ko')
       const theirs = attacksOf(r).filter((a) => a.attacker === 1 && !a.replaced)
       strikes += theirs.length
@@ -4806,16 +4844,18 @@ describe('quatrième demande du 2026-10-27 : le contenu du soin (Lumière, Sang,
     expect(text('tithe', 1)).toBe("Ses 3 prochains coups reçus lui rendent chacun 2 PV, pris à l'attaquant.")
     expect(text('votive-flame')).toBe(typeset("Ses 2 prochains soins brûlent l'adversaire : Brûlure 3 chacun."))
     expect(text('votive-flame', 1)).toBe(typeset("Ses 2 prochains soins brûlent l'adversaire : Brûlure 4 chacun."))
-    expect(text('leech')).toBe("Chaque coup qui touche lui rend 1 PV par charge de Saignement de l'adversaire.")
-    expect(text('leech', 1)).toBe("Chaque coup qui touche lui rend 2 PV par charge de Saignement de l'adversaire.")
+    expect(text('leech')).toBe("Ses 3 prochains coups qui touchent lui rendent chacun 1 PV par charge de Saignement de l'adversaire.")
+    expect(text('leech', 1)).toBe("Ses 4 prochains coups qui touchent lui rendent chacun 1 PV par charge de Saignement de l'adversaire.")
     expect(text('blood-oath')).toBe("Il perd 3 PV. L'adversaire perd 4, 3, 2 puis 1 PV aux prochains coups qui le touchent (10 en tout).")
     expect(text('blood-scent')).toBe("Ce coup est critique, et fait +4 dégâts si l'adversaire saigne.")
     expect(text('blood-scent', 1)).toBe("Ce coup est critique, et fait +7 dégâts si l'adversaire saigne.")
-    expect(text('toad-skin')).toBe("1 Poison à l'attaquant à chaque coup reçu.")
+    expect(text('toad-skin')).toBe(typeset("Ses 3 prochains coups reçus empoisonnent l'attaquant : Poison 2 chacun."))
+    expect(text('toad-skin', 1)).toBe(typeset("Ses 3 prochains coups reçus empoisonnent l'attaquant : Poison 3 chacun."))
     expect(text('verdigris-coin')).toBe(typeset("S'il touche, une pièce : pile, 5 Poison à l'adversaire ; face, rien."))
     expect(text('venom-bite')).toBe("Ce coup ×3 si l'adversaire est empoisonné.")
     expect(text('venom-bite', 1)).toBe("Ce coup ×4 si l'adversaire est empoisonné.")
-    for (const id of ['leech', 'toad-skin']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).toContain('aura permanente')
+    // Refonte des auras (2026-10-28) : des compétences à charges, plus des auras
+    for (const id of ['leech', 'toad-skin']) expect(describeSkill(skill(id)).tags.map((t) => t.label)).not.toContain('aura permanente')
     for (const id of ['tithe', 'votive-flame', 'leech', 'blood-oath', 'blood-scent', 'toad-skin', 'verdigris-coin', 'venom-bite']) {
       expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
       expect(EMOJI.test(describeSkill(skill(id)).text), id).toBe(false)
@@ -4866,7 +4906,7 @@ describe('quatrième demande du 2026-10-27 : le contenu du soin (Lumière, Sang,
     expect(reactions(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'votive-flame'), testCharacter('b', { maxHp: 400 })]), 'votiveFlame')).toEqual([])
   })
 
-  it('Sangsue (`heal.fromStatus`) : chaque coup qui touche rend 1 PV par charge de Saignement de l’adversaire et par charge ; sans Saignement, elle ne part pas', () => {
+  it('Sangsue (compétence à charges, refonte des auras) : ses 3 prochains coups qui touchent rendent 1 PV (+1 par rang) par charge de Saignement de l’adversaire, une charge chacun ; sans Saignement, elle attend', () => {
     for (const rank of [0, 1]) {
       const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, dodgeChance: 0 }, [bleeder]), 'leech', rank), testCharacter('b', { maxHp: 400, attackMin: 8, attackMax: 8, dodgeChance: 0 })])
       const drunk = reactions(r, 'leech')
@@ -4875,12 +4915,16 @@ describe('quatrième demande du 2026-10-27 : le contenu du soin (Lumière, Sang,
         expect(b).toMatchObject({ side: 0, trigger: 'hit' })
         const leech = held(r, b, 0, 'leech')!
         const bleed = held(r, b, 1, 'bleed')!.stacks
-        const want = (leech.stacks + (leech.power ?? 0)) * bleed
+        const want = (1 + (leech.power ?? 0)) * bleed
         const heal = b.effects[0]
         expect(heal.type === 'heal' && heal.target === 0 && heal.amount === Math.min(want, r.fighters[0].maxHp - r.beats[b.id - 1].state.hp[0])).toBe(true)
+        expect(b.state.statuses[0].find((s) => s.id === 'leech')?.stacks ?? 0).toBe(leech.stacks - 1)
       }
     }
-    expect(reactions(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'leech'), testCharacter('b', { maxHp: 400 })]), 'leech')).toEqual([])
+    // Sans Saignement : aucune réaction, ses charges restent
+    const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'leech'), testCharacter('b', { maxHp: 400 })])
+    expect(reactions(dry, 'leech')).toEqual([])
+    expect(stacksOf(finalState(dry).statuses[0], 'leech')).toBeGreaterThanOrEqual(3)
   })
 
   it('Serment de sang : il perd 3 PV, l’adversaire prend 4 Saignement (+1 par rang)', () => {
@@ -4911,7 +4955,7 @@ describe('quatrième demande du 2026-10-27 : le contenu du soin (Lumière, Sang,
     expect(fired(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'blood-scent'), testCharacter('b', { maxHp: 400 })]), 'blood-scent')).toEqual([])
   })
 
-  it('Peau de crapaud : chaque coup reçu, 1 Poison par charge à l’attaquant', () => {
+  it('Peau de crapaud (compétence à charges, refonte des auras) : ses 3 prochains coups reçus, Poison 2 (+1 par rang) à l’attaquant, une charge chacun', () => {
     for (const rank of [0, 1]) {
       const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, dodgeChance: 0 }), 'toad-skin', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
       const skin = reactions(r, 'toadSkin')
@@ -4919,7 +4963,8 @@ describe('quatrième demande du 2026-10-27 : le contenu du soin (Lumière, Sang,
       for (const b of skin) {
         const toad = held(r, b, 0, 'toadSkin')!
         expect(b).toMatchObject({ side: 0, trigger: 'hurt' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'poison', stacks: toad.stacks + (toad.power ?? 0) })])
+        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'poison', stacks: 2 + rank })])
+        expect(b.state.statuses[0].find((s) => s.id === 'toadSkin')?.stacks ?? 0).toBe(toad.stacks - 1)
       }
     }
   })
@@ -4975,32 +5020,32 @@ describe('quatrième demande du 2026-10-27 : le contenu des maîtrises (Fureur, 
 
   it('les textes, au style de l’utilisateur, leurs rangs, et ce qu’elles attendent', () => {
     expect(validateRoster()).toEqual([])
-    expect(text('onrush')).toBe(typeset("+10 % de critique. Chacun de ses gros coups lui donne +3 Ferveur."))
-    expect(text('overcharge')).toBe('Chacun de ses éclairs fait +1.')
-    expect(text('grip')).toBe("Ses coups font +1 par malus que porte l'adversaire.")
+    expect(text('onrush')).toBe(typeset("+10 % de critique. Chacun de ses gros coups lui donne +4 Ferveur."))
     expect(text('pilfer')).toBe(typeset("+10 % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant."))
     expect(text('shockwave')).toBe("L'adversaire perd 2 PV par coup reçu, des trois derniers.")
     expect(text('shockwave', 1)).toBe("L'adversaire perd 3 PV par coup reçu, des trois derniers.")
-    for (const id of ['onrush', 'overcharge', 'grip', 'pilfer', 'shockwave']) {
+    for (const id of ['onrush', 'pilfer', 'shockwave']) {
       expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
       expect(EMOJI.test(describeSkill(skill(id)).text), id).toBe(false)
     }
-    // Le producteur d'abord : un gros coup, des dégâts directs, un malus posé, une esquive ; l'Onde de choc vit des coups reçus
-    expect(['onrush', 'overcharge', 'grip', 'pilfer', 'shockwave'].map((id) => skillNeeds(skill(id)))).toEqual([['moment:heavy'], ['damage:lightning'], ['malus'], ['moment:dodge'], []])
+    // Le producteur d'abord : un gros coup, une esquive ; l'Onde de choc vit des coups reçus
+    expect(['onrush', 'pilfer', 'shockwave'].map((id) => skillNeeds(skill(id)))).toEqual([['moment:heavy'], ['moment:dodge'], []])
     expect(masteryOfSkill('onrush')).toBe('fury')
-    expect(masteryOfSkill('overcharge')).toBe('magic')
-    expect(masteryOfSkill('grip')).toBe('shadow')
     expect(masteryOfSkill('pilfer')).toBe('shadow')
     expect(masteryOfSkill('shockwave')).toBe('bulwark')
+    // L'Emprise et la Surtension, des reliques depuis la refonte des auras : elles attendent ce qu'attend leur statut
+    expect(relicNeeds(getRelic('gaoler-chain'))).toEqual(['malus'])
+    expect(relicNeeds(getRelic('lightning-rod'))).toEqual(['damage:lightning'])
+    expect(relicNeeds(getRelic('blessed-phial'))).toEqual([])
   })
 
-  it('gros coup (`heavy`) : il part après chaque critique et chaque coup ×2 et plus qui touche, jamais sur un coup simple ; l’Élan y donne +3 Ferveur et fait critiquer', () => {
+  it('gros coup (`heavy`) : il part après chaque critique et chaque coup ×2 et plus qui touche, jamais sur un coup simple ; l’Élan y donne +4 Ferveur (+3 jusqu’à la mesure d’ensemble de la refonte des auras) et fait critiquer', () => {
     const crit = run([testCharacter('a', { maxHp: 400, critChance: 1 }, [aura('onrush')]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
     const gains = reactions(crit, 'onrush')
     expect(gains.length).toBeGreaterThan(3)
     for (const b of gains) {
       expect(b.trigger).toBe('heavy')
-      expect(b.effects).toMatchObject([{ type: 'applyStatus', status: 'momentum', stacks: 3, target: 0 }])
+      expect(b.effects).toMatchObject([{ type: 'applyStatus', status: 'momentum', stacks: ONRUSH_FERVOR, target: 0 }])
       const cause = crit.beats[b.cause!]
       expect(cause.type === 'attack' && cause.attack.crit && !cause.attack.dodged).toBe(true)
     }
@@ -5077,15 +5122,16 @@ describe('quatrième demande du 2026-10-27 : le contenu des maîtrises (Fureur, 
   })
 
   it('un dé de plus ne donne jamais de dé de plus (A7, 2026-10-28) : ni compétence ni réaction ; au plus trois dés de plus par action', () => {
-    // Chaque face pose un Duo (une charge) et la Veine réagit à chaque 6 : sans la règle, chaque rafale relançait la suivante
-    const allDuo = [1, 2, 3, 4, 5, 6].map((face): CharacterEvent => ({ ...skillById('duo'), id: `duo-${face}`, trigger: faceTrigger(face) }))
+    // Chaque face pose un Coup de chance (une charge) et la Veine réagit à chaque 6 : sans la règle, chaque rafale relançait
+    // la suivante (le Duo, des coups bruts depuis la refonte des auras, ne donne plus de dés)
+    const allDuo = [1, 2, 3, 4, 5, 6].map((face): CharacterEvent => ({ ...skillById('lucky-strike'), id: `lucky-${face}`, trigger: faceTrigger(face) }))
     let volleys = 0
     let muted = 0
     for (let seed = 1; seed <= 6; seed++) {
       const r = run([testCharacter('a', { maxHp: 2000 }, [...allDuo, aura('luckyStreak')]), testCharacter('b', { maxHp: 2000 })], seed)
-      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0)) {
+      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0 && x.status === 'luckyStrike')) {
         expect(f.strikes).toBeLessThanOrEqual(1 + MAX_EXTRA_JETS)
-        // Le dé de l'action pose un Duo (son étape `roll`) ; les dés de plus, des coups sur une face nue
+        // Le dé de l'action pose un Coup de chance (son étape `roll`) ; les dés de plus, des coups sur une face nue
         const jets = r.beats.filter((x) => x.cause === f.id && (x.type === 'roll' || x.type === 'attack'))
         expect(jets[0]?.type).toBe('roll')
         for (const jet of jets.slice(1)) {

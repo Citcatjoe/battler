@@ -56,6 +56,7 @@ _Demandé par l'utilisateur avant la seconde partie de la phase 7 (écrit en 0.1
 | 0.125.0 | **Troisième retour** (§ 1.23) : la Riposte et la Rétribution sont des coups ; l'aura de départ arrive au plus tard au 3e tour ; Purification +5 quand elle retire un bonus ; Dé pipé +5 % de critique et +5 % d'esquive par charge ; +2 PV max par récompense ; Crescendo sur la face 2 de Morgrut ; plafonds d'esquive (75 %) et de jets de plus (12) ; docs allégées. Roster de 47,0 à 54,0 %, pire duel 62,7 % ; construits de 40,5 à 62,7 % |
 | 0.127.0 | **Quatrième demande** (§ 1.24) : treize briques (Élan, Surtension, Emprise, Larcin, Onde de choc ; Dîme, Flamme votive, Sangsue, Serment de sang, Odeur du sang, Peau de crapaud, Pièce vert-de-gris, Morsure), 77 en tout ; scène de l'Onde de choc, vol visuel du Larcin ; un vol prend une charge ; Morgrut 6 à 8, 52 PV, quatre faces de compétence ; Plume d'aigle recharge 4. Roster de 46,8 à 54,9 %, pire duel 64 % ; construits de 43,4 à 62,6 % |
 | 0.128.0 | **Retour du 2026-10-28** (§ 1.25) : une aura par personnage, la forge n'en ajoute jamais ; forge Graver, Aiguiser (rang II), Copier, dé complet (5 forges, 5 reliques) ; un vol vole le bonus entier, dans la zone des statuts ; dés de plus sans chaîne, plafond 3 ; Duo 1 charge, Fanchon 6-7, 15 %, 15 % ; Médaille de sursis figée ; plancher 65 % aux nœuds 1-2, boss jusqu'à 5 fois sa base ; Aura de poison, Patte de lièvre, Trèfle de fer. Roster de 46,7 à 53,9 %, pire duel 64 % ; construits de 43,6 à 55,7 % (écart 19,2 → 12,1) ; refonte des auras proposée |
+| 0.129.0 | **La refonte des auras** (§ 1.26, [REFONTE_AURAS.md](REFONTE_AURAS.md)) : 33 auras → 20, deux par personnage, nommées sur sa fiche ; la montée à cran entier ; Visée, Plaie ouverte, Ballade, Veine, Puissance, Rancœur refaites ; Bastion, Jugement, Brasier ; Riposte entière (Aldric), Assaut (Morgrut), Duo d'un coup brut (Fanchon) ; seize sorties (Sangsue, Peau de crapaud, Sentence, Bouclier de foi en compétences à charges ; Ampoule bénite, Chaîne du geôlier, Pointe de paratonnerre en reliques ; neuf retraits) ; trois pièces de la Chance et la pile critique ; Coccinelle d'émail ; campagne : le retard des adversaires s'allonge au plancher des PV (65 % nu, 75 % construit) ; icônes v31. Départs de 42,8 à 57,2 % ; vanilla de 44,6 à 56,2 %, pire duel 61,5 ; construits de 43,7 à 57,9 % ; saison 44 à 60 % ; campagne : boss atteint 24,5 %, acte gagné 11,5 % |
 
 ### Le combat, en une page
 
@@ -533,6 +534,31 @@ Principes repris : une règle pour tous ; « synergies d'abord » ; les **vision
 | Aldric, Morgrut, Ysolde, Elaria, Brokk | ressenti de conception | **proposé** dans la refonte (Riposte entière sur le 2, Assaut, Jugement, Visée, Bastion) | [REFONTE_AURAS.md](REFONTE_AURAS.md) § 5 |
 
 **En passant** : le rejoueur `npm run logs` reconstruit l'aura de départ et ne compte plus deux fois les PV réglés : les 96 combats de la 0.127.0 se rejouent à l'identique, sans anomalie d'audit. **À décider** : les 14 questions de la refonte et les choix par défaut des corrections ([TODO.md](TODO.md) § 20).
+
+### 1.26 Refonte des auras (feu vert du 2026-10-28 ; livrée en 0.129.0)
+
+Conception : [REFONTE_AURAS.md](REFONTE_AURAS.md) (§ 3 le jeu de 20 auras, § 4 les sorties, § 8 les questions, § 11 à § 13 ce qui est livré). Principes : une règle pour tous, aucune exception par personnage, **valeurs entières**, « synergies d'abord » ; chaque aura est un moteur (elle produit, convertit ou change une règle), jamais un bonus plat ; un chiffre qui se voit ; un moment d'écran par aura.
+
+**Réponses de l'utilisateur** (Q1 à Q14, [TODO.md](TODO.md) § 20) :
+
+| Question | Réponse | Livré |
+| --- | --- | --- |
+| Q1 deux auras par personnage, nommées | défaut (oui) | `CharacterDef.auras`, `auraServed`, `validateRoster` ; `startAuras` / `startAurasFor` retirés |
+| Q2 la montée à la place des « 1 » | défaut (oui) | `StatusDef.rises`, un cran toutes les deux charges ; Épines 1 → 2, Poison et Décoction 1 → 3, Sainteté +1 → +2, Ciel 1 → 2 éclairs |
+| Q3 le 1 sur une aura posée | **un cran entier** : « Évitons de jouer sur des valeurs pas entières, c'est la porte ouverte à la confusion et aux complications. » | une pose = un cran ; aucune valeur non entière (charge, multiplicateur affiché) |
+| Q4 les 16 sorties | défaut (oui) | 4 compétences à charges, 3 reliques, 9 retraits |
+| Q5 la Visée d'Elaria | **en entiers** (voir Q3) | +1 au multiplicateur par esquive et par coup qui touche, +3 au plus : 52,9 % au départ (+1 par esquive seul 39,1 ; +2 par esquive 46,9 ; +1 par coup seul 51,8 ; +4 au plus 56,0 ; sans plafond 57,9) |
+| Q6 Riposte entière sur le 2 d'Aldric | défaut (oui) | `reflectsHit: 1` pour tous ; 1 charge par pose (gravée +23,0 → +17,9) |
+| Q7 l'Assaut sur le 2 de Morgrut | défaut (oui) | Crescendo dans la réserve de la Fureur |
+| Q8 Fanchon, le Duo en coups bruts | défaut (oui) | **1** coup brut (3 : gravé +29,4 ; 2 : +24,7 ; 1 : +17,2) ; Fanchon 5 à 7, esquive 18 % |
+| Q9 le Jugement à la 3e faute | défaut (oui) | seuil `StatusDef.threshold`, état « Faute » |
+| Q10 la pile critique | défaut (oui) | `critDoubled`, `noCritDouble` (l'Étourdi) |
+| Q11 Thaldrin en Magie | défaut (oui) | Ciel d'orage et Brasier ; critique 8 → 15 % (Ciel 50,1 → 57,2, Brasier 45,9 → 53,2) |
+| Q12 l'Élan de Gorak | défaut (remesurer, levier +4) | +3 → +4 Ferveur : 40,3 → 42,8 % |
+| Q13 trois pièces de Naraxes | **oui, si ce sont des compétences de la maîtrise Chance** qui lancent une pièce | Pièce de bouclier, de la rafale, ensorcelée (gravées +11,0, +15,0, +10,5) |
+| Q14 les porte-bonheur | **bonne idée, icônes assez différentes de l'existant** : le Trèfle de fer ressemble à la Pièce porte-bonheur | Coccinelle d'émail (`holed-coin`, sans trèfle, fer à cheval ni pièce), icône v31 |
+
+**Mesures** (avant → après, [REFONTE_AURAS.md](REFONTE_AURAS.md) § 13) : 20 départs de 42,8 (Gorak, Élan) à 57,2 % (Thaldrin, Ciel), 400 combats par duel (avant les réglages : 40,3 à 55,3) ; vanilla `BALANCE_N=800` 44,4–54,3 → 44,6–56,2 %, pire duel 61,5 ; construits à 10 récompenses 40,9–66,5 → 43,7–57,9 %, écart 25,7 → 14,3 ; saison : personnages de 44 à 60 %. **Campagne** : un premier passage (240 parties, 12 par aura) donnait boss atteint 17 %, acte gagné 6 %, et 0 % de boss pour cinq départs ; ce « 0 % » venait de l'échantillon (12 parties), la cause réelle était le plancher des PV, qui arrêtait le réglage des adversaires construits face aux départs faibles. Réglage livré, une règle pour tous, courbe inchangée : le retard s'allonge au plancher (l'adversaire rend sa dernière récompense et se règle de nouveau, jusqu'à être nu), plancher 65 % nu, 75 % construit ([CAMPAGNE.md](CAMPAGNE.md) § 18.7). Sur 1 200 parties (60 par aura) : boss atteint 22,5 → 24,5 %, acte gagné 10,5 → 11,5 % (attendu 26 / 12) ; courbe servie à la référence 16,2–24,6 → 21,2–25,7 %. Compétences à charges gravées (300 par duel) : Sangsue Brokk +16,2, Peau de crapaud +17,7, Sentence Ysolde +19,7, Bouclier de foi Ysolde +19,7 ; reliques : Ampoule bénite +5,7, Chaîne du geôlier +5,9, Pointe de paratonnerre +5,1. **Hors bande, signalés** : rang II du Duo +11,2, de l'Assaut +10,4, de la Peau de crapaud +8,4 ; Coccinelle +20,8 chez Naraxes construite. Spectacle : le Ciel d'orage à 2 éclairs et le Brasier sur Brûlure 3 jouent leur scène ; Bastion, Jugement, refrain et Visée passent par les règles existantes (à confirmer). Rien vu à l'écran, aucun son entendu.
 
 ---
 

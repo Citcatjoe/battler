@@ -735,11 +735,23 @@ Variantes de pile mesurées (gravées sur le 3, Naraxes · Fanchon) : 1 critique
 | Avant | Après | Id (gardé : historique, sauvegardes) | Règle |
 | --- | --- | --- | --- |
 | Pièce lestée | **Patte de lièvre** | `weighted-coin` | inchangée : +25 % de chances de faire pile à ses pièces |
-| Pièce trouée | **Trèfle de fer** | `holed-coin` | inchangée : +2 coups de chance sur pile |
+| Pièce trouée | **Coccinelle d'émail** (Trèfle de fer du 2026-10-28 à la refonte des auras) | `holed-coin` | +2 coups de chance sur pile ; **recharge 3 tours** depuis la mesure d'ensemble de la refonte des auras (chez ses porteurs construits, `npm run ramp` : Naraxes +21,5, Elaria +20,4, Fanchon +20,1, au-delà de 20 ; recharge 2 : Naraxes +20,5 ; recharge 3 : +19,8, Elaria +18,7, Fanchon +19,1) |
 
 Les noms des fichiers d'icônes ne changent pas (`weighted-coin.png`, `holed-coin.png`) ; leurs images sont **à repeindre** (planche de reliques, couleurs franches, STYLE_BIBLE § 7), le parent les peint :
 
 - **Patte de lièvre** (`weighted-coin`) : une patte de lièvre séchée, fourrure **gris perle et blanc de neige**, cerclée au poignet d'une bague de laiton poli, un **ruban turquoise** noué qui pend ; objet immobile, sans halo ; **aucune pièce, aucun disque, aucun dé**.
-- **Trèfle de fer** (`holed-coin`) : un trèfle à quatre feuilles forgé dans le fer, ses feuilles émaillées **vert émeraude** franc, deux petites étoiles d'or gravées au cœur (les deux coups de chance), pendu à un cordon **rouge** noué ; objet immobile, sans halo ; **aucune pièce, aucun disque percé**, distinct de la Pièce porte-bonheur (pièce émeraude au trèfle frappé : ici, le trèfle est seul, découpé, sans disque).
+- **Coccinelle d'émail** (`holed-coin` ; **Trèfle de fer** jusqu'à la refonte des auras, Q14 : il ressemblait à la Pièce porte-bonheur, frappée d'un trèfle) : une coccinelle d'émail **vermillon**, deux points de **jais** sur ses élytres (les deux coups de chance), cousue au revers d'un gant de cuir noir par trois points de fil d'or ; objet immobile, sans halo ; **ni trèfle, ni fer à cheval, ni pièce, ni disque, ni dé**. La Patte de lièvre ne ressemble à rien d'existant : la seule autre patte est celle de l'ours (`bear-might`, châtaigne, qui fend un rocher ; `claw` est retirée). **Peintes : la Patte en v30, la Coccinelle en v31** (STYLE_BIBLE § 7).
 
 **L'Aura de poison** (`frost-aura.png`, Ervald), renommée le même jour (« Aura glaciale → Aura de poison ») : l'icône givrée est aussi à repeindre, dans la planche des compétences (pas avec les reliques) : l'encensoir de bronze d'Ervald, sans givre, une **fumée vert toxique** qui s'en échappe et forme des gouttes, halo d'aura vert toxique ; distinct de l'Aura de décoction (dague trempée dans une fiole jaune-vert).
+
+## 18. Refonte des auras (2026-10-28) : trois auras deviennent des reliques
+
+Une règle de défense ou un bonus de règle n'est pas un moteur de build ([REFONTE_AURAS.md](REFONTE_AURAS.md) § 4) : trois auras sortent en reliques de tour, posées à son premier tour, une fois. Leur statut a son état dans la zone ; leur texte dit sa durée (« ses 3 premiers tours », « tout le combat »).
+
+| Relique | Id | Règle | Apport (300 par duel) | Plus fort |
+| --- | --- | --- | --- | --- |
+| Ampoule bénite | `blessed-phial` | Aucun malus ne peut lui être posé, ses 3 premiers tours | +5,7 | Morgrut +6,9 |
+| Chaîne du geôlier | `gaoler-chain` | Ses coups font +1 par malus que porte l'adversaire, tout le combat | +5,9 | Brokk +12,4, Ervald +11,9 |
+| Pointe de paratonnerre | `lightning-rod` | Chacun de ses éclairs fait +1, tout le combat | +5,1 | Thaldrin +16,3 |
+
+Les moyennes comptent tout le roster, dont les porteurs qui ne nourrissent pas la relique (de +2 à +5 : les PV de récompense) ; l'offre ne propose la Chaîne qu'à qui pose des malus et la Pointe qu'à qui lance des éclairs (`relicNeeds` lit ce qu'attend le statut posé). L'Aura d'immunité donnait aussi +1 armure : l'Ampoule ne garde que l'immunité, la relique la plus faible des trois, au bas de la bande. Icônes peintes : `blessed-phial`, `gaoler-chain`, `lightning-rod`. Rapport : `logs/relics/2026-10-28-16-22-09_v0.128.0.md`.

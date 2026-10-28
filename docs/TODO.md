@@ -274,26 +274,11 @@ Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (d�
   - [ ] **À décider par l'utilisateur** : rang II des quatre auras de Poison et d'épines au-dessus de la bande (Peau de crapaud +11,0 ; accepter un rang au-dessus, ou un autre axe de rang) ; Aldric construit 45,2 % (Emprise sans malus +4,3) ; Surtension sous la bande chez Thaldrin construit (+7,6) ; Morgrut dernier en saison (38 %) ; 7 départs hors bande et 20 duels de départ au-delà de 65/35, tous d'auras antérieures au lot (Gorak Puissance 59,1, Elaria Ivresse 63,3).
   - [ ] **À juger en jeu** : la scène de l'Onde de choc, le vol du Larcin et « −1 Duo », les icônes v29, la fiche de Morgrut ; aucun son entendu.
 - [x] **Retour du 2026-10-28** (livré en 0.128.0, [PROGRESSION.md](PROGRESSION.md) § 1.25) : une aura par personnage, rien en cours de partie (A2) ; Aura de poison (A3) ; compteur de coups de la Rétribution (A4) ; Vol de vie sur les PV vraiment retirés (A5) ; un vol vole, seulement dans la zone des statuts, Larcin +10 % (A6) ; dés de plus sans chaîne, plafond 3 (A7) ; forge Graver, Aiguiser (rang II), Copier (A8) ; dé complet, 5 forges et 5 reliques (A9) ; Duo 1 charge, Fanchon 6-7, 15 %, 15 % (A11) ; plancher 65 % aux nœuds 1-2 (A13) ; Médaille de sursis figée (A15) ; boss jusqu'à 5 fois sa base, 40 combats par référence (A16) ; porte-bonheur et plafond de pile écrit ; rejoueur `npm run logs` corrigé ; icônes v30. Refonte des auras proposée ([REFONTE_AURAS.md](REFONTE_AURAS.md)).
-  - [ ] **Ce qui attend l'utilisateur : la refonte des auras** (A1, A10, A12, A14 ; [REFONTE_AURAS.md](REFONTE_AURAS.md) § 8, défaut entre parenthèses) :
-    1. deux auras par personnage, nommées sur sa fiche (oui) ;
-    2. la montée 1, 1, 2, 2, puis 3 à la place des « 1 » (oui ; variante « 2, un déclenchement sur deux ») ;
-    3. le 1 du dé ajoute une charge à l'aura posée (oui ; variante un cran entier, non mesurée) ;
-    4. les 16 sorties, dont 4 compétences à charges et 3 reliques (oui) ;
-    5. Elaria : la Visée, +0,5 par esquive et par coup qui touche (oui ; variante +1 / +0,25, 52,1 %) ;
-    6. Aldric : la Riposte entière sur le 2, pour tous ses porteurs (oui ; variante entière avec la Vindicte seule, 53,7 %) ;
-    7. Morgrut : l'Assaut sur le 2, le Crescendo dans la réserve de la Fureur (oui ; variante le Coup de massue, 50,2 %) ;
-    8. Fanchon : « Duo : trois coups de plus, tout de suite », attaque 5 à 6 (oui ; variantes quatre coups bruts, 50,8 % ; dés complets et 52 PV, 41,6 %) ;
-    9. Ysolde : le Jugement à la 3e faute (oui ; variante à la 4e, 45,4 %) ;
-    10. A14 : la pile critique, sauf la Pièce maudite (oui ; variante « un critique fait pile », +1,2 à +1,5 contre +2,6) ;
-    11. Thaldrin : ses deux auras en Magie (oui) ; l'offre qui suit l'aura choisie (non, après la refonte) ;
-    12. Gorak : l'Élan à 41,9 % (remesurer ; levier +4 Ferveur) ;
-    13. Naraxes : trois pièces nouvelles (bouclier, rafale, ensorcelée) (oui) ;
-    14. les porte-bonheur : tranché en 0.128.0 (Patte de lièvre, Trèfle de fer, icônes v30), sauf avis contraire.
+  - [x] **La refonte des auras** (A1, A10, A12, A14) : tranchée par l'utilisateur le 2026-10-28 (Q1 à Q14, [PROGRESSION.md](PROGRESSION.md) § 1.26) et livrée en 0.129.0 (ci-dessous).
   - [ ] **Ce qui attend l'utilisateur : les choix par défaut des corrections** :
     - calendrier de l'acte : 5 forges + 5 reliques (défaut) ou 6 + 4 ; la fin d'acte limitée à Graver et Copier (gardée) ;
     - Morgrut à quatre faces sans Dorer ni Tremper (défaut : gardé ; construit 48,1 %) ou cinq faces ; Dorer gardée au journal pour le boss seul, ou retirée du code ;
-    - Duo : rang II à +19,0 et gravé chez Ysolde +23,1, au-dessus de la bande (défaut : gardé ; sinon un autre axe de rang, ou la forme de la refonte) ;
-    - Fanchon 6-7, esquive et critique 15 % (défaut) ; ou critique 20 % (49,7 %) ; ou esquive 25 % (54,3 %) ;
+    - Duo et Fanchon : repris par la refonte (0.129.0 : Duo d'un coup brut, Fanchon 5 à 7, esquive 18 %, critique 15 %) ;
     - Larcin à +10 % d'esquive (compensation du vol sans aura) ;
     - boss d'Ervald au plafond de 350 PV (défaut : laissé) ; Ervald contre Morgrut 35,0 % à la limite, à surveiller ;
     - A13 : une première défaite pardonnée aux nœuds 1-3 (vision, non mesurée) ; Fanchon nue la plus faible au nœud 1 ;
@@ -302,6 +287,9 @@ Le chantier défini avec l'utilisateur dans [PROGRESSION.md](PROGRESSION.md) (d�
     - renommer aussi les ids `frostAura` / `frost-aura` (défaut : non) ; infobulle de la Rétribution en coups (défaut : non, pas affichée en combat) ; infobulle « Drain » sans l'intensité du Vol de vie (+4) ;
     - Fanchon frappe moins souvent plusieurs fois : identité « multi-coups » à juger en jeu.
   - [ ] **À juger en jeu** : le porteur figé (fondu), « Duo volé » (doublon possible avec le badge), la carte de forge, les icônes v30, le réglage du boss (0,4 à 2 s sur le fil de l'interface) ; aucun son entendu.
+- [x] **La refonte des auras** (livrée en 0.129.0, [REFONTE_AURAS.md](REFONTE_AURAS.md), [PROGRESSION.md](PROGRESSION.md) § 1.26) : deux auras nommées par personnage (`CharacterDef.auras`), la montée à cran entier (Q3), Visée en entiers (Q5), Bastion, Jugement, Brasier ; Riposte entière (Aldric), Assaut (Morgrut), Duo d'un coup brut (Fanchon) ; seize auras sorties (quatre compétences à charges, trois reliques, neuf retraits) ; trois pièces de la Chance et la pile critique (Q13) ; Coccinelle d'émail (Q14) ; scènes du Ciel d'orage et du Brasier ; réglages de la mesure d'ensemble ; icônes v31.
+  - [ ] **À décider par l'utilisateur** (signalés, non réglés) : rang II du Duo +11,2 ; rang II de l'Assaut +10,4 ; rang II de la Peau de crapaud +8,4 ; Coccinelle d'émail +20,8 chez Naraxes construite (sa recharge de 3 tours n'y change presque rien) ; Bastion, Jugement, refrain et Visée sans scène propre (décision à confirmer).
+  - [ ] **À juger en jeu** : les vingt auras et leur moment d'écran, la Mire, les fautes, le refrain, les scènes du Ciel d'orage et du Brasier, la pile critique et la teinte des pièces, les icônes v31 (l'icône `bastion` garde une trace de damier) ; rien vu à l'écran, aucun son entendu. La campagne après le retard allongé au plancher (boss atteint 24,5 %, acte gagné 11,5 %, attendu 26 / 12) et le temps de calcul d'un nœud dans le navigateur (+15 % sous Node).
 - Plus tard : super coups, sertissage, défenses par type, vies.
 
 ## 21. Mise en ligne (demande du 2026-10-26)

@@ -409,7 +409,7 @@ describe('noms uniques', () => {
 describe('aura de départ tirée (retour du 2026-10-27, B7)', () => {
   const faceOne = (c: Character) => c.definition.events.find((e) => rollFace(e.trigger) === 1)?.id
 
-  it('saison : chacun tire au lancement une aura parmi ses startAuras, reproductible à graine égale, toutes possibles', () => {
+  it('saison : chacun tire au lancement une de ses deux auras, reproductible à graine égale, toutes possibles', () => {
     const ids = participants(32, 4)
     const draw = (seed: number) => seasonOf(createSeasonTournament(ids, nameOf, { seed })).entrants.map((e) => e.aura)
     expect(draw(3)).toEqual(draw(3))
@@ -417,19 +417,19 @@ describe('aura de départ tirée (retour du 2026-10-27, B7)', () => {
     const seen = new Map<string, Set<string>>()
     for (let seed = 1; seed <= 40; seed++)
       draw(seed).forEach((aura, i) => {
-        expect(createCharacter(ids[i]).definition.startAuras, ids[i]).toContain(aura)
+        expect(createCharacter(ids[i]).definition.auras, ids[i]).toContain(aura)
         seen.set(ids[i], (seen.get(ids[i]) ?? new Set()).add(aura!))
       })
     // Sur quarante saisons, chaque aura de départ de chaque personnage sort au moins une fois
-    for (const [id, auras] of seen) expect([...auras].sort(), id).toEqual([...createCharacter(id).definition.startAuras!].sort())
+    for (const [id, auras] of seen) expect([...auras].sort(), id).toEqual([...createCharacter(id).definition.auras!].sort())
   })
 
   it('saison forgée : l’aura tient toute la saison puis l’arbre ; un combat parti d’une autre aura est refusé', () => {
     let t = createSeasonTournament(participants(20), nameOf, { seed: 3, forge: true })
     const season = () => seasonOf(t)
     // Un participant dont l'aura tirée n'est pas l'aura par défaut : son dé vanilla n'est pas celui du match
-    const f = seasonFixtures(season()).find((g) => [g.home, g.away].some((i) => season().entrants[i].aura !== createCharacter(season().entrants[i].characterId).definition.startAuras![0]))!
-    const side = season().entrants[f.home].aura !== createCharacter(season().entrants[f.home].characterId).definition.startAuras![0] ? 0 : 1
+    const f = seasonFixtures(season()).find((g) => [g.home, g.away].some((i) => season().entrants[i].aura !== createCharacter(season().entrants[i].characterId).definition.auras![0]))!
+    const side = season().entrants[f.home].aura !== createCharacter(season().entrants[f.home].characterId).definition.auras![0] ? 0 : 1
     t = simulateSeasonMatches(t, seasonFixtures(season()).filter((g) => g.day < f.day).map((g) => g.number))
     const pair = seasonFighters(season(), f.number)
     const vanilla = createCharacter(pair[side].id).withName(pair[side].name).withForge(pair[side].forge).withRelics(pair[side].relics)
@@ -445,10 +445,12 @@ describe('aura de départ tirée (retour du 2026-10-27, B7)', () => {
     }
   })
 
-  it('un participant sans aura (tournoi d’avant le tirage) ou dont l’aura n’est plus de ses startAuras part de l’aura par défaut', () => {
-    const def = createCharacter('brokk').definition.startAuras!
+  it('un participant sans aura (tournoi d’avant le tirage) ou dont l’aura n’est plus sur sa fiche (sortie, refonte des auras) part de l’aura par défaut', () => {
+    const def = createCharacter('brokk').definition.auras!
     expect(entrantAura({ characterId: 'brokk' })).toBe(def[0])
     expect(entrantAura({ characterId: 'brokk', aura: 'holy-aura' })).toBe(def[0])
-    expect(entrantAura({ characterId: 'brokk', aura: def.at(-1) })).toBe(def.at(-1))
+    expect(entrantAura({ characterId: 'brokk', aura: 'bristling-rampart' })).toBe('thorns')
+    expect(entrantAura({ characterId: 'thaldrin', aura: 'storm-field' })).toBe('storm-sky')
+    expect(entrantAura({ characterId: 'brokk', aura: def[1] })).toBe('bastion')
   })
 })

@@ -13,6 +13,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | **Le jeu** | [FEATURES.md](FEATURES.md) | Les règles en vigueur et les écrans : combat, roster, événements et statuts, écrans, arènes, son, statistiques, tournoi, compendium, paris, campagne ; aucun historique |
 | | [PERSONNAGES.md](PERSONNAGES.md) | Le roster : philosophie de chaque race et de chaque personnage, décisions, mesures, matrice des duels |
 | | [STATUTS.md](STATUTS.md) | Les bonus et malus : vocabulaire, conditions, catalogue, règles de design, chantier |
+| | [EMBLEMES.md](EMBLEMES.md) | Les emblèmes d'état : un concept, une icône ; le vocabulaire de la zone d'état, les axes et leurs marques (chevron, barre), les pastilles de déclencheur, l'arbre « faut-il un statut, un état, une icône ? », la grammaire et le prompt de génération, le chantier |
 | | [EQUILIBRAGE.md](EQUILIBRAGE.md) | L'équilibrage par simulation : objectifs, outils (`npm run balance`), méthode, leviers par ordre de préférence, pièges, journal des équilibrages |
 | | [SYSTEMES.md](SYSTEMES.md) | Le grand livre des systèmes : inventaire de toutes les briques (résolution, chronologie, animations, sons, interface), contenu vu comme assemblages, surface de chaque mécanique, sources d'effets de bord, pistes |
 | | [RESOLUTION.md](RESOLUTION.md) | Le livre de règles de la résolution : phases du tour, chaîne de calcul, types d'effets, ordre, application et opposition, interactions, inspirations |
@@ -52,6 +53,7 @@ Ces documents sont la mémoire du projet, pour l'humain comme pour l'agent. Ils 
 | ajoute ou modifie un personnage, ses stats ou son événement | `PERSONNAGES.md` (fiche, décisions, mesures, matrice) |
 | fait une grosse mise à jour du gameplay | `npm run balance`, puis `EQUILIBRAGE.md` (journal) et `PERSONNAGES.md` (mesures) |
 | ajoute ou modifie un statut, une condition ou un déclencheur | `STATUTS.md` (catalogue, vocabulaire, chantier) et `FEATURES.md` § 3 |
+| ajoute un statut à la zone d'état, ou se demande si un sort nouveau a besoin d'un statut, d'un état ou d'une icône | `EMBLEMES.md` d'abord (§ 6) : l'emblème se déduit du concept, le code suit la règle écrite |
 | change l'ordre ou le moment d'une résolution, ou ajoute un crochet ou une règle d'application | `RESOLUTION.md`, d'abord : le code suit la règle écrite |
 | ajoute une verticale au compendium, un registre ou un module | `ARCHITECTURE.md` |
 | ajoute une image | `STYLE_BIBLE.md` (références) et, pour une arène, `FEATURES.md` § 5 |

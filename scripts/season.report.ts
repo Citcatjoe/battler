@@ -24,7 +24,7 @@ const pct = (x: number) => `${Math.round(x * 100)} %`
 const dec = (x: number, n = 1) => x.toFixed(n).replace('.', ',')
 const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / Math.max(1, xs.length)
 /** Les briques des trois lots de la phase 8 (SORTS.md § 22, § 23, § 28 et § 29, RELIQUES.md § 15), comptées dans chaque build */
-const LOT_BRICKS: readonly string[] = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge', 'conflagration', 'loaded-die', 'bristling-rampart', 'vendetta', 'forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin', 'guard-break', 'jinx', 'blinding', 'hemorrhage', 'seal-theft', 'feint', 'black-sap', 'blood-debt', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']
+const LOT_BRICKS: readonly string[] = ['quarry', 'harvest', 'virulence', 'sentence', 'grudge', 'conflagration', 'loaded-die', 'vendetta', 'forge-bellows', 'pavise-nails', 'talion-gauntlet', 'holed-coin', 'guard-break', 'jinx', 'blinding', 'hemorrhage', 'seal-theft', 'feint', 'stoke', 'storm-sky', 'blood-frenzy', 'stunning-blow']
 
 it('mesure de la saison construite', () => {
   const runs = Number(process.env.SEASON_RUNS ?? 4)
@@ -91,7 +91,7 @@ it('mesure de la saison construite', () => {
   const meanGain = mean(gains.map((g) => g.built - naked.get(g.id)!))
   // Saison par aura de départ tirée (B7) : chaque aura de chaque personnage, ses matchs et son taux
   const byAura = CHARACTERS.flatMap((c) =>
-    (c.definition.startAuras ?? []).map((aura) => {
+    (c.definition.auras ?? []).map((aura) => {
       const r = record.get(`${c.id}:${aura}`)
       return `| ${c.name} | ${ALL_SKILLS.find((s) => s.id === aura)?.name ?? aura} | ${r?.played ?? 0} | ${r ? pct(r.wins / r.played) : '—'} |`
     }),
@@ -116,7 +116,7 @@ it('mesure de la saison construite', () => {
     '',
     '## Aura de départ tirée (B7)',
     '',
-    'Chaque participant tire au lancement une aura parmi ses `startAuras` ; taux de saison de chaque personnage selon son aura (peu de participants par aura : à lire comme une tendance).',
+    'Chaque participant tire au lancement une de ses deux `auras` ; taux de saison de chaque personnage selon son aura (peu de participants par aura : à lire comme une tendance).',
     '',
     '| Personnage | Aura | Matchs | Saison |',
     '| --- | --- | --- | --- |',

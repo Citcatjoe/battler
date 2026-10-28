@@ -15,7 +15,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed, winRate } from '../src/game/analysis'
-import { ACT_FIGHTS, BOSS_HP_CEILING, BOSS_TARGET, championOf, EARLY_HP_FLOOR, EARLY_NODES, encountersFor, HP_FLOOR, hpFloorAt, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
+import { ACT_FIGHTS, BOSS_HP_CEILING, BOSS_TARGET, championOf, EARLY_HP_FLOOR, encountersFor, HP_FLOOR, hpFloorOf, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
 import { drawReward, forgesLeftIn, MAX_SKILL_FACES, REWARDS, type PendingReward } from '../src/game/offers'
 import { simulateCombat } from '../src/game/combat'
 import { forgedFaces, withForgeStep, type ForgeStep } from '../src/game/forge'
@@ -47,7 +47,6 @@ const LOT_SKILLS: Record<string, string> = {
   grudge: '1',
   conflagration: '2',
   'loaded-die': '2',
-  'bristling-rampart': '2',
   vendetta: '2',
   'guard-break': '3',
   jinx: '3',
@@ -55,8 +54,6 @@ const LOT_SKILLS: Record<string, string> = {
   hemorrhage: '3',
   'seal-theft': '3',
   feint: '3',
-  'black-sap': '3',
-  'blood-debt': '3',
   stoke: '3',
   'storm-sky': '3',
   'blood-frenzy': '3',
@@ -79,7 +76,7 @@ function lotBricks(reward: PendingReward): { offered: string[]; taken?: string }
  * `referenceChampions`, l'aura par défaut), avec ses offres : la mesure de l'offre seule.
  */
 function actBuild(championId: string, seed: number, v: number) {
-  const aura = createCharacter(championId).definition.startAuras[0]
+  const aura = createCharacter(championId).definition.auras[0]
   const rng = seededRng(hashSeed(`campagne:${seed}:${aura}:reference:${v}`))
   const def = createCharacter(championId).definition
   let forge: ForgeStep[] = []
@@ -100,12 +97,13 @@ it('mesure de la campagne (pilote automatique)', () => {
   // Par nœud normal, tous champions : victoires du champion construit, du même nu, tours de chacun, PV des adversaires
   // réglés (part de leurs PV de base : somme, plus bas, rencontres proposées sous 75 %)
   const nodes = Array.from({ length: ACT_FIGHTS }, () => ({ fights: 0, built: 0, naked: 0, turns: 0, nakedTurns: 0, hp: 0, hpMin: Infinity }))
-  const offered = { count: 0, hp: 0, hpMin: Infinity, under: 0 }
+  // Rencontres dont le retard s'est allongé au plancher (`tunedOpponent`) et récompenses rendues
+  const offered = { count: 0, hp: 0, hpMin: Infinity, under: 0, stripped: 0, returned: 0 }
   const boss = { fights: 0, turns: 0 }
   // Les briques des lots dans les parties : offres où elles figurent, et prises par le choix par défaut
   const inRuns = Object.fromEntries(LOT_BRICKS.map((b) => [b, { offered: 0, taken: 0 }]))
   // Chaque champion, parti de chacune de ses auras de départ (docs/MAITRISES.md § 5) : `RUNS` parties par aura
-  for (const [id, aura] of CHARACTER_IDS.flatMap((id) => createCharacter(id).definition.startAuras.map((a) => [id, a] as const))) {
+  for (const [id, aura] of CHARACTER_IDS.flatMap((id) => createCharacter(id).definition.auras.map((a) => [id, a] as const))) {
     // Chance avant combat aux nœuds 1-2 (le plancher des PV y retient la courbe) et 3-10 ; adversaires normaux au plancher
     const tally = { depth: 0, boss: 0, won: 0, bossHp: 0, chance: 0, fights: 0, turns: 0, early: [0, 0], late: [0, 0], floor: 0, normals: 0, normalWins: 0 }
     for (let k = 0; k < RUNS; k++) {
@@ -119,6 +117,9 @@ it('mesure de la campagne (pilote automatique)', () => {
           offered.hp += share
           offered.hpMin = Math.min(offered.hpMin, share)
           if (share < 0.75) offered.under++
+          const returned = Math.max(0, run.wins - OPPONENT_LAG) - e.forge.length - e.relics.length
+          offered.stripped += returned > 0 ? 1 : 0
+          offered.returned += returned
         }
         const encounter = pick(rng, encounters)
         tally.chance += encounter.chance
@@ -131,7 +132,7 @@ it('mesure de la campagne (pilote automatique)', () => {
           span[0] += encounter.chance
           span[1]++
           tally.normals++
-          if (encounter.maxHp === Math.ceil(createCharacter(encounter.characterId).baseStats.maxHp * hpFloorAt(run.wins))) tally.floor++
+          if (encounter.maxHp === Math.ceil(createCharacter(encounter.characterId).baseStats.maxHp * hpFloorOf(encounter.forge.length + encounter.relics.length))) tally.floor++
         }
         const seed = hashSeed(`combat:${id}:${k}:${run.wins}${SEEDS}`)
         const opponent = opponentOf(encounter)
@@ -217,9 +218,9 @@ it('mesure de la campagne (pilote automatique)', () => {
     `# Campagne · règles ${pkg.version} · ${RUNS} parties par champion, pilote automatique`,
     '',
     `Courbe nominale : ${NORMAL_TARGETS.map(pct).join(', ')} aux combats normaux, ${pct(BOSS_TARGET)} contre le boss. Attendu pour le champion de référence : boss atteint ${pct(expected)}, acte gagné ${pct(expected * BOSS_TARGET)}.`,
-    `Départ : le personnage vanilla parti de chacune de ses auras de départ (l'aura sur le 1, sa compétence sur le 2 ; docs/MAITRISES.md § 5), le champion de référence parti de la même aura ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(EARLY_HP_FLOOR)} de ses PV de base aux ${EARLY_NODES} premiers nœuds, ${pct(HP_FLOOR)} ensuite ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion. Boss : PV réglés jusqu'à ${BOSS_HP_CEILING} fois sa base.`,
+    `Départ : le personnage vanilla parti de chacune de ses auras de départ (l'aura sur le 1, sa compétence sur le 2 ; docs/MAITRISES.md § 5), le champion de référence parti de la même aura ; ${MAX_SKILL_FACES} faces de compétence au plus. Adversaire normal : PV réglés, jamais sous ${pct(EARLY_HP_FLOOR)} de ses PV de base nu, ${pct(HP_FLOOR)} construit ; construit avec ${OPPONENT_LAG} récompense${OPPONENT_LAG > 1 ? 's' : ''} de retard sur le champion, une de plus chaque fois que le plancher arrête son réglage. Boss : PV réglés jusqu'à ${BOSS_HP_CEILING} fois sa base.`,
     `Mesuré, tous champions : boss atteint ${pct(all.boss / all.runs)}, acte gagné ${pct(all.won / all.runs)} (${all.runs} parties).`,
-    `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %.`,
+    `PV des adversaires normaux proposés (${offered.count} rencontres), en part de leurs PV de base : au plus bas ${pct(offered.hpMin)}, en moyenne ${pct(offered.hp / offered.count)} ; ${offered.under} sous 75 %. Retard allongé au plancher : ${offered.stripped} rencontres, ${offered.returned} récompenses rendues.`,
     '',
     '| Champion | Aura de départ | Départ (1, 2) | Victoires moyennes | Atteint le boss | Gagne l’acte | Bat le boss (atteint) | PV du boss (moyenne) | Chance moyenne avant combat | Chance aux nœuds 1-2 | Chance aux nœuds 3-10 | Combats normaux : chance estimée → gagnés | Adversaires au plancher des PV | Tours par combattant |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

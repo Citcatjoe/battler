@@ -8,6 +8,7 @@ import {
   COIN_RANK_HEADS,
   charges,
   consumeStatus,
+  riseStatus,
   directDamage,
   givesJets,
   isAura,
@@ -309,7 +310,7 @@ export type BeatBody =
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
    * deux fois, en coup), face, rien. Le statut est consommé.
    */
-  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true }
+  | { type: 'coin'; side: Side; status: StatusId; heads: boolean; effects: AppliedEffect[]; forced?: true; crit?: true }
   /**
    * Une relique du porteur se déclenche (docs/RELIQUES.md) : sur un moment du coup, au début d'un de ses tours,
    * ou quand ses PV passent sous son seuil. `uses` : ses déclenchements dans ce combat, celui-ci compris.
@@ -647,6 +648,20 @@ export function resolveAttack(
   }
 }
 
+/**
+ * Pile critique (A14, refonte des auras) : l'effet de pile d'une pièce lancée par un coup critique, doublé. Un statut
+ * double son intensité s'il en a une (Pièce porte-bonheur : +4 → +8), sinon ses charges ; dégâts et soins doublent ;
+ * un statut `noCritDouble` (Étourdi : une action perdue) reste tel quel.
+ */
+export function critDoubled(effect: Effect): Effect {
+  if (effect.type === 'applyStatus') {
+    if (STATUSES[effect.status].noCritDouble) return effect
+    return effect.power ? { ...effect, power: effect.power * 2 } : { ...effect, stacks: effect.stacks * 2 }
+  }
+  if (effect.type === 'damage' || effect.type === 'heal') return { ...effect, amount: effect.amount * 2 }
+  return effect
+}
+
 /* ---------- Effet nul ---------- */
 
 /** Le statut qu'un effet `applyStatus` pose, `extra` charges de plus (Pourfendre), durée et intensité comprises */
@@ -733,7 +748,7 @@ export const AURA_DUE_TURN = 3
  * sur son lanceur) et s'il a des auras de départ (un personnage du roster, vanilla ou à l'aura choisie).
  */
 export function startAuraOf(f: Character): { event: CharacterEvent; status: StatusId } | undefined {
-  if (!f.definition.startAuras?.length) return undefined
+  if (!f.definition.auras?.length) return undefined
   const event = f.events.find((e) => e.trigger === faceTrigger(1))
   if (!event || event.effects.length === 0) return undefined
   const posed = event.effects.map((e) => (e.type === 'applyStatus' && (e.target ?? 'self') === 'self' && isAura(e.status) ? e.status : undefined))
@@ -1096,6 +1111,15 @@ export function simulateCombat(
       const done = applyEffect(owner, effect)
       applied.push(done)
       if (fallen() !== undefined) break
+      // Un statut à seuil (la faute du Jugement, la note de la Ballade) : la pose qui l'amène à son seuil le fait partir,
+      // toutes charges comprises, et ses effets tombent aussitôt, du point de vue de son porteur, dans cette étape
+      const threshold = done.type === 'applyStatus' && done.result.kind === 'applied' ? STATUSES[done.status].threshold : undefined
+      const reached = threshold && done.type === 'applyStatus' ? states[done.target].statuses.find((s) => s.id === done.status && s.stacks >= threshold.at) : undefined
+      if (threshold && reached && done.type === 'applyStatus') {
+        states[done.target].statuses = states[done.target].statuses.filter((s) => s.id !== reached.id)
+        applied.push(...applyEffects(done.target, threshold.effects(reached)))
+        if (fallen() !== undefined) break
+      }
       if (effect.type === 'cleanse' && effect.steal && done.type === 'cleanse')
         for (const s of held.filter((x) => done.removed.includes(x.id))) {
           const taken = applyEffect(owner, {
@@ -1190,12 +1214,17 @@ export function simulateCombat(
         (e.type === 'release' && e.from === 'opponent' && !states[other(side)].statuses.some((s) => s.id === e.status)) ||
         ((e.type === 'heal' || e.type === 'damage') && e.fromStatus !== undefined && e.amount + readStatus(side, e.fromStatus) <= 0) ||
         (e.type === 'cleanse' && e.steal !== undefined && !states[e.target === 'opponent' ? other(side) : side].statuses.some((s) => isStealable(s.id))) ||
-        chains(side, e)
+        chains(side, e) ||
+        // Une aura qui ne ferait que reposer sur son porteur un statut déjà à son plafond (la Mire de la Visée à +3) ne part
+        // pas : rien ne changerait (M25)
+        (isAura(id) && e.type === 'applyStatus' && (e.target ?? 'self') === 'self' && STATUSES[e.status].maxStacks !== undefined && stacksOf(states[side].statuses, e.status) >= STATUSES[e.status].maxStacks! && !e.power)
       if (react.length > 0 && react.every(idle)) continue
       const effects = applyEffects(side, react)
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie : le statut agit avec ses charges, puis en perd une dans la même étape
       else if (def.decays || def.drainsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
+      // La montée : le statut a agi, il gagne une charge, dans l'étape de son effet
+      else if (def.rises) states[side].statuses = riseStatus(states[side].statuses, id)
       const beat = push({ type: 'statusReaction', side, status: id, trigger, effects }, cause)
       const down = fallen() ?? checkThresholds(beat) ?? releaseRebounds(beat)
       if (down !== undefined) return down
@@ -1396,6 +1425,8 @@ export function simulateCombat(
         states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
         if (!states[side].statuses.some((s) => s.id === status.id)) faded.push(status.id)
       }
+      // La montée : il a agi, il gagne une charge (son cran monte tous les deux déclenchements)
+      if (def.rises) states[side].statuses = riseStatus(states[side].statuses, status.id)
       const id = push({ type: 'statusTick', phase, side, status: status.id, effects })
       ticks.set(status.id, id)
       const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
@@ -1530,7 +1561,7 @@ export function simulateCombat(
     })
     if (fell !== undefined) return fell
     // Pile ou face : la pièce part aussitôt, juste après le coup qui l'a posée ; pile, ce coup ×N
-    return tossCoin(attacker, hit, dealt)
+    return tossCoin(attacker, hit, dealt, outcome.crit && !outcome.dodged)
   }
 
   /**
@@ -1643,9 +1674,10 @@ export function simulateCombat(
    * en coup et en une perte ; s'ils « touchent » (0.42.0), les fenêtres `hit` et `hurt` s'ouvrent comme pour un coup qui
    * touche de ce montant : tout ce qui réagit à un coup qui touche réagit (Aura de décoction, Épines, Saignement, Vol de
    * vie, Riposte, jauges). Le statut est consommé. Renvoie le perdant s'il y a K.O. La pièce a pour cause l'étape qui l'a
-   * posée, à défaut le coup `after`.
+   * posée, à défaut le coup `after`. Pile critique (A14) : une pièce d'effet lancée par un coup critique (`crit`) double
+   * son effet de pile (`critDoubled`) ; Pile ou face n'en a pas besoin, pile multiplie déjà le coup critique.
    */
-  function tossCoin(side: Side, after: number, dealt: number): Side | undefined {
+  function tossCoin(side: Side, after: number, dealt: number, crit: boolean): Side | undefined {
     const coin = states[side].statuses.find((s) => STATUSES[s.id].coinToss)
     if (!coin) return undefined
     // État de référence de la pièce (un coup à part entière, règle 9) : les statuts au moment où elle part
@@ -1663,11 +1695,16 @@ export function simulateCombat(
     const heads = forceRoll(rng() < Math.min(HEADS_CAP, 0.5 + bias) ? 1 : 2, 2, forced) === 1
     // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
     const extra = toss.multiplier !== undefined ? dealt * (toss.multiplier + (coin.power ?? 0) - 1) : 0
-    const onHeads: readonly Effect[] = toss.multiplier !== undefined ? [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }] : toss.heads
+    const critical = crit && toss.multiplier === undefined
+    const onHeads: readonly Effect[] =
+      toss.multiplier !== undefined ? [{ type: 'damage', amount: extra, target: 'opponent', source: 'strike' }] : critical ? toss.heads.map(critDoubled) : toss.heads
     const foeBefore = states[other(side)].hp
     const effects = heads ? applyEffects(side, onHeads) : []
     const removed = foeBefore - states[other(side)].hp
-    const id = push({ type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }) }, posedBy[side][coin.id] ?? after)
+    const id = push(
+      { type: 'coin', side, status: coin.id, heads, effects, ...(forced !== undefined && { forced: true as const }), ...(critical && { crit: true as const }) },
+      posedBy[side][coin.id] ?? after,
+    )
     return withinStrike(base, () => {
       const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
       if (down !== undefined || !heads) return down

@@ -194,7 +194,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [`${fighters[beat.side].name} lance son dé : ${beat.roll}${beat.forced ? ' [imposé]' : ''} → sa compétence se greffe, puis le coup de base`]
     case 'coin':
       return [
-        `${label(beat.status)} : ${fighters[beat.side].name} lance aussitôt une pièce → ${beat.heads ? 'PILE' : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,
+        `${label(beat.status)} : ${fighters[beat.side].name} lance aussitôt une pièce → ${beat.heads ? (beat.crit ? 'PILE CRITIQUE (effet doublé)' : 'PILE') : 'FACE, rien ne se passe'}${beat.forced ? ' [imposé]' : ''} (statut consommé)`,
         ...(beat.heads ? effects(beat.effects) : []),
       ]
     case 'relic': {

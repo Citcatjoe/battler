@@ -365,12 +365,17 @@ export const RELICS: readonly Relic[] = [
   },
   {
     // Retour du 2026-10-28 : « Pièce trouée » devient un porte-bonheur (les pièces sont des compétences de la Fortune,
-    // jamais des reliques) ; même règle, id gardé (historique, sauvegardes)
+    // jamais des reliques) ; même règle, id gardé (historique, sauvegardes). Trèfle de fer jusqu'à la refonte des auras
+    // (Q14 : trop proche de la Pièce porte-bonheur, frappée d'un trèfle) : une coccinelle, deux points (les deux coups).
+    // Mesure d'ensemble de la refonte des auras (tranche 8) : les pièces de la Chance la font partir plus souvent ; chez
+    // ses porteurs construits (`npm run ramp`), +21,5 (Naraxes), +20,4 (Elaria), +20,1 (Fanchon), au-delà de 20 : une
+    // recharge de 2 tours (elle s'envole, puis revient)
     id: 'holed-coin',
-    name: 'Trèfle de fer',
-    flavor: 'Un trèfle à quatre feuilles forgé dans le fer, pendu à un cordon noué, deux étoiles gravées au cœur. Pile, la chance relance.',
+    name: 'Coccinelle d’émail',
+    flavor: 'Une coccinelle d’émail vermillon, deux points de jais sur le dos, cousue au revers d’un gant. Pile, elle s’envole et la chance relance.',
     trigger: { type: 'strike', on: 'heads' },
     effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 2 }],
+    cooldown: 3,
   },
   /*
    * Les reliques de source (option C1 de l'étude des sources, validée par l'utilisateur le 2026-10-25 ; docs/RELIQUES.md
@@ -406,7 +411,7 @@ export const RELICS: readonly Relic[] = [
   /*
    * Retour du 2026-10-27 (docs/RELIQUES.md § 17) : les idées de l'utilisateur. La Pièce de foire (une relique qui lançait
    * une pièce sur un 6) est retirée : les pièces sont des compétences de la Fortune (M10). Restent des reliques qui
-   * servent ces pièces (Trèfle de fer, Patte de lièvre : des porte-bonheur, 2026-10-28), une qui épargne un coup fatal et
+   * servent ces pièces (Coccinelle d’émail, Patte de lièvre : des porte-bonheur, 2026-10-28), une qui épargne un coup fatal et
    * une qui prend l'initiative.
    */
   {
@@ -428,6 +433,35 @@ export const RELICS: readonly Relic[] = [
     name: 'Patte de lièvre',
     flavor: 'Une patte de lièvre séchée, cerclée d’une bague de laiton, un ruban turquoise noué au poignet. Elle fait retomber la chance du bon côté.',
     headsChance: 0.25,
+  },
+  /*
+   * Refonte des auras (2026-10-28, docs/REFONTE_AURAS.md § 4, docs/RELIQUES.md § 18) : trois auras sorties deviennent des
+   * reliques, des règles qui ne font pas un build. Chacune pose son statut à son premier tour (une fois) : l'Immunité pour
+   * ses 3 premiers tours, l'Emprise et la Surtension pour tout le combat.
+   */
+  {
+    id: 'blessed-phial',
+    name: 'Ampoule bénite',
+    flavor: 'Une ampoule de verre soufflé, scellée de cire blanche, l’eau encore trouble. Les premiers échanges, rien ne s’y accroche.',
+    trigger: { type: 'turn', turn: 1 },
+    charges: 1,
+    effects: [{ type: 'applyStatus', status: 'immunity', stacks: 1, turns: 3 }],
+  },
+  {
+    id: 'gaoler-chain',
+    name: 'Chaîne du geôlier',
+    flavor: 'Trois maillons de fer noir et un cadenas rouillé, la clé perdue. Plus l’adversaire porte de fers, plus elle pèse.',
+    trigger: { type: 'turn', turn: 1 },
+    charges: 1,
+    effects: [{ type: 'applyStatus', status: 'grip', stacks: 1 }],
+  },
+  {
+    id: 'lightning-rod',
+    name: 'Pointe de paratonnerre',
+    flavor: 'Une pointe de cuivre verdi, torsadée, arrachée au faîte d’un clocher. La foudre l’aime, et frappe plus fort.',
+    trigger: { type: 'turn', turn: 1 },
+    charges: 1,
+    effects: [{ type: 'applyStatus', status: 'overcharge', stacks: 1 }],
   },
 ]
 
@@ -468,6 +502,9 @@ const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   critMultiplier: (v) => `${signed(v).replace('.', ',')} au multiplicateur de critique`,
 }
 
+/** Un statut-règle (refonte des auras) : ni mécanisme ni compteur de charges, une seule charge, il dure (ou non) des tours. */
+const isRuleStatus = (id: StatusId) => !STATUSES[id].mechanic && STATUSES[id].counter === 'turns' && STATUSES[id].maxStacks === 1
+
 /**
  * Un effet de relique au plus court : « 3 dégâts directs », « +2 vol de vie », « retire son dernier malus (sinon +3 PV) ».
  * Un statut posé est toujours un bonus de son porteur (« +2 armure temporaire », A3), écrit comme un mot de la phrase ;
@@ -487,6 +524,9 @@ function effectText(e: Effect, attacker = false): string {
       const def = STATUSES[e.status]
       // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence
       if (e.target === 'opponent') return `${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)} à l'adversaire`
+      // Une règle posée pour un temps (refonte des auras : Ampoule bénite, Chaîne du geôlier, Pointe de paratonnerre) : sa
+      // phrase, et combien de temps elle tient
+      if (isRuleStatus(e.status)) return `${lowerFirst(def.summary.replace(/\.$/, ''))}, ${e.turns ? `ses ${e.turns} premiers tours` : 'tout le combat'}`
       // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
       return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}`
     }
@@ -544,6 +584,8 @@ function momentOf(r: Relic): string {
     if (!t) return r.onFace !== undefined ? `sur un ${r.onFace}` : ''
     switch (t.type) {
       case 'turn': {
+        // Une règle posée dès le premier tour dit sa durée dans son effet (« tout le combat »)
+        if (r.charges === 1 && t.turn === 1 && (r.effects ?? []).every((e) => e.type === 'applyStatus' && isRuleStatus(e.status))) return ''
         if (r.charges === 1) return `au ${ordinal(t.turn)} tour`
         const every = r.cooldown ? `tous les ${r.cooldown} tours` : 'à chaque tour'
         return t.turn === (r.cooldown ?? 1) ? every : `au ${ordinal(t.turn)} tour, puis ${every}`

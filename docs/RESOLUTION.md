@@ -516,3 +516,9 @@ La colonne de labels sous le dé. **Définition validée par l'utilisateur (2026
 Nouveautés du 2026-10-21 : esquive assurée, bouclier qui absorbe, Fausse note, Luciole ; Riposte et Épines passent en −. Retirés : Pile ou face, Furie des vents (et son « ×2 »), Coup de chance, Rétribution, Crescendo, Soliste.
 
 **Étendre** : un statut est une surcharge par sa mécanique (`isSurcharge`) : critique ou esquive imposés, bouclier, modificateur qui s'use sur le coup (`spentOnHit`, `spentOnHurt`), vol de vie, renvoi, réaction au coup encaissé ; jamais une aura. Un nouveau statut de ces familles a son label, son signe et son son sans rien déclarer. Aucun point d'appel ne choisit une couleur, un signe ni un son.
+
+## 12. La montée et le seuil (refonte des auras, 2026-10-28)
+
+- **Le moment du cran** : une aura qui monte (`rises`) agit avec le cran de ses charges du moment (au début d'un coup, celles du début du coup, règle 9), puis gagne une charge **dans la même étape** que son effet ; le cran suivant vaut donc pour son prochain déclenchement. Une nouvelle pose de l'aura déjà là ajoute un cran entier (deux charges), au plafond près.
+- **Le seuil** : la pose qui amène un statut à seuil (`threshold`) à son seuil le retire entier, puis ses effets s'appliquent aussitôt, du point de vue de son porteur, rangés dans les effets de la même étape (la Peur de la 3e faute dans la réaction du Jugement ; le refrain dans celle de la Ballade). Pas de réaction en chaîne : ce sont des effets, pas une fenêtre.
+- **Une réaction d'aura sans effet** (reposer un statut à son plafond) ne part pas, comme une relâche sans Brûlure.

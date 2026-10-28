@@ -15,6 +15,7 @@ import { Character, figureHeight, REWARD_HP } from './character'
 import { DAMAGE_SOURCES } from './damage'
 import { EMOJI, testCharacter } from './test-utils'
 import { traceCombat, traceText } from './trace'
+import { hashSeed } from './analysis'
 import {
   ACT_FIGHTS,
   ACT_LENGTH,
@@ -26,7 +27,7 @@ import {
   HP_FLOOR,
   EARLY_HP_FLOOR,
   BOSS_HP_CEILING,
-  hpFloorAt,
+  hpFloorOf,
   OPPONENT_LAG,
   tuneHp,
   championOf,
@@ -127,10 +128,10 @@ describe('catalogue des compétences', () => {
     for (const c of CHARACTERS) for (const e of characterPool(c.definition)) expect(skills.some((s) => s.event.id === e.id), `${c.id} ${e.id}`).toBe(true)
     expect(skills.find((s) => s.event.id === 'thunderbolt')).toMatchObject({ outside: true, triggers: [] })
     expect(skills.find((s) => s.event.id === 'thunderbolt')!.owners.map((c) => c.id).sort()).toEqual(['fanchon', 'thaldrin', 'ysolde'])
-    // Morgrut : l'Aura de puissance sur son 1, le Crescendo sur son 2 (C5), le reste de ses deux maîtrises (Fureur, Rempart)
-    // hors kit
+    // Morgrut : l'Aura de puissance sur son 1, l'Assaut sur son 2 (refonte des auras, Q7), le reste de ses deux maîtrises
+    // (Fureur, Rempart) hors kit
     const morgrut = skills.filter((s) => s.owners.some((c) => c.id === 'morgrut'))
-    expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura', 'crescendo'])
+    expect(morgrut.filter((s) => !s.outside).map((s) => s.event.id)).toEqual(['power-aura', 'assault'])
     expect(morgrut.filter((s) => s.outside).map((s) => s.event.id)).toEqual(expect.arrayContaining(['guard-break', 'grudge', 'stunning-blow']))
   })
 
@@ -160,8 +161,8 @@ describe('catalogue des statuts', () => {
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
     // Poison : posé par le Souffle de la tombe et la Virulence, de la réserve Poison que partagent Ervald, Naraxes et
-    // Thaldrin (V5), par quatre auras (effet de tour, réactions ; la Sève noire, la Peau de crapaud depuis le 2026-10-27),
-    // et par le Dard de guêpe
+    // Thaldrin (V5), par deux auras et la Peau de crapaud (une compétence à charges depuis la refonte des auras), et par le
+    // Dard de guêpe
     expect(who('poison')).toEqual([
       'relique:wasp-sting',
       'skill:ervald',
@@ -170,7 +171,6 @@ describe('catalogue des statuts', () => {
       'skill:naraxes',
       'skill:thaldrin',
       'skill:thaldrin',
-      'statut:blackSap',
       'statut:decoctionAura',
       'statut:frostAura',
       'statut:toadSkin',
@@ -184,12 +184,12 @@ describe('catalogue des statuts', () => {
     expect(who('casting')).toEqual(['form:thaldrin'])
     expect(who('bearMight')).toEqual(['form:thaldrin'])
     // Reliques (audit du 2026-10-21) : elles posent aussi des statuts, le compendium les cite
-    // Le Rempart hérissé (phase 8, second lot) en pose à chaque armure temporaire vidée ; l'Aura d'épines, du Sang, sur le
-    // 1 de Brokk et dans la réserve de Gorak et d'Elaria
-    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'skill:elaria', 'skill:gorak', 'statut:bristlingRampart'])
-    // La Rancune (0.114.0) en pose un à chaque coup encaissé, la Feinte (phase 8, lot 3) à chaque esquive
-    // L'Odeur du sang (Sang, 2026-10-27) en pose un sur son jet, dans la réserve de Gorak, d'Elaria et de Brokk
-    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:brokk', 'skill:elaria', 'skill:elaria', 'skill:fanchon', 'skill:gorak', 'skill:naraxes', 'statut:feint', 'statut:grudge'])
+    // L'Aura d'épines, du Sang, sur le 1 de Brokk et dans la réserve de Gorak et d'Elaria
+    expect(who('thorns')).toEqual(['relique:bramble-collar', 'skill:brokk', 'skill:elaria', 'skill:gorak'])
+    // La Rancune (0.114.0) en pose un à chaque coup encaissé ; la Feinte n'en pose plus depuis qu'elle est la Visée (refonte
+    // des auras : sa Mire). L'Odeur du sang (Sang, 2026-10-27) en pose un sur son jet, dans la réserve de Gorak, d'Elaria et de Brokk
+    expect(who('guaranteedCrit')).toEqual(['relique:hunter-trophy', 'relique:opening-bell', 'relique:siege-clepsydra', 'skill:brokk', 'skill:elaria', 'skill:elaria', 'skill:fanchon', 'skill:gorak', 'skill:naraxes', 'statut:grudge'])
+    expect(who('aim')).toEqual(['statut:feint'])
     // La Brûlure revient en 0.73.0 avec les Feux follets ; la Luciole attend un porteur
     expect(catalog.find((e) => e.id === 'burn')!.inGame).toBe(true)
     expect(catalog.find((e) => e.id === 'firefly')!.inGame).toBe(false)
@@ -213,7 +213,8 @@ describe('catalogue des statuts', () => {
   it('bord en pointillés : seuls les états qui font perdre des PV à leur porteur à chaque tour (0.52.1)', async () => {
     const { hurtsEachTurn } = await import('./statuses')
     const dashed = STATUS_IDS.filter(hurtsEachTurn).sort()
-    expect(dashed).toEqual(['burn', 'poison', 'rot'])
+    // La Pourriture est sortie avec l'Aura de pourriture (refonte des auras, 2026-10-28)
+    expect(dashed).toEqual(['burn', 'poison'])
   })
   it('nombre affiché sur un état : tours restants s’il a une durée, sinon ses charges', () => {
     expect(statusCounter({ id: 'regeneration', stacks: 1, turns: 2 })).toEqual({ value: 2, unit: 'turns' })
@@ -453,20 +454,20 @@ describe('tournoi', () => {
     expect(labels.some((l) => / (I|II|III)$/.test(l))).toBe(true)
   })
 
-  it('aura de départ tirée (B7) : au lancement, une aura des startAuras de chacun, reproductible ; ses combats partent de ce dé', () => {
+  it('aura de départ tirée (B7) : au lancement, une des deux auras de chacun, reproductible ; ses combats partent de ce dé', () => {
     const ids = slots(seededRng(2))
     const make = (seed: number) => createTournament(ids, (id) => createCharacter(id).name, { auras: seededRng(seed) })
     expect(make(9).entrants.map((e) => e.aura)).toEqual(make(9).entrants.map((e) => e.aura))
     expect(make(9).entrants.map((e) => e.aura)).not.toEqual(make(10).entrants.map((e) => e.aura))
-    for (const e of make(9).entrants) expect(createCharacter(e.characterId).definition.startAuras, e.label).toContain(e.aura)
+    for (const e of make(9).entrants) expect(createCharacter(e.characterId).definition.auras, e.label).toContain(e.aura)
     // Sans le hasard du tirage, chacun part de son dé vanilla (l'aura par défaut)
     const plain = createTournament(ids, (id) => createCharacter(id).name)
-    expect(plain.entrants.every((e) => e.aura === undefined && entrantAura(e) === createCharacter(e.characterId).definition.startAuras![0])).toBe(true)
+    expect(plain.entrants.every((e) => e.aura === undefined && entrantAura(e) === createCharacter(e.characterId).definition.auras![0])).toBe(true)
     // Un tournoi entier : chaque combattant porte son aura tirée sur le 1 ; un combat parti du dé vanilla est refusé
     const rng = seededRng(4)
     let t = make(9)
     const faceOne = (c: Character) => c.definition.events.find((e) => rollFace(e.trigger) === 1)?.id
-    const moved = t.entrants.findIndex((e) => e.aura !== createCharacter(e.characterId).definition.startAuras![0])
+    const moved = t.entrants.findIndex((e) => e.aura !== createCharacter(e.characterId).definition.auras![0])
     expect(moved).toBeGreaterThanOrEqual(0)
     const ref = { round: 0, index: Math.floor(moved / 2) }
     const pair = matchFighters(t, ref)
@@ -812,17 +813,23 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Le Duo (2026-10-27) : il ne pose plus d'aura (l'Aura mélodieuse quitte le jeu) ; son dé de plus, un bonus du Tempo,
     // sonne Bonus gagné. Les trois auras de la revue des compétences (Bouclier de foi, Pas de côté, Plaie ouverte) : une
     // aura, son son se déduit de sa nature ; l'Aura d'épines aussi depuis la revue X1 (0.118.1)
-    family('auraGain', ['power-aura', 'precision-aura', 'intimidation-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'immunity-aura', 'wild-aura', 'sentence', 'bristling-rampart', 'vendetta', 'faith-shield', 'sidestep', 'open-wound', 'thorns', 'feint', 'black-sap', 'blood-debt', 'storm-sky', 'blood-frenzy'])
+    family('auraGain', ['power-aura', 'frost-aura', 'holy-aura', 'decoction-aura', 'vendetta', 'open-wound', 'thorns', 'feint', 'storm-sky', 'blood-frenzy'])
     // Les auras des maîtrises (2026-10-27), le Dé pipé devenu aura compris : une aura, son son se déduit de sa nature
-    family('auraGain', ['ballad', 'dread', 'lucky-streak', 'rancor', 'storm-field', 'rot-aura', 'loaded-die'])
+    family('auraGain', ['ballad', 'dread', 'lucky-streak', 'rancor', 'loaded-die'])
     // Le contenu des maîtrises (quatrième demande du 2026-10-27) : quatre auras ; l'Onde de choc sonne avec son coup
-    family('auraGain', ['onrush', 'overcharge', 'grip', 'pilfer'])
+    family('auraGain', ['onrush', 'pilfer'])
+    // Refonte des auras (2026-10-28) : les trois auras nouvelles, une aura, Aura gagnée
+    family('auraGain', ['bastion', 'judgement', 'brasier'])
     family(null, ['shockwave'])
-    family('buff', ['duo'])
+    // Le Duo, des coups bruts depuis la refonte des auras : un mécanisme, muet comme la Furie (sa rafale sonne)
+    family(null, ['duo'])
     // Le contenu du soin (quatrième demande du 2026-10-27) : deux auras ; la Dîme, un bonus du Soin ; le Serment de sang, un
     // malus d'Affliction (le Saignement) ; l'Odeur du sang, un critique assuré ; la Flamme votive, un bonus d'Affliction
     // (Bonus gagné) ; la Pièce vert-de-gris et la Morsure sonnent avec leur pièce et leur coup
-    family('auraGain', ['leech', 'toad-skin'])
+    // Refonte des auras (2026-10-28) : les compétences à charges sorties des auras sonnent la famille de leur bonus
+    family('healingUp', ['leech'])
+    family('buff', ['toad-skin', 'sentence'])
+    family('guardUp', ['faith-shield'])
     family('healingUp', ['tithe'])
     family('afflictionDown', ['blood-oath'])
     family('precisionUp', ['blood-scent'])
@@ -848,12 +855,12 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // Crescendo, Soliste et l'Assaut : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
     // face et l'Embrasement posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
     // Les pièces de la Fortune (2026-10-27) : comme Pile ou face, seule leur pièce sonne (un son pour toutes les pièces, S8)
-    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'assault', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'lucky-coin', 'cursed-coin'])
-    // Les compétences hors des dés de départ (les réserves des maîtrises) se jouent gravées sur le 3 d'un porteur : Gorak
-    // parti de la Plaie ouverte (il fait saigner : la Curée part), ou Ervald pour l'Aura de puissance et les consommatrices
-    // du Poison (il empoisonne), Morsure comprise
+    family(null, ['retribution', 'thunderbolt', 'crescendo', 'soloist', 'assault', 'wind-fury', 'coin-flip', 'quarry', 'conflagration', 'lucky-coin', 'cursed-coin', 'shield-coin', 'volley-coin', 'hex-coin'])
+    // Les compétences hors des dés de départ (les réserves des maîtrises) se jouent gravées sur le 3 d'un porteur : Elaria
+    // partie de la Plaie ouverte (elle fait saigner : la Curée part), ou Ervald pour l'Aura de puissance et les
+    // consommatrices du Poison (il empoisonne), Morsure comprise
     const carriers = ENGRAVABLE_SKILLS.filter((s) => !CHARACTERS.some((c) => c.events.some((e) => e.id === s.id))).map((skill) =>
-      (['power-aura', 'harvest', 'virulence', 'venom-bite'].includes(skill.id) ? createCharacter('ervald') : createCharacter('gorak', { aura: skill.id === 'open-wound' ? undefined : 'open-wound' })).withForge([{ op: 'engrave', face: 3, skill }]),
+      (['power-aura', 'harvest', 'virulence', 'venom-bite'].includes(skill.id) ? createCharacter('ervald') : createCharacter('elaria', { aura: skill.id === 'open-wound' ? undefined : 'open-wound' })).withForge([{ op: 'engrave', face: 3, skill }]),
     )
     const seen: Record<string, Set<string | null>> = {}
     for (const a of [...CHARACTERS, ...carriers])
@@ -1031,13 +1038,21 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     }
   })
 
-  it('le levier des PV, moins fort (0.112.0) : un adversaire normal a `OPPONENT_LAG` récompenses de retard, et jamais moins de son plancher de PV (`hpFloorAt` : 65 % aux deux premiers nœuds, A13 du 2026-10-28 ; 75 % ensuite)', () => {
-    expect([0, 1, 2, 5].map(hpFloorAt)).toEqual([EARLY_HP_FLOOR, EARLY_HP_FLOOR, HP_FLOOR, HP_FLOOR])
-    for (const wins of [0, 1, 5]) {
-      const run = { ...startRun('gorak', 8), wins }
+  it('le levier des PV, moins fort (0.112.0) : un adversaire normal a au plus `OPPONENT_LAG` récompenses de retard, et jamais moins de son plancher de PV (`hpFloorOf` : 65 % nu, A13 ; 75 % construit) ; au plancher, il rend sa dernière récompense (TuningG)', () => {
+    expect([0, 1, 4].map(hpFloorOf)).toEqual([EARLY_HP_FLOOR, HP_FLOOR, HP_FLOOR])
+    for (const wins of [0, 1, 5, ACT_FIGHTS - 1]) {
+      const run = { ...startRun('elaria', 8, undefined, 'open-wound'), wins }
       for (const e of encountersFor(run)) {
-        expect(e.forge.length + e.relics.length, `nœud ${wins}`).toBe(Math.max(0, wins - OPPONENT_LAG))
-        expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThanOrEqual(Math.ceil(createCharacter(e.characterId).baseStats.maxHp * hpFloorAt(wins)))
+        const rewards = e.forge.length + e.relics.length
+        const floorHp = Math.ceil(createCharacter(e.characterId).baseStats.maxHp * hpFloorOf(rewards))
+        expect(rewards, `nœud ${wins}`).toBeLessThanOrEqual(Math.max(0, wins - OPPONENT_LAG))
+        expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThanOrEqual(floorHp)
+        // Construit, il n'est jamais laissé au plancher : il y aurait rendu sa dernière récompense
+        if (rewards > 0) expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThan(floorHp)
+        // Ce qu'il garde est le début de sa construction au retard nominal
+        const full = drawBuild(e.characterId, Math.max(0, wins - OPPONENT_LAG), seededRng(hashSeed(`campagne:${run.seed}:${wins}:${e.characterId}:construction`)))
+        expect(full.forge.slice(0, e.forge.length)).toEqual(e.forge)
+        expect(full.relics.slice(0, e.relics.length)).toEqual(e.relics)
       }
     }
     // Le plancher : contre un adversaire qui les bat toujours, le réglage s'arrête au plancher demandé (le quart, sinon)
@@ -1067,9 +1082,9 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   })
 
   it('le boss est un personnage valide, à son dé forgé', () => {
-    // Le boss n'est pas un personnage du roster : ni aura de départ, ni compétence de personnage, ses trois techniques
+    // Le boss n'est pas un personnage du roster : ni auras sur sa fiche, ni compétence de personnage, ses trois techniques
     // sur le 1, le 2 et le 3 (§ 18.4) ; le reste des règles du roster vaut pour lui
-    expect(validateRoster([BOSS]).filter((p) => !/aura de départ|sans signature|dé vanilla/.test(p))).toEqual([])
+    expect(validateRoster([BOSS]).filter((p) => !/deux auras attendues|sans signature|dé vanilla/.test(p))).toEqual([])
     expect(campaignCharacter(BOSS.id).gilded).toEqual({ 5: 2, 6: 2 })
   })
 
@@ -1093,15 +1108,15 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       ervald: ['frost-aura', 'life-steal'],
       ysolde: ['holy-aura', 'purification'],
       naraxes: ['decoction-aura', 'coin-flip'],
-      aldric: ['vendetta', 'retribution'],
-      morgrut: ['power-aura', 'crescendo'],
+      aldric: ['vendetta', 'riposte'],
+      morgrut: ['power-aura', 'assault'],
       thaldrin: ['storm-sky', 'firefly'],
       fanchon: ['ballad', 'duo'],
     }
     for (const c of CHARACTERS) {
       const onFaces = c.events.filter((e) => rollFace(e.trigger) !== undefined).map((e) => `${e.id}@${rollFace(e.trigger)}`)
       expect(onFaces, c.id).toEqual(dice[c.id].map((id, k) => `${id}@${k + 1}`))
-      expect(c.definition.startAuras?.[0], c.id).toBe(dice[c.id][0])
+      expect(c.definition.auras?.[0], c.id).toBe(dice[c.id][0])
       expect(c.definition.signature, c.id).toBe(dice[c.id][1])
       // Plus rien hors des faces
       expect(c.events.every((e) => rollFace(e.trigger) !== undefined), c.id).toBe(true)
@@ -1471,11 +1486,17 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       save({ ...run, aura: 'fear' })
       expect(loadRun()?.aura).toBe(startAurasOf('gorak')[0])
       // Huit maîtrises (B1) : l'Aura d'immunité a quitté le Rempart pour la Lumière ; une partie de Brokk partie d'elle
-      // repart de son Aura d'épines. Une aura de départ gagnée par la règle (B5 : toutes celles de ses maîtrises) se relit
+      // repart de son Aura d'épines. Refonte des auras (docs/REFONTE_AURAS.md § 3, § 4) : deux auras par fiche ; une partie
+      // partie d'une aura sortie (le Pas de côté d'Elaria) ou qui n'est plus sur sa fiche (les Épines de Gorak) repart de
+      // la première ; sa seconde aura se relit
       save({ ...startRun('brokk', 2), aura: 'immunity-aura' })
       expect(loadRun()?.aura).toBe('thorns')
-      save(startRun('gorak', 2, undefined, 'thorns'))
-      expect(loadRun()?.aura).toBe('thorns')
+      save({ ...startRun('elaria', 2), aura: 'sidestep' })
+      expect(loadRun()?.aura).toBe('feint')
+      save({ ...startRun('gorak', 2), aura: 'thorns' })
+      expect(loadRun()?.aura).toBe('blood-frenzy')
+      save(startRun('gorak', 2, undefined, 'onrush'))
+      expect(loadRun()?.aura).toBe('onrush')
     } finally {
       vi.unstubAllGlobals()
     }

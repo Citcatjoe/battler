@@ -36,7 +36,7 @@ export interface Entrant {
   /** Nom affiché, numéroté si le personnage est présent plusieurs fois (« Gorak II ») */
   label: string
   /**
-   * Son aura de départ (retour du 2026-10-27, B7 ; docs/MAITRISES.md § 5.3) : tirée au lancement parmi les `startAuras`
+   * Son aura de départ (retour du 2026-10-27, B7 ; docs/MAITRISES.md § 5.3) : tirée au lancement parmi les deux `auras`
    * de sa fiche, sur le 1 de son dé pour tout le tournoi (et toute la saison). Absente (un tournoi d'avant le tirage) ou
    * qui n'est plus l'une de ses auras de départ : l'aura par défaut (`entrantAura`).
    */
@@ -121,22 +121,22 @@ export function labelEntrants(ids: readonly string[], nameOf: (id: string) => st
 
 /**
  * Le tirage des auras de départ (retour du 2026-10-27, B7), « comme si chaque participant choisissait son build » avant
- * le premier combat : pour chacun, dans l'ordre, une aura au hasard parmi les `startAuras` de sa fiche (toutes les
- * auras de ses deux maîtrises), chacune avec la même chance. Le hasard est injecté : à graine égale, même tirage.
+ * le premier combat : pour chacun, dans l'ordre, une aura au hasard parmi les deux `auras` de sa fiche, chacune avec la
+ * même chance. Le hasard est injecté : à graine égale, même tirage.
  */
 export function drawStartAuras(entrants: readonly Entrant[], rng: Rng): Entrant[] {
   return entrants.map((e) => {
-    const auras = createCharacter(e.characterId).definition.startAuras ?? []
+    const auras: readonly string[] = createCharacter(e.characterId).definition.auras ?? []
     return auras.length > 0 ? { ...e, aura: pick(rng, auras) } : e
   })
 }
 
 /**
- * L'aura de départ d'un participant : celle de son tirage, si elle est encore l'une des `startAuras` de son personnage ;
- * sinon (participant d'avant le tirage, liste changée depuis) l'aura par défaut, la première.
+ * L'aura de départ d'un participant : celle de son tirage, si elle est encore l'une des `auras` de son personnage ;
+ * sinon (participant d'avant le tirage, aura sortie depuis, docs/REFONTE_AURAS.md § 4) l'aura par défaut, la première.
  */
 export function entrantAura(e: Pick<Entrant, 'characterId' | 'aura'>): string | undefined {
-  const auras = createCharacter(e.characterId).definition.startAuras ?? []
+  const auras: readonly string[] = createCharacter(e.characterId).definition.auras ?? []
   return e.aura !== undefined && auras.includes(e.aura) ? e.aura : auras[0]
 }
 

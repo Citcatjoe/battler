@@ -2,7 +2,6 @@ import type { Character } from './character'
 import type { CharacterEvent, Effect } from './events'
 import {
   FALSE_NOTE,
-  INTIMIDATION,
   isAura,
   STATUS_IDS,
   STATUSES,
@@ -42,7 +41,6 @@ export type StateId =
   | 'poison'
   | 'bleed'
   | 'burn'
-  | 'rot'
   | 'lostTurn'
   | 'breach'
   | 'vulnerable'
@@ -57,6 +55,15 @@ export type StateId =
   // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme et la Flamme votive
   | 'tithed'
   | 'votive'
+  // Refonte des auras (2026-10-28) : les compétences à charges sorties des auras, et les statuts des reliques qui en sortent
+  | 'leeching'
+  | 'toadSkin'
+  | 'sentence'
+  | 'faithShield'
+  | 'grip'
+  | 'overcharge'
+  // Refonte des auras (tranche 3, 2026-10-28) : les fautes du Jugement
+  | 'fault'
 
 export interface StateDef {
   /** Nom générique, le même quel que soit le personnage qui l'a posé */
@@ -87,11 +94,10 @@ export const STATES: Record<StateId, StateDef> = {
   reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup reçu lui revient : une part des dégâts renvoyée, ou un critique.', counter: 'status' },
   // Épines : sans source depuis la 0.118.1 (l'Aura d'épines se lit sur son anneau), gardé dans le vocabulaire avec son emblème
   thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup reçu fait saigner l'attaquant.", counter: 'status' },
-  immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut plus lui être posé.', counter: 'none' },
+  immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut lui être posé.', counter: 'status' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
   bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
   burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
-  rot: { name: 'Pourriture', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
   lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
   breach: { name: 'Brèche', polarity: 'negative', summary: 'Son armure est réduite.', counter: 'status' },
   vulnerable: { name: 'Vulnérable', polarity: 'negative', summary: 'Il subit plus de dégâts à chaque coup.', counter: 'status' },
@@ -107,25 +113,32 @@ export const STATES: Record<StateId, StateDef> = {
   bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
   tithed: { name: 'Dîme', polarity: 'positive', summary: 'Ses prochains coups reçus lui rendent des PV, pris à l’attaquant.', counter: 'status' },
   votive: { name: 'Flamme votive', polarity: 'positive', summary: 'Ses prochains soins brûlent l’adversaire.', counter: 'status' },
+  leeching: { name: 'Sangsue', polarity: 'positive', summary: 'Ses prochains coups qui touchent lui rendent des PV, selon le Saignement de l’adversaire.', counter: 'status' },
+  toadSkin: { name: 'Peau de crapaud', polarity: 'positive', summary: 'Ses prochains coups reçus empoisonnent l’attaquant.', counter: 'status' },
+  sentence: { name: 'Sentence', polarity: 'positive', summary: 'Ses prochains soins font perdre des PV à l’adversaire.', counter: 'status' },
+  faithShield: { name: 'Bouclier de foi', polarity: 'positive', summary: 'Ses prochains soins lui donnent de l’armure temporaire.', counter: 'status' },
+  grip: { name: 'Emprise', polarity: 'positive', summary: 'Ses coups font plus de dégâts par malus de l’adversaire.', counter: 'none' },
+  overcharge: { name: 'Surtension', polarity: 'positive', summary: 'Chacun de ses éclairs fait plus de dégâts.', counter: 'none' },
+  fault: { name: 'Faute', polarity: 'negative', summary: 'À sa troisième faute, il perd sa prochaine action.', counter: 'status' },
 }
 
 // Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % »
 for (const def of Object.values(STATES)) def.summary = typeset(def.summary)
 
-/** Ce qu'un statut verse à un état : sur son porteur (`self`) ou sur l'adversaire de son porteur (une aura qui agit sur lui). */
+/**
+ * Ce qu'un statut verse à un état de la zone de son porteur. L'effet d'une aura relayé chez l'adversaire (l'Aura
+ * d'intimidation, « Affaibli ») est sorti avec elle (refonte des auras, 2026-10-28) : une aura se lit sur son anneau.
+ */
 export interface Relay {
   state: StateId
-  on: 'self' | 'opponent'
   /** Sa part du total (états à `amount`) */
   amount?: (s: Status) => number
-  /** Son effet vu depuis la cible, quand il agit sur l'adversaire (le `describe` du statut parle de son porteur) */
-  describe?: (s: Status) => string
 }
 
 /**
  * Où se montre un statut :
  * - `tray` : dans la zone d'état, sous l'état générique qu'il alimente ;
- * - `aura` : dans l'en-tête, en anneau qui tourne ; son effet est relayé dans la zone (`relays`) ;
+ * - `aura` : dans l'en-tête, en anneau qui tourne ; rien dans la zone d'état ;
  * - `form` et `skill` : un mécanisme (`StatusDef.mechanic`), lu dans sa définition : règle de forme (druide), dans
  *   l'en-tête ; mécanisme d'une compétence, montré sur son sceau (les jauges de Rétribution), ou par le seul éclat
  *   du sceau et le badge du coup (Pile ou face, Furie des vents).
@@ -137,8 +150,8 @@ export interface StatusPlace {
   onSeal?: true
 }
 
-const tray = (state: StateId, amount?: (s: Status) => number): StatusPlace => ({ place: 'tray', relays: [{ state, on: 'self', amount }] })
-const aura = (...relays: Relay[]): StatusPlace => ({ place: 'aura', relays })
+const tray = (state: StateId, amount?: (s: Status) => number): StatusPlace => ({ place: 'tray', relays: [{ state, amount }] })
+const aura = (): StatusPlace => ({ place: 'aura', relays: [] })
 
 /** Place des statuts qui ne sont pas des mécanismes (bonus et malus) ; celle d'un mécanisme découle de `mechanic`. */
 const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
@@ -158,10 +171,8 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   momentum: tray('power', (s) => s.stacks),
   fear: tray('lostTurn'),
   luckyStrike: tray('extraDie'),
-  duo: tray('extraDie'),
   riposte: tray('reflect'),
   firefly: tray('firefly'),
-  rot: tray('rot'),
   bleed: tray('bleed'),
   whistling: tray('healing', () => WHISTLE_HEAL),
   falseNote: tray('spoiled', (s) => FALSE_NOTE * s.stacks),
@@ -171,31 +182,18 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // Une aura sur son porteur est une modification permanente, de l'identité : elle se lit sur son anneau (sa
   // valeur, `badge`), dans la barre de compétences, et ne se relaie pas dans la zone d'état (0.79.7)
   powerAura: aura(),
-  wildAura: aura(),
-  precisionAura: aura(),
   holyAura: aura(),
-  immunityAura: aura(),
-  // Les coups de l'adversaire font moins mal au nain : c'est l'adversaire qui est affaibli, un malus comme un autre
-  intimidationAura: aura({
-    state: 'weakened',
-    on: 'opponent',
-    amount: (s) => INTIMIDATION * s.stacks,
-    describe: (s) => typeset(`Ses coups font −${INTIMIDATION * s.stacks} dégât${INTIMIDATION * s.stacks > 1 ? 's' : ''}, pour le reste du combat`),
-  }),
-  // Ces trois-là posent de vrais statuts (Poison, Pourriture) : ils s'affichent d'eux-mêmes chez la cible
+  // Refonte des auras (2026-10-28) : l'Immunité de l'Ampoule bénite, ses tours comptés
+  immunity: tray('immunity'),
   frostAura: aura(),
   decoctionAura: aura(),
-  rotAura: aura(),
-  // Sentence (0.114.0) : elle agit sur l'adversaire à chaque soin du porteur, en dégâts directs ; rien de durable à relayer
-  sentence: aura(),
-  // Phase 8, second lot : deux auras d'identité (le Rempart hérissé pose des Épines, la Vindicte de la Ferveur, qui
-  // s'affichent d'eux-mêmes) ; l'Embrasement est un mécanisme (sa place découle de `mechanic`)
-  bristlingRampart: aura(),
+  // Les compétences à charges (refonte des auras, 2026-10-28) : leurs charges se comptent dans la zone d'état
+  sentence: tray('sentence'),
+  // Phase 8, second lot : la Vindicte, une aura d'identité (la Ferveur qu'elle pose s'affiche d'elle-même) ; l'Embrasement
+  // est un mécanisme (sa place découle de `mechanic`)
   vendetta: aura(),
-  // Revue des compétences (I1, I3, I4) : trois auras d'identité. Le Bouclier de foi et la Plaie ouverte posent de vrais
-  // statuts (armure temporaire, Saignement), qui s'affichent d'eux-mêmes ; le Pas de côté se lit sur son anneau
-  faithShield: aura(),
-  sidestep: aura(),
+  faithShield: tray('faithShield'),
+  // Revue des compétences (I4) : la Plaie ouverte pose de vrais Saignements, qui s'affichent d'eux-mêmes
   openWound: aura(),
   // Revue X1 (0.118.1) : l'Aura d'épines, permanente et cumulable, se lit sur son anneau ; le Saignement qu'elle pose
   // s'affiche de lui-même chez l'attaquant
@@ -206,12 +204,9 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   blinded: tray('blinded'),
   hemorrhage: tray('noHealing'),
   sealTheft: tray('bonusStolen'),
-  // Phase 8, lot 3 : cinq auras d'identité. La Feinte se lit sur son anneau (son esquive) ; les autres posent de vrais
-  // statuts (Critique assuré, Poison, Saignement) ou frappent en dégâts directs (Ciel d'orage), qui s'affichent d'eux-mêmes.
-  // Les coups de l'Ivresse sont un mécanisme (leur place découle de `mechanic`)
+  // Phase 8, lot 3 : trois auras d'identité. La Feinte se lit sur son anneau (son esquive) ; les autres frappent en dégâts
+  // directs (Ciel d'orage) ou posent des coups, un mécanisme (leur place découle de `mechanic`)
   feint: aura(),
-  blackSap: aura(),
-  bloodDebt: aura(),
   stormSky: aura(),
   bloodFrenzy: aura(),
   // Les Maîtrises, vague 2 (2026-10-27) : le Dé pipé devient une aura (sa chance de pile se lit sur son anneau) ; cinq auras
@@ -221,21 +216,29 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   luckyStreak: aura(),
   dread: aura(),
   rancor: aura(),
-  stormField: aura(),
   ballad: aura(),
+  // Refonte des auras (2026-10-28) : la Mire de la Visée renforce son prochain critique (l'état sans source depuis la
+  // 0.79.7 reprend du service) ; les fautes du Jugement se comptent chez l'attaquant ; Bastion, Jugement et Brasier, trois
+  // auras d'identité, se lisent sur leur anneau
+  aim: tray('critPower', (s) => s.stacks),
+  fault: tray('fault'),
+  bastion: aura(),
+  judgement: aura(),
+  brasier: aura(),
   stoneFist: tray('power', () => STONE_FIST),
   // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : quatre auras d'identité, qui se lisent sur leur anneau ;
   // la Ferveur de l'Élan et le bonus pris par le Larcin s'affichent d'eux-mêmes
   onrush: aura(),
-  overcharge: aura(),
-  grip: aura(),
+  // Refonte des auras (2026-10-28) : la Surtension et l'Emprise des reliques, pour tout le combat
+  overcharge: tray('overcharge'),
+  grip: tray('grip'),
   pilfer: aura(),
   // Quatrième demande du 2026-10-27 : la Dîme et la Flamme votive comptent leurs charges ; la Sangsue et la Peau de
-  // crapaud, deux auras d'identité, soignent et posent de vrais statuts (Poison), qui s'affichent d'eux-mêmes
+  // crapaud aussi depuis la refonte des auras (2026-10-28)
   tithe: tray('tithed'),
   votiveFlame: tray('votive'),
-  leech: aura(),
-  toadSkin: aura(),
+  leech: tray('leeching'),
+  toadSkin: tray('toadSkin'),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */
@@ -246,14 +249,10 @@ export const STATUS_PLACE = Object.fromEntries(
   }),
 ) as Record<StatusId, StatusPlace>
 
-/** Une part d'un état affiché : le statut qui la verse, et à qui il appartient. */
+/** Une part d'un état affiché : le statut qui la verse. */
 export interface StateSource {
   status: Status
-  /** `self` : statut du combattant lui-même ; `opponent` : aura de son adversaire qui agit sur lui */
-  from: 'self' | 'opponent'
   amount?: number
-  /** Effet de la part, quand il diffère du `describe` du statut (aura qui agit sur l'adversaire) */
-  text?: string
 }
 
 /** Un médaillon de la zone d'état : un état générique, son nombre, et ce qui le compose. */
@@ -267,28 +266,18 @@ export interface TrayState {
 }
 
 /**
- * Les états de la zone d'un combattant, à partir de ses statuts et de ceux de son adversaire (ses auras qui
- * agissent sur lui). Un médaillon par état, dans l'ordre où leurs statuts sont arrivés.
+ * Les états de la zone d'un combattant, à partir de ses statuts. Un médaillon par état, dans l'ordre où leurs statuts
+ * sont arrivés.
  */
-export function trayStates(own: readonly Status[], opponent: readonly Status[]): TrayState[] {
+export function trayStates(own: readonly Status[]): TrayState[] {
   const byId = new Map<StateId, StateSource[]>()
-  const add = (state: StateId, source: StateSource) => {
-    const list = byId.get(state)
-    if (list) list.push(source)
-    else byId.set(state, [source])
-  }
-  for (const [from, list, on] of [
-    ['self', own, 'self'],
-    ['opponent', opponent, 'opponent'],
-  ] as const)
-    for (const status of list)
-      for (const relay of STATUS_PLACE[status.id].relays)
-        if (relay.on === on) add(relay.state, {
-          status,
-          from,
-          ...(relay.amount && { amount: relay.amount(status) }),
-          ...(relay.describe && { text: relay.describe(status) }),
-        })
+  for (const status of own)
+    for (const relay of STATUS_PLACE[status.id].relays) {
+      const source = { status, ...(relay.amount && { amount: relay.amount(status) }) }
+      const list = byId.get(relay.state)
+      if (list) list.push(source)
+      else byId.set(relay.state, [source])
+    }
 
   return [...byId].map(([id, sources]): TrayState => {
     const def = STATES[id]
@@ -374,19 +363,19 @@ type AppliedLike = { type: string; target: 0 | 1; status?: StatusId; result?: { 
 
 /**
  * Où file le signal d'activation d'une compétence ou d'une aura (SignalLayer) : vers la zone d'état de chaque
- * combattant où un état apparaît ou grossit. Un statut de la zone vise son porteur ; une aura posée vise la
- * zone où elle relaie son effet (Aura d'intimidation : chez l'adversaire) ; un mécanisme de compétence ne vise
- * rien. Un statut entièrement bloqué ou annulé ne laisse rien à voir : pas de signal. Undefined : rien à envoyer.
+ * combattant où un état apparaît ou grossit. Un statut de la zone vise son porteur ; une aura posée ou un mécanisme de
+ * compétence ne vise rien. Un statut entièrement bloqué ou annulé ne laisse rien à voir : pas de signal. Undefined :
+ * rien à envoyer.
  */
 export function signalTargets(effects: readonly AppliedLike[]): { to: (0 | 1)[]; polarity: Polarity } | undefined {
   const to = new Set<0 | 1>()
   let polarity: Polarity | undefined
   for (const e of effects) {
     if (e.type !== 'applyStatus' || !e.status || e.result?.kind !== 'applied') continue
-    const place = STATUS_PLACE[e.status]
-    const sides = place.relays.map((r) => (r.on === 'self' ? e.target : ((1 - e.target) as 0 | 1)))
-    for (const side of sides) to.add(side)
-    if (sides.length > 0) polarity ??= place.relays.map((r) => STATES[r.state].polarity)[0]
+    const { relays } = STATUS_PLACE[e.status]
+    if (relays.length === 0) continue
+    to.add(e.target)
+    polarity ??= STATES[relays[0].state].polarity
   }
   return polarity && to.size > 0 ? { to: [...to], polarity } : undefined
 }
@@ -397,13 +386,12 @@ export function signalTargets(effects: readonly AppliedLike[]): { to: (0 | 1)[];
  * pose d'elle-même (l'Aura glaciale : du Poison chez l'adversaire) ; un mécanisme de compétence, rien.
  */
 export function statesPosedBy(effects: readonly Effect[]): { state: StateId; target: 'self' | 'opponent' }[] {
-  const flip = (t: 'self' | 'opponent') => (t === 'self' ? 'opponent' : 'self')
   const found = posedBy(effects).flatMap(({ status, target }) => {
     const place = STATUS_PLACE[status]
-    const relayed = place.relays.map((r) => ({ state: r.state, target: r.on === 'self' ? target : flip(target) }))
+    const relayed = place.relays.map((r) => ({ state: r.state, target }))
     if (place.place === 'tray' || place.place === 'skill') return relayed
     const spread = posedBy(statusEffects(status)).flatMap((p) =>
-      STATUS_PLACE[p.status].relays.map((r) => ({ state: r.state, target: p.target === 'self' ? target : flip(target) })),
+      STATUS_PLACE[p.status].relays.map((r) => ({ state: r.state, target: p.target === 'self' ? target : target === 'self' ? ('opponent' as const) : ('self' as const) })),
     )
     return [...relayed, ...spread]
   })

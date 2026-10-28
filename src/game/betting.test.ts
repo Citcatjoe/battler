@@ -118,7 +118,7 @@ describe('paris : cotes', () => {
   it('cote le dé réel (B7) : l’aura de départ tirée change la cote cachée, comme le combat', () => {
     // Chaque personnage à plusieurs auras de départ, contre le même adversaire : sa cote suit l'aura sur son 1
     for (const c of [createCharacter('brokk'), createCharacter('ervald'), createCharacter('aldric')]) {
-      const auras = c.definition.startAuras!
+      const auras = c.definition.auras!
       const priced = auras.map((aura) => outcomeOf(priceMatch([createCharacter(c.id, { aura }), createCharacter('gorak')], 'aura', 120), winner0).probability)
       expect(new Set(priced).size, c.id).toBeGreaterThan(1)
     }

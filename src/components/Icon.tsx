@@ -151,6 +151,14 @@ export type IconName =
   | 'mastery-light'
   | 'mastery-shadow'
   | 'mastery-magic'
+  // Refonte des auras (2026-10-28) : les trois auras nouvelles, la faute du Jugement, les trois pièces de la Chance
+  | 'bastion'
+  | 'judgement'
+  | 'fault'
+  | 'brasier'
+  | 'shield-coin'
+  | 'volley-coin'
+  | 'hex-coin'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -170,10 +178,8 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   lifesteal: 'lifesteal',
   windFury: 'wind-fury',
   evasion: 'evasion',
-  precisionAura: 'precision-aura',
   frostAura: 'frost-aura',
   powerAura: 'power-aura',
-  intimidationAura: 'intimidation-aura',
   fear: 'fear',
   holyAura: 'holy-aura',
   decoctionAura: 'decoction-aura',
@@ -184,20 +190,16 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   luckyStrike: 'lucky-strike',
   retribution: 'retribution',
   riposte: 'riposte',
-  immunityAura: 'immunity-aura',
+  // Refonte des auras (2026-10-28) : l'Immunité de l'Ampoule bénite garde l'icône de l'ancienne aura
+  immunity: 'immunity-aura',
   firefly: 'fireflies',
   burn: 'burn',
-  rotAura: 'rot-aura',
-  // La Pourriture subie (hors jeu) reprend l'icône de l'aura
-  rot: 'rot-aura',
   // Barde (0.41.0) : une icône pour la compétence et son statut, comme les auras
   whistling: 'whistle',
   falseNote: 'false-note',
   bleed: 'bleed',
-  // Druide : l'empreinte d'ours brûlée (planche v8) va à l'Aura sauvage
   casting: 'casting',
   bearMight: 'bear-might',
-  wildAura: 'grudge-aura',
   // Phase 8, premier lot (0.114.0) : la compétence et son statut partagent l'icône
   quarry: 'quarry',
   sentence: 'sentence',
@@ -205,13 +207,11 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   // Phase 8, second lot : de même
   conflagration: 'conflagration',
   loadedDie: 'loaded-die',
-  bristlingRampart: 'bristling-rampart',
   vendetta: 'vendetta',
   // Le Duo (2026-10-25) : la compétence et son statut partagent l'icône
   duo: 'duo',
   // Revue des compétences (2026-10-25) : la compétence et son statut partagent l'icône
   faithShield: 'faith-shield',
-  sidestep: 'sidestep',
   openWound: 'open-wound',
   // Phase 8, lot 3 : les malus de famille ; dans la zone d'état, leur état emprunte la même icône (`STATE_ICON`)
   guardBreak: 'guard-break',
@@ -221,8 +221,6 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   sealTheft: 'seal-theft',
   // Phase 8, lot 3 : la compétence et son statut partagent l'icône ; les coups de l'Ivresse, celle de leur aura
   feint: 'feint',
-  blackSap: 'black-sap',
-  bloodDebt: 'blood-debt',
   stormSky: 'storm-sky',
   bloodFrenzy: 'blood-frenzy',
   bloodFrenzyStrike: 'blood-frenzy',
@@ -230,7 +228,6 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   luckyStreak: 'lucky-streak',
   dread: 'dread',
   rancor: 'rancor',
-  stormField: 'storm-field',
   ballad: 'ballad',
   stoneFist: 'stone-fist',
   // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : la compétence et son statut partagent l'icône
@@ -245,6 +242,20 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   leech: 'leech',
   toadSkin: 'toad-skin',
   verdigrisCoin: 'verdigris-coin',
+  // Refonte des auras (tranche 6) : les trois pièces de la Chance ; la Rafale de pile, l'icône de sa pièce
+  shieldCoin: 'shield-coin',
+  volleyCoin: 'volley-coin',
+  volleyStrike: 'volley-coin',
+  hexCoin: 'hex-coin',
+  // Refonte des auras (tranches 2 et 3) : la Mire, les coups de la Veine et les notes de la Ballade prennent l'icône de
+  // leur aura ; Bastion, Jugement et sa faute, Brasier, la leur
+  aim: 'feint',
+  veinStrike: 'lucky-streak',
+  balladNote: 'ballad',
+  bastion: 'bastion',
+  judgement: 'judgement',
+  fault: 'fault',
+  brasier: 'brasier',
 }
 
 /**
@@ -270,7 +281,6 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   bleed: 'state-bleed',
   burn: 'state-burn',
   lostTurn: 'state-lost-turn',
-  rot: 'state-rot',
   breach: 'state-breach',
   firefly: 'state-firefly',
   spoiled: 'state-spoiled',
@@ -284,6 +294,15 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   // Quatrième demande du 2026-10-27 : pas d'emblème d'état peint ; l'icône de la compétence en tient lieu
   tithed: 'tithe',
   votive: 'votive-flame',
+  // Refonte des auras (2026-10-28) : de même, les compétences à charges et les statuts des reliques sorties des auras
+  leeching: 'leech',
+  toadSkin: 'toad-skin',
+  sentence: 'sentence',
+  faithShield: 'faith-shield',
+  grip: 'grip',
+  overcharge: 'overcharge',
+  // Refonte des auras (2026-10-28) : la faute du Jugement, son icône peinte
+  fault: 'fault',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

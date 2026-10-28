@@ -72,21 +72,16 @@ export function characterPool(def: Pick<CharacterDef, 'masteries' | 'events'>): 
 }
 
 /**
- * Les auras de départ d'un personnage (second retour du 2026-10-27, B5 : une règle pour tous, aucune liste à la main) :
- * les auras de ses deux maîtrises **dont le besoin est satisfait par son dé de départ**, l'aura posée sur le 1 (la règle
- * de l'offre, « le producteur d'abord » : `reachOf`, `skillNeeds`, hooks.ts ; une consommatrice sans sa ressource ne
- * ferait rien, comme la Sentence chez Ysolde sans sa Sainteté). La première, celle du 1 de son dé vanilla (l'aura par
- * défaut, celle du duel ; le tournoi et la saison en tirent une au hasard, docs/MAITRISES.md § 5.3).
+ * Une aura de personnage est-elle servie par son dé de départ (refonte des auras, docs/REFONTE_AURAS.md § 3, règle 1 ; B5
+ * avant elle) ? Son besoin est satisfait par le dé sans le 1, la règle de l'offre, « le producteur d'abord » (`reachOf`,
+ * `skillNeeds`, hooks.ts ; une consommatrice sans sa ressource ne ferait rien). Une aura qui relance sa propre ressource
+ * ne se sert pas elle-même. `validateRoster` le vérifie pour les deux auras de chaque fiche (`CharacterDef.auras`).
  */
-export function startAurasFor(def: Pick<CharacterDef, 'masteries' | 'events' | 'stats' | 'forms'>): string[] {
-  const one = def.events.find((e) => rollFace(e.trigger) === 1)
-  const rest = def.events.filter((e) => rollFace(e.trigger) !== 1)
-  // La portée de son dé sans le 1 : ce que l'aura y trouve (comme l'offre, qui lit le build sans la compétence offerte ;
-  // une aura qui relance sa propre ressource, le Dé pipé ou le Rempart hérissé, ne se sert pas elle-même)
-  const reach = reachOf({ ...def, events: rest })
-  const served = (aura: CharacterEvent) => skillNeeds(aura).every((h) => reach.has(h))
-  const auras = def.masteries.flatMap(aurasOf).filter(served).map((e) => e.id)
-  return one !== undefined && auras.includes(one.id) ? [one.id, ...auras.filter((id) => id !== one.id)] : auras
+export function auraServed(def: Pick<CharacterDef, 'events' | 'stats' | 'forms'>, auraId: string): boolean {
+  const aura = MASTERY_SKILLS[masteryOfSkill(auraId) ?? 'fury'].find((e) => e.id === auraId)
+  if (!aura || auraOfSkill(aura) === undefined) return false
+  const reach = reachOf({ ...def, events: def.events.filter((e) => rollFace(e.trigger) !== 1) })
+  return skillNeeds(aura).every((h) => reach.has(h))
 }
 
 /** Une maîtrise tient une boucle : au moins six briques (B1 : pas de maîtrise pauvre), et deux auras (le choix du départ). */

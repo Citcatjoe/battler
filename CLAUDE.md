@@ -22,6 +22,7 @@ Le plan de la documentation, et où documenter quoi, est dans `docs/README.md`. 
 - `docs/INTENTION.md` : principes à respecter et pistes ;
 - `docs/RESOLUTION.md` : le livre de règles de la résolution (phases, ordre, application, opposition). Toute modification du déroulé d'un combat commence par ce document ;
 - `docs/STATUTS.md` : bonus et malus (vocabulaire, conditions, catalogue, chantier). À mettre à jour dès qu'on touche un statut, une condition ou un déclencheur ;
+- `docs/EMBLEMES.md` : les emblèmes d'état (un concept, une icône : vocabulaire de la zone d'état, axes et marques, pastilles de déclencheur, grammaire et prompt de génération). Un sort nouveau passe par son § 6 pour savoir s'il faut un statut, un état, une icône ; tout état ou emblème nouveau ou modifié commence par ce document ;
 - `docs/SONS.md` : les règles du son. Une compétence ne choisit pas son son, il se déduit de la nature de ses effets ; tout son nouveau ou modifié commence par ce document ;
 - `docs/MISE_EN_SCENE.md` : les règles de la mise en scène (synchronisation du combat à l'écran : ce qui tombe en même temps que quoi). Un constat de l'utilisateur devient une règle générale, avec son contrôle dans `staging.test.ts` ; toute mise en scène nouvelle ou modifiée commence par ce document ;
 - `docs/PERSONNAGES.md` : philosophie et décisions de design de chaque personnage. À mettre à jour (mesures comprises) dès qu'on touche un personnage, ses stats ou son événement.

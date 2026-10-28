@@ -270,7 +270,7 @@ function idea(series: number, character: string, key: string, name: string, kit:
 }
 
 /* --- Série 100 : les départs d'aujourd'hui, chaque aura de départ du roster sur le 1 (l'avant : l'aura par défaut). --- */
-const SERIES_100: LabIdea[] = CHARACTERS.flatMap((c) => (c.definition.startAuras ?? []).slice(1).map((a) => idea(100, c.id, `start-${a}`, `${skill(a).name} sur le 1`, { one: a })))
+const SERIES_100: LabIdea[] = CHARACTERS.flatMap((c) => (c.definition.auras ?? []).slice(1).map((a) => idea(100, c.id, `start-${a}`, `${skill(a).name} sur le 1`, { one: a })))
 
 /* --- Série 101 : les auras refaites, au départ. --- */
 const SERIES_101: LabIdea[] = [

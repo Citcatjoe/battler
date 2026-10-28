@@ -69,7 +69,8 @@ export const BOSS: CharacterDef = {
   // Ses techniques volées viennent du Rempart et du Sang (exigé par la fiche ; le boss ne grave pas)
   masteries: ['bulwark', 'blood'],
   // Règles v2, phase 5 bis (0.106.0) : une attaque lourde, ses trois techniques sur le 1, le 2 et le 3 (Peau de pierre
-  // et l'Aura d'intimidation se greffent sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées
+  // se greffe sur son coup, Pourfendre le modifie), ses faces 5 et 6 dorées. Refonte des auras (2026-10-28) : l'Aura
+  // d'intimidation sort du jeu, la Riposte d'Aldric la remplace sur son 3
   stats: { maxHp: 70, attackMin: 6, attackMax: 8, armor: 0, dodgeChance: 0.04, critChance: 0.08, critMultiplier: 2 },
   look: { ...rosterDef('morgrut').look, tint: 'brightness(0.72) sepia(0.35) hue-rotate(-20deg) saturate(1.4)' },
   lore: {
@@ -82,7 +83,7 @@ export const BOSS: CharacterDef = {
   events: [
     { ...rosterSkill('stoneskin'), trigger: 'naturalOne' },
     { ...rosterSkill('cleave'), trigger: 'naturalTwo' },
-    { ...rosterSkill('intimidation-aura'), trigger: 'naturalThree' },
+    { ...rosterSkill('riposte'), trigger: 'naturalThree' },
   ],
   relics: [getRelic('mercenary-mail'), getRelic('wolf-fang')],
   forge: [
@@ -140,7 +141,7 @@ export interface CampaignRun {
   /** Graine de la partie : rencontres, réglages, offres et choix par défaut en dérivent */
   seed: number
   championId: string
-  /** L'aura de départ choisie (maîtrises, docs/MAITRISES.md § 5) : sur le 1 de son dé, l'une de ses `startAuras` */
+  /** L'aura de départ choisie (docs/REFONTE_AURAS.md § 3) : sur le 1 de son dé, l'une des deux `auras` de sa fiche */
   aura: string
   /** L'héritage choisi au départ (il n'entre pas dans les gains : il ne se transmet pas à nouveau) */
   heritage?: HeritageItem
@@ -180,8 +181,8 @@ export function opponentOf(encounter: Encounter): Character {
 /** Le nœud en cours (0 à `ACT_FIGHTS`) ; le dernier est le boss. */
 export const isBossNode = (run: CampaignRun) => run.wins === ACT_FIGHTS
 
-/** Les auras de départ d'un champion (la première : l'aura par défaut, celle du duel ; le tournoi en tire une au hasard). */
-export const startAurasOf = (championId: string): readonly string[] => rosterDef(championId).startAuras ?? []
+/** Les deux auras d'un champion (la première : l'aura par défaut, celle du duel ; le tournoi en tire une au hasard). */
+export const startAurasOf = (championId: string): readonly string[] => rosterDef(championId).auras ?? []
 
 /**
  * Les héritages d'un champion qui valent sur le dé de l'aura choisie (docs/MAITRISES.md § 11.2) : une gravure de l'aura
@@ -232,15 +233,15 @@ const DANGER_FIGHTS = 160
  * restent proches de sa base (88 % en moyenne). Mesures : docs/CAMPAGNE.md § 18.3. Le boss garde son plancher du quart.
  * Retour du 2026-10-28 (A13, premiers combats durs) : aux deux premiers nœuds, presque tous les adversaires étaient au
  * plancher, plus forts que la courbe ; leur plancher descend à `EARLY_HP_FLOOR` (environ 30 PV au plus bas), la courbe
- * ne change pas.
+ * ne change pas. Depuis TuningG (2026-10-28), le plancher suit la construction de l'adversaire, pas le nœud : nu (les
+ * `OPPONENT_LAG` + 1 premiers nœuds, ou dépouillé de ses récompenses), `EARLY_HP_FLOOR` ; construit, `HP_FLOOR`.
  */
 export const HP_FLOOR = 0.75
 export const EARLY_HP_FLOOR = 0.65
-export const EARLY_NODES = 2
 export const OPPONENT_LAG = 3
 
-/** Le plancher des PV d'un adversaire normal au nœud `node` (0 : le premier combat) */
-export const hpFloorAt = (node: number) => (node < EARLY_NODES ? EARLY_HP_FLOOR : HP_FLOOR)
+/** Le plancher des PV d'un adversaire normal qui a reçu `rewards` récompenses (0 : nu) */
+export const hpFloorOf = (rewards: number) => (rewards === 0 ? EARLY_HP_FLOOR : HP_FLOOR)
 
 /**
  * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
@@ -287,7 +288,7 @@ function winShare(champions: readonly Character[], opponent: Character, fights: 
 /**
  * Les PV qui mettent les champions de référence au plus près de `target` contre cet adversaire (dichotomie : plus il a
  * de PV, moins ils gagnent ; mêmes graines à chaque essai). Entre `floor` de ses PV d'origine (le quart par défaut, le
- * boss ; `hpFloorAt` pour un adversaire normal) et `ceiling` fois (le triple ; `BOSS_HP_CEILING` pour le boss), `fights`
+ * boss ; `hpFloorOf` pour un adversaire normal) et `ceiling` fois (le triple ; `BOSS_HP_CEILING` pour le boss), `fights`
  * combats par champion de référence et par essai.
  */
 export function tuneHp(references: readonly Character[], opponent: Character, target: number, key: string, floor = 1 / 4, ceiling = 3, fights = REFERENCE_FIGHTS): number {
@@ -321,10 +322,29 @@ export type DangerBand = (typeof DANGER_BANDS)[number]
 export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) => chance >= b.min)!
 
 /**
+ * Un adversaire normal réglé au nœud `node` : le personnage vanilla et les récompenses du nœud, `OPPONENT_LAG` de moins
+ * que le champion (`drawBuild`, 0.112.0) ; ses PV le règlent sur la courbe, jamais sous son plancher (`hpFloorOf`).
+ * **Le retard s'allonge au plancher** (TuningG, 2026-10-28) : quand le plancher arrête le réglage, l'adversaire est trop
+ * fort pour la courbe même à ses PV les plus bas ; il rend sa dernière récompense et se règle de nouveau, jusqu'à nu.
+ * Sans cette règle, un départ faible contre les adversaires construits (Plaie ouverte, Effroi, Ivresse du sang)
+ * rencontrait un adversaire au plancher une fois sur deux en fin d'acte, sous la courbe : il atteignait le boss 16 à
+ * 18 % du temps, contre 25 % pour les plus forts (docs/CAMPAGNE.md § 18.7), alors qu'un départ plus faible ne doit pas
+ * rendre la partie plus dure (docs/MAITRISES.md § 11.3).
+ */
+function tunedOpponent(references: readonly Character[], id: string, node: number, key: string): Pick<Encounter, 'forge' | 'relics' | 'maxHp'> {
+  const base = createCharacter(id).baseStats.maxHp
+  for (let rewards = Math.max(0, node - OPPONENT_LAG); ; rewards--) {
+    const build = drawBuild(id, rewards, seededRng(hashSeed(`${key}:construction`)))
+    const floor = hpFloorOf(rewards)
+    const maxHp = tuneHp(references, opponentBase({ characterId: id, ...build }), NORMAL_TARGETS[node], key, floor)
+    if (rewards === 0 || maxHp > Math.ceil(base * floor)) return { ...build, maxHp }
+  }
+}
+
+/**
  * Les rencontres du nœud en cours : deux adversaires du roster (jamais le champion, jamais le dernier adversaire),
- * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) : son
- * départ, puis les récompenses du nœud, `OPPONENT_LAG` de moins que le champion (`drawBuild`, 0.112.0) ; ses PV le
- * règlent ensuite sur la courbe, jamais sous `hpFloorAt` de sa base, puis il est estimé contre le champion réel.
+ * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) et se
+ * règle sur la courbe (`tunedOpponent`) ; il est ensuite estimé contre le champion réel.
  */
 export function encountersFor(run: CampaignRun): Encounter[] {
   const node = run.wins
@@ -336,12 +356,9 @@ export function encountersFor(run: CampaignRun): Encounter[] {
   const ids = boss ? [BOSS.id] : shuffle(rng, CHARACTER_IDS.filter((id) => id !== run.championId && id !== last)).slice(0, ENCOUNTER_CHOICES)
   return ids.map((id) => {
     const key = `campagne:${run.seed}:${node}:${id}`
-    const build = boss ? { forge: [], relics: [] } : drawBuild(id, Math.max(0, node - OPPONENT_LAG), seededRng(hashSeed(`${key}:construction`)))
-    const opponent = opponentBase({ characterId: id, ...build })
-    const maxHp = boss
-      ? tuneHp(references, opponent, BOSS_TARGET, key, 1 / 4, BOSS_HP_CEILING, BOSS_REFERENCE_FIGHTS)
-      : tuneHp(references, opponent, NORMAL_TARGETS[node], key, hpFloorAt(node))
-    const encounter: Encounter = { characterId: id, maxHp, ...build, ...(boss && { boss: true as const }), chance: 0 }
+    const encounter: Encounter = boss
+      ? { characterId: id, forge: [], relics: [], maxHp: tuneHp(references, opponentBase({ characterId: id, forge: [], relics: [] }), BOSS_TARGET, key, 1 / 4, BOSS_HP_CEILING, BOSS_REFERENCE_FIGHTS), boss: true, chance: 0 }
+      : { characterId: id, ...tunedOpponent(references, id, node, key), chance: 0 }
     return { ...encounter, chance: winShare([champion], opponentOf(encounter), DANGER_FIGHTS, `${key}:danger`) }
   })
 }
@@ -586,7 +603,7 @@ export function recordHeritage(run: CampaignRun) {
  * Les choix de départ mémorisés par champion (écran de choix, retour du 2026-10-27) : l'interrupteur « Activer
  * l'héritage » (actif tant qu'on ne l'a pas coupé ; il ne touche pas au calcul de l'héritage : coupé, la partie part
  * sans), et l'aura de départ (`aura`, maîtrises V3, docs/MAITRISES.md § 11.2 : absente, ou qui n'est plus une de ses
- * `startAuras`, l'écran retombe sur la première).
+ * `auras`, l'écran retombe sur la première).
  */
 export interface CampaignChoice {
   heritage: boolean

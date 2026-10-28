@@ -68,7 +68,11 @@ describe('audit de résolution', () => {
     // (Naraxes n'a pas de Vol de vie) : combat.test.ts le prouve par des combats construits. L'esquive imposée ne laisse
     // plus aucune charge (Esquive améliorée non cumulable, 0.117.1). Plus de purge de ses propres malus dans le roster
     // depuis la 0.113.0 (la Purification ne vise plus que l'adversaire ; l'Aura d'immunité est hors kit)
-    for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base', 'coup de base multiplié', 'duo : la rafale suit l’action du Duo', 'cause : jet greffé', 'esquive imposée', 'esquive imposée, plus aucune charge', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'jauges', 'pile : riposte', 'pile : jauges', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', "dégâts de l'instant", 'dégâts temporaires', 'charges tirées du coup', 'relâche en part', 'compétence épuisée'])
+    // Refonte des auras (2026-10-28) : le Duo frappe en coups bruts (« furie instantanée ») ; la Rétribution a quitté le dé
+    // d'Aldric, ses jauges se contrôlent avec les renvois (C1, plus bas). Pile + Riposte ne se voit plus dans le roster
+    // depuis la Riposte à une charge (mesure d'ensemble) : le coup du jet de Pile ou face la prend avant sa pile ;
+    // combat.test.ts le prouve par des combats construits, comme Pile + Vol de vie
+    for (const k of ['jet remplacé', 'jet greffé', 'compétence greffée', 'compétence qui modifie son coup', 'coup de base', 'coup de base multiplié', 'cause : jet greffé', 'esquive imposée', 'esquive imposée, plus aucune charge', 'bouclier', 'critique assuré', 'réaction thorns', 'réaction lifesteal', 'furie', 'tick frostAura', 'aura glaciale', 'dé imposé', 'estompe', 'repli de purge', 'pile qui touche', 'pièce lancée aussitôt', 'furie instantanée', 'coup brut de 1 à 3', 'statut de forme', 'coups multiples', 'brûlure à une valeur', 'réaction bleed', 'saignement', 'reliques portées', 'relique de caractéristique', 'bonus de relique', 'relique de tour', 'relique de seuil', 'relique de seuil unique', 'relique de coup', 'cause : réaction au coup', 'cause : coup de rafale', 'cause : pièce', 'cause : décompte après son effet', 'vol de vie', 'riposte', 'plaie ouverte pendant le coup, qui attend le suivant', 'réaction d’un statut déjà là au début du coup', 'purge face à un mécanisme', 'coup brut avec relique de face', "dégâts de l'instant", 'dégâts temporaires', 'charges tirées du coup', 'compétence épuisée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
     // 0.110.0 : la Furie part juste après le jet qui la pose (RESOLUTION § 2)
     expect(seen['furie juste après son jet'] ?? 0).toBeGreaterThan(0)
@@ -111,12 +115,12 @@ describe('audit de résolution : les reliques de durée (phase 7)', () => {
 })
 
 describe('audit de résolution : le plafond d’esquive (troisième retour du 2026-10-27, C5)', () => {
-  it('aucune anomalie quand le Pas de côté, gravé, copié et aiguisé, porterait l’esquive au-delà de 75 % ; le plafond est vu', () => {
+  it('aucune anomalie quand le Larcin, gravé et aiguisé, porterait l’esquive au-delà de 75 % ; le plafond est vu', () => {
     const { audit, problems, seen } = createAudit()
-    const step = ENGRAVABLE_SKILLS.find((e) => e.id === 'sidestep')!
+    // Le Pas de côté, qui servait ici, est sorti avec la refonte des auras (2026-10-28) : le Larcin, +10 % par charge
+    const step = ENGRAVABLE_SKILLS.find((e) => e.id === 'pilfer')!
     const elaria = createCharacter('elaria').withForge([
       { op: 'engrave', face: 3, skill: step },
-      { op: 'copy', face: 3, to: 4 },
       { op: 'sharpen', face: 3 },
     ])
     let n = 0
@@ -204,16 +208,15 @@ describe('audit de résolution : un combat qui change dans les fenêtres d’un 
 })
 
 describe('audit de résolution : phase 8, second lot', () => {
-  it('aucune anomalie pour l’Embrasement, le Dé pipé, le Rempart hérissé et la Vindicte gravés chez leurs producteurs, aux rangs I et II, ni pour leurs quatre reliques', () => {
+  it('aucune anomalie pour l’Embrasement, le Dé pipé et la Vindicte gravés chez leurs producteurs, aux rangs I et II, ni pour leurs quatre reliques', () => {
     const { audit, problems, seen } = createAudit()
     // Chaque consommatrice chez ses producteurs : la Brûlure (Thaldrin, Ervald aux Feux follets gravés sur le 4), la pièce
-    // (Naraxes), l'armure temporaire (Brokk ; Morgrut à la Chandelle de veille), les renvois (Aldric ; Brokk à la Riposte
-    // gravée sur le 4)
+    // (Naraxes), les renvois (Aldric ; Brokk à la Riposte gravée sur le 4). Le Rempart hérissé est sorti (refonte des
+    // auras, 2026-10-28) : les Clous de pavois vivent de la Peau de pierre de Brokk
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     const hosts: Record<string, readonly [string, ForgeStep[], string[]][]> = {
       conflagration: [['thaldrin', [], []], ['ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }], []]],
       'loaded-die': [['naraxes', [], []]],
-      'bristling-rampart': [['brokk', [], []], ['morgrut', [], ['vigil-candle']]],
       vendetta: [['aldric', [], []], ['brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }], []]],
     }
     let n = 0
@@ -226,7 +229,7 @@ describe('audit de résolution : phase 8, second lot', () => {
     // Les quatre reliques chez leurs producteurs, seules puis avec la consommatrice de la même ressource
     const relicHosts: Record<string, readonly [string, string][]> = {
       'forge-bellows': [['thaldrin', 'conflagration']],
-      'pavise-nails': [['brokk', 'bristling-rampart']],
+      'pavise-nails': [['brokk', 'thorns']],
       'talion-gauntlet': [['aldric', 'vendetta']],
       'holed-coin': [['naraxes', 'loaded-die']],
     }
@@ -236,23 +239,21 @@ describe('audit de résolution : phase 8, second lot', () => {
           for (const b of CHARACTER_IDS)
             for (let k = 0; k < 3; k++) audit(simulateCombat([(paired ? withSkill(host, partner, 0) : createCharacter(host)).withRelics([getRelic(id)]), createCharacter(b)], { seed: 15000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['embrasement', 'pièce pipée', 'rempart hérissé', 'vindicte', 'relique : shieldBroken', 'relique : reflected', 'relique : heads', 'bonus de relique à conditions'])
+    for (const k of ['embrasement', 'pièce pipée', 'vindicte', 'relique : shieldBroken', 'relique : reflected', 'relique : heads', 'bonus de relique à conditions'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
 describe('audit de résolution : revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () => {
-  it('aucune anomalie pour le Bouclier de foi, la Plaie ouverte, le Pas de côté et les compétences retouchées, gravés chez leurs porteurs, aux rangs I et II', () => {
+  it('aucune anomalie pour le Bouclier de foi, la Plaie ouverte et les compétences retouchées, gravés chez leurs porteurs, aux rangs I et II', () => {
     const { audit, problems, seen } = createAudit()
-    // Chaque nouvelle aura chez son porteur et chez qui la nourrit le mieux : les soins (Ysolde ; Ervald au Vol de vie), les
-    // critiques (Ervald, Elaria), l'esquive (Fanchon, Naraxes) ; puis les retouches qui changent une règle : la Virulence
-    // sans condition, le Rempart qui redonne de l'armure (Brokk, à la Peau de pierre), la Fausse note sur deux coups
+    // Chaque brique chez son porteur et chez qui la nourrit le mieux : les soins (Ysolde ; Ervald au Vol de vie), les
+    // critiques (Ervald, Elaria) ; puis les retouches qui changent une règle : la Virulence sans condition, la Fausse note
+    // sur deux coups. Le Bouclier de foi et la Sentence, des compétences à charges depuis la refonte des auras
     const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
       'faith-shield': [['ysolde', []], ['ervald', []]],
       'open-wound': [['ervald', []], ['elaria', []]],
-      sidestep: [['fanchon', []], ['naraxes', []]],
       virulence: [['ervald', []], ['naraxes', []]],
-      'bristling-rampart': [['brokk', []]],
       'false-note': [['fanchon', []]],
       sentence: [['ysolde', []]],
     }
@@ -264,21 +265,18 @@ describe('audit de résolution : revue des auras et des compétences (docs/REVUE
             for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 18000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['bouclier de foi', 'plaie ouverte', 'rempart hérissé', 'sentence', 'fausse note aiguisée', 'charges tirées d’un statut']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['bouclier de foi', 'plaie ouverte', 'sentence', 'compétence à charges', 'fausse note aiguisée', 'charges tirées d’un statut']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
 describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
-  it('aucune anomalie pour la Feinte, la Sève noire, la Dette de sang, Attiser, le Ciel d’orage, l’Ivresse du sang et le Coup de massue, gravés chez leurs porteurs, aux rangs I et II', () => {
+  it('aucune anomalie pour la Feinte, Attiser, le Ciel d’orage, l’Ivresse du sang et le Coup de massue, gravés chez leurs porteurs, aux rangs I et II', () => {
     const { audit, problems, seen } = createAudit()
-    // Chaque compétence chez ses porteurs, et chez qui produit sa ressource : l'esquive (Naraxes, Fanchon, Elaria), les soins
-    // (Ervald ; Aldric au Vol de vie gravé sur le 4), les renvois (Aldric ; Brokk à la Riposte sur le 4), la Brûlure
-    // (Thaldrin ; Ervald aux Feux follets sur le 4), les critiques (Gorak, Elaria, Ervald)
+    // Chaque compétence chez ses porteurs, et chez qui produit sa ressource : l'esquive (Naraxes, Fanchon, Elaria), la
+    // Brûlure (Thaldrin ; Ervald aux Feux follets sur le 4), les critiques (Gorak, Elaria, Ervald)
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
     const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
       feint: [['naraxes', []], ['fanchon', []], ['elaria', []]],
-      'black-sap': [['ervald', []], ['aldric', [{ op: 'engrave', face: 4, skill: skill('life-steal') }]]],
-      'blood-debt': [['aldric', []], ['brokk', [{ op: 'engrave', face: 4, skill: skill('riposte') }]]],
       stoke: [['thaldrin', []], ['ervald', [{ op: 'engrave', face: 4, skill: skill('firefly') }]]],
       'storm-sky': [['thaldrin', []], ['ervald', []]],
       'blood-frenzy': [['gorak', []], ['elaria', []], ['ervald', []]],
@@ -292,7 +290,7 @@ describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
             for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 19000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['feinte', 'sève noire', 'dette de sang', 'statut qui repart', 'ciel d’orage', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
+    for (const k of ['visée : dodge', 'statut qui repart', 'ciel d’orage', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
@@ -341,7 +339,7 @@ describe('audit de résolution : retour du 2026-10-27 (pièces de la Fortune, su
   it('aucune anomalie pour les pièces gravées (rangs I et II, avec la Pièce trouée et la Pièce lestée), la Médaille de sursis et le Cor d’avant-garde', () => {
     const { audit, problems, seen } = createAudit()
     let n = 0
-    for (const id of ['lucky-coin', 'cursed-coin'])
+    for (const id of ['lucky-coin', 'cursed-coin', 'shield-coin', 'volley-coin', 'hex-coin'])
       for (const host of ['naraxes', 'fanchon', 'gorak'])
         for (const rank of [0, 1]) {
           const steps: ForgeStep[] = [{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === id)! }, ...(rank ? [{ op: 'sharpen' as const, face: 3 }] : [])]
@@ -358,7 +356,7 @@ describe('audit de résolution : retour du 2026-10-27 (pièces de la Fortune, su
     // Les deux camps portent le Cor : le jet revient
     for (const a of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics([getRelic('vanguard-horn')]), createCharacter('gorak').withRelics([getRelic('vanguard-horn')])], { seed: 27000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['pièce d’effet sur pile', 'pièce d’effet sur face', 'relique : heads', 'sursis', 'initiative prise', 'initiative disputée'])
+    for (const k of ['pièce d’effet sur pile', 'pièce d’effet sur face', 'pile critique', 'relique : heads', 'sursis', 'initiative prise', 'initiative disputée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
@@ -380,9 +378,10 @@ describe('audit de résolution : retour du 2026-10-27, règles du moteur (critiq
           audit(simulateCombat([a, foe(b)], { seed: 28000 + n++ }))
           audit(simulateCombat([foe(b), a], { seed: 28000 + n++ }))
         }
-    // Clous de pavois chez Brokk (Peau de pierre), contre un attaquant armé (Aura d'immunité gravée : +1 armure)
+    // Clous de pavois chez Brokk (Peau de pierre), contre un attaquant armé (la Cotte du mercenaire : +1 armure ; l'Aura
+    // d'immunité, qui servait ici, est devenue une relique avec la refonte des auras)
     const nails = createCharacter('brokk').withRelics([getRelic('pavise-nails')])
-    const armored = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skill('immunity-aura') }])
+    const armored = createCharacter('aldric').withRelics([getRelic('mercenary-mail')])
     for (const b of [...CHARACTER_IDS.map((id) => createCharacter(id)), armored])
       for (let k = 0; k < 8; k++) audit(simulateCombat([nails, b], { seed: 28000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
@@ -394,10 +393,11 @@ describe('audit de résolution : retour du 2026-10-27, règles du moteur (critiq
 describe('audit de résolution : retour du 2026-10-27 (C1), la Riposte et la Rétribution sont des coups', () => {
   it('aucune anomalie pour les renvois : esquivés, critiques, contre l’armure, la Rétribution coup par coup, aucun renvoi de renvoi', () => {
     const { audit, problems, seen } = createAudit()
-    // Aldric (Rétribution sur son dé) avec la Riposte gravée, aux rangs I et II, contre tout le roster et contre lui-même ;
-    // des reliques de coup (la Fiole de venin, le Croc de boucher), de moment (Écu cabossé, Conque des vents) et d'armure
-    // (la Cotte de mercenaire)
-    const aldric = [withSkill('aldric', 'riposte', 0), withSkill('aldric', 'riposte', 1)]
+    // Aldric (Riposte sur son dé depuis la refonte des auras) avec la Rétribution gravée sur le 3, sa Riposte aux rangs I et
+    // II, contre tout le roster et contre lui-même ; des reliques de coup (la Fiole de venin, le Croc de boucher), de moment
+    // (Écu cabossé, Conque des vents) et d'armure (la Cotte de mercenaire)
+    const gauges: ForgeStep[] = [{ op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'retribution')! }]
+    const aldric = [withSkill('aldric', 'riposte', 0, gauges), withSkill('aldric', 'riposte', 1, gauges)]
     const kits = [[], ['venom-vial', 'butcher-hook'], ['dented-shield', 'wind-conch', 'mercenary-mail']].map((ids) => ids.map(getRelic))
     let n = 0
     for (const a of aldric)
@@ -438,7 +438,7 @@ describe('audit de résolution : dés forgés (campagne, 0.88.0)', () => {
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     // Crescendo (hors kit, 0.107.0) : seule une gravure le joue, son coup qui monte. Une Furie aiguisée (0.110.0) ajoute
     // un coup à sa rafale ; elle ne pose plus deux charges (la Furie à plusieurs charges ne vient plus d'un dé forgé)
-    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'duo : la rafale suit l’action du Duo', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const k of ['dé forgé', 'face dorée', 'compétence gravée au-delà du 3', 'furie instantanée', 'coup qui monte', 'furie juste après son jet', 'furie aiguisée']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
@@ -448,7 +448,7 @@ describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
     let n = 0
     // Chaque dé de départ (l'aura choisie sur le 1), contre tout le roster, de chaque côté
     for (const a of CHARACTER_IDS)
-      for (const aura of createCharacter(a).definition.startAuras ?? [])
+      for (const aura of createCharacter(a).definition.auras ?? [])
         for (const b of CHARACTER_IDS) {
           audit(simulateCombat([createCharacter(a, { aura }), createCharacter(b)], { seed: 29000 + n++ }))
           audit(simulateCombat([createCharacter(b), createCharacter(a, { aura })], { seed: 29000 + n++ }))
@@ -457,9 +457,7 @@ describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
     const hosts: Record<string, readonly string[]> = {
       'lucky-streak': ['naraxes', 'fanchon'],
       dread: ['ervald', 'aldric'],
-      'rot-aura': ['ervald', 'aldric'],
       rancor: ['aldric'],
-      'storm-field': ['ysolde', 'thaldrin'],
       ballad: ['fanchon'],
       prayer: ['ysolde'],
       wither: ['ervald', 'aldric'],
@@ -472,7 +470,7 @@ describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
         for (const rank of [0, 1])
           for (const b of CHARACTER_IDS) audit(simulateCombat([withSkill(host, id, rank), createCharacter(b)], { seed: 29000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['luckyStreak', 'dread', 'rotAura', 'rancor', 'stormField', 'ballad', 'stoneFist'].map((s) => `maîtrises : ${s}`).concat(['poing de pierre', 'pièce pipée', 'plaie ouverte']))
+    for (const k of ['luckyStreak', 'dread', 'rancor', 'ballad', 'stoneFist'].map((s) => `maîtrises : ${s}`).concat(['poing de pierre', 'pièce pipée', 'plaie ouverte']))
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
@@ -508,16 +506,15 @@ describe('audit de résolution : le contenu du soin (quatrième demande du 2026-
 })
 
 describe('audit de résolution : le contenu des maîtrises (quatrième demande du 2026-10-27)', () => {
-  it('aucune anomalie pour l’Élan, la Surtension, l’Emprise, le Larcin et l’Onde de choc gravés chez leurs porteurs, aux rangs I et II', () => {
+  it('aucune anomalie pour l’Élan, le Larcin et l’Onde de choc gravés chez leurs porteurs, aux rangs I et II, ni pour les trois reliques sorties des auras', () => {
     const { audit, problems, seen } = createAudit()
     const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
-    // L'Emprise chez Aldric : un producteur de malus (Flétrissure) d'abord, sur le 4 ; la Surtension avec la Foudre
+    // La Chaîne du geôlier chez Aldric : un producteur de malus (Flétrissure) d'abord, sur le 4 ; la Pointe de paratonnerre
+    // avec la Foudre
     const wither: ForgeStep[] = [{ op: 'engrave', face: 4, skill: skill('wither') }]
     const bolt: ForgeStep[] = [{ op: 'engrave', face: 4, skill: skill('thunderbolt') }]
     const hosts: Record<string, readonly [string, ForgeStep[]][]> = {
       onrush: [['gorak', []], ['morgrut', []]],
-      overcharge: [['thaldrin', []], ['ysolde', bolt]],
-      grip: [['ervald', []], ['aldric', wither]],
       pilfer: [['ervald', []], ['aldric', []]],
       shockwave: [['brokk', []], ['aldric', []], ['morgrut', []]],
     }
@@ -529,8 +526,20 @@ describe('audit de résolution : le contenu des maîtrises (quatrième demande d
             audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 33000 + n++ }))
             audit(simulateCombat([createCharacter(b), withSkill(host, id, rank, before)], { seed: 33000 + n++ }))
           }
+    // Refonte des auras (2026-10-28) : l'Immunité, l'Emprise et la Surtension, des reliques posées au premier tour
+    const relicHosts: Record<string, readonly [string, ForgeStep[]][]> = {
+      'blessed-phial': [['brokk', []], ['ysolde', []], ['fanchon', []]],
+      'gaoler-chain': [['ervald', []], ['aldric', wither]],
+      'lightning-rod': [['thaldrin', []], ['ysolde', bolt]],
+    }
+    for (const [id, list] of Object.entries(relicHosts))
+      for (const [host, before] of list)
+        for (const b of CHARACTER_IDS) {
+          audit(simulateCombat([createCharacter(host).withForge(before).withRelics([getRelic(id)]), createCharacter(b)], { seed: 33000 + n++ }))
+          audit(simulateCombat([createCharacter(b), createCharacter(host).withForge(before).withRelics([getRelic(id)])], { seed: 33000 + n++ }))
+        }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['élan', 'maîtrises : onrush', 'larcin : bonus pris', 'maîtrises : pilfer', 'onde de choc', 'coups multiples', 'ciel d’orage'])
+    for (const k of ['élan', 'maîtrises : onrush', 'larcin : bonus pris', 'maîtrises : pilfer', 'onde de choc', 'coups multiples', 'ciel d’orage', 'relique de tour', 'immunité : malus bloqué'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

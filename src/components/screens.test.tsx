@@ -8,6 +8,7 @@ import { ARENAS, HOME_ARENAS, RANDOM_ARENA } from '../game/arenas'
 import { simulateCombat, type CombatResult } from '../game/combat'
 import { seededRng } from '../game/rng'
 import { CHARACTER_IDS, CHARACTERS, createCharacter, ENGRAVABLE_SKILLS } from '../game/roster'
+import { skillById } from '../game/skills'
 import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type HeritageItem } from '../game/campaign'
 import type { PendingReward } from '../game/offers'
 import { Character } from '../game/character'
@@ -347,8 +348,9 @@ describe('écrans', () => {
     // pas de Pile ou face ni de Furie
     // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé. La Garde brisée (lot 3) y
     // entre : elle double le coup qui la consomme (label « Garde brisée ×2 » sous le dé du défenseur)
-    // La Dîme (2026-10-27) y entre comme la Riposte : elle réagit au coup qui touche son porteur
-    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte', 'tithe'].sort())
+    // La Dîme (2026-10-27) y entre comme la Riposte : elle réagit au coup qui touche son porteur ; la Peau de crapaud aussi,
+    // une compétence à charges depuis la refonte des auras (2026-10-28)
+    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte', 'tithe', 'toadSkin'].sort())
     for (const id of STATUS_IDS) {
       const def = STATUSES[id]
       if (def.coinToss || def.extraStrikes || isAura(id)) expect(isSurcharge(id), def.name).toBe(false)
@@ -518,9 +520,9 @@ describe('écrans', () => {
 
   it('la fiche d’une compétence porte son aura ou son mécanisme', () => {
     const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
-    // Aura de sainteté : sa vie, son plafond et sa maîtrise
+    // Aura de sainteté : sa vie, sa montée (refonte des auras) et sa maîtrise
     const holy = sheet('holy-aura')
-    for (const text of ["jusqu'à la fin du combat", '2 charges au plus']) expect(holy).toContain(text)
+    for (const text of ["jusqu'à la fin du combat", 'un cran de plus tous les deux tours']) expect(holy).toContain(text)
     expect(textOf(holy)).toContain('Aura · Lumière')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
@@ -529,8 +531,8 @@ describe('écrans', () => {
   it('compendium (second retour du 2026-10-27, B4) : plus d’onglet Auras ; un seul index Compétences, auras comprises ; chaque brique dit sa maîtrise', () => {
     expect(COMPENDIUM_SECTIONS.map((s) => s.id)).not.toContain('auras')
     const ids = compendiumSkills().map((s) => s.event.id)
-    // Auras (Sève noire, Ivresse du sang, Épines) et compétences (Pourfendre) dans le même index, chacune une fois
-    expect(ids).toEqual(expect.arrayContaining(['black-sap', 'blood-frenzy', 'thorns', 'cleave']))
+    // Auras (Ciel d'orage, Ivresse du sang, Épines) et compétences (Pourfendre) dans le même index, chacune une fois
+    expect(ids).toEqual(expect.arrayContaining(['storm-sky', 'blood-frenzy', 'thorns', 'cleave']))
     expect(new Set(ids).size).toBe(ids.length)
     // Toute brique, aura comprise, a sa fiche dans l'onglet Compétences
     for (const s of compendiumSkills()) expect(skillLink(s.event), s.event.id).toEqual({ section: 'skills', id: s.event.id })
@@ -738,24 +740,22 @@ describe('écrans', () => {
   it('tous les statuts et effets s’affichent', () => {
     const statuses = STATUS_IDS.map((id, i) => ({ id, stacks: i + 1, ...(i % 2 ? { turns: 2 } : {}) }))
     render(<HpBar side={0} name="x" hp={10} maxHp={20} />)
-    render(<StatusTray states={trayStates(statuses, statuses)} cast={{ bearer: fighters[0], opponent: fighters[1] }} />)
+    render(<StatusTray states={trayStates(statuses)} cast={{ bearer: fighters[0], opponent: fighters[1] }} />)
     // Chaque état a son infobulle : nom, effet actuel, tours restants
-    const tray = renderToString(<StatusTray states={trayStates([{ id: 'poison', stacks: 2, turns: 3 }], [])} />)
+    const tray = renderToString(<StatusTray states={trayStates([{ id: 'poison', stacks: 2, turns: 3 }])} />)
     expect(tray).toContain('role="tooltip"')
     expect(tray).toContain('Poison')
     expect(tray).toContain('3 tours restants')
-    // Regroupés par moment : l'Aura d'intimidation adverse fait un Affaibli, qui dit d'où il vient ; la Fausse note,
-    // qui ne gâche que le prochain coup, après l'armure, a son propre état
+    // Regroupés par moment : Affaibli et la Fausse note, qui ne gâche que le prochain coup, après l'armure, a son propre état
     const weak = renderToString(
       <StatusTray
-        states={trayStates([{ id: 'falseNote', stacks: 1 }], [{ id: 'intimidationAura', stacks: 1 }])}
+        states={trayStates([{ id: 'falseNote', stacks: 1 }, { id: 'weakened', stacks: 1 }])}
         cast={{ bearer: createCharacter('fanchon'), opponent: createCharacter('brokk') }}
       />,
     )
     expect(weak.match(/data-state="/g)).toHaveLength(2)
     expect(weak).toContain('Affaibli −1')
     expect(weak).toContain('Coup gâché −4')
-    expect(weak).toContain('Aura d&#x27;intimidation (Brokk)')
     // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille. L'Aura de
     // puissance, hors kit depuis le d6, est gravée sur le 3 de Gorak
     const powerAura = ENGRAVABLE_SKILLS.find((e) => e.id === 'power-aura')!
@@ -814,17 +814,17 @@ describe('écrans', () => {
   })
 
   it('zone d’état : un état épuisé sort par son propre médaillon, et un état reposé pendant sa sortie ne se double pas', () => {
-    const [poison] = trayStates([{ id: 'poison', stacks: 2 }], [])
+    const [poison] = trayStates([{ id: 'poison', stacks: 2 }])
     let items = trayAfter([], [poison])
     // Épuisé : le même médaillon reste, sortant (il montre son 0, puis s'efface)
     items = trayAfter(items, [])
     expect(items).toEqual([{ state: poison, leaving: true }])
     // Reposé pendant sa sortie : il reprend vie dans ce médaillon, sans second médaillon à côté
-    const [again] = trayStates([{ id: 'poison', stacks: 3 }], [])
+    const [again] = trayStates([{ id: 'poison', stacks: 3 }])
     items = trayAfter(items, [again])
     expect(items).toEqual([{ state: again, leaving: false }])
     // Un nouvel état s'ajoute après les autres, l'ordre est gardé
-    items = trayAfter(items, trayStates([{ id: 'fear', stacks: 1 }, { id: 'poison', stacks: 3 }], []))
+    items = trayAfter(items, trayStates([{ id: 'fear', stacks: 1 }, { id: 'poison', stacks: 3 }]))
     expect(items.map((i) => i.state.id)).toEqual(['poison', 'lostTurn'])
   })
 
@@ -893,7 +893,8 @@ describe('écrans', () => {
   })
 
   it('Rétribution (retour du 2026-10-28, A4) : le compteur de son sceau dit le nombre de coups, jamais les dégâts gardés', () => {
-    const aldric = createCharacter('aldric')
+    // La Rétribution, dans la réserve du Rempart depuis la refonte des auras : gravée sur le 3 d'Aldric
+    const aldric = createCharacter('aldric').withForge([{ op: 'engrave', face: 3, skill: skillById('retribution') }])
     // L'écran rend son texte sans les commentaires de React, et le compteur est seul dans sa pastille
     const count = (statuses: Parameters<typeof SkillBar>[0]['statuses']) =>
       renderToString(<SkillBar character={aldric} side={0} statuses={statuses} />)

@@ -2,6 +2,7 @@ import type { CharacterDef } from './character'
 import { DIE_FACES, faceTrigger, HIT_NOUNS, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { auraOfSkill } from './states'
+import { SKILLS } from './skills'
 import { STATUSES } from './statuses'
 import { typeset } from './typography'
 
@@ -241,10 +242,13 @@ function playTargets(base: ForgeBase, state: ForgeState, op: ForgeOpKind): numbe
   return targets
 }
 
-/** Une opération est-elle jouable en partie dans cet état ? Valide au journal, et permise par la règle du jeu. */
+/**
+ * Une opération est-elle jouable en partie dans cet état ? Valide au journal, et permise par la règle du jeu. Une gravure
+ * d'une compétence sortie du catalogue (refonte des auras, 2026-10-28 : une sauvegarde, un héritage) ne l'est plus.
+ */
 function playable(base: ForgeBase, state: ForgeState, step: ForgeStep) {
   if (!stepValid(base, state, step) || !playTargets(base, state, step.op).includes(step.face)) return false
-  return step.op !== 'engrave' || !isAuraSkill(step.skill)
+  return step.op !== 'engrave' || (step.skill.id in SKILLS && !isAuraSkill(step.skill))
 }
 
 /* ---------- Le personnage forgé ---------- */

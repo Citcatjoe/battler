@@ -131,12 +131,13 @@ export interface CharacterDef {
    */
   masteries: readonly [MasteryId, MasteryId]
   /**
-   * Ses auras de départ (docs/MAITRISES.md § 5) : les auras de ses deux maîtrises que son dé de départ sert (B5, le producteur d'abord, une règle pour tous), choisies
-   * au début d'une campagne (`createCharacter(id, { aura })`) ; la première est celle de son dé vanilla (le duel ; le
-   * tournoi et la saison en tirent une au hasard, § 5.3). Dérivées par la règle (`startAurasFor`, masteries.ts), remplies
-   * par le roster : jamais listées à la main.
+   * Ses deux auras (refonte des auras, docs/REFONTE_AURAS.md § 3, 2026-10-28) : nommées sur sa fiche, comme sa signature,
+   * chacune prise dans l'une de ses deux maîtrises et servie par son dé de départ (`auraServed`, masteries.ts ;
+   * `validateRoster` le vérifie). La première est celle de son dé vanilla (l'aura par défaut, le duel) ; la campagne
+   * laisse choisir (`createCharacter(id, { aura })`), le tournoi et la saison en tirent une au hasard. Absentes : un
+   * personnage hors du roster (le boss, un essai), sans aura de départ ni règle du 3e tour.
    */
-  startAuras?: readonly string[]
+  auras?: readonly [string, string]
   /**
    * Signature : l'id de sa compétence de personnage, fixe sur la face 2 de son dé (Maîtrises, 2026-10-27 ; elle était sur le
    * 1 de la 0.111.0 à la 0.120.0). Sans signature (Morgrut), sa face 2 est nue.
@@ -244,11 +245,11 @@ export class Character {
   }
 
   /**
-   * Même personnage, une autre de ses auras de départ sur le 1 de son dé (le choix du départ de campagne, docs/MAITRISES.md
-   * § 5) ; la forme de sa face 1 (le druide) reste. Une aura hors de ses `startAuras` est une erreur.
+   * Même personnage, son autre aura sur le 1 de son dé (le choix du départ de campagne, docs/MAITRISES.md § 5) ; la forme
+   * de sa face 1 (le druide) reste. Une aura hors de ses `auras` est une erreur.
    */
   withStartAura(skillId: string) {
-    if (!this.#def.startAuras?.includes(skillId)) throw new Error(`${this.id} : ${skillId} n'est pas une de ses auras de départ`)
+    if (!this.#def.auras?.includes(skillId)) throw new Error(`${this.id} : ${skillId} n'est pas une de ses auras`)
     const first = this.#def.events.find((e) => rollFace(e.trigger) === 1)
     const aura: CharacterEvent = { ...skillById(skillId), trigger: faceTrigger(1), ...(first?.form && { form: first.form }) }
     return new Character({ ...this.#def, events: [aura, ...this.#def.events.filter((e) => rollFace(e.trigger) !== 1)] })

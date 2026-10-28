@@ -85,12 +85,9 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   // Ferveur (Encens de l'abbaye) : le prochain coup qui touche fait plus
   momentum: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   frostAura: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
-  // Une aura de coup (puissance, sauvage, force de l'ours) vaut autant de fois qu'il y a de coups : elle
-  // consomme les coups de plus (Furie, Coup de chance, Duo), revue des signatures du 2026-10-24
+  // Une aura de coup (puissance, force de l'ours) vaut autant de fois qu'il y a de coups : elle consomme les coups de plus
+  // (Furie, Coup de chance, Duo), revue des signatures du 2026-10-24
   powerAura: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
-  intimidationAura: { side: 'self' },
-  // 0.107.0 : +5 % de critique par charge en plus du multiplicateur : elle fait aussi critiquer
-  precisionAura: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'stat:critMultiplier'] },
   fear: { side: 'opponent' },
   holyAura: { side: 'self', produces: ['moment:heal'] },
   decoctionAura: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
@@ -101,63 +98,56 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   cursedCoin: { side: 'self', produces: ['moment:heads', 'status:stunned'] },
   // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
-  immunityAura: { side: 'self' },
+  immunity: { side: 'self' },
   riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant', 'moment:reflect'] },
   retribution: { side: 'self', consumes: ['moment:hurt'] },
   // Luciole : l'adversaire ne peut plus esquiver, et prend 2 de plus
   firefly: { side: 'opponent', produces: ['moment:hit', 'damage:instant'] },
-  // Les Maîtrises (2026-10-27) : l'Aura de pourriture pose sa Pourriture au critique
-  rotAura: { side: 'self', consumes: ['moment:crit'], produces: ['status:rot', 'damage:temporal'] },
-  rot: { side: 'opponent', produces: ['damage:temporal'] },
   whistling: { side: 'self', produces: ['moment:heal'] },
   falseNote: { side: 'opponent' },
   casting: { side: 'self' },
   bearMight: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
-  // 0.107.0 : elle écrit l'attaque (minimum et maximum), au lieu d'un bonus après le critique
-  wildAura: { side: 'self', consumes: ['moment:hit'], produces: ['stat:attackMin', 'stat:attackMax', 'damage:instant'] },
   // Phase 8, premier lot (0.114.0) : la Curée, une rafale comme la Furie ; la Sentence vit des soins du porteur, la
   // Rancune des coups qu'il encaisse
   quarry: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   sentence: { side: 'self', consumes: ['moment:heal'], produces: ['damage:instant'] },
   grudge: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:crit'] },
   // Phase 8, second lot : l'Embrasement lit la Brûlure au coup qui touche et la retire (une brique qui la lit aussi en voit
-  // moins) ; le Rempart hérissé vit des armures vidées (et en redonne une, revue des auras, A3), la Vindicte des renvois.
-  // Le Dé pipé, une aura depuis les Maîtrises (M9) : comme la Pièce lestée, il vit des pièces et en fait tomber plus sur pile
+  // moins) ; la Vindicte vit des renvois. Le Dé pipé, une aura depuis les Maîtrises (M9) : comme la Pièce lestée, il vit
+  // des pièces et en fait tomber plus sur pile
   conflagration: { side: 'self', consumes: ['moment:hit', 'status:burn'], hinders: ['status:burn'], produces: ['damage:temporal'] },
   // Depuis le 2026-10-27 (AURAS.md § 3), il fait aussi critiquer et esquiver ; il attend toujours une pièce pour s'offrir
   loadedDie: { side: 'self', consumes: ['moment:heads'], produces: ['moment:heads', 'moment:crit', 'moment:dodge'] },
-  bristlingRampart: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['status:thorns', 'status:bleed', 'damage:temporal', 'status:bonusArmor', 'moment:shieldBreak'] },
   vendetta: { side: 'self', consumes: ['moment:reflect'], produces: ['status:momentum', 'damage:instant'] },
-  // Le Duo (barde) : le dé de plus de Coup de chance, sous son nom
-  duo: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
-  // Revue des compétences (I1, I3) : le Bouclier de foi vit des soins et donne de l'armure temporaire (qui se vide) ; le
-  // Pas de côté fait esquiver ; la Plaie ouverte, refaite avec les Maîtrises (M9), fait saigner à chaque coup qui touche
+  // Le Duo (barde, refonte des auras du 2026-10-28) : trois coups bruts, une rafale comme la Curée
+  duo: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  // Revue des compétences (I1, I3) : le Bouclier de foi vit des soins et donne de l'armure temporaire (qui se vide) ; la
+  // Plaie ouverte, refaite avec les Maîtrises (M9), fait saigner à chaque coup qui touche
   faithShield: { side: 'self', consumes: ['moment:heal'], produces: ['status:bonusArmor', 'moment:shieldBreak'] },
-  sidestep: { side: 'self', produces: ['moment:dodge'] },
-  openWound: { side: 'self', consumes: ['moment:hit'], produces: ['status:bleed', 'damage:temporal'] },
+  // Refonte des auras (2026-10-28) : la Plaie ouverte de nouveau au critique (la Saignée d'Elaria)
+  openWound: { side: 'self', consumes: ['moment:crit'], produces: ['status:bleed', 'damage:temporal'] },
   // Phase 8, lot 3 : les malus de famille ; Garde brisée part sur un coup qui touche (relation « modifie ») et le double
   guardBreak: { side: 'opponent', consumes: ['moment:hit'], produces: ['damage:instant'] },
   jinx: { side: 'opponent' },
   blinded: { side: 'opponent' },
   hemorrhage: { side: 'opponent' },
   sealTheft: { side: 'opponent' },
-  // Phase 8, lot 3 : la Feinte vit des esquives et en donne (son esquive), puis des critiques ; la Sève noire vit des soins,
-  // la Dette de sang des renvois ; le Ciel d'orage frappe en dégâts directs ; l'Ivresse du sang vit des critiques, en
-  // donne (chaque pose de plus) et frappe ; le Coup de massue fait perdre une action (`stunned`, déjà au registre)
-  feint: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge', 'status:guaranteedCrit', 'moment:crit'] },
-  blackSap: { side: 'self', consumes: ['moment:heal'], produces: ['status:poison', 'damage:temporal'] },
-  bloodDebt: { side: 'self', consumes: ['moment:reflect'], produces: ['status:bleed', 'damage:temporal'] },
+  // Phase 8, lot 3 : la Feinte vit des esquives et en donne (son esquive), puis des critiques ; le Ciel d'orage frappe en
+  // dégâts directs ; l'Ivresse du sang vit des critiques, en donne (chaque pose de plus) et frappe ; le Coup de massue fait
+  // perdre une action (`stunned`, déjà au registre)
+  // Refonte des auras (2026-10-28) : la Visée vit des esquives (et en donne) et met en joue (la Mire, que le critique lâche)
+  feint: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge', 'status:aim'] },
   stormSky: { side: 'self', produces: ['damage:instant', 'damage:lightning'] },
   bloodFrenzy: { side: 'self', consumes: ['moment:crit'], produces: ['moment:crit', 'status:bloodFrenzyStrike', 'moment:hit', 'damage:instant'] },
   bloodFrenzyStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   // Les Maîtrises, vague 2 (2026-10-27) : la Veine vit des 6 et donne un jet complet ; l'Effroi vit des critiques et fait
-  // perdre une action (et fait critiquer, chaque pose de plus) ; la Rancœur et le Champ d'orage vivent des coups reçus ; la
-  // Ballade des coups qui touchent ; le Poing de pierre, posé avec l'armure temporaire, frappe plus fort tant qu'elle tient
-  luckyStreak: { side: 'self', consumes: ['face:max'], produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
+  // perdre une action (et fait critiquer, chaque pose de plus) ; la Rancœur vit des coups reçus ; la Ballade des coups qui
+  // touchent ; le Poing de pierre, posé avec l'armure temporaire, frappe plus fort tant qu'elle tient
+  // Refonte des auras (2026-10-28) : la Veine donne des coups bruts, une rafale comme l'Ivresse du sang
+  luckyStreak: { side: 'self', consumes: ['face:max'], produces: ['status:veinStrike', 'moment:hit', 'damage:instant'] },
   dread: { side: 'self', consumes: ['moment:crit'], produces: ['status:fear', 'moment:crit'] },
   rancor: { side: 'self', consumes: ['moment:hurt'], produces: ['status:momentum', 'damage:instant'] },
-  stormField: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant', 'damage:lightning'] },
-  ballad: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
+  ballad: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal', 'status:balladNote', 'damage:instant'] },
   stoneFist: { side: 'self', consumes: ['moment:hit'], produces: ['damage:instant'] },
   // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : l'Élan vit des gros coups, fait critiquer (donc des gros
   // coups) et donne de la Ferveur ; la Surtension vit des éclairs ; l'Emprise des malus de l'adversaire ; le Larcin
@@ -176,6 +166,21 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   leech: { side: 'self', consumes: ['moment:hit', 'status:bleed'], produces: ['moment:heal'] },
   toadSkin: { side: 'self', consumes: ['moment:hurt'], produces: ['status:poison', 'damage:temporal'] },
   verdigrisCoin: { side: 'self', produces: ['moment:heads', 'status:poison', 'damage:temporal'] },
+  // Refonte des auras (tranche 6) : les trois pièces nouvelles ; la Rafale de pile, des coups bruts comme l'Ivresse
+  shieldCoin: { side: 'self', produces: ['moment:heads', 'status:bonusArmor', 'moment:shieldBreak'] },
+  volleyCoin: { side: 'self', produces: ['moment:heads', 'status:volleyStrike', 'moment:hit', 'damage:instant'] },
+  volleyStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  hexCoin: { side: 'self', produces: ['moment:heads', 'status:weakened'] },
+  // Refonte des auras (tranches 2 et 3) : la Mire part au critique ; les coups de la Veine ; les notes de la Ballade et
+  // leur refrain ; le Bastion vit des armures vidées et en redonne ; le Jugement vit des coups reçus et met des fautes, à
+  // seuil (la Peur) ; le Brasier attise ou allume la Brûlure
+  aim: { side: 'self', consumes: ['moment:crit'], produces: ['damage:instant'] },
+  veinStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
+  balladNote: { side: 'self', produces: ['damage:instant'] },
+  bastion: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['damage:instant', 'status:bonusArmor', 'moment:shieldBreak'] },
+  judgement: { side: 'self', consumes: ['moment:hurt'], produces: ['status:fault', 'status:fear'] },
+  fault: { side: 'opponent' },
+  brasier: { side: 'self', produces: ['status:burn', 'damage:temporal'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -304,6 +309,9 @@ export function relicNeeds(r: Relic): Hook[] {
   const on = r.trigger?.type === 'strike' ? triggerHook(r.trigger.on) : undefined
   if (on && RARE_MOMENTS.includes(on)) needs.push(on)
   if (r.headsChance) needs.push('moment:heads')
+  // Refonte des auras (2026-10-28) : une relique qui pose un statut attend ce qu'il attend (la Pointe de paratonnerre, des
+  // éclairs ; la Chaîne du geôlier, des malus chez l'adversaire), la règle des compétences (`skillNeeds`)
+  for (const x of r.effects ?? []) if (x.type === 'applyStatus') for (const h of STATUS_HOOKS[x.status].consumes ?? []) if (RARE_MOMENTS.includes(h)) needs.push(h)
   return needs
 }
 
@@ -334,7 +342,7 @@ export function skillNeeds(e: CharacterEvent): Hook[] {
 /**
  * Ce qui est à la portée d'un combattant, la règle « le producteur d'abord » (décision du parent, 2026-10-25) : ce que
  * produisent ses compétences (son dé), ses reliques et ses formes, et l'esquive ou le critique s'il en a la chance. Une
- * seule fonction pour l'offre (`offerableSkills`, `offerableRelics`) et pour les auras de départ (`startAurasFor`, B5).
+ * seule fonction pour l'offre (`offerableSkills`, `offerableRelics`) et pour les auras de chaque fiche (`auraServed`).
  */
 export function reachOf(c: {
   events: readonly CharacterEvent[]

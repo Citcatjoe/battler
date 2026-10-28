@@ -78,7 +78,7 @@ it('rapport des combats joués', () => {
       // Thaldrin…), qui ne se reconstruit plus
       const listed = /compétences : (.+)$/.exec(text.split('\n')[side + 1])?.[1]
       // L'aura de départ (maîtrises, 0.122.0) : choisie en campagne, tirée en tournoi et en saison, elle n'est pas écrite
-      // dans la trace ; c'est celle de ses `startAuras` dont le dé forgé redonne la liste de sa ligne (l'aura par défaut
+      // dans la trace ; c'est celle de ses `auras` dont le dé forgé redonne la liste de sa ligne (l'aura par défaut
       // d'abord)
       const starts = id === BOSS.id ? [campaignCharacter(id)] : [undefined, ...startAurasOf(id)].map((aura) => createCharacter(id, { aura }))
       const forged = (c: Character) => {

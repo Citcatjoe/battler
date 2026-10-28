@@ -1531,6 +1531,14 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         const harms = beat.effects.some((e) => e.type === 'damage' && e.target === beat.side)
         const strikes = beat.effects.some((e) => e.type === 'damage' && e.target !== beat.side)
         const base = hp
+        // Le moment d'écran d'une aura (refonte des auras, § 3.2, M60) : son étape lance sa scène (le Ciel d'orage à deux
+        // éclairs, le Brasier sur une Brûlure de 3 et plus) ; ses coups tombent sur les impacts, sa pose au premier
+        const hits = beat.effects.reduce((n, e) => n + (e.type === 'damage' && e.target !== beat.side ? (e.parts?.length ?? 1) : 0), 0)
+        const posed = beat.effects.reduce((n, e) => Math.max(n, e.type === 'applyStatus' && e.target !== beat.side && e.result.kind === 'applied' ? e.stacks : 0), 0)
+        const sceneId = idle(beat.effects) ? undefined : STATUSES[beat.status].scene?.({ hits, posed })
+        const timing = sceneId ? SCENE_EVENTS[sceneId] : undefined
+        if (sceneId) emit({ channel: 'scene', scene: { id: sceneId, source: beat.side, target: sceneTarget(sceneId, beat.side) } })
+        if (timing && !strikes) wait(timing.impacts[0], 'rythme de la scène')
         // Une aura qui foudroie l'adversaire au début du tour de son porteur (Ciel d'orage) : il incante (M55)
         const casting = castsMagicAt(beat.side, beat.effects)
         if (casting) castFor(beat.side, true)
@@ -1544,8 +1552,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             log(statusTickLog(beat.side, beat.status, beat.effects, fighters))
           },
           {
-            ...(strikes ? { blows: 'reaction' as const, cue: null, impact: () => 'hit' as const } : harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
-            ...(fromRing && { signal: beat.status, ring: true as const }),
+            ...(strikes ? { blows: 'reaction' as const, cue: null, impact: () => timing?.sound ?? ('hit' as const) } : harms && { cue: STATUSES[beat.status].tickSound ?? ('rot' as const) }),
+            ...(timing && strikes && { schedule: timing.impacts, lead: 0 }),
+            // Une scène porte l'aura (comme une relique à scène) : pas de signal de l'anneau, ses coups tombent sur ses impacts
+            ...(fromRing && !timing && { signal: beat.status, ring: true as const }),
             reactions: answersOf(beat),
           },
         )
@@ -1770,7 +1780,8 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
         setDice({ ...shown, coin: { heads: beat.heads, status: beat.status }, forced: beat.forced })
         // Le résultat tombe d'un bloc : la pièce, le « ding » de la réussite et le texte flottant
         if (beat.heads) sound('coinWin')
-        showFx({ source: beat.side, title: beat.heads ? 'Pile !' : 'Face…', effects: [] })
+        // Pile critique (A14) : le titre le dit, le chiffre doublé suit dans l'effet
+        showFx({ source: beat.side, title: beat.heads ? (beat.crit ? 'Pile critique !' : 'Pile !') : 'Face…', effects: [] })
         for (const relic of onHeads) {
           snapped.add(relic.id)
           stageBeat(relic)

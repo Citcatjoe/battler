@@ -8,15 +8,20 @@
  */
 import { REWARD_HP, STAT_KEYS } from './character'
 import { DAMAGE_SOURCES, type DamageKind } from './damage'
-import { AURA_DUE_TURN, beatEffects, diceOf, effectiveStats, firstSide, healingOf, MAX_DODGE, MAX_EXTRA_JETS, relicIsInert, startAuraOf, type AppliedEffect, type Attack, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
+import { AURA_DUE_TURN, beatEffects, critDoubled, diceOf, effectiveStats, firstSide, healingOf, MAX_DODGE, MAX_EXTRA_JETS, relicIsInert, startAuraOf, type AppliedEffect, type Attack, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
 import {
-  BLACK_SAP_POISON,
-  BLOOD_DEBT_BLEED,
+  AIM_CAP,
+  AIM_STEP,
+  BASTION_ARMOR,
+  BASTION_LOSS,
   BLOOD_FRENZY_STRIKES,
   charges,
+  RANCOR_FERVOR,
+  riseLevel,
+  VEIN_STRIKES,
   directDamage,
   ONRUSH_FERVOR,
   CONFLAGRATION_TIMES,
@@ -25,8 +30,6 @@ import {
   isMechanic,
   isStealable,
   OPEN_WOUND_BLEED,
-  RAMPART_ARMOR,
-  RAMPART_THORNS,
   STATUSES,
   STORM_SKY_LOSS,
   VENDETTA_MOMENTUM,
@@ -432,7 +435,7 @@ export function createAudit() {
         })
       }
       // Sentence (0.114.0) : chaque soin de son porteur (une étape qui lui rend des PV) la fait réagir une fois, avec
-      // l'étape soignante pour cause, de ses charges du moment (le registre le dit) ; sa perte ne soigne rien : sans chaîne
+      // l'étape soignante pour cause (le registre dit la perte) ; sa perte ne soigne rien : sans chaîne
       if (b.type === 'statusReaction' && b.status === 'sentence') {
         const held = find(prev.statuses[b.side], 'sentence')
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
@@ -450,52 +453,50 @@ export function createAudit() {
           const reacted = caused.some((x) => x.type === 'statusReaction' && x.status === 'sentence' && x.side === side)
           if (!reacted && !caused.some((x) => x.state.hp.some((h) => h === 0)) && s.hp.every((h) => h > 0)) flag('sentence non déclenchée', r, i, `${b.type} côté ${side}`)
         }
-      // Phase 8, second lot. Rempart hérissé : il réagit au coup qui vide une armure temporaire de son porteur (ce coup pour
-      // cause), de ses charges du début du coup : 2 Épines acérées et 2 armure temporaire par charge (l'armure depuis la
-      // revue des auras, A3). Vindicte : à chaque étape où son porteur renvoie des dégâts (Riposte, Rétribution), cette
+      // L'Immunité (Ampoule bénite, refonte des auras, 2026-10-28) : tant qu'il la porte, aucun malus ne lui est posé ; un
+      // blocage à son nom vise un malus, sur qui la porte
+      for (const e of beatEffects(b)) {
+        if (e.type !== 'applyStatus') continue
+        const shielded = !!find(prev.statuses[e.target], 'immunity')
+        const malus = STATUSES[e.status].polarity === 'negative' && !isMechanic(e.status)
+        if (e.result.kind === 'blocked' && e.result.by === 'immunity') {
+          if (!shielded || !malus) flag('immunité : blocage faux', r, i, e.status)
+          else see('immunité : malus bloqué')
+        } else if (shielded && malus && e.result.kind === 'applied' && find(s.statuses[e.target], 'immunity')) flag('immunité : malus posé quand même', r, i, e.status)
+      }
+      // Les compétences à charges (refonte des auras, 2026-10-28) : Sangsue, Peau de crapaud, Sentence, Bouclier de foi
+      // perdent une charge à chaque réaction, et partent à la dernière
+      if (b.type === 'statusReaction' && (['leech', 'toadSkin', 'sentence', 'faithShield'] as StatusId[]).includes(b.status)) {
+        const held = find(prev.statuses[b.side], b.status)
+        if (!held || (find(s.statuses[b.side], b.status)?.stacks ?? 0) !== held.stacks - 1) flag('compétence à charges : charge non consommée', r, i, b.status)
+        else see('compétence à charges')
+      }
+      // Phase 8, second lot. Vindicte : à chaque étape où son porteur renvoie des dégâts (Riposte, Rétribution), cette
       // étape pour cause : 6 Ferveur par charge. Embrasement : au coup qui touche un adversaire qui brûle, il relâche sa
       // Brûlure (3 fois ce qu'elle ferait encore perdre), l'éteint et perd une charge. Revue des compétences (I1, I4) : le
-      // Bouclier de foi à chaque soin reçu, 2 armure temporaire par charge ; la Plaie ouverte à chaque critique de son
-      // porteur qui touche, de ses charges du début du coup, 3 Saignement par charge à l'adversaire. Chacun part à chaque
+      // Bouclier de foi à chaque soin reçu, 3 armure temporaire (plus son rang) ; la Plaie ouverte à chaque coup de son
+      // porteur qui touche, de ses charges du début du coup, Saignement par charge à l'adversaire. Chacun part à chaque
       // fois, sauf si le combat finit avant (dans une fenêtre de l'étape, de proche en proche)
       const diedAfter = (j: number) => [r.beats[j], ...descendantsOf(r, j)].some((x) => x.state.hp.includes(0))
       const reactedTo = (j: number, side: Side, id: string) => r.beats.some((x) => x.cause === j && x.type === 'statusReaction' && x.status === id && x.side === side)
-      if (b.type === 'statusReaction' && b.status === 'bristlingRampart') {
-        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'bristlingRampart') : undefined
-        const [thorns, armor] = b.effects
-        if (b.trigger !== 'shieldBroken' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'shieldBroken')) flag('rempart hors d’une armure vidée', r, i, `${b.trigger}`)
-        else if (
-          b.effects.length !== 2 ||
-          thorns?.type !== 'applyStatus' ||
-          thorns.status !== 'thorns' ||
-          thorns.target !== b.side ||
-          thorns.stacks !== RAMPART_THORNS * charges(held) ||
-          armor?.type !== 'applyStatus' ||
-          armor.status !== 'bonusArmor' ||
-          armor.target !== b.side ||
-          armor.stacks !== RAMPART_ARMOR * charges(held)
-        )
-          flag('rempart : épines ou armure fausses', r, i, JSON.stringify(b.effects))
-        else see('rempart hérissé')
-      }
       if (b.type === 'statusReaction' && b.status === 'faithShield') {
         const held = find(prev.statuses[b.side], 'faithShield')
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
         const healedBy = !!cause && beatEffects(cause).some((e) => e.type === 'heal' && e.target === b.side && e.amount > 0)
         const armor = b.effects[0]
         if (b.trigger !== 'healed' || !held || !healedBy) flag('bouclier de foi hors d’un soin', r, i, `${b.trigger} ${cause?.type}`)
-        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== b.side || armor.stacks !== FAITH_SHIELD_ARMOR * charges(held))
+        // Un Sceau de vol (Confiscation) détourne l'armure vers l'adversaire (`stolenBy`)
+        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== (armor.stolenBy ? 1 - b.side : b.side) || armor.stacks !== FAITH_SHIELD_ARMOR + (held.power ?? 0))
           flag('bouclier de foi : armure fausse', r, i, JSON.stringify(b.effects))
         else see('bouclier de foi')
       }
       if (b.type === 'statusReaction' && b.status === 'openWound') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'openWound') : undefined
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
-        // Refaite avec les Maîtrises (M9) : à chaque coup qui touche (une pile qui touche comprise)
-        const touched =
-          (!!strikeIn(cause) && strikeIn(cause)!.attacker === b.side && !strikeIn(cause)!.dodged && !strikeIn(cause)!.replaced) || (cause?.type === 'coin' && cause.side === b.side && cause.heads)
+        // Refonte des auras (2026-10-28) : à chacun de ses critiques qui touche
+        const crit = !!strikeIn(cause) && strikeIn(cause)!.attacker === b.side && strikeIn(cause)!.crit && !strikeIn(cause)!.dodged && !strikeIn(cause)!.replaced
         const wound = b.effects[0]
-        if (b.trigger !== 'hit' || !touched || !held) flag('plaie ouverte hors d’un coup qui touche', r, i, `${b.trigger} ${cause?.type}`)
+        if (b.trigger !== 'crit' || !crit || !held) flag('plaie ouverte hors d’un critique', r, i, `${b.trigger} ${cause?.type}`)
         else if (b.effects.length !== 1 || wound?.type !== 'applyStatus' || wound.status !== 'bleed' || wound.target !== 1 - b.side || wound.stacks !== OPEN_WOUND_BLEED * charges(held))
           flag('plaie ouverte : saignement faux', r, i, JSON.stringify(b.effects))
         else see('plaie ouverte')
@@ -521,38 +522,34 @@ export function createAudit() {
         else if (find(s.statuses[1 - b.side], 'burn') || (find(s.statuses[b.side], 'conflagration')?.stacks ?? 0) !== held.stacks - 1) flag('embrasement : brûlure ou charge restée', r, i, '')
         else see('embrasement')
       }
-      // Phase 8, lot 3 : la Feinte réagit à chaque esquive de son porteur (un coup adverse esquivé, pas le raté d'un
-      // aveuglé), un critique assuré ; la Sève noire à chaque soin reçu, 4 Poison par charge à l'adversaire ; la Dette de
-      // sang à chaque renvoi, 3 Saignement par charge ; l'Ivresse du sang à chaque critique qui touche, deux coups bruts.
-      // Chacune de ses charges du début de l'étape (du coup pour l'esquive et le critique)
+      // Phase 8, lot 3 : la Visée (la Feinte jusqu'à la refonte des auras) réagit à chaque esquive de son porteur (un coup
+      // adverse esquivé, pas le raté d'un aveuglé) et à chacun de ses coups qui touche (une pile qui touche comprise) : la
+      // Mire, +1 au multiplicateur de son prochain critique ; l'Ivresse du sang à chaque critique qui touche, deux coups
+      // bruts. Chacune de ses charges du début du coup
       if (b.type === 'statusReaction' && b.status === 'feint') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'feint') : undefined
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
-        const dodged = !!strikeIn(cause) && strikeIn(cause)!.attacker === 1 - b.side && strikeIn(cause)!.dodged && !strikeIn(cause)!.blindedBy
-        const crit = b.effects[0]
-        if (b.trigger !== 'dodge' || !dodged || !held) flag('feinte hors d’une esquive', r, i, `${b.trigger} ${cause?.type}`)
-        // Un Sceau de vol (Confiscation) détourne le critique vers l'adversaire (`stolenBy`)
-        else if (b.effects.length !== 1 || crit?.type !== 'applyStatus' || crit.status !== 'guaranteedCrit' || crit.target !== (crit.stolenBy ? 1 - b.side : b.side) || crit.stacks !== 1)
-          flag('feinte : critique faux', r, i, JSON.stringify(b.effects))
-        else see('feinte')
+        const blow = strikeIn(cause)
+        const dodged = !!blow && blow.attacker === 1 - b.side && blow.dodged && !blow.blindedBy
+        const touched = (!!blow && blow.attacker === b.side && !blow.dodged && !blow.replaced) || (cause?.type === 'coin' && cause.side === b.side && cause.heads)
+        const aim = b.effects[0]
+        if (!held || !((b.trigger === 'dodge' && dodged) || (b.trigger === 'hit' && touched))) flag('visée hors d’une esquive ou d’un coup qui touche', r, i, `${b.trigger} ${cause?.type}`)
+        // Un Sceau de vol (Confiscation) détourne la Mire vers l'adversaire (`stolenBy`)
+        else if (b.effects.length !== 1 || aim?.type !== 'applyStatus' || aim.status !== 'aim' || aim.target !== (aim.stolenBy ? 1 - b.side : b.side) || aim.stacks !== AIM_STEP)
+          flag('visée : mire fausse', r, i, JSON.stringify(b.effects))
+        else if ((find(s.statuses[aim.target], 'aim')?.stacks ?? 0) > AIM_CAP) flag('visée : mire au-delà de son plafond', r, i, '')
+        else see(`visée : ${b.trigger}`)
       }
-      if (b.type === 'statusReaction' && b.status === 'blackSap') {
-        const held = find(prev.statuses[b.side], 'blackSap')
+      // La Mire : son critique la lâche entière, et ce critique a compté son multiplicateur
+      if (b.type === 'statusReaction' && b.status === 'aim') {
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
-        const healedBy = !!cause && beatEffects(cause).some((e) => e.type === 'heal' && e.target === b.side && e.amount > 0)
-        const poison = b.effects[0]
-        if (b.trigger !== 'healed' || !held || !healedBy) flag('sève noire hors d’un soin', r, i, `${b.trigger} ${cause?.type}`)
-        else if (b.effects.length !== 1 || poison?.type !== 'applyStatus' || poison.status !== 'poison' || poison.target !== 1 - b.side || poison.stacks !== BLACK_SAP_POISON * charges(held))
-          flag('sève noire : poison faux', r, i, JSON.stringify(b.effects))
-        else see('sève noire')
-      }
-      if (b.type === 'statusReaction' && b.status === 'bloodDebt') {
-        const held = find(prev.statuses[b.side], 'bloodDebt')
-        const bleed = b.effects[0]
-        if (b.trigger !== 'reflected' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'reflected')) flag('dette de sang hors d’un renvoi', r, i, `${b.trigger}`)
-        else if (b.effects.length !== 1 || bleed?.type !== 'applyStatus' || bleed.status !== 'bleed' || bleed.target !== 1 - b.side || bleed.stacks !== BLOOD_DEBT_BLEED * charges(held))
-          flag('dette de sang : saignement faux', r, i, JSON.stringify(b.effects))
-        else see('dette de sang')
+        const blow = strikeIn(cause)
+        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'aim') : undefined
+        const base = b.cause !== undefined ? effectiveStats(r.fighters[b.side], stateBefore(b.cause).statuses[b.side].filter((x) => x.id !== 'aim')).critMultiplier : 0
+        if (b.trigger !== 'crit' || !blow?.crit || blow.attacker !== b.side || !held) flag('mire hors d’un critique', r, i, `${b.trigger}`)
+        else if (find(s.statuses[b.side], 'aim')) flag('mire restée après son critique', r, i, '')
+        else if (blow.critMultiplier < base + held.stacks) flag('mire : multiplicateur oublié', r, i, `×${blow.critMultiplier} pour ${base} + ${held.stacks}`)
+        else see(held.stacks > 1 ? 'mire : plusieurs esquives lâchées' : 'mire lâchée')
       }
       if (b.type === 'statusReaction' && b.status === 'bloodFrenzy') {
         const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'bloodFrenzy') : undefined
@@ -603,12 +600,12 @@ export function createAudit() {
         else if ((find(s.statuses[b.side], 'votiveFlame')?.stacks ?? 0) !== held.stacks - 1) flag('flamme votive : charge non consommée', r, i, '')
         else see('flamme votive')
       }
-      // Sangsue : chaque coup qui touche rend 1 PV par charge de Saignement de l'adversaire et par charge, lue avant que la
+      // Sangsue : un coup qui touche rend 1 PV (plus son rang) par charge de Saignement de l'adversaire, lue avant que la
       // plaie coule ; sans Saignement, rien ne part
       if (b.type === 'statusReaction' && b.status === 'leech') {
         const held = find(prev.statuses[b.side], 'leech')
         const bleed = find(prev.statuses[1 - b.side], 'bleed')?.stacks ?? 0
-        const want = held ? LEECH_HEAL * charges(held) * bleed : 0
+        const want = held ? (LEECH_HEAL + (held.power ?? 0)) * bleed : 0
         const heal = b.effects[0]
         if (b.trigger !== 'hit' || !held || bleed === 0) flag('sangsue hors d’un coup sur une plaie', r, i, `${b.trigger} ${bleed}`)
         else if (
@@ -621,16 +618,16 @@ export function createAudit() {
           flag('sangsue : soin faux', r, i, JSON.stringify(b.effects))
         else see('sangsue')
       }
-      // Peau de crapaud : chaque coup reçu, 1 Poison par charge à l'attaquant
+      // Peau de crapaud : un coup reçu, Poison 2 (plus son rang) à l'attaquant
       if (b.type === 'statusReaction' && b.status === 'toadSkin') {
         const held = find(prev.statuses[b.side], 'toadSkin')
         const poison = b.effects[0]
         if (b.trigger !== 'hurt' || !held) flag('peau de crapaud hors d’un coup reçu', r, i, `${b.trigger}`)
-        else if (b.effects.length !== 1 || poison?.type !== 'applyStatus' || poison.status !== 'poison' || poison.target !== 1 - b.side || poison.stacks !== TOAD_POISON * charges(held))
+        else if (b.effects.length !== 1 || poison?.type !== 'applyStatus' || poison.status !== 'poison' || poison.target !== 1 - b.side || poison.stacks !== TOAD_POISON + (held.power ?? 0))
           flag('peau de crapaud : poison faux', r, i, JSON.stringify(b.effects))
         else see('peau de crapaud')
       }
-      // Ciel d'orage : au début de chaque tour de son porteur, avant son coup, un éclair de 1 PV par charge à l'adversaire
+      // Ciel d'orage : au début de chaque tour de son porteur, avant son coup, un éclair de 1 PV par cran à l'adversaire
       if (b.type === 'statusTick' && b.status === 'stormSky') {
         const held = find(prev.statuses[b.side], 'stormSky')
         const bolt = b.effects[0]
@@ -639,11 +636,116 @@ export function createAudit() {
           b.effects.length !== 1 ||
           bolt?.type !== 'damage' ||
           bolt.target !== 1 - b.side ||
-          bolt.amount !== directDamage(prev.statuses[b.side], STORM_SKY_LOSS, 'lightning') * charges(held) ||
-          (bolt.parts?.length ?? 1) !== charges(held)
+          bolt.amount !== directDamage(prev.statuses[b.side], STORM_SKY_LOSS, 'lightning') * riseLevel(held) ||
+          (bolt.parts?.length ?? 1) !== riseLevel(held)
         )
           flag('ciel d’orage : éclairs faux', r, i, JSON.stringify(b.effects))
-        else see('ciel d’orage')
+        else see(riseLevel(held) > 1 ? 'ciel d’orage : deux éclairs' : 'ciel d’orage')
+      }
+      // La montée (refonte des auras, 2026-10-28) : un statut qui monte gagne une charge chaque fois qu'il agit (plafond
+      // `every` × `cap`), dans l'étape de son effet ; son cran est celui que son effet a lu
+      if ((b.type === 'statusTick' || b.type === 'statusReaction') && STATUSES[b.status].rises) {
+        const { every, cap } = STATUSES[b.status].rises!
+        const was = find(prev.statuses[b.side], b.status)
+        const now = find(s.statuses[b.side], b.status)
+        if (!was || !now) flag('montée : statut absent', r, i, b.status)
+        else if (now.stacks !== Math.min(was.stacks + 1, every * cap)) flag('montée : charge fausse', r, i, `${b.status} ${was.stacks} → ${now.stacks}`)
+        else see(riseLevel(now) > riseLevel(was) ? `montée : un cran (${b.status})` : `montée : une charge (${b.status})`)
+      }
+      // Le 1 du dé sur une aura qui monte déjà là : un cran entier (Q3)
+      for (const e of beatEffects(b))
+        if (e.type === 'applyStatus' && STATUSES[e.status].rises && e.result.kind === 'applied') {
+          const was = find(prev.statuses[e.target], e.status)
+          const now = find(s.statuses[e.target], e.status)
+          const { every, cap } = STATUSES[e.status].rises!
+          if (was && now && b.type === 'event' && now.stacks !== Math.min(was.stacks + every * e.stacks, every * cap)) flag('montée : la pose ne monte pas d’un cran', r, i, `${e.status} ${was.stacks} → ${now.stacks}`)
+          else if (was && now && b.type === 'event') see('montée : une pose, un cran')
+        }
+      // Bastion : son armure temporaire vidée, l'attaquant perd 3 PV par charge (dégâts directs) et il regagne 2 d'armure
+      if (b.type === 'statusReaction' && b.status === 'bastion') {
+        const held = find(prev.statuses[b.side], 'bastion')
+        const [loss, armor] = b.effects
+        if (b.trigger !== 'shieldBroken' || !held || b.cause === undefined || !opensMoment(r, b.cause, b.side, 'shieldBroken')) flag('bastion hors d’une armure vidée', r, i, `${b.trigger}`)
+        else if (
+          loss?.type !== 'damage' ||
+          loss.target !== 1 - b.side ||
+          loss.amount !== directDamage(prev.statuses[b.side], BASTION_LOSS * charges(held), 'strike') ||
+          (armor !== undefined && (armor.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.stacks !== BASTION_ARMOR * charges(held)))
+        )
+          flag('bastion : riposte ou armure fausse', r, i, JSON.stringify(b.effects))
+        else see('bastion')
+      }
+      // Jugement : chaque coup qui touche son porteur (une pile qui touche comprise) met une faute par charge à l'attaquant
+      if (b.type === 'statusReaction' && b.status === 'judgement') {
+        const held = find(prev.statuses[b.side], 'judgement')
+        const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const blow = strikeIn(cause)
+        const struck = (!!blow && blow.attacker === 1 - b.side && !blow.dodged) || (cause?.type === 'coin' && cause.side === 1 - b.side && cause.heads)
+        const fault = b.effects[0]
+        if (b.trigger !== 'hurt' || !held || !struck) flag('jugement hors d’un coup reçu', r, i, `${b.trigger} ${cause?.type}`)
+        else if (fault?.type !== 'applyStatus' || fault.status !== 'fault' || fault.target !== 1 - b.side || fault.stacks !== charges(held))
+          flag('jugement : faute fausse', r, i, JSON.stringify(b.effects))
+        else see('jugement')
+      }
+      // Un statut à seuil (la faute, la note) : la pose qui l'amène au seuil le fait partir et ses effets tombent dans
+      // l'étape ; sous le seuil, il reste
+      for (const e of beatEffects(b))
+        if (e.type === 'applyStatus' && STATUSES[e.status].threshold && e.result.kind === 'applied') {
+          const { at } = STATUSES[e.status].threshold!
+          const before = find(prev.statuses[e.target], e.status)?.stacks ?? 0
+          const after = find(s.statuses[e.target], e.status)?.stacks ?? 0
+          const effects = beatEffects(b)
+          const k = effects.indexOf(e)
+          const fear = effects.slice(k + 1).some((x) => x.type === 'applyStatus' && x.status === 'fear' && x.target === e.target)
+          const refrain = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target !== e.target && (x.parts?.length ?? 1) === at)
+          if (before + e.result.stacks >= at) {
+            if (after !== 0) flag('seuil : le statut reste', r, i, `${e.status} ${before} → ${after}`)
+            else if (e.status === 'fault' && !fear) flag('jugement : pas de Peur à la 3e faute', r, i, '')
+            else if (e.status === 'balladNote' && !refrain && s.hp[1 - e.target] > 0) flag('ballade : pas de refrain à la 4e note', r, i, '')
+            else see(`seuil atteint : ${e.status}`)
+          } else if (after !== before + e.result.stacks) flag('seuil : charges fausses', r, i, `${e.status} ${before} + ${e.result.stacks} → ${after}`)
+        }
+      // Ballade : chaque coup qui touche, des PV par charge et une note
+      if (b.type === 'statusReaction' && b.status === 'ballad') {
+        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'ballad') : undefined
+        const [heal, note] = b.effects
+        if (b.trigger !== 'hit' || !held) flag('ballade hors d’un coup qui touche', r, i, `${b.trigger}`)
+        else if (heal?.type !== 'heal' || heal.target !== b.side || note?.type !== 'applyStatus' || note.status !== 'balladNote' || note.stacks !== 1) flag('ballade : soin ou note faux', r, i, JSON.stringify(b.effects))
+        else see('ballade')
+      }
+      // Brasier : au début de chacun de ses tours, la Brûlure de l'adversaire +1 par charge (Brûlure 1 s'il ne brûle pas)
+      if (b.type === 'statusTick' && b.status === 'brasier') {
+        const held = find(prev.statuses[b.side], 'brasier')
+        const burn = find(prev.statuses[1 - b.side], 'burn')?.stacks ?? 0
+        const e = b.effects[0]
+        if (b.phase !== 'turnStart' || !held) flag('brasier hors du début de tour', r, i, `${b.phase}`)
+        else if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'burn' || e.target !== 1 - b.side || e.stacks !== burn + charges(held)) flag('brasier : brûlure fausse', r, i, JSON.stringify(b.effects))
+        else see(burn > 0 ? 'brasier : attise' : 'brasier : allume')
+      }
+      // Aura de puissance : chaque gros coup qui touche, +1 jusqu'à +6 (une charge, cinq au plus)
+      if (b.type === 'statusReaction' && b.status === 'powerAura') {
+        const blow = strikeIn(b.cause !== undefined ? r.beats[b.cause] : undefined)
+        const was = find(prev.statuses[b.side], 'powerAura')
+        const now = find(s.statuses[b.side], 'powerAura')
+        if (b.trigger !== 'heavy' || !blow || blow.attacker !== b.side || blow.dodged || !(blow.crit || (blow.multiplier ?? 1) >= 2)) flag('puissance hors d’un gros coup', r, i, `${b.trigger}`)
+        else if (!was || !now || now.stacks !== was.stacks + 1 || now.stacks > STATUSES.powerAura.maxStacks!) flag('puissance : charge fausse', r, i, `${was?.stacks} → ${now?.stacks}`)
+        else see('puissance : gros coup')
+      }
+      // Rancœur : chaque coup reçu, +3 Ferveur (sans cumul ; son rang s'y ajoute)
+      if (b.type === 'statusReaction' && b.status === 'rancor') {
+        const held = find(prev.statuses[b.side], 'rancor')
+        const fervor = b.effects[0]
+        if (b.trigger !== 'hurt' || !held) flag('rancœur hors d’un coup reçu', r, i, `${b.trigger}`)
+        else if (fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.stacks !== RANCOR_FERVOR + (held.power ?? 0)) flag('rancœur : ferveur fausse', r, i, JSON.stringify(b.effects))
+        else see('rancœur')
+      }
+      // Veine : chaque 6, deux coups bruts par charge, tout de suite
+      if (b.type === 'statusReaction' && b.status === 'luckyStreak') {
+        const held = find(prev.statuses[b.side], 'luckyStreak')
+        const strikes = b.effects[0]
+        if (b.trigger !== 'naturalMax' || !held) flag('veine hors d’un 6', r, i, `${b.trigger}`)
+        else if (strikes?.type !== 'applyStatus' || strikes.status !== 'veinStrike' || strikes.stacks !== VEIN_STRIKES * charges(held)) flag('veine : coups faux', r, i, JSON.stringify(b.effects))
+        else see('veine')
       }
       // Le contenu des maîtrises (quatrième demande du 2026-10-27). Élan : +3 Ferveur au porteur, après un gros coup qui
       // touche (critique ou coup ×2 et plus) ; un Sceau de vol peut la détourner
@@ -682,7 +784,6 @@ export function createAudit() {
         else see(`action perdue : ${b.status}`)
       }
       for (const side of [0, 1] as const) {
-        if (opensMoment(r, i, side, 'shieldBroken') && find(prev.statuses[side], 'bristlingRampart') && !diedAfter(i) && !reactedTo(i, side, 'bristlingRampart')) flag('rempart non déclenché', r, i, `côté ${side}`)
         if (opensMoment(r, i, side, 'reflected') && find(prev.statuses[side], 'vendetta') && !diedAfter(i) && !reactedTo(i, side, 'vendetta')) flag('vindicte non déclenchée', r, i, `côté ${side}`)
         if (find(prev.statuses[side], 'faithShield') && beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0) && !diedAfter(i) && !reactedTo(i, side, 'faithShield'))
           flag('bouclier de foi non déclenché', r, i, `${b.type} côté ${side}`)
@@ -695,16 +796,15 @@ export function createAudit() {
         let rolled = -1
         if (b.type === 'attack' && b.attack.preset) for (let j = i - 1; j >= 0 && rolled < 0; j--) if (r.beats[j].type === 'roll') rolled = j
         const base = rolled >= 0 ? stateBefore(rolled) : prev
-        if (touch && find(base.statuses[side], 'openWound') && !diedAfter(i) && !reactedTo(i, side, 'openWound')) flag('plaie ouverte non déclenchée', r, i, `côté ${side}`)
+        // La Plaie ouverte, au critique depuis la refonte des auras : contrôlée plus bas, avec la Visée
         // Les Maîtrises, vague 2 (2026-10-27) : chaque aura nouvelle réagit à son moment ; le Poing de pierre part avec l'armure
         const reacts: [boolean, StatusId][] = [
           [crit, 'dread'],
-          [crit, 'rotAura'],
           [touch, 'ballad'],
           [hurt, 'rancor'],
-          [hurt, 'stormField'],
-          // La Veine ne donne pas de jets sur un dé de plus (A7, 2026-10-28)
-          [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed && !inExtraJet(r, i, side), 'luckyStreak'],
+          // La Veine donne des coups bruts, pas des jets : elle part aussi sur un dé de plus (pas sur un coup brut)
+          [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed, 'luckyStreak'],
+          [hurt, 'judgement'],
           [opensMoment(r, i, side, 'shieldBroken'), 'stoneFist'],
           // Quatrième demande du 2026-10-27 : la Dîme et la Peau de crapaud à chaque coup reçu, la Sangsue (sur une plaie)
           [hurt, 'tithe'],
@@ -724,10 +824,10 @@ export function createAudit() {
           }
         if (crit && find(prev.statuses[side], 'bloodFrenzy') && !diedAfter(i) && !reactedTo(i, side, 'bloodFrenzy')) flag('ivresse du sang non déclenchée', r, i, `côté ${side}`)
         const dodged = !!blow && blow.attacker === 1 - side && blow.dodged && !blow.blindedBy && !blow.replaced
-        if (dodged && find(prev.statuses[side], 'feint') && !diedAfter(i) && !reactedTo(i, side, 'feint')) flag('feinte non déclenchée', r, i, `côté ${side}`)
-        if (opensMoment(r, i, side, 'reflected') && find(prev.statuses[side], 'bloodDebt') && !diedAfter(i) && !reactedTo(i, side, 'bloodDebt')) flag('dette de sang non déclenchée', r, i, `côté ${side}`)
-        if (find(prev.statuses[side], 'blackSap') && beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0) && !diedAfter(i) && !reactedTo(i, side, 'blackSap'))
-          flag('sève noire non déclenchée', r, i, `${b.type} côté ${side}`)
+        // La Mire à son plafond : la Visée ne part pas (rien ne changerait, M25)
+        if (dodged && find(prev.statuses[side], 'feint') && (find(prev.statuses[side], 'aim')?.stacks ?? 0) < AIM_CAP && !diedAfter(i) && !reactedTo(i, side, 'feint'))
+          flag('visée non déclenchée', r, i, `côté ${side}`)
+        if (crit && find(base.statuses[side], 'openWound') && !diedAfter(i) && !reactedTo(i, side, 'openWound')) flag('plaie ouverte non déclenchée', r, i, `côté ${side}`)
         if (find(prev.statuses[side], 'votiveFlame') && beatEffects(b).some((e) => e.type === 'heal' && e.target === side && e.amount > 0) && !diedAfter(i) && !reactedTo(i, side, 'votiveFlame'))
           flag('flamme votive non déclenchée', r, i, `${b.type} côté ${side}`)
         const touched =
@@ -1063,10 +1163,15 @@ export function createAudit() {
         // que la chance de pile, contrôlée par la fréquence (audit.test.ts)
         if (prev.statuses[b.side].some((x) => STATUSES[x.id].headsChance)) see('pièce pipée')
         const more = find(prev.statuses[b.side], b.status)?.power ?? 0
+        // Pile critique (A14) : une pièce d'effet lancée par un coup critique de son lanceur qui touche, et elle seule
+        const thrown = r.beats.slice(0, i).reverse().find((x) => x.type === 'attack' && x.attack.attacker === b.side && !x.attack.rebound)
+        const critical = !!toss?.heads && thrown?.type === 'attack' && thrown.attack.crit && !thrown.attack.dodged
+        if (!!b.crit !== critical) flag('pile critique fausse', r, i, `${b.crit} ${critical}`)
+        else if (b.crit && b.heads) see('pile critique')
         if (toss?.heads) {
           // Pièce d'effet (2026-10-27) : pile, ses statuts tels que déclarés (son rang la fait tomber plus souvent sur pile),
-          // sans dégâts ; face, rien
-          const wanted = toss.heads.flatMap((e) => (e.type === 'applyStatus' ? [`${e.status}:${e.stacks}`] : []))
+          // doublés sur une pile critique, sans dégâts ; face, rien
+          const wanted = (b.crit ? toss.heads.map(critDoubled) : toss.heads).flatMap((e) => (e.type === 'applyStatus' ? [`${e.status}:${e.stacks}`] : []))
           const got = b.effects.flatMap((e) => (e.type === 'applyStatus' ? [`${e.status}:${e.stacks}`] : []))
           if (dmg !== 0 || (b.heads ? JSON.stringify(got) !== JSON.stringify(wanted) : b.effects.length > 0)) flag('pièce d’effet fausse', r, i, `${b.heads} ${got.join(' ')}`)
           else see(b.heads ? 'pièce d’effet sur pile' : 'pièce d’effet sur face')
@@ -1111,15 +1216,6 @@ export function createAudit() {
             const chained = after.some((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.target === b.side && givesJets(e.status) && !e.stolenBy))
             if (chained) flag('un dé de plus donne des jets de plus', r, i, `${b.status} ×${b.strikes}`)
             else see('dés de plus sans chaîne')
-          }
-          if (b.status === 'duo') {
-            // Un Duo pris par un Larcin (quatrième retour du 2026-10-27) arrive par une réaction : toute étape qui le pose
-            const posed = r.beats
-              .slice(0, i)
-              .reverse()
-              .find((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.status === 'duo' && e.target === b.side && e.result.kind === 'applied'))
-            if (!posed || posed.turn >= b.turn) flag('Duo : rafale sans un Duo avant elle', r, i, `${posed?.turn}`)
-            else see('duo : la rafale suit l’action du Duo')
           }
         }
         // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le jet qui l'a déclenchée (un jet remplacé) ;
@@ -1229,7 +1325,7 @@ export function createAudit() {
         if (r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')) flag('aura glaciale après le coup', r, i, '')
         const st = find(prev.statuses[b.side], 'frostAura')!
         const e = b.effects[0]
-        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== charges(st))
+        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== riseLevel(st))
           flag('aura glaciale : poison, montant ou cible', r, i, JSON.stringify(b.effects))
         else if (e.result.kind === 'applied') see('aura glaciale')
       }

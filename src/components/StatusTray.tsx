@@ -173,16 +173,12 @@ function StatusTooltip({ state, cast }: { state: TrayState; cast?: TrayCast }) {
         {state.sources.map((source) => {
           const s = source.status
           const turns = s.turns !== undefined ? `${s.turns} tour${s.turns > 1 ? 's' : ''} restant${s.turns > 1 ? 's' : ''}` : null
-          const origins = cast
-            ? source.from === 'self'
-              ? originsOf(s.id, cast.bearer, cast.opponent)
-              : [`${STATUSES[s.id].name} (${cast.opponent.name})`]
-            : []
+          const origins = cast ? originsOf(s.id, cast.bearer, cast.opponent) : []
           return (
-            <li key={`${source.from}-${s.id}`} className="font-body text-[15px] leading-snug text-ink-1">
+            <li key={s.id} className="font-body text-[15px] leading-snug text-ink-1">
               {/* Le statut qui compose l'état, quand son nom dit plus que l'état (Aura de puissance, Force de l'ours) */}
-              {STATUSES[s.id].name !== def.name && source.from === 'self' && <span className="font-bold">{STATUSES[s.id].name}{'\u00a0'}: </span>}
-              {source.text ?? STATUSES[s.id].describe(s)}
+              {STATUSES[s.id].name !== def.name && <span className="font-bold">{STATUSES[s.id].name}{'\u00a0'}: </span>}
+              {STATUSES[s.id].describe(s)}
               {(turns || origins.length > 0) && (
                 <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-ink-3">
                   {turns && (
