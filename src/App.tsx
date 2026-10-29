@@ -26,7 +26,7 @@ import {
   currentDay,
   DEFAULT_SEASON_SIZE,
   inSeason,
-  matchCount,
+  seasonSchedule,
   pendingOfDay,
   playedCount,
   seasonFighters,
@@ -44,6 +44,7 @@ import { getRelic } from './game/relics'
 import type { ForgeStep } from './game/forge'
 import {
   ACT_FIGHTS,
+  ACT_LENGTH,
   BOSS,
   championOf,
   isBossNode,
@@ -372,10 +373,14 @@ export default function App() {
     return undefined
   }
 
+  /** Tournoi en cours, sur le volet Tournoi de l'écran titre (une saison n'a pas de numéro : le tournoi vit en mémoire) */
   const progress = (() => {
     if (!tournament || champion(tournament) !== null) return null
-    if (inSeason(tournament)) return `Saison : ${playedCount(tournament.season)} / ${matchCount(tournament.season)} matchs joués`
-    return `${Object.keys(tournament.results).length} / 15 matchs joués`
+    if (inSeason(tournament)) {
+      const day = currentDay(tournament.season)
+      return day === null ? 'Saison terminée · l’arbre attend' : `Saison · journée ${day + 1} sur ${seasonSchedule(tournament.season.entrants.length).length}`
+    }
+    return `Tournoi · combat ${Object.keys(tournament.results).length + 1} sur 15`
   })()
 
   /** Libellé du lien de retour (BackLink : la flèche est son glyphe) */
@@ -391,9 +396,8 @@ export default function App() {
     go({ name: 'season' })
   }
 
-  /** Partie de campagne en cours, sous la plaque de l'accueil */
-  const campaignProgress =
-    campaignRun && !campaignRun.outcome ? (isBossNode(campaignRun) ? BOSS.name : `Combat ${campaignRun.wins + 1} sur ${ACT_FIGHTS}`) : null
+  /** Partie de campagne en cours, sur le volet Campagne de l'écran titre : le champion et son combat, boss compris */
+  const campaignProgress = campaignRun && !campaignRun.outcome ? `En cours · ${championOf(campaignRun).name}, combat ${campaignRun.wins + 1} sur ${ACT_LENGTH}` : null
 
   /** Une rencontre de la carte : le champion à gauche, l'adversaire réglé à droite, par l'écran d'affrontement */
   const openEncounter = (encounter: Encounter) => {

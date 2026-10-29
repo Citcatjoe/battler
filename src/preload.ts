@@ -1,8 +1,9 @@
 import menuCampaignImg from './assets/menu-campaign.jpg'
-import menuDuelImg from './assets/menu-duel.jpg'
 import menuSeasonImg from './assets/menu-season.jpg'
 import menuTournamentImg from './assets/menu-tournament.jpg'
 import menuVictoryImg from './assets/menu-victory.jpg'
+import titleCampaignImg from './assets/title-campaign.webp'
+import titleTournamentImg from './assets/title-tournament.webp'
 import { ICON_URLS } from './components/Icon'
 import { ARENAS, HOME_ARENAS, TRAINING_ARENA } from './game/arenas'
 import { poseImages } from './game/poses'
@@ -38,7 +39,7 @@ const FONTS = [
 function imageUrls(): string[] {
   const fighters = CHARACTERS.flatMap((c) => (c.forms ?? [null]).flatMap((_, f) => poseImages(c.lookFor(f))))
   const arenas = [...ARENAS, TRAINING_ARENA, ...Object.values(HOME_ARENAS)].flatMap((a) => (a ? [a.image] : []))
-  const menus = [menuDuelImg, menuTournamentImg, menuCampaignImg, menuSeasonImg, menuVictoryImg]
+  const menus = [titleCampaignImg, titleTournamentImg, menuTournamentImg, menuCampaignImg, menuSeasonImg, menuVictoryImg]
   return [...new Set([...fighters, ...arenas, ...menus, ...ICON_URLS])]
 }
 

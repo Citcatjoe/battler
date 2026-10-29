@@ -1,9 +1,7 @@
 import type { KeyboardEvent } from 'react'
-import gateImg from '../assets/menu-duel.jpg'
-import { createCharacter } from '../game/roster'
-import { HEDGE_PLANES, HOME_HEDGE, type HedgeSlot } from './homeHedge'
-import { Glyph, IconButton, ModePair, ModePairItem, type GlyphName } from './kit'
-import { STAGE_HEIGHT, STAGE_WIDTH } from './Stage'
+import campaignImg from '../assets/title-campaign.webp'
+import tournamentImg from '../assets/title-tournament.webp'
+import { IconButton } from './kit'
 
 export type HomeChoice = 'test' | 'duel' | 'tournament' | 'campaign'
 
@@ -11,130 +9,102 @@ interface Props {
   onChoose: (choice: HomeChoice) => void
   onOpenRecords: () => void
   onOpenCompendium: () => void
-  /** Tournoi en cours : progression affichée sous la plaque « Tournoi » */
+  /** Tournoi en cours : ligne d'état du volet Tournoi (rien sans tournoi) */
   tournamentProgress: string | null
-  /** Partie de campagne en cours : progression affichée sous la plaque « Campagne » */
+  /** Partie de campagne en cours : ligne d'état du volet Campagne (rien sans partie) */
   campaignProgress: string | null
 }
 
-/** Les modes principaux, côte à côte dans la paire de modes du UI kit, dans l'ordre affiché */
-const MODES: { id: HomeChoice; label: string; icon: GlyphName }[] = [
-  { id: 'duel', label: 'Duel', icon: 'combattre' },
-  { id: 'tournament', label: 'Tournoi', icon: 'tournoi' },
-  { id: 'campaign', label: 'Campagne', icon: 'chroniques' },
-]
+/** Les deux portes, dans l'ordre affiché ; chaque volet est un seul bouton (docs/ref/01-titre-repos.png). */
+const DOORS = [
+  {
+    id: 'campaign',
+    label: 'Campagne',
+    aria: 'Campagne',
+    image: campaignImg,
+    hook: "Un champion, onze combats, un boss. Puis l'arène sans fin : jusqu'où ira-t-il ?",
+  },
+  {
+    id: 'tournament',
+    label: 'Tournoi',
+    aria: 'Tournoi ou saison',
+    image: tournamentImg,
+    hook: 'Seize combattants, élimination directe, des paris entre amis. Ou une saison entière.',
+  },
+] as const
 
 /**
- * L'accueil : le seuil de l'arène. Une haie de combattants (homeHedge.ts) accompagne le joueur vers la
- * porte et sa lumière ; le logo et le choix du mode sont posés au premier plan, dans l'allée centrale.
- * Duel, Tournoi et Campagne sont trois choix de même rang, des plaques d'or dans un même cadre ; Combat test est un lien.
+ * L'écran titre (0.131.0) : un diptyque, deux portes peintes, Campagne et Tournoi. Survoler ou viser une porte au
+ * clavier l'éclaire et assombrit l'autre (index.css, `.title-door`). Duel libre et Combat test sont des liens du coin
+ * « Autres modes » ; Statistiques et Compendium, les deux boutons ronds du coin haut gauche ; le son, le bouton commun.
  */
 export function HomeScreen({ onChoose, onOpenRecords, onOpenCompendium, tournamentProgress, campaignProgress }: Props) {
-  /** Au clavier, comme un menu de jeu : les flèches passent d'un mode à l'autre, Entrée l'ouvre */
+  const progress = { campaign: campaignProgress, tournament: tournamentProgress }
+  /** Au clavier, comme un menu de jeu : les flèches passent d'une porte à l'autre, Entrée l'ouvre */
   const onKey = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-    const modes = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('[data-mode]')]
-    const i = modes.indexOf(document.activeElement as HTMLButtonElement)
-    const next = i + (e.key === 'ArrowRight' ? 1 : -1)
-    modes[Math.max(0, Math.min(modes.length - 1, next))]?.focus()
+    const doors = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('.title-door')]
+    doors[e.key === 'ArrowRight' ? 1 : 0]?.focus()
     e.preventDefault()
   }
 
   return (
-    <div className="fade-in relative isolate h-full overflow-hidden">
-      {/* La porte de l'arène, centrée sur l'allée ; le sol reste dans l'ombre */}
-      <img
-        src={gateImg}
-        alt=""
-        draggable={false}
-        className="pointer-events-none absolute inset-0 -z-10 h-full w-full select-none object-cover object-[50%_40%]"
-        style={{ filter: 'brightness(0.78) saturate(0.95)' }}
-      />
-      <div className="home-vignette pointer-events-none absolute inset-0 -z-10" />
-
-      {/* La haie : chaque plan plus petit et plus sombre que le précédent */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        {HOME_HEDGE.map((slot) => (
-          <HedgeFigure key={`${slot.side}-${slot.id}`} slot={slot} />
+    <div className="fade-in relative isolate h-full overflow-hidden bg-[#0e0b09]">
+      <nav aria-label="Modes de jeu" onKeyDown={onKey} className="title-diptych absolute inset-0 flex">
+        {DOORS.map((door) => (
+          <button
+            key={door.id}
+            type="button"
+            className="title-door"
+            data-door={door.id}
+            aria-label={door.aria}
+            aria-describedby={`title-${door.id}-hook${progress[door.id] ? ` title-${door.id}-state` : ''}`}
+            onClick={() => onChoose(door.id)}
+          >
+            <img src={door.image} alt="" draggable={false} className="title-door-art" />
+            <span aria-hidden className="title-door-veil" />
+            <span className="title-door-text">
+              <span aria-hidden className="title-plate">
+                <span className="title-plate-label">{door.label}</span>
+              </span>
+              <span id={`title-${door.id}-hook`} className="title-hook">
+                {door.hook}
+              </span>
+              {progress[door.id] && (
+                <span id={`title-${door.id}-state`} className="title-state">
+                  {progress[door.id]}
+                </span>
+              )}
+            </span>
+          </button>
         ))}
-      </div>
-
-      {/* Voile sombre localisé sous le logo et les boutons : la lumière de la porte reste au-dessus */}
-      <div className="home-veil pointer-events-none absolute bottom-0 left-1/2 h-[560px] w-[1000px] -translate-x-1/2" />
-
-      <IconButton onClick={onOpenRecords} icon="statistiques" label="Statistiques" className="absolute left-4 top-4" />
-      {/* Accès provisoire au compendium : son intégration définitive reste à définir */}
-      <IconButton onClick={onOpenCompendium} icon="compendium" label="Compendium" className="absolute left-20 top-4" />
-
-      <nav aria-label="Modes de jeu" onKeyDown={onKey} className="absolute inset-x-0 bottom-[60px] z-10 flex flex-col items-center">
-        <h1 className="home-logo font-display text-[96px] font-bold leading-none tracking-[0.08em]">BATTLER</h1>
-
-        {/* Paire de modes du UI kit : deux choix de même rang dans un même cadre */}
-        <div className="mt-8">
-          <ModePair label="Modes de jeu">
-            {MODES.map((m) => (
-              <ModePairItem key={m.id} icon={m.icon} data-mode onClick={() => onChoose(m.id)}>
-                {m.label}
-              </ModePairItem>
-            ))}
-          </ModePair>
-        </div>
-        <div className="mode-hints mt-3">
-          <span className="home-hint">Deux combattants, un vainqueur</span>
-          <span className="home-hint">{tournamentProgress ? `En cours · ${tournamentProgress}` : '16 participants, élimination directe'}</span>
-          <span className="home-hint">{campaignProgress ? `En cours · ${campaignProgress}` : 'Un champion, un dé à forger, un boss'}</span>
-        </div>
       </nav>
 
-      <button
-        onClick={() => onChoose('test')}
-        title="Choisir chaque dé pour tester les compétences"
-        className="home-link absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
-      >
-        <Glyph name="hasard" size={16} />
-        <span>
-          Combat test <span className="text-ink-3">· choisir chaque dé</span>
-        </span>
-      </button>
+      {/* Entre les portes : le filet d'or et le sceau « ou » */}
+      <span aria-hidden className="title-seam pointer-events-none absolute inset-y-0 left-1/2" />
+      <span aria-hidden className="title-or pointer-events-none absolute left-1/2 top-[499px]">
+        ou
+      </span>
 
-      <span className="on-illus absolute bottom-2 right-4 z-10 font-mono text-xs text-stone-500">v{__APP_VERSION__}</span>
-    </div>
-  )
-}
+      <header className="pointer-events-none absolute inset-x-0 top-[26px] flex flex-col items-center">
+        <h1 className="home-logo font-display text-[80px] font-bold leading-none tracking-[0.08em]">BATTLER</h1>
+        <span aria-hidden className="title-rule mt-[14px]" />
+      </header>
 
-/**
- * Un combattant de la haie, en garde, à l'échelle par la hauteur (jamais déformé), ancré bas-centre sur
- * ses pieds (le vide de la toile au-dessus de la tête et sous les pieds est compté), tourné vers l'allée,
- * avec son ombre de contact.
- */
-function HedgeFigure({ slot }: { slot: HedgeSlot }) {
-  const { look } = createCharacter(slot.id)
-  const plane = HEDGE_PLANES[slot.plane]
-  const body = slot.height * STAGE_HEIGHT
-  const canvas = body / (1 - (look.headroom ?? 0) - (look.footroom ?? 0))
-  const flip = look.facing !== (slot.side === 'left' ? 'right' : 'left')
-  // Centre de la silhouette dans la toile (source, avant miroir), pour poser le corps et non la toile
-  const inset = look.bodyInset ?? { left: 0, right: 0 }
-  const shift = (inset.left - inset.right) / 2
-  const x = slot.side === 'left' ? slot.x * STAGE_WIDTH : (1 - slot.x) * STAGE_WIDTH
-  return (
-    <div className="absolute h-0 w-0" style={{ left: x, top: slot.feet * STAGE_HEIGHT, zIndex: plane.z }}>
-      <span
-        className="hedge-shadow"
-        style={{ width: body * 0.62, height: body * 0.08, opacity: 0.55 + 0.45 * plane.brightness }}
-      />
-      <img
-        src={look.image}
-        alt=""
-        draggable={false}
-        className="absolute left-0 max-w-none select-none"
-        style={{
-          height: canvas,
-          bottom: -(look.footroom ?? 0) * canvas,
-          transform: `translateX(${(-0.5 - (flip ? -shift : shift)) * 100}%) scaleX(${flip ? -1 : 1})`,
-          filter: [look.tint, `brightness(${plane.brightness}) saturate(${plane.saturate})`].filter(Boolean).join(' '),
-        }}
-      />
+      <IconButton onClick={onOpenRecords} icon="statistiques" label="Statistiques" className="absolute left-4 top-4 z-10" />
+      <IconButton onClick={onOpenCompendium} icon="compendium" label="Compendium" className="absolute left-20 top-4 z-10" />
+
+      <nav aria-label="Autres modes" className="absolute bottom-[26px] left-[34px] z-10 flex items-baseline gap-5">
+        <span className="title-others">Autres modes</span>
+        <button type="button" className="title-link" onClick={() => onChoose('duel')}>
+          Duel libre
+        </button>
+        <button type="button" className="title-link" onClick={() => onChoose('test')} title="Choisir chaque dé pour tester les compétences">
+          Combat test
+        </button>
+      </nav>
+
+      <span className="absolute bottom-[28px] right-[35px] z-10 font-mono text-[13px] text-ink-3">v{__APP_VERSION__}</span>
     </div>
   )
 }
