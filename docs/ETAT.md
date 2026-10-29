@@ -1,6 +1,6 @@
 # État du projet
 
-_Dernière mise à jour : 2026-10-29, version 0.131.0 (branche `regles-v2`). Ce document dit l'état **présent** ; l'histoire des versions est dans le [CHANGELOG](../CHANGELOG.md) (seule chronique) et dans git, les règles en vigueur dans [FEATURES.md](FEATURES.md)._
+_Dernière mise à jour : 2026-10-29, version 0.131.1 (branche `regles-v2`). Ce document dit l'état **présent** ; l'histoire des versions est dans le [CHANGELOG](../CHANGELOG.md) (seule chronique) et dans git, les règles en vigueur dans [FEATURES.md](FEATURES.md)._
 
 ## En bref
 
@@ -41,7 +41,7 @@ Auto-battler roguelike à regarder et à parier (fiche produit : [INTENTION.md](
 - **Combat test peu fiable** : outil de l'utilisateur, il ne sert pas à valider le gameplay ; une anomalie s'y vérifie par sa trace `_triche` ([TODO.md](TODO.md) § 19).
 - **Écran de fin** : le druide vainqueur s'y montre toujours en forme humaine.
 - **Fonds du 2026-10-27** (0.123.0) : vus en captures Firefox (choix du champion, affrontement et combat chez Ysolde, arbre, fin de campagne gagnée). Non vus : les neuf autres arènes de campagne à l'écran, l'écran de la saison, l'écran du champion du tournoi (même fond, axe du vainqueur à 300 px au lieu de 280). L'arène du Colosse (0.126.0) n'a pas été vue à l'écran ; les décors de Gorak, Brokk et Aldric ont été écrits avant la méthode des décors (à reprendre si l'utilisateur le demande) ([STYLE_BIBLE.md](STYLE_BIBLE.md) § 5.7).
-- **Tournoi non sauvegardé** (voulu) : un rechargement le perd, bourses comprises. La graine d'un match de saison n'est affichée nulle part.
+- **Tournoi non sauvegardé** (voulu) : un rechargement le perd, bourses comprises. Depuis la 0.131.1 (présentation du tournoi désactivée), un tournoi commencé ne se quitte pour un nouveau qu'à sa fin, ou par un rechargement. La graine d'un match de saison n'est affichée nulle part.
 - **Traces anciennes** : celles d'avant la 0.116.0 (deux dés) et les traces de campagne d'avant la 0.111.0 ne se rejouent plus à l'identique.
 - **Chargement** : environ 109 Mo (`dist/assets`), surtout les PNG des postures (piste : WebP) ; la jauge avance par fichier, sans délai maximal.
 - **Hors du UI kit** : le combat test, le magnétoscope, les interrupteurs, les pastilles de filtre du compendium et quelques petites actions de l'arbre.

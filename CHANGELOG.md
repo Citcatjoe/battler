@@ -32,6 +32,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.131.1] — 2026-10-29
+
+### Modifié
+- **La porte Tournoi mène droit à la configuration du tournoi** (demande de l'utilisateur) ; un tournoi en cours reprend où il en était (saison ou arbre). Le lien de retour de la configuration devient « Menu » et ramène à l'écran titre.
+
+### Retiré
+- **La présentation du tournoi** (`TournamentIntroScreen`), désactivée « pour le moment » : elle doublait la porte Tournoi. Le composant reste, aucun écran n'y mène. Effet de bord : un tournoi commencé ne se quitte plus pour en créer un autre avant sa fin (son bouton « Nouveau tournoi » était là) ; le tournoi vivant en mémoire, un rechargement de la page l'efface.
+
 ## [0.131.0] — 2026-10-29
 
 **L'écran titre et l'entrée en campagne** (prompt et maquettes de l'utilisateur, `docs/ref/01` à `09`, `docs/ref/prompt-titre-et-campagne.md` ; décisions du 2026-10-29 : mode sans fin annoncé mais pas codé, carte de l'acte gardée, glyphes crâne et infini ajoutés au kit, classement statique). Présentation et parcours seulement : moteur, règles, équilibre et écrans du tournoi inchangés.

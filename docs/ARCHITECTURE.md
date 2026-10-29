@@ -99,7 +99,7 @@ src/
     Tabs.tsx             onglets mineurs du kit (.bt-tabs) ; `lead` : repère avant le libellé (pastille d'un camp)
     HomeScreen.tsx       écran titre : diptyque Campagne | Tournoi (deux portes peintes, un bouton chacune), coins Statistiques,
                          Compendium, Autres modes (Duel libre, Combat test) et version
-    TournamentIntroScreen.tsx  présentation du tournoi (créer, reprendre), entre l'accueil et la configuration
+    TournamentIntroScreen.tsx  présentation du tournoi (créer, reprendre) ; désactivée depuis la 0.131.1, aucun écran n'y mène
     MatchupScreen.tsx    écran d'affrontement unique (0.100.0), avant chaque combat de duel, d'arbre, de saison ou de campagne :
                          `mode` (MatchupMode, calculé par App.tsx) règle la hauteur des fiches (Layout), les reliques, le retour
                          (BACK_LABEL) ; MatchupCard (fiche à géométrie fixe), ArenaSlider, FighterPicker (sélecteur du duel),
