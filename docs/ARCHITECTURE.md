@@ -38,6 +38,8 @@ src/
     campaign.ts          campagne (0.88.0) : partie v5 (CampaignRun, son aura de départ ; une partie v4 relue), boss, réglage des
                          rencontres sur le champion de référence parti de la même aura (referenceChampions, tuneHp, encountersFor),
                          champion (championOf, startAurasOf, drawBuild), héritage (heritageFor), sauvegarde, choix de l'écran
+    leaderboard.ts       classement du mode sans fin (0.131.0) : entrées (joueur, construction du champion, série, points) par période ;
+                         statique tant que le mode sans fin et un backend n'existent pas
     offers.ts            offre commune à la campagne, à la saison et à l'arbre (0.115.0) : ordre d'un acte (REWARDS, RewardKind),
                          MAX_SKILL_FACES, BuildState (et son aura), réserve des deux maîtrises (characterPool, masteries.ts), offre
                          pertinente « le producteur d'abord » (reachOf, offerableRelics, offerableSkills), écho (ECHO_WEIGHT),
@@ -95,7 +97,8 @@ src/
     kit.tsx              contrôles du UI kit (docs/ui-kit/) : Button, IconButton, ModePair, SegmentedControl, Tool, BackLink, Glyph ; ne posent que les classes du kit
     BattlerIcon.jsx      glyphes de commande, copiés tels quels de docs/ui-kit/ (types : BattlerIcon.d.ts)
     Tabs.tsx             onglets mineurs du kit (.bt-tabs) ; `lead` : repère avant le libellé (pastille d'un camp)
-    HomeScreen.tsx       accueil : la porte de l'arène, la haie de combattants, le logo et les modes
+    HomeScreen.tsx       écran titre : diptyque Campagne | Tournoi (deux portes peintes, un bouton chacune), coins Statistiques,
+                         Compendium, Autres modes (Duel libre, Combat test) et version
     TournamentIntroScreen.tsx  présentation du tournoi (créer, reprendre), entre l'accueil et la configuration
     MatchupScreen.tsx    écran d'affrontement unique (0.100.0), avant chaque combat de duel, d'arbre, de saison ou de campagne :
                          `mode` (MatchupMode, calculé par App.tsx) règle la hauteur des fiches (Layout), les reliques, le retour
@@ -103,11 +106,11 @@ src/
                          Simuler et Parier en SquareButton (DUEL_BETTING : pas de Parier en duel), COMBATTRE en bas
     StatSheet.tsx        stats d'un personnage en barres (STAT_LINES) ; `compare` : meilleur de chaque ligne face à l'adversaire,
                          sur les valeurs affichées (dé en faces, esquive bornée à 0, multiplicateur sans critique perdant)
-    homeHedge.ts         configuration de la haie de l'accueil (personnage, côté, plan, taille, position) et assombrissement par plan
     Portrait.tsx         Portrait (vignette cadrée sur le visage) et PortraitTile (tuile cliquable à états)
     SeasonScreen.tsx     phase de saison : classement en une liste (construction de chacun) et ligne de qualification, journée et ses matchs (récompense de la journée), simulation (aucune règle : tout vient de season.ts)
-    CampaignScreen.tsx   campagne : choix du champion et de son héritage, carte de l'acte (piste, champion, adversaires et leur bande de
-                         danger), récompense (forge puis relique), fin de partie (aucune règle : campaign.ts et forge.ts)
+    CampaignScreen.tsx   campagne : choix du champion et de son héritage (départ en attente, CampaignStart), accueil, carte de l'acte (piste, champion, adversaires et leur bande de
+                         danger), récompense (forge puis relique), fin de partie et fin d'acte (aucune règle : campaign.ts et forge.ts)
+    CampaignWelcome.tsx  accueil de la campagne : parcours, étapes, classement du mode sans fin (leaderboard.ts), fiche d'un champion classé
     DieBuild.tsx         section « Dé de dégâts » de la fiche d'affrontement : douze emplacements en deux rangées de six (dieCells :
                          faces de 1 à la taille du dé du moment, compétence de la forme, rang, gravure, dorure ; vides grisés au-delà),
                          « +N faces » au-delà de douze, sélecteur de forme du druide, une infobulle par face

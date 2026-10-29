@@ -2,7 +2,7 @@ import type { ForgeStep } from './forge'
 import { ENGRAVABLE_SKILLS } from './roster'
 
 /*
- * Le classement du mode sans fin (accueil de la campagne, docs/CAMPAGNE.md § 13). Statique pour l'instant : le mode sans
+ * Le classement du mode sans fin (accueil de la campagne, docs/CAMPAGNE.md § 18.8). Statique pour l'instant : le mode sans
  * fin n'est pas codé et il n'y a pas de backend (docs/EN_LIGNE.md). Le jour où les séries existeront, `leaderboard`
  * lira la source distante ; l'écran ne change pas, il ne connaît que `LeaderboardEntry` et `Leaderboard`. Le personnage
  * d'une entrée se reconstruit comme le champion d'une partie (campaign.ts, `championOf(entry.build)`).

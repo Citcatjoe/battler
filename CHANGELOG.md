@@ -32,6 +32,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.131.0] — 2026-10-29
+
+**L'écran titre et l'entrée en campagne** (prompt et maquettes de l'utilisateur, `docs/ref/01` à `09`, `docs/ref/prompt-titre-et-campagne.md` ; décisions du 2026-10-29 : mode sans fin annoncé mais pas codé, carte de l'acte gardée, glyphes crâne et infini ajoutés au kit, classement statique). Présentation et parcours seulement : moteur, règles, équilibre et écrans du tournoi inchangés.
+
+### Ajouté
+- **Accueil de la campagne** (`CampaignWelcome.tsx`), entre le choix du champion et l'acte I : le parcours (dix combats, le boss, le sans fin au choix), trois étapes, et le **classement du mode sans fin** (Semaine, Saison, Depuis toujours ; podium, série en or, points, aperçu du dé forgé, reliques ; ligne du joueur épinglée au bleu du camp, ou « Battez le boss d'une campagne pour entrer au classement. »). Une ligne ouvre la fiche de son champion (chiffres, stats, dé forgé, reliques, couleurs neutres). « Entrer dans l'acte I » lance la partie.
+- **Classement statique** (`src/game/leaderboard.ts`) : dix joueurs par période et la ligne du joueur ; chaque entrée garde la construction de son champion (forge, reliques), reconstruite comme une partie. À remplacer par une source distante le jour du mode sans fin.
+- **Fin d'acte** : « Continuer sans fin » (grisé : le mode sans fin n'est pas encore codé) et « Terminer l'aventure » (retour au choix du champion).
+- **Glyphes `crane` et `infini`** dans le UI kit ([ui-kit/README.md](docs/ui-kit/README.md) § 7).
+
+### Modifié
+- **Écran titre en diptyque** (`HomeScreen.tsx`) : deux portes peintes, Campagne et Tournoi, chacune un seul bouton (`title-campaign.webp`, `title-tournament.webp`) ; logo, filet d'or et sceau « ou » au centre ; plaque gravée, accroche et ligne d'état de la partie en cours (« En cours · Gorak, combat 4 sur 11 », « Saison · journée 3 sur 38 ») ; au survol ou au focus, la porte s'éclaire et sa plaque passe à l'or, l'autre s'assombrit (sans transition si `prefers-reduced-motion`). Duel libre et Combat test passent dans le coin « Autres modes ».
+- **Choix du champion** : « Choisir ce champion » (au lieu de « Commencer la campagne ») mène à l'accueil de la campagne, après l'offre d'héritage si elle est active (son bouton devient « Continuer »). La partie n'est créée qu'à l'entrée dans l'acte : revenir au choix du champion n'en laisse aucune, et le champion montré est gardé.
+
+### Retiré
+- **La haie de six combattants de l'accueil** (`homeHedge.ts`) et la paire de modes Duel | Tournoi | Campagne de l'écran titre.
+
 ## [0.130.2] — 2026-10-28
 
 ### Modifié
