@@ -41,6 +41,8 @@ const GLYPH_USES: Record<GlyphName, string> = {
   info: 'Aide, règle liée',
   reglages: 'Options, réglages (configuration du tournoi)',
   relique: 'Reliques (option du tournoi)',
+  crane: 'Boss (parcours de la campagne)',
+  infini: 'Mode sans fin',
 }
 
 const SPEEDS = [1, 2, 4].map((s) => ({ value: s, label: `×${s}` }))

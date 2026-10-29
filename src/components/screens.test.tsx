@@ -874,19 +874,18 @@ describe('écrans', () => {
     expect(some).toMatch(/role="switch" aria-checked="true"/)
     expect(some).toContain('Récupère un objet de la dernière partie perdue de ce champion.')
     expect(some).not.toContain('amélioration')
-    expect(some).toContain('Commencer la campagne')
   })
 
-  it('héritage (U4) : aucune carte choisie d’avance, « Commencer » attend le choix du joueur', () => {
+  it('héritage (U4) : aucune carte choisie d’avance, « Continuer » attend le choix du joueur', () => {
     const items: HeritageItem[] = [
       { kind: 'forge', step: { op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'lucky-strike')! } },
       { kind: 'relic', relic: 'wolf-fang' },
       { kind: 'relic', relic: 'eagle-feather' },
     ]
-    const html = renderToString(<HeritagePick champion={createCharacter('elaria')} items={items} seed={1} onBack={noop} onStart={noop} />)
+    const html = renderToString(<HeritagePick champion={createCharacter('elaria')} items={items} seed={1} onBack={noop} onPick={noop} />)
     expect(html).not.toContain('aria-pressed="true"')
     expect(html).not.toContain('Choix d')
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*Commencer/)
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*Continuer/)
   })
 
   it('écrans de victoire (U2) : déclenchements de chaque relique et de chaque face, lus dans les combats enregistrés', () => {

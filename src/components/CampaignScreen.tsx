@@ -47,18 +47,31 @@ import { SkillTooltip } from './SkillDice'
 import { SkillSeal } from './SkillSeal'
 import { StatSheet } from './StatSheet'
 import { Switch } from './Switch'
+import { CampaignWelcome } from './CampaignWelcome'
 
 /*
- * La campagne (0.88.0, docs/CAMPAGNE.md) : le choix du champion et de son héritage, la carte de l'acte (le champion, son
- * dé forgé, ses reliques, et les adversaires du nœud avec leur bande de danger), la récompense de chaque victoire (une
- * relique ou une forge) et la fin de la partie. Aucune règle ici : tout vient de campaign.ts et forge.ts ; App tient la partie.
+ * La campagne (0.88.0, docs/CAMPAGNE.md) : le choix du champion et de son héritage, l'accueil de la campagne
+ * (CampaignWelcome.tsx), la carte de l'acte (le champion, son dé forgé, ses reliques, et les adversaires du nœud avec leur
+ * bande de danger), la récompense de chaque victoire (une relique ou une forge) et la fin de la partie. Aucune règle ici :
+ * tout vient de campaign.ts et forge.ts ; App tient la partie.
  */
+
+/**
+ * Le départ choisi, pas encore lancé (0.131.0) : le champion, son aura, l'objet d'héritage repris s'il y en a un. Il
+ * attend « Entrer dans l'acte I » sur l'accueil de la campagne ; revenir au choix du champion ne laisse aucune partie.
+ */
+export interface CampaignStart {
+  championId: string
+  seed: number
+  aura: string
+  heritage?: HeritageItem
+}
 
 interface Props {
   run: CampaignRun | null
   /** Les héritages de chaque personnage (campaign.ts, `loadHeritage`) */
   heritage: Readonly<Record<string, HeritageItem[]>>
-  onStart: (championId: string, seed: number, heritage?: HeritageItem, aura?: string) => void
+  onStart: (start: CampaignStart) => void
   onFight: (encounter: Encounter) => void
   onReward: (gain: HeritageItem | undefined) => void
   onAbandon: () => void
@@ -66,8 +79,30 @@ interface Props {
   onMenu: () => void
 }
 
+/**
+ * Sans partie : choix du champion (et de son héritage), puis accueil de la campagne, d'où part l'acte I. Le champion
+ * montré survit à l'aller-retour vers l'accueil.
+ */
 export function CampaignScreen({ run, heritage, onStart, onFight, onReward, onAbandon, onNewRun, onMenu }: Props) {
-  if (!run) return <Draft heritage={heritage} onStart={onStart} onMenu={onMenu} />
+  const [championId, setChampionId] = useState(CHARACTERS[0].id)
+  const [start, setStart] = useState<CampaignStart | null>(null)
+  if (!run) {
+    if (start)
+      return (
+        <CampaignWelcome
+          champion={createCharacter(start.championId, { aura: start.aura })}
+          onBack={() => {
+            sfx.click()
+            setStart(null)
+          }}
+          onEnter={() => {
+            setStart(null)
+            onStart(start)
+          }}
+        />
+      )
+    return <Draft heritage={heritage} championId={championId} onSelect={setChampionId} onChoose={setStart} onMenu={onMenu} />
+  }
   if (run.outcome) return <RunEnd run={run} onNewRun={onNewRun} onMenu={onMenu} />
   if (run.reward) return <Reward run={run} onReward={onReward} />
   return <ActMap run={run} onFight={onFight} onAbandon={onAbandon} onMenu={onMenu} />
@@ -95,12 +130,18 @@ function Header({ kicker, title, sub }: { kicker: string; title: string; sub?: s
  * champion choisi en grand (illustration, fiche de l'affrontement, ligne de lore en citation), son aura de départ (une
  * tuile par aura de ses deux maîtrises, docs/MAITRISES.md § 5 et § 12 ; le dé de la fiche la montre sur son 1) et son
  * héritage, optionnel par un interrupteur. Aura et héritage sont mémorisés par champion (`loadCampaignChoices`).
- * Héritage actif et disponible sur le dé de cette aura (`heritageFor`) : « Commencer » ouvre le choix de l'amélioration
- * (`HeritagePick`) ; sinon la partie part sans.
+ * Héritage actif et disponible sur le dé de cette aura (`heritageFor`) : « Choisir ce champion » ouvre le choix de
+ * l'amélioration (`HeritagePick`) ; sinon le départ passe sans, vers l'accueil de la campagne.
  */
-function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart' | 'onMenu'>) {
+function Draft({
+  heritage,
+  championId,
+  onSelect,
+  onChoose,
+  onMenu,
+}: Pick<Props, 'heritage' | 'onMenu'> & { championId: string; onSelect: (id: string) => void; onChoose: (start: CampaignStart) => void }) {
   const [seed] = useState(randomSeed)
-  const [champion, setChampion] = useState<Character>(CHARACTERS[0])
+  const champion = CHARACTERS.find((c) => c.id === championId) ?? CHARACTERS[0]
   const [choices, setChoices] = useState(loadCampaignChoices)
   const [picking, setPicking] = useState(false)
   // L'aura mémorisée, si elle est toujours une de ses auras de départ ; sinon la première (l'aura par défaut)
@@ -110,12 +151,16 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
   const shown = useMemo(() => createCharacter(champion.id, { aura }), [champion.id, aura])
   const items = heritageFor(champion.id, aura, heritage[champion.id] ?? [])
   const withHeritage = items.length > 0 && choices[champion.id]?.heritage !== false
+  const choose = (item?: HeritageItem) => {
+    sfx.click()
+    onChoose({ championId: champion.id, seed, aura, ...(item && { heritage: item }) })
+  }
   if (picking && withHeritage)
-    return <HeritagePick champion={shown} items={items} seed={seed} onBack={() => setPicking(false)} onStart={(item) => onStart(champion.id, seed, item, aura)} />
-  const choose = (c: Character) => {
+    return <HeritagePick champion={shown} items={items} seed={seed} onBack={() => setPicking(false)} onPick={choose} />
+  const select = (c: Character) => {
     if (c.id === champion.id) return
     sfx.click()
-    setChampion(c)
+    onSelect(c.id)
   }
   const remember = (choice: Partial<CampaignChoice>) => {
     sfx.click()
@@ -152,7 +197,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
                 side={0}
                 state={c.id === champion.id ? 'selected' : 'idle'}
                 selection="a"
-                onClick={() => choose(c)}
+                onClick={() => select(c)}
                 title={c.name}
                 aria-label={c.name}
                 className="matchup-picker-tile"
@@ -166,7 +211,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
           label="Un champion au hasard"
           onClick={() => {
             const others = CHARACTERS.filter((c) => c.id !== champion.id)
-            choose(others[Math.floor(Math.random() * others.length)])
+            select(others[Math.floor(Math.random() * others.length)])
           }}
           className="shrink-0"
         />
@@ -224,8 +269,8 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
       </div>
 
       <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 justify-center">
-        <Button variant="primary" size="xl" icon="combattre" onClick={() => (withHeritage ? setPicking(true) : onStart(champion.id, seed, undefined, aura))} className="w-[560px]">
-          Commencer la campagne
+        <Button variant="primary" size="xl" icon="combattre" onClick={() => (withHeritage ? setPicking(true) : choose())} className="w-[560px]">
+          Choisir ce champion
         </Button>
       </div>
     </Backdrop>
@@ -235,7 +280,7 @@ function Draft({ heritage, onStart, onMenu }: Pick<Props, 'heritage' | 'onStart'
 /**
  * La rangée « Aura de départ » : l'icône peinte de chaque aura (son sceau), son nom et l'emblème de sa maîtrise ; la
  * ligne d'effet de l'aura choisie à côté du titre, celle des autres au survol. Des tuiles de contenu, pas des boutons de
- * commande : « Commencer la campagne » reste le bouton du kit.
+ * commande : « Choisir ce champion » reste le bouton du kit.
  */
 function StartAuraRow({ auras, chosen, onChoose }: { auras: readonly string[]; chosen: string; onChoose: (aura: string) => void }) {
   const line = describeSkill(skillById(chosen)).text
@@ -283,9 +328,10 @@ function HeritageCard({ item, champion, selected, mark, onSelect }: { item: Heri
 /**
  * L'héritage (§ 8) : une amélioration de sa dernière partie, parmi trois au plus. Rien n'est choisi d'avance (retour du
  * 2026-10-27, U4 : la carte présélectionnée « Choix d'Elaria », une relique, partait dès qu'on lançait sans avoir
- * cliqué la carte voulue, un sort) : « Commencer » attend une carte, et seule la carte choisie porte une marque.
+ * cliqué la carte voulue, un sort) : « Continuer » attend une carte, et seule la carte choisie porte une marque. Il
+ * mène à l'accueil de la campagne.
  */
-export function HeritagePick({ champion, items, seed, onBack, onStart }: { champion: Character; items: HeritageItem[]; seed: number; onBack: () => void; onStart: (item: HeritageItem) => void }) {
+export function HeritagePick({ champion, items, seed, onBack, onPick }: { champion: Character; items: HeritageItem[]; seed: number; onBack: () => void; onPick: (item: HeritageItem) => void }) {
   const offer = useMemo(() => drawHeritage(items, seededRng(hashSeed(`campagne:${seed}:heritage`))), [items, seed])
   const [picked, setPicked] = useState<HeritageItem>()
   return (
@@ -305,8 +351,8 @@ export function HeritagePick({ champion, items, seed, onBack, onStart }: { champ
       </div>
       <div className="relative flex items-center justify-center gap-6 pb-10">
         <BackLink onClick={onBack}>Champion</BackLink>
-        <Button variant="primary" size="xl" icon="combattre" disabled={!picked} onClick={() => picked && onStart(picked)} className="w-96">
-          Commencer
+        <Button variant="primary" size="xl" icon="combattre" disabled={!picked} onClick={() => picked && onPick(picked)} className="w-96">
+          Continuer
         </Button>
       </div>
     </Backdrop>
@@ -565,6 +611,11 @@ function ForgeReward({
 
 /* ---------- Fin de la partie ---------- */
 
+/**
+ * Fin de la partie. Défaite : « Nouvelle campagne » ramène au choix du champion. Boss vaincu, fin d'acte : « Continuer
+ * sans fin » (le mode sans fin, docs/CAMPAGNE.md, pas encore codé : bouton grisé) ou « Terminer l'aventure », qui ramène
+ * au choix du champion.
+ */
 function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => void; onMenu: () => void }) {
   const champion = championOf(run)
   const won = run.outcome === 'won'
@@ -632,9 +683,20 @@ function RunEnd({ run, onNewRun, onMenu }: { run: CampaignRun; onNewRun: () => v
           )}
         </section>
         <div className="flex items-center gap-6 pt-2">
-          <Button variant="primary" size="xl" icon="chroniques" onClick={onNewRun}>
-            Nouvelle campagne
-          </Button>
+          {won ? (
+            <>
+              <Button variant="primary" size="xl" icon="infini" disabled title="Le mode sans fin n'est pas encore ouvert">
+                Continuer sans fin
+              </Button>
+              <Button variant="secondary" size="md" onClick={onNewRun}>
+                Terminer l'aventure
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" size="xl" icon="chroniques" onClick={onNewRun}>
+              Nouvelle campagne
+            </Button>
+          )}
           <BackLink onClick={onMenu}>Menu</BackLink>
         </div>
       </div>

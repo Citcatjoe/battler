@@ -1,6 +1,6 @@
 // BATTLER — icônes de commande (glyphes). Généré depuis le kit : ne pas modifier à la main.
 // Glyphes monochromes au trait, currentColor. Jamais d'image peinte dans un bouton de commande.
-// Certains dessins reprennent Lucide (ISC) : épées, trophée, haut-parleur, flèche, rafraîchir, musique.
+// Certains dessins reprennent Lucide (ISC) : épées, trophée, haut-parleur, flèche, rafraîchir, musique, crâne, infini.
 import React from 'react';
 
 export const GLYPHS = {
@@ -62,6 +62,10 @@ export const GLYPHS = {
   'reglages': <><path d="M4 6h9"/><path d="M17 6h3"/><circle cx="15" cy="6" r="2"/><path d="M4 12h3"/><path d="M11 12h9"/><circle cx="9" cy="12" r="2"/><path d="M4 18h11"/><path d="M19 18h1"/><circle cx="17" cy="18" r="2"/></>,
   // Relique : l'hexagone des reliques et une gemme, au trait (ajout du 2026-10-25, tuile Reliques des options)
   'relique': <><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/><path d="M12 8.5l3 3.5-3 3.5-3-3.5z"/></>,
+  // Boss d'un parcours de campagne (ajout du 2026-10-29, accueil de la campagne)
+  'crane': <><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M12.5 17l-.5-1-.5 1h1z"/></>,
+  // Mode sans fin (ajout du 2026-10-29, accueil de la campagne, fin d'acte)
+  'infini': <><path d="M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8"/></>,
 };
 
 /** <BattlerIcon name="hasard" size={18} /> — size: 14 | 16 | 18 | 20 | 22 | 24 */

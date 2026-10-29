@@ -32,6 +32,8 @@ export type GlyphName =
   | 'info'
   | 'reglages'
   | 'relique'
+  | 'crane'
+  | 'infini'
 
 export type GlyphSize = 14 | 16 | 18 | 20 | 22 | 24
 

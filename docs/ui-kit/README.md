@@ -109,3 +109,10 @@ Ajouté pour le bouton **Options** de la configuration du tournoi, qui ouvre la 
 **Glyphe « relique »** : ajouté pour la tuile **Reliques** de la boîte des options, qui est un interrupteur (une commande) : le sceau peint d'une relique n'y a pas sa place. **Anatomie** : l'hexagone des reliques, pointe en haut, de rayon 9 centré sur la grille 24 (sommets à y = 3 et y = 21, côtés verticaux à x = 4,2 et 19,8), et une gemme en losange au centre (de 9 à 15 en x, de 8,5 à 15,5 en y), au trait du kit, sans remplissage. **Usage** : une commande qui active, filtre ou ouvre les reliques.
 
 **Tuiles de la boîte Options** (passe de finition du 2026-10-25) : chaque tuile est une commande (interrupteur ou sélecteur) et ouvre sur une marque de 36 px, pour que les noms s'alignent d'une tuile à l'autre : un glyphe du kit à 24 px, or quand l'option est active, `--text-3` sinon : `tournoi` (Phase de saison), `combattre` (Combattants), `relique` (Reliques), `chroniques` (Noms uniques), `parier` (Paris). La Forge du dé garde sa face de dé gravée, dessinée en CSS (`.forge-face`, le chiffre du d6) : aucune image peinte dans une tuile.
+
+## 7. Glyphes « crâne » et « infini » (ajout du 2026-10-29)
+
+Ajoutés avec l'accord de l'utilisateur pour l'accueil de la campagne (`docs/ref/06-accueil-campagne.png`) et la fin d'acte. Dessins de Lucide (ISC), au trait du kit, sans remplissage.
+
+- **`crane`** : un crâne de face, mâchoire à deux dents, deux orbites de rayon 1, le nez en petit triangle. **Usage** : le boss d'un parcours (sceau du parcours de l'accueil de la campagne).
+- **`infini`** : le signe ∞, une seule boucle continue de x = 2 à x = 22. **Usage** : le mode sans fin (sceau du parcours, bouton « Continuer sans fin » de la fin d'acte).
