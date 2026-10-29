@@ -57,8 +57,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   const { hp, statuses, forms, dazed, casting, stone, dice, strike, blow, aura, floats, scene, log, turn, winner, active, pulse, signal, relicPulse, relicUses, speed, setSpeed, paused, setPaused, cheat, forceNextRoll, resolved, vcr } =
     useCombat(script, onEnd, { test: test !== undefined, vcr: vcrOpen ? rootRef : undefined })
 
-  // Zones d'état : les états génériques de chacun, à partir de ses statuts
-  const trays = useMemo(() => ([0, 1] as Side[]).map((side) => trayStates(statuses[side])), [statuses])
+  // Zones d'état : les états génériques de chacun, à partir de ses statuts (et de ceux de l'adversaire : l'Emprise compte ses malus)
+  const trays = useMemo(() => ([0, 1] as Side[]).map((side) => trayStates(statuses[side], statuses[1 - side])), [statuses])
 
   const fighterState = (side: Side) => (winner === null ? 'idle' : winner === side ? 'victory' : 'ko')
   const diceColor = dice.owner === null ? '#e7e5e4' : SIDE_STYLE[dice.owner].hex

@@ -23,8 +23,8 @@ src/
     character.ts         CharacterStats, CharacterDef, classe Character (pure donnée), variant()
     poses.ts             postures d'un combattant (POSES, poseOf, poseImage) : l'image change au fil du combat (docs/POSTURES.md)
     statuses.ts          REGISTRE des statuts (auras bonus/malus) : règles + présentation
-    states.ts            états affichés (0.79.0) : vocabulaire générique de la zone d'état, place de chaque statut
-                         (zone, aura, forme, mécanisme), regroupement, relais des auras, cibles du signal
+    states.ts            états affichés (0.79.0) : vocabulaire générique de la zone d'état (docs/EMBLEMES.md), place de chaque statut
+                         (zone, aura, forme, mécanisme), regroupement par état et par moment (pastille), nombres, cibles du signal
     relics.ts            REGISTRE des reliques (RELICS) : types, rédaction (describeRelic), validation, offre de tournoi (drawOffer, autoPick) ; docs/RELIQUES.md
     events.ts            déclencheurs (TRIGGERS nommés, faces au-delà du 3 : `face:7` ; faceTrigger, rollFace, triggerText),
                          effets (Effect), CharacterEvent

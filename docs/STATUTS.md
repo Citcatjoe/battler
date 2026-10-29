@@ -32,32 +32,13 @@ Demande de l'utilisateur (2026-10-21) : la séparation ci-dessus existait dans l
 - `form` : règle de forme, dans la barre de compétences, avec sa valeur (Force de l'ours « +3 » ; Incantation « Sort » : depuis la 0.106.0, chaque sort se greffe sur le coup de base magique de l'homme) ;
 - `skill` : mécanisme interne d'une compétence, sur son sceau (les jauges de Rétribution) ou par le seul éclat du sceau et le label du coup (Pile ou face, Furie des vents ; l'Attente de l'ogre, retirée en 0.106.0).
 
-**Regroupement.** Les statuts de même effet font un seul médaillon, au total signé : Affaibli et l'Aura d'intimidation adverse font un **Affaibli** (la Fausse note, qui agit après l'armure, a son état à part : **Coup gâché**) ; Régénération et Sifflotement font un **Soin** (PV par tour) ; Peur et Étourdi font un **Tour perdu**. L'infobulle détaille chaque part, son effet et d'où elle vient (« Vient de : Œil de faucon (Elaria) », lu dans les données par `originsOf`). Le regroupement est **une présentation** : le moteur garde ses statuts distincts et leurs règles (avant ou après l'armure, durée, consommation). Unifier les règles elles-mêmes reste le chantier des familles ([FAMILLES.md](FAMILLES.md), TODO § 12-13).
-
-| État | Polarité | Nombre | Statuts qui l'alimentent |
-| --- | --- | --- | --- |
-| Puissance | bonus | total (+N aux coups) | Ferveur (2026-10-24, Encens de l'abbaye : +N au prochain coup qui touche) ; de la 0.79.7 au 2026-10-24, aucun (les auras qui la donnaient se lisent sur leur anneau) |
-| Affaibli | malus | total (−N aux coups) | Affaibli, Aura d'intimidation (de l'adversaire) |
-| Coup gâché | malus | total (−N au prochain coup qui touche, après l'armure) | Fausse note (son propre état depuis qu'elle agit après l'armure : un total commun avec Affaibli ne correspondait à aucun coup) ; emblème à générer (`state-spoiled`, icône peinte de la compétence en attendant) |
-| Bouclier | bonus | points | Armure temporaire |
-| Critique assuré | bonus | charges | Critique assuré |
-| Critique renforcé | bonus | total (+N au multiplicateur) | aucun depuis la 0.79.7 (Aura de précision : sur son anneau) |
-| Esquive assurée | bonus | charges | Esquive améliorée |
-| Dé en plus | bonus | charges | Coup de chance |
-| Soin | bonus | total (PV par tour) | Régénération, Sifflotement |
-| Drain | bonus | charges | Vol de vie |
-| Renvoi | bonus | charges | Riposte ; Rancune (0.114.0 : le coup encaissé lui revient en critique ; le résumé de l'état dit les deux) |
-| Épines | bonus | charges | aucun depuis la 0.118.1 (l'Aura d'épines se lit sur son anneau) ; Épines acérées avant |
-| Immunité | bonus | aucun | Garde sacrée (sans porteur) ; l'Aura d'immunité se lit sur son anneau |
-| Poison, Saignement, Brûlure, Pourriture | malus | charges ou tours | le statut du même nom |
-| Tour perdu | malus | aucun | Peur, Étourdi |
-| Brèche, Vulnérable, Luciole | malus | charges | le statut du même nom (sans porteur) |
+**Regroupement.** Depuis la 0.130.0, le vocabulaire de la zone d'état, ses emblèmes et ses pastilles suivent **[EMBLEMES.md](EMBLEMES.md)** : un emblème par question du spectateur (vingt états, § 3), un symbole par axe avec ses marques (§ 4), une pastille quand un statut agit à un autre moment que son état (§ 5), et l'arbre « faut-il un statut, un état, une icône ? » pour tout sort nouveau (§ 6). Les statuts d'un même état et d'un même moment font un seul médaillon : Régénération et Sifflotement font un **Soin** ; Peur et Étourdi, un **Tour perdu** ; Riposte et Peau de crapaud, une **Représaille** ; Affaibli et la Fausse note gardent deux médaillons, la Fausse note avec la pastille du coup porté (elle n'agit qu'au prochain coup qui touche, après l'armure). L'infobulle détaille chaque part, son effet et d'où elle vient (« Vient de : Œil de faucon (Elaria) », lu dans les données par `originsOf`). Le regroupement est **une présentation** : le moteur garde ses statuts distincts et leurs règles (avant ou après l'armure, durée, consommation). Unifier les règles elles-mêmes reste le chantier des familles ([FAMILLES.md](FAMILLES.md), TODO § 12-13).
 
 **Lien avec l'aura** : essayé en 0.79.4 (un état donné par une aura portait son anneau tournoyant), restreint aux bonus en 0.79.6, retiré en 0.79.7. En cherchant à fondre ces bonus dans des états existants, on a constaté qu'aucun n'avait de vraie source hors aura sur le même personnage : ils ne doublaient pas un autre état, ils doublaient l'aura elle-même. Une aura sur son porteur se lit donc sur son anneau, et plus rien n'est à relier.
 
 **Le signal d'activation** (`SkillSignal`, `SignalLayer`) : quand une compétence ou une aura pose un état visible, une lueur (verte pour un bonus, rouge pour un malus) part de son sceau dans l'en-tête et file vers la zone d'état de la cible. L'état n'y apparaît qu'à son arrivée (340 ms à ×1). Le vol est calé sur la chronologie : il part à l'étape de la compétence (`event`), ou à celle de l'aura qui agit (`statusTick`, `statusReaction`). Un statut bloqué ou un mécanisme de compétence n'envoie rien.
 
-**Icônes** (0.79.2). Un état n'a pas la grammaire d'une compétence. La compétence garde son icône peinte, à la palette de son personnage, dans un sceau octogonal. L'état est un **emblème** : un symbole gravé sur une pièce, monochrome, commun à tous, posé tel quel sans cadre, le compteur dessus ([STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, planche v12).
+**Icônes** (0.79.2, refaites en 0.130.0). Un état n'a pas la grammaire d'une compétence. La compétence garde son icône peinte, à la palette de son personnage, dans un sceau octogonal. L'état est un **emblème** : un symbole sur une pièce de fer lisse, monochrome, commun à tous, posé tel quel sans cadre, le compteur dessus ([EMBLEMES.md](EMBLEMES.md) § 7, planche v32).
 
 **Une grammaire, une place** (0.97.1, revu en 0.98.0, demande de l'utilisateur). Un emblème gris est une règle commune à tous ; une icône peinte appartient à une compétence ou à une forme précise. Le compendium suit la même séparation que l'écran. Sa section **Statuts** ne contient que le vocabulaire commun, les bonus et malus de la zone d'état (`tray`, `sheetStatuses`), sous leur emblème. Une aura ou un mécanisme (`aura`, `skill`) n'a pas de fiche à lui : il est décrit dans la fiche de la compétence qui le pose ou le relâche (`statusHome`), section Compétences, sous son sceau octogonal ; une règle de forme (`form`) l'est dans la fiche de son personnage. Tout lien vers une aura (pastille d'une relique ou d'une autre compétence, « aussi posé par », interactions) mène à cette compétence. Une aura reste un bonus par la règle (une purification la retire) : sa fiche le dit. Essai intermédiaire (0.97.1) : un groupe « Propres aux compétences » dans Statuts, retiré parce qu'il listait des compétences.
 

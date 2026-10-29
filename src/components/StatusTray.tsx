@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { originsOf, STATES, stateValueText, type StateId, type TrayState } from '../game/states'
+import { originsOf, STATES, stateValueText, TRAY_MOMENTS, type TrayState } from '../game/states'
 import { POLARITY_STYLE, STATUSES, type Polarity } from '../game/statuses'
-import { Icon, StateIcon } from './Icon'
+import { Icon, MOMENT_ICON, StateIcon } from './Icon'
 
 const COUNT: Record<Polarity, string> = {
   positive: 'border-emerald-400 text-emerald-100',
   negative: 'border-red-500 text-red-100',
 }
 
-/** Un état affiché : présent, ou « sortant » (il montre son 0 puis quitte la zone). Un seul médaillon par état. */
+/** Un état affiché : présent, ou « sortant » (il montre son 0 puis quitte la zone). Un seul médaillon par état et par moment. */
 export interface TrayItem {
   state: TrayState
   leaving: boolean
@@ -18,16 +18,16 @@ export interface TrayItem {
 /**
  * Les médaillons après un changement d'états. Garde l'ordre et retient ceux qui viennent de disparaître :
  * un état épuisé ou expiré reste, sortant, le temps que son nombre descende à 0, puis s'efface (fin de son
- * animation). C'est le même médaillon (même clé, son id) : son compteur s'anime vers 0 au lieu de renaître
- * à 0. Un état reposé pendant sa sortie reprend vie dans ce médaillon, au lieu d'en ouvrir un second.
+ * animation). C'est le même médaillon (même clé : son état et son moment) : son compteur s'anime vers 0 au lieu de
+ * renaître à 0. Un état reposé pendant sa sortie reprend vie dans ce médaillon, au lieu d'en ouvrir un second.
  */
 export function trayAfter(items: readonly TrayItem[], states: readonly TrayState[]): TrayItem[] {
-  const byId = new Map<StateId, TrayState>(states.map((s) => [s.id, s]))
+  const byKey = new Map<string, TrayState>(states.map((s) => [s.key, s]))
   const next = items.map((item) => {
-    const live = byId.get(item.state.id)
+    const live = byKey.get(item.state.key)
     return live ? { state: live, leaving: false } : { ...item, leaving: true }
   })
-  for (const s of states) if (!next.some((i) => i.state.id === s.id)) next.push({ state: s, leaving: false })
+  for (const s of states) if (!next.some((i) => i.state.key === s.key)) next.push({ state: s, leaving: false })
   return next
 }
 
@@ -38,7 +38,7 @@ function useTrayItems(states: readonly TrayState[]) {
     setPrev(states)
     setItems(trayAfter(items, states))
   }
-  const remove = (id: StateId) => setItems((list) => list.filter((i) => !(i.leaving && i.state.id === id)))
+  const remove = (key: string) => setItems((list) => list.filter((i) => !(i.leaving && i.state.key === key)))
   return { items, remove }
 }
 
@@ -65,7 +65,7 @@ export function StatusTray({ states, cast, side }: { states: readonly TrayState[
       {bonus.length > 0 && (
         <div className="flex gap-2">
           {bonus.map((i) => (
-            <StatusToken key={i.state.id} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.id)} />
+            <StatusToken key={i.state.key} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.key)} />
           ))}
         </div>
       )}
@@ -73,7 +73,7 @@ export function StatusTray({ states, cast, side }: { states: readonly TrayState[
       {malus.length > 0 && (
         <div className="flex gap-2">
           {malus.map((i) => (
-            <StatusToken key={i.state.id} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.id)} />
+            <StatusToken key={i.state.key} state={i.state} leaving={i.leaving} cast={cast} onLeft={() => remove(i.state.key)} />
           ))}
         </div>
       )}
@@ -124,6 +124,8 @@ function StatusToken({ state, leaving, cast, onLeft }: { state: TrayState; leavi
       <StateIcon id={state.id} className="absolute inset-0 h-full w-full" />
       {/* Teinte légère de la pièce monochrome : un reflet vert pour un bonus, rouge pour un malus (.state-tint) */}
       <span aria-hidden className="state-tint" />
+      {/* Sa pastille de déclencheur (EMBLEMES § 5), sur le bord haut gauche : le compteur tient le bas droit */}
+      {state.moment && <Icon name={MOMENT_ICON[state.moment]} className="absolute -left-1.5 -top-1.5 z-[1] h-[22px] w-[22px]" />}
       {value !== undefined && (
         <span
           // La clé relance le geste au moment exact où le nombre change. Chiffres de la police des données, comme les
@@ -168,6 +170,11 @@ function StatusTooltip({ state, cast }: { state: TrayState; cast?: TrayCast }) {
           {POLARITY_STYLE[def.polarity].label}
         </span>
       </div>
+      {state.moment && (
+        <p className="mt-1 flex items-center gap-1.5 font-body text-[13px] font-bold text-ink-2">
+          <Icon name={MOMENT_ICON[state.moment]} className="h-4 w-4" /> {TRAY_MOMENTS[state.moment].label}
+        </p>
+      )}
       <p className="mt-0.5 font-body text-[13px] font-medium text-ink-3">{def.summary}</p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {state.sources.map((source) => {

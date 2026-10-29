@@ -41,7 +41,7 @@ import { SkillBar } from './SkillBar'
 import { DieBuild, dieCells } from './DieBuild'
 import { offerTargets, type ForgeStep } from '../game/forge'
 import { STATES, STATUS_PLACE, trayStates } from '../game/states'
-import { skillIcon, STATE_ICON, statusIcon } from './Icon'
+import { ICON_URLS, skillIcon, STATE_ICON, statusIcon } from './Icon'
 import { RelicCard } from './RelicSeal'
 import { SeasonReport } from './CombatReport'
 import { getRelic, RELICS } from '../game/relics'
@@ -500,7 +500,11 @@ describe('écrans', () => {
   it("un statut de la zone d'état montre partout l'emblème de son état, pas l'icône de la compétence qui le pose", () => {
     for (const e of statusCatalog()) {
       const place = STATUS_PLACE[e.id]
-      if (e.inGame && place.place === 'tray') expect(statusIcon(e.id), e.id).toBe(STATE_ICON[place.relays[0].state])
+      if (!e.inGame || place.place !== 'tray') continue
+      expect(statusIcon(e.id), e.id).toBe(STATE_ICON[place.relays[0].state])
+      // Aucun état en jeu n'emprunte une icône de compétence : son emblème gris (EMBLEMES règle 7), et son fichier existe
+      expect(STATE_ICON[place.relays[0].state], e.id).toMatch(/^state-/)
+      expect(ICON_URLS.some((u) => u.includes(`${STATE_ICON[place.relays[0].state]}.png`)), e.id).toBe(true)
     }
     // Œil de faucon garde sa cible ; le Critique assuré qu'il pose montre la pièce gravée
     expect(skillIcon(createCharacter('elaria').events.find((e) => e.id === 'hawk-eye')!)).toBe('crit')
@@ -746,16 +750,19 @@ describe('écrans', () => {
     expect(tray).toContain('role="tooltip"')
     expect(tray).toContain('Poison')
     expect(tray).toContain('3 tours restants')
-    // Regroupés par moment : Affaibli et la Fausse note, qui ne gâche que le prochain coup, après l'armure, a son propre état
+    // Regroupés par moment : Affaibli et la Fausse note, qui ne gâche que le prochain coup, après l'armure : le même
+    // emblème, deux médaillons, la Fausse note avec la pastille du coup porté
     const weak = renderToString(
       <StatusTray
         states={trayStates([{ id: 'falseNote', stacks: 1 }, { id: 'weakened', stacks: 1 }])}
         cast={{ bearer: createCharacter('fanchon'), opponent: createCharacter('brokk') }}
       />,
     )
-    expect(weak.match(/data-state="/g)).toHaveLength(2)
+    expect(weak.match(/data-state="weakened"/g)).toHaveLength(2)
     expect(weak).toContain('Affaibli −1')
-    expect(weak).toContain('Coup gâché −4')
+    expect(weak).toContain('Affaibli −4')
+    expect(weak.match(/<img src="[^"]*badge-strike\.png"/g)).toHaveLength(2)
+    expect(weak).toContain('Au coup porté')
     // L'en-tête : les sceaux des compétences, l'aura en anneau (active : il tourne), la face du dé en pastille. L'Aura de
     // puissance, hors kit depuis le d6, est gravée sur le 3 de Gorak
     const powerAura = ENGRAVABLE_SKILLS.find((e) => e.id === 'power-aura')!

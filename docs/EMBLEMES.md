@@ -2,7 +2,7 @@
 
 Ce document fait foi pour la **zone d'état** (les médaillons au-dessus d'un combattant, `StatusTray`) et pour la section Statuts du compendium : quels états existent, quel emblème les montre, et comment un statut nouveau reçoit le sien. Il répond à la question qu'on se pose à chaque sort nouveau : **faut-il un nouveau statut ? un nouvel état ? une nouvelle icône ?** (§ 6). Le code suit ce document (`STATES` et `DISPLAYED` dans `states.ts`, `STATE_ICON` dans `Icon.tsx`) ; s'ils divergent, c'est le code qu'on corrige.
 
-Il ne règle pas les icônes peintes des compétences, des auras et des mécanismes (l'identité d'un personnage, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7), ni les règles des statuts eux-mêmes ([STATUTS.md](STATUTS.md)). Décidé avec l'utilisateur le 2026-10-28 ; le chantier qui l'applique est au § 8.
+Il ne règle pas les icônes peintes des compétences, des auras et des mécanismes (l'identité d'un personnage, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7), ni les règles des statuts eux-mêmes ([STATUTS.md](STATUTS.md)). Décidé avec l'utilisateur le 2026-10-28, livré en 0.130.0 (§ 8).
 
 ## 1. Pourquoi ces règles
 
@@ -37,7 +37,7 @@ Vingt états en jeu (2026-10-28, 0.129.0), au lieu de trente. « Moment » : le 
 
 | État | Question du spectateur | Pol. | Emblème | Moment | Nombre | Statuts (pastille) |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Puissance** | frappe-t-il plus fort ? | + | épée, chevron montant | chacun de ses coups | total | Poing de pierre, Emprise, Surtension ; Ferveur (coup porté) |
+| **Puissance** | frappe-t-il plus fort ? | + | épée, chevron montant | chacun de ses coups | total (la Surtension n'en chiffre aucun : ses éclairs ne sont pas des coups) | Poing de pierre, Emprise, Surtension ; Ferveur (coup porté) |
 | **Affaibli** | frappe-t-il moins fort ? | − | épée, chevron descendant | chacun de ses coups | total | Affaibli ; Fausse note (coup porté) |
 | **Bouclier** | encaisse-t-il moins ? | + | bouclier rond | aussitôt | charges | Armure temporaire ; Bouclier de foi (soin) |
 | **Garde brisée** | son prochain coup reçu fera-t-il mal ? | − | bouclier barré | prochain coup reçu | charges | Garde brisée |
@@ -51,14 +51,14 @@ Vingt états en jeu (2026-10-28, 0.129.0), au lieu de trente. « Moment » : le 
 | **Soin** | regagne-t-il des PV ? | + | cœur, chevron montant | ses tours | total | Sifflotement |
 | **Hémorragie** | ne peut-il plus se soigner ? | − | cœur barré | tout le combat | aucun | Hémorragie |
 | **Drain** | ses coups le soignent-ils ? | + | cœur, flèche qui en sort et y revient | coup porté | charges | Vol de vie, Sangsue ; Dîme (coup reçu) |
-| **Représailles** | le toucher se paie-t-il ? | + | flèche en demi-tour | coup reçu | charges | Riposte, Peau de crapaud ; Sentence, Flamme votive (soin) |
+| **Représailles** | le toucher se paie-t-il ? | + | deux flèches opposées (un échange) | coup reçu | charges | Riposte, Peau de crapaud ; Sentence, Flamme votive (soin) |
 | **Immunité** | ses malus tiennent-ils ? | + | cadenas fermé | tout le temps | tours | Immunité (Ampoule bénite) |
 | **Sceau de vol** | son prochain bonus lui échappera-t-il ? | − | cadenas barré | prochain bonus | charges | Sceau de vol |
 | **Poison** | perd-il des PV à chaque tour ? | − | goutte à bulles | fin de ses tours | charges | Poison (ressource, règle 5) |
 | **Saignement** | perd-il des PV à chaque coup reçu ? | − | goutte sous une entaille | coup reçu | charges | Saignement (ressource) |
 | **Brûlure** | brûle-t-il ? | − | flamme | fin de ses tours | charges | Brûlure (ressource) |
 
-**Réserve** (statuts sans porteur ; état et emblème le jour où un statut en jeu l'alimente, pas avant) : **Vulnérable** (bouclier, chevron descendant : Vulnérable, Brèche), **Esquive empêchée** (flèche et poteau barrés : Luciole). La Régénération (sans porteur) va au Soin, la Garde sacrée à l'Immunité. Les états **Épines, Luciole, Brèche, Coup gâché, Sentence, Flamme votive, Sangsue, Peau de crapaud, Dîme, Bouclier de foi, Emprise, Surtension, Faute** disparaissent.
+**Réserve** (statuts sans porteur ; emblème le jour où un statut en jeu l'alimente, pas avant) : **Vulnérable** (bouclier, chevron descendant : Vulnérable, Brèche), **Esquive empêchée** (flèche et poteau barrés : Luciole). La Régénération (sans porteur) va au Soin, la Garde sacrée à l'Immunité. Les états **Épines, Luciole, Brèche, Coup gâché, Renvoi, Sentence, Flamme votive, Sangsue, Peau de crapaud, Dîme, Bouclier de foi, Emprise, Surtension, Faute** ont disparu en 0.130.0.
 
 ## 4. Les axes et leurs marques
 
@@ -74,7 +74,7 @@ Un glyphe de base par axe ; les marques sont les mêmes partout (même forme, m�
 | Tempo | entraves | Tour perdu | — | — | — |
 | Soin | cœur | — | Soin | — | Hémorragie |
 | Soin (drain) | cœur et flèche en boucle | Drain | — | — | — |
-| Représailles | flèche en demi-tour | Représailles | — | — | — |
+| Représailles | deux flèches opposées | Représailles | — | — | — |
 | Sceaux | cadenas fermé | Immunité | — | — | Sceau de vol |
 | Affliction | goutte à bulles, goutte sous entaille, flamme | Poison, Saignement, Brûlure (un glyphe chacun, règle 5) | — | — | — |
 
@@ -82,12 +82,12 @@ Lecture : **le glyphe seul**, il a la chose ; **le chevron**, la chose augmente 
 
 ## 5. Les pastilles de déclencheur
 
-Une petite pièce de la même grammaire (§ 7), sur le bord haut gauche du médaillon, environ 45 % de son diamètre. Elle dit **quand** l'état agit, seulement si ce n'est pas le moment par défaut de son état (§ 3). Deux statuts du même état à des moments différents font deux médaillons (même emblème, pastilles différentes).
+Une petite pièce de la même grammaire (§ 7), sur le bord haut gauche du médaillon, environ 45 % de son diamètre. Elle dit **quand** l'état agit, seulement si ce n'est pas le moment par défaut de son état (§ 3). Deux statuts du même état à des moments différents font deux médaillons (même emblème, pastilles différentes). **Dans la zone d'état seulement** (0.130.1, décision de l'utilisateur) : là, le médaillon n'a ni nom ni phrase ; partout ailleurs (compendium, infobulles), le texte dit le moment, et l'emblème reste seul.
 
 | Pastille | Glyphe | Sens | En jeu |
 | --- | --- | --- | --- |
-| **Coup porté** | une flèche qui part du centre vers l'extérieur | à son prochain coup qui touche | Ferveur, Fausse note, Faute |
-| **Coup reçu** | une flèche qui frappe un point au centre | au prochain coup qui le touche | Rancune, Dîme |
+| **Coup porté** | une flèche diagonale qui part vers le haut à droite | à son prochain coup qui touche | Ferveur, Fausse note, Faute |
+| **Coup reçu** | une flèche qui arrive d'en haut à droite sur un petit éclat | au prochain coup qui le touche | Rancune, Dîme |
 | **Soin** | un petit cœur plein | chaque fois qu'il regagne des PV | Bouclier de foi, Sentence, Flamme votive |
 
 Réserve, pour le jour où deux statuts en auront besoin : **Critique** (étoile), **Esquive**, **Armure vidée**.
@@ -116,7 +116,7 @@ Puis : la ligne du § 3 (et du § 4 ou § 5 si besoin), l'emblème généré sel
 
 ## 7. Grammaire visuelle et génération
 
-Les emblèmes v12 (2026-10-21) étaient des pièces d'argent et de fer martelées, au bord épais, au symbole en relief. Demande de l'utilisateur (2026-10-28) : **même concept, traitement plus simple** ; tous les emblèmes sont refaits.
+Les emblèmes v12 (2026-10-21) étaient des pièces d'argent et de fer martelées, au bord épais, au symbole en relief. Demande de l'utilisateur (2026-10-28) : **même concept, traitement plus simple** ; tous refaits dans la planche v32 (0.130.0).
 
 | | Avant (v12, v15) | Désormais |
 | --- | --- | --- |
@@ -127,7 +127,7 @@ Les emblèmes v12 (2026-10-21) étaient des pièces d'argent et de fer martelée
 
 Ce qui ne change pas : rondes et toutes du même diamètre, monochromes (la teinte de polarité est posée en CSS, `.state-tint`), sans cadre, le compteur sur le bord bas droit ; une planche par type d'icône ([STYLE_BIBLE.md](STYLE_BIBLE.md) § 7).
 
-**Génération** (Artlist, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 8, point 6) : GPT Image 2.5, carré `1:1`, qualité haute, fond transparent, deux versions par appel (200 crédits la paire, devis du 2026-10-28) ; la planche pilote validée sert ensuite de référence (image à image). Découpe par `scripts/slice-coins.py` (disques, 128 px, sans marge), environnement Python avec numpy, pillow et scipy (`python -m venv`, `pip install numpy pillow scipy`) ; planche de contrôle à 48 et 24 px, compteur et pastille posés dessus, regardée avant l'intégration.
+**Génération** (Artlist, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 8, point 6) : GPT Image 2.5, carré `1:1`, qualité haute, fond transparent, deux versions par appel (200 crédits la paire, 2026-10-28) ; en image à image, avec en référence la planche pilote de la v32 (Soin, Hémorragie, Puissance, Affaibli, version B), ou les emblèmes intégrés composés en planche. **Ne jamais décrire le compteur ni la pastille comme une chose à voir** : la v32 en a peint sur les pièces tant que le prompt les nommait ; le prompt ci-dessous les interdit. Découpe par `scripts/slice-coins.py` (disques, 128 px, sans marge), environnement Python avec numpy, pillow et scipy (`python -m venv`, `pip install numpy pillow scipy`), puis `optipng -o5` ; planche de contrôle à 48 et 24 px, teintée, compteur et pastille posés dessus, regardée avant l'intégration.
 
 **Prompt d'une planche d'emblèmes** (complet, à coller tel quel ; on remplace `<N>`, `<G>`, la ligne des cases vides et la liste) :
 
@@ -142,12 +142,13 @@ BACKGROUND: fully transparent, real alpha channel. Do NOT paint a checkerboard p
 If transparency is not possible, use a perfectly flat, uniform pure black background (#000000)
 with no gradient, no texture, no vignette, no shadow under the coins.
 NO grid lines, NO labels, NO numbers, NO letters, NO text anywhere.
+Each coin is a perfect, complete circle and nothing else: NO small extra disc, NO counter, NO badge,
+NO plus or minus sign, NO number on or next to any coin (the game adds its own in code).
 
-PURPOSE: these are STATUS EMBLEMS for a fantasy auto-battler watched on a television. Each one is
-shown at 48 pixels and down to 24 pixels, with a small counter over its lower right edge and
-sometimes a tiny badge over its upper left edge. Each must read in a split second as ONE SYMBOL,
-like a road sign, never as an illustration. The game's skill icons are rich painted objects;
-these emblems must look clearly simpler and different from them.
+PURPOSE: these are STATUS EMBLEMS for a fantasy auto-battler watched on a television, shown at 48
+pixels and down to 24 pixels. Each must read in a split second as ONE SYMBOL, like a road sign,
+never as an illustration. The game's skill icons are rich painted objects; these emblems must look
+clearly simpler and different from them.
 
 STYLE: MONOCHROME AND SIMPLE. Each emblem is a flat round coin seen perfectly head-on: a smooth
 dark iron face with no texture, no hammering, no scratches, no wear, no rivets, no ornament, and a
@@ -163,7 +164,8 @@ never more than one mark per emblem:
 - BAR: one thick straight diagonal bar from the upper left to the lower right of the coin face,
   crossing the whole symbol (denied, prevented).
 Two emblems built on the same symbol must show the very same symbol, in the same orientation, only
-the mark changes: never flip, rotate or mirror the symbol.
+the mark changes: never flip, rotate or mirror the symbol. Emblems built on different symbols must
+have clearly different silhouettes.
 
 AVOID: any color, gold, rich illustration, texture noise, engraved patterns, emoji look, flat vector
 clip-art, cute or cartoon style, glossy plastic, 3D perspective, photorealism, text, real-world
@@ -186,48 +188,28 @@ Row 1:
 | `state-sure-crit.png` | Critique assuré | a sharp four-pointed star (sure critical) |
 | `state-crit-power.png` | Critique renforcé | the same four-pointed star with the UP CHEVRON (stronger critical) |
 | `state-blinded.png` | Aveuglé | the same four-pointed star with the BAR (criticals fail) |
-| `state-sure-dodge.png` | Esquive assurée | a thick curved arrow swerving around a short upright post (sure dodge) |
+| `state-sure-dodge.png` | Esquive assurée | a short upright post in the center and a thick arrow that comes from the left, curves sideways around the post without touching it and leaves to the right (sure dodge) |
 | `state-extra-die.png` | Dé en plus | one six-sided die seen at a slight angle, pips as simple dots, with the UP CHEVRON (extra roll) |
 | `state-jinxed.png` | Malchance | the same die with the BAR (wasted roll) |
 | `state-lost-turn.png` | Tour perdu | a pair of iron shackles, two cuffs joined by a short chain (loses its turn) |
 | `state-healing.png` | Soin | a heart with the UP CHEVRON (healing) |
 | `state-no-healing.png` | Hémorragie | the same heart with the BAR (no healing) |
 | `state-drain.png` | Drain | the same heart with a thick curved arrow leaving it and looping back into it (life drain) |
-| `state-reprisal.png` | Représailles | a thick arrow making a U-turn, coming back the way it came (paid back) |
+| `state-reprisal.png` | Représailles | two thick straight horizontal arrows, one above the other: the upper one points right, the lower one points left (paid back, an exchange) |
 | `state-immunity.png` | Immunité | a closed padlock (protected) |
 | `state-bonus-stolen.png` | Sceau de vol | the same closed padlock with the BAR (protection denied) |
 | `state-poison.png` | Poison | a single teardrop with three small bubbles rising inside (poison) |
 | `state-bleed.png` | Saignement | a single heavy drop below a short diagonal slash mark (bleeding) |
 | `state-burn.png` | Brûlure | a single bold flame tongue (burn) |
 
-**Planche des pastilles** (§ 5) : le même prompt, `<N>` = 3 sur une grille 2×2 (la dernière case vide), et ce paragraphe ajouté après PURPOSE : _« These three are TRIGGER BADGES: tiny coins shown at 20 pixels over the corner of an emblem. Same coin as the emblems, but the symbol is even simpler, one single shape filling 70% of the coin. »_ Symboles : 1. `badge-strike` : a thick arrow leaving the center toward the upper right (when he strikes) · 2. `badge-hurt` : a thick arrow striking down into a small dot at the center (when he is hit) · 3. `badge-heal` : a small solid heart (when he heals).
+**Planche des pastilles** (§ 5) : le même prompt, `<N>` = 3 sur une grille 2×2 (la dernière case vide), PURPOSE remplacé par _« These are TRIGGER BADGES for a fantasy auto-battler watched on a television: tiny coins shown at 20 pixels over the corner of a status emblem. Same coin as the emblems, but the symbol is even simpler: one single bold shape filling 70% of the coin, readable at 20 pixels. »_, « exclamation mark » ajouté à AVOID (une flèche plantée dans un point se lisait « ! »). Symboles : 1. `badge-strike` : one thick diagonal arrow starting at the lower left and pointing OUT toward the upper right (when he strikes) · 2. `badge-hurt` : a small six-pointed impact burst at the lower left, and one thick diagonal arrow coming from the upper right and pointing IN at the burst (when he is hit) · 3. `badge-heal` : a small solid heart (when he heals).
 
-## 8. Le chantier (2026-10-28)
+**Intégration** : le fichier dans `src/assets/icons/`, son nom dans `IconName`, l'état dans `STATE_ICON` (`Icon.tsx`), le statut dans `DISPLAYED` (`states.ts` : son état, sa part chiffrée, sa pastille). La zone d'état (`StatusTray`) pose l'emblème sans cadre à 48 px, teinté (`.state-tint`), le compteur sur le bord bas droit, la pastille (22 px) sur le bord haut gauche. Le compendium (section Statuts) est rangé comme la zone d'état (0.130.2, décision de l'utilisateur) : **un emblème par état, une seule fois**, en intertitre, et ses statuts dessous sans icône ; le statut qui porte le nom de son état tient lieu d'intertitre. La fiche d'un statut montre l'emblème de son état ; sans pastille hors de la zone (§ 5). Un serveur de dev déjà lancé ne voit pas un fichier nouveau : `touch src/components/Icon.tsx`, puis F5.
 
-**Responsable** : l'agent (demande de l'utilisateur). **Prérequis** : la fin du chantier en cours de l'autre agent (règles et équilibre : `statuses.ts`, `states.ts`, `StatusTray.tsx` bougent encore). Rien n'est appliqué au code avant.
+## 8. État (0.130.0, 2026-10-28)
 
-| Étape | Contenu | État |
-| --- | --- | --- |
-| 0. Règles | ce document ; renvois dans `CLAUDE.md` et `docs/README.md` | fait |
-| 1. Pilote | quatre emblèmes (Soin, Hémorragie, Puissance, Affaibli) pour valider le traitement simplifié et les marques ; il devient la référence de style | fait : voir ci-dessous |
-| 2. Reprise | relire statuts, compétences, auras et reliques tels que l'autre agent les laisse ; relancer l'inventaire (chaque statut de la zone : état, icône, déclencheurs, sources, lecteurs ; `VITE_CONFIG_NATIVE_IGNORE_WARNING=true npx vitest run --config ~/.cache/battler-emblems/vitest.config.ts --root . --silent=false`) ; passer chaque statut nouveau par le § 6 ; mettre à jour les § 3 à 5 | à faire |
-| 3. Génération | les vingt emblèmes, sur la référence du pilote (image à image) : une planche 4×4 et une 2×2, puis la planche des pastilles ; deux versions par planche, la meilleure de chaque emblème ; découpe, planche de contrôle | à faire |
-| 4. Code | voir ci-dessous | à faire |
-| 5. Tests | voir ci-dessous | à faire |
-| 6. Rendu | une capture de la zone d'état (statuts imposés, avec pastilles et compteurs) et une de la section Statuts du compendium, Firefox sans interface, port à part | à faire |
-| 7. Documents | ce document (état présent), [STATUTS.md](STATUTS.md) (table des états : renvoi ici), [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7 (le prompt v12 remplacé par un renvoi ici, historique des planches), [FEATURES.md](FEATURES.md) § 3, [SYSTEMES.md](SYSTEMES.md) (la pastille, un rappel visuel), [ARCHITECTURE.md](ARCHITECTURE.md) si `trayStates` change de signature, `ETAT.md`, `CHANGELOG.md`, version mineure | à faire |
-| 8. Compte rendu | ce qui a changé, ce qui a été vu, ce qui ne l'a pas été | à faire |
+**Livré** : les vingt états du § 3, leurs emblèmes et les trois pastilles (planche v32, 1 200 crédits Artlist en tout, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, historique) ; le regroupement par état et par moment, les nombres de la règle 6, l'Emprise comptée sur les malus de l'adversaire. Présentation seulement : le moteur, l'équilibre et l'empreinte de non-régression n'ont pas bougé ; aucun identifiant d'état n'est enregistré dans l'historique. Vus dans Firefox : la zone d'état (tous les statuts en jeu, pastilles, compteurs, infobulles) et la section Statuts du compendium ; pas en combat réel.
 
-**Le pilote (2026-10-28)** : GPT Image 2.5, texte seul, 200 crédits, deux versions ; vrai canal alpha, découpe par `slice-coins.py` sans retouche (rayons 196 à 202 px). Les deux se lisent à 24 px, teintées et sous un compteur : le cœur et l'épée restent reconnaissables, le chevron et la barre se voient. **Version B retenue** : elle garde le même symbole d'un emblème à son opposé ; la version A retournait l'épée d'Affaibli (pointe en bas), d'où la phrase « never flip, rotate or mirror » ajoutée au prompt. L'épée, fine à 24 px, est demandée « broad short sword » pour la suite. Planches et inventaire gardés hors du dépôt, dans `~/.cache/battler-emblems/` (pilote A et B, comparaison avec les emblèmes actuels, script d'inventaire) ; le pilote n'est pas intégré : ses quatre emblèmes seront refaits avec les seize autres (étape 3), sur sa référence, pour une planche homogène.
+**Contrôles** (`states.test.ts`, `screens.test.tsx`) : chaque état alimenté par un statut en jeu a son emblème `state-*` et son fichier (règle 7) ; un médaillon par état et par moment ; le nombre regroupé (le plus grand nombre de charges, le seuil « 2/3 », pas de « 1 » seul, le total de l'Emprise) ; le Poison, le Saignement et la Brûlure n'ont aucun autre statut en jeu sous leur état (règle 5).
 
-**Le code (étape 4)** :
-- `states.ts` : `StateId` réduit aux vingt états du § 3 et aux deux de réserve ; les relais de `DISPLAYED` suivent la colonne « Statuts » ; un `Relay` déclare sa pastille (`trigger`) ; `trayStates` regroupe par (état, pastille) et applique la règle 6 (total par moment, le plus grand nombre de charges, seuil « n/N », pas de « 1 » seul) ; il reçoit les statuts de l'adversaire pour le total de l'Emprise.
-- Les résumés des états suivent leur question (Puissance : « Il fait plus de dégâts. », la Surtension y entre ; Représailles : « Quand on le touche, ou quand il se soigne, l'adversaire en paie le prix. ») ; le résumé du Poison dit « à la fin de ses tours » (il dit encore « au début », faux depuis M2).
-- `Icon.tsx` : `STATE_ICON` ne pointe que vers des `state-*` ; les noms des pastilles ; `StateIcon` sans repli peint.
-- `StatusTray.tsx` : la pastille sur le bord haut gauche ; l'infobulle dit le moment de chaque part.
-- Les fichiers d'emblèmes sans usage sont supprimés (`state-rot`, `state-thorns`, `state-firefly`, `state-breach`, `state-spoiled`, `state-vulnerable`, `state-reflect`) ; avant, chercher leurs usages hors de la zone (compendium, pastilles de règles, puces des reliques).
-- Présentation seulement : le moteur, l'équilibre et l'empreinte de non-régression ne bougent pas. À vérifier : aucun `StateId` dans l'historique `battler:history:v1`.
-
-**Les tests (étape 5)** : chaque état alimenté par un statut en jeu a un emblème `state-*`, et aucun état n'emprunte une icône de compétence (règle 7) ; deux statuts du même état et du même moment font un médaillon, deux moments en font deux ; le nombre regroupé (total, plus grand nombre de charges, seuil) ; une ressource lue (règle 5) ne partage son médaillon avec aucun statut. `npm run check`, `npx vite build`.
-
-**Budget** : 2 923 crédits Artlist le 2026-10-28 avant le pilote, 2 723 après. Reste à dépenser : planches 4×4 et 2×2, 400 ; pastilles, 200 ; retouches, 200 à 400 : environ 1 000.
+**Reste** : les deux états de réserve (Vulnérable, Esquive empêchée), à peindre le jour où un statut en jeu les alimente. **Pour relire tout le contenu d'un coup** (après une refonte des statuts) : l'inventaire hors dépôt, `VITE_CONFIG_NATIVE_IGNORE_WARNING=true npx vitest run --config ~/.cache/battler-emblems/vitest.config.ts --root . --silent=false` (chaque statut de la zone : état, icône, déclencheurs, sources, compétences et reliques qui le lisent) ; les planches de la v32 sont gardées au même endroit.

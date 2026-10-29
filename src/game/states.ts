@@ -2,7 +2,9 @@ import type { Character } from './character'
 import type { CharacterEvent, Effect } from './events'
 import {
   FALSE_NOTE,
+  GRIP,
   isAura,
+  malusCount,
   STATUS_IDS,
   STATUSES,
   statusCounter,
@@ -25,45 +27,34 @@ import { typeset } from './typography'
  * « Deux niveaux de lecture ».
  */
 
+/**
+ * Le vocabulaire de la zone d'état (docs/EMBLEMES.md § 3, 2026-10-28) : un état par question du spectateur, un emblème
+ * gris chacun (`state-*`). Un statut nouveau se range sous l'un d'eux ; un état nouveau est l'exception (règle 8).
+ */
 export type StateId =
   | 'power'
   | 'weakened'
   | 'shield'
+  | 'guardBroken'
   | 'sureCrit'
   | 'critPower'
+  | 'blinded'
   | 'sureDodge'
   | 'extraDie'
+  | 'jinxed'
+  | 'lostTurn'
   | 'healing'
+  | 'noHealing'
   | 'drain'
-  | 'reflect'
-  | 'thorns'
+  | 'reprisal'
   | 'immunity'
+  | 'bonusStolen'
   | 'poison'
   | 'bleed'
   | 'burn'
-  | 'lostTurn'
-  | 'breach'
+  // Réserve (statuts sans porteur) : un état, pas encore d'emblème (EMBLEMES § 3)
   | 'vulnerable'
-  | 'firefly'
-  | 'spoiled'
-  // Phase 8, lot 3 : les malus de famille manquants
-  | 'guardBroken'
-  | 'jinxed'
-  | 'blinded'
-  | 'noHealing'
-  | 'bonusStolen'
-  // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme et la Flamme votive
-  | 'tithed'
-  | 'votive'
-  // Refonte des auras (2026-10-28) : les compétences à charges sorties des auras, et les statuts des reliques qui en sortent
-  | 'leeching'
-  | 'toadSkin'
-  | 'sentence'
-  | 'faithShield'
-  | 'grip'
-  | 'overcharge'
-  // Refonte des auras (tranche 3, 2026-10-28) : les fautes du Jugement
-  | 'fault'
+  | 'noDodge'
 
 export interface StateDef {
   /** Nom générique, le même quel que soit le personnage qui l'a posé */
@@ -79,47 +70,41 @@ export interface StateDef {
 }
 
 export const STATES: Record<StateId, StateDef> = {
-  // Puissance et Critique renforcé : sans source depuis la 0.79.7 (les auras qui les donnaient se lisent sur leur
-  // anneau), gardés dans le vocabulaire avec leur emblème ; la Puissance revient avec la Ferveur (Encens de l'abbaye)
-  power: { name: 'Puissance', polarity: 'positive', summary: 'Ses coups font plus de dégâts.', counter: 'amount' },
+  // Puissance : chacun de ses coups, et les éclairs de la Surtension (un statut de relique entre sous son concept, règle 9)
+  power: { name: 'Puissance', polarity: 'positive', summary: 'Il fait plus de dégâts.', counter: 'amount' },
   weakened: { name: 'Affaibli', polarity: 'negative', summary: 'Ses coups font moins de dégâts.', counter: 'amount' },
   shield: { name: 'Bouclier', polarity: 'positive', summary: "Absorbe des dégâts après l'armure, puis s'épuise.", counter: 'status' },
-  // Une seule charge depuis B8 (2026-10-27) : rien à compter
-  sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Sa prochaine frappe est critique.', counter: 'none' },
-  critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Ses critiques frappent plus fort (multiplicateur).', counter: 'amount' },
+  guardBroken: { name: 'Garde brisée', polarity: 'negative', summary: 'Le prochain coup qu’il reçoit ×2 et brise son armure temporaire.', counter: 'status' },
+  sureCrit: { name: 'Critique assuré', polarity: 'positive', summary: 'Sa prochaine frappe est critique.', counter: 'status' },
+  critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Son prochain critique frappe plus fort (multiplicateur).', counter: 'amount' },
+  blinded: { name: 'Aveuglé', polarity: 'negative', summary: 'Ses critiques ratent.', counter: 'none' },
   sureDodge: { name: 'Esquive assurée', polarity: 'positive', summary: 'Il esquive à coup sûr le prochain coup reçu.', counter: 'status' },
   extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Des jets de plus à sa prochaine action.', counter: 'status' },
+  jinxed: { name: 'Malchance', polarity: 'negative', summary: 'Son prochain jet sur une compétence tombe à vide.', counter: 'status' },
+  lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
-  drain: { name: 'Drain', polarity: 'positive', summary: "Ses prochains coups qui touchent lui rendent les PV qu'ils retirent.", counter: 'status' },
-  reflect: { name: 'Renvoi', polarity: 'positive', summary: 'Le prochain coup reçu lui revient : une part des dégâts renvoyée, ou un critique.', counter: 'status' },
-  // Épines : sans source depuis la 0.118.1 (l'Aura d'épines se lit sur son anneau), gardé dans le vocabulaire avec son emblème
-  thorns: { name: 'Épines', polarity: 'positive', summary: "Chaque coup reçu fait saigner l'attaquant.", counter: 'status' },
+  noHealing: { name: 'Hémorragie', polarity: 'negative', summary: 'Il ne regagne plus de PV.', counter: 'none' },
+  drain: { name: 'Drain', polarity: 'positive', summary: 'Ses coups qui touchent lui rendent des PV.', counter: 'status' },
+  reprisal: { name: 'Représailles', polarity: 'positive', summary: "Quand on le touche, ou quand il se soigne, l'adversaire en paie le prix.", counter: 'status' },
   immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut lui être posé.', counter: 'status' },
-  poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV au début de chacun de ses tours.', counter: 'status' },
+  bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
+  poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
   bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
   burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
-  lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
-  breach: { name: 'Brèche', polarity: 'negative', summary: 'Son armure est réduite.', counter: 'status' },
   vulnerable: { name: 'Vulnérable', polarity: 'negative', summary: 'Il subit plus de dégâts à chaque coup.', counter: 'status' },
-  firefly: { name: 'Luciole', polarity: 'negative', summary: 'Il ne peut plus esquiver et chaque coup reçu lui fait plus mal.', counter: 'status' },
-  // Fausse note (audit du 2026-10-21) : un seul coup, après l'armure ; l'additionner à Affaibli (chaque coup, avant
-  // l'armure) donnait un total qu'aucun coup ne subit
-  spoiled: { name: 'Coup gâché', polarity: 'negative', summary: 'Son prochain coup qui touche fera moins de dégâts.', counter: 'amount' },
-  // Phase 8, lot 3 : les malus de famille manquants (Garde, Fortune, Précision, Soin, Sceaux)
-  guardBroken: { name: 'Garde brisée', polarity: 'negative', summary: 'Le prochain coup qu’il reçoit ×2 et brise son armure temporaire.', counter: 'status' },
-  jinxed: { name: 'Malchance', polarity: 'negative', summary: 'Son prochain jet sur une compétence tombe à vide.', counter: 'status' },
-  blinded: { name: 'Aveuglé', polarity: 'negative', summary: 'Ses critiques ratent.', counter: 'none' },
-  noHealing: { name: 'Hémorragie', polarity: 'negative', summary: 'Il ne regagne plus de PV.', counter: 'none' },
-  bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
-  tithed: { name: 'Dîme', polarity: 'positive', summary: 'Ses prochains coups reçus lui rendent des PV, pris à l’attaquant.', counter: 'status' },
-  votive: { name: 'Flamme votive', polarity: 'positive', summary: 'Ses prochains soins brûlent l’adversaire.', counter: 'status' },
-  leeching: { name: 'Sangsue', polarity: 'positive', summary: 'Ses prochains coups qui touchent lui rendent des PV, selon le Saignement de l’adversaire.', counter: 'status' },
-  toadSkin: { name: 'Peau de crapaud', polarity: 'positive', summary: 'Ses prochains coups reçus empoisonnent l’attaquant.', counter: 'status' },
-  sentence: { name: 'Sentence', polarity: 'positive', summary: 'Ses prochains soins font perdre des PV à l’adversaire.', counter: 'status' },
-  faithShield: { name: 'Bouclier de foi', polarity: 'positive', summary: 'Ses prochains soins lui donnent de l’armure temporaire.', counter: 'status' },
-  grip: { name: 'Emprise', polarity: 'positive', summary: 'Ses coups font plus de dégâts par malus de l’adversaire.', counter: 'none' },
-  overcharge: { name: 'Surtension', polarity: 'positive', summary: 'Chacun de ses éclairs fait plus de dégâts.', counter: 'none' },
-  fault: { name: 'Faute', polarity: 'negative', summary: 'À sa troisième faute, il perd sa prochaine action.', counter: 'status' },
+  noDodge: { name: 'Esquive empêchée', polarity: 'negative', summary: 'Il ne peut plus esquiver.', counter: 'status' },
+}
+
+/**
+ * Le moment d'un statut, quand ce n'est pas celui de son état (EMBLEMES § 5) : une pastille sur le bord haut gauche du
+ * médaillon. Liste fermée ; une pastille n'entre que si deux statuts au moins en ont besoin.
+ */
+export type TrayMoment = 'strike' | 'hurt' | 'heal'
+
+export const TRAY_MOMENTS: Record<TrayMoment, { label: string }> = {
+  strike: { label: 'Au coup porté' },
+  hurt: { label: 'Au coup reçu' },
+  heal: { label: 'Au soin' },
 }
 
 // Typographie française (passe compendium, 2026-10-25) : l'espace insécable devant « : ; ! ? % »
@@ -131,8 +116,10 @@ for (const def of Object.values(STATES)) def.summary = typeset(def.summary)
  */
 export interface Relay {
   state: StateId
-  /** Sa part du total (états à `amount`) */
-  amount?: (s: Status) => number
+  /** Sa part du total (états à `amount`) ; `foe`, les statuts de l'adversaire (l'Emprise compte ses malus). Sans elle, aucune part chiffrée */
+  amount?: (s: Status, foe: readonly Status[]) => number
+  /** Son moment, quand ce n'est pas celui de l'état : sa pastille, et un médaillon à part */
+  moment?: TrayMoment
 }
 
 /**
@@ -150,7 +137,7 @@ export interface StatusPlace {
   onSeal?: true
 }
 
-const tray = (state: StateId, amount?: (s: Status) => number): StatusPlace => ({ place: 'tray', relays: [{ state, amount }] })
+const tray = (state: StateId, amount?: Relay['amount'], moment?: TrayMoment): StatusPlace => ({ place: 'tray', relays: [{ state, amount, moment }] })
 const aura = (): StatusPlace => ({ place: 'aura', relays: [] })
 
 /** Place des statuts qui ne sont pas des mécanismes (bonus et malus) ; celle d'un mécanisme découle de `mechanic`. */
@@ -160,24 +147,26 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   poison: tray('poison'),
   regeneration: tray('healing', (s) => s.stacks),
   weakened: tray('weakened', (s) => s.stacks),
-  exposed: tray('breach'),
+  exposed: tray('vulnerable'),
   burn: tray('burn'),
   vulnerable: tray('vulnerable'),
   stunned: tray('lostTurn'),
   ward: tray('immunity'),
   lifesteal: tray('drain'),
   evasion: tray('sureDodge'),
-  // Ferveur (Encens de l'abbaye) : la Puissance du vocabulaire, son emblème compris, pour un seul coup
-  momentum: tray('power', (s) => s.stacks),
+  // Ferveur : la Puissance, sur son prochain coup qui touche (pastille « coup porté », EMBLEMES § 3)
+  momentum: tray('power', (s) => s.stacks, 'strike'),
   fear: tray('lostTurn'),
   luckyStrike: tray('extraDie'),
-  riposte: tray('reflect'),
-  firefly: tray('firefly'),
+  // Représailles (EMBLEMES règle 2) : un effet qui frappe l'adversaire quand on touche le porteur
+  riposte: tray('reprisal'),
+  firefly: tray('noDodge'),
   bleed: tray('bleed'),
   whistling: tray('healing', () => WHISTLE_HEAL),
-  falseNote: tray('spoiled', (s) => FALSE_NOTE * s.stacks),
-  // Rancune (0.114.0) : comme la Riposte, elle attend le coup qui le touche ; elle se range sous le Renvoi
-  grudge: tray('reflect'),
+  // Fausse note : Affaibli, sur son prochain coup qui touche (après l'armure : un médaillon à part, règle 6)
+  falseNote: tray('weakened', (s) => FALSE_NOTE * s.stacks, 'strike'),
+  // Rancune : le résultat profite au porteur (règle 2), un critique assuré à chaque coup reçu
+  grudge: tray('sureCrit', undefined, 'hurt'),
 
   // Une aura sur son porteur est une modification permanente, de l'identité : elle se lit sur son anneau (sa
   // valeur, `badge`), dans la barre de compétences, et ne se relaie pas dans la zone d'état (0.79.7)
@@ -187,18 +176,19 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   immunity: tray('immunity'),
   frostAura: aura(),
   decoctionAura: aura(),
-  // Les compétences à charges (refonte des auras, 2026-10-28) : leurs charges se comptent dans la zone d'état
-  sentence: tray('sentence'),
+  // Les compétences à charges (refonte des auras, 2026-10-28) : leurs charges se comptent dans la zone d'état ; la
+  // Sentence, une Représaille au soin
+  sentence: tray('reprisal', undefined, 'heal'),
   // Phase 8, second lot : la Vindicte, une aura d'identité (la Ferveur qu'elle pose s'affiche d'elle-même) ; l'Embrasement
   // est un mécanisme (sa place découle de `mechanic`)
   vendetta: aura(),
-  faithShield: tray('faithShield'),
+  faithShield: tray('shield', undefined, 'heal'),
   // Revue des compétences (I4) : la Plaie ouverte pose de vrais Saignements, qui s'affichent d'eux-mêmes
   openWound: aura(),
   // Revue X1 (0.118.1) : l'Aura d'épines, permanente et cumulable, se lit sur son anneau ; le Saignement qu'elle pose
   // s'affiche de lui-même chez l'attaquant
   thorns: aura(),
-  // Phase 8, lot 3 : les malus de famille, chacun son état dans la zone de l'adversaire
+  // Phase 8, lot 3 : les malus de famille, chacun la négation de son axe (EMBLEMES § 4)
   guardBreak: tray('guardBroken'),
   jinx: tray('jinxed'),
   blinded: tray('blinded'),
@@ -217,11 +207,10 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   dread: aura(),
   rancor: aura(),
   ballad: aura(),
-  // Refonte des auras (2026-10-28) : la Mire de la Visée renforce son prochain critique (l'état sans source depuis la
-  // 0.79.7 reprend du service) ; les fautes du Jugement se comptent chez l'attaquant ; Bastion, Jugement et Brasier, trois
-  // auras d'identité, se lisent sur leur anneau
+  // Refonte des auras (2026-10-28) : la Mire de la Visée renforce son prochain critique ; les fautes du Jugement mènent
+  // au Tour perdu (« 2/3 », règle 6) ; Bastion, Jugement et Brasier, trois auras d'identité, se lisent sur leur anneau
   aim: tray('critPower', (s) => s.stacks),
-  fault: tray('fault'),
+  fault: tray('lostTurn', undefined, 'strike'),
   bastion: aura(),
   judgement: aura(),
   brasier: aura(),
@@ -229,16 +218,17 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : quatre auras d'identité, qui se lisent sur leur anneau ;
   // la Ferveur de l'Élan et le bonus pris par le Larcin s'affichent d'eux-mêmes
   onrush: aura(),
-  // Refonte des auras (2026-10-28) : la Surtension et l'Emprise des reliques, pour tout le combat
-  overcharge: tray('overcharge'),
-  grip: tray('grip'),
+  // Refonte des auras (2026-10-28) : la Surtension et l'Emprise des reliques, sous la Puissance (règle 9). L'Emprise
+  // compte les malus de l'adversaire ; la Surtension ne chiffre rien : ses éclairs ne sont pas des coups (règle 6)
+  overcharge: tray('power'),
+  grip: tray('power', (_s, foe) => GRIP * malusCount(foe)),
   pilfer: aura(),
-  // Quatrième demande du 2026-10-27 : la Dîme et la Flamme votive comptent leurs charges ; la Sangsue et la Peau de
-  // crapaud aussi depuis la refonte des auras (2026-10-28)
-  tithe: tray('tithed'),
-  votiveFlame: tray('votive'),
-  leech: tray('leeching'),
-  toadSkin: tray('toadSkin'),
+  // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme, un Drain au coup reçu ; la Flamme votive, une
+  // Représaille au soin ; la Sangsue, un Drain ; la Peau de crapaud, une Représaille
+  tithe: tray('drain', undefined, 'hurt'),
+  votiveFlame: tray('reprisal', undefined, 'heal'),
+  leech: tray('drain'),
+  toadSkin: tray('reprisal'),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */
@@ -255,47 +245,64 @@ export interface StateSource {
   amount?: number
 }
 
-/** Un médaillon de la zone d'état : un état générique, son nombre, et ce qui le compose. */
+/** Un médaillon de la zone d'état : un état générique et son moment, son nombre, et ce qui le compose. */
 export interface TrayState {
+  /** Sa clé : l'état et son moment (deux moments, deux médaillons) */
+  key: string
   id: StateId
+  /** Sa pastille (EMBLEMES § 5) */
+  moment?: TrayMoment
   /** Nombre affiché (absent : aucun nombre) */
   value?: number
+  /** Un seuil (la Faute) : le nombre se lit « value/of » */
+  of?: number
   /** `turns` : le nombre est une durée (icône de sablier) ; `amount` : un total signé */
   unit?: 'stacks' | 'turns' | 'amount'
   sources: StateSource[]
 }
 
 /**
- * Les états de la zone d'un combattant, à partir de ses statuts. Un médaillon par état, dans l'ordre où leurs statuts
- * sont arrivés.
+ * Les états de la zone d'un combattant, à partir de ses statuts : un médaillon par état et par moment, dans l'ordre où
+ * leurs statuts sont arrivés. Le nombre suit EMBLEMES règle 6 : total des parts chiffrées ; un statut seul, son
+ * compteur ; plusieurs, le plus grand nombre de charges (les prochains déclenchements qui paient encore) ; un seuil,
+ * sa progression. `foe` : les statuts de l'adversaire (l'Emprise compte ses malus).
  */
-export function trayStates(own: readonly Status[]): TrayState[] {
-  const byId = new Map<StateId, StateSource[]>()
+export function trayStates(own: readonly Status[], foe: readonly Status[] = []): TrayState[] {
+  const byKey = new Map<string, TrayState>()
   for (const status of own)
     for (const relay of STATUS_PLACE[status.id].relays) {
-      const source = { status, ...(relay.amount && { amount: relay.amount(status) }) }
-      const list = byId.get(relay.state)
-      if (list) list.push(source)
-      else byId.set(relay.state, [source])
+      const key = relay.moment ? `${relay.state}:${relay.moment}` : relay.state
+      const source = { status, ...(relay.amount && { amount: relay.amount(status, foe) }) }
+      const found = byKey.get(key)
+      if (found) found.sources.push(source)
+      else byKey.set(key, { key, id: relay.state, ...(relay.moment && { moment: relay.moment }), sources: [source] })
     }
 
-  return [...byId].map(([id, sources]): TrayState => {
-    const def = STATES[id]
-    if (def.counter === 'none') return { id, sources }
-    if (def.counter === 'amount') return { id, value: sources.reduce((t, s) => t + (s.amount ?? 0), 0), unit: 'amount', sources }
-    // Compteur du statut : celui du seul statut qui l'alimente, ou la somme des charges s'ils sont plusieurs
+  return [...byKey.values()].map((state): TrayState => {
+    const { sources } = state
+    const threshold = sources.find((s) => STATUSES[s.status.id].threshold)
+    if (threshold) return { ...state, value: threshold.status.stacks, of: STATUSES[threshold.status.id].threshold!.at, unit: 'stacks' }
+    const def = STATES[state.id]
+    if (def.counter === 'none') return state
+    if (def.counter === 'amount') {
+      const total = sources.reduce((t, s) => t + (s.amount ?? 0), 0)
+      return total > 0 ? { ...state, value: total, unit: 'amount' } : state
+    }
+    // Un nombre qui ne peut valoir que 1 ne s'affiche pas (règle 6) : une seule charge au plus, sans durée
     if (sources.length === 1) {
       const counter = statusCounter(sources[0].status)
-      return counter ? { id, value: counter.value, unit: counter.unit, sources } : { id, sources }
+      if (!counter || (counter.unit === 'stacks' && STATUSES[sources[0].status.id].maxStacks === 1)) return state
+      return { ...state, value: counter.value, unit: counter.unit }
     }
-    return { id, value: sources.reduce((t, s) => t + s.status.stacks, 0), unit: 'stacks', sources }
+    const counted = sources.filter((s) => STATUSES[s.status.id].maxStacks !== 1)
+    return counted.length > 0 ? { ...state, value: Math.max(...counted.map((s) => s.status.stacks)), unit: 'stacks' } : state
   })
 }
 
-
-/** Texte du nombre d'un état : « +7 » ou « −9 » pour un total, le nombre seul sinon. */
-export function stateValueText(state: Pick<TrayState, 'id' | 'value' | 'unit'>): string | undefined {
+/** Texte du nombre d'un état : « +7 » ou « −9 » pour un total, « 2/3 » pour un seuil, le nombre seul sinon. */
+export function stateValueText(state: Pick<TrayState, 'id' | 'value' | 'unit' | 'of'>): string | undefined {
   if (state.value === undefined) return undefined
+  if (state.of !== undefined) return `${state.value}/${state.of}`
   if (state.unit !== 'amount') return String(state.value)
   return STATES[state.id].polarity === 'negative' ? `−${state.value}` : `+${state.value}`
 }

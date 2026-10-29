@@ -1,4 +1,4 @@
-import { STATES, STATUS_PLACE, type StateId } from '../game/states'
+import { STATES, STATUS_PLACE, type StateId, type TrayMoment } from '../game/states'
 import { STATUSES, type StatusId } from '../game/statuses'
 import type { CharacterEvent } from '../game/events'
 
@@ -63,28 +63,31 @@ export type IconName =
   | 'purse'
   | 'bet-token'
   | 'twist'
-  // Planche v12 (2026-10-21) : emblèmes d'état, pièces gravées monochromes
+  // Planche v32 (2026-10-28) : emblèmes d'état, pièces de fer lisses au symbole argent (docs/EMBLEMES.md § 7)
   | 'state-power'
   | 'state-weakened'
   | 'state-shield'
+  | 'state-guard-broken'
   | 'state-sure-crit'
   | 'state-crit-power'
+  | 'state-blinded'
   | 'state-sure-dodge'
   | 'state-extra-die'
+  | 'state-jinxed'
+  | 'state-lost-turn'
   | 'state-healing'
+  | 'state-no-healing'
   | 'state-drain'
-  | 'state-reflect'
-  | 'state-thorns'
+  | 'state-reprisal'
   | 'state-immunity'
+  | 'state-bonus-stolen'
   | 'state-poison'
   | 'state-bleed'
   | 'state-burn'
-  | 'state-lost-turn'
-  | 'state-rot'
-  | 'state-breach'
-  | 'state-firefly'
-  | 'state-spoiled'
-  | 'state-vulnerable'
+  // et les pastilles de déclencheur (EMBLEMES § 5)
+  | 'badge-strike'
+  | 'badge-hurt'
+  | 'badge-heal'
   // Planche v17 (2026-10-25) : phase 8, premier lot ; la Rancune reprend `grudge` (planche v8)
   | 'quarry'
   | 'harvest'
@@ -213,7 +216,7 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   // Revue des compétences (2026-10-25) : la compétence et son statut partagent l'icône
   faithShield: 'faith-shield',
   openWound: 'open-wound',
-  // Phase 8, lot 3 : les malus de famille ; dans la zone d'état, leur état emprunte la même icône (`STATE_ICON`)
+  // Phase 8, lot 3 : les malus de famille ; leur compétence emprunte cette icône, la zone d'état montre l'emblème de leur état
   guardBreak: 'guard-break',
   jinx: 'jinx',
   blinded: 'blinding',
@@ -259,50 +262,38 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
 }
 
 /**
- * Emblème de chaque état de la zone d'état (`states.ts`, planche v12, 0.79.2). Un état n'a pas la grammaire d'une
- * compétence : la compétence est l'identité du personnage (objet peint à sa palette, dans un sceau octogonal) ;
- * l'état est un mot du vocabulaire commun, une pièce ronde et monochrome au symbole gravé, posée telle quelle,
- * sans cadre (docs/STYLE_BIBLE.md § 7). Les cinq derniers (planche v15, 0.110.1) complètent la zone d'état.
+ * Emblème de chaque état de la zone d'état (planche v32, docs/EMBLEMES.md) : une pièce de fer lisse, monochrome, son
+ * symbole d'argent ; un axe, un symbole, et ses marques (chevron, barre). Jamais l'icône peinte d'une compétence (règle
+ * 7) : un test vérifie que chaque état en jeu a le sien. Les deux états de réserve n'en ont pas encore.
  */
 export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   power: 'state-power',
   weakened: 'state-weakened',
   shield: 'state-shield',
+  guardBroken: 'state-guard-broken',
   sureCrit: 'state-sure-crit',
   critPower: 'state-crit-power',
+  blinded: 'state-blinded',
   sureDodge: 'state-sure-dodge',
   extraDie: 'state-extra-die',
+  jinxed: 'state-jinxed',
+  lostTurn: 'state-lost-turn',
   healing: 'state-healing',
+  noHealing: 'state-no-healing',
   drain: 'state-drain',
-  reflect: 'state-reflect',
-  thorns: 'state-thorns',
+  reprisal: 'state-reprisal',
   immunity: 'state-immunity',
+  bonusStolen: 'state-bonus-stolen',
   poison: 'state-poison',
   bleed: 'state-bleed',
   burn: 'state-burn',
-  lostTurn: 'state-lost-turn',
-  breach: 'state-breach',
-  firefly: 'state-firefly',
-  spoiled: 'state-spoiled',
-  vulnerable: 'state-vulnerable',
-  // Phase 8, lot 3 : pas encore d'emblème d'état peint (pièce ronde monochrome) ; l'icône de la compétence en tient lieu
-  guardBroken: 'guard-break',
-  jinxed: 'jinx',
-  blinded: 'blinding',
-  noHealing: 'hemorrhage',
-  bonusStolen: 'seal-theft',
-  // Quatrième demande du 2026-10-27 : pas d'emblème d'état peint ; l'icône de la compétence en tient lieu
-  tithed: 'tithe',
-  votive: 'votive-flame',
-  // Refonte des auras (2026-10-28) : de même, les compétences à charges et les statuts des reliques sorties des auras
-  leeching: 'leech',
-  toadSkin: 'toad-skin',
-  sentence: 'sentence',
-  faithShield: 'faith-shield',
-  grip: 'grip',
-  overcharge: 'overcharge',
-  // Refonte des auras (2026-10-28) : la faute du Jugement, son icône peinte
-  fault: 'fault',
+}
+
+/** La pastille de chaque moment (EMBLEMES § 5), posée sur le bord haut gauche du médaillon. */
+export const MOMENT_ICON: Record<TrayMoment, IconName> = {
+  strike: 'badge-strike',
+  hurt: 'badge-hurt',
+  heal: 'badge-heal',
 }
 
 /** Icône d'un état : l'icône peinte, sinon une marque neutre (l'initiale de l'état) à la même taille. */

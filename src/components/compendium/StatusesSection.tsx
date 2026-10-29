@@ -2,7 +2,9 @@ import { useState, type ReactNode } from 'react'
 import { sheetStatuses, statusHome, type StatusEntry } from '../../game/catalog'
 import type { CharacterEvent, Target } from '../../game/events'
 import { RULES } from '../../game/rules'
+import { STATES, STATUS_PLACE, type StateId } from '../../game/states'
 import { POLARITY_STYLE, STATUSES, type Polarity, type StatusId } from '../../game/statuses'
+import { StateIcon } from '../Icon'
 import { CodexBox, Line, RelicSource, RuleLink, skillLine, skillLink, SkillMedal, StatusMedal, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type CompendiumTarget, type SectionProps } from './sections'
 
@@ -13,10 +15,11 @@ const KINDS: Polarity[] = ['positive', 'negative']
 
 /**
  * Section « Statuts » : le vocabulaire commun, les bonus et malus de la zone d'état, réunis dans un seul index
- * (polarité dite par la couleur et par le mot), chacun sous l'emblème de son état. Une aura ou un mécanisme
- * appartient à sa compétence, une règle de forme à son personnage : ils sont décrits là (0.98.0). À droite, le
- * détail du statut choisi : effet, consommation, cumul, qui le pose ; ni ses interactions ni ce qui le retire (au joueur
- * de les découvrir, 2026-10-27). Seuls les statuts mis en jeu
+ * (polarité dite par la couleur et par le mot), rangés comme la zone d'état (docs/EMBLEMES.md, 0.130.2) : un intertitre
+ * par état, avec son emblème, une seule fois, et ses statuts dessous, sans icône ; un état dont le seul statut porte son
+ * nom (Poison) tient en une ligne. Une aura ou un mécanisme appartient à sa compétence, une règle de forme à son
+ * personnage : ils sont décrits là (0.98.0). À droite, le détail du statut choisi : effet, consommation, cumul, qui le
+ * pose ; ni ses interactions ni ce qui le retire (au joueur de les découvrir, 2026-10-27). Seuls les statuts mis en jeu
  * (compétence ou relique) y figurent ; les statuts « à venir » restent dans docs/STATUTS.md.
  */
 export function StatusesSection({ nav, focus, filter }: SectionProps) {
@@ -45,27 +48,53 @@ export function StatusesSection({ nav, focus, filter }: SectionProps) {
           {KINDS.map((k) => {
             const group = shown.filter((e) => e.def.polarity === k)
             if (group.length === 0) return null
+            // Les états de cette polarité, dans l'ordre du vocabulaire (STATES), chacun avec ses statuts affichés
+            const byState = (Object.keys(STATES) as StateId[])
+              .map((state) => ({ state, entries: group.filter((e) => STATUS_PLACE[e.id].relays[0]?.state === state) }))
+              .filter((g) => g.entries.length > 0)
+            const row = (e: StatusEntry, medal: boolean) => (
+              <button
+                key={e.id}
+                type="button"
+                ref={e.id === focus ? focusRef : undefined}
+                aria-current={e.id === selected.id}
+                onClick={() => nav.go({ section: 'statuses', id: e.id })}
+                className={`codex-row w-full ${medal ? '' : 'min-h-12! pl-[68px]!'}`}
+              >
+                {medal && <StatusMedal id={e.id} size={40} />}
+                <span className="min-w-0">
+                  <span className="block font-display text-[17px] font-bold leading-tight text-ink-1">{e.def.name}</span>
+                  <span className="block truncate font-body text-[14px] text-ink-3">{e.def.summary}</span>
+                </span>
+              </button>
+            )
             return (
               <section key={k}>
                 <h3 className={`codex-label bg-surface-2/70 px-4 py-1.5 ${KIND_TONE[k]}`}>
                   {POLARITY_STYLE[k].label} · {group.length}
                 </h3>
-                {group.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    ref={e.id === focus ? focusRef : undefined}
-                    aria-current={e.id === selected.id}
-                    onClick={() => nav.go({ section: 'statuses', id: e.id })}
-                    className="codex-row w-full"
-                  >
-                    <StatusMedal id={e.id} size={40} />
-                    <span className="min-w-0">
-                      <span className="block font-display text-[17px] font-bold leading-tight text-ink-1">{e.def.name}</span>
-                      <span className="block truncate font-body text-[14px] text-ink-3">{e.def.summary}</span>
-                    </span>
-                  </button>
-                ))}
+                {byState.map(({ state, entries }) => {
+                  // Le statut qui porte le nom de son état (Critique assuré, Poison) tient lieu d'intertitre : sa ligne porte l'emblème
+                  const namesake = entries.find((e) => e.def.name === STATES[state].name)
+                  return (
+                    <div key={state}>
+                      {namesake ? (
+                        row(namesake, true)
+                      ) : (
+                        <div className="flex items-center gap-[14px] px-[14px] pb-1 pt-3">
+                          <span className="seal" data-tone={STATES[state].polarity} style={{ width: 40, height: 40 }}>
+                            <StateIcon id={state} className="h-full w-full" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-display text-[17px] font-bold leading-tight text-amber-200">{STATES[state].name}</span>
+                            <span className="block truncate font-body text-[14px] text-ink-3">{STATES[state].summary}</span>
+                          </span>
+                        </div>
+                      )}
+                      {entries.filter((e) => e !== namesake).map((e) => row(e, false))}
+                    </div>
+                  )
+                })}
               </section>
             )
           })}

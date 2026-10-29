@@ -265,9 +265,9 @@ Toutes les durées du combat sont divisées par `--speed` (vitesse ×1, ×2, ×4
 
 ### 4.6 Les icônes
 
-Il y a 95 icônes peintes (`src/assets/icons/`, 0.91.2). Trois tables les relient au jeu, dans `Icon.tsx` : `STATUS_ICON` (statut → icône peinte, empruntée par la compétence qui le pose), `STATE_ICON` (état de la zone d'état → emblème gravé) et `SKILL_ICON` (compétence → icône) ; une relique prend le fichier qui porte son id (`RelicIcon`). Hors de la barre de compétences, un statut de la zone d'état montre l'emblème de son état (`statusIcon`, 0.96.2). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji.
+Quatre tables relient les icônes peintes (`src/assets/icons/`) au jeu, dans `Icon.tsx` : `STATUS_ICON` (statut → icône peinte, empruntée par la compétence qui le pose), `STATE_ICON` (état de la zone d'état → emblème `state-*`, jamais une icône de compétence, 0.130.0), `MOMENT_ICON` (moment → pastille de déclencheur `badge-*`, zone d'état seulement, 0.130.0) et `SKILL_ICON` (compétence → icône) ; une relique prend le fichier qui porte son id (`RelicIcon`). Hors de la barre de compétences, un statut de la zone d'état montre l'emblème de son état, sans pastille (`statusIcon`, `StatusIcon`). Une icône manquante affiche l'initiale, et un test l'interdit pour un statut en jeu. Jamais d'emoji. Quand un état mérite un emblème : [EMBLEMES.md](EMBLEMES.md).
 
-Plus aucune icône en attente depuis la 0.91.2 (les quatre reliques élémentaires, planche v13) : la liste unique (STYLE_BIBLE § 7, « Icônes à générer », une planche par type) est vide. Hors jeu, donc pas encore à générer : Vulnérable, Étourdi, Garde sacrée, Pourriture subie.
+En attente : les deux états de réserve (Vulnérable, Esquive empêchée), sans porteur ([EMBLEMES.md](EMBLEMES.md) § 3) ; Garde sacrée et Régénération montreraient l'Immunité et le Soin.
 
 ---
 
@@ -276,7 +276,7 @@ Plus aucune icône en attente depuis la 0.91.2 (les quatre reliques élémentair
 | Brique | Où | Ce qu'elle montre |
 | --- | --- | --- |
 | **En-tête du combat** | `HpBar` | nom, PV, trois dés de compétence (`SkillDice`) avec infobulle ; ceux de la forme en cours pour le druide |
-| **Zone d'état** | `StatusTray` | bonus à gauche (aura en tête), malus à droite ; icône, un seul nombre (tours ou charges), infobulle |
+| **Zone d'état** | `StatusTray` | bonus à gauche, malus à droite ; un médaillon par état et par moment (`trayStates`, [EMBLEMES.md](EMBLEMES.md)) : emblème, pastille de déclencheur en haut à gauche, un seul nombre en bas à droite, infobulle |
 | **Zone des dés** | `FightScreen` | dés ou pièce, critique, marque « Imposé » |
 | **Barre de commandes** | `.hud` | pause, vitesse (×1, ×2, ×4), journal (J), triche (C) |
 | **Journal** | `CombatLog` | toutes les lignes de `narration`, copie de la trace |

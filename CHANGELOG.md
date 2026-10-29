@@ -32,6 +32,36 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.130.2] — 2026-10-28
+
+### Modifié
+- **Compendium, section Statuts, rangée comme la zone d'état** (décision de l'utilisateur, [EMBLEMES.md](docs/EMBLEMES.md) § 7) : un intertitre par état avec son emblème, une seule fois, et ses statuts dessous sans icône (Représailles : Riposte, Sentence, Flamme votive, Peau de crapaud). Le statut qui porte le nom de son état tient lieu d'intertitre (Critique assuré, puis Rancune). Avant, chaque ligne répétait l'emblème de son état : quatre fois les mêmes flèches pour les Représailles.
+
+## [0.130.1] — 2026-10-28
+
+### Retiré
+- **La pastille de déclencheur dans le compendium** (décision de l'utilisateur) : ajoutée en 0.130.0 sans demande, elle doublait ce que la ligne dit déjà (le nom, « chaque coup reçu… ») et chargeait la liste qu'on cherchait à simplifier. Le compendium montre l'emblème seul ; la pastille reste dans la zone d'état du combat, où le médaillon n'a ni nom ni phrase.
+
+## [0.130.0] — 2026-10-28
+
+**Les emblèmes d'état : un concept, une icône** (demande de l'utilisateur du 2026-10-28 : « une icône de statut doit traduire un concept, pouvant être partagé par plusieurs compétences ou personnages »). Règles, vocabulaire, arbre de décision et prompt dans [EMBLEMES.md](docs/EMBLEMES.md). Présentation seulement : moteur, équilibre et empreinte de non-régression inchangés.
+
+### Ajouté
+- **docs/EMBLEMES.md** : neuf règles (un emblème = une question du spectateur ; il dit le résultat pour le porteur ; un effet qui frappe l'adversaire est une Représaille ; une ressource lue par une synergie garde son emblème ; un nombre répond à une seule question ; aucun état n'emprunte l'icône d'une compétence ; un nouvel état est l'exception), le vocabulaire, les axes et leurs marques, les pastilles, l'arbre « un sort nouveau : faut-il un statut, un état, une icône ? », la grammaire et le prompt de génération. Renvoyé par `CLAUDE.md` et `docs/README.md`.
+- **Pastilles de déclencheur** (coup porté, coup reçu, soin) sur le bord haut gauche d'un médaillon, quand un statut agit à un autre moment que son état (Ferveur, Fausse note, Faute ; Rancune, Dîme ; Bouclier de foi, Sentence, Flamme votive), dans la zone d'état et le compendium ; l'infobulle dit le moment (« Au soin »).
+- Tests : chaque état en jeu a son emblème `state-*` ; un médaillon par état et par moment ; les nombres regroupés ; le Poison, le Saignement et la Brûlure gardent leur état seuls.
+
+### Modifié
+- **Vingt états au lieu de trente** : Drain ← Sangsue, Dîme ; Représailles (l'ancien Renvoi) ← Riposte, Peau de crapaud, Sentence, Flamme votive ; Puissance ← Emprise, Surtension (statuts de relique) ; Bouclier ← Bouclier de foi ; Critique assuré ← Rancune (le résultat profite au porteur) ; Affaibli ← Fausse note (Coup gâché retiré) ; Tour perdu ← Faute. Garde brisée, Aveuglé, Malchance, Hémorragie et Sceau de vol deviennent la négation de leur axe.
+- **Emblèmes refaits (planche v32)** : même concept, traitement plus simple (pièce de fer lisse, un seul symbole d'argent), un symbole par axe, chevron montant ou descendant, barre de négation (Hémorragie : le cœur du Soin barré). Les quatorze états qui montraient l'icône peinte de leur compétence ont leur emblème. Artlist, GPT Image 2.5, 1 200 crédits.
+- **Nombres** : plusieurs statuts au même moment montrent le plus grand nombre de charges (les prochains déclenchements qui paient), pas leur somme ; la Faute se lit « 2/3 » ; un nombre qui ne peut valoir que 1 ne s'affiche plus (Esquive améliorée) ; l'Emprise compte les malus de l'adversaire dans le total de Puissance, la Surtension n'y ajoute aucun chiffre.
+
+### Corrigé
+- Le résumé de l'état Poison disait « au début de chacun de ses tours » : il agit à la fin depuis M2.
+
+### Retiré
+- Les états Épines, Luciole, Brèche, Coup gâché, Renvoi, Sentence, Flamme votive, Sangsue, Peau de crapaud, Dîme, Bouclier de foi, Emprise, Surtension, Faute ; les emblèmes `state-reflect`, `state-thorns`, `state-firefly`, `state-breach`, `state-spoiled`, `state-vulnerable`, `state-rot`. Vulnérable et Esquive empêchée restent en réserve, sans emblème, faute de porteur.
+
 ## [0.129.0] — 2026-10-28
 
 **La refonte des auras**, validée par l'utilisateur le 2026-10-28 ([REFONTE_AURAS.md](docs/REFONTE_AURAS.md), réponses Q1 à Q14 dans [PROGRESSION.md](docs/PROGRESSION.md) § 1.26) : 33 auras → **20, deux par personnage**, chacune un moteur (elle produit, convertit ou change une règle), en valeurs entières (Q3 : « Évitons de jouer sur des valeurs pas entières »).

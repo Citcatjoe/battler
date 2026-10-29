@@ -1135,107 +1135,16 @@ L'inventaire sert aussi à éviter les doublons : avant de choisir un motif, vé
 
 **La liste d'attente de tout le projet**, tous chantiers confondus (druide, reliques, son, paris, interface). Chaque besoin s'y ajoute dès qu'une compétence, un statut, une relique ou un bouton arrive sans son icône, avec son type, son besoin, son motif et son icône provisoire. Tout se génère **d'un seul coup**, le moment venu (décision de l'utilisateur, 2026-10-20), mais **une planche par type** (règle de cette bible) : chaque type a sa grammaire, et les mélanger sur une planche brouille le style (une relique est un objet immobile sans halo ; une aura a son halo ; un bouton d'interface a moins de lueur). En attendant, l'icône provisoire s'affiche (ou l'initiale, s'il n'en a pas).
 
-**Emblèmes d'état : un type d'icône à part** (planche v12, intégrée le 2026-10-21, 0.79.2). On cultive la différence de concept entre **compétence** et **état**, et elle passe aussi par l'image :
-
-| | Compétence | État |
-| --- | --- | --- |
-| Ce que c'est | l'identité d'un personnage, ce qu'il sait faire | un mot du vocabulaire commun, ce qu'il subit ou porte, le même chez tous |
-| Image | un objet peint, riche, à la palette du personnage | un symbole **gravé sur une pièce**, **monochrome** (argent et fer vieillis) |
-| Cadre | posée dans un sceau octogonal CSS (`.skill-seal`), avec bordure | **aucun** : la pièce est découpée en disque et posée telle quelle ; toutes sont rondes et de même taille, elles s'alignent d'elles-mêmes |
-| Couleur | celle du personnage | aucune dans l'image ; monochrome, elle peut être teintée en CSS si besoin ; la polarité se lit au compteur (vert ou rouge) et à la rangée (bonus à gauche, malus à droite) |
-| Par-dessus | la pastille du dé, ses jauges | le compteur de l'état |
-
-Deux mots du prompt font cette grammaire (ajoutés par l'utilisateur à la première version, qui donnait des icônes trop proches des compétences) : **« monochrome »** et **« carved on a coin »**. Aucun motif ne reprend celui d'une compétence (le gantelet de l'Aura de puissance, la cible d'Œil de faucon, l'écu de Peau de pierre, le crâne du Souffle de la tombe).
-
-| Fichier | État | Symbole gravé |
-| --- | --- | --- |
-| `state-power.png` | Puissance | an upright sword with two stacked upward chevrons |
-| `state-weakened.png` | Affaibli | a snapped sword blade, one downward chevron |
-| `state-shield.png` | Bouclier | a round buckler with a horizontal band |
-| `state-sure-crit.png` | Critique assuré | concentric rings with a four-pointed spark |
-| `state-crit-power.png` | Critique renforcé | an impact burst with an upward chevron |
-| `state-sure-dodge.png` | Esquive assurée | a curved arrow swerving around a post |
-| `state-extra-die.png` | Dé en plus | two six-sided dice |
-| `state-healing.png` | Soin | a heart with an upward chevron |
-| `state-drain.png` | Drain | a heart with an arrow looping out and back in |
-| `state-reflect.png` | Renvoi | an arrow bouncing off a small shield |
-| `state-thorns.png` | Épines | a thorn star |
-| `state-immunity.png` | Immunité | a shield with a keyhole |
-| `state-poison.png` | Poison | a drop with rising bubbles |
-| `state-bleed.png` | Saignement | a drop under a slash mark |
-| `state-burn.png` | Brûlure | a flame |
-| `state-lost-turn.png` | Tour perdu | iron shackles |
-| `state-rot.png` | Pourriture | a wilting leaf with two holes (v15) |
-| `state-breach.png` | Brèche | a cracked breastplate (v15) |
-| `state-firefly.png` | Luciole | a firefly with a glowing tail (v15) |
-| `state-spoiled.png` | Coup gâché | a sword blade bent wavy (v15) |
-| `state-vulnerable.png` | Vulnérable | a target with an arrow plunging in (v15) |
+**Emblèmes d'état : un type d'icône à part** (planche v12 en 0.79.2 ; planche v32, simplifiée, en 0.130.0). On cultive la différence de concept entre **compétence** (l'identité d'un personnage : un objet peint, riche, à sa palette, dans un sceau octogonal) et **état** (un mot du vocabulaire commun, le même chez tous : un symbole monochrome sur une pièce ronde, sans cadre, le compteur dessus). **Tout ce qui les concerne est dans [EMBLEMES.md](EMBLEMES.md)** : quand un état mérite un emblème (§ 2 et § 6), un symbole par axe et ses marques (§ 4), les pastilles de déclencheur (§ 5), le traitement, le prompt complet, les vingt symboles et la découpe (`scripts/slice-coins.py`, § 7). Aucun motif d'emblème ne reprend celui d'une compétence.
 
 **Pas encore à générer**, mais connus (pour ne pas les redécouvrir) :
-- **Statuts sans porteur** : Étourdi, Garde sacrée. Ils n'entrent dans la liste que lorsqu'un personnage les pose. Les reliques ne les poseront pas : une relique ne pose jamais de malus sur l'adversaire (RELIQUES.md § 3, règle 7). Vulnérable et Pourriture ont leur emblème depuis la planche v15 (0.110.1).
+- **États de réserve** ([EMBLEMES.md](EMBLEMES.md) § 3) : Vulnérable (Vulnérable, Brèche) et Esquive empêchée (Luciole), sans porteur ; leur emblème se génère le jour où un statut en jeu les alimente. Garde sacrée et Régénération, sans porteur, montreraient l'Immunité et le Soin.
 - **Sceaux de compétence peints** (asset A-01, [design-system.md](design-system.md) : retenu, prioritaire) : un autre format qu'une icône, une illustration qui remplit la fenêtre octogonale de la carte (`object-fit: cover`), une par compétence ; aucun n'est commandé, la compétence montre son icône en attendant (`SKILL_SEAL`, `SkillSeal.tsx`).
 - **Icônes de commande** (N-01, design-system : à tester, 3 d'abord) : boutons icône et boutons d'action.
 
 **Emprunts** : une compétence qui pose un statut montre l'icône de ce statut (Œil de faucon → `crit`, Peau de pierre → `shield`, Vol de vie → `lifesteal`, Souffle de la tombe → `poison`) ; Ouverture prend l'Aura mélodieuse qu'elle pose ; les trois Attente de l'ogre partagent `waiting` ; l'Aura sauvage garde `grudge-aura` ; Feux follets montre ses lucioles (`fireflies`, 0.79.0). **Depuis la 0.79.0, ces emprunts restent aux compétences** : ce sont les états qui ont un emblème à eux (pièces gravées de la planche v12, intégrée en 0.79.2) : une compétence et l'état qu'elle pose ne montrent plus la même image. **Depuis la 0.96.2, la règle vaut hors du combat** : un statut de la zone d'état se montre partout (compendium, infobulle d'une relique) par l'emblème de son état (`statusIcon`, `Icon.tsx`) ; `STATUS_ICON` reste l'icône que la compétence emprunte, et celle des auras, formes et mécanismes.
 
-**Prompt d'une planche d'emblèmes d'état** (celui de la v12, complet, à coller tel quel ; pour de nouveaux états, garder tout sauf la liste ICONS, et joindre la planche v12 comme référence de style) :
-
-```text
-Create a single square image, 1024x1024, containing a sprite sheet of 16 game UI icons
-arranged in a strict 4x4 grid (4 columns, 4 rows). Each icon is centered in its own
-invisible cell (1/4 of the width and height), occupies about 85% of the cell,
-and never touches or overlaps the cell borders. Leave clear empty space between icons.
-All coins have exactly the same diameter.
-
-BACKGROUND: fully transparent, real alpha channel. Do NOT paint a checkerboard pattern.
-If transparency is not possible, use a perfectly flat, uniform pure black background (#000000)
-with no gradient, no texture, no vignette, no shadow under the coins.
-NO grid lines, NO labels, NO numbers, NO letters, NO text anywhere.
-
-PURPOSE: these are STATUS EMBLEMS for a fantasy auto-battler. Each one is shown as is, at
-64 pixels and down to 24 pixels, with a small counter placed over its lower right edge.
-They must read as simple SYMBOLS, not as illustrated objects: the game's skill icons are rich,
-colorful painted objects, these emblems must look clearly different from them.
-
-STYLE: MONOCHROME. Each icon is one bold, simple symbol CARVED ON A COIN: a round, flat,
-old silver-and-iron coin seen perfectly head-on, with a thick raised rim, a worn hammered
-surface, and the symbol embossed in its center. Grey metal only, no other color at all
-(the game may tint them). Crisp painted highlight from the top-left, deep engraved shadows
-for contrast. Thick strokes, no thin details, no scenery, no hands, no faces.
-Every symbol must be distinct in silhouette from all the others.
-AVOID: color, gold, emoji look, flat vector clip-art, cute or cartoon style, glossy plastic,
-3D perspective, photorealism, text, real-world religious symbols (no crosses).
-
-ICONS, in reading order (left to right, top to bottom), each carved on its coin:
-Row 1:
- 1. an upright sword with two stacked bold upward chevrons behind its blade (more damage)
- 2. a sword blade snapped in two, the tip falling, one bold downward chevron below (less damage)
- 3. a round buckler shield seen head-on, a thick rim and a horizontal band (damage shield)
- 4. three concentric rings with a sharp four-pointed spark at their center (sure critical)
-Row 2:
- 5. a jagged impact burst (spiky star) with one bold upward chevron above it (stronger criticals)
- 6. a thick curved arrow swerving around a short upright post (sure dodge)
- 7. two six-sided dice, one slightly behind the other, pips as simple dots (extra die)
- 8. a heart shape with one bold upward chevron inside it (healing over time)
-Row 3:
- 9. a heart shape with a curved arrow looping out of it and back into it (life drain)
-10. a small round shield with an arrow bouncing off it and turning back (reflect damage)
-11. a thorn star: five thick sharp thorns pointing outward from a small ring (thorns)
-12. a shield outline with a keyhole at its center (immunity)
-Row 4:
-13. a single teardrop with three tiny bubbles rising inside (poison)
-14. a single heavy drop below a short diagonal slash mark (bleeding)
-15. a single bold flame tongue (burn)
-16. a pair of iron shackles: two cuffs joined by a short chain (loses its turn)
-```
-
-**Découpe** (`scripts/slice-coins.py`, propre à cette grammaire) : sur fond noir uni ou transparent, chaque pièce est trouvée comme un disque (centre au barycentre, rayon tiré de son aire), découpée en rond avec un bord adouci un peu à l'intérieur de la tranche, et remplit tout son carré de 128 px, sans marge. La planche de contrôle montre chaque pièce à 64 et 24 px, avec un compteur posé dessus.
-
-```sh
-python scripts/slice-coins.py <planche.png> src/assets/icons state-power,state-weakened,state-shield,state-sure-crit,state-crit-power,state-sure-dodge,state-extra-die,state-healing,state-drain,state-reflect,state-thorns,state-immunity,state-poison,state-bleed,state-burn,state-lost-turn controle.png
-```
-
-Intégration : les noms dans `IconName`, et l'état dans `STATE_ICON` (`Icon.tsx`). La zone d'état (`StatusTray`) pose l'emblème sans cadre, à 48 px, teinté légèrement en vert ou en rouge selon sa polarité (`.state-tint`, 0.79.3), et son compteur dessus. Les statuts, leurs compétences et le compendium gardent leurs icônes peintes.
+**Prompt, symboles, découpe et intégration des emblèmes d'état** : [EMBLEMES.md](EMBLEMES.md) § 7 (le prompt de la v12 et la liste de ses symboles sont remplacés par ceux de la v32).
 
 ### Règles de design des icônes
 
@@ -1364,6 +1273,7 @@ Les prompts complets suivaient le gabarit ci-dessus. On ne garde ici que ce qui 
 
 | Version | Date | Icônes | Résultat |
 | --- | --- | --- | --- |
+| v32 | 2026-10-28 | 20 emblèmes d'état, 3 pastilles | Refonte des emblèmes ([EMBLEMES.md](EMBLEMES.md)) : même concept, traitement plus simple (fer lisse, un symbole d'argent, chevron et barre communs), vingt états au lieu de trente, aucun emprunt d'icône de compétence ; et les trois pastilles de déclencheur (coup porté, coup reçu, soin). Artlist, GPT Image 2.5 : un pilote de quatre en texte seul (version B retenue, elle garde le même symbole d'un emblème à son opposé), puis en image à image sur le pilote une planche 4×4, une 2×2 et une des pastilles, deux versions chacune ; la 4×4 et les pastilles refaites une fois (les premières peignaient des compteurs et des « + » sur les pièces, le prompt les nommait ; l'esquive ressemblait à la flèche des Représailles). 1 200 crédits. Retenues : la 4×4 C, la 2×2 A, les pastilles D. Découpe par `scripts/slice-coins.py`, `optipng`. Vues en jeu : zone d'état et compendium (captures Firefox, 2026-10-28). Retirés : `state-reflect`, `state-thorns`, `state-firefly`, `state-breach`, `state-spoiled`, `state-vulnerable`, `state-rot`. |
 | v31 | 2026-10-28 | 115, 174 à 183 | La refonte des auras : ses trois auras nouvelles (Bastion, Jugement, Brasier), la Faute du Jugement, les trois pièces de la Chance (bouclier, rafale, ensorcelée), les trois reliques venues des auras sorties (Ampoule bénite, Chaîne du geôlier, Pointe de paratonnerre) et le Trèfle de fer repeint en Coccinelle d'émail (Q14 : un porte-bonheur sans trèfle, sans fer à cheval, sans pièce). Artlist, GPT Image 2.5, 320 crédits ; deux planches : compétences 3×3 (`bastion`, `judgement`, `fault`, `brasier`, `shield-coin`, `volley-coin`, `hex-coin`, deux cases vides), reliques 2×2 (`blessed-phial`, `gaoler-chain`, `lightning-rod`, `holed-coin`). `bastion` détouré à la main : une légère trace de damier dans le halo, à repeindre si elle se voit. Les provisoires retirées (`shield`, `purification`, `fear`, `stoke` ; les pièces teintées). Non vues dans un écran du jeu. |
 | v30 | 2026-10-28 | 22, 115, 138 | Le retour du 2026-10-28 : les deux porte-bonheur (« pas des pièces ») et l'Aura de poison (A3). Artlist, GPT Image 2.5, 160 crédits ; planche 2×2, **la version A retenue** : `weighted-coin` repeinte en Patte de lièvre, `holed-coin` en Trèfle de fer, `frost-aura` en encensoir à fumée verte. Mêmes ids et noms de fichiers. Non vues dans un écran du jeu. |
 | v29 | 2026-10-27 | 100, 161 à 173 | La quatrième demande : les treize briques du contenu des maîtrises et du soin (Élan, Surtension, Emprise, Larcin, Onde de choc ; Dîme, Flamme votive, Sangsue, Serment de sang, Odeur du sang, Peau de crapaud, Pièce vert-de-gris, Morsure), et la Plume d'aigle repeinte à quatre barbes arrachées (recharge 4 tours). Artlist, GPT Image 2.5, 160 crédits, 14 icônes ; **la version damier retenue**. Les icônes provisoires (`sentence`, `burn`, `lifesteal`, `decoction-aura`, `cursed-coin`, `virulence`) sont retirées de ces briques ; `tithed` et `votive` empruntent l'icône de leur compétence. Planche de contrôle regardée (128 px) ; non vues dans un écran du jeu. |
