@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import campaignImg from '../assets/menu-campaign.jpg'
 import { ACT_FIGHTS, ACT_LENGTH, championOf } from '../game/campaign'
-import type { Character } from '../game/character'
 import { DIE_FACES } from '../game/events'
 import { leaderboard, type LeaderboardEntry, type LeaderboardPeriod } from '../game/leaderboard'
 import { sfx } from '../game/sound'
@@ -12,17 +11,17 @@ import { RelicRow } from './RelicSeal'
 import { StatSheet } from './StatSheet'
 
 /*
- * L'accueil de la campagne (0.131.0, docs/ref/06 à 08) : après le choix du champion, avant l'acte I. Il explique le
- * parcours (onze combats, le boss, puis le mode sans fin au choix) et montre le classement du mode sans fin ; une ligne
- * du classement ouvre la fiche de son champion à la place des explications. Le classement est statique tant que le mode
- * sans fin et le backend n'existent pas (leaderboard.ts). Mesures de la maquette (1440) × 10/9.
+ * L'accueil de la campagne (0.131.0, docs/ref/06 à 08 ; avant le choix du champion depuis la 0.131.2, comme la
+ * présentation du tournoi avant sa configuration). Il explique le parcours (onze combats, le boss, puis le mode sans fin
+ * au choix) et montre le classement du mode sans fin ; une ligne du classement ouvre la fiche de son champion à la place
+ * des explications. Le classement est statique tant que le mode sans fin et le backend n'existent pas (leaderboard.ts).
+ * Mesures de la maquette (1440) × 10/9.
  */
 
 interface Props {
-  /** Le champion choisi, parti de son aura : la tête de la ligne du joueur tant qu'il n'est pas classé */
-  champion: Character
   onBack: () => void
-  onEnter: () => void
+  /** Vers le choix du champion */
+  onNext: () => void
 }
 
 const PERIODS: readonly { value: LeaderboardPeriod; label: string }[] = [
@@ -52,7 +51,7 @@ interface Viewed {
   rank: number
 }
 
-export function CampaignWelcome({ champion, onBack, onEnter }: Props) {
+export function CampaignWelcome({ onBack, onNext }: Props) {
   const [period, setPeriod] = useState<LeaderboardPeriod>('season')
   const [viewed, setViewed] = useState<Viewed | null>(null)
   const board = leaderboard(period)
@@ -64,7 +63,7 @@ export function CampaignWelcome({ champion, onBack, onEnter }: Props) {
     <div className="fade-in relative h-full overflow-hidden bg-surface-0">
       <img src={campaignImg} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-[0.12]" />
       <BackLink onClick={onBack} className="absolute left-10 top-[36px] z-30">
-        Choix du champion
+        Menu
       </BackLink>
       <header className="absolute inset-x-0 top-[26px] flex flex-col items-center gap-2 text-center">
         <p className="text-sm font-bold uppercase tracking-[0.5em] text-gold-300">Mode sans fin</p>
@@ -139,7 +138,7 @@ export function CampaignWelcome({ champion, onBack, onEnter }: Props) {
         ) : (
           <div className="welcome-row welcome-you h-[52px] shrink-0">
             <span className="text-center font-data text-[15px] text-side-a-hi">–</span>
-            <MiniPortrait character={champion} size="h-10 w-10" />
+            <span aria-hidden className="h-10 w-10 rounded-(--r-xs) border border-line-2 bg-surface-2" />
             <span className="flex min-w-0 flex-col leading-tight">
               <b className="font-body text-[16px] text-ink-1">Vous</b>
               <span className="font-body text-[13px] text-ink-3">Pas encore classé</span>
@@ -150,8 +149,8 @@ export function CampaignWelcome({ champion, onBack, onEnter }: Props) {
       </section>
 
       <div className="absolute inset-x-0 top-[833px] flex -translate-y-1/2 justify-center">
-        <Button variant="primary" size="xl" icon="combattre" onClick={onEnter} className="w-[560px]">
-          Entrer dans l'acte I
+        <Button variant="primary" size="xl" icon="combattre" onClick={onNext} className="w-[560px]">
+          Choisir un champion
         </Button>
       </div>
     </div>

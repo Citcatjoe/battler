@@ -12,7 +12,7 @@ import { skillById } from '../game/skills'
 import { ACT_FIGHTS, BOSS, championOf, startRun, type Encounter, type HeritageItem } from '../game/campaign'
 import type { PendingReward } from '../game/offers'
 import { Character } from '../game/character'
-import { CampaignScreen, HeritagePick } from './CampaignScreen'
+import { CampaignScreen, ChampionDraft, HeritagePick } from './CampaignScreen'
 import { STATUS_IDS } from '../game/statuses'
 import { fxFloats, type Float, type FxSpec } from '../game/staging'
 import { attackSpecials, isSurcharge, relicSpecial, SPECIAL_SIGNS, SPECIAL_SOURCES, statusSpecial } from '../game/specials'
@@ -861,8 +861,8 @@ describe('écrans', () => {
   })
 
   it('campagne, choix du champion (retour du 2026-10-27) : tous les champions, sa ligne de lore, l’héritage par interrupteur', () => {
-    const props = { onStart: noop, onFight: noop, onReward: noop, onAbandon: noop, onNewRun: noop, onMenu: noop }
-    const html = (heritage: Record<string, HeritageItem[]>) => renderToString(<CampaignScreen {...props} run={null} heritage={heritage} />)
+    const html = (heritage: Record<string, HeritageItem[]>) =>
+      renderToString(<ChampionDraft heritage={heritage} championId={CHARACTER_IDS[0]} onSelect={noop} onChoose={noop} onBack={noop} />)
     const none = html({})
     for (const id of CHARACTER_IDS) expect(none).toContain(`aria-label="${createCharacter(id).name}"`)
     expect(none).toContain(createCharacter(CHARACTER_IDS[0]).definition.lore.background.slice(0, 30))
@@ -876,7 +876,7 @@ describe('écrans', () => {
     expect(some).not.toContain('amélioration')
   })
 
-  it('héritage (U4) : aucune carte choisie d’avance, « Continuer » attend le choix du joueur', () => {
+  it('héritage (U4) : aucune carte choisie d’avance, « Commencer » attend le choix du joueur', () => {
     const items: HeritageItem[] = [
       { kind: 'forge', step: { op: 'engrave', face: 3, skill: ENGRAVABLE_SKILLS.find((e) => e.id === 'lucky-strike')! } },
       { kind: 'relic', relic: 'wolf-fang' },
@@ -885,7 +885,7 @@ describe('écrans', () => {
     const html = renderToString(<HeritagePick champion={createCharacter('elaria')} items={items} seed={1} onBack={noop} onPick={noop} />)
     expect(html).not.toContain('aria-pressed="true"')
     expect(html).not.toContain('Choix d')
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*Continuer/)
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>(?:(?!<\/button>).)*Commencer/)
   })
 
   it('écrans de victoire (U2) : déclenchements de chaque relique et de chaque face, lus dans les combats enregistrés', () => {

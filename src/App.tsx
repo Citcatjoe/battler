@@ -77,6 +77,7 @@ import {
 } from './game/betting'
 import type { BetsOutcome } from './components/Betting'
 import { HOME_ARENAS, RANDOM_ARENA, type Arena, type ArenaChoice } from './game/arenas'
+import { TournamentIntroScreen } from './components/TournamentIntroScreen'
 import { HomeScreen } from './components/HomeScreen'
 import { DUEL_BETTING, MatchupScreen, type MatchupMode } from './components/MatchupScreen'
 import { FightScreen } from './components/FightScreen'
@@ -101,6 +102,8 @@ type Screen =
   | { name: 'home' }
   /** Combat test : chaque dé choisi par le joueur, hors statistiques */
   | { name: 'test' }
+  /** Présentation du tournoi (créer, reprendre), choisie sur l'accueil */
+  | { name: 'tournamentIntro' }
   /** Affrontement : duel (sélection comprise), match de l'arbre, de saison ou de campagne */
   | { name: 'matchup' }
   | { name: 'fight'; script: CombatResult; arena: Arena }
@@ -430,9 +433,7 @@ export default function App() {
           onChoose={(choice) => {
             if (choice === 'test') return go({ name: 'test' })
             if (choice === 'campaign') return go({ name: 'campaign' })
-            // Tournoi : la configuration ; un tournoi en cours reprend où il en était (la présentation du tournoi,
-            // TournamentIntroScreen, est désactivée depuis la 0.131.1 : elle doublait la porte Tournoi)
-            if (choice === 'tournament') return go({ name: progress && tournament ? (inSeason(tournament) ? 'season' : 'bracket') : 'tournamentSetup' })
+            if (choice === 'tournament') return go({ name: 'tournamentIntro' })
             // Duel : directement l'écran d'affrontement, combattants remis à nu
             setFighters(bare)
             toDuel()
@@ -441,6 +442,14 @@ export default function App() {
           onOpenCompendium={() =>
             go({ name: 'compendium', section: 'characters', characterId: fighters[0].id, from: 'home' })
           }
+        />
+      )}
+      {screen.name === 'tournamentIntro' && (
+        <TournamentIntroScreen
+          onHome={() => go({ name: 'home' })}
+          tournamentProgress={progress}
+          onNewTournament={() => go({ name: 'tournamentSetup' })}
+          onResumeTournament={() => go({ name: tournament && inSeason(tournament) ? 'season' : 'bracket' })}
         />
       )}
       {screen.name === 'matchup' && (
@@ -639,7 +648,7 @@ export default function App() {
           onUniqueNamesChange={setUniqueNames}
           season={seasonSetup}
           onSeasonChange={setSeasonSetup}
-          onBack={() => go({ name: 'home' })}
+          onBack={() => go({ name: 'tournamentIntro' })}
           onValidate={() => {
             const nameOf = (id: string) => createCharacter(id).name
             const seed = randomSeed()

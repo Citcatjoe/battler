@@ -12,9 +12,8 @@ interface Props {
 }
 
 /**
- * Présentation du tournoi : créer un tournoi, ou reprendre celui en cours. **Désactivée depuis la 0.131.1** (demande
- * de l'utilisateur, « pour le moment ») : elle doublait la porte Tournoi de l'écran titre, qui mène maintenant droit à la
- * configuration, ou au tournoi en cours. Aucun écran n'y mène ; gardée pour la réactiver ou la refaire.
+ * Présentation du tournoi, choisie sur l'accueil (« Tournoi ») : créer un tournoi, ou reprendre celui en cours. Seul
+ * reste de l'ancien écran de sélection (StartScreen) : la sélection du duel se fait sur l'écran d'affrontement (0.100.0).
  */
 export function TournamentIntroScreen({ onHome, tournamentProgress, onNewTournament, onResumeTournament }: Props) {
   return (

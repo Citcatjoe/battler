@@ -32,6 +32,14 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.131.2] — 2026-10-29
+
+### Modifié
+- **L'accueil de la campagne passe avant le choix du champion** (demande de l'utilisateur : même structure des deux côtés, un choix, une explication, puis la sélection d'un champion ou des règles du tournoi). Campagne : écran titre → accueil (parcours, classement ; « ← Menu », « Choisir un champion ») → choix du champion (« ← Accueil de la campagne », « Choisir ce champion » lance la partie ; « Commencer » après l'offre d'héritage) → carte de l'acte. Après une partie, on revient droit au choix du champion. La ligne du joueur non classé n'a plus de tête (aucun champion n'est choisi à ce moment).
+
+### Annulé
+- **La 0.131.1** (porte Tournoi droit à la configuration) : la présentation du tournoi revient entre la porte Tournoi et la configuration, comme en 0.131.0 (décision de l'utilisateur : « cet écran devait rester »).
+
 ## [0.131.1] — 2026-10-29
 
 ### Modifié

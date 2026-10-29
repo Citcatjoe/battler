@@ -212,7 +212,7 @@ export function TournamentSetupScreen({
       {/* Titre : au-dessus de l'arbre, qui occupe toute la scène */}
       <header className="absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 pr-20 pt-5">
         <div>
-          <BackLink onClick={onBack}>Menu</BackLink>
+          <BackLink onClick={onBack}>Retour</BackLink>
           <h1 className="on-illus mt-1 font-display text-[44px] font-bold leading-none tracking-wide text-gold-200">
             Configuration du tournoi
           </h1>
