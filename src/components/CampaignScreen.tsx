@@ -11,6 +11,7 @@ import {
   dangerOf,
   drawHeritage,
   heritageFor,
+  heritageSlot,
   heritableGains,
   isBossNode,
   loadCampaignChoices,
@@ -82,7 +83,8 @@ interface Props {
 /**
  * Sans partie (0.131.2, même structure que le tournoi : un choix, une explication, une sélection) : l'accueil de la
  * campagne (parcours et classement), puis le choix du champion (et de son héritage), d'où part l'acte I. Après une partie
- * (« Nouvelle campagne », « Terminer l'aventure »), on revient droit au choix du champion. Le champion montré survit à
+ * (« Nouvelle campagne », « Terminer l'aventure »), on revient droit au choix du champion, sur le champion de cette
+ * partie (retour du 2026-10-30 : après une défaite, on veut souvent le reprendre). Le champion montré survit à
  * l'aller-retour vers l'accueil.
  */
 export function CampaignScreen({ run, heritage, onStart, onFight, onReward, onAbandon, onNewRun, onMenu }: Props) {
@@ -112,7 +114,18 @@ export function CampaignScreen({ run, heritage, onStart, onFight, onReward, onAb
       />
     )
   }
-  if (run.outcome) return <RunEnd run={run} onNewRun={onNewRun} onMenu={onMenu} />
+  if (run.outcome)
+    return (
+      <RunEnd
+        run={run}
+        onNewRun={() => {
+          setChampionId(run.championId)
+          setDrafting(true)
+          onNewRun()
+        }}
+        onMenu={onMenu}
+      />
+    )
   if (run.reward) return <Reward run={run} onReward={onReward} />
   return <ActMap run={run} onFight={onFight} onAbandon={onAbandon} onMenu={onMenu} />
 }
@@ -375,8 +388,10 @@ function ActTrack({ run }: { run: CampaignRun }) {
         const fight = run.fights[node]
         const boss = node === ACT_FIGHTS
         const state = fight ? (fight.won ? 'done' : 'lost') : node === run.wins && !run.outcome ? 'current' : 'next'
-        // La récompense du combat précédent (une relique ou une forge), entre lui et ce nœud
+        // La récompense du combat précédent (une relique ou une forge), entre lui et ce nœud ; celle que l'héritage
+        // remplace est déjà reçue (`heritageSlot`)
         const reward = node > 0 ? REWARDS[node - 1] : undefined
+        const inherited = node - 1 === heritageSlot(run)
         return (
           <li key={node} className="flex items-center">
             {reward && (
@@ -384,8 +399,8 @@ function ActTrack({ run }: { run: CampaignRun }) {
                 <span className="act-link" data-done={node <= run.wins ? '' : undefined} />
                 <span
                   className="act-forge"
-                  data-done={run.wins >= node ? '' : undefined}
-                  title={`${reward === 'relic' ? 'Une relique' : 'Une forge du dé'} après le combat ${node}`}
+                  data-done={inherited || run.wins >= node ? '' : undefined}
+                  title={inherited ? `${reward === 'relic' ? 'La relique' : 'La forge'} du combat ${node} : reçue en héritage` : `${reward === 'relic' ? 'Une relique' : 'Une forge du dé'} après le combat ${node}`}
                 />
                 <span className="act-link" data-done={node <= run.wins ? '' : undefined} />
               </>

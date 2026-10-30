@@ -1,14 +1,14 @@
-# Faire vivre les auras, le Dé pipé, les dés de plus
+# Faire vivre les auras, l'Aura du dé pipé, les dés de plus
 
 _Étude du 2026-10-27 (second retour de l'utilisateur, points B11, B12 et B13), sur la branche `regles-v2` en 0.121.0. **Rien n'est livré au jeu** : ce sont des propositions mesurées, à trancher par l'utilisateur. Laboratoire : séries 76 à 78 de `scripts/lab/ideas.ts` (§ 6). Le contexte des auras de départ est dans [MAITRISES.md](MAITRISES.md) § 5 et § 10._
 
-> **Livré le 2026-10-27 (troisième retour, C2 et C3)** : la règle du 3e tour (§ 2.6) avec la Purification à +5 quand elle retire un bonus, et le Dé pipé « pile, critique et esquive » (§ 3.3). Règle : [RESOLUTION.md](RESOLUTION.md) § 2, phase 1, étape 4 ; mesures de la livraison : § 2.7 et § 3.4. La lisibilité n'a pas pris le statut d'attente du § 2.6 : la pose d'office est une étape à elle au début du tour (élan, « Aura éveillée » sur le porteur, son de l'aura, ligne du journal).
+> **Livré le 2026-10-27 (troisième retour, C2 et C3)** : la règle du 3e tour (§ 2.6) avec la Purification à +5 quand elle retire un bonus, et l'Aura du dé pipé « pile, critique et esquive » (§ 3.3). Règle : [RESOLUTION.md](RESOLUTION.md) § 2, phase 1, étape 4 ; mesures de la livraison : § 2.7 et § 3.4. La lisibilité n'a pas pris le statut d'attente du § 2.6 : la pose d'office est une étape à elle au début du tour (élan, « Aura éveillée » sur le porteur, son de l'aura, ligne du journal).
 
 ## 0. En bref
 
 - **Le constat** : l'aura de départ, sur le 1, n'est là qu'au tiers de ses actions (38,5 %), et **ne vient jamais dans 27,8 % des combats** (Thaldrin : 50,3 %, son 1 ne compte qu'en forme humaine). Un personnage sur quatre combats joue sans son identité.
 - **B11, recommandation** : une règle pour tous, **« son aura de départ se pose d'elle-même au début de son 3e tour si elle n'est pas déjà là »** ; le 1 reste le chemin rapide (et une charge de plus pour les auras cumulables). Présence 38,5 → 72,3 %, jamais 27,8 → 0,1 %, combats 14,8 → 14,3 tours. Seule Ysolde décroche (48,3 → 41,2 %) : sa Purification retire l'aura adverse au lieu de blesser. Avec la Purification qui blesse aussi de 5 quand elle retire un bonus (une valeur de compétence, pas une exception) : **roster 44,4 – 53,4 %** (aujourd'hui 45,2 – 54,7 %), écart-type 2,8 → 3,0 points, pire duel 62,7 %. La relique R5 (l'aura dès le début) tombe alors de +12,8 / +23,5 à **+5,2 / +13,4** : une relique ordinaire, plus une obligation.
-- **B12, recommandation** : le Dé pipé, **« +25 % de chances de faire pile, et +5 % de critique et d'esquive, par charge »**. Sans pièce, celui du registre ne vaut rien (gravé chez Fanchon +0,6, Elaria +0,7) ; celui-ci vaut +7,6 à +11,2 gravé et tient le départ de Naraxes (41,2 → 49,1 %). Variante à un seul second effet, comme le demandait l'utilisateur : +10 % de critique (départ 48,0 %, gravé +5,7 à +9,5).
+- **B12, recommandation** : l'Aura du dé pipé, **« +25 % de chances de faire pile, et +5 % de critique et d'esquive, par charge »**. Sans pièce, celle du registre ne vaut rien (gravée chez Fanchon +0,6, Elaria +0,7) ; celle-ci vaut +7,6 à +11,2 gravée et tient le départ de Naraxes (41,2 → 49,1 %). Variante à un seul second effet, comme le demandait l'utilisateur : +10 % de critique (départ 48,0 %, gravée +5,7 à +9,5).
 - **B13** : trois sortes de dés de plus, chacune avec son aspect (le dé complet, le dé brut, le dé d'effet), et une forme par maîtrise (§ 5). Idées seulement.
 
 ## 1. La demande
@@ -29,16 +29,16 @@ Un combat dure 14,8 tours (les deux camps), soit environ 7 actions chacun : la c
 
 | Personnage | Aura sur le 1 | Présence (part de ses actions où il la porte) | Combats sans elle |
 | --- | --- | --- | --- |
-| Gorak | Ivresse du sang | 36,8 % | 26,8 % |
+| Gorak | Aura d'ivresse | 36,8 % | 26,8 % |
 | Elaria | Feinte | 42,3 % | 23,6 % |
 | Brokk | Aura d'épines | 40,4 % | 22,6 % |
 | Ervald | Aura glaciale | 40,9 % | 21,9 % |
 | Ysolde | Aura de sainteté | 43,6 % | 28,8 % |
 | Naraxes | Aura de décoction | 37,2 % | 28,8 % |
-| Aldric | Vindicte | 36,4 % | 29,6 % |
+| Aldric | Aura de vindicte | 36,4 % | 29,6 % |
 | Morgrut | Aura de puissance | 37,1 % | 26,3 % |
-| Thaldrin | Ciel d'orage | 24,5 % | 50,3 % |
-| Fanchon | Ballade | 45,8 % | 19,2 % |
+| Thaldrin | Aura d'orage | 24,5 % | 50,3 % |
+| Fanchon | Aura de ballade | 45,8 % | 19,2 % |
 | **Moyenne** | | **38,5 %** | **27,8 %** |
 
 C'est le « tomber à l'eau » de l'utilisateur, chiffré. La relique R5 qui pose l'aura au début vaut, sur ce roster, **+12,8 (Ysolde) à +23,5 (Brokk)** points (série 77, moyenne +18,9) : bien au-dessus de la bande d'une relique (5 à 15), donc obligatoire ([MAITRISES.md](MAITRISES.md) § 10).
@@ -92,7 +92,7 @@ Chaque option est jugée sur quatre axes : l'identité (l'aura se voit-elle ?), 
 - **D. Éveil de 3 tours.** Une aura qui part d'elle-même au bout de trois tours se lit mal (« pourquoi a-t-elle disparu ? ») et ne tient que 62 % de présence. **Écartée.**
 - **E. Au plus tard à son N-ième tour.** Identité : jamais → 0 ; présence 63 à 83 % selon N. Le 1 garde son rôle (l'aura plus tôt, et une charge de plus pour les cumulables). Équilibre : le roster bouge peu, sauf Ysolde (§ 2.4) et Morgrut (+4,1, son Aura de puissance cumulable à 3 charges). Combats : −0,5 tour au 3e, −0,8 au 2e. Progression : une relique ou une forge peut encore avancer l'aura (§ 2.5). Lisibilité : un rendez-vous fixe, le même pour tous, qui se montre (§ 2.6). **Retenue, au 3e tour** : le 2e tour donne plus d'aura (83 %) mais raccourcit plus et creuse plus l'écart (40,9 – 56,2 %) ; le 4e laisse l'aura absente plus longtemps (63 %).
 - **F, G. Le 6 aussi.** Ne règle pas le « jamais » (7,6 à 7,8 % des combats). F double les charges des auras cumulables (Thaldrin −5,6, Aldric −4,1 : leurs adversaires en profitent davantage). **Écartées.**
-- **H. Le premier coup encaissé.** Presque une aura d'entrée (88 %, le premier coup tombe au tour 1 ou 2), avec la même baisse des combats (−0,9 tour) ; se lit bien pour une aura qui répond (Épines, Rancœur), mal pour une aura offensive (Ivresse du sang). **Écartée.**
+- **H. Le premier coup encaissé.** Presque une aura d'entrée (88 %, le premier coup tombe au tour 1 ou 2), avec la même baisse des combats (−0,9 tour) ; se lit bien pour une aura qui répond (Aura d'épines, Aura de rancœur), mal pour une aura offensive (Aura d'ivresse). **Écartée.**
 - **I. Sous la moitié de ses PV.** La seule qui **allonge le spectacle** : retours 60,7 → 63,3 %, fins serrées 40,4 → 42,4 %, durée inchangée (14,7). Mais l'identité arrive tard (présence 54,6 %), et une aura de comeback n'est pas une aura d'identité. **Gardée en variante** (si l'utilisateur préfère le retournement à la présence), ou comme forme d'une relique de seuil plus tard.
 
 ### 2.4 La cause commune : Ysolde
@@ -144,19 +144,19 @@ La règle divise sa valeur par deux et la ramène dans la bande d'une relique (5
 - **Purification** : un effet `andThen` sur la purge (`events.ts`), joué juste après une purge qui a retiré quelque chose : 5 dégâts directs de Lumière (`PURIFICATION_STRIP`) ; 8 sans bonus (`orElse`, inchangé). Son rang n'aiguise que la lumière de repli (+3), comme avant.
 - **Écran** : l'étape se montre comme une compétence (élan, sceau qui s'allume, son de l'aura déduit de l'effet), avec « Aura éveillée » sur le porteur ; le journal : « Début du 3e tour d'Ysolde : son aura s'éveille. Compétence · … » ; la trace : « (au début de son 3e tour, son aura de départ absente) ». Rien vu ni entendu (aucun navigateur) : à juger en jeu.
 - **Contrôles** : `combat.test.ts` (la pose, une fois, au 3e tour, avant l'action ; l'aura là à la première action du 3e tour ; un 1 plus tôt ; journal et trace ; Purification), `audit.ts` (« aura de départ absente après le début de son 3e tour », pose d'office mal placée), `staging.test.ts` (le moment de la pose).
-- **Mesure** (0.122.0 sans le lot C1 ni la récompense de PV, mesurée sur une copie de travail à part, `BALANCE_N=400 npm run balance`, 400 combats par duel, ± 1,6 point ; avant `logs/balance/2026-10-27-16-44-07_v0.122.0.md`, après, avec C2 et C3 : `…16-47-24…`) : roster 45,2 – 54,7 → **44,2 – 53,4 %** ; pire duel 60,8 % (Aldric contre Elaria) → **64,7 %** (Ysolde contre Elaria, sous 65/35) ; combats 0,4 à 1,0 tour plus courts (Gorak 14,1 → 13,1, Ysolde 15,2 → 15,0). **Ysolde 48,3 → 51,1 %** (Purification +22,1 → +28,2 points, Aura de sainteté +12,2 → +17,9) ; Morgrut 48,9 → 51,7 % (Aura de puissance +24,4 → +35,6) ; en bas, Elaria 45,2 → 44,2 % et Ervald 47,4 → 44,9 %, dans la tolérance. Les auras du 1 sortent 1,2 à 1,4 fois par combat → 1,8 à 2,3 (le 1 plus la pose d'office) ; Thaldrin, Ciel d'orage 0,63 → 1,44.
+- **Mesure** (0.122.0 sans le lot C1 ni la récompense de PV, mesurée sur une copie de travail à part, `BALANCE_N=400 npm run balance`, 400 combats par duel, ± 1,6 point ; avant `logs/balance/2026-10-27-16-44-07_v0.122.0.md`, après, avec C2 et C3 : `…16-47-24…`) : roster 45,2 – 54,7 → **44,2 – 53,4 %** ; pire duel 60,8 % (Aldric contre Elaria) → **64,7 %** (Ysolde contre Elaria, sous 65/35) ; combats 0,4 à 1,0 tour plus courts (Gorak 14,1 → 13,1, Ysolde 15,2 → 15,0). **Ysolde 48,3 → 51,1 %** (Purification +22,1 → +28,2 points, Aura de sainteté +12,2 → +17,9) ; Morgrut 48,9 → 51,7 % (Aura de puissance +24,4 → +35,6) ; en bas, Elaria 45,2 → 44,2 % et Ervald 47,4 → 44,9 %, dans la tolérance. Les auras du 1 sortent 1,2 à 1,4 fois par combat → 1,8 à 2,3 (le 1 plus la pose d'office) ; Thaldrin, Aura d'orage 0,63 → 1,44.
 
-## 3. B12 : le Dé pipé à double effet
+## 3. B12 : l'Aura du dé pipé à double effet
 
 ### 3.1 Le constat
 
-Le Dé pipé est une aura de Chance depuis la 0.121.0 (« +25 % de chances de faire pile à ses pièces, par charge », M9). **Sans pièce, il ne fait rien** : gravé sur le 3 nu, Fanchon +0,6, Elaria +0,7 ; Naraxes, qui n'a que Pile ou face, +3,8 (bande d'une gravure : 8 à 20). Au départ de Naraxes il la laisse à 41,2 % (retiré de ses auras de départ en 0.121.0). Or le point B5 du même retour donne à chacun **toutes les auras de ses deux maîtrises** comme auras de départ, sans exclusion, et la Chance compte désormais Elaria, Naraxes et Fanchon (B1, [MAITRISES.md](MAITRISES.md) « Huit maîtrises ») : le Dé pipé devient une aura de départ des trois, dont deux sans pièce. C'est l'une des « consommatrices mortes au départ » que l'état des lieux (B6) dit irréparables par une valeur ; le second effet change sa règle, et le répare en partie.
+L'Aura du dé pipé est une aura de Chance depuis la 0.121.0 (« +25 % de chances de faire pile à ses pièces, par charge », M9). **Sans pièce, elle ne fait rien** : gravée sur le 3 nu, Fanchon +0,6, Elaria +0,7 ; Naraxes, qui n'a que Pile ou face, +3,8 (bande d'une gravure : 8 à 20). Au départ de Naraxes elle la laisse à 41,2 % (retirée de ses auras de départ en 0.121.0). Or le point B5 du même retour donne à chacun **toutes les auras de ses deux maîtrises** comme auras de départ, sans exclusion, et la Chance compte désormais Elaria, Naraxes et Fanchon (B1, [MAITRISES.md](MAITRISES.md) « Huit maîtrises ») : l'Aura du dé pipé devient une aura de départ des trois, dont deux sans pièce. C'est l'une des « consommatrices mortes au départ » que l'état des lieux (B6) dit irréparables par une valeur ; le second effet change sa règle, et la répare en partie.
 
 ### 3.2 Les variantes mesurées
 
 Série 78, 400 combats par duel, `logs/lab/2026-10-27-15-43-43_v0.121.0.md` (départ d'Elaria : `…15-50-08…`). Chaque variante garde la chance de pile du registre (+25 % par charge, plafond 5 sur 6) et ajoute un second effet par charge. Départ : sur le 1 du dé vanilla, avec sa face 2 (Pile ou face, le Duo, l'Œil de faucon), contre leur dé d'aujourd'hui (Naraxes 49,8 %, Fanchon 50,0 %, Elaria 45,2 %). Gravé : sur le 3 nu de leur dé vanilla.
 
-| Dé pipé | Départ Naraxes | Départ Fanchon | Départ Elaria | Gravé Naraxes | Gravé Fanchon | Gravé Elaria |
+| Aura du dé pipé | Départ Naraxes | Départ Fanchon | Départ Elaria | Gravé Naraxes | Gravé Fanchon | Gravé Elaria |
 | --- | --- | --- | --- | --- | --- | --- |
 | registre (pile seule) | 41,2 % | 36,1 % | 29,2 % | +3,8 | +0,6 | +0,7 |
 | pile, puis chaque pile : un Critique assuré | 43,4 % | 36,1 % | 29,2 % | +5,7 | +0,6 | +0,7 |
@@ -165,11 +165,11 @@ Série 78, 400 combats par duel, `logs/lab/2026-10-27-15-43-43_v0.121.0.md` (dé
 | et +10 % de critique | 48,0 % | 41,9 % | 36,2 % | +9,5 | +5,8 | +5,7 |
 | **et +5 % de critique et d'esquive** | **49,1 %** | **43,2 %** | **39,3 %** | **+11,2** | **+7,6** | **+9,1** |
 
-Marges : ± 1,0 à 1,4 point. Pire duel de la recommandée, gravée chez Naraxes : Ysolde 53,5 → 68,0 % (un duel déjà penché). Le départ d'Elaria reste bas quelle que soit la variante : sur le 1, toute aura autre que la Feinte lui retire sa boucle esquive → critique (Veine 38,7 %, Pas de côté 39,0 % au même relevé B5) ; c'est son dé, pas le Dé pipé.
+Marges : ± 1,0 à 1,4 point. Pire duel de la recommandée, gravée chez Naraxes : Ysolde 53,5 → 68,0 % (un duel déjà penché). Le départ d'Elaria reste bas quelle que soit la variante : sur le 1, toute aura autre que la Feinte lui retire sa boucle esquive → critique (Aura de veine 38,7 %, Pas de côté 39,0 % au même relevé B5) ; c'est son dé, pas l'Aura du dé pipé.
 
 ### 3.3 La recommandation
 
-**« Dé pipé : +25 % de chances de faire pile, +5 % de critique et +5 % d'esquive, par charge. »** La chance penche de son côté partout où le hasard décide : la pièce, le coup, l'esquive. C'est la seule variante qui vaut une gravure chez les trois hôtes (+7,6 à +11,2) et qui tient le départ de Naraxes (49,1 %) ; celui de Fanchon reste au bas de la tolérance (43,2 %, mesuré avec le Duo d'avant B10 : à remesurer), celui d'Elaria en dessous (39,3 %, comme ses autres auras de Chance). Mêmes id, nom et icône (l'héritage et les forges enregistrées gardent leurs gravures).
+**« Aura du dé pipé : +25 % de chances de faire pile, +5 % de critique et +5 % d'esquive, par charge. »** La chance penche de son côté partout où le hasard décide : la pièce, le coup, l'esquive. C'est la seule variante qui vaut une gravure chez les trois hôtes (+7,6 à +11,2) et qui tient le départ de Naraxes (49,1 %) ; celui de Fanchon reste au bas de la tolérance (43,2 %, mesuré avec le Duo d'avant B10 : à remesurer), celui d'Elaria en dessous (39,3 %, comme ses autres auras de Chance). Mêmes id et icône (l'héritage et les forges enregistrées gardent leurs gravures).
 
 **Si l'utilisateur veut un seul second effet** (sa formulation) : **+10 % de critique** (départ 48,0 %, gravé +5,7 à +9,5) plutôt que l'esquive (départ 46,0 %). La pièce qui donne un Critique assuré est écartée : sans pièce, rien.
 
@@ -184,16 +184,16 @@ Livré tel que recommandé : `LOADED_DIE_EDGE = 0.05`, critique et esquive par c
 | Mesure | Résultat | Bande |
 | --- | --- | --- |
 | Gravé sur le 3 (`SKILLS_ENGRAVE=loaded-die SKILLS_PART=engrave`, dix hôtes) | **+7,8** en moyenne, de +6,6 (Fanchon, Aldric) à +10,0 (Gorak) ; Naraxes +9,3 | 8 à 20 : au bord bas |
-| Départ de Naraxes (Dé pipé sur le 1, contre le roster) | **49,0 %** (dé vanilla 50,7 %) | 42 à 58 : dedans |
+| Départ de Naraxes (Aura du dé pipé sur le 1, contre le roster) | **49,0 %** (dé vanilla 50,7 %) | 42 à 58 : dedans |
 | Départ de Fanchon (essai : sans pièce, ce n'est pas une de ses auras de départ) | 41,1 % (dé vanilla 48,5 %) | sans objet |
 | Départ d'Elaria (même essai) | 33,7 % | sans objet |
 
-**Gardé à +5 % / +5 %** : la réduction à +3 % / +3 % était prévue pour un Dé pipé trop fort ; il est au bord bas de la bande des gravures, et la réduire l'en sortirait. Signalé pour le réglage (C5) : au besoin, le relever plutôt que le réduire.
+**Gardé à +5 % / +5 %** : la réduction à +3 % / +3 % était prévue pour une Aura du dé pipé trop forte ; elle est au bord bas de la bande des gravures, et la réduire l'en sortirait. Signalé pour le réglage (C5) : au besoin, la relever plutôt que la réduire.
 
 ## 4. Ce qui n'est pas mesuré (B11 et B12)
 
 - Les mesures ont tourné sur la 0.121.0 **pendant que d'autres agents modifiaient le moteur et le roster** (Critique assuré à une charge, B8 ; regroupement des maîtrises, B1 et B5 ; Duo, B10). Les écarts appariés (mêmes graines, même code) tiennent ; les taux absolus sont à reprendre après l'intégration.
-- Une seule aura par personnage (celle du dé vanilla), pas les autres auras de départ (B5) ni le tirage du tournoi (B7). La règle ne répare pas une aura de départ qui consomme une ressource que son dé ne produit pas (B6, point 5 : Vindicte chez Brokk, Sentence chez Ysolde…) : posée au 3e tour, elle ne fait pas plus que sur un 1. C'est la règle « le producteur d'abord » proposée en B5 qui le peut.
+- Une seule aura par personnage (celle du dé vanilla), pas les autres auras de départ (B5) ni le tirage du tournoi (B7). La règle ne répare pas une aura de départ qui consomme une ressource que son dé ne produit pas (B6, point 5 : Aura de vindicte chez Brokk, Sentence chez Ysolde…) : posée au 3e tour, elle ne fait pas plus que sur un 1. C'est la règle « le producteur d'abord » proposée en B5 qui le peut.
 - La montée (`npm run ramp`), la campagne et la saison avec la règle ; la Purification à +5 sans la règle (seul +3 l'a été : 51,7 %).
 - Rien n'a été vu à l'écran ni entendu : la lisibilité du rendez-vous du 3e tour est une proposition.
 
@@ -226,7 +226,7 @@ Pour que plusieurs sortes de dés restent lisibles, **l'aspect d'un dé dit sa r
 | **Chance** | dé complet | rejoue une action entière, à sa prochaine action | existe : Coup de chance, Veine, Pièce trouée |
 | **Fureur** | dé brut, tout de suite | un coup de plus, dans la même action | existe : Furie des vents |
 | **Sang** | dé brut, sous condition | un coup de plus seulement si l'adversaire saigne, ou après un critique ; chaque dé qui touche le fait saigner davantage | existe : la Curée (si l'adversaire saigne), l'Ivresse du sang (à chaque critique) |
-| **Rempart** | dé d'effet, gardé | posé devant lui, il attend le coup adverse : sa face devient de l'armure temporaire, ou, avec les représailles qui y sont entrées (B1), elle est renvoyée à l'attaquant | la Peau de pierre en dés ; la Rancœur en dés (mis en réserve à chaque coup encaissé, lancés ensemble à son tour) |
+| **Rempart** | dé d'effet, gardé | posé devant lui, il attend le coup adverse : sa face devient de l'armure temporaire, ou, avec les représailles qui y sont entrées (B1), elle est renvoyée à l'attaquant | la Peau de pierre en dés ; l'Aura de rancœur en dés (mis en réserve à chaque coup encaissé, lancés ensemble à son tour) |
 | **Poison** | dé d'effet | sa face, divisée par deux, en Poison sur l'adversaire | le Souffle de la tombe en dés |
 | **Lumière** | dé d'effet | sa face en PV ; sans PV à rendre, en dégâts de lumière (la logique de la Purification : ceci, sinon cela) | la Prière en dés |
 | **Ombre** | le dé volé (le miroir) | un dé de moins pour l'adversaire : son prochain jet tombe à vide, ou il garde le pire de deux dés | la Malchance, la Peur |
@@ -249,6 +249,6 @@ Pour que plusieurs sortes de dés restent lisibles, **l'aspect d'un dé dit sa r
 
 - **Q-A1** : la règle « au plus tard à son 3e tour » pour tous, et la Purification qui blesse de 5 quand elle retire un bonus (sa compensation) ? Variante : la règle seule (Ysolde à 41,2 %) ; ou « sous la moitié de ses PV » (plus de retours, moins de présence).
 - **Q-A2** : le 3e tour, ou le 2e (plus d'aura, combats plus courts, roster plus écarté) ?
-- **Q-A3** : le Dé pipé « pile, critique et esquive » (+5 % chacun), ou un seul second effet (+10 % de critique) ?
+- **Q-A3** : l'Aura du dé pipé « pile, critique et esquive » (+5 % chacun), ou un seul second effet (+10 % de critique) ?
 - **Q-A4** : la relique R5 (Clairon du héraut) au catalogue, une fois la règle livrée (+5 à +13) ?
 - **Q-A5** : parmi les formes de dés de plus (§ 5.3), lesquelles explorer d'abord, et faut-il des dés de plus dans chaque maîtrise ?

@@ -237,7 +237,7 @@ const formOf = (c: Character, face: number) => c.events.find((e) => rollFace(e.t
 const onFace = (e: CharacterEvent, face: number, form?: string): CharacterEvent => ({ ...e, trigger: faceTrigger(face), ...(form ? { form } : {}) })
 
 /** Un dé : `one` sur le 1, `two` sur le 2 (la face d'aujourd'hui sans eux), des gravures sur le 3, le 4…, des événements hors du dé */
-interface Kit {
+export interface Kit {
   one?: CharacterEvent | string
   two?: CharacterEvent | string
   engraved?: (CharacterEvent | string)[]
@@ -245,7 +245,7 @@ interface Kit {
   stats?: Parameters<Character['adjusted']>[0]['stats']
 }
 const of = (e: CharacterEvent | string) => (typeof e === 'string' ? skill(e) : e)
-function withKit(c: Character, kit: Kit): Character {
+export function withKit(c: Character, kit: Kit): Character {
   const one = kit.one ? onFace(of(kit.one), 1, formOf(c, 1)) : c.events.find((e) => rollFace(e.trigger) === 1)
   const two = kit.two ? onFace(of(kit.two), 2, formOf(c, 2)) : c.events.find((e) => rollFace(e.trigger) === 2)
   const engraved = (kit.engraved ?? []).map((e, i) => onFace({ ...of(e), form: undefined }, 3 + i))
@@ -283,7 +283,6 @@ const SERIES_101: LabIdea[] = [
   idea(101, 'brokk', 'thorns3', "Aura d'épines : Saignement 3 par coup reçu", { one: A.thorns3 }),
   idea(101, 'brokk', 'bastion', 'Bastion : armure vidée, 3 dégâts et +2 armure', { one: A.bastion }),
   idea(101, 'brokk', 'bastion4', 'Bastion : armure vidée, 4 dégâts', { one: A.bastion4 }),
-  idea(101, 'brokk', 'bristling', 'Rempart hérissé (registre)', { one: 'bristling-rampart' }),
   // Ervald et Naraxes : le Poison à 2
   idea(101, 'ervald', 'poison2', 'Aura de poison : 2 Poison par tour', { one: A.poison2 }),
   idea(101, 'thaldrin', 'poison2', 'Aura de poison : 2 Poison par tour', { one: A.poison2 }),
@@ -354,7 +353,6 @@ const SERIES_103: LabIdea[] = [
   dir('elaria', 'frenzy', 'Ivresse du sang + Pourfendre, Odeur du sang', { one: 'blood-frenzy', engraved: ['cleave', 'blood-scent'] }),
   dir('brokk', 'thorns2', 'Épines 2 + Curée, Odeur du sang', { one: A.thorns2, engraved: ['quarry', 'blood-scent'] }),
   dir('brokk', 'bastion', 'Bastion + Onde de choc, Riposte', { one: A.bastion, engraved: ['shockwave', 'riposte'] }),
-  dir('brokk', 'bristling', 'Rempart hérissé + Onde de choc, Riposte', { one: 'bristling-rampart', engraved: ['shockwave', 'riposte'] }),
   dir('ervald', 'poison2', 'Aura de poison 2 + Virulence, Morsure', { one: A.poison2, engraved: ['virulence', 'venom-bite'] }),
   dir('ervald', 'dread', 'Effroi + Peur, Confiscation', { one: 'dread', engraved: ['fear', 'seal-theft'] }),
   dir('ysolde', 'holy2', 'Sainteté 2 + Sentence et Bouclier de foi à charges', { one: A.holy2, engraved: [F.sentenceCharges, F.faithCharges] }),
@@ -367,7 +365,6 @@ const SERIES_103: LabIdea[] = [
   dir('morgrut', 'grow-assault', 'Puissance qui monte / Assaut + Soliste, Brise-garde', { one: A.powerGrow, two: 'assault', engraved: ['soloist', 'guard-break'] }),
   dir('morgrut', 'grow-massue2', 'Puissance qui monte / Massue ×2 + Soliste, Brise-garde', { one: A.powerGrow, two: F.massue2, engraved: ['soloist', 'guard-break'] }),
   dir('thaldrin', 'brasier', 'Brasier + Attiser, Embrasement', { one: A.brasier, support: [SUPPORT.brasier], engraved: ['stoke', 'conflagration'] }),
-  dir('thaldrin', 'sky4', 'Ciel montant + Foudre, Surtension', { one: A.skyRise4, engraved: ['thunderbolt', 'overcharge'] }),
   dir('fanchon', 'refrain', 'Ballade refrain / Duo 2 sans relance + Coup de chance, Foudre', { one: A.refrain, two: F.duo2Lock, engraved: ['lucky-strike', 'thunderbolt'] }, undefined, undefined),
   dir('fanchon', 'vein', 'Veine brute / Duo 2 sans relance + Coup de chance, Foudre', { one: A.veinRaw, two: F.duo2Lock, engraved: ['lucky-strike', 'thunderbolt'] }, undefined, undefined),
 ]
@@ -641,7 +638,6 @@ const DIRECTIONS: [character: string, which: 'first' | 'second', bricks: (Charac
   ['aldric', 'second', ['seal-theft', 'fear']],
   ['morgrut', 'first', ['soloist', 'guard-break']],
   ['morgrut', 'second', ['soloist', 'guard-break']],
-  ['thaldrin', 'first', ['thunderbolt', 'overcharge']],
   ['thaldrin', 'second', ['stoke', 'conflagration']],
   ['fanchon', 'first', ['lucky-strike', 'thunderbolt']],
   ['fanchon', 'second', ['lucky-strike', 'thunderbolt']],

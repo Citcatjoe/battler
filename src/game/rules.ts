@@ -159,7 +159,7 @@ export const RULES: Record<RuleId, Rule> = {
   polarity: {
     group: 'statuses',
     title: 'Bonus et malus',
-    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus posé » est le dernier apparu (un statut renforcé garde son rang, il ne redevient pas le dernier). Un vol (Confiscation, Larcin) prend le bonus entier, charges, durée et intensité : le volé le perd. Seuls les bonus de la zone des statuts se volent, jamais une aura. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
+    text: "Les statuts sont des effets durables, positifs (bonus) ou négatifs (malus). La polarité décide de l'ordre en début et fin de tour (bonus d'abord) et de ce que visent immunité, garde et purification. Une purification retire un statut avec toutes ses charges ; « son dernier bonus posé » est le dernier apparu (un statut renforcé garde son rang, il ne redevient pas le dernier). Un vol (Confiscation, Aura de larcin) prend le bonus entier, charges, durée et intensité : le volé le perd. Seuls les bonus de la zone des statuts se volent, jamais une aura. Les mécanismes d'une compétence ou d'une forme (jauges de Rétribution, Pile ou face, Furie des vents, règles de forme du druide) ne sont ni l'un ni l'autre : rien ne les retire ni ne les bloque.",
   },
   duration: {
     group: 'statuses',
@@ -169,7 +169,7 @@ export const RULES: Record<RuleId, Rule> = {
   auras: {
     group: 'statuses',
     title: 'Auras',
-    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet. L'aura de départ, celle du 1 de son dé, arrive au plus tard au début de son 3e tour : si elle n'est pas là, elle se pose d'elle-même, une fois par combat. Un 1 la pose plus tôt, et chaque 1 ajoute une charge à une aura cumulable.",
+    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Leur nom commence toujours par « Aura ». Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet. Certaines auras montent : elles commencent à 1 et gagnent un cran tous les deux déclenchements (tours, coups reçus ou coups qui touchent), jusqu'à leur plafond ; leur description le dit. L'aura de départ, celle du 1 de son dé, arrive au plus tard au début de son 3e tour : si elle n'est pas là, elle se pose d'elle-même, une fois par combat. Un 1 la pose plus tôt, et chaque 1 ajoute une charge à une aura cumulable.",
   },
   'stacking-add': {
     group: 'statuses',

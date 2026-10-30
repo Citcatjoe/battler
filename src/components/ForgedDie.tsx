@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, type CharacterEvent } from '../game/events'
+import { describeSkill, DIE_FACES, type CharacterEvent } from '../game/events'
 import {
   FORGE_OPS,
   copyDestinations,
@@ -26,7 +26,7 @@ import { useTipLayer } from './TipLayer'
 
 /*
  * Le dé forgé (campagne, saison forgée ; docs/CAMPAGNE.md § 4) : toutes ses faces, lisibles de loin, sans texte. Une face
- * qui porte une compétence montre son sceau (liseré de sa nature), une gravure a le liseré violet des runes, une dorure
+ * qui porte une compétence montre son sceau (octogone, ou cercle d'or d'une aura), une gravure a le liseré violet des runes, une dorure
  * la plaque d'or, un rang son chiffre romain ; une face d'attente (l'ogre) est éteinte. Aucune règle ici : tout vient de
  * forge.ts.
  */
@@ -78,7 +78,6 @@ export function ForgedDie({
               onClick={() => target && onPick?.(f.face)}
               className="forge-face"
               data-size={size}
-              data-nature={skill ? (skill.nature ?? DEFAULT_SKILL_NATURE) : undefined}
               data-engraved={f.engraved ? '' : undefined}
               data-gild={f.gild ? '' : undefined}
               data-target={target ? '' : undefined}

@@ -32,6 +32,31 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.132.0] — 2026-10-30
+
+Corrections du retour du 30 octobre (`prompts/Retour du 30 octobre.md`, registre `docs/RETOUR_30.md`).
+
+### Ajouté
+- **Nuage des textes flottants** (règle M31 bis de `docs/MISE_EN_SCENE.md`) : chaque titre ou badge tient sur une ligne et prend un couloir de côté (0, +64 px vers l'adversaire, −56 px vers son combattant), le premier que ne tient aucun texte encore lisible du même combattant (`FLOAT_LANE`, 75 % de la vie d'un texte). Deux textes identiques du même instant n'en font qu'un. Mesuré sur 777 combats construits : recouvrements 1 611 → 320 (2,07 → 0,41 par combat), à plus des deux tiers 758 → 42.
+- **Compendium : section Auras en tête.** L'onglet devient « Compétences et auras » ; deux groupes, Auras · 20 puis Compétences · 51, chacun par ordre alphabétique ; la fiche ouverte par défaut est la première aura.
+- **Six emblèmes d'état repeints** (planche v33, 160 crédits ; mêmes fichiers) : Armure temporaire et Bouclier de foi en écu à pointe, Garde brisée en écu fendu, Esquive améliorée en botte ailée, Tour perdu (Peur, Étourdi, Faute) en tête sonnée aux trois étoiles, Aveuglé en tête à la spirale, Sceau de vol en main qui s'avance vers une gemme.
+- **Campagne : l'aura des adversaires est tirée** parmi les deux de leur personnage (graine à part), au lieu de l'aura par défaut. Elle est enregistrée dans la rencontre ; une partie enregistrée sans elle garde l'aura par défaut.
+
+### Modifié
+- **Toutes les auras s'appellent « Aura … »** (« Aura de/d'/du/des + nom ») : Aura d'élan, Aura d'ivresse, Aura des plaies, Aura de vindicte, Aura de rancœur, Aura du bastion, Aura du dé pipé, Aura de visée, Aura de veine, Aura de jugement, Aura d'effroi, Aura de larcin, Aura d'orage, Aura de ballade, Aura du brasier. Les identifiants ne changent pas (historique, icônes et traces valables). Les statuts de rafale « Ivresse du sang » et « Veine » gardent leur nom : ce ne sont pas des auras.
+- **Descriptions réécrites** : Pourfendre, Onde de choc (compétence et statut), Aura de jugement et Faute, Aura du brasier, Brûlure et Attiser (« repart pour autant de tours que sa nouvelle valeur »), Aura du bastion, Aura de ballade, Peau de crapaud ; les auras qui montent le disent (« elle monte de 1 tous les deux …, jusqu'à N ») ; les reliques écrivent « X perd N PV », expliquent entre parenthèses le bonus qu'elles posent et « au plus une fois tous les N tours ». La règle « Auras » du compendium dit que leur nom commence par « Aura » et que certaines montent.
+- **Cadre des auras : un cercle au double contour d'or**, partout (compendium, choix du champion, dé, barre de compétences du combat). **Tour des compétences : violet pour toutes** (celui de Confiscation) ; la couleur par nature (or, acier, violet, gris) disparaît de l'interface.
+- **« Nouvelle campagne »** (et « Terminer l'aventure ») ouvre directement le choix du champion, sur le champion de la partie finie.
+- **Héritage : il remplace la première récompense de sa sorte** (relique héritée = 1re relique de l'acte, forge héritée = 1re forge). La fin d'acte fait toujours 5 forges et 5 reliques, comme un participant de saison après 10 matchs.
+- **Récolte en drain** : la greffe pose un statut Récolte (une charge) ; le prochain coup qui touche rend 1 PV par charge de Poison de l'adversaire (2 au rang II). Sans Poison, rien, et la charge attend. Avant : +14 PV tout de suite. Valeur nette, face 3, 200 combats par duel : Ervald +22,7 → +10,9, Naraxes +12,4 → +9,3, Thaldrin +3,8 → +4,2.
+- **Rythme du combat** (`docs/MISE_EN_SCENE.md`, M14 bis, M17 ter, M26 bis, M53 bis) : les jauges de la Rétribution partent au rythme d'une série (écart entre deux jauges 1 640 → 430 ms, dé → dernière jauge 5 550 → 1 580 ms) ; le Bastion se joue comme une Riposte, coup rendu avant les autres réactions (impact → dégâts 875 → 645 ms) ; la Pièce de la rafale enchaîne ses coups sans titre ni lecture de trop (pile → 1er coup 3 918 → 1 068 ms).
+- **Une couleur par statut** (M37) : le nom posé, le gain de charges et les « −N » d'un statut qui fait perdre des PV ont la même teinte. **Feu et Brûlure en jaune** cerclé de rouge, Poison vert, Saignement rouge ; la Pourriture garde le mauve.
+
+### Corrigé
+- **Saignement et soins à l'impact** : le Saignement du Serment de sang, de l'Aura des plaies et des Épines acérées monte à l'impact du coup (679 cas sur 679, avant 0) ; le Vol de vie d'une Riposte rend ses PV à l'impact (275 → 0 ms).
+- Plus de « +0 PV » ni de « −0 » d'effet (le soin empêché garde son « 0 » barré).
+- Un titre et un badge qui monte sous un coup encaissé ne partent plus au même rang.
+
 ## [0.131.2] — 2026-10-29
 
 ### Modifié

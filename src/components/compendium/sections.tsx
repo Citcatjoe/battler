@@ -15,8 +15,9 @@ import { StatusesSection } from './StatusesSection'
  * l'écran Statistiques). Une donnée, une maison : chaque information est décrite dans une seule section, et
  * apparaît ailleurs en résumé avec un lien vers elle (`CompendiumNav.go`).
  * Ajouter une section = un composant et une entrée ici : l'onglet, le filtre et la navigation suivent. Toutes les
- * compétences, auras comprises, ont leur fiche dans l'onglet Compétences ; les auras se rangent par maîtrise dans
- * l'onglet Maîtrises (docs/MAITRISES.md § 12 ; l'onglet Auras du premier retour du 2026-10-27 est retiré au second, B4).
+ * compétences, auras comprises, ont leur fiche dans l'onglet Compétences et auras (les auras en tête de sa liste,
+ * retour du 2026-10-30) ; les auras se rangent aussi par maîtrise dans l'onglet Maîtrises (docs/MAITRISES.md § 12 ;
+ * l'onglet Auras du premier retour du 2026-10-27 est retiré au second, B4).
  */
 
 export type CompendiumSectionId = 'characters' | 'masteries' | 'skills' | 'statuses' | 'relics' | 'rules'
@@ -72,9 +73,9 @@ export const COMPENDIUM_SECTIONS: readonly CompendiumSection[] = [
   },
   {
     id: 'skills',
-    label: 'Compétences',
+    label: 'Compétences et auras',
     count: compendiumSkills().length,
-    placeholder: 'Filtrer les compétences…',
+    placeholder: 'Filtrer les compétences et auras…',
     render: (props) => <SkillsSection {...props} />,
   },
   {

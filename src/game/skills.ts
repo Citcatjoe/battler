@@ -52,7 +52,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises ») : la boucle de la Fureur, une aura
     // qui fait critiquer et change chaque gros coup (critique, coup ×2 et plus) en Ferveur. Série 90 : Gorak +15,7, Morgrut +7,7
-    { id: 'onrush', name: 'Élan', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'onrush', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'onrush', name: "Aura d'élan", nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'onrush', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       // Phase 5 bis : elle remplace le coup de sa face par deux coups de base bruts, tout de suite
       id: 'wind-fury',
@@ -101,7 +101,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // Phase 8, lot 3 (SORTS.md § 28) : la consommatrice de critiques de sa Furie, une aura. Chaque critique : deux coups
       // de base bruts juste après ; chaque pose de plus et chaque rang : +5 % de critique. Gravée : Gorak +11,8, rang II +3,9
       id: 'blood-frenzy',
-      name: 'Ivresse du sang',
+      name: "Aura d'ivresse",
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'bloodFrenzy', stacks: 1 }],
@@ -122,7 +122,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // (M9, 2026-10-27) : 1 Saignement à chaque coup qui touche. Refonte des auras (2026-10-28, § 3.1) : de nouveau au
       // critique, Saignement 4, la seconde aura d'Elaria (la Saignée). Son rang : +4 Saignement par critique
       id: 'open-wound',
-      name: 'Plaie ouverte',
+      name: 'Aura des plaies',
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'openWound', stacks: 1 }],
@@ -216,17 +216,17 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // depuis B1). Une aura : +6 Ferveur par charge à chaque renvoi depuis la revue des auras (A2 ; +3 avant, Aldric
       // +9,0 → +12,9 gravée ; +9 valait +15,4, plus risqué)
       id: 'vendetta',
-      name: 'Vindicte',
+      name: 'Aura de vindicte',
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
     // Les Maîtrises (2026-10-27) : une aura qui vit des coups reçus (des Représailles, au Rempart depuis B1). Gravée chez Aldric +9,5
-    { id: 'rancor', name: 'Rancœur', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'rancor', name: 'Aura de rancœur', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     // Refonte des auras (2026-10-28, § 3.1, § 5.2) : la seconde aura de Brokk, à la place du Rempart hérissé (même
     // déclencheur) : l'armure vidée frappe l'attaquant et revient. Départ de Brokk 53,6 % (conception, série 101)
-    { id: 'bastion', name: 'Bastion', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'bastion', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'bastion', name: 'Aura du bastion', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'bastion', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'stoneskin',
       name: 'Peau de pierre',
@@ -340,14 +340,16 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // l'amplificateur du fil Poison (Virulence). Revue des compétences (P1, P2) : elles mouraient sur leur condition et leur
     // montant (Ervald construit +5,3 et +5,2)
     {
-      // +14 PV si l'adversaire est empoisonné (7 avant la revue), rang +6 (+4 avant)
+      // Retour du 2026-10-30 (R30-R31, mécanique écrite par l'utilisateur) : « votre prochain coup draine un montant de PV
+      // égal au nombre de charges de Poison sur l'adversaire ». Un statut posé par sa greffe, que son coup de base consomme
+      // s'il touche (comme la Sangsue) ; sans Poison, la charge attend. Avant : +14 PV tout de suite si l'adversaire était
+      // empoisonné, rang +6. Son rang : +1 PV par charge de Poison
       id: 'harvest',
       name: 'Récolte',
       nature: 'arcane',
       trigger: 'naturalThree',
-      when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
-      effects: [{ type: 'heal', amount: 14 }],
-      rankAxis: { kind: 'amount', per: 6 },
+      effects: [{ type: 'applyStatus', status: 'harvest', stacks: 1 }],
+      rankAxis: { kind: 'power', per: 1 },
     },
     {
       // Quatrième demande du 2026-10-27 : le producteur sur jet, la pièce du Poison (Poison → Chance : elle nourrit le Dé pipé).
@@ -382,7 +384,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de sa pièce. Une aura depuis les Maîtrises (M9, 2026-10-27) :
       // +25 % de chances de faire pile à toutes ses pièces (avant : sa prochaine pièce de Pile ou face sur pile, ce coup ×6)
       id: 'loaded-die',
-      name: 'Dé pipé',
+      name: 'Aura du dé pipé',
       nature: 'finesse',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'loadedDie', stacks: 1 }],
@@ -393,14 +395,14 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // charge). Refonte des auras (2026-10-28, § 5.1, Q5) : la Feinte devient la Visée, chaque esquive +1 au
       // multiplicateur de son prochain critique (plus de critique assuré)
       id: 'feint',
-      name: 'Visée',
+      name: 'Aura de visée',
       nature: 'finesse',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'feint', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
     // Les Maîtrises (2026-10-27) : une aura de la Chance qui lit le dé, à côté des pièces. Gravée chez Naraxes +8,5
-    { id: 'lucky-streak', name: 'Veine', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'luckyStreak', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'lucky-streak', name: 'Aura de veine', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'luckyStreak', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'coin-flip',
       name: 'Pile ou face',
@@ -511,7 +513,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Refonte des auras (2026-10-28, § 3.1, § 5.4) : la seconde aura d'Ysolde, la Peur par les fautes de qui la frappe.
     // Départ d'Ysolde 54,6 % (conception, série 105 ; à la 4e faute, 45,4)
-    { id: 'judgement', name: 'Jugement', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'judgement', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'judgement', name: 'Aura de jugement', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'judgement', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). Revue des auras
       // (A1) : 3 PV par charge (1 avant), Ysolde +7,9 → +15,9 ; son rang, +3 par soin
@@ -588,8 +590,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // (proposition 2 de l'utilisateur) ; série 88 : Ervald +12,6, Aldric +7,6. Une charge par vol (règle commune des vols) :
     // gravé Ervald +16,3 → +14,2, Aldric +10,9 → +10,4 ; départ contre Fanchon 66,5 → 52,3 %. Refonte des auras
     // (2026-10-28) : l'Aura de pourriture sort (doublon de l'Effroi), l'Emprise devient une relique (Chaîne du geôlier)
-    { id: 'dread', name: 'Effroi', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'dread', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
-    { id: 'pilfer', name: 'Larcin', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'dread', name: "Aura d'effroi", nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'dread', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'pilfer', name: 'Aura de larcin', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'life-steal',
       name: 'Vol de vie',
@@ -637,7 +639,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // Phase 8, lot 3 (SORTS.md § 28) : son Orage, une aura qui frappe l'adversaire au début de chacun de ses tours, un éclair
       // de dégâts directs par charge ; gravée, elle agit sous ses deux formes. Gravée : Thaldrin +10,5, rang II +4,7
       id: 'storm-sky',
-      name: "Ciel d'orage",
+      name: "Aura d'orage",
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'stormSky', stacks: 1 }],
@@ -645,10 +647,10 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant (la Magie depuis B1), la chanson qui soigne à chaque coup. Gravée chez Fanchon +12,4 (à 2 PV,
     // son départ passait 62,4 % : trop)
-    { id: 'ballad', name: 'Ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'ballad', name: 'Aura de ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     // Refonte des auras (2026-10-28, § 3.1, § 5.5) : la seconde aura de Thaldrin, le feu qui ne s'éteint plus (il attise
     // ou allume la Brûlure). Départ de Thaldrin 47,8 % (conception, série 105)
-    { id: 'brasier', name: 'Brasier', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'brasier', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    { id: 'brasier', name: 'Aura du brasier', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'brasier', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'firefly',
       name: 'Feux follets',

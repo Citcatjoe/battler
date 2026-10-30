@@ -156,7 +156,7 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', 'Ivresse du sang : chaque critique, deux coups de plus'],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', "Aura d'ivresse : chaque critique, deux coups de plus"],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   // Maîtrises (retour du 2026-10-27, docs/MAITRISES.md § 5 et § 7) : sur le 1, son aura de départ (l'Ivresse du sang par
@@ -401,7 +401,7 @@ const aldric: CharacterDef = {
     tagline: 'Chaque coup reçu est une dette.',
     background:
       "Champion de l'ordre du Sceau ardent, Aldric porte la bannière dans les pires mêlées. Il encaisse sans broncher, tient le compte des coups reçus et rend la justice d'un seul revers.",
-    strengths: ['Riposte : rend le coup reçu, entier', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Vindicte : chaque renvoi nourrit son coup'],
+    strengths: ['Riposte : rend le coup reçu, entier', 'Critiques fréquents et lourds (17 %, ×2,5)', 'Aura de vindicte : chaque renvoi nourrit son coup'],
     weaknesses: ['Esquive faible (7 %)', 'Riposte dérisoire si on ne l’a pas frappé', 'Aucune armure'],
   },
   // Maîtrises : la Vindicte sur le 1 par défaut. Refonte des auras (2026-10-28, Q6, docs/REFONTE_AURAS.md § 5.6) : la
@@ -524,7 +524,7 @@ const thaldrin: CharacterDef = {
     tagline: 'La forêt a deux visages.',
     background:
       "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
-    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', "Ciel d'orage : la foudre à chaque tour"],
+    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', "Aura d'orage : la foudre à chaque tour"],
     weaknesses: ['Aucun soin ni armure', 'Ses sorts, sous forme d’homme seulement', 'Forme imposée à chaque tour'],
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
@@ -588,7 +588,7 @@ const fanchon: CharacterDef = {
     tagline: 'Une chanson, deux coups, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle frappe deux fois d'affilée ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : un coup de plus, tout de suite', 'Ballade : chaque coup la soigne', 'Esquive (18 %) et critique (15 %)'],
+    strengths: ['Duo : un coup de plus, tout de suite', 'Aura de ballade : chaque coup la soigne', 'Esquive (18 %) et critique (15 %)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
   // Maîtrises (P7) : la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité) ; le Soliste quitte son dé pour la

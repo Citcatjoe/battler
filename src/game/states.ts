@@ -228,6 +228,7 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   tithe: tray('drain', undefined, 'hurt'),
   votiveFlame: tray('reprisal', undefined, 'heal'),
   leech: tray('drain'),
+  harvest: tray('drain'),
   toadSkin: tray('reprisal'),
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { statusHome } from '../../game/catalog'
 import type { Character } from '../../game/character'
-import { DEFAULT_SKILL_NATURE, triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
+import { triggerText, type CharacterEvent, type Target, type Trigger } from '../../game/events'
 import { MASTERIES, type MasteryId } from '../../game/masteries'
 import type { Relic } from '../../game/relics'
 import { RULES, type RuleId } from '../../game/rules'
@@ -9,13 +9,15 @@ import { auraOfSkill, STATUS_PLACE } from '../../game/states'
 import { POLARITY_STYLE, STATUSES, type Polarity, type RuleLine, type StatusId } from '../../game/statuses'
 import { Icon, MasteryIcon, skillIcon, StatusIcon } from '../Icon'
 import { RelicSeal } from '../RelicSeal'
+import { SkillFrame } from '../SkillSeal'
 import type { CompendiumNav, CompendiumTarget } from './sections'
 
 /*
  * Petites pièces partagées par les sections du compendium : sceaux, pastilles de statut et de règle, liens vers une
  * compétence ou une aura (`skillLink`), la ligne « posé par » d'un statut. Elles ne rédigent rien : le texte d'une
  * compétence vient de `describeSkill`, celui d'un statut de son registre. Une grammaire par objet, comme en
- * combat : un octogone peint pour une compétence, une pièce gravée pour un état, un hexagone pour une relique.
+ * combat : un octogone peint pour une compétence, un cercle d'or pour une aura, une pièce gravée pour un état, un
+ * hexagone pour une relique.
  */
 
 const POLARITY_TEXT: Record<Polarity, string> = { positive: 'text-good', negative: 'text-bad' }
@@ -24,10 +26,7 @@ const POLARITY_TEXT: Record<Polarity, string> = { positive: 'text-good', negativ
 export const formName = (character: Character, event: CharacterEvent) =>
   event.form ? character.forms?.find((f) => f.id === event.form)?.name : undefined
 
-/** La nature d'une compétence ne fait que colorer son liseré (sceau, face du dé) : le compendium ne la nomme plus (2026-10-27). */
-export const natureOf = (e: CharacterEvent) => e.nature ?? DEFAULT_SKILL_NATURE
-
-/** Où le compendium décrit une compétence, aura comprise : sa fiche dans l'onglet Compétences (B4, plus d'onglet Auras). */
+/** Où le compendium décrit une compétence, aura comprise : sa fiche dans l'onglet Compétences et auras (B4, plus d'onglet Auras). */
 export const skillLink = (event: CharacterEvent): CompendiumTarget => ({ section: 'skills', id: event.id })
 
 /** Ref de l'élément visé par un lien (`focus`) : il défile au centre de sa liste à chaque nouveau lien. */
@@ -48,12 +47,12 @@ export function StatusMedal({ id, size }: { id: StatusId; size: number }) {
   )
 }
 
-/** Sceau d'une compétence : l'octogone de la barre de compétences du combat, liseré à sa nature. */
+/** Sceau d'une compétence au compendium : l'octogone de la barre de compétences du combat, ou le cercle d'or d'une aura (SkillFrame). */
 export function SkillMedal({ event, size }: { event: CharacterEvent; size: number }) {
   return (
-    <span className="skill-seal codex-skill-seal" data-nature={natureOf(event)} style={{ width: size, height: size }}>
+    <SkillFrame event={event} size={size} codex>
       <Icon name={skillIcon(event)} className="h-[80%] w-[80%]" />
-    </span>
+    </SkillFrame>
   )
 }
 

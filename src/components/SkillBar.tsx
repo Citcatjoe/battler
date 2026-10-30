@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { releaseParts } from '../game/combat'
 import type { Character } from '../game/character'
-import { DEFAULT_SKILL_NATURE, describeSkill, DIE_FACES, faceTrigger, rollFace, triggerText, type CharacterEvent } from '../game/events'
+import { describeSkill, DIE_FACES, faceTrigger, rollFace, triggerText, type CharacterEvent } from '../game/events'
 import { auraIdsOf, auraOfSkill, STATUS_PLACE } from '../game/states'
 import { STATUSES, type Status, type StatusId } from '../game/statuses'
 import type { SkillPulse, SkillSignal } from '../game/staging'
@@ -35,7 +35,8 @@ interface Props {
  *   là) : un sceau octogonal par compétence, avec la face du dé qui la déclenche en pastille ; éteint au repos, il
  *   s'allume quand sa face sort, et c'est de lui que part le signal vers la zone d'état de la cible. Une face nue est
  *   une case vide, éteinte, qui s'allume quand le dé tombe dessus ; une face dorée (forge), la même case sur fond d'or ;
- * - une face dont la compétence ne fait que poser une aura : le même médaillon rond qu'avant, à sa place, dont l'anneau
+ * - une face dont la compétence ne fait que poser une aura : le sceau rond d'une aura, au double contour d'or (.aura-seal,
+ *   comme partout), à sa place, dont l'anneau
  *   tourne tant qu'elle est active (avec ses charges), éteint tant qu'elle ne l'est pas ; puis les compétences hors dé
  *   et les auras portées sans face (une relique, l'autre forme) ;
  * - ses règles de forme (druide), en médaillon fixe.
@@ -151,7 +152,6 @@ function Seal({
   return (
     <li
       className={`skill-bar-slot group relative flex ${event ? 'w-[92px]' : 'w-[64px]'} flex-col items-center gap-3 hover:z-[70]`}
-      data-nature={event ? (event.nature ?? DEFAULT_SKILL_NATURE) : 'neutral'}
       data-gild={gild ? '' : undefined}
     >
       <div className="relative" data-signal={event ? `${side}:${event.id}` : undefined}>
@@ -205,10 +205,10 @@ function AuraToken({
         {lit !== undefined && <Ding lit={lit} round />}
         <div
           key={lit !== undefined ? `flash-${lit}` : 'idle'}
-          className={`skill-bar-aura relative h-14 w-14 cursor-help rounded-full bg-stone-950/80 ${active ? 'aura-token' : 'is-idle'} ${lit !== undefined ? 'is-lit' : ''}`}
-          style={{ '--aura': def.look?.aura } as CSSProperties}
+          className={`skill-bar-aura aura-seal h-14 w-14 cursor-help ${active ? 'aura-token' : 'is-idle'} ${lit !== undefined ? 'is-lit' : ''}`}
+          style={{ '--aura': def.look?.aura, '--s': 56 } as CSSProperties}
         >
-          {icon ? <Icon name={icon} className="absolute inset-0.5 h-[calc(100%-4px)] w-[calc(100%-4px)]" /> : <StatusIcon id={id} className="absolute inset-0.5 h-[calc(100%-4px)] w-[calc(100%-4px)]" />}
+          {icon ? <Icon name={icon} className="h-[80%] w-[80%]" /> : <StatusIcon id={id} className="h-[80%] w-[80%]" />}
         </div>
         {onFace !== undefined && (
           <span className="absolute -bottom-2 -right-2.5 z-[1]">
@@ -268,7 +268,7 @@ function useLastLit(lit: number | undefined) {
 /**
  * Le tintement visuel d'une compétence qui se déclenche (0.79.8) : l'onde serrée autour du sceau, puis un éclat de
  * lumière bref qui part de lui et s'étend sur une grande partie de l'arène, avec un anneau fin qui file plus loin.
- * Dans la couleur de la nature de la compétence (ou de l'aura) ; la clé relance l'éclat quand la même face ressort.
+ * Au violet des compétences (ou à la couleur de l'aura) ; la clé relance l'éclat quand la même face ressort.
  */
 function Ding({ lit, round }: { lit: number; round?: boolean }) {
   return (

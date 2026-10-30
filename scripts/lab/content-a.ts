@@ -22,7 +22,7 @@ const trial = (name: string, rest: Partial<StatusDef>): StatusDef => ({
   ...rest,
 })
 /** Une aura d'essai : le halo d'une aura du registre (`isAura`) */
-const aura = (name: string, rest: Partial<StatusDef>): StatusDef => trial(name, { look: STATUSES.sidestep.look, polarity: 'positive', ...rest })
+const aura = (name: string, rest: Partial<StatusDef>): StatusDef => trial(name, { look: STATUSES.powerAura.look, polarity: 'positive', ...rest })
 
 const ids = {
   dime32: 'labATithe32',

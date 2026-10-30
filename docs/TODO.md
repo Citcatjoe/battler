@@ -306,3 +306,17 @@ Plan : [EN_LIGNE.md](EN_LIGNE.md). Premier objectif de l'utilisateur : partager 
 - [ ] Étape 5 : synchronisation (import à la première connexion, écran de choix, envois groupés, hors ligne).
 - [ ] Étape 6 : solidité (sauvegarde quotidienne de la base, surveillance, suppression des données, page « Ce qu'on garde »).
 - Plus tard : remontée des combats, salons de paris sur téléphone (graine et cotes tenues par le serveur), classements et PvP asynchrone.
+
+## 22. Retour du 30 octobre (après la 0.131.2)
+
+Source : `prompts/Retour du 30 octobre.md` ; registre point par point (R1 à R80) : [RETOUR_30.md](RETOUR_30.md).
+
+- [x] **Livré en 0.132.0** : noms « Aura … », descriptions réécrites, compendium (section Auras, cercle d'or, tour violet), « Nouvelle campagne » sur le dernier champion, six emblèmes v33, héritage qui remplace une récompense, aura tirée des adversaires de campagne, rythme (Rétribution, Riposte, Bastion, Pièce de la rafale), Saignement et soins à l'impact, Récolte en drain, nuage des textes flottants, une couleur par statut, feu jaune ([CHANGELOG](../CHANGELOG.md)).
+- [ ] **À juger en jeu** : le rythme et le nuage n'ont pas été vus en mouvement ; la barre de compétences du combat (médaillon d'aura) n'a pas été vue ; le son n'est jamais vérifié.
+- [ ] **Récolte : valeur à trancher** (proposé, à valider) : ×1 livré (Ervald +10,9, Naraxes +9,3 au `skills.report`) ; le laboratoire (face nue, 400 combats par duel) la place sous la bande et propose ×3.
+- [ ] **Dés supplémentaires** (proposé, à valider) : [etudes/DES_SUPPLEMENTAIRES.md](etudes/DES_SUPPLEMENTAIRES.md).
+- [ ] **Personnages** (proposé, à valider) : [etudes/PERSOS_RETOUR_30.md](etudes/PERSOS_RETOUR_30.md).
+- [ ] **Contenu** (compétences, reliques, profondeur des maîtrises ; proposé, à valider) : [etudes/CONTENU_RETOUR_30.md](etudes/CONTENU_RETOUR_30.md).
+- [ ] **Parité campagne / tournoi** (proposé, à valider) : P2, l'arbre seul fait arriver des participants construits d'un acte complet ; O1, pas de redite (une carte proposée et non prise ne revient pas à l'offre suivante de même sorte) ; O2, écho ×1, à écarter ; O3, plus de profondeur réelle (contenu).
+- [ ] **Petit gel avant les cartes d'adversaires** (proposé) : régler les rencontres pendant le combat ou la récompense, dans un Web Worker (0,1 à 2,3 s sous Node, au boss).
+- [ ] **Boss au plafond** (signalé) : cinq départs à 350 PV battent encore le Colosse à 58-84 % ; difficulté fixe pour le mode sans fin : piste dans le rapport de parité ([RETOUR_30.md](RETOUR_30.md)).

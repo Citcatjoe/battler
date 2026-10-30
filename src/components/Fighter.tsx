@@ -2,9 +2,15 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { figureHeight, footDrop, type Character } from '../game/character'
 import type { Side } from '../game/combat'
 import { HIT_TONE_CLASS, TONE_CLASS } from '../game/narration'
-import type { Float } from '../game/staging'
+import type { Float, FLOAT_LANES } from '../game/staging'
 import { isAura, STATUSES, type Status } from '../game/statuses'
 import { poseImage, poseImages, poseOf } from '../game/poses'
+
+/**
+ * Le décalage de côté de chaque couloir d'un texte flottant (le nuage, docs/MISE_EN_SCENE.md, M31 bis), en px : 0, vers
+ * l'adversaire, puis vers son combattant. Le couloir est choisi par la mise en scène (`laneOf`, staging.ts).
+ */
+const LANE_SHIFT = [0, 64, -56] as const satisfies { length: typeof FLOAT_LANES }
 
 /** Ce que le combattant subit pendant le coup en cours. */
 export interface Received {
@@ -180,6 +186,10 @@ export function Fighter({
     '--float-x': '0',
     '--float-origin': side === 0 ? 'left' : 'right',
   } as CSSProperties
+  // Un titre ou un badge s'accroche au bord de la colonne du côté de son combattant et déborde vers l'adversaire ; son
+  // couloir le décale dans ce sens (`toward`)
+  const edge = side === 0 ? 'left-0' : 'right-0'
+  const toward = side === 0 ? 1 : -1
   // Contour lumineux de l'aura (couleur --aura, posée sur le combattant) en plus de l'ombre portée.
   // Le grisé du K.O. ouvre toujours la liste (à 0 sinon) : le filtre passe en fondu de l'un à l'autre.
   // Au K.O., l'aura s'éteint : son contour devient transparent (même liste de filtres, donc même fondu)
@@ -334,21 +344,25 @@ export function Fighter({
       )}
 
       {/* Textes flottants : devant le combattant, du côté de l'adversaire. Chacun vit sa vie (sa clé, sa durée) ;
-          ceux d'un même instant se rangent en colonne, ce qui monte avec un coup passe au-dessus de son chiffre */}
+          ceux d'un même instant se rangent en colonne, ce qui monte avec un coup passe au-dessus de son chiffre. Un texte
+          tient sur une ligne (il déborde vers l'adversaire) et prend son couloir : le nuage (M31 bis) */}
       <div className={`pointer-events-none absolute inset-y-0 z-30 w-[250px] ${side === 0 ? 'text-left' : 'text-right'}`} style={column}>
         {floats.map((f) => (
           <div key={f.key} className="absolute inset-0">
             {f.kind === 'title' ? (
               // Nom de la compétence : même texte flottant qu'ESQUIVE ou CRITIQUE, en violet
-              <div style={at(4)} className="dodge-text float-text absolute inset-x-0 text-3xl text-violet-300 [-webkit-text-stroke:3px_#2e1065]">
+              <div
+                style={{ ...at(4), '--float-x': `${toward * LANE_SHIFT[f.lane ?? 0]}px` } as CSSProperties}
+                className={`dodge-text float-text absolute ${edge} whitespace-nowrap text-3xl text-violet-300 [-webkit-text-stroke:3px_#2e1065]`}
+              >
                 {f.text} !
                 {f.subtitle && <span className="mt-1 block text-xl text-violet-200 [-webkit-text-stroke:2px_#2e1065]">{f.subtitle}</span>}
               </div>
             ) : f.kind === 'badge' ? (
               // Le sens dit gain ou perte de la chose nommée (`Badge.rises`) : un statut gagné monte, même un malus
               <div
-                style={f.lift ? at(6 - f.row * 9) : at(30 + f.row * 9)}
-                className={`${f.badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute inset-x-0 text-4xl ${TONE_CLASS[f.badge.tone]} ${f.badge.struck ? 'line-through decoration-4' : ''}`}
+                style={{ ...(f.lift ? at(6 - f.row * 9) : at(30 + f.row * 9)), '--float-x': `${toward * LANE_SHIFT[f.lane ?? 0]}px` } as CSSProperties}
+                className={`${f.badge.rises ? 'damage-float' : 'damage-sink'} float-text absolute ${edge} whitespace-nowrap text-4xl ${TONE_CLASS[f.badge.tone]} ${f.badge.struck ? 'line-through decoration-4' : ''}`}
               >
                 {f.badge.text}
               </div>

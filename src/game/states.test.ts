@@ -117,7 +117,7 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     const ervald = createCharacter('ervald').withForge([{ op: 'engrave', face: 3, skill: skill('grave-breath') }])
     // L'Œil de faucon (la Visée de son 1 ne donne plus de critique assuré depuis la refonte des auras : sa Mire, si)
     expect(originsOf('guaranteedCrit', elaria, ervald)).toEqual(['Œil de faucon (Elaria)'])
-    expect(originsOf('aim', elaria, ervald)).toEqual(['Visée (Elaria)'])
+    expect(originsOf('aim', elaria, ervald)).toEqual(['Aura de visée (Elaria)'])
     // Le poison d'Elaria peut venir du Souffle de la tombe ou de l'Aura de poison d'Ervald
     expect(originsOf('poison', elaria, ervald)).toEqual(['Souffle de la tombe (Ervald)', 'Aura de poison (Ervald)'])
   })

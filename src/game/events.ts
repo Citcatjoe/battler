@@ -181,13 +181,13 @@ export type Condition =
   | { type: 'hitAtLeast'; amount: number }
 
 /**
- * Nature d'une compétence, pour sa présentation seulement (couleur de sa carte, design system) :
- * martiale (force du corps ou de l'arme), adresse (agilité, précision, ruse, chance), arcane (magie,
- * foi, nature, mort) ou neutre (ni l'un ni l'autre). Sans effet sur le combat.
+ * Nature d'une compétence : martiale (force du corps ou de l'arme), adresse (agilité, précision, ruse, chance), arcane
+ * (magie, foi, nature, mort) ou neutre (ni l'un ni l'autre). Elle ne colore plus rien (retour du 2026-10-30 : toutes les
+ * compétences ont le même tour violet) ; elle ne sert qu'à dire si un maléfice est un sort (`castsSpell`, poses.ts).
  */
 export type SkillNature = 'martial' | 'finesse' | 'arcane' | 'neutral'
 
-/** Nature retenue quand une compétence n'en déclare pas : l'arcane, le violet des cartes d'avant. */
+/** Nature retenue quand une compétence n'en déclare pas : l'arcane. */
 export const DEFAULT_SKILL_NATURE: SkillNature = 'arcane'
 
 /** Le dé de tous les combattants (règles v2) : un d6, dont le jet désigne une face. Il ne fait aucun dégât. */
@@ -247,7 +247,7 @@ export interface CharacterEvent {
   buildsUp?: true
   /** Forme requise (personnage à formes, ex. druide) : la compétence n'existe que sous cette forme */
   form?: string
-  /** Nature de la compétence, pour sa carte (défaut : DEFAULT_SKILL_NATURE). Présentation seulement. */
+  /** Nature de la compétence (défaut : DEFAULT_SKILL_NATURE) : un maléfice arcane est un sort (`castsSpell`). */
   nature?: SkillNature
   /**
    * Événement de scène (0.73.0) : l'écran le joue sur toute l'arène quand la compétence part (la Foudre du
@@ -334,7 +334,7 @@ export function describeEffect(effect: Effect, grafted = false): string {
       const def = STATUSES[effect.status]
       // Pourfendre : des charges tirées du coup, que la définition ne connaît pas
       if (effect.fromHit !== undefined)
-        return `${foe ? "l'adversaire" : 'il'} ${def.bears ?? `prend ${def.name}`} de ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des dégâts de ce coup${effect.stacks ? `, +${effect.stacks}` : ''}`
+        return `${foe ? "l'adversaire" : 'il'} prend un ${def.name} égal à ${effect.fromHit === 0.5 ? 'la moitié' : pct(effect.fromHit)} des PV que ce coup ${foe ? 'lui ' : ''}retire${effect.stacks ? `, +${effect.stacks}` : ''}`
       // Virulence : des charges tirées d'un statut ; le même statut, au même porteur, se multiplie (« Triple le Poison »)
       if (effect.fromStatus !== undefined) {
         const from = effect.fromStatus
@@ -342,7 +342,7 @@ export function describeEffect(effect: Effect, grafted = false): string {
         const plus = effect.stacks ? `, puis +${effect.stacks}` : ''
         if (from.status === effect.status && from.who === (effect.target ?? 'self')) {
           // Attiser (lot 3) : un statut qui se remplace (la Brûlure) repart, plus fort de ses charges d'avant
-          if (def.stacking === 'refresh' && from.factor === 1) return `+${effect.stacks} à la ${def.name} ${whose}, qui repart`
+          if (def.stacking === 'refresh' && from.factor === 1) return `la ${def.name} ${whose} monte de ${effect.stacks} et repart pour autant de tours que sa nouvelle valeur`
           return `${MULTIPLY[from.factor + 1] ?? `multiplie par ${from.factor + 1}`} le ${def.name} ${whose}${plus}`
         }
         return `+${from.factor} ${def.name}${foe ? " à l'adversaire" : ''} par charge ${deName(STATUSES[from.status].name)} ${whose}${plus}`
@@ -361,7 +361,7 @@ export function describeEffect(effect: Effect, grafted = false): string {
       }
       // Onde de choc : ses jauges comptées, `per` PV par coup encaissé
       if (effect.per !== undefined)
-        return `${foe ? "l'adversaire" : 'il'} perd ${effect.per} PV par coup reçu, des ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} derniers`
+        return `${foe ? "l'adversaire" : 'il'} perd ${effect.per} PV par coup qui a touché le porteur depuis sa dernière onde, ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} coups au plus`
       // Rétribution : ses jauges, les dégâts de ses derniers coups reçus
       const share = shareOf(effect.share ?? 1, 'tous les')
       return `${foe ? "l'adversaire" : 'il'} perd ${share} dégâts des ${SMALL_NUMBERS[def.fillsOnHurt?.slots ?? 3] ?? def.fillsOnHurt?.slots} derniers coups reçus`
@@ -397,7 +397,7 @@ function effectDetail(effect: Effect): string | undefined {
       return effect.fromHit !== undefined ? `Arrondi au-dessus.${detail ? ` ${detail}` : ''}` : detail
     }
     case 'release':
-      if (effect.per !== undefined) return 'En dégâts directs ; les jauges se vident.'
+      if (effect.per !== undefined) return 'En dégâts directs ; les coups comptés partent avec l’onde, le compte repart de zéro. Sans coup encaissé, la face reste nue.'
       return effect.from === 'opponent'
         ? `Puis la ${STATUSES[effect.status].name} s'éteint.`
         : `Arrondi au-dessous, au moins ${effect.min} ; les jauges se vident.`
@@ -476,12 +476,12 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   const graftedOnDie = relation === 'graft' && isRollTrigger(e.trigger)
   const sentences = [
     e.hitMultiplier ? `ce coup ×${e.hitMultiplier}${e.buildsUp ? ", puis ×1 de plus à chaque fois qu'il touche" : ''}` : '',
-    // Une compétence qui modifie son coup : ses effets n'arrivent que s'il touche. Des charges tirées du coup (Pourfendre)
-    // disent l'effet d'abord, la condition ensuite (revue des compétences, T1) ; la pièce (Pile ou face) la garde en tête
+    // Une compétence qui modifie son coup : ses effets n'arrivent que s'il touche, et la phrase le dit d'abord (Pourfendre
+    // compris depuis le retour du 2026-10-30, R6 : « S'il touche, l'adversaire prend un Saignement égal à… »)
     ...e.effects.map((effect, k) => {
       const text = describeEffect(effect, graftedOnDie)
       if (!modifies || k > 0) return text
-      return effect.type === 'applyStatus' && effect.fromHit !== undefined ? `${text}, s'il touche` : `s'il touche, ${lowerFirst(text)}`
+      return `s'il touche, ${lowerFirst(text)}`
     }),
   ].filter(Boolean)
   // Virulence : la condition sur le statut qu'elle multiplie va de soi (tripler zéro ne fait rien) ; l'Onde de choc, celle

@@ -489,26 +489,22 @@ body {
 }
 
 /* ---------- Carte de compétence : la lame (design system) ----------
-   Deux coins opposés coupés (--cut-blade), contour et trait de tête de 2 px à la couleur de la
-   nature (data-nature : martial = --gold-500, finesse = --armor, arcane = --arcane,
-   neutral = --text-3). La carte est
+   Deux coins opposés coupés (--cut-blade), contour et trait de tête de 2 px au violet des compétences (--arcane,
+   le même pour toutes depuis le retour du 2026-10-30 : plus de couleur par nature). La carte est
    découpée : son ombre est sur l'enveloppe (.skill-blade-wrap). Fenêtre du sceau octogonale. */
 @layer components {
   .skill-blade-wrap { filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.55)); }
   .skill-blade {
-    --nature: var(--arcane);
+    --blade-line: var(--arcane);
     --c: var(--cut-blade);
     position: relative;
     isolation: isolate;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: linear-gradient(var(--nature) 0 2px, color-mix(in srgb, var(--nature) 45%, transparent) 2px);
+    background: linear-gradient(var(--blade-line) 0 2px, color-mix(in srgb, var(--blade-line) 45%, transparent) 2px);
     clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
   }
-  .skill-blade[data-nature='martial'] { --nature: var(--gold-500); }
-  .skill-blade[data-nature='finesse'] { --nature: var(--armor); }
-  .skill-blade[data-nature='neutral'] { --nature: var(--text-3); }
   .skill-blade::before {
     --c: calc(var(--cut-blade) - 0.6px);
     content: '';
@@ -529,7 +525,9 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: var(--nature, var(--line-bronze));
+    /* Le tour de toute compétence : le violet des compétences (celui de Confiscation, retour du 2026-10-30, R75) ; un
+       contexte qui l'éteint (face nue, dé de l'en-tête du combat) pose son --seal-line */
+    background: var(--seal-line, var(--arcane));
     clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)),
       calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
   }
@@ -540,6 +538,26 @@ body {
     z-index: -1;
     background: var(--bg-0);
     clip-path: inherit;
+  }
+
+  /* Sceau d'une aura (retour du 2026-10-30, R74 et R76) : un cercle, l'octogone étant réservé aux compétences, au double
+     contour d'or (un anneau d'or, un filet sombre, un second filet d'or plus foncé). --s : sa taille en px, sans unité,
+     qui règle l'épaisseur des anneaux. Le même sceau partout (SkillFrame) : compendium, choix de l'aura, dé forgé,
+     infobulles, barre de compétences du combat (où .aura-token y ajoute son halo et son anneau tournant). */
+  .aura-seal {
+    --s: 56;
+    --ring-a: max(1.5px, calc(var(--s) * 0.045px));
+    --ring-gap: max(1px, calc(var(--s) * 0.03px));
+    --ring-b: max(1px, calc(var(--s) * 0.02px));
+    --aura-rings: inset 0 0 0 var(--ring-a) var(--gold-300), inset 0 0 0 calc(var(--ring-a) + var(--ring-gap)) var(--bg-0),
+      inset 0 0 0 calc(var(--ring-a) + var(--ring-gap) + var(--ring-b)) var(--gold-500);
+    position: relative;
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 50% 35%, #2a221b 0%, #0e0b09 72%);
+    box-shadow: var(--aura-rings);
   }
 }
 
@@ -916,8 +934,8 @@ body {
   }
 
   /* Sceau rond (compendium, refonte 0.72.0) : l'icône peinte dans un cercle serti, liseré à la couleur de la
-     polarité (statut) ou de la nature (compétence). data-tone : positive, negative, martial, finesse, arcane,
-     neutral. Remplace l'anneau vert des médaillons de combat dans les index. */
+     polarité (statut). data-tone : positive, negative, neutral (règle de forme), relic. Remplace l'anneau vert des
+     médaillons de combat dans les index. Une aura a son propre cercle, au double contour d'or (.aura-seal). */
   .seal {
     --seal: var(--gold-500);
     position: relative;
@@ -931,19 +949,13 @@ body {
   .seal > * { width: 80%; height: 80%; }
   .seal[data-tone='positive'] { --seal: var(--good); }
   .seal[data-tone='negative'] { --seal: var(--bad); }
-  .seal[data-tone='martial'] { --seal: var(--gold-500); }
-  .seal[data-tone='finesse'] { --seal: var(--armor); }
-  .seal[data-tone='arcane'] { --seal: var(--arcane); }
   .seal[data-tone='neutral'] { --seal: var(--text-3); }
   .seal[data-tone='relic'] { --seal: var(--gold-300); }
 
   /* Sceau d'une compétence au compendium (0.98.0) : l'octogone de la barre de compétences du combat (.skill-seal),
-     liseré de 2 px à la couleur de sa nature. Un octogone est une compétence, une pièce ronde un état. */
+     liseré de 2 px au violet des compétences. Un octogone est une compétence, un cercle d'or une aura, une pièce ronde
+     liserée à sa polarité un état. */
   .codex-skill-seal::before { inset: 2px; background: radial-gradient(circle at 50% 35%, #2a221b 0%, #0e0b09 72%); }
-  .codex-skill-seal[data-nature='martial'] { --nature: var(--gold-500); }
-  .codex-skill-seal[data-nature='finesse'] { --nature: var(--armor); }
-  .codex-skill-seal[data-nature='arcane'] { --nature: var(--arcane); }
-  .codex-skill-seal[data-nature='neutral'] { --nature: var(--text-3); }
 
   /* Ligne d'index (56 à 64 px) : survol discret, choisie avec un filet d'or à gauche */
   .codex-row {
@@ -1511,9 +1523,9 @@ body {
   100% { opacity: 0; transform: translateY(-260px) scale(1.1); }
 }
 
-/* Médaillon d'aura dans la zone d'état : double contour (anneau intérieur doré, anneau extérieur
-   à la couleur de l'aura qui tourne lentement), pour la distinguer des bonus ordinaires. */
-.aura-token { box-shadow: 0 0 0 2px #0c0a09, 0 0 0 4px rgba(253, 224, 71, 0.85), 0 0 18px var(--aura); }
+/* Médaillon d'aura active dans la barre de compétences : le sceau d'aura (.aura-seal, double contour d'or) prend un
+   halo et un anneau extérieur à la couleur de l'aura, qui tourne lentement, pour la distinguer des bonus ordinaires. */
+.aura-token { box-shadow: var(--aura-rings), 0 0 0 1px #0c0a09, 0 0 18px var(--aura); }
 .aura-token::before {
   content: '';
   position: absolute;
@@ -1583,12 +1595,9 @@ body {
 
 /* ---------- Barre de compétences de l'en-tête du combat (SkillBar, 0.79.0) ----------
    Ce que le personnage sait faire : sceaux octogonaux éteints au repos, qui s'allument quand leur face sort
-   (même tintement que les dés d'avant, dans la couleur de la nature de la compétence) ; ses auras en médaillon
-   rond, dont l'anneau tourne quand elles sont actives (.aura-token), éteintes sinon. */
+   (même tintement que les dés d'avant, au violet des compétences, le même pour toutes depuis le 2026-10-30) ; ses
+   auras en sceau rond au double contour d'or, dont l'anneau tourne quand elles sont actives (.aura-token), éteintes sinon. */
 .skill-bar-slot { --pulse: var(--arcane); }
-.skill-bar-slot[data-nature='martial'] { --pulse: var(--gold-400); }
-.skill-bar-slot[data-nature='finesse'] { --pulse: var(--armor); }
-.skill-bar-slot[data-nature='neutral'] { --pulse: var(--text-3); }
 .skill-die-xs .skill-pip { margin: 1px; }
 /* Emblème d'état (pièce monochrome, 0.79.2) : une teinte légère selon la polarité, posée en mode « couleur »
    sur la pièce seule (disque), sans filtre (Firefox dessine mal les filtres sur ces petits éléments) */
@@ -1634,13 +1643,13 @@ body {
 .skill-bar-face.is-rolled { filter: none; opacity: 1; transition: none; }
 /* Face nue (0.111.0) : une case vide, au liseré neutre ; dorée, sur le fond d'or de la forge. Au repos, la case dorée
    s'éteint moins (le gris éteindrait son or) ; elle s'allume comme les autres, tant que le dé est posé dessus */
-.skill-bar-bare { --nature: var(--line-2); }
+.skill-bar-bare { --seal-line: var(--line-2); }
 .skill-bar-bare::before { background: radial-gradient(circle at 50% 35%, #231c16 0%, var(--bg-0) 75%); }
 .skill-bar-slot[data-gild] .skill-bar-bare::before { background: linear-gradient(160deg, #f6dc9a 0%, #dda94a 45%, #8a6424 100%); }
 .skill-bar-slot[data-gild]:not(:hover) .skill-bar-face:not(.is-rolled) { filter: grayscale(0.2) brightness(0.62) drop-shadow(0 0 0 transparent); }
 .skill-bar-face.is-rolled .skill-bar-bare::before { background: radial-gradient(circle at 50% 35%, #5b4a36 0%, #2a211a 75%); }
 .skill-bar-slot[data-gild] .skill-bar-face.is-rolled .skill-bar-bare::before { background: linear-gradient(160deg, #fff1c4 0%, #edc46a 45%, #a37a2e 100%); }
-.skill-bar-aura.is-idle { filter: grayscale(0.9) brightness(0.42) drop-shadow(0 0 0 transparent); opacity: 0.8; box-shadow: 0 0 0 2px #0c0a09, 0 0 0 3px rgba(168, 162, 158, 0.45); }
+.skill-bar-aura.is-idle { filter: grayscale(0.9) brightness(0.42) drop-shadow(0 0 0 transparent); opacity: 0.8; }
 .skill-bar .group:hover .skill-bar-aura.is-idle { filter: none; opacity: 1; }
 /* Au repos, les noms s'effacent aussi ; une aura active reste dorée, un sceau qui sonne s'éclaire un instant */
 .skill-bar-name { opacity: 0.55; }
@@ -1651,7 +1660,7 @@ body {
   0%, 30% { opacity: 1; color: #fff; text-shadow: 0 0 10px var(--pulse), 0 1px 4px rgba(0, 0, 0, 0.9); }
 }
 /* Éclat de lumière (Ding) : part du sceau et couvre une grande partie de l'arène, vite (≈ 0,45 s à ×1), en mode
-   « screen » pour éclairer sans masquer ; un anneau fin file plus loin encore. --pulse : nature de la compétence. */
+   « screen » pour éclairer sans masquer ; un anneau fin file plus loin encore. --pulse : le violet des compétences, la couleur d'une aura. */
 .skill-bar-burst, .skill-bar-ring {
   position: absolute;
   left: 50%;
@@ -1798,7 +1807,7 @@ body {
   align-content: center;
   height: 95px;
 }
-.die-slot .skill-seal { --nature: var(--line-2); }
+.die-slot .skill-seal { --seal-line: var(--line-2); }
 .die-slot .skill-seal::before { background: radial-gradient(circle at 50% 35%, #231c16 0%, var(--bg-0) 75%); }
 .die-slot-plain { font: 700 20px/1 var(--font-display); color: var(--text-1); }
 /* Face dorée : fond d'or, sans le cadre de la face forgée */
@@ -2935,11 +2944,11 @@ body {
 .aura-tile[aria-pressed='true'] { border-color: var(--side-a); background: rgba(67, 180, 238, 0.12); box-shadow: 0 0 0 1px var(--side-a), 0 0 18px rgba(67, 180, 238, 0.35); }
 
 /* ---------- Dé forgé (campagne, ForgedDie.tsx, docs/CAMPAGNE.md § 4) ----------
-   Une tuile par face, lisible de loin : le chiffre, ou le sceau de sa compétence (liseré de sa nature) ; une gravure a
+   Une tuile par face, lisible de loin : le chiffre, ou le sceau de sa compétence (octogone violet, cercle d'or d'une aura) ; une gravure a
    le liseré violet des runes, une dorure la plaque d'or, un rang son chiffre romain ; une face d'attente est éteinte.
    En choix de face (forge), les faces visables sont cerclées d'or en pointillé, les autres s'éteignent. */
 .forge-face {
-  --nature: var(--line-2);
+  --face-line: var(--line-2);
   position: relative;
   display: flex;
   align-items: center;
@@ -2948,7 +2957,7 @@ body {
   border: 0;
   padding: 0;
   background: linear-gradient(160deg, #2e2720 0%, #1c1713 60%, #120f0c 100%);
-  box-shadow: inset 0 0 0 1px var(--nature), inset 0 4px 6px -3px rgba(255, 255, 255, 0.18), 0 3px 0 #0a0806, 0 6px 12px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px var(--face-line), inset 0 4px 6px -3px rgba(255, 255, 255, 0.18), 0 3px 0 #0a0806, 0 6px 12px rgba(0, 0, 0, 0.45);
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 22px;
@@ -2959,10 +2968,6 @@ body {
 .forge-face[data-size='sm'] { font-size: 17px; border-radius: 6px; }
 .forge-face[data-size='xs'] { font-size: 13px; border-radius: 6px; }
 .forge-face[data-size='lg'] { font-size: 34px; border-radius: 14px; }
-.forge-face[data-nature='martial'] { --nature: var(--gold-500); }
-.forge-face[data-nature='finesse'] { --nature: var(--armor); }
-.forge-face[data-nature='arcane'] { --nature: var(--arcane); }
-.forge-face[data-nature='neutral'] { --nature: var(--text-3); }
 .forge-face[data-engraved] {
   box-shadow: inset 0 0 0 2px var(--arcane), inset 0 0 12px color-mix(in srgb, var(--arcane) 45%, transparent), 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent), 0 3px 0 #0a0806;
 }

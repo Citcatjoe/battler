@@ -243,6 +243,7 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   tithe: 'tithe',
   votiveFlame: 'votive-flame',
   leech: 'leech',
+  harvest: 'harvest',
   toadSkin: 'toad-skin',
   verdigrisCoin: 'verdigris-coin',
   // Refonte des auras (tranche 6) : les trois pièces de la Chance ; la Rafale de pile, l'icône de sa pièce

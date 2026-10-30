@@ -34,6 +34,7 @@ import {
   STORM_SKY_LOSS,
   VENDETTA_MOMENTUM,
   LEECH_HEAL,
+  HARVEST_DRAIN,
   TITHE_PV,
   TOAD_POISON,
   VOTIVE_BURN,
@@ -466,7 +467,7 @@ export function createAudit() {
       }
       // Les compétences à charges (refonte des auras, 2026-10-28) : Sangsue, Peau de crapaud, Sentence, Bouclier de foi
       // perdent une charge à chaque réaction, et partent à la dernière
-      if (b.type === 'statusReaction' && (['leech', 'toadSkin', 'sentence', 'faithShield'] as StatusId[]).includes(b.status)) {
+      if (b.type === 'statusReaction' && (['leech', 'harvest', 'toadSkin', 'sentence', 'faithShield'] as StatusId[]).includes(b.status)) {
         const held = find(prev.statuses[b.side], b.status)
         if (!held || (find(s.statuses[b.side], b.status)?.stacks ?? 0) !== held.stacks - 1) flag('compétence à charges : charge non consommée', r, i, b.status)
         else see('compétence à charges')
@@ -600,14 +601,17 @@ export function createAudit() {
         else if ((find(s.statuses[b.side], 'votiveFlame')?.stacks ?? 0) !== held.stacks - 1) flag('flamme votive : charge non consommée', r, i, '')
         else see('flamme votive')
       }
-      // Sangsue : un coup qui touche rend 1 PV (plus son rang) par charge de Saignement de l'adversaire, lue avant que la
-      // plaie coule ; sans Saignement, rien ne part
-      if (b.type === 'statusReaction' && b.status === 'leech') {
-        const held = find(prev.statuses[b.side], 'leech')
-        const bleed = find(prev.statuses[1 - b.side], 'bleed')?.stacks ?? 0
-        const want = held ? (LEECH_HEAL + (held.power ?? 0)) * bleed : 0
+      // Sangsue et Récolte (retour du 2026-10-30) : un coup qui touche rend 1 PV (plus son rang) par charge de Saignement
+      // (Sangsue, lue avant que la plaie coule) ou de Poison (Récolte) de l'adversaire ; sans elle, rien ne part
+      const drains: Partial<Record<StatusId, readonly [string, StatusId, number]>> = { leech: ['sangsue', 'bleed', LEECH_HEAL], harvest: ['récolte', 'poison', HARVEST_DRAIN] }
+      const drain = b.type === 'statusReaction' ? drains[b.status] : undefined
+      if (b.type === 'statusReaction' && drain) {
+        const [label, fed, per] = drain
+        const held = find(prev.statuses[b.side], b.status)
+        const stacks = find(prev.statuses[1 - b.side], fed)?.stacks ?? 0
+        const want = held ? (per + (held.power ?? 0)) * stacks : 0
         const heal = b.effects[0]
-        if (b.trigger !== 'hit' || !held || bleed === 0) flag('sangsue hors d’un coup sur une plaie', r, i, `${b.trigger} ${bleed}`)
+        if (b.trigger !== 'hit' || !held || stacks === 0) flag(`${label} hors d’un coup sur ${fed}`, r, i, `${b.trigger} ${stacks}`)
         else if (
           b.effects.length !== 1 ||
           heal?.type !== 'heal' ||
@@ -615,8 +619,8 @@ export function createAudit() {
           (heal.wanted ?? want) !== want ||
           (heal.amount !== want && heal.wanted === undefined && s.hp[b.side] !== r.fighters[b.side].maxHp)
         )
-          flag('sangsue : soin faux', r, i, JSON.stringify(b.effects))
-        else see('sangsue')
+          flag(`${label} : soin faux`, r, i, JSON.stringify(b.effects))
+        else see(label)
       }
       // Peau de crapaud : un coup reçu, Poison 2 (plus son rang) à l'attaquant
       if (b.type === 'statusReaction' && b.status === 'toadSkin') {
@@ -810,6 +814,7 @@ export function createAudit() {
           [hurt, 'tithe'],
           [hurt, 'toadSkin'],
           [touch && !!find(base.statuses[1 - side], 'bleed'), 'leech'],
+          [touch && !!find(base.statuses[1 - side], 'poison'), 'harvest'],
           // Le contenu des maîtrises : l'Élan à chaque gros coup (critique, coup ×2 et plus), le Larcin à chaque esquive
           [touch && !!blow && (blow.crit || (blow.multiplier ?? 1) >= 2), 'onrush'],
           [

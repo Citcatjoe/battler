@@ -152,7 +152,8 @@ describe('audit de résolution : phase 8, premier lot (0.114.0)', () => {
         }
     }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['rafale après le coup de base de son jet', 'compétence à condition fausse : face nue', 'charges tirées d’un statut', 'sentence', 'rancune', 'compétence greffée'])
+    // Récolte (retour du 2026-10-30) : un drain sur le Poison, au coup qui touche
+    for (const k of ['rafale après le coup de base de son jet', 'compétence à condition fausse : face nue', 'charges tirées d’un statut', 'sentence', 'rancune', 'compétence greffée', 'récolte'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

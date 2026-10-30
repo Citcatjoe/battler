@@ -91,6 +91,7 @@ export type StatusId =
   | 'tithe'
   | 'votiveFlame'
   | 'leech'
+  | 'harvest'
   | 'toadSkin'
   | 'verdigrisCoin'
   // Refonte des auras (tranche 6, 2026-10-28) : trois pièces de la Chance
@@ -414,6 +415,17 @@ export function riseLevel(s: Status): number {
 }
 
 /**
+ * Ce que dit encore un statut qui monte (`rises`), à la suite de sa phrase (retour du 2026-10-30, R25 : « tous ces trucs
+ * qui font 1 et qui stackent devraient le mentionner ») : « , et monte de 1 tous les deux tours, jusqu'à 3 ». Rien à son
+ * plafond. `scale` : la valeur d'un cran ; `what` : ce qui le fait monter, au pluriel (« tours », « coups reçus »).
+ */
+function riseTail(s: Status, what: string, scale = 1): string {
+  const rises = STATUSES[s.id].rises
+  if (!rises || Math.ceil(s.stacks / rises.every) >= rises.cap) return ''
+  return ` ; elle monte de ${scale} tous les ${COUNT_WORDS[rises.every].toLowerCase()} ${what}, jusqu'à ${(rises.cap + (s.power ?? 0)) * scale}`
+}
+
+/**
  * Un impact de dégâts directs infligé à l'adversaire par le porteur de `statuses`, après leurs filtres `modifyDirect`
  * (Surtension, quatrième retour du 2026-10-27, la foudre seule) ; un impact nul reste nul. Le moteur et l'audit le lisent ici.
  */
@@ -525,6 +537,8 @@ export const malusCount = (foe: readonly Status[]) => foe.filter((x) => STATUSES
 export const TITHE_PV = 2
 export const VOTIVE_BURN = 3
 export const LEECH_HEAL = 1
+/** Récolte (retour du 2026-10-30) : PV rendus par charge de Poison de l'adversaire, au coup qui touche */
+export const HARVEST_DRAIN = 1
 export const TOAD_POISON = 2
 export const VERDIGRIS_POISON = 5
 /**
@@ -764,7 +778,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Brûlure',
     polarity: 'negative',
     family: 'affliction',
-    summary: 'Brûlure 3 : il perd 3 PV à la fin de ses 3 prochains tours. Une nouvelle Brûlure remplace l’ancienne.',
+    summary: 'Brûlure 3 : il perd 3 PV à la fin de chacun de ses tours, pendant 3 tours. Une nouvelle Brûlure remplace l’ancienne et repart pour autant de tours que sa valeur.',
     bears: 'brûle',
     describe: (s) =>
       s.turns === undefined
@@ -816,8 +830,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Chaque coup reçu fait saigner l'attaquant, 1 puis ${RISE_TWO} Saignement : elle monte d'un cran tous les deux coups reçus.`,
-    describe: (s) => `${riseLevel(s)} Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat`,
-    detail: () => `Elle monte : cran 1 à la pose, un cran de plus tous les deux coups reçus, ${RISE_TWO} au plus ; chaque nouvelle pose, un cran.`,
+    describe: (s) => `${riseLevel(s)} Saignement à l'attaquant à chaque coup reçu${riseTail(s, 'coups reçus')}`,
+    detail: () => 'Chaque nouvelle pose la fait monter d’un cran de plus.',
     badge: (s) => String(riseLevel(s)),
     // 0.68.0 : les épines font saigner au lieu de renvoyer 1 dégât direct par charge (0.45.0). Le saignement
     // ne coule que quand le nain touche l'attaquant : la punition attend la riposte du porteur.
@@ -990,7 +1004,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   // Elle sert toutes ses pièces et grandit avec elles. Jusqu'à la 0.120.0 : un mécanisme de compétence, sa prochaine pièce
   // de Pile ou face tombait sur pile, ce coup ×6 (gravée +11,9 ; en aura, borne haute +5,9 avec la seule Pile ou face)
   loadedDie: {
-    name: 'Dé pipé',
+    name: 'Aura du dé pipé',
     look: { aura: 'rgba(167,139,250,0.5)' },
     polarity: 'positive',
     family: 'fortune',
@@ -1006,7 +1020,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     power: (n) => `+${Math.round(LOADED_DIE_HEADS * 100 * n)} % de chances de faire pile, +${Math.round(LOADED_DIE_EDGE * 100 * n)} % de critique et d'esquive`,
   },
   vendetta: {
-    name: 'Vindicte',
+    name: 'Aura de vindicte',
     look: { aura: 'rgba(253,186,116,0.5)' },
     polarity: 'positive',
     family: 'power',
@@ -1159,8 +1173,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Au début de chacun de ses tours, Poison à l'adversaire, 1 puis 2 puis ${RISE_THREE} : elle monte d'un cran tous les deux tours.`,
-    describe: (s) => `${riseLevel(s)} Poison à l'adversaire au début de chacun de ses tours`,
-    detail: () => `Elle monte : cran 1 à la pose, un cran de plus tous les deux tours, ${RISE_THREE} au plus ; chaque nouvelle pose, un cran.`,
+    describe: (s) => `${riseLevel(s)} Poison à l'adversaire au début de chacun de ses tours${riseTail(s, 'tours')}`,
+    detail: () => 'Chaque nouvelle pose la fait monter d’un cran de plus.',
     badge: (s) => `+${riseLevel(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1215,8 +1229,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'healing',
     summary: `+1 puis +${HOLY_HEAL * RISE_TWO} PV à la fin de chacun de ses tours : elle monte d'un cran tous les deux tours.`,
-    describe: (s) => `+${HOLY_HEAL * riseLevel(s)} PV à la fin de chacun de ses tours`,
-    detail: () => `Elle monte : cran 1 à la pose, un cran de plus tous les deux tours, ${RISE_TWO} au plus ; chaque nouvelle pose, un cran.`,
+    describe: (s) => `+${HOLY_HEAL * riseLevel(s)} PV à la fin de chacun de ses tours${riseTail(s, 'tours', HOLY_HEAL)}`,
+    detail: () => 'Chaque nouvelle pose la fait monter d’un cran de plus.',
     badge: (s) => `+${HOLY_HEAL * riseLevel(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1253,8 +1267,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Chaque coup qui touche pose du Poison à l'adversaire, 1 puis 2 puis ${RISE_THREE} : elle monte d'un cran tous les deux coups.`,
-    describe: (s) => `${DECOCTION_POISON * riseLevel(s)} Poison à l'adversaire à chaque coup qui touche`,
-    detail: () => `Elle monte : cran 1 à la pose, un cran de plus tous les deux coups qui touchent, ${RISE_THREE} au plus ; chaque nouvelle pose, un cran.`,
+    describe: (s) => `${DECOCTION_POISON * riseLevel(s)} Poison à l'adversaire à chaque coup qui touche${riseTail(s, 'coups qui touchent', DECOCTION_POISON)}`,
+    detail: () => 'Chaque nouvelle pose la fait monter d’un cran de plus.',
     badge: (s) => `+${DECOCTION_POISON * riseLevel(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1405,7 +1419,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     power: (n) => `+${n} armure temporaire par soin`,
   },
   openWound: {
-    name: 'Plaie ouverte',
+    name: 'Aura des plaies',
     look: { aura: 'rgba(220,38,38,0.5)' },
     polarity: 'positive',
     family: 'affliction',
@@ -1506,7 +1520,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // Refonte des auras (2026-10-28, § 3.1, § 5.1 ; Q5 : des valeurs entières) : la Feinte devient la Visée. Plus de
     // critique assuré (B8 l'avait éteint à une charge) : chaque esquive met en joue, +1 au multiplicateur de son prochain
     // critique (la Mire), qui s'accumule jusqu'à ce critique ; l'Œil de faucon est le tir. Id `feint` gardé (historique)
-    name: 'Visée',
+    name: 'Aura de visée',
     look: { aura: 'rgba(52,211,153,0.5)' },
     polarity: 'positive',
     family: 'precision',
@@ -1542,13 +1556,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     spentOnReaction: true,
   },
   stormSky: {
-    name: "Ciel d'orage",
+    name: "Aura d'orage",
     look: { aura: 'rgba(186,230,253,0.55)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: `Au début de chacun de ses tours, des éclairs sur l'adversaire, 1 puis ${RISE_TWO} : le ciel monte d'un cran tous les deux tours.`,
-    describe: (s) => `Au début de chacun de ses tours, l'adversaire perd ${plural(STORM_SKY_LOSS * riseLevel(s), 'PV')}`,
-    detail: () => `Un éclair par cran, en dégâts directs. Il monte : cran 1 à la pose, un cran de plus tous les deux tours, ${RISE_TWO} au plus ; chaque nouvelle pose, un cran.`,
+    summary: `Au début de chacun de ses tours, des éclairs sur l'adversaire, 1 puis ${RISE_TWO} : l'orage monte d'un cran tous les deux tours.`,
+    describe: (s) => `Au début de chacun de ses tours, la foudre tombe sur l'adversaire : il perd ${plural(STORM_SKY_LOSS * riseLevel(s), 'PV')}${riseTail(s, 'tours', STORM_SKY_LOSS)}`,
+    detail: () => 'Un éclair par cran, en dégâts directs. Chaque nouvelle pose la fait monter d’un cran de plus.',
     badge: (s) => `−${STORM_SKY_LOSS * riseLevel(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1561,7 +1575,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     power: (n) => `+${plural(STORM_SKY_LOSS * n, 'PV')} par tour`,
   },
   bloodFrenzy: {
-    name: 'Ivresse du sang',
+    name: "Aura d'ivresse",
     look: { aura: 'rgba(132,204,22,0.5)' },
     polarity: 'positive',
     family: 'tempo',
@@ -1603,7 +1617,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
    * (Fanchon) ; la Peau de pierre et son Poing, départ de Brokk 49,8 → 54,9 %.
    */
   luckyStreak: {
-    name: 'Veine',
+    name: 'Aura de veine',
     look: { aura: 'rgba(56,189,248,0.5)' },
     polarity: 'positive',
     family: 'fortune',
@@ -1635,7 +1649,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     instantStrikes: true,
   },
   dread: {
-    name: 'Effroi',
+    name: "Aura d'effroi",
     look: { aura: 'rgba(120,113,108,0.55)' },
     polarity: 'positive',
     family: 'tempo',
@@ -1653,7 +1667,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     power: (n) => `+${Math.round(DREAD_CRIT * 100 * n)} % de critique`,
   },
   rancor: {
-    name: 'Rancœur',
+    name: 'Aura de rancœur',
     look: { aura: 'rgba(234,88,12,0.5)' },
     polarity: 'positive',
     family: 'power',
@@ -1669,12 +1683,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     power: (n) => `+${n} Ferveur par coup reçu`,
   },
   ballad: {
-    name: 'Ballade',
+    name: 'Aura de ballade',
     look: { aura: 'rgba(244,114,182,0.5)' },
     polarity: 'positive',
     family: 'healing',
     summary: `Chaque coup qui touche lui rend 1 PV par charge et joue une note ; à la ${BALLAD_NOTES}e, le refrain : ${COUNT_WORDS[BALLAD_NOTES].toLowerCase()} notes de ${BALLAD_REFRAIN} dégât sur l'adversaire.`,
-    describe: (s) => `Chaque coup qui touche lui rend ${plural(charges(s), 'PV')} et joue une note ; à la ${BALLAD_NOTES}e, le refrain`,
+    describe: (s) =>
+      `Chaque coup qui touche lui rend ${plural(charges(s), 'PV')} et joue une note ; à la ${BALLAD_NOTES}e note, le refrain : l'adversaire perd ${plural(BALLAD_REFRAIN, 'PV')} ${COUNT_WORDS[BALLAD_NOTES].toLowerCase()} fois`,
     detail: () => `Le refrain : ${COUNT_WORDS[BALLAD_NOTES].toLowerCase()} dégâts directs de ${BALLAD_REFRAIN}, puis les notes repartent de zéro.`,
     badge: (s) => `+${charges(s)}`,
     counter: 'stacks',
@@ -1694,7 +1709,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     look: { glow: 'rgba(244,114,182,0.85)' },
     polarity: 'positive',
     family: 'tempo',
-    summary: `Une note de la Ballade ; à la ${BALLAD_NOTES}e, le refrain.`,
+    summary: `Une note de l'Aura de ballade ; à la ${BALLAD_NOTES}e, le refrain.`,
     describe: (s) => `${s.stacks} sur ${BALLAD_NOTES} notes ; à la ${BALLAD_NOTES}e, le refrain`,
     detail: () => `Le refrain : ${COUNT_WORDS[BALLAD_NOTES].toLowerCase()} dégâts directs de ${BALLAD_REFRAIN} sur l'adversaire.`,
     badge: (s) => `${s.stacks}/${BALLAD_NOTES}`,
@@ -1706,13 +1721,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   // Refonte des auras (2026-10-28, § 3.1) : trois auras nouvelles, un moteur chacune
   // Bastion (Brokk, Rempart) : la Peau de pierre éclate, l'attaquant paie, l'armure revient (sans la réarmure : 36,3 %)
   bastion: {
-    name: 'Bastion',
+    name: 'Aura du bastion',
     look: { aura: 'rgba(148,163,184,0.6)' },
     polarity: 'positive',
     family: 'retaliation',
-    summary: `Chaque fois que son armure temporaire est vidée, l'attaquant perd ${plural(BASTION_LOSS, 'PV')} et il regagne +${BASTION_ARMOR} armure temporaire, par charge.`,
+    summary: `Chaque fois que l'armure temporaire du porteur est vidée, l'attaquant perd ${plural(BASTION_LOSS, 'PV')} et le porteur regagne +${BASTION_ARMOR} armure temporaire, par charge.`,
     describe: (s) =>
-      `Chaque fois que son armure temporaire est vidée, l'attaquant perd ${plural(BASTION_LOSS * charges(s), 'PV')} et il regagne +${BASTION_ARMOR * charges(s)} armure temporaire`,
+      `Chaque fois que son armure temporaire est vidée, l'attaquant perd ${plural(BASTION_LOSS * charges(s), 'PV')} et le porteur regagne +${BASTION_ARMOR * charges(s)} armure temporaire`,
     detail: () => 'En dégâts directs. L’armure regagnée peut être vidée à son tour.',
     badge: (s) => `−${BASTION_LOSS * charges(s)}`,
     counter: 'stacks',
@@ -1727,14 +1742,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
   // Jugement (Ysolde, Lumière) : la Peur revient, par les fautes de qui la frappe (à la 4e : 45,4 % ; à la 3e : 54,6)
   judgement: {
-    name: 'Jugement',
+    name: 'Aura de jugement',
     look: { aura: 'rgba(253,224,71,0.5)' },
     polarity: 'positive',
     family: 'tempo',
-    summary: `Chaque coup qui la touche met une faute à l'attaquant, par charge ; à la ${JUDGEMENT_FAULTS}e, il perd sa prochaine action.`,
+    summary: `Chaque coup qui touche le porteur donne une faute à l'attaquant, par charge ; rien ne s'ajoute avec les tours. À ${JUDGEMENT_FAULTS} fautes, l'attaquant a Peur : il perd sa prochaine action.`,
     describe: (s) =>
-      `Chaque coup qui la touche met ${charges(s) > 1 ? `${charges(s)} fautes` : 'une faute'} à l'attaquant ; à la ${JUDGEMENT_FAULTS}e, il perd sa prochaine action`,
-    detail: () => 'La Peur : une action perdue au plus à la fois ; ses fautes partent avec elle.',
+      `Chaque coup qui touche le porteur donne ${charges(s) > 1 ? `${charges(s)} fautes` : 'une faute'} à l'attaquant ; à ${JUDGEMENT_FAULTS} fautes, l'attaquant a Peur et perd sa prochaine action`,
+    detail: () => 'Les fautes ne viennent que des coups qui touchent le porteur, jamais des tours. La Peur emporte les fautes : le compte repart de zéro.',
     badge: (s) => `+${charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1746,9 +1761,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Faute',
     polarity: 'negative',
     family: 'tempo',
-    summary: `Une faute devant le Jugement ; à la ${JUDGEMENT_FAULTS}e, il perd sa prochaine action.`,
-    describe: (s) => `${s.stacks} sur ${JUDGEMENT_FAULTS} fautes ; à la ${JUDGEMENT_FAULTS}e, il perd sa prochaine action`,
-    onFoe: (s) => `L'adversaire reçoit ${s.stacks > 1 ? `${s.stacks} fautes` : 'une faute'} ; à la ${JUDGEMENT_FAULTS}e, il perd sa prochaine action`,
+    summary: `Une faute de l'Aura de jugement ; à ${JUDGEMENT_FAULTS} fautes, il a Peur et perd sa prochaine action.`,
+    describe: (s) => `${s.stacks} sur ${JUDGEMENT_FAULTS} fautes ; à ${JUDGEMENT_FAULTS} fautes, il a Peur et perd sa prochaine action`,
+    onFoe: (s) => `L'adversaire reçoit ${s.stacks > 1 ? `${s.stacks} fautes` : 'une faute'} ; à ${JUDGEMENT_FAULTS} fautes, il a Peur et perd sa prochaine action`,
     detail: () => 'La Peur : une action perdue au plus à la fois ; ses fautes partent avec elle.',
     badge: (s) => `${s.stacks}/${JUDGEMENT_FAULTS}`,
     counter: 'stacks',
@@ -1759,13 +1774,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
   // Brasier (Thaldrin, Magie) : le feu ne s'éteint plus ; il attise la Brûlure de l'adversaire, ou l'allume
   brasier: {
-    name: 'Brasier',
+    name: 'Aura du brasier',
     look: { aura: 'rgba(249,115,22,0.5)' },
     polarity: 'positive',
     family: 'affliction',
-    summary: "Au début de chacun de ses tours, +1 à la Brûlure de l'adversaire par charge, qui repart (Brûlure 1 s'il ne brûle pas).",
-    describe: (s) => `Au début de chacun de ses tours, +${charges(s)} à la Brûlure de l'adversaire, qui repart`,
-    detail: () => "S'il ne brûle pas, il s'embrase : Brûlure 1 par charge.",
+    summary: "Au début de chacun de ses tours, des braises tombent sur l'adversaire : sa Brûlure monte de 1 par charge et repart pour autant de tours que sa nouvelle valeur (Brûlure 1 s'il ne brûlait pas).",
+    describe: (s) => `Au début de chacun de ses tours, des braises tombent sur l'adversaire : sa Brûlure monte de ${charges(s)} et repart pour autant de tours que sa nouvelle valeur`,
+    detail: () => "S'il ne brûle pas, les braises l'allument : Brûlure 1 par charge. Exemple : une Brûlure 2 à un tour de sa fin devient une Brûlure 3, pour 3 tours.",
     badge: (s) => `+${charges(s)}`,
     counter: 'stacks',
     stacking: 'add',
@@ -1798,7 +1813,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
    * viennent) ; le Larcin esquive et vole le dernier bonus de l'attaquant ; l'Onde de choc compte les coups encaissés.
    */
   onrush: {
-    name: 'Élan',
+    name: "Aura d'élan",
     look: { aura: 'rgba(251,113,133,0.5)' },
     polarity: 'positive',
     family: 'power',
@@ -1821,7 +1836,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'affliction',
     summary: `Chacun de ses éclairs fait +${OVERCHARGE}.`,
     describe: () => `Chacun de ses éclairs fait +${OVERCHARGE}`,
-    detail: () => "Ses dégâts directs de foudre sur l'adversaire, d'où qu'ils viennent : chaque éclair de la Foudre, du Ciel d'orage.",
+    detail: () => "Ses dégâts directs de foudre sur l'adversaire, d'où qu'ils viennent : chaque éclair de la Foudre, de l'Aura d'orage.",
     badge: () => `+${OVERCHARGE}`,
     counter: 'turns',
     stacking: 'refresh',
@@ -1843,7 +1858,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     modifyOutgoing: (damage, _s, foe) => damage + GRIP * malusCount(foe),
   },
   pilfer: {
-    name: 'Larcin',
+    name: 'Aura de larcin',
     look: { aura: 'rgba(217,70,239,0.45)' },
     polarity: 'positive',
     family: 'seals',
@@ -1864,7 +1879,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     name: 'Onde de choc',
     polarity: 'positive',
     family: 'retaliation',
-    summary: `Compte les coups qu'il encaisse, ${SHOCKWAVE_SLOTS} au plus ; sa compétence les relâche en onde de choc.`,
+    summary: `Compte les coups qui le touchent depuis sa dernière onde, ${SHOCKWAVE_SLOTS} au plus ; sa compétence Onde de choc les relâche sur l'adversaire, ${plural(SHOCKWAVE_PER, 'PV')} par coup compté.`,
     describe: (s) => {
       const n = (s.slots ?? []).filter((x) => x > 0).length
       return n > 1 ? `${n} coups encaissés, ${SHOCKWAVE_PER * n} PV d'onde de choc` : n === 1 ? `1 coup encaissé, ${SHOCKWAVE_PER} PV d'onde de choc` : 'Aucun coup encaissé'
@@ -1942,6 +1957,31 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     reactions: { hit: (s) => [{ type: 'heal', amount: 0, fromStatus: { status: 'bleed', who: 'opponent', factor: LEECH_HEAL + (s.power ?? 0) } }] },
     power: (n) => `+${plural(n, 'PV')} par charge de Saignement`,
   },
+  // Récolte (retour du 2026-10-30, R30-R31, mécanique écrite par l'utilisateur) : un drain sur un coup, comme la Sangsue,
+  // lu sur le Poison. Posée par sa greffe juste avant son coup de base : elle apparaît avec le dé, part à l'impact avec son
+  // soin. Sans Poison, rien, et la charge attend
+  harvest: {
+    name: 'Récolte',
+    look: { glow: 'rgba(132,204,22,0.85)' },
+    polarity: 'positive',
+    family: 'healing',
+    summary: `Son prochain coup qui touche lui rend ${HARVEST_DRAIN === 1 ? '1 PV' : plural(HARVEST_DRAIN, 'PV')} par charge de Poison de l'adversaire.`,
+    describe: (s) => {
+      const heal = plural(HARVEST_DRAIN + (s.power ?? 0), 'PV')
+      return next(
+        s.stacks,
+        `Son prochain coup qui touche lui rend ${heal} par charge de Poison de l'adversaire`,
+        `Ses N prochains coups qui touchent lui rendent chacun ${heal} par charge de Poison de l'adversaire`,
+      )
+    },
+    detail: () => 'Lu au coup ; sans Poison, rien, et la charge attend.',
+    badge: (s) => `+${HARVEST_DRAIN + (s.power ?? 0)}`,
+    counter: 'stacks',
+    stacking: 'add',
+    decays: true,
+    reactions: { hit: (s) => [{ type: 'heal', amount: 0, fromStatus: { status: 'poison', who: 'opponent', factor: HARVEST_DRAIN + (s.power ?? 0) } }] },
+    power: (n) => `+${plural(n, 'PV')} par charge de Poison`,
+  },
   toadSkin: {
     name: 'Peau de crapaud',
     look: { glow: 'rgba(251,146,60,0.85)' },
@@ -1952,6 +1992,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
       const poison = TOAD_POISON + (s.power ?? 0)
       return next(s.stacks, `Son prochain coup reçu empoisonne l'attaquant : Poison ${poison}`, `Ses N prochains coups reçus empoisonnent l'attaquant : Poison ${poison} chacun`)
     },
+    detail: () => 'Un bonus à charges, pas une aura : une charge part à chaque coup reçu, et il disparaît à la dernière.',
     badge: (s) => String(TOAD_POISON + (s.power ?? 0)),
     counter: 'stacks',
     stacking: 'add',

@@ -39,26 +39,30 @@ Vingt états en jeu (2026-10-28, 0.129.0), au lieu de trente. « Moment » : le 
 | --- | --- | --- | --- | --- | --- | --- |
 | **Puissance** | frappe-t-il plus fort ? | + | épée, chevron montant | chacun de ses coups | total (la Surtension n'en chiffre aucun : ses éclairs ne sont pas des coups) | Poing de pierre, Emprise, Surtension ; Ferveur (coup porté) |
 | **Affaibli** | frappe-t-il moins fort ? | − | épée, chevron descendant | chacun de ses coups | total | Affaibli ; Fausse note (coup porté) |
-| **Bouclier** | encaisse-t-il moins ? | + | bouclier rond | aussitôt | charges | Armure temporaire ; Bouclier de foi (soin) |
-| **Garde brisée** | son prochain coup reçu fera-t-il mal ? | − | bouclier barré | prochain coup reçu | charges | Garde brisée |
+| **Bouclier** | encaisse-t-il moins ? | + | bouclier à pointe (écu) | aussitôt | charges | Armure temporaire ; Bouclier de foi (soin) |
+| **Garde brisée** | son prochain coup reçu fera-t-il mal ? | − | le même écu, fendu en deux | prochain coup reçu | charges | Garde brisée |
 | **Critique assuré** | va-t-il critiquer ? | + | étoile à quatre branches | prochain coup | charges | Critique assuré ; Rancune (coup reçu) |
 | **Critique renforcé** | son critique frappera-t-il plus fort ? | + | étoile, chevron montant | prochain critique | total | Mire |
-| **Aveuglé** | ses critiques ratent-ils ? | − | étoile barrée | chacun de ses critiques | aucun | Aveuglé |
-| **Esquive assurée** | va-t-il éviter le coup ? | + | flèche qui contourne un poteau | prochain coup reçu | charges | Esquive améliorée |
+| **Aveuglé** | ses critiques ratent-ils ? | − | tête de profil, spirale et traits (il voit trouble) | chacun de ses critiques | aucun | Aveuglé |
+| **Esquive assurée** | va-t-il éviter le coup ? | + | botte ailée | prochain coup reçu | charges | Esquive améliorée |
 | **Dé en plus** | aura-t-il plus de jets ? | + | dé, chevron montant | prochaine action | charges | Coup de chance |
 | **Malchance** | son prochain jet tombera-t-il à vide ? | − | dé barré | prochain jet sur une compétence | charges | Malchance |
-| **Tour perdu** | perd-il son tour ? | − | entraves | prochaine action | aucun | Peur, Étourdi ; Faute (coup porté, « 2/3 ») |
+| **Tour perdu** | perd-il son tour ? | − | tête de profil, étoiles en orbite (sonné) | prochaine action | aucun | Peur, Étourdi ; Faute (coup porté, « 2/3 ») |
 | **Soin** | regagne-t-il des PV ? | + | cœur, chevron montant | ses tours | total | Sifflotement |
 | **Hémorragie** | ne peut-il plus se soigner ? | − | cœur barré | tout le combat | aucun | Hémorragie |
 | **Drain** | ses coups le soignent-ils ? | + | cœur, flèche qui en sort et y revient | coup porté | charges | Vol de vie, Sangsue ; Dîme (coup reçu) |
 | **Représailles** | le toucher se paie-t-il ? | + | deux flèches opposées (un échange) | coup reçu | charges | Riposte, Peau de crapaud ; Sentence, Flamme votive (soin) |
 | **Immunité** | ses malus tiennent-ils ? | + | cadenas fermé | tout le temps | tours | Immunité (Ampoule bénite) |
-| **Sceau de vol** | son prochain bonus lui échappera-t-il ? | − | cadenas barré | prochain bonus | charges | Sceau de vol |
+| **Sceau de vol** | son prochain bonus lui échappera-t-il ? | − | main qui s'avance vers une gemme | prochain bonus | charges | Sceau de vol |
 | **Poison** | perd-il des PV à chaque tour ? | − | goutte à bulles | fin de ses tours | charges | Poison (ressource, règle 5) |
 | **Saignement** | perd-il des PV à chaque coup reçu ? | − | goutte sous une entaille | coup reçu | charges | Saignement (ressource) |
 | **Brûlure** | brûle-t-il ? | − | flamme | fin de ses tours | charges | Brûlure (ressource) |
 
-**Réserve** (statuts sans porteur ; emblème le jour où un statut en jeu l'alimente, pas avant) : **Vulnérable** (bouclier, chevron descendant : Vulnérable, Brèche), **Esquive empêchée** (flèche et poteau barrés : Luciole). La Régénération (sans porteur) va au Soin, la Garde sacrée à l'Immunité. Les états **Épines, Luciole, Brèche, Coup gâché, Renvoi, Sentence, Flamme votive, Sangsue, Peau de crapaud, Dîme, Bouclier de foi, Emprise, Surtension, Faute** ont disparu en 0.130.0.
+**Réserve** (statuts sans porteur ; emblème le jour où un statut en jeu l'alimente, pas avant) : **Vulnérable** (écu à pointe, chevron descendant : Vulnérable, Brèche), **Esquive empêchée** (botte ailée barrée : Luciole). La Régénération (sans porteur) va au Soin, la Garde sacrée à l'Immunité. Les états **Épines, Luciole, Brèche, Coup gâché, Renvoi, Sentence, Flamme votive, Sangsue, Peau de crapaud, Dîme, Bouclier de foi, Emprise, Surtension, Faute** ont disparu en 0.130.0.
+
+**Retour du 2026-10-30 (planche v33, § 7)** : six emblèmes repeints à la demande de l'utilisateur. Le Bouclier devient un **écu à pointe** (contraste avec le médaillon rond) ; la Garde brisée, **le même écu fendu** (« pas barré façon panneau ») ; l'Esquive assurée, une **botte ailée** (« un pied agile », au lieu de la flèche et du poteau) ; le Tour perdu (Peur, Étourdi, Faute), une **tête sonnée** aux étoiles en orbite, comme en bande dessinée (au lieu des entraves) ; l'Aveuglé, **la même tête**, une spirale et des traits à la place des étoiles (il voit trouble) ; le Sceau de vol, **une main qui s'avance vers une gemme** (au lieu du cadenas barré). L'Aveuglé et le Tour perdu gardent deux emblèmes (règle 1 : deux questions, et les deux peuvent se porter ensemble, Éclair aveuglant puis Peur) ; ils partagent la tête, pas le signe.
+
+Le même jour, l'utilisateur demandait si le **Sifflotement** pouvait prendre l'emblème du Vol de vie (le Drain). Non : il garde le **Soin**. Deux questions (« regagne-t-il des PV à chaque tour ? », « ses coups le soignent-ils ? », règle 1), deux moments (fin de ses tours, coup porté), deux nombres (PV par tour, charges, règle 6) ; et la double présence est réelle : Siffloter, Vol de vie, Sangsue et Dîme se gravent tous, et la Dent de loup donne le Vol de vie à n'importe qui. Avec un seul emblème, le même combattant montrerait deux médaillons identiques aux compteurs différents.
 
 ## 4. Les axes et leurs marques
 
@@ -67,18 +71,18 @@ Un glyphe de base par axe ; les marques sont les mêmes partout (même forme, m�
 | Axe (famille) | Glyphe de base | Le glyphe seul | Chevron montant | Chevron descendant | Barre (négation) |
 | --- | --- | --- | --- | --- | --- |
 | Puissance | épée droite | — | Puissance | Affaibli | — |
-| Garde | bouclier rond | Bouclier | — | Vulnérable (réserve) | Garde brisée |
-| Précision | étoile à quatre branches | Critique assuré | Critique renforcé | — | Aveuglé |
-| Esquive | flèche qui contourne un poteau | Esquive assurée | — | — | Esquive empêchée (réserve) |
+| Garde | écu à pointe | Bouclier | — | Vulnérable (réserve) | Garde brisée : l'écu **fendu**, pas barré (retour du 2026-10-30) |
+| Précision | étoile à quatre branches | Critique assuré | Critique renforcé | — | — (l'Aveuglé a pris la tête sonnée, ci-dessous) |
+| Esquive | botte ailée | Esquive assurée | — | — | Esquive empêchée (réserve) |
 | Fortune | un dé | — | Dé en plus | — | Malchance |
-| Tempo | entraves | Tour perdu | — | — | — |
+| Tempo et confusion | tête de profil, sonnée | Tour perdu (étoiles en orbite) ; Aveuglé (spirale et traits) | — | — | — |
 | Soin | cœur | — | Soin | — | Hémorragie |
 | Soin (drain) | cœur et flèche en boucle | Drain | — | — | — |
 | Représailles | deux flèches opposées | Représailles | — | — | — |
-| Sceaux | cadenas fermé | Immunité | — | — | Sceau de vol |
+| Sceaux | cadenas fermé ; main qui convoite | Immunité (cadenas) ; Sceau de vol (la main) | — | — | — |
 | Affliction | goutte à bulles, goutte sous entaille, flamme | Poison, Saignement, Brûlure (un glyphe chacun, règle 5) | — | — | — |
 
-Lecture : **le glyphe seul**, il a la chose ; **le chevron**, la chose augmente ou diminue ; **la barre**, la chose lui est refusée. Les états d'un même axe sonnent aussi pareil à la pose ([SONS.md](SONS.md) § 2, règle 1 : famille et polarité) : l'œil et l'oreille rangent de la même façon.
+Lecture : **le glyphe seul**, il a la chose ; **le chevron**, la chose augmente ou diminue ; **la barre**, la chose lui est refusée (l'écu fendu de la Garde brisée en tient lieu). Les états d'un même axe sonnent aussi pareil à la pose ([SONS.md](SONS.md) § 2, règle 1 : famille et polarité) : l'œil et l'oreille rangent de la même façon.
 
 ## 5. Les pastilles de déclencheur
 
@@ -168,8 +172,8 @@ the mark changes: never flip, rotate or mirror the symbol. Emblems built on diff
 have clearly different silhouettes.
 
 AVOID: any color, gold, rich illustration, texture noise, engraved patterns, emoji look, flat vector
-clip-art, cute or cartoon style, glossy plastic, 3D perspective, photorealism, text, real-world
-religious symbols (no crosses), hands, faces, skulls.
+clip-art, cute or childish style, glossy plastic, 3D perspective, photorealism, text, real-world
+religious symbols (no crosses), facial features (no eyes, no mouth, no nose), skulls.
 
 EMBLEMS, in reading order (left to right, top to bottom), each one coin:
 Row 1:
@@ -183,24 +187,26 @@ Row 1:
 | --- | --- | --- |
 | `state-power.png` | Puissance | a broad short sword, wide blade, point up, with the UP CHEVRON (more damage) |
 | `state-weakened.png` | Affaibli | the same broad short sword, point up, with the DOWN CHEVRON (less damage) |
-| `state-shield.png` | Bouclier | a round buckler shield seen head-on, a thick rim and a central boss (damage shield) |
-| `state-guard-broken.png` | Garde brisée | the same round buckler with the BAR (shield denied) |
+| `state-shield.png` | Bouclier | a heater shield seen head-on: straight top edge, sides curving down to a single point at the bottom, a thick plain rim and a smooth face, no emblem on it (damage shield) |
+| `state-guard-broken.png` | Garde brisée | the very same heater shield, split from the top edge down to the point by one thick jagged crack, the two halves pushed slightly apart, a small chip missing from one edge (guard broken) |
 | `state-sure-crit.png` | Critique assuré | a sharp four-pointed star (sure critical) |
 | `state-crit-power.png` | Critique renforcé | the same four-pointed star with the UP CHEVRON (stronger critical) |
-| `state-blinded.png` | Aveuglé | the same four-pointed star with the BAR (criticals fail) |
-| `state-sure-dodge.png` | Esquive assurée | a short upright post in the center and a thick arrow that comes from the left, curves sideways around the post without touching it and leaves to the right (sure dodge) |
+| `state-blinded.png` | Aveuglé | the very same head in profile facing right, but with no stars: one thick spiral swirl in front of where the eyes would be, and two short thick wavy strokes beside the head (dizzy, seeing blurred: his blows go wild) |
+| `state-sure-dodge.png` | Esquive assurée | a single light boot seen from the side, toe pointing right, heel raised as if springing on the ball of the foot, with one small swept-back wing at the heel (a quick, agile foot: sure dodge) |
 | `state-extra-die.png` | Dé en plus | one six-sided die seen at a slight angle, pips as simple dots, with the UP CHEVRON (extra roll) |
 | `state-jinxed.png` | Malchance | the same die with the BAR (wasted roll) |
-| `state-lost-turn.png` | Tour perdu | a pair of iron shackles, two cuffs joined by a short chain (loses its turn) |
+| `state-lost-turn.png` | Tour perdu | a plain smooth round head seen in profile facing right, a bald silhouette with no face details, and three small five-pointed stars circling just above it along one thick elliptical orbit stroke, like a cartoon character dazed by a blow (stunned: loses his turn) |
 | `state-healing.png` | Soin | a heart with the UP CHEVRON (healing) |
 | `state-no-healing.png` | Hémorragie | the same heart with the BAR (no healing) |
 | `state-drain.png` | Drain | the same heart with a thick curved arrow leaving it and looping back into it (life drain) |
 | `state-reprisal.png` | Représailles | two thick straight horizontal arrows, one above the other: the upper one points right, the lower one points left (paid back, an exchange) |
 | `state-immunity.png` | Immunité | a closed padlock (protected) |
-| `state-bonus-stolen.png` | Sceau de vol | the same closed padlock with the BAR (protection denied) |
+| `state-bonus-stolen.png` | Sceau de vol | a single open hand seen from the side with the start of the wrist, coming in from the lower left, fingers curled and stretching greedily toward a small faceted gem at the upper right that it is about to snatch (stolen bonus) |
 | `state-poison.png` | Poison | a single teardrop with three small bubbles rising inside (poison) |
 | `state-bleed.png` | Saignement | a single heavy drop below a short diagonal slash mark (bleeding) |
 | `state-burn.png` | Brûlure | a single bold flame tongue (burn) |
+
+Les six symboles du Bouclier, de la Garde brisée, de l'Aveuglé, de l'Esquive assurée, du Tour perdu et du Sceau de vol sont ceux de la **planche v33** (2026-10-30, retour de l'utilisateur, § 3) : planche 3×3 de six (la dernière rangée vide), en image à image sur une référence composée de neuf emblèmes intégrés (Puissance, Affaibli, Critique assuré, Soin, Hémorragie, Drain, Immunité, Représailles, Dé en plus) sur fond noir, avec cette phrase avant BACKGROUND : _« The attached image is the STYLE REFERENCE ONLY: nine existing emblems of the same set. Copy exactly their coin, their light polished silver symbol, their size, contrast and lighting. Do NOT copy their symbols: draw only the six new symbols listed below. »_ ; « diagonal bars crossing a symbol, padlocks, shackles, chains » ajouté à AVOID pour cette planche.
 
 **Planche des pastilles** (§ 5) : le même prompt, `<N>` = 3 sur une grille 2×2 (la dernière case vide), PURPOSE remplacé par _« These are TRIGGER BADGES for a fantasy auto-battler watched on a television: tiny coins shown at 20 pixels over the corner of a status emblem. Same coin as the emblems, but the symbol is even simpler: one single bold shape filling 70% of the coin, readable at 20 pixels. »_, « exclamation mark » ajouté à AVOID (une flèche plantée dans un point se lisait « ! »). Symboles : 1. `badge-strike` : one thick diagonal arrow starting at the lower left and pointing OUT toward the upper right (when he strikes) · 2. `badge-hurt` : a small six-pointed impact burst at the lower left, and one thick diagonal arrow coming from the upper right and pointing IN at the burst (when he is hit) · 3. `badge-heal` : a small solid heart (when he heals).
 
@@ -209,6 +215,8 @@ Row 1:
 ## 8. État (0.130.0, 2026-10-28)
 
 **Livré** : les vingt états du § 3, leurs emblèmes et les trois pastilles (planche v32, 1 200 crédits Artlist en tout, [STYLE_BIBLE.md](STYLE_BIBLE.md) § 7, historique) ; le regroupement par état et par moment, les nombres de la règle 6, l'Emprise comptée sur les malus de l'adversaire. Présentation seulement : le moteur, l'équilibre et l'empreinte de non-régression n'ont pas bougé ; aucun identifiant d'état n'est enregistré dans l'historique. Vus dans Firefox : la zone d'état (tous les statuts en jeu, pastilles, compteurs, infobulles) et la section Statuts du compendium ; pas en combat réel.
+
+**Planche v33 (retour du 2026-10-30)** : six emblèmes repeints (Bouclier, Garde brisée, Esquive assurée, Tour perdu, Aveuglé, Sceau de vol), mêmes fichiers et mêmes identifiants, aucun code touché. Artlist, GPT Image 2.5, 160 crédits, deux versions : l'Esquive de la version B (une botte, la A se lisait pied nu), les cinq autres de la A. Planche de contrôle regardée (96, 48 et 24 px, teintée) ; pas vus dans un écran du jeu. Planches et référence gardées dans `~/.cache/battler-emblems/v33`. Contrôle de couverture du même jour (script jetable, toutes les compétences du catalogue et des fiches, statuts en jeu, reliques, maîtrises, pastilles) : aucun élément affiché sans icône peinte ; seuls les deux états de réserve n'ont pas d'emblème.
 
 **Contrôles** (`states.test.ts`, `screens.test.tsx`) : chaque état alimenté par un statut en jeu a son emblème `state-*` et son fichier (règle 7) ; un médaillon par état et par moment ; le nombre regroupé (le plus grand nombre de charges, le seuil « 2/3 », pas de « 1 » seul, le total de l'Emprise) ; le Poison, le Saignement et la Brûlure n'ont aucun autre statut en jeu sous leur état (règle 5).
 

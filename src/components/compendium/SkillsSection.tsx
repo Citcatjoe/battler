@@ -8,14 +8,20 @@ import { NBSP } from '../../game/typography'
 import { CodexBox, formName, Line, MasteryName, RelicSource, RuleLink, SkillMedal, skillLink, StatusChip, triggerShort, useFocusRef } from './CodexBits'
 import { matches, type CompendiumNav, type SectionProps } from './sections'
 
-/** Toutes les compétences, auras comprises, par ordre alphabétique (une ligne par compétence, `skillCatalog`). */
+/**
+ * Toutes les compétences, auras comprises (une ligne par compétence, `skillCatalog`) : les auras d'abord, puis les
+ * compétences, chaque groupe par ordre alphabétique (retour du 2026-10-30, R77).
+ */
 export function compendiumSkills(): SkillEntry[] {
-  return skillCatalog().sort((a, b) => a.event.name.localeCompare(b.event.name, 'fr'))
+  return skillCatalog().sort(
+    (a, b) => Number(auraOfSkill(b.event) !== undefined) - Number(auraOfSkill(a.event) !== undefined) || a.event.name.localeCompare(b.event.name, 'fr'),
+  )
 }
 
 /**
- * Section « Compétences » : à gauche l'index de toutes les briques, auras comprises (second retour du 2026-10-27, B4 :
- * plus d'onglet Auras ; les auras se rangent par maîtrise dans l'onglet Maîtrises), par ordre alphabétique ; à droite
+ * Section « Compétences et auras » : à gauche l'index de toutes les briques, en deux groupes (retour du 2026-10-30,
+ * R77) : d'abord les auras, puis les compétences, chacun par ordre alphabétique (second retour du 2026-10-27, B4 :
+ * plus d'onglet Auras ; les auras se rangent aussi par maîtrise dans l'onglet Maîtrises) ; à droite
  * le détail de celle choisie, la fiche de chaque lien. Chaque brique nomme sa maîtrise, avec son petit emblème. Une
  * compétence se décrit pour elle-même, jamais par ses porteurs (0.98.1), ni par ses interactions avec les autres (au
  * joueur de les découvrir) : sa description (`describeSkill`), les états qu'elle pose, et ce qui lui appartient, son aura
@@ -30,33 +36,50 @@ export function SkillsSection({ nav, focus, filter }: SectionProps) {
   })
   const selected = all.find((s) => s.events.some((e) => e.id === focus)) ?? shown[0] ?? all[0]
 
+  const row = (s: SkillEntry) => {
+    const mastery = masteryOfSkill(s.event.id)
+    return (
+      <button
+        key={s.event.id}
+        type="button"
+        ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
+        aria-current={s === selected}
+        onClick={() => nav.go(skillLink(s.event))}
+        className="codex-row w-full"
+      >
+        <SkillMedal event={s.event} size={40} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2.5">
+            <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
+            {mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
+          </span>
+          <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
+        </span>
+        <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
+      </button>
+    )
+  }
+  // Les auras d'abord, puis les compétences (R77, dans l'ordre de `compendiumSkills`) ; un groupe vide sous le filtre disparaît
+  const groups = [
+    { label: 'Auras', tone: 'text-amber-200', entries: shown.filter((s) => auraOfSkill(s.event) !== undefined) },
+    { label: 'Compétences', tone: 'text-arcane', entries: shown.filter((s) => auraOfSkill(s.event) === undefined) },
+  ]
+
   return (
     <div className="grid h-full min-h-0 grid-cols-[520px_1fr] gap-6">
-      <nav aria-label="Compétences" className="codex-panel scroll-panel min-h-0 overflow-y-auto">
-        {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">Aucune compétence ne correspond.</p>}
-        {shown.map((s) => {
-          const mastery = masteryOfSkill(s.event.id)
-          return (
-            <button
-              key={s.event.id}
-              type="button"
-              ref={s.events.some((e) => e.id === focus) ? focusRef : undefined}
-              aria-current={s === selected}
-              onClick={() => nav.go(skillLink(s.event))}
-              className="codex-row w-full"
-            >
-              <SkillMedal event={s.event} size={40} />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline gap-2.5">
-                  <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
-                  {mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
-                </span>
-                <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
-              </span>
-              <span className="shrink-0 font-data text-[13px] text-ink-3">{triggerShort(s.triggers)}</span>
-            </button>
-          )
-        })}
+      <nav aria-label="Compétences et auras" className="codex-panel scroll-panel min-h-0 overflow-y-auto">
+        {shown.length === 0 && <p className="p-4 font-body italic text-ink-3">Aucune compétence ni aura ne correspond.</p>}
+        {groups.map(
+          (g) =>
+            g.entries.length > 0 && (
+              <section key={g.label}>
+                <h3 className={`codex-label bg-surface-2/70 px-4 py-1.5 ${g.tone}`}>
+                  {g.label} · {g.entries.length}
+                </h3>
+                {g.entries.map(row)}
+              </section>
+            ),
+        )}
       </nav>
       {selected && <SkillDetail key={selected.event.id} entry={selected} nav={nav} />}
     </div>

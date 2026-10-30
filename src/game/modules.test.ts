@@ -33,6 +33,7 @@ import {
   championOf,
   heritableGains,
   heritageFor,
+  heritageSlot,
   isBossNode,
   loadCampaignChoices,
   loadHeritage,
@@ -48,6 +49,7 @@ import {
   withFightResult,
   withReward,
   type Encounter,
+  type HeritageItem,
 } from './campaign'
 import { characterPool, masteryOfSkill, poolOf } from './masteries'
 import { skillById } from './skills'
@@ -135,7 +137,7 @@ describe('catalogue des compétences', () => {
     expect(morgrut.filter((s) => s.outside).map((s) => s.event.id)).toEqual(expect.arrayContaining(['guard-break', 'grudge', 'stunning-blow']))
   })
 
-  it('chaque compétence déclare sa nature (couleur de sa carte)', () => {
+  it('chaque compétence déclare sa nature (un maléfice arcane est un sort ; elle ne colore plus rien depuis le 2026-10-30)', () => {
     const skills = skillCatalog()
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
     expect(skills.find((s) => s.event.id === 'cleave')!.event.nature).toBe('martial')
@@ -827,7 +829,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     // malus d'Affliction (le Saignement) ; l'Odeur du sang, un critique assuré ; la Flamme votive, un bonus d'Affliction
     // (Bonus gagné) ; la Pièce vert-de-gris et la Morsure sonnent avec leur pièce et leur coup
     // Refonte des auras (2026-10-28) : les compétences à charges sorties des auras sonnent la famille de leur bonus
-    family('healingUp', ['leech'])
+    // Récolte (retour du 2026-10-30) : un drain à charges, comme la Sangsue
+    family('healingUp', ['leech', 'harvest'])
     family('buff', ['toad-skin', 'sentence'])
     family('guardUp', ['faith-shield'])
     family('healingUp', ['tithe'])
@@ -851,7 +854,7 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('precisionDown', ['blinding'])
     family('healingDown', ['hemorrhage'])
     family('sealDown', ['seal-theft'])
-    family('heal', ['harvest', 'prayer'])
+    family('heal', ['prayer'])
     // Crescendo, Soliste et l'Assaut : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
     // face et l'Embrasement posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
     // Les pièces de la Fortune (2026-10-27) : comme Pile ou face, seule leur pièce sonne (un son pour toutes les pièces, S8)
@@ -1023,38 +1026,45 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
   const lost = simulateCombat([testCharacter('a', { maxHp: 1 }), testCharacter('b', { maxHp: 100 })], { seed: 1 })
   const fear = ENGRAVABLE_SKILLS.find((e) => e.id === 'fear')!
 
-  it('les adversaires grandissent avec l’acte (0.105.0) : au nœud k, leur départ et les k récompenses de l’acte, puis leurs PV réglés', () => {
-    for (const node of [0, 4, ACT_FIGHTS - 1]) {
-      const build = drawBuild('brokk', node, seededRng(node))
-      expect(build.forge).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'forge').length)
-      expect(build.relics).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'relic').length)
-      const opponent = opponentOf({ characterId: 'brokk', maxHp: 33, ...build, chance: 0 })
-      // Son départ (Épines acérées et Peau de pierre, copiées peut-être) et rien d'autre hors gravures ; sa forge, ses reliques, ses PV
-      expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual(['thorns', 'stoneskin'])
-      expect(opponent.forge).toEqual(build.forge)
-      expect(opponent.relics.map((r) => r.id)).toEqual(build.relics)
-      // Ses PV réglés, plus ceux de ses récompenses
-      expect(opponent.baseStats.maxHp).toBe(33 + opponent.rewardHp)
-    }
+  it('les adversaires grandissent avec l’acte (0.105.0) : au nœud k, leur départ (l’une de leurs deux auras) et les k récompenses de l’acte, puis leurs PV réglés', () => {
+    for (const aura of startAurasOf('brokk'))
+      for (const node of [0, 4, ACT_FIGHTS - 1]) {
+        const build = drawBuild('brokk', node, seededRng(node), aura)
+        expect(build.forge).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'forge').length)
+        expect(build.relics).toHaveLength(REWARDS.slice(0, node).filter((k) => k === 'relic').length)
+        const opponent = opponentOf({ characterId: 'brokk', aura, maxHp: 33, ...build, chance: 0 })
+        // Son départ (son aura et Peau de pierre, copiées peut-être) et rien d'autre hors gravures ; sa forge, ses reliques, ses PV
+        expect([...new Set(opponent.events.filter((e) => !build.forge.some((f) => f.op === 'engrave' && f.skill.id === e.id)).map((e) => e.id))]).toEqual([aura, 'stoneskin'])
+        expect(opponent.forge).toEqual(build.forge)
+        expect(opponent.relics.map((r) => r.id)).toEqual(build.relics)
+        // Ses PV réglés, plus ceux de ses récompenses
+        expect(opponent.baseStats.maxHp).toBe(33 + opponent.rewardHp)
+      }
   })
 
   it('le levier des PV, moins fort (0.112.0) : un adversaire normal a au plus `OPPONENT_LAG` récompenses de retard, et jamais moins de son plancher de PV (`hpFloorOf` : 65 % nu, A13 ; 75 % construit) ; au plancher, il rend sa dernière récompense (TuningG)', () => {
     expect([0, 1, 4].map(hpFloorOf)).toEqual([EARLY_HP_FLOOR, HP_FLOOR, HP_FLOOR])
+    const auras = new Set<string>()
     for (const wins of [0, 1, 5, ACT_FIGHTS - 1]) {
       const run = { ...startRun('elaria', 8, undefined, 'open-wound'), wins }
       for (const e of encountersFor(run)) {
+        // Son aura (retour du 2026-10-30, R1) : l'une des deux de sa fiche, tirée comme en tournoi
+        expect(startAurasOf(e.characterId)).toContain(e.aura)
+        auras.add(`${e.characterId}:${e.aura}`)
         const rewards = e.forge.length + e.relics.length
-        const floorHp = Math.ceil(createCharacter(e.characterId).baseStats.maxHp * hpFloorOf(rewards))
+        const floorHp = Math.ceil(createCharacter(e.characterId, { aura: e.aura }).baseStats.maxHp * hpFloorOf(rewards))
         expect(rewards, `nœud ${wins}`).toBeLessThanOrEqual(Math.max(0, wins - OPPONENT_LAG))
         expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThanOrEqual(floorHp)
         // Construit, il n'est jamais laissé au plancher : il y aurait rendu sa dernière récompense
         if (rewards > 0) expect(e.maxHp, `${e.characterId}, nœud ${wins}`).toBeGreaterThan(floorHp)
-        // Ce qu'il garde est le début de sa construction au retard nominal
-        const full = drawBuild(e.characterId, Math.max(0, wins - OPPONENT_LAG), seededRng(hashSeed(`campagne:${run.seed}:${wins}:${e.characterId}:construction`)))
+        // Ce qu'il garde est le début de sa construction au retard nominal, sur le dé de son aura
+        const full = drawBuild(e.characterId, Math.max(0, wins - OPPONENT_LAG), seededRng(hashSeed(`campagne:${run.seed}:${wins}:${e.characterId}:construction`)), e.aura)
         expect(full.forge.slice(0, e.forge.length)).toEqual(e.forge)
         expect(full.relics.slice(0, e.relics.length)).toEqual(e.relics)
       }
     }
+    // Les huit adversaires ne partent pas tous de leur aura par défaut
+    expect([...auras].some((a) => { const [id, aura] = a.split(':'); return aura !== startAurasOf(id)[0] })).toBe(true)
     // Le plancher : contre un adversaire qui les bat toujours, le réglage s'arrête au plancher demandé (le quart, sinon)
     const weak = [testCharacter('a', { maxHp: 20, attackMin: 1, attackMax: 1 })]
     const strong = testCharacter('b', { maxHp: 40, attackMin: 9, attackMax: 9 })
@@ -1339,6 +1349,32 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(end).toMatchObject({ outcome: 'won', wins: ACT_LENGTH, fights: { length: ACT_LENGTH } })
     expect(end.fights[ACT_FIGHTS]).toMatchObject({ opponentId: BOSS.id, boss: true, won: true })
     expect(end.reward).toBeUndefined()
+  })
+
+  it('l’héritage remplace la première récompense de sa sorte (retour du 2026-10-30, R1) : la fin d’acte reste cinq forges et cinq reliques, le dé complet', () => {
+    const inherited: HeritageItem[] = [
+      { kind: 'relic', relic: 'wolf-fang' },
+      { kind: 'forge', step: { op: 'engrave', face: 3, skill: fear } },
+    ]
+    for (const heritage of inherited) {
+      let run = startRun('gorak', 12, heritage)
+      expect(heritageSlot(run)).toBe(REWARDS.indexOf(heritage.kind))
+      const rewarded: string[] = []
+      while (!isBossNode(run)) {
+        const slot = run.wins === heritageSlot(run)
+        run = withFightResult(run, encounter, won)
+        // La victoire de la récompense remplacée avance sans récompense
+        expect(run.reward === undefined, `victoire ${run.wins}`).toBe(slot)
+        if (!run.reward) continue
+        rewarded.push(run.reward.kind)
+        run = withReward(run, rewardChoice(run.reward))
+      }
+      expect(rewarded).toEqual(REWARDS.filter((_, i) => i !== heritageSlot(run)))
+      expect(run.forge).toHaveLength(5)
+      expect(run.relics).toHaveLength(5)
+      expect(forgedFaces(championOf(run).definition, run.forge).every((f) => f.origin.length > 0 || f.engraved)).toBe(true)
+    }
+    expect(heritageSlot(startRun('gorak', 12))).toBeUndefined()
   })
 
   it('écran de fin (U2) : les déclenchements de chaque relique et de chaque face, lus dans la chronologie et cumulés', () => {

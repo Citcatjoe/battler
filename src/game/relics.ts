@@ -2,7 +2,7 @@ import type { CharacterStats } from './character'
 import { conditionClause, DIE_FACES, type Condition, type Effect, type Target, type Trigger } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
-import { lowerFirst, STATUSES, type StatusId } from './statuses'
+import { isAura, lowerFirst, STATUSES, type StatusId } from './statuses'
 import { typeset } from './typography'
 
 /*
@@ -514,21 +514,29 @@ const isRuleStatus = (id: StatusId) => !STATUSES[id].mechanic && STATUSES[id].co
  */
 function effectText(e: Effect, attacker = false): string {
   switch (e.type) {
-    case 'damage':
+    case 'damage': {
+      // Retour du 2026-10-30 (R72) : qui perd quoi, en PV, au lieu de l'écriture de calcul « 3 × 2 dégâts directs »
+      const who = e.target === 'opponent' ? (attacker ? "l'attaquant" : "l'adversaire") : 'il'
+      const times = e.hits ? ` ${e.hits} fois` : ''
       // Contre l'armure (Clous de pavois, 2026-10-27, M4) : ce ne sont plus des dégâts directs
-      if (e.armored && e.target === 'opponent') return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts contre l'armure de ${attacker ? "l'attaquant" : "l'adversaire"}`
-      return `${e.hits ? `${e.hits} × ` : ''}${e.amount} dégâts directs${e.target === 'opponent' ? (attacker ? " à l'attaquant" : '') : ' à soi-même'}`
+      if (e.armored) return `${who} prend un coup de ${e.amount} dégâts${times} (son armure compte)`
+      return `${who} perd ${e.amount} PV${times}`
+    }
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus': {
       const def = STATUSES[e.status]
-      // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence
+      // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence (Poison et Brûlure ont leur fiche)
       if (e.target === 'opponent') return `${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)} à l'adversaire`
+      // Retour du 2026-10-30 (R72) : ce que fait le bonus, entre parenthèses (sauf l'armure temporaire, qui se lit seule)
+      const what = e.status === 'bonusArmor' ? '' : ` (${lowerFirst(def.describe({ id: e.status, stacks: e.stacks, turns: e.turns }))})`
       // Une règle posée pour un temps (refonte des auras : Ampoule bénite, Chaîne du geôlier, Pointe de paratonnerre) : sa
       // phrase, et combien de temps elle tient
       if (isRuleStatus(e.status)) return `${lowerFirst(def.summary.replace(/\.$/, ''))}, ${e.turns ? `ses ${e.turns} premiers tours` : 'tout le combat'}`
+      // Une aura ne se compte pas : elle s'allume (Collier de ronces), et sa phrase dit son cran
+      if (isAura(e.status)) return `${lowerFirst(def.name)}${what}`
       // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
-      return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}`
+      return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}${what}`
     }
     case 'cleanse': {
       const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
@@ -552,10 +560,10 @@ const STRIKE_MOMENT: Record<StrikeTrigger, string> = {
   dodge: "lors d'une esquive",
   hurt: "lors d'un coup reçu",
   healed: 'à chaque soin reçu',
-  shieldBroken: 'quand son armure temporaire est vidée',
+  shieldBroken: 'quand sa propre armure temporaire est vidée',
   reflected: 'quand il renvoie des dégâts',
   // Retour du 2026-10-27 : la phrase de l'utilisateur (« les lancers de pièce gagnants octroient +2 coups de chance »)
-  heads: 'à chaque lancer de pièce gagnant',
+  heads: "chaque fois qu'une de ses pièces fait pile",
 }
 
 /** Les adversaires qui portent ce statut, en un mot quand il existe (« +2 dégâts aux adversaires empoisonnés »). */
@@ -610,7 +618,7 @@ function momentOf(r: Relic): string {
 function limitOf(r: Relic): string {
   const turn = r.trigger?.type === 'turn'
   if (r.charges !== undefined) return turn && r.charges === 1 ? '' : `${r.charges}x`
-  return r.cooldown && !turn ? `recharge ${r.cooldown} tours` : ''
+  return r.cooldown && !turn ? `au plus une fois tous les ${r.cooldown} tours` : ''
 }
 
 export interface RelicDescription {
@@ -630,7 +638,7 @@ export function describeRelic(r: Relic): RelicDescription {
   const effect = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
     // Le plafond des pièces (`HEADS_CAP`, 5 sur 6) dit avec la chance : sans lui, « +25 % » laissait attendre pile à coup sûr
-    r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile (5 sur 6 au plus)` : '',
+    r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile à ses pièces (5 sur 6 au plus)` : '',
     r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
     // Sursis et initiative : leur effet est leur règle, sans effet de compétence. Le sursis tient tout le tour (A15)
     t?.type === 'lethal' ? 'reste à 1 PV jusqu’à la fin du tour' : t?.type === 'initiative' ? 'joue le premier tour' : '',

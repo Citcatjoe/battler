@@ -2067,25 +2067,26 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "+6 % d'esquive",
       // M12 (2026-10-27) : l'armure dit ce qu'elle fait, à chaque coup reçu (pas un bouclier qui revient)
       "+1 armure (−1 dégât par coup reçu) et −5 % d'esquive",
-      '3 dégâts directs sur un 1',
-      '+1 esquive améliorée sur un 6, recharge 3 tours',
+      // Retour du 2026-10-30 (R72) : qui perd quoi, en PV ; ce que fait le bonus posé, entre parenthèses
+      "L'adversaire perd 3 PV sur un 1",
+      '+1 esquive améliorée (esquive à coup sûr le prochain coup reçu) sur un 6, au plus une fois tous les 3 tours',
       '+4 dégâts sur un 4',
-      '+1 critique assuré au 1er tour',
+      '+1 critique assuré (son prochain coup est critique) au 1er tour',
       'Retire son dernier malus (sinon +3 PV) tous les 3 tours',
-      '+1 critique assuré au 6e tour, puis tous les 4 tours',
-      '+1 vol de vie quand ses PV passent sous 40 %, 1x',
-      "+2 aura d'épines quand ses PV passent sous 50 %, 1x",
-      "+1 critique assuré quand les PV de l'adversaire passent sous 30 %, 1x",
-      '3 × 2 dégâts directs au 4e tour',
+      '+1 critique assuré (son prochain coup est critique) au 6e tour, puis tous les 4 tours',
+      "+1 vol de vie (son prochain coup qui touche lui rend les PV qu'il retire) quand ses PV passent sous 40 %, 1x",
+      "Aura d'épines (1 Saignement à l'attaquant à chaque coup reçu ; elle monte de 1 tous les deux coups reçus, jusqu'à 2) quand ses PV passent sous 50 %, 1x",
+      "+1 critique assuré (son prochain coup est critique) quand les PV de l'adversaire passent sous 30 %, 1x",
+      "L'adversaire perd 2 PV 3 fois au 4e tour",
       'Retire tous ses malus et +5 PV quand ses PV passent sous 35 %, 1x',
-      "3 × 2 dégâts directs à l'attaquant lors d'une esquive, 2x",
+      "L'attaquant perd 2 PV 3 fois lors d'une esquive, 2x",
       // Les trois exemples de l'utilisateur, mot pour mot
       "+4 armure temporaire lors d'un coup reçu, 2x",
       '+2 dégâts aux adversaires empoisonnés',
       '+2 dégâts aux adversaires qui saignent',
-      '+1 ferveur à chaque soin reçu',
+      '+1 ferveur (son prochain coup qui touche fait +1 dégât) à chaque soin reçu',
       "+2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus",
-      "+1 esquive améliorée lors d'un coup critique, recharge 4 tours",
+      "+1 esquive améliorée (esquive à coup sûr le prochain coup reçu) lors d'un coup critique, au plus une fois tous les 4 tours",
       // Les reliques de durée (phase 7)
       "+15 PV max et −1 à l'attaque",
       "+3 PV lors d'un coup reçu, 2x",
@@ -2093,20 +2094,20 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       // Phase 8, second lot
       '+3 dégâts aux adversaires qui brûlent',
       // Contre l'armure de l'attaquant (2026-10-27, M4) : plus des dégâts directs
-      "3 dégâts contre l'armure de l'attaquant quand son armure temporaire est vidée",
+      "L'attaquant prend un coup de 3 dégâts (son armure compte) quand sa propre armure temporaire est vidée",
       '+1 PV quand il renvoie des dégâts',
       // Le pluriel d'un statut qui se compte (passe compendium, 2026-10-25) ; « lancer de pièce gagnant », la phrase de
       // l'utilisateur (2026-10-27) ; sa recharge depuis la mesure d'ensemble de la refonte des auras
-      '+2 coups de chance à chaque lancer de pièce gagnant, recharge 3 tours',
+      "+2 coups de chance (2 jets de plus à sa prochaine action) chaque fois qu'une de ses pièces fait pile, au plus une fois tous les 3 tours",
       // Les reliques de source (2026-10-25)
       "2 poison à l'adversaire sur un 6",
       "2 brûlure à l'adversaire sur un 6",
-      '+1 riposte au 1er tour',
+      "+1 riposte (son prochain coup reçu renvoie tous ses dégâts à l'attaquant) au 1er tour",
       // Retour du 2026-10-27 : la Pièce de foire retirée ; le sursis (tout le tour depuis le 2026-10-28, A15), l'initiative,
       // la chance de pile
       'Reste à 1 PV jusqu’à la fin du tour quand il devrait tomber, 1x',
       "Joue le premier tour sans jet d'initiative",
-      '+25 % de chances de faire pile (5 sur 6 au plus)',
+      '+25 % de chances de faire pile à ses pièces (5 sur 6 au plus)',
       'Aucun malus ne peut lui être posé, ses 3 premiers tours',
       "Ses coups font +1 par malus que porte l'adversaire, tout le combat",
       'Chacun de ses éclairs fait +1, tout le combat',
@@ -3284,9 +3285,9 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
     expect(text('quarry')).toBe("Trois coups de plus si l'adversaire saigne.")
     expect(text('quarry', 1)).toBe("Six coups de plus si l'adversaire saigne.")
     expect(describeSkill(skill('quarry')).detail).toBe(typeset('Des coups de base bruts, juste après celui du jet, chacun son dé : leur face ne déclenche aucune compétence.'))
-    // Revue des compétences (P2) : +14 PV, rang +6
-    expect(text('harvest')).toBe("+14 PV si l'adversaire est empoisonné.")
-    expect(text('harvest', 1)).toBe("+20 PV si l'adversaire est empoisonné.")
+    // Retour du 2026-10-30 (R30-R31) : un drain au prochain coup, 1 PV par charge de Poison, rang +1
+    expect(text('harvest')).toBe("Son prochain coup qui touche lui rend 1 PV par charge de Poison de l'adversaire.")
+    expect(text('harvest', 1)).toBe("Son prochain coup qui touche lui rend 2 PV par charge de Poison de l'adversaire.")
     // Revue des compétences (P1) : sans condition, triple puis +2 ; rang +1
     expect(text('virulence')).toBe("Triple le Poison de l'adversaire, puis +2.")
     expect(text('virulence', 1)).toBe("Triple le Poison de l'adversaire, puis +3.")
@@ -3329,18 +3330,33 @@ describe('phase 8, premier lot : cinq consommatrices (0.114.0)', () => {
     expect(ofType(dry, 'flurry')).toEqual([])
   })
 
-  it('Récolte : +14 PV si l’adversaire est empoisonné, seulement alors', () => {
+  it('Récolte (retour du 2026-10-30) : son statut, posé avec le dé, rend au coup qui touche 1 PV par charge de Poison de l’adversaire (+1 par rang) ; sans Poison, la charge attend', () => {
     const poisoner = ev('turnStart', [{ type: 'applyStatus', status: 'poison', stacks: 1, target: 'opponent' }])
-    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [poisoner]), 'harvest'), testCharacter('b', { maxHp: 400, attackMin: 9, attackMax: 9 })])
-    const harvests = fired(r, 'harvest')
-    expect(harvests.length).toBeGreaterThan(3)
-    for (const e of harvests) {
-      const before = r.beats[e.id - 1].state
-      expect(stacksOf(before.statuses[1], 'poison')).toBeGreaterThan(0)
-      expect(e.event.effects).toEqual([{ type: 'heal', target: 0, amount: Math.min(14, r.fighters[0].maxHp - before.hp[0]) }])
+    for (const rank of [0, 1]) {
+      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [poisoner]), 'harvest', rank), testCharacter('b', { maxHp: 400, attackMin: 9, attackMax: 9 })])
+      const harvests = fired(r, 'harvest')
+      expect(harvests.length).toBeGreaterThan(3)
+      // Greffée : le dé tombe, le statut se pose, puis le coup de base de ce dé
+      for (const e of harvests) {
+        expect(r.beats[e.cause!].type).toBe('roll')
+        expect(e.event.effects).toMatchObject([{ type: 'applyStatus', target: 0, status: 'harvest', stacks: 1 }])
+      }
+      const drunk = ofType(r, 'statusReaction').filter((b) => b.status === 'harvest')
+      expect(drunk.length).toBeGreaterThan(3)
+      for (const b of drunk) {
+        expect(b).toMatchObject({ side: 0, trigger: 'hit' })
+        expect(r.beats[b.cause!].type).toBe('attack')
+        const before = r.beats[b.id - 1].state
+        const want = (1 + rank) * stacksOf(before.statuses[1], 'poison')
+        expect(b.effects).toEqual([{ type: 'heal', target: 0, amount: Math.min(want, r.fighters[0].maxHp - before.hp[0]) }])
+        expect(stacksOf(b.state.statuses[0], 'harvest')).toBe(stacksOf(before.statuses[0], 'harvest') - 1)
+      }
     }
+    // Sans Poison : la Récolte se pose, aucun coup ne la consomme, ses charges restent
     const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'harvest'), testCharacter('b', { maxHp: 400, attackMin: 9, attackMax: 9 })])
-    expect(fired(dry, 'harvest')).toEqual([])
+    expect(fired(dry, 'harvest').length).toBeGreaterThan(3)
+    expect(ofType(dry, 'statusReaction').filter((b) => b.status === 'harvest')).toEqual([])
+    expect(stacksOf(finalState(dry).statuses[0], 'harvest')).toBeGreaterThanOrEqual(3)
   })
 
   it('Virulence (`fromStatus`, sans condition depuis la revue P1) : triple le Poison de l’adversaire, lu quand elle part, puis +2 ; son rang ajoute 1 Poison ; sur un adversaire sain, elle pose ses 2', () => {
@@ -3569,7 +3585,7 @@ describe('les reliques de source (2026-10-25) : Poison, Brûlure, pièce et renv
   it('textes au style de l’utilisateur : l’effet d’abord, puis le moment, puis la limite', () => {
     expect(describeRelic(getRelic('wasp-sting')).text).toBe(typeset(`2 poison à l'adversaire sur un ${DIE_FACES}`))
     expect(describeRelic(getRelic('tinder-box')).text).toBe(typeset(`2 brûlure à l'adversaire sur un ${DIE_FACES}`))
-    expect(describeRelic(getRelic('spiked-bracer')).text).toBe(typeset('+1 riposte au 1er tour'))
+    expect(describeRelic(getRelic('spiked-bracer')).text).toBe(typeset("+1 riposte (son prochain coup reçu renvoie tous ses dégâts à l'attaquant) au 1er tour"))
     for (const id of ['wasp-sting', 'tinder-box', 'spiked-bracer']) expect(describeRelic(getRelic(id)).text).not.toMatch(EMOJI)
   })
 
@@ -3668,7 +3684,7 @@ describe('retour du 2026-10-27 : les pièces de la Fortune, et trois reliques (d
     expect(rate(coins(thrower('lucky-coin', [getRelic('weighted-coin')], 2), 150))).toBeCloseTo(HEADS_CAP, 1)
     // Pile ou face (la pièce qui frappe) : la Pièce lestée la sert aussi
     expect(rate(coins(thrower('coin-flip', [getRelic('weighted-coin')]), 150))).toBeCloseTo(0.75, 1)
-    expect(describeRelic(getRelic('weighted-coin')).text).toBe(typeset('+25 % de chances de faire pile (5 sur 6 au plus)'))
+    expect(describeRelic(getRelic('weighted-coin')).text).toBe(typeset('+25 % de chances de faire pile à ses pièces (5 sur 6 au plus)'))
     expect(relicNeeds(getRelic('weighted-coin'))).toEqual(['moment:heads'])
   })
 
@@ -3822,13 +3838,14 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     expect(describeSkill(skill('open-wound')).tags.map((t) => t.label)).toContain('aura permanente')
     expect(describeSkill(skill('faith-shield')).tags.map((t) => t.label)).not.toContain('aura permanente')
     for (const id of ['faith-shield', 'open-wound']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
-    // T1 : l'effet d'abord, la condition ensuite ; la pièce garde la sienne en tête
-    expect(text('cleave')).toBe("L'adversaire saigne de la moitié des dégâts de ce coup, s'il touche.")
-    expect(text('cleave', 1)).toBe("L'adversaire saigne de la moitié des dégâts de ce coup, +2, s'il touche.")
+    // T1, puis R6 du retour du 2026-10-30 : la condition d'abord, et la plaie en clair (un Saignement égal à la moitié des PV retirés)
+    expect(text('cleave')).toBe("S'il touche, l'adversaire prend un Saignement égal à la moitié des PV que ce coup lui retire.")
+    expect(text('cleave', 1)).toBe("S'il touche, l'adversaire prend un Saignement égal à la moitié des PV que ce coup lui retire, +2.")
     expect(text('coin-flip')).toBe(typeset("S'il touche, une pièce : pile, ce coup ×3 ; face, rien."))
     // T2, T3, T7, A5
     expect(describeSkill(skill('evasion')).detail).toBe(typeset("Une seule à la fois : une nouvelle pose ne s'ajoute pas."))
-    expect(text('thorns')).toBe("1 Saignement à l'attaquant à chaque coup reçu, jusqu'à la fin du combat.")
+    // R25 du retour du 2026-10-30 : une aura qui monte le dit
+    expect(text('thorns')).toBe(typeset("1 Saignement à l'attaquant à chaque coup reçu ; elle monte de 1 tous les deux coups reçus, jusqu'à 2."))
     // Le Crescendo, dans la réserve de la Fureur depuis la refonte des auras (l'Assaut sur le 2 de l'ogre)
     expect(describeSkill(skill('crescendo')).text).toBe("Ce coup ×2, puis ×1 de plus à chaque fois qu'il touche.")
     // P3, P4, P5
@@ -3935,11 +3952,12 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
     expect(validateRoster()).toEqual([])
     expect(text('feint')).toBe(typeset("+5 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
     expect(text('feint', 1)).toBe(typeset("+10 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
-    expect(text('stoke')).toBe("+2 à la Brûlure de l'adversaire, qui repart.")
-    expect(text('stoke', 1)).toBe("+3 à la Brûlure de l'adversaire, qui repart.")
+    // R44 du retour du 2026-10-30 : « qui repart » dit ce qu'il fait
+    expect(text('stoke')).toBe("La Brûlure de l'adversaire monte de 2 et repart pour autant de tours que sa nouvelle valeur.")
+    expect(text('stoke', 1)).toBe("La Brûlure de l'adversaire monte de 3 et repart pour autant de tours que sa nouvelle valeur.")
     expect(describeSkill(skill('stoke')).detail).toBe(typeset("Une Brûlure de 3 à un tour de sa fin devient une Brûlure de 5, pour 5 tours ; sans Brûlure, l'adversaire brûle de 2."))
-    expect(text('storm-sky')).toBe("Au début de chacun de ses tours, l'adversaire perd 1 PV.")
-    expect(text('storm-sky', 1)).toBe("Au début de chacun de ses tours, l'adversaire perd 2 PV.")
+    expect(text('storm-sky')).toBe(typeset("Au début de chacun de ses tours, la foudre tombe sur l'adversaire : il perd 1 PV ; elle monte de 1 tous les deux tours, jusqu'à 2."))
+    expect(text('storm-sky', 1)).toBe(typeset("Au début de chacun de ses tours, la foudre tombe sur l'adversaire : il perd 2 PV ; elle monte de 1 tous les deux tours, jusqu'à 3."))
     expect(text('blood-frenzy')).toBe('Chacun de ses critiques lui donne deux coups de plus.')
     expect(text('blood-frenzy', 1)).toBe(typeset('Chacun de ses critiques lui donne deux coups de plus, et +5 % de critique.'))
     expect(text('stunning-blow')).toBe("S'il touche, l'adversaire perd sa prochaine action, 1x.")
@@ -4475,7 +4493,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
       } else expect(stacksOf(b.state.statuses[0], 'balladNote')).toBe(notes + 1)
     }
     expect(refrains).toBeGreaterThan(1)
-    expect(text('ballad')).toBe(typeset('Chaque coup qui touche lui rend 1 PV et joue une note ; à la 4e, le refrain.'))
+    expect(text('ballad')).toBe(typeset("Chaque coup qui touche lui rend 1 PV et joue une note ; à la 4e note, le refrain : l'adversaire perd 1 PV quatre fois."))
   })
 
   it('Bastion (refonte des auras) : son armure temporaire vidée, l’attaquant perd 3 PV et il regagne 2 d’armure temporaire', () => {
@@ -4491,7 +4509,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
       ])
       expect(stacksOf(b.state.statuses[0], 'bonusArmor')).toBe(BASTION_ARMOR)
     }
-    expect(text('bastion')).toBe("Chaque fois que son armure temporaire est vidée, l'attaquant perd 3 PV et il regagne +2 armure temporaire.")
+    expect(text('bastion')).toBe("Chaque fois que son armure temporaire est vidée, l'attaquant perd 3 PV et le porteur regagne +2 armure temporaire.")
   })
 
   it('Jugement (refonte des auras) : chaque coup qui la touche met une faute à l’attaquant ; à la 3e, il perd sa prochaine action et ses fautes partent', () => {
@@ -4512,7 +4530,8 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     expect(feared).toBeGreaterThan(1)
     // Chaque Peur coûte une action (la dernière peut tomber à la fin du combat)
     expect(ofType(r, 'skip').filter((b) => b.side === 1 && b.status === 'fear').length).toBeGreaterThanOrEqual(feared - 1)
-    expect(text('judgement')).toBe(typeset("Chaque coup qui la touche met une faute à l'attaquant ; à la 3e, il perd sa prochaine action."))
+    // R28 du retour du 2026-10-30 : d'où viennent les fautes (des coups reçus, jamais des tours), et ce qu'est la 3e
+    expect(text('judgement')).toBe(typeset("Chaque coup qui touche le porteur donne une faute à l'attaquant ; à 3 fautes, l'attaquant a Peur et perd sa prochaine action."))
   })
 
   it('Brasier (refonte des auras) : au début de chacun de ses tours, +1 à la Brûlure de l’adversaire, qui repart ; sans Brûlure, Brûlure 1', () => {
@@ -4532,7 +4551,8 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
       if (start === 0) expect(posed.every((n) => n === 1)).toBe(true)
       else expect(posed.slice(0, 4)).toEqual([4, 5, 6, 7])
     }
-    expect(text('brasier')).toBe("Au début de chacun de ses tours, +1 à la Brûlure de l'adversaire, qui repart.")
+    // R42 du retour du 2026-10-30 : les braises qui tombent, et ce que « repart » veut dire
+    expect(text('brasier')).toBe(typeset("Au début de chacun de ses tours, des braises tombent sur l'adversaire : sa Brûlure monte de 1 et repart pour autant de tours que sa nouvelle valeur."))
   })
 
   it('Prière (+6 PV), Flétrissure (−2 dégâts aux coups de l’adversaire, 3 tours), Assaut (ce coup ×2) : gravées sur le 3', () => {
@@ -5022,8 +5042,9 @@ describe('quatrième demande du 2026-10-27 : le contenu des maîtrises (Fureur, 
     expect(validateRoster()).toEqual([])
     expect(text('onrush')).toBe(typeset("+10 % de critique. Chacun de ses gros coups lui donne +4 Ferveur."))
     expect(text('pilfer')).toBe(typeset("+10 % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant."))
-    expect(text('shockwave')).toBe("L'adversaire perd 2 PV par coup reçu, des trois derniers.")
-    expect(text('shockwave', 1)).toBe("L'adversaire perd 3 PV par coup reçu, des trois derniers.")
+    // R20 du retour du 2026-10-30 : sur quoi tape l'onde (les coups encaissés depuis la dernière)
+    expect(text('shockwave')).toBe("L'adversaire perd 2 PV par coup qui a touché le porteur depuis sa dernière onde, trois coups au plus.")
+    expect(text('shockwave', 1)).toBe("L'adversaire perd 3 PV par coup qui a touché le porteur depuis sa dernière onde, trois coups au plus.")
     for (const id of ['onrush', 'pilfer', 'shockwave']) {
       expect(rankText(skill(id)), id).not.toBe('ne s’aiguise pas')
       expect(EMOJI.test(describeSkill(skill(id)).text), id).toBe(false)

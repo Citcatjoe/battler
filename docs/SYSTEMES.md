@@ -216,12 +216,13 @@ Ils sont pilotés par le `look` du registre et lus par `Fighter` (`statusLooks`)
 | Couleur | Sens | Où |
 | --- | --- | --- |
 | **Violet** | nom d'une compétence ou d'un statut qui agit, sur son lanceur | textes flottants, halo `event-aura` |
-| **Rouge** | dégâts subis (famille physique, par défaut) | `-N`, badges `damage` |
-| **Vert acide** | dégâts d'un statut de la famille poison (Poison, 0.97.0) | badges `poison` |
-| **Mauve** | dégâts d'un statut de la famille arcane (Brûlure, Pourriture, 0.97.0) | badges `arcane` |
+| **Rouge** | Saignement : ses dégâts, son nom posé et ses charges gagnées (le coup de base est blanc depuis la 0.111.0) | `-N`, badges `damage` |
+| **Vert acide** | Poison : ses dégâts, son nom posé et ses charges gagnées (2026-10-30 pour le nom et les charges) | badges `poison` |
+| **Jaune cerclé de rouge** | le feu : Feu, Brûlure (dégâts, nom posé, charges gagnées ; mauve jusqu'au 2026-10-30) | badges `fire` |
+| **Mauve** | Pourriture (sans porteur) | badges `arcane` |
 | **Ambre, or** | critique ; bonus posé | `CRITIQUE !`, gros chiffre, badges `positive` |
 | **Vert émeraude** | soin | `+N PV` |
-| **Fuchsia** | malus posé, bonus dissipé | badges `negative` |
+| **Fuchsia** | malus posé (sauf un statut qui fait perdre des PV : sa teinte, `statusTone`), bonus dissipé | badges `negative` |
 | **Pierre** (neutre) | résisté, neutralisé, au maximum | badges `neutral` |
 | **Cyan** | esquive | `ESQUIVE !` |
 | **Bleu ciel / rose** | camp gauche / camp droit | dés, barres de vie, accents |

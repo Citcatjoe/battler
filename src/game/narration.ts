@@ -29,8 +29,8 @@ export interface LogEntry {
 /**
  * Couleur d'un texte flottant. Celle d'un chiffre de dégâts vient de sa source (`DamageTone`, `DAMAGE_SOURCES` de
  * damage.ts ; docs/MISE_EN_SCENE.md, M37) : blanc du coup (le « coup blanc », 2026-10-24), rouge du Saignement, ivoire
- * de la Lumière, cyan de la Foudre, gris acier du Vent, mauve du Feu, de la Brûlure et de la Pourriture, vert acide du
- * Poison.
+ * de la Lumière, cyan de la Foudre, gris acier du Vent, jaune du Feu et de la Brûlure, mauve de la Pourriture, vert
+ * acide du Poison. Un statut qui fait perdre des PV a la teinte de ses dégâts pour son nom et ses charges (`statusTone`).
  */
 export type Tone = 'heal' | 'positive' | 'negative' | 'neutral' | DamageTone
 
@@ -44,6 +44,9 @@ export const TONE_CLASS: Record<Tone, string> = {
   // Vert acide, loin de l'émeraude du soin ; mauve, loin du fuchsia d'un malus posé (docs/MISE_EN_SCENE.md, M37)
   poison: 'text-lime-300 [-webkit-text-stroke:3px_#1a2e05]',
   arcane: 'text-violet-300 [-webkit-text-stroke:3px_#2e1065]',
+  // Le feu (retour du 2026-10-30, R43) : jaune vif cerclé de rouge, loin de l'or pâle d'un bonus (cerclé de brun) et de
+  // l'ambre du critique
+  fire: 'text-yellow-300 [-webkit-text-stroke:3px_#b91c1c]',
   // Jetons du design system (index.css) : l'ivoire du texte cerclé de bronze, le cyan de l'esquive, l'acier de l'armure
   light: 'text-ink-1 [-webkit-text-stroke:3px_var(--gold-700)]',
   storm: 'text-dodge [-webkit-text-stroke:3px_#083344]',
@@ -59,6 +62,7 @@ export const HIT_TONE_CLASS: Record<DamageTone, string> = {
   damage: 'text-red-500 [-webkit-text-stroke:4px_#450a0a]',
   poison: 'text-lime-300 [-webkit-text-stroke:4px_#1a2e05]',
   arcane: 'text-violet-300 [-webkit-text-stroke:4px_#2e1065]',
+  fire: 'text-yellow-300 [-webkit-text-stroke:4px_#b91c1c]',
   light: 'text-ink-1 [-webkit-text-stroke:4px_var(--gold-700)]',
   storm: 'text-dodge [-webkit-text-stroke:4px_#083344]',
   air: 'text-armor [-webkit-text-stroke:4px_#1e293b]',
@@ -92,6 +96,13 @@ export interface Badge {
 /** Le bonus que le lanceur se posait est parti chez l'adversaire (Sceau de vol, lot 3) : le texte du volé, qui le perd */
 export const STOLEN_BADGE: Badge = { text: 'Volé', tone: 'negative', rises: false }
 
+/**
+ * La teinte d'un statut à l'écran : celle de ses dégâts s'il fait perdre des PV (`DAMAGE_SOURCES`, `status` : jaune de
+ * la Brûlure, vert du Poison, rouge du Saignement), sinon sa polarité. Son nom posé et ses charges gagnées la prennent,
+ * comme son « −N » (retour du 2026-10-30, R43 : une couleur par statut).
+ */
+export const statusTone = (id: StatusId): Tone => Object.values(DAMAGE_SOURCES).find((s) => s.status === id)?.tone ?? STATUSES[id].polarity
+
 /** Badge flottant au-dessus de la cible d'un effet. */
 export function effectBadge(e: AppliedEffect): Badge {
   switch (e.type) {
@@ -106,8 +117,8 @@ export function effectBadge(e: AppliedEffect): Badge {
       if (e.result.kind === 'blocked') return { text: `${def.name} résisté`, tone: 'neutral', rises: true }
       if (e.result.kind === 'cancelled') return { text: `${def.name} neutralisé`, tone: 'neutral', rises: true }
       if (atCap(e)) return { text: `${def.name} au maximum`, tone: 'neutral', rises: true }
-      // Gagné, même un malus : il monte (Peur posée sur Naraxes), en fuchsia
-      return { text: def.name, tone: def.polarity, rises: true }
+      // Gagné, même un malus : il monte (Peur posée sur Naraxes), dans la teinte du statut
+      return { text: def.name, tone: statusTone(e.status), rises: true }
     }
     case 'cleanse':
       // Bonus retiré par l'adversaire : « Aura de puissance dissipée » ; malus retirés : « Purifié » ; rien à retirer :

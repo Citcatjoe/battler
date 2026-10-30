@@ -5,14 +5,14 @@
  * cherchés dans ce corpus, et chacun doit y apparaître.
  */
 import { describe, expect, it } from 'vitest'
-import { beatEffects, simulateCombat, splitAmong, type AppliedEffect, type Beat, type CombatResult, type Pair } from './combat'
+import { beatEffects, simulateCombat, splitAmong, type AppliedEffect, type Beat, type CombatResult, type Pair, type Side } from './combat'
 import type { Character } from './character'
 import { DAMAGE_SOURCES, type DamageSource } from './damage'
 import { isRollTrigger, rollFace, type CharacterEvent } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
-import { childrenOf, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
+import { childrenOf, FLOAT_LANES, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import { isAura, type Status } from './statuses'
 import { onOldDie, testCharacter } from './test-utils'
 import { effectBadge, STOLEN_BADGE } from './narration'
@@ -108,6 +108,19 @@ function playedWithDie(beat: Beat): boolean {
   if (beat.type !== 'relic' || beat.state.hp.some((x) => x === 0)) return false
   const trigger = RELICS.find((r) => r.id === beat.relic)?.trigger
   return trigger?.type === 'strike' && isRollTrigger(trigger.on)
+}
+
+/**
+ * Un contact (retour du 2026-10-30) : la réaction du touché qui ne pose que des statuts sur le frappeur (les Épines
+ * acérées, la Peau de crapaud) ; elle tombe à l'impact du coup, comme ce que le coup produit (M14).
+ */
+function isContact(beat: Beat): boolean {
+  return (
+    beat.type === 'statusReaction' &&
+    beat.trigger === 'hurt' &&
+    beat.effects.length > 0 &&
+    beat.effects.every((e) => e.type === 'applyStatus' && e.target !== beat.side && e.result.kind === 'applied')
+  )
 }
 
 /**
@@ -599,8 +612,11 @@ describe('mise en scène', () => {
       for (const hit of result.beats) {
         if (hit.type !== 'attack' || hit.attack.replaced) continue
         const striker = hit.attack.attacker
-        // Une relique du dé est déjà partie avec le dé posé (M40)
-        const first = children[hit.id].find((b) => (b.type === 'relic' && !playedWithDie(b)) || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed'))
+        // Une relique du dé est déjà partie avec le dé posé (M40) ; un contact (les Épines, la Peau de crapaud) tombe à
+        // l'impact (M14, retour du 2026-10-30)
+        const first = children[hit.id].find(
+          (b) => (b.type === 'relic' && !playedWithDie(b)) || (b.type === 'statusReaction' && b.effects.length > 0 && b.side !== striker && b.status !== 'bleed' && !isContact(b)),
+        )
         if (!first) continue
         const m = momentOf(moments, hit.id)
         const impact = impacts(m, result.beats).get(hit.id)!
@@ -631,7 +647,8 @@ describe('mise en scène', () => {
         const m = momentOf(moments, beat.id)
         const impact = impacts(m, result.beats).get(beat.cause)!
         const texts = at(m, 'float', impact).flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' ? [c.float.badge.text] : []))
-        for (const e of beat.effects) expect(texts).toContain(effectBadge(e).text)
+        // Un soin de 0 (son lanceur déjà plein) n'a pas de texte (retour du 2026-10-30, R70) : le label le dit
+        for (const e of beat.effects) if (!(e.type === 'heal' && e.amount === 0)) expect(texts).toContain(effectBadge(e).text)
         expect(at(m, 'special', impact).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES[beat.status].name))).toBe(true)
         drains++
       }
@@ -685,9 +702,11 @@ describe('mise en scène', () => {
     expect(cast).toBeGreaterThan(3)
   })
 
-  it('les dégâts d’un statut qui agit ont la teinte de leur source : Poison en vert, Brûlure en mauve, la plaie en rouge (M37)', () => {
+  it('les dégâts d’un statut qui agit ont la teinte de leur source : Poison en vert, Brûlure en jaune, la plaie en rouge ; son nom et ses charges gagnées aussi (M37, retour du 2026-10-30)', () => {
     const tones = new Map<string, Set<string>>()
-    for (const { result, moments } of corpus)
+    const named = new Map<string, Set<string>>()
+    const hurting = ['poison', 'burn', 'bleed'] as const
+    for (const { result, moments } of corpus) {
       for (const beat of result.beats) {
         if (beat.type !== 'statusTick' && beat.type !== 'statusReaction') continue
         const status = beat.status
@@ -696,9 +715,45 @@ describe('mise en scène', () => {
         const hurt = m.cues.filter((c) => c.channel === 'float' && c.side === beat.side && c.float.kind === 'badge' && c.float.badge.text.startsWith('-'))
         for (const c of hurt) if (c.channel === 'float' && c.float.kind === 'badge') tones.set(status, (tones.get(status) ?? new Set()).add(c.float.badge.tone))
       }
+      // « Brûlure », « +2 Brûlure » : le nom posé et le gain de charges, dans la teinte de ses dégâts (un fait sans effet,
+      // « résisté » ou « au maximum », reste neutre)
+      for (const m of moments)
+        for (const c of m.cues)
+          if (c.channel === 'float' && c.float.kind === 'badge')
+            for (const id of hurting)
+              if (new RegExp(`^(\\+\\d+ )?${STATUSES[id].name}$`).test(c.float.badge.text)) named.set(id, (named.get(id) ?? new Set()).add(c.float.badge.tone))
+    }
     expect(tones.get('poison')).toEqual(new Set(['poison']))
-    expect(tones.get('burn')).toEqual(new Set(['arcane']))
+    expect(tones.get('burn')).toEqual(new Set(['fire']))
     expect(tones.get('bleed')).toEqual(new Set(['damage']))
+    for (const id of hurting) expect(named.get(id), id).toEqual(tones.get(id))
+  })
+
+  it('le nuage : deux textes du même combattant encore lisibles, dans le même sens à des rangs voisins, ne partagent pas leur couloir ; aucun « +0 PV » (M31 bis, retour du 2026-10-30)', () => {
+    let near = 0
+    let shifted = 0
+    for (const { moments } of corpus) {
+      const shown: { side: Side; at: number; lift: boolean; row: number; lane: number }[] = []
+      let offset = 0
+      for (const m of moments) {
+        for (const c of m.cues)
+          if (c.channel === 'float' && c.float.kind !== 'hit') {
+            const f = c.float
+            if (f.kind === 'badge') expect(f.badge.text).not.toBe('+0 PV')
+            shown.push({ side: c.side, at: offset + c.at, lift: f.kind === 'title' || f.lift, row: f.kind === 'badge' ? f.row : 0, lane: f.lane ?? 0 })
+          }
+        offset += m.duration
+      }
+      shown.forEach((x, n) => {
+        const lanes = new Set(shown.slice(0, n).filter((y) => y.side === x.side && y.lift === x.lift && Math.abs(y.row - x.row) <= 1 && x.at - y.at < T.FLOAT_LANE).map((y) => y.lane))
+        if (lanes.size === 0) return
+        near++
+        if (x.lane !== 0) shifted++
+        if (lanes.size < FLOAT_LANES) expect(lanes.has(x.lane), `couloir ${x.lane} à ${x.at} ms`).toBe(false)
+      })
+    }
+    expect(near).toBeGreaterThan(200)
+    expect(shifted).toBeGreaterThan(100)
   })
 
   it('le coup de base de tous est un coup blanc ; un coup de compétence ou de relique a la teinte de sa source, la Foudre en cyan (M37, 2026-10-24)', () => {
@@ -1033,12 +1088,11 @@ describe('mise en scène', () => {
           const impact = hits.get(strike.id)!
           const thorns = children[strike.id].find((b) => b.type === 'statusReaction' && b.status === 'thorns')
           expect(thorns, `Épines au coup ${k + 1}`).toBeDefined()
-          // Le Saignement posé tombe au milieu de la lecture du coup, sans s'attarder ; l'Aura d'épines (une aura depuis la
-          // revue X1, 0.118.1) n'a pas de label sous le dé, ni de vol de signal en rafale (M17 bis)
-          const react = impact + T.VOLLEY_REACTION_LEAD
-          expect(at(m, 'special', react).some((c) => c.channel === 'special' && c.special.label.startsWith(STATUSES.thorns.name))).toBe(false)
-          expect(at(m, 'signal', react).some((c) => c.channel === 'signal')).toBe(false)
-          const shown = at(m, 'statuses', react).at(-1)
+          // Le Saignement posé tombe à l'impact (un contact, M14, retour du 2026-10-30 ; avant, au milieu de la lecture du
+          // coup) ; l'Aura d'épines (une aura depuis la revue X1, 0.118.1) n'a pas de label sous le dé, ni de vol de signal
+          expect(m.cues.some((c) => c.channel === 'special' && c.at >= impact && c.at < impact + T.VOLLEY_STRIKE_HOLD && c.special.label.startsWith(STATUSES.thorns.name))).toBe(false)
+          expect(m.cues.some((c) => c.channel === 'signal' && c.at >= impact && c.at < impact + T.VOLLEY_STRIKE_HOLD)).toBe(false)
+          const shown = at(m, 'statuses', impact).at(-1)
           expect(shown?.channel === 'statuses' && shown.statuses[0].some((s) => s.id === 'bleed')).toBe(true)
           // Le coup suivant part au rythme de la rafale, comme sans Épines
           const next = strikes[k + 1]
@@ -1715,5 +1769,119 @@ describe('mise en scène : les moments des auras (refonte des auras, § 3.2, M60
         }
       }
     expect(staged).toBeGreaterThan(5)
+  })
+})
+
+describe('retour du 2026-10-30 : le rythme du combat', () => {
+  const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const versus = (make: () => Character, seeds = [1, 2, 3]) =>
+    CHARACTER_IDS.flatMap((y) =>
+      seeds.map((seed) => {
+        const result = simulateCombat([make(), createCharacter(y)], { seed })
+        return { result, moments: stage(result) }
+      }),
+    )
+  const stacks = (c: Cue, side: number, id: string) => (c.channel === 'statuses' ? (c.statuses[side].find((s) => s.id === id)?.stacks ?? 0) : undefined)
+
+  it('le Saignement du Serment de sang tombe à l’impact de son coup de base, pas avant (M14 bis)', () => {
+    let seen = 0
+    for (const host of ['elaria', 'gorak'])
+      for (const { result, moments } of versus(() => createCharacter(host).withForge([{ op: 'engrave', face: 3, skill: skill('blood-oath') }]))) {
+        for (const oath of result.beats) {
+          if (oath.type !== 'event' || oath.event.eventId !== 'blood-oath' || oath.event.side !== 0) continue
+          if (!oath.event.effects.some((e) => e.type === 'applyStatus' && e.status === 'bleed' && e.result.kind === 'applied')) continue
+          const base = result.beats.find((b) => b.type === 'attack' && b.cause === oath.cause)
+          if (!base) continue
+          const m = momentOf(moments, oath.id)
+          const impact = impacts(m, result.beats).get(base.id)!
+          const prior = result.beats[oath.id - 1].state.statuses[1].find((s) => s.id === 'bleed')?.stacks ?? 0
+          const before = m.cues.filter((c) => c.channel === 'statuses' && c.at < impact).map((c) => stacks(c, 1, 'bleed')!)
+          expect(Math.max(0, ...before), `étape ${oath.id}`).toBeLessThanOrEqual(prior)
+          expect(at(m, 'statuses', impact).some((c) => stacks(c, 1, 'bleed')! > prior)).toBe(true)
+          seen++
+        }
+      }
+    expect(seen).toBeGreaterThan(10)
+  })
+
+  it('le Vol de vie d’une Riposte rend ses PV à l’impact de la Riposte (M14)', () => {
+    let seen = 0
+    for (const { result, moments } of versus(() => onOldDie('aldric').withRelics([RELICS.find((r) => r.id === 'wolf-fang')!]), [1, 2, 3, 4, 5, 6])) {
+      for (const drain of result.beats) {
+        if (drain.type !== 'statusReaction' || drain.status !== 'lifesteal' || drain.cause === undefined) continue
+        const riposte = result.beats[drain.cause]
+        if (riposte.type !== 'statusReaction' || !riposte.strike || !drain.effects.some((e) => e.type === 'heal' && e.amount > 0)) continue
+        const m = momentOf(moments, drain.id)
+        const landed = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.blow.from === drain.side).map((c) => c.at)
+        const rise = m.cues.find((c, k) => c.channel === 'hp' && k > 0 && landed.includes(c.at) && c.hp[drain.side] === drain.state.hp[drain.side])
+        expect(rise, `étape ${drain.id}`).toBeDefined()
+        seen++
+      }
+    }
+    expect(seen).toBeGreaterThan(3)
+  })
+
+  it('Rétribution : ses jauges partent l’une après l’autre, au rythme d’une série, sans lecture entre elles (M53 bis)', () => {
+    let gaps = 0
+    for (const { result, moments } of versus(() => onOldDie('aldric'), [1, 2, 3, 4, 5, 6])) {
+      const children = childrenOf(result.beats)
+      for (const release of result.beats) {
+        if (release.type !== 'event' || release.event.eventId !== 'retribution') continue
+        const gauges = children[release.id].filter((b) => b.type === 'statusReaction' && !!b.strike)
+        if (gauges.length < 2) continue
+        const m = momentOf(moments, release.id)
+        // Pas de lecture d'effet entre la relâche et ses coups : ni `READ_HOLD`, ni `LEAD`
+        const first = m.cues.find((c) => c.channel === 'blow' && c.blow && !c.blow.landed && c.blow.lunge && c.blow.from === release.event.side)!
+        const reads = m.spans.filter((s) => s.at >= first.at - T.BLOWS_LEAD - T.READ_HOLD && s.at < first.at && (s.name === 'READ_HOLD' || s.name === 'LEAD'))
+        expect(reads, `étape ${release.id}`).toEqual([])
+        const landed = m.cues.filter((c) => c.channel === 'blow' && c.blow?.landed && c.blow.lunge && c.blow.from === release.event.side).map((c) => c.at)
+        gauges.slice(0, -1).forEach((g, k) => {
+          // Une jauge qui a ses propres réactions (une relique, la Vindicte) les joue au milieu de sa lecture
+          if (children[g.id].some((b) => b.type === 'relic' || (b.type === 'statusReaction' && b.effects.length > 0)) || landed[k + 1] === undefined) return
+          expect(landed[k + 1] - landed[k], `étape ${g.id}`).toBeLessThanOrEqual(T.BLOW_HOLD + T.BLOW_WIND + T.HEAVY_FREEZE)
+          gaps++
+        })
+      }
+    }
+    expect(gaps).toBeGreaterThan(5)
+  })
+
+  it('Bastion : l’armure vidée, un élan et une frappe comme la Riposte, sans signal de l’anneau, avant les autres réactions (M17 ter)', () => {
+    let seen = 0
+    let first = 0
+    for (const { result, moments } of versus(() => createCharacter('brokk', { aura: 'bastion' }), [1, 2, 3, 4])) {
+      for (const beat of result.beats) {
+        if (beat.type !== 'statusReaction' || beat.status !== 'bastion') continue
+        const damage = beat.effects.find((e) => e.type === 'damage' && e.target !== beat.side)
+        if (damage?.type !== 'damage' || beat.state.hp.some((x) => x === 0)) continue
+        const m = momentOf(moments, beat.id)
+        expect(m.cues.some((c) => c.channel === 'signal' && c.signal.from === 'bastion')).toBe(false)
+        const wind = m.cues.find((c) => c.channel === 'blow' && c.blow && !c.blow.landed && c.blow.from === beat.side && c.blow.damage === damage.amount)
+        expect(wind?.channel === 'blow' && wind.blow?.lunge, `étape ${beat.id}`).toBe(true)
+        const hit = result.beats[beat.cause!]
+        const impact = hit.type === 'attack' ? impacts(m, result.beats).get(hit.id) : undefined
+        const fast = m.cues.some((c) => c.channel === 'strike' && c.at === impact && c.strike?.fast)
+        if (impact !== undefined && wind && [T.REACTION_LEAD, T.REACTION_LEAD + T.BLEED_DELAY].includes(wind.at - impact - T.BLOWS_LEAD) && !fast) first++
+        seen++
+      }
+    }
+    expect(seen).toBeGreaterThan(5)
+    expect(first).toBeGreaterThan(seen / 2)
+  })
+
+  it('Pièce de la rafale : pile, le résultat se lit, puis ses coups partent, sans titre ni lecture de plus (M26 bis)', () => {
+    let seen = 0
+    for (const { result, moments } of versus(() => createCharacter('fanchon').withForge([{ op: 'engrave', face: 3, skill: skill('volley-coin') }]), [1, 2, 3, 4, 5, 6])) {
+      for (const coin of result.beats) {
+        if (coin.type !== 'coin' || coin.status !== 'volleyCoin' || !coin.heads) continue
+        const m = momentOf(moments, coin.id)
+        expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title' && c.float.text === STATUSES.volleyStrike.name)).toBe(false)
+        const land = m.cues.find((c) => c.channel === 'sound' && c.cue === 'coinLand')!
+        const wind = m.cues.find((c) => c.channel === 'strike' && c.strike && !c.strike.landed && c.at > land.at)!
+        expect(wind.at - land.at, `étape ${coin.id}`).toBe(T.COIN_READ + T.VOLLEY_FLAT)
+        seen++
+      }
+    }
+    expect(seen).toBeGreaterThan(3)
   })
 })

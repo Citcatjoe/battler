@@ -151,6 +151,11 @@ export const TITLE_LIFE = 1500
  * autre texte du même combattant, dans le même sens, qui part avant prend un rang libre (docs/MISE_EN_SCENE.md, M31)
  */
 export const FLOAT_ROW = 600
+/**
+ * Un texte tient son couloir (son décalage de côté, M31 bis) tant qu'il est bien lisible, les trois quarts de sa vie
+ * (`.damage-float` et `.damage-sink` restent opaques jusqu'à 75 %) : un texte qui part à côté de lui prend un autre couloir
+ */
+export const FLOAT_LANE = Math.round(FLOAT_LIFE * 0.75)
 /** Secousse de l'arène sur un gros coup ; sur un critique ou un coup lourd */
 export const SHAKE = 350
 export const SHAKE_HEAVY = 500

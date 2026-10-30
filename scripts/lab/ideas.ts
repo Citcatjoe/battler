@@ -37,6 +37,8 @@ import { charges, STATUSES, type StatusDef, type StatusId } from '../../src/game
 import { AURA_VISION } from './aura-vision'
 import { CONTENT_A } from './content-a'
 import { CONTENT_B } from './content-b'
+import { CONTENU_30 } from './contenu-30'
+import { PERSOS_30 } from './persos-30'
 
 export interface LabIdea {
   id: string
@@ -224,10 +226,17 @@ const SERIES_17_B: LabIdea[] = [
    aura sur le 1 (choisie parmi celles de ses deux maîtrises) et une face 2 fixe (sa compétence de personnage), quatre
    faces nues. Chaque idée mesure un dé de départ contre le roster nu d'aujourd'hui (le « avant » est le dé vanilla
    actuel). Les auras nouvelles sont des statuts d'essai construits avec les crochets existants. --- */
+/**
+ * Compétences sorties du registre depuis leur série (refonte des auras, 2026-10-28 : Aura sauvage, d'intimidation,
+ * d'immunité, de précision, Sève noire, Dette de sang, Rempart hérissé…). Leurs idées ne se rejouent plus : elles
+ * restent ici pour l'historique et sont écartées d'`IDEAS` (rapport du 2026-10-30, agent PropContenu).
+ */
+const RETIRED = new Set<string>()
 const skill = (id: string): CharacterEvent => {
   const found = ALL_SKILLS.find((e) => e.id === id)
-  if (!found) throw new Error(`Série 70 : compétence inconnue (${id})`)
-  return found
+  if (found) return found
+  RETIRED.add(id)
+  return { id, name: `${id} (retirée)`, trigger: 'combatStart', effects: [] }
 }
 /** Une compétence posée sur une face ; sous forme humaine seulement pour le druide (ses sorts) */
 const onFace = (e: CharacterEvent, face: number, form?: string): CharacterEvent => ({ ...e, trigger: faceTrigger(face), ...(form ? { form } : {}) })
@@ -630,4 +639,6 @@ const SERIES_78: LabIdea[] = LOADED_VARIANTS.flatMap(([key, e]) => [
   ...['naraxes', 'fanchon', 'elaria'].map((who) => s78(engrave(who, `pipe-${key}-${who}`, `${e.name}, gravé (${who})`, e))),
 ])
 
-export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B, ...SERIES_76, ...SERIES_77, ...SERIES_78, ...CONTENT_A, ...CONTENT_B, ...AURA_VISION]
+export const IDEAS: readonly LabIdea[] = [...SERIES_14, ...SERIES_16, ...SERIES_17, ...SERIES_17_B, ...SERIES_70, ...SERIES_71, ...SERIES_72, ...SERIES_73, ...SERIES_74, ...SERIES_75, ...SERIES_75_B, ...SERIES_76, ...SERIES_77, ...SERIES_78, ...CONTENT_A, ...CONTENT_B, ...AURA_VISION, ...CONTENU_30, ...PERSOS_30].filter(
+  (i) => !i.watch.some((w) => RETIRED.has(w)),
+)

@@ -40,9 +40,10 @@ import { StatusTray, trayAfter } from './StatusTray'
 import { SkillBar } from './SkillBar'
 import { DieBuild, dieCells } from './DieBuild'
 import { offerTargets, type ForgeStep } from '../game/forge'
-import { STATES, STATUS_PLACE, trayStates } from '../game/states'
+import { auraOfSkill, STATES, STATUS_PLACE, trayStates } from '../game/states'
 import { ICON_URLS, skillIcon, STATE_ICON, statusIcon } from './Icon'
 import { RelicCard } from './RelicSeal'
+import { SkillSeal } from './SkillSeal'
 import { SeasonReport } from './CombatReport'
 import { getRelic, RELICS } from '../game/relics'
 import { MatchupScreen } from './MatchupScreen'
@@ -526,7 +527,7 @@ describe('écrans', () => {
     const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
     // Aura de sainteté : sa vie, sa montée (refonte des auras) et sa maîtrise
     const holy = sheet('holy-aura')
-    for (const text of ["jusqu'à la fin du combat", 'un cran de plus tous les deux tours']) expect(holy).toContain(text)
+    for (const text of ["jusqu'à la fin du combat", 'elle monte de 1 tous les deux tours']) expect(holy).toContain(text)
     expect(textOf(holy)).toContain('Aura · Lumière')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
@@ -554,6 +555,23 @@ describe('écrans', () => {
     }
     // Plus de niveau Martiale / Adresse / Arcane
     for (const word of ['Martiale', 'Adresse', 'Arcane']) expect(list).not.toContain(word)
+  })
+
+  it('compendium (retour du 2026-10-30) : les auras d’abord, dans un cercle d’or ; les compétences ensuite, toutes au même octogone', () => {
+    expect(COMPENDIUM_SECTIONS.find((s) => s.id === 'skills')?.label).toBe('Compétences et auras')
+    const all = compendiumSkills()
+    const auras = all.filter((s) => auraOfSkill(s.event) !== undefined)
+    // Les auras en tête de l'index, puis les compétences
+    expect(all.slice(0, auras.length)).toEqual(auras)
+    const list = textOf(renderToString(<SkillsSection nav={{ go: noop }} filter="" />))
+    expect(list.indexOf(`Auras · ${auras.length}`)).toBeGreaterThanOrEqual(0)
+    expect(list.indexOf(`Compétences · ${all.length - auras.length}`)).toBeGreaterThan(list.indexOf(`Auras · ${auras.length}`))
+    // Un cercle par aura (fiche ouverte comprise), un octogone sans couleur de nature pour toute compétence
+    const html = renderToString(<SkillsSection nav={{ go: noop }} filter="" />)
+    expect(html.match(/class="aura-seal"/g)).toHaveLength(auras.length + 1)
+    expect(html).not.toContain('data-nature')
+    expect(renderToString(<SkillSeal id="thorns" size={32} />)).toContain('aura-seal')
+    expect(renderToString(<SkillSeal id="cleave" size={32} />)).toContain('class="skill-seal"')
   })
 
   it('compendium : ni interaction ni purification dans les fiches de compétence, d’aura et de statut', () => {

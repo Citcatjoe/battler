@@ -5,7 +5,7 @@ import { simulateCombat, type CombatResult } from './combat'
 import { isAuraSkill, isOffered, OFFERED_OPS, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
 import { drawReward, forgesLeftIn, REWARDS, type PendingReward } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
-import { seededRng, shuffle, type Rng } from './rng'
+import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
 import { sumTriggers, triggerCounts, type TriggerCounts } from './stats'
 
@@ -110,11 +110,16 @@ export const campaignCharacter = (id: string) => (id === BOSS.id ? new Character
 export type HeritageItem = { kind: 'relic'; relic: string } | { kind: 'forge'; step: ForgeStep }
 
 /**
- * Une rencontre proposée : un adversaire construit comme un champion (sa signature, puis les récompenses que le nœud
- * lui donne), réglé par ses PV, et la chance cachée du champion réel.
+ * Une rencontre proposée : un adversaire construit comme un champion (son aura de départ, tirée parmi ses deux comme
+ * en tournoi, puis les récompenses que le nœud lui donne), réglé par ses PV, et la chance cachée du champion réel.
  */
 export interface Encounter {
   characterId: string
+  /**
+   * Son aura de départ (retour du 2026-10-30, R1 : un adversaire est un exemple de ce qu'un joueur peut construire),
+   * tirée parmi les deux `auras` de sa fiche. Absente (le boss, une rencontre enregistrée avant) : l'aura par défaut.
+   */
+  aura?: string
   /** PV de base réglés par simulation sur la courbe nominale */
   maxHp: number
   /** Sa forge et ses reliques (règles v2, 0.105.0 : l'adversaire grandit avec l'acte ; vides pour le boss) */
@@ -167,10 +172,10 @@ export function championOf(run: Pick<CampaignRun, 'championId' | 'forge' | 'reli
   return createCharacter(run.championId, { aura: run.aura }).withForge(run.forge).withRelics(run.relics.map(getRelic))
 }
 
-/** Un adversaire avant le réglage de ses PV : le boss, ou le personnage vanilla et sa construction. */
-function opponentBase(e: Pick<Encounter, 'characterId' | 'forge' | 'relics'>): Character {
+/** Un adversaire avant le réglage de ses PV : le boss, ou le personnage vanilla parti de son aura et sa construction. */
+function opponentBase(e: Pick<Encounter, 'characterId' | 'aura' | 'forge' | 'relics'>): Character {
   if (e.characterId === BOSS.id) return new Character(BOSS)
-  return createCharacter(e.characterId).withForge(e.forge).withRelics(e.relics.map(getRelic))
+  return createCharacter(e.characterId, { aura: e.aura }).withForge(e.forge).withRelics(e.relics.map(getRelic))
 }
 
 /** L'adversaire d'une rencontre, à ses PV réglés. */
@@ -193,7 +198,11 @@ export function heritageFor(championId: string, aura: string, items: readonly He
   return items.filter((g) => g.kind === 'relic' || validOnOrigin(def, g.step))
 }
 
-/** Commence une partie : le champion, son aura de départ (l'aura par défaut sans elle), et son héritage s'il en a choisi un. */
+/**
+ * Commence une partie : le champion, son aura de départ (l'aura par défaut sans elle), et son héritage s'il en a choisi
+ * un. L'héritage prend la place d'une récompense de l'acte (`heritageSlot`) : la fin d'acte reste cinq forges et cinq
+ * reliques.
+ */
 export function startRun(championId: string, seed: number, heritage?: HeritageItem, aura = startAurasOf(championId)[0]): CampaignRun {
   if (!startAurasOf(championId).includes(aura)) throw new Error(`${aura} n'est pas une aura de départ de ${championId}`)
   const def = startDef(championId, aura)
@@ -210,6 +219,14 @@ export function startRun(championId: string, seed: number, heritage?: HeritageIt
     fights: [],
   }
 }
+
+/**
+ * La récompense de l'acte que l'héritage remplace (retour du 2026-10-30, R1 : « les mêmes règles de construction en
+ * tournoi et en campagne », la fin d'acte toujours cinq forges et cinq reliques, comme un participant de saison) : la
+ * première de sa sorte au calendrier (`REWARDS`), une relique héritée la première relique, une forge héritée la première
+ * forge. Sans héritage, aucune. La victoire qui l'aurait donnée fait avancer sans récompense.
+ */
+export const heritageSlot = (run: Pick<CampaignRun, 'heritage'>): number | undefined => (run.heritage ? REWARDS.indexOf(run.heritage.kind) : undefined)
 
 /* ---------- Réglage des rencontres (§ 6.3) ---------- */
 
@@ -322,7 +339,8 @@ export type DangerBand = (typeof DANGER_BANDS)[number]
 export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) => chance >= b.min)!
 
 /**
- * Un adversaire normal réglé au nœud `node` : le personnage vanilla et les récompenses du nœud, `OPPONENT_LAG` de moins
+ * Un adversaire normal réglé au nœud `node` : le personnage vanilla parti d'une aura tirée parmi ses deux (comme en
+ * tournoi, retour du 2026-10-30, R1 ; l'aura par défaut jusque-là) et les récompenses du nœud, `OPPONENT_LAG` de moins
  * que le champion (`drawBuild`, 0.112.0) ; ses PV le règlent sur la courbe, jamais sous son plancher (`hpFloorOf`).
  * **Le retard s'allonge au plancher** (TuningG, 2026-10-28) : quand le plancher arrête le réglage, l'adversaire est trop
  * fort pour la courbe même à ses PV les plus bas ; il rend sa dernière récompense et se règle de nouveau, jusqu'à nu.
@@ -331,13 +349,15 @@ export const dangerOf = (chance: number): DangerBand => DANGER_BANDS.find((b) =>
  * 18 % du temps, contre 25 % pour les plus forts (docs/CAMPAGNE.md § 18.7), alors qu'un départ plus faible ne doit pas
  * rendre la partie plus dure (docs/MAITRISES.md § 11.3).
  */
-function tunedOpponent(references: readonly Character[], id: string, node: number, key: string): Pick<Encounter, 'forge' | 'relics' | 'maxHp'> {
-  const base = createCharacter(id).baseStats.maxHp
+function tunedOpponent(references: readonly Character[], id: string, node: number, key: string): Pick<Encounter, 'aura' | 'forge' | 'relics' | 'maxHp'> {
+  const auras = startAurasOf(id)
+  const aura = auras.length > 0 ? pick(seededRng(hashSeed(`${key}:aura`)), auras) : undefined
+  const base = createCharacter(id, { aura }).baseStats.maxHp
   for (let rewards = Math.max(0, node - OPPONENT_LAG); ; rewards--) {
-    const build = drawBuild(id, rewards, seededRng(hashSeed(`${key}:construction`)))
+    const build = drawBuild(id, rewards, seededRng(hashSeed(`${key}:construction`)), aura)
     const floor = hpFloorOf(rewards)
-    const maxHp = tuneHp(references, opponentBase({ characterId: id, ...build }), NORMAL_TARGETS[node], key, floor)
-    if (rewards === 0 || maxHp > Math.ceil(base * floor)) return { ...build, maxHp }
+    const maxHp = tuneHp(references, opponentBase({ characterId: id, aura, ...build }), NORMAL_TARGETS[node], key, floor)
+    if (rewards === 0 || maxHp > Math.ceil(base * floor)) return { ...(aura && { aura }), ...build, maxHp }
   }
 }
 
@@ -370,8 +390,8 @@ export const withEncounters = (run: CampaignRun): CampaignRun => ({ ...run, enco
 
 /**
  * Reporte un combat de la rencontre `encounter` (champion à gauche) : une victoire avance d'un nœud et, contre un
- * adversaire normal, propose sa récompense (`REWARDS`, avec le choix du champion) ; une défaite, ou la victoire contre
- * le boss, termine la partie.
+ * adversaire normal, propose sa récompense (`REWARDS`, avec le choix du champion), sauf celle que l'héritage remplace
+ * (`heritageSlot`) ; une défaite, ou la victoire contre le boss, termine la partie.
  */
 export function withFightResult(run: CampaignRun, encounter: Encounter, result: CombatResult): CampaignRun {
   const won = result.winner === 0
@@ -389,6 +409,7 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   if (!won) return { ...next, outcome: 'lost' }
   const wins = run.wins + 1
   if (encounter.boss) return { ...next, wins, outcome: 'won' }
+  if (wins - 1 === heritageSlot(run)) return { ...next, wins }
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
   return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng, forgesLeftIn(REWARDS, wins - 1)) }
 }

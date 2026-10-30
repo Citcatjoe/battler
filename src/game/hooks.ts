@@ -164,6 +164,7 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   tithe: { side: 'self', consumes: ['moment:hurt'], produces: ['moment:heal', 'damage:instant'] },
   votiveFlame: { side: 'self', consumes: ['moment:heal'], produces: ['status:burn', 'damage:temporal'], hinders: ['slot:burn'] },
   leech: { side: 'self', consumes: ['moment:hit', 'status:bleed'], produces: ['moment:heal'] },
+  harvest: { side: 'self', consumes: ['moment:hit', 'status:poison'], produces: ['moment:heal'] },
   toadSkin: { side: 'self', consumes: ['moment:hurt'], produces: ['status:poison', 'damage:temporal'] },
   verdigrisCoin: { side: 'self', produces: ['moment:heads', 'status:poison', 'damage:temporal'] },
   // Refonte des auras (tranche 6) : les trois pièces nouvelles ; la Rafale de pile, des coups bruts comme l'Ivresse

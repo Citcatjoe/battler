@@ -353,12 +353,20 @@ function control(c: Case, flags: Flags, seen: Record<string, number>) {
     if (k === moments.length - 1 && m.spans.map((sp) => sp.name).join() !== 'KO_HOLD,VICTORY_HOLD') flag('une fin sans K.O. puis victoire', start)
 
     // 10. Une compétence qui pose un état visible envoie son signal de son sceau (M19) ; sauf celle qui modifie son coup,
-    // dont l'effet tombe avec l'impact (M14), et celle à scène (M24)
+    // dont l'effet tombe avec l'impact (M14), celle à scène (M24), et le geste greffé (une compétence martiale) qui ne pose
+    // qu'un malus à l'adversaire : il tombe à l'impact de son coup de base (M14 bis, retour du 2026-10-30, le Serment de sang)
     for (const id of m.beats) {
       const beat = beats[id]
       if (beat.type !== 'event') continue
       const def = result.fighters[beat.event.side].events.find((e) => e.id === beat.event.eventId)
       if (!def || def.scene || relationOf(def) === 'modify' || !signalTargets(beat.event.effects)) continue
+      const gesture =
+        def.nature === 'martial' &&
+        beat.cause !== undefined &&
+        beats[beat.cause].type === 'roll' &&
+        !beat.event.effects.some((e) => e.type === 'damage' && e.target !== beat.event.side) &&
+        beat.event.effects.every((e) => e.type !== 'applyStatus' || (e.target !== beat.event.side && STATUSES[e.status].polarity === 'negative'))
+      if (gesture) continue
       if (JSON.stringify(beats[id - 1]?.state.statuses) === JSON.stringify(beat.state.statuses)) continue
       // Un bonus volé que le voleur a déjà au plafond (Confiscation) : rien ne part (M25), seul le Sceau de vol s'use
       const posed = beat.event.effects.filter((e) => e.type === 'applyStatus')

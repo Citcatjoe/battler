@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Character } from '../game/character'
 import { SIDE_STYLE, type CombatResult, type Side } from '../game/combat'
-import { DEFAULT_SKILL_NATURE, DIE_FACES } from '../game/events'
+import { DIE_FACES } from '../game/events'
 import { forgedFaces, rankLabel } from '../game/forge'
 import { getRelic, relicKind, type Relic } from '../game/relics'
 import { addReport, combatReport, emptyReport, relicsByProcs, type FighterReport } from '../game/report'
@@ -24,7 +24,7 @@ const TILE = { sm: 40, xs: 34 } as const
 
 /**
  * Faces jouées en histogramme : une colonne par face du dé, le compte au-dessus de sa barre, la face en dessous (sceau de
- * sa compétence, liseré de sa nature, gravure, dorure, rang, comme ForgedDie), son infobulle au survol. Les faces tombées
+ * sa compétence ou de son aura, gravure, dorure, rang, comme ForgedDie), son infobulle au survol. Les faces tombées
  * hors du dé forgé (un dé grandi par une relique) suivent, nues.
  */
 export function FaceHistogram({
@@ -60,7 +60,6 @@ export function FaceHistogram({
             <span
               className="forge-face"
               data-size="sm"
-              data-nature={skill ? (skill.nature ?? DEFAULT_SKILL_NATURE) : undefined}
               data-engraved={f?.engraved ? '' : undefined}
               data-gild={f?.gild ? '' : undefined}
               aria-label={`Face ${face} : ${n} fois`}
