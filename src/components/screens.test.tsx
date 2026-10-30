@@ -23,6 +23,7 @@ import { allMatches, championRun, createTournament, fillSlots, matchFighters, ma
 import { BracketScreen } from './BracketScreen'
 import { ChampionScreen } from './ChampionScreen'
 import { CheatPad } from './CheatPad'
+import { Die } from './Die'
 import { CharacterSheet } from './compendium/CharacterSheet'
 import { CompendiumScreen } from './compendium/CompendiumScreen'
 import { COMPENDIUM_SECTIONS } from './compendium/sections'
@@ -746,6 +747,10 @@ describe('écrans', () => {
     expect(end).toContain(`aria-label="Faces jouées par ${holder.name}"`)
     expect(end).toContain('report-bar')
     expect(end.match(EMOJI)?.[0]).toBeUndefined()
+    // Les dés de frappe (coups bruts du Duo de la barde) comptent à part de l'histogramme (D6 du retour du 30 octobre)
+    const strikes = fight.beats.filter((b) => b.type === 'attack' && b.attack.plain && b.attack.attacker === 1).length
+    expect(strikes).toBeGreaterThan(0)
+    expect(end).toContain(`aria-label="${strikes} dé${strikes > 1 ? 's' : ''} de frappe"`)
     // Saison forgée, en partie jouée : le cumul de chaque participant, sa construction (reliques, dé forgé)
     let s = createSeasonTournament(fillSlots(Array(20).fill(null), CHARACTER_IDS, seededRng(3)), (id) => createCharacter(id).name, { seed: 1, forge: true })
     s = simulateSeasonMatches(s, [...pendingOfDay(s.season!, 0), ...pendingOfDay(s.season!, 1), ...pendingOfDay(s.season!, 2)])
@@ -757,6 +762,23 @@ describe('écrans', () => {
     // Une saison enregistrée avant les rapports (aucun `report`) s'affiche encore
     const old = { ...s.season!, results: Object.fromEntries(Object.entries(s.season!.results).map(([n, { report: _r, ...r }]) => [n, r])) }
     expect(renderToString(<SeasonReport season={old} />)).toContain('Aucun rapport')
+  })
+
+  it('dés de l’arène (D6 du retour du 30 octobre) : le dé de compétence, cristal à la couleur du camp et chiffre ; le dé de frappe, cube blanc à points ; le Doublé en or', () => {
+    const skill = renderToString(<Die value={4} face={4} faces={6} rolling={false} color="#38bdf8" size={88} />)
+    expect(skill).toContain('data-kind="skill"')
+    expect(skill).toContain('<polygon')
+    expect(skill).toContain('#38bdf8')
+    const strike = renderToString(<Die value={4} face={4} faces={6} rolling={false} color="#38bdf8" size={60} kind="strike" />)
+    expect(strike).toContain('data-kind="strike"')
+    expect(strike).toContain('aria-label="Dé de frappe 4"')
+    // Quatre points, ni chiffre, ni couleur de camp, ni cristal
+    expect(strike.match(/<circle/g)).toHaveLength(4)
+    expect(strike).not.toContain('#38bdf8')
+    expect(strike).not.toContain('<polygon')
+    const gold = renderToString(<Die value={4} face={4} faces={6} rolling={false} color="#38bdf8" size={88} gold />)
+    expect(gold).toContain('die-gold')
+    expect(gold).toContain('#fbbf24')
   })
 
   it('tous les statuts et effets s’affichent', () => {

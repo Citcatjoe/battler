@@ -28,6 +28,7 @@ export type RuleId =
   | 'ko'
   | 'die'
   | 'base-hit'
+  | 'strike-dice'
   | 'dodge'
   | 'crit'
   | 'modifiers'
@@ -91,6 +92,12 @@ export const RULES: Record<RuleId, Rule> = {
     text: "Chaque jet porte un coup de base : sa valeur est tirée dans l'attaque du personnage (« Attaque 5 à 7 »), la même sorte de coup pour tous. C'est un coup : esquive, critique, bonus et malus de dégâts, armure, boucliers, et tout ce qui réagit quand il touche. Un renvoi (la Riposte, chaque jauge relâchée de la Rétribution) est aussi un coup, sans dé, d'une valeur fixée : il s'esquive, critique (il dépense un Critique assuré), lit les reliques de coup sans face, se heurte à l'armure et aux boucliers, et réveille ce qui réagit à un coup ; aucun renvoi ne répond à un renvoi.",
     see: ['damage-types'],
   },
+  'strike-dice': {
+    group: 'dice',
+    title: 'Dés de frappe et Doublé',
+    text: "Deux sortes de dés. Le dé de compétence, le d6 de l'action à la couleur du camp : sa face lance sa compétence. Le dé de frappe, blanc, plus petit : un dé de plus (Coup de chance, Coccinelle d'émail, Furie des vents, Duo, Veine, Rafale de pile…), qui porte un coup de base ; sa face ne lance aucune compétence (les reliques de face et la dorure la lisent). Doublé : un dé de plus de l'action (Coup de chance, Coccinelle d'émail) qui fait la même face que le dé de compétence, quand cette face porte une compétence qui peut partir, passe en or avec lui, et la compétence repart, puis son coup. Sur une face nue, pas de Doublé : un dé de frappe. Au plus 3 dés de plus par action, et rien de ce qu'un dé de plus déclenche, Doublé compris, ne donne de dé de plus (un Coup de chance ne repart pas sur un Doublé).",
+    see: ['die', 'base-hit'],
+  },
   dodge: {
     group: 'dodge',
     title: 'Esquive',
@@ -144,7 +151,7 @@ export const RULES: Record<RuleId, Rule> = {
   'hit-relations': {
     group: 'skills',
     title: 'Greffe, modifie, remplace',
-    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un jet de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change la valeur du coup de base (Soliste : coup de base ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base par charge, juste après ce jet).",
+    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un dé de frappe de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change la valeur du coup de base (Soliste : coup de base ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base par charge, juste après ce jet).",
   },
   conditions: {
     group: 'skills',

@@ -1117,9 +1117,31 @@ export function createAudit() {
         )
         if (!a.replaced && !a.jinxed && (a.multiplier ?? 1) !== boost) flag('coup multiplié faux', r, i, `×${a.multiplier ?? 1} au lieu de ×${boost}`)
         else if (faceSkills.some((e) => e.buildsUp) && (a.multiplier ?? 1) > (faceSkills.find((e) => e.buildsUp)?.hitMultiplier ?? 1)) see('coup qui monte')
-        // Un coup brut ne vient que d'une rafale instantanée du même tour
-        if (a.plain && !r.beats.slice(0, i).some((x) => x.type === 'flurry' && x.turn === b.turn && STATUSES[x.status].instantStrikes))
+        // Un coup brut ne vient que d'une rafale instantanée du même tour, ou c'est un dé de frappe d'une rafale de dés de
+        // plus (D5, retour du 30 octobre : sa cause est la rafale)
+        const strikeDie = b.cause !== undefined && r.beats[b.cause].type === 'flurry' && !STATUSES[(r.beats[b.cause] as Extract<Beat, { type: 'flurry' }>).status].instantStrikes
+        if (a.plain && !strikeDie && !r.beats.slice(0, i).some((x) => x.type === 'flurry' && x.turn === b.turn && STATUSES[x.status].instantStrikes))
           flag('coup brut hors d’une Furie', r, i, '')
+        // Le Doublé n'existe que sur une face qui porte une compétence prête (forme, limite, conditions au jet, A7), lue
+        // comme le moteur : un dé de frappe sur la face du dé de compétence et une telle compétence, c'est un Doublé manqué ;
+        // un Doublé sur une face nue, une étape sans suite (décision du parent, retour du 30 octobre)
+        const skilledFace = r.fighters[att].events.some(
+          (e) =>
+            isRollTrigger(e.trigger) &&
+            inForm(att, e) &&
+            rollMatches(e.trigger, a.roll, DIE_FACES) &&
+            (e.limit === undefined || firedBefore(e.id) < e.limit) &&
+            !(extraJet && onlyJets(e)) &&
+            holdsAt(e, decided),
+        )
+        if (strikeDie && a.plain) {
+          const opener = r.beats.find((x) => x.id > b.cause! && x.cause === b.cause && (x.type === 'roll' || x.type === 'attack'))
+          const skillRoll = opener?.type === 'roll' ? opener.roll : opener?.type === 'attack' ? opener.attack.roll : undefined
+          if (a.roll === skillRoll && skilledFace) flag('Doublé manqué', r, i, `roll ${a.roll}`)
+          else if (a.roll === skillRoll) see('même face nue : dé de frappe')
+        }
+        const mark = r.beats[(rolled ? b.cause! : i) - 1]
+        if (mark?.type === 'doublet' && !skilledFace) flag('Doublé sur une face nue', r, i, `roll ${a.roll}`)
         resolution(a, att, def)
         // Compétences du dé : déclenchées exactement quand il faut. Après le coup, dans ses fenêtres : celles qui le
         // modifient (s'il touche) ou le remplacent ; avant lui, après son étape roll : celles qui s'y greffent
@@ -1194,6 +1216,14 @@ export function createAudit() {
           else if (poisoned) see('pile qui touche')
         }
       }
+      // Un Doublé (D5) n'existe que dans une rafale de dés de plus de son lanceur, et son jet complet le suit aussitôt
+      if (b.type === 'doublet') {
+        const volley = b.cause !== undefined ? r.beats[b.cause] : undefined
+        const next = r.beats[i + 1]
+        if (volley?.type !== 'flurry' || volley.side !== b.side || STATUSES[volley.status].instantStrikes) flag('Doublé hors d’une rafale de dés de plus', r, i, '')
+        else if (next && !((next.type === 'roll' && next.roll === b.roll) || (next.type === 'attack' && next.attack.roll === b.roll && !next.attack.plain)) && !prev.hp.includes(0))
+          flag('Doublé sans son jet', r, i, `${next.type}`)
+      }
       if (b.type === 'flurry') {
         // Les coups de la rafale : ceux qu'elle cause, directement ou par l'étape `roll` d'un jet (0.110.0 : une Furie
         // peut partir au milieu d'une rafale de jets, entre deux jets de Coup de chance)
@@ -1221,6 +1251,25 @@ export function createAudit() {
             const chained = after.some((x) => beatEffects(x).some((e) => e.type === 'applyStatus' && e.target === b.side && givesJets(e.status) && !e.stolenBy))
             if (chained) flag('un dé de plus donne des jets de plus', r, i, `${b.status} ×${b.strikes}`)
             else see('dés de plus sans chaîne')
+          }
+          // Le Doublé (D5, retour du 30 octobre) : le premier jet est le dé de compétence, un jet complet ; chaque dé de plus
+          // est un dé de frappe (un coup brut), sauf Doublé : une étape `doublet`, juste avant son jet complet (même face,
+          // pas brut). Aucun dé de plus complet sans Doublé ; le Doublé manqué et le Doublé sur une face nue se lisent au coup
+          const first = strikes[0]
+          if (first?.type === 'attack') {
+            const skillRoll = first.attack.roll
+            if (first.attack.plain) flag('dé de compétence brut', r, i, `roll ${skillRoll}`)
+            for (const x of strikes.slice(1)) {
+              if (x.type !== 'attack') continue
+              const opener = x.cause !== undefined && r.beats[x.cause].type === 'roll' ? x.cause : x.id
+              const mark = r.beats[opener - 1]
+              const doubled = mark?.type === 'doublet' && mark.cause === i
+              if (doubled) {
+                if (mark.roll !== skillRoll || x.attack.roll !== skillRoll || x.attack.plain || mark.side !== b.side) flag('Doublé faux', r, i, `${mark.roll} / ${x.attack.roll} pour ${skillRoll}`)
+                else see('doublé')
+              } else if (!x.attack.plain) flag('dé de plus complet sans Doublé', r, i, `roll ${x.attack.roll}`)
+              else see('dé de frappe')
+            }
           }
         }
         // Furie instantanée (0.50.0) : la rafale suit, dans la même action, le jet qui l'a déclenchée (un jet remplacé) ;

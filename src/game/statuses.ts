@@ -172,8 +172,6 @@ export interface StatusDef {
     opacity?: number
     /** Animation du porteur : `tremble` (il tremble de gauche à droite, ex. Peur) */
     motion?: 'tremble' | 'fireflies'
-    /** Couleur des dés supplémentaires qu'il donne (Coup de chance) */
-    dieColor?: string
     /**
      * Une pièce (`coinToss`) : la teinte de ses deux faces peintes (`coin-pile`, `coin-face`), un filtre CSS ; sans elle,
      * l'or de Pile ou face. Chaque pièce a la sienne, pour qu'on les distingue en l'air (retour du 2026-10-27, R2).
@@ -1106,12 +1104,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   },
   luckyStrike: {
     name: 'Coup de chance',
-    look: { glow: 'rgba(52,211,153,0.85)', dieColor: '#34d399' },
+    look: { glow: 'rgba(52,211,153,0.85)' },
     polarity: 'positive',
     family: 'fortune',
-    summary: 'Un jet de plus à sa prochaine action, par charge.',
-    describe: (s) => next(s.stacks, 'Un jet de plus à sa prochaine action', 'N jets de plus à sa prochaine action'),
-    detail: () => 'Chaque jet est complet : son dé, sa compétence, son coup.',
+    summary: 'Un dé de frappe de plus à sa prochaine action, par charge ; sur un Doublé, la compétence repart.',
+    describe: (s) =>
+      next(s.stacks, 'Un dé de frappe de plus à sa prochaine action ; sur un Doublé, la compétence repart', 'N dés de frappe de plus à sa prochaine action ; sur un Doublé, la compétence repart'),
+    detail: () => "Un dé de frappe porte un coup de base, sans compétence. Doublé : s'il fait la même face que le dé de compétence de l'action, la compétence de cette face repart.",
     plural: 'Coups de chance',
     badge: (s) => `+${s.stacks}d6`,
     // 0.50.0 (demande de l'utilisateur) : cumulable, un d6 par charge, toutes les charges à la prochaine action
@@ -1120,7 +1119,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     extraStrikes: 1,
     strikeCharges: 'all',
     // 0.107.0 (SORTS.md § 19) : le jet qui le pose se greffe (son coup part) ; remplacer le coup en faisait perdre un
-    // pour en gagner un plus tard (+3 points gravé). Chaque jet donné est complet
+    // pour en gagner un plus tard (+3 points gravé). D5 du retour du 30 octobre (« le Doublé ») : chaque dé donné est un
+    // dé de frappe, sauf Doublé (docs/etudes/DES_SUPPLEMENTAIRES.md, S2)
   },
 
   /* Paladin (0.31.0). */
@@ -1378,7 +1378,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
   // coup et un coup de plus, le duo
   duo: {
     name: 'Duo',
-    look: { glow: 'rgba(196,181,253,0.85)', dieColor: '#c4b5fd' },
+    look: { glow: 'rgba(196,181,253,0.85)' },
     polarity: 'positive',
     family: 'tempo',
     summary: `${COUNT_WORDS[DUO_STRIKES]} coup${DUO_STRIKES > 1 ? 's' : ''} de plus par charge, juste après le coup du jet.`,
@@ -2180,8 +2180,8 @@ export function statusRuleSections(id: StatusId): StatusRuleSections {
   else if (def.extraStrikes) {
     say(
       effect,
-      `À sa prochaine action, le porteur lance ${def.extraStrikes === 1 ? 'un d6' : `${def.extraStrikes} d6`} de plus${def.strikeCharges ? ' par charge' : ''}, en plus de son dé : autant de jets complets, chacun résolu à part (sa compétence, puis son coup de base, esquive et critique).`,
-      'die',
+      `À sa prochaine action, le porteur lance ${def.extraStrikes === 1 ? 'un dé de frappe' : `${def.extraStrikes} dés de frappe`} de plus${def.strikeCharges ? ' par charge' : ''}, après son dé de compétence : chacun porte un coup de base, sans compétence (esquive et critique résolus à part). Doublé : un dé de frappe qui fait la même face que le dé de compétence, sur une face à compétence, relance cette compétence, puis son coup ; sur une face nue, il reste un dé de frappe.`,
+      'strike-dice',
     )
     say(
       consumption,

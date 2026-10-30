@@ -33,6 +33,15 @@ export const REWARDS: readonly RewardKind[] = ['forge', 'relic', 'forge', 'relic
 export const forgesLeftIn = (calendar: readonly RewardKind[], index: number) => calendar.slice(index).filter((k) => k === 'forge').length
 
 /**
+ * Le calendrier d'une construction de tournoi (saison, ou arbre seul depuis le retour du 2026-10-30, D1) : l'ordre d'un
+ * acte de campagne (`REWARDS`), réduit aux sortes activées. Dix avec les deux (cinq forges, cinq reliques), cinq
+ * reliques seules, cinq forges seules, aucune sans.
+ */
+export function buildRewards({ relics, forge }: { relics: boolean; forge: boolean }): RewardKind[] {
+  return REWARDS.filter((k) => (k === 'relic' ? relics : forge))
+}
+
+/**
  * Faces de compétence au plus sur un dé construit, aura et signature comprises : les six (retour de l'utilisateur du
  * 2026-10-28, A9 : « le dé doit être complet en fin de construction » ; quatre de la 0.104.0 à la 0.111.0, cinq de la
  * 0.112.0 à la 0.127.0). La limite atteinte, ni Graver ni Copier une face ne sont proposées. Elle compte des faces, pas

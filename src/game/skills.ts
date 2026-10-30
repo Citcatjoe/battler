@@ -474,7 +474,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'finesse',
       trigger: 'naturalOne',
       // 0.107.0 (SORTS.md § 19) : il se greffe (le coup de ce jet part) ; il remplaçait le coup depuis la phase 5 bis. Le dé
-      // qu'il donne, à l'action suivante, est un jet complet
+      // qu'il donne, à l'action suivante, est un dé de frappe ; sur un Doublé, la compétence repart (D5, retour du 30 octobre)
       effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 1 }],
       rankAxis: { kind: 'stacks', per: 1 },
     },

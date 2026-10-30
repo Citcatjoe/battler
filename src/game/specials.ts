@@ -83,6 +83,12 @@ export function relicSpecial(relic: string, name: string, bearer: SpecialBearer,
 }
 
 /**
+ * Le Doublé (D5 et D6 du retour du 30 octobre, étape `doublet`) : un dé de frappe fait la face du dé de compétence de
+ * l'action, et la compétence de cette face repart. C'est le dé lui-même : la source Coup, comme la face dorée ; +.
+ */
+export const DOUBLET_SPECIAL: SpecialSpec = { label: 'Doublé !', source: 'strike', sign: 'plus' }
+
+/**
  * Un statut est-il une surcharge, d'après sa mécanique ? Oui s'il change ce coup-ci et n'agit pas à chaque coup :
  * il impose le critique ou l'esquive, absorbe (bouclier), modifie le coup puis s'use sur lui (`spentOnHit`,
  * `spentOnHurt` : Fausse note, Luciole), ou réagit à ce coup (vol de vie, renvoi, réaction au coup encaissé :

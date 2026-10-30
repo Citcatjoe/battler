@@ -1168,6 +1168,19 @@ body {
 .die-slot.is-idle {
   opacity: 0.4;
 }
+/* Doublé (D6 du retour du 30 octobre) : le dé de compétence et le dé de frappe qui a fait la même face s'allument en
+   or, d'un éclat, puis gardent leur halo jusqu'à la fin de la rafale. */
+.die-gold {
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.85));
+}
+.die-gold.die-landed {
+  animation: die-land 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both, die-gold-flash calc(450ms / var(--speed)) ease-out both;
+}
+@keyframes die-gold-flash {
+  0% { filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0)); }
+  40% { filter: drop-shadow(0 0 28px rgba(251, 191, 36, 1)) brightness(1.35); }
+  100% { filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.85)); }
+}
 
 /* ---------- Pile ou face : la pièce qui remplace le dé ---------- */
 .coin-stage {

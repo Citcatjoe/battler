@@ -24,7 +24,8 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
   for (const line of traceText(result).split('\n')) {
     const attack = line.match(new RegExp(`${name} attaque .*?: dé (\\d+)`))
     if (attack) {
-      if (!line.includes('(dé déjà tiré)')) face(Number(attack[1]))
+      if (line.includes('(dé de frappe')) report.strikes = (report.strikes ?? 0) + 1
+      else if (!line.includes('(dé déjà tiré)')) face(Number(attack[1]))
       for (const bonus of line.matchAll(/relique (.+?) \+\d+/g)) relic(bonus[1])
     }
     const rolled = line.match(new RegExp(`${name} lance son dé : (\\d+)`))
@@ -36,16 +37,16 @@ function fromTrace(result: CombatResult, side: 0 | 1): FighterReport {
 }
 
 describe('rapport de combat (report.ts)', () => {
-  it('compte exact sur une chronologie connue : dés lancés, jet greffé, rafale du Duo, reliques', () => {
+  it('compte exact sur une chronologie connue : dés de compétence, jet greffé, dés de frappe du Duo, reliques', () => {
     const attack = (attacker: 0 | 1, roll: number, extra: object = {}) => ({ type: 'attack', attack: { attacker, roll, faces: 6, ...extra } })
     const beats = [
       attack(0, 4, { relicBonus: [{ relic: 'four-nail-shoe', name: 'Fer à quatre clous', amount: 4 }] }),
       attack(1, 6),
       { type: 'relic', side: 1, relic: 'wolf-fang', name: 'Dent de loup', effects: [], uses: 1 },
-      // La rafale du Duo : une étape sans dé à elle, puis ses deux jets, chacun avec son dé
+      // La rafale du Duo : une étape sans dé à elle, puis ses deux coups bruts, chacun son dé de frappe (compté à part)
       { type: 'flurry', side: 0, status: 'duo', strikes: 2, faces: [6, 6] },
-      attack(0, 2),
-      attack(0, 2),
+      attack(0, 2, { plain: true }),
+      attack(0, 2, { plain: true }),
       { type: 'coin', side: 1, status: 'heads', heads: true, effects: [] },
       attack(1, 1, { replaced: true }),
       // Un jet greffé : le dé tombe à l'étape `roll`, le coup qui suit le reprend
@@ -54,8 +55,8 @@ describe('rapport de combat (report.ts)', () => {
       { type: 'relic', side: 1, relic: 'wolf-fang', name: 'Dent de loup', effects: [], uses: 2 },
     ] as unknown as Beat[]
     expect(combatReport({ beats })).toEqual([
-      { relics: { 'four-nail-shoe': 1 }, faces: [0, 2, 0, 1] },
-      { relics: { 'wolf-fang': 2 }, faces: [1, 0, 1, 0, 0, 1] },
+      { relics: { 'four-nail-shoe': 1 }, faces: [0, 0, 0, 1], strikes: 2 },
+      { relics: { 'wolf-fang': 2 }, faces: [1, 0, 1, 0, 0, 1], strikes: 0 },
     ])
   })
 
@@ -73,6 +74,7 @@ describe('rapport de combat (report.ts)', () => {
         const expected = fromTrace(result, side)
         expect(report[side].relics, `graine ${seed}, côté ${side}`).toEqual(expected.relics)
         expect(report[side].faces, `graine ${seed}, côté ${side}`).toEqual(expected.faces)
+        expect(report[side].strikes, `graine ${seed}, côté ${side}`).toBe(expected.strikes)
       }
       // Chaque étape `relic` et chaque bonus de coup comptent une fois
       const relicBeats = result.beats.filter((b) => b.type === 'relic').length
@@ -80,20 +82,20 @@ describe('rapport de combat (report.ts)', () => {
       expect(Object.values(report[0].relics).concat(Object.values(report[1].relics)).reduce((t, n) => t + n, 0)).toBe(relicBeats + bonuses)
       procs += relicBeats + bonuses
       flurries += result.beats.filter((b) => b.type === 'flurry' && b.side === 1 && b.status === 'duo').length
-      // La barde lance un dé par jet : ceux de ses coups lancés et de ses jets greffés, aucun autre
-      const fanchonDice = result.beats.reduce(
-        (t, b) => t + ((b.type === 'roll' && b.side === 1) || (b.type === 'attack' && b.attack.attacker === 1 && !b.attack.preset) ? 1 : 0),
-        0,
-      )
-      expect(report[1].faces.reduce((t, n) => t + n, 0)).toBe(fanchonDice)
+      // La barde lance un dé de compétence par jet (ses coups lancés, ses jets greffés) et un dé de frappe par coup brut
+      const strikes = result.beats.flatMap((b) => (b.type === 'attack' && b.attack.attacker === 1 ? [b.attack] : []))
+      const skillDice = result.beats.filter((b) => b.type === 'roll' && b.side === 1).length + strikes.filter((a) => !a.preset && !a.plain).length
+      const strikeDice = strikes.filter((a) => a.plain).length
+      expect(report[1].faces.reduce((t, n) => t + n, 0)).toBe(skillDice)
+      expect(report[1].strikes).toBe(strikeDice)
     }
     expect(procs).toBeGreaterThan(0)
     expect(flurries).toBeGreaterThan(0)
   })
 
-  it('cumul : addReport additionne reliques et faces, relicsByProcs les classe', () => {
-    const total = addReport(addReport(emptyReport(), { relics: { a: 2 }, faces: [1, 0, 3] }), { relics: { a: 1, b: 5 }, faces: [0, 2, 0, 0, 1] })
-    expect(total).toEqual({ relics: { a: 3, b: 5 }, faces: [1, 2, 3, 0, 1] })
+  it('cumul : addReport additionne reliques, faces et dés de frappe (absents des rapports anciens), relicsByProcs les classe', () => {
+    const total = addReport(addReport(emptyReport(), { relics: { a: 2 }, faces: [1, 0, 3] }), { relics: { a: 1, b: 5 }, faces: [0, 2, 0, 0, 1], strikes: 4 })
+    expect(total).toEqual({ relics: { a: 3, b: 5 }, faces: [1, 2, 3, 0, 1], strikes: 4 })
     expect(relicsByProcs(total)).toEqual([
       ['b', 5],
       ['a', 3],

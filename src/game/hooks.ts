@@ -96,7 +96,10 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   // Les pièces d'effet (retour du 2026-10-27, R2) : pile, un bonus au lanceur ou un malus à l'adversaire ; pas de coup
   luckyCoin: { side: 'self', produces: ['moment:heads', 'status:guaranteedCrit', 'moment:crit'] },
   cursedCoin: { side: 'self', produces: ['moment:heads', 'status:stunned'] },
-  // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face
+  // Le dé de plus (Coup de chance) : ses faces réveillent compétences et reliques de face. Depuis le Doublé (D5 du retour
+  // du 30 octobre), un dé de frappe ne lance de compétence que sur un Doublé ; la signature est gardée telle quelle : sans
+  // ses faces, l'offre tirait deux fois moins Coup de chance (122 → 59 porteurs sur 960 builds) et Naraxes construit
+  // tombait de 50,4 à 47,5 % (docs/etudes/DES_SUPPLEMENTAIRES.md, mesure du 2026-10-30)
   luckyStrike: { side: 'self', produces: ['face:1', 'face:2', 'face:3', 'moment:hit'] },
   immunity: { side: 'self' },
   riposte: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant', 'moment:reflect'] },

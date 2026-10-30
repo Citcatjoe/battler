@@ -7,6 +7,7 @@ import { getRelic, relicKind, type Relic } from '../game/relics'
 import { addReport, combatReport, emptyReport, relicsByProcs, type FighterReport } from '../game/report'
 import { buildOf, seasonReport, standings, type Season } from '../game/season'
 import { entrantCharacter } from '../game/tournament'
+import { StrikeDie } from './Die'
 import { ForgeFaceTooltip } from './ForgeFaceTooltip'
 import { Portrait } from './Portrait'
 import { RelicSeal, RelicTooltip } from './RelicSeal'
@@ -130,17 +131,27 @@ export function RelicProcs({
   )
 }
 
-/** Le rapport d'un combattant : son nom, ses reliques et leurs déclenchements, ses faces jouées. */
+/** Le rapport d'un combattant : son nom, ses reliques et leurs déclenchements, ses faces jouées, ses dés de frappe. */
 function FighterBlock({ character, side, report, winner }: { character: Character; side: Side; report: FighterReport; winner: boolean }) {
   const rolled = report.faces.reduce((t, n) => t + n, 0)
+  const strikes = report.strikes ?? 0
   return (
     <section className={`report-block flex flex-col gap-2.5 px-4 py-3 ${winner ? '' : 'opacity-80'}`}>
       <header className="flex items-baseline gap-3">
         <h3 className={`font-display text-[24px] font-extrabold leading-none ${SIDE_STYLE[side].accent}`}>{character.name}</h3>
         <span className="font-body text-[13px] font-bold uppercase tracking-wider text-gold-300">{winner ? 'Vainqueur' : 'Vaincu'}</span>
         <span className="ml-auto font-body text-[14px] text-ink-3">
-          {rolled} dé{rolled > 1 ? 's' : ''} lancé{rolled > 1 ? 's' : ''}
+          {rolled} dé{rolled > 1 ? 's' : ''} de compétence
         </span>
+        {/* Les dés de frappe à part (D6 du retour du 30 octobre) : leur face ne lance rien, elle n'entre pas dans l'histogramme */}
+        {strikes > 0 && (
+          <span className="flex items-center gap-1.5 self-center font-body text-[14px] text-ink-3" aria-label={`${strikes} dé${strikes > 1 ? 's' : ''} de frappe`}>
+            <span className="relative inline-block h-[18px] w-[18px]">
+              <StrikeDie face={3} />
+            </span>
+            {strikes} de frappe
+          </span>
+        )}
       </header>
       {character.relics.length > 0 || Object.keys(report.relics).length > 0 ? (
         <RelicProcs relics={character.relics} report={report} />

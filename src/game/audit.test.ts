@@ -544,3 +544,19 @@ describe('audit de résolution : le contenu des maîtrises (quatrième demande d
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
+
+describe('audit de résolution : les dés de frappe et le Doublé (D5, retour du 30 octobre)', () => {
+  it('aucune anomalie pour Coup de chance gravé (rangs I à III) et la Coccinelle d’émail chez leurs porteurs : dés de frappe, Doublés, aucun Doublé manqué', () => {
+    const { audit, problems, seen } = createAudit()
+    let n = 0
+    for (const host of ['naraxes', 'fanchon', 'elaria'])
+      for (const rank of [0, 1, 2])
+        for (const b of CHARACTER_IDS)
+          for (let k = 0; k < 3; k++) {
+            const c = withSkill(host, 'lucky-strike', rank).withRelics(k === 2 ? [getRelic('holed-coin')] : [])
+            audit(simulateCombat(k % 2 ? [createCharacter(b), c] : [c, createCharacter(b)], { seed: 34000 + n++ }))
+          }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['dé de frappe', 'doublé', 'même face nue : dé de frappe', 'dés de plus sans chaîne']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})

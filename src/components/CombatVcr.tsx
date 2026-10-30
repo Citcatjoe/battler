@@ -73,6 +73,8 @@ function momentTitle(moment: Moment, index: number, beats: readonly Beat[], figh
       return `Rafale (${STATUSES[beat.status].name})`
     case 'roll':
       return `Jet de dé ${of(fighters[beat.side].name)}`
+    case 'doublet':
+      return `Doublé ${of(fighters[beat.side].name)}`
     case 'coin':
       return `Pile ou face (${STATUSES[beat.status].name})`
     case 'relic':

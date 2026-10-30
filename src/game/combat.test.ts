@@ -1449,7 +1449,7 @@ describe('prêtresse et voleuse (0.30.0)', () => {
     expect(capped).toBeGreaterThan(0)
   })
 
-  it("Coup de chance (gravé sur le 3 de Naraxes, se greffe, 0.107.0) : son coup part ; à l'action suivante, un d6 par charge en plus du dé habituel, chacun un jet complet", () => {
+  it("Coup de chance (gravé sur le 3 de Naraxes, se greffe, 0.107.0) : son coup part ; à l'action suivante, un dé de frappe par charge après le dé de compétence (D5, retour du 30 octobre)", () => {
     const lucky = ENGRAVABLE_SKILLS.find((e) => e.id === 'lucky-strike')!
     const naraxes = createCharacter('naraxes').withForge([{ op: 'engrave', face: 3, skill: lucky }])
     let volleys = 0
@@ -1466,13 +1466,53 @@ describe('prêtresse et voleuse (0.30.0)', () => {
           // Un coup par d6 ; les jets greffés ont leur étape `roll` pour cause, les autres la rafale
           const strikes = attacksOf(r).filter((x) => x.attacker === f.side && x.turn === f.turn)
           if (f.turn < r.turns) expect(strikes).toHaveLength(dice.length)
-          // Chaque d6 lit les faces du porteur : sur le dé de l'action, son 3 (Coup de chance) se greffe, son coup part ; sur
-          // un dé de plus, il ne donne pas de dé de plus (A7, 2026-10-28) : face nue, son coup part sans compétence
+          // Le dé de compétence lit sa face (son 3, Coup de chance, se greffe) ; les dés de frappe portent un coup brut, sauf
+          // Doublé (la face du dé de compétence, si elle porte une compétence prête) : un jet complet, qui ne redonne pas de
+          // dé de plus (A7 : un 3 sur le 3 de Coup de chance reste un dé de frappe)
           for (const s of strikes) expect(s.replaced).toBe(false)
-          strikes.filter((x) => x.roll === 3).forEach((x) => expect(!!x.preset, `jet n° ${strikes.indexOf(x)}`).toBe(strikes.indexOf(x) === 0))
+          expect(strikes[0]?.plain).toBeUndefined()
+          for (const s of strikes.slice(1)) if (!s.plain) expect(s.roll).toBe(strikes[0].roll)
+          for (const s of strikes.slice(1)) if (s.roll === 3 && strikes[0].roll === 3) expect(s.plain).toBe(true)
         }
       }
     expect(volleys).toBeGreaterThan(0)
+  })
+
+  it('le Doublé (D5, retour du 30 octobre) : un dé de frappe qui fait la face du dé de compétence relance sa compétence, une fois par dé ; sur une face nue, ou sinon, un coup brut, sans compétence', () => {
+    const luck: CharacterEvent = { id: 'luck', name: 'luck', trigger: 'turnStart', effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: MAX_EXTRA_JETS }] }
+    const two: CharacterEvent = { id: 'two', name: 'two', trigger: 'naturalTwo', effects: [{ type: 'applyStatus', status: 'poison', stacks: 1, target: 'opponent' }] }
+    let doublets = 0
+    let bare = 0
+    let strikeDice = 0
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = run([testCharacter('a', { maxHp: 400 }, [luck, two]), testCharacter('b', { maxHp: 400 })], seed)
+      for (const f of ofType(r, 'flurry').filter((x) => x.side === 0 && x.status === 'luckyStrike')) {
+        const jets = r.beats.filter((x) => x.cause === f.id && (x.type === 'roll' || x.type === 'attack'))
+        const rollOf = (x: Beat) => (x.type === 'roll' ? x.roll : x.type === 'attack' ? x.attack.roll : 0)
+        const skillRoll = rollOf(jets[0])
+        let fired = skillRoll === 2 ? 1 : 0
+        for (const jet of jets.slice(1)) {
+          const mark = r.beats[jet.id - 1]
+          const doubled = mark.type === 'doublet' && mark.cause === f.id
+          // Seule la face 2 porte une compétence : le Doublé n'existe que là (décision du parent, retour du 30 octobre)
+          expect(doubled, `graine ${seed}, tour ${f.turn}`).toBe(rollOf(jet) === skillRoll && skillRoll === 2)
+          if (doubled) {
+            doublets++
+            expect(mark).toMatchObject({ side: 0, roll: skillRoll })
+            fired++
+          } else {
+            strikeDice++
+            if (rollOf(jet) === skillRoll) bare++
+            expect(jet).toMatchObject({ type: 'attack', attack: { plain: true } })
+          }
+        }
+        const events = r.beats.filter((x) => x.turn === f.turn && x.type === 'event' && x.event.eventId === 'two')
+        if (!r.beats.some((x) => x.turn === f.turn && x.state.hp.includes(0))) expect(events, `graine ${seed}, tour ${f.turn}`).toHaveLength(fired)
+      }
+    }
+    expect(doublets).toBeGreaterThan(5)
+    expect(bare).toBeGreaterThan(doublets)
+    expect(strikeDice).toBeGreaterThan(5 * doublets)
   })
 })
 
@@ -2098,7 +2138,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       '+1 PV quand il renvoie des dégâts',
       // Le pluriel d'un statut qui se compte (passe compendium, 2026-10-25) ; « lancer de pièce gagnant », la phrase de
       // l'utilisateur (2026-10-27) ; sa recharge depuis la mesure d'ensemble de la refonte des auras
-      "+2 coups de chance (2 jets de plus à sa prochaine action) chaque fois qu'une de ses pièces fait pile, au plus une fois tous les 3 tours",
+      "+2 coups de chance (2 dés de frappe de plus à sa prochaine action ; sur un Doublé, la compétence repart) chaque fois qu'une de ses pièces fait pile, au plus une fois tous les 3 tours",
       // Les reliques de source (2026-10-25)
       "2 poison à l'adversaire sur un 6",
       "2 brûlure à l'adversaire sur un 6",

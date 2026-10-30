@@ -145,7 +145,7 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
     case 'attack': {
       const a = beat.attack
       const att = fighters[a.attacker]
-      const head = `${att.name} attaque ${fighters[other(a.attacker)].name} : dé ${a.roll}${a.roll === DIE_FACES ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé déjà tiré)' : ''}${a.plain ? ' (coup brut de Furie, sans compétence)' : ''}`
+      const head = `${att.name} attaque ${fighters[other(a.attacker)].name} : dé ${a.roll}${a.roll === DIE_FACES ? ' (jet maximal)' : ''}${a.forced ? ' [imposé]' : ''}${a.preset ? ' (dé déjà tiré)' : ''}${a.plain ? ' (dé de frappe : coup brut, sans compétence)' : ''}`
       if (a.replaced) return [`${head} · jet remplacé par sa compétence : pas de coup de base (ni esquive ni critique)`]
       // Le coup de base : sa valeur tirée dans l'attaque (« coup de base 6 (5 à 7) »), ×N par Crescendo ou Soliste ; un
       // type d'attaque unique depuis le 2026-10-24 (« DP », « DM Lumière » avant)
@@ -188,8 +188,12 @@ function beatLines(beat: Beat, fighters: Pair<Character>, before: Snapshot): str
       return [`${fighters[beat.side].name} change de forme : ${fighters[beat.side].forms?.[beat.form].name ?? beat.form}`]
     case 'flurry':
       return [
-        `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois cette action (${beat.faces.map((f) => `d${f}`).join(' + ')}), chaque jet résolu à part (statut consommé)`,
+        STATUSES[beat.status].instantStrikes
+          ? `${label(beat.status)} : ${fighters[beat.side].name} frappe ${beat.strikes} fois (${beat.faces.map((f) => `d${f}`).join(' + ')}), des dés de frappe résolus à part (statut consommé)`
+          : `${label(beat.status)} : ${fighters[beat.side].name} lance son dé de compétence et ${beat.strikes - 1} dé${beat.strikes > 2 ? 's' : ''} de frappe cette action, chacun résolu à part (statut consommé)`,
       ]
+    case 'doublet':
+      return [`DOUBLÉ : le dé de frappe de ${fighters[beat.side].name} fait ${beat.roll}, comme son dé de compétence, sur une face à compétence → jet complet au même dé : la compétence repart, puis son coup`]
     case 'roll':
       return [`${fighters[beat.side].name} lance son dé : ${beat.roll}${beat.forced ? ' [imposé]' : ''} → sa compétence se greffe, puis le coup de base`]
     case 'coin':

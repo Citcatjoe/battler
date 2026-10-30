@@ -79,7 +79,7 @@ export const STATES: Record<StateId, StateDef> = {
   critPower: { name: 'Critique renforcé', polarity: 'positive', summary: 'Son prochain critique frappe plus fort (multiplicateur).', counter: 'amount' },
   blinded: { name: 'Aveuglé', polarity: 'negative', summary: 'Ses critiques ratent.', counter: 'none' },
   sureDodge: { name: 'Esquive assurée', polarity: 'positive', summary: 'Il esquive à coup sûr le prochain coup reçu.', counter: 'status' },
-  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Des jets de plus à sa prochaine action.', counter: 'status' },
+  extraDie: { name: 'Dé en plus', polarity: 'positive', summary: 'Des dés de frappe de plus à sa prochaine action ; sur un Doublé, la compétence repart.', counter: 'status' },
   jinxed: { name: 'Malchance', polarity: 'negative', summary: 'Son prochain jet sur une compétence tombe à vide.', counter: 'status' },
   lostTurn: { name: 'Tour perdu', polarity: 'negative', summary: 'Il perd sa prochaine action.', counter: 'none' },
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },

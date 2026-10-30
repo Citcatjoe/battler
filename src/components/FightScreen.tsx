@@ -11,7 +11,7 @@ import { vcrToggle } from '../game/debugConsole'
 import { CombatLog } from './CombatLog'
 import { CopyTraceButton } from './CopyTraceButton'
 import { Coin } from './Coin'
-import { Die, useRollingFaces } from './Die'
+import { Die, STRIKE_DIE_SCALE, useRollingFaces } from './Die'
 import { Fighter, type Received } from './Fighter'
 import { HpBar } from './HpBar'
 import { StatusTray } from './StatusTray'
@@ -150,6 +150,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
   // Les faces que montrent les dés, une seule source pour le dé de l'arène et le reflet dans la zone de compétence de
   // son camp : pendant le roulement, le sceau de la face montrée s'allume brièvement (ni l'initiative ni la pièce)
   const rolled = useRollingFaces(dice.values, dice.values.map((_, i) => dice.dieFaces?.[i] ?? dice.faces), dice.rolling, paused)
+  // Seuls les dés de compétence se reflètent dans la zone de compétence : la face d'un dé de frappe ne lance rien (D6)
+  const skillDie = dice.values.map((_, i) => (dice.kinds?.[i] ?? 'skill') === 'skill')
   // Hauteur d'ancrage du décor (le second terme de `focus`, « 50% 70% » → « 70% »)
   const focusY = arena?.focus.split(' ')[1] ?? '50%'
 
@@ -182,8 +184,8 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
               statuses={statuses[side]}
               pulse={pulseOf(side)}
               signal={signalOf(side)}
-              rolling={dice.owner === side && !dice.coin && dice.rolling ? rolled.faces : undefined}
-              landed={dice.owner === side && !dice.coin && !dice.rolling ? dice.values : undefined}
+              rolling={dice.owner === side && !dice.coin && dice.rolling ? rolled.faces.filter((_, i) => skillDie[i]) : undefined}
+              landed={dice.owner === side && !dice.coin && !dice.rolling ? dice.values.filter((_, i) => skillDie[i]) : undefined}
               align={side === 1 ? 'right' : 'left'}
             />
           </div>
@@ -276,27 +278,35 @@ export function FightScreen({ script, arena, onEnd, test }: Props) {
 
         {/* Zone des dés : sans libellé (0.96.0), le camp se lit à la couleur du dé et au halo du tour */}
         <div className="absolute left-1/2 top-[17%] z-0 flex -translate-x-1/2 flex-col items-center gap-3">
-          <div className="flex gap-6">
+          <div className="flex items-center gap-6">
             {/* Pile ou face : la pièce remplace le dé */}
             {dice.coin && <Coin heads={dice.coin.heads} />}
-            {dice.values.map((v, i) => (
-              <div
-                key={`${dice.values.length}-${i}`}
-                // Rafale : le second dé jaillit ; ensuite, le dé du coup en cours ressort
-                className={`die-slot ${dice.volley && i > 0 ? 'die-burst' : ''} ${
-                  dice.active === undefined ? '' : dice.active === i ? 'is-active' : 'is-idle'
-                }`}
-              >
-                <Die
-                  value={v}
-                  face={rolled.faces[i] ?? v}
-                  faces={dice.dieFaces?.[i] ?? dice.faces}
-                  rolling={dice.rolling}
-                  color={dice.dieColors?.[i] ?? (dice.owner === null ? SIDE_STYLE[i as Side].hex : diceColor)}
-                  size={dice.values.length > 1 ? 88 : 104}
-                />
-              </div>
-            ))}
+            {dice.values.map((v, i) => {
+              // Le dé de compétence, à la couleur du camp ; un dé de frappe, blanc et plus petit ; un Doublé, en or (D6)
+              const kind = dice.kinds?.[i] ?? 'skill'
+              const gold = !!dice.golden?.includes(i)
+              const size = dice.values.length > 1 ? 88 : 104
+              return (
+                <div
+                  key={`${dice.values.length}-${i}`}
+                  // Rafale : le second dé jaillit ; ensuite, le dé du coup en cours ressort ; les dés d'un Doublé restent allumés
+                  className={`die-slot ${dice.volley && i > 0 ? 'die-burst' : ''} ${
+                    dice.active === undefined ? '' : dice.active === i ? 'is-active' : gold ? '' : 'is-idle'
+                  }`}
+                >
+                  <Die
+                    value={v}
+                    face={rolled.faces[i] ?? v}
+                    faces={dice.dieFaces?.[i] ?? dice.faces}
+                    rolling={dice.rolling}
+                    color={dice.owner === null ? SIDE_STYLE[i as Side].hex : diceColor}
+                    size={kind === 'strike' ? Math.round(size * STRIKE_DIE_SCALE) : size}
+                    kind={kind}
+                    gold={gold}
+                  />
+                </div>
+              )
+            })}
           </div>
           {/* Zone de surcharge : ce qui change ce coup-ci, en colonne, dans l'ordre où ça s'applique (critique, esquive
               assurée, bouclier, Riposte, relique…), tous à la largeur du plus long ; couleur de la source, hachures pour

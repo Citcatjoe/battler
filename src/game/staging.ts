@@ -30,6 +30,7 @@ import {
   atCap,
   attackLog,
   coinLog,
+  doubletLog,
   effectBadge,
   eventLog,
   flurryLog,
@@ -47,7 +48,7 @@ import {
 import { RELICS } from './relics'
 import { SCENE_EVENTS, sceneTarget, type SceneEventId } from './scenes'
 import { signalTargets, STATES, STATUS_PLACE } from './states'
-import { attackSpecials, reactionSpecial, relicSpecial, SPECIAL_SIGNS, type SpecialBadge, type SpecialSign, type SpecialSpec } from './specials'
+import { attackSpecials, DOUBLET_SPECIAL, reactionSpecial, relicSpecial, SPECIAL_SIGNS, type SpecialBadge, type SpecialSign, type SpecialSpec } from './specials'
 import { isMechanic, STATUSES, type Polarity, type Status, type StatusId } from './statuses'
 import { castsMagicAt, castsSpell } from './poses'
 import type { sfx } from './sound'
@@ -69,9 +70,12 @@ export interface DiceState {
   volley?: boolean
   /** Pendant une rafale, le dé du coup en cours */
   active?: number
-  /** Faces et couleur de chaque dé quand ils diffèrent (le d6 vert de Coup de chance) */
+  /** Faces de chaque dé quand elles diffèrent */
   dieFaces?: number[]
-  dieColors?: (string | undefined)[]
+  /** Sorte de chaque dé (absent : des dés de compétence, `DieKind`) */
+  kinds?: DieKind[]
+  /** Doublé : les deux dés allumés en or (le dé de compétence de l'action, le dé de frappe qui a fait la même face) */
+  golden?: number[]
   /**
    * Pile ou face : une pièce remplace le dé ; `heads` absent tant qu'elle tournoie. `status` : le statut de la pièce
    * lancée (chaque pièce son visuel, Coin.tsx ; un seul jeu de sons pour toutes, SONS.md)
@@ -85,6 +89,13 @@ export interface DiceState {
    */
   specials?: SpecialBadge[]
 }
+
+/**
+ * Les deux sortes de dé (D6 du retour du 30 octobre), distinctes par la forme et la couleur : `skill`, le dé de
+ * compétence (le d6 forgé de l'action, à la couleur du camp, dont la face lance sa compétence) ; `strike`, un dé de
+ * frappe (un dé de plus : blanc à points, plus petit ; un coup de base, sa face ne lance rien, sauf Doublé).
+ */
+export type DieKind = 'skill' | 'strike'
 
 export const IDLE_DICE: DiceState = {
   values: [],
@@ -1506,11 +1517,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   }
 
   /**
-   * Rafale : tous les dés roulent ensemble, le second jaillit, ou apparaît dans sa couleur s'il est d'une autre sorte
-   * (les dés du statut, après le premier). `flat` : rafale instantanée (Furie des vents), déclenchée par le dé qui vient
-   * de tomber : les dés apparaissent d'un coup, à plat.
+   * Rafale : tous les dés roulent ensemble, le second jaillit. Le premier dé d'une rafale de jets (Coup de chance) est le
+   * dé de compétence de l'action ; tous les autres, et tous ceux d'une rafale de coups bruts (Furie des vents, Duo),
+   * sont des dés de frappe (D6 du retour du 30 octobre ; un Doublé ne s'allume qu'à son étape `doublet`). `flat` :
+   * rafale instantanée (Furie des vents), déclenchée par le dé qui vient de tomber : les dés apparaissent d'un coup, à
+   * plat.
    */
-  function rollVolley(attacks: Attack[], color: string | undefined, flat: boolean): DiceState {
+  function rollVolley(attacks: Attack[], flat: boolean): DiceState {
     const { attacker, faces } = attacks[0]
     const shown: DiceState = {
       ...IDLE_DICE,
@@ -1518,7 +1531,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       owner: attacker,
       volley: true,
       dieFaces: attacks.map((a) => a.faces),
-      dieColors: attacks.map((_, k) => (k >= 1 ? color : undefined)),
+      kinds: attacks.map((a, k) => (k === 0 && !a.plain ? 'skill' : 'strike')),
     }
     const landed = { ...shown, values: attacks.map((a) => a.roll), forced: attacks.some((a) => a.forced) }
     if (flat) {
@@ -1864,14 +1877,13 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           .filter((b): b is Extract<Beat, { type: 'attack' }> => b.type === 'attack')
           .slice(0, beat.strikes)
         if (strikes.length > 0) {
-          // Les dés du statut prennent sa couleur, après le premier (le dé de la Furie, le dé de l'action)
+          // Le dé de compétence de l'action, puis les dés de frappe (rollVolley)
           const outer = volleys.at(-1)
           if (outer) outer.covered = true
           // À plat pour une rafale instantanée (Furie des vents, Curée, coups de l'Ivresse du sang, lot 3) : ses dés suivent
           // le jet, sans relancer le gobelet
           const landed = rollVolley(
             strikes.map((b) => b.attack),
-            def.look?.dieColor,
             chained || !!def.instantStrikes,
           )
           volleys.push({ strikes: strikes.map((b) => b.id), next: 0, dice: landed, covered: false })
@@ -1884,6 +1896,23 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
             playDieRelics(hit, true)
           }
         }
+        break
+      }
+      case 'doublet': {
+        // Le Doublé (D6 du retour du 30 octobre) : le dé de frappe posé fait la face du dé de compétence. Les deux dés
+        // s'allument en or, le dé de frappe devient un dé de compétence, « Doublé ! » sous les dés (son signe sonne) ; le
+        // temps de le lire, puis le jet complet qui suit relance la compétence de la face (étapes `roll`, `attack`)
+        const volley = volleys.at(-1)
+        const index = volley ? volley.strikes.findIndex((id) => id > beat.id) : -1
+        if (volley && index > 0) {
+          uncover(volley)
+          const kinds = (volley.dice.kinds ?? []).map((k, i): DieKind => (i === index ? 'skill' : k))
+          patchDice({ kinds, golden: [0, index], active: index })
+          volley.dice = { ...volley.dice, kinds, golden: [0, index] }
+        }
+        addSpecial(DOUBLET_SPECIAL)
+        log(doubletLog(beat.turn, beat.side, beat.roll, fighters))
+        hold('LABEL_READ')
         break
       }
       case 'shift': {

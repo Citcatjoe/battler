@@ -3,7 +3,7 @@ import { Character, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { isAuraSkill, isOffered, OFFERED_OPS, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { drawReward, forgesLeftIn, REWARDS, type PendingReward } from './offers'
+import { drawReward, forgesLeftIn, REWARDS, type PendingReward, type RewardKind } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
@@ -261,16 +261,17 @@ export const OPPONENT_LAG = 3
 export const hpFloorOf = (rewards: number) => (rewards === 0 ? EARLY_HP_FLOOR : HP_FLOOR)
 
 /**
- * Une construction de campagne tirée au hasard au nœud `node` : les récompenses de l'acte jusque-là (`REWARDS`), choisies
- * par défaut dans l'offre (le choix automatique du tournoi), sur le dé de l'aura `aura` (l'aura par défaut sans elle).
- * Le champion de référence et les adversaires sont construits ainsi.
+ * Une construction tirée au hasard au nœud `node` : les `node` premières récompenses du calendrier `calendar` (l'acte de
+ * campagne, `REWARDS`, par défaut), choisies par défaut dans l'offre (le choix automatique du tournoi), sur le dé de
+ * l'aura `aura` (l'aura par défaut sans elle). Le champion de référence, les adversaires de campagne et les participants
+ * d'un arbre seul (tournament.ts, retour du 2026-10-30, D1 : leur calendrier entier) sont construits ainsi.
  */
-export function drawBuild(championId: string, node: number, rng: Rng, aura?: string): Pick<CampaignRun, 'forge' | 'relics'> {
+export function drawBuild(championId: string, node: number, rng: Rng, aura?: string, calendar: readonly RewardKind[] = REWARDS): Pick<CampaignRun, 'forge' | 'relics'> {
   const def = startDef(championId, aura)
   let forge: ForgeStep[] = []
   const relics: string[] = []
-  for (const [index, kind] of REWARDS.slice(0, node).entries()) {
-    const reward = drawReward({ championId, aura, forge, relics }, kind, rng, forgesLeftIn(REWARDS, index))
+  for (const [index, kind] of calendar.slice(0, node).entries()) {
+    const reward = drawReward({ championId, aura, forge, relics }, kind, rng, forgesLeftIn(calendar, index))
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
   }

@@ -41,6 +41,7 @@ src/
     leaderboard.ts       classement du mode sans fin (0.131.0) : entrées (joueur, construction du champion, série, points) par période ;
                          statique tant que le mode sans fin et un backend n'existent pas
     offers.ts            offre commune à la campagne, à la saison et à l'arbre (0.115.0) : ordre d'un acte (REWARDS, RewardKind),
+                         calendrier d'un tournoi réduit aux sortes activées (buildRewards),
                          MAX_SKILL_FACES, BuildState (et son aura), réserve des deux maîtrises (characterPool, masteries.ts), offre
                          pertinente « le producteur d'abord » (reachOf, offerableRelics, offerableSkills), écho (ECHO_WEIGHT),
                          tirage d'une récompense (drawReward, PendingReward)
@@ -71,11 +72,12 @@ src/
     scenes.ts            événements de scène (SceneEventId, rythme SCENE_EVENTS : impacts, durée) : présentation seule, le moteur ne les lit pas
     history.ts           historique localStorage, useHistory, normalize
     tournament.ts        arbre à 16 : création, état des matchs, résultats, reliques gagnées (relicsOf, chooseRelic), construction de saison
-                         figée des qualifiés (Entrant.build), fighterKey, fillSlots, labelEntrants
+                         figée des qualifiés (Entrant.build) ou, sans saison, acte complet tiré à l'entrée (createTournament, drawBuild,
+                         D1 du 2026-10-30), fighterKey, fillSlots, labelEntrants
     season.ts            phase de saison facultative avant l'arbre (0.86.0) : calendrier aller-retour (seasonSchedule, Berger), graine par match,
                          bilans compacts, simulation sans trace ni historique (simulateSeasonMatches), classement et départage
                          (standings), 16 qualifiés en têtes de série (startBracket, BRACKET_SEEDS) ; construction (0.92.0 ; rythme de
-                         la 0.115.0) : une récompense à chacun des dix premiers matchs de chaque côté (buildRewards, seasonReward par
+                         la 0.115.0) : une récompense à chacun des dix premiers matchs de chaque côté (buildRewards d'offers.ts, seasonReward par
                          drawReward, SeasonResult.rewards), construction d'un participant (buildOf, buildDone), match prêt (seasonStatus),
                          choix de l'observateur (chooseSeasonReward, par côté) ; rapport de chaque
                          match dans son bilan (SeasonResult.report, facultatif) et cumul par participant (seasonReport)

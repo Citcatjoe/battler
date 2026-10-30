@@ -14,18 +14,23 @@ export interface FighterReport {
    */
   relics: Record<string, number>
   /**
-   * Faces jouées : `faces[k]`, le nombre de dés tombés sur la face k + 1. Chaque dé lancé compte : le coup de l'action
-   * (ou le jet d'une compétence greffée, étape `roll`), les coups d'une rafale (Furie des vents, Coup de chance, Duo).
-   * Le coup qui reprend un dé déjà tiré (jet greffé) ne relance rien, il ne compte pas une seconde
-   * fois ; une pièce n'est pas un dé.
+   * Faces jouées : `faces[k]`, le nombre de dés de compétence tombés sur la face k + 1 (D6 du retour du 30 octobre).
+   * Chaque dé de compétence lancé compte : le coup de l'action (ou le jet d'une compétence greffée, étape `roll`), le jet
+   * d'un Doublé. Le coup qui reprend un dé déjà tiré (jet greffé) ne relance rien, il ne compte pas une seconde fois ;
+   * une pièce n'est pas un dé ; un dé de frappe (coup brut, `Attack.plain`) compte à part, dans `strikes`.
    */
   faces: number[]
+  /**
+   * Dés de frappe lancés : les coups bruts (Coup de chance, Coccinelle d'émail, Furie des vents, Duo…), dont la face ne
+   * lance aucune compétence. Absent des rapports de saison enregistrés avant le Doublé (0 par défaut).
+   */
+  strikes?: number
 }
 
 /** Rapport d'un combat : un par camp (0 à gauche, 1 à droite). */
 export type CombatReport = Pair<FighterReport>
 
-export const emptyReport = (): FighterReport => ({ relics: {}, faces: [] })
+export const emptyReport = (): FighterReport => ({ relics: {}, faces: [], strikes: 0 })
 
 /** Ajoute `n` dés tombés sur `face` (les faces manquantes valent 0). */
 function addFace(report: FighterReport, face: number, n = 1) {
@@ -42,7 +47,8 @@ export function combatReport(result: Pick<CombatResult, 'beats'>): CombatReport 
     else if (beat.type === 'roll') addFace(reports[beat.side], beat.roll)
     else if (beat.type === 'attack') {
       const a = beat.attack
-      if (!a.preset) addFace(reports[a.attacker], a.roll)
+      if (a.plain) reports[a.attacker].strikes = (reports[a.attacker].strikes ?? 0) + 1
+      else if (!a.preset) addFace(reports[a.attacker], a.roll)
       for (const bonus of a.relicBonus ?? []) relic(a.attacker, bonus.relic)
     }
   }
@@ -53,6 +59,7 @@ export function combatReport(result: Pick<CombatResult, 'beats'>): CombatReport 
 export function addReport(into: FighterReport, extra: FighterReport): FighterReport {
   for (const [id, n] of Object.entries(extra.relics)) into.relics[id] = (into.relics[id] ?? 0) + n
   extra.faces.forEach((n, k) => addFace(into, k + 1, n))
+  into.strikes = (into.strikes ?? 0) + (extra.strikes ?? 0)
   return into
 }
 

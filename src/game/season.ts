@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
 import { isOffered, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { drawReward, forgesLeftIn, REWARDS, type RewardKind } from './offers'
+import { buildRewards, drawReward, forgesLeftIn, type RewardKind } from './offers'
 import { getRelic } from './relics'
 import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
@@ -33,15 +33,6 @@ export type SeasonSize = (typeof SEASON_SIZES)[number]
 export const DEFAULT_SEASON_SIZE: SeasonSize = 24
 
 export const WIN_POINTS = 3
-
-/**
- * Les récompenses d'un participant, une par match dès son premier : l'ordre d'un acte de campagne (`REWARDS`), réduit
- * aux sortes activées. Dix avec les deux (cinq forges, cinq reliques), cinq reliques seules, cinq forges seules,
- * aucune sans.
- */
-export function buildRewards({ relics, forge }: { relics: boolean; forge: boolean }): RewardKind[] {
-  return REWARDS.filter((k) => (k === 'relic' ? relics : forge))
-}
 
 /**
  * Têtes de série des huitièmes, dans l'ordre de l'arbre : le match i oppose les rangs `BRACKET_SEEDS[2i]` et

@@ -296,9 +296,15 @@ export type BeatBody =
   | { type: 'shift'; side: Side; form: number }
   /**
    * Une action à plusieurs jets : un statut qui donne plusieurs coups (Furie des vents : deux coups bruts ; Coup de
-   * chance, Duo : des jets de plus), qui est consommé.
+   * chance : des dés de frappe à l'action suivante, D5 du retour du 30 octobre), qui est consommé.
    */
   | { type: 'flurry'; side: Side; status: StatusId; strikes: number; faces: number[] }
+  /**
+   * Un Doublé (D5, retour du 30 octobre, docs/RESOLUTION.md § 2) : un dé de frappe de la rafale vient de faire la face du
+   * dé de compétence de l'action ; ce dé devient un jet complet, la compétence de la face repart. L'étape ne porte pas de
+   * dé à elle : le jet qui suit (même cause, la rafale) réutilise ce dé, `roll`.
+   */
+  | { type: 'doublet'; side: Side; roll: number }
   /**
    * Un jet dont la face porte une compétence qui se greffe (règles v2, phase 5 bis) : le dé tombe, la compétence suit
    * (étape event), puis le coup de base, au dé déjà tiré (`Attack.preset`). Un jet sans greffe n'a pas cette étape : son
@@ -1506,15 +1512,16 @@ export function simulateCombat(
    * Un jet complet (règles v2, phase 5 bis, docs/RESOLUTION.md § 2) : un dé, qui désigne une face. Sa compétence
    * remplace le coup (jet remplacé), ou se greffe (étape roll, la compétence, puis le coup de base au dé tiré), ou modifie
    * le coup (elle part dans ses fenêtres s'il touche, ou le multiplie) ; une face nue ne porte que le coup de base.
-   * `cause` : la rafale dont le jet fait partie (Coup de chance, Duo).
+   * `cause` : la rafale dont le jet fait partie (Coup de chance). `die` : le dé déjà tiré (le dé de compétence d'une
+   * rafale, ou le dé de frappe d'un Doublé), à défaut le jet tire le sien.
    */
-  function jet(attacker: Side, cause?: number): Side | undefined {
+  function jet(attacker: Side, cause?: number, die?: { roll: number; forced: boolean }): Side | undefined {
     // Coups instantanés (Furie des vents) : juste après le jet qui les a posés, dans la même action (RESOLUTION § 2)
-    return throwDie(attacker, cause) ?? burst(attacker)
+    return throwDie(attacker, cause, die) ?? burst(attacker)
   }
 
-  function throwDie(attacker: Side, cause?: number): Side | undefined {
-    const { roll, forced } = drawDie()
+  function throwDie(attacker: Side, cause?: number, die = drawDie()): Side | undefined {
+    const { roll, forced } = die
     // Malchance (lot 3) : un jet qui porterait une compétence tombe à vide (une charge par jet). Le dé est tiré comme
     // avant ; un dé imposé (mode triche) garde sa valeur et laisse la charge
     const jinx = forced ? undefined : states[attacker].statuses.find((s) => STATUSES[s.id].jinxesRoll)
@@ -1746,12 +1753,17 @@ export function simulateCombat(
   }
 
   /**
-   * L'action : un jet, plus ceux d'un statut de coups supplémentaires non instantané (Coup de chance, Duo, consommé au
-   * début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action ; un seul de ces statuts
-   * par action, l'autre attend la suivante). Chaque jet est complet : son dé, sa face, sa compétence, son coup de base.
-   * Plusieurs jets font une rafale (étape flurry), cause de chacun. Au plus `MAX_EXTRA_JETS` jets de plus par action ;
-   * les charges au-delà partent avec les autres. Le premier jet est le dé de l'action ; les suivants sont des dés de plus
-   * (`extraJet`, A7) : rien de ce qu'ils déclenchent ne donne de jets de plus.
+   * L'action : un jet, plus les dés de plus d'un statut de coups supplémentaires non instantané (Coup de chance, consommé
+   * au début de l'action : un nouveau déclenchement pendant ces jets vaut pour la prochaine action ; un seul de ces
+   * statuts par action, l'autre attend la suivante). Le premier dé est le dé de compétence de l'action, un jet complet :
+   * sa face, sa compétence, son coup de base. Les suivants sont des dés de frappe (D5 du retour du 30 octobre, « le
+   * Doublé ») : un coup de base brut, dont la face ne lance aucune compétence (les reliques de face la lisent), comme un
+   * coup de Furie ; sauf s'il fait la même face que le dé de compétence et que cette face porte une compétence prête à
+   * partir (`ready` : forme, limite, conditions, A7) : Doublé (étape `doublet`), ce dé devient un jet complet et la
+   * compétence de la face repart. Sur une face nue, pas de Doublé (décision du parent, retour du 30 octobre : jamais un
+   * « Doublé ! » sans suite). Plusieurs jets font une rafale (étape flurry), cause de chacun. Au plus `MAX_EXTRA_JETS`
+   * dés de plus par action ; les charges au-delà partent avec les autres. Rien de ce que déclenche un dé de plus, Doublé
+   * compris, ne donne de dés de plus (`extraJet`, A7).
    */
   function action(attacker: Side): Side | undefined {
     const att = states[attacker]
@@ -1763,11 +1775,20 @@ export function simulateCombat(
     att.statuses = def.strikeCharges === 'one' ? consumeStatus(att.statuses, flurry.id, 1) : att.statuses.filter((s) => s.id !== flurry.id)
     // Tous les jets d'une rafale, celui de l'action compris, ont la rafale pour cause
     const volley = push({ type: 'flurry', side: attacker, status: flurry.id, strikes: jets, faces: Array.from({ length: jets }, () => DIE_FACES) })
+    const skillDie = drawDie()
     try {
-      for (let k = 0; k < jets; k++) {
-        extraJet = k > 0 ? attacker : undefined
-        const down = jet(attacker, volley)
-        if (down !== undefined) return down
+      const down = jet(attacker, volley, skillDie)
+      if (down !== undefined) return down
+      extraJet = attacker
+      for (let k = 1; k < jets; k++) {
+        const die = drawDie()
+        // Lu avec `extraJet` posé : une face qui ne donnerait que des dés de plus (Coup de chance, A7) est nue
+        const doublet = die.roll === skillDie.roll && (['graft', 'modify', 'replace'] as const).some((rel) => ready(attacker, die.roll, rel).length > 0)
+        if (doublet) push({ type: 'doublet', side: attacker, roll: die.roll }, volley)
+        // Un dé de frappe est un coup brut, comme ceux d'une Furie : une charge de coups instantanés qu'il pose (l'Ivresse
+        // du sang à son critique) attend le prochain jet complet (RESOLUTION § 2)
+        const fell = doublet ? jet(attacker, volley, die) : strikeOnce(attacker, die, true, volley)
+        if (fell !== undefined) return fell
       }
     } finally {
       extraJet = undefined

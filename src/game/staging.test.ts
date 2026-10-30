@@ -12,6 +12,7 @@ import { isRollTrigger, rollFace, type CharacterEvent } from './events'
 import { RELICS } from './relics'
 import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
+import { DOUBLET_SPECIAL } from './specials'
 import { childrenOf, FLOAT_LANES, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
 import { isAura, type Status } from './statuses'
 import { onOldDie, testCharacter } from './test-utils'
@@ -1883,5 +1884,56 @@ describe('retour du 2026-10-30 : le rythme du combat', () => {
       }
     }
     expect(seen).toBeGreaterThan(3)
+  })
+
+  it('D6 : une rafale de jets montre le dé de compétence puis des dés de frappe ; une rafale de coups bruts, des dés de frappe seuls', () => {
+    const kindsOf = (moments: Moment[], beat: Extract<Beat, { type: 'flurry' }>) => {
+      const shown = momentOf(moments, beat.id).cues.find((c) => c.channel === 'dice' && c.dice.volley && c.dice.owner === beat.side && c.dice.kinds?.length === beat.strikes)
+      return shown?.channel === 'dice' ? shown.dice.kinds : undefined
+    }
+    let jets = 0
+    let raw = 0
+    const lucky = versus(() => createCharacter('naraxes').withForge([{ op: 'engrave', face: 3, skill: skill('lucky-strike') }]), [1, 2, 3, 4])
+    for (const { result, moments } of [...lucky, ...versus(() => createCharacter('gorak'))])
+      for (const beat of result.beats) {
+        if (beat.type !== 'flurry') continue
+        const kinds = kindsOf(moments, beat)
+        if (!kinds) continue
+        if (STATUSES[beat.status].instantStrikes) {
+          expect(kinds.every((k) => k === 'strike'), `étape ${beat.id}`).toBe(true)
+          raw++
+        } else {
+          expect(kinds, `étape ${beat.id}`).toEqual(['skill', ...Array<string>(beat.strikes - 1).fill('strike')])
+          jets++
+        }
+      }
+    expect(jets).toBeGreaterThan(5)
+    expect(raw).toBeGreaterThan(5)
+  })
+
+  it('D6 : le Doublé allume les deux dés en or, le dé de frappe devient un dé de compétence, « Doublé ! » se lit, puis la compétence repart', () => {
+    let seen = 0
+    const lucky = versus(() => createCharacter('naraxes').withForge([{ op: 'engrave', face: 3, skill: skill('lucky-strike') }]), [1, 2, 3, 4, 5, 6, 7, 8])
+    for (const { result, moments } of lucky)
+      for (const beat of result.beats) {
+        if (beat.type !== 'doublet') continue
+        const m = momentOf(moments, beat.id)
+        const label = m.cues.find((c) => c.channel === 'special' && c.special.label === DOUBLET_SPECIAL.label)
+        expect(label, `étape ${beat.id}`).toBeDefined()
+        const gold = m.cues.find((c) => c.channel === 'dice' && c.at === label!.at && c.dice.golden)
+        expect(gold?.channel, `étape ${beat.id}`).toBe('dice')
+        if (gold?.channel !== 'dice') continue
+        const [skillDie, doubled] = gold.dice.golden!
+        expect(skillDie).toBe(0)
+        expect(gold.dice.kinds?.[doubled]).toBe('skill')
+        expect(gold.dice.values[doubled]).toBe(beat.roll)
+        expect(gold.dice.values[0]).toBe(beat.roll)
+        // Le temps de lire le label, puis le jet complet : le sceau de sa face, ou son coup
+        const next = m.cues.find((c) => c.at > gold.at && (c.channel === 'skillPulse' || (c.channel === 'strike' && c.strike && !c.strike.landed)))
+        if (next) expect(next.at - gold.at, `étape ${beat.id}`).toBeGreaterThanOrEqual(T.LABEL_READ)
+        expect(m.cues.some((c) => c.channel === 'log' && c.entry.text.includes('Doublé'))).toBe(true)
+        seen++
+      }
+    expect(seen).toBeGreaterThan(2)
   })
 })

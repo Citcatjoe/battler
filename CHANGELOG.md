@@ -32,6 +32,23 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.133.0] — 2026-10-30
+
+Décisions du retour du 30 octobre validées par l'utilisateur (D1, D5, D6, D18 ; registre `docs/RETOUR_30.md`).
+
+### Ajouté
+- **Le Doublé** (D5) : à une action qui lance plusieurs dés (Coup de chance, Coccinelle d'émail), le premier dé est le **dé de compétence** (jet complet) ; chaque dé de plus est un **dé de frappe**, un coup de base brut dont la face ne lance aucune compétence. Un dé de frappe qui fait la face du dé de compétence, quand cette face porte une compétence prête, fait un **Doublé** : la compétence repart, puis son coup. Sur une face nue, pas de Doublé. Règle « Dés de frappe et Doublé » au compendium ; trace, journal et audit (Doublé faux, manqué, sur une face nue, hors d'une rafale). Porteurs réels : Coup de chance gravé +18,8 → +14,1, Coccinelle d'émail +17,5 → +12,5 (Naraxes +21,0 → +14,9), Naraxes construite 54,2 → 50,4 % ; roster nu et empreinte `balance.test.ts` inchangés. Les accroches de Coup de chance (ses faces) sont gardées : sans elles, l'offre le tirait deux fois moins.
+- **Arbre seul construit** (D1) : sans saison, avec les reliques ou la forge, chacun des 16 participants entre dans l'arbre construit d'un acte complet (5 forges et 5 reliques avec les deux), tiré au lancement à la graine du tournoi puis figé, par le chemin du champion de référence de la campagne. La Forge du dé s'actionne aussi sans saison ; les cotes lisent le build.
+
+### Modifié
+- **Dés de frappe blancs, Doublé en or** (D6, M61 de `docs/MISE_EN_SCENE.md`) : le dé de compétence reste le cristal à la couleur du camp ; un dé de frappe est un cube ivoire à points sombres, à 68 % de la taille, qui n'allume aucun sceau de la barre de compétences (Furie, Duo, Aura de veine, Curée, Aura d'ivresse, Pièce de la rafale compris ; le vert de Coup de chance et le mauve du Duo disparaissent). Un Doublé passe les deux dés en or, avec « Doublé ! » sous les dés et le ding des labels +. Le rapport de combat compte les dés de frappe à part ; les faces tombées des écrans de victoire ne comptent que les dés de compétence.
+- `buildRewards` passe de `season.ts` à `offers.ts`.
+
+### Retiré
+- **Plus aucune relique gagnée dans l'arbre** : l'arbre seul ne donne plus une relique par victoire (le bouton Récompense n'y apparaît plus) ; chaque participant y entre avec ses 5 reliques.
+
+Décisions sans changement de code : **D18**, la pile ×3 sur un coup critique est gardée. **D2 et D25** : la redite stricte (« pas de redite ») est écartée par l'utilisateur ; une étude de la profondeur de l'offre est proposée, à valider (`docs/etudes/PROFONDEUR_OFFRE.md`, recommandation ACsD).
+
 ## [0.132.0] — 2026-10-30
 
 Corrections du retour du 30 octobre (`prompts/Retour du 30 octobre.md`, registre `docs/RETOUR_30.md`).

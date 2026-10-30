@@ -87,7 +87,8 @@ export function computeStats(result: CombatResult): Pair<FighterStats> {
 
 /**
  * Déclenchements d'un combattant (écrans de victoire, retour du 2026-10-27), lus dans la chronologie : chaque relique
- * (par identifiant) et chaque face de son dé tombée (`faces[0]` : la face 1), coups bruts et jets à vide compris.
+ * (par identifiant) et chaque face de son dé de compétence tombée (`faces[0]` : la face 1), jets à vide compris ; pas
+ * les dés de frappe (coups bruts, `Attack.plain`), dont la face ne lance rien (D6 du retour du 30 octobre).
  */
 export interface TriggerCounts {
   relics: Record<string, number>
@@ -98,7 +99,7 @@ export function triggerCounts(result: CombatResult, side: Side): TriggerCounts {
   const counts: TriggerCounts = { relics: {}, faces: [] }
   for (const b of result.beats) {
     if (b.type === 'relic' && b.side === side) counts.relics[b.relic] = (counts.relics[b.relic] ?? 0) + 1
-    if (b.type === 'attack' && b.attack.attacker === side) counts.faces[b.attack.roll - 1] = (counts.faces[b.attack.roll - 1] ?? 0) + 1
+    if (b.type === 'attack' && b.attack.attacker === side && !b.attack.plain) counts.faces[b.attack.roll - 1] = (counts.faces[b.attack.roll - 1] ?? 0) + 1
   }
   return { relics: counts.relics, faces: Array.from(counts.faces, (n) => n ?? 0) }
 }

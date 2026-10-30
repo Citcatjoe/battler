@@ -220,34 +220,36 @@ export function attackLog(
   // Jet tombé à vide (Malchance, lot 3) : ni compétence ni coup
   if (attack.jinxed)
     return { kind: 'attack', side: attack.attacker, text: `Tour ${turn} · Le jet de ${attack.roll} ${of(att.name)} tombe à vide : ni compétence ni coup.` }
-  // Le coup de base : sa valeur tirée, multipliée par Crescendo ou Soliste
+  // Le coup de base : sa valeur tirée, multipliée par Crescendo ou Soliste. Un coup brut est un dé de frappe (D5, retour du
+  // 30 octobre) : le journal le nomme, avec sa face
   const value = attack.multiplier ? `${attack.value} ×${attack.multiplier}` : String(attack.value)
+  const head = attack.plain ? `Tour ${turn} · Dé de frappe (${attack.roll}) ·` : `Tour ${turn} ·`
   // Critique raté d'un aveuglé (lot 3) : le critique tiré, ou assuré, rate
   if (attack.blindedBy)
     return {
       kind: 'dodge',
       side: attack.attacker,
-      text: `Tour ${turn} · ${att.name} ${STATUSES[attack.blindedBy].bears ?? `subit ${statusLabel(attack.blindedBy)}`} : son ${attack.critForced ? 'critique assuré' : 'critique'} (${value}) rate ${def.name} !`,
+      text: `${head} ${att.name} ${STATUSES[attack.blindedBy].bears ?? `subit ${statusLabel(attack.blindedBy)}`} : son ${attack.critForced ? 'critique assuré' : 'critique'} (${value}) rate ${def.name} !`,
     }
   if (attack.dodged) {
     return {
       kind: 'dodge',
       side: defender,
-      text: `Tour ${turn} · ${att.name} frappe (${value}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''}${attack.critForced ? ' : le critique assuré est perdu' : ''} !`,
+      text: `${head} ${att.name} frappe (${value}) mais ${def.name} esquive${attack.dodgeForced ? ' à coup sûr' : ''}${attack.critForced ? ' : le critique assuré est perdu' : ''} !`,
     }
   }
   if (attack.crit) {
     return {
       kind: 'crit',
       side: attack.attacker,
-      text: `Tour ${turn} · ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${value} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
+      text: `${head} ${attack.critForced ? 'CRITIQUE ASSURÉ' : 'CRITIQUE'} ! ${att.name} frappe ${value} ${multiplier(attack.critMultiplier)} et inflige ${attack.damage} dégâts à ${def.name}${armorDetail(attack)} (${defenderHp} PV).`,
     }
   }
   const flavor = attack.multiplier ? ` Coup ×${attack.multiplier} !` : attack.value === att.stats.attackMax && att.stats.attackMax > att.stats.attackMin ? ' Coup maximal !' : ''
   return {
     kind: 'attack',
     side: attack.attacker,
-    text: `Tour ${turn} · ${att.name} inflige ${plural(attack.damage, 'dégât')} à ${def.name}${armorDetail(attack)} (${defenderHp} PV).${flavor}`,
+    text: `${head} ${att.name} inflige ${plural(attack.damage, 'dégât')} à ${def.name}${armorDetail(attack)} (${defenderHp} PV).${flavor}`,
   }
 }
 
@@ -320,14 +322,20 @@ export function shiftLog(turn: number, side: Side, form: number, fighters: Pair<
   return { kind: 'event', side, text: `Tour ${turn} · ${c.name} prend sa ${c.forms?.[form].name.toLowerCase() ?? 'autre forme'}.` }
 }
 
-/** Coups multiples (Furie des vents, Coup de chance, Duo) */
+/** Coups multiples (Furie des vents, Duo : des coups tout de suite ; Coup de chance : des dés de frappe après le dé de compétence) */
 export function flurryLog(turn: number, side: Side, status: StatusId, strikes: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
-  return { kind: 'status', side, text: `Tour ${turn} · ${statusLabel(status)} · ${fighters[side].name} frappe ${strikes} fois !` }
+  const what = STATUSES[status].instantStrikes ? `frappe ${strikes} fois !` : `lance ${plural(strikes - 1, 'dé')} de frappe de plus !`
+  return { kind: 'status', side, text: `Tour ${turn} · ${statusLabel(status)} · ${fighters[side].name} ${what}` }
 }
 
 /** Un jet dont la face porte une compétence qui se greffe : le dé, avant la compétence et le coup de base */
 export function rollLog(turn: number, side: Side, roll: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   return { kind: 'attack', side, text: `Tour ${turn} · ${fighters[side].name} fait ${roll}.` }
+}
+
+/** Un Doublé (D5, retour du 30 octobre) : le dé de frappe fait la face du dé de compétence, une face à compétence ; elle repart */
+export function doubletLog(turn: number, side: Side, roll: number, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
+  return { kind: 'attack', side, text: `Tour ${turn} · Doublé ! Le dé de frappe de ${fighters[side].name} fait ${roll}, comme son dé de compétence : la compétence repart.` }
 }
 
 /** Pile ou face */

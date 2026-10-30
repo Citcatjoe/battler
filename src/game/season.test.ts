@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { simulateCombat } from './combat'
 import { EPITHETS, uniqueNames } from './epithets'
 import { copyDestinations, forgedFaces, isAuraSkill, offerTargets, stepKey, stepOf } from './forge'
-import { MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
+import { buildRewards, MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
+import { drawBuild } from './campaign'
+import { hashSeed } from './analysis'
+import { priceMatch } from './betting'
 import { characterPool } from './masteries'
 import { EMOJI } from './test-utils'
 import { getRelic, RELICS } from './relics'
@@ -11,7 +14,6 @@ import { CHARACTER_IDS, createCharacter } from './roster'
 import {
   BRACKET_SEEDS,
   buildOf,
-  buildRewards,
   chooseSeasonReward,
   createSeasonTournament,
   currentDay,
@@ -368,6 +370,41 @@ describe('saison', () => {
     expect(t.entrants.every((e) => !('seasonRank' in e))).toBe(true)
     expect(readyMatches(t)).toHaveLength(8)
     expect(() => withSeasonResult(t, 0, simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 1 }))).toThrow()
+  })
+
+  it('arbre seul construit (D1) : chacun entre avec un acte complet (dé complet, 5 reliques), tiré comme en campagne à la graine du tournoi ; l’arbre n’en donne plus', () => {
+    const slots = participants(SLOTS)
+    const make = (seed: number, options: { relics?: boolean; forge?: boolean } = { forge: true }) =>
+      createTournament(slots, nameOf, { ...options, auras: seededRng(3), seed })
+    const t = make(11)
+    t.entrants.forEach((e, i) => {
+      const aura = entrantAura(e)
+      const def = createCharacter(e.characterId, { aura }).definition
+      // Le même chemin que le champion de référence de la campagne : drawBuild sur l'acte entier, à la graine de sa case
+      expect(e.build, e.label).toEqual(drawBuild(e.characterId, REWARDS.length, seededRng(hashSeed(`tournoi:11:${i}`)), aura))
+      expect(e.build!.relics, e.label).toHaveLength(5)
+      expect(forgedFaces(def, e.build!.forge).filter((f) => f.origin.length > 0 || f.engraved).length, e.label).toBe(def.skillFaces ?? MAX_SKILL_FACES)
+    })
+    expect(make(11)).toEqual(t)
+    expect(make(12).entrants.map((e) => e.build)).not.toEqual(t.entrants.map((e) => e.build))
+    // Les sortes coupées dans les options : reliques seules, forge seule, rien (chacun part nu)
+    expect(make(11, { forge: false }).entrants.every((e) => e.build!.relics.length === 5 && e.build!.forge.length === 0)).toBe(true)
+    expect(make(11, { relics: false, forge: true }).entrants.every((e) => e.build!.relics.length === 0 && e.build!.forge.length === 5)).toBe(true)
+    expect(make(11, { relics: false, forge: false }).entrants.every((e) => e.build === undefined)).toBe(true)
+    // Chaque match oppose les builds ; les cotes se calculent sur ces combattants (priceMatch reçoit matchFighters)
+    const first = matchFighters(t, { round: 0, index: 0 })
+    expect(first.map((f) => f.relics.map((r) => r.id))).toEqual([t.entrants[0].build!.relics, t.entrants[1].build!.relics])
+    const bare = [0, 1].map((i) => createCharacter(t.entrants[i].characterId, { aura: entrantAura(t.entrants[i]) })) as [Character, Character]
+    expect(priceMatch(first, 'd1', 40).outcomes).not.toEqual(priceMatch(bare, 'd1', 40).outcomes)
+    // Tout l'arbre : la construction reste figée, aucune relique gagnée en chemin
+    let played = t
+    let seed = 1
+    while (readyMatches(played).length > 0)
+      for (const ref of readyMatches(played)) {
+        played = withResult(played, ref, simulateCombat(matchFighters(played, ref), { seed: seed++ }), seededRng(seed))
+        expect(played.results[matchKey(ref)].relic).toBeUndefined()
+      }
+    expect(championRun(played)!.relics).toHaveLength(5)
   })
 })
 

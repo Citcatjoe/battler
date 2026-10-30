@@ -11,7 +11,7 @@ import { SkillSeal } from './SkillSeal'
  */
 
 /** Points d'une face de dé, sur une grille de 3 × 3 (1 : centre ; 2 : diagonale ; 3 : diagonale et centre…). Au-delà de 6, son chiffre. */
-const PIPS: Record<number, [number, number][]> = {
+export const PIPS: Record<number, [number, number][]> = {
   1: [[1, 1]],
   2: [[0, 0], [2, 2]],
   3: [[0, 0], [1, 1], [2, 2]],

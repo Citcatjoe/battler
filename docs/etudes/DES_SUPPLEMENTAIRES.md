@@ -210,3 +210,22 @@ L'existant à garder en tête : la **Malchance** (Ombre) fait déjà tomber à v
 - **Q3 (R8)** : Pièce de la rafale inchangée (+17,9) et son rythme raccourci, ou pile = 1 coup (+10,5 à +13,5) ?
 - **Q4 (R12)** : **A2·7** (l'aura purgée se rallume au début du 2e tour suivant de son porteur ; Purification 5 → 7 quand elle retire un bonus) ? Ou A2·8 (« blesse toujours de 8 », plus simple, Ysolde +3) ?
 - **Q5 (R57, R58, R59)** : lesquelles entrent au catalogue (nouvelles reliques, nouvelles règles du moteur) : le **Clairon du héraut** (+9,7), le **Sceau long** (+6,9), le **Dé de joueur** (+5,0, fort en début de partie), la **Rage** au critique reçu (+8,7) ; et la **Rage montante** en aura de Fureur (+11,3) ?
+
+## 8. Livré : le Doublé (D5 du retour du 30 octobre)
+
+L'utilisateur a retenu **S2** (registre `docs/RETOUR_30.md`, D5). Règle : [RESOLUTION.md](../RESOLUTION.md) § 2, phase 2 ; moteur : `action` (`combat.ts`), étape `doublet` ; audit : « Doublé faux », « Doublé manqué », « dé de plus complet sans Doublé », « dé de compétence brut ». Un écart avec la copie de laboratoire : un dé de frappe ne fait pas partir les coups instantanés après lui (comme un coup de Furie, une charge de l'Ivresse posée à son critique attend le prochain jet complet).
+
+Mesures du moteur livré, mêmes outils et graines qu'aux § 1 à 3 (0.132.0 avant → après) :
+
+| Mesure | Avant | Après | Étude (S2) |
+| --- | --- | --- | --- |
+| Coup de chance gravé, chez ses porteurs (122 builds, 30 par duel) | +18,8 | **+14,1** | +14,2 |
+| Coccinelle d'émail, chez ses porteurs (78 builds) | +17,5 (Naraxes +21,0) | **+12,5** (Naraxes +14,9) | +12,1 |
+| Pièce de la rafale, chez ses porteurs (44 builds) | +18,0 | +17,4 | +17,1 à +17,9 |
+| Naraxes construit (48 builds, 20 par duel) | 54,2 % | **50,4 %** | 50,6 % |
+| Elaria, Fanchon construites | 52,5 %, 54,0 % | 50,4 %, 51,4 % | — |
+| Coup de chance gravé sur le 3 nu (`scripts/skills.report.ts`, 200 par duel) | +17,6 | +16,0 | — |
+| Coccinelle d'émail, roster nu (`npm run relics`, 400 par duel) | +4,6 | +4,5 | — |
+| Roster nu (`npm run balance`, 400 par duel) | inchangé | inchangé | aucun personnage ne porte Coup de chance au départ |
+
+**Les accroches de Coup de chance (`hooks.ts`) sont gardées** (ses faces) : les retirer, comme le voudrait un dé de frappe, faisait tirer Coup de chance deux fois moins par l'offre (122 → 59 porteurs sur 960 builds, Coccinelle 78 → 60) et Naraxes construit tombait à 47,5 % (−6,7 points au lieu de −3,8). À décider avec l'offre, pas avec la règle du dé.

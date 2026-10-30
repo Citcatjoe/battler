@@ -1377,13 +1377,16 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     expect(heritageSlot(startRun('gorak', 12))).toBeUndefined()
   })
 
-  it('écran de fin (U2) : les déclenchements de chaque relique et de chaque face, lus dans la chronologie et cumulés', () => {
+  it('écran de fin (U2) : les déclenchements de chaque relique et de chaque face du dé de compétence (sans les dés de frappe), lus dans la chronologie et cumulés', () => {
     const champion = createCharacter('gorak').withRelics(['split-knucklebone', 'eagle-feather', 'hollow-die'].map(getRelic))
     const result = simulateCombat([champion, createCharacter('brokk')], { seed: 11 })
     const counts = triggerCounts(result, 0)
     const relicBeats = result.beats.filter((b) => b.type === 'relic' && b.side === 0).length
     expect(Object.values(counts.relics).reduce((s, n) => s + n, 0)).toBe(relicBeats)
-    expect(counts.faces.reduce((s, n) => s + n, 0)).toBe(attacksOf(result).filter((a) => a.attacker === 0).length)
+    const attacks = attacksOf(result).filter((a) => a.attacker === 0)
+    // La Furie de Gorak : des dés de frappe, hors des faces (D6 du retour du 30 octobre)
+    expect(attacks.some((a) => a.plain)).toBe(true)
+    expect(counts.faces.reduce((s, n) => s + n, 0)).toBe(attacks.filter((a) => !a.plain).length)
     const run = withFightResult(withFightResult(startRun('gorak', 3), encounter, won), encounter, won)
     const total = (faces: number[]) => faces.reduce((s, n) => s + n, 0)
     expect(total(runTriggers(run).faces)).toBe(total(run.fights[0].triggers!.faces) + total(run.fights[1].triggers!.faces))

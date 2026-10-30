@@ -3,8 +3,10 @@ import { finalState, type CombatResult, type Pair } from './combat'
 import { stepKey, type ForgeStep } from './forge'
 import { rollFace } from './events'
 import { computeStats, sumTriggers, triggerCounts, type FighterStats, type TriggerCounts } from './stats'
-import { defaultRng, pick, shuffle, type Rng } from './rng'
-import { drawReward } from './offers'
+import { defaultRng, pick, seededRng, shuffle, type Rng } from './rng'
+import { buildRewards, drawReward } from './offers'
+import { hashSeed } from './analysis'
+import { drawBuild } from './campaign'
 import { getRelic } from './relics'
 import { createCharacter } from './roster'
 import type { Season } from './season'
@@ -15,7 +17,8 @@ import { uniqueNames } from './epithets'
  * Les participants d'un match se déduisent des vainqueurs du tour précédent :
  * le match i du tour r oppose les vainqueurs des matchs 2i et 2i+1 du tour r-1.
  * Facultative, une phase de saison (season.ts) peut précéder l'arbre : ses 16 premiers y entrent, avec ce qu'ils y ont
- * construit (reliques, forge du dé), figé jusqu'à la fin du tournoi.
+ * construit (reliques, forge du dé), figé jusqu'à la fin du tournoi. Sans saison, chacun entre construit d'un acte
+ * complet (`createTournament`, retour du 2026-10-30, D1), figé lui aussi.
  */
 
 export const SLOTS = 16
@@ -25,7 +28,7 @@ export const ROUND_NAMES = ['Huitièmes de finale', 'Quarts de finale', 'Demi-fi
 /** Nombre de matchs dans un tour : 8, 4, 2, 1 */
 export const matchesInRound = (round: number) => SLOTS >> (round + 1)
 
-/** Ce qu'un participant a construit pendant la saison : ses reliques et le journal de forge de son dé, dans l'ordre. */
+/** Ce qu'un participant a construit (saison, ou tirage d'entrée de l'arbre seul) : ses reliques et le journal de forge de son dé, dans l'ordre. */
 export interface Build {
   relics: string[]
   forge: ForgeStep[]
@@ -43,7 +46,7 @@ export interface Entrant {
   aura?: string
   /** Rang au classement final de la saison, s'il y en a eu une (tête de série dans l'arbre) */
   seasonRank?: number
-  /** Sa construction de saison (season.ts), figée : il la porte à chaque match de l'arbre */
+  /** Sa construction (saison, ou tirage d'entrée de l'arbre seul), figée : il la porte à chaque match de l'arbre */
   build?: Build
 }
 
@@ -75,9 +78,10 @@ export interface Tournament {
   entrants: Entrant[]
   results: Record<string, MatchResult>
   /**
-   * Système de reliques (docs/RELIQUES.md) : choisi sur l'écran de configuration. Désactivé, aucune victoire
-   * n'offre de relique, donc personne n'en porte pendant ce tournoi. Avec une saison, les reliques se gagnent
-   * aux victoires de la saison (season.ts, construction), jamais dans l'arbre.
+   * Système de reliques (docs/RELIQUES.md) : choisi sur l'écran de configuration. Désactivé, personne n'en reçoit ni
+   * n'en porte pendant ce tournoi. Avec une saison, les reliques se gagnent aux matchs de la saison (season.ts,
+   * construction) ; sans saison, dans la construction d'entrée (`createTournament`). Jamais dans l'arbre, sauf pour un
+   * tournoi d'avant le retour du 2026-10-30 (D1) dont les participants sont partis nus (une relique par victoire).
    */
   relics: boolean
   /** Phase de saison qui précède l'arbre (season.ts) ; absente : l'arbre seul, comme avant la 0.86.0 */
@@ -147,15 +151,27 @@ export const entrantCharacter = (e: Entrant): Character => createCharacter(e.cha
  * Crée le tournoi à partir des 16 cases (ids de personnages), dans l'ordre de l'arbre. `relics` : le système
  * de reliques est actif (par défaut) ou non pour tout le tournoi. `epithets` : noms uniques, tirés avec ce hasard.
  * `auras` : le hasard du tirage des auras de départ (`drawStartAuras`) ; sans lui, chacun part de son dé vanilla.
+ * `seed` (graine du tournoi) : l'arbre seul oppose des personnages construits (retour du 2026-10-30, D1) ; chacun
+ * arrive avec un acte complet de récompenses (`buildRewards` : reliques et forge du dé selon `relics` et `forge`, le
+ * calendrier de la saison), tirées comme le champion de référence de la campagne (`drawBuild` : la même offre,
+ * `drawReward`, et le choix par défaut) sur le dé de son aura, à la graine du tournoi et de sa case. Sa construction
+ * est figée : l'arbre ne donne plus de relique. Sans `seed`, chacun part nu et gagne une relique par victoire.
  */
 export function createTournament(
   slots: string[],
   nameOf: (id: string) => string,
-  { relics = true, epithets, auras }: { relics?: boolean; epithets?: Rng; auras?: Rng } = {},
+  { relics = true, forge = false, epithets, auras, seed }: { relics?: boolean; forge?: boolean; epithets?: Rng; auras?: Rng; seed?: number } = {},
 ): Tournament {
   if (slots.length !== SLOTS) throw new Error(`Il faut ${SLOTS} participants`)
-  const entrants = labelEntrants(slots, nameOf, epithets)
-  return { entrants: auras ? drawStartAuras(entrants, auras) : entrants, results: {}, relics }
+  const labeled = labelEntrants(slots, nameOf, epithets)
+  const entrants = auras ? drawStartAuras(labeled, auras) : labeled
+  const calendar = buildRewards({ relics, forge })
+  if (seed === undefined || calendar.length === 0) return { entrants, results: {}, relics }
+  const built = entrants.map((e, i) => ({
+    ...e,
+    build: drawBuild(e.characterId, calendar.length, seededRng(hashSeed(`tournoi:${seed >>> 0}:${i}`)), entrantAura(e), calendar),
+  }))
+  return { entrants: built, results: {}, relics }
 }
 
 /** Les deux participants d'un match (null tant que le tour précédent n'est pas joué). */
@@ -241,9 +257,10 @@ export function matchFighters(t: Tournament, ref: MatchRef): [Character, Charact
 
 /**
  * Enregistre l'issue d'un combat dans l'arbre (renvoie un nouveau tournoi), avec la récompense du vainqueur
- * (hors finale, si le tournoi a ses reliques et pas de saison : après une saison, chacun garde sa construction
- * figée) : l'offre de relique de la campagne (`drawReward`, offers.ts : reliques à sa portée qu'il n'a pas encore, la
- * première à l'écho de son build), et son choix, tiré au hasard (`rng`).
+ * (hors finale, si le tournoi a ses reliques, pas de saison, et un vainqueur parti nu : un participant construit, par la
+ * saison ou d'entrée dans l'arbre seul, garde sa construction figée) : l'offre de relique de la campagne (`drawReward`,
+ * offers.ts : reliques à sa portée qu'il n'a pas encore, la première à l'écho de son build), et son choix, tiré au
+ * hasard (`rng`).
  * Refuse un match déjà joué ou pas encore prêt, ou un combat dont les combattants (personnages, reliques, forge)
  * ne sont pas ceux du match : l'appelant ne doit alors rien enregistrer.
  */
@@ -255,9 +272,9 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
   if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
   const drawn =
-    t.relics && !t.season && ref.round < ROUNDS - 1
+    t.relics && !t.season && !t.entrants[winner].build && ref.round < ROUNDS - 1
       ? drawReward(
-          { championId: t.entrants[winner].characterId, aura: entrantAura(t.entrants[winner]), forge: t.entrants[winner].build?.forge ?? [], relics: relicsOf(t, winner) },
+          { championId: t.entrants[winner].characterId, aura: entrantAura(t.entrants[winner]), forge: [], relics: relicsOf(t, winner) },
           'relic',
           rng,
         )

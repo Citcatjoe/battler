@@ -63,14 +63,14 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     immunité use sa fois, comme la Peur.
     Chaque jet porte un COUP DE BASE (règles v2, phase 5 bis, décision de l'utilisateur du 2026-10-23) :
     sa valeur est tirée dans l'attaque du personnage (§ 3 bis). Le dé ne fait plus de dégâts : il désigne
-    une face, qui déclenche sa compétence, ou rien (face nue). Un JET, pour chaque dé (un pour tous, deux
-    pour la barde, plus ceux de Coup de chance) :
+    une face, qui déclenche sa compétence, ou rien (face nue). Un JET, pour le dé de compétence de l'action
+    (et pour un dé de frappe qui fait un Doublé, plus bas) :
       a. le dé est lancé (un rang de dé en mode triche) ; il désigne une face ;
       b. la compétence de cette face déclare sa relation au coup de base (§ 3 bis) :
          - greffe (défaut) : étape roll (le dé), puis la compétence (fenêtre de sa face, compétences
            seules, étape event), puis le coup de base, au dé déjà tiré. Ce que la compétence pose est
            présent au début du coup : il y réagit (Œil de faucon rend ce coup critique, Vol de vie le draine ;
-           Coup de chance, greffé depuis la 0.107.0, donne un jet de plus à l'action suivante) ;
+           Coup de chance, greffé depuis la 0.107.0, donne un dé de frappe de plus à l'action suivante) ;
          - modifie : le coup de base part ; s'il touche, la compétence se déclenche dans la fenêtre de sa
            face (Pourfendre : Saignement de la moitié des PV que ce coup a retirés, arrondie au-dessus ;
            Pile ou face : la pièce, voir plus bas). Une compétence qui modifie avec `hitMultiplier`
@@ -103,13 +103,25 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
     pièce se tire quand même (même suite du hasard), puis une charge de `loadedDie` la fait tomber sur
     pile, et pile vaut ×2 de plus (ce coup ×5) ; la charge part à cette pièce. Une pièce imposée par
     l'observateur (mode triche) garde sa valeur, et la charge reste.
-    Coups multiples : si l'actif porte un statut `extraStrikes` non instantané (Coup de chance, Duo), il est
-    consommé (étape flurry) et l'action compte plusieurs jets complets, chacun avec son dé, sa compétence
-    et son coup de base (0.50.0 : toutes ses charges, un jet par charge, `strikeCharges: 'all'`). Un seul
-    de ces statuts part par action : si Coup de chance et le Duo sont posés ensemble, l'un attend l'action
-    suivante.
+    Coups multiples : si l'actif porte un statut `extraStrikes` non instantané (Coup de chance, dont la
+    Coccinelle d'émail pose deux charges), il est consommé (étape flurry) et l'action lance des dés de plus
+    (0.50.0 : toutes ses charges, un dé par charge, `strikeCharges: 'all'` ; au plus 3, `MAX_EXTRA_JETS`).
+    LE DOUBLÉ (D5 du retour du 30 octobre, décision de l'utilisateur ; étude docs/etudes/DES_SUPPLEMENTAIRES.md,
+    option S2) : le premier dé est le DÉ DE COMPÉTENCE de l'action, un jet complet (a à c ci-dessus). Chaque
+    dé de plus est un DÉ DE FRAPPE : un coup de base brut (`Attack.plain`, cause la rafale), dont la face ne
+    lance aucune compétence (les reliques de face et la dorure la lisent), comme un coup de Furie ; une charge
+    de coups instantanés posée à son critique (l'Ivresse du sang) attend le prochain jet complet. Sauf s'il
+    fait la même face que le dé de compétence ET que cette face porte une compétence qui peut partir (même
+    lecture qu'au jet : forme, limite, conditions, et A7 : une face qui ne donne que des dés de plus, comme
+    Coup de chance, est nue) : DOUBLÉ. Sur une face nue, pas de Doublé : un dé de frappe (décision du
+    parent, retour du 30 octobre : jamais un « Doublé ! » sans suite visible). Une étape `doublet` (cause la
+    rafale, sans dé à elle) marque ce dé, qui devient un jet complet au même dé : la compétence de cette face
+    repart, puis son coup (une fois par dé qui fait le Doublé ; deux dés de frappe sur la même face font deux
+    Doublés). Rien de ce que déclenche un dé de plus, Doublé compris, ne donne de dé de plus (A7). Jusqu'au retour du 30 octobre,
+    chaque dé de plus était un jet complet (sa face lançait sa compétence) : la boule de neige de la
+    Coccinelle chez Naraxes. Un seul de ces statuts part par action ; l'autre attend l'action suivante.
     Coups instantanés (`instantStrikes`, Furie des vents, 0.50.0) : les charges gagnées pendant un jet
-    frappent juste après ce jet, avant le jet suivant de la même action (d6 de Coup de chance ou du Duo),
+    frappent juste après ce jet, avant le dé suivant de la même action (dé de frappe de Coup de chance),
     toutes à la fois : `extraStrikes` coups de base par charge (0.110.0 ; avant, la
     rafale attendait la fin de l'action et une seule charge partait par action), plus son intensité
     (Furie aiguisée, 0.110.0, § 6 : un coup de plus une rafale sur deux au rang II). Ce sont des
@@ -258,7 +270,7 @@ Les charges consommées par le coup (critique assuré, bouclier) sont retirées 
 | **Modifie** | Le coup de base part ; s'il touche, la compétence se déclenche dans la fenêtre de sa face, ou change la valeur de ce coup | Pourfendre (Saignement de la moitié des PV que ce coup a retirés, arrondie au-dessus, dès le coup suivant ; 2 avant la 0.107.0) ; Pile ou face (pile : ce coup ×3) ; Soliste (ce coup ×3, une fois par combat) et Crescendo (×2, puis ×1 de plus à chaque fois), dès le jet |
 | **Remplace** | Pas de coup de base : la compétence fournit ses propres coups | Furie des vents (deux coups de base bruts, chacun son dé) |
 
-**Coup de chance garde son identité** (un dé de plus), au plus simple : depuis la 0.107.0, il se greffe, le coup du jet qui le déclenche part ; à sa prochaine action, le porteur lance un jet complet de plus par charge (sa face déclenche sa compétence, puis son coup de base). Aucune règle nouvelle : c'est la greffe, puis l'action à plusieurs jets. De la 0.106.0 à la 0.106.1, il remplaçait le coup : il en faisait perdre un pour en gagner un plus tard (+3 points gravé, Morgrut y perdait).
+**Coup de chance garde son identité** (un dé de plus), au plus simple : depuis la 0.107.0, il se greffe, le coup du jet qui le déclenche part ; à sa prochaine action, le porteur lance un dé de frappe de plus par charge, après son dé de compétence (D5 du retour du 30 octobre, « le Doublé » : un coup de base brut ; sur la face du dé de compétence, Doublé, la compétence de cette face repart). Jusqu'au retour du 30 octobre, chaque dé de plus était un jet complet. De la 0.106.0 à la 0.106.1, il remplaçait le coup : il en faisait perdre un pour en gagner un plus tard (+3 points gravé, Morgrut y perdait).
 
 **Une compétence épuisée laisse sa face nue** (0.107.0, Soliste et Peur, `limit: 1`) : ni étape roll, ni multiplicateur, ni compétence, le coup de base seul. Une compétence qui modifie son coup ne compte un déclenchement que s'il touche : un solo esquivé reste à jouer. **Une compétence qui pose compte son déclenchement même quand la pose est refusée** (décision de l'utilisateur du 2026-10-24, E4 : « c'est le principe de ce genre de jeu ») : une Peur bloquée par une immunité, d'une relique ou d'une compétence, a usé sa fois par combat ; le 1 suivant est une face nue.
 
@@ -321,7 +333,7 @@ Tout effet du jeu appartient à l'une de ces familles. Chacune a son moment de r
 | **Remplacement** | À la place d'un événement, avant qu'il arrive | esquive (le coup n'a pas lieu), esquive imposée, jet remplacé par sa compétence (Furie des vents), bouclier (une partie n'arrive pas), garde et immunité (le statut n'est pas posé), critique assuré | étapes 1, 2, 3 et 8 ; `relation: 'replace'`, `forcesDodge`, `wards`, `immunities` |
 | **Sur le coup** | Dans les fenêtres d'un coup qui touche (ou d'une pile qui touche) : `hit` de l'attaquant, `hurt` du défenseur | Vol de vie (`hit`), Riposte (`hurt`, un renvoi : un coup sans dé, § 3 ter) et jauges de Rétribution (`hurt`), Embrasement (`hit`, phase 8 : il relâche d'un coup la Brûlure de l'adversaire, `release` avec `from: 'opponent'` et `StatusDef.releases` ; sans Brûlure, il attend) | `drainsHit`, `reflectsHit`, `fillsOnHurt`, `reactions` |
 | **Contrôle** | À la place de l'action du porteur | Étourdi | `skipsAction` |
-| **Action multiple** | Pendant l'action du porteur | Furie des vents (deux coups de base bruts, après son jet remplacé), Curée (deux coups de base bruts, après le coup de base de son jet, 0.114.0), Coup de chance et Duo (un jet complet de plus par charge, à la prochaine action ; **au plus 3 jets de plus par action**, `MAX_EXTRA_JETS`, les charges au-delà partent avec les autres ; **un dé de plus ne donne jamais de dé de plus** (retour du 2026-10-28, A7) : sur un jet de rafale après le dé de l'action, une compétence, une réaction ou une relique qui ne donne que des jets de plus ne part pas, sa face est nue. Avant : plafond de 12, et la chaîne faisait lancer 9 dés et plus à Fanchon) | `extraStrikes`, `instantStrikes`, `givesJets` |
+| **Action multiple** | Pendant l'action du porteur | Furie des vents (deux coups de base bruts, après son jet remplacé), Curée (deux coups de base bruts, après le coup de base de son jet, 0.114.0), Coup de chance (un dé de frappe de plus par charge, à la prochaine action, après le dé de compétence ; **Doublé** sur la face du dé de compétence quand elle porte une compétence qui peut partir : la compétence repart, D5 du retour du 30 octobre ; sur une face nue, un dé de frappe ; **au plus 3 dés de plus par action**, `MAX_EXTRA_JETS`, les charges au-delà partent avec les autres ; **un dé de plus ne donne jamais de dé de plus** (retour du 2026-10-28, A7) : sur un Doublé, une compétence, une réaction ou une relique qui ne donne que des dés de plus ne part pas, sa face est nue. Avant : plafond de 12, et la chaîne faisait lancer 9 dés et plus à Fanchon) | `extraStrikes`, `instantStrikes`, `givesJets`, étape `doublet` |
 | **Aura** (permanente) | Pour le reste du combat, sans durée | Aura de puissance (sortant, non cumulable), d'intimidation (entrant), de précision et sauvage (stats : critique ; attaque), glaciale (périodique : pose du Poison sur l'adversaire, 0.69.0) | crochets existants, statut sans `turns` |
 | **Mécanisme de compétence** (2026-10-21) | Statut qui porte la règle d'une compétence ou d'une forme (`StatusDef.mechanic` : `skill` pour les jauges de Rétribution, Pile ou face, Furie des vents, la Curée, l'Embrasement et le Dé pipé (phase 8) ; `form` pour Incantation et Force de l'ours, posés tant que le personnage garde la forme). Jamais purgé, jamais bloqué (immunité, garde, opposition), jamais compté comme bonus ou malus dans les statistiques ; le compendium le présente comme une mécanique de sa compétence | Rétribution, Furie des vents, Incantation, Dé pipé (`loadsCoin` : sa prochaine pièce tombe sur pile) | `StatusDef.mechanic`, `isMechanic`, `CharacterForm.statuses` |
 
@@ -403,7 +415,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Aura d'immunité | Posée sur un 3 : les malus du paladin sont d'abord purgés, puis toute pose de malus est bloquée (« protégé par Aura d'immunité »), sans usure. Une Purification adverse peut retirer l'aura. |
 | Peur contre Furie des vents ou Pile ou face | La peur fait perdre l'action entière. La Furie, instantanée depuis la 0.50.0, ne peut pas se faire voler son action : elle frappe dans celle où elle est posée. La pièce non plus depuis le 2026-10-21 : elle part juste après le coup qui la pose. |
 | Purification contre une aura cumulée | Le dernier bonus posé part avec toutes ses charges : une Aura de poison à 3 charges disparaît d'un coup. Un Vol de vie en attente peut aussi être purifié ; une Furie ou les jauges de Rétribution, mécanismes de compétence, jamais. |
-| Coup de chance : le jet qui le pose, puis l'action suivante | Greffe (0.107.0 ; il remplaçait le coup avant) : le coup du 1 part. À sa prochaine action, la voleuse lance un jet complet de plus par charge : chaque face déclenche sa compétence (un nouveau Coup de chance se garde pour la suivante), puis son coup de base. |
+| Coup de chance : le jet qui le pose, puis l'action suivante | Greffe (0.107.0 ; il remplaçait le coup avant) : le coup du 1 part. À sa prochaine action, la voleuse lance son dé de compétence (un jet complet), puis un dé de frappe de plus par charge : chacun un coup de base brut, sans compétence. Un dé de frappe sur la face du dé de compétence, si cette face porte une compétence qui peut partir, fait un Doublé : la compétence repart, puis son coup. Sur une face nue, ou sur la face de Coup de chance (elle ne donne que des dés de plus, A7), il reste un dé de frappe. Jusqu'au retour du 30 octobre, chaque dé de plus déclenchait la compétence de sa face. |
 | Pile ou face et Aura de décoction | Le coup du 2 (le 1 jusqu'à la 0.112.0) touche : la pièce part. Pile : ce coup ×3, encore deux fois les PV retirés par ce coup, qui comptent comme un coup qui touche : la décoction empoisonne aussi juste après la pièce. Face, ou coup esquivé : rien de plus. |
 | Aura de sainteté et poison | Le poison agit au début du tour du porteur, la sainteté à sa fin : la prêtresse empoisonnée perd puis regagne dans le même tour. |
 | Aura de précision et Œil de faucon | Le critique assuré utilise le multiplicateur effectif : ×3,4 pour Elaria. Chaque charge ajoute aussi 5 % de critique (0.107.0). |
@@ -416,7 +428,7 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Régénération et Brûlure | La Régénération agit au début du tour, la Brûlure à la fin. |
 | Barde : un 2 (le Duo), puis un 2 et un 5 | Le 2 : une charge de Duo, greffée (trois du 2026-10-27 au 2026-10-28, A11 ; depuis le 2026-10-27, sa signature sur le 2 ; jusque-là sur le 1, +1 Aura mélodieuse et une charge) ; le coup de ce 2 part. À sa prochaine action, le Duo part : une rafale de jets complets (deux dés ; trois au rang II), dans l'ordre ; le 2 de la rafale, un dé de plus, est une face nue (A7, 2026-10-28) ; le 5, une face nue, ne porte que son coup de base. Chaque coup a sa valeur tirée, son esquive et son critique ; les reliques de face et la dorure lisent chaque dé seul. |
 | Barde : un 2 dans la rafale du Duo | Depuis le 2026-10-28 (A7) : un dé de plus ne donne jamais de dé de plus. Le 2 d'un dé de plus est une face nue (son coup part, sans Duo) ; la Veine et la Pièce trouée ne donnent rien sur un dé de plus. Seul le dé de l'action pose un Duo pour l'action suivante. Jusqu'au 2026-10-28, ce 2 posait un nouveau Duo : deux 2 dans une rafale, sept dés à l'action suivante. |
-| Barde : le Duo et Coup de chance (gravé) posés ensemble | Un seul statut de jets de plus part par action : le premier posé ; l'autre attend l'action suivante. |
+| Barde : le Duo et Coup de chance (gravé) posés ensemble | Le Duo frappe en coups bruts depuis la refonte des auras (2026-10-28) : il part juste après le jet qui le pose ; Coup de chance attend la prochaine action. |
 | Aura mélodieuse contre Aura d'intimidation (1) et armure 1 (jusqu'au 2026-10-27, l'aura a quitté le jeu) | Dégâts finaux (`modifyFinal`) : appliqués après tout le reste. Un 3 devient 3 − 2 = 1, l'armure laisse 1 (plancher), puis +1 : 2. C'était la réponse de la barde aux réductions fixes par coup. |
 | Fausse note (1 charge) contre une Furie des vents | Le premier coup qui touche perd 5 dégâts finaux, après l'armure (plancher à 1), et consomme toute la Fausse note ; le second est normal. Un coup esquivé ne la consomme pas. |
 | Fausse note (1) et Aura mélodieuse (1) sur le même coup de 3 après l'armure (jusqu'au 2026-10-27) | Dégâts finaux additionnés : 3 − 5 + 1 = −1, puis le plancher : 1, quel que soit l'ordre de pose (0.110.0). |

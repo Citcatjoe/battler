@@ -3,7 +3,8 @@ import tournamentImg from '../assets/menu-tournament.jpg'
 import { multiplier, percent } from '../game/combat'
 import { DIE_FACES } from '../game/events'
 import { CHARACTER_IDS, CHARACTERS } from '../game/roster'
-import { BRACKET_SEEDS, buildRewards, SEASON_SIZES, type SeasonSize } from '../game/season'
+import { buildRewards } from '../game/offers'
+import { BRACKET_SEEDS, SEASON_SIZES, type SeasonSize } from '../game/season'
 import { sfx } from '../game/sound'
 import { fillSlots, SLOTS } from '../game/tournament'
 import { Bracket } from './Bracket'
@@ -27,7 +28,7 @@ interface Props {
   /** Système de reliques pour ce tournoi (docs/RELIQUES.md) ; le choix reste pour le tournoi suivant */
   relics: boolean
   onRelicsChange: (relics: boolean) => void
-  /** Forge du dé pendant la construction de la saison (season.ts) ; sans saison, l'interrupteur est éteint */
+  /** Forge du dé dans la construction des participants (saison, ou acte tiré au lancement de l'arbre seul) */
   forge: boolean
   onForgeChange: (forge: boolean) => void
   /** Noms uniques : une épithète du personnage par participant, au lieu des chiffres romains (epithets.ts) */
@@ -190,7 +191,7 @@ export function TournamentSetupScreen({
   const summary = [
     season.enabled ? `Saison de ${season.size}, aller-retour (${seasonMatches} matchs)` : `Arbre de ${SLOTS}, sans saison`,
     relics && 'reliques',
-    forge && season.enabled && 'forge du dé',
+    forge && 'forge du dé',
     uniqueNames && 'noms uniques',
     betting.enabled && `paris entre ${betting.names[0]} et ${betting.names[1]}`,
   ]
@@ -277,9 +278,9 @@ export function TournamentSetupScreen({
                 <p className="mt-1 font-body text-[15px] leading-snug text-ink-2">
                   {season.enabled
                     ? `${build ? `${build}. ` : ''}Les ${SLOTS} premiers entrent dans l'arbre en têtes de série.`
-                    : relics
-                      ? 'Chaque victoire de l’arbre offre au vainqueur une relique à sa portée (hors finale).'
-                      : 'Personne ne gagne ni ne porte de relique.'}
+                    : build
+                      ? `${build}.`
+                      : 'Ni relique ni forge du dé : chacun part de son dé d’origine.'}
                 </p>
               </div>
               <Button
@@ -358,16 +359,19 @@ type OptionProps = Pick<
 >
 
 /**
- * La construction de la saison, en une phrase (season.ts : une récompense par match, aux premiers matchs de chacun,
- * l'ordre d'un acte de campagne) ; vide sans saison, ou sans reliques ni forge.
+ * La construction des participants, en une phrase (offers.ts, `buildRewards` : l'ordre d'un acte de campagne, réduit
+ * aux sortes activées) : avec la saison, une récompense à chacun de ses premiers matchs (season.ts) ; sans elle, l'acte
+ * complet tiré au lancement (tournament.ts, `createTournament`, D1). Vide sans reliques ni forge.
  */
 function buildText(seasonOn: boolean, relics: boolean, forge: boolean): string {
-  const rewards = seasonOn ? buildRewards({ relics, forge }) : []
+  const rewards = buildRewards({ relics, forge })
   if (rewards.length === 0) return ''
   const forges = rewards.filter((k) => k === 'forge').length
   const relicCount = rewards.length - forges
   const list = [forges && `${forges} forges du dé`, relicCount && `${relicCount} reliques`].filter(Boolean).join(' et ')
-  return `Une récompense à chacun des ${rewards.length} premiers matchs de chaque combattant, gagné ou perdu (${list}), puis son build est figé`
+  return seasonOn
+    ? `Une récompense à chacun des ${rewards.length} premiers matchs de chaque combattant, gagné ou perdu (${list}), puis son build est figé`
+    : `Chacun entre dans l'arbre construit d'un acte complet (${list}), tiré au lancement, puis figé`
 }
 
 /**
@@ -424,21 +428,16 @@ export function TournamentOptions({
       id: 'forge',
       label: 'Forge du dé',
       states: ['Activée', 'Désactivée'],
-      on: forge && season.enabled,
+      on: forge,
       onToggle: () => onForgeChange(!forge),
-      unavailable: season.enabled ? undefined : 'Avec la saison',
-      title: !season.enabled
-        ? 'La forge du dé se gagne pendant la phase de saison : activez-la d’abord'
-        : forge
-          ? build
-          : 'Saison sans forge du dé : chacun garde son dé d’origine',
+      title: forge ? build : 'Sans forge du dé : chacun garde son dé d’origine',
       // Une face gravée du dé (le cadre arcane de la forge), éteinte quand la forge est coupée
       visual: (
         <span
           className="forge-face shrink-0"
           data-size="sm"
-          data-engraved={forge && season.enabled ? '' : undefined}
-          style={{ width: 36, height: 36, opacity: forge && season.enabled ? 1 : 0.45 }}
+          data-engraved={forge ? '' : undefined}
+          style={{ width: 36, height: 36, opacity: forge ? 1 : 0.45 }}
         >
           {DIE_FACES}
         </span>
@@ -451,11 +450,7 @@ export function TournamentOptions({
       states: ['Activées', 'Désactivées'],
       on: relics,
       onToggle: () => onRelicsChange(!relics),
-      title: !relics
-        ? 'Tournoi sans reliques : personne n’en gagne ni n’en porte'
-        : season.enabled
-          ? `${build} ; l'arbre n'en donne plus`
-          : 'Chaque victoire de l’arbre offre au vainqueur une relique à sa portée (hors finale)',
+      title: !relics ? 'Tournoi sans reliques : personne n’en reçoit ni n’en porte' : `${build} ; l'arbre n'en donne plus`,
       visual: <TileGlyph name="relique" on={relics} />,
     },
     {
@@ -528,7 +523,7 @@ export function TournamentOptions({
       <p className="mt-5 font-body text-[16px] leading-snug text-ink-2">
         {season.enabled
           ? `${season.size} combattants tirés au sort, aller-retour (${seasonMatches} matchs). ${build ? `${build}. ` : ''}Les ${SLOTS} premiers entrent dans l'arbre en têtes de série.`
-          : `L'arbre seul : ${SLOTS} cases, placées à la main. Pas de forge du dé sans saison.`}
+          : `L'arbre seul : ${SLOTS} cases, placées à la main.${build ? ` ${build}.` : ''}`}
       </p>
     </section>
   )

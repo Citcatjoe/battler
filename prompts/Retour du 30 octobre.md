@@ -165,3 +165,9 @@ INTERFACE
 
 
 Je le repete, cette version est du bon boulot, et j'aimerais aller plus loin dans cette direction, peaufiner les interaction, compléter les perso/build/orientation un peu creuses. ajouter un peu de contenu, clarifier la lisibilité des combat. etc etc... peut -tu considérer tout ceci, déleguer les agent nécessaire et entatmons ensemble une nouvelle passe de tuning, contenu, fun
+
+
+
+
+
+
