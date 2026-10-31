@@ -691,11 +691,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
     labels = []
   }
   /**
-   * Empile un label sous le dé (une seule fois par libellé pour un même jet) et joue le son de son signe. Un label encore
-   * à l'écran, remplacé mais pas encore parti, sert au nouveau coup : il reste, son heure de départ est oubliée.
+   * Empile un label sous le dé (une seule fois par libellé pour un même jet) et joue le son de son signe, ou le son
+   * propre qui le remplace (`cue` : le Doublé, SONS.md § 4.4). Un label encore à l'écran, remplacé mais pas encore parti,
+   * sert au nouveau coup : il reste, son heure de départ est oubliée.
    */
-  const addSpecial = (spec: SpecialSpec) => {
-    sound(SPECIAL_SIGNS[spec.sign as SpecialSign].cue)
+  const addSpecial = (spec: SpecialSpec, cue: SfxName = SPECIAL_SIGNS[spec.sign as SpecialSign].cue) => {
+    sound(cue)
     if (labels.some((l) => l.label === spec.label)) return
     const shown = leaving.some((l) => l.label === spec.label)
     leaving = leaving.filter((l) => l.label !== spec.label)
@@ -1911,8 +1912,9 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       }
       case 'doublet': {
         // Le Doublé (D6 du retour du 30 octobre) : le dé de frappe posé fait la face du dé de compétence. Les deux dés
-        // s'allument en or, le dé de frappe devient un dé de compétence, « Doublé ! » sous les dés (son signe sonne) ; le
-        // temps de le lire, puis le jet complet qui suit relance la compétence de la face (étapes `roll`, `attack`)
+        // s'allument en or, le dé de frappe devient un dé de compétence, « Doublé ! » sous les dés, avec son son propre au
+        // lieu du ding de son signe (SONS.md § 4.4) ; le temps de le lire, puis le jet complet qui suit relance la
+        // compétence de la face (étapes `roll`, `attack`)
         const volley = volleys.at(-1)
         const index = volley ? volley.strikes.findIndex((id) => id > beat.id) : -1
         if (volley && index > 0) {
@@ -1921,7 +1923,7 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           patchDice({ kinds, golden: [0, index], active: index })
           volley.dice = { ...volley.dice, kinds, golden: [0, index] }
         }
-        addSpecial(DOUBLET_SPECIAL)
+        addSpecial(DOUBLET_SPECIAL, 'doublet')
         log(doubletLog(beat.turn, beat.side, beat.roll, fighters))
         hold('LABEL_READ')
         break

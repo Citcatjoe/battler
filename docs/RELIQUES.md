@@ -839,3 +839,15 @@ Toutes dans la bande (5 à 15, 20 au plus) chez leurs hôtes ; Dé de joueur et 
 - **Cotte du mercenaire** (+1 armure, −5 % d'esquive : +12,4, Morgrut +19,4). **+2 armure, −10 % d'esquive, −8 PV max : +8,9** (Elaria −0,8, Morgrut +18,9). Écartés : +2 armure, −10 % d'esquive, −10 % de critique, +15,1 (Morgrut +32,7) ; +2 armure, −2 à l'attaque, −3,4 (Elaria −30,2).
 - **Gambison matelassé** (+15 PV, −1 à l'attaque : +12,3, Elaria −1,0, Naraxes +20,2). **+8 PV max, −5 % d'esquive : +13,0** (Elaria +7,6, Morgrut +20,6) ; +6 PV seuls : +14,5 (Brokk +17,6), sans contrepartie. Écartés : +15 PV −5 % de critique, +23,7 ; +12 PV −5 % d'esquive, +19,5 ; +20 PV −2 à l'attaque, −0,1 (Elaria −27,9) ; +10 PV −10 % de critique, +12,3 (Morgrut +23,9).
 - **Contrepoids de plomb** (+1 au multiplicateur de critique, −4 % : +6,8). +2 au multiplicateur, −10 % de critique : +1,6 (Gorak −6,9). Le pas du multiplicateur est 1 : proposition, le dire en valeur atteinte (« ses critiques ×3 au lieu de ×2 »), le porteur connu à l'écran de la relique.
+
+### 19.4 Les reliques à « 1 », tranchées (0.135.0, décision ouverte 6)
+
+Mesures : 400 combats par duel, contre le roster nu, mêmes graines (banc jetable, méthode de `npm run relics`).
+
+| Relique | Avant → après | Apport moyen avant → après | Plus faible / plus fort après |
+| --- | --- | --- | --- |
+| Cotte du mercenaire | +1 armure, −5 % d'esquive → **+2 armure, −10 % d'esquive, −8 PV max** | +12,4 → +8,9 | Elaria −1,1 / Morgrut +18,9 |
+| Gambison matelassé | +15 PV max, −1 à l'attaque → **+7 PV max, −5 % d'esquive** | +12,3 → +11,3 | Elaria +6,2 / Morgrut +18,3 |
+| Contrepoids de plomb | inchangé (multiplicateur +1, −4 % de critique), texte : « Critiques ×3 au lieu de ×2 » | +6,8 | Gorak +3,0 / Ervald +13,2 |
+
+Gambison : la proposition à +8 PV mettait Morgrut à +20,6 (sans esquive, il ne paie rien) ; +7 PV le ramène à +18,3 (+6 PV : +9,6 en moyenne, Morgrut +16,7). Contrepoids : le texte dit la valeur atteinte sur le multiplicateur commun de ×2 ; Elaria et Aldric (×2,2) et Naraxes (×2,5) gagnent le même cran. Une relique à trois parts se lit « a, b et c » (`describeRelic`).

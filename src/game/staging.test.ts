@@ -1923,6 +1923,10 @@ describe('retour du 2026-10-30 : le rythme du combat', () => {
         expect(label, `étape ${beat.id}`).toBeDefined()
         const gold = m.cues.find((c) => c.channel === 'dice' && c.at === label!.at && c.dice.golden)
         expect(gold?.channel, `étape ${beat.id}`).toBe('dice')
+        // Son propre (SONS.md § 4.4) : deux dés qui s'entrechoquent et un tintement doré, au lieu du ding de son signe
+        const cues = at(m, 'sound', label!.at).map((c) => c.channel === 'sound' && c.cue)
+        expect(cues, `étape ${beat.id}`).toContain('doublet')
+        expect(cues, `étape ${beat.id}`).not.toContain('coinWin')
         if (gold?.channel !== 'dice') continue
         const [skillDie, doubled] = gold.dice.golden!
         expect(skillDie).toBe(0)

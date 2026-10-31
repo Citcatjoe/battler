@@ -29,7 +29,7 @@ let speed = 1
  * ligne : les sons de pose par famille (2026-10-25, `FAMILY_CUES`, cues.ts).
  */
 export const SOUND_NAMES = [
-  'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win',
+  'dice-roll', 'dice-land', 'coin-toss', 'coin-land', 'coin-win', 'doublet',
   'hit', 'crit-rumble', 'dodge',
   'aura-gain', 'aura-loss', 'buff', 'debuff', 'dispel', 'stun', 'rot', 'fizz', 'heal',
   'power-up', 'power-down', 'guard-up', 'guard-down', 'precision-up', 'precision-down', 'evasion-up', 'evasion-down',
@@ -69,6 +69,7 @@ const MIX: Record<SoundName, number> = {
   'coin-toss': LEVEL[4],
   'coin-land': LEVEL[2],
   'coin-win': LEVEL[2],
+  doublet: LEVEL[2],
   hit: LEVEL[2],
   'crit-rumble': LEVEL[1],
   dodge: LEVEL[3],
@@ -441,6 +442,15 @@ export const sfx = {
   coinWin() {
     if (play('coin-win')) return
     ;[1318.5, 2637, 3640].forEach((f, i) => tone({ freq: f, dur: 0.8 - i * 0.2, type: 'sine', gain: 0.18 / (i + 1) }))
+  },
+  /**
+   * Doublé : deux dés qui s'entrechoquent, puis un tintement doré plus aigu que le ding de Pile réussie (2 100 et
+   * 2 650 Hz contre 1 318). Il remplace le ding du label « Doublé ! » à cet instant (`docs/SONS.md` § 4.4).
+   */
+  doublet() {
+    if (play('doublet')) return
+    tone({ freq: 2100, dur: 0.6, type: 'sine', gain: 0.16 })
+    tone({ freq: 2650, dur: 0.45, type: 'sine', gain: 0.08 })
   },
 
   /** Coup : des dégâts portés par un coup, quelle qu'en soit la source. */

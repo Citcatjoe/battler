@@ -162,8 +162,9 @@ export const RELICS: readonly Relic[] = [
     name: 'Cotte du mercenaire',
     flavor: 'Une cotte de mailles roulée en boule, rapiécée d’anneaux plus clairs. Elle arrête les coups, et les pas.',
     tier: 'trinket',
-    // Retour du 30 octobre (D11) : +2 armure et −10 % d'esquive mesurés +23,3 (Morgrut +33,4), hors bande ; gardée, signalée
-    stats: { armor: 1, dodgeChance: -0.05 },
+    // Retour du 30 octobre (D11, décision ouverte 6) : +2 armure, −10 % d'esquive et −8 PV, des chiffres de 2 ou plus. Nu,
+    // 400 par duel : +12,4 (Elaria +6,6, Morgrut +19,4) → +8,9 (Elaria −1,1, Morgrut +18,9)
+    stats: { armor: 2, dodgeChance: -0.1, maxHp: -8 },
   },
   /* Coup : des objets de hasard, qui portent la face qui les éveille */
   {
@@ -370,8 +371,10 @@ export const RELICS: readonly Relic[] = [
     name: 'Gambison matelassé',
     flavor: 'Un gambison de lin épais, piqué de losanges, raide de vieille sueur. Il encaisse tout, et pèse au bras.',
     tier: 'trinket',
-    // Retour du 30 octobre (D11) : +25 PV et −2 à l'attaque mesurés +6,5 (Elaria −22,7, Naraxes +23,3) ; gardé, signalé
-    stats: { maxHp: 15, attackMin: -1, attackMax: -1 },
+    // Retour du 30 octobre (D11, décision ouverte 6) : +7 PV et −5 % d'esquive au lieu de +15 PV et −1 à l'attaque (le
+    // « 1 »). Nu, 400 par duel : +12,3 (Elaria −1,0, Naraxes +20,2) → +11,3 (Elaria +6,2, Morgrut +18,3) ; à +8 PV,
+    // Morgrut +20,6, au-delà de 20 (sans esquive, il ne paie rien)
+    stats: { maxHp: 7, dodgeChance: -0.05 },
   },
   {
     id: 'bonesetter-salve',
@@ -735,7 +738,9 @@ const STAT_TEXT: Record<keyof CharacterStats, (v: number) => string> = {
   armor: (v) => `${signed(v)} armure (${signed(-v)} dégât${Math.abs(v) > 1 ? 's' : ''} par coup reçu)`,
   dodgeChance: (v) => `${signed(Math.round(v * 100))} % d'esquive`,
   critChance: (v) => `${signed(Math.round(v * 100))} % de critique`,
-  critMultiplier: (v) => `${signed(v).replace('.', ',')} au multiplicateur de critique`,
+  // Contrepoids de plomb (retour du 30 octobre, décision ouverte 6) : la valeur atteinte plutôt qu'un « +1 » (D11), sur le
+  // multiplicateur commun de ×2 (Elaria et Aldric partent de ×2,2, Naraxes de ×2,5 : ils gagnent le même cran)
+  critMultiplier: (v) => `critiques ×${String(2 + v).replace('.', ',')} au lieu de ×2`,
 }
 
 /** Un statut-règle (refonte des auras) : ni mécanisme ni compteur de charges, une seule charge, il dure (ou non) des tours. */
@@ -863,7 +868,7 @@ function momentOf(r: Relic): string {
       case 'initiative':
         return "sans jet d'initiative"
       case 'startAura':
-        return 'dès le début de son 1er tour (au lieu du 3e au plus tard)'
+        return 'dès le début de son 1er tour (au lieu du 3e au plus tard, ou du 2e aiguisée)'
       case 'bareFace':
         return 'quand il tombe sur une face sans compétence'
     }
@@ -897,7 +902,7 @@ export interface RelicDescription {
 /** La seule rédaction d'une relique : infobulle, compendium, écran de récompense, trace et rapports la lisent. */
 export function describeRelic(r: Relic): RelicDescription {
   const t = r.trigger
-  const effect = [
+  const parts = [
     ...Object.entries(r.stats ?? {}).map(([k, v]) => STAT_TEXT[k as keyof CharacterStats](v)),
     // Le plafond des pièces (`HEADS_CAP`, 5 sur 6) dit avec la chance : sans lui, « +25 % » laissait attendre pile à coup sûr
     r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile à ses pièces (5 sur 6 au plus)` : '',
@@ -915,9 +920,9 @@ export function describeRelic(r: Relic): RelicDescription {
     ...(r.effects ?? []).map((e) =>
       effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'critHurt' || t.on === 'dodge' || t.on === 'shieldBroken'), r.charges === 1 && t?.type === 'turn' && t.turn === 1),
     ),
-  ]
-    .filter(Boolean)
-    .join(' et ')
+  ].filter(Boolean)
+  // Trois parts et plus (Cotte du mercenaire) : « a, b et c »
+  const effect = parts.length > 2 ? `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}` : parts.join(' et ')
   // Une relique qui revient de tour en tour : son rythme après une virgule (« +3 PV, tous les 4 tours » ; la Focale :
   // « fait +2, pendant 2 tours, au 1er tour, puis tous les 4 tours »)
   const recurring = t?.type === 'turn' && r.charges === undefined

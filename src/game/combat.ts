@@ -6,7 +6,6 @@ import { chance, defaultRng, rollDie, seededRng, type Rng } from './rng'
 import {
   BLIND_MISS,
   COIN_RANK_HEADS,
-  charges,
   consumeStatus,
   directDamage,
   givesJets,
@@ -37,8 +36,9 @@ import {
  *   Chaque tour, pour le joueur actif (l'attaquant) :
  *     Phase 1 · Début de tour : effets `onTurnStart` (bonus, puis malus) → durées « début »
  *               → fenêtre « turnStart »
- *               → au 3e tour de son porteur, l'aura de départ absente se pose d'office (déclencheur `auraDue`) ; dissipée,
- *                 elle revient de même au début du 2e tour suivant de son porteur (le rendez-vous réarmé, D8)
+ *               → au 3e tour de son porteur (le 2e, aiguisée), l'aura de départ absente se pose d'office (déclencheur
+ *                 `auraDue`) ; dissipée, elle revient de même au début du 2e tour suivant de son porteur (le rendez-vous
+ *                 réarmé, D8)
  *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un jet, ou plusieurs (Coup de chance, Duo),
  *               et des coups instantanés (Furie des vents). Un jet : le d6 désigne une face ; sa compétence se
  *               greffe (étape roll, la compétence, puis le coup de base), modifie le coup (il part, elle suit s'il
@@ -747,9 +747,9 @@ interface FighterState {
   /** Reliques de seuil déjà déclenchées sous leur seuil : elles se réarment quand les PV remontent au-dessus */
   relicBelow: Set<string>
   /**
-   * Aura de départ : le tour de son porteur où elle se pose d'office si elle est absente (son rendez-vous). Le 3e tour, une
-   * fois ; passé (posée d'office, ou déjà là), plus aucun, jusqu'à ce qu'on la lui dissipe : le rendez-vous se réarme au
-   * 2e tour suivant (D8, retour du 30 octobre)
+   * Aura de départ : le tour de son porteur où elle se pose d'office si elle est absente (son rendez-vous). Le 3e tour (le
+   * 2e, aiguisée : `auraDueTurn`), une fois ; passé (posée d'office, ou déjà là), plus aucun, jusqu'à ce qu'on la lui
+   * dissipe : le rendez-vous se réarme au 2e tour suivant (D8, retour du 30 octobre)
    */
   auraDueAt: number
 }
@@ -758,6 +758,12 @@ interface FighterState {
 export const AURA_DUE_TURN = 3
 /** Dissipée, l'aura de départ revient au début de ce tour de son porteur après la dissipation (le 2e ; D8) */
 export const AURA_REARM_TURNS = 2
+
+/**
+ * Le premier rendez-vous de son aura de départ : le 3e tour, le 2e si elle est aiguisée (axe `due`, retour du 30 octobre :
+ * une règle pour toutes les auras), le 1er au rang III (le journal seul ; la partie s'arrête au rang II).
+ */
+export const auraDueTurn = (f: Character) => startAuraOf(f)?.event.dueTurn ?? AURA_DUE_TURN
 
 /**
  * L'aura de départ d'un combattant : la compétence de la face 1 de son dé, si c'est une aura (elle ne pose qu'une aura
@@ -822,7 +828,7 @@ export function simulateCombat(
       relicUses: {},
       relicReady: {},
       relicBelow: new Set(),
-      auraDueAt: AURA_DUE_TURN,
+      auraDueAt: auraDueTurn(f),
     }),
   ) as Pair<FighterState>
   const beats: Beat[] = []
@@ -1734,7 +1740,7 @@ export function simulateCombat(
     // plafonné à 5 sur 6 (`HEADS_CAP`). Un seul tirage dans tous les cas : la suite du hasard ne change pas (sans relique,
     // aura ni rang, le tirage est celui du d2)
     const ranked = toss.multiplier === undefined ? (coin.power ?? 0) * COIN_RANK_HEADS : 0
-    const fromStatuses = base[side].reduce((p, s) => p + (STATUSES[s.id].headsChance ?? 0) * charges(s), ranked)
+    const fromStatuses = base[side].reduce((p, s) => p + (STATUSES[s.id].headsChance ?? 0) * s.stacks, ranked)
     const bias = fighters[side].relics.reduce((p, r) => p + (r.headsChance ?? 0), fromStatuses)
     const heads = forceRoll(rng() < Math.min(HEADS_CAP, 0.5 + bias) ? 1 : 2, 2, forced) === 1
     // Aiguisée (0.110.0) : son intensité monte le multiplicateur de pile
@@ -1878,10 +1884,11 @@ export function simulateCombat(
       down = fireEvent(attacker, herald.event, 'auraDue', call)
       if (down !== undefined) return end(other(down), 'ko')
     }
-    // L'aura de départ au rendez-vous (2026-10-27, AURAS.md § 2) : au début de son 3e tour, après ses statuts et ses
-    // reliques de tour, avant son action, si sa compétence de la face 1 n'a pas posé son aura (ou qu'on la lui a
-    // retirée), elle part comme sur un 1. Passé, le rendez-vous ne revient que si on lui dissipe son aura : au début de son
-    // 2e tour suivant (D8, `auraDueAt`). Sous l'autre forme (le druide), au tour suivant
+    // L'aura de départ au rendez-vous (2026-10-27, AURAS.md § 2) : au début de son 3e tour (son 2e, aiguisée : retour du 30
+    // octobre, `auraDueTurn`), après ses statuts et ses reliques de tour, avant son action, si sa compétence de la face 1
+    // n'a pas posé son aura (ou qu'on la lui a retirée), elle part comme sur un 1. Passé, le rendez-vous ne revient que si
+    // on lui dissipe son aura : au début de son 2e tour suivant (D8, `auraDueAt`). Sous l'autre forme (le druide), au tour
+    // suivant
     const due = att.turnsTaken < att.auraDueAt ? undefined : startAuraOf(fighters[attacker])
     if (due && inForm(attacker, due.event)) {
       att.auraDueAt = Infinity

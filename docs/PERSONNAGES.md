@@ -1301,6 +1301,14 @@ Roster nu (premier départ) : de 45,2 % (Morgrut) à 54,5 % (Thaldrin) ; pire du
 
 **Les rangs II d'aura au départ** sont presque tous au-dessus de +8 (de +6,4, Vindicte, à +17,6, Épines) : le plus petit pas entier d'une aura de kit est son moteur entier aiguisé. Le Cuir épais (+23,5) est ramené à +14,2 ; les autres, dont les Épines (+17,6 ; +11,4 construites) et l'Aura de poison (+16,3 ; +12,9 construite), sont signalés (proposition : [SORTS.md](SORTS.md) § 34).
 
+## Décisions ouvertes du 30 octobre, tranchées (0.135.0, agent Reglages)
+
+Mesures et tableaux : [SORTS.md](SORTS.md) § 35 ; reliques : [RELIQUES.md](RELIQUES.md) § 19.4. Aucune fiche ne change.
+- **Rangs d'aura** : aiguisée, l'aura de départ arrive au 2e tour au lieu du 3e. Rang II au départ de +4,3 (Orage) à +11,7 (Épines) au lieu de +6,4 à +17,6 ; construit de +2,4 à +8,3.
+- **Défi** (Rempart, gravé chez Brokk, Aldric, Morgrut) : s'il touche, deux fois par combat. Gravé nu +17,4 à +19,9 (avant +19,3 à +22,3), construit +9,7 à +14,5, rang II +3,3 à +4,8.
+- **Éclair aveuglant** (Ysolde, Thaldrin, Fanchon) : Aveuglé 3 tours. Ysolde gravée +16,4 → +13,3 nu, +14,6 → +12,0 construite (32 builds).
+- **Aura de rancœur** : aucun porteur évident (Brokk : 51,7 % nu mais −8 à −11 points construit ; Aldric : 62,3 %, 72/28 contre Brokk ; Morgrut : +2,4 nu, +2,0 construit contre le Cuir épais, mais retirée par D19). Elle reste hors jeu.
+
 ## Ajouter un personnage : check-list de design
 
 - [ ] Sa personnalité, en trois points (qui il est, comment il se bat, pistes), écrite avant ses compétences : voir « Personnalité ».

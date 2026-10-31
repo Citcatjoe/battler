@@ -40,6 +40,7 @@ Intensité : **1** fort, **2** appuyé, **3** moyen, **4** discret. Les 16 sons 
 | | Pièce lancée | Pile ou face : la pièce tournoie en l'air | pièce qui tournoie, léger et en retrait : le résultat doit se détacher | 4 | 1 à 1,5 s, coupé quand elle retombe |
 | | Pièce retombe | le résultat de la pièce est là, pile comme face | pièce qui claque net sur une table, plus fort que le lancer | 2 | 0,2 à 0,6 s |
 | | Pile réussie (Ding) | une bonne nouvelle : la pièce est tombée sur pile, ou un label + (qui amplifie l'action de l'attaquant) tombe sous le dé (2026-10-21, § 4.4) | « ding » clair et net : juste après la pièce qui retombe, ou avec le label | 2 | 0,5 à 0,8 s |
+| | Doublé | un dé de frappe fait la face du dé de compétence, et la compétence repart (étape `doublet`, 2026-10-31) : le label « Doublé ! » | deux dés qui s'entrechoquent, puis un tintement doré plus aigu que le ding (2 100 et 2 650 Hz contre 1 318) ; il remplace le ding du label à cet instant | 2 | 0,6 à 0,8 s |
 | **Coups** | Coup | des dégâts portés par un coup, quelle qu'en soit la source | frappe d'épée, bruit métallique net | 2 | 0,3 à 0,4 s |
 | | Coup critique (composé) | un coup critique, le coup de Pile, le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts ou plus (la Rétribution, qui relâche la moitié de ses jauges en un coup) | **Coup + Grondement**, joués ensemble | 1 | celle du Grondement |
 | | *Grondement* | couche du Coup critique, jamais jouée seule | gros choc grave qui résonne | 1 | 0,6 à 0,9 s |
@@ -151,10 +152,11 @@ Un label (badge sous le dé : « Critique ×2 », « Armure temporaire −6 », 
 4. **Jamais deux fois le même son au même instant** : plusieurs labels qui tombent ensemble (Critique assuré et Critique ; Armure temporaire et Fausse note) jouent un seul son par signe.
 5. **Pas de doublon de signification** : un label dont l'effet joue déjà le son de son signe dans la même frappe se tait (déduit : le son des effets, `cueOf`, est celui du signe). Ce fut le cas des Épines acérées (−) et du Malus reçu du Saignement qu'elles posent, jusqu'à la 0.118.1 : en aura, elles n'ont plus de label du tout. Depuis les sons de famille (2026-10-25), un malus posé ne joue plus Malus reçu : s'il tombait avec un label −, les deux sonneraient (le signe, puis la famille). Aucun cas aujourd'hui : aucun label − ne pose de malus.
 6. **Pas de label pour une réaction refusée** (0.110.0) : une réaction dont aucun effet n'a de résultat (les Épines acérées contre une Aura d'immunité : « Saignement résisté ») n'a ni label ni son ; seul son texte neutre s'affiche (règle 8 du § 4.2, `MISE_EN_SCENE.md` M25).
+7. **Exception, le Doublé** (2026-10-31, demande de l'utilisateur sur la proposition D6 du retour du 30 octobre) : son label + sonne le **Doublé** (§ 3) à la place du ding. Le Doublé, la compétence d'une face qui repart au milieu d'une rafale, a son son à lui, qui dit le même signe (+), plus haut et avec les dés. Tout autre label garde le son de son signe.
 
 Hors de la colonne, donc sans son de label : Pile ou face, la Furie des vents, Coup de chance, Rétribution, Crescendo et Soliste (ce coup ×N : leur coup sonne, la compétence est muette), les auras. La pièce sur pile garde son propre ding (§ 4.1).
 
-Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe ; `sound` n'émet qu'un son par nom et par instant, ce qui règle à la fois la règle 4 (deux labels du même signe) et la règle 5 (un effet qui joue déjà ce son dans la même frappe).
+Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe, ou le son qui le remplace (second argument, le Doublé seul) ; `sound` n'émet qu'un son par nom et par instant, ce qui règle à la fois la règle 4 (deux labels du même signe) et la règle 5 (un effet qui joue déjà ce son dans la même frappe).
 
 ## 5. Mixage
 
@@ -188,6 +190,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Pièce lancée | `coin-toss`, `sfx.coinToss` | `coin-toss.mp3` | `coin-toss-1` | 1,25 s (source très faible, +38 dB) |
 | Pièce retombe | `coin-land`, `sfx.coinLand` | `coin-land.mp3` | `coin-land-4` | 0,22 s |
 | Pile réussie | `coin-win`, `sfx.coinWin` | `coin-win.mp3` | **généré par l'agent** (0.36.4) : cloche à quatre partiels (1 318, 2 637, 3 640 et 5 274 Hz), décroissance rapide | 0,80 s |
+| Doublé | `doublet`, `sfx.doublet` | `doublet.mp3` | **assemblé par l'agent** (2026-10-31) à partir de deux prises ElevenLabs : voir ci-dessous et `SOURCES.md` | 0,685 s |
 | Coup | `hit`, `sfx.hit` | `hit.mp3` | `hit.wav`, déposé par l'utilisateur (0.36.4) | 0,70 s |
 | Coup critique | `sfx.crit` | Coup + Grondement | | |
 | Grondement | `crit-rumble` | `crit-rumble.mp3` | `crit.wav`, déposé par l'utilisateur (0.36.4) | 1,20 s |
@@ -228,6 +231,18 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Représailles + | `retaliation-up.mp3` | 2 (1 : 154 échantillons à pleine échelle) | 0,57 s | −14,1 |
 | Sceaux − | `seal-down.mp3` | 2 (1 : queue qui ne retombe pas, à −24 dB) | 0,67 s | −15,1 |
 
+**Le Doublé (2026-10-31)** : généré avec ElevenLabs (outil `text_to_sound_effects`, 1,0 s demandée), cinq prises, toutes gardées dans `logs/sons/doublet/`. Aucune ne faisait d'elle-même « deux dés qui s'entrechoquent puis un tintement doré » ; mesures (`ffmpeg`, sans écoute) :
+
+| Prise | Crête | Ce que disent les mesures | Verdict |
+| --- | --- | --- | --- |
+| 1 | −3,3 dBFS | trois clics (0, 50 et 140 ms), puis du souffle à 8-9 kHz ; aucun ton (pic spectral 13 dB au-dessus de la moyenne) ; 0,3 s utiles | écartée : pas de tintement |
+| 2 | −27,2 dBFS | presque muette, bruit de fond à −45 dB sous la crête | écartée |
+| 3 | −33,1 dBFS | **tintement pur** : 2 100 et 2 650 Hz (pic 22 dB au-dessus de la moyenne), mais aucune attaque et une tenue qui ne retombe pas (−12 dB à 0,4 s) | gardée pour le tintement |
+| 4 | 0,0 dBFS | cliquetis continu de 0,8 s à 5-7 kHz, sans ton | écartée : un cliquetis, pas deux chocs |
+| 5 | +2,4 dBFS (inter-échantillon, aucune crête plate) | **deux chocs nets** à 10 et 110 ms (silence à −56 dB entre eux), puis un cliquetis sans ton | gardée pour les deux chocs |
+
+**Assemblage** : les deux chocs de la prise 5 (0 à 0,135 s), puis le tintement de la prise 3, entré à 0,10 s sur le second choc, décroissance exponentielle ajoutée (constante 0,2 s), chacun à −3 dBFS de crête ; puis `process-sounds.py` (fenêtre de 0,8 s, `MAX_DURATION`). **Mesures du fichier du jeu** : 0,685 s, crête −0,9 dBFS, aucune crête plate, **−13,3 LUFS** (Pile réussie : −13,2 ; Bonus gagné : −12,1), RMS −17,0 dB sur toute la durée (Pile réussie −13,0, Dé posé −17,9) ; ton dominant 2 100 Hz, au-dessus du ding (1 325 Hz mesurés). Au niveau 2 dans `MIX`, comme Pile réussie qu'il remplace. **Rien entendu** : à juger à l'oreille par l'utilisateur, en jeu.
+
 ## 8. Décisions de l'utilisateur
 
 | Question | Décision (2026-10-18) |
@@ -256,6 +271,7 @@ Le code : `addSpecial` (`staging.ts`) pose le label et émet le son de son signe
 | Le retour du 2026-10-27 | « Si pile, le son du coup doit devenir le coup normal et pas le son critique » : le coup de pile sonne **Coup** (le ding de la pièce a déjà dit la réussite). « Un son de pièce pour toutes les compétences de type pièce » : toute pièce passe par l'étape `coin` et sonne Pièce lancée, Pièce retombe, Pile réussie sur pile, quel que soit son visuel ; une pièce qui pose un statut sur pile sonne ensuite le son de ce statut, à l'arrivée de son signal. « Duo : synchroniser le ding avec la consommation » : une rafale posée plus tôt (Duo, Coup de chance) s'annonce avec **Pile réussie**, à l'instant où sa charge quitte la zone d'état (choix de l'agent : la consommation était muette ; à confirmer à l'oreille). La Riposte esquivée sonne Esquive. Rétribution : un Coup par jauge, Coup critique sur la dernière (règle des séries). **Rien entendu par l'agent.** |
 | La refonte des auras (2026-10-28, agent RefonteCore) | **Aucun son nouveau** : chaque brique sonne par sa nature (règle 4). La montée (un cran qui monte) ne sonne rien de plus que l'effet de l'aura ; Bastion (Représailles, dégâts directs) sonne le Coup à son impact ; Jugement pose une faute (Tempo −) puis la Peur (son son de Peur) ; Brasier pose la Brûlure (Affliction −) ; la Mire de la Visée sonne Précision + ; la note de la Ballade est un mécanisme muet, son refrain sonne quatre fois le Coup (des coups en rafale). Le Ciel d'orage à deux éclairs et le Brasier sur une Brûlure de 3 et plus jouent leur scène (`lightning`, `emberRain`) : chaque éclair et chaque braise sonne le Coup critique, comme la Foudre et la Braise captive. Rien entendu. |
 | La refonte des auras, tranches 4 et 5 (2026-10-28, agent RefonteFaces) | **Aucun son nouveau.** Le Duo, un mécanisme de coups bruts, est muet à la pose (règle 8) ; sa rafale sonne comme la Furie des vents (un Dé posé, puis le Coup de chaque coup). La Riposte entière sonne comme avant (Représailles +, puis Coup). Les compétences à charges sonnent la famille de ce qu'elles posent : Sangsue Soin +, Peau de crapaud et Sentence Bonus gagné, Bouclier de foi Garde + ; à chaque déclenchement, leur effet (Affliction −, Coup, Soin, Garde +). Les trois reliques nouvelles posent un bonus au premier tour (Bonus gagné, au dé posé de leur label). Rien entendu. |
+| Le Doublé (2026-10-31) | Proposé par l'agent DesEcran (D6 du retour du 30 octobre), accepté par l'utilisateur (« son du Doublé : le fabriquer et l'intégrer ») : un son propre, deux dés qui s'entrechoquent puis un tintement doré plus aigu que le ding, qui **remplace** le ding du label « Doublé ! » (§ 4.4, règle 7). Généré avec ElevenLabs, assemblé et choisi sur mesures (§ 7). Rien entendu. |
 
 ## 9. Index : qui joue quel son
 
@@ -269,7 +285,8 @@ Les deux sens de lecture : ce qui fait jouer chaque son (§ 9.1), et le son de c
 | Dé posé | la fin de tout jet, quelle que soit la face |
 | Pièce lancée | Pile ou face, quand la pièce part |
 | Pièce retombe | Pile ou face, quand la pièce retombe, sur pile comme sur face |
-| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique qui se déclenche pour un bonus de son porteur (chez l'attaquant comme chez le défenseur, 0.110.0), Luciole, Vol de vie, Saignement (2026-10-21, § 4.4), Rancune et Dé pipé (2026-10-25). La barde sur un double jusqu'à la phase 5 ter |
+| Pile réussie | Pile ou face, juste après la pièce, quand elle tombe sur pile ; tout label + sous le dé : critique, bonus de relique, relique qui se déclenche pour un bonus de son porteur (chez l'attaquant comme chez le défenseur, 0.110.0), Luciole, Vol de vie, Saignement (2026-10-21, § 4.4), Rancune et Dé pipé (2026-10-25) ; sauf « Doublé ! », qui a son son (2026-10-31). La barde sur un double jusqu'à la phase 5 ter |
+| Doublé | le label « Doublé ! » : un dé de frappe fait la face du dé de compétence, la compétence repart (étape `doublet`, 2026-10-31) ; à la place du ding |
 | Coup | un coup d'attaque qui touche (y compris ceux de l'ours, le coup de Pourfendre et les coups de la Curée) ; la Riposte (renvoi) ; la perte de PV de la Sentence et la frappe de l'Embrasement (2026-10-25) ; la relâche de la Rétribution (un coup, la moitié de ses jauges, sous 10 dégâts) ; chaque jauge d'une relâche en entier sauf la dernière ; les lames d'air de la Conque des vents |
 | Coup critique | un coup critique (dont ceux d'Œil de faucon) ; le coup de Pile ; le dernier coup d'une relâche en entier, ou un coup de compétence unique de 10 dégâts et plus (la Rétribution à 10 et plus) ; les météores de la Braise captive ; la Foudre, un par éclair, à l'impact de chacun (0.76.0, gardé le 2026-10-24) |
 | Esquive | un coup esquivé (dont ceux d'Esquive améliorée) ; le critique raté d'un aveuglé (lot 3, `MISE_EN_SCENE.md` M47 : le coup passe à côté, le même son) |

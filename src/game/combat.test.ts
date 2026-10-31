@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { attacksOf, AURA_DUE_TURN, beatEffects, diceOf, dieAt, effectiveStats, finalState, firstSide, HEADS_CAP, MAX_DODGE, MAX_EXTRA_JETS, MAX_TURNS, rollsDie, simulateCombat, splitAmong, startAuraOf, type Beat, type CombatResult, type Pair, type Side } from './combat'
+import { attacksOf, AURA_DUE_TURN, auraDueTurn, beatEffects, diceOf, dieAt, effectiveStats, finalState, firstSide, HEADS_CAP, MAX_DODGE, MAX_EXTRA_JETS, MAX_TURNS, rollsDie, simulateCombat, splitAmong, startAuraOf, type Beat, type CombatResult, type Pair, type Side } from './combat'
 import { describeSkill, DIE_FACES, faceTrigger, isRollTrigger, relationOf, rollFace, rollMatches, triggerText, type CharacterEvent } from './events'
 import { eventLog, of } from './narration'
 import { AURA_FACE, autoForge, copyDestinations, drawForgeOffer, FORGE_OFFER_SIZE, forgedFaces, forgeState, GILD_BONUS, isAuraSkill, MAX_SHARPENS, OFFERED_OPS, offerTargets, rankText, sharpen, stepKey, stepLabel, stepOf, validOnOrigin, withForgeStep, writtenFace, type ForgeBase, type ForgeStep } from './forge'
@@ -748,7 +748,6 @@ describe('résolution : phases, contrôle, réactions, application', () => {
     // Les textes disent l'épine et le chiffre, jamais un « 1 » (D11)
     expect(STATUSES.thorns.describe({ id: 'thorns', stacks: 1 })).toBe(typeset('Chaque coup reçu lui plante une épine ; son prochain coup qui touche les enfonce toutes : Saignement 2 par épine'))
     expect(STATUSES.thornSpike.badge({ id: 'thornSpike', stacks: 3 })).toBe('6')
-    expect(STATUSES.thornSpike.badge({ id: 'thornSpike', stacks: 1, power: 1 })).toBe('3')
   })
 
   it('réaction : un K.O. par Saignement donne la victoire à l’adversaire', () => {
@@ -1135,7 +1134,7 @@ describe('auras du 3 au dé (0.26.0)', () => {
     effects: [{ type: 'applyStatus', status, stacks: 1 }],
   })
 
-  it('Aura de poison (D15) : au début de chaque tour du porteur, Poison 2 à l’adversaire, sans montée ; rang II, Poison 3', () => {
+  it('Aura de poison (D15) : au début de chaque tour du porteur, Poison 2 à l’adversaire, sans montée', () => {
     const frost: CharacterEvent = { id: 'start', name: 'start', trigger: 'combatStart', effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }] }
     const r = run([testCharacter('a', { maxHp: 200 }, [frost]), testCharacter('b', { maxHp: 200 })])
     const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'frostAura')
@@ -1148,11 +1147,7 @@ describe('auras du 3 au dé (0.26.0)', () => {
       const strike = r.beats.slice(r.beats.indexOf(tick)).find((b) => b.type === 'attack')
       if (strike?.type === 'attack' && tick.state.hp[1] > 0) expect(strike).toMatchObject({ turn: tick.turn, attack: { attacker: 0 } })
     }
-    // Aiguisée : Poison 3 (le total s'affiche, jamais un « +1 », D11)
-    const sharp = run([testCharacter('a', { maxHp: 200 }, [{ ...frost, effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1, power: 1 }] }]), testCharacter('b', { maxHp: 200 })])
-    expect(ofType(sharp, 'statusTick').filter((b) => b.status === 'frostAura').every((t) => t.effects[0].type === 'applyStatus' && t.effects[0].stacks === 3)).toBe(true)
     expect(STATUSES.frostAura.badge({ id: 'frostAura', stacks: 1 })).toBe('+2')
-    expect(STATUSES.frostAura.power!(1)).toBe('Poison 3 par tour')
     // Permanente : jamais expirée
     expect(ofType(r, 'statusAge').some((b) => b.expired.includes('frostAura'))).toBe(false)
   })
@@ -1283,7 +1278,8 @@ describe('prêtresse et voleuse (0.30.0)', () => {
       }
     })
     expect(describeSkill(skillById('holy-aura')).text).toBe(typeset('Tous les deux tours, à la fin de son tour, elle lui rend 4 PV.'))
-    expect(describeSkill(sharpen(skillById('holy-aura'), 1)).text).toBe(typeset('Tous les deux tours, à la fin de son tour, elle lui rend 6 PV.'))
+    // Aiguisée (retour du 30 octobre) : son soin ne change pas, elle arrive plus tôt
+    expect(describeSkill(sharpen(skillById('holy-aura'), 1)).text).toBe(typeset('Tous les deux tours, à la fin de son tour, elle lui rend 4 PV. Arrive au plus tard au début de son 2e tour.'))
   })
 
   it('Aura de décoction regroupée (D11, 2026-10-30) : chaque coup qui touche, une Dose ; à la 3e, Poison 6 à la cible, et le compte repart', () => {
@@ -1918,16 +1914,16 @@ describe('reliques (docs/RELIQUES.md)', () => {
 
   it('caractéristique : les stats s’ajoutent à plat, la base reste connue, une stat peut passer sous 0', () => {
     const c = createCharacter('morgrut').withRelics([getRelic('mercenary-mail'), getRelic('lead-pommel')])
-    expect(c.stats).toMatchObject({ armor: c.baseStats.armor + 1, critMultiplier: c.baseStats.critMultiplier + 1 })
+    expect(c.stats).toMatchObject({ armor: c.baseStats.armor + 2, maxHp: c.baseStats.maxHp - 8, critMultiplier: c.baseStats.critMultiplier + 1 })
     // Morgrut ne vise pas (0 % de critique) : le Contrepoids l'affiche sous 0, il ne critique simplement jamais
     expect(c.stats.critChance).toBeCloseTo(-0.04)
     expect(effectiveStats(c, []).critChance).toBe(0)
-    // Morgrut n'a pas d'esquive : la cotte l'affiche à −5 % (« c'est marrant »), il n'esquive simplement jamais
-    expect(c.stats.dodgeChance).toBeCloseTo(-0.05)
+    // Morgrut n'a pas d'esquive : la cotte l'affiche à −10 % (« c'est marrant »), il n'esquive simplement jamais
+    expect(c.stats.dodgeChance).toBeCloseTo(-0.1)
     expect(effectiveStats(c, []).dodgeChance).toBe(0)
-    // La cotte retient 1 de chaque coup : un coup de 1 tombe au plancher
-    const r = run([testCharacter('a', { maxHp: 10 }), testCharacter('b', { maxHp: 10 }).withRelics([getRelic('mercenary-mail')])])
-    for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ armor: 1, damage: 1, floored: true })
+    // La cotte retient 2 de chaque coup : un coup de 1 tombe au plancher
+    const r = run([testCharacter('a', { maxHp: 10 }), testCharacter('b', { maxHp: 20 }).withRelics([getRelic('mercenary-mail')])])
+    for (const a of attacksOf(r).filter((x) => x.attacker === 0)) expect(a).toMatchObject({ armor: 2, damage: 1, floored: true })
   })
 
   it('coup : un bonus ajouté à chaque coup qui touche, avant le critique, sans changer le jet', () => {
@@ -2127,11 +2123,12 @@ describe('reliques (docs/RELIQUES.md)', () => {
     expect(parseRelics(traceText(simulateCombat([createCharacter('gorak'), createCharacter('brokk')], { seed: 5 })))).toEqual([[], []])
   })
 
-  it('durée (phase 7) : +15 PV max dès le départ, un soin par coup encaissé, un bouclier tous les 3 tours', () => {
-    // Gambison matelassé : les PV max montent, l'attaque baisse de 1 au minimum comme au maximum ; le combat part des PV max
+  it('durée (phase 7) : +7 PV max dès le départ, un soin par coup encaissé, un bouclier tous les 3 tours', () => {
+    // Gambison matelassé (retour du 30 octobre, D11) : les PV max montent, l'esquive baisse ; le combat part des PV max
     const gorak = createCharacter('gorak')
     const padded = gorak.withRelics([getRelic('quilted-gambison')])
-    expect(padded.stats).toMatchObject({ maxHp: gorak.baseStats.maxHp + REWARD_HP + 15, attackMin: gorak.baseStats.attackMin - 1, attackMax: gorak.baseStats.attackMax - 1 })
+    expect(padded.stats).toMatchObject({ maxHp: gorak.baseStats.maxHp + REWARD_HP + 7, attackMin: gorak.baseStats.attackMin, attackMax: gorak.baseStats.attackMax })
+    expect(padded.stats.dodgeChance).toBeCloseTo(gorak.baseStats.dodgeChance - 0.05)
     const worn = simulateCombat([padded, createCharacter('brokk')], { seed: 1 })
     expect(Math.max(...worn.beats.map((b) => b.state.hp[0]))).toBeGreaterThan(gorak.baseStats.maxHp)
     // Onguent du rebouteux : +2 PV juste après un coup encaissé qui touche, au plus une fois tous les 3 tours (D28, retour du
@@ -2170,10 +2167,11 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
     // Écrites avec des espaces simples ; la ligne affichée a l'espace insécable devant « % » (`typeset`, passe compendium)
     expect(lines).toEqual(
       [
-      '+1 au multiplicateur de critique et −4 % de critique',
+      // Retour du 30 octobre (D11, décision ouverte 6) : la valeur atteinte, pas un « +1 »
+      'Critiques ×3 au lieu de ×2 et −4 % de critique',
       "+6 % d'esquive",
       // M12 (2026-10-27) : l'armure dit ce qu'elle fait, à chaque coup reçu (pas un bouclier qui revient)
-      "+1 armure (−1 dégât par coup reçu) et −5 % d'esquive",
+      "+2 armure (−2 dégâts par coup reçu), −10 % d'esquive et −8 PV max",
       // Retour du 2026-10-30 (R72) : qui perd quoi, en PV ; ce que fait le bonus posé, entre parenthèses
       "L'adversaire perd 3 PV sur un 1",
       // Retour du 30 octobre (D11) : une seule charge se dit sans « +1 », une seule fois sans « 1x »
@@ -2198,7 +2196,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "+2 armure temporaire lors d'un coup reçu de 6 dégâts ou plus",
       "Esquive améliorée (esquive à coup sûr le prochain coup reçu) lors d'un coup critique, au plus une fois tous les 4 tours",
       // Les reliques de durée (phase 7)
-      "+15 PV max et −1 à l'attaque",
+      "+7 PV max et −5 % d'esquive",
       "+2 PV lors d'un coup reçu, au plus une fois tous les 3 tours",
       '+2 armure temporaire, tous les 3 tours',
       // Phase 8, second lot
@@ -2222,7 +2220,7 @@ describe('le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
       "Ses coups font +2 par malus que porte l'adversaire, tout le combat",
       'Chacun de ses éclairs fait +2, tout le combat',
       // Retour du 30 octobre (D9, D26, profondeur de l'offre)
-      'Pose son aura de départ dès le début de son 1er tour (au lieu du 3e au plus tard)',
+      'Pose son aura de départ dès le début de son 1er tour (au lieu du 3e au plus tard, ou du 2e aiguisée)',
       "Scelle la face du dernier jet de l'adversaire pendant 3 tours (un jet sur sa face scellée ne lance pas sa compétence : le coup de base seul), tous les 3 tours",
       'Relance son dé quand il tombe sur une face sans compétence, au plus une fois tous les 2 tours',
       "+5 Ferveur (son prochain coup qui touche fait +5 dégâts) lors d'un critique reçu",
@@ -2877,8 +2875,9 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
     expect(sharp('ervald', ranks(2, 2), 'life-steal').effects[0]).toMatchObject({ stacks: 1, power: 12 })
     expect(offerTargets(def('ervald'), ranks(2, 1), { op: 'sharpen' })).not.toContain(2)
     expect(sharp('aldric', ranks(2, 2), 'riposte').effects[0]).toMatchObject({ stacks: 1, power: 4 })
-    expect(sharp('ysolde', ranks(1, 1), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 1 })
-    expect(sharp('ysolde', ranks(1, 2), 'holy-aura').effects[0]).toMatchObject({ stacks: 1, power: 2 })
+    // Une aura (retour du 30 octobre) : son rendez-vous avance, au 2e tour (rang II), au 1er (rang III) ; ses effets ne changent pas
+    expect(sharp('ysolde', ranks(1, 1), 'holy-aura')).toMatchObject({ dueTurn: 2, effects: def('ysolde').events.find((e) => e.id === 'holy-aura')!.effects })
+    expect(sharp('ysolde', ranks(1, 2), 'holy-aura')).toMatchObject({ dueTurn: 1 })
     // Coup ×N (Crescendo, Soliste), limite par combat (Peur), part relâchée (Rétribution)
     expect(sharp('gorak', ranks(3, 1, [{ op: 'engrave', face: 3, skill: skill('crescendo') }]), 'crescendo').hitMultiplier).toBe(skill('crescendo').hitMultiplier! + 1)
     expect(sharp('fanchon', ranks(2, 1), 'soloist')).toMatchObject({ hitMultiplier: 4, limit: 1 })
@@ -2947,15 +2946,12 @@ describe('forge du dé (0.88.0, docs/CAMPAGNE.md § 4)', () => {
       expect(b.event.effects[0]).toMatchObject({ type: 'applyStatus', status: 'evasion', stacks: 1 })
       expect(b.state.statuses[0].find((s) => s.id === 'evasion')).toEqual({ id: 'evasion', stacks: 1, power: 2 })
     }
-    // Aura de poison II (intensité 1) : un cran de plus à chaque tour, au-delà du plafond
+    // Aura de poison II (retour du 30 octobre) : son effet ne change pas, Poison 2 à chaque tour (elle arrive plus tôt :
+    // « aiguisée, l'aura de départ arrive au début de son 2e tour », plus bas)
     const frost = runOn(1, [createCharacter('ervald').withForge([{ op: 'sharpen', face: 1 }]), foe])
     const ticks = ofType(frost, 'statusTick').filter((t) => t.side === 0 && t.status === 'frostAura')
     expect(ticks.length).toBeGreaterThan(3)
-    for (const t of ticks) {
-      const aura = frost.beats[t.id - 1].state.statuses[0].find((s) => s.id === 'frostAura')!
-      expect(aura.power).toBe(1)
-      expect(t.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: 3 })
-    }
+    for (const t of ticks) expect(t.effects[0]).toMatchObject({ type: 'applyStatus', status: 'poison', stacks: 2 })
     // Pile ou face II (chaque pièce tombe sur pile, la pièce lisant 1 = pile : la compétence aiguisée de sa face 2, portée
     // sur le 1) : ce coup ×4 (pile ×1 de plus par rang : ×2 de la revue R2 à la mesure d'ensemble de la refonte des auras),
     // la pièce rend encore trois fois les PV retirés
@@ -3570,11 +3566,11 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
     expect(text('conflagration')).toBe("Si l'adversaire brûle, son prochain coup qui touche lui fait perdre deux fois sa Brûlure.")
     expect(text('conflagration', 1)).toBe("Si l'adversaire brûle, son prochain coup qui touche lui fait perdre quatre fois sa Brûlure.")
     // Le Dé pipé, une aura depuis les Maîtrises (M9) : sa chance de pile, du critique et de l'esquive (2026-10-27 ; 6 % depuis
-    // la passe d'équilibre du 2026-10-31) ; son rang, une charge de plus
+    // la passe d'équilibre du 2026-10-31) ; son rang, comme toute aura, avance son arrivée (retour du 30 octobre)
     expect(text('loaded-die')).toBe(typeset("+25 % de chances de faire pile à ses pièces (5 sur 6 au plus), +6 % de critique et +6 % d'esquive."))
-    expect(text('loaded-die', 1)).toBe(typeset("+50 % de chances de faire pile à ses pièces (5 sur 6 au plus), +12 % de critique et +12 % d'esquive."))
+    expect(describeSkill(sharpen(skill('loaded-die'), 1)).text).toBe(typeset("+25 % de chances de faire pile à ses pièces (5 sur 6 au plus), +6 % de critique et +6 % d'esquive. Arrive au plus tard au début de son 2e tour."))
     expect(text('vendetta')).toBe('+6 Ferveur chaque fois que son porteur renvoie des dégâts.')
-    expect(text('vendetta', 1)).toBe('+12 Ferveur chaque fois que son porteur renvoie des dégâts.')
+    expect(describeSkill(sharpen(skill('vendetta'), 1)).text).toBe('+6 Ferveur chaque fois que son porteur renvoie des dégâts. Arrive au plus tard au début de son 2e tour.')
     expect(describeSkill(skill('vendetta')).tags.map((t) => t.label)).toContain('aura permanente')
     for (const id of ['conflagration', 'loaded-die', 'vendetta']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
   })
@@ -3623,17 +3619,14 @@ describe('phase 8, second lot : quatre consommatrices, trois moments, quatre rel
 
   it('dégâts renvoyés (`reflected`) : la Vindicte donne 6 Ferveur par charge (revue A2) après chaque Riposte qui rend une part du coup, l’étape de la Riposte pour cause', () => {
     const riposte = ev('turnStart', [{ type: 'applyStatus', status: 'riposte', stacks: 1 }])
-    for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [riposte]), 'vendetta', rank), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
-      const fired = reactions(r, 'vendetta')
-      expect(fired.length).toBeGreaterThan(5)
-      for (const b of fired) {
-        expect(b).toMatchObject({ side: 0, trigger: 'reflected' })
-        const cause = r.beats[b.cause!]
-        expect(cause).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
-        const held = r.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'vendetta')!
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks: 6 * (held.stacks + rank) })])
-      }
+    const reflected = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }, [riposte]), 'vendetta'), testCharacter('b', { maxHp: 400, attackMin: 4, attackMax: 4 })])
+    const fired = reactions(reflected, 'vendetta')
+    expect(fired.length).toBeGreaterThan(5)
+    for (const b of fired) {
+      expect(b).toMatchObject({ side: 0, trigger: 'reflected' })
+      expect(reflected.beats[b.cause!]).toMatchObject({ type: 'statusReaction', status: 'riposte', side: 0 })
+      const held = reflected.beats[b.id - 1].state.statuses[0].find((s) => s.id === 'vendetta')!
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 0, status: 'momentum', stacks: 6 * held.stacks })])
     }
     // La Rétribution qui relâche ses jauges renvoie aussi des dégâts : la Vindicte y répond une fois, son dernier coup pour
     // cause (C1 : chaque jauge est un renvoi, un coup à part)
@@ -3965,7 +3958,6 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
     expect(text('faith-shield')).toBe('Ses 3 prochains soins lui donnent chacun +3 armure temporaire.')
     expect(text('faith-shield', 1)).toBe('Ses 3 prochains soins lui donnent chacun +5 armure temporaire.')
     expect(text('open-wound')).toBe("4 Saignement à l'adversaire à chacun de ses critiques.")
-    expect(text('open-wound', 1)).toBe("8 Saignement à l'adversaire à chacun de ses critiques.")
     expect(describeSkill(skill('open-wound')).tags.map((t) => t.label)).toContain('aura permanente')
     expect(describeSkill(skill('faith-shield')).tags.map((t) => t.label)).not.toContain('aura permanente')
     for (const id of ['faith-shield', 'open-wound']) expect(rankText(skill(id))).not.toBe('ne s’aiguise pas')
@@ -4013,17 +4005,15 @@ describe('revue des auras et des compétences (docs/REVUE_COMPETENCES.md)', () =
   })
 
   it('Plaie ouverte (refonte des auras) : chacun de ses critiques fait saigner l’adversaire de 4 par charge ; un coup qui touche sans critique, rien', () => {
-    for (const rank of [0, 1]) {
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 1 }), 'open-wound', rank), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
-      const fired = reactions(r, 'openWound')
-      expect(fired.length).toBeGreaterThan(5)
-      for (const b of fired) {
-        const cause = r.beats[b.cause!]
-        expect(cause).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false, crit: true } })
-        const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'openWound')!
-        expect(b).toMatchObject({ side: 0, trigger: 'crit' })
-        expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: OPEN_WOUND_BLEED * (held.stacks + rank) })])
-      }
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 1 }), 'open-wound'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+    const fired = reactions(r, 'openWound')
+    expect(fired.length).toBeGreaterThan(5)
+    for (const b of fired) {
+      const cause = r.beats[b.cause!]
+      expect(cause).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false, crit: true } })
+      const held = r.beats[b.cause! - 1].state.statuses[0].find((s) => s.id === 'openWound')!
+      expect(b).toMatchObject({ side: 0, trigger: 'crit' })
+      expect(b.effects).toEqual([expect.objectContaining({ type: 'applyStatus', target: 1, status: 'bleed', stacks: OPEN_WOUND_BLEED * held.stacks })])
     }
     const dry = runOn(3, [engraved(testCharacter('a', { maxHp: 400, critChance: 0 }), 'open-wound'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
     expect(reactions(dry, 'openWound')).toEqual([])
@@ -4082,15 +4072,12 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
   it('les textes, au style de l’utilisateur, et leurs rangs', () => {
     expect(validateRoster()).toEqual([])
     expect(text('feint')).toBe(typeset("+5 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
-    expect(text('feint', 1)).toBe(typeset("+10 % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +1 au multiplicateur de son prochain critique, +3 au plus."))
     // R44 du retour du 2026-10-30 : « qui repart » dit ce qu'il fait
     expect(text('stoke')).toBe("La Brûlure de l'adversaire monte de 2 et repart pour autant de tours que sa nouvelle valeur.")
     expect(text('stoke', 1)).toBe("La Brûlure de l'adversaire monte de 3 et repart pour autant de tours que sa nouvelle valeur.")
     expect(describeSkill(skill('stoke')).detail).toBe(typeset("Une Brûlure de 3 à un tour de sa fin devient une Brûlure de 5, pour 5 tours ; sans Brûlure, l'adversaire brûle de 2."))
     expect(text('storm-sky')).toBe(typeset("Tous les trois tours, au début de son tour, l'orage éclate : l'adversaire perd 2 PV trois fois."))
-    expect(text('storm-sky', 1)).toBe(typeset("Tous les trois tours, au début de son tour, l'orage éclate : l'adversaire perd 2 PV quatre fois."))
     expect(text('blood-frenzy')).toBe('Chacun de ses critiques lui donne deux coups de plus.')
-    expect(text('blood-frenzy', 1)).toBe(typeset('Chacun de ses critiques lui donne deux coups de plus, et +5 % de critique.'))
     // D11 (passe d'équilibre du 2026-10-31) : « une fois » au lieu de « 1x » ; son rang reste une fois de plus (deux de plus :
     // rang II +7,7 points nu, +12,1 construit)
     expect(text('stunning-blow')).toBe("S'il touche, l'adversaire perd sa prochaine action, une fois par combat.")
@@ -4105,7 +4092,6 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
   it('Visée (refonte des auras, Q5) : +5 % d’esquive par charge ; chaque esquive et chaque coup qui touche, la Mire +1 (+3 au plus), que son critique lâche entière', () => {
     const base = createCharacter('naraxes')
     expect(effectiveStats(base, [{ id: 'feint', stacks: 2 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
-    expect(effectiveStats(base, [{ id: 'feint', stacks: 1, power: 1 }]).dodgeChance).toBeCloseTo(base.stats.dodgeChance + 0.1)
     expect(effectiveStats(base, [{ id: 'aim', stacks: 3 }]).critMultiplier).toBe(base.stats.critMultiplier + 3)
     let released = 0
     for (let seed = 1; seed < 20; seed++) {
@@ -4145,37 +4131,34 @@ describe('phase 8, lot 3 : les fils minces (docs/SORTS.md § 28)', () => {
       }
   })
 
-  it('Aura d’orage (D20, 2026-10-30) : au début de chaque tour de son porteur, une Nuée ; à la 3e, l’orage éclate, trois éclairs de 2 (un de plus par charge ou rang de plus)', () => {
+  it('Aura d’orage (D20, 2026-10-30) : au début de chaque tour de son porteur, une Nuée ; à la 3e, l’orage éclate, trois éclairs de 2 (un de plus par charge de plus)', () => {
     expect(hurtsEachTurn('stormSky')).toBe(false)
-    for (const rank of [0, 1]) {
-      let storms = 0
-      const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'storm-sky', rank), testCharacter('b', { maxHp: 400 })])
-      const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'stormSky')
-      expect(ticks.length).toBeGreaterThan(5)
-      for (const t of ticks) {
-        const was = r.beats[t.id - 1].state.statuses[0]
-        const held = was.find((s) => s.id === 'stormSky')!
-        const cloud = was.find((s) => s.id === 'stormCloud')
-        expect(t).toMatchObject({ side: 0, phase: 'turnStart' })
-        expect(t.effects[0]).toMatchObject({ type: 'applyStatus', target: 0, status: 'stormCloud', stacks: 1 })
-        if ((cloud?.stacks ?? 0) + 1 < 3) {
-          expect(t.effects).toHaveLength(1)
-          continue
-        }
-        const bolts = STORM_BOLTS + Math.max(cloud?.power ?? 0, held.stacks - 1 + (held.power ?? 0))
-        expect(t.effects[1]).toMatchObject({ type: 'damage', target: 1, amount: STORM_BOLT * bolts, parts: Array(bolts).fill(STORM_BOLT), source: 'lightning' })
-        expect(stacksOf(t.state.statuses[0], 'stormCloud')).toBe(0)
-        storms++
+    let storms = 0
+    const r = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'storm-sky'), testCharacter('b', { maxHp: 400 })])
+    const ticks = ofType(r, 'statusTick').filter((b) => b.status === 'stormSky')
+    expect(ticks.length).toBeGreaterThan(5)
+    for (const t of ticks) {
+      const was = r.beats[t.id - 1].state.statuses[0]
+      const held = was.find((s) => s.id === 'stormSky')!
+      const cloud = was.find((s) => s.id === 'stormCloud')
+      expect(t).toMatchObject({ side: 0, phase: 'turnStart' })
+      expect(t.effects[0]).toMatchObject({ type: 'applyStatus', target: 0, status: 'stormCloud', stacks: 1 })
+      if ((cloud?.stacks ?? 0) + 1 < 3) {
+        expect(t.effects).toHaveLength(1)
+        continue
       }
-      expect(storms).toBeGreaterThan(1)
+      const bolts = STORM_BOLTS + Math.max(cloud?.power ?? 0, held.stacks - 1)
+      expect(t.effects[1]).toMatchObject({ type: 'damage', target: 1, amount: STORM_BOLT * bolts, parts: Array(bolts).fill(STORM_BOLT), source: 'lightning' })
+      expect(stacksOf(t.state.statuses[0], 'stormCloud')).toBe(0)
+      storms++
     }
+    expect(storms).toBeGreaterThan(1)
   })
 
   it('Ivresse du sang : chaque critique, deux coups bruts ; un critique pendant une rafale attend le jet suivant, sans retarder une Furie', () => {
     const base = createCharacter('gorak')
     expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 1 }]).critChance).toBeCloseTo(base.stats.critChance)
     expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 2 }]).critChance).toBeCloseTo(base.stats.critChance + 0.05)
-    expect(effectiveStats(base, [{ id: 'bloodFrenzy', stacks: 1, power: 1 }]).critChance).toBeCloseTo(base.stats.critChance + 0.05)
     let deferred = 0
     for (let seed = 1; seed < 40; seed++) {
       const r = run([engraved(oldDie('gorak'), 'blood-frenzy'), testCharacter('b', { maxHp: 200, dodgeChance: 0 })], seed)
@@ -4249,11 +4232,11 @@ describe('phase 8, lot 3 : les malus de famille (docs/SORTS.md § 29)', () => {
     expect(validateRoster()).toEqual([])
     expect(text('guard-break')).toBe("S'il touche, le prochain coup que reçoit l'adversaire ×2 et brise son armure temporaire.")
     expect(text('guard-break', 1)).toBe("S'il touche, les 2 prochains coups que reçoit l'adversaire ×2 et brisent son armure temporaire.")
-    // Passe d'équilibre du 2026-10-31 : Aveuglé pendant 4 tours
+    // Passe d'équilibre du 2026-10-31 : Aveuglé pendant 4 tours ; retour du 30 octobre (décision ouverte 4) : 3 tours
     expect(text('jinx')).toBe("Le prochain jet de l'adversaire sur une compétence tombe à vide.")
     expect(text('jinx', 1)).toBe("Les 2 prochains jets de l'adversaire sur une compétence tombent à vide.")
-    expect(text('blinding')).toBe("Les critiques de l'adversaire ratent, encore 4 tours.")
-    expect(text('blinding', 1)).toBe(typeset("Les critiques de l'adversaire ratent, et +10 % de coups ratés, encore 4 tours."))
+    expect(text('blinding')).toBe("Les critiques de l'adversaire ratent, encore 3 tours.")
+    expect(text('blinding', 1)).toBe(typeset("Les critiques de l'adversaire ratent, et +10 % de coups ratés, encore 3 tours."))
     expect(text('hemorrhage')).toBe("4 dégâts directs à l'adversaire. L'adversaire ne regagne plus de PV, jusqu'à la fin du combat.")
     expect(text('hemorrhage', 1)).toBe("6 dégâts directs à l'adversaire. L'adversaire ne regagne plus de PV, jusqu'à la fin du combat.")
     expect(text('seal-theft')).toBe("Vole le prochain bonus de l'adversaire.")
@@ -4593,7 +4576,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     // Sur un autre jet, rien
     expect(reactions(runOn(3, [auraOn('luckyStreak'), testCharacter('b', { maxHp: 400 })]), 'luckyStreak')).toEqual([])
     expect(text('lucky-streak')).toBe('Chaque 6 au dé lui donne 2 coups de plus, tout de suite.')
-    expect(text('lucky-streak', 1)).toBe('Chaque 6 au dé lui donne 4 coups de plus, tout de suite.')
+    expect(text('lucky-streak', 1)).toBe('Chaque 6 au dé lui donne 2 coups de plus, tout de suite. Arrive au plus tard au début de son 2e tour.')
   })
 
   it('Effroi : chacun de ses critiques fait perdre sa prochaine action à l’adversaire ; chaque charge de plus, +5 % de critique', () => {
@@ -4623,10 +4606,10 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
       }
     }
     expect(text('rancor')).toBe('Chaque coup reçu lui donne +3 Ferveur.')
-    expect(text('rancor', 1)).toBe('Chaque coup reçu lui donne +5 Ferveur.')
+    expect(text('rancor', 1)).toBe('Chaque coup reçu lui donne +3 Ferveur. Arrive au plus tard au début de son 2e tour.')
   })
 
-  it('Cuir épais (D19, 2026-10-30, Morgrut) : chaque coup reçu lui donne +3 armure temporaire, sans cumul ; +1 par rang (+4 au rang II, passe d’équilibre du 2026-10-31)', () => {
+  it('Cuir épais (D19, 2026-10-30, Morgrut) : chaque coup reçu lui donne +3 armure temporaire, sans cumul ; aiguisée, elle arrive plus tôt (retour du 30 octobre)', () => {
     for (const stacks of [1, 2]) {
       const r = run([auraOn('thickHide', {}, stacks), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
       const hidden = reactions(r, 'thickHide')
@@ -4640,7 +4623,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     const r = run([auraOn('thickHide'), testCharacter('b', { maxHp: 400, attackMin: 6, attackMax: 6, dodgeChance: 0 })])
     expect(attacksOf(r).some((a) => a.attacker === 1 && !a.dodged && a.shields.some((x) => x.status === 'bonusArmor' && x.absorbed > 0))).toBe(true)
     expect(text('thick-hide')).toBe('Chaque coup reçu lui donne +3 armure temporaire.')
-    expect(text('thick-hide', 1)).toBe('Chaque coup reçu lui donne +4 armure temporaire.')
+    expect(text('thick-hide', 1)).toBe('Chaque coup reçu lui donne +3 armure temporaire. Arrive au plus tard au début de son 2e tour.')
     // Morgrut la porte en seconde aura, à la place de la Rancœur ; la Rancœur reste une brique offerte du Rempart
     expect(createCharacter('morgrut', { aura: 'thick-hide' }).events.find((e) => rollFace(e.trigger) === 1)?.id).toBe('thick-hide')
     expect(poolOf('bulwark').map((e) => e.id)).toEqual(expect.arrayContaining(['rancor', 'thick-hide']))
@@ -4670,7 +4653,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     }
     expect(refrains).toBeGreaterThan(1)
     expect(text('ballad')).toBe(typeset("Chaque coup qui touche joue une note ; à la 4e, le refrain : l'adversaire perd 2 PV quatre fois, et elle lui rend 4 PV."))
-    expect(text('ballad', 1)).toBe(typeset("Chaque coup qui touche joue une note ; à la 4e, le refrain : l'adversaire perd 2 PV cinq fois, et elle lui rend 4 PV."))
+    expect(text('ballad', 1)).toBe(typeset("Chaque coup qui touche joue une note ; à la 4e, le refrain : l'adversaire perd 2 PV quatre fois, et elle lui rend 4 PV. Arrive au plus tard au début de son 2e tour."))
   })
 
   it('Bastion (refonte des auras) : son armure temporaire vidée, l’attaquant perd 3 PV et il regagne 2 d’armure temporaire', () => {
@@ -4708,9 +4691,6 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     expect(verdicts).toBeGreaterThan(1)
     // Plus de Peur : l'attaquant ne perd aucune action
     expect(ofType(r, 'skip').some((b) => b.side === 1)).toBe(false)
-    // Aiguisée : le verdict plus lourd (+2 PV)
-    const sharp = run([testCharacter('a', { maxHp: 400 }, [ev('combatStart', [{ type: 'applyStatus', status: 'judgement', stacks: 1, power: 1 }], 'j')]), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
-    expect(reactions(sharp, 'judgement').some((b) => b.effects[1]?.type === 'damage' && b.effects[1].amount === VERDICT_LOSS + 2)).toBe(true)
     // R28 du retour du 2026-10-30 : d'où viennent les fautes (des coups reçus, jamais des tours), et le verdict ; le
     // compteur se lit 1/3, 2/3, l'aura dit le verdict (D11 : aucun « 1 » seul)
     expect(text('judgement')).toBe(typeset("Chaque coup qui touche le porteur donne une faute à l'attaquant ; à la 3e, le verdict tombe : il perd 8 PV."))
@@ -4738,7 +4718,7 @@ describe('les Maîtrises (retour du 2026-10-27, V1 à V5 ; docs/MAITRISES.md)', 
     }
     // R42 du retour du 2026-10-30 : les braises qui tombent, et ce que « repart » veut dire
     expect(text('brasier')).toBe(typeset("Tous les deux tours, au début de son tour, des braises tombent sur l'adversaire : sa Brûlure monte de 2 et repart pour autant de tours que sa nouvelle valeur."))
-    expect(text('brasier', 1)).toBe(typeset("Tous les deux tours, au début de son tour, des braises tombent sur l'adversaire : sa Brûlure monte de 4 et repart pour autant de tours que sa nouvelle valeur."))
+    expect(text('brasier', 1)).toBe(typeset("Tous les deux tours, au début de son tour, des braises tombent sur l'adversaire : sa Brûlure monte de 2 et repart pour autant de tours que sa nouvelle valeur. Arrive au plus tard au début de son 2e tour."))
   })
 
   it('Prière (+6 PV), Flétrissure (−2 dégâts aux coups de l’adversaire, 3 tours), Assaut (ce coup ×2) : gravées sur le 3', () => {
@@ -4848,14 +4828,40 @@ describe('retour du 2026-10-27 (C2, C3) : l’aura de départ au 3e tour, le Dé
     const r = [...rosterCombats(2)].find((x) => ofType(x, 'event').some((b) => b.event.trigger === 'auraDue'))!
     const b = ofType(r, 'event').find((x) => x.event.trigger === 'auraDue')!
     expect(eventLog(b.event, r.fighters).text).toContain(`Début du tour ${of(r.fighters[b.event.side].name)} : son aura s'éveille.`)
-    expect(traceText(r)).toContain('au début de son 3e tour, ou de son 2e tour après sa dissipation, son aura de départ absente')
+    expect(traceText(r)).toContain('au début de son 3e tour (son 2e, aiguisée), ou de son 2e tour après sa dissipation, son aura de départ absente')
     for (const text of [eventLog(b.event, r.fighters).text, triggerText('auraDue').label]) expect(text).not.toMatch(EMOJI)
   })
 
-  it('Dé pipé : +25 % de pile, +6 % de critique et +6 % d’esquive par charge (5 % avant la passe d’équilibre du 2026-10-31), rang compris', () => {
+  it('aiguisée (retour du 30 octobre) : l’aura de départ arrive au début de son 2e tour au lieu du 3e, le 1er au rang III du journal ; ses effets ne changent pas, son texte le dit', () => {
+    for (const id of CHARACTER_IDS)
+      for (const aura of createCharacter(id).definition.auras ?? []) {
+        const one = createCharacter(id, { aura })
+        const [two, three] = [1, 2].map((n) => one.withForge(Array.from({ length: n }, (): ForgeStep => ({ op: 'sharpen', face: AURA_FACE }))))
+        expect([one, two, three].map(auraDueTurn), `${id} ${aura}`).toEqual([AURA_DUE_TURN, 2, 1])
+        const [before, after] = [startAuraOf(one)!.event, startAuraOf(two)!.event]
+        expect(after.effects).toEqual(before.effects)
+        expect(describeSkill(after).text).toBe(`${describeSkill(before).text} Arrive au plus tard au début de son 2e tour.`)
+        // Le rang III du journal s'arrête au 1er tour : un rang de plus n'avance plus rien
+        expect({ ...sharpen(skillById(aura), 3), name: '' }).toEqual({ ...sharpen(skillById(aura), 2), name: '' })
+      }
+    // Une aura ailleurs que sur le 1 (gravée au laboratoire) n'a pas de rendez-vous : le journal ne l'aiguise pas
+    const engraved: ForgeStep[] = [{ op: 'engrave', face: 3, skill: skillById('rancor') }]
+    expect(() => forgeState(createCharacter('brokk').definition, [...engraved, { op: 'sharpen', face: 3 }])).toThrow()
+    // Dans le combat : sans 1 au dé, l'Aura de puissance de Morgrut aiguisée se pose d'office au début de son 2e tour
+    const no1 = Object.fromEntries(Array.from({ length: 40 }, (_, k) => [k, 4]))
+    for (const seed of [1, 2, 3]) {
+      const r = simulateCombat([createCharacter('morgrut').withForge([{ op: 'sharpen', face: AURA_FACE }]), createCharacter('ervald')], { seed, forcedRolls: no1 })
+      const posed = ofType(r, 'event').filter((b) => b.event.side === 0 && b.event.trigger === 'auraDue')
+      expect(posed).toHaveLength(1)
+      expect(posed[0]).toMatchObject({ turn: turnsOf(r, 0)[1], phase: 'turnStart' })
+      expect(posed[0].event.eventId).toBe('power-aura')
+    }
+  })
+
+  it('Dé pipé : +25 % de pile, +6 % de critique et +6 % d’esquive par charge (5 % avant la passe d’équilibre du 2026-10-31)', () => {
     const c = createCharacter('naraxes')
     const base = effectiveStats(c, [])
-    const two = effectiveStats(c, [{ id: 'loadedDie', stacks: 1, power: 1 }])
+    const two = effectiveStats(c, [{ id: 'loadedDie', stacks: 2 }])
     expect(two.critChance).toBeCloseTo(base.critChance + 0.12)
     expect(two.dodgeChance).toBeCloseTo(base.dodgeChance + 0.12)
     expect(STATUSES.loadedDie.headsChance).toBe(0.25)
@@ -5444,13 +5450,19 @@ describe('décisions du 2026-10-30 : compétences nouvelles (D26, profondeur de 
     expect(STATUSES.risingRage.modifyOutgoing!(5, { id: 'risingRage', stacks: 2 }, undefined as never)).toBe(9)
   })
 
-  it('Rempart et Lumière sans condition : Mur de boucliers +6 armure, Défi +2 armure et une Riposte, Lumière sacrée 3 PV et +3 PV, Onction +3 PV et +3 armure, Charge de l’ours ×2 et +2 armure', () => {
+  it('Rempart et Lumière sans condition : Mur de boucliers +6 armure, Défi +2 armure et une Riposte (s’il touche, deux fois par combat), Lumière sacrée 3 PV et +3 PV, Onction +3 PV et +3 armure, Charge de l’ours ×2 et +2 armure', () => {
     expect(skill('shield-wall').effects).toEqual([expect.objectContaining({ status: 'bonusArmor', stacks: 6 })])
     expect(skill('challenge').effects).toEqual([expect.objectContaining({ status: 'bonusArmor', stacks: 2 }), expect.objectContaining({ status: 'riposte', stacks: 1 })])
     expect(skill('holy-light').effects).toEqual([expect.objectContaining({ type: 'damage', amount: 3, source: 'holy' }), expect.objectContaining({ type: 'heal', amount: 3 })])
     expect(skill('anointing').effects).toEqual([expect.objectContaining({ type: 'heal', amount: 3 }), expect.objectContaining({ status: 'bonusArmor', stacks: 3 })])
     expect(skill('mauling')).toMatchObject({ relation: 'modify', hitMultiplier: 2 })
-    for (const id of ['shield-wall', 'challenge', 'holy-light', 'anointing', 'mauling']) expect(fired(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), id), testCharacter('b', { maxHp: 400 })]), id).length).toBeGreaterThan(3)
+    for (const id of ['shield-wall', 'holy-light', 'anointing', 'mauling']) expect(fired(runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), id), testCharacter('b', { maxHp: 400 })]), id).length).toBeGreaterThan(3)
+    // Le Défi (retour du 30 octobre, décision ouverte 2) : il modifie son coup, deux fois par combat ; son coup esquivé, rien
+    expect(skill('challenge')).toMatchObject({ relation: 'modify', limit: 2 })
+    const defied = runOn(3, [engraved(testCharacter('a', { maxHp: 400 }), 'challenge'), testCharacter('b', { maxHp: 400, dodgeChance: 0 })])
+    expect(fired(defied, 'challenge')).toHaveLength(2)
+    for (const b of fired(defied, 'challenge')) expect(defied.beats[b.cause!]).toMatchObject({ type: 'attack', attack: { attacker: 0, dodged: false } })
+    expect(describeSkill(skill('challenge')).text).toBe("S'il touche, +2 armure temporaire. Son prochain coup reçu renvoie tous ses dégâts à l'attaquant, deux fois par combat.")
   })
 })
 

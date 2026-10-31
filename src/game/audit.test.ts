@@ -22,12 +22,15 @@ const { audit, problems, seen } = createAudit()
 /**
  * `host` avec la compétence `id` au rang `rank` (0 : rang I) : gravée sur le 3, après `before` ; ou, si son dé de départ la
  * porte déjà (Maîtrises, 2026-10-27 : la Vindicte d'Aldric, la Feinte d'Elaria, l'Ivresse de Gorak…), aiguisée sur sa face.
+ * Une aura gravée ailleurs que sur le 1 n'a pas de rendez-vous à avancer (retour du 30 octobre) : elle reste au rang I.
  */
 function withSkill(host: string, id: string, rank: number, before: ForgeStep[] = []): Character {
   const own = createCharacter(host).events.find((e) => e.id === id)
   const face = own ? rollFace(own.trigger)! : 3
-  const engrave: ForgeStep[] = own ? [] : [{ op: 'engrave', face, skill: ENGRAVABLE_SKILLS.find((e) => e.id === id)! }]
-  return createCharacter(host).withForge([...before, ...engrave, ...Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face }))])
+  const skill = own ?? ENGRAVABLE_SKILLS.find((e) => e.id === id)!
+  const engrave: ForgeStep[] = own ? [] : [{ op: 'engrave', face, skill }]
+  const ranks = skill.rankAxis?.kind === 'due' && face !== 1 ? 0 : rank
+  return createCharacter(host).withForge([...before, ...engrave, ...Array.from({ length: ranks }, (): ForgeStep => ({ op: 'sharpen', face }))])
 }
 
 /** Relique de coup sur un moment (aucune du registre n'en a encore) : quand il encaisse, recharge de 2 tours. */
@@ -85,6 +88,23 @@ describe('audit de résolution', () => {
   })
 })
 
+describe('audit de résolution : l’aura aiguisée arrive plus tôt (retour du 30 octobre)', () => {
+  it('aucune anomalie quand chaque aura de départ, aiguisée (rang II, et rang III du journal), part de son rendez-vous avancé', () => {
+    const { audit, problems, seen } = createAudit()
+    let n = 0
+    for (const a of CHARACTER_IDS)
+      for (const aura of createCharacter(a).definition.auras ?? [])
+        for (const rank of [1, 2])
+          for (let k = 0; k < 12; k++) {
+            const sharp = createCharacter(a, { aura }).withForge(Array.from({ length: rank }, (): ForgeStep => ({ op: 'sharpen', face: 1 })))
+            const foe = createCharacter(CHARACTER_IDS[n % CHARACTER_IDS.length])
+            audit(simulateCombat(k % 2 ? [sharp, foe] : [foe, sharp], { seed: 9100 + n++ }))
+          }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ["aura aiguisée posée d'office avant le 3e tour", 'aura de départ dissipée, rendez-vous réarmé']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
 describe('audit de résolution : le lot des consommateurs (PROGRESSION.md § 13.3)', () => {
   it('aucune anomalie quand chaque relique porte sur ce qu’elle consomme : Poison, Saignement, soins, gros coups, critiques', () => {
     const { audit, problems, seen } = createAudit()
@@ -132,14 +152,12 @@ describe('audit de résolution : les reliques de durée (phase 7)', () => {
 })
 
 describe('audit de résolution : le plafond d’esquive (troisième retour du 2026-10-27, C5)', () => {
-  it('aucune anomalie quand le Larcin, gravé et aiguisé, porterait l’esquive au-delà de 75 % ; le plafond est vu', () => {
+  it('aucune anomalie quand le Larcin, gravé, porterait l’esquive au-delà de 75 % ; le plafond est vu', () => {
     const { audit, problems, seen } = createAudit()
     // Le Pas de côté, qui servait ici, est sorti avec la refonte des auras (2026-10-28) : le Larcin, +10 % par charge
+    // (aiguisé jusqu'au retour du 30 octobre ; une aura gravée ailleurs que sur le 1 ne s'aiguise plus)
     const step = ENGRAVABLE_SKILLS.find((e) => e.id === 'pilfer')!
-    const elaria = createCharacter('elaria').withForge([
-      { op: 'engrave', face: 3, skill: step },
-      { op: 'sharpen', face: 3 },
-    ])
+    const elaria = createCharacter('elaria').withForge([{ op: 'engrave', face: 3, skill: step }])
     let n = 0
     for (const b of CHARACTER_IDS)
       for (let k = 0; k < 4; k++) audit(simulateCombat(k % 2 ? [elaria, createCharacter(b)] : [createCharacter(b), elaria], { seed: 13000 + n++ }))

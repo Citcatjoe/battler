@@ -12,18 +12,18 @@ Contrôle de la vague des décisions (Suivi, 2026-10-31) : chaque D vérifiée d
 
 ## Décisions encore ouvertes (après 0.134.0)
 
-À trancher par l'utilisateur ; chaque ligne porte la recommandation et sa source.
+À trancher par l'utilisateur ; chaque ligne porte la recommandation et sa source. **Réponses de l'utilisateur du 2026-10-31, livrées en 0.135.0 (agent Reglages, `local://r30e-Reglages.md`, mesures [SORTS.md](SORTS.md) § 35)** : points 2, 3, 4, 6 livrés ; point 5 étudié, sans porteur ; point 10 confié à l'agent Son.
 
 1. **Dé de joueur (D9)** : l'utilisateur a dit « une fois par tour » ; livré avec une recharge de 2 (`relics.ts` `gambler-die`, `cooldown: 2`), car une fois par tour mesure +16,6 nu et Ysolde +22,1, au-delà de 20. Recommandation : garder la recharge 2 (+12,8). `r30c-Reliques.md`.
-2. **Défi** (compétence de Rempart, profondeur de l'offre) : gravé +21,4 à +25,5, hors bande ; c'est la Riposte qu'il porte (+20,6 seule). Proposition non mesurée : Défi = +4 armure + Rancune. `r30d-Equilibre.md` § 4.
-3. **Rangs II d'aura au départ** : presque tous au-dessus de +8 (Vindicte +6,4 à Épines +17,6, Poison +16,3 ; construits Épines +11,4, Poison +12,9), systémique. Proposition : le rang d'une aura avance son rendez-vous (2e tour au lieu du 3e). `r30d-Equilibre.md` § 4.
-4. **Éclair aveuglant chez Ysolde construite** : +28,4 (± 8,2, 6 builds), après le passage à Aveuglé 4 tours. Option : 3 tours. `r30d-Equilibre.md` § 4.
-5. **Aura de rancœur sans porteur** : retirée à Morgrut par D19 et laissée « brique offerte du Rempart » (`skills.ts` `rancor`), mais l'offre ne grave jamais d'aura : elle n'entre plus en jeu. Écart entre `r30c-PersosB.md` et `r30d-Equilibre.md` § 4. À décider : la retirer, ou lui donner un porteur.
-6. **Cotte du mercenaire, Gambison, Contrepoids** (reliques à « 1 », D11) : regroupées, hors bande. Propositions mesurées : Cotte +2 armure −10 % esquive −8 PV (+8,9) ; Gambison +8 PV −5 % esquive (+13,0, Morgrut +20,6) ; Contrepoids sans version ≥ 2 dans la bande, à dire en valeur atteinte (« ×3 au lieu de ×2 »). `r30d-Equilibre.md` § 4.
+2. **Défi** : **livré** (« trop haut, une proposition moins forte ») : s'il touche, deux fois par combat (`skills.ts` `challenge`, `relation: 'modify'`, `limit: 2`). Gravé nu +17,4 à +19,9 (avant +19,3 à +22,3), construit +9,7 à +14,5, rang II +3,3 à +4,8. « +4 armure et Rancune » mesuré plus fort (+20,6 à +24,4).
+3. **Rangs II d'aura** : **livré** (« au 2e tour au lieu du 3e », une règle pour toutes) : axe `due`, `auraDueTurn`. Rang II nu +6,4…+17,6 → +4,3…+11,7 (13 auras sur 20 dans la bande, 3 avant), construit +2,4…+8,3. Restent au-dessus de +8 nu : Épines, Décoction, Poison, Puissance, Cuir épais, Plaies, Bastion.
+4. **Éclair aveuglant** : **livré** (« l'option la moins forte ») : Aveuglé 3 tours. Ysolde gravée +16,4 → +13,3 nu ; construite, sur 32 builds, +14,6 → +12,0 (le +28,4 venait de 6 builds).
+5. **Aura de rancœur** (« on peut lui donner un porteur si elle rentre dans un build ») : **aucun porteur évident, gardée hors jeu**. Brokk 51,7 % nu mais −8,4 à −10,6 points sur ses builds ; Aldric 62,3 % (72/28 contre Brokk), 54,5 % à +2 Ferveur mais 65,5/34,5 contre Morgrut ; Morgrut +2,4 nu et +2,0 construit contre le Cuir épais (45,7 %), mais D19 l'a retirée de sa fiche. À décider : la rendre à Morgrut (à la place du Cuir épais) ou la retirer du jeu.
+6. **Cotte, Gambison, Contrepoids** : **livré** : Cotte +2 armure −10 % d'esquive −8 PV (+12,4 → +8,9) ; Gambison +7 PV −5 % d'esquive (+11,3, Morgrut +18,3 ; à +8 PV, Morgrut +20,6) ; Contrepoids inchangé, texte « Critiques ×3 au lieu de ×2 » (Elaria et Aldric partent de ×2,2, Naraxes de ×2,5). [RELIQUES.md](RELIQUES.md) § 19.4.
 7. **Rangs gardés à +1 et « 1 » des textes de base (D11)** : 27 rangs restés à +1 (à +2 hors bande ; Equilibre constate que `rankText` n'est affiché nulle part, la forge montre le total) ; restent des « 1 » dans Récolte et Sangsue (« 1 PV par charge », Récolte voulue par D10), Serment et Souffle (« … puis 1 PV »), Acharnement (« ×1 de plus »). Écho et Coup de chance gardés à 1 (compteurs d'unités de coup). À confirmer comme lecture de la règle. `r30d-Equilibre.md` § 3, `r30c-PersosB.md`.
 8. **Face scellée et Focale sans emblème propre** : `sealedFace` garde l'emblème Malchance, `spellFocus` celui de la Puissance (règle 1 des emblèmes). `r30d-IconesD.md`.
 9. **Compteurs sans icône propre** : `stormCloud`, `holyVigil`, `decoctionDose`, `emberHeap`, `thornSpike` gardent l'icône de leur aura. `r30d-IconesD.md`.
-10. **Son du Doublé** : aucun son nouveau, le label sonne le ding générique (`MISE_EN_SCENE.md` M61, SONS.md § 4.4). Non vérifiable par l'agent.
+10. **Son du Doublé** : l'utilisateur demande de le fabriquer et l'intégrer ; confié à l'agent Son (0.135.0). Non vérifiable par l'agent.
 11. **Losange « offre riche » sur la piste de campagne** : les victoires 3, 4, 7 et 8 donnent une carte de plus (D2), mais la piste (`CampaignScreen.tsx`, un losange par récompense) ne le montre pas. À décider : le marquer ou non.
 12. **Thaldrin** : pente −11,9 du nu (54,5) au construit (44,6), dans la bande aux deux bouts ; l'Aura d'orage ne grandit pas (+11,6 construite). À surveiller. `r30d-Equilibre.md` § 4.
 
@@ -68,7 +68,7 @@ Verdicts du 2026-10-30 (`local://decisions-30b.md`), contrôlés dans le code le
 - R80 : défaite réelle non vue au navigateur (même chemin que l'abandon, vu).
 - R79 (descriptions intelligibles) : les 11 compétences et 17 reliques nouvelles n'ont pas eu de passe de Textes dédiée ; Equilibre a retouché des textes (« une fois », « encore 4 tours ») sans les voir rendus.
 - R25 (« elle monte de 1 ») : la montée (`rises`) est retirée par D11 ; plus aucun « monte de 1 » dans `src/` (contrôle du 2026-10-31). Les textes R25 de Textes sont remplacés par les valeurs fixes.
-- R17 et R24 : rangs II hors bande, voir décision ouverte 3.
+- R17 et R24 : rangs II hors bande ; règle du rendez-vous livrée en 0.135.0 (décision ouverte 3), Épines et Poison restent au-dessus (+11,7, +10,0).
 - R18 (D11) : voir décisions ouvertes 6 et 7.
 
 ## Registre

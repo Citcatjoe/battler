@@ -418,9 +418,6 @@ export interface StatusDef {
   scene?: (done: { hits: number; posed: number }) => SceneEventId | undefined
 }
 
-/** Les charges qui agissent : les charges, plus l'intensité (une aura aiguisée compte autant de charges de plus, 0.110.0). */
-export const charges = (s: Status) => s.stacks + (s.power ?? 0)
-
 /**
  * Un impact de dégâts directs infligé à l'adversaire par le porteur de `statuses`, après leurs filtres `modifyDirect`
  * (Surtension, quatrième retour du 2026-10-27, la foudre seule) ; un impact nul reste nul. Le moteur et l'audit le lisent ici.
@@ -490,12 +487,12 @@ export const DREAD_CRIT = 0.05
 /** Poing de pierre : +2 depuis la décision D11 (2026-10-30), avec l'armure de la Peau de pierre 6 → 5 (force égale) */
 export const STONE_FIST = 2
 /**
- * Effroi : la première pose fait peur ; chaque charge de plus, et chaque rang, du critique (comme l'Ivresse du sang).
+ * Effroi : la première pose fait peur ; chaque charge de plus, du critique (comme l'Ivresse du sang).
  * Plafonné à 3 charges (D16, retour du 30 octobre) : +10 % au plus par ses poses ; à 8 charges contre le Colosse, le boss
  * perdait une action sur deux (l'Ombre contre des adversaires à 2 fois leurs PV : 57,3 → 54,9 %)
  */
 export const DREAD_CAP = 3
-const dreadCrit = (s: Status) => DREAD_CRIT * (s.stacks - 1 + (s.power ?? 0))
+const dreadCrit = (s: Status) => DREAD_CRIT * (s.stacks - 1)
 
 /**
  * Phase 8, lot 3 (docs/SORTS.md § 28, séries 60 à 69, 400 combats par duel) : les fils minces. Feinte : esquive par
@@ -505,15 +502,15 @@ export const FEINT_DODGE = 0.05
 /**
  * Aura d'orage (décision D20 du 2026-10-30) : tous les trois tours, l'orage éclate, trois éclairs de 2 (un ou deux
  * éclairs de 1 par tour avant). Départ de Thaldrin 56,9 → 56,8 % (laboratoire, série 128, 0.131.2). Chaque charge de
- * plus et chaque rang : un éclair de plus.
+ * plus : un éclair de plus.
  */
 export const STORM_TURNS = 3
 export const STORM_BOLT = 2
 export const STORM_BOLTS = 3
 export const BLOOD_FRENZY_STRIKES = 2
 export const BLOOD_FRENZY_CRIT = 0.05
-/** Ivresse du sang : la première pose donne les coups ; chaque charge de plus, et chaque rang, du critique. */
-const frenzyCrit = (s: Status) => BLOOD_FRENZY_CRIT * (s.stacks - 1 + (s.power ?? 0))
+/** Ivresse du sang : la première pose donne les coups ; chaque charge de plus, du critique. */
+const frenzyCrit = (s: Status) => BLOOD_FRENZY_CRIT * (s.stacks - 1)
 
 /**
  * Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises », séries 85 à 92 du laboratoire, gravées
@@ -539,18 +536,11 @@ export const PILFER_DODGE = 0.1
 /** Onde de choc : 3 PV par coup encaissé, des trois derniers (D14, retour du 30 octobre ; 2 avant, « faible ») */
 export const SHOCKWAVE_PER = 3
 export const SHOCKWAVE_SLOTS = 3
-/**
- * Épines plantées (D13, retour du 30 octobre) : Saignement par épine quand son coup les enfonce ; son rang, du Saignement
- * en plus, une fois par enfoncement
- */
+/** Épines plantées (D13, retour du 30 octobre) : Saignement par épine quand son coup les enfonce */
 export const THORN_BLEED = 2
-export const THORN_RANK = 1
-const thornPerSpike = (s: Status) => THORN_BLEED + THORN_RANK * (s.power ?? 0)
-const thornBleed = (s: Status) => thornPerSpike(s) * s.stacks
-/** Aura de poison (D15, retour du 30 octobre) : Poison posé au début de chacun de ses tours, sans montée ; son rang, en plus */
+const thornBleed = (s: Status) => THORN_BLEED * s.stacks
+/** Aura de poison (D15, retour du 30 octobre) : Poison posé au début de chacun de ses tours, sans montée */
 export const POISON_AURA = 2
-export const POISON_AURA_RANK = 1
-const poisonAura = (s: Status) => POISON_AURA + POISON_AURA_RANK * (s.power ?? 0)
 /** Emprise : les malus que porte l'adversaire, un par statut (ses charges ne comptent pas), mécanismes exclus */
 export const malusCount = (foe: readonly Status[]) => foe.filter((x) => STATUSES[x.id].polarity === 'negative' && !isMechanic(x.id)).length
 
@@ -616,7 +606,7 @@ export const FALSE_NOTE = 4
 /**
  * Aura de décoction (décision D11 du 2026-10-30) : tous les trois coups qui touchent, Poison 6 (1, 2 puis 3 Poison par
  * coup avant). Départ de Naraxes 52,3 → 53,3 % (laboratoire, série 160, 400 par duel, 0.133.0 ; tous les deux coups,
- * Poison 4 : 57,1 ; Poison 2 par coup : 59,2). Chaque charge de plus et chaque rang : Poison +2.
+ * Poison 4 : 57,1 ; Poison 2 par coup : 59,2). Chaque charge de plus : Poison +2.
  */
 export const DECOCTION_HITS = 3
 export const DECOCTION_POISON = 6
@@ -652,40 +642,34 @@ const coinOdds = (s: Status) => (s.power ? `Une pièce, pile ${Math.min(5, 3 + s
 /**
  * Aura de sainteté (décision D11 du 2026-10-30) : tous les deux tours, +4 PV à la fin de son tour (+1 puis +2 par tour
  * avant). Départ d'Ysolde 45,6 → 46,7 % (laboratoire, série 161, 400 par duel, 0.133.0 ; +3 : 41,6 ; tous les trois
- * tours, +6 : 44,3). Chaque charge de plus et chaque rang : +2 PV.
+ * tours, +6 : 44,3). Chaque charge de plus : +2 PV.
  */
 export const HOLY_TURNS = 2
 export const HOLY_HEAL = 4
 /**
  * Aura du brasier (décision D11 du 2026-10-30) : tous les deux tours, la Brûlure de l'adversaire monte de 2 (de 1 à
  * chaque tour avant). Départ de Thaldrin 52,1 → 50,4 % (laboratoire, série 162, 400 par duel, 0.133.0 ; +3 : 57,1 ;
- * tous les trois tours, +3 : 49,8). Chaque charge de plus et chaque rang : Brûlure +2.
+ * tous les trois tours, +3 : 49,8). Chaque charge de plus : Brûlure +2.
  */
 export const BRASIER_TURNS = 2
 export const BRASIER_BURN = 2
-/**
- * Cuir épais (décision D19 du 2026-10-30, Morgrut) : armure temporaire par coup reçu ; son rang, +1 (+4 au rang II, le
- * total affiché). Passe d'équilibre du 2026-10-31 : +2 par rang valait +23,5 points au départ (rang II), +1 : +14,2
- */
+/** Cuir épais (décision D19 du 2026-10-30, Morgrut) : armure temporaire par coup reçu, sans cumul */
 export const THICK_HIDE_ARMOR = 3
-export const THICK_HIDE_RANK = 1
-/** L'intensité d'une aura regroupée (D11) : ses charges et ses rangs au-delà de la première, que porte son compteur */
-const tallyPower = (s: Status) => charges(s) - 1
+/** L'intensité d'une aura regroupée (D11) : ses charges au-delà de la première, que porte son compteur */
+const tallyPower = (s: Status) => s.stacks - 1
 /** Ce que lâche le seuil d'une aura regroupée, selon l'intensité `p` que porte son compteur : +2 ou un impact de plus par cran */
 const holyHeal = (p: number) => HOLY_HEAL + 2 * p
 const decoctionPoison = (p: number) => DECOCTION_POISON + 2 * p
 const brasierBurn = (p: number) => BRASIER_BURN + 2 * p
 const stormBolts = (p: number) => STORM_BOLTS + p
 const balladShards = (p: number) => BALLAD_NOTES + p
-/** Cuir épais : +3 armure temporaire, +1 par rang (sans cumul) */
-export const thickHide = (s: Status) => THICK_HIDE_ARMOR + THICK_HIDE_RANK * (s.power ?? 0)
 
 /**
  * Aura de puissance (refonte des auras, § 3.1) : +2 à chacun de ses coups, puis +1 par gros coup (critique, coup ×2 et
- * plus) et par nouvelle pose, jusqu'à +6 : une charge par +1, cinq au plus ; son intensité (rangs) s'y ajoute.
+ * plus) et par nouvelle pose, jusqu'à +6 : une charge par +1, cinq au plus.
  */
 const POWER_AURA_CAP = 5
-const powerAuraBonus = (s: Status) => 1 + s.stacks + (s.power ?? 0)
+const powerAuraBonus = (s: Status) => 1 + s.stacks
 
 /** Rancœur (refonte des auras, § 3.1) : Ferveur par coup reçu, sans cumul (à +2, 41,9 % au départ de Morgrut ; à +3, 51,9) */
 export const RANCOR_FERVOR = 3
@@ -694,17 +678,14 @@ export const BASTION_LOSS = 3
 export const BASTION_ARMOR = 2
 /**
  * Jugement : la faute qui fait tomber le verdict. Retour du 30 octobre (D17) : à la 3e faute, l'attaquant perd 8 PV de
- * Lumière au lieu d'avoir Peur (départ d'Ysolde 49,6 → 49,0 % au laboratoire ; 6 PV : 43,3 ; 10 PV : 53,9). Son rang :
- * +2 PV au verdict
+ * Lumière au lieu d'avoir Peur (départ d'Ysolde 49,6 → 49,0 % au laboratoire ; 6 PV : 43,3 ; 10 PV : 53,9)
  */
 export const JUDGEMENT_FAULTS = 3
 export const VERDICT_LOSS = 8
-export const VERDICT_RANK = 2
-const verdictLoss = (s: Status) => VERDICT_LOSS + VERDICT_RANK * (s.power ?? 0)
 /**
  * Ballade (décision D22 du 2026-10-30) : une note par coup qui touche ; à la 4e, le refrain, quatre éclats de 2 sur
  * l'adversaire et +4 PV (+1 PV par coup et quatre éclats de 1 avant). Départ de Fanchon 50,5 → 52,4 % (laboratoire,
- * série 125, 0.131.2). Chaque charge de plus et chaque rang : un éclat de plus.
+ * série 125, 0.131.2). Chaque charge de plus : un éclat de plus.
  */
 export const BALLAD_NOTES = 4
 export const BALLAD_REFRAIN = 2
@@ -910,18 +891,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Chaque coup reçu lui plante une épine. Son prochain coup qui touche les enfonce toutes : Saignement ${THORN_BLEED} par épine.`,
-    describe: (s) => `Chaque coup reçu lui plante une épine ; son prochain coup qui touche les enfonce toutes : Saignement ${thornPerSpike(s)} par épine`,
+    describe: () => `Chaque coup reçu lui plante une épine ; son prochain coup qui touche les enfonce toutes : Saignement ${THORN_BLEED} par épine`,
     detail: () => 'Les épines restent plantées tant que son coup ne touche pas. Une nouvelle pose ne change rien.',
-    badge: (s) => String(thornPerSpike(s)),
+    badge: () => String(THORN_BLEED),
     counter: 'stacks',
     stacking: 'refresh',
     maxStacks: 1,
     // Son compteur, sur son anneau : le Saignement à venir (PersosB, `tally`)
     tally: 'thornSpike',
     // Pas de `spentOnReaction` : contre une Furie des vents, chaque coup plante son épine
-    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'thornSpike', stacks: 1, ...(s.power && { power: s.power }) }] },
-    // Aiguisée : chaque épine fait saigner davantage (Saignement 3 par épine au rang II)
-    power: (n) => `Saignement ${THORN_BLEED + THORN_RANK * n} par épine`,
+    reactions: { hurt: () => [{ type: 'applyStatus', status: 'thornSpike', stacks: 1 }] },
   },
   // Les épines plantées (D13) : le compteur de l'Aura d'épines sur son porteur ; son prochain coup qui touche les enfonce
   thornSpike: {
@@ -1107,14 +1086,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'fortune',
     summary: `+${Math.round(LOADED_DIE_HEADS * 100)} % de chances de faire pile à ses pièces (5 sur 6 au plus), +${Math.round(LOADED_DIE_EDGE * 100)} % de critique et +${Math.round(LOADED_DIE_EDGE * 100)} % d'esquive, par charge.`,
     describe: (s) =>
-      `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} % de chances de faire pile à ses pièces (5 sur 6 au plus), +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % de critique et +${Math.round(LOADED_DIE_EDGE * 100 * charges(s))} % d'esquive`,
+      `+${Math.round(LOADED_DIE_HEADS * 100 * s.stacks)} % de chances de faire pile à ses pièces (5 sur 6 au plus), +${Math.round(LOADED_DIE_EDGE * 100 * s.stacks)} % de critique et +${Math.round(LOADED_DIE_EDGE * 100 * s.stacks)} % d'esquive`,
     detail: () => 'Toutes ses pièces ; jamais plus de 5 chances sur 6 de faire pile.',
-    badge: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * charges(s))} %`,
+    badge: (s) => `+${Math.round(LOADED_DIE_HEADS * 100 * s.stacks)} %`,
     counter: 'stacks',
     stacking: 'add',
     headsChance: LOADED_DIE_HEADS,
-    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + LOADED_DIE_EDGE * charges(s), dodgeChance: stats.dodgeChance + LOADED_DIE_EDGE * charges(s) }),
-    power: (n) => `+${Math.round(LOADED_DIE_HEADS * 100 * n)} % de chances de faire pile, +${Math.round(LOADED_DIE_EDGE * 100 * n)} % de critique et d'esquive`,
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + LOADED_DIE_EDGE * s.stacks, dodgeChance: stats.dodgeChance + LOADED_DIE_EDGE * s.stacks }),
   },
   vendetta: {
     name: 'Aura de vindicte',
@@ -1122,12 +1100,11 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'power',
     summary: `+${VENDETTA_MOMENTUM} Ferveur par charge chaque fois que son porteur renvoie des dégâts.`,
-    describe: (s) => `+${VENDETTA_MOMENTUM * charges(s)} Ferveur chaque fois que son porteur renvoie des dégâts`,
-    badge: (s) => `+${VENDETTA_MOMENTUM * charges(s)}`,
+    describe: (s) => `+${VENDETTA_MOMENTUM * s.stacks} Ferveur chaque fois que son porteur renvoie des dégâts`,
+    badge: (s) => `+${VENDETTA_MOMENTUM * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
-    reactions: { reflected: (s) => [{ type: 'applyStatus', status: 'momentum', stacks: VENDETTA_MOMENTUM * charges(s) }] },
-    power: (n) => `+${VENDETTA_MOMENTUM * n} Ferveur par renvoi`,
+    reactions: { reflected: (s) => [{ type: 'applyStatus', status: 'momentum', stacks: VENDETTA_MOMENTUM * s.stacks }] },
   },
 
   /* Humains et hommes-lézards (0.30.0). */
@@ -1272,9 +1249,9 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Au début de chacun de ses tours, Poison ${POISON_AURA} à l'adversaire.`,
-    describe: (s) => `Poison ${poisonAura(s)} à l'adversaire au début de chacun de ses tours`,
+    describe: () => `Poison ${POISON_AURA} à l'adversaire au début de chacun de ses tours`,
     detail: () => 'Le Poison s’ajoute à celui qu’il porte déjà. Une nouvelle pose ne change rien.',
-    badge: (s) => `+${poisonAura(s)}`,
+    badge: () => `+${POISON_AURA}`,
     counter: 'stacks',
     // 0.69.0 (choix de l'utilisateur, SORTS.md § 15) : elle pose du vrai Poison au lieu de dégâts directs
     // au début du tour adverse (0.45.0). Un seul statut, une seule règle : l'immunité le bloque, la
@@ -1282,9 +1259,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // sans montée (1, 1, 2, 2 puis 3 avant : un « 1 » au début, et sans fin dans un combat long)
     stacking: 'refresh',
     maxStacks: 1,
-    onTurnStart: (s) => [{ type: 'applyStatus', status: 'poison', stacks: poisonAura(s), target: 'opponent' }],
-    // Aiguisée : Poison 3 au rang II (le total, jamais un « +1 » : D11)
-    power: (n) => `Poison ${POISON_AURA + POISON_AURA_RANK * n} par tour`,
+    onTurnStart: () => [{ type: 'applyStatus', status: 'poison', stacks: POISON_AURA, target: 'opponent' }],
   },
   powerAura: {
     name: 'Aura de puissance',
@@ -1305,7 +1280,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     modifyOutgoing: (damage, s) => damage + powerAuraBonus(s),
     // Au plafond, la réaction ne part plus (une aura qui reposerait un statut à son plafond, combat.ts)
     reactions: { heavy: () => [{ type: 'applyStatus', status: 'powerAura', stacks: 1 }] },
-    power: (n) => `${damageText(n)} par coup`,
   },
   // Refonte des auras (2026-10-28, docs/REFONTE_AURAS.md § 4) : l'Aura d'immunité devient l'Ampoule bénite, une relique
   // qui pose ce statut pour ses premiers tours (une règle de défense, pas un moteur de build)
@@ -1337,7 +1311,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // Décision D11 (2026-10-30) : regroupée, +4 PV tous les deux tours (son compteur, le Recueillement)
     tally: 'holyVigil',
     onTurnEnd: (s) => [{ type: 'applyStatus', status: 'holyVigil', stacks: 1, power: tallyPower(s) }],
-    power: (n) => `+${plural(2 * n, 'PV')} tous les ${COUNT_WORDS[HOLY_TURNS].toLowerCase()} tours`,
   },
   // Le compteur de l'Aura de sainteté (D11) : à son 2e tour, le soin
   holyVigil: {
@@ -1388,7 +1361,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // les trois coups qui touchent (son compteur, la Dose)
     tally: 'decoctionDose',
     reactions: { hit: (s) => [{ type: 'applyStatus', status: 'decoctionDose', stacks: 1, power: tallyPower(s) }] },
-    power: (n) => `Poison +${2 * n} tous les ${COUNT_WORDS[DECOCTION_HITS].toLowerCase()} coups qui touchent`,
   },
   // Le compteur de l'Aura de décoction (D11) : à son 3e coup qui touche, le Poison
   decoctionDose: {
@@ -1551,15 +1523,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'affliction',
     summary: `Chacun de ses critiques pose ${OPEN_WOUND_BLEED} Saignement par charge à l'adversaire.`,
-    describe: (s) => `${OPEN_WOUND_BLEED * charges(s)} Saignement à l'adversaire à chacun de ses critiques`,
+    describe: (s) => `${OPEN_WOUND_BLEED * s.stacks} Saignement à l'adversaire à chacun de ses critiques`,
     detail: () => 'Posé pendant le coup, le Saignement coule dès le coup suivant.',
-    badge: (s) => `+${OPEN_WOUND_BLEED * charges(s)}`,
+    badge: (s) => `+${OPEN_WOUND_BLEED * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
     // Refonte des auras (2026-10-28, § 3.1, § 5.1) : au critique, la Saignée d'Elaria (Odeur du sang : le critique fait
     // saigner, le saignement fait critiquer). 3 par critique : 48,1 % au départ ; 4 : 54,2
-    reactions: { crit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * charges(s), target: 'opponent' }] },
-    power: (n) => `+${OPEN_WOUND_BLEED * n} Saignement par critique`,
+    reactions: { crit: (s) => [{ type: 'applyStatus', status: 'bleed', stacks: OPEN_WOUND_BLEED * s.stacks, target: 'opponent' }] },
   },
   // Phase 8, lot 3 (docs/SORTS.md § 29) : les malus de famille manquants, Garde, Fortune, Précision, Soin, Sceaux
   guardBreak: {
@@ -1653,17 +1624,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'precision',
     summary: `+${Math.round(FEINT_DODGE * 100)} % d'esquive par charge ; chaque esquive et chaque coup qui touche ajoutent +${AIM_STEP} au multiplicateur de son prochain critique, +${AIM_CAP} au plus.`,
     describe: (s) =>
-      `+${Math.round(FEINT_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +${AIM_STEP} au multiplicateur de son prochain critique, +${AIM_CAP} au plus`,
+      `+${Math.round(FEINT_DODGE * 100 * s.stacks)} % d'esquive. Chaque esquive et chaque coup qui touche ajoutent +${AIM_STEP} au multiplicateur de son prochain critique, +${AIM_CAP} au plus`,
     detail: () => 'La Mire s’accumule jusqu’à son prochain critique, qui la lâche. Chaque nouvelle pose ajoute +5 % d’esquive.',
-    badge: (s) => `+${Math.round(FEINT_DODGE * 100 * charges(s))} %`,
+    badge: (s) => `+${Math.round(FEINT_DODGE * 100 * s.stacks)} %`,
     counter: 'stacks',
     stacking: 'add',
-    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + FEINT_DODGE * charges(s) }),
+    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + FEINT_DODGE * s.stacks }),
     reactions: {
       dodge: () => [{ type: 'applyStatus', status: 'aim', stacks: AIM_STEP }],
       hit: () => [{ type: 'applyStatus', status: 'aim', stacks: AIM_STEP }],
     },
-    power: (n) => `+${Math.round(FEINT_DODGE * 100 * n)} % d'esquive`,
   },
   // La Mire (la Visée, refonte des auras) : un chiffre qui grossit en attendant le coup ; le critique la lâche entière
   aim: {
@@ -1700,7 +1670,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     onTurnStart: (s) => [{ type: 'applyStatus', status: 'stormCloud', stacks: 1, power: tallyPower(s) }],
     // L'orage qui éclate : l'arène s'assombrit et ses éclairs tombent comme ceux de la Foudre (§ 3.2)
     scene: ({ hits }) => (hits >= 2 ? 'lightning' : undefined),
-    power: (n) => `${n > 1 ? `${n} éclairs` : 'Un éclair'} de plus quand l'orage éclate`,
   },
   // Le compteur de l'Aura d'orage (D20) : à son 3e tour, l'orage éclate
   stormCloud: {
@@ -1732,7 +1701,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + frenzyCrit(s) }),
     reactions: { crit: () => [{ type: 'applyStatus', status: 'bloodFrenzyStrike', stacks: BLOOD_FRENZY_STRIKES }] },
-    power: (n) => `+${Math.round(BLOOD_FRENZY_CRIT * 100 * n)} % de critique`,
   },
   // Les coups de l'Ivresse : une rafale comme la Curée, posée par un critique. Un critique pendant une rafale pose une
   // charge que la rafale en cours ne relance pas : elle part après le prochain jet du porteur (RESOLUTION § 2)
@@ -1764,15 +1732,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'fortune',
     summary: `Chaque 6 au dé lui donne ${COUNT_WORDS[VEIN_STRIKES].toLowerCase()} coups de plus, tout de suite, par charge.`,
-    describe: (s) => `Chaque 6 au dé lui donne ${VEIN_STRIKES * charges(s)} coups de plus, tout de suite`,
+    describe: (s) => `Chaque 6 au dé lui donne ${VEIN_STRIKES * s.stacks} coups de plus, tout de suite`,
     detail: () => 'Des coups de base bruts, juste après le coup du 6 : leur face ne déclenche aucune compétence.',
-    badge: (s) => `×${VEIN_STRIKES * charges(s)}`,
+    badge: (s) => `×${VEIN_STRIKES * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
     // Refonte des auras (2026-10-28, § 3.1, § 5.8) : des coups bruts (un jet complet de plus avant : 40,8 % au départ de
     // Fanchon), sans boucle ; à deux coups, 44,4 % pour tous (W5)
-    reactions: { naturalMax: (s) => [{ type: 'applyStatus', status: 'veinStrike', stacks: VEIN_STRIKES * charges(s) }] },
-    power: (n) => `+${VEIN_STRIKES * n} coups par 6`,
+    reactions: { naturalMax: (s) => [{ type: 'applyStatus', status: 'veinStrike', stacks: VEIN_STRIKES * s.stacks }] },
   },
   // Les coups de la Veine : une rafale comme celle de l'Ivresse du sang, posée par un 6
   veinStrike: {
@@ -1808,7 +1775,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     maxStacks: DREAD_CAP,
     modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + dreadCrit(s) }),
     reactions: { crit: () => [{ type: 'applyStatus', status: 'fear', stacks: 1, target: 'opponent' }] },
-    power: (n) => `+${Math.round(DREAD_CRIT * 100 * n)} % de critique`,
   },
   rancor: {
     name: 'Aura de rancœur',
@@ -1816,17 +1782,16 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'power',
     summary: `Chaque coup reçu lui donne +${RANCOR_FERVOR} Ferveur.`,
-    describe: (s) => `Chaque coup reçu lui donne +${RANCOR_FERVOR + 2 * (s.power ?? 0)} Ferveur`,
+    describe: () => `Chaque coup reçu lui donne +${RANCOR_FERVOR} Ferveur`,
     detail: () => 'La Ferveur part sur son prochain coup qui touche. Une nouvelle pose ne change rien.',
-    badge: (s) => `+${RANCOR_FERVOR + 2 * (s.power ?? 0)}`,
+    badge: () => `+${RANCOR_FERVOR}`,
     counter: 'stacks',
     // Refonte des auras (2026-10-28, § 3.1, § 5.7) : « il s'énerve si on le frappe », +3 sans cumul (+1 par charge avant).
     // Décision D19 (2026-10-30) : elle quitte la fiche de Morgrut (le Cuir épais la remplace) et reste une brique du
-    // Rempart, offerte en gravure ; son rang, +2 (D11)
+    // Rempart
     stacking: 'refresh',
     maxStacks: 1,
-    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'momentum', stacks: RANCOR_FERVOR + 2 * (s.power ?? 0) }] },
-    power: (n) => `+${2 * n} Ferveur par coup reçu`,
+    reactions: { hurt: () => [{ type: 'applyStatus', status: 'momentum', stacks: RANCOR_FERVOR }] },
   },
   // Cuir épais (décision D19 du 2026-10-30, Rempart) : la seconde aura de Morgrut, celle qui tient. Chaque coup reçu, de
   // l'armure temporaire : le gros tas qui encaisse, qui nourrit le Bastion, la Riposte et l'Onde de choc. Sans cumul, comme
@@ -1838,15 +1803,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'guard',
     summary: `Chaque coup reçu lui donne +${THICK_HIDE_ARMOR} armure temporaire.`,
-    describe: (s) => `Chaque coup reçu lui donne +${thickHide(s)} armure temporaire`,
+    describe: () => `Chaque coup reçu lui donne +${THICK_HIDE_ARMOR} armure temporaire`,
     detail: () => "Après le coup : l'armure attend le coup suivant. Une nouvelle pose ne change rien.",
-    badge: (s) => `+${thickHide(s)}`,
+    badge: () => `+${THICK_HIDE_ARMOR}`,
     counter: 'stacks',
     stacking: 'refresh',
     maxStacks: 1,
-    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'bonusArmor', stacks: thickHide(s) }] },
-    // Aiguisée : +4 armure temporaire par coup reçu au rang II (le total, jamais un « +1 » : D11)
-    power: (n) => `+${THICK_HIDE_ARMOR + THICK_HIDE_RANK * n} armure temporaire par coup reçu`,
+    reactions: { hurt: () => [{ type: 'applyStatus', status: 'bonusArmor', stacks: THICK_HIDE_ARMOR }] },
   },
   ballad: {
     name: 'Aura de ballade',
@@ -1864,7 +1827,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     // coup ; le refrain porte tout (quatre éclats de 2, +4 PV)
     tally: 'balladNote',
     reactions: { hit: (s) => [{ type: 'applyStatus', status: 'balladNote', stacks: 1, power: tallyPower(s) }] },
-    power: (n) => `${n > 1 ? `${n} éclats` : 'Un éclat'} de plus au refrain`,
   },
   // Les notes de la Ballade : un statut à seuil ; la 4e joue le refrain
   balladNote: {
@@ -1897,18 +1859,17 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     family: 'retaliation',
     summary: `Chaque fois que l'armure temporaire du porteur est vidée, l'attaquant perd ${plural(BASTION_LOSS, 'PV')} et le porteur regagne +${BASTION_ARMOR} armure temporaire, par charge.`,
     describe: (s) =>
-      `Chaque fois que son armure temporaire est vidée, l'attaquant perd ${plural(BASTION_LOSS * charges(s), 'PV')} et le porteur regagne +${BASTION_ARMOR * charges(s)} armure temporaire`,
+      `Chaque fois que son armure temporaire est vidée, l'attaquant perd ${plural(BASTION_LOSS * s.stacks, 'PV')} et le porteur regagne +${BASTION_ARMOR * s.stacks} armure temporaire`,
     detail: () => 'En dégâts directs. L’armure regagnée peut être vidée à son tour.',
-    badge: (s) => `−${BASTION_LOSS * charges(s)}`,
+    badge: (s) => `−${BASTION_LOSS * s.stacks}`,
     counter: 'stacks',
     stacking: 'add',
     reactions: {
       shieldBroken: (s) => [
-        { type: 'damage', amount: BASTION_LOSS * charges(s), target: 'opponent', source: 'strike' },
-        { type: 'applyStatus', status: 'bonusArmor', stacks: BASTION_ARMOR * charges(s) },
+        { type: 'damage', amount: BASTION_LOSS * s.stacks, target: 'opponent', source: 'strike' },
+        { type: 'applyStatus', status: 'bonusArmor', stacks: BASTION_ARMOR * s.stacks },
       ],
     },
-    power: (n) => `+${plural(BASTION_LOSS * n, 'PV')} et +${BASTION_ARMOR * n} armure temporaire par armure vidée`,
   },
   // Jugement (Ysolde, Lumière) : les fautes de qui la frappe ; à la 3e, le verdict (D17, retour du 30 octobre : des PV de
   // Lumière au lieu de la Peur, que donnent déjà l'Effroi et sa Peur : la juge punit, l'Ombre terrifie)
@@ -1918,15 +1879,14 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'retaliation',
     summary: `Chaque coup qui touche le porteur donne une faute à l'attaquant. À la ${JUDGEMENT_FAULTS}e, le verdict tombe : il perd ${plural(VERDICT_LOSS, 'PV')}.`,
-    describe: (s) =>
-      `Chaque coup qui touche le porteur donne une faute à l'attaquant ; à la ${JUDGEMENT_FAULTS}e, le verdict tombe : il perd ${plural(verdictLoss(s), 'PV')}`,
+    describe: () =>
+      `Chaque coup qui touche le porteur donne une faute à l'attaquant ; à la ${JUDGEMENT_FAULTS}e, le verdict tombe : il perd ${plural(VERDICT_LOSS, 'PV')}`,
     detail: () => 'En dégâts directs. Les fautes ne viennent que des coups qui touchent le porteur, jamais des tours. Le verdict emporte les fautes : le compte repart de zéro. Une nouvelle pose ne change rien.',
-    badge: (s) => `−${verdictLoss(s)}`,
+    badge: () => `−${VERDICT_LOSS}`,
     counter: 'stacks',
     stacking: 'refresh',
     maxStacks: 1,
-    reactions: { hurt: (s) => [{ type: 'applyStatus', status: 'fault', stacks: 1, target: 'opponent', ...(s.power && { power: s.power }) }] },
-    power: (n) => `+${plural(VERDICT_RANK * n, 'PV')} au verdict`,
+    reactions: { hurt: () => [{ type: 'applyStatus', status: 'fault', stacks: 1, target: 'opponent' }] },
   },
   // La faute : un malus à seuil ; à la 3e, le verdict (dégâts directs de Lumière, sur celui qui la porte)
   fault: {
@@ -1934,8 +1894,8 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'negative',
     family: 'retaliation',
     summary: `Une faute de l'Aura de jugement ; à la ${JUDGEMENT_FAULTS}e, le verdict : il perd ${plural(VERDICT_LOSS, 'PV')}.`,
-    describe: (s) => `${s.stacks} sur ${JUDGEMENT_FAULTS} fautes ; à la ${JUDGEMENT_FAULTS}e, le verdict : il perd ${plural(verdictLoss(s), 'PV')}`,
-    onFoe: (s) => `L'adversaire reçoit ${s.stacks > 1 ? `${s.stacks} fautes` : 'une faute'} ; à la ${JUDGEMENT_FAULTS}e, le verdict : il perd ${plural(verdictLoss(s), 'PV')}`,
+    describe: (s) => `${s.stacks} sur ${JUDGEMENT_FAULTS} fautes ; à la ${JUDGEMENT_FAULTS}e, le verdict : il perd ${plural(VERDICT_LOSS, 'PV')}`,
+    onFoe: (s) => `L'adversaire reçoit ${s.stacks > 1 ? `${s.stacks} fautes` : 'une faute'} ; à la ${JUDGEMENT_FAULTS}e, le verdict : il perd ${plural(VERDICT_LOSS, 'PV')}`,
     detail: () => 'En dégâts directs. Ses fautes partent avec le verdict.',
     // Un compteur à seuil (1/3, 2/3) : il se lit comme une jauge (docs/etudes/PERSOS_RETOUR_30.md § 2)
     badge: (s) => `${s.stacks}/${JUDGEMENT_FAULTS}`,
@@ -1943,7 +1903,7 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     stacking: 'add',
     bears: 'est en faute',
     plural: 'fautes',
-    threshold: { at: JUDGEMENT_FAULTS, effects: (s) => [{ type: 'damage', amount: verdictLoss(s), source: 'holy' }] },
+    threshold: { at: JUDGEMENT_FAULTS, effects: () => [{ type: 'damage', amount: VERDICT_LOSS, source: 'holy' }] },
   },
   // Brasier (Thaldrin, Magie) : le feu ne s'éteint plus ; il attise la Brûlure de l'adversaire, ou l'allume
   brasier: {
@@ -1965,7 +1925,6 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     onTurnStart: (s) => [{ type: 'applyStatus', status: 'emberHeap', stacks: 1, power: tallyPower(s) }],
     // Une Brûlure de 3 et plus : le ciel rougit et les braises tombent sur l'adversaire (§ 3.2)
     scene: ({ posed }) => (posed >= 3 ? 'emberRain' : undefined),
-    power: (n) => `Brûlure +${2 * n} tous les ${COUNT_WORDS[BRASIER_TURNS].toLowerCase()} tours`,
   },
   // Le compteur de l'Aura du brasier (D11) : à son 2e tour, les braises
   emberHeap: {
@@ -2012,14 +1971,13 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'power',
     summary: `+${Math.round(ONRUSH_CRIT * 100)} % de critique par charge ; chacun de ses gros coups lui donne +${ONRUSH_FERVOR} Ferveur.`,
-    describe: (s) => `+${Math.round(ONRUSH_CRIT * 100 * charges(s))} % de critique. Chacun de ses gros coups lui donne +${ONRUSH_FERVOR} Ferveur`,
+    describe: (s) => `+${Math.round(ONRUSH_CRIT * 100 * s.stacks)} % de critique. Chacun de ses gros coups lui donne +${ONRUSH_FERVOR} Ferveur`,
     detail: () => 'Un gros coup : un critique, ou un coup ×2 et plus (Assaut, Coup de maître, Acharnement). La Ferveur part sur son prochain coup qui touche.',
-    badge: (s) => `+${Math.round(ONRUSH_CRIT * 100 * charges(s))} %`,
+    badge: (s) => `+${Math.round(ONRUSH_CRIT * 100 * s.stacks)} %`,
     counter: 'stacks',
     stacking: 'add',
-    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + ONRUSH_CRIT * charges(s) }),
+    modifyStats: (stats, s) => ({ ...stats, critChance: stats.critChance + ONRUSH_CRIT * s.stacks }),
     reactions: { heavy: () => [{ type: 'applyStatus', status: 'momentum', stacks: ONRUSH_FERVOR }] },
-    power: (n) => `+${Math.round(ONRUSH_CRIT * 100 * n)} % de critique`,
   },
   // Refonte des auras (2026-10-28, docs/REFONTE_AURAS.md § 4) : la Surtension et l'Emprise deviennent des reliques (la
   // Pointe de paratonnerre, la Chaîne du geôlier), qui posent leur statut à son premier tour, pour tout le combat
@@ -2086,16 +2044,15 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     polarity: 'positive',
     family: 'seals',
     summary: `+${Math.round(PILFER_DODGE * 100)} % d'esquive par charge ; chaque esquive lui fait voler le dernier bonus de l'attaquant.`,
-    describe: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant`,
+    describe: (s) => `+${Math.round(PILFER_DODGE * 100 * s.stacks)} % d'esquive. Chaque esquive lui fait voler le dernier bonus de l'attaquant`,
     // Un vrai vol (retour du 2026-10-28, A6) : le bonus entier change de camp, et seuls les bonus de la zone des statuts se
     // volent (`isStealable`) ; une charge par vol (0.127.0) laissait le bonus au volé, comme une copie
     detail: () => 'Le bonus entier, charges, durée et intensité. Ni une aura ni un mécanisme ne se volent.',
-    badge: (s) => `+${Math.round(PILFER_DODGE * 100 * charges(s))} %`,
+    badge: (s) => `+${Math.round(PILFER_DODGE * 100 * s.stacks)} %`,
     counter: 'stacks',
     stacking: 'add',
-    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + PILFER_DODGE * charges(s) }),
+    modifyStats: (stats, s) => ({ ...stats, dodgeChance: stats.dodgeChance + PILFER_DODGE * s.stacks }),
     reactions: { dodge: () => [{ type: 'cleanse', polarity: 'positive', target: 'opponent', count: 1, steal: 'pilfer' }] },
-    power: (n) => `+${Math.round(PILFER_DODGE * 100 * n)} % d'esquive`,
   },
   // L'Onde de choc compte les coups qu'il encaisse : des jauges, comme la Rétribution, dont sa compétence lit le nombre
   shockwave: {

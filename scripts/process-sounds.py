@@ -26,7 +26,7 @@ SR, STEP, TARGET = 44100, 0.005, -12.0
 AUDIO = ('.mp3', '.wav', '.ogg', '.flac')
 # Durée maximale gardée, en secondes à ×1 (fenêtre du son, `docs/SONS.md` § 3)
 MAX_DURATION = {
-    'dice-roll': 1.2, 'dice-land': 0.3, 'coin-toss': 1.5, 'coin-land': 0.6, 'coin-win': 0.8,
+    'dice-roll': 1.2, 'dice-land': 0.3, 'coin-toss': 1.5, 'coin-land': 0.6, 'coin-win': 0.8, 'doublet': 0.8,
     'hit': 0.7, 'crit-rumble': 1.2, 'dodge': 0.3,
     'aura-gain': 1.3, 'aura-loss': 1.0, 'buff': 0.7, 'debuff': 0.7, 'dispel': 0.6, 'stun': 0.9, 'rot': 0.5, 'fizz': 0.6, 'heal': 0.7,
     # Sons de pose par famille (2026-10-25)

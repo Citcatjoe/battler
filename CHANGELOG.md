@@ -32,6 +32,21 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.135.0] — 2026-10-31
+
+Suite des décisions ouvertes du retour du 30 octobre (registre `docs/RETOUR_30.md`). Mesures : 400 combats par duel, mêmes graines que `npm run balance` ; « construit » = 48 builds à 8 récompenses ([SORTS.md](docs/SORTS.md) § 35, [RELIQUES.md](docs/RELIQUES.md) § 19.4).
+
+### Ajouté
+- **Son du Doublé** : deux chocs de dés puis un tintement doré à 2 100 Hz (plus aigu que le ding de Pile réussie, qu'il remplace à cet instant seulement), généré avec ElevenLabs et assemblé de deux prises (`src/assets/sounds/doublet.mp3`, 0,685 s, −13,3 LUFS ; prises gardées dans `logs/sons/doublet/`). Repli synthétisé dans `sound.ts`.
+
+### Modifié
+- **Le rang d'une aura** : une aura aiguisée arrive au plus tard au **2e tour** au lieu du 3e, et ses valeurs ne changent plus (avant : un cran de plus de son effet). Seule l'aura du 1 s'aiguise. Rang II au départ +6,4 à +17,6 (3 auras sur 20 dans la bande de +3 à +8) → **+4,3 à +11,7** (13 sur 20) ; construit +4,6 à +12,3 → +2,4 à +8,3.
+- **Défi** : « s'il touche, +2 armure temporaire et une Riposte, deux fois par combat » (avant : à chaque fois, sans condition). Gravé nu +19,3 à +22,3 → +17,4 à +19,9 ; construit +11,4 à +17,2 → +9,7 à +14,5 ; Aldric construit 25,5 → 19,6.
+- **Éclair aveuglant** : Aveuglé 4 → **3 tours**. Ysolde nu +16,4 → +13,3, construite +14,6 → +12,0.
+- **Cotte du mercenaire** : +2 armure, −10 % d'esquive et −8 PV max (+1 armure et −5 % avant ; +12,4 → +8,9, Morgrut +18,9). **Gambison matelassé** : +7 PV max et −5 % d'esquive (+12,3 → +11,3, Morgrut +18,3). **Contrepoids de plomb** : texte « Critiques ×3 au lieu de ×2 » (règle inchangée, +6,8). Plus aucun « 1 » affiché sur ces trois reliques (D11).
+- Le texte du Clairon du héraut et les listes de reliques (« a, b et c ») suivent le rendez-vous aiguisé.
+- Empreinte `balance.test.ts` régénérée une fois (roster nu inchangé : 45,2 à 54,5 %). Contrôle d'audit ajouté : « aura aiguisée posée d'office avant le 3e tour ».
+
 ## [0.134.0] — 2026-10-31
 
 Les décisions de l'utilisateur du 30 octobre (D3, D7 à D29 ; « crée des reliques, des icônes, des compétences, tune, peaufine les synergies, rééquilibre »). Registre point par point : `docs/RETOUR_30.md` ; décisions encore ouvertes en tête du registre.

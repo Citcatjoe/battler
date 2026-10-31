@@ -426,3 +426,9 @@ Mesures et raisons : [PERSONNAGES.md](PERSONNAGES.md) « Passe d'équilibre du 3
 - **Aura du dé pipé** : **+6 %** de critique et d'esquive par charge (`LOADED_DIE_EDGE`, 5 % avant).
 - **Sentence, Bouclier de foi, Flamme votive** : leur intensité de rang passe à +2 par rang (rangs « +1 », D11) ; Dîme, Grâce, Sangsue, Lame enduite, Égide d'orage, Répit : +2 charges par rang. Les autres rangs à +1 restent (hors bande à +2).
 - **Mise en scène** (`staging.ts`, `display`) : un statut qu'une étape pas encore jouée a changé, et qu'une étape plus récente déjà montrée a changé aussi, ne revient que de l'écart de l'étape retenue (deux Hameçons rouillés sur les dés d'une rafale : la seconde pose s'ajoute à la première au lieu de l'effacer).
+
+## Décisions ouvertes du 30 octobre, tranchées (2026-10-31, 0.135.0, agent Reglages)
+
+- **Toutes les auras** : leur rang n'a plus d'intensité. Aiguisée, l'aura de départ arrive au plus tard au début du 2e tour de son porteur au lieu du 3e (axe `due`, `auraDueTurn`, RESOLUTION.md phase 1). Retirés : `THORN_RANK`, `POISON_AURA_RANK`, `THICK_HIDE_RANK`, `VERDICT_RANK`, les textes d'intensité (`power`) des 21 auras, l'intensité passée aux Épines plantées et aux Fautes, et `charges` (une aura agit par ses charges seules). Les lignes « Rang : » des tableaux ci-dessus (Épines, Poison, Jugement, Cuir épais, Rancœur) sont caduques. Mesures : [SORTS.md](SORTS.md) § 35.
+- **Aveuglé** (Éclair aveuglant) : 3 tours au lieu de 4.
+- **Riposte** posée par le Défi : seulement si son coup touche, deux fois par combat.

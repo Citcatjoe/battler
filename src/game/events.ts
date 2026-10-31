@@ -53,9 +53,9 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   combatStart: { label: 'Au début du combat', short: 'début du combat' },
   turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
   turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
-  // L'aura de départ au rendez-vous (2026-10-27 ; réarmé après une dissipation, D8 du 2026-10-30) : réservé au moteur,
-  // aucune compétence ne le déclare
-  auraDue: { label: 'Au début de son 3e tour, ou de son 2e tour après sa dissipation, son aura de départ absente', short: 'aura due' },
+  // L'aura de départ au rendez-vous (2026-10-27 ; réarmé après une dissipation, D8 du 2026-10-30 ; le 2e tour aiguisée,
+  // retour du 30 octobre) : réservé au moteur, aucune compétence ne le déclare
+  auraDue: { label: 'Au début de son 3e tour (son 2e, aiguisée), ou de son 2e tour après sa dissipation, son aura de départ absente', short: 'aura due' },
   naturalOne: { label: 'Sur un 1 au dé', short: 'dé 1' },
   naturalTwo: { label: 'Sur un 2 au dé', short: 'dé 2' },
   naturalThree: { label: 'Sur un 3 au dé', short: 'dé 3' },
@@ -226,10 +226,13 @@ export type HitRelation = 'graft' | 'modify' | 'replace'
  * - `power` : intensité du statut qu'elle pose (`Status.power`) ; ce qu'elle vaut, le statut le dit (`StatusDef.power`) ;
  * - `multiplier` : son coup ×N, `per` de plus (Soliste, Crescendo) ;
  * - `limit` : `per` fois de plus par combat (Peur) ;
- * - `share` : la part relâchée, `per` points de pourcentage de plus (Rétribution).
+ * - `share` : la part relâchée, `per` points de pourcentage de plus (Rétribution) ;
+ * - `due` : une aura, son rendez-vous `per` tour plus tôt (retour du 30 octobre : l'aura aiguisée arrive au début du 2e
+ *   tour de son porteur au lieu du 3e, une règle pour toutes les auras ; le 1er tour au plus tôt). Seule l'aura de départ,
+ *   sur la face 1, a un rendez-vous : c'est la seule qui s'aiguise (`forge.ts`).
  */
 export interface RankAxis {
-  kind: 'stacks' | 'amount' | 'power' | 'multiplier' | 'limit' | 'share'
+  kind: 'stacks' | 'amount' | 'power' | 'multiplier' | 'limit' | 'share' | 'due'
   per: number
   /** `amount` : le seul genre d'effet qui gagne le montant (sans : dégâts et soins) */
   on?: 'heal' | 'damage'
@@ -273,6 +276,11 @@ export interface CharacterEvent {
   scene?: SceneEventId
   /** Ce qu'un rang d'aiguisage lui ajoute (0.110.0). Toute compétence du dé du roster en déclare un (`validateRoster`). */
   rankAxis?: RankAxis
+  /**
+   * Aura de départ aiguisée (axe `due`, retour du 30 octobre) : le tour de son porteur où elle arrive au plus tard (son
+   * rendez-vous) ; absent, le 3e (`AURA_DUE_TURN`, combat.ts). Seule la forge le pose.
+   */
+  dueTurn?: number
 }
 
 /** La relation d'une compétence au coup de base, `graft` par défaut. */
@@ -522,6 +530,8 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   if (clauses.length > 0 && sentences.length === 1) sentences[0] = `${sentences[0]} ${clauses.join(' et ')}`
   else if (clauses.length > 0) sentences[0] = `${clauses.join(' et ')}, ${lowerFirst(sentences[0])}`
   if (limits.length > 0) sentences[sentences.length - 1] = `${sentences[sentences.length - 1]}, ${limits.join(', ')}`
+  // L'aura de départ aiguisée (retour du 30 octobre) : son rendez-vous avancé, dit en total (« au 2e tour »), comme tout rang
+  if (e.dueTurn !== undefined) sentences.push(`arrive au plus tard au début de son ${e.dueTurn === 1 ? '1er' : `${e.dueTurn}e`} tour`)
   const details = [...new Set(e.effects.flatMap((effect) => effectDetail(effect) ?? []))]
   const posedIds = e.effects.flatMap((effect) => (effect.type === 'applyStatus' ? [effect.status] : []))
   const direct = e.effects.some((x) => x.type === 'damage' || x.type === 'release' || (x.type === 'cleanse' && x.orElse?.type === 'damage'))

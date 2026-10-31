@@ -1622,3 +1622,70 @@ Après la vague du 30 octobre. Mesures : `scripts/skills.report.ts` (`SKILLS_PAR
 - **Rangs II d'aura au départ** : de +6,4 (Vindicte) à +17,6 (Épines), presque tous au-dessus de +8 (Aura de poison +16,3, Plaies +16,2, Brasier +14,4, Élan +13,8, Dé pipé +13,9, Larcin +13,2, Puissance +13,2…). Construites (les aiguisages pris) : Épines +11,4, Poison +12,9, Vindicte +10,7, Ivresse +8,4, Orage +5,1, Ballade +5,5. Le plus petit pas entier d'une aura est son moteur aiguisé d'un cran. Proposition (règle pour toutes, à décider) : le rang d'une aura avance son rendez-vous (au 2e tour au lieu du 3e) ; le Clairon du héraut, qui la pose au 1er tour, vaut +13,6 en moyenne (`npm run relics`), un tour d'avance vaudrait autour de la moitié (non mesuré).
 - **Aura de rancœur** : rang +2 Ferveur, +8,1 (400 par duel, au bord). Elle n'est sur aucune fiche et l'offre ne grave jamais une aura (`forge.ts`, A2) : elle n'est jamais en jeu.
 - Gravures déjà au-dessus avant la vague, inchangées : Curée (Brokk +27,9), Malchance (Ervald +26,0, Aldric +25,1), Virulence (Ervald +24,0), Rétribution (Aldric +23,0), Coup de maître (Morgrut +21,0) ; aiguisages de kit au-dessus (Écho +20,4, Furie +15,3, Feux follets +15,2, Assaut +14,5).
+
+## 35. Décisions ouvertes du 30 octobre, tranchées (0.135.0, agent Reglages, 2026-10-31)
+
+Réponses de l'utilisateur aux points ouverts de [RETOUR_30.md](RETOUR_30.md). Mesures : banc jetable (supprimé), mêmes graines que `npm run balance`. « Nu » : gravée sur le 3 nu (ou aiguisée sur le 1 pour une aura), contre le roster nu, 400 combats par duel. « Construit » : les 48 builds du champion de référence à 8 récompenses (`drawBuild`), la brique ajoutée sur sa première face libre (ou l'aura aiguisée), contre les builds des 9 autres au même indice, 100 combats par duel ; n = builds où elle s'ajoutait. Une gravure ou un aiguisage ajoute aussi les PV d'une récompense (+2 PV, environ +4 points).
+
+### Rangs d'aura : l'aura aiguisée arrive au 2e tour au lieu du 3e
+
+Une règle pour toutes les auras (axe de rang `due`, `skills.ts` `AURA_RANK`) : aiguisée, l'aura de départ arrive au plus tard au début du 2e tour de son porteur (le 1er au rang III du journal) ; ses valeurs ne changent plus. Les valeurs de rang propres à chaque aura sont retirées (`THORN_RANK`, `POISON_AURA_RANK`, `THICK_HIDE_RANK`, `VERDICT_RANK`, les textes d'intensité des auras, `charges`). Une aura gravée ailleurs que sur le 1 (laboratoire) ne s'aiguise pas. Texte de forge : la compétence aiguisée ajoute « Arrive au plus tard au début de son 2e tour. » Contrôle : audit (`aura aiguisée posée d'office avant le 3e tour`).
+
+| Aura (porteur) | Rang II nu, avant → après | Construit, avant → après |
+| --- | --- | --- |
+| Ivresse (Gorak) | +12,0 → +6,2 | +8,1 → +4,9 |
+| Élan (Gorak) | +13,8 → +6,7 | — |
+| Visée (Elaria) | +7,7 → +6,9 | +6,4 → +5,4 |
+| Plaies (Elaria) | +16,3 → +8,8 | — |
+| Épines (Brokk) | +17,6 → +11,7 | +11,2 → +7,8 |
+| Bastion (Brokk) | +9,2 → +8,3 | — |
+| Poison (Ervald) | +16,3 → +10,0 | +12,3 → +6,0 |
+| Effroi (Ervald) | +9,5 → +5,8 | — |
+| Sainteté (Ysolde) | +12,3 → +7,3 | +8,2 → +5,4 |
+| Jugement (Ysolde) | +9,4 → +7,9 | — |
+| Décoction (Naraxes) | +11,1 → +10,9 | +6,7 → +8,3 |
+| Dé pipé (Naraxes) | +13,9 → +6,4 | — |
+| Vindicte (Aldric) | +6,4 → +4,7 | +9,5 → +4,8 |
+| Larcin (Aldric) | +13,2 → +5,8 | — |
+| Puissance (Morgrut) | +13,2 → +9,3 | +7,6 → +5,3 |
+| Cuir épais (Morgrut) | +14,2 → +9,0 | — |
+| Orage (Thaldrin) | +9,3 → +4,3 | +4,6 → +2,4 |
+| Brasier (Thaldrin) | +14,4 → +4,4 | — |
+| Ballade (Fanchon) | +7,6 → +7,3 | +5,2 → +6,4 |
+| Veine (Fanchon) | +11,7 → +6,9 | — |
+
+Nu : de +4,3 à +11,7 (avant +6,4 à +17,6), 13 sur 20 dans la bande de +3 à +8 (avant 3). Restent au-dessus : Épines +11,7, Décoction +10,9, Poison +10,0, Puissance +9,3, Cuir épais +9,0, Plaies +8,8, Bastion +8,3 : les auras qui agissent dès le 1er coup reçu ou porté valent plus d'un tour d'avance. Construit : +2,4 (Orage, sous la bande : son orage n'éclate qu'au 3e tour de l'aura) à +8,3 (Décoction).
+
+### Défi : s'il touche, deux fois par combat
+
+| Variante | Gravée nu (Brokk / Aldric / Morgrut) | Construit | Rang II nu |
+| --- | --- | --- | --- |
+| Avant : +2 armure et Riposte | +22,3 / +21,4 / +19,3 | +14,6 / +17,2 / +11,4 | +4,3 / +3,5 / +5,0 |
+| +4 armure et Rancune (proposition d'Equilibre) | +23,0 / +20,6 / +24,4 | +13,8 / +13,3 / +15,3 | +5,6 / +5,0 / +5,1 |
+| +6 armure et Rancune | +25,7 / +22,6 / +26,5 | +16,4 / +15,0 / +17,0 | — |
+| deux fois par combat | +21,5 / +20,3 / +18,6 | +13,5 / +16,2 / +10,7 | — |
+| s'il touche | +20,4 / +19,1 / +17,7 | +12,8 / +15,2 / +10,0 | — |
+| Riposte seule, s'il touche | +19,2 / +19,1 / +16,9 | +11,6 / +15,0 / +9,1 | — |
+| une fois par combat (rang : une fois de plus) | +16,8 / +15,6 / +13,7 | +10,3 / +12,1 / +8,3 | +8,3 / +7,8 / +8,5 |
+| s'il touche, une fois (rang : une fois de plus) | +16,2 / +14,6 / +13,3 | +9,7 / +11,3 / +7,7 | +7,3 / +6,9 / +8,0 |
+| **Livré : s'il touche, deux fois par combat** | **+19,9 / +18,4 / +17,4** | **+12,4 / +14,5 / +9,7** | **+4,4 / +3,3 / +4,8** |
+
+La seule variante dans toutes les bandes (gravure +8 à +20 nu et construit, rang +3 à +8) ; Brokk nu au bord (+19,9). Texte : « S'il touche, +2 armure temporaire. Son prochain coup reçu renvoie tous ses dégâts à l'attaquant, deux fois par combat. »
+
+### Éclair aveuglant : Aveuglé 3 tours
+
+Gravé nu : Ysolde +16,4 → +13,3, Thaldrin +15,0 → +13,3, Fanchon +13,6 → +11,8. Construit (32 à 39 builds par porteur, plus large que les 6 builds de `npm run ramp`) : Ysolde +14,6 → +12,0, Thaldrin +12,0 → +10,0, Fanchon +10,8 → +8,9. Rang II +5,1 à +5,9. Le +28,4 de la passe d'équilibre (6 builds) ne se retrouve pas sur un échantillon large : à 4 tours, Ysolde construite valait déjà +14,6.
+
+### Aura de rancœur : pas de porteur
+
+Chaque porteur possible (le Rempart : Brokk, Aldric, Morgrut ; la Rancœur sert son dé chez les trois, `auraServed`), la Rancœur à la place de chacune de ses auras, au départ (nu) et sur les builds partis de l'aura remplacée (construit), règle de rang nouvelle :
+
+| Porteur | Départ actuel | Rancœur +3 Ferveur : départ (construit) | Rancœur +2 : départ (construit) |
+| --- | --- | --- | --- |
+| Brokk | Épines 46,0, Bastion 43,7 | 51,7 % (−10,6 / −8,4) | 39,6 % (−17,6 / −16,0) |
+| Aldric | Vindicte 46,6, Larcin 49,5 | **62,3 %**, contre Brokk 72,0 (+5,0 / +3,8) | 54,5 %, contre Morgrut 65,5 (−1,4 / −2,1) |
+| Morgrut | Puissance 45,2, Cuir épais 43,3 | 45,7 % (+0,2 / +2,0) | 36,3 % (−6,2 / −4,3) |
+
+Aucun porteur évident : chez Brokk elle gagne nu et perd construite ; chez Aldric elle est trop forte à +3 et sort de 65/35 à +2 ; chez Morgrut (le seul où elle tient aux deux bouts, +2,4 nu et +2,0 construit contre le Cuir épais) elle a été retirée par la décision D19. Elle reste hors jeu ; propositions dans RETOUR_30.md.
+
+**Après livraison** : `BALANCE_N=400 npm run balance` (roster nu inchangé, 45,2 à 54,5 %, aucune de ces briques n'est sur un dé vanilla) ; `npm run ramp` (`logs/ramp/2026-10-31-16-56-37_v0.134.0.md`, porteurs réels, 4 à 24 builds) : Défi Aldric +25,5 → +19,6, Brokk +21,6 → +17,5, Morgrut +19,8 → +13,8 ; Éclair aveuglant Ysolde +28,4 → +25,3 (± 7,2, 6 builds : l'échantillon large ci-dessus le place à +12,0), Thaldrin +18,3 → +15,6, Fanchon +15,7 → +13,0 ; aiguisage d'aura de +2,1 (Orage) à +8,9 (Épines), avant +5,1 à +12,9. `npm run relics` (`logs/relics/2026-10-31-16-53-12_v0.134.0.md`) confirme RELIQUES.md § 19.4.

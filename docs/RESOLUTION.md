@@ -52,6 +52,9 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
        au tour 3), avant son action, si la compétence d'aura de la face 1 de son dé de départ (vanilla
        ou choisie) n'a pas posé son aura, ou qu'on la lui a retirée, elle part comme sur un 1 : étape
        event, déclencheur `auraDue`, une charge. Déjà là, rien ne se passe et le rendez-vous est passé.
+       **L'aura aiguisée** (retour du 30 octobre, 0.135.0) : son rang avance ce premier rendez-vous d'un tour,
+       au début de son 2e tour (le 1er au rang III du journal ; `auraDueTurn`, axe de rang `due`) ; ses
+       effets ne changent pas. Une aura gravée ailleurs que sur le 1 n'a pas de rendez-vous et ne s'aiguise pas.
        **Le rendez-vous réarmé** (D8, retour du 30 octobre) : une purge qui retire l'aura de départ (la
        Purification d'Ysolde, toute purge de bonus ; pas un vol) la redonne au début du 2e tour suivant de
        son porteur, de la même façon (`auraDueAt` : son tour de dissipation + 2 ; un rendez-vous déjà en

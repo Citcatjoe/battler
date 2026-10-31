@@ -18,7 +18,6 @@ import {
   BASTION_ARMOR,
   BASTION_LOSS,
   BLOOD_FRENZY_STRIKES,
-  charges,
   RANCOR_FERVOR,
   VEIN_STRIKES,
   directDamage,
@@ -31,7 +30,6 @@ import {
   OPEN_WOUND_BLEED,
   STATUSES,
   THICK_HIDE_ARMOR,
-  THICK_HIDE_RANK,
   VENDETTA_MOMENTUM,
   LEECH_HEAL,
   HARVEST_DRAIN,
@@ -39,11 +37,8 @@ import {
   TOAD_POISON,
   VOTIVE_BURN,
   POISON_AURA,
-  POISON_AURA_RANK,
   THORN_BLEED,
-  THORN_RANK,
   VERDICT_LOSS,
-  VERDICT_RANK,
   type Status,
   type StatusId,
 } from './statuses'
@@ -285,14 +280,14 @@ export function createAudit() {
         else see(coin ? 'pile : épine plantée' : 'épine plantée')
       }
       // Les épines plantées sur le frappeur, au début du coup : son coup qui touche les enfonce toutes, Saignement
-      // THORN_BLEED (+THORN_RANK par rang) par épine, et elles partent
+      // THORN_BLEED par épine, et elles partent
       const driven = caused.find((x): x is Extract<Beat, { type: 'statusReaction' }> => x.type === 'statusReaction' && x.status === 'thornSpike' && x.side === striker)
       const planted = find(stateBefore(i).statuses[striker], 'thornSpike')
       if (planted && !driven && !died && !rebound) flag('épines plantées non enfoncées', r, i, '')
       if (driven) {
         const held = find(before(driven).statuses[striker], 'thornSpike')!
         const bleed = driven.effects[0]
-        if (bleed?.type !== 'applyStatus' || bleed.status !== 'bleed' || bleed.target !== target || bleed.stacks !== (THORN_BLEED + THORN_RANK * (held.power ?? 0)) * held.stacks)
+        if (bleed?.type !== 'applyStatus' || bleed.status !== 'bleed' || bleed.target !== target || bleed.stacks !== THORN_BLEED * held.stacks)
           flag('épines plantées : Saignement faux', r, i, JSON.stringify(driven.effects))
         else if (find(driven.state.statuses[striker], 'thornSpike')) flag('épines plantées restées après le coup', r, i, '')
         else see(held.stacks > 1 ? 'épines plantées enfoncées (plusieurs)' : 'épines plantées enfoncées')
@@ -318,10 +313,16 @@ export function createAudit() {
       }
     }
     // L'aura de départ au rendez-vous (2026-10-27, C2) : tours entamés par chacun, et son aura de départ. Son rendez-vous
-    // (`dueAt`) : le 3e tour, une fois ; réarmé au 2e tour suivant quand on la lui dissipe (D8, retour du 30 octobre)
+    // (`dueAt`) : le 3e tour, une fois ; un tour plus tôt par rang de l'aura, lu dans le journal de forge (retour du 30
+    // octobre : l'aura aiguisée au 2e tour ; le 1er au plus tôt) ; réarmé au 2e tour suivant quand on la lui dissipe (D8)
     const taken = [0, 0]
     const starts = [startAuraOf(r.fighters[0]), startAuraOf(r.fighters[1])]
-    const dueAt = [AURA_DUE_TURN, AURA_DUE_TURN]
+    const firstDue = ([0, 1] as const).map((side) => {
+      const f = r.fighters[side]
+      const rank = starts[side] && f.forge.length > 0 ? (forgeState(f.definition, f.forge).ranks.get(starts[side].event.id) ?? 0) : 0
+      return Math.max(1, AURA_DUE_TURN - rank)
+    })
+    const dueAt = [...firstDue]
     const posedAt = [0, 0]
     r.beats.forEach((b: Beat, i) => {
       if (b.type === 'shift') {
@@ -389,7 +390,7 @@ export function createAudit() {
         const herald = before?.type === 'relic' && before.side === side && r.fighters[side].relics.some((x) => x.id === before.relic && x.trigger?.type === 'startAura')
         if ((!herald && taken[side] < dueAt[side]) || b.owner !== side || b.phase !== 'turnStart') flag("pose d'office hors de son rendez-vous", r, i, `${taken[side]} (rendez-vous : ${dueAt[side]})`)
         else if (!herald) {
-          see(dueAt[side] === AURA_DUE_TURN ? "aura de départ posée d'office" : 'aura dissipée revenue à son rendez-vous')
+          see(dueAt[side] !== firstDue[side] ? 'aura dissipée revenue à son rendez-vous' : firstDue[side] < AURA_DUE_TURN ? "aura aiguisée posée d'office avant le 3e tour" : "aura de départ posée d'office")
           dueAt[side] = Infinity
           posedAt[side] = taken[side]
         }
@@ -572,7 +573,7 @@ export function createAudit() {
         const crit = !!strikeIn(cause) && strikeIn(cause)!.attacker === b.side && strikeIn(cause)!.crit && !strikeIn(cause)!.dodged && !strikeIn(cause)!.replaced
         const wound = b.effects[0]
         if (b.trigger !== 'crit' || !crit || !held) flag('plaie ouverte hors d’un critique', r, i, `${b.trigger} ${cause?.type}`)
-        else if (b.effects.length !== 1 || wound?.type !== 'applyStatus' || wound.status !== 'bleed' || wound.target !== 1 - b.side || wound.stacks !== OPEN_WOUND_BLEED * charges(held))
+        else if (b.effects.length !== 1 || wound?.type !== 'applyStatus' || wound.status !== 'bleed' || wound.target !== 1 - b.side || wound.stacks !== OPEN_WOUND_BLEED * held.stacks)
           flag('plaie ouverte : saignement faux', r, i, JSON.stringify(b.effects))
         else see('plaie ouverte')
       }
@@ -581,7 +582,7 @@ export function createAudit() {
         const fervor = b.effects[0]
         if (b.trigger !== 'reflected' || b.cause === undefined || !held || !opensMoment(r, b.cause, b.side, 'reflected')) flag('vindicte hors d’un renvoi', r, i, `${b.trigger}`)
         // Un Sceau de vol (Confiscation) détourne la Ferveur vers l'adversaire, entière (`stolenBy`)
-        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side) || fervor.stacks !== VENDETTA_MOMENTUM * charges(held))
+        else if (b.effects.length !== 1 || fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.target !== (fervor.stolenBy ? 1 - b.side : b.side) || fervor.stacks !== VENDETTA_MOMENTUM * held.stacks)
           flag('vindicte : ferveur fausse', r, i, JSON.stringify(b.effects))
         else see('vindicte')
       }
@@ -719,7 +720,7 @@ export function createAudit() {
         else if (feed.result.kind === 'applied' && (was?.stacks ?? 0) + 1 >= at) {
           // L'intensité du compteur se garde d'une pose à l'autre (la plus forte, règle des poses) : une aura dissipée puis
           // revenue (D8) avec moins de charges laisse au compteur celle d'avant
-          const expected = effects({ id: counter, stacks: at, power: Math.max(was?.power ?? 0, charges(held) - 1) })
+          const expected = effects({ id: counter, stacks: at, power: Math.max(was?.power ?? 0, held.stacks - 1) })
           const bolts = expected.map((x) => (x.type === 'damage' ? (x.hits ?? 1) : undefined))
           const done = rest.slice(0, expected.length)
           if (s.hp[0] > 0 && s.hp[1] > 0 && done.length !== expected.length) flag(`aura regroupée : seuil sans effet (${b.status})`, r, i, JSON.stringify(b.effects))
@@ -737,8 +738,8 @@ export function createAudit() {
         else if (
           loss?.type !== 'damage' ||
           loss.target !== 1 - b.side ||
-          loss.amount !== directDamage(prev.statuses[b.side], BASTION_LOSS * charges(held), 'strike') ||
-          (armor !== undefined && (armor.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.stacks !== BASTION_ARMOR * charges(held)))
+          loss.amount !== directDamage(prev.statuses[b.side], BASTION_LOSS * held.stacks, 'strike') ||
+          (armor !== undefined && (armor.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.stacks !== BASTION_ARMOR * held.stacks))
         )
           flag('bastion : riposte ou armure fausse', r, i, JSON.stringify(b.effects))
         else see('bastion')
@@ -765,14 +766,12 @@ export function createAudit() {
           const after = find(s.statuses[e.target], e.status)?.stacks ?? 0
           const effects = beatEffects(b)
           const k = effects.indexOf(e)
-          // Le verdict (D17) : à la 3e faute, le fautif perd VERDICT_LOSS PV (+VERDICT_RANK par rang du Jugement), en Lumière
-          const rank = Math.max(find(prev.statuses[e.target], 'fault')?.power ?? 0, find(prev.statuses[1 - e.target], 'judgement')?.power ?? 0)
-          const loss = VERDICT_LOSS + VERDICT_RANK * rank
-          const verdict = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target === e.target && x.source === 'holy' && x.amount === loss)
+          // Le verdict (D17) : à la 3e faute, le fautif perd VERDICT_LOSS PV, en Lumière
+          const verdict = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target === e.target && x.source === 'holy' && x.amount === VERDICT_LOSS)
           const refrain = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target !== e.target)
           if (before + e.result.stacks >= at) {
             if (after !== 0) flag('seuil : le statut reste', r, i, `${e.status} ${before} → ${after}`)
-            else if (e.status === 'fault' && !verdict) flag('jugement : pas de verdict à la 3e faute', r, i, `${loss} attendus`)
+            else if (e.status === 'fault' && !verdict) flag('jugement : pas de verdict à la 3e faute', r, i, `${VERDICT_LOSS} attendus`)
             else if (e.status === 'balladNote' && !refrain && s.hp[1 - e.target] > 0) flag('ballade : pas de refrain à la 4e note', r, i, '')
             else see(`seuil atteint : ${e.status}`)
           } else if (after !== before + e.result.stacks) flag('seuil : charges fausses', r, i, `${e.status} ${before} + ${e.result.stacks} → ${after}`)
@@ -783,7 +782,7 @@ export function createAudit() {
         const armor = b.effects[0]
         if (b.trigger !== 'hurt' || !held) flag('cuir épais hors d’un coup reçu', r, i, `${b.trigger}`)
         else if (held.stacks !== 1) flag('cuir épais cumulé', r, i, `${held.stacks}`)
-        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== b.side || armor.stacks !== THICK_HIDE_ARMOR + THICK_HIDE_RANK * (held.power ?? 0))
+        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== b.side || armor.stacks !== THICK_HIDE_ARMOR)
           flag('cuir épais : armure fausse', r, i, JSON.stringify(b.effects))
         else see('cuir épais')
       }
@@ -809,7 +808,7 @@ export function createAudit() {
         const held = find(prev.statuses[b.side], 'luckyStreak')
         const strikes = b.effects[0]
         if (b.trigger !== 'naturalMax' || !held) flag('veine hors d’un 6', r, i, `${b.trigger}`)
-        else if (strikes?.type !== 'applyStatus' || strikes.status !== 'veinStrike' || strikes.stacks !== VEIN_STRIKES * charges(held)) flag('veine : coups faux', r, i, JSON.stringify(b.effects))
+        else if (strikes?.type !== 'applyStatus' || strikes.status !== 'veinStrike' || strikes.stacks !== VEIN_STRIKES * held.stacks) flag('veine : coups faux', r, i, JSON.stringify(b.effects))
         else see('veine')
       }
       // Le contenu des maîtrises (quatrième demande du 2026-10-27). Élan : +3 Ferveur au porteur, après un gros coup qui
@@ -1442,13 +1441,12 @@ export function createAudit() {
         }
       }
       // Aura de poison (0.69.0 ; D15 du 2026-10-30) : au début du tour de son porteur, avant son coup, Poison POISON_AURA
-      // (+POISON_AURA_RANK par rang) sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler)
+      // sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler)
       if (b.type === 'statusTick' && b.status === 'frostAura') {
         if (b.phase !== 'turnStart') flag('aura glaciale hors début de tour', r, i, '')
         if (r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')) flag('aura glaciale après le coup', r, i, '')
-        const st = find(prev.statuses[b.side], 'frostAura')!
         const e = b.effects[0]
-        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== POISON_AURA + POISON_AURA_RANK * (st.power ?? 0))
+        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== POISON_AURA)
           flag('aura glaciale : poison, montant ou cible', r, i, JSON.stringify(b.effects))
         else if (e.result.kind === 'applied') see('aura glaciale')
       }

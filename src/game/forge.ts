@@ -1,4 +1,5 @@
 import type { CharacterDef } from './character'
+import { AURA_DUE_TURN } from './combat'
 import { DIE_FACES, faceTrigger, HIT_NOUNS, relationOf, rollFace, type CharacterEvent, type Effect, type RankAxis } from './events'
 import { pick, pickWeighted, shuffle, type Rng } from './rng'
 import { auraOfSkill } from './states'
@@ -125,8 +126,10 @@ function targetsIn(base: ForgeBase, state: ForgeState, op: ForgeOpKind): number[
       return FACES.filter((f) => isFree(base, state, f))
     case 'sharpen':
       // Aiguisable : une compétence qui déclare son axe de rang (0.110.0, `RankAxis`), toutes celles du roster ; chaque rang
-      // change quelque chose. Le journal n'a pas de rang maximal ; la partie s'arrête au rang II (`MAX_SHARPENS`)
-      return FACES.filter((f) => skillsOn(base, state, f).some((e) => sharpensAt(e, state.ranks.get(e.id) ?? 0)))
+      // change quelque chose. Le journal n'a pas de rang maximal ; la partie s'arrête au rang II (`MAX_SHARPENS`). Une aura
+      // (axe `due`) ne s'aiguise que sur la face de l'aura de départ : ailleurs (une aura gravée au laboratoire), pas de
+      // rendez-vous à avancer
+      return FACES.filter((f) => skillsOn(base, state, f).some((e) => (e.rankAxis?.kind !== 'due' || f === AURA_FACE) && sharpensAt(e, state.ranks.get(e.id) ?? 0)))
     case 'copy':
       // Une face de compétence encore sur moins de deux faces, qu'une seconde face renforce, et une face libre où poser la copie
       return FACES.filter((f) => destinationsIn(base, state, f).length > 0)
@@ -292,10 +295,12 @@ export function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
   if (rank === 0 || !e.rankAxis) return e
   const { kind, per, on } = e.rankAxis
   const gain = per * rank
+  const named = { ...e, name: `${e.name} ${rankLabel(rank)}` }
+  // Une aura aiguisée (retour du 30 octobre) : son rendez-vous avance, ses effets ne changent pas ; le 1er tour au plus tôt
+  if (kind === 'due') return { ...named, dueTurn: Math.max(1, AURA_DUE_TURN - gain) }
   const posed = e.effects.findIndex((x) => x.type === 'applyStatus')
   return {
-    ...e,
-    name: `${e.name} ${rankLabel(rank)}`,
+    ...named,
     effects: e.effects.map((x, k) => (x.type === 'applyStatus' && k !== posed ? x : sharpenEffect(x, kind, gain, on))),
     ...(kind === 'multiplier' && e.hitMultiplier !== undefined && { hitMultiplier: e.hitMultiplier + gain }),
     ...(kind === 'limit' && e.limit !== undefined && { limit: e.limit + gain }),
@@ -319,6 +324,7 @@ export function rankText(e: CharacterEvent): string {
       multiplier: `ce coup ×${per} de plus`,
       limit: `${per} fois de plus par combat`,
       share: `+${per} % des dégâts renvoyés`,
+      due: per > 1 ? `arrive ${per} tours plus tôt` : 'arrive un tour plus tôt',
     }[kind],
   )
 }

@@ -756,8 +756,11 @@ export function validateRoster(defs: readonly CharacterDef[] = ROSTER): string[]
         multiplier: e.hitMultiplier !== undefined,
         limit: e.limit !== undefined,
         share: e.effects.some((x) => x.type === 'release' && x.share !== undefined),
+        // Une aura (retour du 30 octobre) : son rang avance son rendez-vous, une règle pour toutes
+        due: auraOfSkill(e) !== undefined,
       }
       if (!grip[axis.kind]) problems.push(`${at} ${e.id} : axe de rang ${axis.kind} sans prise sur la compétence`)
+      if (auraOfSkill(e) && axis.kind !== 'due') problems.push(`${at} ${e.id} : une aura s'aiguise par son rendez-vous (axe due)`)
       // Un gain entier par rang (0.111.0, retour de l'utilisateur : plus de demi-rang ni de chiffre à virgule) ; une part
       // se compte en points de pourcentage
       if (!Number.isInteger(axis.per) || axis.per < 1) problems.push(`${at} ${e.id} : axe de rang, un gain entier ≥ 1 par rang`)
