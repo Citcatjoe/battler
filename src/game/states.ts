@@ -5,6 +5,8 @@ import {
   GRIP,
   isAura,
   malusCount,
+  risingRageBonus,
+  GRACE_MOMENTUM,
   STATUS_IDS,
   STATUSES,
   statusCounter,
@@ -52,6 +54,8 @@ export type StateId =
   | 'poison'
   | 'bleed'
   | 'burn'
+  // Le verdict (D17 du 2026-10-30) : les fautes du Jugement mènent à une perte de PV, plus au Tour perdu
+  | 'condemned'
   // Réserve (statuts sans porteur) : un état, pas encore d'emblème (EMBLEMES § 3)
   | 'vulnerable'
   | 'noDodge'
@@ -85,12 +89,13 @@ export const STATES: Record<StateId, StateDef> = {
   healing: { name: 'Soin', polarity: 'positive', summary: 'Il regagne des PV à chacun de ses tours.', counter: 'amount' },
   noHealing: { name: 'Hémorragie', polarity: 'negative', summary: 'Il ne regagne plus de PV.', counter: 'none' },
   drain: { name: 'Drain', polarity: 'positive', summary: 'Ses coups qui touchent lui rendent des PV.', counter: 'status' },
-  reprisal: { name: 'Représailles', polarity: 'positive', summary: "Quand on le touche, ou quand il se soigne, l'adversaire en paie le prix.", counter: 'status' },
+  reprisal: { name: 'Représailles', polarity: 'positive', summary: "Quand on le touche, quand il touche ou quand il se soigne, l'adversaire en paie le prix.", counter: 'status' },
   immunity: { name: 'Immunité', polarity: 'positive', summary: 'Aucun malus ne peut lui être posé.', counter: 'status' },
   bonusStolen: { name: 'Sceau de vol', polarity: 'negative', summary: 'Son prochain bonus va à l’adversaire.', counter: 'status' },
   poison: { name: 'Poison', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
   bleed: { name: 'Saignement', polarity: 'negative', summary: 'Il perd des PV à chaque coup qui le touche.', counter: 'status' },
   burn: { name: 'Brûlure', polarity: 'negative', summary: 'Il perd des PV à la fin de chacun de ses tours.', counter: 'status' },
+  condemned: { name: 'En faute', polarity: 'negative', summary: 'À la 3e faute, le verdict tombe : il perd des PV.', counter: 'status' },
   vulnerable: { name: 'Vulnérable', polarity: 'negative', summary: 'Il subit plus de dégâts à chaque coup.', counter: 'status' },
   noDodge: { name: 'Esquive empêchée', polarity: 'negative', summary: 'Il ne peut plus esquiver.', counter: 'status' },
 }
@@ -208,12 +213,15 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   rancor: aura(),
   ballad: aura(),
   // Refonte des auras (2026-10-28) : la Mire de la Visée renforce son prochain critique ; les fautes du Jugement mènent
-  // au Tour perdu (« 2/3 », règle 6) ; Bastion, Jugement et Brasier, trois auras d'identité, se lisent sur leur anneau
+  // au verdict (« 2/3 », règle 6 ; au Tour perdu avant le 2026-10-30, D17) ; Bastion, Jugement et Brasier, trois auras
+  // d'identité, se lisent sur leur anneau
   aim: tray('critPower', (s) => s.stacks),
-  fault: tray('lostTurn', undefined, 'strike'),
+  fault: tray('condemned', undefined, 'strike'),
   bastion: aura(),
   judgement: aura(),
   brasier: aura(),
+  // Décision D19 (2026-10-30) : le Cuir épais, une aura d'identité ; l'armure qu'il pose s'affiche d'elle-même
+  thickHide: aura(),
   stoneFist: tray('power', () => STONE_FIST),
   // Quatrième demande du 2026-10-27 (le contenu des maîtrises) : quatre auras d'identité, qui se lisent sur leur anneau ;
   // la Ferveur de l'Élan et le bonus pris par le Larcin s'affichent d'eux-mêmes
@@ -222,6 +230,9 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   // compte les malus de l'adversaire ; la Surtension ne chiffre rien : ses éclairs ne sont pas des coups (règle 6)
   overcharge: tray('power'),
   grip: tray('power', (_s, foe) => GRIP * malusCount(foe)),
+  // Retour du 30 octobre (reliques) : la Focale, de la Puissance ; la face scellée, une Malchance (le jet perd sa compétence)
+  spellFocus: tray('power'),
+  sealedFace: tray('jinxed'),
   pilfer: aura(),
   // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme, un Drain au coup reçu ; la Flamme votive, une
   // Représaille au soin ; la Sangsue, un Drain ; la Peau de crapaud, une Représaille
@@ -230,6 +241,13 @@ const DISPLAYED: Partial<Record<StatusId, StatusPlace>> = {
   leech: tray('drain'),
   harvest: tray('drain'),
   toadSkin: tray('reprisal'),
+  // Décisions du 2026-10-30 : l'Égide, une Représaille au coup reçu ; la Grâce, de la Ferveur au soin, donc la Puissance
+  // (comme la Ferveur ; une Représaille disait « l'adversaire en paie le prix », faux) ; la Lame enduite, une Représaille au
+  // coup porté ; la Rage montante, la Puissance du vocabulaire
+  stormAegis: tray('reprisal', undefined, 'hurt'),
+  grace: tray('power', () => GRACE_MOMENTUM, 'heal'),
+  coatedBlade: tray('reprisal', undefined, 'strike'),
+  risingRage: tray('power', risingRageBonus),
 }
 
 /** Où se montre chaque statut : un mécanisme d'après `StatusDef.mechanic` (une seule source), les autres d'après `DISPLAYED`. */
@@ -318,11 +336,15 @@ const posedBy = (effects: readonly Effect[]): { status: StatusId; target: 'self'
         : [],
   )
 
-/** Effets qu'un statut produit de lui-même (début ou fin de tour, réactions), sondés avec une charge. */
+/**
+ * Effets qu'un statut produit de lui-même (début ou fin de tour, réactions, seuil), sondés avec une charge ; une aura
+ * regroupée (D11), aussi ceux du seuil de son compteur (l'Aura de décoction : du Poison chez l'adversaire).
+ */
 function statusEffects(id: StatusId): Effect[] {
   const def = STATUSES[id]
   const probe: Status = { id, stacks: 1 }
-  return [def.onTurnStart?.(probe), def.onTurnEnd?.(probe), ...Object.values(def.reactions ?? {}).map((r) => r?.(probe))].flatMap(
+  const tally = def.tally && STATUSES[def.tally].threshold?.effects({ id: def.tally, stacks: 1 })
+  return [def.onTurnStart?.(probe), def.onTurnEnd?.(probe), ...Object.values(def.reactions ?? {}).map((r) => r?.(probe)), def.threshold?.effects(probe), tally].flatMap(
     (e) => e ?? [],
   )
 }

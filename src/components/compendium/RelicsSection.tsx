@@ -62,7 +62,7 @@ function RelicDetail({ relic, nav }: { relic: Relic; nav: CompendiumNav }) {
       </CodexBox>
 
       <p className="mt-auto font-body text-[14px] text-ink-3">
-        Une relique se gagne au fil d’un tournoi, d’une saison ou d’une campagne{'\u00a0'}: on en choisit une parmi {OFFER_SIZE}.
+        Une relique se gagne au fil d’un tournoi, d’une saison ou d’une campagne{'\u00a0'}: on en choisit une parmi {OFFER_SIZE}, ou parmi {OFFER_SIZE + 1} à la 2e et à la 4e offre.
       </p>
     </article>
   )

@@ -36,8 +36,13 @@ src/
                          (forgeState, forgedEvents, forgedFaces), offre (drawForgeOffer : Graver à une compétence par maîtrise,
                          `groupOf`) et choix automatique (autoForge, isOffered), validité
     campaign.ts          campagne (0.88.0) : partie v5 (CampaignRun, son aura de départ ; une partie v4 relue), boss, réglage des
-                         rencontres sur le champion de référence parti de la même aura (referenceChampions, tuneHp, encountersFor),
-                         champion (championOf, startAurasOf, drawBuild), héritage (heritageFor), sauvegarde, choix de l'écran
+                         rencontres sur le champion de référence parti de la même aura (referenceChampions, tuneHp ; le réglage
+                         tunedEncounters, qui ne lit que TuningKey, puis le danger contre le champion réel withDanger ;
+                         encountersFor les enchaîne), champion (championOf, startAurasOf, drawBuild), héritage (heritageFor),
+                         sauvegarde, choix de l'écran
+    encounters.worker.ts Web Worker (D3, 2026-10-30) : règle les rencontres hors du fil de l'interface, garde le réglage préparé
+    encounterWorker.ts   son client : prepareEncounters (le nœud suivant, dès qu'une rencontre est choisie), computeEncounters
+                         (la carte ; sans worker, le calcul d'un bloc, même résultat)
     leaderboard.ts       classement du mode sans fin (0.131.0) : entrées (joueur, construction du champion, série, points) par période ;
                          statique tant que le mode sans fin et un backend n'existent pas
     offers.ts            offre commune à la campagne, à la saison et à l'arbre (0.115.0) : ordre d'un acte (REWARDS, RewardKind),

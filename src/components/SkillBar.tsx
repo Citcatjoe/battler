@@ -63,9 +63,21 @@ export function SkillBar({ character, side, form = 0, statuses, pulse, signal, r
   for (const { face, auraId } of faces) if (auraId && !onFace.has(auraId)) onFace.set(auraId, face)
   const formRules = statuses.filter((s) => STATUS_PLACE[s.id].place === 'form')
   const tip = align === 'right' ? 'right' : 'left'
-  const aura = (id: StatusId) => (
-    <AuraToken key={id} side={side} id={id} character={character} status={statuses.find((s) => s.id === id)} lit={auraLit(id, events, pulse, signal)} align={tip} />
-  )
+  const aura = (id: StatusId) => {
+    const tally = STATUSES[id].tally
+    return (
+      <AuraToken
+        key={id}
+        side={side}
+        id={id}
+        character={character}
+        status={statuses.find((s) => s.id === id)}
+        tally={tally && statuses.find((s) => s.id === tally)}
+        lit={auraLit(id, events, pulse, signal)}
+        align={tip}
+      />
+    )
+  }
   return (
     <ul className={`skill-bar flex items-start gap-2 ${align === 'right' ? 'flex-row-reverse' : ''}`} aria-label={`Compétences de ${character.name}`}>
       {faces.map(({ face, event, auraId }) => {
@@ -108,14 +120,15 @@ function auraLit(id: StatusId, events: readonly CharacterEvent[], pulse?: SkillP
 /**
  * Compte d'une compétence à jauges, sur son sceau : **le nombre de coups** que sa relâche produira (Rétribution ; retour
  * du 2026-10-28, A4, jamais les dégâts gardés, qui se lisent dans l'infobulle de la compétence). Lu dans le moteur
- * (`releaseParts`) ; une compétence qui pose le statut sans le relâcher montre son `badge`.
+ * (`releaseParts`) ; une relâche en une seule perte (`per`, Onde de choc) montre ses PV (D11 du 2026-10-30 : jamais un
+ * « 1 ») ; une compétence qui pose le statut sans le relâcher montre son `badge`.
  */
 function sealCount(event: CharacterEvent, statuses: readonly Status[]): number | undefined {
   for (const effect of event.effects) {
     const id = effect.type === 'release' || effect.type === 'applyStatus' ? effect.status : undefined
     if (!id || !STATUS_PLACE[id].onSeal) continue
     const s = statuses.find((x) => x.id === id)
-    if (effect.type === 'release') return releaseParts(effect, s).length
+    if (effect.type === 'release') return effect.per !== undefined ? effect.per * (s?.slots?.filter((n) => n > 0).length ?? 0) : releaseParts(effect, s).length
     return s ? Number(STATUSES[id].badge(s)) || 0 : 0
   }
   return undefined
@@ -181,6 +194,7 @@ function AuraToken({
   id,
   character,
   status,
+  tally,
   lit: litNow,
   align,
 }: {
@@ -188,6 +202,8 @@ function AuraToken({
   id: StatusId
   character: Character
   status?: Status
+  /** Son compteur (`StatusDef.tally`), s'il en porte un : l'anneau le montre au lieu de son chiffre */
+  tally?: Status
   lit?: number
   align: 'left' | 'right'
 }) {
@@ -215,8 +231,9 @@ function AuraToken({
             <DieFace face={onFace} empty={false} />
           </span>
         )}
-        {/* Son effet du moment (« +4 ») : l'aura se lit ici, elle ne se relaie pas dans la zone d'état (0.79.7) */}
-        {active && auraValue(status) && <Count text={auraValue(status)!} aura />}
+        {/* Son effet du moment (« +4 ») : l'aura se lit ici, elle ne se relaie pas dans la zone d'état (0.79.7) ; une
+            aura regroupée (D11) montre son compteur */}
+        {status && auraCount(status, tally) && <Count text={auraCount(status, tally)!} aura />}
       </div>
       <span key={lit !== undefined ? `name-${lit}` : 'name'} className={`skill-bar-name ${active ? 'is-active' : ''} ${lit !== undefined ? 'is-lit' : ''}`}>{def.name}</span>
       <div
@@ -280,9 +297,15 @@ function Ding({ lit, round }: { lit: number; round?: boolean }) {
   )
 }
 
-/** Valeur d'une aura active sur son anneau (son `badge` : « +4 ») ; rien pour une aura sans nombre (immunité : ∞). */
-const auraValue = (s: Status) => {
-  const badge = STATUSES[s.id].badge(s)
+/**
+ * Valeur d'une aura active sur son anneau : son `badge` (« +4 ») ; rien pour une aura sans nombre (immunité : ∞). Une
+ * aura regroupée (`StatusDef.tally`, D11 du 2026-10-30) montre son compteur : sa progression vers son seuil (« 2/3 »),
+ * ou, sans seuil, le badge du compteur tant qu'il est là (les épines plantées).
+ */
+function auraCount(s: Status, tally?: Status): string | undefined {
+  const counter = STATUSES[s.id].tally
+  const at = counter && STATUSES[counter].threshold?.at
+  const badge = at ? `${tally?.stacks ?? 0}/${at}` : tally ? STATUSES[tally.id].badge(tally) : STATUSES[s.id].badge(s)
   return /\d/.test(badge) ? badge : undefined
 }
 

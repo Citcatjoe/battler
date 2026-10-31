@@ -50,17 +50,18 @@ import {
   isBossNode,
   loadHeritage,
   loadRun,
+  nextTuningKey,
   opponentOf,
   recordHeritage,
   saveRun,
   startRun,
-  withEncounters,
   withFightResult,
   withReward,
   type CampaignRun,
   type Encounter,
 } from './game/campaign'
 import { music, sfx } from './game/sound'
+import { computeEncounters, prepareEncounters } from './game/encounterWorker'
 import {
   cancelBet,
   cancelMatch,
@@ -203,12 +204,18 @@ export default function App() {
   }
   const oddsId = `${betKey}:${fighters[0].id}-${fighters[1].id}`
 
-  // Campagne : les rencontres du nœud en cours se règlent par simulation (quelques milliers de combats), après
-  // l'affichage de la carte, pour qu'elle apparaisse aussitôt
+  // Campagne : les rencontres du nœud en cours se règlent par simulation (quelques milliers de combats) hors du fil de
+  // l'interface (encounterWorker.ts, retour du 2026-10-30, D3) : la carte s'affiche aussitôt, une attente à la place des
+  // cartes, sans geler l'écran. Une réponse arrivée après un changement de partie ou d'écran est ignorée.
   useEffect(() => {
     if (screen.name !== 'campaign' || !campaignRun || campaignRun.outcome || campaignRun.reward || campaignRun.encounters) return
-    const id = setTimeout(() => setCampaignRun(withEncounters(campaignRun)), 60)
-    return () => clearTimeout(id)
+    let live = true
+    void computeEncounters(campaignRun).then((encounters) => {
+      if (live) setCampaignRun({ ...campaignRun, encounters })
+    })
+    return () => {
+      live = false
+    }
   }, [screen.name, campaignRun]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tapis sonore (docs/SONS.md § 10) : une boucle au hasard pendant chaque combat joué, en fondu
@@ -399,9 +406,14 @@ export default function App() {
   /** Partie de campagne en cours, sur le volet Campagne de l'écran titre : le champion et son combat, boss compris */
   const campaignProgress = campaignRun && !campaignRun.outcome ? `En cours · ${championOf(campaignRun).name}, combat ${campaignRun.wins + 1} sur ${ACT_LENGTH}` : null
 
-  /** Une rencontre de la carte : le champion à gauche, l'adversaire réglé à droite, par l'écran d'affrontement */
+  /**
+   * Une rencontre de la carte : le champion à gauche, l'adversaire réglé à droite, par l'écran d'affrontement. Les
+   * rencontres du nœud suivant se règlent dès maintenant, hors du fil de l'interface (D3) : il ne restera que leur
+   * danger à estimer au retour sur la carte.
+   */
   const openEncounter = (encounter: Encounter) => {
     if (!campaignRun) return
+    prepareEncounters(nextTuningKey(campaignRun, encounter))
     setActiveMatch(null)
     setActiveSeasonMatch(null)
     setActiveEncounter(encounter)

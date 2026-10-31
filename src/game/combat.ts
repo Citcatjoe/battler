@@ -8,7 +8,6 @@ import {
   COIN_RANK_HEADS,
   charges,
   consumeStatus,
-  riseStatus,
   directDamage,
   givesJets,
   isAura,
@@ -38,7 +37,8 @@ import {
  *   Chaque tour, pour le joueur actif (l'attaquant) :
  *     Phase 1 · Début de tour : effets `onTurnStart` (bonus, puis malus) → durées « début »
  *               → fenêtre « turnStart »
- *               → au 3e tour de son porteur, l'aura de départ absente se pose d'office (déclencheur `auraDue`)
+ *               → au 3e tour de son porteur, l'aura de départ absente se pose d'office (déclencheur `auraDue`) ; dissipée,
+ *                 elle revient de même au début du 2e tour suivant de son porteur (le rendez-vous réarmé, D8)
  *     Phase 2 · Action : contrôle (`skipsAction` : le tour est perdu), sinon un jet, ou plusieurs (Coup de chance, Duo),
  *               et des coups instantanés (Furie des vents). Un jet : le d6 désigne une face ; sa compétence se
  *               greffe (étape roll, la compétence, puis le coup de base), modifie le coup (il part, elle suit s'il
@@ -311,7 +311,7 @@ export type BeatBody =
    * coup lance lui-même son dé.
    */
   /** `jinxedBy` : ce jet tombe à vide, par ce statut du lanceur (Malchance) ; l'étape `attack` qui suit est `jinxed` */
-  | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true; jinxedBy?: StatusId }
+  | { type: 'roll'; side: Side; roll: number; faces: number; forced?: true; jinxedBy?: StatusId; sealedBy?: StatusId }
   /**
    * Pile ou face : une pièce lancée juste après le coup qui l'a posée ; pile, ce coup ×3 (les PV qu'il a retirés, encore
    * deux fois, en coup), face, rien. Le statut est consommé.
@@ -702,10 +702,14 @@ function isNilEffect(effect: Effect, owner: Side, view: Snapshot, fighters: Pair
     case 'release':
       return false
     case 'applyStatus': {
-      const { outcome } = resolveApplication(view.statuses[target], statusOfEffect(effect), fighters[target].immunities)
+      const { list, outcome } = resolveApplication(view.statuses[target], statusOfEffect(effect), fighters[target].immunities)
       // Une garde qui bloque s'use : ce n'est pas nul ; une immunité qui bloque, si
       if (outcome.kind === 'blocked') return outcome.by === 'immunity' || !STATUSES[outcome.by].wards
-      return outcome.kind === 'applied' && outcome.stacks === 0 && !outcome.cancelled
+      if (outcome.kind !== 'applied' || outcome.cancelled) return false
+      // Reposé tel quel (une aura non cumulable déjà là, le Collier de ronces chez Brokk, 30 octobre) : rien ne change
+      const was = view.statuses[target].find((s) => s.id === effect.status)
+      const now = list.find((s) => s.id === effect.status)
+      return outcome.stacks === 0 || (!!was && !!now && was.stacks === now.stacks && was.turns === now.turns && was.power === now.power)
     }
     case 'cleanse': {
       const any = view.statuses[target].some((s) => (effect.steal ? isStealable(s.id) : STATUSES[s.id].polarity === effect.polarity && !isMechanic(s.id)))
@@ -742,12 +746,18 @@ interface FighterState {
   relicReady: Record<string, number>
   /** Reliques de seuil déjà déclenchées sous leur seuil : elles se réarment quand les PV remontent au-dessus */
   relicBelow: Set<string>
-  /** Aura de départ : son rendez-vous du 3e tour est passé (posée d'office, ou déjà là), une fois par combat */
-  auraDue: boolean
+  /**
+   * Aura de départ : le tour de son porteur où elle se pose d'office si elle est absente (son rendez-vous). Le 3e tour, une
+   * fois ; passé (posée d'office, ou déjà là), plus aucun, jusqu'à ce qu'on la lui dissipe : le rendez-vous se réarme au
+   * 2e tour suivant (D8, retour du 30 octobre)
+   */
+  auraDueAt: number
 }
 
 /** Le tour de son porteur où l'aura de départ se pose d'office si elle n'est pas là (docs/RESOLUTION.md, phase 1) */
 export const AURA_DUE_TURN = 3
+/** Dissipée, l'aura de départ revient au début de ce tour de son porteur après la dissipation (le 2e ; D8) */
+export const AURA_REARM_TURNS = 2
 
 /**
  * L'aura de départ d'un combattant : la compétence de la face 1 de son dé, si c'est une aura (elle ne pose qu'une aura
@@ -812,7 +822,7 @@ export function simulateCombat(
       relicUses: {},
       relicReady: {},
       relicBelow: new Set(),
-      auraDue: false,
+      auraDueAt: AURA_DUE_TURN,
     }),
   ) as Pair<FighterState>
   const beats: Beat[] = []
@@ -829,6 +839,8 @@ export function simulateCombat(
   const posedBy: Pair<Partial<Record<StatusId, number>>> = [{}, {}]
   /** Dernier coup émis : cause de repli des coups instantanés dont le statut n'a pas d'auteur connu */
   let lastStrike = -1
+  /** La face du dernier jet de dé de compétence de chaque camp (Cachet du greffier : la face qu'il scelle) */
+  const lastFace: Pair<number | undefined> = [undefined, undefined]
   /** Émet une étape avec ses champs communs (rang, cause, phase, maître du tour, état) ; renvoie son rang. */
   const push = (body: BeatBody, cause?: number): number => {
     const id = beats.length
@@ -1019,7 +1031,10 @@ export function simulateCombat(
           return stolen.type === 'applyStatus' ? { ...stolen, stolenBy: thief.id } : stolen
         }
         const { stacks, turns } = status
-        const { list, outcome } = resolveApplication(state.statuses, status, fighters[target].immunities)
+        // Face scellée (D9) : elle retient la face du dernier jet de sa cible, et remplace l'ancienne
+        const sealed = STATUSES[effect.status].sealsFace ? lastFace[target] : undefined
+        if (sealed !== undefined) state.statuses = state.statuses.filter((s) => s.id !== effect.status)
+        const { list, outcome } = resolveApplication(state.statuses, sealed !== undefined ? { ...status, power: sealed } : status, fighters[target].immunities)
         state.statuses = list
         if (outcome.kind === 'applied') state.fresh.add(effect.status)
         if (outcome.kind === 'applied') posedBy[target][effect.status] = beats.length
@@ -1074,6 +1089,9 @@ export function simulateCombat(
         // 2026-10-28), les statuts visés, toutes charges comprises
         state.statuses =
           effect.count === undefined && !effect.steal ? removeStatuses(state.statuses, effect.polarity) : state.statuses.filter((s) => !removed.includes(s.id))
+        // Son aura de départ dissipée : son rendez-vous se réarme au début de son 2e tour suivant (D8, retour du 30 octobre)
+        const start = startAuraOf(fighters[target])
+        if (start && removed.includes(start.status)) state.auraDueAt = Math.min(state.auraDueAt, state.turnsTaken + AURA_REARM_TURNS)
         return { type: 'cleanse', target, removed, ...(effect.steal && { stolen: true as const }) }
       }
     }
@@ -1229,8 +1247,6 @@ export function simulateCombat(
       if (def.spentOnReaction) states[side].statuses = states[side].statuses.filter((s) => s.id !== id)
       // Saignement, Vol de vie : le statut agit avec ses charges, puis en perd une dans la même étape
       else if (def.decays || def.drainsHit) states[side].statuses = consumeStatus(states[side].statuses, id, 1)
-      // La montée : le statut a agi, il gagne une charge, dans l'étape de son effet
-      else if (def.rises) states[side].statuses = riseStatus(states[side].statuses, id)
       const beat = push({ type: 'statusReaction', side, status: id, trigger, effects }, cause)
       const down = fallen() ?? checkThresholds(beat) ?? releaseRebounds(beat)
       if (down !== undefined) return down
@@ -1325,6 +1341,8 @@ export function simulateCombat(
     if (relic.charges !== undefined && uses >= relic.charges) return undefined
     if (s.turnsTaken < (s.relicReady[relic.id] ?? 0)) return undefined
     if (relic.when && !relic.when.every((c) => conditionMet(side, c))) return undefined
+    // Le Cachet du greffier ne scelle rien tant que l'adversaire n'a pas jeté son dé
+    if (relic.effects?.some((e) => e.type === 'applyStatus' && STATUSES[e.status].sealsFace) && lastFace[other(side)] === undefined) return undefined
     if (inert(side, relic)) return undefined
     s.relicUses[relic.id] = uses + 1
     if (relic.cooldown) s.relicReady[relic.id] = s.turnsTaken + relic.cooldown
@@ -1431,8 +1449,6 @@ export function simulateCombat(
         states[side].statuses = consumeStatus(states[side].statuses, status.id, 1)
         if (!states[side].statuses.some((s) => s.id === status.id)) faded.push(status.id)
       }
-      // La montée : il a agi, il gagne une charge (son cran monte tous les deux déclenchements)
-      if (def.rises) states[side].statuses = riseStatus(states[side].statuses, status.id)
       const id = push({ type: 'statusTick', phase, side, status: status.id, effects })
       ticks.set(status.id, id)
       const down = fallen() ?? checkThresholds(id) ?? releaseRebounds(id)
@@ -1521,7 +1537,26 @@ export function simulateCombat(
   }
 
   function throwDie(attacker: Side, cause?: number, die = drawDie()): Side | undefined {
+    // Dé de joueur (D9) : un jet sur une face nue (aucune compétence prête) est relancé, une fois par tour ; un dé imposé
+    // (mode triche) ne se relance pas
+    const s = states[attacker]
+    const reroll = die.forced ? undefined : fighters[attacker].relics.find((r) => r.trigger?.type === 'bareFace' && s.turnsTaken >= (s.relicReady[r.id] ?? 0))
+    if (reroll && !(['graft', 'modify', 'replace'] as const).some((rel) => ready(attacker, die.roll, rel).length > 0)) {
+      const uses = (s.relicUses[reroll.id] ?? 0) + 1
+      s.relicUses[reroll.id] = uses
+      s.relicReady[reroll.id] = s.turnsTaken + (reroll.cooldown ?? 1)
+      push({ type: 'relic', side: attacker, relic: reroll.id, name: reroll.name, effects: [], uses }, cause)
+      die = drawDie()
+    }
     const { roll, forced } = die
+    lastFace[attacker] = roll
+    // Face scellée (D9, Cachet du greffier) : un jet sur la face scellée qui porterait une compétence ne porte que son coup
+    // de base, un coup brut ; un dé imposé garde sa compétence
+    const seal = forced ? undefined : s.statuses.find((x) => STATUSES[x.id].sealsFace && x.power === roll)
+    if (seal && JINXED_RELATIONS.some((r) => ready(attacker, roll, r).length > 0)) {
+      const rolled = push({ type: 'roll', side: attacker, roll, faces: DIE_FACES, sealedBy: seal.id }, cause)
+      return strikeOnce(attacker, { roll, preset: true }, true, rolled)
+    }
     // Malchance (lot 3) : un jet qui porterait une compétence tombe à vide (une charge par jet). Le dé est tiré comme
     // avant ; un dé imposé (mode triche) garde sa valeur et laisse la charge
     const jinx = forced ? undefined : states[attacker].statuses.find((s) => STATUSES[s.id].jinxesRoll)
@@ -1625,6 +1660,8 @@ export function simulateCombat(
       ...(outcome.crit ? [[attacker, 'crit'] as [Side, Trigger]] : []),
       ...(heavy ? [[attacker, 'heavy'] as [Side, Trigger]] : []),
       [defender, 'hurt'],
+      // Critique reçu (retour du 30 octobre, D9) : juste après le coup reçu
+      ...(outcome.crit ? [[defender, 'critHurt'] as [Side, Trigger]] : []),
       ...(emptied ? [[defender, 'shieldBroken'] as [Side, Trigger]] : []),
     ]
   }
@@ -1831,12 +1868,23 @@ export function simulateCombat(
     phase = 'turnStart'
     down = statusPhase(attacker, 'turnStart') ?? fire(attacker, 'turnStart')
     if (down !== undefined) return end(other(down), 'ko')
+    // Clairon du héraut (D9) : au début de son 1er tour, après ses statuts et ses reliques de tour, son aura de départ part
+    // comme sur un 1 si elle n'est pas déjà là (sous sa forme du moment)
+    const clarion = att.turnsTaken === 1 ? fighters[attacker].relics.find((r) => r.trigger?.type === 'startAura') : undefined
+    const herald = clarion && startAuraOf(fighters[attacker])
+    if (clarion && herald && inForm(attacker, herald.event) && !att.statuses.some((s) => s.id === herald.status)) {
+      att.relicUses[clarion.id] = 1
+      const call = push({ type: 'relic', side: attacker, relic: clarion.id, name: clarion.name, effects: [], uses: 1 })
+      down = fireEvent(attacker, herald.event, 'auraDue', call)
+      if (down !== undefined) return end(other(down), 'ko')
+    }
     // L'aura de départ au rendez-vous (2026-10-27, AURAS.md § 2) : au début de son 3e tour, après ses statuts et ses
     // reliques de tour, avant son action, si sa compétence de la face 1 n'a pas posé son aura (ou qu'on la lui a
-    // retirée), elle part comme sur un 1. Une fois par combat ; sous l'autre forme (le druide), au tour suivant
-    const due = att.auraDue || att.turnsTaken < AURA_DUE_TURN ? undefined : startAuraOf(fighters[attacker])
+    // retirée), elle part comme sur un 1. Passé, le rendez-vous ne revient que si on lui dissipe son aura : au début de son
+    // 2e tour suivant (D8, `auraDueAt`). Sous l'autre forme (le druide), au tour suivant
+    const due = att.turnsTaken < att.auraDueAt ? undefined : startAuraOf(fighters[attacker])
     if (due && inForm(attacker, due.event)) {
-      att.auraDue = true
+      att.auraDueAt = Infinity
       if (!att.statuses.some((s) => s.id === due.status)) {
         down = fireEvent(attacker, due.event, 'auraDue')
         if (down !== undefined) return end(other(down), 'ko')

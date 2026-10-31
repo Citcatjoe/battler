@@ -796,7 +796,10 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
   /**
    * Les statuts à l'écran : ceux de l'étape montrée, avec les décomptes et expirations montrés d'avance. Une étape
    * antérieure pas encore jouée (la Riposte, jouée au milieu du coup dont le poison est déjà tombé à l'impact) garde
-   * ses changements pour son propre instant : ses statuts restent comme avant elle (docs/MISE_EN_SCENE.md, M3).
+   * ses changements pour son propre instant : ses statuts restent comme avant elle (docs/MISE_EN_SCENE.md, M3). Un
+   * statut qu'une étape plus récente, déjà montrée, a changé aussi ne revient que de l'écart de l'étape retenue (deux
+   * Hameçons rouillés sur les dés d'une rafale, joués à l'atterrissage, avant le Saignement du premier coup) : la
+   * seconde pose s'ajoute à la première au lieu de l'effacer.
    */
   const display = (state: Pair<Status[]>): Pair<Status[]> => {
     let shown = state
@@ -811,8 +814,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
           if (JSON.stringify(was) === JSON.stringify(after[side].find((s) => s.id === id))) continue
           const at = out.findIndex((s) => s.id === id)
           if (!was) out = out.filter((s) => s.id !== id)
-          else if (at >= 0) out = out.map((s) => (s.id === id ? was : s))
-          else out = [...out.slice(0, before[side].indexOf(was)), was, ...out.slice(before[side].indexOf(was))]
+          else if (at >= 0) {
+            const now = out[at]
+            const done = after[side].find((s) => s.id === id)
+            const stacks = done ? now.stacks + was.stacks - done.stacks : was.stacks
+            out = stacks > 0 ? out.map((s) => (s.id === id ? { ...was, stacks } : s)) : out.filter((s) => s.id !== id)
+          } else out = [...out.slice(0, before[side].indexOf(was)), was, ...out.slice(before[side].indexOf(was))]
         }
         return out
       }) as Pair<Status[]>
@@ -929,8 +936,12 @@ export function stage(result: CombatResult, { test = false }: StageOptions = {})
       if (next.side !== striker)
         return next.trigger === 'hurt' && next.effects.every((e) => e.type === 'applyStatus' && e.target === striker && e.result.kind === 'applied')
       const struck = next.trigger === 'hit' || next.trigger === 'crit'
-      if (struck && next.effects.every((e) => (e.type === 'applyStatus' && e.target !== striker) || (e.type === 'heal' && e.target === striker))) return true
-      return struck && next.effects.every((e) => e.type === 'applyStatus' && e.target === striker && isMechanic(e.status))
+      // Ce qu'il pose sur sa cible, ses soins, et les mécanismes qu'il se pose (le compteur d'une aura regroupée, D11 : la
+      // Dose de l'Aura de décoction, et son Poison au seuil) ; ou seulement un mécanisme (l'Ivresse du sang)
+      return (
+        struck &&
+        next.effects.every((e) => (e.type === 'applyStatus' && (e.target !== striker || isMechanic(e.status))) || (e.type === 'heal' && e.target === striker))
+      )
     })
   }
   /** Étapes déjà jouées avec le coup qui les a provoquées : à leur place, il ne reste rien à montrer */

@@ -8,7 +8,7 @@
  */
 import { REWARD_HP, STAT_KEYS } from './character'
 import { DAMAGE_SOURCES, type DamageKind } from './damage'
-import { AURA_DUE_TURN, beatEffects, critDoubled, diceOf, effectiveStats, firstSide, healingOf, MAX_DODGE, MAX_EXTRA_JETS, relicIsInert, startAuraOf, type AppliedEffect, type Attack, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
+import { AURA_DUE_TURN, AURA_REARM_TURNS, beatEffects, critDoubled, diceOf, effectiveStats, firstSide, healingOf, MAX_DODGE, MAX_EXTRA_JETS, relicIsInert, startAuraOf, type AppliedEffect, type Attack, type Beat, type CombatResult, type Side, type Snapshot } from './combat'
 import { DIE_FACES, isRollTrigger, relationOf, rollMatches, type CharacterEvent, type Condition, type Trigger } from './events'
 import { forgeState } from './forge'
 import { withRelicStats } from './relics'
@@ -20,7 +20,6 @@ import {
   BLOOD_FRENZY_STRIKES,
   charges,
   RANCOR_FERVOR,
-  riseLevel,
   VEIN_STRIKES,
   directDamage,
   ONRUSH_FERVOR,
@@ -31,18 +30,31 @@ import {
   isStealable,
   OPEN_WOUND_BLEED,
   STATUSES,
-  STORM_SKY_LOSS,
+  THICK_HIDE_ARMOR,
+  THICK_HIDE_RANK,
   VENDETTA_MOMENTUM,
   LEECH_HEAL,
   HARVEST_DRAIN,
   TITHE_PV,
   TOAD_POISON,
   VOTIVE_BURN,
+  POISON_AURA,
+  POISON_AURA_RANK,
+  THORN_BLEED,
+  THORN_RANK,
+  VERDICT_LOSS,
+  VERDICT_RANK,
   type Status,
   type StatusId,
 } from './statuses'
 
 const find = (l: readonly Status[], id: string) => l.find((s) => s.id === id)
+
+/** Un coup de jet scellé (D9, Cachet du greffier) : un jet complet de l'action, qui ne porte que son coup de base, brut. */
+const sealedJet = (r: CombatResult, x: Beat) => {
+  const roll = x.cause !== undefined ? r.beats[x.cause] : undefined
+  return x.type === 'attack' && roll?.type === 'roll' && roll.sealedBy !== undefined
+}
 
 /**
  * L'étape `j` a lieu pendant un dé de plus de `side` (retour du 2026-10-28, A7) : un jet de rafale de Coup de chance ou de
@@ -262,8 +274,29 @@ export function createAudit() {
         if ((find(grudged.state.statuses[target], 'grudge')?.stacks ?? 0) !== (find(was.statuses[target], 'grudge')?.stacks ?? 0) - 1) flag('rancune non estompée', r, i, '')
         see(coin ? 'pile : rancune' : 'rancune')
       }
-      // Épines
-      if (find(s.statuses[target], 'thorns') && !reaction('thorns') && !died) flag('épines non déclenchées', r, i, '')
+      // Épines (D13) : chaque coup reçu plante une épine sur le porteur (avec l'intensité de l'aura)
+      const thorned = reaction('thorns')
+      if (find(s.statuses[target], 'thorns') && !thorned && !died) flag('épines non déclenchées', r, i, '')
+      if (thorned) {
+        const spike = thorned.effects[0]
+        const power = find(before(thorned).statuses[target], 'thorns')?.power ?? 0
+        if (thorned.effects.length !== 1 || spike?.type !== 'applyStatus' || spike.status !== 'thornSpike' || spike.target !== target || spike.stacks !== 1) flag('épines : épine mal plantée', r, i, JSON.stringify(thorned.effects))
+        else if (spike.result.kind === 'applied' && (find(thorned.state.statuses[target], 'thornSpike')?.power ?? 0) < power) flag('épines : épine sans le rang de son aura', r, i, '')
+        else see(coin ? 'pile : épine plantée' : 'épine plantée')
+      }
+      // Les épines plantées sur le frappeur, au début du coup : son coup qui touche les enfonce toutes, Saignement
+      // THORN_BLEED (+THORN_RANK par rang) par épine, et elles partent
+      const driven = caused.find((x): x is Extract<Beat, { type: 'statusReaction' }> => x.type === 'statusReaction' && x.status === 'thornSpike' && x.side === striker)
+      const planted = find(stateBefore(i).statuses[striker], 'thornSpike')
+      if (planted && !driven && !died && !rebound) flag('épines plantées non enfoncées', r, i, '')
+      if (driven) {
+        const held = find(before(driven).statuses[striker], 'thornSpike')!
+        const bleed = driven.effects[0]
+        if (bleed?.type !== 'applyStatus' || bleed.status !== 'bleed' || bleed.target !== target || bleed.stacks !== (THORN_BLEED + THORN_RANK * (held.power ?? 0)) * held.stacks)
+          flag('épines plantées : Saignement faux', r, i, JSON.stringify(driven.effects))
+        else if (find(driven.state.statuses[striker], 'thornSpike')) flag('épines plantées restées après le coup', r, i, '')
+        else see(held.stacks > 1 ? 'épines plantées enfoncées (plusieurs)' : 'épines plantées enfoncées')
+      }
       // Saignement : la plaie coule de ses charges du début du coup (au plus de celles qui lui restent), puis en perd une
       const flow = reaction('bleed')
       const atStart = find(stateBefore(i).statuses[target], 'bleed')?.stacks ?? 0
@@ -284,9 +317,12 @@ export function createAudit() {
         else if (left && !atStart) see('plaie ouverte pendant le coup, qui attend le suivant')
       }
     }
-    // L'aura de départ au rendez-vous (2026-10-27, C2) : tours entamés par chacun, et son aura de départ
+    // L'aura de départ au rendez-vous (2026-10-27, C2) : tours entamés par chacun, et son aura de départ. Son rendez-vous
+    // (`dueAt`) : le 3e tour, une fois ; réarmé au 2e tour suivant quand on la lui dissipe (D8, retour du 30 octobre)
     const taken = [0, 0]
     const starts = [startAuraOf(r.fighters[0]), startAuraOf(r.fighters[1])]
+    const dueAt = [AURA_DUE_TURN, AURA_DUE_TURN]
+    const posedAt = [0, 0]
     r.beats.forEach((b: Beat, i) => {
       if (b.type === 'shift') {
         see('changement de forme')
@@ -336,22 +372,41 @@ export function createAudit() {
       if (i > 0 && prev.hp.some((h) => h === 0)) flag('étape après K.O.', r, i, b.type)
       if (b.type === 'flurry' && (!Number.isSafeInteger(b.strikes) || b.strikes < 1 || b.faces.length !== b.strikes)) flag('rafale : nombre de coups faux', r, i, `${b.strikes}`)
       if (i === 0 || r.beats[i - 1].turn !== b.turn) if (b.turn > 0) taken[b.owner]++
-      if (b.type === 'event' && b.event.trigger === 'auraDue') {
-        const start = starts[b.event.side]
-        if (!start || start.event.id !== b.event.eventId) flag("pose d'office d'autre chose que l'aura de départ", r, i, b.event.eventId)
-        else if (prev.statuses[b.event.side].some((x) => x.id === start.status)) flag("pose d'office d'une aura déjà là", r, i, start.status)
-        if (taken[b.event.side] < AURA_DUE_TURN || b.owner !== b.event.side || b.phase !== 'turnStart') flag("pose d'office hors du début de son 3e tour", r, i, `${taken[b.event.side]}`)
-        else see("aura de départ posée d'office")
+      for (const side of [0, 1] as const) {
+        const start = starts[side]
+        if (start && beatEffects(b).some((e) => e.type === 'cleanse' && e.target === side && !e.stolen && e.removed.includes(start.status))) {
+          dueAt[side] = Math.min(dueAt[side], taken[side] + AURA_REARM_TURNS)
+          see('aura de départ dissipée, rendez-vous réarmé')
+        }
       }
-      // Le druide excepté (son 1 ne vaut que sous une forme) : à la première action de son 3e tour, l'aura de départ est là,
-      // sauf si sa pose d'office a été volée (Sceau de vol : elle est partie chez l'adversaire)
+      if (b.type === 'event' && b.event.trigger === 'auraDue') {
+        const side = b.event.side
+        const start = starts[side]
+        if (!start || start.event.id !== b.event.eventId) flag("pose d'office d'autre chose que l'aura de départ", r, i, b.event.eventId)
+        else if (prev.statuses[side].some((x) => x.id === start.status)) flag("pose d'office d'une aura déjà là", r, i, start.status)
+        // Le Clairon du héraut (D9) la pose à son premier tour, sans toucher au rendez-vous
+        const before = r.beats[i - 1]
+        const herald = before?.type === 'relic' && before.side === side && r.fighters[side].relics.some((x) => x.id === before.relic && x.trigger?.type === 'startAura')
+        if ((!herald && taken[side] < dueAt[side]) || b.owner !== side || b.phase !== 'turnStart') flag("pose d'office hors de son rendez-vous", r, i, `${taken[side]} (rendez-vous : ${dueAt[side]})`)
+        else if (!herald) {
+          see(dueAt[side] === AURA_DUE_TURN ? "aura de départ posée d'office" : 'aura dissipée revenue à son rendez-vous')
+          dueAt[side] = Infinity
+          posedAt[side] = taken[side]
+        }
+      }
+      // Le druide excepté (son 1 ne vaut que sous une forme) : à la première action du tour de son rendez-vous, l'aura de
+      // départ est là, sauf si sa pose d'office a été volée (Sceau de vol : elle est partie chez l'adversaire)
       const start = starts[b.owner]
-      if (start && !r.fighters[b.owner].forms && b.phase === 'action' && taken[b.owner] === AURA_DUE_TURN && r.beats[i - 1]?.phase !== 'action')
+      const due = taken[b.owner] >= dueAt[b.owner] || taken[b.owner] === posedAt[b.owner]
+      const opening = r.beats[i - 1]?.phase !== 'action' || r.beats[i - 1].turn !== b.turn
+      if (start && !r.fighters[b.owner].forms && b.phase === 'action' && due && opening) {
         if (!prev.statuses[b.owner].some((x) => x.id === start.status)) {
           const stolen = r.beats.some((x) => x.turn === b.turn && x.type === 'event' && x.event.trigger === 'auraDue' && x.event.effects.some((e) => e.type === 'applyStatus' && e.stolenBy !== undefined))
           if (stolen) see("aura de départ volée à sa pose d'office")
-          else flag('aura de départ absente après le début de son 3e tour', r, i, start.status)
+          else flag('aura de départ absente après le début de son rendez-vous', r, i, start.status)
         }
+        if (taken[b.owner] >= dueAt[b.owner]) dueAt[b.owner] = Infinity
+      }
       // Purge avec repli (0.42.0, Purification) : le repli ne joue que s'il n'y avait rien à retirer
       if (b.type === 'event') {
         const asked = r.fighters[b.event.side].events.find((e) => e.id === b.event.eventId)?.effects
@@ -467,10 +522,29 @@ export function createAudit() {
       }
       // Les compétences à charges (refonte des auras, 2026-10-28) : Sangsue, Peau de crapaud, Sentence, Bouclier de foi
       // perdent une charge à chaque réaction, et partent à la dernière
-      if (b.type === 'statusReaction' && (['leech', 'harvest', 'toadSkin', 'sentence', 'faithShield'] as StatusId[]).includes(b.status)) {
+      if (b.type === 'statusReaction' && (['leech', 'harvest', 'toadSkin', 'sentence', 'faithShield', 'stormAegis', 'grace', 'coatedBlade'] as StatusId[]).includes(b.status)) {
         const held = find(prev.statuses[b.side], b.status)
         if (!held || (find(s.statuses[b.side], b.status)?.stacks ?? 0) !== held.stacks - 1) flag('compétence à charges : charge non consommée', r, i, b.status)
         else see('compétence à charges')
+      }
+      // Décisions du 2026-10-30 (D9) : la Rage montante ne part qu'au critique reçu, et ne dépasse jamais 3 charges
+      if (b.type === 'statusReaction' && b.status === 'risingRage') {
+        if (b.trigger !== 'critHurt') flag('rage montante : hors critique reçu', r, i, b.trigger)
+        else see('rage montante')
+      }
+      for (const side of [0, 1] as const) if ((find(s.statuses[side], 'risingRage')?.stacks ?? 0) > 3) flag('rage montante : au-delà de 3 charges', r, i, '')
+      // Face scellée (D9, Cachet du greffier) : un jet scellé tombe sur la face que le statut retient, et ne porte que son coup
+      // de base, un coup brut, sans compétence ; une face scellée retient une face du dé
+      if (b.type === 'roll' && b.sealedBy) {
+        const seal = find(prev.statuses[b.side], b.sealedBy)
+        const blow = r.beats.find((x) => x.cause === i)
+        if (!seal || seal.power !== b.roll) flag('face scellée : jet sur une autre face', r, i, `${b.roll} / ${seal?.power}`)
+        else if (blow?.type !== 'attack' || !blow.attack.plain || r.beats.some((x) => x.cause === i && x.type === 'event')) flag('face scellée : compétence partie', r, i, `${b.roll}`)
+        else see('face scellée')
+      }
+      for (const side of [0, 1] as const) {
+        const sealed = s.statuses[side].find((x) => STATUSES[x.id].sealsFace)
+        if (sealed && !(sealed.power !== undefined && sealed.power >= 1 && sealed.power <= DIE_FACES)) flag('face scellée sans face', r, i, `${sealed.power}`)
       }
       // Phase 8, second lot. Vindicte : à chaque étape où son porteur renvoie des dégâts (Riposte, Rétribution), cette
       // étape pour cause : 6 Ferveur par charge. Embrasement : au coup qui touche un adversaire qui brûle, il relâche sa
@@ -631,40 +705,30 @@ export function createAudit() {
           flag('peau de crapaud : poison faux', r, i, JSON.stringify(b.effects))
         else see('peau de crapaud')
       }
-      // Ciel d'orage : au début de chaque tour de son porteur, avant son coup, un éclair de 1 PV par cran à l'adversaire
-      if (b.type === 'statusTick' && b.status === 'stormSky') {
-        const held = find(prev.statuses[b.side], 'stormSky')
-        const bolt = b.effects[0]
-        if (b.phase !== 'turnStart' || !held) flag('ciel d’orage hors du début de tour', r, i, `${b.phase}`)
-        else if (
-          b.effects.length !== 1 ||
-          bolt?.type !== 'damage' ||
-          bolt.target !== 1 - b.side ||
-          bolt.amount !== directDamage(prev.statuses[b.side], STORM_SKY_LOSS, 'lightning') * riseLevel(held) ||
-          (bolt.parts?.length ?? 1) !== riseLevel(held)
-        )
-          flag('ciel d’orage : éclairs faux', r, i, JSON.stringify(b.effects))
-        else see(riseLevel(held) > 1 ? 'ciel d’orage : deux éclairs' : 'ciel d’orage')
+      // Les auras regroupées (décisions D11, D20, D22 du 2026-10-30 : orage, sainteté, décoction, brasier, ballade) : chacune
+      // de leurs étapes nourrit leur compteur d'une charge, à leur intensité (charges et rangs au-delà de la première) ; au
+      // seuil, leur gros effet tombe dans la même étape, et le compteur repart de zéro
+      const counter = b.type === 'statusTick' || b.type === 'statusReaction' ? STATUSES[b.status].tally : undefined
+      if ((b.type === 'statusTick' || b.type === 'statusReaction') && counter && STATUSES[counter].threshold) {
+        const held = find(prev.statuses[b.side], b.status) ?? (b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], b.status) : undefined)
+        const [feed, ...rest] = b.effects
+        const was = find(prev.statuses[b.side], counter)
+        const { at, effects } = STATUSES[counter].threshold!
+        if (!held) flag(`aura regroupée sans son aura (${b.status})`, r, i, '')
+        else if (feed?.type !== 'applyStatus' || feed.status !== counter || feed.target !== b.side || feed.stacks !== 1) flag(`aura regroupée : compteur faux (${b.status})`, r, i, JSON.stringify(b.effects))
+        else if (feed.result.kind === 'applied' && (was?.stacks ?? 0) + 1 >= at) {
+          // L'intensité du compteur se garde d'une pose à l'autre (la plus forte, règle des poses) : une aura dissipée puis
+          // revenue (D8) avec moins de charges laisse au compteur celle d'avant
+          const expected = effects({ id: counter, stacks: at, power: Math.max(was?.power ?? 0, charges(held) - 1) })
+          const bolts = expected.map((x) => (x.type === 'damage' ? (x.hits ?? 1) : undefined))
+          const done = rest.slice(0, expected.length)
+          if (s.hp[0] > 0 && s.hp[1] > 0 && done.length !== expected.length) flag(`aura regroupée : seuil sans effet (${b.status})`, r, i, JSON.stringify(b.effects))
+          else if (done.some((x, k) => x.type !== expected[k].type || (x.type === 'damage' && (x.parts?.length ?? 1) !== bolts[k])))
+            flag(`aura regroupée : effet du seuil faux (${b.status})`, r, i, JSON.stringify(b.effects))
+          else see(`aura regroupée : seuil (${b.status})`)
+        } else if (rest.length > 0) flag(`aura regroupée : effet avant le seuil (${b.status})`, r, i, JSON.stringify(b.effects))
+        else see(`aura regroupée : compte (${b.status})`)
       }
-      // La montée (refonte des auras, 2026-10-28) : un statut qui monte gagne une charge chaque fois qu'il agit (plafond
-      // `every` × `cap`), dans l'étape de son effet ; son cran est celui que son effet a lu
-      if ((b.type === 'statusTick' || b.type === 'statusReaction') && STATUSES[b.status].rises) {
-        const { every, cap } = STATUSES[b.status].rises!
-        const was = find(prev.statuses[b.side], b.status)
-        const now = find(s.statuses[b.side], b.status)
-        if (!was || !now) flag('montée : statut absent', r, i, b.status)
-        else if (now.stacks !== Math.min(was.stacks + 1, every * cap)) flag('montée : charge fausse', r, i, `${b.status} ${was.stacks} → ${now.stacks}`)
-        else see(riseLevel(now) > riseLevel(was) ? `montée : un cran (${b.status})` : `montée : une charge (${b.status})`)
-      }
-      // Le 1 du dé sur une aura qui monte déjà là : un cran entier (Q3)
-      for (const e of beatEffects(b))
-        if (e.type === 'applyStatus' && STATUSES[e.status].rises && e.result.kind === 'applied') {
-          const was = find(prev.statuses[e.target], e.status)
-          const now = find(s.statuses[e.target], e.status)
-          const { every, cap } = STATUSES[e.status].rises!
-          if (was && now && b.type === 'event' && now.stacks !== Math.min(was.stacks + every * e.stacks, every * cap)) flag('montée : la pose ne monte pas d’un cran', r, i, `${e.status} ${was.stacks} → ${now.stacks}`)
-          else if (was && now && b.type === 'event') see('montée : une pose, un cran')
-        }
       // Bastion : son armure temporaire vidée, l'attaquant perd 3 PV par charge (dégâts directs) et il regagne 2 d'armure
       if (b.type === 'statusReaction' && b.status === 'bastion') {
         const held = find(prev.statuses[b.side], 'bastion')
@@ -679,7 +743,8 @@ export function createAudit() {
           flag('bastion : riposte ou armure fausse', r, i, JSON.stringify(b.effects))
         else see('bastion')
       }
-      // Jugement : chaque coup qui touche son porteur (une pile qui touche comprise) met une faute par charge à l'attaquant
+      // Jugement : chaque coup qui touche son porteur (une pile qui touche comprise) met une faute à l'attaquant, avec
+      // l'intensité de l'aura (son rang : le verdict plus lourd)
       if (b.type === 'statusReaction' && b.status === 'judgement') {
         const held = find(prev.statuses[b.side], 'judgement')
         const cause = b.cause !== undefined ? r.beats[b.cause] : undefined
@@ -687,7 +752,7 @@ export function createAudit() {
         const struck = (!!blow && blow.attacker === 1 - b.side && !blow.dodged) || (cause?.type === 'coin' && cause.side === 1 - b.side && cause.heads)
         const fault = b.effects[0]
         if (b.trigger !== 'hurt' || !held || !struck) flag('jugement hors d’un coup reçu', r, i, `${b.trigger} ${cause?.type}`)
-        else if (fault?.type !== 'applyStatus' || fault.status !== 'fault' || fault.target !== 1 - b.side || fault.stacks !== charges(held))
+        else if (fault?.type !== 'applyStatus' || fault.status !== 'fault' || fault.target !== 1 - b.side || fault.stacks !== 1)
           flag('jugement : faute fausse', r, i, JSON.stringify(b.effects))
         else see('jugement')
       }
@@ -700,31 +765,27 @@ export function createAudit() {
           const after = find(s.statuses[e.target], e.status)?.stacks ?? 0
           const effects = beatEffects(b)
           const k = effects.indexOf(e)
-          const fear = effects.slice(k + 1).some((x) => x.type === 'applyStatus' && x.status === 'fear' && x.target === e.target)
-          const refrain = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target !== e.target && (x.parts?.length ?? 1) === at)
+          // Le verdict (D17) : à la 3e faute, le fautif perd VERDICT_LOSS PV (+VERDICT_RANK par rang du Jugement), en Lumière
+          const rank = Math.max(find(prev.statuses[e.target], 'fault')?.power ?? 0, find(prev.statuses[1 - e.target], 'judgement')?.power ?? 0)
+          const loss = VERDICT_LOSS + VERDICT_RANK * rank
+          const verdict = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target === e.target && x.source === 'holy' && x.amount === loss)
+          const refrain = effects.slice(k + 1).some((x) => x.type === 'damage' && x.target !== e.target)
           if (before + e.result.stacks >= at) {
             if (after !== 0) flag('seuil : le statut reste', r, i, `${e.status} ${before} → ${after}`)
-            else if (e.status === 'fault' && !fear) flag('jugement : pas de Peur à la 3e faute', r, i, '')
+            else if (e.status === 'fault' && !verdict) flag('jugement : pas de verdict à la 3e faute', r, i, `${loss} attendus`)
             else if (e.status === 'balladNote' && !refrain && s.hp[1 - e.target] > 0) flag('ballade : pas de refrain à la 4e note', r, i, '')
             else see(`seuil atteint : ${e.status}`)
           } else if (after !== before + e.result.stacks) flag('seuil : charges fausses', r, i, `${e.status} ${before} + ${e.result.stacks} → ${after}`)
         }
-      // Ballade : chaque coup qui touche, des PV par charge et une note
-      if (b.type === 'statusReaction' && b.status === 'ballad') {
-        const held = b.cause !== undefined ? find(stateBefore(b.cause).statuses[b.side], 'ballad') : undefined
-        const [heal, note] = b.effects
-        if (b.trigger !== 'hit' || !held) flag('ballade hors d’un coup qui touche', r, i, `${b.trigger}`)
-        else if (heal?.type !== 'heal' || heal.target !== b.side || note?.type !== 'applyStatus' || note.status !== 'balladNote' || note.stacks !== 1) flag('ballade : soin ou note faux', r, i, JSON.stringify(b.effects))
-        else see('ballade')
-      }
-      // Brasier : au début de chacun de ses tours, la Brûlure de l'adversaire +1 par charge (Brûlure 1 s'il ne brûle pas)
-      if (b.type === 'statusTick' && b.status === 'brasier') {
-        const held = find(prev.statuses[b.side], 'brasier')
-        const burn = find(prev.statuses[1 - b.side], 'burn')?.stacks ?? 0
-        const e = b.effects[0]
-        if (b.phase !== 'turnStart' || !held) flag('brasier hors du début de tour', r, i, `${b.phase}`)
-        else if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'burn' || e.target !== 1 - b.side || e.stacks !== burn + charges(held)) flag('brasier : brûlure fausse', r, i, JSON.stringify(b.effects))
-        else see(burn > 0 ? 'brasier : attise' : 'brasier : allume')
+      // Cuir épais (D19) : chaque coup reçu, +3 armure temporaire (+2 par rang), sans cumul
+      if (b.type === 'statusReaction' && b.status === 'thickHide') {
+        const held = find(prev.statuses[b.side], 'thickHide')
+        const armor = b.effects[0]
+        if (b.trigger !== 'hurt' || !held) flag('cuir épais hors d’un coup reçu', r, i, `${b.trigger}`)
+        else if (held.stacks !== 1) flag('cuir épais cumulé', r, i, `${held.stacks}`)
+        else if (b.effects.length !== 1 || armor?.type !== 'applyStatus' || armor.status !== 'bonusArmor' || armor.target !== b.side || armor.stacks !== THICK_HIDE_ARMOR + THICK_HIDE_RANK * (held.power ?? 0))
+          flag('cuir épais : armure fausse', r, i, JSON.stringify(b.effects))
+        else see('cuir épais')
       }
       // Aura de puissance : chaque gros coup qui touche, +1 jusqu'à +6 (une charge, cinq au plus)
       if (b.type === 'statusReaction' && b.status === 'powerAura') {
@@ -735,12 +796,12 @@ export function createAudit() {
         else if (!was || !now || now.stacks !== was.stacks + 1 || now.stacks > STATUSES.powerAura.maxStacks!) flag('puissance : charge fausse', r, i, `${was?.stacks} → ${now?.stacks}`)
         else see('puissance : gros coup')
       }
-      // Rancœur : chaque coup reçu, +3 Ferveur (sans cumul ; son rang s'y ajoute)
+      // Rancœur : chaque coup reçu, +3 Ferveur (sans cumul ; son rang, +2)
       if (b.type === 'statusReaction' && b.status === 'rancor') {
         const held = find(prev.statuses[b.side], 'rancor')
         const fervor = b.effects[0]
         if (b.trigger !== 'hurt' || !held) flag('rancœur hors d’un coup reçu', r, i, `${b.trigger}`)
-        else if (fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.stacks !== RANCOR_FERVOR + (held.power ?? 0)) flag('rancœur : ferveur fausse', r, i, JSON.stringify(b.effects))
+        else if (fervor?.type !== 'applyStatus' || fervor.status !== 'momentum' || fervor.stacks !== RANCOR_FERVOR + 2 * (held.power ?? 0)) flag('rancœur : ferveur fausse', r, i, JSON.stringify(b.effects))
         else see('rancœur')
       }
       // Veine : chaque 6, deux coups bruts par charge, tout de suite
@@ -806,6 +867,8 @@ export function createAudit() {
           [crit, 'dread'],
           [touch, 'ballad'],
           [hurt, 'rancor'],
+          // Décision D19 (2026-10-30) : le Cuir épais à chaque coup reçu
+          [hurt, 'thickHide'],
           // La Veine donne des coups bruts, pas des jets : elle part aussi sur un dé de plus (pas sur un coup brut)
           [b.type === 'attack' && b.attack.attacker === side && b.attack.roll === DIE_FACES && !b.attack.plain && !b.attack.jinxed, 'luckyStreak'],
           [hurt, 'judgement'],
@@ -815,6 +878,9 @@ export function createAudit() {
           [hurt, 'toadSkin'],
           [touch && !!find(base.statuses[1 - side], 'bleed'), 'leech'],
           [touch && !!find(base.statuses[1 - side], 'poison'), 'harvest'],
+          // Décisions du 2026-10-30 : l'Égide d'orage à chaque coup reçu, la Lame enduite à chaque coup qui touche
+          [hurt, 'stormAegis'],
+          [touch, 'coatedBlade'],
           // Le contenu des maîtrises : l'Élan à chaque gros coup (critique, coup ×2 et plus), le Larcin à chaque esquive
           [touch && !!blow && (blow.crit || (blow.multiplier ?? 1) >= 2), 'onrush'],
           [
@@ -890,7 +956,7 @@ export function createAudit() {
         for (const side of [0, 1] as const)
           for (const st of s.statuses[side]) {
             const was = find(prev.statuses[side], st.id)
-            if (was?.turns !== undefined && st.turns !== undefined && st.turns < was.turns && b.type !== 'event' && b.type !== 'statusReaction')
+            if (was?.turns !== undefined && st.turns !== undefined && st.turns < was.turns && b.type !== 'event' && b.type !== 'statusReaction' && b.type !== 'relic')
               flag('durée décomptée hors de son étape', r, i, `${st.id} ${was.turns}→${st.turns} (${b.type})`)
           }
       if (b.type === 'statusAge' || b.type === 'statusTick') {
@@ -1092,7 +1158,7 @@ export function createAudit() {
         const replaces = faceSkills.some((e) => relationOf(e) === 'replace')
         const grafts = !replaces && faceSkills.some((e) => relationOf(e) === 'graft')
         if (a.replaced !== replaces) flag('jet remplacé incohérent', r, i, `roll ${a.roll}`)
-        if (!a.jinxed && grafts !== rolled) flag('jet greffé incohérent', r, i, `roll ${a.roll}`)
+        if (!a.jinxed && !sealedJet(r, b) && grafts !== rolled) flag('jet greffé incohérent', r, i, `roll ${a.roll}`)
         // Malchance : le jet tombé à vide suit son étape roll (`jinxedBy`), chez un porteur du statut qui en perd une charge, sur
         // une face qui portait une compétence prête ; un jet non imposé sur une telle face, chez un porteur, tombe à vide. Une
         // compétence qui modifie le coup y compte si sa condition tient au jet (une Morsure contre un adversaire sain laisse
@@ -1120,7 +1186,7 @@ export function createAudit() {
         // Un coup brut ne vient que d'une rafale instantanée du même tour, ou c'est un dé de frappe d'une rafale de dés de
         // plus (D5, retour du 30 octobre : sa cause est la rafale)
         const strikeDie = b.cause !== undefined && r.beats[b.cause].type === 'flurry' && !STATUSES[(r.beats[b.cause] as Extract<Beat, { type: 'flurry' }>).status].instantStrikes
-        if (a.plain && !strikeDie && !r.beats.slice(0, i).some((x) => x.type === 'flurry' && x.turn === b.turn && STATUSES[x.status].instantStrikes))
+        if (a.plain && !strikeDie && !sealedJet(r, b) && !r.beats.slice(0, i).some((x) => x.type === 'flurry' && x.turn === b.turn && STATUSES[x.status].instantStrikes))
           flag('coup brut hors d’une Furie', r, i, '')
         // Le Doublé n'existe que sur une face qui porte une compétence prête (forme, limite, conditions au jet, A7), lue
         // comme le moteur : un dé de frappe sur la face du dé de compétence et une telle compétence, c'est un Doublé manqué ;
@@ -1288,9 +1354,12 @@ export function createAudit() {
           // elle part après le prochain jet de son porteur (RESOLUTION § 2, décision du parent, 2026-10-25)
           const posed = b.cause !== undefined ? r.beats[b.cause] : undefined
           const posedCause = posed?.cause !== undefined ? r.beats[posed.cause] : undefined
-          // Reportée aussi : une charge posée au critique d'un renvoi pendant le tour de l'adversaire (C1), qui attend son jet
-          const deferred = posed?.type === 'statusReaction' && !!strikeIn(posedCause) && (strikeIn(posedCause)!.plain || posed.turn !== b.turn)
-          if (posedCause?.type === 'attack' && posedCause.attack.plain && !deferred) flag('Furie en chaîne', r, i, '')
+          // Reportée aussi : une charge posée au critique d'un renvoi pendant le tour de l'adversaire (C1), qui attend son jet.
+          // Un jet scellé (D9) est un jet complet, brut seulement par son coup : sa rafale part aussitôt
+          const blow = strikeIn(posedCause)
+          const plainBlow = !!blow?.plain && !sealedJet(r, posedCause!)
+          const deferred = posed?.type === 'statusReaction' && !!blow && (plainBlow || posed.turn !== b.turn)
+          if (posedCause?.type === 'attack' && plainBlow && !deferred) flag('Furie en chaîne', r, i, '')
           // 0.110.0 (RESOLUTION § 2) : la rafale a sa cause dans le même tour et suit le jet qui l'a posée, avant tout
           // autre coup ; toutes ses charges partent à la fois. Posée par une greffe (la Curée, 0.114.0), elle suit le coup
           // de base de son jet : le seul coup permis entre les deux est celui de l'étape roll qui a fait partir la greffe
@@ -1305,7 +1374,7 @@ export function createAudit() {
             .filter((x) => x.type === 'attack' && !(x.type === 'attack' && x.attack.plain && x.cause !== undefined && r.beats[x.cause].type === 'flurry'))
           if (deferred) {
             // Reportée : un seul jet de son porteur (un coup qui n'est pas brut) entre la pose et la rafale
-            const jets = between.filter((x) => x.type === 'attack' && x.attack.attacker === b.side && !x.attack.plain)
+            const jets = between.filter((x) => x.type === 'attack' && x.attack.attacker === b.side && (!x.attack.plain || sealedJet(r, x)))
             if (jets.length !== 1) flag('Furie : charge réactive mal reportée', r, i, `${jets.length} jets`)
             else see('furie : charge réactive reportée')
           } else if (!posed || posed.turn !== b.turn) flag('Furie : rafale reportée', r, i, `cause tour ${posed?.turn}`)
@@ -1372,14 +1441,14 @@ export function createAudit() {
           if (touched && !b.attack.modifiers.some((m) => m.status === 'falseNote') && before > 1) flag('Fausse note sans effet', r, i, '')
         }
       }
-      // Aura glaciale (0.69.0) : au début du tour de son porteur, avant son coup, 1 charge de Poison par
-      // charge d'aura sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler), intensité comprise
+      // Aura de poison (0.69.0 ; D15 du 2026-10-30) : au début du tour de son porteur, avant son coup, Poison POISON_AURA
+      // (+POISON_AURA_RANK par rang) sur l'adversaire (que l'immunité peut bloquer et la Régénération annuler)
       if (b.type === 'statusTick' && b.status === 'frostAura') {
         if (b.phase !== 'turnStart') flag('aura glaciale hors début de tour', r, i, '')
         if (r.beats.slice(0, i).some((x) => x.turn === b.turn && x.type === 'attack')) flag('aura glaciale après le coup', r, i, '')
         const st = find(prev.statuses[b.side], 'frostAura')!
         const e = b.effects[0]
-        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== riseLevel(st))
+        if (b.effects.length !== 1 || e.type !== 'applyStatus' || e.status !== 'poison' || e.target === b.side || e.stacks !== POISON_AURA + POISON_AURA_RANK * (st.power ?? 0))
           flag('aura glaciale : poison, montant ou cible', r, i, JSON.stringify(b.effects))
         else if (e.result.kind === 'applied') see('aura glaciale')
       }
@@ -1543,6 +1612,30 @@ export function createAudit() {
           else see(wanted ? 'initiative prise' : 'initiative disputée')
           continue
         }
+        // Clairon du héraut (D9) : au plus une fois, au 1er tour de son porteur, avant son premier coup ; l'aura de départ
+        // part juste après lui (déclencheur `auraDue`, la relique pour cause)
+        if (t.type === 'startAura') {
+          for (const i of fires) {
+            const b = r.beats[i]
+            const posed = r.beats.find((x) => x.cause === i)
+            const early = r.beats.slice(0, i).some((x) => x.type === 'attack' && x.attack.attacker === side)
+            if (fires.length > 1 || b.turn === 0 || owner(b.turn) !== side || ownTurns(side, b.turn) !== 1 || early) flag('clairon : hors de son 1er tour', r, i, relic.id)
+            else if (posed?.type !== 'event' || posed.event.trigger !== 'auraDue' || posed.event.side !== side) flag('clairon : aura de départ non posée', r, i, `${posed?.type}`)
+            else see('clairon du héraut')
+          }
+          continue
+        }
+        // Dé de joueur (D9) : au plus une relance par recharge (contrôlée plus haut), dans le tour de son porteur, juste
+        // avant son jet ; le jet relancé est le suivant de ce camp
+        if (t.type === 'bareFace') {
+          for (const i of fires) {
+            const b = r.beats[i]
+            const next = r.beats.slice(i + 1).find((x) => (x.type === 'attack' && x.attack.attacker === side && !x.attack.rebound) || (x.type === 'roll' && x.side === side))
+            if (b.turn === 0 || owner(b.turn) !== side || !next || next.turn !== b.turn) flag('dé de joueur : relance sans jet', r, i, relic.id)
+            else see('dé de joueur')
+          }
+          continue
+        }
         if (t.type === 'turn') {
           for (const i of fires)
             if (r.beats[i].turn === 0 || owner(r.beats[i].turn) !== side || ownTurns(side, r.beats[i].turn) < t.turn) flag('relique de tour hors de son tour', r, i, relic.id)
@@ -1567,6 +1660,12 @@ export function createAudit() {
             const view = at > 0 ? r.beats[at - 1].state : undefined
             if (view && relicIsInert(relic, side, view, r.fighters)) {
               see('relique nulle qui attend')
+              continue
+            }
+            // Cachet du greffier (D9) : rien à sceller tant que l'adversaire n'a pas jeté son dé
+            const foeRolled = r.beats.slice(0, Math.max(at, 0)).some((x) => (x.type === 'attack' && x.attack.attacker !== side && !x.attack.rebound) || (x.type === 'roll' && x.side !== side))
+            if (relic.effects?.some((e) => e.type === 'applyStatus' && STATUSES[e.status].sealsFace) && !foeRolled) {
+              see('cachet : aucun jet adverse à sceller')
               continue
             }
             flag('relique de tour manquée', r, 0, `${relic.id} : ${got.join(',')}, tour ${k} manqué`)
@@ -1686,6 +1785,7 @@ export function createAudit() {
               missed: mine && a.dodged,
               dodge: !mine && a.dodged,
               hurt: !mine && touched,
+              critHurt: !mine && touched && a.crit,
             }
             // Une face du dé, coup brut de Furie compris (2026-10-23) ; une pièce (jet 0) n'a pas de face
             const ok = moments[t.on] ?? (mine && rollMatches(t.on, a.roll, a.faces))

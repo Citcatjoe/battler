@@ -533,7 +533,7 @@ Chaque fiche ci-dessous l'ouvre en trois points : **qui il est**, **comment il s
 
 - **Fantasy** : le champion des fosses, lent et inébranlable. C'est la référence de l'orc, et l'unité de taille du jeu (`scale: 1`).
 - **Stats** (0.43.0, celles de Murzug) : PV 57, d9 depuis la 0.69.0 (d8 de la 0.50.0 à la 0.68.3), armure 0, esquive 5 %, critique 19 % ×2 (18 % avant la 0.69.0) ; Pourfendre (coup, puis Saignement 2 s'il touche) depuis la 0.70.0, Saignée en 0.68.0 et 0.69.0, Rage du sang à 5 PV avant. Jusqu'à la 0.42.0 : PV 61, critique 10 %, Rage du sang à 3 PV.
-- **Fiche** (0.110.0, revue T14) : critique aujourd'hui **14 %** (`roster.ts`) ; sa force « Critiques fréquents pour un orc » disait encore 19 %, corrigée.
+- **Fiche** (0.110.0, revue T14) : critique **14 %** (`roster.ts`) ; sa force « Critiques fréquents pour un orc » disait encore 19 %, corrigée. **16 %** depuis la passe d'équilibre du 2026-10-31 (ses deux auras vivent du critique ; mesures : « Passe d'équilibre du 31 octobre », plus bas).
 - **Comment il gagne** : ses PV absorbent les pics de dégâts, et son d10 frappe régulièrement fort.
 - **Comment il perd** : il prend tous les coups, et n'a aucune réponse face à l'usure du nain.
 - **Mesures** : 50,0 % de victoires (0.26.0), environ 19 tours par combat. Duels les plus durs : les elfes (44 % contre Elaria, 45 % contre Sylwen).
@@ -628,6 +628,7 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 - **Décisions** :
   - Elle a les PV les plus bas parce qu'elle a la meilleure défense active. Le hasard de l'esquive crée de la variance : ses combats sont les plus imprévisibles.
   - Son point faible face à l'armure est voulu. Depuis que les nains n'ont plus d'armure passive (0.24.1), il ne joue plus que contre Ervald et les boucliers.
+- **Retour du 30 octobre (D12, 2026-10-30)** : **critique 17 → 15 %** (une stat secondaire, les PV intacts ; `docs/etudes/PERSOS_RETOUR_30.md` § 9.1). Elle était au haut de la bande (55,1 % au départ de la Feinte). Mesure appariée dans le monde de la vague (0.133.0, autres agents au travail, 400 combats par duel) : départ Feinte **52,5 → 50,2 %** (pire duel Ysolde 40,0, meilleur Gorak 61,3) ; départ Plaies 44,7 % (même monde). La Sangsue inchangée.
 
 ### Sylwen · Sentinelle sylvestre (variante d'Elaria) · retiré en 0.43.0
 
@@ -690,6 +691,9 @@ Lecture : le plafond reste (meilleur build 90,0), le plancher baisse (pire 44,4,
 - **Décisions** :
   - Son armure passive de 2 a été retirée en 0.24.1 : cumulée à Peau de pierre, elle protégeait trop. Son endurance passe désormais par les PV, compensés par l'offensive la plus faible du roster.
   - **À surveiller** : le duel contre Ervald (45 %), où le poison, qui ignore tout, gagne avec la durée du combat.
+- **Retour du 30 octobre (D13, D14, 2026-10-30)** :
+  - **Les épines plantées** (son Aura d'épines) : « Chaque coup reçu lui plante une épine. Son prochain coup qui touche les enfonce toutes : Saignement 2 par épine. » Le Saignement 1 qui coulait aussitôt (« 1 saignement, nul ») devient une plaie qui grossit sur lui pendant qu'il encaisse et s'ouvre quand il rend le coup ; son anneau montre le Saignement à venir (2, 4, 6). Mesures appariées dans le monde de la vague (0.133.0, autres agents au travail, ancienne aura émulée, 400 combats par duel) : départ **45,1 → 46,7 %** (étude : 49,3 → 49,8) ; avec Curée et Odeur du sang **74,0 → 70,1 %** (étude : −4,3, le prix annoncé : il saigne l'adversaire moins souvent). Rang II : Saignement 3 par épine, départ 59,7 % (**+13,0**, au-dessus de la bande de rang 3 à 8 ; avant +20,5 ; « +1 par enfoncement » mesuré +11,8 mais affiche un « 1 », « +2 » +19,1) : à régler par la passe d'équilibre.
+  - **L'Onde de choc à 3 PV** par coup encaissé (9 au plus ; 2 avant) : gravée sur le 3 nu, 2 → 3 : Brokk **56,4 → 61,5 %** (+5,1), Aldric 54,9 → 59,2 (+4,3), Morgrut 55,3 → 60,0 (+4,7) ; contre la face nue : Brokk +14,8, Aldric +12,3, Morgrut +14,2, dans la bande d'une gravure (8 à 20). Rang II (+1 PV par coup) : +3,6, +3,6, +3,9.
 
 ### Grimbald · Briseur de fer (variante de Brokk) · retiré en 0.43.0
 
@@ -763,6 +767,9 @@ La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 
 - **Décisions** :
   - Il réutilise le statut Poison du registre, sans aucune règle nouvelle dans le moteur. Ajouter la race a seulement demandé des données.
   - Il a une armure légère (1). C'est la seule armure passive du roster depuis que les nains l'ont perdue (0.24.1).
+- **Retour du 30 octobre (D15, D16, 2026-10-30)** :
+  - **Aura de poison : Poison 2 à chacun de ses tours**, sans montée (1, 1, 2, 2 puis 3 avant ; l'utilisateur a refusé « Poison 4 tous les deux tours »). Mesures appariées dans le monde de la vague (0.133.0, autres agents au travail, ancienne aura émulée, 400 combats par duel) : départ **44,3 → 53,8 %** (+9,5 ; pire duel Naraxes 47,5, meilleur Elaria 59,0) ; avec Virulence et Morsure 69,9 → 76,5 % ; même direction contre des adversaires à 2 fois leurs PV (le boss approché) 26,1 → 32,6 %. **Dans la bande (42 à 58) : aucune compensation.** Le gain vient du début de combat (2 dès le premier tour au lieu de 1) ; la fin de combat grossit moins vite (2 par tour au lieu de 3). Rang II : Poison 3 par tour, départ 65,9 % (**+12,1**, au-dessus de la bande de rang 3 à 8 ; avant +14,6 ; « Poison 4 » +19,9) : à régler par la passe d'équilibre.
+  - **L'Effroi plafonné à 3 charges** (+10 % de critique au plus par ses poses ; son badge « 1/3 » à « 3/3 », plus de « ×1 ») : départ 49,6 → 49,4 % ; l'Ombre de l'utilisateur (Effroi, Malchance, Peur, Flétrissure, Vol de vie) 87,9 → 87,6 % contre le roster, **55,4 → 53,1 %** contre des adversaires à 2 fois leurs PV (étude : −2,4). Le Colosse Inébranlable (règle du boss) n'est pas livré : il relève de la difficulté de campagne.
 
 ### Caldrec · Faucheur d'âmes (variante d'Ervald) · retiré en 0.43.0
 
@@ -832,6 +839,9 @@ La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 
 - **Maîtrises, vague 2 (2026-10-27)** : la **Purification** inflige **8 dégâts** sans bonus à retirer (6) : vanilla 44,2 → 48,1 %, construite 36,6 → 37,7 % (la plus basse du roster, à reprendre par ses builds) ; sa valeur nette en vanilla, +21,9 points.
 - **L'aura de départ au 3e tour (2026-10-27, troisième retour, C2)** : la règle est pour tous (l'aura du 1 se pose d'office au début du 3e tour de son porteur si elle n'est pas là). Elle coûtait à Ysolde : ses adversaires portent leur aura bien plus souvent, et sa Purification, qui ne blessait que sans bonus à retirer, blessait moins (−7 points au laboratoire, [AURAS.md](AURAS.md) § 2.4). Sa compensation, une valeur de sa compétence et non une exception : la **Purification blesse de 5 quand elle retire un bonus** (8 sans bonus, inchangé ; son rang aiguise la lumière de repli). Mesuré avec le Dé pipé refait (C3), 400 combats par duel, ± 1,6 : **48,3 → 51,1 %**, Purification +22,1 → +28,2 points, Aura de sainteté +12,2 → +17,9 (la sienne aussi arrive au 3e tour), 15,2 → 15,0 tours. Son meilleur duel, Elaria, passe de 59 à 64,7 %, sous le seuil de 65/35 : à surveiller au réglage (C5).
 - **À surveiller** : elle écrase Brokk (72 %, voir « Questions ouvertes » dans EQUILIBRAGE.md). Sans son aura de sainteté, elle ne gagne que **0,7 %** de ses combats contre lui : l'intimidation ramène ses petits coups à 1 dégât, et seul le soin la fait gagner.
+- **Retour du 30 octobre (D8, D17, 2026-10-30)** :
+  - **L'aura purifiée revient** (une règle pour tous, A2·7 de `docs/etudes/DES_SUPPLEMENTAIRES.md` § 4) : l'aura de départ qu'elle dissipe se repose d'office au début du 2e tour suivant de son porteur (63 % des purges la retiraient pour de bon). Sa compensation : **la Purification blesse de 7 quand elle retire un bonus** (5 avant ; 8 sans bonus, inchangé). Mesures dans le monde de la vague (0.133.0, 400 combats par duel, réarmement coupé puis rétabli dans le moteur, même monde) : départ Sainteté **51,4 → 51,7 %** (le réarmement seul −3,3, la Purification à 7 seule +2,6 à +3,6) ; départ Jugement 47,0 → 49,2 % (le verdict en place des deux côtés). Étude : 47,2 → 48,2 % (nue), 49,4 → 50,3 % (construite).
+  - **Le verdict** (son Aura de jugement) : « Chaque coup qui touche le porteur donne une faute à l'attaquant ; à la 3e, le verdict tombe : il perd 8 PV. » Plus de Peur (la juge punit, l'Ombre terrifie) ; le compteur des fautes se lit « 1/3, 2/3 » (état En faute), l'anneau dit « −8 ». Mesure appariée (ancienne aura émulée, même monde) : départ **43,8 → 49,2 %** (pire duel Ervald 42,5, meilleur Gorak 60,5 ; étude : 49,6 → 49,0). Rang II : +2 PV au verdict, **+5,2** (dans la bande).
 
 ### Bérengère · Inquisitrice (variante d'Ysolde) · retiré en 0.43.0
 
@@ -971,6 +981,8 @@ La revue attendait 46,6 → 51,2 % en vanilla (P3 seule, à d'autres graines) : 
 
 **Quatrième demande (2026-10-27)** : « il ne fait presque rien, mais ses coups sont plus forts ». **Quatre faces de compétence au plus** (`skillFaces` ; cinq pour les autres) : son aura, son Crescendo et deux gravures, puis la forge ne lui offre plus que des coups plus lourds (Dorer, Aiguiser, Tremper). Attaque **5 à 7 → 6 à 8**, la plus lourde du roster, payée en PV (**59 → 52**). Construit 40,5 → 44,7 %. Formes mesurées et choix : « La quatrième demande » plus haut.
 
+**2026-10-30, le Cuir épais (D19)** : sa seconde aura devient l'**Aura du cuir épais** (Rempart, +3 armure temporaire par coup reçu, sans cumul) à la place de la Rancœur : la Puissance pour le cogneur, le Cuir pour le gros tas qui encaisse. Départ 46,3 → 43,9 %, pire duel Gorak 65,8 % (il gagne) : à surveiller. Mesures : « Retour du 30 octobre : D11, D19 à D22 », plus bas.
+
 **Personnalité : le gros distrait.**
 - **Qui il est** : simple, lent d'esprit, et pas méchant du tout : il s'émerveille d'un papillon. Il ne se bat pas par haine, on lui a juste dit de taper.
 - **Comment il se bat** : il tape, à chaque jet, plus fort que tout le monde (depuis la 0.106.0 ; avant, il attendait sur un jet qu'il ne comprenait pas, l'Attente). Il ne vise pas (aucun critique) et n'esquive pas : il n'y pense même pas.
@@ -1055,6 +1067,8 @@ Luciole est désormais une vraie compétence, la quatrième du druide après cel
 
 La revue attendait 54,9 → 56,4 % : 55,9 %, sans compensation. La Foudre II passe au-dessus de la bande parce que son rang (+1 par éclair) compte désormais quatre fois : dans son kit, le rang II vaut +5,7.
 
+**2026-10-30, l'Aura d'orage regroupée et la Fureur (D20, D21, D11)** : l'orage éclate tous les trois tours, trois éclairs de 2 (une Nuée par tour sur l'anneau) ; sa Foudre tombe en deux éclairs de 2 ; son Brasier attise de 2 tous les deux tours ; ses maîtrises deviennent Magie et **Fureur** (le Poison sort), le Brasier reste sa seconde aura. Mesures : « Retour du 30 octobre : D11, D19 à D22 », plus bas.
+
 **Personnalité : l'homme et la bête.**
 - **Qui il est** : un gardien des chênes anciens, qui appelle la foudre et le feu, et porte en lui un ours qu'il ne maîtrise pas. Les deux ne se ressemblent pas et se relaient sans se demander leur avis.
 - **Comment il se bat** : la forme lui est imposée à chaque tour. L'homme lance un sort à chaque tour (Foudre, Feux follets, Aura sauvage) sans jamais frapper ; l'ours frappe toujours, et fort (+3, plus l'Aura sauvage que l'homme a accumulée).
@@ -1082,6 +1096,8 @@ La revue attendait 54,9 → 56,4 % : 55,9 %, sans compensation. La Foudre II pas
 **0.76.0, la Foudre en trois éclairs** (demande de l'utilisateur : « 3 éclairs qui tombent à la suite à des endroits un peu différents, 2 chacun, impossible de critiquer ») : la Foudre fait 3 fois 2 dégâts directs (6 au lieu de 5), jamais critiques, sans armure ni esquive. À l'écran, trois éclairs tombent l'un après l'autre à gauche, à droite puis au centre de la cible, chacun avec son « 2 ». **Compensation, choix de l'agent** : Force de l'ours +4 → **+3**. Sans elle, Thaldrin montait à 58,0 % et Brokk tombait à 31,5 % contre lui, au-delà de 65/35. Avec : Thaldrin 54,0 → **49,8 %**, 17,4 tours, 10,1 dégâts par coup (toujours le plus haut) ; ses duels de 38 à 62 % (Brokk 38,5 % contre lui). Valeurs nettes : Foudre +15,6, Feux follets +11,6, Aura sauvage +5,5 points (400 combats par duel).
 
 ## Barde : la musique sur ses faces, et le Duo (deux dés jusqu'à la 0.115.1, doubles jusqu'à la phase 5 ter)
+
+**Noms du 2026-10-30 (D23, décision de l'utilisateur ; ids inchangés)** : les compétences nées de sa musique, devenues des briques de maîtrise partagées, perdent leur nom de chanson : **Duo → Écho** (sa signature, Arcanes, avec son statut), **Soliste → Coup de maître** et **Crescendo → Acharnement** (Fureur), **Siffloter → Répit** (Lumière, avec son statut, l'ex-Sifflotement), **Fausse note → Main tremblante** (Ombre, avec son statut). Sa maîtrise Magie s'appelle les **Arcanes** (D29). Aucune règle ni valeur ne change : aucune mesure à refaire. Ses épithètes (« Fausse-Note ») et sa fiche (« son solo les fait trembler ») restent : c'est elle qui chante, pas ses compétences. Les sections ci-dessous gardent les noms de leur date.
 
 **Images** : `bard-idle.png` et cinq postures (0.41.0, session images). Saltimbanque de foire, en tenue bigarrée à losanges et chapeau à plume, avec un luth et une rapière. Taille 1,00, celle d'un humain.
 
@@ -1161,6 +1177,8 @@ Restent au-dessus de leur bande : le Duo gravé chez Ysolde (+23,1, la marge tou
 
 **2026-10-25, la revue des auras et des compétences** ([REVUE_COMPETENCES.md](REVUE_COMPETENCES.md), P4, P5, I3) : son kit ne change pas. Sa réserve : la **Fausse note** vaut **les 2 prochains coups de l'adversaire qui touchent à −4** (un coup à −5 avant ; son intensité de départ compte le second coup, son rang en ajoute un) ; **Siffloter** rend **3 PV** par tour (2 avant), 6 en tout ; le **Pas de côté**, nouveau (« +8 % d'esquive », une aura cumulable, la saltimbanque qui esquive d'un pas de danse), entre dans sa réserve et dans le répertoire de Naraxes. Gravées chez elle (400 combats par duel) : Fausse note +13,6 → **+20,1** (au bord haut : drapeau « forte » à la moyenne des hôtes, +20,0), Siffloter +10,3 → **+15,3**, Pas de côté **+6,4** (sous la bande chez elle ; +8,2 en moyenne) ; rangs II : Fausse note +4,9, Siffloter +4,3. Vanilla 47,4 → 46,9 % (bruit) ; construite contre construits 52 ± 13 → 54 ± 13 % ; saison 59 → 56 % ; campagne, acte gagné 30 → 17 % (30 parties, bruit large : boss atteint 40 → 30 %).
 
+**2026-10-30, la Ballade refaite (D22)** : plus de +1 PV par coup ; une note par coup qui touche, et au 4e le refrain : quatre éclats de 2 sur l'adversaire et +4 PV. Mesures : « Retour du 30 octobre : D11, D19 à D22 », plus bas.
+
 **Personnalité : l'artiste de foire.**
 - **Qui elle est** : joyeuse, cabotine, moqueuse sans méchanceté. Pour elle, le combat est un numéro ; ce qui compte, c'est le public.
 - **Comment elle se bat** : une chanson, un rythme. Son aura est là dès son entrée en scène : elle ne rate jamais son arrivée. Quand la foule reprend le refrain (son 1), elle lance deux dés au tour suivant, deux jets complets : le Duo.
@@ -1234,6 +1252,54 @@ Chaque personnage nomme ses deux auras, comme sa signature (`CharacterDef.auras`
 **Mesure d'ensemble (tranche 8, agent TuningF ; détail et essais : [REFONTE_AURAS.md](REFONTE_AURAS.md) § 13).** **Fanchon** : le Duo, un coup brut de plus (trois avant) ; attaque 4 à 6 → 5 à 7, esquive 15 → 18 % : Ballade 55,3 → 51,1 %, Veine 51,1 → 52,4, construite 66,5 → 57,9. **Aldric** : la Riposte pose une charge (deux avant) ; attaque 5 à 6 → 5 à 7 : Vindicte 52,1 → 47,0, Larcin 53,6 → 52,9, construit 58,0 → 52,3. **Gorak** : l'Élan, +4 Ferveur par gros coup : 40,3 → 42,8 ; Ivresse 43,8 → 44,1 ; construit 41,3 → 44,0. **Thaldrin** : critique 8 → 15 % : Ciel 50,1 → 57,2, Brasier 45,9 → 53,2, construit 40,9 → 44,5. **Naraxes** : Pile ou face aiguisée, ×1 de plus par rang : construite 56,4 → 56,9 (59,6 au plus haut du réglage). Morgrut garde l'attaque la plus lourde (6 à 8 ; tous les autres finissent sous 8, testé). Vanilla (800 par duel) : de 44,6 % (Gorak) à 56,2 (Thaldrin), pire duel 61,5.
 
 **La campagne par départ (agent TuningG ; détail : [CAMPAGNE.md](CAMPAGNE.md) § 18.7).** Aucun personnage ne change. Les « 0 % de boss atteint » d'Elaria Plaie ouverte, Brokk Bastion, Morgrut Puissance et Rancœur, Fanchon Veine (12 parties par aura) étaient du bruit : à 60 parties, 14 à 25 %. La seule part réelle venait du plancher des PV, qui laissait les départs les plus faibles contre les adversaires construits sous la courbe (Effroi, Plaie ouverte, Ivresse du sang : 16 à 18 % de boss atteint servis, contre 25 %) ; Morgrut à quatre faces n'y est pour rien (21,5 et 23,8 %). Réglé par une règle de campagne (le retard de l'adversaire s'allonge au plancher) : courbe servie de 21,2 (Bastion) à 25,7 % ; boss atteint, 60 parties, Plaie ouverte 14 → 18 %, Bastion 15 → 20, Effroi 20 → 28, Puissance 18 → 25, Rancœur 20 → 25, Veine 25 → 25.
+
+## Retour du 30 octobre : D11, D19 à D22 (2026-10-30, agent PersosB)
+
+Décisions de l'utilisateur (registre [RETOUR_30.md](RETOUR_30.md)), étude [PERSOS_RETOUR_30.md](etudes/PERSOS_RETOUR_30.md) § 2, 6, 7, 8 ; statuts : [STATUTS.md](STATUTS.md), même titre. Règle D11 : un chiffre affiché vaut 2 ou plus ; on regroupe au lieu d'affaiblir (un compteur sur l'anneau, puis un gros effet). Mesures : laboratoire (`scripts/lab/d11-30.ts`, séries 160 à 165, 400 combats par duel, mêmes graines que `npm run balance`), en 0.133.0 **pendant la vague** (d'autres agents changeaient le registre : les « après » mêlent leurs changements) ; une passe d'équilibre globale suit.
+
+| Brique | Avant | Après | Mesure (avant → après) |
+| --- | --- | --- | --- |
+| **Morgrut, seconde aura (D19)** | Aura de rancœur (+3 Ferveur par coup reçu) | **Aura du cuir épais** (Rempart) : +3 armure temporaire par coup reçu, sans cumul ; rang +2 | départ 46,3 → **43,9 %** (série 165) ; pire duel **Gorak 65,8 %** (Morgrut gagne), à la limite 65/35 : à surveiller. Cumulée par le 1 de Morgrut (premier essai), 54,4 % et Gorak 78 % : écartée |
+| Rancœur | sur la fiche de Morgrut | brique offerte du Rempart (Aldric, Brokk, Morgrut en gravure) ; rang +1 → **+2** Ferveur | rang non remesuré |
+| **Aura d'orage (D20)** | 1 puis 2 éclairs de 1 par tour | une Nuée par tour, **au 3e : 3 éclairs de 2** (scène de la Foudre) ; rang : un éclair de plus | étude (0.131.2) 56,9 → 56,8 % ; registre en 0.133.0 : Thaldrin **54,7 %** (`npm run balance`), valeur nette +17,5, apport 6,0 PV |
+| **Ballade (D22)** | +1 PV par coup, refrain 4 × 1 | une note par coup qui touche, **au 4e : 4 éclats de 2 et +4 PV** ; plus de +1 PV ; rang : un éclat de plus | étude (0.131.2) 50,5 → 52,4 % ; registre : Fanchon **53,2 %**, valeur nette +26,9 |
+| Aura de sainteté (D11) | +1 puis +2 PV par tour | **+4 PV tous les deux tours** ; +2 par rang | Ysolde 45,6 → 46,7 % (série 161 ; +3 : 41,6 ; tous les 3 tours +6 : 44,3) ; registre : **51,7 %** (le verdict et la Purification à 7 de PersosA y sont aussi) |
+| Aura de décoction (D11) | Poison 1, 2 puis 3 par coup qui touche | **Poison 6 tous les trois coups qui touchent** ; +2 par rang | Naraxes 52,3 → 53,3 % (série 160 ; tous les 2 coups Poison 4 : 57,1, Ysolde 65 ; Poison 2 par coup : 59,2) ; registre : **54,4 %**, pire duel Gorak 63,5 |
+| Aura du brasier (D11) | Brûlure +1 par tour | **Brûlure +2 tous les deux tours** ; +2 par rang | départ de Thaldrin 52,1 → 50,4 % (série 162 ; +3 : 57,1) ; registre : **48,4 %** |
+| Foudre (D11) | 4 éclairs de 1 ; rang +1 par éclair | **2 éclairs de 2** ; rang +2 par éclair | gravée sur le 3 (Thaldrin, Fanchon, Ysolde, Naraxes) : **+0,0** chez les quatre (même total, une perte) ; 3 éclairs de 2 : +2,9 à +4,4 |
+| Poing de pierre (D11) | +1 tant que l'armure tient ; Peau de pierre armure 6 | **+2**, armure **5** | Brokk 46,4 → 46,4 % (série 164 ; armure 6 et +2 : +2,8 ; armure 4 : −3,4) ; gravée Morgrut −0,2, Aldric +0,8 |
+
+**Thaldrin, la Fureur au lieu du Poison (D21).** Maîtrises Magie (Arcanes) et Fureur ; le Brasier reste sa seconde aura (l'Élan est celle de Gorak). Sa réserve perd la Décoction, l'Aura de poison, Souffle de la tombe, Virulence, Récolte, Pièce vert-de-gris, Morsure, Peau de crapaud, Lame enduite ; elle gagne l'Aura de puissance, l'Élan, Furie des vents, Coup de massue, Brise-garde, Assaut, Coup de maître, Acharnement, la Charge de l'ours et la Rage montante (Competences). Montée (`npm run ramp`, 48 builds, 0.128 → 0.133.0, toute la vague comprise) : construit à 10 récompenses **44,5 → 46,6 %**, pente **−15,5 → −9,9** ; ses gravures les plus prises : Charge de l'ours +13,3, Coup de maître +11,0, Embrasement +24,0 (au-dessus de la bande), Brise-garde +15,5, Éclair aveuglant +21,5 (au-dessus). Toujours la pente la plus négative du roster, le 8e construit : son départ reste le plus fort nu (54,7 %). Levier proposé, non mesuré : critique 15 → 12 % (l'étude).
+
+**Gardés à « 1 », justifiés.** Aura de visée (+1 à la Mire, +3 au plus) et Aura de puissance (+1 par gros coup, jusqu'à +6) : des compteurs qui montent et se lisent (« ×+3 », « +6 ») ; l'étude les classe ainsi. Écho (un coup de plus) : un nombre de coups, dit en toutes lettres, jamais un chiffre « 1 » à l'écran. Coup de chance : un dé de frappe, réglé par le Doublé (D5). Récolte : 1 PV par Poison, décision D10. Les textes de rang à « +1 » des autres briques (« +1 Rancune », « pile ×1 de plus », « +1 chance sur 6 »…) : inventaire et proposition dans le livrable de l'agent (non traités : ils changent l'axe de rang de toutes les compétences, à mesurer avec la passe d'équilibre).
+
+Rapports : `logs/lab/2026-10-30-15-32-10_v0.133.0.md` (160), `…15-32-26…` (161), `…15-32-39…` (162), `…15-37-47…` (163), `…15-38-12…` (164), `…16-15-32…` et `…16-16-16…` (165) ; `logs/balance/2026-10-30-16-16-39_v0.133.0.md` ; `logs/ramp/2026-10-30-16-20-04_v0.133.0.md`.
+
+## Passe d'équilibre du 31 octobre (agent Equilibre)
+
+Après toute la vague des décisions du 30 octobre (PersosA, PersosB, Reliques, Competences, Arcanes, OffreCode). Mesures : `BALANCE_N=400 npm run balance` (roster nu) ; départs d'aura et rangs II d'aura au départ (chaque personnage parti de chacune de ses deux auras, l'aura aiguisée une fois sur le 1), 400 combats par duel, mêmes graines que `npm run balance` ; `npm run ramp` (48 builds, 60 par duel) ; `scripts/skills.report.ts` (gravures et rangs, 200 puis 400 par duel) ; `npm run relics` ; `npm run campaign`. Avant : `logs/balance/2026-10-31-13-41-38`, `logs/ramp/2026-10-31-13-44-24`, `logs/relics/2026-10-31-13-48-19` ; après : `logs/balance/2026-10-31-14-11-02`, `logs/ramp/2026-10-31-14-14-59`, `logs/relics/2026-10-31-14-20-17` (tous `_v0.133.0.md`).
+
+**Réglages** : Gorak critique **14 → 16 %** ; Dé pipé **+5 → +6 %** de critique et d'esquive par charge ; Cuir épais, rang **+2 → +1** armure (+4 au rang II) ; Embrasement **×3 → ×2** ; Éclair aveuglant, Aveuglé **4 tours** (jusqu'à la fin du combat avant) ; Lumière sacrée, le rang au **soin seul** ; les rangs « +1 » passés à +2 quand ils restent dans la bande (détail : [SORTS.md](SORTS.md) § 34).
+
+| Départ (aura sur le 1) | Avant | Après | Pire duel après | Rang II de l'aura, avant → après |
+| --- | --- | --- | --- | --- |
+| Gorak, Ivresse | 42,6 % | **46,7 %** | Naraxes 38,8 | +12,1 → +12,0 |
+| Gorak, Élan | **40,8 %** (sous 42) | **43,5 %** | Naraxes 36,5 | +14,5 → +13,8 |
+| Elaria, Visée / Plaies | 50,2 / 44,7 | 49,9 / 44,3 | Ysolde 40,0 / Naraxes 38,5 | +7,7 / +16,2 |
+| Brokk, Épines / Bastion | 46,7 / 44,1 | 46,0 / 43,7 | Naraxes 41,5 / Ervald 37,8 | +17,5 → +17,6 / +9,2 |
+| Ervald, Poison / Effroi | 53,8 / 49,4 | 53,3 / 49,0 | Naraxes 47,5 / 38,3 | +16,3 / +9,5 |
+| Ysolde, Sainteté / Jugement | 51,7 / 49,2 | 51,2 / 48,6 | Naraxes 42,5 / Ervald 42,5 | +12,3 / +9,4 |
+| Naraxes, Décoction / Dé pipé | 54,4 / 42,0 (41,7 après Gorak) | 54,2 / **44,0** | Thaldrin 46,0 / 37,0 | +11,1 / +12,6 → +13,9 |
+| Aldric, Vindicte / Larcin | 46,9 / 50,1 | 46,6 / 49,5 | Fanchon 40,3 / Ysolde 41,5 | +6,4 / +13,2 |
+| Morgrut, Puissance / Cuir épais | 45,8 / 43,9 | 45,2 / 43,3 | Aldric 39,0 / Thaldrin 37,3 ; **Gorak contre lui 65,8 → 60,0 %** | +13,2 / **+23,5 → +14,2** |
+| Thaldrin, Orage / Brasier | 54,7 / 48,4 | 54,5 / 48,2 | Ysolde 47,3 / Ervald 42,0 | +9,3 / +14,4 |
+| Fanchon, Ballade / Veine | 53,2 / 50,7 | 52,5 / 50,2 | Thaldrin 42,5 / 42,8 | +7,6 / +11,7 |
+
+Roster nu (premier départ) : de 45,2 % (Morgrut) à 54,5 % (Thaldrin) ; pire duel Gorak contre Naraxes **36,5 → 38,8 %**. Construits à 10 récompenses (`npm run ramp`) : de 44,6 % (Thaldrin) à 56,0 % (Ervald) ; Gorak **48,8 → 52,2**, Thaldrin 46,6 → 44,6 (Embrasement et Éclair aveuglant réglés), les autres à ±0,8. Campagne : boss atteint **27 %**, acte gagné **13 %** (240 parties ; attendu 26 et 12).
+
+**Thaldrin, la pente construite** (−9,9 → −11,9) : le levier proposé, critique 15 → 12 %, mesuré et **écarté** : départs Orage 54,7 → 52,4 %, Brasier 48,4 → 45,8, construit 44,5 → **42,9** (au bord bas), pente −12,0 → −11,4. Sa pente vient d'un départ fort et d'une aura qui ne grandit pas avec le build (l'Aura d'orage vaut +11,6 construite, la plus faible aura de kit) ; baisser une stat baisse les deux bouts. Construit et nu restent dans la bande.
+
+**Les rangs II d'aura au départ** sont presque tous au-dessus de +8 (de +6,4, Vindicte, à +17,6, Épines) : le plus petit pas entier d'une aura de kit est son moteur entier aiguisé. Le Cuir épais (+23,5) est ramené à +14,2 ; les autres, dont les Épines (+17,6 ; +11,4 construites) et l'Aura de poison (+16,3 ; +12,9 construite), sont signalés (proposition : [SORTS.md](SORTS.md) § 34).
 
 ## Ajouter un personnage : check-list de design
 

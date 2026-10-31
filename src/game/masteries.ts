@@ -8,10 +8,12 @@ import { auraOfSkill } from './states'
 /*
  * Les Maîtrises (retour de l'utilisateur du 2026-10-27, V1 à V5 ; docs/MAITRISES.md) : huit grandes familles de sorts
  * depuis le second retour du même jour (B1 : la Chasse, les Représailles et le Chant fondus dans les autres, l'Orage
- * devenu la Magie), par thème, lisibles par le joueur. Chaque personnage en joue deux (`CharacterDef.masteries`) ; chaque
- * compétence et chaque aura appartient à une seule (son rangement dans le catalogue, skills.ts). Deux personnages qui
- * partagent une maîtrise tirent dans la même réserve (V5). La famille d'un statut (`StatusDef.family`) reste une donnée
- * technique (le son de sa pose), jamais montrée comme une maîtrise.
+ * devenu la Magie, renommée Arcanes le 2026-10-30, D29), par thème, lisibles par le joueur. Chaque personnage en joue
+ * deux (`CharacterDef.masteries`) ; chaque compétence et chaque aura appartient à une seule (son rangement dans le
+ * catalogue, skills.ts). Deux personnages qui partagent une maîtrise tirent dans la même réserve (V5). La famille d'un
+ * statut (`StatusDef.family`) reste une donnée technique (le son de sa pose), jamais montrée comme une maîtrise.
+ *
+ * Les Arcanes gardent leur id `magic` (D29) : le nom affiché change seul, l'historique et les journaux restent lisibles.
  */
 
 export type MasteryId = 'fury' | 'blood' | 'bulwark' | 'poison' | 'chance' | 'light' | 'shadow' | 'magic'
@@ -47,7 +49,7 @@ export const MASTERIES: Record<MasteryId, Mastery> = {
   chance: mastery('chance', 'Chance', 'Le hasard joue-t-il pour lui ?', 'Des pièces, des jets de plus, des critiques et des esquives : le hasard joue pour lui.'),
   light: mastery('light', 'Lumière', 'Se soigne-t-il, et le fait-il payer ?', "Il se soigne et se garde des malus, et chaque soin se retourne contre l'adversaire."),
   shadow: mastery('shadow', 'Ombre', "L'adversaire est-il maudit ?", "Des malédictions : l'adversaire perd ses actions, ses coups, ses bonus et sa chance."),
-  magic: mastery('magic', 'Magie', 'Ses sorts tombent-ils ?', 'Des sorts : la foudre et le feu frappent sans coup, ses chants portent ses coups.'),
+  magic: mastery('magic', 'Arcanes', 'Ses sorts tombent-ils ?', 'Des sorts : la foudre et le feu frappent sans coup, ses chants portent ses coups.'),
 }
 
 export const MASTERY_IDS = Object.keys(MASTERIES) as MasteryId[]

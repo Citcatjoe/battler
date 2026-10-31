@@ -49,6 +49,7 @@ export type RuleId =
   | 'stacking-refresh'
   | 'max-stacks'
   | 'application'
+  | 'spell'
 
 export interface Rule {
   group: RuleGroup
@@ -74,7 +75,7 @@ export const RULES: Record<RuleId, Rule> = {
   phases: {
     group: 'turn',
     title: 'Un tour, trois phases',
-    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son jet et son coup de base, ou ses coups : Furie des vents, Coup de chance, Duo ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
+    text: "Pour le joueur actif : début de tour (changement de forme ; ses statuts agissent, bonus puis malus ; leurs durées « début » baissent ; puis ses compétences et reliques de début de tour), action (son jet et son coup de base, ou ses coups : Furie des vents, Coup de chance, Écho ; rien s'il porte la Peur), fin de tour (ses statuts de fin, comme la Brûlure ; leurs durées « fin » ; ses compétences de fin de tour).",
   },
   ko: {
     group: 'turn',
@@ -95,7 +96,7 @@ export const RULES: Record<RuleId, Rule> = {
   'strike-dice': {
     group: 'dice',
     title: 'Dés de frappe et Doublé',
-    text: "Deux sortes de dés. Le dé de compétence, le d6 de l'action à la couleur du camp : sa face lance sa compétence. Le dé de frappe, blanc, plus petit : un dé de plus (Coup de chance, Coccinelle d'émail, Furie des vents, Duo, Veine, Rafale de pile…), qui porte un coup de base ; sa face ne lance aucune compétence (les reliques de face et la dorure la lisent). Doublé : un dé de plus de l'action (Coup de chance, Coccinelle d'émail) qui fait la même face que le dé de compétence, quand cette face porte une compétence qui peut partir, passe en or avec lui, et la compétence repart, puis son coup. Sur une face nue, pas de Doublé : un dé de frappe. Au plus 3 dés de plus par action, et rien de ce qu'un dé de plus déclenche, Doublé compris, ne donne de dé de plus (un Coup de chance ne repart pas sur un Doublé).",
+    text: "Deux sortes de dés. Le dé de compétence, le d6 de l'action à la couleur du camp : sa face lance sa compétence. Le dé de frappe, blanc, plus petit : un dé de plus (Coup de chance, Coccinelle d'émail, Furie des vents, Écho, Veine, Rafale de pile…), qui porte un coup de base ; sa face ne lance aucune compétence (les reliques de face et la dorure la lisent). Doublé : un dé de plus de l'action (Coup de chance, Coccinelle d'émail) qui fait la même face que le dé de compétence, quand cette face porte une compétence qui peut partir, passe en or avec lui, et la compétence repart, puis son coup. Sur une face nue, pas de Doublé : un dé de frappe. Au plus 3 dés de plus par action, et rien de ce qu'un dé de plus déclenche, Doublé compris, ne donne de dé de plus (un Coup de chance ne repart pas sur un Doublé).",
     see: ['die', 'base-hit'],
   },
   dodge: {
@@ -106,7 +107,7 @@ export const RULES: Record<RuleId, Rule> = {
   crit: {
     group: 'crit',
     title: 'Critique',
-    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (un seul à la fois, pour la prochaine frappe ; esquivée ou ratée, elle le perd) : la valeur du coup (le coup de base, ×N par Crescendo ou Soliste, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 ou plus selon le personnage, davantage avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
+    text: "Selon sa chance de critique, ou à coup sûr avec Critique assuré (un seul à la fois, pour la prochaine frappe ; esquivée ou ratée, elle le perd) : la valeur du coup (le coup de base, ×N par Acharnement ou Coup de maître, plus un bonus de relique ou de dorure) est multipliée par son multiplicateur (×2 ou plus selon le personnage, davantage avec l'Aura de précision), arrondie au plus proche. Les bonus et malus de dégâts viennent après.",
   },
   modifiers: {
     group: 'damage',
@@ -126,7 +127,7 @@ export const RULES: Record<RuleId, Rule> = {
   'final-damage': {
     group: 'damage',
     title: 'Dégâts finaux',
-    text: "Les dégâts finaux de l'attaquant (Fausse note) s'additionnent, puis s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; le coup garde au moins 1 dégât.",
+    text: "Les dégâts finaux de l'attaquant (Main tremblante) s'additionnent, puis s'ajoutent ou se retirent en dernier, sur un coup qui touche, sans que l'armure, l'intimidation ni les boucliers ne les touchent ; le coup garde au moins 1 dégât.",
   },
   'direct-damage': {
     group: 'damage',
@@ -151,7 +152,7 @@ export const RULES: Record<RuleId, Rule> = {
   'hit-relations': {
     group: 'skills',
     title: 'Greffe, modifie, remplace',
-    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un dé de frappe de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change la valeur du coup de base (Soliste : coup de base ×3 ; Crescendo : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base par charge, juste après ce jet).",
+    text: "Une compétence du dé dit ce qu'elle fait du coup de base. Elle se greffe (la règle) : au jet, elle se résout, puis le coup de base part ; ce qu'elle pose agit déjà sur ce coup (Œil de faucon le rend critique ; Coup de chance : le coup part, et l'action suivante a un dé de frappe de plus). Elle modifie son coup : il part, et s'il touche, elle se déclenche (Pourfendre : un Saignement de la moitié des PV retirés, dès le coup suivant ; Pile ou face : pile, ce coup ×3), ou elle change la valeur du coup de base (Coup de maître : coup de base ×3 ; Acharnement : ×2, puis ×1 de plus à chaque fois). Elle remplace le coup : il ne part pas, et elle donne ses propres coups (Furie des vents : deux coups de base par charge, juste après ce jet).",
   },
   conditions: {
     group: 'skills',
@@ -162,6 +163,14 @@ export const RULES: Record<RuleId, Rule> = {
     group: 'skills',
     title: 'Formes',
     text: "Un personnage à formes commence sous sa première forme, puis en change au tout début de chacun de ses tours, sauf le premier. Ses compétences dépendent de sa forme, et chaque forme a ses règles (le druide : un sort à chaque jet, greffé sur son coup de base, en homme ; en ours, seules ses gravures partent, et un coup de base à +3) : ce sont des mécanismes, ni bonus ni malus.",
+  },
+  // Le mot-clé « sort » (second retour du 2026-10-30, D29) : il traverse les maîtrises. Sa source est la nature de la
+  // compétence (`isSpell`, events.ts), et la magie de ses dégâts (`DAMAGE_SOURCES.magical`) en découle
+  spell: {
+    group: 'skills',
+    title: 'Sorts',
+    text: `Une compétence arcane (la magie, la foi, la nature, la mort) est un sort et porte la pastille « sort », quelle que soit sa maîtrise : la foudre, le feu et les chants des Arcanes, mais aussi les soins et la lumière de la Lumière, les malédictions de l'Ombre, les venins arcanes du Poison, les pièces ensorcelées de la Chance. Toute compétence qui blesse par la magie (${sourceNames((s) => s.magical)}) est un sort. Les coups et les gestes, martiaux ou d'adresse, n'en sont pas (Pourfendre, la Riposte, la Rétribution). Un sort qui blesse ou entrave l'adversaire fait incanter son lanceur. Le mot n'ajoute aucun effet par lui-même : une compétence ou une relique qui parle de « sort » vise exactement celles-ci.`,
+    see: ['skill', 'damage-types'],
   },
   polarity: {
     group: 'statuses',
@@ -176,7 +185,7 @@ export const RULES: Record<RuleId, Rule> = {
   auras: {
     group: 'statuses',
     title: 'Auras',
-    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Leur nom commence toujours par « Aura ». Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet. Certaines auras montent : elles commencent à 1 et gagnent un cran tous les deux déclenchements (tours, coups reçus ou coups qui touchent), jusqu'à leur plafond ; leur description le dit. L'aura de départ, celle du 1 de son dé, arrive au plus tard au début de son 3e tour : si elle n'est pas là, elle se pose d'elle-même, une fois par combat. Un 1 la pose plus tôt, et chaque 1 ajoute une charge à une aura cumulable.",
+    text: "Les auras restent jusqu'à la fin du combat, sans durée ; seule une purification peut en retirer une, avec toutes ses charges. Leur nom commence toujours par « Aura ». Chaque charge renforce l'effet ; en combat, leur anneau dans la barre de compétences affiche cet effet. Certaines comptent leurs tours, leurs coups qui touchent ou les coups reçus (Aura d'orage, de ballade, de jugement…) : leur anneau montre le compte (« 2/3 ») ; au dernier, elles agissent, et le compte repart de zéro. L'aura de départ, celle du 1 de son dé, arrive au plus tard au début de son 3e tour (dès le 1er avec le Clairon du héraut) : si elle n'est pas là, elle se pose d'elle-même. Dissipée, elle revient de même au début de son 2e tour suivant. Un 1 la pose plus tôt, et chaque 1 ajoute une charge à une aura cumulable.",
   },
   'stacking-add': {
     group: 'statuses',

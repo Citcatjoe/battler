@@ -147,7 +147,7 @@ export function ForgeCard({
   offer: ForgeOffer | ForgeStep
   character: Character
   selected: boolean
-  /** Graver à deux compétences : celle retenue */
+  /** Graver à plusieurs compétences (deux, trois aux offres riches) : celle retenue */
   skill?: string
   mark?: string
   onSelect: (skill?: string) => void
@@ -158,7 +158,7 @@ export function ForgeCard({
   const where = !('face' in offer) ? '' : offer.op === 'copy' && offer.to !== undefined ? `Face ${offer.face} → ${offer.to}` : `Face ${offer.face}`
   if (skills.length > 1)
     return (
-      <div className="relic-card relic-card-split" data-selected={selected ? '' : undefined} role="group" aria-label={op.name}>
+      <div className={`relic-card relic-card-split${skills.length > 2 ? ' relic-card-split-wide' : ''}`} data-selected={selected ? '' : undefined} role="group" aria-label={op.name}>
         {mark && <span className="relic-card-mark">{mark}</span>}
         <span className="rounded-(--r-xs) border border-gold-500/60 bg-gold-500/15 px-2 py-px font-body text-[13px] font-bold uppercase tracking-[0.2em] text-gold-300">{op.name}</span>
         <div className="flex w-full flex-1 items-stretch gap-3">

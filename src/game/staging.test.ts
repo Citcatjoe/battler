@@ -14,7 +14,7 @@ import { CHARACTER_IDS, createCharacter, ENGRAVABLE_SKILLS } from './roster'
 import { SCENE_EVENTS } from './scenes'
 import { DOUBLET_SPECIAL } from './specials'
 import { childrenOf, FLOAT_LANES, relicSignal, skillFaceAt, stage, type Cue, type Moment } from './staging'
-import { isAura, type Status } from './statuses'
+import { isAura, isMechanic, type Status } from './statuses'
 import { onOldDie, testCharacter } from './test-utils'
 import { effectBadge, STOLEN_BADGE } from './narration'
 import { signalTargets, STATES } from './states'
@@ -212,7 +212,8 @@ describe('mise en scène', () => {
         if (hit.type !== 'attack') continue
         const m = momentOf(moments, beat.id)
         const impact = impacts(m, result.beats).get(hit.id)!
-        const posed = beat.effects.flatMap((e) => (e.type === 'applyStatus' ? [effectBadge(e).text] : []))
+        // Le compteur de l'aura (la Dose, D11) est un mécanisme : il se lit sur l'anneau, sans texte flottant
+        const posed = beat.effects.flatMap((e) => (e.type === 'applyStatus' && !isMechanic(e.status) ? [effectBadge(e).text] : []))
         if (posed.length === 0) continue
         const floats = at(m, 'float', impact).flatMap((c) => (c.channel === 'float' && c.float.kind === 'badge' ? [c.float.badge.text] : []))
         for (const text of posed) expect(floats).toContain(text)
@@ -864,7 +865,7 @@ describe('mise en scène', () => {
                 ? c.channel === 'special' && name !== undefined && c.special.label.startsWith(name)
                 : c.channel === 'sound' || c.channel === 'special' || c.channel === 'signal' || (c.channel === 'aura' && !!c.fx),
           )
-          expect(busy, `${beat.type} ${beat.id}`).toEqual([])
+          expect(busy, `${beat.type} ${beat.id}${beat.type === 'relic' ? ` ${beat.relic}` : ''}`).toEqual([])
         }
         if (effects.some((e) => e.type === 'applyStatus' && e.result.kind === 'applied' && e.result.stacks > 0)) seen.reposed++
         if (beat.type === 'statusReaction' && effects.some((e) => e.type === 'applyStatus' && e.result.kind === 'blocked')) seen.refused++
@@ -1028,7 +1029,7 @@ describe('mise en scène', () => {
         // Le statut n'apparaît qu'à l'arrivée du signal
         const shown = at(m, 'statuses', use.at).at(-1)
         for (const e of relic.effects)
-          if (e.type === 'applyStatus' && e.result.kind === 'applied') expect(shown?.channel === 'statuses' && shown.statuses[e.target].some((s) => s.id === e.status)).toBe(true)
+          if (e.type === 'applyStatus' && e.result.kind === 'applied') expect(shown?.channel === 'statuses' && shown.statuses[e.target].some((s) => s.id === e.status), `${relic.relic}, étape ${relic.id}`).toBe(true)
         signals++
       }
     expect(signals).toBeGreaterThan(50)
@@ -1089,12 +1090,12 @@ describe('mise en scène', () => {
           const impact = hits.get(strike.id)!
           const thorns = children[strike.id].find((b) => b.type === 'statusReaction' && b.status === 'thorns')
           expect(thorns, `Épines au coup ${k + 1}`).toBeDefined()
-          // Le Saignement posé tombe à l'impact (un contact, M14, retour du 2026-10-30 ; avant, au milieu de la lecture du
-          // coup) ; l'Aura d'épines (une aura depuis la revue X1, 0.118.1) n'a pas de label sous le dé, ni de vol de signal
+          // L'épine plantée (D13, 2026-10-30) tombe à l'impact, sur le porteur des Épines (un contact, M14 ; le Saignement
+          // posé sur l'attaquant avant) ; l'Aura d'épines (une aura depuis la revue X1, 0.118.1) n'a pas de label sous le dé, ni de vol de signal
           expect(m.cues.some((c) => c.channel === 'special' && c.at >= impact && c.at < impact + T.VOLLEY_STRIKE_HOLD && c.special.label.startsWith(STATUSES.thorns.name))).toBe(false)
           expect(m.cues.some((c) => c.channel === 'signal' && c.at >= impact && c.at < impact + T.VOLLEY_STRIKE_HOLD)).toBe(false)
-          const shown = at(m, 'statuses', impact).at(-1)
-          expect(shown?.channel === 'statuses' && shown.statuses[0].some((s) => s.id === 'bleed')).toBe(true)
+          const shown = m.cues.filter((c) => c.channel === 'statuses' && c.at >= impact && c.at < impact + T.VOLLEY_STRIKE_HOLD)
+          expect(shown.some((c) => c.channel === 'statuses' && c.statuses[1].some((s) => s.id === 'thornSpike')), `épine plantée au coup ${k + 1}`).toBe(true)
           // Le coup suivant part au rythme de la rafale, comme sans Épines
           const next = strikes[k + 1]
           if (!next) return
@@ -1496,25 +1497,24 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
     expect(restarted).toBeGreaterThan(0)
   })
 
-  it('Ciel d’orage à un éclair : au début du tour de son porteur, son anneau envoie le signal ; l’éclair tombe à son arrivée en coup sans élan, teinte de la Foudre, sans Ronge (M19 bis)', () => {
-    let struck = 0
+  it('Aura d’orage (D20) : un tour qui ne fait que compter (la Nuée) est muet, sans coup ni scène ; au 3e, ses éclairs tombent en coups sans élan, teinte de la Foudre, sans Ronge (M19 bis)', () => {
+    let counted = 0
     for (const { result, moments } of fights('thaldrin', 'storm-sky'))
       for (const tick of result.beats) {
-        // À deux éclairs, sa scène (M60, plus bas)
-        if (tick.type !== 'statusTick' || tick.status !== 'stormSky' || tick.effects.some((e) => e.type === 'damage' && (e.parts?.length ?? 1) > 1)) continue
+        if (tick.type !== 'statusTick' || tick.status !== 'stormSky') continue
         const m = momentOf(moments, tick.id)
         expect(m.owner).toBe(tick.side)
-        const signal = m.cues.find((c) => c.channel === 'signal' && c.signal.from === 'stormSky')!
-        expect(signal.channel === 'signal' && signal.signal.to).toEqual([1 - tick.side])
-        const landed = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed)!
-        expect(landed.at).toBe(signal.at + T.SIGNAL + T.BLOW_WIND_REACTION)
-        expect(landed.channel === 'blow' && landed.blow).toMatchObject({ from: tick.side, to: 1 - tick.side, source: 'lightning', lunge: false })
-        expect(sounds(m, landed.at)).toContain('hit')
         expect(m.cues.some((c) => c.channel === 'sound' && c.cue === 'rot')).toBe(false)
         expect(m.cues.some((c) => c.channel === 'float' && c.float.kind === 'title')).toBe(false)
-        struck++
+        if (tick.effects.some((e) => e.type === 'damage')) {
+          const landed = m.cues.find((c) => c.channel === 'blow' && c.blow?.landed)!
+          expect(landed.channel === 'blow' && landed.blow).toMatchObject({ from: tick.side, to: 1 - tick.side, source: 'lightning', lunge: false })
+          continue
+        }
+        expect(m.cues.some((c) => c.channel === 'blow' || c.channel === 'scene')).toBe(false)
+        counted++
       }
-    expect(struck).toBeGreaterThan(3)
+    expect(counted).toBeGreaterThan(3)
   })
 
   it('Ivresse du sang : au critique, son sceau et son anneau s’allument à l’impact, muets ; après la lecture du coup, ses deux coups à plat, au rythme d’une rafale (M27, M39)', () => {
@@ -1525,9 +1525,10 @@ describe('mise en scène : phase 8, lot 3 (malus de famille et fils minces)', ()
         const posed = result.beats[burst.cause!]
         const crit = posed.cause !== undefined ? result.beats[posed.cause] : undefined
         // Une charge posée en rafale attend le prochain jet (RESOLUTION § 2) : ici, le critique d'un coup seul, sans réaction du
-        // défenseur entre le coup et la rafale (Épines : sa réaction a sa propre lecture)
+        // défenseur entre le coup et la rafale (Épines, ou le coup renvoyé de la Riposte d'Aldric, sans effet propre : sa réaction
+        // a sa propre lecture)
         if (crit?.type !== 'attack' || !momentOf(moments, crit.id).beats.includes(burst.id) || moments.some((m) => m.beats.includes(crit.id) && m.beats.some((id) => result.beats[id].type === 'flurry' && id < crit.id))) continue
-        if (result.beats.some((b) => b.cause === crit.id && b.type === 'statusReaction' && b.side !== burst.side && b.effects.length > 0)) continue
+        if (result.beats.some((b) => b.cause === crit.id && b.type === 'statusReaction' && b.side !== burst.side && (b.effects.length > 0 || b.strike !== undefined))) continue
         const m = momentOf(moments, burst.id)
         const impact = impacts(m, result.beats).get(crit.id)!
         expect(at(m, 'skillPulse', impact).some((c) => c.channel === 'skillPulse' && c.side === burst.side && c.face === 3)).toBe(true)
@@ -1727,7 +1728,7 @@ describe('mise en scène : retour du 2026-10-28', () => {
 })
 
 describe('mise en scène : les moments des auras (refonte des auras, § 3.2, M60)', () => {
-  it('Ciel d’orage à deux éclairs : la scène de la Foudre, ses éclairs sur ses impacts ; à un éclair, pas de scène', () => {
+  it('Aura d’orage (D20) : quand l’orage éclate, la scène de la Foudre, ses éclairs sur ses impacts ; un tour qui compte, pas de scène', () => {
     let staged = 0
     let plain = 0
     for (const y of CHARACTER_IDS)
@@ -1736,7 +1737,7 @@ describe('mise en scène : les moments des auras (refonte des auras, § 3.2, M60
         const moments = stage(result)
         for (const beat of result.beats) {
           if (beat.type !== 'statusTick' || beat.status !== 'stormSky') continue
-          const bolt = beat.effects[0]
+          const bolt = beat.effects.find((e) => e.type === 'damage')
           const m = momentOf(moments, beat.id)
           const scene = m.cues.find((c) => c.channel === 'scene' && c.scene.id === 'lightning' && c.scene.source === beat.side)
           if (bolt?.type === 'damage' && (bolt.parts?.length ?? 1) >= 2) {
@@ -1754,7 +1755,7 @@ describe('mise en scène : les moments des auras (refonte des auras, § 3.2, M60
     expect(plain).toBeGreaterThan(5)
   })
 
-  it('Brasier sur une Brûlure de 3 et plus (les Feux follets) : la pluie de braises, la Brûlure tombe à son premier impact', () => {
+  it('Brasier (D11) : sur une Brûlure de 3 et plus, la pluie de braises, la Brûlure tombe à son premier impact', () => {
     let staged = 0
     for (const y of CHARACTER_IDS)
       for (const seed of [1, 2, 3]) {
@@ -1762,7 +1763,7 @@ describe('mise en scène : les moments des auras (refonte des auras, § 3.2, M60
         const moments = stage(result)
         for (const beat of result.beats) {
           if (beat.type !== 'statusTick' || beat.status !== 'brasier') continue
-          const burn = beat.effects[0]
+          const burn = beat.effects.find((e) => e.type === 'applyStatus' && e.status === 'burn')
           const scene = momentOf(moments, beat.id).cues.find((c) => c.channel === 'scene' && c.scene.id === 'emberRain')
           const big = burn?.type === 'applyStatus' && burn.result.kind === 'applied' && burn.stacks >= 3
           expect(!!scene, `${y} ${seed} ${beat.id}`).toBe(big)

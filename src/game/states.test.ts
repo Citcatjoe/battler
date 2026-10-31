@@ -3,7 +3,7 @@ import { statusCatalog } from './catalog'
 import { simulateCombat, type Side } from './combat'
 import { createCharacter, ENGRAVABLE_SKILLS, ROSTER } from './roster'
 import { auraIdsOf, auraOfSkill, originsOf, signalTargets, STATES, STATUS_PLACE, stateValueText, trayStates } from './states'
-import { isAura, JUDGEMENT_FAULTS, STATUS_IDS, STATUSES } from './statuses'
+import { GRIP, isAura, JUDGEMENT_FAULTS, STATUS_IDS, STATUSES, STONE_FIST } from './statuses'
 
 /** Une compétence gravable par son id (les compétences hors kit, depuis le d6, se gravent pour être jouées). */
 const skill = (id: string) => ENGRAVABLE_SKILLS.find((e) => e.id === id)!
@@ -19,9 +19,9 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
       if (STATUSES[id].mechanic) expect(place.place, id).toBe(STATUSES[id].mechanic)
       // Un statut de la zone d'état alimente exactement un état, sur son porteur
       if (place.place === 'tray') expect(place.relays, id).toHaveLength(1)
-      // Un état à total sait compter chaque part qui l'alimente ; seule la Surtension n'en chiffre aucune (ses éclairs ne
-      // sont pas des coups, EMBLEMES règle 6)
-      for (const r of place.relays) if (STATES[r.state].counter === 'amount' && id !== 'overcharge') expect(r.amount, `${id} → ${r.state}`).toBeDefined()
+      // Un état à total sait compter chaque part qui l'alimente ; seules la Surtension et la Focale n'en chiffrent aucune (leurs
+      // éclairs et leurs sorts ne sont pas des coups, EMBLEMES règle 6)
+      for (const r of place.relays) if (STATES[r.state].counter === 'amount' && id !== 'overcharge' && id !== 'spellFocus') expect(r.amount, `${id} → ${r.state}`).toBeDefined()
     }
   })
 
@@ -61,15 +61,15 @@ describe('états affichés : deux niveaux de lecture (0.79.0)', () => {
     ])
     // Un nombre qui ne peut valoir que 1 ne s'affiche pas : l'Esquive améliorée, une charge au plus
     expect(trayStates([{ id: 'evasion', stacks: 1 }])[0].value).toBeUndefined()
-    // Un seuil se lit « 2/3 » : la Faute mène au Tour perdu
+    // Un seuil se lit « 2/3 » : la Faute mène au verdict (En faute, D17 du 2026-10-30 ; au Tour perdu avant)
     const [fault] = trayStates([{ id: 'fault', stacks: 2 }])
-    expect(fault).toMatchObject({ id: 'lostTurn', moment: 'strike', value: 2, of: JUDGEMENT_FAULTS })
+    expect(fault).toMatchObject({ id: 'condemned', moment: 'strike', value: 2, of: JUDGEMENT_FAULTS })
     expect(stateValueText(fault)).toBe(`2/${JUDGEMENT_FAULTS}`)
     // Un statut de relique entre sous son concept (règle 9) : l'Emprise compte les malus de l'adversaire, et s'ajoute au
     // Poing de pierre, qui agit sur les mêmes coups ; la Surtension (ses éclairs) n'y ajoute aucun chiffre
     const foe = [{ id: 'poison' as const, stacks: 3 }, { id: 'bleed' as const, stacks: 1 }]
     const [power] = trayStates([{ id: 'stoneFist', stacks: 1 }, { id: 'grip', stacks: 1 }, { id: 'overcharge', stacks: 1 }], foe)
-    expect(power).toMatchObject({ id: 'power', value: 1 + 2, unit: 'amount' })
+    expect(power).toMatchObject({ id: 'power', value: STONE_FIST + 2 * GRIP, unit: 'amount' })
     expect(power.sources.map((s) => s.status.id)).toEqual(['stoneFist', 'grip', 'overcharge'])
     expect(trayStates([{ id: 'overcharge', stacks: 1 }])[0].value).toBeUndefined()
   })

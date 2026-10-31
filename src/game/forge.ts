@@ -263,14 +263,14 @@ export const rankLabel = (rank: number) => ROMAN[rank + 1] ?? String(rank + 1)
  * le montant aux dégâts et aux soins (le repli d'une purge compris), la part à une relâche (`gain` en points de
  * pourcentage), le montant par jauge à une relâche comptée (Onde de choc, `per`).
  */
-function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Effect {
+function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number, on?: RankAxis['on']): Effect {
   switch (effect.type) {
     case 'applyStatus':
       if (kind === 'stacks') return { ...effect, stacks: effect.stacks + gain }
       return kind === 'power' ? { ...effect, power: (effect.power ?? 0) + gain } : effect
     case 'heal':
     case 'damage':
-      return kind === 'amount' ? { ...effect, amount: effect.amount + gain } : effect
+      return kind === 'amount' && (!on || on === effect.type) ? { ...effect, amount: effect.amount + gain } : effect
     case 'release':
       if (kind === 'amount' && effect.per !== undefined) return { ...effect, per: effect.per + gain }
       return kind === 'share' ? { ...effect, share: (effect.share ?? 1) + gain / 100 } : effect
@@ -290,13 +290,13 @@ function sharpenEffect(effect: Effect, kind: RankAxis['kind'], gain: number): Ef
  */
 export function sharpen(e: CharacterEvent, rank: number): CharacterEvent {
   if (rank === 0 || !e.rankAxis) return e
-  const { kind, per } = e.rankAxis
+  const { kind, per, on } = e.rankAxis
   const gain = per * rank
   const posed = e.effects.findIndex((x) => x.type === 'applyStatus')
   return {
     ...e,
     name: `${e.name} ${rankLabel(rank)}`,
-    effects: e.effects.map((x, k) => (x.type === 'applyStatus' && k !== posed ? x : sharpenEffect(x, kind, gain))),
+    effects: e.effects.map((x, k) => (x.type === 'applyStatus' && k !== posed ? x : sharpenEffect(x, kind, gain, on))),
     ...(kind === 'multiplier' && e.hitMultiplier !== undefined && { hitMultiplier: e.hitMultiplier + gain }),
     ...(kind === 'limit' && e.limit !== undefined && { limit: e.limit + gain }),
   }
@@ -315,7 +315,7 @@ export function rankText(e: CharacterEvent): string {
     {
       stacks,
       power: (def && def.power?.(per)) ?? `+${per}`,
-      amount: strike?.hits ? `+${per} à chacun des ${strike.hits} ${HIT_NOUNS[strike.source] ?? 'coups'}` : `+${per} ${e.effects.some((x) => x.type === 'heal') ? 'PV' : per > 1 ? 'dégâts' : 'dégât'}`,
+      amount: strike?.hits ? `+${per} à chacun des ${strike.hits} ${HIT_NOUNS[strike.source] ?? 'coups'}` : `+${per} ${(e.rankAxis.on ? e.rankAxis.on === 'heal' : e.effects.some((x) => x.type === 'heal')) ? 'PV' : per > 1 ? 'dégâts' : 'dégât'}`,
       multiplier: `ce coup ×${per} de plus`,
       limit: `${per} fois de plus par combat`,
       share: `+${per} % des dégâts renvoyés`,
@@ -412,6 +412,9 @@ export interface ForgeOfferOptions {
   /** Le groupe d'une compétence (sa maîtrise) : Graver propose une compétence de chaque groupe qui en a une gravable,
    * dans l'ordre où le groupe apparaît dans `pool` ; sans groupes, une seule compétence */
   groupOf?: (skill: CharacterEvent) => string | undefined
+  /** Offre riche (retour du 2026-10-30, option ACsD) : Graver montre une compétence de plus, tirée au poids de `focus`
+   * parmi les gravables qui restent (dans ses groupes), s'il en reste */
+  extraSkill?: boolean
 }
 
 /**
@@ -423,7 +426,7 @@ export function drawForgeOffer(
   steps: readonly ForgeStep[],
   rng: Rng,
   pool: readonly CharacterEvent[],
-  { focus, noNewSkill = false, fillOnly = false, groupOf }: ForgeOfferOptions = {},
+  { focus, noNewSkill = false, fillOnly = false, groupOf, extraSkill = false }: ForgeOfferOptions = {},
 ): ForgeOffer[] {
   const state = forgeState(base, steps)
   const valid = shuffle(rng, OFFERED_OPS).filter((op) => offerValid(base, state, op, pool, noNewSkill))
@@ -437,9 +440,12 @@ export function drawForgeOffer(
     const key = groupOf?.(s)
     groups.set(key, [...(groups.get(key) ?? []), s])
   }
+  const draw = (items: readonly CharacterEvent[]) => (focus ? pickWeighted(rng, items, focus) : pick(rng, items))
   return chosen.slice(0, FORGE_OFFER_SIZE).map((op): ForgeOffer => {
-    if (op === 'engrave') return { op, skills: [...groups.values()].map((g) => (focus ? pickWeighted(rng, g, focus) : pick(rng, g))) }
-    return { op }
+    if (op !== 'engrave') return { op }
+    const shown = [...groups.values()].map(draw)
+    const rest = skills.filter((s) => !shown.includes(s))
+    return { op, skills: extraSkill && rest.length > 0 ? [...shown, draw(rest)] : shown }
   })
 }
 

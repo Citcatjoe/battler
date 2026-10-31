@@ -1561,3 +1561,64 @@ Quatrième demande de l'utilisateur (proposition 3, « des choses qui tournent a
 
 Leçon : une consommatrice qui **relâche** une affliction (Saigner à blanc, l'Agonie en relâche) ne fait qu'avancer une perte déjà due (+0 à +3) ; elle ne vaut qu'en multipliant (comme l'Embrasement ×3), et reste rare à l'écran. Celles qui **lisent** la ressource par une condition et frappent (Odeur du sang, Morsure) ou soignent (Sangsue) valent par la fréquence de la ressource chez leur porteur : fortes chez qui la produit en continu (Brokk, Ervald), sous la bande ailleurs.
 
+## 32. Le mot-clé « sort » et cinq noms nouveaux (second retour du 2026-10-30, D29, D23)
+
+**Le mot « sort »** : jusqu'ici ce document l'emploie au sens large (toute compétence). Depuis D29, le jeu le montre au sens strict : **un sort est une compétence arcane** (`nature: 'arcane'`, `isSpell`, `events.ts`), quelle que soit sa maîtrise. Pastille « sort » en tête de sa description (compendium, infobulles), règle « Sorts » du compendium (`rules.ts`), recherche « sort » dans l'index des compétences. Une seule source : la nature, qui disait déjà quel maléfice fait incanter (`castsSpell`) ; toute compétence qui blesse par une source magique (`DAMAGE_SOURCES.magical`) ou qui pose sur l'adversaire un statut qui ronge par la magie (la Brûlure) en est un, et un test le garde (`modules.test.ts`). Le mot n'ajoute aucun effet : une idée de laboratoire qui « renforce les sorts » doit lire `isSpell`.
+
+- **Sorts** : toutes les Arcanes (ex-Magie) et toute la Lumière, l'Ombre sauf l'Aura de larcin, quatre briques du Poison (Aura de poison, Souffle de la tombe, Virulence, Récolte), deux pièces de la Chance (Pièce maudite, Pièce ensorcelée). **Pas de sort** en Fureur, Sang, Rempart.
+- **La Rétribution** passe de arcane à martiale : elle relâche des coups blancs (`source: 'strike'`) ; elle n'incantait déjà pas et rien d'autre ne lit sa nature. Aucun effet sur le combat ni sur la mesure.
+
+**D23, les noms** (ids inchangés, donc les rapports du laboratoire et de l'audit qui citent les ids restent lisibles ; les sections ci-dessus gardent les noms de leur date) :
+
+| Id | Avant | Après | Maîtrise | Statut renommé |
+| --- | --- | --- | --- | --- |
+| `duo` | Duo | **Écho** | Arcanes | `duo` : Écho |
+| `soloist` | Soliste | **Coup de maître** | Fureur | — |
+| `crescendo` | Crescendo | **Acharnement** | Fureur | — |
+| `whistle` | Siffloter | **Répit** | Lumière | `whistling` : Sifflotement → Répit |
+| `false-note` | Fausse note | **Main tremblante** | Ombre | `falseNote` : Main tremblante |
+
+Aucune règle ne change : aucune mesure à refaire. Les cinq icônes montrent encore de la musique ; elles sont à repeindre.
+
+## 33. Onze compétences nouvelles (décisions du 2026-10-30 : D26, profondeur de l'offre, D9)
+
+Livrées en règles 0.133.0+ (le dépôt changeait en même temps : PersosA, PersosB, Reliques). Mesure : `SKILLS_ENGRAVE=… SKILLS_PART=engrave|rank`, `scripts/skills.report.ts`, gravée sur le 3 nu contre le roster nu (rapport `logs/skills/2026-10-30-15-31-33_v0.133.0.md` puis la remesure après réglage). Bande : gravée +8 à +20 chez ses porteurs, rang II +3 à +8.
+
+| Compétence (id) | Maîtrise | Effet | Synergie | Gravée chez ses porteurs | Rang II |
+| --- | --- | --- | --- | --- | --- |
+| Arc électrique (`arc-lightning`) | Arcanes | l'adversaire perd 3 PV, +2 par charge de Brûlure | lit la Brûlure (Feux follets, Attiser, Boule de feu, Brasier) | Thaldrin +12,3, Ysolde +11,9, Fanchon +10,9 | +8,1 (+2 dégâts ; au bord) ; **+7,5** à 400 par duel (§ 34) |
+| Boule de feu (`fireball`) | Arcanes | 4 PV et Brûlure 2 | pose la Brûlure (Embrasement, Attiser, Arc) | Thaldrin +17,7, Ysolde +21,8, Fanchon +19,1 | +6,5 |
+| Égide d'orage (`storm-aegis`) | Arcanes | ses 2 prochains coups reçus foudroient l'attaquant : 2 éclairs de 2 | vit des coups reçus ; la défense des Arcanes | Thaldrin +16,1, Ysolde +19,9, Fanchon +16,5 | +6,0 |
+| Grâce (`grace`) | Lumière | ses 3 prochains soins : +3 Ferveur chacun | consomme le soin, produit la Ferveur | Ysolde +17,7 (à 4 Ferveur : +20,9) ; sans soin ~+2 à +7 | +3,8 |
+| Lumière sacrée (`holy-light`) | Lumière | 3 PV de lumière et +3 PV | sans condition ; produit le soin (Sentence, Bouclier de foi, Flamme votive, Grâce) | Ysolde +18,6 | +9,2 (**hors bande**, le rang aiguise les deux montants) ; rang au soin seul : **+6,1** (§ 34) |
+| Onction (`anointing`) | Lumière | +3 PV et +3 armure temporaire | sans condition ; produit le soin et l'armure | Ysolde +18,2 | +6,2 |
+| Mur de boucliers (`shield-wall`) | Rempart | +6 armure temporaire | produit l'armure (Poing de pierre, Bastion) | Brokk +20,1, Aldric +13,0, Morgrut +15,9 | +7,2 |
+| Défi (`challenge`) | Rempart | +2 armure temporaire et une Riposte | produit le renvoi (Vindicte) et l'armure | Brokk +22,7, Aldric +20,3, Morgrut +18,7 (**au-dessus** chez Brokk et Aldric ; signalé, § 34) | +3,6 |
+| Lame enduite (`coated-blade`) | Poison | ses 3 prochains coups qui touchent : Poison 2 chacun | source de Poison (Virulence, Récolte, Morsure) | Ervald +20,7, Naraxes +18,6 | +4,3 |
+| Charge de l'ours (`mauling`) | Fureur | ce coup ×2 et +2 armure temporaire | gros coup (Élan, Aura de puissance) ; armure | Gorak +16,0, Morgrut +20,8, Thaldrin +16,4 | +6,4 |
+| Rage montante (`rising-rage`) | Fureur | +2 à ses coups ; chaque critique reçu +2, jusqu'à +6 | vit des critiques reçus (fenêtre `critHurt`) | Gorak +19,6, Morgrut +18,5, Thaldrin +17,8 | +7,8 mesuré en « +1 charge » ; « +2 fixe par coup » : **+8,0** (400 par duel, § 34) |
+
+Réglages faits (avant → après, gravée en moyenne sur les dix hôtes) : Charge de l'ours armure 4 → 2 (+21,3 → +18,8) ; Défi armure 4 → 2 (+19,7 → +19,2) ; Mur 8 → 6 (+19,4 → +16,2) ; Lumière sacrée 4/4 → 3/3 (+19,6 → +16,4) ; Onction 4/4 → 3/3 (+19,4 → +16,1) ; Grâce 4 → 3 Ferveur (Ysolde +20,9 → +17,7). Les mesures montrent un roster nu en mouvement (Brokk, Ervald, Ysolde prennent +19 à +23 de presque tout) : la passe Equilibre doit les relire. Rangs « +1 charge » (Égide, Grâce, Lame, Rage) : texte de rang au format commun des compétences à charges, à revoir avec la règle D11 si elle s'étend aux rangs.
+
+## 34. Passe d'équilibre du 31 octobre : rangs « +1 », gravures hors bande (agent Equilibre)
+
+Après la vague du 30 octobre. Mesures : `scripts/skills.report.ts` (`SKILLS_PART=rank|engrave`, 200 puis 400 combats par duel aux bords) ; valeur construite chez les porteurs réels, `npm run ramp` (48 builds, 60 par duel ; avant `logs/ramp/2026-10-31-13-44-24`, après `logs/ramp/2026-10-31-14-14-59`). Personnages et départs : [PERSONNAGES.md](PERSONNAGES.md), « Passe d'équilibre du 31 octobre ».
+
+**Ce que le joueur lit d'un rang.** La forge montre la compétence aiguisée en entier (`describeSkill` du rang II : « Trois coups au lieu d'un », « Ce coup ×3 », « Poison 4 chacun ») ; la ligne `rankText` (« +1 coup », « ce coup ×1 de plus ») ne sert qu'aux rapports et aux tests. Un rang à `per: 1` n'affiche donc pas de « 1 ». Règle suivie (D11) : `per: 2` quand le rang II reste dans la bande, nu **et** construit ; sinon `per: 1`, signalé.
+
+| Passées à +2 (rang II nu, 200 par duel ; construit quand mesuré) | Restées à +1 (rang II à +2, nu ; construit) |
+| --- | --- |
+| Sangsue +3,7 (3,0) ; Lame enduite +4,3 (3,8) ; Sentence +4,4 (8,0, n = 1) ; Bouclier de foi +4,4 (6,3) ; Flamme votive +4,3 ; Grâce +3,7 (3,7) ; Répit +7,3 ; Dîme +7,0 ; Égide d'orage +7,0 (5,0) ; Pièce porte-bonheur +8,0 / +7,9 à 400 (4,1) ; Pièce de bouclier +7,7 ; Pièce ensorcelée +7,4 (3,7) ; Embrasement +3,9 (×2 → ×4) | Furie des vents +14,3 ; Assaut +14,0 ; Coup de maître +11,5 ; Acharnement +12,3 ; Brise-garde +9,4 ; Serment de sang +10,9 ; Onde de choc +9,8 (+1 : +6,9) ; Rancune +9,5 (+1 : +7,7) ; Virulence +11,4 ; Peau de crapaud +10,8 ; Souffle de la tombe +10,5 ; Pièce vert-de-gris +8,4 ; Coup de chance +13,8 ; Pièce de la rafale +8,9 ; Pièce maudite +8,1 (400) ; Flétrissure +9,5 ; Peur +8,8 ; Main tremblante +8,6 ; Écho +15,3 ; Attiser +12,9 ; Pile ou face +7,7 (Naraxes, son kit, +9,6) ; Coup de massue +7,7 (construit 8,2 → 12,1) ; Malchance +7,3 (14,6 → 22,5) ; Confiscation +5,1 (7,3 → 10,4) ; Morsure +4,1 (7,3 → 11,3) ; Récolte (D10 : « déjà très fort ») ; Aura de puissance (kit) |
+
+**Gravures et rangs réglés** :
+- **Embrasement** ×3 → **×2** (son rang ×2 de plus, ×4 au rang II, +3,9) : Thaldrin construit +24,3 → **+18,3**, nu +10,2 → +8,7.
+- **Éclair aveuglant** : Aveuglé **4 tours** au lieu de la fin du combat (gravé nu, moyenne +17,6 → +14,4 ; Ysolde +20,6 → +16,4, Thaldrin +17,4 → +15,0) ; construit Thaldrin +21,6 → **+18,3**, Ysolde +31,9 → +28,4 (± 8,2, 6 builds : encore au-dessus, signalé). Rang II +6,0.
+- **Lumière sacrée** : le rang au **soin seul** (`RankAxis.on: 'heal'`, `forge.ts`), comme son texte de rang (« +2 PV ») le disait : +8,9 → **+6,1** (400 par duel).
+- **Cuir épais** (aura de Morgrut) : rang +2 → **+1** armure (le texte dit le total, +4) : rang II au départ +23,5 → +14,2.
+- **Coup de massue, Coup de maître, Peur** : « 1x » → « **une fois** » (comme les reliques, D11 ; « 2x » au-delà).
+
+**Signalés, sans réglage** :
+- **Défi** : gravé nu Brokk +22,3, Aldric +21,4 (400 par duel) ; construit Brokk +21,6, Aldric +25,5 (± 6). Sa valeur est celle de la Riposte qu'il pose (la Riposte seule, gravée chez Brokk : +20,6) ; l'armure n'ajoute que +1,3. Essai écarté : le Défi qui remplace le coup (une posture) tombe à +6,3. Proposition : le Défi sans Riposte (+4 armure temporaire et Rancune), à mesurer.
+- **Rangs II d'aura au départ** : de +6,4 (Vindicte) à +17,6 (Épines), presque tous au-dessus de +8 (Aura de poison +16,3, Plaies +16,2, Brasier +14,4, Élan +13,8, Dé pipé +13,9, Larcin +13,2, Puissance +13,2…). Construites (les aiguisages pris) : Épines +11,4, Poison +12,9, Vindicte +10,7, Ivresse +8,4, Orage +5,1, Ballade +5,5. Le plus petit pas entier d'une aura est son moteur aiguisé d'un cran. Proposition (règle pour toutes, à décider) : le rang d'une aura avance son rendez-vous (au 2e tour au lieu du 3e) ; le Clairon du héraut, qui la pose au 1er tour, vaut +13,6 en moyenne (`npm run relics`), un tour d'avance vaudrait autour de la moitié (non mesuré).
+- **Aura de rancœur** : rang +2 Ferveur, +8,1 (400 par duel, au bord). Elle n'est sur aucune fiche et l'offre ne grave jamais une aura (`forge.ts`, A2) : elle n'est jamais en jeu.
+- Gravures déjà au-dessus avant la vague, inchangées : Curée (Brokk +27,9), Malchance (Ervald +26,0, Aldric +25,1), Virulence (Ervald +24,0), Rétribution (Aldric +23,0), Coup de maître (Morgrut +21,0) ; aiguisages de kit au-dessus (Écho +20,4, Furie +15,3, Feux follets +15,2, Assaut +14,5).

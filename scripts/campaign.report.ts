@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { it } from 'vitest'
 import { hashSeed, winRate } from '../src/game/analysis'
 import { ACT_FIGHTS, BOSS_HP_CEILING, BOSS_TARGET, championOf, EARLY_HP_FLOOR, encountersFor, HP_FLOOR, hpFloorOf, NORMAL_TARGETS, OPPONENT_LAG, opponentOf, rewardChoice, startRun, withFightResult, withReward, type CampaignRun } from '../src/game/campaign'
-import { drawReward, forgesLeftIn, MAX_SKILL_FACES, REWARDS, type PendingReward } from '../src/game/offers'
+import { drawReward, forgesLeftIn, MAX_SKILL_FACES, rankIn, REWARDS, withSeen, type PendingReward } from '../src/game/offers'
 import { simulateCombat } from '../src/game/combat'
 import { forgedFaces, withForgeStep, type ForgeStep } from '../src/game/forge'
 import { buildLinks } from '../src/game/hooks'
@@ -82,8 +82,10 @@ function actBuild(championId: string, seed: number, v: number) {
   let forge: ForgeStep[] = []
   const relics: string[] = []
   const rewards: PendingReward[] = []
+  let seen: string[] = []
   for (const [index, kind] of REWARDS.entries()) {
-    const reward = drawReward({ championId, forge, relics }, kind, rng, forgesLeftIn(REWARDS, index))
+    const reward = drawReward({ championId, forge, relics, seen }, kind, rng, forgesLeftIn(REWARDS, index), rankIn(REWARDS, index))
+    seen = withSeen(seen, reward)
     rewards.push(reward)
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)

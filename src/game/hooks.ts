@@ -76,7 +76,9 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   burn: { side: 'opponent', produces: ['damage:temporal'], hinders: ['slot:burn'] },
   vulnerable: { side: 'opponent', produces: ['damage:instant'] },
   stunned: { side: 'opponent' },
-  thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bleed', 'damage:temporal'] },
+  // Les épines plantées (D13 du 2026-10-30) : les coups reçus les plantent, son coup qui touche les enfonce (le Saignement)
+  thorns: { side: 'self', consumes: ['moment:hurt'], produces: ['status:thornSpike', 'status:bleed', 'damage:temporal'] },
+  thornSpike: { side: 'self', consumes: ['moment:hit'], produces: ['status:bleed', 'damage:temporal'] },
   ward: { side: 'self' },
   lifesteal: { side: 'self', consumes: ['moment:hit'], produces: ['moment:heal'] },
   windFury: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
@@ -158,6 +160,9 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   onrush: { side: 'self', consumes: ['moment:heavy'], produces: ['moment:crit', 'status:momentum', 'damage:instant'] },
   overcharge: { side: 'self', consumes: ['damage:lightning'], produces: ['damage:instant', 'damage:lightning'] },
   grip: { side: 'self', consumes: ['malus'], produces: ['damage:instant'] },
+  // Retour du 30 octobre (reliques) : la Focale renforce ses éclairs, flammes, rayons et lames d'air ; la face scellée, posée sur l'adversaire
+  spellFocus: { side: 'self', produces: ['damage:instant'] },
+  sealedFace: { side: 'opponent' },
   pilfer: { side: 'self', consumes: ['moment:dodge'], produces: ['moment:dodge'] },
   shockwave: { side: 'self', consumes: ['moment:hurt'] },
   // Quatrième demande du 2026-10-27 (le contenu du soin) : la Dîme, posée sur l'adversaire, part quand il frappe le lanceur
@@ -170,6 +175,12 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   harvest: { side: 'self', consumes: ['moment:hit', 'status:poison'], produces: ['moment:heal'] },
   toadSkin: { side: 'self', consumes: ['moment:hurt'], produces: ['status:poison', 'damage:temporal'] },
   verdigrisCoin: { side: 'self', produces: ['moment:heads', 'status:poison', 'damage:temporal'] },
+  // Décisions du 2026-10-30 (D26, profondeur, D9) : l'Égide vit des coups reçus, la Grâce des soins, la Lame enduite des
+  // coups qui touchent ; la Rage montante, des critiques reçus
+  stormAegis: { side: 'self', consumes: ['moment:hurt'], produces: ['damage:instant'] },
+  grace: { side: 'self', consumes: ['moment:heal'], produces: ['status:momentum'] },
+  coatedBlade: { side: 'self', consumes: ['moment:hit'], produces: ['status:poison', 'damage:temporal'] },
+  risingRage: { side: 'self', consumes: ['moment:hurt'] },
   // Refonte des auras (tranche 6) : les trois pièces nouvelles ; la Rafale de pile, des coups bruts comme l'Ivresse
   shieldCoin: { side: 'self', produces: ['moment:heads', 'status:bonusArmor', 'moment:shieldBreak'] },
   volleyCoin: { side: 'self', produces: ['moment:heads', 'status:volleyStrike', 'moment:hit', 'damage:instant'] },
@@ -182,9 +193,17 @@ export const STATUS_HOOKS: Record<StatusId, StatusHooks> = {
   veinStrike: { side: 'self', produces: ['moment:hit', 'damage:instant'] },
   balladNote: { side: 'self', produces: ['damage:instant'] },
   bastion: { side: 'self', consumes: ['moment:shieldBreak'], produces: ['damage:instant', 'status:bonusArmor', 'moment:shieldBreak'] },
-  judgement: { side: 'self', consumes: ['moment:hurt'], produces: ['status:fault', 'status:fear'] },
-  fault: { side: 'opponent' },
+  // Le verdict (D17 du 2026-10-30) : à la 3e faute, des PV perdus (plus la Peur)
+  judgement: { side: 'self', consumes: ['moment:hurt'], produces: ['status:fault', 'damage:instant'] },
+  fault: { side: 'opponent', produces: ['damage:instant'] },
   brasier: { side: 'self', produces: ['status:burn', 'damage:temporal'] },
+  // Décisions D11, D19, D20 du 2026-10-30 : les compteurs des auras regroupées lâchent leur gros effet à leur seuil ; le
+  // Cuir épais vit des coups reçus et donne de l'armure temporaire (qui se vide)
+  stormCloud: { side: 'self', produces: ['damage:instant', 'damage:lightning'] },
+  holyVigil: { side: 'self', produces: ['moment:heal'] },
+  decoctionDose: { side: 'self', produces: ['status:poison', 'damage:temporal'] },
+  emberHeap: { side: 'self', produces: ['status:burn', 'damage:temporal'] },
+  thickHide: { side: 'self', consumes: ['moment:hurt'], produces: ['status:bonusArmor', 'moment:shieldBreak'] },
 }
 
 /** Le moment d'un déclencheur, ou sa face ; rien pour un déclencheur de temps (début de combat, de tour…). */
@@ -295,6 +314,9 @@ export function relicHooks(r: Relic): Hooks {
   // Médaille de sursis : de la durée, comme des PV de plus ; Cor d'avant-garde : le premier coup du combat
   if (r.trigger?.type === 'lethal') h.produces.push('stat:maxHp')
   if (r.trigger?.type === 'initiative') h.produces.push('moment:hit')
+  // Clairon du héraut : son aura de départ, plus tôt (ce qu'elle fait dépend du porteur) ; Dé de joueur : un jet de plus
+  // sur ses compétences, un coup
+  if (r.trigger?.type === 'startAura' || r.trigger?.type === 'bareFace') h.produces.push('damage:instant')
   for (const c of r.when ?? []) if (c.type === 'hasStatus') h.consumes.push(`status:${c.status}`)
   for (const effect of r.effects ?? []) addEffect(h, effect)
   return unique(h)

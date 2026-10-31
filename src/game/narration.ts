@@ -255,8 +255,9 @@ export function attackLog(
 
 export function eventLog(event: TriggeredEvent, fighters: Pair<Character>): Omit<LogEntry, 'id'> {
   const effects = event.effects.map((e) => effectText(e, fighters)).join(', ')
-  // L'aura de départ posée d'office au 3e tour (2026-10-27) : le journal dit le rendez-vous avant la compétence
-  const due = event.trigger === 'auraDue' ? `Début du 3e tour ${of(fighters[event.side].name)} : son aura s'éveille. ` : ''
+  // L'aura de départ posée d'office (2026-10-27 ; au 3e tour, ou au 2e tour après sa dissipation : D8 du 2026-10-30) : le
+  // journal dit le rendez-vous avant la compétence
+  const due = event.trigger === 'auraDue' ? `Début du tour ${of(fighters[event.side].name)} : son aura s'éveille. ` : ''
   return { kind: 'event', side: event.side, text: effects ? `${due}Compétence · ${event.name} ! ${effects}.` : `${due}Compétence · ${event.name} !` }
 }
 

@@ -11,16 +11,23 @@ import { SHOCKWAVE_PER } from './statuses'
 /**
  * Foudre du druide (0.76.0, demande de l'utilisateur) : des éclairs de dégâts directs, jamais critiques. 2 chacun
  * jusqu'à la 0.105.0 ; 1 depuis la 0.106.0 (phase 5 bis) : la Foudre se greffe sur son coup de base. Trois éclairs jusqu'à
- * la revue des compétences (O3, docs/REVUE_COMPETENCES.md), quatre depuis : la plus faible brique de kit du jeu.
+ * la revue des compétences (O3, docs/REVUE_COMPETENCES.md), quatre depuis : la plus faible brique de kit du jeu. Décision
+ * D11 (2026-10-30, plus de « 1 ») : deux éclairs de 2, le même total en une seule perte (gravée sur le 3, avant → après
+ * +0,0 point chez Thaldrin, Fanchon, Ysolde, Naraxes, 400 par duel, laboratoire série 163) ; son rang, +2 par éclair
+ * (2 × 4 au rang II, comme 4 × 2 avant)
  */
-const THUNDERBOLT = 1
-const THUNDERBOLT_HITS = 4
+const THUNDERBOLT = 2
+const THUNDERBOLT_HITS = 2
 
 /** Dégâts directs de la Purification quand il n'y a aucun bonus à retirer (0.42.0 ; 6 en 0.115.1 ; 8 depuis les Maîtrises). */
 const PURIFICATION_LIGHT = 8
 
-/** Dégâts directs de la Purification quand elle retire un bonus (2026-10-27, avec l'aura de départ au 3e tour, AURAS.md § 2.4). */
-const PURIFICATION_STRIP = 5
+/**
+ * Dégâts directs de la Purification quand elle retire un bonus (2026-10-27, avec l'aura de départ au 3e tour, AURAS.md
+ * § 2.4). 5 → 7 avec le rendez-vous réarmé (D8, retour du 30 octobre, A2·7 de docs/etudes/DES_SUPPLEMENTAIRES.md § 4 :
+ * l'aura dissipée revient au début du 2e tour suivant de son porteur ; Ysolde garde sa force).
+ */
+const PURIFICATION_STRIP = 7
 
 /**
  * Les compétences à charges sorties des auras (refonte des auras, 2026-10-28, docs/REFONTE_AURAS.md § 4) : Sangsue, Peau
@@ -36,6 +43,10 @@ const SPENT_CHARGES = 3
  * reçoit les sorts du Chant (Ballade, Duo) ; ses gros coups martiaux (Soliste, Crescendo) vont à la Fureur, Siffloter (un
  * soin) à la Lumière, la Fausse note (un malus) à l'Ombre. Ivresse du sang passe au Sang, l'Aura d'immunité à la
  * Lumière, la Malchance à l'Ombre (docs/MAITRISES.md, « Huit maîtrises »).
+ *
+ * Second retour du 2026-10-30 (D29, D23) : la Magie s'affiche Arcanes (id `magic` gardé) ; cinq compétences quittent la
+ * musique de Fanchon, ids inchangés (journaux, historique) : Duo → Écho, Soliste → Coup de maître, Crescendo →
+ * Acharnement, Siffloter → Répit, Fausse note → Main tremblante. Une compétence arcane est un sort (`isSpell`, events.ts).
  */
 export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
   fury: [
@@ -92,9 +103,25 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     { id: 'assault', name: 'Assaut', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
     // Un gros coup (idée de l'utilisateur) : l'intimidation et les épines ne le rognent qu'une fois. Phase 5 ter : il
     // modifie son coup de base, ce coup ×3. 0.107.0 (SORTS.md § 19) : le solo, une fois par combat (un solo qui touche) ;
-    // à chaque 2, il valait +23 points gravé ; Crescendo, lui, monte à chaque fois
-    { id: 'soloist', name: 'Soliste', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
-    { id: 'crescendo', name: 'Crescendo', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    // à chaque 2, il valait +23 points gravé ; l'Acharnement, lui, monte à chaque fois. Noms du 2026-10-30 (D23) : le
+    // Soliste devient le Coup de maître, le Crescendo l'Acharnement
+    { id: 'soloist', name: 'Coup de maître', nature: 'martial', trigger: 'naturalTwo', relation: 'modify', hitMultiplier: 3, limit: 1, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    { id: 'crescendo', name: 'Acharnement', nature: 'martial', trigger: 'naturalThree', relation: 'modify', hitMultiplier: 2, buildsUp: true, effects: [], rankAxis: { kind: 'multiplier', per: 1 } },
+    // Profondeur de l'offre et D21 (2026-10-30) : le corps à corps de la Fureur, pour qui frappe aussi en ours (Thaldrin) ;
+    // le gros coup qui encaisse (Fureur → armure, que lisent le Poing de pierre, le Bastion, le Bouclier de foi)
+    {
+      id: 'mauling',
+      name: "Charge de l'ours",
+      nature: 'martial',
+      trigger: 'naturalThree',
+      relation: 'modify',
+      hitMultiplier: 2,
+      effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
+      rankAxis: { kind: 'stacks', per: 3 },
+    },
+    // D9 (2026-10-30, docs/etudes/DES_SUPPLEMENTAIRES.md R59) : la Rage montante, un moteur offrable plutôt qu'une aura sans
+    // porteur. +2 à ses coups, puis +2 à chaque critique reçu (fenêtre `critHurt`), jusqu'à +6. Son rang : +2 fixe par coup
+    { id: 'rising-rage', name: 'Rage montante', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'risingRage', stacks: 1 }], rankAxis: { kind: 'power', per: 2 } },
   ],
   blood: [
     {
@@ -113,8 +140,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'martial',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
-      // Une charge de plus qui agit sans se poser : chaque coup encaissé fait saigner d'une charge de plus (+8,8 points
-      // gravée, au-dessus de la bande, 0.111.0 ; à demi en 0.110.0 : +6,1)
+      // Les épines plantées (D13, 2026-10-30) : son rang, Saignement 3 par épine au lieu de 2 (départ de Brokk au rang II
+      // +13,0 points, 0.133.0 ; +1 par enfoncement : +11,8 mais un « 1 » affiché ; +2 : +19,1)
       rankAxis: { kind: 'power', per: 1 },
     },
     {
@@ -140,7 +167,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'martial',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'leech', stacks: SPENT_CHARGES }],
-      rankAxis: { kind: 'stacks', per: 1 },
+      rankAxis: { kind: 'stacks', per: 2 },
     },
     {
       // 0.70.0 (proposition de l'utilisateur) : remplace la Saignée, qui sacrifiait le coup. Phase 5 bis : elle modifie
@@ -222,8 +249,12 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'vendetta', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
-    // Les Maîtrises (2026-10-27) : une aura qui vit des coups reçus (des Représailles, au Rempart depuis B1). Gravée chez Aldric +9,5
+    // Les Maîtrises (2026-10-27) : une aura qui vit des coups reçus (des Représailles, au Rempart depuis B1). Gravée chez Aldric +9,5.
+    // Décision D19 (2026-10-30) : elle quitte la fiche de Morgrut ; une brique offerte du Rempart
     { id: 'rancor', name: 'Aura de rancœur', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'rancor', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
+    // Décision D19 (2026-10-30) : la seconde aura de Morgrut, celle qui tient (+3 armure temporaire par coup reçu), à la
+    // place de la Rancœur. Départ de Morgrut 49,3 → 46,6 % (laboratoire, série 123, 0.131.2)
+    { id: 'thick-hide', name: 'Aura du cuir épais', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'thickHide', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     // Refonte des auras (2026-10-28, § 3.1, § 5.2) : la seconde aura de Brokk, à la place du Rempart hérissé (même
     // déclencheur) : l'armure vidée frappe l'attaquant et revient. Départ de Brokk 53,6 % (conception, série 101)
     { id: 'bastion', name: 'Aura du bastion', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'bastion', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
@@ -232,10 +263,12 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       name: 'Peau de pierre',
       nature: 'martial',
       trigger: 'naturalTwo',
-      // Le Poing de pierre (Maîtrises, P4 : « un début très mou ») : tant que l'armure tient, ses coups font +1. Départ de
-      // Brokk 49,8 → 54,9 % (à +2 : 58,4 %, trop ; série 73). Son rang reste à l'armure
+      // Le Poing de pierre (Maîtrises, P4 : « un début très mou ») : tant que l'armure tient, ses coups font plus. Son rang
+      // reste à l'armure. Décision D11 (2026-10-30) : Poing +1 → +2 et armure 6 → 5, à force égale (laboratoire, série
+      // 164, 400 par duel : départ de Brokk 46,4 → 46,4 % ; gravée chez Morgrut −0,2, chez Aldric +0,8 ; armure 6 et +2 :
+      // +2,4 à +2,8)
       effects: [
-        { type: 'applyStatus', status: 'bonusArmor', stacks: 6 },
+        { type: 'applyStatus', status: 'bonusArmor', stacks: 5 },
         { type: 'applyStatus', status: 'stoneFist', stacks: 1 },
       ],
       rankAxis: { kind: 'stacks', per: 2 },
@@ -251,7 +284,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     {
       id: 'retribution',
       name: 'Rétribution',
-      nature: 'arcane',
+      // Martiale depuis le 2026-10-30 (D29) : la relâche de coups encaissés, des coups blancs, pas un sort
+      nature: 'martial',
       trigger: 'naturalOne',
       // 0.107.0 (SORTS.md § 19, choisi au laboratoire, série 16) : la moitié des jauges, arrondie au-dessous (au-dessus,
       // elle restait à +20,8 gravée, hors de la bande) ; un coup à chaque jet remplissait ses trois jauges à chaque tour
@@ -273,7 +307,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     {
       // Quatrième demande du 2026-10-27 (docs/MAITRISES.md, « Le contenu des maîtrises », proposition 1 de l'utilisateur) :
       // la consommatrice des coups encaissés qui frappe. Ses jauges comptent les trois derniers coups reçus ; elle les relâche
-      // en une onde de choc, 2 PV de dégâts directs par coup compté (série 89 : Brokk +10,6, Morgrut +9,2 ; 3 PV : +15,4).
+      // en une onde de choc, 3 PV de dégâts directs par coup compté (D14, 2026-10-30 ; 2 PV avant, « faible ») : gravée sur
+      // le 3 nu, Brokk +14,8, Aldric +12,3, Morgrut +14,2 (2 → 3 : +5,1, +4,3, +4,7 ; 0.133.0, 400 par duel)
       // Sans coup encaissé, sa face reste nue. Elle se voit : le sol se fend et l'onde roule vers l'adversaire (scène)
       id: 'shockwave',
       name: 'Onde de choc',
@@ -284,6 +319,20 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'release', status: 'shockwave', min: 0, per: SHOCKWAVE_PER, target: 'opponent', source: 'strike' }],
       rankAxis: { kind: 'amount', per: 1 },
     },
+    // Profondeur de l'offre (2026-10-30) : le Rempart, la maîtrise la plus courte. Le Mur de boucliers produit l'armure (que
+    // lisent le Poing de pierre, le Bastion) ; le Défi encaisse et renvoie le coup suivant (que lit la Vindicte)
+    { id: 'shield-wall', name: 'Mur de boucliers', nature: 'martial', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 6 }], rankAxis: { kind: 'stacks', per: 3 } },
+    {
+      id: 'challenge',
+      name: 'Défi',
+      nature: 'martial',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'applyStatus', status: 'bonusArmor', stacks: 2 },
+        { type: 'applyStatus', status: 'riposte', stacks: 1 },
+      ],
+      rankAxis: { kind: 'stacks', per: 2 },
+    },
   ],
   poison: [
     {
@@ -292,7 +341,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'finesse',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'decoctionAura', stacks: 1 }],
-      // +1 Poison par coup qui touche : +9,9 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi : +7,4)
+      // Décision D11 (2026-10-30) : regroupée, Poison 6 tous les trois coups qui touchent ; son rang, Poison +2
       rankAxis: { kind: 'power', per: 1 },
     },
     {
@@ -302,7 +351,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalOne',
       // 0.69.0 : l'aura pose du vrai Poison (cumulable, sans compensation), au lieu de dégâts directs
       effects: [{ type: 'applyStatus', status: 'frostAura', stacks: 1 }],
-      // +1 Poison par tour : +10,2 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi en 0.110.0 : +7,5)
+      // Son rang (D15, 2026-10-30) : Poison 3 par tour au lieu de 2 (Ervald au départ, rang II +12,1 points ; 0.133.0)
       rankAxis: { kind: 'power', per: 1 },
     },
     {
@@ -378,6 +427,10 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [],
       rankAxis: { kind: 'multiplier', per: 1 },
     },
+    // Profondeur de l'offre (2026-10-30) : une source de Poison au coup (Fureur, Chance : ceux qui frappent souvent), qui
+    // ouvre la Virulence, la Récolte, la Morsure. Ses 3 prochains coups qui touchent, Poison 2 chacun ; son rang, deux de plus
+    // (D11, passe d'équilibre du 2026-10-31 : rang II +4,3 points, 200 par duel)
+    { id: 'coated-blade', name: 'Lame enduite', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'coatedBlade', stacks: 3 }], rankAxis: { kind: 'stacks', per: 2 } },
   ],
   chance: [
     {
@@ -428,7 +481,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalThree',
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'luckyCoin', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       id: 'cursed-coin',
@@ -448,7 +501,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalThree',
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'shieldCoin', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       id: 'volley-coin',
@@ -466,7 +519,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalThree',
       relation: 'modify',
       effects: [{ type: 'applyStatus', status: 'hexCoin', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       id: 'lucky-strike',
@@ -508,11 +561,12 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'holyAura', stacks: 1 }],
-      // Plafonnée à 2 charges : son intensité, +1 PV par tour (+8,1 points gravée, au bord de la bande, 0.111.0)
+      // Décision D11 (2026-10-30) : regroupée, +4 PV tous les deux tours ; son rang, +2 PV
       rankAxis: { kind: 'power', per: 1 },
     },
-    // Refonte des auras (2026-10-28, § 3.1, § 5.4) : la seconde aura d'Ysolde, la Peur par les fautes de qui la frappe.
-    // Départ d'Ysolde 54,6 % (conception, série 105 ; à la 4e faute, 45,4)
+    // Refonte des auras (2026-10-28, § 3.1, § 5.4) : la seconde aura d'Ysolde, les fautes de qui la frappe. Le verdict (D17,
+    // 2026-10-30) : à la 3e faute, 8 PV de Lumière au lieu de la Peur (départ d'Ysolde 43,8 → 49,2 %, émulé, 0.133.0) ; son
+    // rang, +2 PV au verdict (rang II +5,2)
     { id: 'judgement', name: 'Aura de jugement', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'judgement', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       // Phase 8, premier lot (0.114.0, SORTS.md) : le consommateur de ses soins, une aura (+8,1 gravée). Revue des auras
@@ -522,7 +576,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'sentence', stacks: SPENT_CHARGES }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       // Revue des compétences (I1, retenue avec la Sentence) : l'autre consommatrice de ses soins, Soin → Garde, une aura.
@@ -532,7 +586,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'faithShield', stacks: SPENT_CHARGES }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       id: 'purification',
@@ -545,7 +599,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       // « l'effet sur soi doit être retiré ») : un bonus en face, sinon sa lumière. Son rang aiguise ces dégâts. Maîtrises
       // (vague 2, 2026-10-27) : 6 → 8 dégâts, Ysolde vanilla 43,8 → 47,6 % (400 par duel), construite 36,4 → 37,7 %.
       // L'aura de départ au 3e tour (2026-10-27, AURAS.md § 2.4) : ses adversaires portent leur aura bien plus souvent, elle
-      // blessait moins ; elle blesse aussi de 5 quand elle retire un bonus (sa lumière de repli, seule, s'aiguise)
+      // blessait moins ; elle blesse aussi quand elle retire un bonus, de 7 depuis le rendez-vous réarmé (D8 ; 5 avant), sa
+      // lumière de repli, seule, s'aiguise
       effects: [
         {
           type: 'cleanse',
@@ -560,7 +615,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Les Maîtrises (P9, 2026-10-27) : le soin franc de la Lumière. Gravée : Ysolde +17,7, Gorak +14,2 (série 71)
     { id: 'prayer', name: 'Prière', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'heal', amount: 6 }], rankAxis: { kind: 'amount', per: 3 } },
-    { id: 'whistle', name: 'Siffloter', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 1 } },
+    // Siffloter, renommé Répit le 2026-10-30 (D23) : le soin de la Lumière n'est plus une chanson de Fanchon
+    { id: 'whistle', name: 'Répit', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'whistling', stacks: 2 }], rankAxis: { kind: 'stacks', per: 2 } },
     {
       // Quatrième demande du 2026-10-27 (le contenu du soin) : la Lumière fait payer l'adversaire. Ses 2 prochains coups reçus
       // lui rendent chacun 2 PV, pris à l'attaquant : un soin (Sentence, Bouclier de foi, Flamme votive). Gravée sur Ysolde
@@ -570,7 +626,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'tithe', stacks: 2 }],
-      rankAxis: { kind: 'stacks', per: 1 },
+      rankAxis: { kind: 'stacks', per: 2 },
     },
     {
       // Quatrième demande du 2026-10-27 : la consommatrice de soins en compétence, le pont de la Lumière vers la Magie
@@ -581,7 +637,35 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'votiveFlame', stacks: 2 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
+    },
+    // D26 (docs/etudes/CONTENU_RETOUR_30.md § 5, n° 12) : la Grâce, le soin qui fait frapper (une consommatrice de soins)
+    { id: 'grace', name: 'Grâce', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'grace', stacks: 3 }], rankAxis: { kind: 'stacks', per: 2 } },
+    // Profondeur de l'offre (2026-10-30) : deux Lumières sans condition, qui produisent le soin que lisent la Sentence, le
+    // Bouclier de foi, la Flamme votive, la Grâce. La Lumière sacrée blesse et soigne ; l'Onction soigne et garde. Passe
+    // d'équilibre du 2026-10-31 : le rang de la Lumière sacrée va au soin seul (+2 PV), comme son texte de rang le disait
+    // (sur les deux effets, rang II +8,9 points, 400 par duel, au-dessus de la bande)
+    {
+      id: 'holy-light',
+      name: 'Lumière sacrée',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'damage', amount: 3, target: 'opponent', source: 'holy' },
+        { type: 'heal', amount: 3 },
+      ],
+      rankAxis: { kind: 'amount', per: 2, on: 'heal' },
+    },
+    {
+      id: 'anointing',
+      name: 'Onction',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'heal', amount: 3 },
+        { type: 'applyStatus', status: 'bonusArmor', stacks: 3 },
+      ],
+      rankAxis: { kind: 'amount', per: 2 },
     },
   ],
   shadow: [
@@ -589,7 +673,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // sans critique : il esquive et prend une charge du dernier bonus de l'attaquant, l'icône volant d'un camp à l'autre
     // (proposition 2 de l'utilisateur) ; série 88 : Ervald +12,6, Aldric +7,6. Une charge par vol (règle commune des vols) :
     // gravé Ervald +16,3 → +14,2, Aldric +10,9 → +10,4 ; départ contre Fanchon 66,5 → 52,3 %. Refonte des auras
-    // (2026-10-28) : l'Aura de pourriture sort (doublon de l'Effroi), l'Emprise devient une relique (Chaîne du geôlier)
+    // (2026-10-28) : l'Aura de pourriture sort (doublon de l'Effroi), l'Emprise devient une relique (Chaîne du geôlier).
+    // D16 (2026-10-30) : l'Effroi plafonné à 3 charges (`DREAD_CAP`)
     { id: 'dread', name: "Aura d'effroi", nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'dread', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     { id: 'pilfer', name: 'Aura de larcin', nature: 'finesse', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'pilfer', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
@@ -626,8 +711,9 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // Les Maîtrises (2026-10-27) : le malus de Puissance de l'Ombre (Affaibli). Gravée : Ervald +11,5, Aldric +8,2
     { id: 'wither', name: 'Flétrissure', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'weakened', stacks: 2, turns: 3, target: 'opponent' }], rankAxis: { kind: 'stacks', per: 1 } },
     {
+      // La Fausse note, renommée Main tremblante le 2026-10-30 (D23) : le malus de l'Ombre, une main qui tremble
       id: 'false-note',
-      name: 'Fausse note',
+      name: 'Main tremblante',
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'falseNote', stacks: 1, power: 1, target: 'opponent' }],
@@ -636,8 +722,8 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
   ],
   magic: [
     {
-      // Phase 8, lot 3 (SORTS.md § 28) : son Orage, une aura qui frappe l'adversaire au début de chacun de ses tours, un éclair
-      // de dégâts directs par charge ; gravée, elle agit sous ses deux formes. Gravée : Thaldrin +10,5, rang II +4,7
+      // Phase 8, lot 3 (SORTS.md § 28) : son Orage, une aura qui frappe l'adversaire en dégâts directs ; gravée, elle agit
+      // sous ses deux formes. Décision D20 (2026-10-30) : tous les trois tours, trois éclairs de 2 ; son rang, un éclair de plus
       id: 'storm-sky',
       name: "Aura d'orage",
       nature: 'arcane',
@@ -645,11 +731,11 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       effects: [{ type: 'applyStatus', status: 'stormSky', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
-    // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant (la Magie depuis B1), la chanson qui soigne à chaque coup. Gravée chez Fanchon +12,4 (à 2 PV,
-    // son départ passait 62,4 % : trop)
+    // Les Maîtrises (P9, 2026-10-27) : l'aura du Chant (la Magie depuis B1). Décision D22 (2026-10-30) : une note par coup
+    // qui touche ; à la 4e, le refrain (quatre éclats de 2, +4 PV) ; son rang, un éclat de plus
     { id: 'ballad', name: 'Aura de ballade', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'ballad', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     // Refonte des auras (2026-10-28, § 3.1, § 5.5) : la seconde aura de Thaldrin, le feu qui ne s'éteint plus (il attise
-    // ou allume la Brûlure). Départ de Thaldrin 47,8 % (conception, série 105)
+    // ou allume la Brûlure). Décision D11 (2026-10-30) : regroupée, Brûlure +2 tous les deux tours ; son rang, +2
     { id: 'brasier', name: 'Aura du brasier', nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'brasier', stacks: 1 }], rankAxis: { kind: 'power', per: 1 } },
     {
       id: 'firefly',
@@ -667,9 +753,9 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       trigger: 'naturalTwo',
       scene: 'lightning',
       effects: [{ type: 'damage', amount: THUNDERBOLT, hits: THUNDERBOLT_HITS, target: 'opponent', source: 'lightning' }],
-      // +1 par éclair : +8,7 points gravée, au-dessus de la bande (0.111.0, signalé ; à demi en 0.110.0 : +6,5 ; +2 par
-      // éclair avant la 0.110.0 : +15,1)
-      rankAxis: { kind: 'amount', per: 1 },
+      // Son rang : +2 par éclair depuis la décision D11 (+1 par éclair sur quatre avant, le même total : +8,7 points gravée
+      // en 0.111.0, signalé)
+      rankAxis: { kind: 'amount', per: 2 },
     },
     {
       // Phase 8, second lot (SORTS.md § 23) : le consommateur de ses Feux follets (la Brûlure). Une charge qui attend son
@@ -680,7 +766,7 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
       nature: 'arcane',
       trigger: 'naturalThree',
       effects: [{ type: 'applyStatus', status: 'conflagration', stacks: 1 }],
-      rankAxis: { kind: 'power', per: 1 },
+      rankAxis: { kind: 'power', per: 2 },
     },
     {
       // Phase 8, lot 3 (SORTS.md § 28) : son Feu, l'amplificateur de la Brûlure. +2 à la Brûlure de l'adversaire, qui
@@ -694,8 +780,10 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     },
     // Phase 8, lot 3 (SORTS.md § 29) : le malus de Précision, l'éclair qui éblouit ; gravée +13,8 chez lui, +13,6 en
     // moyenne, rang II +3,8 (+10 % de coups ratés)
-    // Retour du 2026-10-27 (S10) : un éclair blanc frappe la cible, l'arène blanchit, puis « Aveuglé » (MISE_EN_SCENE.md M54)
-    { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', scene: 'blindFlash', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
+    // Retour du 2026-10-27 (S10) : un éclair blanc frappe la cible, l'arène blanchit, puis « Aveuglé » (MISE_EN_SCENE.md M54).
+    // Passe d'équilibre du 2026-10-31 : Aveuglé pendant 4 tours (jusqu'à la fin du combat avant) ; gravé sur le 3 nu,
+    // Ysolde +20,6 → +16,4, Thaldrin +17,4 → +15,0 (400 par duel) ; construit, Thaldrin +21,6 → +18,2 (`npm run ramp`)
+    { id: 'blinding', name: 'Éclair aveuglant', nature: 'arcane', trigger: 'naturalThree', scene: 'blindFlash', effects: [{ type: 'applyStatus', status: 'blinded', stacks: 1, turns: 4, target: 'opponent' }], rankAxis: { kind: 'power', per: 1 } },
     // Le Duo (2026-10-25) : des dés de plus à sa prochaine action, joués en entier (la mécanique de Coup de chance). Jusqu'à
     // la 0.120.0, il posait d'abord +1 Aura mélodieuse, et un seul dé de plus. Retour du 2026-10-27 (P7) : l'aura quitte le
     // jeu, le Duo la compense par ses charges, 1 → 3 (quatre dés à l'action suivante). Mesuré (winRate, 300 combats par
@@ -705,14 +793,39 @@ export const MASTERY_SKILLS: Record<MasteryId, readonly CharacterEvent[]> = {
     // le roster nu (200 par duel) : 3 charges +28 à +33, 2 charges +23 à +28, 1 charge +15 à +20 (rang II +10). Refonte des
     // auras (2026-10-28, Q8) : des coups bruts de plus, tout de suite (la rafale de la Curée), aucune boucle ; son rang,
     // un coup de plus. Trois coups, puis un à la mesure d'ensemble (tranche 8) : gravé chez les autres +29,4 → +16,2
+    // Renommé Écho le 2026-10-30 (D23) : le coup de plus qui suit le coup du jet, sans la musique
     {
       id: 'duo',
-      name: 'Duo',
+      name: 'Écho',
       nature: 'arcane',
       trigger: 'naturalOne',
       effects: [{ type: 'applyStatus', status: 'duo', stacks: 1 }],
       rankAxis: { kind: 'power', per: 1 },
     },
+    // D26 (docs/etudes/CONTENU_RETOUR_30.md § 5, n° 9 à 11) : trois sorts. L'Arc électrique lit la Brûlure (le feu appelle
+    // la foudre) ; la Boule de feu la pose (la source de Brûlure qui manquait, profondeur de l'offre) ; l'Égide d'orage est
+    // la première défense des Arcanes
+    {
+      id: 'arc-lightning',
+      name: 'Arc électrique',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      scene: 'lightning',
+      effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'lightning', fromStatus: { status: 'burn', who: 'opponent', factor: 2 } }],
+      rankAxis: { kind: 'amount', per: 2 },
+    },
+    {
+      id: 'fireball',
+      name: 'Boule de feu',
+      nature: 'arcane',
+      trigger: 'naturalThree',
+      effects: [
+        { type: 'damage', amount: 4, target: 'opponent', source: 'fire' },
+        { type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent' },
+      ],
+      rankAxis: { kind: 'amount', per: 2 },
+    },
+    { id: 'storm-aegis', name: "Égide d'orage", nature: 'arcane', trigger: 'naturalThree', effects: [{ type: 'applyStatus', status: 'stormAegis', stacks: 2 }], rankAxis: { kind: 'stacks', per: 2 } },
   ],
 }
 

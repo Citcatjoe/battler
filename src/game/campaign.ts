@@ -3,7 +3,7 @@ import { Character, type CharacterDef } from './character'
 import type { CharacterEvent } from './events'
 import { simulateCombat, type CombatResult } from './combat'
 import { isAuraSkill, isOffered, OFFERED_OPS, stepKey, validOnOrigin, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { drawReward, forgesLeftIn, REWARDS, type PendingReward, type RewardKind } from './offers'
+import { drawReward, forgesLeftIn, rankIn, REWARDS, withSeen, type PendingReward, type RewardKind } from './offers'
 import { getRelic, RELIC_IDS } from './relics'
 import { pick, seededRng, shuffle, type Rng } from './rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter, ROSTER } from './roster'
@@ -160,6 +160,8 @@ export interface CampaignRun {
   /** Rencontres du nœud en cours, une fois réglées (absentes : à calculer, `withEncounters`) */
   encounters?: Encounter[]
   reward?: PendingReward
+  /** Les cartes déjà montrées dans la partie (offers.ts, `BuildState.seen`) ; absentes d'une partie d'avant 0.134 : rien de vu */
+  seen?: string[]
   /** Fin de la partie : victoire contre le boss, ou défaite */
   outcome?: 'won' | 'lost'
 }
@@ -270,8 +272,10 @@ export function drawBuild(championId: string, node: number, rng: Rng, aura?: str
   const def = startDef(championId, aura)
   let forge: ForgeStep[] = []
   const relics: string[] = []
+  let seen: string[] = []
   for (const [index, kind] of calendar.slice(0, node).entries()) {
-    const reward = drawReward({ championId, aura, forge, relics }, kind, rng, forgesLeftIn(calendar, index))
+    const reward = drawReward({ championId, aura, forge, relics, seen }, kind, rng, forgesLeftIn(calendar, index), rankIn(calendar, index))
+    seen = withSeen(seen, reward)
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)
   }
@@ -363,28 +367,62 @@ function tunedOpponent(references: readonly Character[], id: string, node: numbe
 }
 
 /**
- * Les rencontres du nœud en cours : deux adversaires du roster (jamais le champion, jamais le dernier adversaire),
- * ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de l'utilisateur, 0.105.0) et se
- * règle sur la courbe (`tunedOpponent`) ; il est ensuite estimé contre le champion réel.
+ * Ce dont dépend le réglage des rencontres d'un nœud (retour du 2026-10-30, D3) : la graine, le personnage et l'aura du
+ * champion, le nœud et le dernier adversaire (exclu). Pas sa forge ni ses reliques : seul le danger les lit. Le réglage
+ * se fait donc à l'avance, dès que le combat du nœud précédent commence (`nextTuningKey`).
  */
-export function encountersFor(run: CampaignRun): Encounter[] {
-  const node = run.wins
-  const rng = seededRng(hashSeed(`campagne:${run.seed}:noeud:${node}`))
-  const references = referenceChampions(run.championId, node, run.seed, run.aura)
-  const champion = championOf(run)
-  const boss = isBossNode(run)
-  const last = run.fights[run.fights.length - 1]?.opponentId
-  const ids = boss ? [BOSS.id] : shuffle(rng, CHARACTER_IDS.filter((id) => id !== run.championId && id !== last)).slice(0, ENCOUNTER_CHOICES)
+export interface TuningKey {
+  seed: number
+  championId: string
+  aura: string
+  node: number
+  last?: string
+}
+
+/** La clé de réglage du nœud en cours de la partie. */
+export const tuningKeyOf = (run: CampaignRun): TuningKey => ({
+  seed: run.seed,
+  championId: run.championId,
+  aura: run.aura,
+  node: run.wins,
+  ...(run.fights.length > 0 && { last: run.fights[run.fights.length - 1].opponentId }),
+})
+
+/** La clé du nœud suivant si le champion bat `encounter` ; aucune après le boss. */
+export const nextTuningKey = (run: CampaignRun, encounter: Encounter): TuningKey | undefined =>
+  encounter.boss || run.wins >= ACT_FIGHTS ? undefined : { ...tuningKeyOf(run), node: run.wins + 1, last: encounter.characterId }
+
+/**
+ * Les rencontres réglées d'un nœud, sans leur danger (`chance` à 0) : deux adversaires du roster (jamais le champion,
+ * jamais le dernier adversaire), ou le boss au dernier nœud. Un adversaire grandit avec l'acte (règles v2, décision de
+ * l'utilisateur, 0.105.0) et se règle sur la courbe (`tunedOpponent`). Le gros du calcul : des milliers de combats.
+ */
+export function tunedEncounters(k: TuningKey): Encounter[] {
+  const rng = seededRng(hashSeed(`campagne:${k.seed}:noeud:${k.node}`))
+  const references = referenceChampions(k.championId, k.node, k.seed, k.aura)
+  const boss = k.node === ACT_FIGHTS
+  const ids = boss ? [BOSS.id] : shuffle(rng, CHARACTER_IDS.filter((id) => id !== k.championId && id !== k.last)).slice(0, ENCOUNTER_CHOICES)
   return ids.map((id) => {
-    const key = `campagne:${run.seed}:${node}:${id}`
-    const encounter: Encounter = boss
+    const key = `campagne:${k.seed}:${k.node}:${id}`
+    return boss
       ? { characterId: id, forge: [], relics: [], maxHp: tuneHp(references, opponentBase({ characterId: id, forge: [], relics: [] }), BOSS_TARGET, key, 1 / 4, BOSS_HP_CEILING, BOSS_REFERENCE_FIGHTS), boss: true, chance: 0 }
-      : { characterId: id, ...tunedOpponent(references, id, node, key), chance: 0 }
-    return { ...encounter, chance: winShare([champion], opponentOf(encounter), DANGER_FIGHTS, `${key}:danger`) }
+      : { characterId: id, ...tunedOpponent(references, id, k.node, key), chance: 0 }
   })
 }
 
-/** La partie avec les rencontres de son nœud en cours (calcul de quelques milliers de combats). */
+/** Le danger de chaque rencontre réglée, estimé contre le champion réel tel qu'il est (2 × `DANGER_FIGHTS` combats). */
+export function withDanger(run: CampaignRun, tuned: readonly Encounter[]): Encounter[] {
+  const champion = championOf(run)
+  return tuned.map((e) => ({ ...e, chance: winShare([champion], opponentOf(e), DANGER_FIGHTS, `campagne:${run.seed}:${run.wins}:${e.characterId}:danger`) }))
+}
+
+/** Les rencontres du nœud en cours : réglées sur la courbe, puis estimées contre le champion réel. */
+export const encountersFor = (run: CampaignRun): Encounter[] => withDanger(run, tunedEncounters(tuningKeyOf(run)))
+
+/**
+ * La partie avec les rencontres de son nœud en cours (calcul de quelques milliers de combats, 0,3 à 2 s). En jeu, ce
+ * calcul se fait hors du fil de l'interface (`encounters.worker.ts`) ; ici, d'un bloc (tests, simulations).
+ */
 export const withEncounters = (run: CampaignRun): CampaignRun => ({ ...run, encounters: encountersFor(run) })
 
 /* ---------- Combats et récompenses ---------- */
@@ -412,7 +450,8 @@ export function withFightResult(run: CampaignRun, encounter: Encounter, result: 
   if (encounter.boss) return { ...next, wins, outcome: 'won' }
   if (wins - 1 === heritageSlot(run)) return { ...next, wins }
   const rng = seededRng(hashSeed(`campagne:${run.seed}:recompense:${wins}`))
-  return { ...next, wins, reward: drawReward(run, REWARDS[wins - 1], rng, forgesLeftIn(REWARDS, wins - 1)) }
+  const reward = drawReward(run, REWARDS[wins - 1], rng, forgesLeftIn(REWARDS, wins - 1), rankIn(REWARDS, wins - 1))
+  return { ...next, wins, reward, seen: withSeen(run.seen, reward) }
 }
 
 /** Déclenchements du champion sur toute la partie (écran de fin) : la somme de ses combats. */

@@ -42,8 +42,9 @@ export const SCENE_EVENTS: Record<SceneEventId, SceneTiming> = {
   // (O3) : le quatrième au même pas (360 ms), la scène s'allonge d'autant
   lightning: { impacts: [440, 800, 1160, 1520], length: 2110, sound: 'crit' },
   // Reliques élémentaires (0.85.0, docs/RELIQUES.md § 12) : le sceau de l'objet se brise, sa magie envahit l'arène.
-  // Braise captive : le ciel rougit, trois météores tombent en diagonale sur l'adversaire (un coup de 2 chacun)
-  emberRain: { impacts: [560, 900, 1240], length: 1900, quake: true, sound: 'crit' },
+  // Braise captive : le ciel rougit, deux météores tombent en diagonale sur l'adversaire (deux braises, retour du 30
+  // octobre, D24)
+  emberRain: { impacts: [560, 980], length: 1700, quake: true, sound: 'crit' },
   // Conque des vents : l'esquive appelle le vent, trois lames d'air traversent l'arène vers l'adversaire
   gale: { impacts: [420, 640, 860], length: 1450 },
   // Larme de givre : le givre gagne l'écran, une gangue se referme sur le porteur et éclate (purge et soin)

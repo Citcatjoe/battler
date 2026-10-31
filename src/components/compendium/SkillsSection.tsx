@@ -1,5 +1,5 @@
 import { skillCatalog, statusHome, statusSources, type SkillEntry } from '../../game/catalog'
-import { describeSkill, triggerText, type CharacterEvent } from '../../game/events'
+import { describeSkill, isSpell, triggerText, type CharacterEvent } from '../../game/events'
 import { MASTERIES, masteryOfSkill } from '../../game/masteries'
 import { RULES, type RuleId } from '../../game/rules'
 import { auraOfSkill, STATUS_PLACE } from '../../game/states'
@@ -32,7 +32,9 @@ export function SkillsSection({ nav, focus, filter }: SectionProps) {
   const all = compendiumSkills()
   const shown = all.filter((s) => {
     const mastery = masteryOfSkill(s.event.id)
-    return matches(filter, s.event.name, describeSkill(s.event).text, ...describeSkill(s.event).posed.map((p) => STATUSES[p.status].name), mastery && MASTERIES[mastery].name)
+    const { text, posed, tags } = describeSkill(s.event)
+    // Ses pastilles aussi : « sort » liste les sorts de toutes les maîtrises (D29)
+    return matches(filter, s.event.name, text, ...posed.map((p) => STATUSES[p.status].name), ...tags.map((t) => t.label), mastery && MASTERIES[mastery].name)
   })
   const selected = all.find((s) => s.events.some((e) => e.id === focus)) ?? shown[0] ?? all[0]
 
@@ -52,6 +54,8 @@ export function SkillsSection({ nav, focus, filter }: SectionProps) {
           <span className="flex items-baseline gap-2.5">
             <span className="font-display text-[17px] font-bold leading-tight text-ink-1">{s.event.name}</span>
             {mastery && <MasteryName id={mastery} className="font-body text-[13px] text-ink-3" />}
+            {/* Le mot-clé « sort » (D29), à côté de la maîtrise qu'il traverse */}
+            {isSpell(s.event) && <span className="font-body text-[13px] font-medium italic text-arcane">sort</span>}
           </span>
           <span className="block truncate font-body text-[14px] text-ink-3">{describeSkill(s.event).text}</span>
         </span>

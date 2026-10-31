@@ -30,6 +30,7 @@ export type NamedTrigger =
   | 'missed'
   | 'dodge'
   | 'hurt'
+  | 'critHurt'
   | 'healed'
   | 'bloodied'
   | 'shieldBroken'
@@ -52,8 +53,9 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   combatStart: { label: 'Au début du combat', short: 'début du combat' },
   turnStart: { label: 'Au début de chacun de ses tours', short: 'début de tour' },
   turnEnd: { label: 'À la fin de chacun de ses tours', short: 'fin de tour' },
-  // L'aura de départ au rendez-vous (2026-10-27) : réservé au moteur, aucune compétence ne le déclare
-  auraDue: { label: 'Au début de son 3e tour, son aura de départ absente', short: 'aura due' },
+  // L'aura de départ au rendez-vous (2026-10-27 ; réarmé après une dissipation, D8 du 2026-10-30) : réservé au moteur,
+  // aucune compétence ne le déclare
+  auraDue: { label: 'Au début de son 3e tour, ou de son 2e tour après sa dissipation, son aura de départ absente', short: 'aura due' },
   naturalOne: { label: 'Sur un 1 au dé', short: 'dé 1' },
   naturalTwo: { label: 'Sur un 2 au dé', short: 'dé 2' },
   naturalThree: { label: 'Sur un 3 au dé', short: 'dé 3' },
@@ -66,6 +68,8 @@ export const TRIGGERS: Record<NamedTrigger, { label: string; short: string }> = 
   missed: { label: 'Quand son coup est esquivé', short: 'esquivé' },
   dodge: { label: 'Quand il esquive', short: 'esquive' },
   hurt: { label: 'Quand il reçoit un coup', short: 'coup reçu' },
+  // Retour du 30 octobre (D9, la Rage) : le coup reçu est un critique, juste après la fenêtre `hurt`
+  critHurt: { label: 'Quand il encaisse un critique', short: 'critique reçu' },
   // Lot des consommateurs (docs/PROGRESSION.md § 13.3) : après l'étape qui lui a rendu des PV (soin, vol de vie, repli
   // d'une purge), jamais sur un soin nul (PV déjà pleins)
   healed: { label: 'Quand il regagne des PV', short: 'soin reçu' },
@@ -183,12 +187,21 @@ export type Condition =
 /**
  * Nature d'une compétence : martiale (force du corps ou de l'arme), adresse (agilité, précision, ruse, chance), arcane
  * (magie, foi, nature, mort) ou neutre (ni l'un ni l'autre). Elle ne colore plus rien (retour du 2026-10-30 : toutes les
- * compétences ont le même tour violet) ; elle ne sert qu'à dire si un maléfice est un sort (`castsSpell`, poses.ts).
+ * compétences ont le même tour violet). Une compétence arcane est un sort (`isSpell`, le mot-clé « sort » du second
+ * retour du 2026-10-30, D29) ; un maléfice arcane fait incanter son lanceur (`castsSpell`, poses.ts).
  */
 export type SkillNature = 'martial' | 'finesse' | 'arcane' | 'neutral'
 
 /** Nature retenue quand une compétence n'en déclare pas : l'arcane. */
 export const DEFAULT_SKILL_NATURE: SkillNature = 'arcane'
+
+/**
+ * Le mot-clé « sort » (D29, 2026-10-30) : une compétence arcane, quelle que soit sa maîtrise (la foudre, le feu, les
+ * chants, la lumière, les malédictions). Une étiquette qui traverse les maîtrises, lue par la pastille « sort » de sa
+ * description (règle « Sorts ») ; toute compétence qui blesse par une source magique (`DAMAGE_SOURCES.magical`) en est
+ * un (modules.test.ts). Aucune règle de combat ne la lit encore.
+ */
+export const isSpell = (e: Pick<CharacterEvent, 'nature'>) => (e.nature ?? DEFAULT_SKILL_NATURE) === 'arcane'
 
 /** Le dé de tous les combattants (règles v2) : un d6, dont le jet désigne une face. Il ne fait aucun dégât. */
 export const DIE_FACES = 6
@@ -208,7 +221,8 @@ export type HitRelation = 'graft' | 'modify' | 'replace'
  * points de victoire (« un rang ajoute moins »). La forge le lit (`forge.ts`, `sharpen`) ; il ne connaît aucun plafond :
  * chaque rang ajoute quelque chose.
  * - `stacks` : charges du statut qu'elle pose (son premier `applyStatus`) ;
- * - `amount` : dégâts ou soin de son effet, repli d'une purge compris (Foudre : chaque éclair) ;
+ * - `amount` : dégâts ou soin de son effet, repli d'une purge compris (Foudre : chaque éclair) ; `on` le limite à un seul
+ *   genre d'effet (Lumière sacrée : son soin seul) ;
  * - `power` : intensité du statut qu'elle pose (`Status.power`) ; ce qu'elle vaut, le statut le dit (`StatusDef.power`) ;
  * - `multiplier` : son coup ×N, `per` de plus (Soliste, Crescendo) ;
  * - `limit` : `per` fois de plus par combat (Peur) ;
@@ -217,6 +231,8 @@ export type HitRelation = 'graft' | 'modify' | 'replace'
 export interface RankAxis {
   kind: 'stacks' | 'amount' | 'power' | 'multiplier' | 'limit' | 'share'
   per: number
+  /** `amount` : le seul genre d'effet qui gagne le montant (sans : dégâts et soins) */
+  on?: 'heal' | 'damage'
 }
 
 export interface CharacterEvent {
@@ -247,7 +263,7 @@ export interface CharacterEvent {
   buildsUp?: true
   /** Forme requise (personnage à formes, ex. druide) : la compétence n'existe que sous cette forme */
   form?: string
-  /** Nature de la compétence (défaut : DEFAULT_SKILL_NATURE) : un maléfice arcane est un sort (`castsSpell`). */
+  /** Nature de la compétence (défaut : DEFAULT_SKILL_NATURE) : une compétence arcane est un sort (`isSpell`). */
   nature?: SkillNature
   /**
    * Événement de scène (0.73.0) : l'écran le joue sur toute l'arène quand la compétence part (la Foudre du
@@ -298,7 +314,7 @@ const TIMES: Record<number, string> = { 2: 'deux fois', 3: 'trois fois', 4: 'qua
 const shareOf = (share: number, all: string) => (share === 0.5 ? 'la moitié des' : share >= 1 ? all : `${pct(share)} des`)
 
 /** Un petit nombre en toutes lettres, au milieu d'une phrase (« des trois derniers coups ») ; au-delà, en chiffres. */
-const SMALL_NUMBERS: Record<number, string> = { 2: 'deux', 3: 'trois', 4: 'quatre', 5: 'cinq' }
+export const SMALL_NUMBERS: Record<number, string> = { 2: 'deux', 3: 'trois', 4: 'quatre', 5: 'cinq' }
 
 /**
  * Dégâts directs en plusieurs impacts qui ont un nom (revue des compétences, T5) : « L'adversaire perd 4 PV, en quatre
@@ -323,7 +339,13 @@ export function describeEffect(effect: Effect, grafted = false): string {
     case 'damage': {
       const noun = effect.hits ? HIT_NOUNS[effect.source] : undefined
       if (noun && effect.hits) return `${foe ? "l'adversaire" : 'il'} perd ${effect.amount * effect.hits} PV, en ${SMALL_NUMBERS[effect.hits] ?? effect.hits} ${noun}`
-      if (effect.fromStatus) return `${foe ? "l'adversaire" : 'il'} perd ${effect.fromStatus.factor} PV ${per(effect.fromStatus)}${effect.amount ? `, puis ${effect.amount} de plus` : ''}`
+      // Arc électrique : la base d'abord, puis ce que le statut ajoute ; le porteur lu est celui qui perd (« qu'il porte »)
+      if (effect.fromStatus) {
+        const from = effect.fromStatus
+        const whose = (from.who === 'opponent') === foe ? "qu'il porte" : from.who === 'opponent' ? "de l'adversaire" : 'du porteur'
+        const per = `par charge ${deName(STATUSES[from.status].name)} ${whose}`
+        return `${foe ? "l'adversaire" : 'il'} perd ${effect.amount ? `${effect.amount} PV, +${from.factor} ${per}` : `${from.factor} PV ${per}`}`
+      }
       // Contre l'armure (Clous de pavois, 2026-10-27) : ce ne sont plus des dégâts directs
       if (effect.armored) return `${effect.amount} ${effect.amount > 1 ? 'dégâts' : 'dégât'} contre l'armure ${foe ? "de l'adversaire" : 'du porteur'}`
       // Serment de sang (2026-10-27) : le prix qu'il paie lui-même, en PV
@@ -490,7 +512,12 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
     c.type === 'hasStatus' &&
     e.effects.some((x) => (x.type === 'applyStatus' && x.fromStatus?.status === c.status && x.fromStatus.who === c.who) || (x.type === 'release' && x.status === c.status && c.who === 'self'))
   const clauses = (e.when ?? []).filter((c) => !multiplied(c)).map(conditionClause)
-  const limits = [e.chance !== undefined && e.chance < 1 ? `${Math.round(e.chance * 100)} % de chances` : '', e.limit !== undefined ? `${e.limit}x` : ''].filter(Boolean)
+  // Une limite par combat se dit en lettres (D11 : plus de « 1 » affiché) et dit sur quoi elle porte : « une fois par
+  // combat » (« , une fois » laissait croire à un effet qui ne dure qu'une fois)
+  const limits = [
+    e.chance !== undefined && e.chance < 1 ? `${Math.round(e.chance * 100)} % de chances` : '',
+    e.limit === undefined ? '' : `${e.limit === 1 ? 'une' : (SMALL_NUMBERS[e.limit] ?? e.limit)} fois par combat`,
+  ].filter(Boolean)
   // La condition suit une phrase seule (« Deux coups de plus si l'adversaire saigne ») ; devant plusieurs, elle ouvre la première
   if (clauses.length > 0 && sentences.length === 1) sentences[0] = `${sentences[0]} ${clauses.join(' et ')}`
   else if (clauses.length > 0) sentences[0] = `${clauses.join(' et ')}, ${lowerFirst(sentences[0])}`
@@ -511,6 +538,8 @@ export function describeSkill(e: CharacterEvent, formName?: string): SkillDescri
   // Une compétence du dé dit sa relation au coup de base : se greffer est la règle, elle n'a pas de pastille
   const onDie = isRollTrigger(e.trigger)
   const tags: SkillTag[] = [
+    // Le mot-clé « sort » d'abord (D29) : il traverse les maîtrises
+    ...(isSpell(e) ? [{ label: 'sort', rule: 'spell' as const }] : []),
     ...(formName ? [{ label: formName, rule: 'forms' as const }] : []),
     // Au début du combat : avant le premier tour, quel que soit le vainqueur de l'initiative (règle « Initiative »)
     ...(e.trigger === 'combatStart' ? [{ label: 'avant le premier tour', rule: 'initiative' as const }] : []),

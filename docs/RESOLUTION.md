@@ -5,6 +5,7 @@ Ce document est le **livre de règles** de la résolution. Il dit dans quel ordr
 - Le moteur (`src/game/combat.ts`, `src/game/statuses.ts`) applique exactement ce qui est écrit ici. En cas de doute, c'est le code qui fait foi, et ce document doit être corrigé.
 - Chaque règle est couverte par un test (`src/game/combat.test.ts`, sections « résolution » et « conditions »).
 - Le vocabulaire (statut, charges, durée, cumul…) est défini dans [STATUTS.md](STATUTS.md#vocabulaire).
+- **Noms du 2026-10-30** (D23 ; ids inchangés) : les règles ci-dessous citent parfois les noms d'avant. Duo = **Écho**, Soliste = **Coup de maître**, Crescendo = **Acharnement**, Siffloter et Sifflotement = **Répit**, Fausse note = **Main tremblante** ; la maîtrise Magie = **Arcanes** (D29). Le mot-clé « sort » (une compétence arcane, `isSpell`) est une étiquette : aucune règle de résolution ne le lit ([MAITRISES.md](MAITRISES.md), « Arcanes, le mot-clé « sort » et cinq noms »).
 
 ---
 
@@ -50,12 +51,17 @@ TOUR (répété, le joueur actif alterne) — l'actif est l'attaquant, l'autre l
        3e tour, après ses statuts et ses reliques de tour (Chapelet de l'ermite, Chandelle de veille
        au tour 3), avant son action, si la compétence d'aura de la face 1 de son dé de départ (vanilla
        ou choisie) n'a pas posé son aura, ou qu'on la lui a retirée, elle part comme sur un 1 : étape
-       event, déclencheur `auraDue`, une charge. Une fois par combat : déjà là, rien ne se passe et le
-       rendez-vous est passé. Un 1 la pose plus tôt ; chaque 1 ajoute une charge aux auras cumulables.
+       event, déclencheur `auraDue`, une charge. Déjà là, rien ne se passe et le rendez-vous est passé.
+       **Le rendez-vous réarmé** (D8, retour du 30 octobre) : une purge qui retire l'aura de départ (la
+       Purification d'Ysolde, toute purge de bonus ; pas un vol) la redonne au début du 2e tour suivant de
+       son porteur, de la même façon (`auraDueAt` : son tour de dissipation + 2 ; un rendez-vous déjà en
+       attente, plus proche, reste). Elle s'éteint un tour entier, puis revient. Compensation : la
+       Purification blesse de 7 (5 avant) quand elle retire un bonus. Un 1 la pose plus tôt ; chaque 1
+       ajoute une charge aux auras cumulables.
        Le druide : son 1 ne vaut que sous sa forme humaine ; sous l'autre, le rendez-vous attend son
        tour suivant. Une règle pour tous, sans exception par personnage ; un personnage sans auras de
        départ (personnage de test) n'en a pas. Contrôlé par l'audit (`aura de départ absente après le
-       début de son 3e tour`).
+       début de son rendez-vous`, `pose d'office hors de son rendez-vous`).
   Phase 2 · ACTION (actif)
     Contrôle : si l'actif porte un statut de contrôle (skipsAction), il perd son action
     (une charge consommée) → aller en phase 3. La Peur ; l'Étourdi depuis le lot 3 de la phase 8, posé
@@ -389,8 +395,8 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Même victime, Régénération (4) | Le poison est effacé, Régénération 1 posée. |
 | Un porteur de Garde sacrée (1) reçoit Poison puis Brèche | Le Poison est bloqué et la garde est épuisée ; la Brèche est posée. |
 | Un mort-vivant immunisé au poison est visé par Souffle de la tombe | Bloqué par immunité (« insensible »). |
-| Épines acérées (2) : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : 2 charges de Saignement posées sur l'attaquant (0.68.0 ; avant, 2 dégâts directs renvoyés). Elles ne coulent pas tout de suite : la plaie attend que le nain touche à son tour. Les épines restent pour les coups suivants. |
-| Furie des vents contre Épines acérées | **Chaque** coup qui touche le nain déclenche les épines : avec 3 charges, 3 + 3 = 6 charges de Saignement sur l'orc, qui couleront 6, 5, 4… sur les prochains coups du nain. |
+| Aura d'épines : le porteur encaisse un coup | Fenêtre `hurt` du défenseur : une épine plantée sur lui (`thornSpike`, +1). Son prochain coup qui touche (sa fenêtre `hit`) les enfonce toutes : Saignement 2 par épine sur l'adversaire (3 au rang II), et elles partent. Le Saignement ne coule qu'au coup suivant du porteur (règle 9). Avant le 2026-10-30 (D13) : Saignement 1 puis 2 posé sur l'attaquant à chaque coup reçu ; avant la 0.68.0, des dégâts directs renvoyés. |
+| Furie des vents contre l'Aura d'épines | **Chaque** coup qui touche le nain plante une épine : une rafale de 3 coups, 3 épines ; le prochain coup du nain qui touche fait saigner l'orc de 6. Une rafale du nain : le premier coup qui touche enfonce tout, les suivants n'ont plus rien à enfoncer. |
 | Saignement (2) : le porteur encaisse un coup | Fenêtre `hurt` du porteur, après les réactions posées avant la plaie : 2 dégâts directs (ignorent armure et bouclier), puis la plaie passe à 1, dans la même étape. Le coup suivant fait couler 1, et la plaie disparaît. |
 | Saignement posé par le coup qui touche | Une plaie ouverte pendant un coup (`naturalOne`, `hit`, `crit`) ne coule pas sur ce coup : elle coule dès le coup suivant qui touche le porteur (règle 9). Une plaie de 2 grossie de 2 par le coup coule de 2 (ses charges du début du coup), puis passe à 3. |
 | Saignement contre esquive, Peur ou jet remplacé | Aucun coup ne touche : la plaie ne coule pas et ne perd rien. Elle attend le prochain coup qui touche, sans limite de durée. |
@@ -402,9 +408,10 @@ Le résultat est enregistré dans la chronologie (`result` : posé, neutralisé 
 | Furie des vents : un 1, un 2 ou un 3 pendant les deux coups | Coups bruts (0.69.0) : deux coups de base, sans compétence ; aucune Furie ne se relance. Les reliques de face et la dorure lisent leur dé : le Fer à quatre clous renforce un 4 de Furie, l'Osselet fendu part sur un 1 de Furie. |
 | Vol de vie (Ervald) : le 1 | Greffe : 1 charge posée au jet (2 au plus ; 2 par jet avant la 0.107.0) ; le coup de base du 1 l'use déjà s'il est porté (il touche : soin ; esquivé : la charge est perdue). |
 | Vol de vie : coup esquivé | La charge est consommée sans soin : le coup a été porté, mais il n'a rien retiré. |
-| Vol de vie contre Épines acérées | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (sa fenêtre `hit`), puis la fenêtre `hurt` du nain pose le Saignement sur lui. |
+| Vol de vie contre l'Aura d'épines | Le mort-vivant touche le nain : il regagne d'abord les PV retirés (sa fenêtre `hit`), puis la fenêtre `hurt` du nain lui plante une épine (sur le nain). |
 | Jet remplacé (Furie des vents) contre Esquive améliorée, Épines acérées ou Saignement | Le jet lui-même ne porte pas de coup : il ne consomme ni l'esquive imposée, ni les épines, ni la plaie ; les deux coups de la Furie, eux, sont des coups. |
 | Aura de poison (2) au début du tour du mort-vivant | Phase 1, effets de début de tour du **porteur** (bonus) : 2 charges de Poison posées sur l'adversaire, avant le coup (0.69.0). Ce Poison agit à la fin du tour suivant de la victime (au début jusqu'au 2026-10-27) et perd une charge à chaque fois : il grossit d'1 par tour. Immunisée, la victime ne reçoit rien. |
+| Aura de jugement : la 3e faute | Fenêtre `hurt` du porteur : une faute posée sur l'attaquant ; à la 3e (seuil), les fautes partent et le verdict tombe dans la même étape : l'attaquant perd 8 PV de Lumière (dégâts directs, +2 au rang II). Plus de Peur depuis le 2026-10-30 (D17) : il garde son action. |
 | Attiser sur une Brûlure de 3 à un tour de sa fin (phase 8, lot 3) | La compétence lit la Brûlure de l'adversaire (`fromStatus`, facteur 1) et pose une Brûlure de 3 + 2 = 5 ; la Brûlure se remplace (`stacking: 'refresh'`) : elle devient 5, pour 5 tours. Sans Brûlure, elle en pose une de 2. Elle n'écrase jamais une Brûlure plus forte : elle ne gêne pas la place unique de la Brûlure (X2). L'audit vérifie qu'un statut qui se remplace repart de ses charges d'avant, plus celles de la définition, au lieu de s'additionner. |
 | Ciel d'orage (2) au début du tour du druide (phase 8, lot 3) | Phase 1, effets de début de tour du porteur : deux éclairs de 1 PV chacun à l'adversaire, en une étape (`hits`, détail dans `parts`), dégâts directs de l'instant. Une immunité n'y peut rien : ce n'est pas un malus posé. |
 | Feinte, Sève noire, Dette de sang (phase 8, lot 3) | Des réactions, sans brique nouvelle : la Feinte dans la fenêtre `dodge` de son porteur (un coup adverse esquivé ; le raté d'un aveuglé n'ouvre pas cette fenêtre), un Critique assuré ; la Sève noire dans `healed`, 4 Poison par charge à l'adversaire ; la Dette de sang dans `reflected`, 3 Saignement par charge, qui coule dès le coup suivant (règle 9). |
@@ -534,3 +541,11 @@ Nouveautés du 2026-10-21 : esquive assurée, bouclier qui absorbe, Fausse note,
 - **Le moment du cran** : une aura qui monte (`rises`) agit avec le cran de ses charges du moment (au début d'un coup, celles du début du coup, règle 9), puis gagne une charge **dans la même étape** que son effet ; le cran suivant vaut donc pour son prochain déclenchement. Une nouvelle pose de l'aura déjà là ajoute un cran entier (deux charges), au plafond près.
 - **Le seuil** : la pose qui amène un statut à seuil (`threshold`) à son seuil le retire entier, puis ses effets s'appliquent aussitôt, du point de vue de son porteur, rangés dans les effets de la même étape (la Peur de la 3e faute dans la réaction du Jugement ; le refrain dans celle de la Ballade). Pas de réaction en chaîne : ce sont des effets, pas une fenêtre.
 - **Une réaction d'aura sans effet** (reposer un statut à son plafond) ne part pas, comme une relâche sans Brûlure.
+
+## 13. Le dé et l'aura d'entrée : règles des reliques du 30 octobre (D9)
+
+- **Critique reçu** (`critHurt`, nouveau déclencheur nommé) : un coup critique qui touche ouvre, pour le défenseur, la fenêtre `critHurt` juste après `hurt` (avant `shieldBroken`). Le Torque du berserker et la Rage montante (compétence de Competences) y réagissent ; un renvoi critique l'ouvre aussi pour celui qu'il frappe.
+- **Clairon du héraut** (`startAura`) : au début du 1er tour de son porteur, après ses statuts et ses reliques de tour, avant son action, son aura de départ (la compétence de sa face 1, sous sa forme du moment) part comme au rendez-vous du 3e tour (déclencheur `auraDue`), la relique pour cause. Déjà là, rien ne part. Le rendez-vous du 3e tour (§ 2) la trouve alors posée.
+- **Dé de joueur** (`bareFace`) : quand le dé de compétence d'un jet (celui de l'action, d'un Doublé ou d'une rafale de jets complets) tombe sur une face sans compétence prête, il est relancé une fois, une étape `relic` d'abord ; le second jet compte, quel qu'il soit. Sa recharge (2 tours) la borne ; un dé imposé (mode triche) ne se relance jamais. Un dé de frappe (coup brut) n'est pas relancé.
+- **Face scellée** (`sealedFace`, posée par le Cachet du greffier) : posée, elle retient dans son intensité la face du dernier jet de dé de compétence de sa cible (la pose remplace l'ancienne) ; sans jet passé, le Cachet ne part pas. Un jet non imposé sur la face scellée qui porterait une compétence prête (comme la Malchance) ne la lance pas : une étape `roll` marquée `sealedBy`, puis le coup de base, brut (ses reliques de face, oui ; aucune compétence). C'est un jet complet : les coups instantanés qu'il pose partent après lui. La face reste scellée ses 3 tours.
+- **Une relique qui reposerait un statut tel quel** (même charges, durée, intensité : une aura non cumulable déjà là) ne part pas (règle des reliques nulles, `relicIsInert`).

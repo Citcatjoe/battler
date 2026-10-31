@@ -4,7 +4,7 @@ import { stepKey, type ForgeStep } from './forge'
 import { rollFace } from './events'
 import { computeStats, sumTriggers, triggerCounts, type FighterStats, type TriggerCounts } from './stats'
 import { defaultRng, pick, seededRng, shuffle, type Rng } from './rng'
-import { buildRewards, drawReward } from './offers'
+import { buildRewards, drawReward, withSeen } from './offers'
 import { hashSeed } from './analysis'
 import { drawBuild } from './campaign'
 import { getRelic } from './relics'
@@ -271,12 +271,26 @@ export function withResult(t: Tournament, ref: MatchRef, result: CombatResult, r
   const actual = result.fighters.map(fighterKey)
   if (actual[0] !== expected[0] || actual[1] !== expected[1]) throw new Error(`Le combat ne correspond pas au match ${matchKey(ref)}`)
   const winner = result.winner === 0 ? a : b
+  // L'arbre ne récompense qu'un participant parti nu : ses reliques sont celles de ses victoires, ses offres vues celles
+  // de ses résultats, et le rang de cette offre suit (offres riches, offers.ts)
+  const won = allMatches().flatMap((m) => {
+    const r = t.results[matchKey(m)]
+    return r?.relic && r.winner === winner ? [r.relic.offer] : []
+  })
   const drawn =
     t.relics && !t.season && !t.entrants[winner].build && ref.round < ROUNDS - 1
       ? drawReward(
-          { championId: t.entrants[winner].characterId, aura: entrantAura(t.entrants[winner]), forge: [], relics: relicsOf(t, winner) },
+          {
+            championId: t.entrants[winner].characterId,
+            aura: entrantAura(t.entrants[winner]),
+            forge: [],
+            relics: relicsOf(t, winner),
+            seen: won.reduce<string[]>((seen, offer) => withSeen(seen, { kind: 'relic', offer }), []),
+          },
           'relic',
           rng,
+          undefined,
+          won.length + 1,
         )
       : undefined
   const relic = drawn?.kind === 'relic' && drawn.choice ? { offer: drawn.offer, chosen: drawn.choice } : undefined

@@ -1,7 +1,7 @@
 import type { Character } from './character'
 import { simulateCombat, finalState, type CombatResult, type Pair, type Side } from './combat'
 import { isOffered, withForgeStep, type ForgeOffer, type ForgeStep } from './forge'
-import { buildRewards, drawReward, forgesLeftIn, type RewardKind } from './offers'
+import { buildRewards, drawReward, forgesLeftIn, rankIn, withSeen, type RewardKind } from './offers'
 import { getRelic } from './relics'
 import { seededRng } from './rng'
 import { addReport, combatReport, emptyReport, type CombatReport, type FighterReport } from './report'
@@ -209,6 +209,20 @@ export function buildOf(season: Season, entrant: number, beforeDay = Infinity): 
   return build
 }
 
+/**
+ * Les cartes déjà montrées à un participant avant la journée `beforeDay` (offers.ts, `BuildState.seen`) : les offres de
+ * ses récompenses, déduites des résultats comme sa construction.
+ */
+function seenOf(season: Season, entrant: number, beforeDay: number): string[] {
+  let seen: string[] = []
+  for (const day of seasonSchedule(season.entrants.length).slice(0, beforeDay)) {
+    const f = day.find((g) => involves(g, entrant))!
+    const reward = season.results[f.number]?.rewards?.[f.home === entrant ? 0 : 1]
+    if (reward) seen = withSeen(seen, reward)
+  }
+  return seen
+}
+
 /** Une construction est-elle complète (toutes les récompenses de la saison reçues) ? Alors elle est figée. */
 export const buildDone = (season: Season, build: Build) => build.relics.length + build.forge.length >= season.rewards.length
 
@@ -251,7 +265,13 @@ function seasonReward(season: Season, number: number, side: Side): SeasonReward 
   const index = build.relics.length + build.forge.length
   const rng = seededRng((seasonMatchSeed(season, number) ^ (side === 0 ? 0x72657764 : 0x70657264)) | 0)
   const e = season.entrants[entrant]
-  const drawn = drawReward({ championId: e.characterId, aura: entrantAura(e), ...build }, season.rewards[index], rng, forgesLeftIn(season.rewards, index))
+  const drawn = drawReward(
+    { championId: e.characterId, aura: entrantAura(e), ...build, seen: seenOf(season, entrant, f.day) },
+    season.rewards[index],
+    rng,
+    forgesLeftIn(season.rewards, index),
+    rankIn(season.rewards, index),
+  )
   if (drawn.kind === 'relic') return drawn.choice ? { kind: 'relic', offer: drawn.offer, chosen: drawn.choice } : null
   return drawn.choice ? { kind: 'forge', offer: drawn.offer, chosen: drawn.choice } : null
 }

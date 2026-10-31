@@ -78,6 +78,10 @@ describe('audit de résolution', () => {
     expect(seen['furie juste après son jet'] ?? 0).toBeGreaterThan(0)
     // L'aura de départ au rendez-vous (2026-10-27, C2) : posée d'office au début du 3e tour, contrôlée à chaque combat
     expect(seen["aura de départ posée d'office"] ?? 0).toBeGreaterThan(0)
+    // Retour du 30 octobre : l'aura dissipée revient à son rendez-vous réarmé (D8) ; les épines plantées puis enfoncées
+    // (D13) ; le verdict du Jugement à la 3e faute (D17)
+    for (const k of ['aura de départ dissipée, rendez-vous réarmé', 'aura dissipée revenue à son rendez-vous', 'épine plantée', 'épines plantées enfoncées', 'épines plantées enfoncées (plusieurs)'])
+      expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
@@ -99,6 +103,19 @@ describe('audit de résolution : le lot des consommateurs (PROGRESSION.md § 13.
           for (let k = 0; k < 3; k++) audit(simulateCombat([createCharacter(id).withRelics([getRelic(relic)]), createCharacter(b)], { seed: 11000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['bonus de relique à conditions', 'relique de soin reçu', 'relique sur un gros coup', 'relique de coup']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : les reliques du 30 octobre (D9, D24, D26, profondeur)', () => {
+  it('aucune anomalie pour l’aura d’entrée, la relance, la face scellée, le critique reçu et les reliques des trous, chez tout le roster', () => {
+    const { audit, problems, seen } = createAudit()
+    const ids = RELICS.slice(RELICS.findIndex((r) => r.id === 'herald-clarion')).map((r) => r.id)
+    let n = 0
+    for (const relic of [...ids, 'caged-ember', 'split-geode', 'wind-conch'])
+      for (const a of CHARACTER_IDS)
+        for (const b of CHARACTER_IDS) audit(simulateCombat([createCharacter(a).withRelics([getRelic(relic)]), createCharacter(b)], { seed: 12500 + n++ }))
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['clairon du héraut', 'dé de joueur', 'face scellée', 'relique de coup', 'relique de tour', 'relique : affliction à l’adversaire']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
@@ -291,7 +308,7 @@ describe('audit de résolution : phase 8, lot 3, les fils minces', () => {
             for (let k = 0; k < 3; k++) audit(simulateCombat([withSkill(host, id, rank, before), createCharacter(b)], { seed: 19000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['visée : dodge', 'statut qui repart', 'ciel d’orage', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
+    for (const k of ['visée : dodge', 'statut qui repart', 'aura regroupée : seuil (stormSky)', 'ivresse du sang', 'action perdue : stunned', 'furie : charge réactive reportée'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
@@ -458,21 +475,35 @@ describe('audit de résolution : les Maîtrises, vague 2 (2026-10-27)', () => {
     const hosts: Record<string, readonly string[]> = {
       'lucky-streak': ['naraxes', 'fanchon'],
       dread: ['ervald', 'aldric'],
-      rancor: ['aldric'],
-      ballad: ['fanchon'],
+      rancor: ['aldric', 'morgrut', 'brokk'],
+      ballad: ['fanchon', 'thaldrin'],
+      // Décisions D11 et D19 (2026-10-30) : le Cuir épais chez ses porteurs du Rempart, les auras regroupées gravées
+      'thick-hide': ['morgrut', 'brokk', 'aldric'],
+      brasier: ['thaldrin', 'fanchon'],
+      'storm-sky': ['fanchon', 'ysolde'],
+      'holy-aura': ['gorak'],
+      'decoction-aura': ['ervald'],
       prayer: ['ysolde'],
       wither: ['ervald', 'aldric'],
       assault: ['gorak', 'morgrut'],
       'loaded-die': ['naraxes', 'fanchon'],
       'open-wound': ['gorak', 'brokk'],
+      // Retour du 30 octobre : les épines plantées (D13), le Poison 2 (D15) et le verdict (D17), aux rangs I et II
+      thorns: ['brokk', 'gorak'],
+      'frost-aura': ['ervald', 'naraxes'],
+      judgement: ['ysolde'],
     }
     for (const [id, list] of Object.entries(hosts))
       for (const host of list)
         for (const rank of [0, 1])
           for (const b of CHARACTER_IDS) audit(simulateCombat([withSkill(host, id, rank), createCharacter(b)], { seed: 29000 + n++ }))
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['luckyStreak', 'dread', 'rancor', 'ballad', 'stoneFist'].map((s) => `maîtrises : ${s}`).concat(['poing de pierre', 'pièce pipée', 'plaie ouverte']))
+    for (const k of ['luckyStreak', 'dread', 'rancor', 'ballad', 'stoneFist', 'thickHide'].map((s) => `maîtrises : ${s}`).concat(['poing de pierre', 'pièce pipée', 'plaie ouverte', 'cuir épais', 'jugement', 'seuil atteint : fault', 'épines plantées enfoncées', 'aura glaciale']))
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+    for (const s of ['stormSky', 'holyAura', 'decoctionAura', 'brasier', 'ballad']) {
+      expect(seen[`aura regroupée : compte (${s})`] ?? 0, s).toBeGreaterThan(0)
+      expect(seen[`aura regroupée : seuil (${s})`] ?? 0, s).toBeGreaterThan(0)
+    }
   })
 })
 
@@ -503,6 +534,35 @@ describe('audit de résolution : le contenu du soin (quatrième demande du 2026-
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
     for (const k of ['dîme', 'flamme votive', 'sangsue', 'peau de crapaud', 'pièce d’effet sur pile', 'compétence qui modifie son coup', 'compétence à condition fausse : face nue'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
+  })
+})
+
+describe('audit de résolution : les compétences du 2026-10-30 (D26, profondeur de l’offre, D9)', () => {
+  it('aucune anomalie pour les onze compétences nouvelles gravées chez leurs porteurs, aux rangs I et II', () => {
+    const { audit, problems, seen } = createAudit()
+    const hosts: Record<string, readonly string[]> = {
+      mauling: ['thaldrin', 'gorak'],
+      'rising-rage': ['morgrut', 'gorak'],
+      'shield-wall': ['brokk', 'aldric'],
+      challenge: ['aldric', 'morgrut'],
+      'coated-blade': ['ervald', 'naraxes'],
+      grace: ['ysolde'],
+      'holy-light': ['ysolde'],
+      anointing: ['ysolde'],
+      'arc-lightning': ['thaldrin', 'fanchon'],
+      fireball: ['thaldrin', 'ysolde'],
+      'storm-aegis': ['thaldrin', 'fanchon'],
+    }
+    let n = 0
+    for (const [id, list] of Object.entries(hosts))
+      for (const host of list)
+        for (const rank of [0, 1])
+          for (const b of CHARACTER_IDS) {
+            audit(simulateCombat([withSkill(host, id, rank, []), createCharacter(b)], { seed: 47000 + n++ }))
+            audit(simulateCombat([createCharacter(b), withSkill(host, id, rank, [])], { seed: 47000 + n++ }))
+          }
+    expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
+    for (const k of ['compétence à charges', 'rage montante']) expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })
 
@@ -540,7 +600,7 @@ describe('audit de résolution : le contenu des maîtrises (quatrième demande d
           audit(simulateCombat([createCharacter(b), createCharacter(host).withForge(before).withRelics([getRelic(id)])], { seed: 33000 + n++ }))
         }
     expect([...problems].map(([kind, p]) => `${kind} ×${p.n} — ex. ${p.example}`)).toEqual([])
-    for (const k of ['élan', 'maîtrises : onrush', 'larcin : bonus pris', 'maîtrises : pilfer', 'onde de choc', 'coups multiples', 'ciel d’orage', 'relique de tour', 'immunité : malus bloqué'])
+    for (const k of ['élan', 'maîtrises : onrush', 'larcin : bonus pris', 'maîtrises : pilfer', 'onde de choc', 'coups multiples', 'aura regroupée : seuil (stormSky)', 'relique de tour', 'immunité : malus bloqué'])
       expect(seen[k] ?? 0, k).toBeGreaterThan(0)
   })
 })

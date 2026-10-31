@@ -32,6 +32,52 @@ La version en cours est celle de `package.json`. Elle s'affiche en bas à droite
 - `docs/STYLE_BIBLE.md` : ajout du gabarit de fond de menu (prompt validé du portail) et d'une section sur les icônes d'interface (inventaire des 16 emojis à remplacer, prompt de la planche, conventions de découpe et d'intégration, procédure pour en ajouter, historique des versions).
 - `docs/STYLE_BIBLE.md` : direction artistique précisée. Le style reste high fantasy stylisé et peint à la main, avec des couleurs franches par faction et des proportions héroïques exagérées. Les visages sont fins et charismatiques, et le look jeu mobile casual ou gacha (visages ronds ou grossiers, gros yeux, couleurs bonbon, rendu plastique) est explicitement exclu.
 
+## [0.134.0] — 2026-10-31
+
+Les décisions de l'utilisateur du 30 octobre (D3, D7 à D29 ; « crée des reliques, des icônes, des compétences, tune, peaufine les synergies, rééquilibre »). Registre point par point : `docs/RETOUR_30.md` ; décisions encore ouvertes en tête du registre.
+
+### Ajouté
+- **Onze compétences** (profondeur des maîtrises, D2 et D26 ; gravées sur le 3 nu, 400 combats par duel après Equilibre) :
+  - Arcanes : **Arc électrique** (3 PV, +2 par charge de Brûlure de l'adversaire ; +10,9 à +12,3), **Boule de feu** (4 dégâts directs et Brûlure 2 ; +17,7 à +21,8), **Égide d'orage** (ses 2 prochains coups reçus : 2 éclairs de 2 sur l'attaquant ; +16,1 à +19,9) ;
+  - Lumière : **Grâce** (ses 3 prochains soins : +3 Ferveur ; +17,7), **Lumière sacrée** (3 PV de Lumière et +3 PV ; rang au soin seul), **Onction** (+3 PV et +3 armure temporaire ; +18,2) ;
+  - Rempart : **Mur de boucliers** (+6 armure temporaire ; +13,0 à +20,1), **Défi** (+2 armure temporaire et une Riposte ; hors bande, voir ETAT) ;
+  - Poison : **Lame enduite** (ses 3 prochains coups qui touchent : Poison 2 ; +18,6 à +20,7) ;
+  - Fureur : **Charge de l'ours** (ce coup ×2 et +2 armure temporaire ; +16,0 à +20,8), **Rage montante** (D9 : +2 à ses coups, +2 par critique reçu, jusqu'à +6 ; +17,8 à +19,6).
+- **Dix-sept reliques** (D9, D26 ; 54 en tout ; contre le roster nu, 200 combats par duel) : Clairon du héraut (aura de départ dès le 1er tour, +13,4), Cachet du greffier (face du dernier jet adverse scellée 3 tours, tous les 3 tours, +5,3), Dé de joueur (relance un jet tombé sur une face nue, recharge 2, +12,8), Torque du berserker (+5 Ferveur au critique reçu, +12,5), Hameçon rouillé (Saignement 2 sur un 6, +10,0), Mortier d'apothicaire (double le Poison de l'adversaire puis +2, +6,3 ; Ervald +20,2), Corne de bélier (+5 Ferveur au critique, +10,1), Calice noir (Vol de vie au critique, recharge 4, +8,8), Cierge de l'exorciste (l'adversaire perd 3 PV à chaque soin reçu, recharge 3, +5,6), Pierre de tonnerre (2 éclairs de 2 si l'adversaire brûle, recharge 3, +4,1), Focale (+2 à chaque impact magique pendant 2 tours, au 1er puis tous les 4, +6,4), Tison ardent (Brûlure 2 au critique, +8,4), Fiel de vipère (Poison 2 à l'attaquant au coup reçu, recharge 4, +14,8), Fil barbelé (Saignement 2 à l'attaquant au coup reçu, recharge 4, +14,5), Gourde du pèlerin (+3 PV au 4e tour puis tous les 4, +10,6), Cape de brume (+3 Ferveur à l'esquive, +7,6), Coupe de l'écorcheur (+2 PV au coup qui touche un adversaire qui saigne, recharge 2, +4,8).
+- **Aura du cuir épais** (D19) : seconde aura de Morgrut, +3 armure temporaire par coup reçu, sans cumul ; rang +1.
+- **Auras à compte** (D11, D20, D22) : une aura qui agit tous les N déclenchements montre son compte sur son anneau (« 2/3 ») et repart de zéro (`StatusDef.tally` : Épines plantées, Nuée, Recueillement, Dose, Tisons, Notes, Fautes). Nouvel état « En faute » (verdict de l'Aura de jugement).
+- **Paliers de reliques** (D27) : chaque relique est babiole, forte ou maîtresse (`Relic.tier`) ; une forte pèse moitié moins avant 2 reliques portées, une maîtresse quatre fois moins avant 3, puis deux fois plus.
+- **Fraîcheur et cartes de plus dans l'offre** (D2, ACsD) : une carte jamais vue dans la partie pèse ×3 (une carte vue revient) ; 4 reliques aux victoires 4 et 8, Graver à 3 compétences aux victoires 3 et 7. Une seule voie (`drawReward`) pour le joueur, la référence, les adversaires, la saison et l'arbre. 300 parties par départ : reliques vues 13,6 → 16,3, compétences 7,1 → 9,2, Graver qui redit une paire 4,0 → 0,5 %. Sauvegarde `battler:campaign:v5` rétrocompatible (`seen` facultatif).
+- **Arcanes et le mot-clé « sort »** (D29) : la maîtrise Magie s'affiche « Arcanes » (id `magic` gardé), emblème peint ; une compétence arcane porte la pastille « sort » (compendium, infobulles des dés, de la barre et de la forge), règle « Sorts » au compendium, recherche « sort » à travers les maîtrises.
+- **Rencontres sans gel** (D3) : le réglage des adversaires tourne dans un Web Worker (`encounters.worker.ts`), et celui du nœud suivant se prépare pendant l'affrontement, le combat et la récompense ; la carte montre une carte d'attente animée (« Un adversaire se prépare… », « Le Colosse se prépare… »). Plus long gel mesuré dans Firefox : 237 à 1 898 ms → 18 à 44 ms.
+- **36 icônes peintes (planche v34, 960 crédits)** : 17 compétences et auras (dont les cinq renommées), 17 reliques (plus aucune initiale provisoire), l'emblème des Arcanes, l'état « En faute ».
+
+### Modifié
+- **D8** Une aura de départ dissipée revient d'office au début du 2e tour de son porteur après la purge (avant : perdue) ; Purification 5 → **7** quand elle retire un bonus (8 sinon). Ysolde Sainteté 51,4 → 51,7 %.
+- **D12** Elaria critique 17 → **15 %** (départ 52,5 → 50,2 %).
+- **D13** Aura d'épines → **épines plantées** : chaque coup reçu plante une épine sur Brokk ; son prochain coup qui touche les enfonce toutes, Saignement 2 par épine (avant : Saignement 1 puis 2 à l'attaquant à chaque coup reçu). Brokk 45,1 → 46,7 %.
+- **D14** Onde de choc 2 → **3 PV** par coup compté, 3 au plus.
+- **D15** Aura de poison : Poison 1, 2 puis 3 → **Poison 2 à chaque tour**, sans montée. Ervald 44,3 → 53,8 %, sans compensation.
+- **D16** Aura d'effroi plafonnée à **3 charges**.
+- **D17** Aura de jugement en **verdict** : à la 3e faute, l'attaquant perd 8 PV de Lumière (avant : Peur). Ysolde Jugement 43,8 → 49,2 %.
+- **D19** Morgrut : Aura de rancœur → Aura du cuir épais ; la Rancœur reste au registre, sans porteur.
+- **D20** Aura d'orage : 1 puis 2 éclairs de 1 à chaque tour → **3 éclairs de 2 tous les 3 tours**.
+- **D21** Thaldrin : maîtrises Magie et Poison → **Arcanes et Fureur** ; l'Aura du brasier reste sa seconde aura.
+- **D22** Aura de ballade : plus de +1 PV par coup ; une note par coup qui touche, au 4e le refrain : **4 éclats de 2 et +4 PV** (4 × 1 avant).
+- **D11** (tout chiffre affiché vaut 2 ou plus, en regroupant) : Aura de décoction (Poison 1, 2, 3 par coup → Poison 6 tous les 3 coups qui touchent), Aura de sainteté (+1 puis +2 PV par tour → +4 PV tous les 2 tours), Aura du brasier (Brûlure +1 par tour → +2 tous les 2 tours), Foudre (4 éclairs de 1 → 2 éclairs de 2), Poing de pierre (+1, armure 6 → +2, armure 5), Pointe de paratonnerre, Chaîne du geôlier, Encens de l'abbaye et Gantelet du talion (+1 → +2), Collier de ronces (1 épine, Épines non cumulables) ; treize rangs passés à +2 (Sangsue, Lame enduite, Sentence, Bouclier de foi, Flamme votive, Grâce, Répit, Dîme, Égide d'orage, trois pièces, Embrasement).
+- **La montée des auras est retirée** (`rises`) : chaque aura a une valeur fixe ou agit à son compte.
+- **D23** Renommages (ids inchangés) : Duo → **Écho**, Soliste → **Coup de maître**, Crescendo → **Acharnement**, Siffloter → **Répit**, Fausse note → **Main tremblante**.
+- **D24** Braise captive : 3 × 2 au 4e tour, une fois → 2 braises de 2 au 4e tour puis tous les 4, chacune +1 par charge de Brûlure de l'adversaire (+15,0 → +13,4).
+- **D28** Géode fendue (+4, 2 fois → +2, recharge 3 ; +17,8 → +12,3), Onguent du rebouteux (+3 PV, 2 fois → +2 PV, recharge 3 ; +14,4 → +12,2), Conque des vents (2 fois → recharge 3 ; +10,5 → +9,9).
+- **Passe d'équilibre** : Gorak critique 14 → **16 %** ; Aura du dé pipé +5 → **+6 %** de critique et d'esquive par charge ; Aura du cuir épais rang +2 → +1 ; Embrasement ×3 → **×2** ; Éclair aveuglant : Aveuglé 4 tours (jusqu'à la fin du combat avant) ; Lumière sacrée : le rang n'ajoute qu'au soin. Avant → après : roster nu 42,6 (Gorak) à 54,7 % → **45,2 (Morgrut) à 54,5 %**, pire duel 36,5 → 38,8 % ; départs d'aura 40,8 à 54,7 → 43,3 à 54,5 % ; Morgrut Cuir épais contre Gorak 65,8 → 60,0 % ; construits à 10 récompenses 44,6 à 56,0 % ; campagne boss atteint 23 → 27 %, acte gagné 10 → 13 % (attendu 26 / 12).
+- La Rétribution est martiale (elle relâche des coups) : sans effet en combat.
+- **Textes** : limites « une fois par combat » / « deux fois par combat » (au lieu de « 1x », « 2x ») ; les reliques nomment la ressource avec sa majuscule et sa cible (« Poison 2 à l'attaquant ») ; Arc électrique, Boule de feu et Feux follets nomment la Brûlure ; règle « Auras » : les auras à compte et le Clairon ; Grâce rangée sous Puissance, Lame enduite sous Représailles « au coup porté ».
+
+### Corrigé
+- **Hameçon rouillé en rafale** : une seconde pose du même statut, dans une étape déjà montrée, effaçait la première à l'écran (`display`, `staging.ts`).
+- Textes qui décrivaient mal le moteur : Pierre de tonnerre et Mortier d'apothicaire guettent chaque début de tour puis rechargent (et non un rythme fixe dès le 1er tour) ; le plafond de la Rage montante au rang II est +8 (le texte disait +6).
+- Empreinte de non-régression `balance.test.ts` régénérée une fois, volontairement (règles des personnages et offre changées).
+
 ## [0.133.0] — 2026-10-30
 
 Décisions du retour du 30 octobre validées par l'utilisateur (D1, D5, D6, D18 ; registre `docs/RETOUR_30.md`).

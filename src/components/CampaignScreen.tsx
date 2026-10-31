@@ -10,6 +10,7 @@ import {
   championOf,
   dangerOf,
   drawHeritage,
+  ENCOUNTER_CHOICES,
   heritageFor,
   heritageSlot,
   heritableGains,
@@ -518,7 +519,16 @@ function ActMap({ run, onFight, onAbandon, onMenu }: { run: CampaignRun; onFight
               ))}
             </div>
           ) : (
-            <p className="flex h-[440px] items-center font-body text-xl italic text-ink-3">Les adversaires se préparent…</p>
+            // En attendant le réglage (hors du fil de l'interface, D3) : une carte vide par adversaire attendu, sa roue
+            // tourne sur le fil du compositeur (une rotation CSS), même si le fil de l'interface est occupé
+            <div className="flex items-end gap-8" role="status" aria-label={boss ? `${BOSS.name} se prépare` : 'Les adversaires se préparent'}>
+              {Array.from({ length: boss ? 1 : ENCOUNTER_CHOICES }, (_, i) => (
+                <div key={i} className="encounter-card encounter-waiting">
+                  <span aria-hidden className="encounter-spinner" />
+                  <p className="font-body text-lg italic text-ink-3">{boss ? `${BOSS.name} se prépare…` : 'Un adversaire se prépare…'}</p>
+                </div>
+              ))}
+            </div>
           )}
           <p className="font-body text-[14px] text-ink-3">Le danger se mesure contre votre champion tel qu'il est ; les chiffres restent cachés.</p>
         </section>

@@ -900,8 +900,56 @@ Maquettes et prompt de l'utilisateur : `docs/ref/01` à `09` et `docs/ref/prompt
 - **L'héritage prend la place d'une récompense** (`heritageSlot`) : la première de sa sorte au calendrier (une relique héritée, la première relique, après le combat 2 ; une forge héritée, la première forge, après le combat 1). La victoire qui l'aurait donnée fait avancer sans récompense ; la carte de l'acte marque ce losange « reçue en héritage ». Avant : onze récompenses au boss (six reliques, ou six forges). La fin d'acte est maintenant toujours **cinq forges et cinq reliques**, héritage ou non ; le départ hérité garde son avance sur les premiers nœuds. La courbe ne bouge pas (la référence n'a pas d'héritage).
 - **Les adversaires tirent leur aura de départ** parmi les deux de leur fiche, comme en tournoi (`Encounter.aura`, `tunedOpponent`) ; jusque-là, toujours l'aura par défaut. Ils sont construits sur le dé de cette aura et réglés par leurs PV comme avant. Une rencontre enregistrée sans aura garde l'aura par défaut.
 
-**Écarts qui restent** : une offre vide est perdue en campagne et retentée en saison (jamais observée sur 12 000 actes). Les redites d'offres (« pas de redite ») et le calcul des rencontres hors du fil de l'interface sont des propositions à part (rapport `r30-Parite`). Le tournoi sans saison qui ne construisait pas (participants nus, une relique par tour gagné, trois au plus, aucune forge) est réglé par D1, ci-dessous.
+**Écarts qui restent** : une offre vide est perdue en campagne et retentée en saison (jamais observée sur 12 000 actes). Les redites d'offres (« pas de redite ») sont une proposition à part (rapport `r30-Parite`) ; le calcul des rencontres hors du fil de l'interface est livré par D3 (§ 18.10). Le tournoi sans saison qui ne construisait pas (participants nus, une relique par tour gagné, trois au plus, aucune forge) est réglé par D1, ci-dessous.
 
 **D1, l'arbre seul construit (décision de l'utilisateur du 2026-10-30, proposition P2, agent Tournoi)** : sans saison, chacun des 16 participants **entre dans l'arbre construit d'un acte complet**, comme un participant de saison au soir de la journée 10. Le chemin est celui du champion de référence : `drawBuild` (`campaign.ts`), qui prend désormais un calendrier (`buildRewards`, déplacé de `season.ts` dans `offers.ts` : `REWARDS` réduit aux sortes activées dans les options, reliques et forge du dé), sur le dé de son aura tirée parmi ses deux, chaque récompense par `drawReward` et son choix par défaut. Tirage à la graine du tournoi et de la case (`hashSeed('tournoi:<graine>:<case>')`) : le même tournoi se reconstruit à l'identique. La construction est figée : l'arbre ne donne plus de relique (`withResult` n'en tire que pour un vainqueur parti nu, ce qui reste le cas d'un `createTournament` sans graine). L'interrupteur **Forge du dé** sert aussi sans saison. Les cotes des paris (`priceMatch`) se calculent sur `matchFighters`, donc sur les builds ; elles restent cachées jusqu'au règlement. Le jour où un joueur apportera son build, il prendra simplement la place de ce tirage. Conséquence attendue [non mesurée] : l'équilibre de l'arbre devient celui des builds complets (rampe à 10 récompenses, § 18.5 : 43,6 % Thaldrin à 55,7 % Aldric) au lieu de celui des personnages nus. Test : `season.test.ts`, « arbre seul construit (D1) ».
 
 **Non mesuré** : l'effet des deux règles sur la campagne (`npm run campaign` non relancé) ; attendu : −1 récompense au boss pour un champion hérité, environ −5 à −8 points contre le Colosse [estimation, non mesurée] ; les adversaires restent sur la courbe par leurs PV.
+
+### 18.10 Retour du 2026-10-30 : les rencontres sans gel (D3, agent Gel)
+
+**La demande** : « calculer les adversaires sans geler (Web Worker ou pendant le combat) ; sinon un spinner à l'emplacement de la carte attendue, qui ne gèle pas lui-même ». Le gel venait du réglage des rencontres (`withEncounters`), calculé d'un bloc sur le fil de l'interface 60 ms après l'affichage de la carte : environ 2 300 combats simulés par nœud normal, 4 800 au boss.
+
+**Ce qui est livré** (les deux pistes, ensemble) :
+- **Le calcul se coupe en deux** (`campaign.ts`) : le **réglage** (`tunedEncounters`, le tirage des deux adversaires, leur aura, leur construction et leurs PV sur la courbe, tout le gros du calcul) ne lit que la graine, le personnage du champion, son aura, le nœud et le dernier adversaire (`TuningKey`) ; le **danger** (`withDanger`, 2 × 160 combats) lit le champion réel. `encountersFor` est la composition des deux : mêmes graines, même résultat qu'avant (un test le vérifie, sur une copie clonée de la partie comme celle que reçoit le worker).
+- **Un Web Worker** (`encounters.worker.ts`, empaqueté par Vite) fait les deux calculs ; le fil de l'interface ne fait qu'attendre la réponse (`encounterWorker.ts`, `computeEncounters`).
+- **Le réglage se prépare pendant le combat** : dès qu'une rencontre est choisie sur la carte (`openEncounter`, App.tsx), le worker règle le nœud suivant (`nextTuningKey` : le nœud + 1, cet adversaire exclu) et le garde ; au retour sur la carte, après la récompense, il ne reste que le danger à estimer (30 à 90 ms sous Node).
+- **En attendant** : à la place de chaque carte attendue (deux, ou une au boss), une carte vide de même taille avec une roue qui tourne par `transform` (le fil du compositeur), et « Un adversaire se prépare… » (« Le Colosse se prépare… » au boss).
+- **Sans worker** (tests sous jsdom, navigateur qui refuserait un worker de module) : l'ancien calcul d'un bloc, après l'affichage de la carte.
+
+**Mesuré** (Firefox sans interface, serveur de dev, la carte ouverte depuis l'écran titre sur une partie enregistrée sans rencontres, donc sans préparation : le pire cas ; plus long écart entre deux images) :
+
+| Nœud | Avant : plus long gel | Après : plus long gel | Cartes affichées après |
+|---|---|---|---|
+| Brokk, 1 | 237 ms | 44 ms | 0,53 → 0,57 s |
+| Ysolde, 5 | 407 ms | 21 ms | 0,69 → 0,66 s |
+| Brokk, 9 | 740 ms | 22 ms | 0,96 → 1,17 s |
+| Ysolde, 11 (boss) | 1 898 ms | 21 ms | 2,11 → 2,17 s |
+| Brokk, 11 (boss) | 1 818 ms | 39 ms | 2,02 → 2,08 s |
+
+Avec la version construite (`vite build`, `vite preview`) : plus long gel de 18 à 41 ms. Le gel restant (20 à 45 ms) est le rendu de la carte elle-même. Le temps avant les cartes ne change pas dans ce pire cas (le calcul est le même, ailleurs) ; en partie, le réglage est prêt avant la fin du combat et l'attente tombe au danger seul. Sous Node, par nœud : réglage de 0,11 à 0,72 s (2,1 s au boss), danger de 31 à 86 ms.
+
+**Non vérifié** : le chemin préparé de bout en bout dans le navigateur (il passerait par un combat joué ; vérifié par le test de la clé et du résultat identique) ; le comportement sur une machine lente, où un boss pourrait se régler plus lentement qu'un combat simulé (« Simuler ») : la roue tourne alors un peu plus longtemps, sans gel.
+
+### 18.11 Retour du 2026-10-30 : la profondeur de l'offre (option ACsD, agent OffreCode)
+
+Décision de l'utilisateur : « augmente l'offre de manière maligne ». L'option ACsD de l'étude ([PROFONDEUR_OFFRE.md](etudes/PROFONDEUR_OFFRE.md) § 5), trois règles pour tous, dans `drawReward` (`offers.ts`), la seule voie (joueur, champion de référence, adversaires, saison, arbre, R1) :
+
+1. **Fraîcheur** (`FRESH_WEIGHT = 3`) : une relique ou une compétence de Graver jamais montrée dans la partie pèse ×3. Une carte vue ou refusée garde son poids : elle peut toujours revenir. La mémoire est celle du build (`BuildState.seen`, `relic:<id>` et `skill:<id>`, `withSeen`) : enregistrée dans la partie (`CampaignRun.seen`, champ facultatif de `battler:campaign:v5` : une partie d'avant se relit, rien de vu) ; déduite des offres enregistrées en saison (`seenOf`) et dans l'arbre (les offres de ses victoires) ; suivie par `drawBuild`.
+2. **Paliers en poids (D27)**, lus sur les reliques déjà portées (`tierWeight`, en quarts pour rester entier) : babiole 4 ; forte 2 tant qu'il en porte moins de 2, puis 4 ; maîtresse 1 tant qu'il en porte moins de 3, puis 8. Une maîtresse peut sortir tôt, rarement. Le palier est `Relic.tier` ([RELIQUES.md](RELIQUES.md)). Toutes les cartes de relique se tirent désormais au poids (`drawOffer`), la première aussi à l'écho.
+3. **Offres riches** (`RICH_RANKS = [2, 4]`, rang dans sa sorte par `rankIn`) : la 2e et la 4e offre de chaque sorte montrent une carte de plus. Dans l'acte : victoires 3 et 7, Graver à 3 compétences (la 3e tirée au poids parmi les gravables restantes de ses maîtrises) ; victoires 4 et 8, 4 reliques. Dans l'arbre (reliques seules) : la 2e et la 4e relique gagnée. Écran : la carte Graver s'élargit à 760 px (`relic-card-split-wide`), le menu de reliques aligne quatre cartes de 300 px.
+
+**Mesures** (script jetable, 300 parties par départ, 20 départs, choix par défaut, registre du jour : 54 reliques ; contrôle O0 = l'offre d'avant rejouée sur ce registre) :
+
+| Mesure | O0 | ACsD |
+| --- | --- | --- |
+| Reliques vues par partie | 13,6 | **16,3** |
+| Compétences vues par partie | 7,1 | **9,2** |
+| Compétences jamais vues | 7,2 | **5,1** |
+| Graver qui redit une paire déjà montrée | 4,0 % | **0,5 %** |
+| Reliques revues d'une offre à la suivante | 0,59 | **0,33** |
+| 1re relique maîtresse prise | 2,6e | **3,7e** |
+
+Les réserves ont grandi pendant la mesure (nouvelles compétences et reliques des autres agents) : les chiffres ne se comparent pas à ceux de l'étude (13,0 → 15,8), seulement entre eux. Tests : `modules.test.ts`, « profondeur de l'offre ».
+
+**Non vérifié** : la force des builds et la difficulté (`npm run campaign`, `npm run ramp`, empreinte `balance.test.ts` : passe d'équilibre suivante) ; le losange « offre riche » sur la piste de l'acte (`ActTrack`, proposé par l'étude) n'est pas posé.

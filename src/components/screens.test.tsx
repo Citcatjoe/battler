@@ -351,8 +351,8 @@ describe('écrans', () => {
     // L'Aura d'épines (revue X1, 0.118.1) en est sortie : une aura n'a pas de label sous le dé. La Garde brisée (lot 3) y
     // entre : elle double le coup qui la consomme (label « Garde brisée ×2 » sous le dé du défenseur)
     // La Dîme (2026-10-27) y entre comme la Riposte : elle réagit au coup qui touche son porteur ; la Peau de crapaud aussi,
-    // une compétence à charges depuis la refonte des auras (2026-10-28)
-    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte', 'tithe', 'toadSkin'].sort())
+    // une compétence à charges depuis la refonte des auras (2026-10-28) ; l'Égide d'orage (2026-10-30), de même
+    expect(surcharges).toEqual(['bleed', 'bonusArmor', 'evasion', 'falseNote', 'firefly', 'grudge', 'guaranteedCrit', 'guardBreak', 'lifesteal', 'momentum', 'riposte', 'stormAegis', 'tithe', 'toadSkin'].sort())
     for (const id of STATUS_IDS) {
       const def = STATUSES[id]
       if (def.coinToss || def.extraStrikes || isAura(id)) expect(isSurcharge(id), def.name).toBe(false)
@@ -380,7 +380,7 @@ describe('écrans', () => {
     expect(spec('bonusArmor', 'defender', -6)).toBe('Armure temporaire −6 [skill minus]')
     expect(spec('riposte', 'defender', 3)).toBe('Riposte −3 [skill minus]')
     expect(statusSpecial('thorns', 'defender')).toBeUndefined()
-    expect(spec('falseNote', 'attacker', -10)).toBe('Fausse note −10 [skill minus]')
+    expect(spec('falseNote', 'attacker', -10)).toBe('Main tremblante −10 [skill minus]')
     // Le même statut change de signe avec son porteur ; une aura n'a jamais de label
     expect(statusSpecial('lifesteal', 'defender')?.sign).toBe('minus')
     expect(statusSpecial('powerAura', 'attacker', 2)).toBeUndefined()
@@ -416,7 +416,7 @@ describe('écrans', () => {
     const show = (list: typeof roll) => list.map((s) => `${s.label} ${s.sign}`)
     expect(show(roll)).toEqual(['Fer à quatre clous +4 plus'])
     expect(show(crit)).toEqual(['Critique assuré plus', 'Critique ×2 plus'])
-    expect(show(impact)).toEqual(['Luciole +2 plus', 'Armure temporaire −6 minus', 'Fausse note −10 minus'])
+    expect(show(impact)).toEqual(['Luciole +2 plus', 'Armure temporaire −6 minus', 'Main tremblante −10 minus'])
     // Esquive imposée : elle annule le reste du coup
     const dodged = attackSpecials({ ...base.attack, dodged: true, dodgeForced: true, dodgeBy: 'evasion', replaced: false, crit: false, critForced: false, relicBonus: undefined, modifiers: [], shields: [] })
     expect(show([...dodged.roll, ...dodged.crit, ...dodged.impact])).toEqual(['Esquive assurée minus'])
@@ -526,9 +526,9 @@ describe('écrans', () => {
 
   it('la fiche d’une compétence porte son aura ou son mécanisme', () => {
     const sheet = (id: string) => renderToString(<SkillsSection nav={{ go: noop }} focus={id} filter="" />).replace(/&#x27;/g, "'")
-    // Aura de sainteté : sa vie, sa montée (refonte des auras) et sa maîtrise
+    // Aura de sainteté : sa vie, son compteur (D11, regroupée : tous les deux tours) et sa maîtrise
     const holy = sheet('holy-aura')
-    for (const text of ["jusqu'à la fin du combat", 'elle monte de 1 tous les deux tours']) expect(holy).toContain(text)
+    for (const text of ["jusqu'à la fin du combat", 'Tous les deux tours']) expect(holy).toContain(text)
     expect(textOf(holy)).toContain('Aura · Lumière')
     // Rétribution : la règle de ses jauges, que sa description ne dit pas
     expect(sheet('retribution')).toContain('range ses dégâts dans une des 3 jauges')
@@ -554,8 +554,8 @@ describe('écrans', () => {
         expect(list, s.event.id).toContain(`mastery-${m}`)
       }
     }
-    // Plus de niveau Martiale / Adresse / Arcane
-    for (const word of ['Martiale', 'Adresse', 'Arcane']) expect(list).not.toContain(word)
+    // Plus de niveau Martiale / Adresse / Arcane (le mot entier : la maîtrise Arcanes, D29, n'en est pas un)
+    for (const word of [/Martiale/, /Adresse/, /Arcane(?!s)/]) expect(list).not.toMatch(word)
   })
 
   it('compendium (retour du 2026-10-30) : les auras d’abord, dans un cercle d’or ; les compétences ensuite, toutes au même octogone', () => {
@@ -700,8 +700,10 @@ describe('écrans', () => {
     const tree = renderToString(<BracketScreen tournament={t} onPlay={noop} onSimulate={noop} onChampion={noop} onNewTournament={noop} onMenu={noop} />)
     expect(tree.match(EMOJI)?.[0]).toBeUndefined()
     // Aperçu du build sur chaque carte : le dé en miniature de chaque participant (30 lignes remplies), et les reliques
-    // qu'il porte à ce match (le champion, celles gagnées en chemin)
-    expect(tree.match(/aria-label="Dé de /g)).toHaveLength(30)
+    // qu'il porte à ce match (le champion, celles gagnées en chemin). Le sceau du Dé de joueur (relique, D9) porte aussi un
+    // « Dé de » : il ne compte pas
+    const dice = [...tree.matchAll(/aria-label="(Dé de [^"]+)"/g)].filter(([, label]) => !RELICS.some((r) => r.name === label))
+    expect(dice).toHaveLength(30)
     expect(tree).toContain('data-size="xs"')
     for (const id of championRun(t)!.relics) expect(tree).toContain(`aria-label="${getRelic(id).name}"`)
     const run = championRun(t)!
@@ -740,7 +742,9 @@ describe('écrans', () => {
 
   it('rapport de combat (écran de victoire) et rapport de saison : reliques déclenchées, faces jouées', () => {
     const holder = createCharacter('brokk').withRelics(RELICS)
-    const fight = simulateCombat([holder, createCharacter('fanchon')], { seed: 5 })
+    // Un combat où la barde frappe de son Écho (des dés de frappe) : la graine change avec les règles, on la cherche
+    const fights = Array.from({ length: 20 }, (_, k) => simulateCombat([holder, createCharacter('fanchon')], { seed: 5 + k }))
+    const fight = fights.find((f) => f.beats.some((b) => b.type === 'attack' && b.attack.plain && b.attack.attacker === 1))!
     const end = renderToString(<EndScreen result={fight} onReplay={noop} onMenu={noop} />)
     expect(end).toContain('aria-label="Rapport de combat"')
     expect(end).toContain('aria-label="Déclenchements des reliques"')

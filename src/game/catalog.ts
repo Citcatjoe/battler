@@ -37,7 +37,7 @@ export interface StatusEntry {
   inGame: boolean
 }
 
-/** Les effets que les crochets d'un statut produisent (effets de tour, réactions), sondés sur une charge. */
+/** Les effets que les crochets d'un statut produisent (effets de tour, réactions, seuil), sondés sur une charge. */
 function hookEffects(id: StatusId): Effect[] {
   const def = STATUSES[id]
   const probe = { id, stacks: 1 }
@@ -45,6 +45,10 @@ function hookEffects(id: StatusId): Effect[] {
     ...(def.onTurnStart?.(probe) ?? []),
     ...(def.onTurnEnd?.(probe) ?? []),
     ...Object.values(def.reactions ?? {}).flatMap((react) => react?.(probe) ?? []),
+    // Un compteur pose ce que lâche son seuil ; une aura regroupée (D11), ce que lâche celui de son compteur (l'Aura de
+    // décoction → Poison)
+    ...(def.threshold?.effects(probe) ?? []),
+    ...((def.tally && STATUSES[def.tally].threshold?.effects({ id: def.tally, stacks: 1 })) ?? []),
   ]
 }
 

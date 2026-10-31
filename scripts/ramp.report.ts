@@ -25,7 +25,7 @@ import { hashSeed } from '../src/game/analysis'
 import { Character, type CharacterDef } from '../src/game/character'
 import { rollFace } from '../src/game/events'
 import { forgeState, withForgeStep, type ForgeBase, type ForgeStep } from '../src/game/forge'
-import { drawReward, forgesLeftIn, REWARDS, type PendingReward } from '../src/game/offers'
+import { drawReward, forgesLeftIn, rankIn, REWARDS, withSeen, type PendingReward } from '../src/game/offers'
 import { getRelic } from '../src/game/relics'
 import { seededRng } from '../src/game/rng'
 import { ALL_SKILLS, CHARACTER_IDS, createCharacter } from '../src/game/roster'
@@ -84,8 +84,10 @@ function actOf(id: string, seed: number, v: number): { states: BuildState[]; rew
   const relics: string[] = []
   const states: BuildState[] = [{ forge, relics: [] }]
   const rewards: PendingReward[] = []
+  let seen: string[] = []
   for (const [index, kind] of REWARDS.entries()) {
-    const reward = drawReward({ championId: id, forge, relics }, kind, rng, forgesLeftIn(REWARDS, index))
+    const reward = drawReward({ championId: id, forge, relics, seen }, kind, rng, forgesLeftIn(REWARDS, index), rankIn(REWARDS, index))
+    seen = withSeen(seen, reward)
     rewards.push(reward)
     if (reward.kind === 'forge' && reward.choice) forge = withForgeStep(def, forge, reward.choice)
     if (reward.kind === 'relic' && reward.choice) relics.push(reward.choice)

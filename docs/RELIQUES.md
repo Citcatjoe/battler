@@ -756,3 +756,86 @@ Une règle de défense ou un bonus de règle n'est pas un moteur de build ([REFO
 | Pointe de paratonnerre | `lightning-rod` | Chacun de ses éclairs fait +1, tout le combat | +5,1 | Thaldrin +16,3 |
 
 Les moyennes comptent tout le roster, dont les porteurs qui ne nourrissent pas la relique (de +2 à +5 : les PV de récompense) ; l'offre ne propose la Chaîne qu'à qui pose des malus et la Pointe qu'à qui lance des éclairs (`relicNeeds` lit ce qu'attend le statut posé). L'Aura d'immunité donnait aussi +1 armure : l'Ampoule ne garde que l'immunité, la relique la plus faible des trois, au bas de la bande. Icônes peintes : `blessed-phial`, `gaoler-chain`, `lightning-rod`. Rapport : `logs/relics/2026-10-28-16-22-09_v0.128.0.md`.
+
+## 19. Retour du 30 octobre (D9, D11, D24, D26, D27, D28, profondeur de l'offre)
+
+Mesures : `npm run relics`, **200 combats par duel**, contre le roster nu, sur la 0.133.0 pendant que d'autres agents changeaient le roster (rapport `logs/relics/2026-10-30-15-37-52_v0.133.0.md`, remesures ciblées après réglage). « Construit » : mesure de `docs/etudes/DES_SUPPLEMENTAIRES.md` § 6 quand elle existe (laboratoire, non refaite). Une relique qui ne fait rien vaut +3,5 à +4 (les PV de récompense).
+
+**Le palier** (D27, `Relic.tier`, requis par `validateRelics`, lu par l'offre : `tierWeight`, `offers.ts`) : `trinket` (babiole : une stat ou un petit moment), `strong` (forte : au-delà de +14 pour tous), `master` (maîtresse : faible seule, forte chez son hôte). Classement de départ : `CONTENU_RETOUR_30.md` § 1.3.
+
+**Règles moteur nouvelles** (RESOLUTION § 13) : déclencheurs de relique `startAura` (Clairon) et `bareFace` (Dé de joueur) ; moment `critHurt` (critique reçu) ; statut `sealedFace` ; le Saignement et la face scellée rejoignent les afflictions de source (`SOURCE_AFFLICTIONS`, exception à la règle 7) ; une relique qui reposerait un statut tel quel ne part pas.
+
+### 19.1 Modifiées
+
+| Relique | Avant → après | Apport avant → après | Plus fort |
+| --- | --- | --- | --- |
+| Braise captive (D24) | « 3 × 2 au 4e tour, une fois » → « L'adversaire perd 2 PV deux fois (chaque fois +1 par charge de Brûlure qu'il porte), tous les 4 tours » | +15,0 (v0.128) → +13,4 | Brokk +16,2 ; Thaldrin 54,3 → 70,1 % |
+| Géode fendue (D28) | +4 armure tmp, 2x → +2, recharge 3 | +17,8 → +12,3 | Brokk +16,0 (à +3 : +16,6, Brokk +21,9) |
+| Onguent du rebouteux (D28) | +3 PV, 2x → +2 PV, recharge 3 | +14,4 → +12,2 | Brokk +15,9 |
+| Conque des vents (D28) | deux fois par combat → « L'attaquant perd 2 PV trois fois lors d'une esquive, au plus une fois tous les 3 tours » | +10,5 → +9,9 | Elaria +15,9 |
+| Pointe de paratonnerre (D11) | éclairs +1 → +2 | +4,6 → +5,1 | Thaldrin +11,8 → +16,9 |
+| Chaîne du geôlier (D11) | +1 par malus → +2 | +5,6 → +7,4 | Ervald +11,1 → +17,8 |
+| Encens de l'abbaye (D11) | +1 Ferveur → « +2 Ferveur (son prochain coup qui touche fait +2 dégâts) à chaque soin reçu » | +5,3 | Ysolde +12,0 |
+| Gantelet du talion (D11) | +1 PV → +2 | +3,9 | Aldric +5,2 (rare : un renvoi) |
+| Collier de ronces | Aura d'épines 2 → 1 (non cumulable, D13) | +7,5 | Ysolde +9,2 |
+
+Textes (D11, formulations finales de la 0.134.0) : une seule charge se dit sans « +1 » (« Critique assuré (…) »), « une fois » au lieu de « 1x », « deux fois » / « trois fois » en lettres ; la ressource posée prend sa majuscule et se place devant son nombre (« Poison 2 », « Brûlure 2 », « Saignement 2 » ; « +2 Ferveur ») ; le rythme se sépare de l'effet par une virgule (« +3 PV, tous les 4 tours »). Dard de guêpe et Briquet d'amadou : « Poison 2 à l'adversaire sur un 6 », « Brûlure 2 à l'adversaire sur un 6 ». **Non faits, signalés** : Cotte du mercenaire (+1 armure), Gambison (−1 attaque), Contrepoids (+1 multiplicateur) gardent un « 1 » : regroupés (+2 armure et −10 % d'esquive ; +25 PV et −2), ils sortent de la bande (Cotte +23,3, Morgrut +33,4 ; Gambison Elaria −22,7, Naraxes +23,3). À trancher par l'utilisateur.
+
+### 19.2 Nouvelles
+
+| Relique (id) | Règle | Palier | Nu : moyenne (plus fort) | Construit (étude) | Ce qu'elle comble |
+| --- | --- | --- | --- | --- | --- |
+| Clairon du héraut (`herald-clarion`) | « Pose son aura de départ dès le début de son 1er tour (au lieu du 3e au plus tard) » | forte | +13,4 (Brokk +19,9) | +9,7 | D9 / R58, l'aura d'entrée |
+| Cachet du greffier (`clerk-seal`) | « Scelle la face du dernier jet de l'adversaire pendant 3 tours (un jet sur sa face scellée ne lance pas sa compétence : le coup de base seul), tous les 3 tours » | babiole | +5,3 (Brokk +6,4) | +6,9 | D9 / R57, le dé adverse |
+| Dé de joueur (`gambler-die`) | « Relance son dé quand il tombe sur une face sans compétence, au plus une fois tous les 2 tours » | babiole | +12,8 (Ysolde +16,4) ; recharge 1 : +16,6 (Ysolde +22,1) | +5,0 (s'éteint quand le dé se remplit) | D9 / R57, son propre dé |
+| Torque du berserker (`berserker-torc`) | « +5 Ferveur (son prochain coup qui touche fait +5 dégâts) lors d'un critique reçu » | babiole | +12,5 (Morgrut +15,5) | +8,7 | D9 / R59, la rage ; la Rage montante est une compétence (agent Competences) |
+| Hameçon rouillé (`rusty-hook`) | « Saignement 2 à l'adversaire sur un 6 » | babiole | +10,0 (Brokk +12,9) | — | Sang : la source qui manquait (Croc, Curée, Sangsue) |
+| Mortier d'apothicaire (`apothecary-mortar`) | « Double le Poison de l'adversaire, puis +2, à partir du 5e tour, au début de son tour si l'adversaire est empoisonné, au plus une fois tous les 5 tours » : guet à chaque début de tour dès le 5e, part au premier où l'adversaire est empoisonné, puis recharge 5 (pas un rythme fixe) | maîtresse | +6,3 (Ervald +20,2, Naraxes +13,7) | — | Poison : l'amplificateur |
+| Corne de bélier (`ram-horn`) | « +5 Ferveur (son prochain coup qui touche fait +5 dégâts) lors d'un coup critique » | maîtresse | +10,1 (Ervald +15,7) | — | Fureur : le critique nourrit le gros coup |
+| Calice noir (`black-chalice`) | « Vol de vie (son prochain coup qui touche lui rend les PV qu'il retire) lors d'un coup critique, au plus une fois tous les 4 tours » | maîtresse | +8,8 (Ervald +13,5) | — | Ombre : le vol de vie |
+| Cierge de l'exorciste (`exorcist-taper`) | « L'adversaire perd 3 PV à chaque soin reçu, au plus une fois tous les 3 tours » | maîtresse | +5,6 (Ysolde +12,3, Fanchon +9,8) | — | Lumière : le soin qui frappe (R27) |
+| Pierre de tonnerre (`thunder-stone`) | « L'adversaire perd 2 PV deux fois, au début de son tour si l'adversaire brûle, au plus une fois tous les 3 tours » : guet à chaque début de tour, part au premier où l'adversaire brûle, puis recharge 3 (pas un rythme fixe) | maîtresse | +4,1 (Thaldrin +7,2 ; parti du Brasier, étude +17,7) | — | Arcanes : le feu appelle la foudre |
+| Focale (`focal-lens`) | « Chaque éclair, flamme, rayon ou lame d'air qu'il lance fait +2, pendant 2 tours, au 1er tour, puis tous les 4 tours » : pose le statut Focale (`spellFocus`), +2 à chaque impact magique sur l'adversaire (compétence, aura ou relique ; pas la Brûlure) pendant 2 tours | maîtresse | +6,4 (Fanchon +15,2, Thaldrin +14,9) | — | Arcanes transverse (+1 permanent dans l'étude, ici +2 par intermittence pour D11) |
+| Tison ardent (`ember-brand`) | « Brûlure 2 à l'adversaire lors d'un coup critique » | babiole | +8,4 (Ervald +11,7) | — | 2e source de Brûlure : ouvre Soufflet, Embrasement, Pierre de tonnerre |
+| Fiel de vipère (`viper-gall`) | « Poison 2 à l'attaquant lors d'un coup reçu, au plus une fois tous les 4 tours » | babiole | +14,8 (Ervald +18,2) | — | source de Poison des défenseurs (Fiole, Mortier, Virulence) |
+| Fil barbelé (`barbed-wire`) | « Saignement 2 à l'attaquant lors d'un coup reçu, au plus une fois tous les 4 tours » | babiole | +14,5 (Brokk +19,8) | — | source de Saignement des défenseurs (Croc, Coupe) |
+| Gourde du pèlerin (`pilgrim-gourd`) | « +3 PV, tous les 4 tours » (au 4e, puis tous les 4) | babiole | +10,6 (Brokk +13,3) | — | un soin qui revient : nourrit Encens, Cierge, Sentence |
+| Cape de brume (`mist-cloak`) | « +3 Ferveur (son prochain coup qui touche fait +3 dégâts) lors d'une esquive » | maîtresse | +7,6 (Elaria +11,6) | — | l'esquive qui frappe (Elaria, Naraxes) |
+| Coupe de l'écorcheur (`flayer-cup`) | « +2 PV lors d'un coup qui touche si l'adversaire saigne, au plus une fois tous les 2 tours » | maîtresse | +4,8 (Brokk +14,4) | — | Sang : le soin du saignement |
+
+Toutes dans la bande d'une relique chez leurs hôtes (5 à 15, 20 au plus) ; les moyennes basses (Pierre, Cierge, Coupe, Mortier) sont celles de maîtresses qui ne valent rien hors de leur build, ce que `relicNeeds` règle à l'offre. Écartés : Dé de joueur recharge 1 (Ysolde +22,1), Géode +3 recharge 3 (Brokk +21,9), Fiel et Fil en recharge 3 (Ervald +20,6, Brokk +23,2), Gourde tous les 3 (Brokk +20,6).
+
+**Non mesuré** : la valeur construite des reliques nouvelles hors D9 (`npm run ramp`), l'effet sur la campagne (`npm run campaign`), l'équilibre global (agent Equilibre). Icônes provisoires (initiale dorée de `RelicIcon`), à peindre. Rien vu à l'écran : la Braise captive ne fait plus tomber que deux météores (`emberRain`, deux impacts).
+
+### 19.3 Passe d'équilibre du 31 octobre (agent Equilibre)
+
+Aucune relique ne change. Remesure après la vague entière : `npm run relics` (400 par duel, `logs/relics/2026-10-31-14-20-17_v0.133.0.md`) et valeur construite chez les porteurs réels (`npm run ramp`, `logs/ramp/2026-10-31-14-14-59_v0.133.0.md`, moyenne pondérée des builds qui la prennent).
+
+| Relique | Nu : moyenne (plus fort) | Construit : moyenne (plus fort) |
+| --- | --- | --- |
+| Clairon du héraut | +13,6 (Brokk +20,1, au bord) | +10,9 (Brokk +17,1) |
+| Cachet du greffier | +5,3 | +6,3 |
+| Dé de joueur | +12,7 (Ysolde +16,9) | **+4,2** (le dé se remplit de compétences) |
+| Torque du berserker | +12,5 | +8,0 |
+| Hameçon rouillé | +10,1 | +7,4 |
+| Mortier d'apothicaire | +6,3 (Ervald +20,0) | +6,9 |
+| Corne de bélier | +10,2 | +9,1 |
+| Calice noir | +8,8 | +6,6 |
+| Cierge de l'exorciste | +5,7 | +6,9 |
+| Pierre de tonnerre | +4,1 | +8,4 |
+| Focale | +6,4 (Thaldrin +16,1) | **+4,2** |
+| Tison ardent | +8,3 | +6,9 |
+| Fiel de vipère | **+15,0** (Ervald +17,6), au bord | +9,5 |
+| Fil barbelé | +14,7 (Brokk +20,0, au bord) | +10,7 |
+| Gourde du pèlerin | +10,7 | +7,3 |
+| Cape de brume | +7,8 | +6,1 |
+| Coupe de l'écorcheur | +4,8 | +6,9 |
+| Braise captive | +13,6 | +9,3 (Thaldrin +15,4) |
+| Géode fendue / Onguent / Conque | +12,5 / +12,4 / +10,0 | +7,3 / +8,4 / +7,5 |
+
+Toutes dans la bande (5 à 15, 20 au plus) chez leurs hôtes ; Dé de joueur et Focale tombent sous 5 en construit, leur rôle (un dé encore nu, des sorts) passe vite.
+
+**Les trois « 1 » restants, propositions mesurées** (contre le roster nu, 400 par duel, mêmes graines ; à trancher par l'utilisateur) :
+- **Cotte du mercenaire** (+1 armure, −5 % d'esquive : +12,4, Morgrut +19,4). **+2 armure, −10 % d'esquive, −8 PV max : +8,9** (Elaria −0,8, Morgrut +18,9). Écartés : +2 armure, −10 % d'esquive, −10 % de critique, +15,1 (Morgrut +32,7) ; +2 armure, −2 à l'attaque, −3,4 (Elaria −30,2).
+- **Gambison matelassé** (+15 PV, −1 à l'attaque : +12,3, Elaria −1,0, Naraxes +20,2). **+8 PV max, −5 % d'esquive : +13,0** (Elaria +7,6, Morgrut +20,6) ; +6 PV seuls : +14,5 (Brokk +17,6), sans contrepartie. Écartés : +15 PV −5 % de critique, +23,7 ; +12 PV −5 % d'esquive, +19,5 ; +20 PV −2 à l'attaque, −0,1 (Elaria −27,9) ; +10 PV −10 % de critique, +12,3 (Morgrut +23,9).
+- **Contrepoids de plomb** (+1 au multiplicateur de critique, −4 % : +6,8). +2 au multiplicateur, −10 % de critique : +1,6 (Gorak −6,9). Le pas du multiplicateur est 1 : proposition, le dire en valeur atteinte (« ses critiques ×3 au lieu de ×2 »), le porteur connu à l'écran de la relique.

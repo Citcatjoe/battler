@@ -140,7 +140,9 @@ const gorak: CharacterDef = {
   // d6 imprimé (règles v2, phase 5, 0.105.0) : Pourfendre sur le 1, Furie des vents sur le 2. Mesuré : 50,0 %.
   // Attaque (phase 5 bis, 0.106.0) : voir docs/PERSONNAGES.md pour la mesure avant → après.
   // Un seul modèle (0.113.0, règle de l'utilisateur) : la signature sur le 1, Pourfendre sur le 2, en tournoi comme en campagne.
-  stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.05, critChance: 0.14, critMultiplier: 2 },
+  // Passe d'équilibre du 2026-10-31 : critique 14 → 16 % (ses deux auras vivent du critique) : départs Ivresse 42,6 → 46,7 %,
+  // Élan 40,8 → 43,5 % (sous 42 avant) ; Morgrut Cuir épais contre lui 65,8 → 60,0 % (400 par duel) ; construit 48,8 → 52,1
+  stats: { maxHp: 57, attackMin: 5, attackMax: 6, armor: 0, dodgeChance: 0.05, critChance: 0.16, critMultiplier: 2 },
   // Premier personnage à postures (0.40.0, docs/POSTURES.md). La toile commune est plus haute que la garde
   // seule (la garde en occupe 84 %, avec 13 % de vide au-dessus de la tête) : scale 1,18 pour sa taille 1,08.
   look: {
@@ -156,7 +158,7 @@ const gorak: CharacterDef = {
     tagline: 'Le roc des fosses de Kar-Dush.',
     background:
       "Sept saisons invaincu dans les fosses de combat de Kar-Dush. Gorak frappe sans finesse mais encaisse tout, et l'on dit qu'un coup manqué ne fait que l'énerver davantage.",
-    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (14 %)', "Aura d'ivresse : chaque critique, deux coups de plus"],
+    strengths: ['Furie des vents : deux coups tout de suite', 'Critiques fréquents pour un orc (16 %)', "Aura d'ivresse : chaque critique, deux coups de plus"],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Brutal mais prévisible'],
   },
   // Maîtrises (retour du 2026-10-27, docs/MAITRISES.md § 5 et § 7) : sur le 1, son aura de départ (l'Ivresse du sang par
@@ -183,7 +185,8 @@ const elaria: CharacterDef = {
   // d'aigle ses meilleures reliques : construite 60,6 → 57,7 % (`npm run ramp`), vanilla 51,9 → 47,0 % (400 par duel)
   // Troisième retour du 2026-10-27 (C5) : esquive 22 → 24 % (vanilla 44,8 → 48,2 %, pire duel Ysolde contre elle 64,8 →
   // 61,5 % ; 400 combats par duel). Mesures : docs/PERSONNAGES.md, Elaria
-  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.24, critChance: 0.17, critMultiplier: 2.2 },
+  // Retour du 30 octobre (D12) : critique 17 → 15 % (vanilla 55,1 → 52,8 % au laboratoire, pire duel Gorak 62,3 → 61,3)
+  stats: { maxHp: 53, attackMin: 4, attackMax: 5, armor: 0, dodgeChance: 0.24, critChance: 0.15, critMultiplier: 2.2 },
   // Postures (atelier des postures, 2026-10-20). L'arc dépasse de la tête : la taille se règle sur le
   // corps (capuche-pieds, 77 % de la toile), le reste compte dans `headroom` (comme Aldric et Ysolde)
   look: {
@@ -202,7 +205,7 @@ const elaria: CharacterDef = {
     tagline: 'Un souffle, une flèche.',
     background:
       "Éclaireuse des marches de Lithmeren, Elaria chasse à la lueur de la lune et n'est jamais là où l'ennemi frappe. Chaque tir manqué lui sert à mieux ajuster le suivant.",
-    strengths: ['Meilleure esquive (24 %)', 'Critiques fréquents (17 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
+    strengths: ['Meilleure esquive (24 %)', 'Critiques fréquents (15 %, ×2,2)', 'Œil de faucon : son 2 est critique'],
     weaknesses: ['PV modestes (53)', 'Attaque légère', "Peine face aux boucliers et à l'intimidation"],
   },
   // Maîtrises : la Feinte sur le 1 par défaut, l'Œil de faucon sur le 2 ; l'Esquive améliorée quitte son dé pour la réserve.
@@ -280,7 +283,7 @@ const ervald: CharacterDef = {
     tagline: 'La mort l’a rendu, pas pardonné.',
     background:
       "Ancien capitaine de la garde d'Ostremort, Ervald est tombé en défendant la cité, puis s'est relevé sous son étendard pourpre. Il ne fatigue jamais, et son souffle glacé ronge lentement ceux qui l'affrontent.",
-    strengths: ['Vol de vie : son coup le soigne', 'Aura de poison : un poison sans fin', 'Critiques fréquents (28 %)'],
+    strengths: ['Vol de vie : son coup le soigne', 'Aura de poison : Poison 2 à chaque tour', 'Critiques fréquents (28 %)'],
     weaknesses: ["N'esquive presque jamais", 'Aucune armure', 'Dégâts lents à venir'],
   },
   // Maîtrises : dé inchangé, l'Aura de poison sur le 1 par défaut, le Vol de vie sur le 2
@@ -458,9 +461,10 @@ const morgrut: CharacterDef = {
   },
   // Maîtrises : la Fureur et le Rempart ; l'Aura de puissance sur le 1 par défaut. Refonte des auras (2026-10-28, Q7,
   // docs/REFONTE_AURAS.md § 5.7) : l'Assaut sur le 2 (il tape, plus fort), le Crescendo retourne dans la réserve de la
-  // Fureur ; deux gravures au plus ensuite (quatrième demande)
+  // Fureur ; deux gravures au plus ensuite (quatrième demande). Décision D19 (2026-10-30) : sa seconde aura, le Cuir épais
+  // (Rempart, celle qui tient) au lieu de la Rancœur (qui disait comme la Puissance « il frappe plus fort »)
   masteries: ['fury', 'bulwark'],
-  auras: ['power-aura', 'rancor'],
+  auras: ['power-aura', 'thick-hide'],
   signature: 'assault',
   skillFaces: 4,
   events: startDie('power-aura', 'assault'),
@@ -524,14 +528,15 @@ const thaldrin: CharacterDef = {
     tagline: 'La forêt a deux visages.',
     background:
       "Gardien des chênes anciens, Thaldrin appelle la foudre et le feu sous sa forme d'homme, puis devient l'ours qui frappe et déchire. Un tour sur deux, l'un ou l'autre.",
-    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', "Aura d'orage : la foudre à chaque tour"],
+    strengths: ['Feux follets : une Brûlure qui dure', 'L’ours frappe fort (+3)', "Aura d'orage : trois éclairs tous les trois tours"],
     weaknesses: ['Aucun soin ni armure', 'Ses sorts, sous forme d’homme seulement', 'Forme imposée à chaque tour'],
   },
   // 0.73.0 (SORTS.md § 18, choix de l'utilisateur) : l'homme lance des sorts, l'ours frappe. Phase 5 bis : l'homme frappe
   // aussi, d'un petit coup de base. Remplace Fleur de vie, Écorce épaisse, Charge, Coup de griffe et ses deux auras.
   // Maîtrises : le Ciel d'orage sur le 1 par défaut, les Feux follets sur le 2 (sa signature, décision de l'utilisateur du
-  // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour la réserve. L'Orage est la Magie depuis B1
-  masteries: ['magic', 'poison'],
+  // 2026-10-24), sous forme humaine ; la Foudre quitte son dé pour la réserve. L'Orage est la Magie depuis B1. Décision D21
+  // (2026-10-30) : la Fureur au lieu du Poison (l'homme appelle l'orage, l'ours frappe) ; le Brasier reste sa seconde aura
+  masteries: ['magic', 'fury'],
   auras: ['storm-sky', 'brasier'],
   signature: 'firefly',
   events: startDie('storm-sky', 'firefly', 'human'),
@@ -588,7 +593,7 @@ const fanchon: CharacterDef = {
     tagline: 'Une chanson, deux coups, aucune fausse note. Sauf chez vous.',
     background:
       "Fanchon a appris l'escrime entre deux couplets, sur les tréteaux des foires. Quand la foule reprend le refrain, elle frappe deux fois d'affilée ; sa chanson porte ses coups, et son solo les fait trembler.",
-    strengths: ['Duo : un coup de plus, tout de suite', 'Aura de ballade : chaque coup la soigne', 'Esquive (18 %) et critique (15 %)'],
+    strengths: ['Écho : un coup de plus, tout de suite', 'Aura de ballade : un refrain toutes les quatre touches', 'Esquive (18 %) et critique (15 %)'],
     weaknesses: ['Peu de PV (46)', 'Aucune armure', 'Gros coups rares'],
   },
   // Maîtrises (P7) : la Ballade sur le 1 par défaut, le Duo sur le 2 (son identité) ; le Soliste quitte son dé pour la

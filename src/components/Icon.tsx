@@ -84,6 +84,8 @@ export type IconName =
   | 'state-poison'
   | 'state-bleed'
   | 'state-burn'
+  // D17 (2026-10-30, planche v34) : En faute, la balance qui penche
+  | 'state-condemned'
   // et les pastilles de déclencheur (EMBLEMES § 5)
   | 'badge-strike'
   | 'badge-hurt'
@@ -145,7 +147,8 @@ export type IconName =
   | 'grip'
   | 'pilfer'
   | 'shockwave'
-  // Les emblèmes des huit maîtrises (docs/MAITRISES.md « Huit maîtrises » ; la Magie reprend l'emblème de l'Orage en attendant le sien)
+  // Les emblèmes des huit maîtrises (docs/MAITRISES.md « Huit maîtrises ») ; les Arcanes (`mastery-magic`, la Magie
+  // renommée le 2026-10-30, D29) : le sceau runique violet de la planche v34, ni foudre ni feu
   | 'mastery-fury'
   | 'mastery-blood'
   | 'mastery-bulwark'
@@ -162,6 +165,12 @@ export type IconName =
   | 'shield-coin'
   | 'volley-coin'
   | 'hex-coin'
+  // Décisions du 2026-10-30 (planche v34) : les compétences, auras et statuts nouveaux ou renommés
+  | 'storm-aegis'
+  | 'grace'
+  | 'coated-blade'
+  | 'rising-rage'
+  | 'thick-hide'
 
 /**
  * Icône peinte propre à chaque statut : celle de la compétence ou de l'aura qui le porte. Une compétence qui pose
@@ -246,6 +255,11 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   harvest: 'harvest',
   toadSkin: 'toad-skin',
   verdigrisCoin: 'verdigris-coin',
+  // Décisions du 2026-10-30 (planche v34) : la compétence et son statut partagent l'icône
+  stormAegis: 'storm-aegis',
+  grace: 'grace',
+  coatedBlade: 'coated-blade',
+  risingRage: 'rising-rage',
   // Refonte des auras (tranche 6) : les trois pièces de la Chance ; la Rafale de pile, l'icône de sa pièce
   shieldCoin: 'shield-coin',
   volleyCoin: 'volley-coin',
@@ -260,6 +274,15 @@ export const STATUS_ICON: Partial<Record<StatusId, IconName>> = {
   judgement: 'judgement',
   fault: 'fault',
   brasier: 'brasier',
+  // Décisions D11, D19, D20 du 2026-10-30 : les compteurs prennent l'icône de leur aura (l'anneau de l'aura les montre) ;
+  // le Cuir épais, la sienne (planche v34)
+  stormCloud: 'storm-sky',
+  holyVigil: 'holy-aura',
+  decoctionDose: 'decoction-aura',
+  emberHeap: 'brasier',
+  thickHide: 'thick-hide',
+  // D13 (2026-10-30) : les épines plantées, l'icône de leur aura (l'anneau de l'aura montre le Saignement à venir)
+  thornSpike: 'thorns',
 }
 
 /**
@@ -288,6 +311,8 @@ export const STATE_ICON: Partial<Record<StateId, IconName>> = {
   poison: 'state-poison',
   bleed: 'state-bleed',
   burn: 'state-burn',
+  // D17 (2026-10-30, planche v34) : En faute, la balance qui penche
+  condemned: 'state-condemned',
 }
 
 /** La pastille de chaque moment (EMBLEMES § 5), posée sur le bord haut gauche du médaillon. */

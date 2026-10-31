@@ -3,7 +3,7 @@ import { skillCatalog, statusCatalog } from './catalog'
 import { ARENAS, getArena, HOME_ARENAS, RANDOM_ARENA, resolveArena, TRAINING_ARENA } from './arenas'
 import { attacksOf, finalState, simulateCombat, type AppliedEffect, type CombatResult } from './combat'
 import { cueOf, FAMILY_CUES } from './cues'
-import { describeEffect, describeEvent, describeSkill, faceTrigger, rollFace, TRIGGERS, type Effect } from './events'
+import { describeEffect, describeEvent, describeSkill, faceTrigger, isSpell, rollFace, TRIGGERS, type Effect } from './events'
 import { getHistory, normalize, recordMatch, recordTournamentWin, clearHistory } from './history'
 import { attackLog, coinLog, effectBadge, effectText, eventLog, statusAgeLog, statusReactionLog, statusTickLog } from './narration'
 import { chance, pickWeighted, rollDie, seededRng, shuffle } from './rng'
@@ -38,6 +38,7 @@ import {
   loadCampaignChoices,
   loadHeritage,
   loadRun,
+  nextTuningKey,
   recordHeritage,
   referenceChampions,
   rewardChoice,
@@ -46,14 +47,18 @@ import {
   saveRun,
   startAurasOf,
   startRun,
+  tunedEncounters,
+  tuningKeyOf,
+  withDanger,
   withFightResult,
   withReward,
   type Encounter,
   type HeritageItem,
 } from './campaign'
-import { characterPool, masteryOfSkill, poolOf } from './masteries'
-import { skillById } from './skills'
-import { drawReward, forgesLeftIn, MAX_SKILL_FACES, offerableRelics, offerableSkills, REWARDS } from './offers'
+import { characterPool, MASTERIES, masteryOfSkill, poolOf } from './masteries'
+import { MASTERY_SKILLS, skillById } from './skills'
+import { RULES } from './rules'
+import { drawReward, forgesLeftIn, MAX_SKILL_FACES, offerableRelics, offerableSkills, rankIn, REWARDS, RICH_RANKS, tierWeight, withSeen } from './offers'
 import { STATUS_IDS, statusCounter, type StatusId } from './statuses'
 import {
   allMatches,
@@ -137,10 +142,33 @@ describe('catalogue des compétences', () => {
     expect(morgrut.filter((s) => s.outside).map((s) => s.event.id)).toEqual(expect.arrayContaining(['guard-break', 'grudge', 'stunning-blow']))
   })
 
-  it('chaque compétence déclare sa nature (un maléfice arcane est un sort ; elle ne colore plus rien depuis le 2026-10-30)', () => {
+  it('chaque compétence déclare sa nature (une compétence arcane est un sort ; elle ne colore plus rien depuis le 2026-10-30)', () => {
     const skills = skillCatalog()
     expect(skills.filter((s) => !s.event.nature).map((s) => s.event.id)).toEqual([])
     expect(skills.find((s) => s.event.id === 'cleave')!.event.nature).toBe('martial')
+  })
+
+  it('le mot-clé « sort » (D29, 2026-10-30) : toute compétence arcane, de toutes les maîtrises ; sa pastille en tête, qui cite la règle « Sorts »', () => {
+    const all = [...ENGRAVABLE_SKILLS, ...CHARACTERS.flatMap((c) => c.events)]
+    for (const e of all) {
+      const { tags } = describeSkill(e)
+      expect(tags.some((t) => t.label === 'sort'), e.id).toBe(isSpell(e))
+      if (isSpell(e)) expect(tags[0], e.id).toEqual({ label: 'sort', rule: 'spell' })
+      // Un sort offensif (posture d'incantation) est un sort ; une compétence qui blesse par la magie, ou qui pose sur
+      // l'adversaire un statut qui ronge par la magie (la Brûlure), aussi
+      if (castsSpell(e)) expect(isSpell(e), e.id).toBe(true)
+      const magic = (s: StatusId) => Object.values(DAMAGE_SOURCES).some((d) => d.status === s && d.magical)
+      if (e.effects.some((x) => x.type === 'applyStatus' && x.target === 'opponent' && magic(x.status))) expect(isSpell(e), e.id).toBe(true)
+    }
+    // Il traverse les maîtrises : des sorts ailleurs que dans les Arcanes, et toutes les Arcanes en sont
+    const spells = new Set(all.filter(isSpell).map((e) => masteryOfSkill(e.id)))
+    for (const m of ['magic', 'light', 'shadow', 'poison', 'chance'] as const) expect(spells.has(m), m).toBe(true)
+    for (const e of MASTERY_SKILLS.magic) expect(isSpell(e), e.id).toBe(true)
+    for (const id of ['thunderbolt', 'firefly', 'ballad', 'duo', 'prayer', 'whistle', 'false-note', 'fear']) expect(isSpell(skillById(id)), id).toBe(true)
+    // Les coups et les gestes n'en sont pas, la Rétribution comprise (martiale depuis D29 : des coups blancs)
+    for (const id of ['cleave', 'riposte', 'retribution', 'soloist', 'crescendo', 'wind-fury', 'coin-flip']) expect(isSpell(skillById(id)), id).toBe(false)
+    expect(RULES.spell.group).toBe('skills')
+    expect(MASTERIES.magic.name).toBe('Arcanes')
   })
 
   it('un effet subi par l’adversaire le nomme dans le texte de la compétence (retour du 2026-10-21)', () => {
@@ -162,21 +190,20 @@ describe('catalogue des statuts', () => {
         .find((e) => e.id === id)!
         .sources.map((s) => (s.kind === 'status' ? `statut:${s.status}` : s.kind === 'relic' ? `relique:${s.relic.id}` : `${s.kind}:${s.character.id}`))
         .sort()
-    // Poison : posé par le Souffle de la tombe et la Virulence, de la réserve Poison que partagent Ervald, Naraxes et
-    // Thaldrin (V5), par deux auras et la Peau de crapaud (une compétence à charges depuis la refonte des auras), et par le
-    // Dard de guêpe
-    expect(who('poison')).toEqual([
+    // Poison : posé par le Souffle de la tombe et la Virulence, de la réserve Poison que partagent Ervald et Naraxes (V5 ;
+    // Thaldrin l'a quittée pour la Fureur, D21), par deux auras (l'Aura de décoction par sa Dose, D11) et la Peau de
+    // crapaud (une compétence à charges depuis la refonte des auras), et par le Dard de guêpe
+    expect(who('poison')).toEqual(expect.arrayContaining([
       'relique:wasp-sting',
       'skill:ervald',
       'skill:ervald',
       'skill:naraxes',
       'skill:naraxes',
-      'skill:thaldrin',
-      'skill:thaldrin',
       'statut:decoctionAura',
       'statut:frostAura',
       'statut:toadSkin',
-    ])
+    ]))
+    expect(who('poison').some((s) => s.endsWith(':thaldrin'))).toBe(false)
     // Régénération : sans porteur depuis la 0.73.0 (Fleur de vie retirée)
     expect(who('regeneration')).toEqual([])
     // Rétribution : aucune compétence ne la pose, celle d'Aldric la relâche (et la réserve du Rempart l'offre à Brokk et
@@ -243,10 +270,11 @@ describe('catalogue des statuts', () => {
     })
     // Toutes dans la ligne, en clair (passe compendium, 2026-10-25) : « s'il », la condition d'un statut en un verbe d'état
     expect(text).toBe(
-      "+2 PV s'il est sous 50\u00a0% de ses PV et si l'adversaire porte 2 Poison ou plus et s'il ne porte pas Armure temporaire et si l'adversaire a au moins 25\u00a0% de ses PV et à partir du tour 3.",
+      "+2 PV s'il est sous 50\u00a0% de ses PV et si l'adversaire porte 2 Poison ou plus et s'il ne porte pas Armure temporaire et si l'adversaire a au moins 25\u00a0% de ses PV et à partir du tour 3. · sort",
     )
+    // Sans nature déclarée, une compétence est arcane : un sort (D29)
     expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects: [{ type: 'heal', amount: 2 }], when: [{ type: 'lacksStatus', who: 'opponent', status: 'poison' }] })).toBe(
-      "+2 PV si l'adversaire n'est pas empoisonné.",
+      "+2 PV si l'adversaire n'est pas empoisonné. · sort",
     )
   })
 })
@@ -411,7 +439,7 @@ describe('narration', () => {
     ]
     // La chance et la limite au bout de la ligne, sans pastille (passe compendium, 2026-10-25)
     expect(describeEvent({ id: 'x', name: 'x', trigger: 'hit', effects, chance: 0.25, limit: 2 })).toBe(
-      "+2 PV. 2 dégâts directs à l'adversaire. L'adversaire perd 1 PV à la fin de son prochain tour. Retire tous ses malus, 25\u00a0% de chances, 2x. · dégâts directs · se cumule",
+      "+2 PV. 2 dégâts directs à l'adversaire. L'adversaire perd 1 PV à la fin de son prochain tour. Retire tous ses malus, 25\u00a0% de chances, deux fois par combat. · sort · dégâts directs · se cumule",
     )
   })
   it('raconte un combat entier sans trou', () => {
@@ -515,7 +543,9 @@ describe('tournoi', () => {
           const before = relicsOf(t, won.winner, ref.round)
           if (ref.round === ROUNDS - 1) expect(won.relic).toBeUndefined()
           else {
-            expect(won.relic!.offer).toHaveLength(Math.min(OFFER_SIZE, RELIC_IDS.length - before.length))
+            // Une carte de plus à sa 2e et à sa 4e relique gagnée (offres riches, retour du 2026-10-30)
+            const size = OFFER_SIZE + (RICH_RANKS.includes(before.length + 1) ? 1 : 0)
+            expect(won.relic!.offer).toHaveLength(Math.min(size, RELIC_IDS.length - before.length))
             expect(new Set(won.relic!.offer).size).toBe(won.relic!.offer.length)
             expect(won.relic!.offer.some((id) => before.includes(id))).toBe(false)
             expect(won.relic!.offer).toContain(won.relic!.chosen)
@@ -822,6 +852,8 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('auraGain', ['onrush', 'pilfer'])
     // Refonte des auras (2026-10-28) : les trois auras nouvelles, une aura, Aura gagnée
     family('auraGain', ['bastion', 'judgement', 'brasier'])
+    // Décision D19 (2026-10-30) : le Cuir épais de Morgrut, une aura
+    family('auraGain', ['thick-hide'])
     family(null, ['shockwave'])
     // Le Duo, des coups bruts depuis la refonte des auras : un mécanisme, muet comme la Furie (sa rafale sonne)
     family(null, ['duo'])
@@ -855,6 +887,18 @@ describe('Sons (docs/SONS.md, 0.36.2)', () => {
     family('healingDown', ['hemorrhage'])
     family('sealDown', ['seal-theft'])
     family('heal', ['prayer'])
+    // Décisions du 2026-10-30 (D26, profondeur de l'offre, D9) : les compétences nouvelles sonnent la famille de leur effet
+    family('guardUp', ['mauling', 'shield-wall', 'challenge'])
+    family('buff', ['coated-blade'])
+    family('retaliationUp', ['storm-aegis'])
+    family('powerUp', ['rising-rage', 'grace'])
+    // La Lumière sacrée : ses dégâts sonnent comme un coup, son soin joue Soin ; l'Onction, son armure d'abord (SONS.md
+    // § 4.2 : le bonus posé, règle 4, passe avant le soin, règle 6)
+    family('heal', ['holy-light'])
+    family('guardUp', ['anointing'])
+    family(null, ['arc-lightning'])
+    // La Boule de feu pose la Brûlure : Affliction − (règle 3) ; ses dégâts sonnent comme un coup
+    family('afflictionDown', ['fireball'])
     // Crescendo, Soliste et l'Assaut : leur coup ×N sonne, la compétence est muette ; la Furie des vents, la Curée, Pile ou
     // face et l'Embrasement posent un mécanisme, muet (0.110.0) : leur rafale, leur pièce, leur relâche sonnent.
     // Les pièces de la Fortune (2026-10-27) : comme Pile ou face, seule leur pièce sonne (un son pour toutes les pièces, S8)
@@ -945,7 +989,7 @@ describe('postures (docs/POSTURES.md)', () => {
     const casts = (id: string) => castsSpell(skillById(id)!)
     // Dégâts magiques (Foudre, Lumière), malus arcanes (Peur, Souffle de la tombe, Malchance), purge et lumière (Purification)
     for (const id of ['thunderbolt', 'purification', 'fear', 'grave-breath', 'jinx', 'blinding']) expect(casts(id), id).toBe(true)
-    // Des coups (la Rétribution, arcane mais physique), des entraves martiales, des sorts sur soi
+    // Des coups (la Rétribution, martiale depuis D29 : des coups blancs), des entraves martiales, des sorts sur soi
     for (const id of ['retribution', 'stunning-blow', 'hemorrhage', 'cleave', 'prayer', 'holy-aura', 'storm-sky']) expect(casts(id), id).toBe(false)
     // Toute compétence du jeu qui blesse l'adversaire par une source magique fait incanter son lanceur
     const all = [...ENGRAVABLE_SKILLS, ...CHARACTERS.flatMap((c) => c.events)]
@@ -1089,6 +1133,27 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       const o = opponentOf(e)
       expect(o.maxHp, e.characterId).toBe(e.maxHp + o.rewardHp + (o.maxHp - o.baseStats.maxHp))
     }
+  })
+
+  it('le réglage se prépare pendant le combat (retour du 2026-10-30, D3) : il ne lit que la graine, le champion, son aura, le nœud et le dernier adversaire ; le danger se calcule ensuite, sur une copie de la partie, au même résultat', () => {
+    // La clé préparée au début du combat est celle du nœud suivant, récompense choisie ou non
+    const run = { ...startRun('ysolde', 21), wins: 2 }
+    const after = withFightResult(run, encounter, won)
+    const next = withReward(after, rewardChoice(after.reward!))
+    expect(next.relics.length + next.forge.length).toBe(1)
+    expect(nextTuningKey(run, encounter)).toEqual(tuningKeyOf(next))
+    expect(nextTuningKey(run, encounter)).toEqual(tuningKeyOf(after))
+    // Avant le boss, la clé du boss ; après le boss, aucune
+    expect(nextTuningKey({ ...run, wins: ACT_FIGHTS - 1 }, encounter)?.node).toBe(ACT_FIGHTS)
+    expect(nextTuningKey({ ...run, wins: ACT_FIGHTS }, bossEncounter)).toBeUndefined()
+    // Le worker reçoit une copie (clonage structuré) de la partie, forge gravée comprise : même danger, même rencontres
+    const built = { ...startRun('ysolde', 21), ...drawBuild('ysolde', 6, seededRng(3)), wins: 6 }
+    expect(built.forge.some((s) => s.op === 'engrave')).toBe(true)
+    const tuned = tunedEncounters(tuningKeyOf(built))
+    expect(tuned.every((e) => e.chance === 0)).toBe(true)
+    const encounters = withDanger(structuredClone(built), structuredClone(tuned))
+    expect(encounters).toEqual(withDanger(built, tuned))
+    expect(encounters).toEqual(encountersFor(built))
   })
 
   it('le boss est un personnage valide, à son dé forgé', () => {
@@ -1243,14 +1308,79 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
     // Morgrut, six faces nues : rien d'autre dans son build ne fait écho (Gorak, depuis Pourfendre sur le 2, appelle aussi le Croc de boucher)
     let first = 0
     let others = 0
-    for (let k = 0; k < 400; k++) {
+    for (let k = 0; k < 1000; k++) {
       const reward = drawReward({ championId: 'morgrut', forge: [], relics: ['hollow-die'] }, 'relic', seededRng(k))
       if (reward.kind !== 'relic') throw new Error('relique attendue')
       if (reward.offer[0] === 'wind-conch') first++
       if (reward.offer.slice(1).includes('wind-conch')) others++
     }
-    // Libre, la Conque tomberait deux fois plus souvent dans les deux autres cartes qu'en première : orientée, l'inverse
-    expect(first).toBeGreaterThan(others)
+    // Libre, la Conque tomberait deux fois plus souvent dans les deux autres cartes qu'en première (rapport 0,5) ; orientée,
+    // nettement plus en première (les autres cartes se tirent aussi au poids depuis la profondeur de l'offre, 2026-10-30)
+    expect(first / others).toBeGreaterThan(0.75)
+  })
+
+  describe('profondeur de l’offre (retour du 2026-10-30, option ACsD, docs/etudes/PROFONDEUR_OFFRE.md)', () => {
+    it('fraîcheur : une carte jamais vue sort plus souvent ; vue ou refusée, elle peut toujours revenir', () => {
+      let fresh = 0
+      let seen = 0
+      for (let k = 0; k < 400; k++) {
+        const a = drawReward({ championId: 'gorak', forge: [], relics: [] }, 'relic', seededRng(k))
+        const b = drawReward({ championId: 'gorak', forge: [], relics: [], seen: ['relic:wolf-fang'] }, 'relic', seededRng(k))
+        if (a.kind !== 'relic' || b.kind !== 'relic') throw new Error('relique attendue')
+        if (a.offer.includes('wolf-fang')) fresh++
+        if (b.offer.includes('wolf-fang')) seen++
+      }
+      expect(fresh).toBeGreaterThan(seen * 1.5)
+      expect(seen).toBeGreaterThan(0)
+      // Graver : la compétence déjà montrée revient moins, jamais 0
+      const pool = drawReward({ championId: 'gorak', forge: [], relics: [] }, 'forge', seededRng(1))
+      if (pool.kind !== 'forge') throw new Error('forge attendue')
+      const skill = pool.offer.find((o) => o.op === 'engrave')!
+      if (skill.op !== 'engrave') throw new Error('Graver attendue')
+      const id = skill.skills[0].id
+      const count = (seenCards: string[]) =>
+        Array.from({ length: 400 }, (_, k) => drawReward({ championId: 'gorak', forge: [], relics: [], seen: seenCards }, 'forge', seededRng(k))).filter(
+          (r) => r.kind === 'forge' && r.offer.some((o) => o.op === 'engrave' && o.skills.some((s) => s.id === id)),
+        ).length
+      expect(count([])).toBeGreaterThan(count([`skill:${id}`]))
+      expect(count([`skill:${id}`])).toBeGreaterThan(0)
+    })
+
+    it('withSeen garde les cartes montrées, sans doublon', () => {
+      const fear = ENGRAVABLE_SKILLS.find((s) => s.id === 'fear')!
+      const seen = withSeen(['relic:wolf-fang'], { kind: 'relic', offer: ['wolf-fang', 'hollow-die'] })
+      expect(seen).toEqual(['relic:wolf-fang', 'relic:hollow-die'])
+      expect(withSeen(seen, { kind: 'forge', offer: [{ op: 'engrave', skills: [fear] }, { op: 'sharpen' }] })).toEqual([...seen, 'skill:fear'])
+    })
+
+    it('paliers en poids (D27) : forte à demi-poids avant la 3e relique, maîtresse à quart avant la 4e puis double', () => {
+      expect([0, 1, 2, 3].map((held) => tierWeight('trinket', held))).toEqual([4, 4, 4, 4])
+      expect([0, 1, 2, 3].map((held) => tierWeight('strong', held))).toEqual([2, 2, 4, 4])
+      expect([0, 1, 2, 3].map((held) => tierWeight('master', held))).toEqual([1, 1, 1, 8])
+      // Une maîtresse sort tôt, rarement ; plus souvent une fois trois reliques portées
+      const masters = (held: string[]) =>
+        Array.from({ length: 300 }, (_, k) => drawReward({ championId: 'gorak', forge: [], relics: held }, 'relic', seededRng(k))).flatMap((r) =>
+          r.kind === 'relic' ? r.offer.filter((id) => getRelic(id).tier === 'master') : [],
+        ).length
+      const trinkets = RELIC_IDS.filter((id) => getRelic(id).tier === 'trinket')
+      expect(masters([])).toBeGreaterThan(0)
+      expect(masters(trinkets.slice(0, 3))).toBeGreaterThan(masters([]) * 2)
+    })
+
+    it('offres riches : 4 reliques et 3 compétences à la 2e et à la 4e offre de chaque sorte (victoires 3, 4, 7, 8)', () => {
+      expect(REWARDS.map((_, i) => RICH_RANKS.includes(rankIn(REWARDS, i))).flatMap((rich, i) => (rich ? [i + 1] : []))).toEqual([3, 4, 7, 8])
+      for (let k = 0; k < 20; k++) {
+        const plain = drawReward({ championId: 'gorak', forge: [], relics: [] }, 'relic', seededRng(k), undefined, 1)
+        const rich = drawReward({ championId: 'gorak', forge: [], relics: [] }, 'relic', seededRng(k), undefined, 2)
+        expect(plain.offer).toHaveLength(OFFER_SIZE)
+        expect(rich.offer).toHaveLength(OFFER_SIZE + 1)
+        const forge = drawReward({ championId: 'gorak', forge: [], relics: [] }, 'forge', seededRng(k), 5, 4)
+        if (forge.kind !== 'forge') throw new Error('forge attendue')
+        const engrave = forge.offer.find((o) => o.op === 'engrave')
+        expect(engrave?.op === 'engrave' && engrave.skills.length, `graine ${k}`).toBe(3)
+        expect(new Set(engrave?.op === 'engrave' ? engrave.skills.map((s) => s.id) : []).size).toBe(3)
+      }
+    })
   })
 
   it('offre pertinente (2026-10-24) : jamais une relique dont la condition ne peut pas arriver ; une brique qui la rend possible la rouvre', () => {
@@ -1496,6 +1626,10 @@ describe('campagne et héritage (0.88.0, docs/CAMPAGNE.md)', () => {
       // Un adversaire doré (le journal le rejoue) : la partie se relit telle quelle
       save({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'gild', face: 6 }], relics: [], chance: 0.5 }] })
       expect(loadRun()).toEqual({ ...run, encounters: [{ characterId: 'brokk', maxHp: 40, forge: [{ op: 'gild', face: 6 }], relics: [], chance: 0.5 }] })
+      // La profondeur de l'offre (retour du 2026-10-30) : une partie d'avant n'a pas `seen` (rien de vu) ; ce qu'elle a vu se garde
+      expect(run.seen).toBeUndefined()
+      save({ ...run, seen: ['relic:wolf-fang', 'skill:fear'] })
+      expect(loadRun()?.seen).toEqual(['relic:wolf-fang', 'skill:fear'])
       // Une gravure sur le 2 de Gorak (sa compétence de personnage y est) : retirée, la partie continue
       save({ ...run, forge: [{ op: 'engrave', face: 2, skill: fear }], gains: [{ kind: 'forge', step: { op: 'engrave', face: 2, skill: fear } }] })
       expect(loadRun()).toMatchObject({ forge: [], gains: [] })

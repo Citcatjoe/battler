@@ -1,7 +1,7 @@
 import type { CharacterLook } from './character'
 import type { AppliedEffect } from './combat'
 import { DAMAGE_SOURCES } from './damage'
-import { DEFAULT_SKILL_NATURE, type CharacterEvent, type Effect } from './events'
+import { isSpell, type CharacterEvent, type Effect } from './events'
 import { STATUSES } from './statuses'
 
 /*
@@ -118,16 +118,16 @@ function harmOf(e: Effect): 'none' | 'magical' | 'physical' | 'hex' {
 
 /**
  * Un sort offensif (2026-10-27, docs/POSTURES.md § 7) : une compétence qui blesse l'adversaire par la magie (une source
- * magique : Lumière, Foudre, Feu, Brûlure…, `DAMAGE_SOURCES.magical`), ou, sans dégâts physiques, une compétence arcane
- * qui l'entrave (un malus, une purge de ses bonus : la Peur, le Souffle de la tombe). Son lanceur prend sa posture
- * d'incantation. Des dégâts physiques restent des coups, même d'une compétence arcane (la Rétribution) ; une compétence
- * martiale ou d'adresse qui entrave reste un coup (le Coup de massue) ; un sort qui ne vise que soi (une aura, un soin)
- * n'est pas offensif. Présentation seule : aucune règle ne le lit.
+ * magique : Lumière, Foudre, Feu, Brûlure…, `DAMAGE_SOURCES.magical`), ou, sans dégâts physiques, un sort (`isSpell` :
+ * une compétence arcane) qui l'entrave (un malus, une purge de ses bonus : la Peur, le Souffle de la tombe). Son lanceur
+ * prend sa posture d'incantation. Des dégâts physiques restent des coups ; une compétence martiale ou d'adresse qui
+ * entrave reste un coup (le Coup de massue) ; un sort qui ne vise que soi (une aura, un soin) n'est pas offensif.
+ * Présentation seule : aucune règle ne le lit.
  */
 export function castsSpell(event: Pick<CharacterEvent, 'nature' | 'effects'>): boolean {
   const harms = event.effects.map(harmOf)
   if (harms.includes('magical')) return true
-  return !harms.includes('physical') && (event.nature ?? DEFAULT_SKILL_NATURE) === 'arcane' && harms.includes('hex')
+  return !harms.includes('physical') && isSpell(event) && harms.includes('hex')
 }
 
 /**

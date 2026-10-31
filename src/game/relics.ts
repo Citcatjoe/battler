@@ -1,6 +1,6 @@
 import type { CharacterStats } from './character'
-import { conditionClause, DIE_FACES, type Condition, type Effect, type Target, type Trigger } from './events'
-import { pick, pickWeighted, shuffle, type Rng } from './rng'
+import { conditionClause, DIE_FACES, SMALL_NUMBERS, type Condition, type Effect, type Target, type Trigger } from './events'
+import { pick, pickWeighted, type Rng } from './rng'
 import { SCENE_EVENTS, type SceneEventId } from './scenes'
 import { isAura, lowerFirst, STATUSES, type StatusId } from './statuses'
 import { typeset } from './typography'
@@ -22,7 +22,7 @@ import { typeset } from './typography'
  * reçu (`healed`, lot des consommateurs, docs/PROGRESSION.md § 13.3), qui nourrit ses coups suivants ; depuis le second
  * lot de la phase 8, son armure temporaire vidée, ses dégâts renvoyés et sa pièce sur pile.
  */
-export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt', 'healed', 'shieldBroken', 'reflected', 'heads'] as const satisfies readonly Trigger[]
+export const STRIKE_TRIGGERS = ['naturalOne', 'naturalTwo', 'naturalThree', 'naturalMax', 'hit', 'crit', 'missed', 'dodge', 'hurt', 'critHurt', 'healed', 'shieldBroken', 'reflected', 'heads'] as const satisfies readonly Trigger[]
 export type StrikeTrigger = (typeof STRIKE_TRIGGERS)[number]
 
 /** Les moments d'un coup qui touche : seuls à connaître les PV que ce coup a retirés (condition `hitAtLeast`). */
@@ -49,6 +49,31 @@ export type RelicTrigger =
    * les deux camps en portent une, aucune ne part et le jet revient. Sans effet, sans limite (une fois par combat).
    */
   | { type: 'initiative' }
+  /**
+   * Clairon du héraut (retour du 30 octobre, D9) : au début de son 1er tour, après ses reliques de tour, son aura de
+   * départ (la compétence de sa face 1) part si elle n'est pas déjà là, comme au rendez-vous du 3e tour. Sans effet ni
+   * limite (une fois par combat).
+   */
+  | { type: 'startAura' }
+  /**
+   * Dé de joueur (retour du 30 octobre, D9) : un jet de son dé de compétence qui tombe sur une face nue (aucune
+   * compétence prête à partir) est relancé, une fois ; le second jet compte. Sans effet ; une recharge (au moins 1 : une
+   * fois par tour au plus).
+   */
+  | { type: 'bareFace' }
+
+/**
+ * Le palier d'une relique (retour du 30 octobre, D27, CONTENU_RETOUR_30.md § 1.3) : ce que l'offre lit pour sortir les
+ * plus fortes et les plus liées à un build plus tard (offers.ts). Babiole : une stat ou un petit moment, sans condition ;
+ * forte : au-delà de +14 pour tous ; maîtresse : faible seule, forte chez son hôte (un build).
+ */
+export type RelicTier = 'trinket' | 'strong' | 'master'
+
+export const RELIC_TIERS: Record<RelicTier, { label: string }> = {
+  trinket: { label: 'Babiole' },
+  strong: { label: 'Forte' },
+  master: { label: 'Maîtresse' },
+}
 
 /** Stats de base ajoutées à plat par une relique (0,05 d'esquive = 5 points de pourcentage). */
 export type RelicStats = Partial<CharacterStats>
@@ -58,6 +83,8 @@ export interface Relic {
   name: string
   /** Une phrase d'ambiance, pour le compendium seulement ; la règle se rédige depuis les données (`describeRelic`) */
   flavor: string
+  /** Son palier dans l'offre (D27) ; requis au registre (`validateRelics`), facultatif pour une relique d'essai */
+  tier?: RelicTier
   /** Caractéristique : stats ajoutées à plat */
   stats?: RelicStats
   /** Coup : ajouté au coup de base de chacun de ses coups qui touchent, avant le critique (« +4 dégâts à ce coup ») */
@@ -100,7 +127,7 @@ export const RELIC_KINDS: Record<RelicKind, { label: string }> = {
 
 export function relicKind(r: Relic): RelicKind {
   if (r.stats || r.headsChance !== undefined) return 'stat'
-  if (r.trigger?.type === 'turn' || r.trigger?.type === 'initiative') return 'turn'
+  if (r.trigger?.type === 'turn' || r.trigger?.type === 'initiative' || r.trigger?.type === 'startAura') return 'turn'
   if (r.trigger?.type === 'hpBelow' || r.trigger?.type === 'lethal') return 'threshold'
   return 'strike'
 }
@@ -120,18 +147,22 @@ export const RELICS: readonly Relic[] = [
     id: 'lead-pommel',
     name: 'Contrepoids de plomb',
     flavor: 'Un pommeau de plomb cerclé de fer, limé à la main. Le bras frappe plus lourd, et moins souvent juste.',
+    tier: 'trinket',
     stats: { critMultiplier: 1, critChance: -0.04 },
   },
   {
     id: 'felt-boots',
     name: 'Bottes de feutre',
     flavor: 'Des bottes souples aux talons usés, lacets défaits. On ne les entend pas venir, on ne les voit pas partir.',
+    tier: 'trinket',
     stats: { dodgeChance: 0.06 },
   },
   {
     id: 'mercenary-mail',
     name: 'Cotte du mercenaire',
     flavor: 'Une cotte de mailles roulée en boule, rapiécée d’anneaux plus clairs. Elle arrête les coups, et les pas.',
+    tier: 'trinket',
+    // Retour du 30 octobre (D11) : +2 armure et −10 % d'esquive mesurés +23,3 (Morgrut +33,4), hors bande ; gardée, signalée
     stats: { armor: 1, dodgeChance: -0.05 },
   },
   /* Coup : des objets de hasard, qui portent la face qui les éveille */
@@ -139,6 +170,7 @@ export const RELICS: readonly Relic[] = [
     id: 'split-knucklebone',
     name: 'Osselet fendu',
     flavor: 'Un osselet de mouton fendu en long, un seul point gravé sur sa face creuse. Même le pire jet mord.',
+    tier: 'trinket',
     trigger: { type: 'strike', on: 'naturalOne' },
     effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike' }],
   },
@@ -146,6 +178,7 @@ export const RELICS: readonly Relic[] = [
     id: 'hollow-die',
     name: 'Dé creux',
     flavor: 'Un dé d’os évidé, une couronne gravée à la place des points. Le jet parfait laisse le porteur en garde.',
+    tier: 'strong',
     trigger: { type: 'strike', on: 'naturalMax' },
     cooldown: 3,
     effects: [{ type: 'applyStatus', status: 'evasion', stacks: 1 }],
@@ -154,6 +187,7 @@ export const RELICS: readonly Relic[] = [
     id: 'four-nail-shoe',
     name: 'Fer à quatre clous',
     flavor: 'Un fer à cheval étroit, quatre clous encore plantés. Le plus pauvre des vrais coups devient un bon coup.',
+    tier: 'trinket',
     rollBonus: 4,
     onFace: 4,
   },
@@ -162,6 +196,7 @@ export const RELICS: readonly Relic[] = [
     id: 'opening-bell',
     name: 'Cloche d’ouverture',
     flavor: 'Une petite cloche de bronze, une seule encoche sur la robe. Elle ne sonne qu’une fois : au premier coup.',
+    tier: 'trinket',
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
@@ -170,6 +205,7 @@ export const RELICS: readonly Relic[] = [
     id: 'hermit-beads',
     name: 'Chapelet de l’ermite',
     flavor: 'Des grains de bois, trois plus gros que les autres, un fermoir d’os. À chaque gros grain, une prière lave.',
+    tier: 'strong',
     trigger: { type: 'turn', turn: 3 },
     cooldown: 3,
     effects: [{ type: 'cleanse', polarity: 'negative', count: 1, orElse: { type: 'heal', amount: 3 } }],
@@ -180,6 +216,7 @@ export const RELICS: readonly Relic[] = [
     id: 'siege-clepsydra',
     name: 'Clepsydre du siège',
     flavor: 'Un bol de bronze percé au fond, trois graduations, l’eau arrêtée à la deuxième. Plus le siège dure, plus il frappe juste.',
+    tier: 'strong',
     trigger: { type: 'turn', turn: 6 },
     cooldown: 4,
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
@@ -189,6 +226,7 @@ export const RELICS: readonly Relic[] = [
     id: 'wolf-fang',
     name: 'Dent de loup',
     flavor: 'Une canine de loup en cage de fil de fer, fêlée aux quatre dixièmes. Acculé, il mord pour reprendre son sang.',
+    tier: 'strong',
     trigger: { type: 'hpBelow', ratio: 0.4 },
     // 2026-10-21 (retour de l'utilisateur) : une seule fois par combat. Sans charge, elle se réarmait quand un
     // soin remontait le porteur au-dessus de 40 %, et repartait à la chute suivante.
@@ -200,14 +238,17 @@ export const RELICS: readonly Relic[] = [
     id: 'bramble-collar',
     name: 'Collier de ronces',
     flavor: 'Une ronce séchée tressée sur un médaillon fendu. À mi-chemin de sa chute, il devient dangereux à frapper.',
+    tier: 'trinket',
     trigger: { type: 'hpBelow', ratio: 0.5 },
     charges: 1,
-    effects: [{ type: 'applyStatus', status: 'thorns', stacks: 2 }],
+    // Retour du 30 octobre (D13) : l'Aura d'épines n'est plus cumulable, une pose suffit
+    effects: [{ type: 'applyStatus', status: 'thorns', stacks: 1 }],
   },
   {
     id: 'hunter-trophy',
     name: 'Trophée du chasseur',
     flavor: 'Une mâchoire de bête pendue à la ceinture, quatre encoches, la dernière à peine commencée. Elle sent la proie faiblir.',
+    tier: 'trinket',
     trigger: { type: 'hpBelow', ratio: 0.3, who: 'opponent' },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'guaranteedCrit', stacks: 1 }],
@@ -220,16 +261,20 @@ export const RELICS: readonly Relic[] = [
   {
     id: 'caged-ember',
     name: 'Braise captive',
-    flavor: 'Une braise vivante dans une cage de quatre barreaux. Au quatrième tour, la cage cède, et le ciel brûle.',
+    flavor: 'Une braise vivante dans une cage de quatre barreaux. Tous les quatre tours, la cage s’entrouvre, et le ciel brûle.',
+    tier: 'strong',
     scene: 'emberRain',
+    // Retour du 30 octobre (D24, R52) : une recharge au lieu d'une charge (3 × 2 au 4e tour, 1x : +15,0 en combat court,
+    // +10,6 en long) ; elle profite de la Brûlure, +1 à chaque braise par charge (CONTENU_RETOUR_30.md § 1.2.1)
     trigger: { type: 'turn', turn: 4 },
-    charges: 1,
-    effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent', source: 'fire' }],
+    cooldown: 4,
+    effects: [{ type: 'damage', amount: 2, hits: 2, target: 'opponent', source: 'fire', fromStatus: { status: 'burn', who: 'opponent', factor: 1 } }],
   },
   {
     id: 'frost-tear',
     name: 'Larme de givre',
     flavor: 'Une larme de glace qui ne fond pas, fêlée près de la pointe. Quand tout saigne, elle gèle la plaie.',
+    tier: 'strong',
     scene: 'hoarfrost',
     trigger: { type: 'hpBelow', ratio: 0.35 },
     charges: 1,
@@ -242,20 +287,24 @@ export const RELICS: readonly Relic[] = [
     id: 'wind-conch',
     name: 'Conque des vents',
     flavor: 'Un coquillage à deux tours de spire où souffle encore une tempête. Qui l’esquive l’entend répondre.',
+    tier: 'trinket',
     scene: 'gale',
     trigger: { type: 'strike', on: 'dodge' },
-    charges: 2,
+    // Retour du 30 octobre (D28) : recharge 3 au lieu de 2 charges (les esquives sont rares : même valeur, +10,0)
+    cooldown: 3,
     effects: [{ type: 'damage', amount: 2, hits: 3, target: 'opponent', source: 'wind' }],
   },
   {
     id: 'split-geode',
     name: 'Géode fendue',
     flavor: 'Une géode ouverte en deux, deux gros cristaux ambrés au fond. Frappée, la terre se lève autour du porteur.',
+    tier: 'strong',
     scene: 'stoneWall',
     trigger: { type: 'strike', on: 'hurt' },
-    // 2026-10-24 (retour de l'utilisateur) : une seule limite, deux fois par combat ; la recharge de 3 tours part
-    charges: 2,
-    effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 4 }],
+    // Retour du 30 octobre (D28) : recharge 3 au lieu de 2 charges (+4, 2x : +17,8 court, +12,8 long ; +4, recharge 3 :
+    // +21,2, hors bande) ; +3 à la recharge 3 : +16,6 (Brokk +21,9) ; +2 à la recharge 3 (docs/RELIQUES.md § 19)
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
   },
   /*
    * Le lot des consommateurs (docs/PROGRESSION.md § 13.3, validé par l'utilisateur le 2026-10-24) : une relique par
@@ -268,6 +317,7 @@ export const RELICS: readonly Relic[] = [
     id: 'venom-vial',
     name: 'Fiole de venin',
     flavor: 'Une fiole de verre vert bouchée de cire, une goutte figée le long du col. Là où le venin court déjà, la lame mord.',
+    tier: 'master',
     rollBonus: 2,
     when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
   },
@@ -275,6 +325,7 @@ export const RELICS: readonly Relic[] = [
     id: 'butcher-hook',
     name: 'Croc de boucher',
     flavor: 'Un croc à viande au manche de corne, la pointe noircie. Là où le sang coule déjà, il entre mieux.',
+    tier: 'master',
     rollBonus: 2,
     when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
   },
@@ -282,13 +333,16 @@ export const RELICS: readonly Relic[] = [
     id: 'abbey-incense',
     name: 'Encens de l’abbaye',
     flavor: 'Un encensoir de cuivre cabossé, la chaîne nouée, une braise tiède au fond. Chaque soin la ranime.',
+    tier: 'master',
     trigger: { type: 'strike', on: 'healed' },
-    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 1 }],
+    // Retour du 30 octobre (D11, plus de « 1 » affiché) : +2 Ferveur au lieu de +1
+    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 2 }],
   },
   {
     id: 'dented-shield',
     name: 'Écu cabossé',
     flavor: 'La bosse de fer d’un vieil écu, arrachée à son bois, six creux profonds sur le dôme. Elle se souvient des gros coups.',
+    tier: 'strong',
     trigger: { type: 'strike', on: 'hurt' },
     when: [{ type: 'hitAtLeast', amount: 6 }],
     effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
@@ -297,6 +351,7 @@ export const RELICS: readonly Relic[] = [
     id: 'eagle-feather',
     name: 'Plume d’aigle',
     flavor: 'Une rémige d’aigle liée d’un fil rouge à un anneau de cuivre, quatre barbes arrachées. Après le coup juste, il est déjà ailleurs.',
+    tier: 'master',
     trigger: { type: 'strike', on: 'crit' },
     // Quatrième demande du 2026-10-27 (« fais ce qu'il faut pour la Plume d'aigle ») : recharge 2 → 4. Chez Elaria
     // construite +24,7 → +18,1 (plafond d'une relique 20), moyenne contre le roster nu +13,1 → +11,8 (recharge 3 :
@@ -314,22 +369,26 @@ export const RELICS: readonly Relic[] = [
     id: 'quilted-gambison',
     name: 'Gambison matelassé',
     flavor: 'Un gambison de lin épais, piqué de losanges, raide de vieille sueur. Il encaisse tout, et pèse au bras.',
+    tier: 'trinket',
+    // Retour du 30 octobre (D11) : +25 PV et −2 à l'attaque mesurés +6,5 (Elaria −22,7, Naraxes +23,3) ; gardé, signalé
     stats: { maxHp: 15, attackMin: -1, attackMax: -1 },
   },
   {
     id: 'bonesetter-salve',
     name: 'Onguent du rebouteux',
     flavor: 'Un pot de terre bouché de cire, deux creux de doigts dans la graisse jaune. Chaque gros coup reçu en appelle une bonne noix.',
+    tier: 'strong',
     trigger: { type: 'strike', on: 'hurt' },
-    // Retour du 2026-10-27 (M11, « 5 PV sur un combat, c'est peanuts ») : +3 PV, 2x (+13,3 points, 200 combats par duel) au
-    // lieu de +1 PV, 5x (+11,1) : des soins qu'on voit. +4 PV, 2x valait +17,0, hors de la bande de 5 à 15
-    charges: 2,
-    effects: [{ type: 'heal', amount: 3 }],
+    // Retour du 2026-10-27 (M11) : +3 PV, 2x au lieu de +1 PV, 5x. Retour du 30 octobre (D28) : recharge 3 au lieu de
+    // 2 charges (+3 PV, recharge 3 : +17,0) ; réglée dans la bande (docs/RELIQUES.md § 19)
+    cooldown: 3,
+    effects: [{ type: 'heal', amount: 2 }],
   },
   {
     id: 'vigil-candle',
     name: 'Chandelle de veille',
     flavor: 'Une chandelle de suif dans un bougeoir de fer, trois anneaux gravés dans la cire. À chaque anneau fondu, la garde se relève.',
+    tier: 'trinket',
     trigger: { type: 'turn', turn: 3 },
     cooldown: 3,
     effects: [{ type: 'applyStatus', status: 'bonusArmor', stacks: 2 }],
@@ -345,6 +404,7 @@ export const RELICS: readonly Relic[] = [
     id: 'forge-bellows',
     name: 'Soufflet de forge',
     flavor: 'Un petit soufflet de cuir plissé entre deux planchettes de chêne, trois clous de laiton. Là où le feu couve déjà, il le ranime.',
+    tier: 'master',
     rollBonus: 3,
     when: [{ type: 'hasStatus', who: 'opponent', status: 'burn' }],
   },
@@ -352,6 +412,7 @@ export const RELICS: readonly Relic[] = [
     id: 'pavise-nails',
     name: 'Clous de pavois',
     flavor: 'Un éclat de pavois peint, trois gros clous forgés encore plantés. Quand le bouclier cède, ses pointes restent.',
+    tier: 'master',
     trigger: { type: 'strike', on: 'shieldBroken' },
     // Retour de l'utilisateur du 2026-10-27 (M4) : ses 3 dégâts se heurtent à l'armure de l'attaquant (au moins 1)
     effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'strike', armored: true }],
@@ -360,8 +421,10 @@ export const RELICS: readonly Relic[] = [
     id: 'talion-gauntlet',
     name: 'Gantelet du talion',
     flavor: 'La manchette d’un gantelet de fer, une courroie bouclée, une seule pointe sur le dos. Chaque coup rendu lui rend un peu de souffle.',
+    tier: 'master',
     trigger: { type: 'strike', on: 'reflected' },
-    effects: [{ type: 'heal', amount: 1 }],
+    // Retour du 30 octobre (D11, plus de « 1 » affiché) : +2 PV au lieu de +1
+    effects: [{ type: 'heal', amount: 2 }],
   },
   {
     // Retour du 2026-10-28 : « Pièce trouée » devient un porte-bonheur (les pièces sont des compétences de la Fortune,
@@ -373,6 +436,7 @@ export const RELICS: readonly Relic[] = [
     id: 'holed-coin',
     name: 'Coccinelle d’émail',
     flavor: 'Une coccinelle d’émail vermillon, deux points de jais sur le dos, cousue au revers d’un gant. Pile, elle s’envole et la chance relance.',
+    tier: 'master',
     trigger: { type: 'strike', on: 'heads' },
     effects: [{ type: 'applyStatus', status: 'luckyStrike', stacks: 2 }],
     cooldown: 3,
@@ -388,6 +452,7 @@ export const RELICS: readonly Relic[] = [
     id: 'wasp-sting',
     name: 'Dard de guêpe',
     flavor: 'Un dard de guêpe séché dans un capuchon de laiton, deux gouttes de venin perlées à la pointe. Le coup parfait pique.',
+    tier: 'trinket',
     trigger: { type: 'strike', on: 'naturalMax' },
     effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }],
   },
@@ -396,6 +461,7 @@ export const RELICS: readonly Relic[] = [
     id: 'tinder-box',
     name: 'Briquet d’amadou',
     flavor: 'Un briquet de fer, son silex et son battant, deux braises dans l’amadou. Le coup parfait fait jaillir l’étincelle.',
+    tier: 'trinket',
     trigger: { type: 'strike', on: 'naturalMax' },
     effects: [{ type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent' }],
   },
@@ -404,6 +470,7 @@ export const RELICS: readonly Relic[] = [
     id: 'spiked-bracer',
     name: 'Brassard à pointes',
     flavor: 'Un brassard de cuir clouté, une grosse pointe rabattue vers l’arrière. Le premier qui frappe s’y pique.',
+    tier: 'strong',
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'riposte', stacks: 1 }],
@@ -418,6 +485,7 @@ export const RELICS: readonly Relic[] = [
     id: 'reprieve-medal',
     name: 'Médaille de sursis',
     flavor: 'Une médaille de bronze sur un ruban délavé, entaillée en plein centre par la lame qu’elle a arrêtée. Une fois, pas deux.',
+    tier: 'strong',
     trigger: { type: 'lethal' },
     charges: 1,
   },
@@ -425,6 +493,7 @@ export const RELICS: readonly Relic[] = [
     id: 'vanguard-horn',
     name: 'Cor d’avant-garde',
     flavor: 'Un cor de corne cerclé de laiton, l’embouchure mâchée, pendu à une lanière. Qui sonne le premier frappe le premier.',
+    tier: 'trinket',
     trigger: { type: 'initiative' },
   },
   {
@@ -432,6 +501,7 @@ export const RELICS: readonly Relic[] = [
     id: 'weighted-coin',
     name: 'Patte de lièvre',
     flavor: 'Une patte de lièvre séchée, cerclée d’une bague de laiton, un ruban turquoise noué au poignet. Elle fait retomber la chance du bon côté.',
+    tier: 'master',
     headsChance: 0.25,
   },
   /*
@@ -443,6 +513,7 @@ export const RELICS: readonly Relic[] = [
     id: 'blessed-phial',
     name: 'Ampoule bénite',
     flavor: 'Une ampoule de verre soufflé, scellée de cire blanche, l’eau encore trouble. Les premiers échanges, rien ne s’y accroche.',
+    tier: 'trinket',
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'immunity', stacks: 1, turns: 3 }],
@@ -451,6 +522,7 @@ export const RELICS: readonly Relic[] = [
     id: 'gaoler-chain',
     name: 'Chaîne du geôlier',
     flavor: 'Trois maillons de fer noir et un cadenas rouillé, la clé perdue. Plus l’adversaire porte de fers, plus elle pèse.',
+    tier: 'master',
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'grip', stacks: 1 }],
@@ -459,9 +531,172 @@ export const RELICS: readonly Relic[] = [
     id: 'lightning-rod',
     name: 'Pointe de paratonnerre',
     flavor: 'Une pointe de cuivre verdi, torsadée, arrachée au faîte d’un clocher. La foudre l’aime, et frappe plus fort.',
+    tier: 'master',
     trigger: { type: 'turn', turn: 1 },
     charges: 1,
     effects: [{ type: 'applyStatus', status: 'overcharge', stacks: 1 }],
+  },
+  /*
+   * Retour du 30 octobre (D9) : les idées de l'utilisateur sur le dé et l'aura (docs/etudes/DES_SUPPLEMENTAIRES.md § 6),
+   * des règles nouvelles du moteur : l'aura d'entrée, la face scellée, la relance d'une face nue, la rage au critique reçu.
+   */
+  {
+    id: 'herald-clarion',
+    name: 'Clairon du héraut',
+    flavor: 'Un clairon de laiton bosselé, une flamme de soie fanée nouée au pavillon. Il annonce le champion avant qu’il frappe.',
+    tier: 'strong',
+    trigger: { type: 'startAura' },
+  },
+  {
+    id: 'clerk-seal',
+    name: 'Cachet du greffier',
+    flavor: 'Un cachet de cuivre au manche d’os, un cadenas gravé à l’envers dans la cire rouge. Ce qu’on vient de jouer, il le scelle.',
+    tier: 'trinket',
+    trigger: { type: 'turn', turn: 3 },
+    cooldown: 3,
+    effects: [{ type: 'applyStatus', status: 'sealedFace', stacks: 1, turns: 3, target: 'opponent' }],
+  },
+  {
+    id: 'gambler-die',
+    name: 'Dé de joueur',
+    flavor: 'Un dé de corne aux coins usés, une face blanche sans un point. Un jet perdu, il le relance du pouce.',
+    tier: 'trinket',
+    trigger: { type: 'bareFace' },
+    // Mesuré (200 combats par duel, roster nu) : recharge 1, +16,6 (Ysolde +22,1, au-delà de 20) ; recharge 2 (§ 19)
+    cooldown: 2,
+  },
+  {
+    id: 'berserker-torc',
+    name: 'Torque du berserker',
+    flavor: 'Un torque de fer tordu, deux têtes d’ours qui se mordent. Le coup qui l’a fait saigner, il le rend.',
+    tier: 'trinket',
+    trigger: { type: 'strike', on: 'critHurt' },
+    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 5 }],
+  },
+  /*
+   * Retour du 30 octobre (D26) : les reliques des trous par maîtrise (docs/etudes/CONTENU_RETOUR_30.md § 5), une ou deux par
+   * maîtrise courte ; mesures dans docs/RELIQUES.md § 19.
+   */
+  {
+    id: 'rusty-hook',
+    name: 'Hameçon rouillé',
+    flavor: 'Un gros hameçon de fer rongé de rouille, un bout de ligne encore noué à l’œillet. Le coup parfait accroche, et déchire.',
+    tier: 'trinket',
+    trigger: { type: 'strike', on: 'naturalMax' },
+    effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }],
+  },
+  {
+    id: 'apothecary-mortar',
+    name: 'Mortier d’apothicaire',
+    flavor: 'Un petit mortier de pierre verte et son pilon, une poudre sombre collée au fond. Il broie le venin, et le venin double.',
+    tier: 'master',
+    trigger: { type: 'turn', turn: 5 },
+    cooldown: 5,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'poison' }],
+    effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent', fromStatus: { status: 'poison', who: 'opponent', factor: 1 } }],
+  },
+  {
+    id: 'ram-horn',
+    name: 'Corne de bélier',
+    flavor: 'Une corne de bélier enroulée, cerclée de fer à la base, la pointe émoussée à force de cogner. Le coup juste appelle le coup lourd.',
+    tier: 'master',
+    trigger: { type: 'strike', on: 'crit' },
+    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 5 }],
+  },
+  {
+    id: 'black-chalice',
+    name: 'Calice noir',
+    flavor: 'Un calice d’étain noirci, une goutte sombre séchée au bord. Après le coup juste, la lame a soif.',
+    tier: 'master',
+    trigger: { type: 'strike', on: 'crit' },
+    cooldown: 4,
+    effects: [{ type: 'applyStatus', status: 'lifesteal', stacks: 1 }],
+  },
+  {
+    id: 'exorcist-taper',
+    name: 'Cierge de l’exorciste',
+    flavor: 'Un long cierge de cire blanche, trois croix incisées, la mèche noire. Chaque grâce reçue brûle l’ennemi.',
+    tier: 'master',
+    trigger: { type: 'strike', on: 'healed' },
+    cooldown: 3,
+    effects: [{ type: 'damage', amount: 3, target: 'opponent', source: 'holy' }],
+  },
+  {
+    id: 'thunder-stone',
+    name: 'Pierre de tonnerre',
+    flavor: 'Une pierre noire striée de veines blanches, tiède au toucher. Là où le feu couve, elle appelle la foudre.',
+    tier: 'master',
+    trigger: { type: 'turn', turn: 1 },
+    cooldown: 3,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'burn' }],
+    effects: [{ type: 'damage', amount: 2, hits: 2, target: 'opponent', source: 'lightning' }],
+  },
+  {
+    id: 'focal-lens',
+    name: 'Focale',
+    flavor: 'Une lentille de cristal taillé dans une monture de cuivre, un fil d’or enroulé autour. Elle rassemble la magie en un point.',
+    tier: 'master',
+    trigger: { type: 'turn', turn: 1 },
+    cooldown: 4,
+    effects: [{ type: 'applyStatus', status: 'spellFocus', stacks: 1, turns: 2 }],
+  },
+  /*
+   * Profondeur de l'offre (retour du 30 octobre, docs/etudes/PROFONDEUR_OFFRE.md § 6) : des reliques de build, sources et
+   * consommatrices des ressources qui en manquent (Brûlure, Poison, Saignement, soin, esquive) ; mesures dans
+   * docs/RELIQUES.md § 19.
+   */
+  {
+    id: 'ember-brand',
+    name: 'Tison ardent',
+    flavor: 'Un tison de chêne noirci au bout rouge, serré dans une pince de forgeron. Le coup juste met le feu.',
+    tier: 'trinket',
+    trigger: { type: 'strike', on: 'crit' },
+    effects: [{ type: 'applyStatus', status: 'burn', stacks: 2, target: 'opponent' }],
+  },
+  {
+    id: 'viper-gall',
+    name: 'Fiel de vipère',
+    flavor: 'Une petite poche de fiel séché dans un filet de cuir, un crochet de vipère piqué au travers. Qui le frappe s’empoisonne.',
+    tier: 'trinket',
+    trigger: { type: 'strike', on: 'hurt' },
+    cooldown: 4,
+    effects: [{ type: 'applyStatus', status: 'poison', stacks: 2, target: 'opponent' }],
+  },
+  {
+    id: 'barbed-wire',
+    name: 'Fil barbelé',
+    flavor: 'Une boucle de fil de fer hérissée de nœuds tranchants, enroulée autour d’un brassard. Qui le frappe y laisse du sang.',
+    tier: 'trinket',
+    trigger: { type: 'strike', on: 'hurt' },
+    cooldown: 4,
+    effects: [{ type: 'applyStatus', status: 'bleed', stacks: 2, target: 'opponent' }],
+  },
+  {
+    id: 'pilgrim-gourd',
+    name: 'Gourde du pèlerin',
+    flavor: 'Une gourde de calebasse frappée d’une coquille, le bouchon de liège ficelé. Une gorgée tous les quatre pas.',
+    tier: 'trinket',
+    trigger: { type: 'turn', turn: 4 },
+    cooldown: 4,
+    effects: [{ type: 'heal', amount: 3 }],
+  },
+  {
+    id: 'mist-cloak',
+    name: 'Cape de brume',
+    flavor: 'Un pan de cape grise, si fine qu’on voit au travers, toujours humide. Qui l’a manqué la sent déjà dans son dos.',
+    tier: 'master',
+    trigger: { type: 'strike', on: 'dodge' },
+    effects: [{ type: 'applyStatus', status: 'momentum', stacks: 3 }],
+  },
+  {
+    id: 'flayer-cup',
+    name: 'Coupe de l’écorcheur',
+    flavor: 'Une coupe de corne cerclée de fer, une rigole taillée sur le bord. Là où le sang coule déjà, il en boit.',
+    tier: 'master',
+    trigger: { type: 'strike', on: 'hit' },
+    cooldown: 2,
+    when: [{ type: 'hasStatus', who: 'opponent', status: 'bleed' }],
+    effects: [{ type: 'heal', amount: 2 }],
   },
 ]
 
@@ -485,6 +720,7 @@ export function withRelicStats(base: CharacterStats, relics: readonly Relic[]): 
 const signed = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`)
 const capitalize = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`
 const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`)
+const MULTIPLIED: Record<number, string> = { 2: 'double', 3: 'triple' }
 
 /**
  * Une stat ajoutée, en clair : « +2 armure », « +6 % d'esquive ». Une esquive négative n'esquive jamais. L'attaque se dit
@@ -512,31 +748,47 @@ const isRuleStatus = (id: StatusId) => !STATUSES[id].mechanic && STATUSES[id].co
  * (Conque des vents). `validateRelics` garantit le reste : vers l'adversaire, seulement des dégâts directs ; aucune
  * relâche de jauges.
  */
-function effectText(e: Effect, attacker = false): string {
+function effectText(e: Effect, attacker = false, once = true): string {
   switch (e.type) {
     case 'damage': {
       // Retour du 2026-10-30 (R72) : qui perd quoi, en PV, au lieu de l'écriture de calcul « 3 × 2 dégâts directs »
       const who = e.target === 'opponent' ? (attacker ? "l'attaquant" : "l'adversaire") : 'il'
-      const times = e.hits ? ` ${e.hits} fois` : ''
+      const times = e.hits ? ` ${SMALL_NUMBERS[e.hits] ?? e.hits} fois` : ''
       // Contre l'armure (Clous de pavois, 2026-10-27, M4) : ce ne sont plus des dégâts directs
       if (e.armored) return `${who} prend un coup de ${e.amount} dégâts${times} (son armure compte)`
-      return `${who} perd ${e.amount} PV${times}`
+      // Braise captive : chaque impact lit un statut (« chaque fois +1 par charge de Brûlure qu'il porte »)
+      const per = e.fromStatus
+        ? ` (${e.hits ? 'chaque fois ' : ''}+${e.fromStatus.factor} par charge de ${STATUSES[e.fromStatus.status].name} ${(e.fromStatus.who === 'opponent') === (e.target === 'opponent') ? "qu'il porte" : e.fromStatus.who === 'opponent' ? "de l'adversaire" : 'du porteur'})`
+        : ''
+      return `${who} perd ${e.amount} PV${times}${per}`
     }
     case 'heal':
       return `+${e.amount} PV`
     case 'applyStatus': {
       const def = STATUSES[e.status]
       // Une affliction de source (Dard de guêpe) : « 2 Poison à l'adversaire », comme une compétence (Poison et Brûlure ont leur fiche)
-      if (e.target === 'opponent') return `${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)} à l'adversaire`
+      // La face scellée (Cachet du greffier) : la face, c'est le moteur qui la lit ; le texte dit laquelle et combien de temps
+      // Retour du 31 octobre (textes) : la durée dite « pendant », et la ressource avec sa majuscule, comme aux compétences
+      if (e.target === 'opponent' && def.sealsFace) return `scelle la face du dernier jet de l'adversaire${e.turns ? ` pendant ${e.turns} tours` : ''} (${lowerFirst(def.summary.replace(/\.$/, ''))})`
+      // Mortier d'apothicaire : le statut qu'elle lit et pose est le même, chez l'adversaire (« double son Poison, puis +2 »)
+      if (e.target === 'opponent' && e.fromStatus?.status === e.status && e.fromStatus.who === 'opponent')
+        return `${MULTIPLIED[e.fromStatus.factor + 1] ?? `multiplie par ${e.fromStatus.factor + 1}`} le ${def.name} de l'adversaire, puis +${e.stacks}`
+      // Sur un coup reçu (Fiel de vipère, Fil barbelé), l'adversaire est l'attaquant : le texte le dit
+      if (e.target === 'opponent') return `${def.name} ${e.stacks} à ${attacker ? "l'attaquant" : "l'adversaire"}`
       // Retour du 2026-10-30 (R72) : ce que fait le bonus, entre parenthèses (sauf l'armure temporaire, qui se lit seule)
       const what = e.status === 'bonusArmor' ? '' : ` (${lowerFirst(def.describe({ id: e.status, stacks: e.stacks, turns: e.turns }))})`
       // Une règle posée pour un temps (refonte des auras : Ampoule bénite, Chaîne du geôlier, Pointe de paratonnerre) : sa
       // phrase, et combien de temps elle tient
-      if (isRuleStatus(e.status)) return `${lowerFirst(def.summary.replace(/\.$/, ''))}, ${e.turns ? `ses ${e.turns} premiers tours` : 'tout le combat'}`
+      // Une règle posée pour un temps, qui revient (Focale) : « pendant 2 tours », son moment dit quand
+      if (isRuleStatus(e.status)) return `${lowerFirst(def.summary.replace(/\.$/, ''))}, ${e.turns ? (once ? `ses ${e.turns} premiers tours` : `pendant ${e.turns} tours`) : 'tout le combat'}`
       // Une aura ne se compte pas : elle s'allume (Collier de ronces), et sa phrase dit son cran
       if (isAura(e.status)) return `${lowerFirst(def.name)}${what}`
-      // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »)
-      return `+${e.stacks} ${lowerFirst(e.stacks > 1 ? (def.plural ?? def.name) : def.name)}${e.turns ? ` (${e.turns} tours)` : ''}${what}`
+      // Un statut qui se compte prend son pluriel (« +2 coups de chance ») ; les autres ne varient pas (« +4 armure temporaire »).
+      // Une seule charge se dit sans chiffre (retour du 30 octobre, D11 : plus de « +1 ») : « critique assuré (…) »
+      // La Ferveur garde sa majuscule, comme aux compétences (« +3 Ferveur »)
+      const named = e.status === 'momentum' ? def.name : lowerFirst(def.plural ?? def.name)
+      const count = e.stacks > 1 ? `+${e.stacks} ${named}` : lowerFirst(def.name)
+      return `${count}${e.turns ? ` (${e.turns} tours)` : ''}${what}`
     }
     case 'cleanse': {
       const kind = e.polarity === 'negative' ? 'malus' : 'bonus'
@@ -559,6 +811,7 @@ const STRIKE_MOMENT: Record<StrikeTrigger, string> = {
   missed: "lors d'un coup manqué",
   dodge: "lors d'une esquive",
   hurt: "lors d'un coup reçu",
+  critHurt: "lors d'un critique reçu",
   healed: 'à chaque soin reçu',
   shieldBroken: 'quand sa propre armure temporaire est vidée',
   reflected: 'quand il renvoie des dégâts',
@@ -595,6 +848,9 @@ function momentOf(r: Relic): string {
         // Une règle posée dès le premier tour dit sa durée dans son effet (« tout le combat »)
         if (r.charges === 1 && t.turn === 1 && (r.effects ?? []).every((e) => e.type === 'applyStatus' && isRuleStatus(e.status))) return ''
         if (r.charges === 1) return `au ${ordinal(t.turn)} tour`
+        // Une relique de tour à condition (Pierre de tonnerre, Mortier) : elle guette chaque début de tour dès son tour
+        // d'éveil, et part au premier où la condition tient ; sa recharge suit (limitOf)
+        if (r.when?.length) return `${t.turn > 1 ? `à partir du ${ordinal(t.turn)} tour, ` : ''}au début de son tour`
         const every = r.cooldown ? `tous les ${r.cooldown} tours` : 'à chaque tour'
         return t.turn === (r.cooldown ?? 1) ? every : `au ${ordinal(t.turn)} tour, puis ${every}`
       }
@@ -606,6 +862,10 @@ function momentOf(r: Relic): string {
         return 'quand il devrait tomber'
       case 'initiative':
         return "sans jet d'initiative"
+      case 'startAura':
+        return 'dès le début de son 1er tour (au lieu du 3e au plus tard)'
+      case 'bareFace':
+        return 'quand il tombe sur une face sans compétence'
     }
   })()
   return [head, ...(r.when ?? []).map((c) => conditionText(c, r))].filter(Boolean).join(' ')
@@ -617,8 +877,10 @@ function momentOf(r: Relic): string {
  */
 function limitOf(r: Relic): string {
   const turn = r.trigger?.type === 'turn'
-  if (r.charges !== undefined) return turn && r.charges === 1 ? '' : `${r.charges}x`
-  return r.cooldown && !turn ? `au plus une fois tous les ${r.cooldown} tours` : ''
+  if (r.charges !== undefined) return turn && r.charges === 1 ? '' : r.charges === 1 ? 'une fois' : `${r.charges}x`
+  // Le Dé de joueur : une fois par tour
+  if (r.cooldown === 1 && !turn) return 'une fois par tour'
+  return r.cooldown && (!turn || r.when?.length) ? `au plus une fois tous les ${r.cooldown} tours` : ''
 }
 
 export interface RelicDescription {
@@ -641,12 +903,25 @@ export function describeRelic(r: Relic): RelicDescription {
     r.headsChance ? `${signed(Math.round(r.headsChance * 100))} % de chances de faire pile à ses pièces (5 sur 6 au plus)` : '',
     r.rollBonus ? `${signed(r.rollBonus)} dégâts` : '',
     // Sursis et initiative : leur effet est leur règle, sans effet de compétence. Le sursis tient tout le tour (A15)
-    t?.type === 'lethal' ? 'reste à 1 PV jusqu’à la fin du tour' : t?.type === 'initiative' ? 'joue le premier tour' : '',
-    ...(r.effects ?? []).map((e) => effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'dodge' || t.on === 'shieldBroken'))),
+    t?.type === 'lethal'
+      ? 'reste à 1 PV jusqu’à la fin du tour'
+      : t?.type === 'initiative'
+        ? 'joue le premier tour'
+        : t?.type === 'startAura'
+          ? 'pose son aura de départ'
+          : t?.type === 'bareFace'
+            ? 'relance son dé'
+            : '',
+    ...(r.effects ?? []).map((e) =>
+      effectText(e, t?.type === 'strike' && (t.on === 'hurt' || t.on === 'critHurt' || t.on === 'dodge' || t.on === 'shieldBroken'), r.charges === 1 && t?.type === 'turn' && t.turn === 1),
+    ),
   ]
     .filter(Boolean)
     .join(' et ')
-  const rule = [effect, momentOf(r)].filter(Boolean).join(' ')
+  // Une relique qui revient de tour en tour : son rythme après une virgule (« +3 PV, tous les 4 tours » ; la Focale :
+  // « fait +2, pendant 2 tours, au 1er tour, puis tous les 4 tours »)
+  const recurring = t?.type === 'turn' && r.charges === undefined
+  const rule = [effect, momentOf(r)].filter(Boolean).join(recurring ? ', ' : ' ')
   const limit = limitOf(r)
   const posed = (r.effects ?? []).flatMap((e) => (e.type === 'applyStatus' ? [{ status: e.status, target: e.target ?? ('self' as const) }] : []))
   return { text: typeset(capitalize(limit ? `${rule}, ${limit}` : rule)), posed }
@@ -654,8 +929,11 @@ export function describeRelic(r: Relic): RelicDescription {
 
 /* ---------- Validation ---------- */
 
-/** Les seules afflictions qu'une relique pose à l'adversaire : les reliques de source (exception à la règle 7, 2026-10-25). */
-const SOURCE_AFFLICTIONS: readonly StatusId[] = ['poison', 'burn']
+/**
+ * Les seules afflictions qu'une relique pose à l'adversaire : les reliques de source (exception à la règle 7, 2026-10-25),
+ * le Saignement depuis le retour du 30 octobre (D26, Hameçon rouillé), et la face scellée (D9, Cachet du greffier).
+ */
+const SOURCE_AFFLICTIONS: readonly StatusId[] = ['poison', 'burn', 'bleed', 'sealedFace']
 
 /** Erreurs de définition du registre (vide si tout va bien). Vérifié par les tests. */
 export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
@@ -667,6 +945,7 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     ids.add(r.id)
     if (!/^[a-z]+(-[a-z]+)*$/.test(r.id)) at('identifiant en kebab-case attendu')
     if (!r.name || !r.flavor) at('nom et phrase d’ambiance requis')
+    if (!r.tier || !(r.tier in RELIC_TIERS)) at('palier requis : babiole, forte ou maîtresse (D27)')
     // Un seul type par relique : des stats, une chance de pile, un bonus de coup, ou un déclencheur et ses effets
     const families = [r.stats !== undefined, r.headsChance !== undefined, r.rollBonus !== undefined, r.trigger !== undefined].filter(Boolean).length
     if (families !== 1) at('une relique a un seul type : stats, chance de pile, bonus de coup ou déclencheur')
@@ -677,11 +956,12 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
     if (r.rollBonus !== undefined && (!Number.isInteger(r.rollBonus) || r.rollBonus === 0)) at('bonus de coup entier et non nul')
     if (r.onFace !== undefined && (r.rollBonus === undefined || !Number.isInteger(r.onFace) || r.onFace < 1)) at('face : un entier ≥ 1, avec un bonus de coup')
     // Sursis et initiative : leur règle est leur effet ; le sursis part une fois (une charge), l'initiative une fois par nature
-    const bare = r.trigger?.type === 'lethal' || r.trigger?.type === 'initiative'
+    const bare = r.trigger?.type === 'lethal' || r.trigger?.type === 'initiative' || r.trigger?.type === 'startAura' || r.trigger?.type === 'bareFace'
     if (r.trigger && !bare && !r.effects?.length) at('un déclencheur sans effet')
-    if (bare && (r.effects?.length || r.when || r.scene)) at('sursis et initiative : sans effet, condition ni scène')
+    if (bare && (r.effects?.length || r.when || r.scene)) at('sursis, initiative, aura d’entrée et relance : sans effet, condition ni scène')
     if (r.trigger?.type === 'lethal' && r.charges !== 1) at('sursis : une charge')
-    if (r.trigger?.type === 'initiative' && (r.charges !== undefined || r.cooldown !== undefined)) at('initiative : sans limite')
+    if ((r.trigger?.type === 'initiative' || r.trigger?.type === 'startAura') && (r.charges !== undefined || r.cooldown !== undefined)) at('initiative, aura d’entrée : sans limite')
+    if (r.trigger?.type === 'bareFace' && (r.cooldown === undefined || r.charges !== undefined)) at('relance : une recharge, sans charges')
     if (!r.trigger && (r.effects || r.charges !== undefined || r.cooldown !== undefined)) at('effets, charges et recharge demandent un déclencheur')
     // Des conditions : sur un déclencheur, ou sur un bonus de coup (lues au coup qui touche, avant le critique)
     if (r.when && !r.trigger && r.rollBonus === undefined) at('des conditions demandent un déclencheur ou un bonus de coup')
@@ -729,19 +1009,28 @@ export function validateRelics(relics: readonly Relic[] = RELICS): string[] {
 
 /* ---------- Récompense de tournoi ---------- */
 
-/** Nombre de reliques proposées après une victoire. */
+/** Nombre de reliques proposées après une victoire ; une de plus aux offres riches (offers.ts, `RICH_RANKS`). */
 export const OFFER_SIZE = 3
 
 /**
- * L'offre d'une victoire : `OFFER_SIZE` reliques tirées parmi celles que le vainqueur n'a pas encore.
- * `focus` (offre orientée, règles v2, docs/PROGRESSION.md § 13.2) : la première se tire au poids que `focus` lui donne
- * (l'écho avec le build), les autres restent libres, à parts égales.
+ * L'offre d'une victoire : `size` reliques tirées sans remise parmi celles que le vainqueur n'a pas encore, chacune au
+ * poids que `weight` lui donne (fraîcheur et palier, offers.ts : retour du 2026-10-30, option ACsD). `focus` (offre
+ * orientée, règles v2, docs/PROGRESSION.md § 13.2) multiplie en plus le poids de la première carte (l'écho avec le
+ * build). Sans poids, toutes à parts égales.
  */
-export function drawOffer(held: readonly string[], rng: Rng, pool: readonly string[] = RELIC_IDS, focus?: (id: string) => number): string[] {
+export function drawOffer(
+  held: readonly string[],
+  rng: Rng,
+  pool: readonly string[] = RELIC_IDS,
+  { weight = () => 1, focus = () => 1, size = OFFER_SIZE }: { weight?: (id: string) => number; focus?: (id: string) => number; size?: number } = {},
+): string[] {
   const open = pool.filter((id) => !held.includes(id))
-  if (!focus || open.length === 0) return shuffle(rng, open).slice(0, OFFER_SIZE)
-  const echo = pickWeighted(rng, open, focus)
-  return [echo, ...shuffle(rng, open.filter((id) => id !== echo)).slice(0, OFFER_SIZE - 1)]
+  const offer: string[] = []
+  while (offer.length < Math.min(size, open.length)) {
+    const left = open.filter((id) => !offer.includes(id))
+    offer.push(pickWeighted(rng, left, offer.length === 0 ? (id) => focus(id) * weight(id) : weight))
+  }
+  return offer
 }
 
 /**

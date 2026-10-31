@@ -3,7 +3,7 @@ import type { CharacterEvent } from './events'
 import { autoForge, drawForgeOffer, forgedFaces, type ForgeOffer, type ForgeStep } from './forge'
 import { buildHooks, echoOf, eventHooks, reachOf as fighterReach, relicHooks, relicNeeds, skillNeeds, type Hook } from './hooks'
 import { characterPool, masteryOfSkill } from './masteries'
-import { autoPick, drawOffer, getRelic, RELIC_IDS } from './relics'
+import { autoPick, drawOffer, getRelic, OFFER_SIZE, RELIC_IDS, type RelicTier } from './relics'
 import type { Rng } from './rng'
 import { createCharacter } from './roster'
 
@@ -15,7 +15,9 @@ import { createCharacter } from './roster'
  *   § 6.1), la limite de faces de compétence (`MAX_SKILL_FACES`) ;
  * - l'offre pertinente (`offerableRelics`, `offerableSkills` : rien dont la condition ne peut pas arriver) ;
  * - l'offre orientée (`drawReward` : la première carte au poids de son écho avec le build, `ECHO_WEIGHT` ; Graver
- *   propose une compétence de chacune de ses deux maîtrises, § 6.2).
+ *   propose une compétence de chacune de ses deux maîtrises, § 6.2) ;
+ * - la profondeur (retour du 2026-10-30, option ACsD, docs/etudes/PROFONDEUR_OFFRE.md) : fraîcheur (`FRESH_WEIGHT`,
+ *   `seen`), paliers des reliques en poids (`tierWeight`), offres riches (`RICH_RANKS`).
  * Chaque mode garde son rythme (quand une récompense tombe) et son stockage ; l'offre, elle, est la même.
  */
 
@@ -59,6 +61,8 @@ export interface BuildState {
   aura?: string
   forge: ForgeStep[]
   relics: string[]
+  /** Les cartes déjà montrées dans la partie (`relic:<id>`, `skill:<id>`, `withSeen`) : absentes, rien de vu */
+  seen?: readonly string[]
 }
 
 /** Une récompense tirée : une relique ou une forge, l'offre, et le choix par défaut (au hasard dans l'offre), modifiable. */
@@ -71,6 +75,44 @@ const builtCharacter = (b: BuildState): Character => createCharacter(b.championI
 
 /** Poids d'une brique dans l'offre orientée : 1, plus `ECHO_WEIGHT` par accroche qui la relie au build (docs/PROGRESSION.md § 13.2). */
 export const ECHO_WEIGHT = 2
+
+/**
+ * La fraîcheur (retour du 2026-10-30, option ACsD) : une carte (relique, ou compétence de Graver) jamais montrée dans la
+ * partie pèse `FRESH_WEIGHT` fois plus. Une carte déjà vue, ou refusée, garde son poids : elle peut toujours revenir.
+ */
+export const FRESH_WEIGHT = 3
+
+/**
+ * Les offres riches : la 2e et la 4e offre de chaque sorte (victoires 3, 4, 7 et 8 d'un acte) montrent une carte de
+ * plus, 4 reliques ou une 3e compétence dans Graver. Rang compté à partir de 1 parmi les offres de sa sorte (`rankIn`).
+ */
+export const RICH_RANKS: readonly number[] = [2, 4]
+
+/** Le rang (à partir de 1) de la récompense `index` du calendrier parmi celles de sa sorte. */
+export const rankIn = (calendar: readonly RewardKind[], index: number) => calendar.slice(0, index + 1).filter((k) => k === calendar[index]).length
+
+/**
+ * Le poids du palier d'une relique (D27, en poids et pas en murs), lu sur le nombre de reliques déjà portées `held` :
+ * une babiole pèse 4 ; une forte 2 tant qu'il en porte moins de 2, puis 4 ; une maîtresse 1 tant qu'il en porte moins
+ * de 3 (une maîtresse peut sortir tôt, rarement), puis 8. En quarts, pour rester entier.
+ */
+export function tierWeight(tier: RelicTier, held: number): number {
+  if (tier === 'strong') return held < 2 ? 2 : 4
+  if (tier === 'master') return held < 3 ? 1 : 8
+  return 4
+}
+
+/**
+ * Ce que la partie a vu (`BuildState.seen`), avec les cartes que montre l'offre `reward` en plus, sans doublon : ses
+ * reliques (`relic:<id>`), les compétences de son Graver (`skill:<id>`).
+ */
+export function withSeen(seen: readonly string[] = [], reward: { kind: 'relic'; offer: readonly string[] } | { kind: 'forge'; offer: readonly ForgeOffer[] }): string[] {
+  const cards =
+    reward.kind === 'relic'
+      ? reward.offer.map((id) => `relic:${id}`)
+      : reward.offer.flatMap((o) => (o.op === 'engrave' ? o.skills.map((s) => `skill:${s.id}`) : []))
+  return [...new Set([...seen, ...cards])]
+}
 
 /**
  * Ce qui est à la portée du personnage, l'offre pertinente : ce que produit **son build d'aujourd'hui**, ses compétences
@@ -112,14 +154,24 @@ export function offerableSkills(b: BuildState, skills: readonly CharacterEvent[]
  *   le dé porte `MAX_SKILL_FACES` faces de compétence, ni Graver ni copie d'une compétence. `forgesLeft`, les forges
  *   qui restent au calendrier, celle-ci comprise (`forgesLeftIn`) : quand il en reste autant que de faces à remplir,
  *   seulement Graver et Copier une face (A9 : le dé complet en fin de construction) ;
- * - relique : parmi celles dont la condition peut arriver avec son build (`offerableRelics`), la première carte au poids de son écho,
- *   les deux autres libres.
- * Le choix par défaut reste au hasard dans l'offre (pour Graver, une maîtrise sur deux).
+ * - relique : parmi celles dont la condition peut arriver avec son build (`offerableRelics`), toutes au poids de leur
+ *   palier (`tierWeight`), la première aussi au poids de son écho.
+ * Toutes les cartes (reliques, compétences de Graver) pèsent `FRESH_WEIGHT` fois plus si la partie ne les a jamais vues
+ * (`b.seen`). `rank`, le rang de cette offre parmi celles de sa sorte (`rankIn`) : aux `RICH_RANKS`, une carte de plus.
+ * La même voie pour tous (R1) : campagne, champion de référence, adversaires, saison, arbre.
+ * Le choix par défaut reste au hasard dans l'offre (pour Graver, une compétence au hasard parmi celles montrées).
  */
-export function drawReward(b: BuildState, kind: RewardKind, rng: Rng, forgesLeft?: number): PendingReward {
+export function drawReward(b: BuildState, kind: RewardKind, rng: Rng, forgesLeft?: number, rank?: number): PendingReward {
   const build = buildHooks(builtCharacter(b))
+  const seen = new Set(b.seen)
+  const rich = rank !== undefined && RICH_RANKS.includes(rank)
   if (kind === 'relic') {
-    const offer = drawOffer(b.relics, rng, offerableRelics(b), (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build))
+    const offer = drawOffer(b.relics, rng, offerableRelics(b), {
+      // Le palier est requis au registre (`validateRelics`) : seule une relique d'essai, jamais offerte, n'en a pas
+      weight: (id) => (seen.has(`relic:${id}`) ? 1 : FRESH_WEIGHT) * tierWeight(getRelic(id).tier!, b.relics.length),
+      focus: (id) => 1 + ECHO_WEIGHT * echoOf(relicHooks(getRelic(id)), build),
+      size: OFFER_SIZE + (rich ? 1 : 0),
+    })
     const choice = autoPick(offer, rng)
     return { kind: 'relic', offer, ...(choice && { choice }) }
   }
@@ -130,10 +182,11 @@ export function drawReward(b: BuildState, kind: RewardKind, rng: Rng, forgesLeft
     characterPool(def).filter((s) => !b.forge.some((f) => f.op === 'engrave' && f.skill.id === s.id)),
   )
   const offer = drawForgeOffer(def, b.forge, rng, left, {
-    focus: (s) => 1 + ECHO_WEIGHT * echoOf(eventHooks(s), build),
+    focus: (s) => (1 + ECHO_WEIGHT * echoOf(eventHooks(s), build)) * (seen.has(`skill:${s.id}`) ? 1 : FRESH_WEIGHT),
     noNewSkill: empty <= 0,
     fillOnly: forgesLeft !== undefined && empty >= forgesLeft,
     groupOf: (s) => masteryOfSkill(s.id),
+    extraSkill: rich,
   })
   const choice = autoForge(def, b.forge, offer, rng)
   return { kind: 'forge', offer, ...(choice && { choice }) }
